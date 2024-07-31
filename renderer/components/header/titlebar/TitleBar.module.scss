@@ -1,0 +1,62 @@
+@import "../../../styles/variables.scss";
+
+.button {
+  height: 18px;
+  width: 18px;
+  border: none;
+  border-radius: 10px;
+  position: relative;
+
+  svg {
+    width: 12px;
+    height: 12px;
+    margin: 3px;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  &:hover {
+    svg {
+      color: black;
+    }
+  }
+}
+
+.info {
+  background-color: white;
+  color: black;
+  position: absolute;
+  right: 10px;
+  top: 10px;
+  z-index: 1000;
+}
+
+.navigationBack {
+  background-color: $font-color-h;
+  color: black;
+  position: absolute;
+  left: 10px;
+  top: 10px;
+  z-index: 1000;
+}
+
+.navigationForward {
+  background-color: $font-color-h;
+  color: black;
+  position: absolute;
+  left: 32px;
+  top: 10px;
+  z-index: 1000;
+}
+
+.navigationEnabled {
+  background-color: $font-color;
+}
+
+.loading {
+  position: absolute;
+  left: 60px;
+  top: 6px;
+  z-index: 1000;
+}

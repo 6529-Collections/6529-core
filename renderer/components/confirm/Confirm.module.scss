@@ -1,0 +1,8 @@
+@import "../../styles/variables.scss";
+
+.modalContent {
+  background-color: $bg-color-2;
+  border: 1px solid $lighter-grey !important;
+  color: $font-color;
+  border-radius: 0;
+}
