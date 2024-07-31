@@ -16,9 +16,8 @@ export default function CommonDropdownItemsMobileWrapper({
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog
         as="div"
-        className="tw-relative tw-z-50 lg:tw-hidden"
-        onClose={setOpen}
-      >
+        className="tailwind-scope tw-relative tw-z-50 lg:tw-hidden"
+        onClose={setOpen}>
         <Transition.Child
           as={Fragment}
           enter="tw-ease-in-out tw-duration-500"
@@ -26,8 +25,7 @@ export default function CommonDropdownItemsMobileWrapper({
           enterTo="tw-opacity-100"
           leave="tw-ease-in-out tw-duration-500"
           leaveFrom="tw-opacity-100"
-          leaveTo="tw-opacity-0"
-        >
+          leaveTo="tw-opacity-0">
           <div className="tw-fixed tw-inset-0 tw-bg-gray-500 tw-bg-opacity-75 tw-transition-opacity" />
         </Transition.Child>
 
@@ -41,8 +39,7 @@ export default function CommonDropdownItemsMobileWrapper({
                 enterTo="tw-translate-y-0"
                 leave="tw-transform tw-transition tw-ease-in-out tw-duration-500 sm:tw-duration-700"
                 leaveFrom="tw-translate-y-0"
-                leaveTo="tw-translate-y-full"
-              >
+                leaveTo="tw-translate-y-full">
                 <Dialog.Panel className="tw-pointer-events-auto tw-relative tw-w-screen">
                   <Transition.Child
                     as={Fragment}
@@ -51,23 +48,20 @@ export default function CommonDropdownItemsMobileWrapper({
                     enterTo="tw-opacity-100"
                     leave="tw-ease-in-out tw-duration-500"
                     leaveFrom="tw-opacity-100"
-                    leaveTo="tw-opacity-0"
-                  >
+                    leaveTo="tw-opacity-0">
                     <div className="tw-absolute tw-right-0 -tw-top-16 -tw-ml-8 tw-flex tw-pr-2 tw-pt-4 sm:-tw-ml-10 sm:tw-pr-4">
                       <button
                         type="button"
                         title="Close panel"
                         aria-label="Close panel"
                         className="tw-p-2.5 tw-relative tw-bg-transparent tw-rounded-md focus:tw-outline-none tw-border-none focus:tw-ring-2 focus:tw-ring-white"
-                        onClick={() => setOpen(false)}
-                      >
+                        onClick={() => setOpen(false)}>
                         <svg
                           className="tw-w-6 tw-h-6 tw-flex-shrink-0 tw-text-white"
                           viewBox="0 0 24 24"
                           fill="none"
                           aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
+                          xmlns="http://www.w3.org/2000/svg">
                           <path
                             d="M18 6L6 18M6 6L18 18"
                             stroke="currentColor"
@@ -81,8 +75,7 @@ export default function CommonDropdownItemsMobileWrapper({
                   </Transition.Child>
                   <div
                     className="tw-flex tw-flex-col tw-bg-iron-950 tw-rounded-t-xl tw-overflow-y-auto tw-scroll-py-3 tw-py-6"
-                    style={{ maxHeight: "calc(100vh - 4rem)" }}
-                  >
+                    style={{ maxHeight: "calc(100vh - 4rem)" }}>
                     <div className="tw-px-6">
                       <Dialog.Title className="tw-text-base tw-font-semibold tw-text-iron-50">
                         {filterLabel}

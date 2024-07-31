@@ -1,5 +1,3 @@
-import { useDispatch } from "react-redux";
-import { setActiveGroupId } from "../../../../store/groupSlice";
 import { GroupFull } from "../../../../generated/models/GroupFull";
 import { getRandomColorWithSeed } from "../../../../helpers/Helpers";
 
@@ -8,14 +6,14 @@ export default function GroupItemWrapper({
   isActive,
   children,
   deactivateHover,
+  onActiveGroupId,
 }: {
   readonly group: GroupFull;
   readonly isActive: boolean;
   readonly deactivateHover: boolean;
   readonly children: React.ReactNode;
+  readonly onActiveGroupId?: (groupId: string | null) => void;
 }) {
-  const dispatch = useDispatch();
-
   const banner1 =
     group.created_by.banner1_color ??
     getRandomColorWithSeed(group.created_by.handle);
@@ -24,8 +22,8 @@ export default function GroupItemWrapper({
     getRandomColorWithSeed(group.created_by.handle);
 
   const onFilterClick = () => {
-    if (isActive) return;
-    dispatch(setActiveGroupId(group.id));
+    if (isActive || !onActiveGroupId) return;
+    onActiveGroupId(group.id);
   };
 
   const getClasses = () => {
@@ -41,14 +39,12 @@ export default function GroupItemWrapper({
     <div>
       <div
         onClick={onFilterClick}
-        className={`tw-bg-iron-900 tw-w-full tw-text-left tw-relative tw-border tw-border-solid tw-rounded-xl tw-transition tw-duration-300 tw-ease-out ${classes}`}
-      >
+        className={`tw-bg-iron-900 tw-w-full tw-text-left tw-relative tw-border tw-border-solid tw-rounded-xl tw-transition tw-duration-300 tw-ease-out ${classes}`}>
         <div
           className="tw-relative tw-w-full tw-h-7 tw-rounded-t-xl"
           style={{
             background: `linear-gradient(45deg, ${banner1} 0%, ${banner2} 100%)`,
-          }}
-        ></div>
+          }}></div>
         {children}
       </div>
     </div>

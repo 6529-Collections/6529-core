@@ -29,3 +29,4 @@ dist
 dev.sqlite
 
 /renderer/next-env.d.ts
+/renderer_backup

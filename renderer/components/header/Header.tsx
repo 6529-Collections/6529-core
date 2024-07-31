@@ -1,7 +1,7 @@
 import styles from "./Header.module.scss";
 import { Container, Row, Col, Nav, Navbar, NavDropdown } from "react-bootstrap";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Image from "next/image";
 import { AboutSection } from "../../pages/about/[section]";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -12,8 +12,9 @@ import HeaderDesktopLink from "./HeaderDesktopLink";
 import Link from "next/link";
 import HeaderUser from "./user/HeaderUser";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
-import TitleBar from "./titlebar/TitleBar";
+import { AuthContext } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
+import TitleBar from "./titlebar/TitleBar";
 
 interface Props {
   onLoad?: () => void;
@@ -27,9 +28,9 @@ export interface HeaderLink {
 }
 
 export default function Header(props: Readonly<Props>) {
+  const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
   const router = useRouter();
   const account = useAccount();
-
   const [consolidations, setConsolidations] = useState<string[]>([]);
   const [burgerMenuOpen, setBurgerMenuOpen] = useState(false);
 
@@ -38,6 +39,21 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuAbout, setShowBurgerMenuAbout] = useState(false);
   const [showBurgerMenuCommunity, setShowBurgerMenuCommunity] = useState(false);
   const [showBurgerMenuTools, setShowBurgerMenuTools] = useState(false);
+  const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
+
+  const getShowDrops = () =>
+    !!(
+      !!connectedProfile?.profile?.handle &&
+      connectedProfile.level >= 30 &&
+      !activeProfileProxy
+    ) || connectedProfile?.profile?.handle === "simo";
+
+  const [showDrops, setShowDrops] = useState<boolean>(getShowDrops());
+
+  useEffect(
+    () => setShowDrops(getShowDrops()),
+    [connectedProfile, activeProfileProxy]
+  );
 
   useEffect(() => {
     function handleResize() {
@@ -46,6 +62,7 @@ export default function Header(props: Readonly<Props>) {
       setShowBurgerMenuAbout(false);
       setShowBurgerMenuCommunity(false);
       setShowBurgerMenuTools(false);
+      setShowBurgerMenuBrain(false);
     }
 
     window.addEventListener("resize", handleResize);
@@ -113,6 +130,7 @@ export default function Header(props: Readonly<Props>) {
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuTools(false);
+                  setShowBurgerMenuBrain(false);
                 }}></FontAwesomeIcon>
             </Col>
           </Row>
@@ -139,13 +157,65 @@ export default function Header(props: Readonly<Props>) {
               </h3>
             </Col>
           </Row>
-          <Row className="pt-3 pb-3">
-            <Col>
-              <Link href="/">
-                <h3>Home</h3>
-              </Link>
-            </Col>
-          </Row>
+          {showDrops && (
+            <Row className="pt-3 pb-3">
+              <Col>
+                <h3
+                  onClick={() => {
+                    setShowBurgerMenuCollections(false);
+                    setShowBurgerMenuCommunity(false);
+                    setShowBurgerMenuAbout(false);
+                    setShowBurgerMenuTools(false);
+                    setShowBurgerMenuBrain(!showBurgerMenuBrain);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      setShowBurgerMenuCollections(false);
+                      setShowBurgerMenuCommunity(false);
+                      setShowBurgerMenuAbout(false);
+                      setShowBurgerMenuTools(false);
+                      setShowBurgerMenuBrain(!showBurgerMenuBrain);
+                    }
+                  }}
+                  className={`${styles.burgerMenuHeader}
+                  ${
+                    showBurgerMenuBrain
+                      ? styles.burgerMenuCaretClose
+                      : styles.burgerMenuCaretOpen
+                  }`}>
+                  Brain
+                </h3>
+              </Col>
+              {showBurgerMenuBrain && (
+                <Container>
+                  <Row>
+                    <Col xs={{ span: 6, offset: 3 }}>
+                      <hr />
+                    </Col>
+                  </Row>
+                  <Row className="pt-3">
+                    <Col>
+                      <Link href="/my-stream">
+                        <h3>My Stream</h3>
+                      </Link>
+                    </Col>
+                  </Row>
+                  <Row className="pt-3">
+                    <Col>
+                      <Link href="/waves">
+                        <h3>Waves</h3>
+                      </Link>
+                    </Col>
+                  </Row>
+                  <Row>
+                    <Col xs={{ span: 6, offset: 3 }}>
+                      <hr />
+                    </Col>
+                  </Row>
+                </Container>
+              )}
+            </Row>
+          )}
           <Row className="pt-3 pb-3">
             <Col>
               <h3
@@ -154,6 +224,7 @@ export default function Header(props: Readonly<Props>) {
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuTools(false);
+                  setShowBurgerMenuBrain(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
@@ -161,6 +232,7 @@ export default function Header(props: Readonly<Props>) {
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
                     setShowBurgerMenuTools(false);
+                    setShowBurgerMenuBrain(false);
                   }
                 }}
                 className={`${styles.burgerMenuHeader}
@@ -638,8 +710,6 @@ export default function Header(props: Readonly<Props>) {
     );
   }
 
-  const goTo = (path: string) => router.push(path);
-
   return (
     <>
       {printBurgerMenu()}
@@ -707,13 +777,25 @@ export default function Header(props: Readonly<Props>) {
                           id="seize-navbar-nav"
                           className={`justify-content-end d-none ${styles.dMdBlock}`}>
                           <Nav className="justify-content-end ml-auto">
-                            <Nav.Link
-                              className={`${styles.mainNavLink} ${
-                                router.pathname === "/" ? "active" : ""
-                              }`}
-                              onClick={() => goTo("/")}>
-                              Home
-                            </Nav.Link>
+                            {showDrops && (
+                              <NavDropdown
+                                title="Brain"
+                                align={"start"}
+                                className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
+                                <HeaderDesktopLink
+                                  link={{
+                                    name: "My Stream",
+                                    path: "/my-stream",
+                                  }}
+                                />
+                                <HeaderDesktopLink
+                                  link={{
+                                    name: "Waves",
+                                    path: "/waves",
+                                  }}
+                                />
+                              </NavDropdown>
+                            )}
 
                             <NavDropdown
                               title="Collections"

@@ -1,0 +1,3 @@
+[submodule "renderer"]
+	path = renderer
+	url = https://github.com/6529-Collections/6529seize-frontend.git

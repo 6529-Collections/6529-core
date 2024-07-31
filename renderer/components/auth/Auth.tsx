@@ -1,6 +1,7 @@
-import { createContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Slide, ToastContainer, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useAccount, useSignMessage } from "wagmi";
 import {
   getAuthJwt,
   removeAuthJwt,
@@ -9,18 +10,27 @@ import {
 import { commonApiFetch, commonApiPost } from "../../services/api/common-api";
 import { jwtDecode } from "jwt-decode";
 import { UserRejectedRequestError } from "viem";
-import { IProfileAndConsolidations } from "../../entities/IProfile";
+import {
+  IProfileAndConsolidations,
+  ProfileConnectedStatus,
+} from "../../entities/IProfile";
 import { useQuery } from "@tanstack/react-query";
-import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
+import {
+  QueryKey,
+  ReactQueryWrapperContext,
+} from "../react-query-wrapper/ReactQueryWrapper";
+import { getProfileConnectedStatus } from "../../helpers/ProfileHelpers";
 import { NonceResponse } from "../../generated/models/NonceResponse";
 import { LoginRequest } from "../../generated/models/LoginRequest";
 import { LoginResponse } from "../../generated/models/LoginResponse";
 import { ProfileProxy } from "../../generated/models/ProfileProxy";
 import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
-import { useAccount, useSignMessage } from "wagmi";
+import { useRouter } from "next/router";
+import { isElectron } from "../../helpers";
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
+  readonly connectionStatus: ProfileConnectedStatus;
   readonly receivedProfileProxies: ProfileProxy[];
   readonly activeProfileProxy: ProfileProxy | null;
   readonly requestAuth: () => Promise<{ success: boolean }>;
@@ -40,6 +50,7 @@ export const AuthContext = createContext<AuthContextType>({
   connectedProfile: null,
   receivedProfileProxies: [],
   activeProfileProxy: null,
+  connectionStatus: ProfileConnectedStatus.NOT_CONNECTED,
   requestAuth: async () => ({ success: false }),
   setToast: () => {},
   setActiveProfileProxy: async () => {},
@@ -50,7 +61,9 @@ export default function Auth({
 }: {
   readonly children: React.ReactNode;
 }) {
+  const { invalidateAll } = useContext(ReactQueryWrapperContext);
   const { address } = useAccount();
+
   const signMessage = useSignMessage();
 
   const { data: connectedProfile } = useQuery<IProfileAndConsolidations>({
@@ -107,7 +120,9 @@ export default function Auth({
   useEffect(() => {
     if (!address) {
       removeAuthJwt();
+      invalidateAll();
       setActiveProfileProxy(null);
+
       return;
     } else {
       const isAuth = validateJwt({
@@ -115,7 +130,14 @@ export default function Auth({
         wallet: address,
         role: activeProfileProxy?.created_by.id ?? null,
       });
-      if (!isAuth) removeAuthJwt();
+      if (!isAuth) {
+        removeAuthJwt();
+        setActiveProfileProxy(null);
+        invalidateAll();
+        if (isElectron()) {
+          requestAuth();
+        }
+      }
     }
   }, [address, activeProfileProxy]);
 
@@ -165,7 +187,6 @@ export default function Auth({
   }> => {
     try {
       const signedMessage = await signMessage.signMessageAsync({
-        account: address,
         message,
       });
       return {
@@ -340,18 +361,33 @@ export default function Auth({
     }
   };
 
-  return (
-    <AuthContext.Provider
-      value={{
-        requestAuth,
-        setToast,
-        connectedProfile: connectedProfile ?? null,
-        receivedProfileProxies,
-        activeProfileProxy,
-        setActiveProfileProxy: onActiveProfileProxy,
-      }}>
-      {children}
-      <ToastContainer />
-    </AuthContext.Provider>
+  return useMemo(
+    () => (
+      <AuthContext.Provider
+        value={{
+          requestAuth,
+          setToast,
+          connectedProfile: connectedProfile ?? null,
+          receivedProfileProxies,
+          activeProfileProxy,
+          connectionStatus: getProfileConnectedStatus({
+            profile: connectedProfile ?? null,
+            isProxy: !!activeProfileProxy,
+          }),
+          setActiveProfileProxy: onActiveProfileProxy,
+        }}>
+        {children}
+        <ToastContainer />
+      </AuthContext.Provider>
+    ),
+    [
+      requestAuth,
+      setToast,
+      connectedProfile,
+      receivedProfileProxies,
+      activeProfileProxy,
+      onActiveProfileProxy,
+      children,
+    ]
   );
 }

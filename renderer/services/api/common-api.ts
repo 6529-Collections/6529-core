@@ -116,6 +116,35 @@ export const commonApiDelete = async (param: {
   });
 };
 
+export const commonApiDeleWithBody = async <
+  T,
+  U,
+  Z = Record<string, string>
+>(param: {
+  endpoint: string;
+  body: T;
+  headers?: Record<string, string>;
+  params?: Z;
+}): Promise<U> => {
+  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  if (param.params) {
+    const queryParams = new URLSearchParams(param.params);
+    url += `?${queryParams.toString()}`;
+  }
+  const res = await fetch(url, {
+    method: "DELETE",
+    headers: getHeaders(param.headers),
+    body: JSON.stringify(param.body),
+  });
+  if (!res.ok) {
+    const body: any = await res.json();
+    return Promise.reject(
+      body?.error ?? res.statusText ?? "Something went wrong"
+    );
+  }
+  return res.json();
+};
+
 export const commonApiPostForm = async <U>(param: {
   endpoint: string;
   body: FormData;
