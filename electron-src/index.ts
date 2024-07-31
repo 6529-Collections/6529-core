@@ -25,6 +25,8 @@ import { platform } from "os";
 let mainWindow: BrowserWindow | null = null;
 let PORT: number;
 
+const gotTheLock = app.requestSingleInstanceLock();
+
 async function resolvePort() {
   if (!PORT) {
     PORT = await getPort({
@@ -44,20 +46,80 @@ function isMac(): boolean {
   return platform() === "darwin";
 }
 
-app.on("open-url", (event, url) => {
-  event.preventDefault();
-  const urlObj = new URL(url);
+if (!gotTheLock) {
+  app.quit();
+} else {
+  function handleUrl(url: string) {
+    const urlObj = new URL(url);
 
-  if (urlObj.host === "connector") {
-    const encodedData = urlObj.searchParams.get("data");
-    if (encodedData === null) {
-      console.error("No data parameter found in the URL");
-      return;
+    if (urlObj.host === "connector") {
+      const encodedData = urlObj.searchParams.get("data");
+      if (encodedData === null) {
+        console.error("No data parameter found in the URL");
+        return;
+      }
+      const connectionInfo = JSON.parse(encodedData);
+      mainWindow?.webContents.send("wallet-connection", connectionInfo);
     }
-    const connectionInfo = JSON.parse(encodedData);
-    mainWindow?.webContents.send("wallet-connection", connectionInfo);
   }
-});
+
+  app.on("second-instance", (_event, commandLine, _workingDirectory) => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+
+      const url = commandLine.find((arg) => arg.startsWith("core6529://"));
+      if (url) {
+        handleUrl(url);
+      }
+    }
+  });
+
+  app.on("open-url", (event, url) => {
+    event.preventDefault();
+    handleUrl(url);
+  });
+
+  app.on("window-all-closed", () => {
+    Logger.info("All windows closed");
+  });
+
+  app.whenReady().then(async () => {
+    app.setName("6529 CORE");
+    protocol.handle("core6529", (_request) => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.focus();
+      }
+      return new Response("App focused");
+    });
+
+    if (!app.isDefaultProtocolClient("core6529")) {
+      app.setAsDefaultProtocolClient("core6529");
+    }
+
+    if (isMac()) {
+      app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
+    }
+
+    await resolvePort();
+
+    await prepareNext(PORT);
+    await initLogs();
+    initDb();
+    initStore();
+
+    await createWindow();
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        if (isMac()) {
+          app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
+        }
+        createWindow();
+      }
+    });
+  });
+}
 
 async function createWindow() {
   let iconPath;
@@ -112,47 +174,6 @@ async function createWindow() {
 protocol.registerSchemesAsPrivileged([
   { scheme: "core6529", privileges: { secure: true, standard: true } },
 ]);
-
-app.whenReady().then(async () => {
-  app.setName("6529 CORE");
-
-  protocol.handle("core6529", (_request) => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.focus();
-    }
-    return new Response("App focused");
-  });
-
-  if (!app.isDefaultProtocolClient("core6529")) {
-    app.setAsDefaultProtocolClient("core6529");
-  }
-
-  if (isMac()) {
-    app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
-  }
-
-  await resolvePort();
-
-  await prepareNext(PORT);
-  await initLogs();
-  initDb();
-  initStore();
-
-  await createWindow();
-  app.on("activate", () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      if (isMac()) {
-        app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
-      }
-      createWindow();
-    }
-  });
-});
-
-app.on("window-all-closed", () => {
-  Logger.info("All windows closed");
-});
 
 ipcMain.on(ADD_CUSTOM_WALLET, (event) => {
   addCustomWallet()

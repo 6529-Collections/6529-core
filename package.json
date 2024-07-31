@@ -15,7 +15,7 @@
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "pack-app": "npm run build && electron-builder --dir",
     "dist-win": "npm run build && electron-builder --win --ia32 --x64 --arm64 --publish never",
-    "dist-mac": "npm run build && electron-builder --mac --universal --publish never",
+    "dist-mac": "npm run build && electron-builder --mac --x64 --arm64 --publish never",
     "dist-linux": "npm run build && electron-builder --linux --publish never",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
@@ -122,9 +122,20 @@
     "mac": {
       "icon": "assets/icon.icns",
       "target": [
-        "dmg"
+        {
+          "target": "dmg",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
       ],
-      "artifactName": "6529 CORE-mac-${version}.${ext}",
+      "artifactName": "${productName}-mac-${arch}-${version}.${ext}",
       "extendInfo": {
         "CFBundleURLTypes": [
           {
@@ -142,13 +153,23 @@
         {
           "target": "nsis",
           "arch": [
-            "ia32",
-            "x64",
+            "x64"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
+            "ia32"
+          ]
+        },
+        {
+          "target": "nsis",
+          "arch": [
             "arm64"
           ]
         }
       ],
-      "artifactName": "6529 CORE-win-${version}.${ext}"
+      "artifactName": "${productName}-win-${arch}-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,

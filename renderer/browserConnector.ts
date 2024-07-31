@@ -1,5 +1,5 @@
 import { createConnector } from "@wagmi/core";
-import { mainnet } from "viem/chains";
+import { mainnet, sepolia } from "viem/chains";
 
 interface ProviderRequest {
   method: string;
@@ -137,6 +137,10 @@ export function browserConnector(parameters: {
         request: async ({ method, params }: ProviderRequest): Promise<any> => {
           console.log("Provider method called", method, params);
 
+          if (method === "eth_chainId") {
+            return this.getChainId();
+          }
+
           return new Promise((resolve, reject) => {
             const requestId = generateRequestId();
             const encodedParams = encodeURIComponent(JSON.stringify(params));
@@ -163,9 +167,17 @@ export function browserConnector(parameters: {
     async isAuthorized() {
       return true;
     },
-    async switchChain() {
-      //donthing
-      return mainnet;
+    async switchChain(params: { chainId: number }) {
+      console.log("Switch Chain method called", params.chainId);
+      await init();
+      const myChain = params.chainId === sepolia.id ? sepolia : mainnet;
+      connectionObject.chainId = myChain.id;
+      await window.store.set(
+        CONNECTION_STORE,
+        JSON.stringify(connectionObject)
+      );
+      console.log("Switched to chain", myChain.name);
+      return myChain;
     },
     async onAccountsChanged(accounts) {
       //do nothing

@@ -43,32 +43,42 @@ export default function AppWalletProvider(
   }, []);
 
   useEffect(() => {
-    if (signMessageData) {
-      setSuccessResponse(signMessageData);
-    }
-  }, [signMessageData]);
+    const d = signMessageData ?? sendTransactionData;
+    if (!d) return;
+    setSuccessResponse(d);
+  }, [signMessageData, sendTransactionData]);
 
   useEffect(() => {
-    if (signMessageError) {
-      setError(signMessageError.message);
-    }
-  }, [signMessageError]);
+    const e = signMessageError ?? sendTransactionError;
+    if (!e) return;
+
+    const eMsg = e.message
+      .split("Request Arguments")[0]
+      .split(".")[0]
+      .split("Contract Call")[0];
+    setError(eMsg);
+  }, [signMessageError, sendTransactionError]);
 
   async function onSign() {
     setError(null);
     const { method, params } = methodParams;
     switch (method) {
-      case "personal_sign":
+      case "personal_sign": {
         const msg = hexToString(params[0]);
         signMessage({ message: msg });
         break;
-      case "eth_sendTransaction":
-        sendTransaction({
+      }
+      case "eth_sendTransaction": {
+        const sendParams: any = {
           to: params[0].to,
-          value: parseEther(params[0].value),
           data: params[0].data,
-        });
+        };
+        if (params[0].value) {
+          sendParams.value = parseEther(params[0].value);
+        }
+        sendTransaction(sendParams);
         break;
+      }
       default:
         setError(`Unsupported method: ${method}`);
     }
