@@ -4,12 +4,13 @@ import {
   faArrowLeft,
   faArrowRight,
   faInfo,
+  faRefresh,
 } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
-import { Spinner } from "../../dotLoader/DotLoader";
 import { Modal } from "react-bootstrap";
+import Tippy from "@tippyjs/react";
 
 export default function TitleBar() {
   const router = useRouter();
@@ -54,13 +55,22 @@ export default function TitleBar() {
 
   const handleBack = () => {
     if (canGoBack) {
+      setNavigationLoading(true);
       window.api.goBack();
     }
   };
 
   const handleForward = () => {
     if (canGoForward) {
+      setNavigationLoading(true);
       window.api.goForward();
+    }
+  };
+
+  const handleRefresh = () => {
+    if (!navigationLoading) {
+      setNavigationLoading(true);
+      window.location.reload();
     }
   };
 
@@ -86,30 +96,66 @@ export default function TitleBar() {
 
   return (
     <>
-      <button
-        className={`${styles.button} ${styles.navigationBack} ${
-          canGoBack ? styles.navigationEnabled : ""
-        }`}
-        onClick={handleBack}>
-        <FontAwesomeIcon icon={faArrowLeft} />
-      </button>
-      <button
-        className={`${styles.button} ${styles.navigationForward} ${
-          canGoForward ? styles.navigationEnabled : ""
-        }`}
-        onClick={handleForward}>
-        <FontAwesomeIcon icon={faArrowRight} />
-      </button>
-      {navigationLoading && (
-        <span className={styles.loading}>
-          <Spinner dimension={16} />
-        </span>
-      )}
-      <button
-        className={`${styles.button} ${styles.info}`}
-        onClick={() => setShowInfo(true)}>
-        <FontAwesomeIcon icon={faInfo} />
-      </button>
+      <span className={styles.buttonWrapper}>
+        <Tippy
+          className={styles.tippy}
+          delay={250}
+          content="Go Back"
+          placement="right"
+          theme="light">
+          <button
+            className={`${styles.button} ${
+              canGoBack ? styles.enabled : styles.disabled
+            }`}
+            onClick={handleBack}>
+            <FontAwesomeIcon icon={faArrowLeft} />
+          </button>
+        </Tippy>
+        <Tippy
+          className={styles.tippy}
+          delay={250}
+          content="Go Forward"
+          placement="right"
+          theme="light">
+          <button
+            className={`${styles.button} ${
+              canGoForward ? styles.enabled : styles.disabled
+            }`}
+            onClick={handleForward}>
+            <FontAwesomeIcon icon={faArrowRight} />
+          </button>
+        </Tippy>
+        <Tippy
+          className={styles.tippy}
+          delay={250}
+          content="Refresh"
+          placement="right"
+          theme="light">
+          <button
+            className={`${styles.button} ${
+              !navigationLoading ? styles.enabled : styles.disabled
+            }`}
+            onClick={handleRefresh}>
+            <FontAwesomeIcon
+              icon={faRefresh}
+              className={navigationLoading ? styles.refreshSpin : ""}
+            />
+          </button>
+        </Tippy>
+      </span>
+
+      <Tippy
+        className={styles.tippy}
+        delay={250}
+        content="Info"
+        placement="left"
+        theme="light">
+        <button
+          className={`${styles.button} ${styles.info}`}
+          onClick={() => setShowInfo(true)}>
+          <FontAwesomeIcon icon={faInfo} />
+        </button>
+      </Tippy>
       <ConfirmClose
         onQuit={handleQuit}
         onCancel={handleCancelClose}

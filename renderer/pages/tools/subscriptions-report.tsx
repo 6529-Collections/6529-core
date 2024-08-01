@@ -11,7 +11,7 @@ import {
 import {
   getMintingDates,
   numberOfCardsForSeasonEnd,
-} from "../../helpers/meme_calendar.helplers";
+} from "../../helpers/meme_calendar.helpers";
 import { commonApiFetch } from "../../services/api/common-api";
 import { getCommonHeaders } from "../../helpers/server.helpers";
 import { Time } from "../../helpers/time";
@@ -97,7 +97,8 @@ function SubscriptionsReportComponent({
           </h1>
           <Link
             href="/about/subscriptions"
-            className="decoration-hover-underline">
+            className="decoration-hover-underline"
+          >
             Learn More
           </Link>
         </Col>
@@ -116,7 +117,8 @@ function SubscriptionsReportComponent({
               className="table table-bordered"
               style={{
                 borderColor: "white",
-              }}>
+              }}
+            >
               <thead>
                 <tr>
                   <th
@@ -124,7 +126,8 @@ function SubscriptionsReportComponent({
                       border: "1px solid white",
                       width: "50%",
                       padding: "15px",
-                    }}>
+                    }}
+                  >
                     Meme Card
                   </th>
                   <th
@@ -133,7 +136,8 @@ function SubscriptionsReportComponent({
                       width: "50%",
                       padding: "15px",
                       textAlign: "center",
-                    }}>
+                    }}
+                  >
                     Subscriptions
                   </th>
                 </tr>
@@ -165,7 +169,8 @@ function SubscriptionsReportComponent({
               className="table table-bordered"
               style={{
                 borderColor: "white",
-              }}>
+              }}
+            >
               <thead>
                 <tr>
                   <th
@@ -173,7 +178,8 @@ function SubscriptionsReportComponent({
                       border: "1px solid white",
                       width: "50%",
                       padding: "15px",
-                    }}>
+                    }}
+                  >
                     Meme Card
                   </th>
                   <th
@@ -182,7 +188,8 @@ function SubscriptionsReportComponent({
                       width: "50%",
                       padding: "15px",
                       textAlign: "center",
-                    }}>
+                    }}
+                  >
                     Subscriptions
                   </th>
                 </tr>
@@ -219,7 +226,8 @@ function SubscriptionDayDetails(
           width: "50%",
           padding: "15px",
           verticalAlign: "middle",
-        }}>
+        }}
+      >
         <span className="d-flex flex-column">
           <span>The Memes #{props.count.token_id}</span>
           <span className="font-color-silver font-smaller">
@@ -234,7 +242,8 @@ function SubscriptionDayDetails(
           padding: "15px",
           textAlign: "center",
           verticalAlign: "middle",
-        }}>
+        }}
+      >
         {props.count.count > 0 ? props.count.count.toLocaleString() : "0"}
       </td>
     </tr>
@@ -255,7 +264,8 @@ function RedeemedSubscriptionDetails(
           width: "50%",
           padding: "15px",
           verticalAlign: "middle",
-        }}>
+        }}
+      >
         <span className="d-flex gap-2 align-items-center flex-wrap">
           <Image
             src={props.count.image_url}
@@ -271,7 +281,8 @@ function RedeemedSubscriptionDetails(
           <span className="d-flex flex-column">
             <Link
               href={`/the-memes/${props.count.token_id}`}
-              className="decoration-hover-underline">
+              className="decoration-hover-underline"
+            >
               #{props.count.token_id} - {props.count.name}
             </Link>
             <span className="font-color-silver font-smaller">
@@ -287,7 +298,8 @@ function RedeemedSubscriptionDetails(
           padding: "15px",
           textAlign: "center",
           verticalAlign: "middle",
-        }}>
+        }}
+      >
         {props.count.count > 0 ? props.count.count.toLocaleString() : "0"}
       </td>
     </tr>

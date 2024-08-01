@@ -1,8 +1,10 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import UserPageTab from "./UserPageTab";
+import { AuthContext } from "../../auth/Auth";
 
 export enum UserPageTabType {
+  BRAIN = "BRAIN",
   REP = "REP",
   IDENTITY = "IDENTITY",
   COLLECTED = "COLLECTED",
@@ -10,17 +12,24 @@ export enum UserPageTabType {
   SUBSCRIPTIONS = "SUBSCRIPTIONS",
   PROXY = "PROXY",
   GROUPS = "GROUPS",
+  WAVES = "WAVES",
 }
 
 export const USER_PAGE_TAB_META: Record<
   UserPageTabType,
   { tab: UserPageTabType; title: string; route: string }
 > = {
+  [UserPageTabType.BRAIN]: {
+    tab: UserPageTabType.BRAIN,
+    title: "Brain",
+    route: "",
+  },
   [UserPageTabType.REP]: {
     tab: UserPageTabType.REP,
     title: "Rep",
-    route: "",
+    route: "rep",
   },
+
   [UserPageTabType.IDENTITY]: {
     tab: UserPageTabType.IDENTITY,
     title: "Identity",
@@ -51,11 +60,16 @@ export const USER_PAGE_TAB_META: Record<
     title: "Groups",
     route: "groups",
   },
+  [UserPageTabType.WAVES]: {
+    tab: UserPageTabType.WAVES,
+    title: "Waves",
+    route: "waves",
+  },
 };
 
 export default function UserPageTabs() {
   const router = useRouter();
-
+  const { showWaves } = useContext(AuthContext);
   const pathnameToTab = (pathname: string): UserPageTabType => {
     const regex = /\/\[user\]\/([^/?]+)/;
     const match = pathname.match(regex);
@@ -76,12 +90,24 @@ export default function UserPageTabs() {
     setTab(pathnameToTab(router.pathname));
   }, [router.query]);
 
+  const wrapperRef = useRef<HTMLDivElement>(null);
+
+  const getTabsToShow = () => {
+    if (showWaves) return Object.values(UserPageTabType);
+    return Object.values(UserPageTabType).filter(
+      (tab) => ![UserPageTabType.BRAIN, UserPageTabType.WAVES].includes(tab)
+    );
+  };
+  const [tabsToShow, setTabsToShow] = useState<UserPageTabType[]>(
+    getTabsToShow()
+  );
+  useEffect(() => setTabsToShow(getTabsToShow()), [showWaves]);
+
   return (
     <div className="tw-border-b tw-border-iron-700 tw-border-solid tw-border-x-0 tw-border-t-0 tw-overflow-hidden">
       <div
         className="tw-flex tw-gap-x-3 lg:tw-gap-x-4 tw-overflow-x-auto horizontal-menu-hide-scrollbar"
-        aria-label="Tabs"
-      >
+        aria-label="Tabs">
         {Object.values(UserPageTabType).map((tabType) => (
           <UserPageTab key={tabType} tab={tabType} activeTab={tab} />
         ))}

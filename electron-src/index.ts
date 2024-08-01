@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron/main";
+import { app, BrowserWindow, Menu } from "electron/main";
 import path from "node:path";
 import { initLogs } from "./utils/initLogs";
 import { getInfo } from "./utils/info";
@@ -21,6 +21,8 @@ import { getPort } from "get-port-please";
 import { exec } from "child_process";
 import { getValue, initStore, removeValue, setValue } from "./store";
 import { platform } from "os";
+import { menuTemplate } from "./menu";
+import { checkForUpdates } from "./update";
 
 let mainWindow: BrowserWindow | null = null;
 let PORT: number;
@@ -84,6 +86,9 @@ if (!gotTheLock) {
     Logger.info("All windows closed");
   });
 
+  const menu = Menu.buildFromTemplate(menuTemplate);
+  Menu.setApplicationMenu(menu);
+
   app.whenReady().then(async () => {
     app.setName("6529 CORE");
     protocol.handle("core6529", (_request) => {
@@ -110,6 +115,9 @@ if (!gotTheLock) {
     initStore();
 
     await createWindow();
+
+    checkForUpdates();
+
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         if (isMac()) {
@@ -155,6 +163,7 @@ async function createWindow() {
 
   mainWindow.on("close", (e) => {
     e.preventDefault();
+    mainWindow?.focus();
     mainWindow?.webContents.send("app-close");
   });
 

@@ -1,6 +1,9 @@
 {
   "name": "6529-core",
   "version": "0.0.1",
+  "author": {
+    "name": "6529"
+  },
   "description": "6529core APP",
   "private": false,
   "license": "MIT",
@@ -14,9 +17,9 @@
     "build-electron": "tsc -p electron-src && cp -r assets main/electron-src/",
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "pack-app": "npm run build && electron-builder --dir",
-    "dist-win": "npm run build && electron-builder --win --ia32 --x64 --arm64 --publish never",
-    "dist-mac": "npm run build && electron-builder --mac --x64 --arm64 --publish never",
-    "dist-linux": "npm run build && electron-builder --linux --publish never",
+    "dist-win": "npm run build && electron-builder --win --ia32 --x64 --arm64 --publish always",
+    "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
+    "dist-linux": "npm run build && electron-builder --linux --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
   "dependencies": {
@@ -44,6 +47,7 @@
     "electron-localshortcut": "^3.2.1",
     "electron-log": "^5.1.7",
     "electron-store": "^10.0.0",
+    "electron-updater": "^6.2.1",
     "ethereum-cryptography": "^2.2.0",
     "ethers": "^6.13.1",
     "framer-motion": "^11.3.9",
@@ -126,19 +130,30 @@
     "extraResources": [
       "assets/**/*"
     ],
+    "publish": [
+      {
+        "provider": "s3",
+        "bucket": "6529bucket",
+        "region": "eu-west-1",
+        "path": "6529-core-app/${os}/",
+        "acl": null
+      }
+    ],
     "mac": {
       "icon": "assets/icon.icns",
       "target": [
         {
           "target": "dmg",
           "arch": [
+            "arm64",
             "x64"
           ]
         },
         {
-          "target": "dmg",
+          "target": "zip",
           "arch": [
-            "arm64"
+            "arm64",
+            "x64"
           ]
         }
       ],
