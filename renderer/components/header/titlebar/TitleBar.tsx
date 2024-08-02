@@ -12,6 +12,10 @@ import { useRouter } from "next/router";
 import { Modal } from "react-bootstrap";
 import Tippy from "@tippyjs/react";
 
+function isWindows() {
+  return /Win/i.test(navigator.userAgent);
+}
+
 export default function TitleBar() {
   const router = useRouter();
 
@@ -96,6 +100,7 @@ export default function TitleBar() {
 
   return (
     <>
+      <div className={styles.spacer}></div>
       <span className={styles.buttonWrapper}>
         <Tippy
           className={styles.tippy}
@@ -143,7 +148,6 @@ export default function TitleBar() {
           </button>
         </Tippy>
       </span>
-
       <Tippy
         className={styles.tippy}
         delay={250}
@@ -151,7 +155,9 @@ export default function TitleBar() {
         placement="left"
         theme="light">
         <button
-          className={`${styles.button} ${styles.info}`}
+          className={`${styles.info} ${
+            isWindows() ? styles.infoWin : styles.infoMac
+          }`}
           onClick={() => setShowInfo(true)}>
           <FontAwesomeIcon icon={faInfo} />
         </button>

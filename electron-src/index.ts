@@ -143,9 +143,13 @@ async function createWindow() {
     minWidth: 900,
     minHeight: 700,
     icon: iconPath,
-    frame: false,
-    titleBarStyle: "hidden",
     backgroundColor: "#222",
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#222",
+      symbolColor: "#fff",
+      height: 22,
+    },
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
