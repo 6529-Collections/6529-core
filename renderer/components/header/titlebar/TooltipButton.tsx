@@ -55,7 +55,6 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
       theme="light"
       visible={tooltipVisible}
       onClickOutside={() => setTooltipVisible(false)}
-      hideOnClick={true}
       onShow={(instance) => handleMouseEnter()}
       onHide={(instance) => handleMouseLeave()}>
       <button
