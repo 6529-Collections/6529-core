@@ -149,6 +149,7 @@ export default function TitleBar() {
           }`}
           onClick={handleRefresh}
           icon={faRefresh}
+          iconStyles={navigationLoading ? styles.refreshSpin : ""}
           content="Refresh"
         />
         {showScrollTop && (

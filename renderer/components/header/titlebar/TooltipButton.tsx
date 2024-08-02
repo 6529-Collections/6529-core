@@ -9,6 +9,7 @@ type TooltipButtonProps = {
   placement?: "top" | "bottom" | "left" | "right";
   onClick: () => void;
   icon: IconProp;
+  iconStyles?: string;
   content?: string;
 };
 
@@ -17,6 +18,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
   placement = "right",
   onClick,
   icon,
+  iconStyles,
   content,
 }) => {
   const delay = 300;
@@ -62,7 +64,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
         onClick={handleButtonClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}>
-        <FontAwesomeIcon icon={icon} />
+        <FontAwesomeIcon icon={icon} className={iconStyles} />
       </button>
     </Tippy>
   );
