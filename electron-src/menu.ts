@@ -9,7 +9,7 @@ export const menuTemplate: Array<MenuItemConstructorOptions | MenuItem> = [
       { type: "separator" },
       {
         label: "Check for Updates",
-        click: () => checkForUpdates(true),
+        click: () => checkForUpdates(null, true),
       },
       { type: "separator" },
       { role: "quit" },

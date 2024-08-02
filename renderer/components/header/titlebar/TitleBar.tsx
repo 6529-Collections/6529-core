@@ -1,6 +1,6 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./TitleBar.module.scss";
 import {
+  faAnglesUp,
   faArrowLeft,
   faArrowRight,
   faInfo,
@@ -9,8 +9,12 @@ import {
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
-import { Modal } from "react-bootstrap";
-import Tippy from "@tippyjs/react";
+import { Button, Modal } from "react-bootstrap";
+import TooltipButton from "./TooltipButton";
+
+function isWindows() {
+  return /Win/i.test(navigator.userAgent);
+}
 
 export default function TitleBar() {
   const router = useRouter();
@@ -21,6 +25,8 @@ export default function TitleBar() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
+
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const handleStart = () => setNavigationLoading(true);
@@ -75,6 +81,29 @@ export default function TitleBar() {
   };
 
   useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 600) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const handleScrollTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  useEffect(() => {
     window.api.onAppClose(() => {
       setShowConfirm(true);
     });
@@ -96,66 +125,50 @@ export default function TitleBar() {
 
   return (
     <>
+      <div className={styles.spacer}></div>
       <span className={styles.buttonWrapper}>
-        <Tippy
-          className={styles.tippy}
-          delay={250}
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            canGoBack ? styles.enabled : styles.disabled
+          }`}
+          onClick={handleBack}
+          icon={faArrowLeft}
           content="Go Back"
-          placement="right"
-          theme="light">
-          <button
-            className={`${styles.button} ${
-              canGoBack ? styles.enabled : styles.disabled
-            }`}
-            onClick={handleBack}>
-            <FontAwesomeIcon icon={faArrowLeft} />
-          </button>
-        </Tippy>
-        <Tippy
-          className={styles.tippy}
-          delay={250}
+        />
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            canGoForward ? styles.enabled : styles.disabled
+          }`}
+          onClick={handleForward}
+          icon={faArrowRight}
           content="Go Forward"
-          placement="right"
-          theme="light">
-          <button
-            className={`${styles.button} ${
-              canGoForward ? styles.enabled : styles.disabled
-            }`}
-            onClick={handleForward}>
-            <FontAwesomeIcon icon={faArrowRight} />
-          </button>
-        </Tippy>
-        <Tippy
-          className={styles.tippy}
-          delay={250}
+        />
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            navigationLoading ? styles.disabled : styles.enabled
+          }`}
+          onClick={handleRefresh}
+          icon={faRefresh}
           content="Refresh"
-          placement="right"
-          theme="light">
-          <button
-            className={`${styles.button} ${
-              !navigationLoading ? styles.enabled : styles.disabled
-            }`}
-            onClick={handleRefresh}>
-            <FontAwesomeIcon
-              icon={faRefresh}
-              className={navigationLoading ? styles.refreshSpin : ""}
-            />
-          </button>
-        </Tippy>
+        />
+        {showScrollTop && (
+          <TooltipButton
+            buttonStyles={`${styles.button} ${styles.enabled}`}
+            onClick={handleScrollTop}
+            icon={faAnglesUp}
+            content="Scroll to top"
+          />
+        )}
       </span>
-
-      <Tippy
-        className={styles.tippy}
-        delay={250}
-        content="Info"
+      <TooltipButton
+        buttonStyles={`${styles.info} ${
+          isWindows() ? styles.infoWin : styles.infoMac
+        }`}
         placement="left"
-        theme="light">
-        <button
-          className={`${styles.button} ${styles.info}`}
-          onClick={() => setShowInfo(true)}>
-          <FontAwesomeIcon icon={faInfo} />
-        </button>
-      </Tippy>
+        onClick={() => setShowInfo(true)}
+        icon={faInfo}
+        content="Info"
+      />
       <ConfirmClose
         onQuit={handleQuit}
         onCancel={handleCancelClose}
@@ -174,6 +187,11 @@ interface InfoProps {
 
 const InfoModal: React.FC<InfoProps> = ({ show, onHide }) => {
   const [info, setInfo] = useState<any>({});
+
+  const handleCheckUpdates = () => {
+    window.api.checkUpdates();
+    onHide();
+  };
 
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
@@ -203,6 +221,14 @@ const InfoModal: React.FC<InfoProps> = ({ show, onHide }) => {
         {printInfo("CHROME VERSION", info.chrome_version)}
         {printInfo("NODE VERSION", info.node_version)}
         {printInfo("OS", `${info.os}:${info.arch}`)}
+        <div className="text-center">
+          <Button
+            variant="primary"
+            onClick={() => handleCheckUpdates()}
+            className="btn-block pt-2 pb-2">
+            Check for Updates
+          </Button>
+        </div>
       </Modal.Body>
     </Modal>
   );

@@ -32,15 +32,12 @@ export default function AppWallet({ image }: { readonly image: string }) {
             <Image
               loading="eager"
               priority
-              className={styles.logoIcon}
-              src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png"
+              src="/6529.png"
               alt="6529Seize"
-              width={0}
-              height={0}
+              width={60}
+              height={60}
               style={{
-                width: "200px",
-                height: "auto",
-                paddingTop: "25px",
+                marginTop: "25px",
               }}
             />
             {completed ? (

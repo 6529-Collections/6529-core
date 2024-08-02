@@ -4,8 +4,16 @@ import { isDev } from "./utils/env";
 import Logger from "electron-log";
 
 let updateCheckInProgress = false;
+let mainWindow: Electron.BrowserWindow | null;
 
-export function checkForUpdates(manual: boolean = false) {
+export function checkForUpdates(
+  window: Electron.BrowserWindow | null,
+  manual: boolean = false
+) {
+  if (window) {
+    mainWindow = window;
+  }
+
   if (isDev) {
     Logger.info("Skipping update check in development mode");
 
@@ -43,6 +51,10 @@ autoUpdater.on("update-available", (info) => {
     });
 });
 
+autoUpdater.on("download-progress", (progress) => {
+  mainWindow?.setProgressBar(progress.percent / 100);
+});
+
 autoUpdater.on("update-downloaded", (info) => {
   dialog
     .showMessageBox({
@@ -60,7 +72,7 @@ autoUpdater.on("update-downloaded", (info) => {
 
 autoUpdater.on("error", (err) => {
   dialog.showErrorBox(
-    "Error: ",
+    "Error",
     err == null ? "unknown" : (err.stack ?? err).toString()
   );
 });

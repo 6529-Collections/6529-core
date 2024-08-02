@@ -25,6 +25,7 @@ import { menuTemplate } from "./menu";
 import { checkForUpdates } from "./update";
 
 let mainWindow: BrowserWindow | null = null;
+let splash: BrowserWindow | null = null;
 let PORT: number;
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -116,7 +117,7 @@ if (!gotTheLock) {
 
     await createWindow();
 
-    checkForUpdates();
+    checkForUpdates(mainWindow);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -139,16 +140,33 @@ async function createWindow() {
     iconPath = path.join(__dirname, "assets", "icon.png");
   }
 
+  splash = new BrowserWindow({
+    width: 300,
+    height: 300,
+    frame: false,
+    backgroundColor: "#222",
+    transparent: true,
+  });
+
+  splash.loadFile(path.join(__dirname, "assets/splash.html"));
+
   mainWindow = new BrowserWindow({
     minWidth: 900,
     minHeight: 700,
     icon: iconPath,
     backgroundColor: "#222",
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#000",
+      symbolColor: "#fff",
+      height: 30,
+    },
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
+    show: false,
   });
 
   const url = `http://localhost:${PORT}`;
@@ -157,9 +175,14 @@ async function createWindow() {
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
+    splash?.webContents.openDevTools();
   });
 
-  mainWindow.maximize();
+  mainWindow.once("ready-to-show", () => {
+    splash?.destroy();
+    mainWindow?.maximize();
+    mainWindow?.show();
+  });
 
   mainWindow.on("close", (e) => {
     e.preventDefault();
@@ -367,4 +390,8 @@ ipcMain.handle("store:set", (_event, key, value) => {
 
 ipcMain.handle("store:remove", (_event, key) => {
   removeValue(key);
+});
+
+ipcMain.on("check-updates", () => {
+  checkForUpdates(mainWindow, true);
 });
