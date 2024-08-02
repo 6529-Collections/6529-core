@@ -10,7 +10,7 @@ import {
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
-import { Modal } from "react-bootstrap";
+import { Button, Modal } from "react-bootstrap";
 import Tippy from "@tippyjs/react";
 
 function isWindows() {
@@ -221,6 +221,11 @@ interface InfoProps {
 const InfoModal: React.FC<InfoProps> = ({ show, onHide }) => {
   const [info, setInfo] = useState<any>({});
 
+  const handleCheckUpdates = () => {
+    window.api.checkUpdates();
+    onHide();
+  };
+
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
       setInfo(newInfo);
@@ -249,6 +254,14 @@ const InfoModal: React.FC<InfoProps> = ({ show, onHide }) => {
         {printInfo("CHROME VERSION", info.chrome_version)}
         {printInfo("NODE VERSION", info.node_version)}
         {printInfo("OS", `${info.os}:${info.arch}`)}
+        <div className="text-center">
+          <Button
+            variant="primary"
+            onClick={() => handleCheckUpdates()}
+            className="btn-block pt-2 pb-2">
+            Check for Updates
+          </Button>
+        </div>
       </Modal.Body>
     </Modal>
   );

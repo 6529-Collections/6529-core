@@ -144,7 +144,6 @@ async function createWindow() {
     width: 300,
     height: 300,
     frame: false,
-    alwaysOnTop: true,
     backgroundColor: "#222",
     transparent: true,
   });
