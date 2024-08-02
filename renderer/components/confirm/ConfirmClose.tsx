@@ -17,7 +17,7 @@ const ConfirmClose: React.FC<ConfirmProps> = ({
 }) => {
   return (
     <Modal show={show} onHide={onCancel} backdrop keyboard={false} centered>
-      <Modal.Header className={styles.modalContent}>
+      <Modal.Header className={styles.modalHeader}>
         <Modal.Title>Close App</Modal.Title>
       </Modal.Header>
       <Modal.Footer className={styles.modalContent}>

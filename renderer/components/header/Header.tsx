@@ -15,6 +15,7 @@ import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import { AuthContext } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
 import TitleBar from "./titlebar/TitleBar";
+import { faBars } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   onLoad?: () => void;
@@ -104,7 +105,7 @@ export default function Header(props: Readonly<Props>) {
         className={`${styles.burgerMenu} ${
           burgerMenuOpen ? styles.burgerMenuOpen : ""
         }`}>
-        <Container className="pt-2 pb-2">
+        <Container className="pt-3 pb-3">
           <Row>
             <Col className="d-flex justify-content-end">
               <FontAwesomeIcon
@@ -127,11 +128,10 @@ export default function Header(props: Readonly<Props>) {
               <Image
                 loading="eager"
                 priority
-                className={styles.logoIcon}
-                src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png"
+                src="/6529.png"
                 alt="6529Seize"
-                width={319}
-                height={50}
+                width={40}
+                height={40}
               />
             </Col>
           </Row>
@@ -742,21 +742,14 @@ export default function Header(props: Readonly<Props>) {
                           <div className="tw-mr-6 xl:tw-mr-2">
                             <HeaderSearchButton />
                           </div>
-                          <Image
-                            loading="eager"
-                            priority
-                            width="0"
-                            height="0"
-                            style={{
-                              height: "auto",
-                              width: "auto",
-                              maxHeight: "42px",
-                            }}
-                            className={`${styles.burgerMenuBtn} d-block `}
-                            src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Icon.png"
-                            alt="6529Seize"
+                          <button
+                            type="button"
+                            aria-label="Search"
+                            title="Search"
                             onClick={() => setBurgerMenuOpen(true)}
-                          />
+                            className="tw-flex tw-items-center tw-justify-center tw-rounded-lg tw-bg-iron-800 tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-h-11 tw-w-11 tw-border-0 tw-text-iron-300 hover:tw-text-iron-50 tw-shadow-sm hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 tw-transition tw-duration-300 tw-ease-out">
+                            <FontAwesomeIcon icon={faBars} height={20} />
+                          </button>
                         </div>
                         <Navbar
                           id="seize-navbar-nav"

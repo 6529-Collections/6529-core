@@ -19,12 +19,6 @@
   height: $header-height;
 }
 
-.logoIcon {
-  width: 100%;
-  height: auto;
-  max-width: 250px;
-}
-
 .headerRight {
   font-weight: bold;
   font-size: $font-size;
@@ -43,7 +37,7 @@
   width: 100%;
   height: 100%;
   background-color: $bg-color-1;
-  z-index: 51;
+  z-index: 1001;
   padding-top: 20px;
   padding-bottom: 20px;
   overflow-y: auto;

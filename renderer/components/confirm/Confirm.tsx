@@ -19,7 +19,7 @@ const Confirm: React.FC<ConfirmProps> = ({
 }) => {
   return (
     <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <Modal.Header className={styles.modalContent}>
+      <Modal.Header className={styles.modalHeader}>
         <Modal.Title>{title}</Modal.Title>
       </Modal.Header>
       <Modal.Body className={styles.modalContent}>
