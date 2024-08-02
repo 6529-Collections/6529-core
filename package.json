@@ -16,7 +16,7 @@
     "rebuild-sql": "npx electron-rebuild -f -w better-sqlite3",
     "build-renderer": "next build renderer",
     "build-electron": "tsc -p electron-src && cp -r assets main/electron-src/",
-    "build-electron-win": "tsc -p electron-src && xcopy /E /I assets main\\electron-src\\",
+    "build-electron-win": "tsc -p electron-src && xcopy /E /I assets main\\electron-src\\assets\\",
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "pack-app": "npm run build && electron-builder --dir",
     "dist-win": "npm run build && electron-builder --win --ia32 --x64 --arm64 --publish always",
