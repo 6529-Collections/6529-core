@@ -27,6 +27,7 @@ import { ProfileProxy } from "../../generated/models/ProfileProxy";
 import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
 import { useRouter } from "next/router";
 import { isElectron } from "../../helpers";
+import { useEffectOnce } from "../../hooks/useEffectOnce";
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
@@ -121,7 +122,7 @@ export default function Auth({
     }
   }, [profileProxies, connectedProfile]);
 
-  useEffect(() => {
+  useEffectOnce(() => {
     if (!address) {
       removeAuthJwt();
       invalidateAll();
