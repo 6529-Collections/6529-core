@@ -10,7 +10,7 @@
   "main": "main/electron-src/index.js",
   "scripts": {
     "clean": "rm -rf dist main renderer/out renderer/.next",
-    "clean-win": "rmdir /s /q dist && rmdir /s /q main && rmdir /s /q renderer\\out && rmdir /s /q renderer\\.next",
+    "clean-win": "rimraf dist main renderer/out renderer/.next",
     "dev": "npm run clean && npm run build-electron && electron . --dev",
     "dev-win": "npm run clean-win && npm run build-electron-win && electron . --dev",
     "start": "electron . --start",
@@ -108,6 +108,7 @@
     "postcss": "^8.4.38",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "rimraf": "^6.0.1",
     "sass": "^1.77.2",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5"
