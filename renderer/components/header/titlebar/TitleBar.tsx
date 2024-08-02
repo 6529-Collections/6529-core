@@ -1,4 +1,3 @@
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./TitleBar.module.scss";
 import {
   faAnglesUp,
@@ -11,7 +10,7 @@ import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
 import { Button, Modal } from "react-bootstrap";
-import Tippy from "@tippyjs/react";
+import TooltipButton from "./TooltipButton";
 
 function isWindows() {
   return /Win/i.test(navigator.userAgent);
@@ -128,80 +127,48 @@ export default function TitleBar() {
     <>
       <div className={styles.spacer}></div>
       <span className={styles.buttonWrapper}>
-        <Tippy
-          className={styles.tippy}
-          delay={250}
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            canGoBack ? styles.enabled : styles.disabled
+          }`}
+          onClick={handleBack}
+          icon={faArrowLeft}
           content="Go Back"
-          placement="right"
-          theme="light">
-          <button
-            className={`${styles.button} ${
-              canGoBack ? styles.enabled : styles.disabled
-            }`}
-            onClick={handleBack}>
-            <FontAwesomeIcon icon={faArrowLeft} />
-          </button>
-        </Tippy>
-        <Tippy
-          className={styles.tippy}
-          delay={250}
+        />
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            canGoForward ? styles.enabled : styles.disabled
+          }`}
+          onClick={handleForward}
+          icon={faArrowRight}
           content="Go Forward"
-          placement="right"
-          theme="light">
-          <button
-            className={`${styles.button} ${
-              canGoForward ? styles.enabled : styles.disabled
-            }`}
-            onClick={handleForward}>
-            <FontAwesomeIcon icon={faArrowRight} />
-          </button>
-        </Tippy>
-        <Tippy
-          className={styles.tippy}
-          delay={250}
+        />
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            navigationLoading ? styles.disabled : styles.enabled
+          }`}
+          onClick={handleRefresh}
+          icon={faRefresh}
           content="Refresh"
-          placement="right"
-          theme="light">
-          <button
-            className={`${styles.button} ${
-              !navigationLoading ? styles.enabled : styles.disabled
-            }`}
-            onClick={handleRefresh}>
-            <FontAwesomeIcon
-              icon={faRefresh}
-              className={navigationLoading ? styles.refreshSpin : ""}
-            />
-          </button>
-        </Tippy>
+        />
         {showScrollTop && (
-          <Tippy
-            className={styles.tippy}
-            delay={250}
+          <TooltipButton
+            buttonStyles={`${styles.button} ${styles.enabled}`}
+            onClick={handleScrollTop}
+            icon={faAnglesUp}
             content="Scroll to top"
-            placement="right"
-            theme="light">
-            <button
-              className={`${styles.button} ${styles.enabled}`}
-              onClick={handleScrollTop}>
-              <FontAwesomeIcon icon={faAnglesUp} />
-            </button>
-          </Tippy>
+          />
         )}
       </span>
-      <Tippy
-        className={styles.tippy}
-        delay={250}
-        content="Info"
+      <TooltipButton
+        buttonStyles={`${styles.info} ${
+          isWindows() ? styles.infoWin : styles.infoMac
+        }`}
         placement="left"
-        theme="light">
-        <button
-          className={`${styles.info} ${
-            isWindows() ? styles.infoWin : styles.infoMac
-          }`}
-          onClick={() => setShowInfo(true)}>
-          <FontAwesomeIcon icon={faInfo} />
-        </button>
-      </Tippy>
+        onClick={() => setShowInfo(true)}
+        icon={faInfo}
+        content="Info"
+      />
       <ConfirmClose
         onQuit={handleQuit}
         onCancel={handleCancelClose}
