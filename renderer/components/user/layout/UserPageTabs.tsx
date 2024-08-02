@@ -2,6 +2,7 @@ import { useRouter } from "next/router";
 import { useContext, useEffect, useRef, useState } from "react";
 import UserPageTab from "./UserPageTab";
 import { AuthContext } from "../../auth/Auth";
+import { useAccount } from "wagmi";
 
 export enum UserPageTabType {
   BRAIN = "BRAIN",
@@ -104,13 +105,22 @@ export default function UserPageTabs() {
   useEffect(() => setTabsToShow(getTabsToShow()), [showWaves]);
 
   return (
-    <div className="tw-border-b tw-border-iron-700 tw-border-solid tw-border-x-0 tw-border-t-0 tw-overflow-hidden">
+    <div className="tw-overflow-hidden tw-border-b tw-border-iron-700 tw-border-solid tw-border-x-0 tw-border-t-0">
       <div
         className="tw-flex tw-gap-x-3 lg:tw-gap-x-4 tw-overflow-x-auto horizontal-menu-hide-scrollbar"
         aria-label="Tabs">
-        {Object.values(UserPageTabType).map((tabType) => (
-          <UserPageTab key={tabType} tab={tabType} activeTab={tab} />
-        ))}
+        <div
+          className="-tw-mb-px tw-flex tw-gap-x-3 lg:tw-gap-x-4"
+          aria-label="Tabs">
+          {tabsToShow.map((tabType) => (
+            <UserPageTab
+              key={tabType}
+              tab={tabType}
+              activeTab={tab}
+              parentRef={wrapperRef}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );
