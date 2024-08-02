@@ -159,7 +159,7 @@ async function createWindow() {
     titleBarOverlay: {
       color: "#000",
       symbolColor: "#fff",
-      height: 25,
+      height: 30,
     },
     webPreferences: {
       nodeIntegration: false,
