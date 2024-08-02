@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Loading...</title>
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        background-color: #000;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+      img {
+        width: 200px;
+        animation: spin 5s linear infinite;
+        animation-delay: 0.5s;
+        margin-bottom: 20px;
+      }
+      p {
+        font-size: 16px;
+        color: white;
+      }
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <img src="./icon.png" alt="6529" />
+    <p>Loading</p>
+  </body>
+</html>
