@@ -45,6 +45,7 @@ export const api = {
   handleWalletResponse: (response: any) => {
     ipcRenderer.on("wallet-response", response);
   },
+  checkUpdates: () => ipcRenderer.send("check-updates"),
 };
 
 contextBridge.exposeInMainWorld("api", api);

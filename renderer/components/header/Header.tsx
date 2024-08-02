@@ -717,11 +717,10 @@ export default function Header(props: Readonly<Props>) {
                     <Image
                       loading="eager"
                       priority
-                      className={styles.logoIcon}
-                      src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png"
+                      src="/6529.png"
                       alt="6529Seize"
-                      width={319}
-                      height={50}
+                      width={40}
+                      height={40}
                     />
                   </Link>
                 </Col>
@@ -1066,21 +1065,6 @@ export default function Header(props: Readonly<Props>) {
                             <HeaderSearchButton />
                           </Nav>
                         </Navbar>
-                        <Image
-                          loading="eager"
-                          priority
-                          width="0"
-                          height="0"
-                          style={{
-                            height: "auto",
-                            width: "auto",
-                            maxHeight: "42px",
-                            paddingLeft: "15px",
-                          }}
-                          className={`d-none ${styles.dMdBlock}`}
-                          src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Icon.png"
-                          alt="6529Seize"
-                        />
                       </Container>
                     </Navbar>
                   </Container>

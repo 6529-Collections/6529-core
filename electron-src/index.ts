@@ -392,3 +392,7 @@ ipcMain.handle("store:set", (_event, key, value) => {
 ipcMain.handle("store:remove", (_event, key) => {
   removeValue(key);
 });
+
+ipcMain.on("check-updates", () => {
+  checkForUpdates(mainWindow, true);
+});

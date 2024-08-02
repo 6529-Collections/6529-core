@@ -1,6 +1,7 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import styles from "./TitleBar.module.scss";
 import {
+  faAnglesUp,
   faArrowLeft,
   faArrowRight,
   faInfo,
@@ -25,6 +26,8 @@ export default function TitleBar() {
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
+
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     const handleStart = () => setNavigationLoading(true);
@@ -76,6 +79,29 @@ export default function TitleBar() {
       setNavigationLoading(true);
       window.location.reload();
     }
+  };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 600) {
+        setShowScrollTop(true);
+      } else {
+        setShowScrollTop(false);
+      }
+    };
+
+    window.addEventListener("scroll", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const handleScrollTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
   };
 
   useEffect(() => {
@@ -147,6 +173,20 @@ export default function TitleBar() {
             />
           </button>
         </Tippy>
+        {showScrollTop && (
+          <Tippy
+            className={styles.tippy}
+            delay={250}
+            content="Scroll to top"
+            placement="right"
+            theme="light">
+            <button
+              className={`${styles.button} ${styles.enabled}`}
+              onClick={handleScrollTop}>
+              <FontAwesomeIcon icon={faAnglesUp} />
+            </button>
+          </Tippy>
+        )}
       </span>
       <Tippy
         className={styles.tippy}
