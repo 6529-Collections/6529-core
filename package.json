@@ -10,7 +10,7 @@
   "main": "main/electron-src/index.js",
   "scripts": {
     "clean": "rm -rf dist main renderer/out renderer/.next",
-    "dev": "npm run build-electron && electron . --dev",
+    "dev": "npm run clean && npm run build-electron && electron . --dev",
     "dev-win": "npm run build-electron-win && electron . --dev",
     "start": "electron . --start",
     "rebuild-sql": "npx electron-rebuild -f -w better-sqlite3",
