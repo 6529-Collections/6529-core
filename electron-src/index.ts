@@ -116,7 +116,7 @@ if (!gotTheLock) {
 
     await createWindow();
 
-    checkForUpdates();
+    checkForUpdates(mainWindow);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -143,6 +143,8 @@ async function createWindow() {
     minWidth: 900,
     minHeight: 700,
     icon: iconPath,
+    frame: false,
+    titleBarStyle: "hidden",
     backgroundColor: "#222",
     webPreferences: {
       nodeIntegration: false,
