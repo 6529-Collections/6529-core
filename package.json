@@ -9,6 +9,7 @@
   "license": "MIT",
   "main": "main/electron-src/index.js",
   "scripts": {
+    "pull-web": "git subtree pull --prefix=renderer https://github.com/6529-Collections/6529seize-frontend.git main",
     "clean": "rm -rf dist main renderer/out renderer/.next",
     "clean-win": "rimraf dist main renderer/out renderer/.next",
     "dev": "npm run clean && npm run build-electron && electron . --dev",
