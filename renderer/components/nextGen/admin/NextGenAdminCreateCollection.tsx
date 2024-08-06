@@ -9,12 +9,14 @@ import {
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
 import { NULL_MERKLE } from "../../../constants";
+import { useAccount } from "wagmi";
 
 interface Props {
   close: () => void;
 }
 
 export default function NextGenAdminCreateCollection(props: Readonly<Props>) {
+  const account = useAccount();
   const [collectionName, setCollectionName] = useState("");
   const [artist, setArtist] = useState("");
   const [description, setDescription] = useState("");
@@ -79,6 +81,7 @@ export default function NextGenAdminCreateCollection(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           collectionName,
           artist,

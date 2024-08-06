@@ -14,6 +14,8 @@ import { commonApiFetch } from "../../services/api/common-api";
 import { MemeSeason } from "../../entities/ISeason";
 import LeaderboardCardsCollectedComponent from "./LeaderboardCardsCollected";
 import LeaderboardInteractionsComponent from "./LeaderboardInteractions";
+import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 export enum Content {
   ALL = "All",
@@ -72,7 +74,7 @@ export default function Leaderboard(
   }, [content, collector]);
 
   useEffect(() => {
-    fetchUrl(`${process.env.API_ENDPOINT}/api/blocks?page_size=${1}`).then(
+    fetchUrl(`${SEIZE_API_URL}/api/blocks?page_size=${1}`).then(
       (response: DBResponse) => {
         if (response.data.length > 0) {
           setLastTDH({
@@ -91,9 +93,7 @@ export default function Leaderboard(
   }, []);
 
   useEffect(() => {
-    let url = `${
-      process.env.API_ENDPOINT
-    }/api/tdh_global_history?page_size=${1}`;
+    let url = `${SEIZE_API_URL}/api/tdh_global_history?page_size=${1}`;
     fetchUrl(url).then((response: DBResponse) => {
       const tdhH = response.data[0];
       setGlobalTdhHistory(tdhH);
@@ -191,9 +191,12 @@ export default function Leaderboard(
               <span>
                 TDH Block&nbsp;
                 <a
-                  href={`https://etherscan.io/block/${lastTDH.block}`}
-                  rel="noreferrer"
-                  target="_blank">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser(
+                      `https://etherscan.io/block/${lastTDH.block}`
+                    )
+                  }>
                   {lastTDH.block}
                 </a>
               </span>

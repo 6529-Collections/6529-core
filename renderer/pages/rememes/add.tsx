@@ -4,6 +4,7 @@ import { useState } from "react";
 import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -28,16 +29,10 @@ export default function ReMemes() {
         <title>Add ReMemes | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Add ReMemes | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/rememes/add`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/rememes/add`} />
         <meta property="og:title" content="ReMemes" />
         <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/re-memes-b.jpeg`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/re-memes-b.jpeg`} />
       </Head>
 
       <main className={styles.main}>

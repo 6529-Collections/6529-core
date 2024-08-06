@@ -4,6 +4,8 @@ import { NEXTGEN_CHAIN_ID } from "./nextgen_contracts";
 import DotLoader from "../dotLoader/DotLoader";
 import { useEffect, useState } from "react";
 import { NULL_MERKLE } from "../../constants";
+import { openInExternalBrowser } from "../../helpers";
+import Link from "next/link";
 
 const TRANSFER_EVENT =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -91,9 +93,12 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
         <span>
           Transaction {getStatusMessage()}{" "}
           <a
-            href={getTransactionLink(NEXTGEN_CHAIN_ID, props.hash)}
-            target="_blank"
-            rel="noreferrer">
+            href="#"
+            onClick={() =>
+              openInExternalBrowser(
+                getTransactionLink(NEXTGEN_CHAIN_ID, props.hash!)
+              )
+            }>
             view
           </a>
           {waitContractWrite.isLoading && (
@@ -110,12 +115,7 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
           <ul>
             {mintedTokens.map((t) => (
               <li key={`minted-token-${t}`}>
-                <a
-                  href={`/nextgen/token/${t}`}
-                  target="_blank"
-                  rel="noreferrer">
-                  #{t}
-                </a>
+                <Link href={`/nextgen/token/${t}`}>#{t}</Link>
               </li>
             ))}
           </ul>

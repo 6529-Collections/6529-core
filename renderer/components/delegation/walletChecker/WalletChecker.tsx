@@ -19,6 +19,7 @@ import {
 } from "../../../pages/delegation/[...section]";
 import { fetchUrl } from "../../../services/6529api";
 import Address from "../../address/Address";
+import { SEIZE_API_URL } from "../../../../constants";
 
 interface Props {
   path?: string;
@@ -88,7 +89,7 @@ export default function WalletCheckerComponent(
   }, [walletAddressFromEns.data]);
 
   function fetchDelegations(address: string) {
-    const url = `${process.env.API_ENDPOINT}/api/delegations/${address}`;
+    const url = `${SEIZE_API_URL}/api/delegations/${address}`;
     fetchUrl(url).then((response: DBResponse) => {
       setDelegations(
         [...response.data].filter(
@@ -211,7 +212,7 @@ export default function WalletCheckerComponent(
   }, [consolidationsLoaded]);
 
   function fetchConsolidatedWallets(address: string) {
-    const url = `${process.env.API_ENDPOINT}/api/consolidations/${address}`;
+    const url = `${SEIZE_API_URL}/api/consolidations/${address}`;
     fetchUrl(url).then((response: DBResponse) => {
       const myConsolidatedWallets: {
         address: string;
@@ -238,13 +239,13 @@ export default function WalletCheckerComponent(
   }
 
   function fetchConsolidations(address: string) {
-    const url = `${process.env.API_ENDPOINT}/api/consolidations/${address}?show_incomplete=true`;
+    const url = `${SEIZE_API_URL}/api/consolidations/${address}?show_incomplete=true`;
     fetchUrl(url).then((response1: DBResponse) => {
       if (response1.data.length > 0) {
         const newWallet = areEqualAddresses(address, response1.data[0].wallet1)
           ? response1.data[0].wallet2
           : response1.data[0].wallet1;
-        const newUrl = `${process.env.API_ENDPOINT}/api/consolidations/${newWallet}?show_incomplete=true`;
+        const newUrl = `${SEIZE_API_URL}/api/consolidations/${newWallet}?show_incomplete=true`;
         fetchUrl(newUrl).then((response2: DBResponse) => {
           setAllConsolidations([...response1.data, ...response2.data]);
         });
@@ -389,7 +390,7 @@ export default function WalletCheckerComponent(
               <>
                 <Form.Group as={Row} className="pt-4">
                   <Col sm={12}>
-                    <h5 className="pt-2 pb-2">
+                    <h5 className="pt-2 pb-2 float-none">
                       Delegations ({delegations.length})
                     </h5>
                     {delegations.length > 0 ? (
@@ -474,7 +475,7 @@ export default function WalletCheckerComponent(
                 </Form.Group>
                 {activeDelegation && (
                   <div className="pt-2">
-                    <h5 className="pt-2 pb-2">
+                    <h5 className="pt-2 pb-2 float-none">
                       Active Minting Delegation for The Memes
                     </h5>
                     <div className="d-flex align-items-center gap-4">
@@ -516,7 +517,7 @@ export default function WalletCheckerComponent(
                 )}
                 <Form.Group as={Row} className="pt-4">
                   <Col sm={12}>
-                    <h5 className="pt-2 pb-2">
+                    <h5 className="pt-2 pb-2 float-none">
                       Delegation Managers ({subDelegations.length})
                     </h5>
                     {subDelegations.length > 0 ? (
@@ -592,7 +593,7 @@ export default function WalletCheckerComponent(
             {consolidationsLoaded && (
               <Form.Group as={Row} className="pt-4">
                 <Col sm={12}>
-                  <h5 className="pt-2 pb-2">
+                  <h5 className="pt-2 pb-2 float-none">
                     Consolidations ({consolidations.length})
                   </h5>
                   {consolidations.length > 0 ? (
@@ -654,7 +655,9 @@ export default function WalletCheckerComponent(
                   {consolidations.length > 1 &&
                     consolidatedWallets.length > 1 && (
                       <div className="pt-2">
-                        <h5 className="pt-2 pb-2">Active Consolidation</h5>
+                        <h5 className="pt-2 pb-2 float-none">
+                          Active Consolidation
+                        </h5>
                         <div className="d-flex align-items-center">
                           {consolidatedWallets.map((wallet, index) => (
                             <Fragment key={`consolidated-wallets-${index}`}>

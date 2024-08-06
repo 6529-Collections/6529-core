@@ -108,12 +108,10 @@ export default function UserPageTabs() {
     <div className="tw-overflow-hidden tw-border-b tw-border-iron-700 tw-border-solid tw-border-x-0 tw-border-t-0">
       <div
         className="tw-flex tw-gap-x-3 lg:tw-gap-x-4 tw-overflow-x-auto horizontal-menu-hide-scrollbar"
-        aria-label="Tabs"
-      >
+        aria-label="Tabs">
         <div
           className="-tw-mb-px tw-flex tw-gap-x-3 lg:tw-gap-x-4"
-          aria-label="Tabs"
-        >
+          aria-label="Tabs">
           {tabsToShow.map((tabType) => (
             <UserPageTab
               key={tabType}

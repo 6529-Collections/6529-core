@@ -27,6 +27,8 @@ import {
   getNextGenIconUrl,
   getNextGenImageUrl,
 } from "../nextGen/collections/nextgenToken/NextGenTokenImage";
+import { openInExternalBrowser } from "../../helpers";
+import Link from "next/link";
 
 function calculateRoyaltiesPercentage(value: number, royalties: number) {
   return Math.round((royalties / value) * 10000) / 10000;
@@ -151,7 +153,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
   function printNft() {
     if (props.nft) {
       return (
-        <a href={getHref()} target="_blank" rel="noreferrer">
+        <a href="#" onClick={() => openInExternalBrowser(getHref())}>
           <Image
             width={0}
             height={0}
@@ -255,10 +257,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
       <>NextGen #{normalized.collection_id}</>
     );
     const tokenInfo = (
-      <a
-        href={`/nextgen/token/${props.tr.token_id}/provenance`}
-        target="_blank"
-        rel="noreferrer">
+      <Link href={`/nextgen/token/${props.tr.token_id}/provenance`}>
         {collectionName} #{normalized.token_id}
         <Image
           width={0}
@@ -278,7 +277,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
             }
           }}
         />
-      </a>
+      </Link>
     );
 
     if (isNullAddress(props.tr.from_address)) {
@@ -359,10 +358,13 @@ export default function LatestActivityRow(props: Readonly<Props>) {
         )}
         {printGas(props.tr.gas, props.tr.gas_gwei, props.tr.gas_price_gwei)}
         <a
-          href={`https://etherscan.io/tx/${props.tr.transaction}`}
-          className={styles.transactionLink}
-          target="_blank"
-          rel="noreferrer">
+          href="#"
+          onClick={() =>
+            openInExternalBrowser(
+              `https://etherscan.io/tx/${props.tr.transaction}`
+            )
+          }
+          className={styles.transactionLink}>
           <FontAwesomeIcon
             className={styles.gasIcon}
             icon="external-link-square"></FontAwesomeIcon>

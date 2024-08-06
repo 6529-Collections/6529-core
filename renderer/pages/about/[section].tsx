@@ -27,6 +27,7 @@ import AboutSubscriptions from "../../components/about/AboutSubscriptions";
 import AboutNakamotoThreshold from "../../components/about/AboutNakamotoThreshold";
 import AboutCopyright from "../../components/about/AboutCopyright";
 import AboutPrimaryAddress from "../../components/about/AboutPrimaryAddress";
+import { SEIZE_URL } from "../../../constants";
 
 const AboutCookiePolicy = dynamic(
   () => import("../../components/about/AboutCookiePolicy"),
@@ -169,15 +170,12 @@ export default function About(props: any) {
           name="description"
           content={`About - ${sectionTitle} | 6529 SEIZE`}
         />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/about/${section}`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/about/${section}`} />
         <meta property="og:title" content={`About - ${sectionTitle}`} />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
       <main className={styles.main}>

@@ -18,6 +18,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import DotLoader from "../dotLoader/DotLoader";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
+import { SEIZE_API_URL } from "../../../constants";
 
 const PAGE_SIZE = 40;
 
@@ -57,12 +58,10 @@ export default function Rememes() {
   );
 
   useEffect(() => {
-    fetchUrl(`${process.env.API_ENDPOINT}/api/memes_lite`).then(
-      (response: DBResponse) => {
-        setMemes(response.data);
-        setMemesLoaded(true);
-      }
-    );
+    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`).then((response: DBResponse) => {
+      setMemes(response.data);
+      setMemesLoaded(true);
+    });
   }, []);
 
   function fetchResults(mypage: number) {
@@ -79,7 +78,7 @@ export default function Rememes() {
     if (selectedSorting === RememeSort.CREATED_ASC) {
       sort = "&sort=created_at&sort_direction=desc";
     }
-    let url = `${process.env.API_ENDPOINT}/api/rememes?page_size=${PAGE_SIZE}&page=${mypage}${memeFilter}${tokenTypeFilter}${sort}`;
+    let url = `${SEIZE_API_URL}/api/rememes?page_size=${PAGE_SIZE}&page=${mypage}${memeFilter}${tokenTypeFilter}${sort}`;
     fetchUrl(url).then((response: DBResponse) => {
       setTotalResults(response.count);
       setRememes(response.data);

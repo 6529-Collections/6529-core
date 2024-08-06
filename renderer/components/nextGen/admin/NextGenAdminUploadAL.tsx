@@ -17,6 +17,7 @@ import {
   NextGenCollectionIdFormGroup,
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
+import { SEIZE_API_URL } from "../../../../constants";
 interface Props {
   close: () => void;
 }
@@ -81,6 +82,7 @@ export default function NextGenAdminUploadAL(props: Readonly<Props>) {
     signMessage.reset();
     setUploading(true);
     signMessage.signMessage({
+      account: account.address,
       message: uuid,
     });
   }
@@ -112,7 +114,7 @@ export default function NextGenAdminUploadAL(props: Readonly<Props>) {
       );
 
       postFormData(
-        `${process.env.API_ENDPOINT}/api/nextgen/create_allowlist`,
+        `${SEIZE_API_URL}/api/nextgen/create_allowlist`,
         formData
       ).then((response) => {
         setUploading(false);

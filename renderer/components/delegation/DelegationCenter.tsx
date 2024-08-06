@@ -1,8 +1,7 @@
 import styles from "./Delegation.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
-import { useAccount } from "wagmi";
+import { Connector, useAccount } from "wagmi";
 import Image from "next/image";
-import { useWeb3Modal, useWeb3ModalState } from "@web3modal/wagmi/react";
 
 import { SUPPORTED_COLLECTIONS } from "../../pages/delegation/[...section]";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -15,6 +14,7 @@ import {
   GRADIENT_CONTRACT,
 } from "../../constants";
 import { areEqualAddresses } from "../../helpers/Helpers";
+import HeaderUserConnectModal from "../header/user/HeaderUserConnectModal";
 
 interface Props {
   setSection(section: DelegationCenterSection): any;
@@ -23,8 +23,6 @@ interface Props {
 export default function DelegationCenterComponent(props: Readonly<Props>) {
   const [redirect, setRedirect] = useState<DelegationCenterSection>();
   const accountResolution = useAccount();
-  const web3Modal = useWeb3Modal();
-  const web3ModalState = useWeb3ModalState();
 
   const [openConnect, setOpenConnect] = useState(false);
 
@@ -32,7 +30,6 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
     if (redirect) {
       if (!accountResolution.isConnected) {
         setOpenConnect(true);
-        web3Modal.open();
       } else {
         props.setSection(redirect);
       }
@@ -40,15 +37,11 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
   }, [redirect]);
 
   useEffect(() => {
-    if (!web3ModalState.open) {
-      if (openConnect) {
-        if (accountResolution.isConnected && redirect) {
-          props.setSection(redirect);
-        }
-      }
-      setRedirect(undefined);
+    if (accountResolution.isConnected && redirect) {
+      props.setSection(redirect);
     }
-  }, [web3ModalState.open]);
+    setRedirect(undefined);
+  }, [accountResolution.isConnected]);
 
   function printCollectionSelection() {
     return (
@@ -254,6 +247,10 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
       <Row className="pt-4">
         <Col>{printCollectionSelection()}</Col>
       </Row>
+      <HeaderUserConnectModal
+        show={openConnect}
+        onHide={() => setOpenConnect(false)}
+      />
     </Container>
   );
 }

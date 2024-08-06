@@ -32,7 +32,8 @@ export default function CreateWaveVotingRep({
       <IdentitySearch
         identity={profileId}
         setIdentity={setProfileId}
-        error={isProfileIdError}      />
+        error={isProfileIdError}
+      />
     </div>
   );
 }

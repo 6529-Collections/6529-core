@@ -6,6 +6,7 @@ import DotLoader, { Spinner } from "../../../dotLoader/DotLoader";
 import Tippy from "@tippyjs/react";
 import { useEffect, useState } from "react";
 import { numberWithCommas } from "../../../../helpers/Helpers";
+import { openInExternalBrowser } from "../../../../helpers";
 
 export enum Resolution {
   "Thumbnail" = "Thumbnail",
@@ -116,7 +117,7 @@ export default function NextGenTokenDownload(
             style={{ cursor: "pointer", height: "24px", width: "24px" }}
             onClick={() => {
               const h = getUrl(props.token, quality);
-              window.open(h, "_blank");
+              openInExternalBrowser(h);
             }}
             icon="external-link"
           />

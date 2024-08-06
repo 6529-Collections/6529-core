@@ -10,6 +10,7 @@ import { DBResponse } from "../../entities/IDBResponse";
 import { fetchUrl } from "../../services/6529api";
 import { Transaction } from "../../entities/ITransaction";
 import Pagination from "../pagination/Pagination";
+import { SEIZE_API_URL } from "../../../constants";
 
 export function MemePageActivity(props: {
   show: boolean;
@@ -25,7 +26,7 @@ export function MemePageActivity(props: {
 
   useEffect(() => {
     if (props.nft) {
-      let url = `${process.env.API_ENDPOINT}/api/transactions?contract=${MEMES_CONTRACT}&id=${props.nft.id}&page_size=${props.pageSize}&page=${activityPage}`;
+      let url = `${SEIZE_API_URL}/api/transactions?contract=${MEMES_CONTRACT}&id=${props.nft.id}&page_size=${props.pageSize}&page=${activityPage}`;
       switch (activityTypeFilter) {
         case TypeFilter.SALES:
           url += `&filter=sales`;

@@ -10,7 +10,11 @@ import {
   isValidEthAddress,
 } from "../../../../../helpers/Helpers";
 import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
-import { NEXTGEN_CHAIN_ID, NEXTGEN_MINTER } from "../../../nextgen_contracts";
+import {
+  NEXTGEN_CHAIN,
+  NEXTGEN_CHAIN_ID,
+  NEXTGEN_MINTER,
+} from "../../../nextgen_contracts";
 import {
   ProofResponse,
   Status,
@@ -26,7 +30,6 @@ import {
 import { useEffect, useState } from "react";
 import { NULL_ADDRESS } from "../../../../../constants";
 import { fetchUrl } from "../../../../../services/6529api";
-import { useWeb3Modal } from "@web3modal/wagmi/react";
 import {
   getStatusFromDates,
   useMintSharedState,
@@ -35,6 +38,8 @@ import { NextGenMintingFor } from "./NextGenMintShared";
 import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
 import DotLoader from "../../../../dotLoader/DotLoader";
+import HeaderUserConnectModal from "../../../../header/user/HeaderUserConnectModal";
+import { SEIZE_API_URL } from "../../../../../../constants";
 
 export function getJsonData(keccak: string, data: string) {
   const parsed = JSON.parse(data);
@@ -77,7 +82,8 @@ function getMintValue(mintCount: number, mintPrice: number) {
 export default function NextGenMintWidget(props: Readonly<Props>) {
   const account = useAccount();
   const chainId = useChainId();
-  const web3Modal = useWeb3Modal();
+
+  const [openConnect, setOpenConnect] = useState(false);
 
   const [currentProof, setCurrentProof] = useState<
     | {
@@ -149,7 +155,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
       if (mintForAddress) {
         setFetchingProofs(true);
         const merkleRoot = props.collection.merkle_root;
-        const url = `${process.env.API_ENDPOINT}/api/nextgen/proofs/${merkleRoot}/${mintForAddress}`;
+        const url = `${SEIZE_API_URL}/api/nextgen/proofs/${merkleRoot}/${mintForAddress}`;
         fetchUrl(url).then((response: ProofResponse[]) => {
           const proofResponses: ProofResponse[] = [];
           if (response.length > 0) {
@@ -208,10 +214,10 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           setIsMinting(true);
         }
       } else {
-        web3Modal.open();
+        setOpenConnect(true);
       }
     } else {
-      web3Modal.open();
+      setOpenConnect(true);
     }
   };
 
@@ -266,6 +272,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
             : mintForAddress,
           salt,
         ],
+        chain: NEXTGEN_CHAIN,
+        account: account.address,
       });
     }
   }, [isMinting]);
@@ -578,6 +586,10 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           </Form>
         </Col>
       </Row>
+      <HeaderUserConnectModal
+        show={openConnect}
+        onHide={() => setOpenConnect(false)}
+      />
     </Container>
   );
 }

@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
 import { Container, Row, Col } from "react-bootstrap";
 import { AboutSection } from "./about/[section]";
+import { SEIZE_URL } from "../../constants";
 
 const Header = dynamic(() => import("../components/header/Header"), {
   ssr: false,
@@ -17,15 +18,12 @@ export default function DisputeResolution() {
         <title>Dispute Resolution | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Dispute Resolution | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/dispute-resolution`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/dispute-resolution`} />
         <meta property="og:title" content="Dispute Resolution" />
         <meta property="og:description" content="6529 Seize" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

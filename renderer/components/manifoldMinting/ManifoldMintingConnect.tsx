@@ -157,7 +157,7 @@ export default function ManifoldMintingConnect(
     return <>{mintForFren && printMintFor()}</>;
   }
 
-  if (!account.isConnected) {
+  if (!account.address) {
     return (
       <div className="text-center pt-2 pb-2">
         <HeaderUserConnect />

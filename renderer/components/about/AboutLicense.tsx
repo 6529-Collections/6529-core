@@ -1,3 +1,4 @@
+import { openInExternalBrowser } from "../../helpers";
 import styles from "./About.module.scss";
 import { Col, Container, Row } from "react-bootstrap";
 
@@ -6,7 +7,7 @@ export default function AboutLicense() {
     <Container>
       <Row>
         <Col>
-          <h1>License</h1>
+          <h1 className="float-none">License</h1>
         </Col>
       </Row>
       <Row>
@@ -29,9 +30,12 @@ export default function AboutLicense() {
           <p>
             Link to the formal text of the CC0 license:{" "}
             <a
-              href="https://creativecommons.org/share-your-work/public-domain/cc0/"
-              target="_blank"
-              rel="noreferrer">
+              href="#"
+              onClick={() =>
+                openInExternalBrowser(
+                  "https://creativecommons.org/share-your-work/public-domain/cc0/"
+                )
+              }>
               https://creativecommons.org/share-your-work/public-domain/cc0/
             </a>
           </p>
@@ -56,9 +60,10 @@ export default function AboutLicense() {
             derivative of Punk 6529, the copyright for which is owned by Yuga
             Labs. &#64;
             <a
-              href="https://twitter.com/6529er"
-              target="_blank"
-              rel="noreferrer">
+              href="#"
+              onClick={() =>
+                openInExternalBrowser("https://twitter.com/6529er")
+              }>
               6529er
             </a>{" "}
             , the artist, is putting whatever rights he may have in Meme Card #1

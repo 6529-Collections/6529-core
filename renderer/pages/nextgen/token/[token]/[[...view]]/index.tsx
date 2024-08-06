@@ -15,6 +15,7 @@ import { commonApiFetch } from "../../../../../services/api/common-api";
 import { ContentView } from "../../../../../components/nextGen/collections/collectionParts/NextGenCollection";
 import NextGenNavigationHeader from "../../../../../components/nextGen/collections/NextGenNavigationHeader";
 import { formatNameForUrl } from "../../../../../components/nextGen/nextgen_helpers";
+import { SEIZE_URL } from "../../../../../../constants";
 
 const Header = dynamic(
   () => import("../../../../../components/header/Header"),
@@ -74,7 +75,7 @@ export default function NextGenCollectionToken(props: any) {
         <meta name="description" content={pagenameFull} />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/nextgen/token/${tokenId}`}
+          content={`${SEIZE_URL}/nextgen/token/${tokenId}`}
         />
         <meta property="og:title" content={pagenameFull} />
         <meta property="og:image" content={pageImage} />

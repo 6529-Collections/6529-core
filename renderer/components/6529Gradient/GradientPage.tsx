@@ -23,6 +23,8 @@ import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
 import { AuthContext } from "../auth/Auth";
+import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 interface NftWithOwner extends NFT {
   owner: string;
@@ -94,7 +96,7 @@ export default function GradientPage() {
       });
     }
     if (router.isReady && nftId) {
-      const initialUrlNfts = `${process.env.API_ENDPOINT}/api/nfts/gradients?&page_size=101`;
+      const initialUrlNfts = `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`;
       fetchNfts(initialUrlNfts, []);
     }
   }, [router.isReady, nftId]);
@@ -115,7 +117,7 @@ export default function GradientPage() {
   useEffect(() => {
     if (nftId) {
       fetchUrl(
-        `${process.env.API_ENDPOINT}/api/transactions?contract=${GRADIENT_CONTRACT}&id=${nftId}`
+        `${SEIZE_API_URL}/api/transactions?contract=${GRADIENT_CONTRACT}&id=${nftId}`
       ).then((response: DBResponse) => {
         setTransactions(response.data);
       });
@@ -255,9 +257,12 @@ export default function GradientPage() {
                 <Row className="pt-4">
                   <Col>
                     <a
-                      href={`https://opensea.io/assets/ethereum/${GRADIENT_CONTRACT}/${nft.id}`}
-                      target="_blank"
-                      rel="noreferrer">
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          `https://opensea.io/assets/ethereum/${GRADIENT_CONTRACT}/${nft.id}`
+                        )
+                      }>
                       <Image
                         className={styles.marketplace}
                         src="/opensea.png"
@@ -266,22 +271,13 @@ export default function GradientPage() {
                         height={40}
                       />
                     </a>
-                    {/* <a
-                      href={`https://looksrare.org/collections/${GRADIENT_CONTRACT}/${nft.id}`}
-                      target="_blank"
-                      rel="noreferrer">
-                      <Image
-                        className={styles.marketplace}
-                        src="/looksrare.png"
-                        alt="looksrare"
-                        width={40}
-                        height={40}
-                      />
-                    </a> */}
                     <a
-                      href={`https://x2y2.io/eth/${GRADIENT_CONTRACT}/${nft.id}`}
-                      target="_blank"
-                      rel="noreferrer">
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          `https://x2y2.io/eth/${GRADIENT_CONTRACT}/${nft.id}`
+                        )
+                      }>
                       <Image
                         className={styles.marketplace}
                         src="/x2y2.png"
@@ -362,7 +358,7 @@ export default function GradientPage() {
                       {nftId && (
                         <>
                           <span>
-                            <h2 className="float-left">
+                            <h2>
                               <a
                                 href={`/6529-gradient/${parseInt(nftId) - 1}`}
                                 className={`${styles.nextPreviousNft} ${
@@ -373,7 +369,7 @@ export default function GradientPage() {
                                 <FontAwesomeIcon icon="chevron-circle-left" />
                               </a>
                             </h2>
-                            <h2 className="float-left">
+                            <h2>
                               &nbsp;
                               <a
                                 href={`/6529-gradient/${parseInt(nftId) + 1}`}

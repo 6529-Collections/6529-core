@@ -100,6 +100,7 @@ export default function NextGenAdminChangeMetadataView(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [collectionID, status],
       });
     }

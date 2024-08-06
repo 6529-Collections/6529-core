@@ -17,6 +17,7 @@ import { DBResponse } from "../../entities/IDBResponse";
 import { MemeSeason } from "../../entities/ISeason";
 import { commonApiFetch } from "../../services/api/common-api";
 import { AuthContext } from "../auth/Auth";
+import { SEIZE_API_URL } from "../../../constants";
 
 enum Sort {
   AGE = "age",
@@ -116,7 +117,7 @@ export default function TheMemesComponent(props: Readonly<Props>) {
     if (selectedSeason > 0) {
       seasonFilter = `&season=${selectedSeason}`;
     }
-    return `${process.env.API_ENDPOINT}/api/memes_extended_data?page_size=48&sort_direction=${sortDir}&sort=${mySort}${seasonFilter}`;
+    return `${SEIZE_API_URL}/api/memes_extended_data?page_size=48&sort_direction=${sortDir}&sort=${mySort}${seasonFilter}`;
   };
 
   const [sortDir, setSortDir] = useState<SortDirection>(SortDirection.ASC);
@@ -258,7 +259,7 @@ export default function TheMemesComponent(props: Readonly<Props>) {
       .filter((id) => !nftBalances.some((b) => b.token_id === id));
     if (connectedConsolidationKey && newTokenIds.length > 0) {
       fetchAllPages(
-        `${process.env.API_ENDPOINT}/api/nft-owners/consolidation/${
+        `${SEIZE_API_URL}/api/nft-owners/consolidation/${
           connectedProfile?.consolidation.consolidation_key
         }?contract=${MEMES_CONTRACT}&token_id=${newTokenIds.join(",")}`
       ).then((owners: NftOwner[]) => {

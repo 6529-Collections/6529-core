@@ -10,6 +10,7 @@ import { GroupFull } from "../generated/models/GroupFull";
 import { QueryKey } from "../components/react-query-wrapper/ReactQueryWrapper";
 import { commonApiFetch } from "../services/api/common-api";
 import { useEffect, useState } from "react";
+import { SEIZE_URL } from "../../constants";
 
 export enum CommunityMembersSortOption {
   DISPLAY = "display",
@@ -59,15 +60,12 @@ export default function CommunityPage() {
         <title>Community | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Community | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/community`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/community`} />
         <meta property="og:title" content="Community" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

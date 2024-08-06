@@ -85,6 +85,7 @@ export default function NextGenAdminArtistSignCollection(
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [collectionID, signature],
       });
     }

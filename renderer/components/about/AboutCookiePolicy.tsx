@@ -10,6 +10,7 @@ import {
   CONSENT_ESSENTIAL_COOKIE,
   CONSENT_PERFORMANCE_COOKIE,
 } from "../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutCookiePolicy() {
   const { showCookieConsent, consent, reject } = useCookieConsent();
@@ -30,7 +31,7 @@ export default function AboutCookiePolicy() {
     <Container>
       <Row>
         <Col>
-          <h1>
+          <h1 className="float-none">
             <span className="font-lightest">Cookie</span> Policy
           </h1>
         </Col>
@@ -98,9 +99,12 @@ export default function AboutCookiePolicy() {
                       <td>seize.io</td>
                       <td>
                         <a
-                          href="https://cookiepedia.co.uk/cookies/AWSALBTGCORS"
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              "https://cookiepedia.co.uk/cookies/AWSALBTGCORS"
+                            )
+                          }>
                           AWSALBTGCORS
                         </a>{" "}
                         (Amazon Web Services)
@@ -112,9 +116,12 @@ export default function AboutCookiePolicy() {
                       <td>seize.io</td>
                       <td>
                         <a
-                          href="https://cookiepedia.co.uk/cookies/AWSALBTG"
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              "https://cookiepedia.co.uk/cookies/AWSALBTG"
+                            )
+                          }>
                           AWSALBTG
                         </a>{" "}
                         (Amazon Web Services)
@@ -199,9 +206,12 @@ export default function AboutCookiePolicy() {
                       <td>.seize.io</td>
                       <td>
                         <a
-                          href="https://cookiepedia.co.uk/cookies/_ga_"
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              "https://cookiepedia.co.uk/cookies/_ga_"
+                            )
+                          }>
                           _ga_71NLVV3KY3
                         </a>{" "}
                         (Google Analytics)
@@ -213,9 +223,12 @@ export default function AboutCookiePolicy() {
                       <td>.seize.io</td>
                       <td>
                         <a
-                          href="https://cookiepedia.co.uk/cookies/_ga"
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              "https://cookiepedia.co.uk/cookies/_ga"
+                            )
+                          }>
                           _ga
                         </a>{" "}
                         (Google Analytics)
@@ -227,9 +240,12 @@ export default function AboutCookiePolicy() {
                       <td>.seize.io</td>
                       <td>
                         <a
-                          href="https://cookiepedia.co.uk/cookies/_gid"
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              "https://cookiepedia.co.uk/cookies/_gid"
+                            )
+                          }>
                           _gid
                         </a>{" "}
                         (Google Analytics)

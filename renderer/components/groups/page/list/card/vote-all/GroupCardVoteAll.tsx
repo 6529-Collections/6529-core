@@ -9,10 +9,6 @@ import {
 import { CreditDirection } from "../GroupCard";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { Page } from "../../../../../../helpers/Types";
-import {
-  CommunityMembersQuery,
-  CommunityMembersSortOption,
-} from "../../../../../../pages/community";
 import { SortDirection } from "../../../../../../entities/ISort";
 import {
   commonApiFetch,
@@ -24,7 +20,7 @@ import GroupCardActionWrapper from "../GroupCardActionWrapper";
 import { RateMatter } from "../../../../../../generated/models/RateMatter";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
 import GroupCardVoteAllInputs from "./GroupCardVoteAllInputs";
-
+import { CommunityMembersSortOption } from "../../../../../community/CommunityMembers";
 
 export default function GroupCardVoteAll({
   matter,
@@ -73,10 +69,7 @@ export default function GroupCardVoteAll({
         },
       ],
       queryFn: async () =>
-        await commonApiFetch<
-          Page<CommunityMemberOverview>,
-          CommunityMembersQuery
-        >({
+        await commonApiFetch<Page<CommunityMemberOverview>, any>({
           endpoint: `community-members/top`,
           params: {
             page: 1,
@@ -151,10 +144,7 @@ export default function GroupCardVoteAll({
   const getMembersPage = async (
     page: number
   ): Promise<Page<CommunityMemberOverview>> => {
-    return await commonApiFetch<
-      Page<CommunityMemberOverview>,
-      CommunityMembersQuery
-    >({
+    return await commonApiFetch<Page<CommunityMemberOverview>, any>({
       endpoint: `community-members/top`,
       params: {
         page: page,
@@ -226,8 +216,7 @@ export default function GroupCardVoteAll({
       membersCount={membersCount}
       doneMembersCount={doneMembersCount}
       matter={matter}
-      onSave={onSave}
-    >
+      onSave={onSave}>
       <GroupCardVoteAllInputs
         matter={matter}
         category={category}

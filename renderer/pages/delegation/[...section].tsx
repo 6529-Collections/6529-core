@@ -12,6 +12,7 @@ import {
   MEMELAB_CONTRACT,
   GRADIENT_CONTRACT,
 } from "../../constants";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -290,13 +291,13 @@ export default function DelegationsDocumentation(props: any) {
         <meta name="description" content="Delegation | 6529 SEIZE" />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/delegation/delegation-center`}
+          content={`${SEIZE_URL}/delegation/delegation-center`}
         />
         <meta property="og:title" content="Delegation" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

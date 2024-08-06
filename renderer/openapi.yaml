@@ -117,6 +117,7 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/NftsPage"
+<<<<<<< Updated upstream
 
   /notifications:
     get:
@@ -238,6 +239,8 @@ paths:
               schema:
                 $ref: "#/components/schemas/IdentitySubscriptionActions"
 
+=======
+>>>>>>> Stashed changes
   /profiles/{identity}/proxies:
     get:
       tags:
@@ -554,6 +557,7 @@ paths:
                 $ref: "#/components/schemas/RatingWithProfileInfoAndLevelPage"
         "404":
           description: Profile not found
+<<<<<<< Updated upstream
 
   /public/drops:
     get:
@@ -725,11 +729,13 @@ paths:
                 $ref: "#/components/schemas/DropsPage"
         "404":
           description: Drop not found
+=======
+>>>>>>> Stashed changes
   /drops:
     get:
       tags:
         - Drops
-      summary: Get latest drops. Needs authentication. Use /public/drops for public drops.
+      summary: Get latest drops
       operationId: getLatestDrops
       parameters:
         - name: limit
@@ -782,12 +788,21 @@ paths:
             type: number
             format: int64
             minimum: 1
+<<<<<<< Updated upstream
         - name: include_replies
           in: query
           description: If true then reply drops will be included in top level (false by default)
           required: false
           schema:
             type: boolean
+=======
+        - name: context_profile
+          in: query
+          description: If supplied, each drop has some context related to given profile. It can be wallet address, ENS, handle or profile ID.
+          required: false
+          schema:
+            type: string
+>>>>>>> Stashed changes
       responses:
         "200":
           description: successful operation
@@ -822,12 +837,18 @@ paths:
     get:
       tags:
         - Drops
-      summary: Get drop by ID. Needs authenticated user. Use /public/drops/{dropId} for public drops.
+      summary: Get drop by ID
       operationId: getDropById
       parameters:
         - name: dropId
           in: path
           required: true
+          schema:
+            type: string
+        - name: context_profile
+          in: query
+          description: If supplied drop has some context related to given profile. It can be wallet address, ENS, handle or profile ID.
+          required: false
           schema:
             type: string
         - name: min_part_id
@@ -886,18 +907,29 @@ paths:
           description: Drop not found
         "400":
           description: "Invalid request"
+<<<<<<< Updated upstream
   /drops/{dropId}/subscriptions:
     post:
       tags:
         - Drops
       summary: Subscribe authenticated user to drop actions.
       operationId: subscribeToDropActions
+=======
+
+  /drops/{dropId}/log:
+    get:
+      tags:
+        - Drops
+      summary: Get drop logs
+      operationId: getDropLogs
+>>>>>>> Stashed changes
       parameters:
         - name: dropId
           in: path
           required: true
           schema:
             type: string
+<<<<<<< Updated upstream
       requestBody:
         required: true
         content:
@@ -932,10 +964,59 @@ paths:
               $ref: "#/components/schemas/DropSubscriptionActions"
       responses:
         "201":
+=======
+        - name: log_type
+          in: query
+          description: Filter logs by type
+          required: false
+          schema:
+            type: string
+            enum:
+              - DROP_COMMENT
+              - DROP_RATING_EDIT
+              - DROP_CREATED
+        - name: sort_direction
+          in: query
+          required: false
+          schema:
+            description: Default is DESC
+            type: string
+            enum:
+              - ASC
+              - DESC
+        - name: sort
+          in: query
+          required: false
+          schema:
+            description: Default is created_at
+            type: string
+            enum:
+              - created_at
+        - name: page
+          in: query
+          required: false
+          schema:
+            description: Default is 1
+            type: number
+            format: int64
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            description: Default is 50
+            type: number
+            format: int64
+            minimum: 1
+            maximum: 2000
+      responses:
+        "200":
+>>>>>>> Stashed changes
           description: successful operation
           content:
             application/json:
               schema:
+<<<<<<< Updated upstream
                 $ref: "#/components/schemas/DropSubscriptionActions"
         "404":
           description: Wave not found
@@ -945,6 +1026,19 @@ paths:
         - Drops
       summary: Get reply drops
       operationId: getReplyDrops
+=======
+                type: array
+                items:
+                  $ref: "#/components/schemas/DropActivityLog"
+        "404":
+          description: Drop not found
+  /drops/{dropId}/parts/{dropPartId}/comments:
+    get:
+      tags:
+        - Drops
+      summary: Get drop part comments
+      operationId: getDropComments
+>>>>>>> Stashed changes
       parameters:
         - name: dropId
           in: path
@@ -1197,184 +1291,13 @@ paths:
         "400":
           description: "Invalid request"
 
-  /public/waves:
-    get:
-      tags:
-        - Waves
-      summary: Get public waves
-      operationId: getPublicWaves
-      parameters:
-        - name: name
-          in: query
-          description: Search by name or part of name
-          required: false
-          schema:
-            type: string
-        - name: author
-          in: query
-          description: Search by author identity
-          required: false
-          schema:
-            type: string
-        - name: limit
-          in: query
-          description: How many waves to return (10 by default)
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-            maximum: 20
-        - name: serial_no_less_than
-          in: query
-          description: Used to find older drops
-          required: false
-          schema:
-            type: integer
-            format: int64
-        - name: group_id
-          in: query
-          description: Waves by authors that fall into supplied group
-          required: false
-          schema:
-            type: string
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Wave"
-
-  /public/waves/{id}:
-    get:
-      tags:
-        - Waves
-      summary: Get public wave by ID
-      operationId: getPublicWaveById
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Wave"
-        "404":
-          description: Wave not found
-
-  /public/waves-overview:
-    get:
-      tags:
-        - Waves
-      summary: Get overview of waves by different criteria.
-      operationId: getPublicWavesOverview
-      parameters:
-        - name: limit
-          in: query
-          description: How many waves to return (10 by default)
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-            maximum: 20
-            default: 10
-        - name: offset
-          in: query
-          description: Used to find next waves
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 0
-        - name: type
-          in: query
-          description: Type of overview
-          required: true
-          schema:
-            type: string
-            enum:
-              - LATEST
-              - MOST_SUBSCRIBED
-              - HIGH_LEVEL_AUTHOR
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Wave"
-
-  /waves-overview:
-    get:
-      tags:
-        - Waves
-      summary: Get overview of waves by different criteria. User must be authenticated. Public alternative is /public/waves-overview.
-      operationId: getWavesOverview
-      parameters:
-        - name: limit
-          in: query
-          description: How many waves to return (10 by default)
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-            maximum: 20
-            default: 10
-        - name: offset
-          in: query
-          description: Used to find next waves
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 0
-        - name: type
-          in: query
-          description: Type of overview
-          required: true
-          schema:
-            $ref: "#/components/schemas/WavesOverviewType"
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Wave"
-
   /waves:
     get:
       tags:
         - Waves
-      summary: Get waves. Needs authentication. Use /public/waves for public waves.
+      summary: Get waves
       operationId: getWaves
       parameters:
-        - name: name
-          in: query
-          description: Search by name or part of name
-          required: false
-          schema:
-            type: string
-        - name: author
-          in: query
-          description: Search by author identity
-          required: false
-          schema:
-            type: string
         - name: limit
           in: query
           description: How many waves to return (10 by default)
@@ -1432,7 +1355,7 @@ paths:
     get:
       tags:
         - Waves
-      summary: Get wave by ID. Needs authenticated user. Use /public/waves/{id} for public waves.
+      summary: Get wave by ID
       operationId: getWaveById
       parameters:
         - name: id
@@ -1449,84 +1372,6 @@ paths:
                 $ref: "#/components/schemas/Wave"
         "404":
           description: Wave not found
-
-  /waves/{id}/subscriptions:
-    post:
-      tags:
-        - Waves
-      summary: Subscribe authenticated user to wave actions.
-      operationId: subscribeToWaveActions
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WaveSubscriptionActions"
-      responses:
-        "201":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WaveSubscriptionActions"
-        "404":
-          description: Wave not found
-    delete:
-      tags:
-        - Waves
-      summary: Unsubscribe authenticated user from wave actions.
-      operationId: unsubscribeFromWaveActions
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/WaveSubscriptionActions"
-      responses:
-        "201":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/WaveSubscriptionActions"
-        "404":
-          description: Wave not found
-
-  /feed:
-    get:
-      tags:
-        - Feed
-      summary: Get feed
-      operationId: getFeed
-      parameters:
-        - name: serial_no_less_than
-          in: query
-          description: Used to find older items
-          required: false
-          schema:
-            type: integer
-            format: int64
-      responses:
-        "200":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/FeedItem"
 
   /groups:
     get:
@@ -2101,7 +1946,6 @@ components:
         - raters_count
         - title
         - context_profile_context
-        - subscribed_actions
       properties:
         id:
           type: string
@@ -2157,10 +2001,6 @@ components:
           anyOf:
             - type: "null"
             - $ref: "#/components/schemas/DropContextProfileContext"
-        subscribed_actions:
-          type: array
-          items:
-            $ref: "#/components/schemas/DropSubscriptionTargetAction"
 
     QuotedDrop:
       type: object
@@ -2233,8 +2073,7 @@ components:
         - tdh
         - level
         - banner1_color
-        - banner2_color
-        - subscribed_actions
+        - banner2_coloe
         - archived
       properties:
         id:
@@ -2263,10 +2102,6 @@ components:
         level:
           type: number
           format: int64
-        subscribed_actions:
-          type: array
-          items:
-            $ref: "#/components/schemas/IdentitySubscriptionTargetAction"
         archived:
           type: boolean
 
@@ -2819,8 +2654,6 @@ components:
         - outcomes
         - created_at
         - contributors_overview
-        - subscribed_actions
-        - metrics
       properties:
         id:
           description: The ID of the wave
@@ -2860,12 +2693,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/WaveContributorOverview"
-        subscribed_actions:
-          type: array
-          items:
-            $ref: "#/components/schemas/WaveSubscriptionTargetAction"
-        metrics:
-          $ref: "#/components/schemas/WaveMetrics"
 
     WaveContributorOverview:
       required:
@@ -3384,8 +3211,6 @@ components:
         - name
         - picture
         - description_drop_id
-        - authenticated_user_eligible_to_vote
-        - authenticated_user_eligible_to_participate
       properties:
         id:
           type: string
@@ -3395,6 +3220,7 @@ components:
           type: string
         description_drop_id:
           type: string
+<<<<<<< Updated upstream
         authenticated_user_eligible_to_vote:
           type: boolean
         authenticated_user_eligible_to_participate:
@@ -3581,5 +3407,7 @@ components:
           additional_context:
             type: object
 
+=======
+>>>>>>> Stashed changes
 security:
   - bearerAuth: []

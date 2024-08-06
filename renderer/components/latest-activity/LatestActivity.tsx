@@ -16,6 +16,7 @@ import { normalizeNextgenTokenID } from "../nextGen/nextgen_helpers";
 import { GRADIENT_CONTRACT, MEMES_CONTRACT } from "../../constants";
 import { NEXTGEN_CORE, NEXTGEN_CHAIN_ID } from "../nextGen/nextgen_contracts";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
+import { SEIZE_API_URL } from "../../../constants";
 
 interface Props {
   page: number;
@@ -63,7 +64,7 @@ export default function LatestActivity(props: Readonly<Props>) {
 
   useEffect(() => {
     setFetching(true);
-    let url = `${process.env.API_ENDPOINT}/api/transactions?page_size=${props.pageSize}&page=${page}`;
+    let url = `${SEIZE_API_URL}/api/transactions?page_size=${props.pageSize}&page=${page}`;
     switch (typeFilter) {
       case TypeFilter.SALES:
         url += `&filter=sales`;
@@ -100,11 +101,11 @@ export default function LatestActivity(props: Readonly<Props>) {
   }, [page, typeFilter, selectedContract]);
 
   useEffect(() => {
-    fetchUrl(`${process.env.API_ENDPOINT}/api/memes_lite`).then(
+    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`).then(
       (memeResponse: DBResponse) => {
         setNfts(memeResponse.data);
         fetchAllPages(
-          `${process.env.API_ENDPOINT}/api/nfts/gradients?&page_size=101`
+          `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`
         ).then((gradients: NFT[]) => {
           setNfts([...memeResponse.data, ...gradients]);
         });

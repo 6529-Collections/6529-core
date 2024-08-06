@@ -3,7 +3,6 @@ import { Time } from "../../../helpers/time";
 import CommonInput from "../input/CommonInput";
 import { CommonSelectItem } from "../select/CommonSelect";
 import CommonDropdown from "../select/dropdown/CommonDropdown";
-import { assertUnreachable } from "../../../helpers/AllowlistToolHelpers";
 
 enum TimeMode {
   MINUTES = "MINUTES",
@@ -66,8 +65,6 @@ export default function CommonTimeSelect({
       case TimeMode.MONTHS:
         now.setMonth(now.getMonth() + value);
         break;
-      default:
-        assertUnreachable(timeMode);
     }
     return now.getTime();
   };

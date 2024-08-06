@@ -8,6 +8,7 @@ import { useRouter } from "next/router";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import Head from "next/head";
+import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../header/Header"), {
   ssr: false,
@@ -47,12 +48,12 @@ export default function DistributionPlanToolWrapper({
         <title>EMMA | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="EMMA | 6529 SEIZE" />
-        <meta property="og:url" content={`${process.env.BASE_ENDPOINT}/emma`} />
+        <meta property="og:url" content={`${SEIZE_URL}/emma`} />
         <meta property="og:title" content="EMMA" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
       <Header />
@@ -60,8 +61,7 @@ export default function DistributionPlanToolWrapper({
       <div className={`tw-bg-neutral-900 ${poppins.className}`}>
         <div
           id="allowlist-tool"
-          className="tailwind-scope tw-overflow-y-auto tw-min-h-screen tw-relative"
-        >
+          className="tailwind-scope tw-overflow-y-auto tw-min-h-screen tw-relative">
           {children}
         </div>
       </div>

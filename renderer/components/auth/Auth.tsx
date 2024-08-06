@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { Slide, ToastContainer, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAccount, useSignMessage } from "wagmi";
@@ -25,6 +25,9 @@ import { LoginRequest } from "../../generated/models/LoginRequest";
 import { LoginResponse } from "../../generated/models/LoginResponse";
 import { ProfileProxy } from "../../generated/models/ProfileProxy";
 import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
+import { useRouter } from "next/router";
+import { isElectron } from "../../helpers";
+import { useEffectOnce } from "../../hooks/useEffectOnce";
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
@@ -119,7 +122,7 @@ export default function Auth({
     }
   }, [profileProxies, connectedProfile]);
 
-  useEffect(() => {
+  useEffectOnce(() => {
     if (!address) {
       removeAuthJwt();
       invalidateAll();
@@ -135,8 +138,10 @@ export default function Auth({
       if (!isAuth) {
         removeAuthJwt();
         setActiveProfileProxy(null);
-        requestAuth();
         invalidateAll();
+        if (isElectron()) {
+          requestAuth();
+        }
       }
     }
   }, [address, activeProfileProxy]);
@@ -384,22 +389,33 @@ export default function Auth({
     setShowWaves(getShowWaves());
   }, [connectedProfile, activeProfileProxy, address]);
 
+  const contextValue = useMemo(
+    () => ({
+      requestAuth,
+      setToast,
+      connectedProfile: connectedProfile ?? null,
+      receivedProfileProxies,
+      activeProfileProxy,
+      showWaves,
+      connectionStatus: getProfileConnectedStatus({
+        profile: connectedProfile ?? null,
+        isProxy: !!activeProfileProxy,
+      }),
+      setActiveProfileProxy: onActiveProfileProxy,
+    }),
+    [
+      requestAuth,
+      setToast,
+      connectedProfile,
+      receivedProfileProxies,
+      activeProfileProxy,
+      showWaves,
+      onActiveProfileProxy,
+    ]
+  );
+
   return (
-    <AuthContext.Provider
-      value={{
-        requestAuth,
-        setToast,
-        connectedProfile: connectedProfile ?? null,
-        receivedProfileProxies,
-        activeProfileProxy,
-        showWaves,
-        connectionStatus: getProfileConnectedStatus({
-          profile: connectedProfile ?? null,
-          isProxy: !!activeProfileProxy,
-        }),
-        setActiveProfileProxy: onActiveProfileProxy,
-      }}
-    >
+    <AuthContext.Provider value={contextValue}>
       {children}
       <ToastContainer />
     </AuthContext.Provider>

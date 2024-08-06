@@ -113,6 +113,7 @@ export default function NextGenAdminRegisterAdmin(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: getParams(),
       });
     }

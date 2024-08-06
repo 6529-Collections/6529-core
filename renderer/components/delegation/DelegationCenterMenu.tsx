@@ -20,6 +20,7 @@ import DelegationHTML from "./html/DelegationHTML";
 import WalletCheckerComponent from "./walletChecker/WalletChecker";
 import { useRouter } from "next/router";
 import NewAssignPrimaryAddress from "./NewAssignPrimaryAddress";
+import { openInExternalBrowser } from "../../helpers";
 
 export enum DelegationCenterSection {
   CENTER = "delegation-center",
@@ -427,9 +428,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
 function NFTDelegationLink() {
   return (
     <a
-      href="https://nftdelegation.com/"
-      target="_blank"
-      rel="noreferrer"
+      href="#"
+      onClick={() => openInExternalBrowser("https://nftdelegation.com/")}
       className={styles.delegationLink}>
       <Image
         src="/nftdelegation.jpg"
@@ -445,13 +445,14 @@ function NFTDelegationLink() {
 function EtherscanLink() {
   return (
     <a
-      href={
-        DELEGATION_CONTRACT.chain_id === sepolia.id
-          ? `https://sepolia.etherscan.io/address/${DELEGATION_CONTRACT.contract}`
-          : `https://etherscan.io/address/${DELEGATION_CONTRACT.contract}`
+      href="#"
+      onClick={() =>
+        openInExternalBrowser(
+          DELEGATION_CONTRACT.chain_id === sepolia.id
+            ? `https://sepolia.etherscan.io/address/${DELEGATION_CONTRACT.contract}`
+            : `https://etherscan.io/address/${DELEGATION_CONTRACT.contract}`
+        )
       }
-      target="_blank"
-      rel="noreferrer"
       className={styles.delegationLink}>
       <Image src="/etherscan_w.png" alt="etherscan" width={30} height={30} />
       <span>Etherscan</span>
@@ -462,9 +463,12 @@ function EtherscanLink() {
 function GithubLink() {
   return (
     <a
-      href={`https://github.com/6529-Collections/nftdelegation`}
-      target="_blank"
-      rel="noreferrer"
+      href="#"
+      onClick={() =>
+        openInExternalBrowser(
+          `https://github.com/6529-Collections/nftdelegation`
+        )
+      }
       className={styles.delegationLink}>
       <Image src="/github_w.png" alt="github" width={30} height={30} />
       <span>Github</span>

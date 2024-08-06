@@ -4,6 +4,7 @@ import {
   NEXTGEN_CORE_ABI,
   NEXTGEN_MINTER_ABI,
 } from "../../abis";
+import { NEXTGEN_CHAIN_ID_ENV } from "../../../constants";
 
 export interface NextGenContract {
   [goerli.id]: string;
@@ -13,8 +14,8 @@ export interface NextGenContract {
 }
 
 export function getNextGenChainId() {
-  if (process.env.NEXTGEN_CHAIN_ID) {
-    const chainId: number = parseInt(process.env.NEXTGEN_CHAIN_ID);
+  if (NEXTGEN_CHAIN_ID_ENV) {
+    const chainId: number = parseInt(NEXTGEN_CHAIN_ID_ENV);
     if (chainId == sepolia.id) {
       return sepolia.id;
     }
@@ -26,6 +27,21 @@ export function getNextGenChainId() {
 }
 
 export const NEXTGEN_CHAIN_ID = getNextGenChainId();
+
+export function getNextGenChain() {
+  if (NEXTGEN_CHAIN_ID_ENV) {
+    const chainId: number = parseInt(NEXTGEN_CHAIN_ID_ENV);
+    if (chainId == sepolia.id) {
+      return sepolia;
+    }
+    if (chainId == goerli.id) {
+      return goerli;
+    }
+  }
+  return mainnet;
+}
+
+export const NEXTGEN_CHAIN = getNextGenChain();
 
 export enum FunctionSelectors {
   CREATE_COLLECTION = "0xe1fa8089",

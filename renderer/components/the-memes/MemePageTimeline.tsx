@@ -4,6 +4,7 @@ import { NFT, NFTHistory } from "../../entities/INFT";
 import { useEffect, useState } from "react";
 import { fetchAllPages } from "../../services/6529api";
 import Timeline from "../timeline/Timeline";
+import { SEIZE_API_URL } from "../../../constants";
 
 export function MemePageTimeline(props: {
   show: boolean;
@@ -18,7 +19,7 @@ export function MemePageTimeline(props: {
       });
     }
     if (props.nft) {
-      const initialUrlHistory = `${process.env.API_ENDPOINT}/api/nft_history/${MEMES_CONTRACT}/${props.nft.id}`;
+      const initialUrlHistory = `${SEIZE_API_URL}/api/nft_history/${MEMES_CONTRACT}/${props.nft.id}`;
       fetchHistory(initialUrlHistory);
     }
   }, [props.nft]);

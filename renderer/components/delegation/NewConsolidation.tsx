@@ -20,6 +20,7 @@ import {
   DelegationFormDelegateAddressFormGroup,
   DelegationSubmitGroups,
 } from "./DelegationFormParts";
+import Link from "next/link";
 
 interface Props {
   address: string;
@@ -162,14 +163,12 @@ export default function NewConsolidationComponent(props: Readonly<Props>) {
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Note: For TDH Consolidation use either &apos;Any
                 Collection&apos; or &apos;The Memes&apos;
-                <a
-                  href={`/delegation/delegation-faq/register-consolidation`}
-                  target="_blank"
-                  rel="noreferrer">
+                <Link
+                  href={`/delegation/delegation-faq/register-consolidation`}>
                   <FontAwesomeIcon
                     className={styles.infoIconLink}
                     icon="info-circle"></FontAwesomeIcon>
-                </a>
+                </Link>
               </Form.Label>
             </Form.Group>
             <DelegationSubmitGroups

@@ -21,6 +21,7 @@ import {
   NextGenAdminTextFormGroup,
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
+import { SEIZE_API_URL } from "../../../../constants";
 
 interface Props {
   close: () => void;
@@ -83,6 +84,7 @@ export default function NextGenAdminInitializeExternalBurnSwap(
     if (valid) {
       signMessage.signMessage({
         message: uuid,
+        account: account.address,
       });
     } else {
       setLoading(false);
@@ -112,7 +114,7 @@ export default function NextGenAdminInitializeExternalBurnSwap(
       };
 
       postData(
-        `${process.env.API_ENDPOINT}/api/nextgen/register_burn_collection`,
+        `${SEIZE_API_URL}/api/nextgen/register_burn_collection`,
         data
       ).then((response) => {
         if (response.status === 200 && response.response) {
@@ -169,6 +171,7 @@ export default function NextGenAdminInitializeExternalBurnSwap(
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           erc721Collection,
           burnCollectionID,

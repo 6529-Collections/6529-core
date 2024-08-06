@@ -235,8 +235,7 @@ export default function NewAssignPrimaryAddress(props: Readonly<Props>) {
         </Col>
         <Col
           xs={2}
-          className="pt-3 pb-1 d-flex align-items-center justify-content-end"
-        >
+          className="pt-3 pb-1 d-flex align-items-center justify-content-end">
           <DelegationCloseButton onHide={props.onHide} title="Consolidation" />
         </Col>
       </Row>

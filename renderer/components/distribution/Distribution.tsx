@@ -23,6 +23,8 @@ import DotLoader from "../dotLoader/DotLoader";
 import Address from "../address/Address";
 import { MEMES_CONTRACT } from "../../constants";
 import MemePageMintCountdown from "../the-memes/MemePageMintCountdown";
+import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 enum Sort {
   phase = "phase",
@@ -79,7 +81,7 @@ export default function DistributionPage(props: Readonly<Props>) {
     setFetching(true);
     const walletFilter =
       searchWallets.length === 0 ? "" : `&search=${searchWallets.join(",")}`;
-    const distributionUrl = `${process.env.API_ENDPOINT}/api/distributions?card_id=${nftId}&contract=${props.contract}&page=${pageProps.page}${walletFilter}`;
+    const distributionUrl = `${SEIZE_API_URL}/api/distributions?card_id=${nftId}&contract=${props.contract}&page=${pageProps.page}${walletFilter}`;
     fetchUrl(distributionUrl).then((r: DBResponse) => {
       setTotalResults(r.count);
       const mydistributions: Distribution[] = r.data;
@@ -106,7 +108,7 @@ export default function DistributionPage(props: Readonly<Props>) {
         { display: `Distribution` },
       ]);
 
-      const distributionPhotosUrl = `${process.env.API_ENDPOINT}/api/distribution_photos/${props.contract}/${nftId}`;
+      const distributionPhotosUrl = `${SEIZE_API_URL}/api/distribution_photos/${props.contract}/${nftId}`;
 
       fetchAllPages(distributionPhotosUrl).then((distributionPhotos: any[]) => {
         setDistributionPhotos(distributionPhotos);
@@ -262,7 +264,7 @@ export default function DistributionPage(props: Readonly<Props>) {
     return (
       <Button
         className="seize-btn btn-white"
-        onClick={() => window.open(props.minting_link, "_blank")}>
+        onClick={() => openInExternalBrowser(props.minting_link)}>
         Minting Page
       </Button>
     );
@@ -312,9 +314,12 @@ export default function DistributionPage(props: Readonly<Props>) {
                     <Col xs={12}>
                       Please check back later and make sure to also check the{" "}
                       <a
-                        href="https://twitter.com/6529Collections"
-                        target="_blank"
-                        rel="noreferrer">
+                        href="#"
+                        onClick={() =>
+                          openInExternalBrowser(
+                            "https://twitter.com/6529Collections"
+                          )
+                        }>
                         &#64;6529Collections
                       </a>{" "}
                       account on X for drop updates.

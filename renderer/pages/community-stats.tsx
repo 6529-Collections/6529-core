@@ -5,6 +5,7 @@ import { Container, Row, Col } from "react-bootstrap";
 import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
 import { useState } from "react";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../constants";
 
 const Header = dynamic(() => import("../components/header/Header"), {
   ssr: false,
@@ -28,15 +29,12 @@ export default function CommunityStats() {
         <title>Community Stats | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Community Stats | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/community-stats`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/community-stats`} />
         <meta property="og:title" content="Community Stats" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

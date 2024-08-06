@@ -46,7 +46,7 @@ export async function getServerSideProps(
     const needsRedirect = userPageNeedsRedirect({
       profile,
       req,
-      subroute: "groups",
+      subroute: "collected",
     });
 
     if (needsRedirect) {

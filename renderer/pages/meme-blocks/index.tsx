@@ -14,6 +14,7 @@ import { distributionPlanApiPost } from "../../services/distribution-plan-api";
 
 import AllowlistToolLoader from "../../components/allowlist-tool/common/AllowlistToolLoader";
 import BlockPickerResult from "../../components/block-picker/result/BlockPickerResult";
+import { SEIZE_URL } from "../../../constants";
 
 export interface PredictBlockNumbersResponseApiModel {
   readonly blockNumberIncludes: number;
@@ -206,15 +207,12 @@ export default function BlockPicker() {
         <title>Meme Blocks | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Meme Blocks | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/meme-blocks`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/meme-blocks`} />
         <meta property="og:title" content="Meme Blocks" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
       <Header />

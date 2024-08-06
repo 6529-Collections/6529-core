@@ -8,6 +8,7 @@ import { getRandomObjectId } from "../../../../helpers/AllowlistToolHelpers";
 import { numberWithCommas } from "../../../../helpers/Helpers";
 import { NEXTGEN_CHAIN_ID } from "../../nextgen_contracts";
 import { NEXTGEN_GENERATOR_BASE_URL } from "../../../../constants";
+import { openInExternalBrowser } from "../../../../helpers";
 
 export default function NextgenTokenRenderCenter(
   props: Readonly<{ token: NextGenToken }>
@@ -97,7 +98,7 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
     if (params.toString()) {
       url += `?${params.toString()}`;
     }
-    window.open(url, "_blank");
+    openInExternalBrowser(url);
   }
 
   return (

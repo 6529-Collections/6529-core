@@ -17,6 +17,7 @@ import DotLoader from "../dotLoader/DotLoader";
 import { AuthContext } from "../auth/Auth";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import { MEMELAB_CONTRACT } from "../../constants";
+import { SEIZE_API_URL } from "../../../constants";
 
 enum Sort {
   AGE = "age",
@@ -91,7 +92,7 @@ export default function MemeLabComponent(props: Readonly<Props>) {
   }
 
   useEffect(() => {
-    const nftsUrl = `${process.env.API_ENDPOINT}/api/lab_extended_data`;
+    const nftsUrl = `${SEIZE_API_URL}/api/lab_extended_data`;
     fetchAllPages(nftsUrl).then((responseNftMetas: LabExtendedData[]) => {
       setNftMetas(responseNftMetas);
       const myCollections: string[] = [];
@@ -104,9 +105,7 @@ export default function MemeLabComponent(props: Readonly<Props>) {
       if (responseNftMetas.length > 0) {
         const tokenIds = responseNftMetas.map((n: LabExtendedData) => n.id);
         fetchAllPages(
-          `${process.env.API_ENDPOINT}/api/nfts_memelab?id=${tokenIds.join(
-            ","
-          )}`
+          `${SEIZE_API_URL}/api/nfts_memelab?id=${tokenIds.join(",")}`
         ).then((responseNfts: any[]) => {
           setNfts(responseNfts);
         });
@@ -123,7 +122,7 @@ export default function MemeLabComponent(props: Readonly<Props>) {
       connectedProfile?.consolidation.wallets?.[0]?.wallet.address;
     if (connected) {
       fetchAllPages(
-        `${process.env.API_ENDPOINT}/api/nft-owners/consolidation/${connected}?contract=${MEMELAB_CONTRACT}`
+        `${SEIZE_API_URL}/api/nft-owners/consolidation/${connected}?contract=${MEMELAB_CONTRACT}`
       ).then((owners: NftOwner[]) => {
         setNftBalances(owners);
         setBalancesLoaded(true);

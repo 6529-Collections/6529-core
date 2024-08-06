@@ -136,6 +136,7 @@ export default function NextGenAdminSetSplits(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           collectionID,
           artistPrimary,

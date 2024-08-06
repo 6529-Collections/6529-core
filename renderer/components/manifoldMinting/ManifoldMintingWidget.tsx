@@ -23,6 +23,7 @@ import {
   ManifoldPhase,
 } from "../../hooks/useManifoldClaim";
 import { Time } from "../../helpers/time";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function ManifoldMintingWidget(
   props: Readonly<{
@@ -209,22 +210,21 @@ export default function ManifoldMintingWidget(
       value: BigInt(value),
       functionName: args.functionName,
       args: args.args,
+      chain: MANIFOLD_NETWORK,
+      account: connectedAddress.address,
     });
   };
 
   useEffect(() => {
     if (mintWrite.error) {
+      console.log("i am error", mintWrite.error);
       setMintStatus(<></>);
-      const fullError = mintWrite.error.message;
-      const resolvedError = fullError
-        .split("Request Arguments")[0]
-        .split(".")[0]
-        .split("Contract Call")[0];
-      if (!resolvedError || resolvedError.length < 5) {
-        setMintError(fullError);
-      } else {
-        setMintError(resolvedError);
-      }
+      setMintError(
+        mintWrite.error.message
+          .split("Request Arguments")[0]
+          .split(".")[0]
+          .split("Contract Call")[0]
+      );
     }
   }, [mintWrite.error]);
 
@@ -243,9 +243,10 @@ export default function ManifoldMintingWidget(
   const getViewLink = (hash: string) => {
     return (
       <a
-        href={getTransactionLink(MANIFOLD_NETWORK.id, hash)}
-        target="_blank"
-        rel="noreferrer">
+        href="#"
+        onClick={() =>
+          openInExternalBrowser(getTransactionLink(MANIFOLD_NETWORK.id, hash))
+        }>
         view trx
       </a>
     );

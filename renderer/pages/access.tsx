@@ -5,6 +5,7 @@ import { API_AUTH_COOKIE } from "../constants";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Image from "next/image";
+import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
 
 export default function Access() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function Access() {
   useEffect(() => {
     if (!image && router.isReady) {
       const apiAuth = Cookies.get(API_AUTH_COOKIE);
-      fetch(`${process.env.API_ENDPOINT}/api/`, {
+      fetch(`${SEIZE_API_URL}/api/`, {
         headers: apiAuth ? { "x-6529-auth": apiAuth } : {},
       }).then((r: any) => {
         r.json().then((response: any) => {
@@ -30,7 +31,7 @@ export default function Access() {
   function doLogin(target: any) {
     target.select();
     const pass = target.value;
-    fetch(`${process.env.API_ENDPOINT}/api/`, {
+    fetch(`${SEIZE_API_URL}/api/`, {
       headers: { "x-6529-auth": pass },
     }).then((r: any) => {
       if (r.status === 401) {
@@ -49,15 +50,12 @@ export default function Access() {
         <title>Access Page | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Access Page | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/access`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/access`} />
         <meta property="og:title" content={`Access Page`} />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
       <main className={styles.login}>
@@ -90,7 +88,7 @@ export function LoginImage(props: Readonly<{ image: string; alt: string }>) {
         height: "auto",
         width: "auto",
         maxWidth: "100%",
-        maxHeight: "100%",
+        maxHeight: "100vh",
       }}
       src={props.image}
       className={styles.loginImage}

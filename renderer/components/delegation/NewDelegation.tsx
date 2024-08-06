@@ -22,6 +22,7 @@ import {
   DelegationTokenSelection,
   DelegationSubmitGroups,
 } from "./DelegationFormParts";
+import Link from "next/link";
 
 interface Props {
   address: string;
@@ -293,14 +294,11 @@ export default function NewDelegationComponent(props: Readonly<Props>) {
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Note: The currently supported use cases on seize.io are: #1 -
                 All, #2 - Minting/Allowlist, #3 - Airdrops{" "}
-                <a
-                  href={`/delegation/delegation-faq/use-cases-overview`}
-                  target="_blank"
-                  rel="noreferrer">
+                <Link href={`/delegation/delegation-faq/use-cases-overview`}>
                   <FontAwesomeIcon
                     className={styles.infoIconLink}
                     icon="info-circle"></FontAwesomeIcon>
-                </a>
+                </Link>
               </Form.Label>
             </Form.Group>
             <DelegationSubmitGroups

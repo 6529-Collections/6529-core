@@ -30,6 +30,7 @@ import { AuthContext } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
 import MemePageMintCountdown from "./MemePageMintCountdown";
+import { SEIZE_API_URL } from "../../../constants";
 
 interface MemeTab {
   focus: MEME_FOCUS;
@@ -161,36 +162,36 @@ export default function MemePage() {
 
   useEffect(() => {
     if (nftId) {
-      fetchUrl(
-        `${process.env.API_ENDPOINT}/api/memes_extended_data?id=${nftId}`
-      ).then((response: DBResponse) => {
-        const nftMetas = response.data;
-        if (nftMetas.length === 1) {
-          setNftMeta(nftMetas[0]);
-          fetchUrl(
-            `${process.env.API_ENDPOINT}/api/nfts?id=${nftId}&contract=${MEMES_CONTRACT}`
-          ).then((response: DBResponse) => {
-            const mynft = response.data[0];
-            setNft(mynft);
+      fetchUrl(`${SEIZE_API_URL}/api/memes_extended_data?id=${nftId}`).then(
+        (response: DBResponse) => {
+          const nftMetas = response.data;
+          if (nftMetas.length === 1) {
+            setNftMeta(nftMetas[0]);
+            fetchUrl(
+              `${SEIZE_API_URL}/api/nfts?id=${nftId}&contract=${MEMES_CONTRACT}`
+            ).then((response: DBResponse) => {
+              const mynft = response.data[0];
+              setNft(mynft);
+              setBreadcrumbs([
+                { display: "Home", href: "/" },
+                { display: "The Memes", href: "/the-memes" },
+                {
+                  display: `SZN${nftMetas[0].season}`,
+                  href: `/the-memes?szn=${nftMetas[0].season}&sort=age&sort_dir=ASC`,
+                },
+                { display: `Card ${nftId} - ${mynft.name}` },
+              ]);
+            });
+          } else {
+            setNftMeta(undefined);
             setBreadcrumbs([
               { display: "Home", href: "/" },
               { display: "The Memes", href: "/the-memes" },
-              {
-                display: `SZN${nftMetas[0].season}`,
-                href: `/the-memes?szn=${nftMetas[0].season}&sort=age&sort_dir=ASC`,
-              },
-              { display: `Card ${nftId} - ${mynft.name}` },
+              { display: `${nftId}` },
             ]);
-          });
-        } else {
-          setNftMeta(undefined);
-          setBreadcrumbs([
-            { display: "Home", href: "/" },
-            { display: "The Memes", href: "/the-memes" },
-            { display: `${nftId}` },
-          ]);
+          }
         }
-      });
+      );
     }
   }, [nftId]);
 
@@ -211,9 +212,7 @@ export default function MemePage() {
   useEffect(() => {
     if (connectedWallets.length && nftId) {
       fetchUrl(
-        `${
-          process.env.API_ENDPOINT
-        }/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
+        `${SEIZE_API_URL}/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
           ","
         )}&id=${nftId}`
       ).then((response: DBResponse) => {
@@ -358,16 +357,14 @@ export default function MemePage() {
                   </Row>
                   <Row className="pt-2">
                     <Col>
-                      <h2 className="float-left">
+                      <h2>
                         <a
                           href={`/the-memes?szn=${nftMeta.season}&sort=age&sort_dir=ASC`}>
                           SZN{nftMeta.season}
                         </a>
                       </h2>
-                      <h2 className="float-left">
-                        &nbsp;| Card {nft.id} -&nbsp;
-                      </h2>
-                      <h2 className="float-left">{nft.name}</h2>
+                      <h2>&nbsp;| Card {nft.id} -&nbsp;</h2>
+                      <h2>{nft.name}</h2>
                     </Col>
                   </Row>
                   <Row className="pt-3 pb-3">

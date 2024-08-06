@@ -6,6 +6,7 @@ import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -30,15 +31,12 @@ export default function GradientsPage() {
         <title>6529 Gradient | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="6529 Gradient | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/6529-gradient`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/6529-gradient`} />
         <meta property="og:title" content={`6529 Gradient`} />
         <meta property="og:description" content={`6529 SEIZE`} />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/gradients-preview.png`}
+          content={`${SEIZE_URL}/gradients-preview.png`}
         />
       </Head>
 
