@@ -20,7 +20,7 @@
     "build-electron-win": "tsc -p electron-src && xcopy /E /I assets main\\electron-src\\assets\\",
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "pack-app": "npm run build && electron-builder --dir",
-    "dist-win": "npm run build && electron-builder --win --ia32 --x64 --arm64 --publish always",
+    "dist-win": "ts-node build-win.ts",
     "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
     "dist-linux": "npm run build && electron-builder --linux --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
@@ -47,6 +47,7 @@
     "better-sqlite3": "^11.1.2",
     "bootstrap": "^5.3.3",
     "csv-parser": "^3.0.0",
+    "dotenv": "^16.4.5",
     "electron-localshortcut": "^3.2.1",
     "electron-log": "^5.1.7",
     "electron-store": "^10.0.0",
@@ -174,6 +175,7 @@
       }
     },
     "win": {
+      "publisherName": "6529",
       "icon": "assets/icon.ico",
       "target": [
         {
@@ -195,7 +197,11 @@
           ]
         }
       ],
-      "artifactName": "${productName}-win-${arch}-${version}.${ext}"
+      "artifactName": "${productName}-win-${arch}-${version}.${ext}",
+      "signingHashAlgorithms": [
+        "sha256"
+      ],
+      "rfc3161TimeStampServer": "http://timestamp.digicert.com"
     },
     "nsis": {
       "oneClick": false,

@@ -3,6 +3,7 @@ import "../styles/globals.scss";
 import "tippy.js/dist/tippy.css";
 import "tippy.js/themes/light.css";
 import "../styles/swiper.scss";
+import "../components/drops/create/lexical/lexical.styles.scss";
 import { Provider } from "react-redux";
 import type { AppProps } from "next/app";
 import { wrapper } from "../store/store";

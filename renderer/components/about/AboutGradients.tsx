@@ -1,5 +1,6 @@
 import { Col, Container, Row } from "react-bootstrap";
 import Image from "next/image";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutGradients() {
   return (
@@ -56,9 +57,10 @@ export default function AboutGradients() {
           <p>
             It is the artist&apos;s (&#64;
             <a
-              href="https://twitter.com/6529er"
-              target="_blank"
-              rel="noreferrer">
+              href="#"
+              onClick={() =>
+                openInExternalBrowser("https://twitter.com/6529er")
+              }>
               6529er
             </a>
             ) preferred interpretation of his work and his vision for it in its

@@ -33,6 +33,7 @@ import {
   getNextGenIconUrl,
   getNextGenImageUrl,
 } from "../nextgenToken/NextGenTokenImage";
+import Link from "next/link";
 
 const TRAITS: Record<number, string[]> = {
   1: ["Palette", "Size", "Traced"],
@@ -473,24 +474,20 @@ function TraitSetAccordion(
                         style={{ height: "1.5em", color: "#00aa00" }}
                         icon="check-circle"></FontAwesomeIcon>
                       <b>
-                        <a
+                        <Link
                           href={`/nextgen/collection/${formatNameForUrl(
                             props.collection.name
                           )}/art?traits=${props.trait}:${tv.value}`}
-                          className="decoration-hover-underline"
-                          target="_blank"
-                          rel="noreferrer">
+                          className="decoration-hover-underline">
                           {tv.value}
-                        </a>
+                        </Link>
                       </b>
                     </span>
                     <span className="d-flex flex-wrap">
                       {tv.tokens.map((t) => (
-                        <a
+                        <Link
                           key={`accordion-${props.trait}-${tv.value}-${t}`}
-                          href={`/nextgen/token/${t}`}
-                          target="_blank"
-                          rel="noreferrer">
+                          href={`/nextgen/token/${t}`}>
                           <Tippy
                             theme="light"
                             delay={250}
@@ -519,7 +516,7 @@ function TraitSetAccordion(
                               }}
                             />
                           </Tippy>
-                        </a>
+                        </Link>
                       ))}
                     </span>
                   </Col>
@@ -532,15 +529,13 @@ function TraitSetAccordion(
                     Not Seized:{" "}
                     {missingValues.map((mv, index) => (
                       <Fragment key={mv}>
-                        <a
+                        <Link
                           href={`/nextgen/collection/${formatNameForUrl(
                             props.collection.name
                           )}/art?traits=${props.trait}:${mv}`}
-                          className="decoration-hover-underline"
-                          target="_blank"
-                          rel="noreferrer">
+                          className="decoration-hover-underline">
                           {mv}
-                        </a>
+                        </Link>
                         {index < missingValues.length - 1 ? ", " : ""}
                       </Fragment>
                     ))}

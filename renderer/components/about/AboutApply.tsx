@@ -1,4 +1,5 @@
 import { Col, Container, Row } from "react-bootstrap";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutApply() {
   return (
@@ -16,9 +17,10 @@ export default function AboutApply() {
           <p>
             Please send an email to{" "}
             <a
-              href="mailto:collections@6529.io"
-              target="_blank"
-              rel="noreferrer">
+              href="#"
+              onClick={() =>
+                openInExternalBrowser("mailto:collections@6529.io")
+              }>
               collections&#64;6529.io
             </a>{" "}
             with:

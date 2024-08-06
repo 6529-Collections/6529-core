@@ -13,6 +13,7 @@ import router from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import DatePickerModal from "../datePickerModal/DatePickerModal";
 import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 export enum GasRoyaltiesCollectionFocus {
   MEMES = "the-memes",
@@ -336,9 +337,8 @@ interface TokenImageProps {
 export function GasRoyaltiesTokenImage(props: Readonly<TokenImageProps>) {
   return (
     <a
-      href={`/${props.path}/${props.token_id}`}
-      target="_blank"
-      rel="noreferrer">
+      href="#"
+      onClick={() => openInExternalBrowser(`/${props.path}/${props.token_id}`)}>
       <span className="d-flex justify-content-center aling-items-center gap-3">
         <span>{props.token_id} -</span>
         <Tippy

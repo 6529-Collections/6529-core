@@ -227,14 +227,12 @@ const CreateDropContent = forwardRef<
                       !canAddPart
                         ? "tw-cursor-default tw-text-iron-600"
                         : "tw-cursor-pointer tw-text-iron-400 hover:tw-text-primary-400"
-                    }`}
-                  >
+                    }`}>
                     <svg
                       className="tw-h-4 tw-w-4 tw-flex-shrink-0"
                       viewBox="0 0 24 24"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                      xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M12 5V19M5 12H19"
                         stroke="currentColor"
@@ -248,8 +246,7 @@ const CreateDropContent = forwardRef<
                       viewBox="0 0 24 24"
                       fill="none"
                       aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                      xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M21 4H3M20 8L6 8M18 12L9 12M15 16L8 16M17 20H12"
                         stroke="currentColor"
@@ -273,14 +270,12 @@ const CreateDropContent = forwardRef<
                       !canAddPart
                         ? "tw-text-iron-600 tw-cursor-default"
                         : "tw-cursor-pointer tw-text-iron-400 hover:tw-text-primary-400"
-                    }`}
-                  >
+                    }`}>
                     <svg
                       className="tw-h-4 tw-w-4 tw-flex-shrink-0 -tw-mr-0.5"
                       viewBox="0 0 24 24"
                       fill="none"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                      xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M12 5V19M5 12H19"
                         stroke="currentColor"
@@ -294,8 +289,7 @@ const CreateDropContent = forwardRef<
                       viewBox="0 0 24 24"
                       fill="none"
                       aria-hidden="true"
-                      xmlns="http://www.w3.org/2000/svg"
-                    >
+                      xmlns="http://www.w3.org/2000/svg">
                       <path
                         d="M21 4H3M20 8L6 8M18 12L9 12M15 16L8 16M17 20H12"
                         stroke="currentColor"
@@ -324,8 +318,7 @@ const CreateDropContent = forwardRef<
                   <span className="tw-text-iron-50">{currentPartCount}</span>,
                 </span>
                 <span
-                  className={`${charsCount > 240 && "tw-text-error"} tw-pl-1`}
-                >
+                  className={`${charsCount > 240 && "tw-text-error"} tw-pl-1`}>
                   length: {formatNumberWithCommas(charsCount)}
                 </span>
               </>
@@ -337,8 +330,7 @@ const CreateDropContent = forwardRef<
             <div
               role="button"
               aria-label="Select audio file"
-              className="tw-cursor-pointer tw-flex tw-items-center tw-gap-x-2 tw-text-iron-400 hover:tw-text-iron-50 tw-ease-out tw-transition tw-duration-300"
-            >
+              className="tw-cursor-pointer tw-flex tw-items-center tw-gap-x-2 tw-text-iron-400 hover:tw-text-iron-50 tw-ease-out tw-transition tw-duration-300">
               <svg
                 className="tw-flex-shrink-0 tw-h-5 tw-w-5"
                 xmlns="http://www.w3.org/2000/svg"
@@ -346,8 +338,7 @@ const CreateDropContent = forwardRef<
                 aria-hidden="true"
                 viewBox="0 0 24 24"
                 strokeWidth="1.5"
-                stroke="currentColor"
-              >
+                stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"

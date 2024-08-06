@@ -8,6 +8,7 @@ import Document, {
 } from "next/document";
 import { AboutSection } from "./about/[section]";
 import { SEIZE_API_URL } from "../../constants";
+import { openInExternalBrowser } from "../helpers";
 
 interface MyDocumentProps extends DocumentProps {
   pathname: string;
@@ -49,9 +50,10 @@ class MyDocument extends Document<MyDocumentProps> {
               id="footer">
               <span className="d-flex align-items-center justify-content-center flex-wrap gap-2">
                 <a
-                  href="https://twitter.com/punk6529"
-                  target="_blank"
-                  rel="noreferrer">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser("https://twitter.com/punk6529")
+                  }>
                   <img
                     width="0"
                     height="0"
@@ -63,9 +65,10 @@ class MyDocument extends Document<MyDocumentProps> {
                 </a>
                 |
                 <a
-                  href="https://twitter.com/6529Collections"
-                  target="_blank"
-                  rel="noreferrer">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser("https://twitter.com/6529Collections")
+                  }>
                   <img
                     width="0"
                     height="0"
@@ -77,9 +80,10 @@ class MyDocument extends Document<MyDocumentProps> {
                 </a>
                 |
                 <a
-                  href="https://discord.gg/join-om"
-                  target="_blank"
-                  rel="noreferrer">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser("https://discord.gg/join-om")
+                  }>
                   <img
                     width="0"
                     height="0"
@@ -90,7 +94,9 @@ class MyDocument extends Document<MyDocumentProps> {
                   OM Discord
                 </a>
                 |
-                <a href="https://6529.io" target="_blank" rel="noreferrer">
+                <a
+                  href="#"
+                  onClick={() => openInExternalBrowser("https://6529.io")}>
                   <img
                     width="0"
                     height="0"
@@ -102,9 +108,10 @@ class MyDocument extends Document<MyDocumentProps> {
                 </a>
                 |
                 <a
-                  href="https://github.com/6529-Collections"
-                  target="_blank"
-                  rel="noreferrer">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser("https://github.com/6529-Collections")
+                  }>
                   <img
                     width="0"
                     height="0"
@@ -129,16 +136,18 @@ class MyDocument extends Document<MyDocumentProps> {
                 </a>
                 | <a href={`/about/${AboutSection.LICENSE}`}>License</a>|{" "}
                 <a
-                  href="https://api.seize.io/docs"
-                  target="_blank"
-                  rel="noreferrer">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser("https://api.seize.io/docs")
+                  }>
                   API Documentation
                 </a>
                 |{" "}
                 <a
-                  href={`https://status.seize.io/`}
-                  target="_blank"
-                  rel="noreferrer">
+                  href="#"
+                  onClick={() =>
+                    openInExternalBrowser("https://status.seize.io/")
+                  }>
                   Status
                 </a>
               </span>

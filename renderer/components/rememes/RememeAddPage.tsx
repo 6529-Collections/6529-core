@@ -15,6 +15,7 @@ import { AuthContext } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import { SEIZE_API_URL, SEIZE_URL } from "../../../constants";
+import Link from "next/link";
 
 interface CheckList {
   status: boolean;
@@ -356,13 +357,11 @@ export default function RememeAddPage() {
                           key={`submission-result-token-${t.id}`}>
                           #{t.id} - {t.name}
                           &nbsp;&nbsp;
-                          <a
+                          <Link
                             className="font-color"
-                            href={`${SEIZE_URL}/rememes/${submissionResult.contract}/${t.id}`}
-                            target="_blank"
-                            rel="noreferrer">
+                            href={`/rememes/${submissionResult.contract}/${t.id}`}>
                             view
-                          </a>
+                          </Link>
                         </Col>
                       ))}
                     </Row>

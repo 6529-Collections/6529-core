@@ -1,6 +1,8 @@
 import { Col, Container, Row, Table } from "react-bootstrap";
 import Image from "next/image";
 import { AboutSection } from "../../pages/about/[section]";
+import Link from "next/link";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutMemes() {
   return (
@@ -78,43 +80,31 @@ export default function AboutMemes() {
             <b>Learn More About The Memes:</b>
           </p>
           <p>
-            All The Memes:{" "}
-            <a href={`/the-memes`} target="_blank" rel="noreferrer">
-              seize.io/the-memes
-            </a>
+            All The Memes: <Link href="/the-memes">seize.io/the-memes</Link>
           </p>
           <p>
             The Memes Community:{" "}
-            <a href={`/community`} target="_blank" rel="noreferrer">
-              seize.io/community
-            </a>
+            <Link href="/community">seize.io/community</Link>
           </p>
           <p>
             FAQs:{" "}
-            <a
-              href={`/about/${AboutSection.FAQ}`}
-              target="_blank"
-              rel="noreferrer">
-              seize.io/about/faq
-            </a>
+            <Link href={`/about/${AboutSection.FAQ}`}>seize.io/about/faq</Link>
           </p>
           <p>
             The Memes Discord:{" "}
             <a
-              href="https://discord.gg/join-om"
-              target="_blank"
-              rel="noreferrer">
+              href="#"
+              onClick={() =>
+                openInExternalBrowser("https://discord.gg/join-om")
+              }>
               discord.gg/join-om
             </a>
           </p>
           <p>
             Minting Memes:{" "}
-            <a
-              href={`/about/${AboutSection.MINTING}`}
-              target="_blank"
-              rel="noreferrer">
+            <Link href={`/about/${AboutSection.MINTING}`}>
               seize.io/about/minting
-            </a>
+            </Link>
           </p>
         </Col>
       </Row>

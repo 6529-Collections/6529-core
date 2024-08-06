@@ -1,4 +1,5 @@
 import { Container, Row, Col } from "react-bootstrap";
+import { openInExternalBrowser } from "../../../helpers";
 
 export default function NextGenAbout() {
   return (
@@ -292,9 +293,10 @@ export default function NextGenAbout() {
         <Col>
           Additional technical information can be found here:{" "}
           <a
-            href="https://seize-io.gitbook.io/nextgen/"
-            target="_blank"
-            rel="noopener noreferrer">
+            href="#"
+            onClick={() =>
+              openInExternalBrowser("https://seize-io.gitbook.io/nextgen/")
+            }>
             https://seize-io.gitbook.io/nextgen/
           </a>
         </Col>

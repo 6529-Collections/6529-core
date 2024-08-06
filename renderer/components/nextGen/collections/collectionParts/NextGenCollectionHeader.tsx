@@ -26,6 +26,7 @@ import Head from "next/head";
 import { getCommonHeaders } from "../../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../../services/api/common-api";
 import { SEIZE_API_URL, SEIZE_URL } from "../../../../../constants";
+import { openInExternalBrowser } from "../../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -232,12 +233,13 @@ export default function NextGenCollectionHeader(props: Readonly<Props>) {
           {props.show_links && (
             <span className="pt-2 pb-2 d-flex align-items-center justify-content-end gap-4">
               <a
-                href={
-                  props.collection.opensea_link ||
-                  getOpenseaLink(NEXTGEN_CHAIN_ID)
-                }
-                target="_blank"
-                rel="noreferrer">
+                href="#"
+                onClick={() =>
+                  openInExternalBrowser(
+                    props.collection.opensea_link ||
+                      getOpenseaLink(NEXTGEN_CHAIN_ID)
+                  )
+                }>
                 <Image
                   className={styles.marketplace}
                   src="/opensea.png"

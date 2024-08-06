@@ -1,5 +1,6 @@
 import DistributionPlanToolWrapper from "../../components/distribution-plan-tool/wrapper/DistributionPlanToolWrapper";
 import DistributionPlanToolConnect from "../../components/distribution-plan-tool/connect/distributipn-plan-tool-connect";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function DistributionPlanTool() {
   return (
@@ -20,14 +21,16 @@ export default function DistributionPlanTool() {
                   lead to the creation of {""}
                   <a
                     className="tw-font-semibold hover:tw-text-neutral-300 tw-transition tw-duration-300 tw-ease-out"
-                    href="https://github.com/6529-Collections/Janus"
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                    href="#"
+                    onClick={() =>
+                      openInExternalBrowser(
+                        "https://github.com/6529-Collections/Janus"
+                      )
+                    }>
                     Janus
-                  </a>{""}
-                  , a domain-specific language for deeply customized allowlist
-                  management.
+                  </a>
+                  {""}, a domain-specific language for deeply customized
+                  allowlist management.
                 </p>
                 <p className="tw-text-justify tw-mb-0 tw-mt-2 md:tw-mt-4 tw-block tw-font-light tw-text-base tw-leading-[1.6] tw-text-neutral-400">
                   EMMA was created as the internal team tool so that The Memes

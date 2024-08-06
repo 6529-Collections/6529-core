@@ -17,6 +17,7 @@ import {
   SUPPORTED_COLLECTIONS,
 } from "../../pages/delegation/[...section]";
 import { useOrignalDelegatorEnsResolution } from "./delegation_shared";
+import { openInExternalBrowser } from "../../helpers";
 
 export function DelegationAddressInput(
   props: Readonly<{ setAddress: (address: string) => void }>
@@ -315,9 +316,11 @@ export function DelegationSubmitGroups(
   }
 
   function getTransactionAnchor(hash: any) {
-    return `<a href=${getTransactionLink(DELEGATION_CONTRACT.chain_id, hash)}
-    target="_blank"
-    rel="noreferrer"
+    return `<a href="#"
+    onClick={() =>
+      ${openInExternalBrowser(
+        getTransactionLink(DELEGATION_CONTRACT.chain_id, hash)
+      )}
     className=${styles.etherscanLink}>
       view
     </a>`;

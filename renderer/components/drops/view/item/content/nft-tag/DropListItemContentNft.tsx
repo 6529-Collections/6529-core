@@ -16,6 +16,7 @@ import {
 } from "../../../../../../constants";
 import Link from "next/link";
 import { isMemesEcosystemContract } from "../../../../../../helpers/nft.helpers";
+import { openInExternalBrowser } from "../../../../../../helpers";
 
 export default function DropListItemContentNft({
   nft: { contract, token, name },
@@ -83,11 +84,16 @@ export default function DropListItemContentNft({
 
   return (
     <Link
-      onClick={(e) => e.stopPropagation()}
-      href={nftHref}
-      className="tw-no-underline"
-      target={target}
-    >
+      onClick={(e) => {
+        e.preventDefault();
+        if (target === "_blank") {
+          openInExternalBrowser(nftHref);
+        } else {
+          window.open(nftHref);
+        }
+      }}
+      href="#"
+      className="tw-no-underline">
       <div className="tw-mt-2 tw-gap-y-2 tw-flex tw-flex-col" ref={elementRef}>
         <div className="tw-w-full tw-h-full">
           {nft && (

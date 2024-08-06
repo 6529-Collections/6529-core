@@ -23,6 +23,7 @@ import {
 } from "../../helpers/Helpers";
 import NFTAttributes from "../nftAttributes/NFTAttributes";
 import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 interface Props {
   contract: string;
@@ -158,9 +159,12 @@ export default function RememePage(props: Readonly<Props>) {
                   <Col>
                     <a
                       className={styles.userLink}
-                      href={`https://etherscan.io/token/${rememe.contract}/?a=${rememe.id}`}
-                      target="_blank"
-                      rel="noreferrer">
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          `https://etherscan.io/token/${rememe.contract}/?a=${rememe.id}`
+                        )
+                      }>
                       <Image
                         width="0"
                         height="0"
@@ -194,9 +198,12 @@ export default function RememePage(props: Readonly<Props>) {
                     <Col>
                       <a
                         className={styles.userLink}
-                        href={`https://twitter.com/${rememe.contract_opensea_data.twitterUsername}`}
-                        target="_blank"
-                        rel="noreferrer">
+                        href="#"
+                        onClick={() =>
+                          openInExternalBrowser(
+                            `https://twitter.com/${rememe.contract_opensea_data.twitterUsername}`
+                          )
+                        }>
                         <Image
                           width="0"
                           height="0"
@@ -213,9 +220,12 @@ export default function RememePage(props: Readonly<Props>) {
                 <Row className="pt-5">
                   <Col>
                     <a
-                      href={`https://opensea.io/assets/ethereum/${props.contract}/${props.id}`}
-                      target="_blank"
-                      rel="noreferrer">
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          `https://opensea.io/assets/ethereum/${props.contract}/${props.id}`
+                        )
+                      }>
                       <Image
                         className={styles.marketplaceRememe}
                         src="/opensea.png"
@@ -225,9 +235,12 @@ export default function RememePage(props: Readonly<Props>) {
                       />
                     </a>
                     <a
-                      href={`https://x2y2.io/eth/${props.contract}/${props.id}`}
-                      target="_blank"
-                      rel="noreferrer">
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          `https://x2y2.io/eth/${props.contract}/${props.id}`
+                        )
+                      }>
                       <Image
                         className={styles.marketplaceRememe}
                         src="/x2y2.png"
@@ -297,9 +310,8 @@ export default function RememePage(props: Readonly<Props>) {
     if (isUrl(s) || isIPFS(s)) {
       return (
         <a
-          href={parseIpfsUrl(s)}
-          target="_blank"
-          rel="noreferrer"
+          href="#"
+          onClick={() => openInExternalBrowser(parseIpfsUrl(s))}
           className={`d-inline-flex align-items-center justify-content-start ${styles.userLink}`}>
           {s}
           <FontAwesomeIcon icon="external-link" className={styles.linkIcon} />
@@ -321,9 +333,8 @@ export default function RememePage(props: Readonly<Props>) {
                     <td className={styles.metadataTableNoBreak}>Token URI</td>
                     <td className={styles.metadataTableBreak}>
                       <a
-                        href={rememe.token_uri}
-                        target="_blank"
-                        rel="noreferrer"
+                        href="#"
+                        onClick={() => openInExternalBrowser(rememe.token_uri)}
                         className={`d-inline-flex align-items-center justify-content-start ${styles.userLink}`}>
                         {rememe.token_uri}
                         <FontAwesomeIcon

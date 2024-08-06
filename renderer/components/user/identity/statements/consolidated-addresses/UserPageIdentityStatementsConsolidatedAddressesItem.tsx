@@ -24,6 +24,7 @@ import {
 import { DELEGATION_ABI } from "../../../../../abis";
 import { AuthContext } from "../../../../auth/Auth";
 import { getTransactionLink } from "../../../../../helpers/Helpers";
+import { openInExternalBrowser } from "../../../../../helpers";
 
 export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   address,
@@ -43,16 +44,14 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
 
   const goToOpensea = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
-    window.open(
-      `https://opensea.io/accounts/${address.wallet.address}`,
-      "_blank"
+    openInExternalBrowser(
+      `https://opensea.io/accounts/${address.wallet.address}`
     );
   };
 
   const goToEtherscan = () => {
-    window.open(
-      `https://etherscan.io/address/${address.wallet.address}`,
-      "_blank"
+    openInExternalBrowser(
+      `https://etherscan.io/address/${address.wallet.address}`
     );
   };
 
@@ -95,12 +94,15 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
         <>
           {writeDelegation.data && (
             <a
-              href={getTransactionLink(
-                DELEGATION_CONTRACT.chain_id,
-                writeDelegation.data
-              )}
-              target="_blank"
-              rel="noreferrer"
+              href="#"
+              onClick={() =>
+                openInExternalBrowser(
+                  getTransactionLink(
+                    DELEGATION_CONTRACT.chain_id,
+                    writeDelegation.data
+                  )
+                )
+              }
               className="tw-text-primary-400 tw-underline">
               View Transaction
             </a>

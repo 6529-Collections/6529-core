@@ -51,6 +51,7 @@ import UpdateDelegationComponent from "./UpdateDelegation";
 import RevokeDelegationWithSubComponent from "./RevokeDelegationWithSub";
 import NewAssignPrimaryAddress from "./NewAssignPrimaryAddress";
 import { Spinner } from "../dotLoader/DotLoader";
+import { openInExternalBrowser } from "../../helpers";
 
 interface Props {
   setSection(section: DelegationCenterSection): any;
@@ -513,12 +514,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: "Revoking Delegation",
             message: `Transaction submitted...
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      contractWriteRevoke.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          contractWriteRevoke.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a><br />Waiting for confirmation...`,
@@ -528,12 +531,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: "Revoking Delegation",
             message: `Transaction Successful!
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      contractWriteRevoke.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          contractWriteRevoke.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a>`,
@@ -562,12 +567,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: "Batch Revoking Delegations",
             message: `Transaction submitted...
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      contractWriteBatchRevoke.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          contractWriteBatchRevoke.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a><br />Waiting for confirmation...`,
@@ -578,12 +585,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: "Batch Revoking Delegations",
             message: `Transaction Successful!
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      contractWriteBatchRevoke.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          contractWriteBatchRevoke.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a>`,
@@ -615,12 +624,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: `Locking Wallet`,
             message: `Transaction submitted...
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      collectionLockWrite.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          collectionLockWrite.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a><br />Waiting for confirmation...`,
@@ -630,12 +641,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: `Locking Wallet`,
             message: `Transaction Successful!
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      collectionLockWrite.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          collectionLockWrite.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a>`,
@@ -668,12 +681,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: title,
             message: `Transaction submitted...
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      useCaseLockWrite.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          useCaseLockWrite.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a><br />Waiting for confirmation...`,
@@ -683,12 +698,14 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
             title: title,
             message: `Transaction Successful!
                     <a
-                    href=${getTransactionLink(
-                      DELEGATION_CONTRACT.chain_id,
-                      useCaseLockWrite.data
-                    )}
-                    target="_blank"
-                    rel="noreferrer"
+                    href="#"
+                    onClick={() =>
+                      ${openInExternalBrowser(
+                        getTransactionLink(
+                          DELEGATION_CONTRACT.chain_id,
+                          useCaseLockWrite.data
+                        )
+                      )}
                     className=${styles.etherscanLink}>
                     view
                   </a>`,

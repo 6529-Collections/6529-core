@@ -14,6 +14,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { mainnet } from "viem/chains";
 import { formatNameForUrl, getOpenseaLink } from "../nextgen_helpers";
 import Tippy from "@tippyjs/react";
+import { openInExternalBrowser } from "../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -183,7 +184,9 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
                 <span className="d-flex align-items-center gap-1">
                   <span>
                     {props.collection.on_chain ? "On-Chain" : "Off-Chain"}{" "}
-                    <a href={tokenMetadataUrl} target="_blank" rel="noreferrer">
+                    <a
+                      href="#"
+                      onClick={() => openInExternalBrowser(tokenMetadataUrl)}>
                       <FontAwesomeIcon
                         className={styles.copyIcon}
                         icon="external-link-square"></FontAwesomeIcon>
@@ -196,9 +199,12 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
                 <span className="d-flex gap-4">
                   <Tippy content={"Opensea"} theme={"light"} delay={250}>
                     <a
-                      href={getOpenseaLink(NEXTGEN_CHAIN_ID, props.token_id)}
-                      target="_blank"
-                      rel="noreferrer">
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          getOpenseaLink(NEXTGEN_CHAIN_ID, props.token_id)
+                        )
+                      }>
                       <Image
                         className={styles.marketplace}
                         src="/opensea.png"

@@ -12,6 +12,7 @@ import useManifoldClaim, {
 import { MEMES_MANIFOLD_PROXY_ABI } from "../../abis";
 import MintCountdownBox from "../mintCountdownBox/MintCountdownBox";
 import { useEffect } from "react";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function MemePageMintCountdown(
   props: Readonly<{
@@ -64,7 +65,7 @@ export default function MemePageMintCountdown(
               {
                 label: "Mint on Manifold",
                 link: MEMES_MINTING_HREF,
-                target: "_blank",
+                onClick: (e) => openInExternalBrowser(MEMES_MINTING_HREF, e),
               },
               {
                 label: (
@@ -76,7 +77,10 @@ export default function MemePageMintCountdown(
                   </span>
                 ),
                 link: `/the-memes/mint`,
-                target: "_self",
+                onClick: (e) => {
+                  e.preventDefault();
+                  window.open(MEMES_MINTING_HREF);
+                },
               },
             ]}
             additional_elements={

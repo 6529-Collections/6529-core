@@ -16,6 +16,7 @@ import NextGenZoomableImage, {
   MIN_ZOOM_SCALE,
 } from "./NextGenZoomableImage";
 import useIsMobileScreen from "../../../../hooks/isMobileScreen";
+import { openInExternalBrowser } from "../../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -261,7 +262,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
               className={styles.modeIcon}
               onClick={() => {
                 const href = getCurrentHref();
-                window.open(href, "_blank");
+                openInExternalBrowser(href);
               }}
               icon="external-link"
             />

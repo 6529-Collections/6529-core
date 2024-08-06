@@ -19,6 +19,7 @@ import { MEMES_CONTRACT } from "../../constants";
 import { AuthContext } from "../auth/Auth";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 enum Sort {
   AGE = "age",
@@ -481,9 +482,8 @@ export default function LabCollection(props: Readonly<Props>) {
                     {website.split(" ").map((w) => (
                       <>
                         <a
-                          href={addProtocol(w)}
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() => openInExternalBrowser(addProtocol(w))}>
                           {w}
                         </a>
                         &nbsp;&nbsp;

@@ -23,6 +23,7 @@ import {
   ManifoldPhase,
 } from "../../hooks/useManifoldClaim";
 import { Time } from "../../helpers/time";
+import { openInExternalBrowser } from "../../helpers";
 
 export default function ManifoldMintingWidget(
   props: Readonly<{
@@ -242,9 +243,10 @@ export default function ManifoldMintingWidget(
   const getViewLink = (hash: string) => {
     return (
       <a
-        href={getTransactionLink(MANIFOLD_NETWORK.id, hash)}
-        target="_blank"
-        rel="noreferrer">
+        href="#"
+        onClick={() =>
+          openInExternalBrowser(getTransactionLink(MANIFOLD_NETWORK.id, hash))
+        }>
         view trx
       </a>
     );

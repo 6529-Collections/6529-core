@@ -20,6 +20,7 @@ import Tippy from "@tippyjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ArtistProfileHandle from "./ArtistProfileHandle";
 import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 const REMEMES_PAGE_SIZE = 20;
 
@@ -220,13 +221,18 @@ export function MemePageLiveRightMenu(props: {
           <Row>
             <Col>
               <a
-                href={
-                  props.nft.has_distribution
-                    ? `/the-memes/${props.nft.id}/distribution`
-                    : `https://github.com/6529-Collections/thememecards/tree/main/card${props.nft.id}`
-                }
-                target={props.nft.has_distribution ? "_self" : "_blank"}
-                rel="noreferrer">
+                href="#"
+                onClick={() => {
+                  if (props.nft?.has_distribution) {
+                    return window.open(
+                      `/the-memes/${props.nft.id}/distribution`
+                    );
+                  } else {
+                    return openInExternalBrowser(
+                      `https://github.com/6529-Collections/thememecards/tree/main/card${props.nft?.id}`
+                    );
+                  }
+                }}>
                 Distribution Plan
               </a>
             </Col>
@@ -244,9 +250,12 @@ export function MemePageLiveRightMenu(props: {
           <Row className="pt-4">
             <Col>
               <a
-                href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft.id}`}
-                target="_blank"
-                rel="noreferrer">
+                href="#"
+                onClick={() =>
+                  openInExternalBrowser(
+                    `https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft?.id}`
+                  )
+                }>
                 <Image
                   className={styles.marketplace}
                   src="/opensea.png"
@@ -255,22 +264,13 @@ export function MemePageLiveRightMenu(props: {
                   height={40}
                 />
               </a>
-              {/* <a
-                      href={`https://looksrare.org/collections/${MEMES_CONTRACT}/${props.nft.id}`}
-                      target="_blank"
-                      rel="noreferrer">
-                      <Image
-                        className={styles.marketplace}
-                        src="/looksrare.png"
-                        alt="looksrare"
-                        width={40}
-                        height={40}
-                      />
-                    </a> */}
               <a
-                href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft.id}`}
-                target="_blank"
-                rel="noreferrer">
+                href="#"
+                onClick={() =>
+                  openInExternalBrowser(
+                    `https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft?.id}`
+                  )
+                }>
                 <Image
                   className={styles.marketplace}
                   src="/x2y2.png"

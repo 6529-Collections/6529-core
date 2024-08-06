@@ -27,6 +27,7 @@ import UserPageStatsActivityWalletTableRowGas from "./UserPageStatsActivityWalle
 import { NextGenCollection } from "../../../../../../../entities/INextgen";
 import { normalizeNextgenTokenID } from "../../../../../../nextGen/nextgen_helpers";
 import { getNextGenIconUrl } from "../../../../../../nextGen/collections/nextgenToken/NextGenTokenImage";
+import { openInExternalBrowser } from "../../../../../../../helpers";
 
 export enum TransactionType {
   AIRDROPPED = "AIRDROPPED",
@@ -362,11 +363,14 @@ export default function UserPageStatsActivityWalletTableRow({
             gasPriceGwei={transaction.gas_price_gwei}
           />
           <a
-            href={`https://etherscan.io/tx/${transaction.transaction}`}
-            target="_blank"
+            href="#"
+            onClick={() =>
+              openInExternalBrowser(
+                `https://etherscan.io/tx/${transaction.transaction}`
+              )
+            }
             title="Go to etherscan"
             aria-label="Go to etherscan"
-            rel="noopener noreferrer"
             className="tw-bg-transparent tw-border-none tw-h-10 tw-w-10 tw-flex tw-justify-center tw-items-center hover:tw-scale-110 tw-rounded-full focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
             <span className="tw-flex-shrink-0 tw-w-6 tw-h-6 sm:tw-w-5 sm:tw-h-5">
               <EtherscanIcon />
