@@ -5,6 +5,7 @@ import { fetchAllPages } from "../../services/6529api";
 import { Consolidation } from "../../entities/IDelegation";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { SEIZE_API_URL } from "../../../constants";
 
 const csvParser = require("csv-parser");
 
@@ -133,7 +134,7 @@ export default function ConsolidationMappingTool() {
       });
     }
     if (processing) {
-      const initialUrl = `${process.env.API_ENDPOINT}/api/consolidations`;
+      const initialUrl = `${SEIZE_API_URL}/api/consolidations`;
       fetchConsolidations(initialUrl);
     }
   }, [processing]);

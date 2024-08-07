@@ -3,6 +3,7 @@ import { IProfileAndConsolidations } from "../../../entities/IProfile";
 import HeaderUserProfile from "./HeaderUserProfile";
 import HeaderUserProxy from "./proxy/HeaderUserProxy";
 import { useAccount } from "wagmi";
+import HeaderNotifications from "../notifications/HeaderNotifications";
 
 export default function HeaderUserContext({
   profile,
@@ -29,6 +30,7 @@ export default function HeaderUserContext({
             Create profile
           </Link>
         )}
+        <HeaderNotifications />
       </div>
     </div>
   );

@@ -94,6 +94,7 @@ export default function NextGenAdminMintAndAuction(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [recipient, tokenData, salt, collectionID, endTime],
       });
     }

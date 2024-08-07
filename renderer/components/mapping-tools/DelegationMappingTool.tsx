@@ -12,6 +12,7 @@ import { Delegation } from "../../entities/IDelegation";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import { DELEGATION_ALL_ADDRESS, MEMES_CONTRACT } from "../../constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { SEIZE_API_URL } from "../../../constants";
 
 const csvParser = require("csv-parser");
 
@@ -111,7 +112,7 @@ export default function DelegationMappingTool() {
       const useCaseFilter = `&use_case=1,${useCase}`;
 
       const collectionFilter = `&collection=${DELEGATION_ALL_ADDRESS},${collection}`;
-      const initialUrl = `${process.env.API_ENDPOINT}/api/delegations?${useCaseFilter}${collectionFilter}`;
+      const initialUrl = `${SEIZE_API_URL}/api/delegations?${useCaseFilter}${collectionFilter}`;
       fetchDelegations(initialUrl);
     }
   }, [processing]);

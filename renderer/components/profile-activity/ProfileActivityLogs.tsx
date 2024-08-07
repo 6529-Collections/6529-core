@@ -29,15 +29,15 @@ export interface ActivityLogParams {
   readonly groupId: string | null;
 }
 
-export interface ActivityLogParamsConverted {
+export interface ActivityLogParamsConverted extends Record<string, string> {
   readonly page: string;
   readonly page_size: string;
   readonly log_type: string;
-  include_incoming?: string;
-  rating_matter?: string;
-  profile?: string;
-  target?: string;
-  group_id?: string;
+  include_incoming: string;
+  rating_matter: string;
+  profile: string;
+  target: string;
+  group_id: string;
 }
 
 export const convertActivityLogParams = ({
@@ -47,7 +47,7 @@ export const convertActivityLogParams = ({
   readonly params: ActivityLogParams;
   readonly disableActiveGroup: boolean;
 }): ActivityLogParamsConverted => {
-  const converted: ActivityLogParamsConverted = {
+  const converted: any = {
     page: `${params.page}`,
     page_size: `${params.pageSize}`,
     log_type: params.logTypes.length
@@ -196,8 +196,7 @@ export default function ProfileActivityLogs({
         {withFilters && (
           <div className="min-[1200px]:tw-flex min-[1200px]:tw-justify-end">
             <div
-              className={`${children ? "" : "tw-mt-6"} min-[1200px]:tw-w-80`}
-            >
+              className={`${children ? "" : "tw-mt-6"} min-[1200px]:tw-w-96`}>
               <ProfileActivityLogsFilter
                 user={initialParams.handleOrWallet}
                 options={initialParams.logTypes}
@@ -235,8 +234,7 @@ export default function ProfileActivityLogs({
               <span
                 className={`${
                   initialParams.handleOrWallet ? "tw-px-4 sm:tw-px-6" : ""
-                } tw-text-sm sm:tw-text-md tw-italic tw-text-iron-500`}
-              >
+                } tw-text-sm sm:tw-text-md tw-italic tw-text-iron-500`}>
                 No Activity Log
               </span>
             </div>

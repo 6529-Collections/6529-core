@@ -180,7 +180,6 @@ type ReactQueryWrapperContextType = {
   onWaveCreated: () => void;
   onWaveFollowChange: () => void;
   invalidateAll: () => void;
-  invalidateNotifications: () => void;
 };
 
 export const ReactQueryWrapperContext =
@@ -210,7 +209,6 @@ export const ReactQueryWrapperContext =
     onWaveCreated: () => {},
     onWaveFollowChange: () => {},
     invalidateAll: () => {},
-    invalidateNotifications: () => {},
   });
 
 export default function ReactQueryWrapper({
@@ -993,12 +991,6 @@ export default function ReactQueryWrapper({
     queryClient.invalidateQueries();
   };
 
-  const invalidateNotifications = () => {
-    queryClient.invalidateQueries({
-      queryKey: [QueryKey.IDENTITY_NOTIFICATIONS],
-    });
-  };
-
   const value = useMemo(
     () => ({
       setProfile,
@@ -1026,7 +1018,6 @@ export default function ReactQueryWrapper({
       invalidateAll,
       onIdentityFollowChange,
       invalidateDrops,
-      invalidateNotifications,
     }),
     [
       setProfile,
@@ -1054,7 +1045,6 @@ export default function ReactQueryWrapper({
       invalidateAll,
       onIdentityFollowChange,
       invalidateDrops,
-      invalidateNotifications,
     ]
   );
 

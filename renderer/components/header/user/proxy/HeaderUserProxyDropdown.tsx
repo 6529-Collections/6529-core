@@ -4,9 +4,7 @@ import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../../auth/Auth";
 import { ProfileProxy } from "../../../../generated/models/ProfileProxy";
 import HeaderUserProxyDropdownItem from "./HeaderUserProxyDropdownItem";
-import { disconnect } from "@wagmi/core";
-import { useAccount } from "wagmi";
-import { wagmiConfig } from "../../../../pages/_app";
+import { useAccount, useConnections, useDisconnect } from "wagmi";
 import HeaderUserProxyDropdownChains from "./HeaderUserProxyDropdownChains";
 
 export default function HeaderUserProxyDropdown({
@@ -18,7 +16,10 @@ export default function HeaderUserProxyDropdown({
   readonly profile: IProfileAndConsolidations;
   readonly onClose: () => void;
 }) {
-  const { address } = useAccount();
+  const account = useAccount();
+  const connections = useConnections();
+
+  const disconnect = useDisconnect();
 
   const { activeProfileProxy, setActiveProfileProxy, receivedProfileProxies } =
     useContext(AuthContext);
@@ -28,26 +29,33 @@ export default function HeaderUserProxyDropdown({
     onClose();
   };
 
-  const onDisconnect = () => disconnect(wagmiConfig);
+  const onDisconnect = async () => {
+    for (const c of connections) {
+      disconnect.disconnect({
+        connector: c.connector,
+      });
+    }
+  };
 
   const getLabel = (): string => {
     if (profile.profile?.handle) {
       return profile.profile.handle;
     }
     const wallet = profile?.consolidation.wallets.find(
-      (w) => w.wallet.address.toLowerCase() === address?.toLocaleLowerCase()
+      (w) =>
+        w.wallet.address.toLowerCase() === account?.address?.toLocaleLowerCase()
     );
     if (wallet?.wallet?.ens) {
       return wallet.wallet.ens;
     }
-    if (address) {
-      return address.slice(0, 6);
+    if (account.address) {
+      return account.address.slice(0, 6);
     }
     throw new Error("No label found");
   };
 
   const [label, setLabel] = useState(getLabel());
-  useEffect(() => setLabel(getLabel()), [profile, address]);
+  useEffect(() => setLabel(getLabel()), [profile, account.address]);
 
   return (
     <div>

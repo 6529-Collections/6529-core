@@ -29,7 +29,7 @@ export default function GroupCreateRep({
               Rep
             </p>
             <p className="tw-mb-0 tw-text-base tw-font-normal tw-text-iron-400">
-              Set the giver, rep category, and minimum rep.
+              Lorem ipsum dolor sit amet consectetur adipisicing elit.
             </p>
           </div>
           {rep.user_identity && rep.direction && (

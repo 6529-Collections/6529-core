@@ -1,11 +1,10 @@
 import { mainnet } from "wagmi/chains";
 
 export const PROJECT_NAME = "6529SEIZE";
-export const CW_PROJECT_ID = "0ba285cc179045bec37f7c9b9e7f9fbf";
+export const CW_PROJECT_ID = "bf8c0543ea5cf26717a35a383d6f7102";
 
 export const MEMES_CONTRACT = "0x33FD426905F149f8376e227d0C9D3340AaD17aF1";
 export const NEXTGEN_CONTRACT = "0x45882f9bc325e14fbb298a1df930c43a874b83ae";
-export const MANIFOLD_PROXY = "0x26bbea7803dcac346d5f5f135b57cf2c752a02be";
 export const MEMES_MANIFOLD_PROXY_CONTRACT =
   "0x26bbea7803dcac346d5f5f135b57cf2c752a02be";
 export const GRADIENT_CONTRACT = "0x0C58Ef43fF3032005e472cB5709f8908aCb00205";
@@ -22,13 +21,16 @@ export const NULL_MERKLE =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 export const DELEGATION_CONTRACT: {
+  chain: any;
   chain_id: number;
   contract: `0x${string}`;
 } = {
+  // chain: sepolia,
   // chain_id: sepolia.id,
   // contract: "0x8f86c644f845a077999939c69bc787662377d915",
   // chain_id: goerli.id,
   // contract: "0xAD024eeD08190285Edb7100c9Caabe79d48e448B",
+  chain: mainnet,
   chain_id: mainnet.id,
   contract: "0x2202CB9c00487e7e8EF21e6d8E914B32e709f43d",
 };

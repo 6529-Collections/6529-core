@@ -3,6 +3,7 @@ import styles from "../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import Breadcrumb from "../../components/breadcrumb/Breadcrumb";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -30,15 +31,12 @@ export default function RoyaltiesDownloads() {
         <title>Team Downloads | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Royalties Downloads | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/open-data/royalties`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/open-data/royalties`} />
         <meta property="og:title" content={`Royalties Downloads`} />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

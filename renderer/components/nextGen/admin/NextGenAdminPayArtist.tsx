@@ -93,6 +93,7 @@ export default function NextGenAdminPayArtist(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [collectionID, address1, address2, percentage1, percentage2],
       });
     }

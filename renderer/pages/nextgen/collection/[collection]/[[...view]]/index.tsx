@@ -11,6 +11,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/router";
 import { formatNameForUrl } from "../../../../../components/nextGen/nextgen_helpers";
 import { ContentView } from "../../../../../components/nextGen/collections/collectionParts/NextGenCollection";
+import { SEIZE_URL } from "../../../../../../constants";
 
 const Header = dynamic(
   () => import("../../../../../components/header/Header"),
@@ -44,9 +45,9 @@ export default function NextGenCollectionPage(props: any) {
         <meta name="description" content={pagenameFull} />
         <meta
           property="og:url"
-          content={`${
-            process.env.BASE_ENDPOINT
-          }/nextgen/collection/${formatNameForUrl(collection.name)}`}
+          content={`${SEIZE_URL}/nextgen/collection/${formatNameForUrl(
+            collection.name
+          )}`}
         />
         <meta property="og:title" content={pagenameFull} />
         <meta property="og:image" content={collection.image} />

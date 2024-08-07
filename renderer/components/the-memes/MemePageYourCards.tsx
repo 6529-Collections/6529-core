@@ -15,6 +15,8 @@ import NFTImage from "../nft-image/NFTImage";
 import { Transaction } from "../../entities/ITransaction";
 import { ConsolidatedTDH } from "../../entities/ITDH";
 import LatestActivityRow from "../latest-activity/LatestActivityRow";
+import { SEIZE_API_URL } from "../../../constants";
+import Link from "next/link";
 
 export function MemePageYourCardsRightMenu(props: {
   show: boolean;
@@ -252,7 +254,7 @@ export function MemePageLiveSubMenu(props: {
   useEffect(() => {
     if (props.nft) {
       fetchUrl(
-        `${process.env.API_ENDPOINT}/api/nfts_memelab?sort_direction=asc&meme_id=${props.nft.id}`
+        `${SEIZE_API_URL}/api/nfts_memelab?sort_direction=asc&meme_id=${props.nft.id}`
       ).then((response: DBResponse) => {
         setMemeLabNfts(response.data);
         setMemeLabNftsLoaded(true);
@@ -348,11 +350,7 @@ export function MemePageLiveSubMenu(props: {
             We hope to display them here once we find a &quot;safe&quot; way to
             do so.
             <br />
-            Learn more{" "}
-            <a href="/rememes" target="_blank">
-              here
-            </a>
-            .
+            Learn more <Link href="/rememes">here</Link>.
           </Col>
         </Row>
       </>

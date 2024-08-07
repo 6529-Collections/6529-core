@@ -8,14 +8,14 @@ import {
   commonApiPost,
 } from "../../../../../services/api/common-api";
 import { GroupFull } from "../../../../../generated/models/GroupFull";
-import {
-  CommunityMembersQuery,
-  CommunityMembersSortOption,
-} from "../../../../../pages/community";
 import { SortDirection } from "../../../../../entities/ISort";
 import { Page } from "../../../../../helpers/Types";
 import { CommunityMemberOverview } from "../../../../../entities/IProfile";
 import { QueryKey } from "../../../../react-query-wrapper/ReactQueryWrapper";
+import {
+  CommunityMembersQuery,
+  CommunityMembersSortOption,
+} from "../../../../community/CommunityMembers";
 
 export default function GroupCreateTest({
   groupConfig,
@@ -65,10 +65,7 @@ export default function GroupCreateTest({
         },
       ],
       queryFn: async () =>
-        await commonApiFetch<
-          Page<CommunityMemberOverview>,
-          CommunityMembersQuery
-        >({
+        await commonApiFetch<Page<CommunityMemberOverview>, any>({
           endpoint: `community-members/top`,
           params: params,
         }),
@@ -117,8 +114,7 @@ export default function GroupCreateTest({
           disabled
             ? "tw-opacity-50 tw-text-iron-400"
             : "tw-text-iron-300 hover:tw-bg-iron-900"
-        } tw-border tw-border-solid tw-border-iron-700 tw-rounded-lg tw-bg-iron-950 tw-px-3.5 tw-py-2.5 tw-text-sm tw-font-semibold  tw-shadow-sm  focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-iron-700 tw-transition tw-duration-300 tw-ease-out`}
-      >
+        } tw-border tw-border-solid tw-border-iron-700 tw-rounded-lg tw-bg-iron-950 tw-px-3.5 tw-py-2.5 tw-text-sm tw-font-semibold  tw-shadow-sm  focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-iron-700 tw-transition tw-duration-300 tw-ease-out`}>
         <div className="tw-flex tw-items-center tw-gap-x-3">
           {loading && <CircleLoader />}
           <span>Test</span>
@@ -134,8 +130,7 @@ export default function GroupCreateTest({
               aria-hidden="true"
               viewBox="0 0 24 24"
               strokeWidth="1.5"
-              stroke="currentColor"
-            >
+              stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"

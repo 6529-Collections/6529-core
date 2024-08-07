@@ -1,3 +1,4 @@
+import { SEIZE_API_URL } from "../../../constants";
 import CommunityDownloadsComponent from "./CommunityDownloadsComponent";
 
 interface Props {
@@ -10,7 +11,7 @@ export enum VIEW {
 }
 
 export default function CommunityDownloadsTDH(props: Readonly<Props>) {
-  const url = `${process.env.API_ENDPOINT}/api/${
+  const url = `${SEIZE_API_URL}/api/${
     props.view === VIEW.WALLET ? "uploads" : "consolidated_uploads"
   }`;
   const title = props.view === VIEW.CONSOLIDATION ? `Consolidated ` : ``;

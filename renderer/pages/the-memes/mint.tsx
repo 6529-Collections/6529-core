@@ -10,6 +10,7 @@ import { getCommonHeaders } from "../../helpers/server.helpers";
 import { commonApiFetch } from "../../services/api/common-api";
 import Head from "next/head";
 import { Time } from "../../helpers/time";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -41,10 +42,7 @@ export default function TheMemesMint(props: any) {
         <title>{pagenameFull}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content={pagenameFull} />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/the-memes/mint`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/the-memes/mint`} />
         <meta property="og:title" content={pagename} />
         <meta property="og:image" content={nft.image} />
         <meta property="og:description" content="6529 SEIZE" />

@@ -1,10 +1,11 @@
+import { SEIZE_API_URL } from "../../../constants";
 import CommunityDownloadsComponent from "./CommunityDownloadsComponent";
 
 export default function CommunityDownloadsRememes() {
   return (
     <CommunityDownloadsComponent
       title="Rememes"
-      url={`${process.env.API_ENDPOINT}/api/rememes_uploads`}
+      url={`${SEIZE_API_URL}/api/rememes_uploads`}
     />
   );
 }

@@ -1,12 +1,14 @@
 import { Col, Container, Row } from "react-bootstrap";
 import { MEMES_MINTING_HREF } from "../../constants";
+import { openInExternalBrowser } from "../../helpers";
+import Link from "next/link";
 
 export default function AboutMinting() {
   return (
     <Container>
       <Row>
         <Col>
-          <h1>
+          <h1 className="float-none">
             <span className="font-lightest">Minting</span> Meme Cards
           </h1>
         </Col>
@@ -29,7 +31,9 @@ export default function AboutMinting() {
             <br />
             <li>
               The minting website for The Memes is:{" "}
-              <a href={MEMES_MINTING_HREF} target="_blank" rel="noreferrer">
+              <a
+                href="#"
+                onClick={() => openInExternalBrowser(MEMES_MINTING_HREF)}>
                 {MEMES_MINTING_HREF}
               </a>
             </li>
@@ -41,9 +45,10 @@ export default function AboutMinting() {
             <li>
               Minting time and dates are announced on{" "}
               <a
-                href="https://twitter.com/6529collections"
-                target="_blank"
-                rel="noreferrer">
+                href="#"
+                onClick={() =>
+                  openInExternalBrowser("https://twitter.com/6529collections")
+                }>
                 https://twitter.com/6529collections
               </a>
             </li>
@@ -52,9 +57,10 @@ export default function AboutMinting() {
               Currently, the mints are happening Mon/Wed/Fri at 11am ET (4pm
               UTC), but times may vary. Please follow &#64;
               <a
-                href="https://twitter.com/6529collections"
-                target="_blank"
-                rel="noreferrer">
+                href="#"
+                onClick={() =>
+                  openInExternalBrowser("https://twitter.com/6529collections")
+                }>
                 6529collections
               </a>{" "}
               for details
@@ -540,9 +546,7 @@ export default function AboutMinting() {
             <br />
             <li>
               For our full analysis of our Community Metrics, go here:{" "}
-              <a href="/community-metrics" target="_blank" rel="noreferrer">
-                seize.io/community-metrics
-              </a>
+              <Link href="/community-metrics">seize.io/community-metrics</Link>
             </li>
           </ul>
           <br />
@@ -571,9 +575,7 @@ export default function AboutMinting() {
             <li>
               On a daily basis, we publish to Arweave the statistics we use to
               create our own allowlists. You can find them here:{" "}
-              <a href="/open-data" target="_blank" rel="noreferrer">
-                seize.io/open-data
-              </a>
+              <Link href="/open-data">seize.io/open-data</Link>
             </li>
             <br />
             <li>

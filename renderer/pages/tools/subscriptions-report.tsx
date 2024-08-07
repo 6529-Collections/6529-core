@@ -17,6 +17,7 @@ import { getCommonHeaders } from "../../helpers/server.helpers";
 import { Time } from "../../helpers/time";
 import Image from "next/image";
 import Link from "next/link";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -47,13 +48,13 @@ export default function SubscriptionsReport({
         <meta name="description" content="Subscriptions Report | 6529 SEIZE" />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/tools/subscriptions-report`}
+          content={`${SEIZE_URL}/tools/subscriptions-report`}
         />
         <meta property="og:title" content="Subscriptions Report" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

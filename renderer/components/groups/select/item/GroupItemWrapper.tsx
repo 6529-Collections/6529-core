@@ -14,7 +14,6 @@ export default function GroupItemWrapper({
   readonly children: React.ReactNode;
   readonly onActiveGroupId?: (groupId: string | null) => void;
 }) {
-
   const banner1 =
     group.created_by.banner1_color ??
     getRandomColorWithSeed(group.created_by.handle);
@@ -40,14 +39,12 @@ export default function GroupItemWrapper({
     <div>
       <div
         onClick={onFilterClick}
-        className={`tw-bg-iron-900 tw-w-full tw-text-left tw-relative tw-border tw-border-solid tw-rounded-xl tw-transition tw-duration-300 tw-ease-out ${classes}`}
-      >
+        className={`tw-bg-iron-900 tw-w-full tw-text-left tw-relative tw-border tw-border-solid tw-rounded-xl tw-transition tw-duration-300 tw-ease-out ${classes}`}>
         <div
           className="tw-relative tw-w-full tw-h-7 tw-rounded-t-xl"
           style={{
             background: `linear-gradient(45deg, ${banner1} 0%, ${banner2} 100%)`,
-          }}
-        ></div>
+          }}></div>
         {children}
       </div>
     </div>

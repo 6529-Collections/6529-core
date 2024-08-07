@@ -15,6 +15,7 @@ import { ReactQueryWrapperContext } from "../components/react-query-wrapper/Reac
 import { Crumb } from "../components/breadcrumb/Breadcrumb";
 import SidebarLayout from "../components/utils/sidebar/SidebarLayout";
 import { getProfileLogTypes } from "../helpers/profile-logs.helpers";
+import { SEIZE_URL } from "../../constants";
 
 const INITIAL_ACTIVITY_LOGS_PARAMS: ActivityLogParams = {
   page: 1,
@@ -56,14 +57,11 @@ export default function CommunityActivityPage({
         <title>Profiles Activity | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Profiles Activity | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/profiles-activity`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/profiles-activity`} />
         <meta property="og:title" content="Profiles Activity" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
         <meta property="og:description" content="6529 SEIZE" />
       </Head>
@@ -71,8 +69,7 @@ export default function CommunityActivityPage({
       <SidebarLayout breadcrumbs={breadcrumbs}>
         <ProfileActivityLogs
           initialParams={INITIAL_ACTIVITY_LOGS_PARAMS}
-          withFilters={true}
-        >
+          withFilters={true}>
           <h1 className="tw-block tw-float-none tw-whitespace-nowrap">
             <span className="font-lightest">Community</span> Activity
           </h1>

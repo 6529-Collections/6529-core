@@ -10,6 +10,7 @@ import { fetchAllPages } from "../../services/6529api";
 import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import DotLoader from "../dotLoader/DotLoader";
+import { SEIZE_API_URL } from "../../../constants";
 
 enum Sort {
   ID = "id",
@@ -31,12 +32,11 @@ export default function GradientsComponent(props: Readonly<Props>) {
 
   const [nfts, setNfts] = useState<GradientNFT[]>([]);
   const [nftsLoaded, setNftsLoaded] = useState(false);
-  const [nftsSorted, setNftsSorted] = useState(false);
   const [sortDir, setSortDir] = useState<SortDirection>(SortDirection.ASC);
   const [sort, setSort] = useState<Sort>(Sort.ID);
 
   function fetchResults() {
-    const url = `${process.env.API_ENDPOINT}/api/nfts/gradients?&page_size=101&sort=${sort}&sort_direction=${sortDir}`;
+    const url = `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101&sort=${sort}&sort_direction=${sortDir}`;
     fetchAllPages(url).then((newNfts: GradientNFT[]) => {
       setNfts(newNfts);
       setNftsLoaded(true);
@@ -77,7 +77,6 @@ export default function GradientsComponent(props: Readonly<Props>) {
           );
         }
       }
-      setNftsSorted(true);
     }
   }, [sortDir, sort]);
 

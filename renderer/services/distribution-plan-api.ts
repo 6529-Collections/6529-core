@@ -2,6 +2,7 @@ import Cookies from "js-cookie";
 import { WALLET_AUTH_COOKIE } from "../constants";
 import { AllowlistToolResponse } from "../components/allowlist-tool/allowlist-tool.types";
 import { makeErrorToast } from "./distribution-plan.utils";
+import { ALLOWLIST_API_ENDPOINT } from "../../constants";
 
 const handleResponse = async <T>(
   res: Response
@@ -31,7 +32,7 @@ const handleResponse = async <T>(
 
   return {
     success: true,
-    data,
+    data: data as T,
   };
 };
 
@@ -47,12 +48,9 @@ export async function distributionPlanApiFetch<T>(endpoint: string): Promise<{
     headers["Authorization"] = `Bearer ${auth}`;
   }
   try {
-    const res = await fetch(
-      `${process.env.ALLOWLIST_API_ENDPOINT}${endpoint}`,
-      {
-        headers,
-      }
-    );
+    const res = await fetch(`${ALLOWLIST_API_ENDPOINT}${endpoint}`, {
+      headers,
+    });
 
     return await handleResponse<T>(res);
   } catch (error) {
@@ -82,14 +80,11 @@ export const distributionPlanApiPost = async <T>({
     headers["Authorization"] = `Bearer ${auth}`;
   }
   try {
-    const res = await fetch(
-      `${process.env.ALLOWLIST_API_ENDPOINT}${endpoint}`,
-      {
-        method: "POST",
-        headers,
-        body: JSON.stringify(body),
-      }
-    );
+    const res = await fetch(`${ALLOWLIST_API_ENDPOINT}${endpoint}`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    });
 
     return await handleResponse<T>(res);
   } catch (error) {
@@ -117,13 +112,10 @@ export const distributionPlanApiDelete = async <T>({
     headers["Authorization"] = `Bearer ${auth}`;
   }
   try {
-    const res = await fetch(
-      `${process.env.ALLOWLIST_API_ENDPOINT}${endpoint}`,
-      {
-        method: "DELETE",
-        headers,
-      }
-    );
+    const res = await fetch(`${ALLOWLIST_API_ENDPOINT}${endpoint}`, {
+      method: "DELETE",
+      headers,
+    });
     try {
       return await handleResponse<T>(res);
     } catch (e) {

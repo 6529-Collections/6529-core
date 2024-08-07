@@ -139,6 +139,7 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           collectionID,
           selectedAllowlist?.start_time ?? publicStartTime,

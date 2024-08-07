@@ -13,7 +13,9 @@ import Link from "next/link";
 import HeaderUser from "./user/HeaderUser";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import { AuthContext } from "../auth/Auth";
-import HeaderNotifications from "./notifications/HeaderNotifications";
+import { SEIZE_API_URL } from "../../../constants";
+import TitleBar from "./titlebar/TitleBar";
+import { faBars } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   onLoad?: () => void;
@@ -75,11 +77,11 @@ export default function Header(props: Readonly<Props>) {
 
   useEffect(() => {
     if (account.address) {
-      fetchUrl(
-        `${process.env.API_ENDPOINT}/api/consolidations/${account.address}`
-      ).then((response: DBResponse) => {
-        setConsolidations(Array.from(response.data));
-      });
+      fetchUrl(`${SEIZE_API_URL}/api/consolidations/${account.address}`).then(
+        (response: DBResponse) => {
+          setConsolidations(Array.from(response.data));
+        }
+      );
     } else {
       setConsolidations([]);
     }
@@ -102,9 +104,8 @@ export default function Header(props: Readonly<Props>) {
       <div
         className={`${styles.burgerMenu} ${
           burgerMenuOpen ? styles.burgerMenuOpen : ""
-        }`}
-      >
-        <Container className="pt-2 pb-2">
+        }`}>
+        <Container className="pt-3 pb-3">
           <Row>
             <Col className="d-flex justify-content-end">
               <FontAwesomeIcon
@@ -117,8 +118,7 @@ export default function Header(props: Readonly<Props>) {
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuTools(false);
                   setShowBurgerMenuBrain(false);
-                }}
-              ></FontAwesomeIcon>
+                }}></FontAwesomeIcon>
             </Col>
           </Row>
         </Container>
@@ -128,19 +128,17 @@ export default function Header(props: Readonly<Props>) {
               <Image
                 loading="eager"
                 priority
-                className={styles.logoIcon}
-                src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png"
+                src="/6529.png"
                 alt="6529Seize"
-                width={319}
-                height={50}
+                width={40}
+                height={40}
               />
             </Col>
           </Row>
           <Row className="pt-4 pb-3">
             <Col>
               <h3
-                className={`d-flex justify-content-center ${styles.burgerMenuHeader}`}
-              >
+                className={`d-flex justify-content-center ${styles.burgerMenuHeader}`}>
                 <HeaderUser />
               </h3>
             </Col>
@@ -170,8 +168,7 @@ export default function Header(props: Readonly<Props>) {
                     showBurgerMenuBrain
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
-                  }`}
-                >
+                  }`}>
                   Brain
                 </h3>
               </Col>
@@ -229,8 +226,7 @@ export default function Header(props: Readonly<Props>) {
                     showBurgerMenuCollections
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
-                  }`}
-              >
+                  }`}>
                 Collections
               </h3>
             </Col>
@@ -319,8 +315,7 @@ export default function Header(props: Readonly<Props>) {
                     showBurgerMenuCommunity
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
-                  }`}
-              >
+                  }`}>
                 Community
               </h3>
             </Col>
@@ -427,8 +422,7 @@ export default function Header(props: Readonly<Props>) {
                     showBurgerMenuTools
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
-                  }`}
-              >
+                  }`}>
                 Tools
               </h3>
             </Col>
@@ -513,8 +507,7 @@ export default function Header(props: Readonly<Props>) {
                     showBurgerMenuAbout
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
-                  }`}
-              >
+                  }`}>
                 About
               </h3>
             </Col>
@@ -706,6 +699,7 @@ export default function Header(props: Readonly<Props>) {
   return (
     <>
       {printBurgerMenu()}
+      <TitleBar />
       <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>
@@ -718,17 +712,15 @@ export default function Header(props: Readonly<Props>) {
                   lg={{ span: 3 }}
                   xl={{ span: 2 }}
                   xxl={{ span: 3 }}
-                  className={`d-flex align-items-center justify-content-start ${styles.headerLeft}`}
-                >
+                  className={`d-flex align-items-center justify-content-start ${styles.headerLeft}`}>
                   <Link href="/">
                     <Image
                       loading="eager"
                       priority
-                      className={styles.logoIcon}
-                      src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png"
+                      src="/6529.png"
                       alt="6529Seize"
-                      width={319}
-                      height={50}
+                      width={40}
+                      height={40}
                     />
                   </Link>
                 </Col>
@@ -740,47 +732,34 @@ export default function Header(props: Readonly<Props>) {
                   lg={{ span: 9 }}
                   xl={{ span: 10 }}
                   xxl={{ span: 9 }}
-                  className={`no-padding d-flex align-items-center justify-content-end ${styles.headerRight}`}
-                >
+                  className={`no-padding d-flex align-items-center justify-content-end ${styles.headerRight}`}>
                   <Container className="no-padding">
                     <Navbar expand="lg" variant="dark">
                       <Container
-                        className={`d-flex align-items-center justify-content-end no-padding`}
-                      >
+                        className={`d-flex align-items-center justify-content-end no-padding`}>
                         <div
-                          className={`${styles.dMdNone} d-flex align-items-center`}
-                        >
-                          <div className="tw-inline-flex tw-space-x-2 tw-mr-6 xl:tw-mr-2">
-                            {showWaves && <HeaderNotifications />}
+                          className={`${styles.dMdNone} d-flex align-items-center`}>
+                          <div className="tw-mr-6 xl:tw-mr-2">
                             <HeaderSearchButton />
                           </div>
-                          <Image
-                            loading="eager"
-                            priority
-                            width="0"
-                            height="0"
-                            style={{
-                              height: "auto",
-                              width: "auto",
-                              maxHeight: "42px",
-                            }}
-                            className={`${styles.burgerMenuBtn} d-block `}
-                            src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Icon.png"
-                            alt="6529Seize"
+                          <button
+                            type="button"
+                            aria-label="Search"
+                            title="Search"
                             onClick={() => setBurgerMenuOpen(true)}
-                          />
+                            className="tw-flex tw-items-center tw-justify-center tw-rounded-lg tw-bg-iron-800 tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-h-11 tw-w-11 tw-border-0 tw-text-iron-300 hover:tw-text-iron-50 tw-shadow-sm hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 tw-transition tw-duration-300 tw-ease-out">
+                            <FontAwesomeIcon icon={faBars} height={20} />
+                          </button>
                         </div>
                         <Navbar
                           id="seize-navbar-nav"
-                          className={`justify-content-end d-none ${styles.dMdBlock}`}
-                        >
+                          className={`justify-content-end d-none ${styles.dMdBlock}`}>
                           <Nav className="justify-content-end ml-auto">
                             {showWaves && (
                               <NavDropdown
                                 title="Brain"
                                 align={"start"}
-                                className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}
-                              >
+                                className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                                 <HeaderDesktopLink
                                   link={{
                                     name: "My Stream",
@@ -799,8 +778,7 @@ export default function Header(props: Readonly<Props>) {
                             <NavDropdown
                               title="Collections"
                               align={"start"}
-                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}
-                            >
+                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                               <HeaderDesktopLink
                                 link={{
                                   name: "The Memes",
@@ -838,8 +816,7 @@ export default function Header(props: Readonly<Props>) {
                             <NavDropdown
                               title="Community"
                               align={"start"}
-                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}
-                            >
+                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                               <HeaderDesktopLink
                                 link={{
                                   name: "Community",
@@ -894,8 +871,7 @@ export default function Header(props: Readonly<Props>) {
                             <NavDropdown
                               title="Tools"
                               align={"start"}
-                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}
-                            >
+                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                               <HeaderDesktopLink
                                 link={{
                                   name: "Subscriptions Report",
@@ -951,8 +927,7 @@ export default function Header(props: Readonly<Props>) {
                                   ? "active"
                                   : ""
                               }`}
-                              align={"start"}
-                            >
+                              align={"start"}>
                               <HeaderDesktopLink
                                 link={{
                                   name: "The Memes",
@@ -1080,25 +1055,9 @@ export default function Header(props: Readonly<Props>) {
                               />
                             </NavDropdown>
                             <HeaderUser />
-                            {showWaves && <HeaderNotifications />}
                             <HeaderSearchButton />
                           </Nav>
                         </Navbar>
-                        <Image
-                          loading="eager"
-                          priority
-                          width="0"
-                          height="0"
-                          style={{
-                            height: "auto",
-                            width: "auto",
-                            maxHeight: "42px",
-                            paddingLeft: "15px",
-                          }}
-                          className={`d-none ${styles.dMdBlock}`}
-                          src="https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Icon.png"
-                          alt="6529Seize"
-                        />
                       </Container>
                     </Navbar>
                   </Container>

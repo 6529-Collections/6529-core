@@ -4,6 +4,7 @@ import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../constants";
 
 const LatestActivity = dynamic(
   () => import("../components/latest-activity/LatestActivity"),
@@ -27,15 +28,12 @@ export default function TheMemesPage() {
         <title>NFT Activity | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="NFT Activity | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/nft-activity`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/nft-activity`} />
         <meta property="og:title" content="NFT Activity" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

@@ -125,6 +125,7 @@ export default function NextGenAdminProposeAddressesAndPercentages(
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           collectionID,
           address1,

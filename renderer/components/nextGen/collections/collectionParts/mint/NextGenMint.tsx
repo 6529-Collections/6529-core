@@ -13,10 +13,7 @@ import {
   Status,
 } from "../../../nextgen_entities";
 import { fromGWEI } from "../../../../../helpers/Helpers";
-import {
-  ALL_USE_CASE,
-  MINTING_USE_CASE,
-} from "../../../../../pages/delegation/[...section]";
+
 import { NEXTGEN_CHAIN_ID, NEXTGEN_CORE } from "../../../nextgen_contracts";
 import { fetchUrl } from "../../../../../services/6529api";
 import {
@@ -36,6 +33,11 @@ import {
 } from "../NextGenCollectionHeader";
 import DotLoader from "../../../../dotLoader/DotLoader";
 import { NextGenCollection } from "../../../../../entities/INextgen";
+import {
+  ALL_USE_CASE,
+  MINTING_USE_CASE,
+} from "../../../../../pages/delegation/[...section]";
+import { SEIZE_API_URL } from "../../../../../../constants";
 
 interface Props {
   collection: NextGenCollection;
@@ -224,7 +226,7 @@ export default function NextGenMint(props: Readonly<Props>) {
   useEffect(() => {
     if (props.collection.merkle_root) {
       const merkleRoot = props.collection.merkle_root;
-      const url = `${process.env.API_ENDPOINT}/api/nextgen/merkle_roots/${merkleRoot}`;
+      const url = `${SEIZE_API_URL}/api/nextgen/merkle_roots/${merkleRoot}`;
       fetchUrl(url).then((response: CollectionWithMerkle) => {
         if (response) {
           setCollection(response);

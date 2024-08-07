@@ -23,7 +23,7 @@ import {
   getCommonHeaders,
   getUserProfileActivityLogs,
 } from "../helpers/server.helpers";
-import {
+import ProfileActivityLogs, {
   ActivityLogParams,
   convertActivityLogParams,
 } from "../components/profile-activity/ProfileActivityLogs";
@@ -44,6 +44,8 @@ import {
 } from "../helpers/nft.helpers";
 import { getProfileLogTypes } from "../helpers/profile-logs.helpers";
 import { ManifoldClaim } from "../hooks/useManifoldClaim";
+import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
+import { openInExternalBrowser } from "../helpers";
 
 export interface IndexPageProps {
   readonly nft: NFTWithMemesExtendedData;
@@ -106,7 +108,7 @@ export default function Home({
   useEffect(() => {
     if (connectedProfile?.consolidation.consolidation_key && pageProps.nft) {
       fetchUrl(
-        `${process.env.API_ENDPOINT}/api/nft-owners/consolidation/${connectedProfile?.consolidation.consolidation_key}?contract=${pageProps.nft.contract}&token_id=${pageProps.nft.id}`
+        `${SEIZE_API_URL}/api/nft-owners/consolidation/${connectedProfile?.consolidation.consolidation_key}?contract=${pageProps.nft.contract}&token_id=${pageProps.nft.id}`
       ).then((response: DBResponse) => {
         const balanceObject: NftOwner = response.data[0];
         setNftBalance(balanceObject?.balance ?? 0);
@@ -159,12 +161,12 @@ export default function Home({
         <title>6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="6529 SEIZE" />
-        <meta property="og:url" content={`${process.env.BASE_ENDPOINT}`} />
+        <meta property="og:url" content={`${SEIZE_URL}`} />
         <meta property="og:title" content="6529 SEIZE" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 
@@ -190,8 +192,7 @@ export default function Home({
                   xs={{ span: 12 }}
                   sm={{ span: 12 }}
                   md={{ span: 6 }}
-                  lg={{ span: 6 }}
-                >
+                  lg={{ span: 6 }}>
                   <Container className="no-padding">
                     <Row>
                       {pageProps.nft.animation ||
@@ -199,8 +200,7 @@ export default function Home({
                         <span
                           className={
                             connectedProfile ? styles.nftImagePadding : ""
-                          }
-                        >
+                          }>
                           <NFTImage
                             nft={pageProps.nft}
                             animation={true}
@@ -214,8 +214,7 @@ export default function Home({
                           href={`/the-memes/${pageProps.nft.id}`}
                           className={
                             connectedProfile ? styles.nftImagePadding : ""
-                          }
-                        >
+                          }>
                           <NFTImage
                             nft={pageProps.nft}
                             animation={true}
@@ -234,8 +233,7 @@ export default function Home({
                   xs={{ span: 12 }}
                   sm={{ span: 12 }}
                   md={{ span: 6 }}
-                  lg={{ span: 6 }}
-                >
+                  lg={{ span: 6 }}>
                   <Container>
                     <Row>
                       <Col>
@@ -336,8 +334,7 @@ export default function Home({
                     <Row className="pb-3">
                       <Col>
                         <Link
-                          href={`/the-memes/${pageProps.nft.id}/distribution`}
-                        >
+                          href={`/the-memes/${pageProps.nft.id}/distribution`}>
                           Distribution Plan
                         </Link>
                       </Col>
@@ -392,10 +389,12 @@ export default function Home({
                     <Row className="pt-3">
                       <Col>
                         <a
-                          href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              `https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`
+                            )
+                          }>
                           <Image
                             className={styles.marketplace}
                             src="/opensea.png"
@@ -405,10 +404,12 @@ export default function Home({
                           />
                         </a>
                         <a
-                          href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
+                          href="#"
+                          onClick={() =>
+                            openInExternalBrowser(
+                              `https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`
+                            )
+                          }>
                           <Image
                             className={styles.marketplace}
                             src="/x2y2.png"
@@ -436,8 +437,7 @@ export default function Home({
                         href={`/nextgen/collection/${formatNameForUrl(
                           pageProps.nextGenFeatured.name
                         )}`}
-                        className={styles.viewAllLink}
-                      >
+                        className={styles.viewAllLink}>
                         <span>View Collection</span>
                       </Link>
                     </Col>
@@ -453,7 +453,7 @@ export default function Home({
               )}
             <div className="tailwind-scope tw-relative tw-px-2 min-[1000px]:tw-max-w-[850px] min-[1100px]:tw-max-w-[950px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px] tw-mx-auto">
               <div className="tw-px-2">
-                {/* <ProfileActivityLogs
+                <ProfileActivityLogs
                   initialParams={INITIAL_ACTIVITY_LOGS_PARAMS}
                   withFilters={true}
                   disableActiveGroup={true}>
@@ -467,7 +467,7 @@ export default function Home({
                       <span>View All</span>
                     </Link>
                   </span>
-                </ProfileActivityLogs> */}
+                </ProfileActivityLogs>
               </div>
             </div>
             <Container className={styles.mainContainer}>

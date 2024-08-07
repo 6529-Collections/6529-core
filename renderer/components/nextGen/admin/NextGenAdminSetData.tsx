@@ -106,6 +106,7 @@ export default function NextGenAdminSetData(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           collectionID,
           artistAddress,

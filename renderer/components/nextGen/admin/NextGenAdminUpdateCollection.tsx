@@ -208,6 +208,7 @@ export default function NextGenAdminUpdateCollection(props: Readonly<Props>) {
       const params = getParams();
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: params,
       });
     }

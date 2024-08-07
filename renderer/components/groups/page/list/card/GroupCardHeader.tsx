@@ -4,10 +4,6 @@ import { getTimeAgo } from "../../../../../helpers/Helpers";
 import { useContext } from "react";
 import { AuthContext } from "../../../../auth/Auth";
 import GroupCardEditActions from "./actions/GroupCardEditActions";
-import {
-  getScaledImageUri,
-  ImageScale,
-} from "../../../../../helpers/image.helpers";
 
 export default function GroupCardHeader({
   group,
@@ -25,10 +21,7 @@ export default function GroupCardHeader({
         {group.created_by.pfp ? (
           <img
             className="tw-flex-shrink-0 tw-object-contain tw-h-9 tw-w-9 tw-rounded-md tw-bg-iron-700 tw-ring-1 tw-ring-iron-700"
-            src={getScaledImageUri(
-              group.created_by.pfp,
-              ImageScale.W_AUTO_H_50
-            )}
+            src={group.created_by.pfp}
             alt="Profile Picture"
           />
         ) : (
@@ -46,7 +39,7 @@ export default function GroupCardHeader({
           </span>
         </Link>
         <div className="tw-flex tw-items-center tw-gap-x-4">
-          <span className="tw-text-sm tw-text-iron-500 tw-font-normal">
+          <span className="tw-text-sm tw-text-iron-400 tw-font-normal">
             {timeAgo}
           </span>
           {!!connectedProfile?.profile?.handle && !activeProfileProxy && (

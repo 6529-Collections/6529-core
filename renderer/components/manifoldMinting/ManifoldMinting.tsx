@@ -25,6 +25,7 @@ import ManifoldMintingWidget from "./ManifoldMintingWidget";
 import { ETHEREUM_ICON_TEXT, MEMES_CONTRACT } from "../../constants";
 import MemePageMintCountdown from "../the-memes/MemePageMintCountdown";
 import { Distribution } from "../../entities/IDistribution";
+import { openInExternalBrowser } from "../../helpers";
 
 interface Props {
   title: string;
@@ -356,9 +357,10 @@ export default function ManifoldMinting(props: Readonly<Props>) {
         <Col xs={12} className="font-color-h">
           Note: The start/end times have some variance. Watch this page or{" "}
           <a
-            href="https://twitter.com/6529collections"
-            target="_blank"
-            rel="noreferrer"
+            href="#"
+            onClick={() =>
+              openInExternalBrowser("https://twitter.com/6529collections")
+            }
             className="font-color-h font-color-hover">
             &#64;6529collections
           </a>{" "}

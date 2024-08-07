@@ -1,9 +1,10 @@
-import { ReactNode, useContext } from "react";
+import { useContext } from "react";
 import { AuthContext, WAVES_MIN_ACCESS_LEVEL } from "../auth/Auth";
 import Link from "next/link";
 import StreamDiscovery from "./discovery/StreamDiscovery";
+import MyStream from "./my-stream/MyStream";
 
-export default function Brain({ children }: { readonly children: ReactNode }) {
+export default function Brain() {
   const { showWaves } = useContext(AuthContext);
 
   if (!showWaves) {
@@ -21,8 +22,7 @@ export default function Brain({ children }: { readonly children: ReactNode }) {
       </div>
 
       <div className="md:tw-flex tw-justify-center tw-gap-x-5 xl:tw-ml-16">
-      
-        {children}
+        <MyStream />
         <div className="md:tw-w-[27%]">
           <div className="tw-mt-16">
             <Link

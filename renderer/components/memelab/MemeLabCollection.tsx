@@ -18,6 +18,8 @@ import NFTImage from "../nft-image/NFTImage";
 import { MEMES_CONTRACT } from "../../constants";
 import { AuthContext } from "../auth/Auth";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
+import { SEIZE_API_URL } from "../../../constants";
+import { openInExternalBrowser } from "../../helpers";
 
 enum Sort {
   AGE = "age",
@@ -89,17 +91,15 @@ export default function LabCollection(props: Readonly<Props>) {
 
   useEffect(() => {
     if (collectionName) {
-      const nftsUrl = `${
-        process.env.API_ENDPOINT
-      }/api/lab_extended_data?collection=${encodeURIComponent(collectionName)}`;
+      const nftsUrl = `${SEIZE_API_URL}/api/lab_extended_data?collection=${encodeURIComponent(
+        collectionName
+      )}`;
       fetchAllPages(nftsUrl).then((responseNftMetas: LabExtendedData[]) => {
         setNftMetas(responseNftMetas);
         if (responseNftMetas.length > 0) {
           const tokenIds = responseNftMetas.map((n: LabExtendedData) => n.id);
           fetchAllPages(
-            `${process.env.API_ENDPOINT}/api/nfts_memelab?id=${tokenIds.join(
-              ","
-            )}`
+            `${SEIZE_API_URL}/api/nfts_memelab?id=${tokenIds.join(",")}`
           ).then((responseNfts: any[]) => {
             setNfts(responseNfts);
             setNftsLoaded(true);
@@ -125,7 +125,7 @@ export default function LabCollection(props: Readonly<Props>) {
   useEffect(() => {
     if (connectedProfile?.consolidation.consolidation_key) {
       fetchAllPages(
-        `${process.env.API_ENDPOINT}/api/nft-owners/consolidation/${connectedProfile?.consolidation.consolidation_key}?contract=${MEMES_CONTRACT}`
+        `${SEIZE_API_URL}/api/nft-owners/consolidation/${connectedProfile?.consolidation.consolidation_key}?contract=${MEMES_CONTRACT}`
       ).then((owners: NftOwner[]) => {
         setNftBalances(owners);
       });
@@ -482,9 +482,8 @@ export default function LabCollection(props: Readonly<Props>) {
                     {website.split(" ").map((w) => (
                       <>
                         <a
-                          href={addProtocol(w)}
-                          target="_blank"
-                          rel="noreferrer">
+                          href="#"
+                          onClick={() => openInExternalBrowser(addProtocol(w))}>
                           {w}
                         </a>
                         &nbsp;&nbsp;

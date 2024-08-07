@@ -8,6 +8,7 @@ import {
 } from "../../../../../helpers/Helpers";
 import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
 import {
+  NEXTGEN_CHAIN,
   NEXTGEN_CHAIN_ID,
   NEXTGEN_CORE,
   NEXTGEN_MINTER,
@@ -21,7 +22,6 @@ import {
 import { useAccount, useChainId, useWriteContract } from "wagmi";
 import { useState, useEffect } from "react";
 import { fetchUrl } from "../../../../../services/6529api";
-import { useWeb3Modal } from "@web3modal/wagmi/react";
 import { getNftsForContractAndOwner } from "../../../../../services/alchemy-api";
 import {
   getStatusFromDates,
@@ -30,6 +30,8 @@ import {
 import { NextGenMintingFor } from "./NextGenMintShared";
 import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
+import HeaderUserConnectModal from "../../../../header/user/HeaderUserConnectModal";
+import { SEIZE_API_URL } from "../../../../../../constants";
 
 interface Props {
   collection: NextGenCollection;
@@ -46,7 +48,8 @@ interface Props {
 export default function NextGenMintBurnWidget(props: Readonly<Props>) {
   const account = useAccount();
   const chainId = useChainId();
-  const web3Modal = useWeb3Modal();
+
+  const [openConnect, setOpenConnect] = useState(false);
 
   const alStatus = getStatusFromDates(
     props.collection.allowlist_start,
@@ -133,7 +136,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
     mintWrite.reset();
     if (tokenId) {
       setFetchingProofs(true);
-      const url = `${process.env.API_ENDPOINT}/api/nextgen/burn_proofs/${props.collection_merkle.merkle_root}/${tokenId}`;
+      const url = `${SEIZE_API_URL}/api/nextgen/burn_proofs/${props.collection_merkle.merkle_root}/${tokenId}`;
       fetchUrl(url).then((response: ProofResponse) => {
         setBurnProofResponse(response);
         setFetchingProofs(false);
@@ -165,10 +168,10 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
           setIsMinting(true);
         }
       } else {
-        web3Modal.open();
+        setOpenConnect(true);
       }
     } else {
-      web3Modal.open();
+      setOpenConnect(true);
     }
   };
 
@@ -213,6 +216,8 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
             : [],
           salt,
         ],
+        chain: NEXTGEN_CHAIN,
+        account: account.address,
       });
     }
   }, [isMinting]);
@@ -375,6 +380,10 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
           </Form>
         </Col>
       </Row>
+      <HeaderUserConnectModal
+        show={openConnect}
+        onHide={() => setOpenConnect(false)}
+      />
     </Container>
   );
 }

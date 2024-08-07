@@ -6,6 +6,7 @@ import { DBResponse } from "../../../entities/IDBResponse";
 import { fetchUrl } from "../../../services/6529api";
 import { NextGenCollection } from "../../../entities/INextgen";
 import Pagination from "../../pagination/Pagination";
+import { SEIZE_API_URL } from "../../../../constants";
 
 const PAGE_SIZE = 25;
 
@@ -33,7 +34,7 @@ export default function NextGenCollections() {
       statusFilter = `&status=${selectedStatus}`;
     }
 
-    let url = `${process.env.API_ENDPOINT}/api/nextgen/collections?page_size=${PAGE_SIZE}&page=${mypage}${statusFilter}`;
+    let url = `${SEIZE_API_URL}/api/nextgen/collections?page_size=${PAGE_SIZE}&page=${mypage}${statusFilter}`;
     fetchUrl(url).then((response: DBResponse) => {
       setTotalResults(response.count);
       setCollections(response.data);

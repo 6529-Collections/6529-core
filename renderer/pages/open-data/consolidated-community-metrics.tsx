@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import Breadcrumb from "../../components/breadcrumb/Breadcrumb";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
 import { VIEW } from "../../components/communityDownloads/CommunityDownloadsTDH";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -35,7 +36,7 @@ export default function ConsolidatedCommunityMetricsDownloads() {
         />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/open-data/consolidated-community-metrics`}
+          content={`${SEIZE_URL}/open-data/consolidated-community-metrics`}
         />
         <meta
           property="og:title"
@@ -44,7 +45,7 @@ export default function ConsolidatedCommunityMetricsDownloads() {
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

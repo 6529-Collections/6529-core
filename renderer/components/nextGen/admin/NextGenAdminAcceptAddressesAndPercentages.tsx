@@ -160,6 +160,7 @@ export default function NextGenAdminAcceptAddressesAndPercentages(
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [collectionID, primaryStatus, secondaryStatus],
       });
     }

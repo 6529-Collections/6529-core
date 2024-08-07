@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { API_AUTH_COOKIE } from "./constants";
+import { SEIZE_API_URL } from "../constants";
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -16,7 +17,7 @@ export async function middleware(req: NextRequest) {
 
   if (pathname != "/access" && pathname != "/restricted") {
     const apiAuth = req.cookies.get(API_AUTH_COOKIE);
-    const r = await fetch(`${process.env.API_ENDPOINT}/api/`, {
+    const r = await fetch(`${SEIZE_API_URL}/api/`, {
       headers: apiAuth ? { "x-6529-auth": apiAuth.value } : {},
     });
 

@@ -7,6 +7,7 @@ import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import { LeaderboardFocus } from "../../../components/leaderboard/Leaderboard";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { SEIZE_URL } from "../../../../constants";
 
 const Leaderboard = dynamic(
   () => import("../../../components/leaderboard/Leaderboard"),
@@ -50,15 +51,12 @@ export default function CommunityNerdPage(props: any) {
         <title>Community | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Community | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/community`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/community`} />
         <meta property="og:title" content="Community" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

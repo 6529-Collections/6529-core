@@ -88,6 +88,7 @@ export default function NextGenAdminUpdateRandomizer(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [collectionID, randomizerContract],
       });
     }

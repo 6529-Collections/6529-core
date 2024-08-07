@@ -5,6 +5,7 @@ import { fetchUrl } from "../../../services/6529api";
 import { NextGenCollection } from "../../../entities/INextgen";
 import NextGenCollectionArtist from "./collectionParts/NextGenCollectionArtist";
 import { areEqualAddresses } from "../../../helpers/Helpers";
+import { SEIZE_API_URL } from "../../../../constants";
 
 export default function NextGenArtists() {
   const [artistCollections, setArtistCollections] = useState<
@@ -12,7 +13,7 @@ export default function NextGenArtists() {
   >([]);
 
   function fetchResults() {
-    let url = `${process.env.API_ENDPOINT}/api/nextgen/collections`;
+    let url = `${SEIZE_API_URL}/api/nextgen/collections`;
     fetchUrl(url).then((response: DBResponse) => {
       setArtistCollections(
         response.data.reduce((acc, collection) => {

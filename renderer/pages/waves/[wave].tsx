@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { QueryKey } from "../../components/react-query-wrapper/ReactQueryWrapper";
 import { Wave } from "../../generated/models/Wave";
 import { commonApiFetch } from "../../services/api/common-api";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -39,14 +40,11 @@ export default function WavePage() {
         <title>Waves | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Waves | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/waves`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/waves`} />
         <meta property="og:title" content="Waves" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
         <meta property="og:description" content="6529 SEIZE" />
       </Head>

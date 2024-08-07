@@ -14,6 +14,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { getDateDisplay } from "../../helpers/Helpers";
+import { openInExternalBrowser } from "../../helpers";
 
 interface Prenode {
   ip: string;
@@ -112,9 +113,8 @@ export default function PrenodesStatus() {
     return (
       <Col xs={12} sm={12} md={6} className="pt-2 pb-2">
         <a
-          href={href}
-          target="_blank"
-          rel="noreferrer"
+          href="#"
+          onClick={() => openInExternalBrowser(href)}
           className="decoration-none">
           <Container className={`no-padding ${styles.prenode}`}>
             <Row>

@@ -6,7 +6,6 @@ import { NFT } from "../../entities/INFT";
 import { fetchUrl, postData } from "../../services/6529api";
 import RememeAddComponent, { ProcessedRememe } from "./RememeAddComponent";
 import { useAccount, useSignMessage } from "wagmi";
-import { useWeb3Modal, useWeb3ModalState } from "@web3modal/wagmi/react";
 import { DBResponse } from "../../entities/IDBResponse";
 import { ConsolidatedTDH } from "../../entities/ITDH";
 import { areEqualAddresses, numberWithCommas } from "../../helpers/Helpers";
@@ -14,6 +13,9 @@ import { SeizeSettings } from "../../entities/ISeizeSettings";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { AuthContext } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
+import HeaderUserConnect from "../header/user/HeaderUserConnect";
+import { SEIZE_API_URL, SEIZE_URL } from "../../../constants";
+import Link from "next/link";
 
 interface CheckList {
   status: boolean;
@@ -23,8 +25,6 @@ interface CheckList {
 export default function RememeAddPage() {
   const accountResolution = useAccount();
   const { connectedProfile } = useContext(AuthContext);
-  const web3modal = useWeb3Modal();
-  const web3modalState = useWeb3ModalState();
 
   const [seizeSettings, setSeizeSettings] = useState<SeizeSettings>();
 
@@ -103,16 +103,14 @@ export default function RememeAddPage() {
   }, [signMessage.isError]);
 
   useEffect(() => {
-    fetchUrl(`${process.env.API_ENDPOINT}/api/memes_lite`).then(
-      (response: DBResponse) => {
-        setMemes(response.data);
-        setMemesLoaded(true);
-      }
-    );
+    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`).then((response: DBResponse) => {
+      setMemes(response.data);
+      setMemesLoaded(true);
+    });
   }, []);
 
   useEffect(() => {
-    fetchUrl(`${process.env.API_ENDPOINT}/api/settings`).then(
+    fetchUrl(`${SEIZE_API_URL}/api/settings`).then(
       (settings: SeizeSettings) => {
         setSeizeSettings(settings);
       }
@@ -138,7 +136,7 @@ export default function RememeAddPage() {
   useEffect(() => {
     if (signMessage.isSuccess && signMessage.data) {
       setSubmitting(true);
-      postData(`${process.env.API_ENDPOINT}/api/rememes/add`, {
+      postData(`${SEIZE_API_URL}/api/rememes/add`, {
         address: accountResolution.address,
         signature: signMessage.data,
         rememe: buildRememeObject(),
@@ -286,6 +284,7 @@ export default function RememeAddPage() {
                         setSubmissionResult(undefined);
                         if (addRememe) {
                           signMessage.signMessage({
+                            account: accountResolution.address,
                             message: JSON.stringify(buildRememeObject()),
                           });
                         }
@@ -294,12 +293,7 @@ export default function RememeAddPage() {
                     </Button>
                   </span>
                 ) : (
-                  <Button
-                    className="seize-btn btn-white"
-                    disabled={web3modalState.open}
-                    onClick={() => web3modal.open()}>
-                    {web3modalState.open ? `Connecting...` : `Connect Wallet`}
-                  </Button>
+                  <HeaderUserConnect />
                 )}
               </Col>
             </Row>
@@ -363,17 +357,11 @@ export default function RememeAddPage() {
                           key={`submission-result-token-${t.id}`}>
                           #{t.id} - {t.name}
                           &nbsp;&nbsp;
-                          <a
+                          <Link
                             className="font-color"
-                            href={`${
-                              process.env.BASE_ENDPOINT
-                                ? process.env.BASE_ENDPOINT
-                                : "https://seize.io"
-                            }/rememes/${submissionResult.contract}/${t.id}`}
-                            target="_blank"
-                            rel="noreferrer">
+                            href={`/rememes/${submissionResult.contract}/${t.id}`}>
                             view
-                          </a>
+                          </Link>
                         </Col>
                       ))}
                     </Row>

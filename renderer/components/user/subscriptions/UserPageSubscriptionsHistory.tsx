@@ -15,6 +15,7 @@ import {
 } from "../../../helpers/Helpers";
 import { mainnet } from "wagmi/chains";
 import { MEMES_CONTRACT } from "../../../constants";
+import { openInExternalBrowser } from "../../../helpers";
 
 export default function UserPageSubscriptionsHistory(
   props: Readonly<{
@@ -146,9 +147,12 @@ function TopUpEntry(
           <div className="tw-flex tw-items-center tw-justify-center tw-flex-shrink-0 tw-h-5 tw-w-5">
             <a
               className="d-flex align-items-center"
-              target="_blank"
-              rel="noreferrer"
-              href={getTransactionLink(mainnet.id, props.topUp.hash)}>
+              href="#"
+              onClick={() =>
+                openInExternalBrowser(
+                  getTransactionLink(mainnet.id, props.topUp.hash)
+                )
+              }>
               <EtherscanIcon />
             </a>
           </div>
@@ -214,9 +218,12 @@ function RedeemedEntry(
           <div className="tw-flex tw-items-center tw-justify-center tw-flex-shrink-0 tw-h-5 tw-w-5">
             <a
               className="d-flex align-items-center"
-              target="_blank"
-              rel="noreferrer"
-              href={getTransactionLink(mainnet.id, props.redeem.transaction)}>
+              href="#"
+              onClick={() =>
+                openInExternalBrowser(
+                  getTransactionLink(mainnet.id, props.redeem.transaction)
+                )
+              }>
               <EtherscanIcon />
             </a>
           </div>

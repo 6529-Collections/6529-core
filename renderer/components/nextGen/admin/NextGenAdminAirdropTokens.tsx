@@ -103,6 +103,7 @@ export default function NextGenAdminAirdropTokens(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
+        account: account.address,
         args: [
           recipients,
           tokenData,

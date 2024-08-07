@@ -13,6 +13,7 @@ import NextGenNavigationHeader, {
   NextGenView,
 } from "../../../components/nextGen/collections/NextGenNavigationHeader";
 import Image from "next/image";
+import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../../components/header/Header"), {
   ssr: false,
@@ -82,16 +83,10 @@ export default function NextGen(props: any) {
         <link rel="icon" href="/favicon.ico" />
         <link rel="preload" href={collection.banner} as="image" />
         <meta name="description" content={`${title} | 6529 SEIZE`} />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/${path}`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/${path}`} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/nextgen.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/nextgen.png`} />
       </Head>
 
       <main className={styles.main}>

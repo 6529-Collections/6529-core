@@ -16,6 +16,7 @@ import {
   BarElement,
 } from "chart.js";
 import { numberWithCommas } from "../../helpers/Helpers";
+import { SEIZE_API_URL } from "../../../constants";
 
 ChartJS.register(
   CategoryScale,
@@ -71,7 +72,7 @@ export default function CommunityStats() {
   }
 
   useEffect(() => {
-    let url = `${process.env.API_ENDPOINT}/api/tdh_global_history?page_size=${pageSize}&page=${page}`;
+    let url = `${SEIZE_API_URL}/api/tdh_global_history?page_size=${pageSize}&page=${page}`;
     fetchUrl(url).then((response: DBResponse) => {
       const tdhH = response.data.reverse();
       setTdhHistory(tdhH);

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import Breadcrumb, { Crumb } from "../../../components/breadcrumb/Breadcrumb";
 import { useState } from "react";
+import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../../components/header/Header"), {
   ssr: false,
@@ -38,12 +39,12 @@ export default function MemeLabIndex(props: any) {
         <meta name="description" content={pagenameFull} />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/the-memes/collection/${pageProps.collection}`}
+          content={`${SEIZE_URL}/the-memes/collection/${pageProps.collection}`}
         />
         <meta property="og:title" content={pageProps.name} />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
         <meta property="og:description" content="6529 SEIZE" />
         <meta name="twitter:card" content={pagenameFull} />
@@ -52,7 +53,7 @@ export default function MemeLabIndex(props: any) {
         <meta name="twitter:description" content="6529 SEIZE" />
         <meta
           name="twitter:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

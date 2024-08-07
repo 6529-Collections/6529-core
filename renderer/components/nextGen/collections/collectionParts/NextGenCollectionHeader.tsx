@@ -25,6 +25,8 @@ import { DistributionLink } from "../NextGen";
 import Head from "next/head";
 import { getCommonHeaders } from "../../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../../services/api/common-api";
+import { SEIZE_API_URL, SEIZE_URL } from "../../../../../constants";
+import { openInExternalBrowser } from "../../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -83,7 +85,7 @@ export function NextGenCountdown(props: Readonly<CountdownProps>) {
   const [collectionLoaded, setCollectionLoaded] = useState(false);
 
   useEffect(() => {
-    const url = `${process.env.API_ENDPOINT}/api/nextgen/merkle_roots/${props.collection.merkle_root}`;
+    const url = `${SEIZE_API_URL}/api/nextgen/merkle_roots/${props.collection.merkle_root}`;
     fetchUrl(url).then((response: CollectionWithMerkle) => {
       if (response) {
         setCollection(response);
@@ -231,12 +233,13 @@ export default function NextGenCollectionHeader(props: Readonly<Props>) {
           {props.show_links && (
             <span className="pt-2 pb-2 d-flex align-items-center justify-content-end gap-4">
               <a
-                href={
-                  props.collection.opensea_link ||
-                  getOpenseaLink(NEXTGEN_CHAIN_ID)
-                }
-                target="_blank"
-                rel="noreferrer">
+                href="#"
+                onClick={() =>
+                  openInExternalBrowser(
+                    props.collection.opensea_link ||
+                      getOpenseaLink(NEXTGEN_CHAIN_ID)
+                  )
+                }>
                 <Image
                   className={styles.marketplace}
                   src="/opensea.png"
@@ -354,9 +357,9 @@ export function NextGenCollectionHead(
       <meta name="description" content={props.name} />
       <meta
         property="og:url"
-        content={`${
-          process.env.BASE_ENDPOINT
-        }/nextgen/collection/${formatNameForUrl(props.collection.name)}`}
+        content={`${SEIZE_URL}/nextgen/collection/${formatNameForUrl(
+          props.collection.name
+        )}`}
       />
       <meta property="og:title" content={props.name} />
       <meta property="og:image" content={props.collection.image} />

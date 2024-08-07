@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { Container, Row, Col } from "react-bootstrap";
 import Breadcrumb from "../components/breadcrumb/Breadcrumb";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../constants";
 
 const Header = dynamic(() => import("../components/header/Header"), {
   ssr: false,
@@ -22,15 +23,12 @@ export default function CommunityMetrics() {
         <title>Community Metrics | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Community Metrics | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/community-metrics`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/community-metrics`} />
         <meta property="og:title" content="Community Metrics" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 
@@ -177,7 +175,7 @@ export default function CommunityMetrics() {
                       fun qualitative factor based on which NFTS were collected.
                       The boosters are as follows:
                     </p>
-                    <h5 className="text-white pt-3" id="tdh-1.3">
+                    <h5 className="text-white float-none pt-3" id="tdh-1.3">
                       <a href="#tdh-1.3">
                         <u>TDH 1.3 (March 29, 2024 - present)</u>
                       </a>
@@ -227,7 +225,7 @@ export default function CommunityMetrics() {
                         Gradients)
                       </li>
                     </ol>
-                    <h5 className="text-white pt-3" id="tdh-1.2">
+                    <h5 className="text-white float-none pt-3" id="tdh-1.2">
                       <a href="#tdh-1.2">
                         <u>TDH 1.2 (December 30, 2023 - March 28, 2024)</u>
                       </a>
@@ -289,7 +287,7 @@ export default function CommunityMetrics() {
                         </ol>
                       </li>
                     </ol>
-                    <h5 className="text-white pt-3" id="tdh-1.1">
+                    <h5 className="text-white float-none pt-3" id="tdh-1.1">
                       <a href="#tdh-1.1">
                         <u>TDH 1.1 (July 14, 2023 - December 29, 2023)</u>
                       </a>
@@ -342,7 +340,7 @@ export default function CommunityMetrics() {
                     </ol>
                     <br />
                     <br />
-                    <h5 className="text-white pt-3" id="tdh-1.0">
+                    <h5 className="text-white float-none pt-3" id="tdh-1.0">
                       <a href="#tdh-1.0">
                         <u>TDH 1.0 (January 30, 2023 - July 13, 2023)</u>
                       </a>

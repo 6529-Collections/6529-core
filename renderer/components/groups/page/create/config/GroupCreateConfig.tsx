@@ -3,9 +3,7 @@ import GroupCreateCIC from "./GroupCreateCIC";
 import GroupCreateLevel from "./GroupCreateLevel";
 import GroupCreateRep from "./GroupCreateRep";
 import GroupCreateTDH from "./GroupCreateTDH";
-import GroupCreateWallets, {
-  GroupCreateWalletsType,
-} from "./wallets/GroupCreateWallets";
+import GroupCreateWallets from "./wallets/GroupCreateWallets";
 
 export default function GroupCreateConfig({
   level,
@@ -13,29 +11,23 @@ export default function GroupCreateConfig({
   cic,
   rep,
   wallets,
-  excludeWallets,
   setLevel,
   setTDH,
   setCIC,
   setRep,
   setWallets,
-  setExcludeWallets,
 }: {
   readonly level: CreateGroupDescription["level"];
   readonly tdh: CreateGroupDescription["tdh"];
   readonly cic: CreateGroupDescription["cic"];
   readonly rep: CreateGroupDescription["rep"];
   readonly wallets: CreateGroupDescription["identity_addresses"];
-  readonly excludeWallets: CreateGroupDescription["excluded_identity_addresses"];
   readonly setLevel: (level: CreateGroupDescription["level"]) => void;
   readonly setTDH: (tdh: CreateGroupDescription["tdh"]) => void;
   readonly setCIC: (cic: CreateGroupDescription["cic"]) => void;
   readonly setRep: (rep: CreateGroupDescription["rep"]) => void;
   readonly setWallets: (
     wallets: CreateGroupDescription["identity_addresses"]
-  ) => void;
-  readonly setExcludeWallets: (
-    wallets: CreateGroupDescription["excluded_identity_addresses"]
   ) => void;
 }) {
   return (
@@ -46,18 +38,7 @@ export default function GroupCreateConfig({
         <GroupCreateCIC cic={cic} setCIC={setCIC} />
         <GroupCreateRep rep={rep} setRep={setRep} />
       </div>
-      <GroupCreateWallets
-        type={GroupCreateWalletsType.INCLUDE}
-        wallets={wallets}
-        setWallets={setWallets}
-        walletsLimit={10000}
-      />
-      <GroupCreateWallets
-        type={GroupCreateWalletsType.EXCLUDE}
-        wallets={excludeWallets}
-        setWallets={setExcludeWallets}
-        walletsLimit={1000}
-      />
+      <GroupCreateWallets wallets={wallets} setWallets={setWallets} />
     </div>
   );
 }

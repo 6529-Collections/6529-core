@@ -5,6 +5,7 @@ import { useState } from "react";
 import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -28,16 +29,10 @@ export default function TheMemesPage() {
         <title>The Memes | 6529 SEIZE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="The Memes | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/the-memes`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/the-memes`} />
         <meta property="og:title" content="The Memes" />
         <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/memes-preview.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/memes-preview.png`} />
       </Head>
 
       <main className={styles.main}>
