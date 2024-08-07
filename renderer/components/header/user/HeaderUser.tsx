@@ -3,12 +3,12 @@ import HeaderUserConnected from "./HeaderUserConnected";
 import HeaderUserConnect from "./HeaderUserConnect";
 
 export default function HeaderUser() {
-  const account = useAccount();
+  const { address } = useAccount();
 
   return (
     <div className="tailwind-scope">
-      {account.address ? (
-        <HeaderUserConnected connectedAddress={account.address} />
+      {address ? (
+        <HeaderUserConnected connectedAddress={address} />
       ) : (
         <div className="tw-mx-3">
           <HeaderUserConnect />

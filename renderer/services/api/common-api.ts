@@ -3,12 +3,6 @@ import { API_AUTH_COOKIE } from "../../constants";
 import { getAuthJwt } from "../auth/auth.utils";
 import { SEIZE_API_URL } from "../../../constants";
 
-type QueryParams =
-  | string
-  | Record<string, string>
-  | string[][]
-  | URLSearchParams;
-
 const getHeaders = (
   headers?: Record<string, string>,
   contentType: boolean = true
@@ -23,10 +17,7 @@ const getHeaders = (
   };
 };
 
-export const commonApiFetch = async <
-  T,
-  U extends QueryParams = Record<string, string>
->(param: {
+export const commonApiFetch = async <T, U = Record<string, string>>(param: {
   endpoint: string;
   headers?: Record<string, string>;
   params?: U;
@@ -48,11 +39,7 @@ export const commonApiFetch = async <
   return res.json();
 };
 
-export const commonApiPost = async <
-  T,
-  U,
-  Z extends QueryParams = Record<string, string>
->(param: {
+export const commonApiPost = async <T, U, Z = Record<string, string>>(param: {
   endpoint: string;
   body: T;
   headers?: Record<string, string>;
@@ -77,33 +64,22 @@ export const commonApiPost = async <
   return res.json();
 };
 
-export const commonApiPut = async <
-  T,
-  U,
-  Z extends QueryParams = Record<string, string>
->(param: {
+export const commonApiPostWithoutBodyAndResponse = async (param: {
   endpoint: string;
-  body: T;
   headers?: Record<string, string>;
-  params?: Z;
-}): Promise<U> => {
+}): Promise<void> => {
   let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
-  if (param.params) {
-    const queryParams = new URLSearchParams(param.params);
-    url += `?${queryParams.toString()}`;
-  }
   const res = await fetch(url, {
-    method: "PUT",
+    method: "POST",
     headers: getHeaders(param.headers),
-    body: JSON.stringify(param.body),
+    body: "",
   });
   if (!res.ok) {
     const body: any = await res.json();
-    return Promise.reject(
-      body?.error ?? res.statusText ?? "Something went wrong"
+    return new Promise((_, rej) =>
+      rej(body?.error ?? res.statusText ?? "Something went wrong")
     );
   }
-  return res.json();
 };
 
 export const commonApiDelete = async (param: {
@@ -133,6 +109,31 @@ export const commonApiDeleWithBody = async <
   }
   const res = await fetch(url, {
     method: "DELETE",
+    headers: getHeaders(param.headers),
+    body: JSON.stringify(param.body),
+  });
+  if (!res.ok) {
+    const body: any = await res.json();
+    return Promise.reject(
+      body?.error ?? res.statusText ?? "Something went wrong"
+    );
+  }
+  return res.json();
+};
+
+export const commonApiPut = async <T, U, Z = Record<string, string>>(param: {
+  endpoint: string;
+  body: T;
+  headers?: Record<string, string>;
+  params?: Z;
+}): Promise<U> => {
+  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  if (param.params) {
+    const queryParams = new URLSearchParams(param.params);
+    url += `?${queryParams.toString()}`;
+  }
+  const res = await fetch(url, {
+    method: "PUT",
     headers: getHeaders(param.headers),
     body: JSON.stringify(param.body),
   });

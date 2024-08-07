@@ -16,6 +16,7 @@ import { AuthContext } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
 import TitleBar from "./titlebar/TitleBar";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
+import HeaderNotifications from "./notifications/HeaderNotifications";
 
 interface Props {
   onLoad?: () => void;
@@ -739,7 +740,8 @@ export default function Header(props: Readonly<Props>) {
                         className={`d-flex align-items-center justify-content-end no-padding`}>
                         <div
                           className={`${styles.dMdNone} d-flex align-items-center`}>
-                          <div className="tw-mr-6 xl:tw-mr-2">
+                          <div className="tw-inline-flex tw-space-x-2 tw-mr-6 xl:tw-mr-2">
+                            {showWaves && <HeaderNotifications />}
                             <HeaderSearchButton />
                           </div>
                           <button
@@ -1055,6 +1057,7 @@ export default function Header(props: Readonly<Props>) {
                               />
                             </NavDropdown>
                             <HeaderUser />
+                            {showWaves && <HeaderNotifications />}
                             <HeaderSearchButton />
                           </Nav>
                         </Navbar>
