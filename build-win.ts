@@ -5,6 +5,8 @@ import * as fs from "fs";
 
 dotenv.config();
 
+console.log("Building Windows installer...");
+
 const certificateFile = resolve(__dirname, process.env.CSC_LINK!);
 
 if (!fs.existsSync(certificateFile)) {
