@@ -105,7 +105,7 @@ export default function AppWalletProvider(
         <Row>
           <Col>
             <p>Error: {errorMessage}</p>
-            <p>Close this window, return to Seize App and retry.</p>
+            <p>Close this window, return to 6529 CORE App and retry.</p>
           </Col>
         </Row>
       </Container>
