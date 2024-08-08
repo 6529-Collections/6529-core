@@ -346,7 +346,9 @@ export default function Home({
                             <td>Status</td>
                             <td>
                               <b>
-                                {capitalizeEveryWord(manifoldClaim?.status)}
+                                {manifoldClaim?.isFinalized
+                                  ? "Sold Out"
+                                  : capitalizeEveryWord(manifoldClaim?.status)}
                               </b>
                             </td>
                           </tr>

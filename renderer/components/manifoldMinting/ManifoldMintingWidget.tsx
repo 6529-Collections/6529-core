@@ -434,7 +434,10 @@ export default function ManifoldMintingWidget(
   }
 
   function printContent() {
-    if (props.claim.status === ManifoldClaimStatus.ENDED) {
+    if (
+      props.claim.status === ManifoldClaimStatus.ENDED ||
+      props.claim.isFinalized
+    ) {
       return (
         <button
           disabled
@@ -442,7 +445,11 @@ export default function ManifoldMintingWidget(
           style={{
             padding: "0.6rem",
           }}>
-          <b>ENDED</b>
+          <b>
+            {props.claim.status === ManifoldClaimStatus.ENDED
+              ? "ENDED"
+              : "SOLD OUT"}
+          </b>
         </button>
       );
     }
@@ -492,13 +499,14 @@ export default function ManifoldMintingWidget(
 
   return (
     <Container className="no-padding">
-      {props.claim.status !== ManifoldClaimStatus.ENDED && (
-        <Row>
-          <Col>
-            <ManifoldMintingConnect onMintFor={setMintForAddress} />
-          </Col>
-        </Row>
-      )}
+      {props.claim.status !== ManifoldClaimStatus.ENDED &&
+        !props.claim.isFinalized && (
+          <Row>
+            <Col>
+              <ManifoldMintingConnect onMintFor={setMintForAddress} />
+            </Col>
+          </Row>
+        )}
       <Row className="pt-2">
         <Col>{printContent()}</Col>
       </Row>
