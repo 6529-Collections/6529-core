@@ -1,24 +1,24 @@
 # 6529-CORE
 
-### Overview
+## Overview
 
 6529 Core Desktop App supporting Windows, MacOS and Linux
 
-### Structure
+## Structure
 
-#### electron-src
+### electron-src
 
 This folder holds the code specific to ElectronJS
 
-#### renderer
+### renderer
 
 This is a subtree of `6529seize-frontend` repository (https://github.com/6529-Collections/6529seize-frontend)
 
-### Usage
+## Usage
 
-#### 6529seize-frontend
+### 6529seize-frontend
 
-##### Get Updates
+#### Get Updates
 
 Run the following script to fetch new changes from branch 'main' of 6529seize-frontend repository
 
@@ -28,11 +28,11 @@ npm run pull-web
 
 Note: there might be conflicts that need resolving
 
-##### Packages
+#### Packages
 
 Any package in this repository's package.json needs to be duplicated in the root package.json - this has to do with electron-builder not detecting the required dependencies of subtrees properly during build phase so it needs to be done in the root package.json
 
-#### Running locally - dev
+### Running locally - dev
 
 Use:
 
@@ -46,7 +46,7 @@ or if running on a windows machine:
 npm run dev-win
 ```
 
-#### Rebuilding SQL
+### Rebuilding SQL
 
 This project used `better-sqlite3`
 When changing between building different platform versions, you need to rebuild this package first by running:
@@ -55,13 +55,13 @@ When changing between building different platform versions, you need to rebuild 
 npm run rebuild-sql
 ```
 
-### Building and Publishing
+## Building and Publishing
 
 IMPORTANT: In order to build and publish a new version of tha app, first you have to update the version of package.json, otherwise the previous version will be overriden and the electron-updater will not work properly!
 
 Use the following commands to build for each platform:
 
-#### Windows
+### Windows
 
 ```
 npm run dist-win
@@ -69,7 +69,7 @@ npm run dist-win
 
 Packaged versions: x64, x32, arm, universal
 
-#### MacOS
+### MacOS
 
 ```
 npm run dist-mac
@@ -77,13 +77,13 @@ npm run dist-mac
 
 Packaged versions: arm64 (silicon), x64 (intel)
 
-#### Linux
+### Linux
 
 ```
 npm run dist-linux
 ```
 
-#### Publishing
+### Publishing
 
 The project is configured to publish the new version to s3. Each platform has its dedicated folder on S3:
 
