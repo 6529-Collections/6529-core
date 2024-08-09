@@ -25,6 +25,8 @@ import DropAuthor from "../../create/utils/author/DropAuthor";
 import Link from "next/link";
 import { ProfileMinWithoutSubs } from "../../../../helpers/ProfileTypes";
 import CommonAnimationHeight from "../../../utils/animation/CommonAnimationHeight";
+import { SEIZE_URL } from "../../../../../constants";
+import { openInExternalBrowser } from "../../../../helpers";
 
 export enum DropPartSize {
   SMALL = "SMALL",
@@ -152,15 +154,14 @@ const aHrefRenderer = ({
     return <p>[invalid link]</p>;
   }
 
-  const baseEndpoint = process.env.BASE_ENDPOINT || "";
-
-  const isExternalLink = href && baseEndpoint && !href.startsWith(baseEndpoint);
+  const isExternalLink = href && !href.startsWith(SEIZE_URL);
+  let externalHref = "";
 
   if (isExternalLink) {
-    props.rel = "noopener noreferrer nofollow";
-    props.target = "_blank";
+    externalHref = href;
+    props.href = "";
   } else {
-    props.href = href?.replace(baseEndpoint, "");
+    props.href = href?.replace(SEIZE_URL, "");
   }
 
   return (
@@ -169,6 +170,10 @@ const aHrefRenderer = ({
         e.stopPropagation();
         if (props.onClick) {
           props.onClick(e);
+        }
+        if (isExternalLink) {
+          e.preventDefault();
+          openInExternalBrowser(externalHref);
         }
       }}
       {...props}
