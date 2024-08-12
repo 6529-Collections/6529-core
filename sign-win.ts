@@ -41,7 +41,7 @@ function signAllExecutables(): void {
       .map((file) => path.join(dirPath, file));
 
     files.forEach((file) => {
-      if (fs.statSync(file).isFile()) {
+      if (file.endsWith(".exe")) {
         signExecutable(file);
       }
     });
