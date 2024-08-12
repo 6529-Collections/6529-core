@@ -5,13 +5,19 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-const { AZURE_KEY_VAULT_URL, AZURE_CLIENT_ID, AZURE_TENANT_ID, CERT_NAME } =
-  process.env;
+const {
+  AZURE_KEY_VAULT_URL,
+  AZURE_CLIENT_ID,
+  AZURE_CLIENT_SECRET,
+  AZURE_TENANT_ID,
+  CERT_NAME,
+} = process.env;
 
 function signExecutable(filePath: string): void {
   const command =
     `azure-sign sign --azure-key-vault-url "${AZURE_KEY_VAULT_URL}" ` +
     `--azure-key-vault-client-id "${AZURE_CLIENT_ID}" ` +
+    `--azure-key-vault-client-secret "${AZURE_CLIENT_SECRET}" ` +
     `--azure-key-vault-tenant-id "${AZURE_TENANT_ID}" ` +
     `--azure-key-vault-certificate "${CERT_NAME}" ` +
     `--file "${filePath}"`;
