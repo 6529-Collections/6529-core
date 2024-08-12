@@ -2,7 +2,8 @@
   "name": "6529-core",
   "version": "0.0.1",
   "author": {
-    "name": "6529"
+    "name": "6529",
+    "email": "6529@6529.io"
   },
   "description": "6529core APP",
   "private": false,
@@ -10,6 +11,7 @@
   "main": "main/electron-src/index.js",
   "scripts": {
     "pull-web": "git subtree pull --prefix=renderer https://github.com/6529-Collections/6529seize-frontend.git main",
+    "postinstall": "electron-builder install-app-deps",
     "clean": "rm -rf dist main renderer/out renderer/.next",
     "clean-win": "rimraf dist main renderer/out renderer/.next",
     "dev": "npm run clean && npm run build-electron && electron . --dev",
@@ -25,7 +27,7 @@
     "sign-win": "ts-node sign-win.ts",
     "dist-sign-win": "npm run dist-win && npm run sign-win && npm run publish-only",
     "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
-    "dist-linux": "npm run build && electron-builder --linux --publish always",
+    "dist-linux": "npm run build && electron-builder --linux --x64 --publish always",
     "publish-only": "electron-builder --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
@@ -212,10 +214,32 @@
     "linux": {
       "icon": "assets",
       "target": [
-        "AppImage",
-        "deb",
-        "rpm"
-      ]
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "rpm",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-linux-${arch}-${version}.${ext}"
     }
   }
 }
