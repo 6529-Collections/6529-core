@@ -30,7 +30,7 @@
     "dist-sign-win": "npm run dist-win && npm run sign-win && npm run publish-only",
     "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
     "dist-linux": "npm run build && electron-builder --linux --x64 --publish always",
-    "publish-only": "electron-builder --publish always",
+    "publish-only": "electron-builder --publish always --config.directories.output=dist",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
   "dependencies": {
