@@ -198,8 +198,7 @@
       "artifactName": "${productName}-win-${arch}-${version}.${ext}",
       "signingHashAlgorithms": [
         "sha256"
-      ],
-      "rfc3161TimeStampServer": "http://timestamp.digicert.com"
+      ]
     },
     "nsis": {
       "oneClick": false,

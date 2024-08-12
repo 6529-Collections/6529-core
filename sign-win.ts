@@ -15,12 +15,13 @@ const {
 
 function signExecutable(filePath: string): void {
   const command =
-    `azure-sign sign --azure-key-vault-url "${AZURE_KEY_VAULT_URL}" ` +
+    `azuresigntool sign --azure-key-vault-url "${AZURE_KEY_VAULT_URL}" ` +
     `--azure-key-vault-client-id "${AZURE_CLIENT_ID}" ` +
     `--azure-key-vault-client-secret "${AZURE_CLIENT_SECRET}" ` +
     `--azure-key-vault-tenant-id "${AZURE_TENANT_ID}" ` +
     `--azure-key-vault-certificate "${CERT_NAME}" ` +
-    `--file "${filePath}"`;
+    `--timestamp-rfc3161 "http://timestamp.digicert.com" ` +
+    `"${filePath}"`;
 
   console.log(`Signing ${filePath}...`);
   try {
