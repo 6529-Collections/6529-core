@@ -1,9 +1,9 @@
 import styles from "./PdfViewer.module.scss";
-import { Document, Page, pdfjs } from "react-pdf";
+// import { Document, Page, pdfjs } from "react-pdf";
 import { useEffect, useRef, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
-import "react-pdf/dist/esm/Page/AnnotationLayer.css";
-import "react-pdf/dist/esm/Page/TextLayer.css";
+// import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+// import "react-pdf/dist/esm/Page/TextLayer.css";
 import Pagination from "../pagination/Pagination";
 
 interface Props {
@@ -11,9 +11,9 @@ interface Props {
 }
 
 export default function PdfViewer(props: Readonly<Props>) {
-  useEffect(() => {
-    pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-  }, []);
+  // useEffect(() => {
+  //   pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  // }, []);
 
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
@@ -35,7 +35,7 @@ export default function PdfViewer(props: Readonly<Props>) {
     <Container className="no-padding" ref={containerRef}>
       <Row>
         <Col>
-          <Document
+          {/* <Document
             file={props.file}
             onLoadSuccess={onDocumentLoadSuccess}
             onLoadError={(e) => {
@@ -55,7 +55,7 @@ export default function PdfViewer(props: Readonly<Props>) {
               onRenderSuccess={() => setRenderedPageNumber(pageNumber)}
               width={containerRef.current?.offsetWidth}
             />
-          </Document>
+          </Document> */}
         </Col>
       </Row>
       <Row className="pt-2">
