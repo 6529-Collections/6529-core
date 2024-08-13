@@ -7,7 +7,7 @@ let updateCheckInProgress = false;
 let mainWindow: Electron.BrowserWindow | null;
 
 autoUpdater.autoDownload = false;
-autoUpdater.autoInstallOnAppQuit = true;
+autoUpdater.autoInstallOnAppQuit = false;
 
 export function checkForUpdates(
   window: Electron.BrowserWindow | null,
@@ -50,8 +50,6 @@ autoUpdater.on("update-available", (info) => {
     .then((result) => {
       if (result.response === 0) {
         autoUpdater.downloadUpdate();
-      } else {
-        mainWindow?.setProgressBar(-1);
       }
     });
 });
@@ -65,7 +63,7 @@ autoUpdater.on("update-downloaded", (info) => {
     .showMessageBox({
       type: "info",
       title: "Update Ready",
-      message: `Version ${info.version} has been downloaded. Would you like to install it now?`,
+      message: `Version v${info.version} has been downloaded. Would you like to install it now?`,
       buttons: ["Install and Restart", "Later"],
     })
     .then((result) => {
