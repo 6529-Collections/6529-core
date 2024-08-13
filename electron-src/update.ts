@@ -6,6 +6,9 @@ import Logger from "electron-log";
 let updateCheckInProgress = false;
 let mainWindow: Electron.BrowserWindow | null;
 
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = true;
+
 export function checkForUpdates(
   window: Electron.BrowserWindow | null,
   manual: boolean = false
