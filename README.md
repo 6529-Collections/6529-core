@@ -90,3 +90,36 @@ The project is configured to publish the new version to s3. Each platform has it
 - /win
 - /mac
 - /linux
+
+## Windows Publish Process
+
+### Build
+
+```
+npm run dist-win
+```
+
+The above command will:
+
+- build the project (renderer + electron-src)
+- run `electron-builder` which will create Windows related artifacts
+- upload artifacts to S3 at location `6529bucket/6529-core-app/win-unsigned/`
+
+### Sign
+
+The following must be run on the dedicated 6529 Core Windows EC2 instance `i-06a5dc2fe0d6a9f00` (Use Microsoft Remote Desktop)
+
+In Command prompt cd to project directory and run the sign command:
+
+```
+cd  C:\Users\Administrator\Desktop\6529-core
+npm run sign-publish-win
+```
+
+The above command will:
+
+- download the artifacts from `6529bucket/6529-core-app/win-unsigned/`
+- sign the artifacts
+- update the latest.yml to match the new sha512 of the artifacts
+- upload signed artifacts to S3 at location `6529bucket/6529-core-app/win/`
+  (the above upload in this location will trigger the 'autoupdater' functionality of the app)
