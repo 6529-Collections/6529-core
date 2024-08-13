@@ -218,6 +218,10 @@
     "linux": {
       "icon": "assets",
       "executableName": "6529-core",
+      "category": "Utility",
+      "executableArgs": [
+        "--no-sandbox"
+      ],
       "target": [
         {
           "target": "AppImage",
