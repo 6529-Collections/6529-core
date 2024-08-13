@@ -217,6 +217,7 @@
     },
     "linux": {
       "icon": "assets",
+      "executableName": "6529-core",
       "target": [
         {
           "target": "AppImage",
@@ -246,7 +247,6 @@
       "artifactName": "${productName}-linux-${arch}-${version}.${ext}",
       "desktop": {
         "Name": "6529 Core",
-        "Exec": "/usr/bin/6529-core %u",
         "Type": "Application",
         "Terminal": "false",
         "MimeType": "x-scheme-handler/core6529;",
