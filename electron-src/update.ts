@@ -6,6 +6,9 @@ import Logger from "electron-log";
 let updateCheckInProgress = false;
 let mainWindow: Electron.BrowserWindow | null;
 
+autoUpdater.autoDownload = false;
+autoUpdater.autoInstallOnAppQuit = false;
+
 export function checkForUpdates(
   window: Electron.BrowserWindow | null,
   manual: boolean = false
@@ -37,11 +40,12 @@ export function checkForUpdates(
 
 autoUpdater.on("update-available", (info) => {
   updateCheckInProgress = false;
+  mainWindow?.setProgressBar(-1);
   dialog
     .showMessageBox({
       type: "info",
       title: "Update Available",
-      message: `Version v${info.version} is available, do you want to download it now?`,
+      message: `Version v${info.version} is available. Do you want to download it now?`,
       buttons: ["Yes", "No"],
     })
     .then((result) => {
@@ -60,7 +64,7 @@ autoUpdater.on("update-downloaded", (info) => {
     .showMessageBox({
       type: "info",
       title: "Update Ready",
-      message: `Version -${info.version} has been downloaded. Would you like to install it now?`,
+      message: `Version v${info.version} has been downloaded. Would you like to install it now?`,
       buttons: ["Install and Restart", "Later"],
     })
     .then((result) => {
@@ -75,6 +79,7 @@ autoUpdater.on("error", (err) => {
     "Error",
     err == null ? "unknown" : (err.stack ?? err).toString()
   );
+  mainWindow?.setProgressBar(-1);
 });
 
 autoUpdater.on("update-not-available", (info) => {

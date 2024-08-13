@@ -83,7 +83,7 @@ export default function MemePageMintCountdown(
                 link: `/the-memes/mint`,
                 onClick: (e) => {
                   e.preventDefault();
-                  window.open(MEMES_MINTING_HREF);
+                  window.location.href = `/the-memes/mint`;
                 },
               },
             ]}

@@ -12,8 +12,8 @@ import { useRouter } from "next/router";
 import { Button, Modal } from "react-bootstrap";
 import TooltipButton from "./TooltipButton";
 
-function isWindows() {
-  return /Win/i.test(navigator.userAgent);
+function isMac() {
+  return /Mac/i.test(navigator.userAgent);
 }
 
 export default function TitleBar() {
@@ -163,7 +163,7 @@ export default function TitleBar() {
       </span>
       <TooltipButton
         buttonStyles={`${styles.info} ${
-          isWindows() ? styles.infoWin : styles.infoMac
+          isMac() ? styles.infoMac : styles.infoWin
         }`}
         placement="left"
         onClick={() => setShowInfo(true)}
