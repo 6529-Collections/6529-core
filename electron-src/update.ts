@@ -40,6 +40,7 @@ export function checkForUpdates(
 
 autoUpdater.on("update-available", (info) => {
   updateCheckInProgress = false;
+  mainWindow?.setProgressBar(-1);
   dialog
     .showMessageBox({
       type: "info",
@@ -78,6 +79,7 @@ autoUpdater.on("error", (err) => {
     "Error",
     err == null ? "unknown" : (err.stack ?? err).toString()
   );
+  mainWindow?.setProgressBar(-1);
 });
 
 autoUpdater.on("update-not-available", (info) => {
