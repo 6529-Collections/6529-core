@@ -248,9 +248,9 @@
       "desktop": {
         "Name": "6529 Core",
         "Type": "Application",
-        "Terminal": "false",
+        "Terminal": false,
         "MimeType": "x-scheme-handler/core6529;",
-        "Categories": "Utility;",
+        "Categories": "Utility;Network;",
         "Comment": "6529 Core Application"
       },
       "protocols": [
