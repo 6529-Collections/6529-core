@@ -74,7 +74,7 @@ export default function AppWalletProvider(
           data: params[0].data,
         };
         if (params[0].value) {
-          sendParams.value = parseEther(params[0].value);
+          sendParams.value = params[0].value;
         }
         sendTransaction(sendParams);
         break;
