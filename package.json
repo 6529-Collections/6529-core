@@ -31,7 +31,7 @@
     "sign-win": "ts-node sign-win.ts && npm run win-update-latest",
     "upload-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-win": "npm run clean-win && npm run download-win-unsigned && npm run sign-win && npm run upload-win-signed",
-    "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
+    "dist-mac": "electron-builder --mac --arm64 --publish never",
     "dist-linux": "npm run build && electron-builder --linux --x64 --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
@@ -113,6 +113,7 @@
     "autoprefixer": "^10.4.19",
     "electron": "^30.0.8",
     "electron-builder": "^24.13.3",
+    "electron-notarize": "^1.2.2",
     "postcss": "^8.4.38",
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",
@@ -122,6 +123,7 @@
     "appId": "com.6529.6529core",
     "productName": "6529 CORE",
     "asar": true,
+    "afterSign": "scripts/mac-notarize.js",
     "protocols": [
       {
         "name": "6529core",
@@ -149,8 +151,9 @@
       }
     ],
     "mac": {
-      "identity": null,
+      "identity": "Apple Distribution: 6529 Collection LLC (4962266Y3D)",
       "icon": "assets/icon.icns",
+      "hardenedRuntime": true,
       "target": [
         {
           "target": "dmg",
@@ -177,7 +180,14 @@
             ]
           }
         ]
-      }
+      },
+      "asarUnpack": [
+        "**/node_modules/keccak/bin/**/*",
+        "**/node_modules/secp256k1/bin/**/*",
+        "**/node_modules/utf-8-validate/bin/**/*",
+        "**/node_modules/bufferutil/bin/**/*",
+        "**/node_modules/**/*.{node,dylib}"
+      ]
     },
     "win": {
       "publisherName": "6529 Collection LLC",
