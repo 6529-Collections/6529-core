@@ -5,7 +5,7 @@
     "name": "6529",
     "email": "6529@6529.io"
   },
-  "description": "6529core APP",
+  "description": "6529 CORE APP",
   "private": false,
   "license": "MIT",
   "main": "main/electron-src/index.js",
