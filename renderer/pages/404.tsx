@@ -19,7 +19,7 @@ export default function Seize404() {
         <meta name="description" content="404 NOT FOUND | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/404`} />
         <meta property="og:title" content="404 NOT FOUND" />
-        <meta property="og:description" content="6529 Seize" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
