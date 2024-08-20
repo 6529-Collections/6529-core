@@ -71,9 +71,7 @@ export default function NextGen(props: any) {
     setCrumbs();
   }, [view]);
 
-  const title = view
-    ? view + " | NextGen | 6529 SEIZE"
-    : "NextGen | 6529 SEIZE";
+  const title = view ? view + " | NextGen | 6529 CORE" : "NextGen | 6529 CORE";
   const path = view ? `/nextgen/${view.toLowerCase()}` : "/nextgen";
 
   return (
@@ -82,10 +80,10 @@ export default function NextGen(props: any) {
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <link rel="preload" href={collection.banner} as="image" />
-        <meta name="description" content={`${title} | 6529 SEIZE`} />
+        <meta name="description" content={`${title} | 6529 CORE`} />
         <meta property="og:url" content={`${SEIZE_URL}/${path}`} />
         <meta property="og:title" content={title} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta property="og:image" content={`${SEIZE_URL}/nextgen.png`} />
       </Head>
 

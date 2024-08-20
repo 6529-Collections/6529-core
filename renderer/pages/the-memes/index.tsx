@@ -26,12 +26,12 @@ export default function TheMemesPage() {
   return (
     <>
       <Head>
-        <title>The Memes | 6529 SEIZE</title>
+        <title>The Memes | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="The Memes | 6529 SEIZE" />
+        <meta name="description" content="The Memes | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/the-memes`} />
         <meta property="og:title" content="The Memes" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta property="og:image" content={`${SEIZE_URL}/memes-preview.png`} />
       </Head>
 

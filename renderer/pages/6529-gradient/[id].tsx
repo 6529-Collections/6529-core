@@ -20,7 +20,7 @@ const GradientPageComponent = dynamic(
 
 export default function GradientPageIndex(props: any) {
   const pageProps = props.pageProps;
-  const pagenameFull = `${pageProps.name} | 6529 SEIZE`;
+  const pagenameFull = `${pageProps.name} | 6529 CORE`;
 
   return (
     <>
@@ -34,7 +34,7 @@ export default function GradientPageIndex(props: any) {
         />
         <meta property="og:title" content={pageProps.name} />
         <meta property="og:image" content={pageProps.image} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
       </Head>
 
       <main className={styles.main}>

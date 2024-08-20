@@ -14,9 +14,9 @@ export default function Seize404() {
   return (
     <>
       <Head>
-        <title>NOT FOUND | 6529 SEIZE</title>
+        <title>NOT FOUND | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="404 NOT FOUND | 6529 SEIZE" />
+        <meta name="description" content="404 NOT FOUND | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/404`} />
         <meta property="og:title" content="404 NOT FOUND" />
         <meta property="og:description" content="6529 Seize" />

@@ -28,12 +28,12 @@ export default function GradientsPage() {
   return (
     <>
       <Head>
-        <title>6529 Gradient | 6529 SEIZE</title>
+        <title>6529 Gradient | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="6529 Gradient | 6529 SEIZE" />
+        <meta name="description" content="6529 Gradient | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/6529-gradient`} />
         <meta property="og:title" content={`6529 Gradient`} />
-        <meta property="og:description" content={`6529 SEIZE`} />
+        <meta property="og:description" content={`6529 CORE`} />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/gradients-preview.png`}

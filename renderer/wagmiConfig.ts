@@ -35,8 +35,8 @@ export function getChains() {
 const CONTRACT_CHAINS = getChains();
 
 const metadata = {
-  name: "Seize",
-  description: "6529 SEIZE",
+  name: "6529 CORE",
+  description: "6529 CORE",
   url: SEIZE_URL,
   icons: [
     "https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses_3.png",

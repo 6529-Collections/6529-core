@@ -57,12 +57,12 @@ export default function CommunityPage() {
   return (
     <>
       <Head>
-        <title>Community | 6529 SEIZE</title>
+        <title>Community | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Community | 6529 SEIZE" />
+        <meta name="description" content="Community | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/community`} />
         <meta property="og:title" content="Community" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

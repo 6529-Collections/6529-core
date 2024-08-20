@@ -17,12 +17,12 @@ export default function GasPage() {
   return (
     <>
       <Head>
-        <title>Meme Gas | 6529 SEIZE</title>
+        <title>Meme Gas | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Meme Gas | 6529 SEIZE" />
+        <meta name="description" content="Meme Gas | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/meme-gas`} />
         <meta property="og:title" content="Meme Gas" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

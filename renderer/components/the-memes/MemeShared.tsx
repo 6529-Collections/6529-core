@@ -29,7 +29,7 @@ export function SharedHead(
   const pageProps = props.props;
   const pagenameFull = `${pageProps.name}${
     props.isDistribution ? " Distribution" : ""
-  } | 6529 SEIZE`;
+  } | 6529 CORE`;
 
   return (
     <Head>
@@ -39,11 +39,11 @@ export function SharedHead(
       <meta property="og:url" content={`${SEIZE_URL}/${path}`} />
       <meta property="og:title" content={pageProps.name} />
       <meta property="og:image" content={pageProps.image} />
-      <meta property="og:description" content="6529 SEIZE" />
+      <meta property="og:description" content="6529 CORE" />
       <meta name="twitter:card" content={pagenameFull} />
       <meta name="twitter:image:alt" content={pageProps.name} />
       <meta name="twitter:title" content={pageProps.name} />
-      <meta name="twitter:description" content="6529 SEIZE" />
+      <meta name="twitter:description" content="6529 CORE" />
       <meta name="twitter:image" content={pageProps.image} />
     </Head>
   );

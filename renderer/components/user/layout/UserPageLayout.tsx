@@ -73,7 +73,7 @@ export default function UserPageLayout({
 
   const title = getTitle();
 
-  const pagenameFull = `${title} | 6529 SEIZE`;
+  const pagenameFull = `${title} | 6529 CORE`;
 
   const descriptionArray = [];
 
@@ -88,7 +88,7 @@ export default function UserPageLayout({
   );
   descriptionArray.push(`Cards: ${formatNumberWithCommas(profile.balance)}`);
 
-  descriptionArray.push("6529 SEIZE");
+  descriptionArray.push("6529 CORE");
 
   const mainAddress =
     profile.profile?.primary_wallet ?? handleOrWallet.toLowerCase();

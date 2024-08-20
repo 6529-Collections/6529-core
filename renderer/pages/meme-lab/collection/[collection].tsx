@@ -29,7 +29,7 @@ export default function MemeLabIndex(props: any) {
     { display: "Collections", href: "/meme-lab?sort=collections" },
     { display: pageProps.collection.replaceAll("-", " ") },
   ]);
-  const pagenameFull = `${pageProps.name} | 6529 SEIZE`;
+  const pagenameFull = `${pageProps.name} | 6529 CORE`;
 
   return (
     <>
@@ -46,11 +46,11 @@ export default function MemeLabIndex(props: any) {
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta name="twitter:card" content={pagenameFull} />
         <meta name="twitter:image:alt" content={pageProps.name} />
         <meta name="twitter:title" content={pageProps.name} />
-        <meta name="twitter:description" content="6529 SEIZE" />
+        <meta name="twitter:description" content="6529 CORE" />
         <meta
           name="twitter:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

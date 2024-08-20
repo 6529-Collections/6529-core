@@ -46,18 +46,18 @@ export default function ConsolidationMappingToolPage() {
   return (
     <>
       <Head>
-        <title>Consolidation Mapping Tool | 6529 SEIZE</title>
+        <title>Consolidation Mapping Tool | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content="Consolidation Mapping Tool | 6529 SEIZE"
+          content="Consolidation Mapping Tool | 6529 CORE"
         />
         <meta
           property="og:url"
           content={`${SEIZE_URL}/consolidation-mapping-tool`}
         />
         <meta property="og:title" content="Consolidation Mapping Tool" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

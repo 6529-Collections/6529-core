@@ -28,12 +28,12 @@ export default function NextGenAdmin() {
   return (
     <>
       <Head>
-        <title>NextGen Admin | 6529 SEIZE</title>
+        <title>NextGen Admin | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="NextGen Admin | 6529 SEIZE" />
+        <meta name="description" content="NextGen Admin | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/nextgen/admin`} />
         <meta property="og:title" content="NextGen Admin" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta property="og:image" content={`${SEIZE_URL}/nextgen.png`} />
       </Head>
 

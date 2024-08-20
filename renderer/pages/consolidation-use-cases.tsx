@@ -39,18 +39,18 @@ export default function ConsolidationUseCases() {
   return (
     <>
       <Head>
-        <title>Consolidation Use Cases | 6529 SEIZE</title>
+        <title>Consolidation Use Cases | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content="Consolidation Use Cases | 6529 SEIZE"
+          content="Consolidation Use Cases | 6529 CORE"
         />
         <meta
           property="og:url"
           content={`${SEIZE_URL}/consolidation-use-cases`}
         />
         <meta property="og:title" content="Consolidation Use Cases" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

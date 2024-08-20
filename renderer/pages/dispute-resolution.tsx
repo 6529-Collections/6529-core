@@ -15,9 +15,9 @@ export default function DisputeResolution() {
   return (
     <>
       <Head>
-        <title>Dispute Resolution | 6529 SEIZE</title>
+        <title>Dispute Resolution | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Dispute Resolution | 6529 SEIZE" />
+        <meta name="description" content="Dispute Resolution | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/dispute-resolution`} />
         <meta property="og:title" content="Dispute Resolution" />
         <meta property="og:description" content="6529 Seize" />

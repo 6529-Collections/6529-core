@@ -168,15 +168,15 @@ export default function About(props: any) {
   return (
     <>
       <Head>
-        <title>{`About - ${sectionTitle} | 6529 SEIZE`}</title>
+        <title>{`About - ${sectionTitle} | 6529 CORE`}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content={`About - ${sectionTitle} | 6529 SEIZE`}
+          content={`About - ${sectionTitle} | 6529 CORE`}
         />
         <meta property="og:url" content={`${SEIZE_URL}/about/${section}`} />
         <meta property="og:title" content={`About - ${sectionTitle}`} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

@@ -28,11 +28,11 @@ export default function ConsolidatedCommunityMetricsDownloads() {
   return (
     <>
       <Head>
-        <title>Consolidated Community Metrics Downloads | 6529 SEIZE</title>
+        <title>Consolidated Community Metrics Downloads | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content="Consolidated Community Metrics Downloads | 6529 SEIZE"
+          content="Consolidated Community Metrics Downloads | 6529 CORE"
         />
         <meta
           property="og:url"
@@ -42,7 +42,7 @@ export default function ConsolidatedCommunityMetricsDownloads() {
           property="og:title"
           content={`Consolidated Community Metrics Downloads`}
         />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

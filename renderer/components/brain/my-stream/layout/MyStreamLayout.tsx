@@ -25,16 +25,16 @@ export default function MyStreamLayout({
   return (
     <>
       <Head>
-        <title>My Stream | 6529 SEIZE</title>
+        <title>My Stream | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="My Stream | 6529 SEIZE" />
+        <meta name="description" content="My Stream | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/my-stream`} />
         <meta property="og:title" content="My Stream" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
       </Head>
 
       <div className="tailwind-scope lg:tw-min-h-screen tw-bg-iron-950 tw-overflow-x-hidden">
