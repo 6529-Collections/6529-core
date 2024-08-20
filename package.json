@@ -23,16 +23,24 @@
     "build-electron-win": "tsc -p electron-src && xcopy /E /I assets main\\electron-src\\assets\\",
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "build-win": "npm run clean-win && npm run build-renderer && npm run build-electron-win",
-    "dist-win": "npm run build && electron-builder --win --ia32 --x64 --arm64 --publish never && npm run upload-win-unsigned",
-    "clear-win-unsigned": "aws s3 rm s3://6529bucket/6529-core-app/win-unsigned/ --recursive",
-    "upload-win-unsigned": "npm run clear-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
-    "download-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ./dist",
+    "dist-win-staging": "npm run build && electron-builder --config electron-builder.staging.json --win --x64 --arm64 --publish never && npm run upload-staging-win-unsigned",
+    "dist-win-production": "npm run build && electron-builder --config electron-builder.production.json --win --ia32 --x64 --arm64 --publish never && npm run upload-production-win-unsigned",
+    "clear-staging-win-unsigned": "aws s3 rm s3://6529bucket/6529-staging-core-app/win-unsigned/ --recursive",
+    "clear-production-win-unsigned": "aws s3 rm s3://6529bucket/6529-core-app/win-unsigned/ --recursive",
+    "upload-staging-win-unsigned": "npm run clear-staging-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-staging-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
+    "upload-production-win-unsigned": "npm run clear-production-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
+    "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ./dist",
+    "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ./dist",
     "win-update-latest": "ts-node scripts/win-update-latest.ts",
     "sign-win": "ts-node sign-win.ts && npm run win-update-latest",
-    "upload-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
-    "sign-publish-win": "npm run clean-win && npm run download-win-unsigned && npm run sign-win && npm run upload-win-signed",
-    "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
-    "dist-linux": "npm run build && electron-builder --linux --x64 --publish always",
+    "upload-staging-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-staging-core-app/win/",
+    "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
+    "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
+    "sign-publish-production-win": "npm run clean-win && npm run download-production-win-unsigned && npm run sign-win && npm run upload-production-win-signed",
+    "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish always",
+    "dist-mac-production": "npm run build && electron-builder --config electron-builder.production.json --mac --arm64 --x64 --publish always",
+    "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",
+    "dist-linux-production": "npm run build && electron-builder --config electron-builder.production.json --linux --x64 --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
   "dependencies": {
@@ -117,154 +125,5 @@
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5"
-  },
-  "build": {
-    "appId": "com.6529.6529core",
-    "productName": "6529 CORE",
-    "asar": true,
-    "protocols": [
-      {
-        "name": "6529core",
-        "schemes": [
-          "core6529"
-        ]
-      }
-    ],
-    "files": [
-      "main/**/*",
-      "next.config.mjs",
-      "renderer/out/**/*",
-      "renderer/public/**/*"
-    ],
-    "extraResources": [
-      "assets/**/*"
-    ],
-    "publish": [
-      {
-        "provider": "s3",
-        "bucket": "6529bucket",
-        "region": "eu-west-1",
-        "path": "6529-core-app/${os}/",
-        "acl": null
-      }
-    ],
-    "mac": {
-      "identity": null,
-      "icon": "assets/icon.icns",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64",
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-mac-${arch}-${version}.${ext}",
-      "extendInfo": {
-        "CFBundleURLTypes": [
-          {
-            "CFBundleURLName": "com.6529.6529core",
-            "CFBundleURLSchemes": [
-              "core6529"
-            ]
-          }
-        ]
-      }
-    },
-    "win": {
-      "publisherName": "6529 Collection LLC",
-      "icon": "assets/icon.ico",
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "nsis",
-          "arch": [
-            "ia32"
-          ]
-        },
-        {
-          "target": "nsis",
-          "arch": [
-            "arm64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-win-${arch}-${version}.${ext}",
-      "signingHashAlgorithms": [
-        "sha256"
-      ]
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": true,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "6529 CORE"
-    },
-    "linux": {
-      "icon": "assets",
-      "executableName": "6529-core",
-      "category": "Utility",
-      "executableArgs": [
-        "--no-sandbox"
-      ],
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "rpm",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "${productName}-linux-${arch}-${version}.${ext}",
-      "desktop": {
-        "Name": "6529 Core",
-        "Type": "Application",
-        "Terminal": false,
-        "MimeType": "x-scheme-handler/core6529;",
-        "Categories": "Utility;Network;",
-        "Comment": "6529 Core Application"
-      },
-      "protocols": [
-        {
-          "name": "6529 Core Protocol",
-          "schemes": [
-            "core6529"
-          ]
-        }
-      ]
-    }
   }
 }
