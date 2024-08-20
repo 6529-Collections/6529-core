@@ -323,6 +323,7 @@ export default function Home({
                         <MemePageMintCountdown
                           nft_id={pageProps.nft.id}
                           setClaim={setManifoldClaim}
+                          is_full_width={true}
                         />
                       </Col>
                     </Row>
