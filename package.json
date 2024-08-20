@@ -31,7 +31,7 @@
     "sign-win": "ts-node sign-win.ts && npm run win-update-latest",
     "upload-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-win": "npm run clean-win && npm run download-win-unsigned && npm run sign-win && npm run upload-win-signed",
-    "dist-mac": "npm run build && electron-builder --mac --arm64 --x64 --publish always",
+    "dist-mac": "npm run build && electron-builder --mac --arm64 --publish never",
     "dist-linux": "npm run build && electron-builder --linux --x64 --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json"
   },
@@ -156,15 +156,7 @@
         {
           "target": "dmg",
           "arch": [
-            "arm64",
-            "x64"
-          ]
-        },
-        {
-          "target": "zip",
-          "arch": [
-            "arm64",
-            "x64"
+            "arm64"
           ]
         }
       ],
