@@ -28,6 +28,7 @@ export function browserConnector(parameters: {
     new Map();
 
   let initialized = false;
+  let scheme = "";
 
   let connectionObject: ConnectionObject = {
     accounts: [],
@@ -48,6 +49,10 @@ export function browserConnector(parameters: {
         callback(data.data);
         deepLinkCallbacks.delete(data.requestId);
       }
+    });
+
+    window.api.getInfo().then((newInfo) => {
+      scheme = newInfo.scheme;
     });
 
     initialized = true;
@@ -91,7 +96,7 @@ export function browserConnector(parameters: {
 
       return new Promise((resolve, reject) => {
         const requestId = generateRequestId();
-        const url = `http://localhost:6529/app-wallet?task=connect&requestId=${requestId}`;
+        const url = `http://localhost:6529/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}`;
 
         parameters.openUrlFn(url);
 
@@ -144,7 +149,7 @@ export function browserConnector(parameters: {
           return new Promise((resolve, reject) => {
             const requestId = generateRequestId();
             const encodedParams = encodeURIComponent(JSON.stringify(params));
-            const url = `http://localhost:6529/app-wallet?task=provider&requestId=${requestId}&method=${method}&params=${encodedParams}`;
+            const url = `http://localhost:6529/app-wallet?task=provider&scheme=${scheme}&requestId=${requestId}&method=${method}&params=${encodedParams}`;
 
             parameters.openUrlFn(url);
 

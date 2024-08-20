@@ -217,7 +217,7 @@ const InfoModal: React.FC<InfoProps> = ({ show, onHide }) => {
       <hr className="mt-0 mb-0" />
       <Modal.Body>
         {printInfo("APP VERSION", info.app_version)}
-        {printInfo("APP PORT", `:${info.port}`)}
+        {printInfo("APP PORT", `${info.scheme}:${info.port}`)}
         {printInfo("ELECTRON VERSION", info.electron_version)}
         {printInfo("CHROME VERSION", info.chrome_version)}
         {printInfo("NODE VERSION", info.node_version)}

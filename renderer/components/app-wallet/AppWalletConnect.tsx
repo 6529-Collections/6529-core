@@ -7,6 +7,7 @@ import { Container, Row, Col } from "react-bootstrap";
 
 export default function AppWalletConnect(
   props: Readonly<{
+    scheme?: string;
     setCompleted: (value: boolean) => void;
   }>
 ) {
@@ -34,7 +35,7 @@ export default function AppWalletConnect(
       requestId,
       data: connectionInfo,
     });
-    const deepLink = `core6529://connector?data=${encodeURIComponent(
+    const deepLink = `${props.scheme}://connector?data=${encodeURIComponent(
       serializedInfo
     )}`;
     window.location.href = deepLink;
