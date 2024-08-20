@@ -5,7 +5,10 @@ import { Container, Row, Col } from "react-bootstrap";
 import { hexToString, parseEther } from "viem";
 
 export default function AppWalletProvider(
-  props: Readonly<{ setCompleted: (value: boolean) => void }>
+  props: Readonly<{
+    scheme?: string;
+    setCompleted: (value: boolean) => void;
+  }>
 ) {
   const account = useAccount();
   const [methodParams, setMethodParams] = useState<any>(null);
@@ -89,7 +92,7 @@ export default function AppWalletProvider(
       requestId,
       data: successResponse,
     });
-    const deepLink = `core6529://connector?data=${encodeURIComponent(
+    const deepLink = `${props.scheme}://connector?data=${encodeURIComponent(
       serializedInfo
     )}`;
     window.location.href = deepLink;

@@ -2,6 +2,11 @@
   "appId": "com.6529.6529stagingcore",
   "productName": "6529 STAGING CORE",
   "asar": true,
+  "extraMetadata": {
+    "env": {
+      "ENVIRONMENT": "staging"
+    }
+  },
   "protocols": [
     {
       "name": "6529stagingcore",

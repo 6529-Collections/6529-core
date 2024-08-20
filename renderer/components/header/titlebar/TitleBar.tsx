@@ -10,7 +10,6 @@ import {
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
-import { Button, Modal } from "react-bootstrap";
 import TooltipButton from "./TooltipButton";
 import { AboutSection } from "../../../pages/about/[section]";
 
@@ -30,6 +29,14 @@ export default function TitleBar() {
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   const [isShareOpen, setIsShareOpen] = useState(false);
+
+  const [scheme, setScheme] = useState("");
+
+  useEffect(() => {
+    window.api.getInfo().then((newInfo) => {
+      setScheme(newInfo.scheme);
+    });
+  }, []);
 
   useEffect(() => {
     const handleStart = () => setNavigationLoading(true);
@@ -165,7 +172,11 @@ export default function TitleBar() {
             icon={faShare}
             content="Share"
           />
-          <SharePopup show={isShareOpen} onHide={() => setIsShareOpen(false)} />
+          <SharePopup
+            scheme={scheme}
+            show={isShareOpen}
+            onHide={() => setIsShareOpen(false)}
+          />
         </div>
         <TooltipButton
           buttonStyles={`${styles.button} ${
@@ -209,7 +220,11 @@ interface InfoProps {
   onHide: () => void;
 }
 
-function SharePopup(props: { show: boolean; onHide: () => void }) {
+function SharePopup(props: {
+  scheme: string;
+  show: boolean;
+  onHide: () => void;
+}) {
   const [animationClass, setAnimationClass] = useState("");
 
   const [isDesktopLinkCopied, setIsDesktopLinkCopied] = useState(false);
@@ -232,7 +247,7 @@ function SharePopup(props: { show: boolean; onHide: () => void }) {
   };
 
   const copyAppLink = () => {
-    const link = `core6529://navigate/${getLinkPath()}`;
+    const link = `${props.scheme}://navigate/${getLinkPath()}`;
     navigator.clipboard.writeText(link).then(() => {
       setIsWebLinkCopied(false);
       setIsDesktopLinkCopied(true);

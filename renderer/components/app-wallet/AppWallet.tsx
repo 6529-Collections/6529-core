@@ -5,14 +5,14 @@ import { Col, Container, Row } from "react-bootstrap";
 import AppWalletConnect from "./AppWalletConnect";
 import Image from "next/image";
 import AppWalletProvider from "./AppWalletProvider";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function AppWallet({ image }: { readonly image: string }) {
   const router = useRouter();
 
   const [completed, setCompleted] = useState(false);
 
-  const { task } = router.query;
+  const { task, scheme } = router.query as { task?: string; scheme?: string };
 
   return (
     <Container fluid>
@@ -48,10 +48,16 @@ export default function AppWallet({ image }: { readonly image: string }) {
             ) : (
               <>
                 {task === "connect" && (
-                  <AppWalletConnect setCompleted={setCompleted} />
+                  <AppWalletConnect
+                    scheme={scheme}
+                    setCompleted={setCompleted}
+                  />
                 )}
                 {task === "provider" && (
-                  <AppWalletProvider setCompleted={setCompleted} />
+                  <AppWalletProvider
+                    scheme={scheme}
+                    setCompleted={setCompleted}
+                  />
                 )}
               </>
             )}
