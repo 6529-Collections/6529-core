@@ -28,6 +28,7 @@ import AboutNakamotoThreshold from "../../components/about/AboutNakamotoThreshol
 import AboutCopyright from "../../components/about/AboutCopyright";
 import AboutPrimaryAddress from "../../components/about/AboutPrimaryAddress";
 import { SEIZE_URL } from "../../../constants";
+import AboutCore from "../../components/about/AboutCore";
 
 const AboutCookiePolicy = dynamic(
   () => import("../../components/about/AboutCookiePolicy"),
@@ -57,6 +58,7 @@ export enum AboutSection {
   SUBSCRIPTIONS = "subscriptions",
   NAKAMOTO_THRESHOLD = "nakamoto-threshold",
   COPYRIGHT = "copyright",
+  CORE = "6529-core",
 }
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -158,6 +160,8 @@ export default function About(props: any) {
         return <AboutNakamotoThreshold />;
       case AboutSection.COPYRIGHT:
         return <AboutCopyright />;
+      case AboutSection.CORE:
+        return <AboutCore />;
     }
   }
 

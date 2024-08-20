@@ -45,6 +45,9 @@ export const api = {
   handleWalletResponse: (response: any) => {
     ipcRenderer.on("wallet-response", response);
   },
+  onNavigate: (url: any) => {
+    ipcRenderer.on("navigate", url);
+  },
   checkUpdates: () => ipcRenderer.send("check-updates"),
 };
 

@@ -5,12 +5,14 @@ import {
   faArrowRight,
   faInfo,
   faRefresh,
+  faShare,
 } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
 import { Button, Modal } from "react-bootstrap";
 import TooltipButton from "./TooltipButton";
+import { AboutSection } from "../../../pages/about/[section]";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -20,13 +22,14 @@ export default function TitleBar() {
   const router = useRouter();
 
   const [showConfirm, setShowConfirm] = useState(false);
-  const [showInfo, setShowInfo] = useState(false);
 
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
 
   const [showScrollTop, setShowScrollTop] = useState(false);
+
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   useEffect(() => {
     const handleStart = () => setNavigationLoading(true);
@@ -54,8 +57,14 @@ export default function TitleBar() {
     window.api.onNavigationStateChange(updateNavState);
     updateNavState();
 
+    window.api.onNavigate((_event: any, url: string) => {
+      console.log("Navigating to:", url);
+      router.push(url);
+    });
+
     return () => {
       window.api.removeNavigationStateChangeListener(updateNavState);
+      window.api.onNavigate(() => {});
     };
   }, []);
 
@@ -123,6 +132,10 @@ export default function TitleBar() {
     setShowConfirm(false);
   };
 
+  const toggleShare = () => {
+    setIsShareOpen(!isShareOpen);
+  };
+
   return (
     <>
       <div className={styles.spacer}></div>
@@ -143,6 +156,17 @@ export default function TitleBar() {
           icon={faArrowRight}
           content="Go Forward"
         />
+        <div className="position-relative">
+          <TooltipButton
+            buttonStyles={`${styles.button} ${
+              navigationLoading ? styles.disabled : styles.enabled
+            }`}
+            onClick={toggleShare}
+            icon={faShare}
+            content="Share"
+          />
+          <SharePopup show={isShareOpen} onHide={() => setIsShareOpen(false)} />
+        </div>
         <TooltipButton
           buttonStyles={`${styles.button} ${
             navigationLoading ? styles.disabled : styles.enabled
@@ -166,7 +190,7 @@ export default function TitleBar() {
           isMac() ? styles.infoMac : styles.infoWin
         }`}
         placement="left"
-        onClick={() => setShowInfo(true)}
+        onClick={() => router.push(`/about/${AboutSection.CORE}`)}
         icon={faInfo}
         content="Info"
       />
@@ -176,7 +200,6 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
-      <InfoModal show={showInfo} onHide={() => setShowInfo(false)} />
     </>
   );
 }
@@ -186,51 +209,72 @@ interface InfoProps {
   onHide: () => void;
 }
 
-const InfoModal: React.FC<InfoProps> = ({ show, onHide }) => {
-  const [info, setInfo] = useState<any>({});
+function SharePopup(props: { show: boolean; onHide: () => void }) {
+  const [animationClass, setAnimationClass] = useState("");
 
-  const handleCheckUpdates = () => {
-    window.api.checkUpdates();
-    onHide();
-  };
+  const [isDesktopLinkCopied, setIsDesktopLinkCopied] = useState(false);
+  const [isWebLinkCopied, setIsWebLinkCopied] = useState(false);
 
   useEffect(() => {
-    window.api.getInfo().then((newInfo) => {
-      setInfo(newInfo);
-    });
-  }, []);
+    if (props.show) {
+      setAnimationClass(styles.show);
+    } else {
+      setAnimationClass(styles.hide);
+    }
+  }, [props.show]);
 
-  function printInfo(key: string, value: string) {
-    return (
-      <div className="d-flex flex-column pb-3">
-        <span className="font-smaller font-lighter">{key}</span>
-        <span>{value}</span>
-      </div>
-    );
-  }
+  const getLinkPath = () => {
+    let path = window.location.pathname;
+    if (path.startsWith("/")) {
+      path = path.slice(1);
+    }
+    return path;
+  };
+
+  const copyAppLink = () => {
+    const link = `core6529://navigate/${getLinkPath()}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setIsWebLinkCopied(false);
+      setIsDesktopLinkCopied(true);
+      setTimeout(() => {
+        setIsDesktopLinkCopied(false);
+      }, 1500);
+    });
+  };
+
+  const copyWebLink = () => {
+    const link = `https://seize.io/${getLinkPath()}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setIsDesktopLinkCopied(false);
+      setIsWebLinkCopied(true);
+      setTimeout(() => {
+        setIsWebLinkCopied(false);
+      }, 1500);
+    });
+  };
 
   return (
-    <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <Modal.Header>
-        <Modal.Title>App Info</Modal.Title>
-      </Modal.Header>
-      <hr className="mt-0 mb-0" />
-      <Modal.Body>
-        {printInfo("APP VERSION", info.app_version)}
-        {printInfo("APP PORT", `:${info.port}`)}
-        {printInfo("ELECTRON VERSION", info.electron_version)}
-        {printInfo("CHROME VERSION", info.chrome_version)}
-        {printInfo("NODE VERSION", info.node_version)}
-        {printInfo("OS", `${info.os}:${info.arch}`)}
-        <div className="text-center">
-          <Button
-            variant="primary"
-            onClick={() => handleCheckUpdates()}
-            className="btn-block pt-2 pb-2">
-            Check for Updates
-          </Button>
-        </div>
-      </Modal.Body>
-    </Modal>
+    <>
+      <div
+        className={`${styles.sharePopup} ${animationClass}`}
+        onAnimationEnd={() => {
+          if (!props.show) {
+            setAnimationClass("");
+          }
+        }}>
+        <button className={styles.sharePopupBtn} onClick={copyAppLink}>
+          {isDesktopLinkCopied ? "Copied!" : "Copy Desktop App link"}
+        </button>
+        <button className={styles.sharePopupBtn} onClick={copyWebLink}>
+          {isWebLinkCopied ? "Copied!" : "Copy Web link"}
+        </button>
+      </div>
+      <div
+        onClick={props.onHide}
+        className={styles.sharePopupOverlay}
+        style={{
+          display: props.show ? "block" : "none",
+        }}></div>
+    </>
   );
-};
+}
