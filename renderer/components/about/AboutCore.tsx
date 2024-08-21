@@ -18,7 +18,7 @@ export default function AboutCore() {
 
   function printInfo(key: string, value: string) {
     return (
-      <Col xs={12} sm={6} md={4} className="pt-3 pb-3 d-flex flex-column pb-3">
+      <Col xs={12} className="pt-3 pb-3 d-flex flex-column pb-3 text-center">
         <span>{key}</span>
         <span className="font-larger font-bolder">{value}</span>
       </Col>
@@ -28,19 +28,17 @@ export default function AboutCore() {
   return (
     <Container>
       <Row>
-        <Col>
+        <Col className="text-center">
           <h1 className="float-none">
             <span className="font-lightest">6529</span> Core
           </h1>
         </Col>
       </Row>
-      <Row>
+      <Row className="pt-3">
         {printInfo("APP VERSION", info.app_version)}
         {printInfo("APP PORT", `:${info.port}`)}
-        {printInfo("ELECTRON VERSION", info.electron_version)}
-        {printInfo("CHROME VERSION", info.chrome_version)}
-        {printInfo("NODE VERSION", info.node_version)}
         {printInfo("OS", `${info.os}:${info.arch}`)}
+        {printInfo("PROTOCOL", `${info.scheme}`)}
       </Row>
       <Row className="pt-5">
         <Col xs={12} sm={{ span: 8, offset: 2 }} md={{ span: 6, offset: 3 }}>

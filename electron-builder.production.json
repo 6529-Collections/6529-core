@@ -2,6 +2,7 @@
   "appId": "com.6529.6529core",
   "productName": "6529 CORE",
   "asar": true,
+  "afterSign": "scripts/notarize.js",
   "extraMetadata": {
     "env": {
       "ENVIRONMENT": "production"
@@ -30,8 +31,10 @@
     }
   ],
   "mac": {
-    "identity": null,
+    "identity": "6529 Collection LLC (4962266Y3D)",
     "icon": "assets/icon.icns",
+    "hardenedRuntime": true,
+    "notarize": false,
     "target": [
       {
         "target": "dmg",

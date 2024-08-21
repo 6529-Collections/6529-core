@@ -299,6 +299,17 @@ function AboutMenu(
         </Col>
       </Row>
       <AboutRow
+        section={AboutSection.CORE}
+        currentSection={currentSection}
+        setSection={setSection}
+        title="6529 CORE"
+      />
+      <Row>
+        <Col>
+          <hr />
+        </Col>
+      </Row>
+      <AboutRow
         section={AboutSection.MEMES}
         currentSection={currentSection}
         setSection={setSection}
