@@ -45,7 +45,7 @@
         "arch": ["arm64"]
       }
     ],
-    "artifactName": "${productName}-mac-${arch}-${version}.${ext}",
+    "artifactName": "6529-STAGING-CORE-mac-${arch}-${version}.${ext}",
     "extendInfo": {
       "CFBundleURLTypes": [
         {
@@ -64,7 +64,7 @@
         "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}-win-${arch}-${version}.${ext}",
+    "artifactName": "6529-STAGING-CORE-win-${arch}-${version}.${ext}",
     "signingHashAlgorithms": ["sha256"]
   },
   "nsis": {
@@ -90,7 +90,7 @@
         "arch": ["x64"]
       }
     ],
-    "artifactName": "${productName}-linux-${arch}-${version}.${ext}",
+    "artifactName": "6529-STAGING-CORE-linux-${arch}-${version}.${ext}",
     "desktop": {
       "Name": "6529 STAGING Core",
       "Type": "Application",
