@@ -71,16 +71,32 @@ Packaged versions: x64, x32, arm, universal
 
 ### MacOS
 
+Staging
+
 ```
-npm run dist-mac
+npm run dist-mac-staging
+```
+
+Production
+
+```
+npm run dist-mac-production
 ```
 
 Packaged versions: arm64 (silicon), x64 (intel)
 
 ### Linux
 
+Staging
+
 ```
-npm run dist-linux
+npm run dist-linux-staging
+```
+
+Production
+
+```
+npm run dist-linux-production
 ```
 
 ### Publishing
@@ -95,8 +111,16 @@ The project is configured to publish the new version to s3. Each platform has it
 
 ### Build
 
+Staging
+
 ```
-npm run dist-win
+npm run dist-win-staging
+```
+
+Production
+
+```
+npm run dist-win-production
 ```
 
 The above command will:
@@ -111,9 +135,18 @@ The following must be run on the dedicated 6529 Core Windows EC2 instance `i-06a
 
 In Command prompt cd to project directory and run the sign command:
 
+Staging
+
 ```
 cd  C:\Users\Administrator\Desktop\6529-core
-npm run sign-publish-win
+npm run sign-publish-staging-win
+```
+
+Production
+
+```
+cd  C:\Users\Administrator\Desktop\6529-core
+npm run sign-publish-production-win
 ```
 
 The above command will:
