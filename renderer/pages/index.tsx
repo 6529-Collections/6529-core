@@ -158,12 +158,12 @@ export default function Home({
   return (
     <>
       <Head>
-        <title>6529 SEIZE</title>
+        <title>6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="6529 SEIZE" />
+        <meta name="description" content="6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}`} />
-        <meta property="og:title" content="6529 SEIZE" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:title" content="6529 CORE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
@@ -323,6 +323,7 @@ export default function Home({
                         <MemePageMintCountdown
                           nft_id={pageProps.nft.id}
                           setClaim={setManifoldClaim}
+                          is_full_width={true}
                         />
                       </Col>
                     </Row>
@@ -347,7 +348,9 @@ export default function Home({
                             <td>
                               <b>
                                 {manifoldClaim?.isFinalized
-                                  ? "Sold Out"
+                                  ? manifoldClaim.remaining > 0
+                                    ? "Ended"
+                                    : "Sold Out"
                                   : capitalizeEveryWord(manifoldClaim?.status)}
                               </b>
                             </td>

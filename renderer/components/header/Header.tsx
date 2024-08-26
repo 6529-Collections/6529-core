@@ -932,6 +932,13 @@ export default function Header(props: Readonly<Props>) {
                               align={"start"}>
                               <HeaderDesktopLink
                                 link={{
+                                  name: "6529 CORE",
+                                  path: `/about/${AboutSection.CORE}`,
+                                }}
+                              />
+                              <NavDropdown.Divider />
+                              <HeaderDesktopLink
+                                link={{
                                   name: "The Memes",
                                   path: `/about/${AboutSection.MEMES}`,
                                 }}

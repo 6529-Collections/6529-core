@@ -27,12 +27,12 @@ export default function TeamDownloads() {
   return (
     <>
       <Head>
-        <title>Team Downloads | 6529 SEIZE</title>
+        <title>Team Downloads | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Team Downloads | 6529 SEIZE" />
+        <meta name="description" content="Team Downloads | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/open-data/team`} />
         <meta property="og:title" content={`Team Downloads`} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

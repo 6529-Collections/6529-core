@@ -29,6 +29,7 @@ import { useRouter } from "next/router";
 import { isElectron } from "../../helpers";
 import { useEffectOnce } from "../../hooks/useEffectOnce";
 
+
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
   readonly connectionStatus: ProfileConnectedStatus;

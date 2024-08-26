@@ -1,6 +1,7 @@
 @import "../../../styles/variables.scss";
 
 .spacer {
+  -webkit-app-region: drag;
   background-color: #000;
   position: fixed;
   top: 0;
@@ -35,6 +36,7 @@
 }
 
 .info {
+  -webkit-app-region: no-drag;
   background-color: white;
   color: black;
   position: fixed;
@@ -108,4 +110,90 @@
 .tippy {
   padding: 0px;
   font-size: 12px !important;
+}
+
+@keyframes fadeInScale {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOutScale {
+  from {
+    transform: scale(1);
+    opacity: 1;
+  }
+  to {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+.sharePopup {
+  z-index: 1001;
+  background-color: black;
+  position: absolute;
+  width: fit-content;
+  white-space: nowrap;
+  left: 42px;
+  top: -25px;
+  display: flex;
+  flex-direction: column;
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.9);
+  transition: visibility 0.2s, opacity 0.2s, transform 0.2s;
+}
+
+.sharePopup.show {
+  visibility: visible;
+  opacity: 1;
+  transform: scale(1);
+  animation: fadeInScale 0.2s ease forwards;
+}
+
+.sharePopup.hide {
+  visibility: hidden;
+  opacity: 0;
+  transform: scale(0.9);
+  animation: fadeOutScale 0.2s ease forwards;
+}
+
+.sharePopup::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -10px;
+  transform: translateY(-50%);
+  border-width: 10px 10px 10px 0;
+  border-style: solid;
+  border-color: transparent black transparent transparent;
+}
+
+.sharePopupOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.sharePopupBtn {
+  cursor: pointer;
+  padding: 10px;
+  background-color: black;
+  border: none !important;
+  width: 200px;
+  text-align: left;
+
+  &:hover {
+    background-color: $dark-grey;
+  }
 }

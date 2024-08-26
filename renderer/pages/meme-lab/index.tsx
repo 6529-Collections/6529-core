@@ -28,12 +28,12 @@ export default function MemeLab() {
   return (
     <>
       <Head>
-        <title>Meme Lab | 6529 SEIZE</title>
+        <title>Meme Lab | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Meme Lab | 6529 SEIZE" />
+        <meta name="description" content="Meme Lab | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/meme-lab`} />
         <meta property="og:title" content="Meme Lab" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta property="og:image" content={`${SEIZE_URL}/meme-lab.jpg`} />
       </Head>
 

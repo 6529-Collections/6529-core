@@ -51,11 +51,11 @@ export default function NextGenCollectionPage(props: any) {
         />
         <meta property="og:title" content={pagenameFull} />
         <meta property="og:image" content={collection.image} />
-        <meta property="og:description" content="NEXTGEN | 6529 SEIZE" />
+        <meta property="og:description" content="NEXTGEN | 6529 CORE" />
         <meta name="twitter:card" content={pagenameFull} />
         <meta name="twitter:image:alt" content={pagenameFull} />
         <meta name="twitter:title" content={pagenameFull} />
-        <meta name="twitter:description" content="NEXTGEN | 6529 SEIZE" />
+        <meta name="twitter:description" content="NEXTGEN | 6529 CORE" />
         <meta name="twitter:image" content={collection.image} />
       </Head>
 

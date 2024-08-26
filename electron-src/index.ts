@@ -1,7 +1,7 @@
 import { app, BrowserWindow, Menu } from "electron/main";
 import path from "node:path";
 import { initLogs } from "./utils/initLogs";
-import { getInfo } from "./utils/info";
+import { getInfo, getScheme } from "./utils/info";
 import {
   addCustomWallet,
   deleteCustomWallet,
@@ -56,13 +56,17 @@ if (!gotTheLock) {
     const urlObj = new URL(url);
 
     if (urlObj.host === "connector") {
+      Logger.info("Hanling connector Deep Link");
       const encodedData = urlObj.searchParams.get("data");
       if (encodedData === null) {
-        console.error("No data parameter found in the URL");
+        Logger.error("No data parameter found in the URL");
         return;
       }
       const connectionInfo = JSON.parse(encodedData);
       mainWindow?.webContents.send("wallet-connection", connectionInfo);
+    } else if (urlObj.host === "navigate") {
+      Logger.info("Handling navigate Deep Link", urlObj.pathname);
+      mainWindow?.webContents.send("navigate", urlObj.pathname);
     }
   }
 
@@ -71,7 +75,9 @@ if (!gotTheLock) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
 
-      const url = commandLine.find((arg) => arg.startsWith("core6529://"));
+      const scheme = getScheme();
+
+      const url = commandLine.find((arg) => arg.startsWith(scheme));
       if (url) {
         handleUrl(url);
       }
@@ -92,7 +98,8 @@ if (!gotTheLock) {
 
   app.whenReady().then(async () => {
     app.setName("6529 CORE");
-    protocol.handle("core6529", (_request) => {
+    const scheme = getScheme();
+    protocol.handle(scheme, (_request) => {
       if (mainWindow) {
         if (mainWindow.isMinimized()) mainWindow.restore();
         mainWindow.focus();
@@ -100,8 +107,8 @@ if (!gotTheLock) {
       return new Response("App focused");
     });
 
-    if (!app.isDefaultProtocolClient("core6529")) {
-      app.setAsDefaultProtocolClient("core6529");
+    if (!app.isDefaultProtocolClient(scheme)) {
+      app.setAsDefaultProtocolClient(scheme);
     }
 
     if (isMac()) {
@@ -151,8 +158,8 @@ async function createWindow() {
   splash.loadFile(path.join(__dirname, "assets/splash.html"));
 
   mainWindow = new BrowserWindow({
-    minWidth: 900,
-    minHeight: 700,
+    minWidth: 500,
+    minHeight: 500,
     icon: iconPath,
     backgroundColor: "#222",
     titleBarStyle: "hidden",
@@ -204,7 +211,7 @@ async function createWindow() {
 }
 
 protocol.registerSchemesAsPrivileged([
-  { scheme: "core6529", privileges: { secure: true, standard: true } },
+  { scheme: getScheme(), privileges: { secure: true, standard: true } },
 ]);
 
 ipcMain.on(ADD_CUSTOM_WALLET, (event) => {
@@ -258,7 +265,7 @@ function executeCommand(command: string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     exec(command, (error) => {
       if (error) {
-        console.error("Command execution failed:", error);
+        Logger.error("Command execution failed:", error);
         reject(error);
       } else {
         resolve();
@@ -311,7 +318,7 @@ function openInBrave(url: string): Promise<void> {
 
 ipcMain.on("open-external", (event, url) => {
   event.preventDefault();
-  console.info("Opening external URL:", url);
+  Logger.info("Opening external URL:", url);
   shell.openExternal(url);
 });
 

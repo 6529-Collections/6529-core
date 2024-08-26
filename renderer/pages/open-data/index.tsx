@@ -26,12 +26,12 @@ export default function Downloads() {
   return (
     <>
       <Head>
-        <title>Open Data | 6529 SEIZE</title>
+        <title>Open Data | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Open Data | 6529 SEIZE" />
+        <meta name="description" content="Open Data | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/open-data`} />
         <meta property="og:title" content={`Open Data`} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

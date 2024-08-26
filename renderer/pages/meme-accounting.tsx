@@ -20,12 +20,12 @@ export default function MemeAccountingPage() {
   return (
     <>
       <Head>
-        <title>Meme Accounting | 6529 SEIZE</title>
+        <title>Meme Accounting | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Meme Accounting | 6529 SEIZE" />
+        <meta name="description" content="Meme Accounting | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/meme-accounting`} />
         <meta property="og:title" content="Meme Accounting" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

@@ -34,7 +34,7 @@ export default function TheMemesMint(props: any) {
   ];
 
   const pagename = `Mint The Memes #${nft.id}`;
-  const pagenameFull = `${pagename} | 6529 SEIZE`;
+  const pagenameFull = `${pagename} | 6529 CORE`;
 
   return (
     <>
@@ -45,11 +45,11 @@ export default function TheMemesMint(props: any) {
         <meta property="og:url" content={`${SEIZE_URL}/the-memes/mint`} />
         <meta property="og:title" content={pagename} />
         <meta property="og:image" content={nft.image} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta name="twitter:card" content={pagenameFull} />
         <meta name="twitter:image:alt" content={pagename} />
         <meta name="twitter:title" content={pagename} />
-        <meta name="twitter:description" content="6529 SEIZE" />
+        <meta name="twitter:description" content="6529 CORE" />
         <meta name="twitter:image" content={pagename} />
       </Head>
       <main className={styles.main}>

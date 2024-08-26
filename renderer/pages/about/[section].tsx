@@ -28,6 +28,7 @@ import AboutNakamotoThreshold from "../../components/about/AboutNakamotoThreshol
 import AboutCopyright from "../../components/about/AboutCopyright";
 import AboutPrimaryAddress from "../../components/about/AboutPrimaryAddress";
 import { SEIZE_URL } from "../../../constants";
+import AboutCore from "../../components/about/AboutCore";
 
 const AboutCookiePolicy = dynamic(
   () => import("../../components/about/AboutCookiePolicy"),
@@ -57,6 +58,7 @@ export enum AboutSection {
   SUBSCRIPTIONS = "subscriptions",
   NAKAMOTO_THRESHOLD = "nakamoto-threshold",
   COPYRIGHT = "copyright",
+  CORE = "6529-core",
 }
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -158,21 +160,23 @@ export default function About(props: any) {
         return <AboutNakamotoThreshold />;
       case AboutSection.COPYRIGHT:
         return <AboutCopyright />;
+      case AboutSection.CORE:
+        return <AboutCore />;
     }
   }
 
   return (
     <>
       <Head>
-        <title>{`About - ${sectionTitle} | 6529 SEIZE`}</title>
+        <title>{`About - ${sectionTitle} | 6529 CORE`}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content={`About - ${sectionTitle} | 6529 SEIZE`}
+          content={`About - ${sectionTitle} | 6529 CORE`}
         />
         <meta property="og:url" content={`${SEIZE_URL}/about/${section}`} />
         <meta property="og:title" content={`About - ${sectionTitle}`} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
@@ -292,6 +296,17 @@ function AboutMenu(
       <Row>
         <Col>
           <h3>About</h3>
+        </Col>
+      </Row>
+      <AboutRow
+        section={AboutSection.CORE}
+        currentSection={currentSection}
+        setSection={setSection}
+        title="6529 CORE"
+      />
+      <Row>
+        <Col>
+          <hr />
         </Col>
       </Row>
       <AboutRow

@@ -54,16 +54,16 @@ export default function CommunityActivityPage({
   return (
     <>
       <Head>
-        <title>Profiles Activity | 6529 SEIZE</title>
+        <title>Profiles Activity | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Profiles Activity | 6529 SEIZE" />
+        <meta name="description" content="Profiles Activity | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/profiles-activity`} />
         <meta property="og:title" content="Profiles Activity" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
       </Head>
 
       <SidebarLayout breadcrumbs={breadcrumbs}>

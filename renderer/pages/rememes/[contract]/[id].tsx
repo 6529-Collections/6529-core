@@ -29,11 +29,11 @@ export default function ReMeme(props: any) {
   return (
     <>
       <Head>
-        <title>{`${pageProps.name} | ReMemes | 6529 SEIZE`}</title>
+        <title>{`${pageProps.name} | ReMemes | 6529 CORE`}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"
-          content={`${pageProps.name} | ReMemes | 6529 SEIZE`}
+          content={`${pageProps.name} | ReMemes | 6529 CORE`}
         />
         <meta
           property="og:url"
@@ -41,11 +41,11 @@ export default function ReMeme(props: any) {
         />
         <meta
           property="og:title"
-          content={`${pageProps.name} | ReMemes | 6529 SEIZE`}
+          content={`${pageProps.name} | ReMemes | 6529 CORE`}
         />
         <meta
           property="og:description"
-          content={`${pageProps.name} | ReMemes | 6529 SEIZE`}
+          content={`${pageProps.name} | ReMemes | 6529 CORE`}
         />
         <meta property="og:image" content={parseIpfsUrl(pageProps.image)} />
       </Head>

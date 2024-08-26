@@ -1,0 +1,125 @@
+{
+  "appId": "com.6529.6529core",
+  "productName": "6529 CORE",
+  "asar": true,
+  "afterSign": "scripts/notarize.js",
+  "extraMetadata": {
+    "env": {
+      "ENVIRONMENT": "production"
+    }
+  },
+  "protocols": [
+    {
+      "name": "6529core",
+      "schemes": ["core6529"]
+    }
+  ],
+  "files": [
+    "main/**/*",
+    "next.config.mjs",
+    "renderer/out/**/*",
+    "renderer/public/**/*"
+  ],
+  "extraResources": ["assets/**/*"],
+  "publish": [
+    {
+      "provider": "s3",
+      "bucket": "6529bucket",
+      "region": "eu-west-1",
+      "path": "6529-core-app/${os}/",
+      "acl": null
+    }
+  ],
+  "mac": {
+    "identity": "6529 Collection LLC (4962266Y3D)",
+    "icon": "assets/icon.icns",
+    "hardenedRuntime": true,
+    "notarize": false,
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64", "x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64", "x64"]
+      }
+    ],
+    "artifactName": "6529-CORE-mac-${arch}-${version}.${ext}",
+    "extendInfo": {
+      "CFBundleURLTypes": [
+        {
+          "CFBundleURLName": "com.6529.6529core",
+          "CFBundleURLSchemes": ["core6529"]
+        }
+      ]
+    }
+  },
+  "win": {
+    "publisherName": "6529 Collection LLC",
+    "icon": "assets/icon.ico",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      },
+      {
+        "target": "nsis",
+        "arch": ["ia32"]
+      },
+      {
+        "target": "nsis",
+        "arch": ["arm64"]
+      }
+    ],
+    "artifactName": "6529-CORE-win-${arch}-${version}.${ext}",
+    "signingHashAlgorithms": ["sha256"]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "6529 CORE"
+  },
+  "linux": {
+    "icon": "assets",
+    "executableName": "6529-core",
+    "category": "Utility",
+    "executableArgs": ["--no-sandbox"],
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "deb",
+        "arch": ["x64"]
+      },
+      {
+        "target": "rpm",
+        "arch": ["x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "6529-CORE-linux-${arch}-${version}.${ext}",
+    "desktop": {
+      "Name": "6529 Core",
+      "Type": "Application",
+      "Terminal": false,
+      "MimeType": "x-scheme-handler/core6529;",
+      "Categories": "Utility;Network;",
+      "Comment": "6529 Core Application"
+    },
+    "protocols": [
+      {
+        "name": "6529 Core Protocol",
+        "schemes": ["core6529"]
+      }
+    ]
+  }
+}

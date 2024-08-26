@@ -17,12 +17,12 @@ export default function SeizeAppWallet(props: any) {
   return (
     <>
       <Head>
-        <title>App Wallet | 6529 SEIZE</title>
+        <title>App Wallet | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="App Wallet| 6529 SEIZE" />
+        <meta name="description" content="App Wallet| 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/app-wallet`} />
         <meta property="og:title" content="App Wallet" />
-        <meta property="og:description" content="6529 Seize" />
+        <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
           content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}

@@ -29,12 +29,12 @@ export default function ReMemes(props: Readonly<Props>) {
   return (
     <>
       <Head>
-        <title>ReMemes | 6529 SEIZE</title>
+        <title>ReMemes | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="ReMemes | 6529 SEIZE" />
+        <meta name="description" content="ReMemes | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/rememes`} />
         <meta property="og:title" content="ReMemes" />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
         <meta property="og:image" content={`${SEIZE_URL}/re-memes-b.jpeg`} />
       </Head>
 
