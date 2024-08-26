@@ -1,6 +1,4 @@
 import { Button, Col, Container, Row } from "react-bootstrap";
-import Image from "next/image";
-import { openInExternalBrowser } from "../../helpers";
 import { useState, useEffect } from "react";
 
 export default function AboutCore() {
