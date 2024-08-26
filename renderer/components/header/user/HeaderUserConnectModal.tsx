@@ -17,23 +17,6 @@ export default function HeaderUserConnectModal({
 }: Readonly<HeaderUserConnectModalProps>) {
   const connectors = useConnectors();
 
-  function sortedConnectors() {
-    const order = [
-      "MetaMask",
-      "Chrome",
-      "Firefox",
-      "Brave",
-      "WalletConnect",
-      "Coinbase Wallet",
-      "Safe",
-    ];
-
-    const sortedConnectors = connectors.flat().sort((a, b) => {
-      return order.indexOf(a.name) - order.indexOf(b.name);
-    });
-    return sortedConnectors;
-  }
-
   function nonBrowserConnectors() {
     const order = ["MetaMask", "WalletConnect", "Coinbase Wallet", "Safe"];
     return connectors
@@ -107,10 +90,6 @@ function ConnectorSelector(
       console.log("error", error);
     }
   }, [error]);
-
-  if (props.connector.name === "Injected") {
-    return <></>;
-  }
 
   const onConnect = () => {
     let c: Connector | CreateConnectorFn = props.connector;

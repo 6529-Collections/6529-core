@@ -48,6 +48,8 @@ export const api = {
   onNavigate: (url: any) => {
     ipcRenderer.on("navigate", url);
   },
+  offNavigate: (callback: any) =>
+    ipcRenderer.removeListener("navigate", callback),
   checkUpdates: () => ipcRenderer.send("check-updates"),
 };
 

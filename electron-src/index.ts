@@ -23,6 +23,15 @@ import { getValue, initStore, removeValue, setValue } from "./store";
 import { platform } from "os";
 import { menuTemplate } from "./menu";
 import { checkForUpdates } from "./update";
+import contextMenu from "electron-context-menu";
+
+contextMenu({
+  showInspectElement: false,
+  showCopyImage: true,
+  showCopyImageAddress: true,
+  showSaveImageAs: true,
+  showSaveImage: true,
+});
 
 let mainWindow: BrowserWindow | null = null;
 let splash: BrowserWindow | null = null;
@@ -172,6 +181,7 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
+      spellcheck: true,
     },
     show: false,
   });
@@ -182,7 +192,6 @@ async function createWindow() {
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
-    splash?.webContents.openDevTools();
   });
 
   mainWindow.once("ready-to-show", () => {

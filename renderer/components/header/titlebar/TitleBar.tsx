@@ -64,14 +64,15 @@ export default function TitleBar() {
     window.api.onNavigationStateChange(updateNavState);
     updateNavState();
 
-    window.api.onNavigate((_event: any, url: string) => {
+    const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
       router.push(url);
-    });
+    };
+    window.api.onNavigate(handleNavigate);
 
     return () => {
       window.api.removeNavigationStateChangeListener(updateNavState);
-      window.api.onNavigate(() => {});
+      window.api.offNavigate(handleNavigate);
     };
   }, []);
 
@@ -213,11 +214,6 @@ export default function TitleBar() {
       />
     </>
   );
-}
-
-interface InfoProps {
-  show: boolean;
-  onHide: () => void;
 }
 
 function SharePopup(props: {

@@ -8,7 +8,6 @@ import {
 } from "./constants";
 import { MANIFOLD_NETWORK } from "./hooks/useManifoldClaim";
 import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
-import { metaMask } from "wagmi/connectors";
 import { SEIZE_URL } from "../constants";
 import { browserConnector } from "./browserConnector";
 import { isElectron } from "./helpers";
@@ -43,11 +42,9 @@ const metadata = {
   ],
 };
 
-const isBrowser = !isElectron();
-
 const connectors = [];
 
-if (!isBrowser) {
+if (isElectron()) {
   const chrome = browserConnector({
     openUrlFn: (url: string) => {
       window.api.openExternalChrome(url);
@@ -72,12 +69,7 @@ if (!isBrowser) {
     id: "brave",
     icon: "/brave.svg",
   });
-  const metamask = metaMask({
-    shouldShimWeb3: true,
-    dappMetadata: metadata,
-    preferDesktop: !isElectron(),
-  });
-  connectors.push(chrome, firefox, brave, metamask);
+  connectors.push(chrome, firefox, brave);
 }
 
 export const wagmiConfig = defaultWagmiConfig({
@@ -87,6 +79,7 @@ export const wagmiConfig = defaultWagmiConfig({
   coinbasePreference: "all",
   enableCoinbase: true,
   enableWalletConnect: true,
+  enableInjected: false,
   auth: {
     email: false,
   },
