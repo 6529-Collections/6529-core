@@ -10,13 +10,30 @@
   border-top: 1px solid $bg-color-2;
 }
 
+.capacitorMainContainer {
+  height: calc($header-height-capacitor + env(safe-area-inset-top));
+  z-index: 600;
+  background-color: black;
+  position: fixed;
+  top: -env(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  left: 0;
+  width: 100%;
+}
+
+.capacitorPlaceholder {
+  height: calc($header-height-capacitor + env(safe-area-inset-top));
+  opacity: 0;
+}
+
 .headerRow {
   min-height: $header-height;
   z-index: 10;
 }
 
-.headerLeft {
-  height: $header-height;
+.capacitorHeaderRow {
+  min-height: $header-height-capacitor;
+  z-index: 10;
 }
 
 .headerRight {
@@ -139,6 +156,13 @@
   min-height: $header-height;
   background-color: $bg-color-1;
   border-top: 1px solid $bg-color-2;
+}
+
+.headerPlaceholderCapacitor {
+  z-index: 10;
+  position: relative;
+  min-height: $header-height-capacitor;
+  background-color: $bg-color-1;
 }
 
 .userDropdown {

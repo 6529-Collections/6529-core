@@ -6,7 +6,6 @@ import { Drop } from "../../../../generated/models/Drop";
 import DropPartQuote from "./quote/DropPartQuote";
 import { QuotedDrop } from "../../../../generated/models/QuotedDrop";
 import { DropConnectingLineType, DropVoteState } from "../item/DropsListItem";
-import DropListItemData from "../item/data/DropListItemData";
 import DropReplyInputWrapper from "../item/replies/input/DropReplyInputWrapper";
 import { DropPartSize } from "./DropPart";
 import DropListItemQuote from "../item/quote/DropListItemQuote";
@@ -76,8 +75,6 @@ export default function DropPartWrapper({
     string | null
   >(null);
 
-  const haveData = !!drop.mentioned_users.length || !!drop.metadata.length;
-
   const [repliesOpen, setRepliesOpen] = useState(false);
   const [repliesIntent, setRepliesIntent] = useState<"tw-pl-12" | "tw-pl-0">(
     "tw-pl-0"
@@ -119,8 +116,7 @@ export default function DropPartWrapper({
               "tw-h-8"
             } ${
               connectingLineType === DropConnectingLineType.BOTTOM && "tw-pt-8"
-            }  tw-absolute tw-z-[1] tw-top-0 tw-left-[2.15rem] tw-bottom-0 tw-flex tw-flex-col tw-items-center`}
-          >
+            }  tw-absolute tw-z-[1] tw-top-0 tw-left-[2.15rem] tw-bottom-0 tw-flex tw-flex-col tw-items-center`}>
             <div
               className={` tw-flex-1 tw-w-[1.5px] tw-bg-iron-700 ${
                 (showReplyInput || isDiscussionOpen) &&
@@ -130,8 +126,7 @@ export default function DropPartWrapper({
                 )
                   ? "tw-visible"
                   : "tw-hidden"
-              }`}
-            ></div>
+              }`}></div>
           </div>
 
           <div className="tw-flex-1 tw-px-4 tw-relative tw-z-20">
@@ -149,22 +144,11 @@ export default function DropPartWrapper({
           </div>
 
           <div
-            className={`tw-relative tw-z-10 ${
+            className={`tw-px-4 tw-ml-9 tw-mt-1 ${
               size === DropPartSize.SMALL
                 ? "sm:tw-ml-[40px]"
                 : "sm:tw-ml-[54px]"
-            }`}
-          >
-            {haveData && <DropListItemData drop={drop} />}
-          </div>
-
-          <div
-            className={`tw-px-4 tw-relative tw-z-10 tw-ml-9 tw-mt-2 ${
-              size === DropPartSize.SMALL
-                ? "sm:tw-ml-[40px]"
-                : "sm:tw-ml-[54px]"
-            }`}
-          >
+            }`}>
             <DropPartActionTriggers
               drop={drop}
               dropPart={dropPart}
@@ -184,8 +168,7 @@ export default function DropPartWrapper({
             <div className="tw-relative">
               {showInputLine && (
                 <div
-                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}
-                ></div>
+                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}></div>
               )}
               <div className={replyInputIntent}>
                 <DropInputWrapper drop={drop}>
@@ -204,8 +187,7 @@ export default function DropPartWrapper({
             <div className="tw-relative">
               {showInputLine && (
                 <div
-                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}
-                ></div>
+                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}></div>
               )}
               <div className={replyInputIntent}>
                 <DropInputWrapper drop={drop}>

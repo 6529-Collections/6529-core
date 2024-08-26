@@ -17,6 +17,8 @@ import { SEIZE_API_URL } from "../../../constants";
 import TitleBar from "./titlebar/TitleBar";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import HeaderNotifications from "./notifications/HeaderNotifications";
+import useCapacitor from "../../hooks/useCapacitor";
+import CapacitorWidget from "./capacitor/CapacitorWidget";
 
 interface Props {
   onLoad?: () => void;
@@ -30,6 +32,8 @@ export interface HeaderLink {
 }
 
 export default function Header(props: Readonly<Props>) {
+  const capacitor = useCapacitor();
+
   const { showWaves } = useContext(AuthContext);
   const router = useRouter();
   const account = useAccount();
@@ -42,6 +46,21 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuCommunity, setShowBurgerMenuCommunity] = useState(false);
   const [showBurgerMenuTools, setShowBurgerMenuTools] = useState(false);
   const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
+
+  let logoSrc: string;
+  let logoWidth: number;
+  let logoHeight: number;
+  if (capacitor.isCapacitor) {
+    logoSrc =
+      "https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Icon.png";
+    logoWidth = 40;
+    logoHeight = 40;
+  } else {
+    logoSrc =
+      "https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png";
+    logoWidth = 319;
+    logoHeight = 50;
+  }
 
   useEffect(() => {
     function handleResize() {
@@ -103,7 +122,7 @@ export default function Header(props: Readonly<Props>) {
   function printBurgerMenu() {
     return (
       <div
-        className={`${styles.burgerMenu} ${
+        className={`inset-safe-area ${styles.burgerMenu} ${
           burgerMenuOpen ? styles.burgerMenuOpen : ""
         }`}>
         <Container className="pt-3 pb-3">
@@ -705,7 +724,12 @@ export default function Header(props: Readonly<Props>) {
         <Row>
           <Col>
             <Container>
-              <Row className={styles.headerRow}>
+              <Row
+                className={
+                  capacitor.isCapacitor
+                    ? styles.capacitorHeaderRow
+                    : styles.headerRow
+                }>
                 <Col
                   xs={{ span: 8 }}
                   sm={{ span: 8 }}
@@ -713,7 +737,7 @@ export default function Header(props: Readonly<Props>) {
                   lg={{ span: 3 }}
                   xl={{ span: 2 }}
                   xxl={{ span: 3 }}
-                  className={`d-flex align-items-center justify-content-start ${styles.headerLeft}`}>
+                  className={`d-flex align-items-center justify-content-start`}>
                   <Link href="/">
                     <Image
                       loading="eager"
@@ -1077,6 +1101,9 @@ export default function Header(props: Readonly<Props>) {
           </Col>
         </Row>
       </Container>
+      {capacitor.isCapacitor && (
+        <Container className={styles.capacitorPlaceholder}></Container>
+      )}
     </>
   );
 }
