@@ -29,6 +29,7 @@ import {
   isUpdateInitiatedQuit,
 } from "./update";
 import contextMenu from "electron-context-menu";
+import { isDev } from "./utils/env";
 
 contextMenu({
   showInspectElement: false,
@@ -205,9 +206,10 @@ async function createWindow() {
 
   mainWindow.on("close", (e) => {
     if (isUpdateInitiatedQuit) {
-      mainWindow?.destroy();
-      app.relaunch();
-      app.quit();
+      if (isDev) {
+        app.relaunch();
+        app.quit();
+      }
     } else {
       e.preventDefault();
       mainWindow?.focus();
