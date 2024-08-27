@@ -5,6 +5,7 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 const BUCKET = "6529bucket";
 const BUCKET_PATH = "6529-core-app";
 const BASE_PATH = `https://${BUCKET}.s3.eu-west-1.amazonaws.com`;
+const CF_PATH = "https://d3lqz0a4bldqgf.cloudfront.net";
 const s3 = new S3Client({ region: "eu-west-1" });
 
 async function fetchWithProgress(url: string) {
@@ -105,7 +106,22 @@ function getFileName(url: string) {
   return filePath;
 }
 
-async function processNewVersion(platform: string, filePath: string) {
+function getTitle(platform: string, version: string) {
+  if (platform === "mac") {
+    return `6529 CORE v${version} for macOS`;
+  } else if (platform === "win") {
+    return `6529 CORE v${version} for Windows`;
+  } else if (platform === "linux") {
+    return `6529 CORE v${version} for Linux`;
+  }
+  return platform;
+}
+
+async function processNewVersion(
+  platform: string,
+  filePath: string,
+  skipArweave: boolean
+) {
   console.log("Fetching latest version", platform, filePath);
   console.time(`${platform} Processing`);
 
@@ -129,37 +145,88 @@ async function processNewVersion(platform: string, filePath: string) {
 
   console.log("Files processed", files.length);
 
-  let newVersionContents = "";
+  const title = getTitle(platform, yml.version);
 
+  let htmlContent = `
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <img src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x1000/0x0c58ef43ff3032005e472cb5709f8908acb00205/0.WEBP" alt="6529 CORE" width="75" height="75">
+      <h1>${title}</h1>
+    </div>
+  `;
   for (const file of files) {
     const fileName = getFileName(file);
-    const { url } = await arweaveUpload(file);
-    newVersionContents += `${fileName}\n`;
-    newVersionContents += `${file}\n`;
-    newVersionContents += `${url}\n\n`;
+    const cloudfront = `${CF_PATH}/${BUCKET_PATH}/${platform}/${file
+      .split("/")
+      .pop()}`;
+    htmlContent += `<div>`;
+    htmlContent += `<h2>${fileName}</h2>`;
+    htmlContent += `<div class="link-row">CloudFront: <a href="${cloudfront}" target="_blank">${cloudfront}</a></div>`;
+    if (skipArweave) {
+      htmlContent += `<div class="link-row">Arweave: Coming Soon...</div>`;
+    } else {
+      const { url } = await arweaveUpload(file);
+      htmlContent += `<div class="link-row">Arweave: <a href="${url}" target="_blank">${url}</a></div>`;
+    }
+
+    htmlContent += `</div>`;
   }
 
-  const newVersionKey = `${BUCKET_PATH}/${platform}/${yml.version}`;
+  const htmlFile = `
+    <!DOCTYPE html>
+      <html lang="en">
+      <head>
+          <meta charset="UTF-8">
+          <title>${title}</title>
+          <style>
+            body {
+              background-color: black;
+              color: white;
+              font-size: larger;
+              padding: 1rem;
+            }
+            a {
+              color: white;
+              word-break: break-all;
+              overflow-wrap: anywhere;
+              white-space: normal;
+            }
+            .link-row {
+              padding-top: 0.2rem;
+              padding-bottom: 0.2rem;
+            }
+          </style>
+      </head>
+      <body>
+      <pre>
+        ${htmlContent}
+      </pre>
+    </body>
+    </html>
+  `;
+
+  const newVersionKey = `${BUCKET_PATH}/${platform}/${yml.version}.html`;
 
   await s3.send(
     new PutObjectCommand({
       Bucket: BUCKET,
       Key: newVersionKey,
-      Body: newVersionContents,
-      ContentType: `text/plain`,
+      Body: htmlFile,
+      ContentType: `text/html`,
     })
   );
+
   console.timeEnd(`${platform} Processing`);
 }
 
-async function processAllPlatforms() {
+async function processAllPlatforms(skipArweave: boolean) {
   console.time("Total Processing");
   await Promise.all([
-    processNewVersion("mac", "latest-mac.yml"),
-    processNewVersion("linux", "latest-linux.yml"),
-    processNewVersion("win", "latest.yml"),
+    processNewVersion("mac", "latest-mac.yml", skipArweave),
+    processNewVersion("linux", "latest-linux.yml", skipArweave),
+    processNewVersion("win", "latest.yml", skipArweave),
   ]);
   console.timeEnd("Total Processing");
 }
 
-processAllPlatforms();
+const skipArweave = process.argv.includes("--skip-arweave");
+processAllPlatforms(skipArweave);

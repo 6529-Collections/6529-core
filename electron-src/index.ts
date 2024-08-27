@@ -22,7 +22,12 @@ import { exec } from "child_process";
 import { getValue, initStore, removeValue, setValue } from "./store";
 import { platform } from "os";
 import { menuTemplate } from "./menu";
-import { checkForUpdates, downloadUpdate, installUpdate } from "./update";
+import {
+  checkForUpdates,
+  downloadUpdate,
+  installUpdate,
+  isUpdateInitiatedQuit,
+} from "./update";
 import contextMenu from "electron-context-menu";
 
 contextMenu({
@@ -199,9 +204,16 @@ async function createWindow() {
   });
 
   mainWindow.on("close", (e) => {
-    e.preventDefault();
-    mainWindow?.focus();
-    mainWindow?.webContents.send("app-close");
+    if (isUpdateInitiatedQuit) {
+      mainWindow?.close();
+      mainWindow?.destroy();
+      mainWindow = null;
+      app.relaunch();
+    } else {
+      e.preventDefault();
+      mainWindow?.focus();
+      mainWindow?.webContents.send("app-close");
+    }
   });
 
   mainWindow.webContents.on("did-navigate", updateNavigationState);

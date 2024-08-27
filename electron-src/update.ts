@@ -3,6 +3,7 @@ import { isDev } from "./utils/env";
 import Logger from "electron-log";
 
 let mainWindow: Electron.BrowserWindow | null;
+export let isUpdateInitiatedQuit = false;
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
@@ -34,7 +35,12 @@ export function downloadUpdate() {
 
 export function installUpdate() {
   Logger.info("Installing update");
-  autoUpdater.quitAndInstall();
+  isUpdateInitiatedQuit = true;
+  if (isDev) {
+    mainWindow?.emit("close");
+  } else {
+    autoUpdater.quitAndInstall();
+  }
 }
 
 autoUpdater.on("update-available", (info) => {

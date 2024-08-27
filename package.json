@@ -42,7 +42,8 @@
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",
     "dist-linux-production": "npm run build && electron-builder --config electron-builder.production.json --linux --x64 --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json",
-    "publish-arweave": "ts-node scripts/publish-arweave.ts"
+    "publish-links": "ts-node scripts/publish-links.ts --skip-arweave",
+    "publish-links-arweave": "ts-node scripts/publish-links.ts"
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
