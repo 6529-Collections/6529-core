@@ -80,27 +80,27 @@ function getFileName(url: string) {
   const filePath = url.split("/").pop();
   if (url.includes("/win/")) {
     if (filePath?.includes("x64")) {
-      return "Windows x64 (recommended)";
+      return "x64 (recommended)";
     } else if (filePath?.includes("arm64")) {
-      return "Windows ARM64";
+      return "ARM64";
     } else if (filePath?.includes("ia32")) {
-      return "Windows x86";
+      return "x86";
     } else {
-      return `Windows Universal (larger file)`;
+      return `Universal (larger file)`;
     }
   } else if (url.includes("/mac/")) {
     if (filePath?.includes("x64")) {
-      return "macOS Intel";
+      return "Intel";
     } else if (filePath?.includes("arm64")) {
-      return "macOS Silicon";
+      return "Silicon";
     }
   } else if (url.includes("/linux/")) {
     if (filePath?.endsWith("AppImage")) {
-      return "Linux AppImage";
+      return "AppImage";
     } else if (filePath?.endsWith("deb")) {
-      return "Linux Debian";
+      return "Debian";
     } else if (filePath?.endsWith("rpm")) {
-      return "Linux Red Hat";
+      return "Red Hat";
     }
   }
   return filePath;
