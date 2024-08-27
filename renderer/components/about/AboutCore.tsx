@@ -285,7 +285,7 @@ function UpdateProgress(props: Readonly<{ progress: ProgressInfo }>) {
             {props.progress.percent.toFixed(2)} %
           </span>
           <span className="font-smaller">
-            {bytesToMB(props.progress.bytesPerSecond)} KB per second
+            {bytesToKB(props.progress.bytesPerSecond)} KB per second
           </span>
           <span className="font-smaller">
             {bytesToMB(props.progress.transferred)}/
