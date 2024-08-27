@@ -158,8 +158,8 @@ async function processNewVersion(
     const cloudfront = `${CF_PATH}/${BUCKET_PATH}/${platform}/${file
       .split("/")
       .pop()}`;
-    htmlContent += `<div>`;
-    htmlContent += `<h2>${fileName}</h2>`;
+    htmlContent += `<div style="padding-bottom: 15px;">`;
+    htmlContent += `<h3>${fileName}</h3>`;
     htmlContent += `<div class="link-row">CloudFront: <a href="${cloudfront}" target="_blank">${cloudfront}</a></div>`;
     if (skipArweave) {
       htmlContent += `<div class="link-row">Arweave: Coming Soon...</div>`;
@@ -215,6 +215,7 @@ async function processNewVersion(
     })
   );
 
+  console.log("Uploaded", `${BASE_PATH}/${newVersionKey}`);
   console.timeEnd(`${platform} Processing`);
 }
 
