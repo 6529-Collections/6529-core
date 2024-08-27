@@ -39,7 +39,7 @@ export default function TitleBar() {
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
       setScheme(newInfo.scheme);
-      window.api.checkUpdates();
+      window.updater.checkUpdates();
     });
   }, []);
 
@@ -79,12 +79,12 @@ export default function TitleBar() {
     };
     window.api.onNavigate(handleNavigate);
 
-    window.api.onUpdateAvailable(handleUpdateAvailable);
+    window.updater.onUpdateAvailable(handleUpdateAvailable);
 
     return () => {
       window.api.removeNavigationStateChangeListener(updateNavState);
       window.api.offNavigate(handleNavigate);
-      window.api.offUpdateAvailable(handleUpdateAvailable);
+      window.updater.offUpdateAvailable(handleUpdateAvailable);
     };
   }, []);
 

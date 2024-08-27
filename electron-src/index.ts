@@ -133,8 +133,6 @@ if (!gotTheLock) {
 
     await createWindow();
 
-    checkForUpdates(mainWindow);
-
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         if (isMac()) {
@@ -409,7 +407,7 @@ ipcMain.handle("store:remove", (_event, key) => {
 });
 
 ipcMain.on("check-updates", () => {
-  checkForUpdates(mainWindow, true);
+  checkForUpdates(mainWindow);
 });
 
 ipcMain.on("download-update", () => {

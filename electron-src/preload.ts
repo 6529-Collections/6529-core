@@ -50,6 +50,19 @@ export const api = {
   },
   offNavigate: (callback: any) =>
     ipcRenderer.removeListener("navigate", callback),
+};
+
+contextBridge.exposeInMainWorld("api", api);
+
+export const store = {
+  get: (key: string) => ipcRenderer.invoke("store:get", key),
+  set: (key: string, value: any) => ipcRenderer.invoke("store:set", key, value),
+  remove: (key: string) => ipcRenderer.invoke("store:remove", key),
+};
+
+contextBridge.exposeInMainWorld("store", store);
+
+export const updater = {
   checkUpdates: () => ipcRenderer.send("check-updates"),
   onUpdateAvailable: (data: any) => ipcRenderer.on("update-available", data),
   offUpdateAvailable: (data: any) =>
@@ -72,15 +85,8 @@ export const api = {
   installUpdate: () => ipcRenderer.send("install-update"),
 };
 
-contextBridge.exposeInMainWorld("api", api);
-
-export const store = {
-  get: (key: string) => ipcRenderer.invoke("store:get", key),
-  set: (key: string, value: any) => ipcRenderer.invoke("store:set", key, value),
-  remove: (key: string) => ipcRenderer.invoke("store:remove", key),
-};
-
-contextBridge.exposeInMainWorld("store", store);
+contextBridge.exposeInMainWorld("updater", updater);
 
 export type ElectronAPI = typeof api;
 export type ElectronStore = typeof store;
+export type ElectronUpdater = typeof updater;

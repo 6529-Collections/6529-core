@@ -28,7 +28,7 @@ export default function AboutCore() {
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
       setInfo(newInfo);
-      window.api.checkUpdates();
+      window.updater.checkUpdates();
     });
   }, []);
 
@@ -78,18 +78,18 @@ export default function AboutCore() {
       setUpdateDownloaded(info);
     };
 
-    window.api.onUpdateAvailable(handleUpdateAvailable);
-    window.api.onUpdateNotAvailable(handleUpdateNotAvailable);
-    window.api.onUpdateError(handleUpdateError);
-    window.api.onUpdateProgress(handleUpdateProgress);
-    window.api.onUpdateDownloaded(handleUpdateDownloaded);
+    window.updater.onUpdateAvailable(handleUpdateAvailable);
+    window.updater.onUpdateNotAvailable(handleUpdateNotAvailable);
+    window.updater.onUpdateError(handleUpdateError);
+    window.updater.onUpdateProgress(handleUpdateProgress);
+    window.updater.onUpdateDownloaded(handleUpdateDownloaded);
 
     return () => {
-      window.api.offUpdateAvailable(handleUpdateAvailable);
-      window.api.offUpdateNotAvailable(handleUpdateNotAvailable);
-      window.api.offUpdateError(handleUpdateError);
-      window.api.offUpdateProgress(handleUpdateProgress);
-      window.api.offUpdateDownloaded(handleUpdateDownloaded);
+      window.updater.offUpdateAvailable(handleUpdateAvailable);
+      window.updater.offUpdateNotAvailable(handleUpdateNotAvailable);
+      window.updater.offUpdateError(handleUpdateError);
+      window.updater.offUpdateProgress(handleUpdateProgress);
+      window.updater.offUpdateDownloaded(handleUpdateDownloaded);
     };
   }, []);
 
@@ -139,18 +139,16 @@ export default function AboutCore() {
 
 function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
   function handleUpdate() {
-    window.api.downloadUpdate();
+    window.updater.downloadUpdate();
   }
 
   return (
     <Container className="text-center">
       <Row>
-        <Col xs={12} className="pt-3 pb-3 text-center">
-          <Image
+        <Col xs={12} className="pb-3">
+          <UpdateImage
             src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/120.WEBP"
             alt="update"
-            width={60}
-            height={90}
           />
         </Col>
         <Col xs={12} className="pb-3 text-center">
@@ -173,12 +171,10 @@ function UpdateNotAvailable(props: Readonly<{ info: UpdateInfo }>) {
   return (
     <Container className="text-center">
       <Row>
-        <Col xs={12} className="pt-3 pb-3 text-center">
-          <Image
+        <Col xs={12} className="pb-3">
+          <UpdateImage
             src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/1.WEBP"
-            alt="update"
-            width={60}
-            height={90}
+            alt="6529"
           />
         </Col>
         <Col xs={12} className="pb-3 text-center">
@@ -191,14 +187,20 @@ function UpdateNotAvailable(props: Readonly<{ info: UpdateInfo }>) {
 
 function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
   function handleInstall() {
-    window.api.installUpdate();
+    window.updater.installUpdate();
   }
 
   return (
     <Container className="text-center">
       <Row>
-        <Col xs={12} className="pt-3 pb-3 text-center">
-          Update Downloaded!
+        <Col xs={12} className="pb-3">
+          <UpdateImage
+            src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/89.GIF"
+            alt="downloaded"
+          />
+        </Col>
+        <Col xs={12} className="pb-3 text-center">
+          Update Downloaded
         </Col>
         <Col xs={12} sm={{ span: 8, offset: 2 }} md={{ span: 6, offset: 3 }}>
           <Button
@@ -219,15 +221,17 @@ function UpdateError(
   return (
     <Container className="text-center">
       <Row>
-        <Col xs={12} className="d-flex flex-column gap-2 align-items-center">
-          <Image
+        <Col xs={12} className="pb-3">
+          <UpdateImage
             src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/28.GIF"
             alt="error"
-            width={22}
-            height={40}
           />
-          <span>Something went wrong</span>
-          <span className="font-larger">{props.error.stack}</span>
+        </Col>
+        <Col xs={12} className="pb-3 text-center">
+          Something went wrong
+        </Col>
+        <Col xs={12} className="pb-3 text-center">
+          {props.error.stack}
         </Col>
       </Row>
     </Container>
@@ -238,17 +242,48 @@ function UpdateProgress(props: Readonly<{ progress: ProgressInfo }>) {
   return (
     <Container className="text-center">
       <Row>
-        <Col xs={12} className="d-flex flex-column gap-2 align-items-center">
-          <Image
+        <Col xs={12} className="pb-3">
+          <UpdateImage
             src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/217.GIF"
-            alt="error"
-            width={66}
-            height={90}
+            alt="progress"
           />
-          <span>Downloading Update</span>
-          <span className="font-larger">{props.progress.percent} / 100</span>
+        </Col>
+        <Col xs={12} className="pb-3 text-center">
+          Downloading Update
+        </Col>
+        <Col
+          xs={12}
+          className="pb-3 text-center d-flex flex-column align-items-center">
+          <span className="font-larger">{props.progress.percent} %</span>
+          <span className="font-smaller">
+            {parseInt(
+              props.progress.bytesPerSecond.toFixed(0)
+            ).toLocaleString()}{" "}
+            bytes per second
+          </span>
+          <span className="font-smaller">
+            {props.progress.transferred.toLocaleString()}/{props.progress.total}{" "}
+            Total Bytes
+          </span>
         </Col>
       </Row>
     </Container>
+  );
+}
+
+function UpdateImage(props: Readonly<{ src: string; alt: string }>) {
+  return (
+    <Image
+      priority
+      loading="eager"
+      src={props.src}
+      alt={props.alt}
+      width={0}
+      height={0}
+      style={{
+        height: "120px",
+        width: "auto",
+      }}
+    />
   );
 }

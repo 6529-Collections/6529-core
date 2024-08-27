@@ -2,31 +2,18 @@ import { autoUpdater } from "electron-updater";
 import { isDev } from "./utils/env";
 import Logger from "electron-log";
 
-let updateCheckInProgress = false;
 let mainWindow: Electron.BrowserWindow | null;
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
-export function checkForUpdates(
-  window: Electron.BrowserWindow | null,
-  manual: boolean = false
-) {
+export function checkForUpdates(window: Electron.BrowserWindow | null) {
   Logger.info("Checking for updates");
   if (window) {
     mainWindow = window;
   }
 
-  if (updateCheckInProgress) {
-    Logger.info("Update check already in progress");
-    return;
-  }
-
-  updateCheckInProgress = manual;
-
   if (isDev) {
-    updateCheckInProgress = false;
-    mainWindow?.setProgressBar(-1);
     mainWindow?.webContents.send("update-available", {
       version: "1.0.0",
       files: [],
@@ -52,8 +39,6 @@ export function installUpdate() {
 
 autoUpdater.on("update-available", (info) => {
   Logger.info("Update available", info);
-  updateCheckInProgress = false;
-  mainWindow?.setProgressBar(-1);
   mainWindow?.webContents.send("update-available", info);
 });
 
@@ -101,8 +86,5 @@ autoUpdater.on("error", (error) => {
 
 autoUpdater.on("update-not-available", (info) => {
   Logger.info("Update not available", info);
-  if (updateCheckInProgress) {
-    updateCheckInProgress = false;
-    mainWindow?.webContents.send("update-not-available", info);
-  }
+  mainWindow?.webContents.send("update-not-available", info);
 });
