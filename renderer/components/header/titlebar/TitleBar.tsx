@@ -12,10 +12,15 @@ import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
 import TooltipButton from "./TooltipButton";
 import { AboutSection } from "../../../pages/about/[section]";
+import Cookies from "js-cookie";
+import { Modal, Button } from "react-bootstrap";
+import Link from "next/link";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
+
+const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 
 export default function TitleBar() {
   const router = useRouter();
@@ -35,6 +40,8 @@ export default function TitleBar() {
   const [updateAvailable, setUpdateAvailable] = useState<{
     version: string;
   }>();
+
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
 
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
@@ -68,6 +75,11 @@ export default function TitleBar() {
 
     const handleUpdateAvailable = (_event: any, info: any) => {
       setUpdateAvailable(info);
+      const disableUpdateModal = Cookies.get(DISABLE_UPDATE_MODAL_COOKIE);
+      if (!disableUpdateModal) {
+        setShowUpdateModal(true);
+        Cookies.set(DISABLE_UPDATE_MODAL_COOKIE, "true", { expires: 1 });
+      }
     };
 
     window.api.onNavigationStateChange(updateNavState);
@@ -225,6 +237,28 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
+      <Modal
+        show={showUpdateModal}
+        onHide={() => setShowUpdateModal(false)}
+        backdrop
+        keyboard={false}
+        centered>
+        <Modal.Header className={styles.updateModalHeader}>
+          <Modal.Title>Update Available</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className={styles.updateModalContent}>
+          <p>Version {updateAvailable?.version} is available.</p>
+          <span>
+            Visit <Link href={`/about/${AboutSection.CORE}`}>App Info</Link>{" "}
+            page to update.
+          </span>
+        </Modal.Body>
+        <Modal.Footer className={styles.updateModalContent}>
+          <Button variant="secondary" onClick={() => setShowUpdateModal(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </>
   );
 }

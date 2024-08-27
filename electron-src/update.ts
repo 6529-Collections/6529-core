@@ -53,26 +53,31 @@ function simulateDownloadProgress() {
     percent: 0,
     bytesPerSecond: 0,
     transferred: 0,
-    total: 100,
+    total: 300 * 1024 * 1024, // 300MB in bytes
   };
 
   const interval = setInterval(() => {
-    // Increment the progress percentage
-    progress.percent += 1;
-    progress.bytesPerSecond = Math.random() * 1000 + 500; // simulate random download speed
-    progress.transferred = (progress.percent / 100) * progress.total;
+    progress.bytesPerSecond =
+      Math.random() * (5 * 1024 * 1024 - 1 * 1024 * 1024) + 1 * 1024 * 1024;
 
-    // Send the progress update to the renderer process
+    progress.transferred += progress.bytesPerSecond * 0.05;
+
+    progress.percent = (progress.transferred / progress.total) * 100;
+
+    if (progress.percent > 100) {
+      progress.percent = 100;
+      progress.transferred = progress.total;
+    }
+
     mainWindow?.webContents.send("update-progress", progress);
 
-    // Stop the interval when progress reaches 100%
     if (progress.percent >= 100) {
       clearInterval(interval);
       mainWindow?.webContents.send("update-downloaded", {
         version: "1.0.0",
       });
     }
-  }, 50);
+  }, 1);
 }
 
 autoUpdater.on("download-progress", (progress) => {

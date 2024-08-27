@@ -205,10 +205,9 @@ async function createWindow() {
 
   mainWindow.on("close", (e) => {
     if (isUpdateInitiatedQuit) {
-      mainWindow?.close();
       mainWindow?.destroy();
-      mainWindow = null;
       app.relaunch();
+      app.quit();
     } else {
       e.preventDefault();
       mainWindow?.focus();

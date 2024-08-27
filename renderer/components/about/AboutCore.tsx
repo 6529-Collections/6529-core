@@ -15,6 +15,14 @@ interface UpdateInfo {
   version: string;
 }
 
+function bytesToKB(bytes: number): string {
+  return parseInt((bytes / 1024).toFixed(0)).toLocaleString();
+}
+
+function bytesToMB(bytes: number): string {
+  return parseInt((bytes / (1024 * 1024)).toFixed(0)).toLocaleString();
+}
+
 export default function AboutCore() {
   const [info, setInfo] = useState<any>({});
 
@@ -95,9 +103,19 @@ export default function AboutCore() {
 
   function printInfo(key: string, value: string) {
     return (
-      <Col xs={12} className="pt-3 pb-3 d-flex flex-column pb-3 text-center">
-        <span>{key}</span>
-        <span className="font-larger font-bolder">{value}</span>
+      <Col sm={12} md={6} className="pt-2 pb-2">
+        <Container>
+          <Row>
+            <Col
+              className="pt-3 pb-3 d-flex flex-column text-center"
+              style={{
+                border: "1px solid #e5e5e5",
+              }}>
+              <span>{key}</span>
+              <span className="font-larger font-bolder">{value}</span>
+            </Col>
+          </Row>
+        </Container>
       </Col>
     );
   }
@@ -112,10 +130,16 @@ export default function AboutCore() {
         </Col>
       </Row>
       <Row className="pt-3">
-        {printInfo("APP VERSION", info.app_version)}
-        {printInfo("APP PORT", `:${info.port}`)}
-        {printInfo("OS", `${info.os}:${info.arch}`)}
-        {printInfo("PROTOCOL", `${info.scheme}`)}
+        <Col sm={12} md={{ span: 10, offset: 1 }}>
+          <Container>
+            <Row>
+              {printInfo("APP VERSION", info.app_version)}
+              {printInfo("APP PORT", `:${info.port}`)}
+              {printInfo("OS", `${info.os}:${info.arch}`)}
+              {printInfo("PROTOCOL", `${info.scheme}`)}
+            </Row>
+          </Container>
+        </Col>
       </Row>
       <Row className="pt-5">
         <Col xs={12} className="text-center">
@@ -186,8 +210,10 @@ function UpdateNotAvailable(props: Readonly<{ info: UpdateInfo }>) {
 }
 
 function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
+  const [installing, setInstalling] = useState(false);
   function handleInstall() {
     window.updater.installUpdate();
+    setInstalling(true);
   }
 
   return (
@@ -204,10 +230,11 @@ function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
         </Col>
         <Col xs={12} sm={{ span: 8, offset: 2 }} md={{ span: 6, offset: 3 }}>
           <Button
+            disabled={installing}
             variant="primary"
             onClick={handleInstall}
             className="btn-block pt-2 pb-2 font-bolder">
-            Install v{props.info.version}
+            {installing ? "Installing" : "Install"} v{props.info.version}
           </Button>
         </Col>
       </Row>
@@ -254,16 +281,15 @@ function UpdateProgress(props: Readonly<{ progress: ProgressInfo }>) {
         <Col
           xs={12}
           className="pb-3 text-center d-flex flex-column align-items-center">
-          <span className="font-larger">{props.progress.percent} %</span>
-          <span className="font-smaller">
-            {parseInt(
-              props.progress.bytesPerSecond.toFixed(0)
-            ).toLocaleString()}{" "}
-            bytes per second
+          <span className="font-larger">
+            {props.progress.percent.toFixed(2)} %
           </span>
           <span className="font-smaller">
-            {props.progress.transferred.toLocaleString()}/{props.progress.total}{" "}
-            Total Bytes
+            {bytesToMB(props.progress.bytesPerSecond)} KB per second
+          </span>
+          <span className="font-smaller">
+            {bytesToMB(props.progress.transferred)}/
+            {bytesToMB(props.progress.total)} Total MB
           </span>
         </Col>
       </Row>
