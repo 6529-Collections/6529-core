@@ -42,7 +42,7 @@
   position: fixed;
   z-index: 1000;
   height: 16px;
-  width: 16px;
+  min-width: 16px;
   border: none;
   border-radius: 10px;
   top: 8px;
@@ -69,6 +69,12 @@
 
 .infoWin {
   left: 10px;
+}
+
+.buttonContent {
+  font-size: 10px;
+  margin-left: 8px;
+  line-height: 15px;
 }
 
 .buttonWrapper {

@@ -51,6 +51,25 @@ export const api = {
   offNavigate: (callback: any) =>
     ipcRenderer.removeListener("navigate", callback),
   checkUpdates: () => ipcRenderer.send("check-updates"),
+  onUpdateAvailable: (data: any) => ipcRenderer.on("update-available", data),
+  offUpdateAvailable: (data: any) =>
+    ipcRenderer.removeListener("update-available", data),
+  onUpdateNotAvailable: (data: any) =>
+    ipcRenderer.on("update-not-available", data),
+  offUpdateNotAvailable: (data: any) =>
+    ipcRenderer.removeListener("update-not-available", data),
+  onUpdateError: (error: any) => ipcRenderer.on("update-error", error),
+  offUpdateError: (error: any) =>
+    ipcRenderer.removeListener("update-error", error),
+  onUpdateProgress: (progress: any) =>
+    ipcRenderer.on("update-progress", progress),
+  offUpdateProgress: (progress: any) =>
+    ipcRenderer.removeListener("update-progress", progress),
+  onUpdateDownloaded: (data: any) => ipcRenderer.on("update-downloaded", data),
+  offUpdateDownloaded: (data: any) =>
+    ipcRenderer.removeListener("update-downloaded", data),
+  downloadUpdate: () => ipcRenderer.send("download-update"),
+  installUpdate: () => ipcRenderer.send("install-update"),
 };
 
 contextBridge.exposeInMainWorld("api", api);

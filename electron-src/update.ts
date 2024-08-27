@@ -1,4 +1,3 @@
-import { dialog } from "electron";
 import { autoUpdater } from "electron-updater";
 import { isDev } from "./utils/env";
 import Logger from "electron-log";
@@ -13,83 +12,97 @@ export function checkForUpdates(
   window: Electron.BrowserWindow | null,
   manual: boolean = false
 ) {
+  Logger.info("Checking for updates");
   if (window) {
     mainWindow = window;
   }
 
-  if (isDev) {
-    Logger.info("Skipping update check in development mode");
-
-    if (manual) {
-      dialog.showErrorBox(
-        "Update Not Supported",
-        "You're running in development mode"
-      );
-    }
-    return;
-  }
-
   if (updateCheckInProgress) {
+    Logger.info("Update check already in progress");
     return;
   }
 
   updateCheckInProgress = manual;
 
-  autoUpdater.checkForUpdates();
+  if (isDev) {
+    updateCheckInProgress = false;
+    mainWindow?.setProgressBar(-1);
+    mainWindow?.webContents.send("update-available", {
+      version: "1.0.0",
+      files: [],
+    });
+  } else {
+    autoUpdater.checkForUpdates();
+  }
+}
+
+export function downloadUpdate() {
+  Logger.info("Downloading update");
+  if (isDev) {
+    simulateDownloadProgress();
+  } else {
+    autoUpdater.downloadUpdate();
+  }
+}
+
+export function installUpdate() {
+  Logger.info("Installing update");
+  autoUpdater.quitAndInstall();
 }
 
 autoUpdater.on("update-available", (info) => {
+  Logger.info("Update available", info);
   updateCheckInProgress = false;
   mainWindow?.setProgressBar(-1);
-  dialog
-    .showMessageBox({
-      type: "info",
-      title: "Update Available",
-      message: `Version v${info.version} is available. Do you want to download it now?`,
-      buttons: ["Yes", "No"],
-    })
-    .then((result) => {
-      if (result.response === 0) {
-        autoUpdater.downloadUpdate();
-      }
-    });
+  mainWindow?.webContents.send("update-available", info);
 });
 
+function simulateDownloadProgress() {
+  let progress = {
+    percent: 0,
+    bytesPerSecond: 0,
+    transferred: 0,
+    total: 100,
+  };
+
+  const interval = setInterval(() => {
+    // Increment the progress percentage
+    progress.percent += 1;
+    progress.bytesPerSecond = Math.random() * 1000 + 500; // simulate random download speed
+    progress.transferred = (progress.percent / 100) * progress.total;
+
+    // Send the progress update to the renderer process
+    mainWindow?.webContents.send("update-progress", progress);
+
+    // Stop the interval when progress reaches 100%
+    if (progress.percent >= 100) {
+      clearInterval(interval);
+      mainWindow?.webContents.send("update-downloaded", {
+        version: "1.0.0",
+      });
+    }
+  }, 50);
+}
+
 autoUpdater.on("download-progress", (progress) => {
-  mainWindow?.setProgressBar(progress.percent / 100);
+  Logger.info("Download progress", progress);
+  mainWindow?.webContents.send("update-progress", progress);
 });
 
 autoUpdater.on("update-downloaded", (info) => {
-  dialog
-    .showMessageBox({
-      type: "info",
-      title: "Update Ready",
-      message: `Version v${info.version} has been downloaded. Would you like to install it now?`,
-      buttons: ["Install and Restart", "Later"],
-    })
-    .then((result) => {
-      if (result.response === 0) {
-        autoUpdater.quitAndInstall();
-      }
-    });
+  Logger.info("Update downloaded", info);
+  mainWindow?.webContents.send("update-downloaded", info);
 });
 
-autoUpdater.on("error", (err) => {
-  dialog.showErrorBox(
-    "Error",
-    err == null ? "unknown" : (err.stack ?? err).toString()
-  );
-  mainWindow?.setProgressBar(-1);
+autoUpdater.on("error", (error) => {
+  Logger.error("Update error", error);
+  mainWindow?.webContents.send("update-error", error);
 });
 
 autoUpdater.on("update-not-available", (info) => {
+  Logger.info("Update not available", info);
   if (updateCheckInProgress) {
     updateCheckInProgress = false;
-    dialog.showMessageBox({
-      type: "info",
-      title: "No Update Available",
-      message: `You're already running the latest version - v${info.version}.`,
-      buttons: ["OK"],
-    });
+    mainWindow?.webContents.send("update-not-available", info);
   }
 });

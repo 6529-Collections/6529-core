@@ -22,7 +22,7 @@ import { exec } from "child_process";
 import { getValue, initStore, removeValue, setValue } from "./store";
 import { platform } from "os";
 import { menuTemplate } from "./menu";
-import { checkForUpdates } from "./update";
+import { checkForUpdates, downloadUpdate, installUpdate } from "./update";
 import contextMenu from "electron-context-menu";
 
 contextMenu({
@@ -410,4 +410,12 @@ ipcMain.handle("store:remove", (_event, key) => {
 
 ipcMain.on("check-updates", () => {
   checkForUpdates(mainWindow, true);
+});
+
+ipcMain.on("download-update", () => {
+  downloadUpdate();
+});
+
+ipcMain.on("install-update", () => {
+  installUpdate();
 });

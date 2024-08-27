@@ -32,9 +32,14 @@ export default function TitleBar() {
 
   const [scheme, setScheme] = useState("");
 
+  const [updateAvailable, setUpdateAvailable] = useState<{
+    version: string;
+  }>();
+
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
       setScheme(newInfo.scheme);
+      window.api.checkUpdates();
     });
   }, []);
 
@@ -61,6 +66,10 @@ export default function TitleBar() {
       });
     };
 
+    const handleUpdateAvailable = (_event: any, info: any) => {
+      setUpdateAvailable(info);
+    };
+
     window.api.onNavigationStateChange(updateNavState);
     updateNavState();
 
@@ -70,9 +79,12 @@ export default function TitleBar() {
     };
     window.api.onNavigate(handleNavigate);
 
+    window.api.onUpdateAvailable(handleUpdateAvailable);
+
     return () => {
       window.api.removeNavigationStateChangeListener(updateNavState);
       window.api.offNavigate(handleNavigate);
+      window.api.offUpdateAvailable(handleUpdateAvailable);
     };
   }, []);
 
@@ -204,7 +216,8 @@ export default function TitleBar() {
         placement="left"
         onClick={() => router.push(`/about/${AboutSection.CORE}`)}
         icon={faInfo}
-        content="Info"
+        content="App Info"
+        buttonContent={updateAvailable ? "Update Available" : ""}
       />
       <ConfirmClose
         onQuit={handleQuit}
