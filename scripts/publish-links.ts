@@ -204,7 +204,7 @@ async function processNewVersion(
     </html>
   `;
 
-  const newVersionKey = `${BUCKET_PATH}/${platform}/${yml.version}.html`;
+  const newVersionKey = `${BUCKET_PATH}/${platform}/links/${yml.version}.html`;
 
   await s3.send(
     new PutObjectCommand({
