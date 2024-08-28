@@ -48,7 +48,8 @@ export const api = {
   onNavigate: (url: any) => {
     ipcRenderer.on("navigate", url);
   },
-  checkUpdates: () => ipcRenderer.send("check-updates"),
+  offNavigate: (callback: any) =>
+    ipcRenderer.removeListener("navigate", callback),
 };
 
 contextBridge.exposeInMainWorld("api", api);
@@ -61,5 +62,31 @@ export const store = {
 
 contextBridge.exposeInMainWorld("store", store);
 
+export const updater = {
+  checkUpdates: () => ipcRenderer.send("check-updates"),
+  onUpdateAvailable: (data: any) => ipcRenderer.on("update-available", data),
+  offUpdateAvailable: (data: any) =>
+    ipcRenderer.removeListener("update-available", data),
+  onUpdateNotAvailable: (data: any) =>
+    ipcRenderer.on("update-not-available", data),
+  offUpdateNotAvailable: (data: any) =>
+    ipcRenderer.removeListener("update-not-available", data),
+  onUpdateError: (error: any) => ipcRenderer.on("update-error", error),
+  offUpdateError: (error: any) =>
+    ipcRenderer.removeListener("update-error", error),
+  onUpdateProgress: (progress: any) =>
+    ipcRenderer.on("update-progress", progress),
+  offUpdateProgress: (progress: any) =>
+    ipcRenderer.removeListener("update-progress", progress),
+  onUpdateDownloaded: (data: any) => ipcRenderer.on("update-downloaded", data),
+  offUpdateDownloaded: (data: any) =>
+    ipcRenderer.removeListener("update-downloaded", data),
+  downloadUpdate: () => ipcRenderer.send("download-update"),
+  installUpdate: () => ipcRenderer.send("install-update"),
+};
+
+contextBridge.exposeInMainWorld("updater", updater);
+
 export type ElectronAPI = typeof api;
 export type ElectronStore = typeof store;
+export type ElectronUpdater = typeof updater;

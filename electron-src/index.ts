@@ -22,7 +22,22 @@ import { exec } from "child_process";
 import { getValue, initStore, removeValue, setValue } from "./store";
 import { platform } from "os";
 import { menuTemplate } from "./menu";
-import { checkForUpdates } from "./update";
+import {
+  checkForUpdates,
+  downloadUpdate,
+  installUpdate,
+  isUpdateInitiatedQuit,
+} from "./update";
+import contextMenu from "electron-context-menu";
+import { isDev } from "./utils/env";
+
+contextMenu({
+  showInspectElement: false,
+  showCopyImage: true,
+  showCopyImageAddress: true,
+  showSaveImageAs: true,
+  showSaveImage: true,
+});
 
 let mainWindow: BrowserWindow | null = null;
 let splash: BrowserWindow | null = null;
@@ -124,8 +139,6 @@ if (!gotTheLock) {
 
     await createWindow();
 
-    checkForUpdates(mainWindow);
-
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         if (isMac()) {
@@ -172,6 +185,7 @@ async function createWindow() {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
+      spellcheck: true,
     },
     show: false,
   });
@@ -182,7 +196,6 @@ async function createWindow() {
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
-    splash?.webContents.openDevTools();
   });
 
   mainWindow.once("ready-to-show", () => {
@@ -192,9 +205,16 @@ async function createWindow() {
   });
 
   mainWindow.on("close", (e) => {
-    e.preventDefault();
-    mainWindow?.focus();
-    mainWindow?.webContents.send("app-close");
+    if (isUpdateInitiatedQuit) {
+      if (isDev) {
+        app.relaunch();
+        app.quit();
+      }
+    } else {
+      e.preventDefault();
+      mainWindow?.focus();
+      mainWindow?.webContents.send("app-close");
+    }
   });
 
   mainWindow.webContents.on("did-navigate", updateNavigationState);
@@ -400,5 +420,13 @@ ipcMain.handle("store:remove", (_event, key) => {
 });
 
 ipcMain.on("check-updates", () => {
-  checkForUpdates(mainWindow, true);
+  checkForUpdates(mainWindow);
+});
+
+ipcMain.on("download-update", () => {
+  downloadUpdate();
+});
+
+ipcMain.on("install-update", () => {
+  installUpdate();
 });

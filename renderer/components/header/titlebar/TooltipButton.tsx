@@ -11,6 +11,7 @@ type TooltipButtonProps = {
   icon: IconProp;
   iconStyles?: string;
   content?: string;
+  buttonContent?: string;
 };
 
 const TooltipButton: React.FC<TooltipButtonProps> = ({
@@ -20,6 +21,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
   icon,
   iconStyles,
   content,
+  buttonContent,
 }) => {
   const delay = 300;
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -60,10 +62,13 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
       onShow={(instance) => handleMouseEnter()}
       onHide={(instance) => handleMouseLeave()}>
       <button
-        className={buttonStyles}
+        className={`${buttonStyles} d-flex`}
         onClick={handleButtonClick}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}>
+        {buttonContent && (
+          <span className={styles.buttonContent}>{buttonContent}</span>
+        )}
         <FontAwesomeIcon icon={icon} className={iconStyles} />
       </button>
     </Tippy>

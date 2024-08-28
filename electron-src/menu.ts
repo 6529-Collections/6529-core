@@ -1,19 +1,9 @@
 import { MenuItem, MenuItemConstructorOptions } from "electron";
-import { checkForUpdates } from "./update";
 
 export const menuTemplate: Array<MenuItemConstructorOptions | MenuItem> = [
   {
     label: "File",
-    submenu: [
-      { role: "about" },
-      { type: "separator" },
-      {
-        label: "Check for Updates",
-        click: () => checkForUpdates(null, true),
-      },
-      { type: "separator" },
-      { role: "quit" },
-    ],
+    submenu: [{ role: "about" }, { type: "separator" }, { role: "quit" }],
   },
   {
     label: "Edit",

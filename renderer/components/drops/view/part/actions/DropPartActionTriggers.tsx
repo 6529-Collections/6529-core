@@ -9,6 +9,7 @@ import DropPartReplyButton from "./discussion/DropPartReplyButton";
 import DropPartActionTriggersVoteVoters from "./vote/DropPartActionTriggersVoteVoters";
 import DropPartActionTriggersVoteVotings from "./vote/DropPartActionTriggersVoteVotings";
 import { useCopyToClipboard } from "react-use";
+import { SEIZE_URL } from "../../../../../../constants";
 
 interface DropPartActionTriggersProps {
   readonly drop: Drop;
@@ -34,18 +35,14 @@ export default function DropPartActionTriggers({
   const [copied, setCopied] = useState(false);
   const [_, copyToClipboard] = useCopyToClipboard();
   const copyDropLink = () => {
-    copyToClipboard(
-      `${window.location.protocol}//${window.location.host}/waves/${drop.wave.id}?drop=${drop.id}`
-    );
+    copyToClipboard(`${SEIZE_URL}/waves/${drop.wave.id}?drop=${drop.id}`);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
   return (
     <div className="tw-w-full tw-inline-flex tw-justify-between">
-      <div
-        className="tw-px-4 sm:tw-px-0 tw-gap-x-6 tw-flex tw-items-center"
-      >
+      <div className="tw-px-4 sm:tw-px-0 tw-gap-x-6 tw-flex tw-items-center">
         {!!dropPart.replies_count && (
           <DropPartDiscussionButton
             dropPart={dropPart}
@@ -58,16 +55,14 @@ export default function DropPartActionTriggers({
           type="button"
           title="Copy Link"
           className="tw-text-iron-500 icon tw-p-0 tw-group tw-bg-transparent tw-border-0 tw-inline-flex tw-items-center tw-gap-x-2 tw-text-[0.8125rem] tw-leading-5 tw-font-normal tw-transition tw-ease-out tw-duration-300"
-          onClick={copyDropLink}
-        >
+          onClick={copyDropLink}>
           <svg
             className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-transition tw-ease-out tw-duration-300"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth="1.5"
-            stroke="currentColor"
-          >
+            stroke="currentColor">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -75,7 +70,9 @@ export default function DropPartActionTriggers({
             />
           </svg>
           {copied && (
-            <span className="tw-text-primary-400 tw-text-xs tw-font-normal">Copied!</span>
+            <span className="tw-text-primary-400 tw-text-xs tw-font-normal">
+              Copied!
+            </span>
           )}
         </button>
       </div>
