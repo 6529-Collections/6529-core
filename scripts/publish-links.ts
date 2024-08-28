@@ -177,6 +177,7 @@ async function processNewVersion(
       <head>
           <meta charset="UTF-8">
           <title>${title}</title>
+          <link rel="icon" href="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x60/0x0c58ef43ff3032005e472cb5709f8908acb00205/100.WEBP" />
           <style>
             body {
               background-color: black;
