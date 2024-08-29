@@ -1087,9 +1087,7 @@ export default function Header(props: Readonly<Props>) {
                                 }}
                               />
                             </NavDropdown>
-                            <HeaderUser
-                              onConnectClick={() => setBurgerMenuOpen(false)}
-                            />
+                            <HeaderUser />
                             {showWaves && <HeaderNotifications />}
                             <HeaderSearchButton />
                           </Nav>
