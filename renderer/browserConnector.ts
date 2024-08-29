@@ -29,6 +29,7 @@ export function browserConnector(parameters: {
 
   let initialized = false;
   let scheme = "";
+  let port = 6529;
 
   let connectionObject: ConnectionObject = {
     accounts: [],
@@ -44,15 +45,19 @@ export function browserConnector(parameters: {
     }
 
     window.api.onWalletConnection((_event: any, data: any) => {
+      console.log("all callbacks", deepLinkCallbacks);
       const callback = deepLinkCallbacks.get(data.requestId);
       if (callback) {
         callback(data.data);
         deepLinkCallbacks.delete(data.requestId);
+      } else {
+        console.log("No callback found for requestId", data.requestId);
       }
     });
 
     window.api.getInfo().then((newInfo) => {
       scheme = newInfo.scheme;
+      port = newInfo.port;
     });
 
     initialized = true;
@@ -96,13 +101,14 @@ export function browserConnector(parameters: {
 
       return new Promise((resolve, reject) => {
         const requestId = generateRequestId();
-        const url = `http://localhost:6529/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}`;
+        const t = Date.now();
+        const url = `http://localhost:${port}/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}`;
 
         parameters.openUrlFn(url);
 
         deepLinkCallbacks.set(requestId, async (response: any) => {
-          if (response.error) {
-            reject(new Error(response.error));
+          if (!response || response.error) {
+            reject(new Error(response?.error));
           } else {
             connectionObject = {
               accounts: response.accounts,
@@ -117,6 +123,7 @@ export function browserConnector(parameters: {
         });
 
         setTimeout(() => {
+          console.log("Deep link callback timed out", requestId);
           deepLinkCallbacks.delete(requestId);
           reject(new Error("Connection request timed out"));
         }, 60000);
@@ -149,19 +156,22 @@ export function browserConnector(parameters: {
           return new Promise((resolve, reject) => {
             const requestId = generateRequestId();
             const encodedParams = encodeURIComponent(JSON.stringify(params));
-            const url = `http://localhost:6529/app-wallet?task=provider&scheme=${scheme}&requestId=${requestId}&method=${method}&params=${encodedParams}`;
+            const t = Date.now();
+            const url = `http://localhost:${port}/app-wallet?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
 
             parameters.openUrlFn(url);
 
             deepLinkCallbacks.set(requestId, (response: any) => {
-              if (response.error) {
-                reject(new Error(response.error));
+              if (!response || response.error) {
+                reject(new Error(response?.error));
               } else {
                 resolve(response);
               }
             });
+            console.log("i am deepLinkCallbacks", deepLinkCallbacks);
 
             setTimeout(() => {
+              console.log("Deep link callback timed out", requestId);
               deepLinkCallbacks.delete(requestId);
               reject(new Error("Provider request timed out"));
             }, 60000);
