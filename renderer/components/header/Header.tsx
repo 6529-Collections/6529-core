@@ -125,7 +125,7 @@ export default function Header(props: Readonly<Props>) {
         className={`inset-safe-area ${styles.burgerMenu} ${
           burgerMenuOpen ? styles.burgerMenuOpen : ""
         }`}>
-        <Container className="pt-3 pb-3">
+        <Container className="pt-2 pb-2">
           <Row>
             <Col className="d-flex justify-content-end">
               <FontAwesomeIcon
@@ -1087,7 +1087,9 @@ export default function Header(props: Readonly<Props>) {
                                 }}
                               />
                             </NavDropdown>
-                            <HeaderUser />
+                            <HeaderUser
+                              onConnectClick={() => setBurgerMenuOpen(false)}
+                            />
                             {showWaves && <HeaderNotifications />}
                             <HeaderSearchButton />
                           </Nav>
