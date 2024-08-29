@@ -45,7 +45,6 @@ export function browserConnector(parameters: {
     }
 
     window.api.onWalletConnection((_event: any, data: any) => {
-      console.log("all callbacks", deepLinkCallbacks);
       const callback = deepLinkCallbacks.get(data.requestId);
       if (callback) {
         callback(data.data);

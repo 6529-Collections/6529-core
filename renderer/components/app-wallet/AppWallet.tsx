@@ -31,8 +31,6 @@ export default function AppWallet({ image }: { readonly image: string }) {
 
     const calculateTimeLeft = () => {
       const now = Date.now();
-      console.log("now", now);
-      console.log("expiryTime", expiryTime);
       const timeRemaining = expiryTime - now;
 
       if (timeRemaining > 0) {
@@ -49,7 +47,7 @@ export default function AppWallet({ image }: { readonly image: string }) {
       calculateTimeLeft();
     }, 1000);
 
-    return () => clearInterval(intervalId); // Cleanup the interval when the component unmounts or `t` changes
+    return () => clearInterval(intervalId);
   }, [t]);
 
   return (
