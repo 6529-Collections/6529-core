@@ -28,6 +28,10 @@
       "region": "eu-west-1",
       "path": "6529-staging-core-app/${os}/",
       "acl": null
+    },
+    {
+      "provider": "generic",
+      "url": "https://d3lqz0a4bldqgf.cloudfront.net/6529-staging-core-app/${os}/"
     }
   ],
   "mac": {
