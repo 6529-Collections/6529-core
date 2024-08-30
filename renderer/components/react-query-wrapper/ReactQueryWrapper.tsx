@@ -888,7 +888,6 @@ export default function ReactQueryWrapper({
                       item.item.reply.id === qd.drop_id &&
                       part.part_id === qd.drop_part_id
                   );
-                  console.log(isQuoted);
                   if (isQuoted) {
                     return {
                       ...part,
@@ -1254,6 +1253,9 @@ export default function ReactQueryWrapper({
     });
     queryClient.invalidateQueries({
       queryKey: [QueryKey.FEED_ITEMS],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [QueryKey.IDENTITY_NOTIFICATIONS],
     });
   };
 

@@ -11,14 +11,16 @@ import DropPart, { DropPartSize } from "../DropPart";
 
 export default function DropPartQuote({
   quotedDrop,
-  onContentClick,
+  marginLeft = true,
+  onRedropClick,
 }: {
   readonly quotedDrop: QuotedDrop;
-  readonly onContentClick?: () => void;
+  readonly marginLeft?: boolean;
+  readonly onRedropClick?: (redropId: string) => void;
 }) {
   const { connectedProfile } = useContext(AuthContext);
 
-  const { data: drop } = useQuery<Drop>({
+  const { data: drop, error } = useQuery<Drop>({
     queryKey: [
       QueryKey.DROP,
       {
@@ -50,6 +52,17 @@ export default function DropPartQuote({
     setQuotedPart(part);
   }, [drop]);
 
+  if (error) {
+    return (
+      <div
+        className={`${
+          marginLeft && "tw-ml-[54px]"
+        } tw-mt-2 tw-px-4 tw-py-2 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid`}>
+        Drop not found
+      </div>
+    );
+  }
+
   if (!quotedPart || !drop) {
     return null;
   }
@@ -79,7 +92,9 @@ export default function DropPartQuote({
           id: drop.wave.id,
         }}
         size={DropPartSize.SMALL}
-        onContentClick={onContentClick}
+        onContentClick={() =>
+          onRedropClick && onRedropClick(quotedDrop.drop_id)
+        }
       />
     </div>
   );
