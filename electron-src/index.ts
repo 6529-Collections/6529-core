@@ -71,7 +71,7 @@ if (!gotTheLock) {
     const urlObj = new URL(url);
 
     if (urlObj.host === "connector") {
-      Logger.info("Hanling connector Deep Link");
+      Logger.info("Handling connector Deep Link");
       const encodedData = urlObj.searchParams.get("data");
       if (encodedData === null) {
         Logger.error("No data parameter found in the URL");

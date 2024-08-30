@@ -10,9 +10,45 @@ import { useEffect, useState } from "react";
 export default function AppWallet({ image }: { readonly image: string }) {
   const router = useRouter();
 
-  const [completed, setCompleted] = useState(false);
+  const [isCompleted, setIsCompleted] = useState(false);
+  const [isExpired, setExpired] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-  const { task, scheme } = router.query as { task?: string; scheme?: string };
+  const { task, scheme, t } = router.query as {
+    task?: string;
+    scheme?: string;
+    t?: string;
+  };
+
+  useEffect(() => {
+    if (!t) {
+      setExpired(true);
+      setTimeLeft(null);
+      return;
+    }
+
+    const expiryTime = parseInt(t) + 60 * 1000;
+
+    const calculateTimeLeft = () => {
+      const now = Date.now();
+      const timeRemaining = expiryTime - now;
+
+      if (timeRemaining > 0) {
+        setTimeLeft(timeRemaining);
+      } else {
+        setExpired(true);
+        setTimeLeft(0);
+      }
+    };
+
+    calculateTimeLeft();
+
+    const intervalId = setInterval(() => {
+      calculateTimeLeft();
+    }, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [t]);
 
   return (
     <Container fluid>
@@ -40,9 +76,14 @@ export default function AppWallet({ image }: { readonly image: string }) {
                 marginTop: "25px",
               }}
             />
-            {completed ? (
+            {isCompleted ? (
               <div className="d-flex flex-column align-items-center justify-content-center">
                 <h2 className="text-white">You're all set!</h2>
+                <p className="text-white">You can now close this window.</p>
+              </div>
+            ) : isExpired ? (
+              <div className="d-flex flex-column align-items-center justify-content-center">
+                <h2 className="text-white">This page is expired</h2>
                 <p className="text-white">You can now close this window.</p>
               </div>
             ) : (
@@ -50,18 +91,27 @@ export default function AppWallet({ image }: { readonly image: string }) {
                 {task === "connect" && (
                   <AppWalletConnect
                     scheme={scheme}
-                    setCompleted={setCompleted}
+                    setCompleted={setIsCompleted}
                   />
                 )}
                 {task === "provider" && (
                   <AppWalletProvider
                     scheme={scheme}
-                    setCompleted={setCompleted}
+                    setCompleted={setIsCompleted}
                   />
                 )}
               </>
             )}
-            <span></span>
+            <span className="font-color-h pb-2">
+              {!isCompleted && timeLeft ? (
+                <>
+                  This page will expire in {(timeLeft / 1000).toFixed(0)}{" "}
+                  seconds
+                </>
+              ) : (
+                <></>
+              )}
+            </span>
           </>
         </Col>
       </Row>

@@ -31,6 +31,7 @@ import { useEffectOnce } from "../../hooks/useEffectOnce";
 
 
 
+
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
   readonly connectionStatus: ProfileConnectedStatus;

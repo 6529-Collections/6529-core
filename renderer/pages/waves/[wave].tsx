@@ -9,6 +9,7 @@ import { QueryKey } from "../../components/react-query-wrapper/ReactQueryWrapper
 import { Wave } from "../../generated/models/Wave";
 import { commonApiFetch } from "../../services/api/common-api";
 import { SEIZE_URL } from "../../../constants";
+import { useEffect, useState } from "react";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -16,12 +17,6 @@ const Header = dynamic(() => import("../../components/header/Header"), {
 });
 
 export default function WavePage() {
-  const breadcrumbs: Crumb[] = [
-    { display: "Home", href: "/" },
-    { display: "Waves", href: "/waves" },
-    { display: "Wave" },
-  ];
-
   const router = useRouter();
   const wave_id = (router.query.wave as string)?.toLowerCase();
 
@@ -33,6 +28,17 @@ export default function WavePage() {
       }),
     enabled: !!wave_id,
   });
+
+  const getBreadCrumbs = (): Crumb[] => {
+    return [
+      { display: "Home", href: "/" },
+      { display: "Waves", href: "/waves" },
+      { display: wave?.name ?? "" },
+    ];
+  };
+
+  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>(getBreadCrumbs());
+  useEffect(() => setBreadcrumbs(getBreadCrumbs()), [wave]);
 
   return (
     <>

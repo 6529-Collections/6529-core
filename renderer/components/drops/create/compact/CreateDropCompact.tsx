@@ -1,5 +1,4 @@
 import { CreateDropScreenType } from "../utils/CreateDropWrapper";
-import DropPfp from "../utils/DropPfp";
 import CreateDropContent, {
   CreateDropContentHandles,
 } from "../utils/CreateDropContent";
@@ -125,11 +124,6 @@ const CreateDropCompact = forwardRef<
       <div className={`${getWrapperClasses()}  tw-bg-iron-900`}>
         {children}
         <div className="tw-inline-flex tw-w-full tw-items-start tw-gap-x-2 sm:tw-gap-x-3">
-          {showProfile && (
-            <div className="tw-hidden sm:tw-block">
-              <DropPfp pfpUrl={profile?.pfp} />
-            </div>
-          )}
           <div className="tw-w-full tw-flex tw-gap-x-2 sm:tw-gap-x-3">
             <div className="tw-w-full">
               <CreateDropContent
@@ -146,25 +140,24 @@ const CreateDropCompact = forwardRef<
                 onReferencedNft={onReferencedNft}
                 onViewClick={() => onViewChange(CreateDropViewType.FULL)}
                 onFileChange={onFileChange}
-                onDropPart={onDropPart}
-              />
+                onDropPart={onDropPart}>
+                {showSubmit && (
+                  <div>
+                    <PrimaryButton
+                      onClick={onDrop}
+                      disabled={!canSubmit}
+                      loading={loading}
+                      size={
+                        screenType === CreateDropScreenType.MOBILE
+                          ? PrimaryButtonSize.SMALL
+                          : PrimaryButtonSize.MEDIUM
+                      }>
+                      {getSubmitText()}
+                    </PrimaryButton>
+                  </div>
+                )}
+              </CreateDropContent>
             </div>
-            {showSubmit && (
-              <div>
-                <PrimaryButton
-                  onClick={onDrop}
-                  disabled={!canSubmit}
-                  loading={loading}
-                  size={
-                    screenType === CreateDropScreenType.MOBILE
-                      ? PrimaryButtonSize.SMALL
-                      : PrimaryButtonSize.MEDIUM
-                  }
-                >
-                  {getSubmitText()}
-                </PrimaryButton>
-              </div>
-            )}
           </div>
         </div>
 
@@ -182,15 +175,13 @@ const CreateDropCompact = forwardRef<
                   onClick={() => onFileChange(null)}
                   type="button"
                   aria-label="Remove file"
-                  className="-tw-mb-0.5 tw-h-8 tw-w-8 tw-flex tw-items-center tw-justify-center tw-bg-transparent tw-border-0 tw-rounded-full hover:tw-bg-iron-800"
-                >
+                  className="-tw-mb-0.5 tw-h-8 tw-w-8 tw-flex tw-items-center tw-justify-center tw-bg-transparent tw-border-0 tw-rounded-full hover:tw-bg-iron-800">
                   <svg
                     className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-red"
                     viewBox="0 0 24 24"
                     fill="none"
                     aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
+                    xmlns="http://www.w3.org/2000/svg">
                     <path
                       d="M18 6L6 18M6 6L18 18"
                       stroke="currentColor"
