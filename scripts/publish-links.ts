@@ -135,15 +135,15 @@ async function processNewVersion(
   const data = await response.text();
   const yml: any = yaml.load(data);
 
-  const files: string[] = [];
+  const files: Set<string> = new Set();
   yml.files.forEach((file: any) => {
     if (file.url.endsWith("zip")) {
       return;
     }
-    files.push(`${BASE_PATH}/${BUCKET_PATH}/${platform}/${file.url}`);
+    files.add(`${BASE_PATH}/${BUCKET_PATH}/${platform}/${file.url}`);
   });
 
-  console.log("Files processed", files.length);
+  console.log("Files processed", files.size);
 
   const title = getTitle(platform, yml.version);
 
