@@ -14,6 +14,7 @@ export default function AppWalletProvider(
   const account = useAccount();
   const [methodParams, setMethodParams] = useState<any>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
+  const [requesterAddress, setRequesterAddress] = useState<string | null>(null);
 
   const [missingInfo, setMissingInfo] = useState(false);
 
@@ -46,6 +47,19 @@ export default function AppWalletProvider(
       setMethodParams({ method, params });
       setRequestId(rId);
     }
+
+    let requester = null;
+    switch (method) {
+      case "personal_sign": {
+        requester = params[1];
+        break;
+      }
+      case "eth_sendTransaction": {
+        requester = params[0].from;
+        break;
+      }
+    }
+    setRequesterAddress(requester);
   }, []);
 
   function startRedirectCountdown(d: any) {
@@ -153,10 +167,7 @@ export default function AppWalletProvider(
             <Row>
               {methodParams && (
                 <Col>
-                  {areEqualAddresses(
-                    account.address,
-                    methodParams.params[1]
-                  ) ? (
+                  {areEqualAddresses(account.address, requesterAddress) ? (
                     <button
                       onClick={onSign}
                       className="mt-3 tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
@@ -164,11 +175,18 @@ export default function AppWalletProvider(
                     </button>
                   ) : (
                     <div className="pt-3 text-danger">
-                      Something is wrong... This request is for address:
-                      <br />
-                      <code className="text-danger">
-                        {methodParams.params[1].toLowerCase()}
-                      </code>
+                      Something is wrong...{" "}
+                      {requesterAddress ? (
+                        <>
+                          This request is for address:
+                          <br />
+                          <code className="text-danger">
+                            {requesterAddress.toLowerCase()}
+                          </code>
+                        </>
+                      ) : (
+                        <>Requester Address Missing</>
+                      )}
                     </div>
                   )}
                 </Col>

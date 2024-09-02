@@ -33,7 +33,7 @@ export interface DropPartProps {
   readonly mentionedUsers: Array<DropMentionedUser>;
   readonly referencedNfts: Array<DropReferencedNFT>;
   readonly partContent: string | null;
-  readonly partMedia: DropPartPropsMedia | null;
+  readonly partMedias: DropPartPropsMedia[];
   readonly createdAt: number;
   readonly wave: DropPartPropsWave | null;
   readonly showFull?: boolean;
@@ -55,7 +55,7 @@ const DropPart = memo(
     mentionedUsers,
     referencedNfts,
     partContent,
-    partMedia,
+    partMedias,
     showFull = false,
     dropTitle,
     createdAt,
@@ -77,10 +77,11 @@ const DropPart = memo(
     const contentRef = useRef<HTMLDivElement>(null);
     const [isOverflowing, setIsOverflowing] = useState(false);
     const checkOverflow = () => {
-      setIsOverflowing(
-        !!contentRef.current &&
-          contentRef.current.scrollHeight > contentRef.current.clientHeight
-      );
+      const tolerance = 2; // Adjust this value as needed
+      if (containerRef.current) {
+        const { scrollHeight, clientHeight } = containerRef.current;
+        setIsOverflowing(scrollHeight > clientHeight + tolerance);
+      }
     };
 
     useEffect(() => {
@@ -133,7 +134,14 @@ const DropPart = memo(
             <div className="tw-flex tw-flex-col tw-w-full tw-h-full tw-self-center sm:tw-self-start">
               <div className={`${smallMenuIsShown && ""} tw-flex tw-gap-x-3`}>
                 <DropPfp pfpUrl={profile.pfp} size={size} />
-                <div className="tw-w-full tw-h-10 tw-flex tw-flex-col tw-justify-between">
+                <div
+                  className={`tw-w-full tw-flex tw-flex-col ${
+                    wave?.id ? "tw-justify-between" : "tw-justify-center"
+                  } ${
+                    size === DropPartSize.SMALL && !wave?.id
+                      ? "tw-h-8"
+                      : "tw-h-10"
+                  }`}>
                   <DropAuthor
                     profile={profile}
                     timestamp={createdAt}
@@ -237,13 +245,19 @@ const DropPart = memo(
                         onImageLoaded={onImageLoaded}
                       />
                     </div>
-                    {!!partMedia?.mediaSrc && !!partMedia?.mimeType && (
-                      <div className={partContent ? "tw-mt-4" : "tw-mt-1"}>
-                        <DropListItemContentMedia
-                          media_mime_type={partMedia.mimeType}
-                          media_url={partMedia.mediaSrc}
-                          onImageLoaded={onImageLoaded}
-                        />
+                    {!!partMedias.length && (
+                      <div
+                        className={`${
+                          partContent ? "tw-mt-4" : "tw-mt-1"
+                        } tw-space-y-2`}>
+                        {partMedias.map((media, i) => (
+                          <DropListItemContentMedia
+                            key={`part-${currentPartCount}-media-${i}-${media.mediaSrc}`}
+                            media_mime_type={media.mimeType}
+                            media_url={media.mediaSrc}
+                            onImageLoaded={onImageLoaded}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>

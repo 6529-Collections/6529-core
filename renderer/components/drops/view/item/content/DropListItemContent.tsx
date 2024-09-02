@@ -38,7 +38,7 @@ export default function DropListItemContent({
   dropReplyDepth,
   isDiscussionOpen,
   connectingLineType = DropConnectingLineType.NONE,
-  onDiscussionButtonClick
+  onDiscussionButtonClick,
 }: DropListItemContentProps) {
   const router = useRouter();
   const partsCount = drop.parts.length;
@@ -94,13 +94,21 @@ export default function DropListItemContent({
     });
   };
 
-  const size = dropReplyDepth > 0 && !isDiscussionOpen ? DropPartSize.SMALL : DropPartSize.MEDIUM;
+  const onRedropClick = (redropId: string) => {
+    router.push(`/waves/${drop.wave.id}?drop=${redropId}`, undefined, {
+      shallow: true,
+    });
+  };
+
+  const size =
+    dropReplyDepth > 0 && !isDiscussionOpen
+      ? DropPartSize.SMALL
+      : DropPartSize.MEDIUM;
 
   return (
     <DropListItemContentWrapper
       scrollIntoView={scrollIntoView}
-      shouldWrap={dropReplyDepth === 0}
-    >
+      shouldWrap={dropReplyDepth === 0}>
       <div className="tw-space-y-6 tw-h-full" ref={containerRef}>
         <DropPartWrapper
           dropPart={activePart}
@@ -112,9 +120,9 @@ export default function DropListItemContent({
           dropReplyDepth={dropReplyDepth}
           isDiscussionOpen={isDiscussionOpen}
           connectingLineType={connectingLineType}
-          onContentClick={onContentClick}
-          onDiscussionButtonClick={onDiscussionButtonClick}
-        >
+          showWaveInfo={showWaveInfo}
+          onRedropClick={onRedropClick}
+          onDiscussionButtonClick={onDiscussionButtonClick}>
           <DropPart
             profile={drop.author}
             size={size}
@@ -123,14 +131,10 @@ export default function DropListItemContent({
             partContent={activePart.content ?? null}
             totalPartsCount={partsCount}
             smallMenuIsShown={smallMenuIsShown}
-            partMedia={
-              activePart.media.length
-                ? {
-                    mimeType: activePart.media[0].mime_type,
-                    mediaSrc: activePart.media[0].url,
-                  }
-                : null
-            }
+            partMedias={activePart.media.map((media) => ({
+              mimeType: media.mime_type,
+              mediaSrc: media.url,
+            }))}
             showFull={showFull}
             wave={
               showWaveInfo

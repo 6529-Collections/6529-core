@@ -723,7 +723,7 @@ export default function Header(props: Readonly<Props>) {
       <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>
-            <Container>
+            <Container className={styles.capacitorHeaderRowContainerLandscape}>
               <Row
                 className={
                   capacitor.isCapacitor
@@ -757,7 +757,7 @@ export default function Header(props: Readonly<Props>) {
                   lg={{ span: 9 }}
                   xl={{ span: 10 }}
                   xxl={{ span: 9 }}
-                  className={`no-padding d-flex align-items-center justify-content-end ${styles.headerRight}`}>
+                  className={`d-flex align-items-center justify-content-end ${styles.headerRight}`}>
                   <Container className="no-padding">
                     <Navbar expand="lg" variant="dark">
                       <Container
