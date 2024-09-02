@@ -33,7 +33,7 @@ export interface DropPartProps {
   readonly mentionedUsers: Array<DropMentionedUser>;
   readonly referencedNfts: Array<DropReferencedNFT>;
   readonly partContent: string | null;
-  readonly partMedia: DropPartPropsMedia | null;
+  readonly partMedias: DropPartPropsMedia[];
   readonly createdAt: number;
   readonly wave: DropPartPropsWave | null;
   readonly showFull?: boolean;
@@ -55,7 +55,7 @@ const DropPart = memo(
     mentionedUsers,
     referencedNfts,
     partContent,
-    partMedia,
+    partMedias,
     showFull = false,
     dropTitle,
     createdAt,
@@ -245,13 +245,19 @@ const DropPart = memo(
                         onImageLoaded={onImageLoaded}
                       />
                     </div>
-                    {!!partMedia?.mediaSrc && !!partMedia?.mimeType && (
-                      <div className={partContent ? "tw-mt-4" : "tw-mt-1"}>
-                        <DropListItemContentMedia
-                          media_mime_type={partMedia.mimeType}
-                          media_url={partMedia.mediaSrc}
-                          onImageLoaded={onImageLoaded}
-                        />
+                    {!!partMedias.length && (
+                      <div
+                        className={`${
+                          partContent ? "tw-mt-4" : "tw-mt-1"
+                        } tw-space-y-2`}>
+                        {partMedias.map((media, i) => (
+                          <DropListItemContentMedia
+                            key={`part-${currentPartCount}-media-${i}-${media.mediaSrc}`}
+                            media_mime_type={media.mimeType}
+                            media_url={media.mediaSrc}
+                            onImageLoaded={onImageLoaded}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>

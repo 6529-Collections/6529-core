@@ -36,6 +36,7 @@ const nextConfig = {
     unoptimized: true,
     minimumCacheTTL: 86400,
   },
+  transpilePackages: ["react-tweet"],
   async headers() {
     return [
       {

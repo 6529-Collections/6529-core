@@ -131,14 +131,10 @@ export default function DropListItemContent({
             partContent={activePart.content ?? null}
             totalPartsCount={partsCount}
             smallMenuIsShown={smallMenuIsShown}
-            partMedia={
-              activePart.media.length
-                ? {
-                    mimeType: activePart.media[0].mime_type,
-                    mediaSrc: activePart.media[0].url,
-                  }
-                : null
-            }
+            partMedias={activePart.media.map((media) => ({
+              mimeType: media.mime_type,
+              mediaSrc: media.url,
+            }))}
             showFull={showFull}
             wave={
               showWaveInfo

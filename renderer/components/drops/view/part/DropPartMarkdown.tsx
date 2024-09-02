@@ -14,6 +14,8 @@ import { SEIZE_URL } from "../../../../../constants";
 import { openInExternalBrowser } from "../../../../helpers";
 import DropPartQuote from "./quote/DropPartQuote";
 import { useRouter } from "next/router";
+import { Tweet } from "react-tweet";
+import Link from "next/link";
 
 interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<DropMentionedUser>;
@@ -121,6 +123,10 @@ export default function DropPartMarkdown({
     ExtraProps) => {
     const { href } = props;
 
+    if (!href) {
+      return null;
+    }
+
     const baseEndpoint = process.env.BASE_ENDPOINT || "";
     const regex =
       /\/waves\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\?drop=([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
@@ -146,6 +152,19 @@ export default function DropPartMarkdown({
             onRedropClick={onRedropClick}
           />
         </div>
+      );
+    }
+
+    const twitterRegex =
+      /https:\/\/(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/;
+    const twitterMatch = href ? href.match(twitterRegex) : null;
+
+    if (twitterMatch) {
+      const tweetId = twitterMatch[3];
+      return (
+        <Link className="tw-no-underline" target="_blank" href={href}>
+          <Tweet id={tweetId} />
+        </Link>
       );
     }
 
