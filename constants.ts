@@ -1,7 +1,8 @@
-export const CUSTOM_WALLET_TABLE = "custom_wallet";
-export const ADD_CUSTOM_WALLET = "addCustomWallet";
-export const DELETE_CUSTOM_WALLET = "deleteCustomWallet";
-export const GET_CUSTOM_WALLET = "getCustomWallet";
+export const SEED_WALLET_TABLE = "seed_wallet";
+export const ADD_SEED_WALLET = "addSeedWallet";
+export const DELETE_SEED_WALLET = "deleteSeedWallet";
+export const GET_SEED_WALLETS = "getSeedWallets";
+export const GET_SEED_WALLET = "getSeedWallet";
 
 export const SEIZE_URL = "https://seize.io";
 export const SEIZE_API_URL = "https://api.seize.io";

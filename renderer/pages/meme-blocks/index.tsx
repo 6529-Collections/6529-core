@@ -263,7 +263,6 @@ export default function BlockPicker() {
           )}
         </div>
       </div>
-      <ToastContainer />
     </>
   );
 }

@@ -15,7 +15,7 @@ export function checkForUpdates(window: Electron.BrowserWindow | null) {
   }
 
   if (isDev) {
-    mainWindow?.webContents.send("update-available", {
+    mainWindow?.webContents.send("update-not-available", {
       version: "1.0.0",
       files: [],
     });

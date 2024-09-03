@@ -226,7 +226,7 @@ export default function TitleBar() {
           isMac() ? styles.infoMac : styles.infoWin
         }`}
         placement="left"
-        onClick={() => router.push(`/about/${AboutSection.CORE}`)}
+        onClick={() => router.push("/network/app-info")}
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}
@@ -249,8 +249,8 @@ export default function TitleBar() {
         <Modal.Body className={styles.updateModalContent}>
           <p>Version {updateAvailable?.version} is available.</p>
           <span>
-            Visit <Link href={`/about/${AboutSection.CORE}`}>App Info</Link>{" "}
-            page to update.
+            Visit <Link href={"/network/app-info"}>App Info</Link> page to
+            update.
           </span>
         </Modal.Body>
         <Modal.Footer className={styles.updateModalContent}>

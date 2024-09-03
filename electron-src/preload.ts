@@ -6,10 +6,11 @@ export const api = {
       callback(event, args)
     );
   },
-  send: (channel: string, args: any): void => {
+  send: (channel: string, ...args: any[]): void => {
     ipcRenderer.send(channel, args);
   },
-  sendSync: (channel: string, args?: any): any => {
+  sendSync: (channel: string, ...args: any[]): any => {
+    console.log("sendSync", channel, args);
     return ipcRenderer.sendSync(channel, args);
   },
   openExternal: (url: string): void => {

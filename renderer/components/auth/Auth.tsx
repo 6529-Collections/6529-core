@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Slide, ToastContainer, TypeOptions, toast } from "react-toastify";
+import { Slide, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAccount, useSignMessage } from "wagmi";
 import {
@@ -28,10 +28,6 @@ import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
 import { useRouter } from "next/router";
 import { isElectron } from "../../helpers";
 import { useEffectOnce } from "../../hooks/useEffectOnce";
-
-
-
-
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
@@ -419,9 +415,6 @@ export default function Auth({
   );
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-      <ToastContainer />
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 }

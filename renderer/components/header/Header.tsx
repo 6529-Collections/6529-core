@@ -800,7 +800,30 @@ export default function Header(props: Readonly<Props>) {
                                 />
                               </NavDropdown>
                             )}
-
+                            <NavDropdown
+                              title="Network"
+                              align={"start"}
+                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "App Info",
+                                  path: "/network/app-info",
+                                }}
+                              />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "Logs",
+                                  path: "/network/logs",
+                                }}
+                              />
+                              <NavDropdown.Divider />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "Seed Wallets",
+                                  path: "/network/seed-wallets",
+                                }}
+                              />
+                            </NavDropdown>
                             <NavDropdown
                               title="Collections"
                               align={"start"}
@@ -954,12 +977,6 @@ export default function Header(props: Readonly<Props>) {
                                   : ""
                               }`}
                               align={"start"}>
-                              <HeaderDesktopLink
-                                link={{
-                                  name: "6529 CORE",
-                                  path: `/about/${AboutSection.CORE}`,
-                                }}
-                              />
                               <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{

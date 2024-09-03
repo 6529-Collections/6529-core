@@ -1,43 +1,70 @@
 import Database from "better-sqlite3";
 import databasePath from "./utils/databasePath";
-import { CUSTOM_WALLET_TABLE } from "../constants";
-import { ICustomWallet } from "../shared/types";
+import { SEED_WALLET_TABLE } from "../constants";
+import { ISeedWallet } from "../shared/types";
 
-import ethers from "ethers";
+const ethers = require("ethers");
 
 const db = new Database(databasePath);
 
-export function addCustomWallet(): Promise<string | undefined> {
+export function addSeedWallet(name: string): Promise<string | undefined> {
   return new Promise((resolve, reject) => {
     try {
       const wallet = ethers.Wallet.createRandom();
       const prepare = db.prepare(
-        `INSERT OR REPLACE INTO ${CUSTOM_WALLET_TABLE} (id, address, mnemonic, private_key) VALUES (1, ?, ?, ?)`
+        `INSERT INTO ${SEED_WALLET_TABLE} (name, address, mnemonic, private_key) VALUES (?, ?, ?, ?)`
       );
-      prepare.run(wallet.address, wallet.mnemonic?.phrase, wallet.privateKey);
+      prepare.run(
+        name,
+        wallet.address,
+        wallet.mnemonic?.phrase,
+        wallet.privateKey
+      );
       resolve(wallet.address);
     } catch (e: any) {
-      console.error("ERROR IN addCustomWallet", e);
+      console.error("ERROR IN addSeedWallet", e);
       reject(new Error(e));
     }
   });
 }
 
-export function getCustomWallet(): Promise<ICustomWallet | undefined> {
-  const result = db.prepare(`SELECT * FROM ${CUSTOM_WALLET_TABLE}`).get() as {
-    address: string;
-  } as ICustomWallet;
-
-  return Promise.resolve(result);
-}
-
-export function deleteCustomWallet(): Promise<void> {
+export function getSeedWallets(): Promise<ISeedWallet[] | undefined> {
   return new Promise((resolve, reject) => {
     try {
-      db.prepare(`DELETE FROM ${CUSTOM_WALLET_TABLE} WHERE id = 1`).run();
+      const results = db
+        .prepare(`SELECT * FROM ${SEED_WALLET_TABLE}`)
+        .all() as ISeedWallet[];
+      resolve(results ?? []);
+    } catch (e: any) {
+      console.error("ERROR IN getSeedWallets", e);
+      reject(new Error(e));
+    }
+  });
+}
+
+export function getSeedWallet(name: string) {
+  return new Promise((resolve, reject) => {
+    try {
+      const results = db
+        .prepare(`SELECT * FROM ${SEED_WALLET_TABLE} WHERE name = ?`)
+        .get(name) as {
+        address: string;
+      } as ISeedWallet;
+      resolve(results);
+    } catch (e: any) {
+      console.error("ERROR IN getSeedWallet", e);
+      reject(new Error(e));
+    }
+  });
+}
+
+export function deleteSeedWallet(name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    try {
+      db.prepare(`DELETE FROM ${SEED_WALLET_TABLE} WHERE name = ?`).run(name);
       resolve();
     } catch (e: any) {
-      console.error("ERROR IN deleteCustomWallet", e);
+      console.error("ERROR IN deleteSeedWallet", e);
       reject(new Error(e));
     }
   });
@@ -45,10 +72,10 @@ export function deleteCustomWallet(): Promise<void> {
 
 export function initDb(): void {
   db.exec(`
-    CREATE TABLE IF NOT EXISTS ${CUSTOM_WALLET_TABLE} (
-      id INTEGER PRIMARY KEY CHECK (id = 1),
-      address TEXT NOT NULL,
-      mnemonic TEXT NOT NULL,
-      private_key TEXT NOT NULL
+      CREATE TABLE IF NOT EXISTS ${SEED_WALLET_TABLE} (
+        name TEXT PRIMARY KEY COLLATE NOCASE,
+        address TEXT NOT NULL,
+        mnemonic TEXT NOT NULL,
+        private_key TEXT NOT NULL
     )`);
 }

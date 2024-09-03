@@ -3,16 +3,18 @@ import path from "node:path";
 import { initLogs } from "./utils/initLogs";
 import { getInfo, getScheme } from "./utils/info";
 import {
-  addCustomWallet,
-  deleteCustomWallet,
-  getCustomWallet,
+  addSeedWallet,
+  deleteSeedWallet,
+  getSeedWallet,
+  getSeedWallets,
   initDb,
 } from "./db";
 import { ipcMain, protocol, shell } from "electron";
 import {
-  GET_CUSTOM_WALLET,
-  ADD_CUSTOM_WALLET,
-  DELETE_CUSTOM_WALLET,
+  GET_SEED_WALLETS,
+  ADD_SEED_WALLET,
+  DELETE_SEED_WALLET,
+  GET_SEED_WALLET,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -190,7 +192,7 @@ async function createWindow() {
     show: false,
   });
 
-  const url = `http://localhost:${PORT}`;
+  const url = `http://localhost:${PORT}/network/seed-wallets`;
 
   mainWindow.loadURL(url);
 
@@ -234,8 +236,9 @@ protocol.registerSchemesAsPrivileged([
   { scheme: getScheme(), privileges: { secure: true, standard: true } },
 ]);
 
-ipcMain.on(ADD_CUSTOM_WALLET, (event) => {
-  addCustomWallet()
+ipcMain.on(ADD_SEED_WALLET, (event, ...args) => {
+  const name = args[0];
+  addSeedWallet(name)
     .then((data) => {
       event.returnValue = {
         error: false,
@@ -250,8 +253,8 @@ ipcMain.on(ADD_CUSTOM_WALLET, (event) => {
     });
 });
 
-ipcMain.on(GET_CUSTOM_WALLET, (event) => {
-  getCustomWallet()
+ipcMain.on(GET_SEED_WALLETS, (event) => {
+  getSeedWallets()
     .then((data) => {
       event.returnValue = {
         error: false,
@@ -266,8 +269,26 @@ ipcMain.on(GET_CUSTOM_WALLET, (event) => {
     });
 });
 
-ipcMain.on(DELETE_CUSTOM_WALLET, (event) => {
-  deleteCustomWallet()
+ipcMain.on(GET_SEED_WALLET, (event, ...args) => {
+  const name = args[0];
+  getSeedWallet(name)
+    .then((data) => {
+      event.returnValue = {
+        error: false,
+        data,
+      };
+    })
+    .catch((error) => {
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(DELETE_SEED_WALLET, (event, ...args) => {
+  const name = args[0];
+  deleteSeedWallet(name)
     .then(() => {
       event.returnValue = {
         error: false,

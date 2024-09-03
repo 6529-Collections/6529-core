@@ -1,7 +1,7 @@
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
-import DotLoader from "../dotLoader/DotLoader";
 import Image from "next/image";
+import DotLoader from "../../dotLoader/DotLoader";
 
 interface ProgressInfo {
   total: number;
@@ -23,7 +23,7 @@ function bytesToMB(bytes: number): string {
   return parseInt((bytes / (1024 * 1024)).toFixed(0)).toLocaleString();
 }
 
-export default function AboutCore() {
+export default function AppInfo() {
   const [info, setInfo] = useState<any>({});
 
   const [checkingForUpdates, setCheckingForUpdates] = useState(true);
@@ -121,7 +121,7 @@ export default function AboutCore() {
   }
 
   return (
-    <Container>
+    <Container className="pt-5 pb-5">
       <Row>
         <Col className="text-center">
           <h1 className="float-none">
@@ -130,16 +130,10 @@ export default function AboutCore() {
         </Col>
       </Row>
       <Row className="pt-3">
-        <Col sm={12} md={{ span: 10, offset: 1 }}>
-          <Container>
-            <Row>
-              {printInfo("APP VERSION", info.app_version)}
-              {printInfo("APP PORT", `:${info.port}`)}
-              {printInfo("OS", `${info.os}:${info.arch}`)}
-              {printInfo("PROTOCOL", `${info.scheme}`)}
-            </Row>
-          </Container>
-        </Col>
+        {printInfo("APP VERSION", info.app_version)}
+        {printInfo("APP PORT", `:${info.port}`)}
+        {printInfo("OS", `${info.os}:${info.arch}`)}
+        {printInfo("PROTOCOL", `${info.scheme}`)}
       </Row>
       <Row className="pt-5">
         <Col xs={12} className="text-center">

@@ -103,6 +103,7 @@ import CookiesBanner from "../components/cookies/CookiesBanner";
 import { CookieConsentProvider } from "../components/cookies/CookieConsentContext";
 import { ToastProvider } from "../contexts/ToastContext";
 import { useRouter } from "next/router";
+import { ConfirmProvider } from "../contexts/ConfirmContext";
 
 library.add(
   faArrowUp,
@@ -213,25 +214,29 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
-        <ToastProvider>
-          <Provider store={store}>
-            <Head>
-              <meta
-                name="viewport"
-                content="width=device-width, initial-scale=1.0, maximum-scale=1"
-              />
-            </Head>
-            <ReactQueryWrapper>
-              <Auth>
-                <CookieConsentProvider>
-                  {getLayout(<Component {...props} hide_footer={hideFooter} />)}
-                  <CookiesBanner />
-                </CookieConsentProvider>
-              </Auth>
-            </ReactQueryWrapper>
-          </Provider>
-          <ReactQueryDevtools initialIsOpen={false} />
-        </ToastProvider>
+        <ConfirmProvider>
+          <ToastProvider>
+            <Provider store={store}>
+              <Head>
+                <meta
+                  name="viewport"
+                  content="width=device-width, initial-scale=1.0, maximum-scale=1"
+                />
+              </Head>
+              <ReactQueryWrapper>
+                <Auth>
+                  <CookieConsentProvider>
+                    {getLayout(
+                      <Component {...props} hide_footer={hideFooter} />
+                    )}
+                    <CookiesBanner />
+                  </CookieConsentProvider>
+                </Auth>
+              </ReactQueryWrapper>
+            </Provider>
+            <ReactQueryDevtools initialIsOpen={false} />
+          </ToastProvider>
+        </ConfirmProvider>
       </WagmiProvider>
     </QueryClientProvider>
   );
