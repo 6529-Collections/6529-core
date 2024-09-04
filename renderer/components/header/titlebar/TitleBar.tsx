@@ -15,6 +15,7 @@ import { AboutSection } from "../../../pages/about/[section]";
 import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
+import ConfirmSeedWalletRequest from "../../confirm/ConfirmSeedWalletRequest";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -94,7 +95,7 @@ export default function TitleBar() {
     window.updater.onUpdateAvailable(handleUpdateAvailable);
 
     return () => {
-      window.api.removeNavigationStateChangeListener(updateNavState);
+      window.api.offNavigationStateChange(updateNavState);
       window.api.offNavigate(handleNavigate);
       window.updater.offUpdateAvailable(handleUpdateAvailable);
     };
@@ -237,6 +238,7 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
+      <ConfirmSeedWalletRequest />
       <Modal
         show={showUpdateModal}
         onHide={() => setShowUpdateModal(false)}

@@ -105,6 +105,14 @@ export const isElectron = () => {
   return false;
 };
 
+export function isHexString(str: string): boolean {
+  // Regular expression to match valid hex strings
+  const hexRegex = /^[0-9a-fA-F]+$/;
+
+  // Check if the string matches the hex pattern and has an even length (pairs of characters)
+  return hexRegex.test(str) && str.length % 2 === 0;
+}
+
 export function hexToString(hex: string) {
   hex = hex.replace(/^0x/, "");
 

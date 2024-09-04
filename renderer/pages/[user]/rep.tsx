@@ -115,6 +115,7 @@ export async function getServerSideProps(
       },
     };
   } catch (e: any) {
+    console.error("Error in user rep page", e);
     return {
       redirect: {
         permanent: false,

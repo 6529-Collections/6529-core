@@ -274,6 +274,17 @@ export function getTransactionLink(chain_id: number, hash: string) {
   }
 }
 
+export function getAddressEtherscanLink(chain_id: number, address: string) {
+  switch (chain_id) {
+    case sepolia.id:
+      return `https://sepolia.etherscan.io/address/${address}`;
+    case goerli.id:
+      return `https://goerli.etherscan.io/address/${address}`;
+    default:
+      return `https://etherscan.io/address/${address}`;
+  }
+}
+
 export async function getContentTypeFromURL(url: string) {
   try {
     const response = await fetch(url, { method: "HEAD" });

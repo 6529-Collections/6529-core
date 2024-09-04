@@ -5,7 +5,8 @@ import "react-toastify/dist/ReactToastify.css";
 interface ToastContextType {
   showToast: (
     message: string,
-    type?: "info" | "success" | "warning" | "error"
+    type?: "info" | "success" | "warning" | "error",
+    singleton?: boolean
   ) => void;
 }
 
@@ -28,8 +29,12 @@ export const ToastProvider = ({
 }: ToastProviderProps): JSX.Element => {
   const showToast = (
     message: string,
-    type: "info" | "success" | "warning" | "error" = "info"
+    type: "info" | "success" | "warning" | "error" = "info",
+    singleton?: boolean
   ) => {
+    if (singleton) {
+      toast.dismiss();
+    }
     toast(message, { type });
   };
 

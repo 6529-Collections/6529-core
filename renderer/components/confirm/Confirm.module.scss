@@ -16,3 +16,8 @@
   border-right: 1px solid $lighter-grey !important;
   border-radius: 0;
 }
+
+.modalContentSeedRequest {
+  max-height: 250px;
+  overflow: auto;
+}

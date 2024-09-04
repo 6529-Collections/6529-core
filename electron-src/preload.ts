@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import { SeedWalletRequest } from "../shared/types";
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -10,7 +11,6 @@ export const api = {
     ipcRenderer.send(channel, args);
   },
   sendSync: (channel: string, ...args: any[]): any => {
-    console.log("sendSync", channel, args);
     return ipcRenderer.sendSync(channel, args);
   },
   openExternal: (url: string): void => {
@@ -37,8 +37,12 @@ export const api = {
   getNavigationState: () => ipcRenderer.invoke("get-nav-state"),
   onNavigationStateChange: (callback: any) =>
     ipcRenderer.on("nav-state-change", callback),
-  removeNavigationStateChangeListener: (callback: any) =>
+  offNavigationStateChange: (callback: any) =>
     ipcRenderer.removeListener("nav-state-change", callback),
+  onSeedWalletsChange: (callback: any) =>
+    ipcRenderer.on("seed-wallets-change", callback),
+  offSeedWalletsChange: (callback: any) =>
+    ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);
@@ -88,6 +92,33 @@ export const updater = {
 
 contextBridge.exposeInMainWorld("updater", updater);
 
+export const seedConnector = {
+  initRequest: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-init-request", request);
+  },
+  onInitRequest: (callback: any) => {
+    ipcRenderer.on("seed-connector-init-request", callback);
+  },
+  offInitRequest: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-init-request", callback);
+  },
+  confirm: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-confirm", request);
+  },
+  onConfirm: (callback: any) => {
+    ipcRenderer.on("seed-connector-confirm", callback);
+  },
+  cancel: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-cancel", request);
+  },
+  onCancel: (callback: any) => {
+    ipcRenderer.on("seed-connector-cancel", callback);
+  },
+};
+
+contextBridge.exposeInMainWorld("seedConnector", seedConnector);
+
 export type ElectronAPI = typeof api;
 export type ElectronStore = typeof store;
 export type ElectronUpdater = typeof updater;
+export type ElectronSeedConnector = typeof seedConnector;

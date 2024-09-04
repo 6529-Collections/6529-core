@@ -1,4 +1,4 @@
-import { mainnet } from "wagmi/chains";
+import { mainnet, sepolia } from "wagmi/chains";
 
 export const PROJECT_NAME = "6529SEIZE";
 export const CW_PROJECT_ID = "bf8c0543ea5cf26717a35a383d6f7102";
@@ -25,14 +25,14 @@ export const DELEGATION_CONTRACT: {
   chain_id: number;
   contract: `0x${string}`;
 } = {
-  // chain: sepolia,
-  // chain_id: sepolia.id,
-  // contract: "0x8f86c644f845a077999939c69bc787662377d915",
+  chain: sepolia,
+  chain_id: sepolia.id,
+  contract: "0x8f86c644f845a077999939c69bc787662377d915",
   // chain_id: goerli.id,
   // contract: "0xAD024eeD08190285Edb7100c9Caabe79d48e448B",
-  chain: mainnet,
-  chain_id: mainnet.id,
-  contract: "0x2202CB9c00487e7e8EF21e6d8E914B32e709f43d",
+  // chain: mainnet,
+  // chain_id: mainnet.id,
+  // contract: "0x2202CB9c00487e7e8EF21e6d8E914B32e709f43d",
 };
 
 export const DELEGATION_ALL_ADDRESS =

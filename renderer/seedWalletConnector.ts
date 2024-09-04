@@ -1,14 +1,12 @@
 import { createConnector } from "@wagmi/core";
+import { ethers } from "ethers";
 import { mainnet, sepolia } from "viem/chains";
+import { SeedWalletRequest } from "../shared/types";
+import { hexToString } from "./helpers";
 
 interface ProviderRequest {
   method: string;
-  params?: any[];
-}
-
-interface ProviderResponse {
-  result?: any;
-  error?: string;
+  params: any[];
 }
 
 interface ConnectionObject {
@@ -16,25 +14,48 @@ interface ConnectionObject {
   chainId: number;
 }
 
-const CONNECTION_STORE = "seize-app-connection";
+const CONNECTION_STORE = "seize-app-connection-seed-wallet";
 
-export function browserConnector(parameters: {
-  openUrlFn: (url: string) => void;
+export function seedWalletConnector(parameters: {
+  wallet: ethers.Wallet;
   name: string;
   icon: string;
   id: string;
 }) {
-  const deepLinkCallbacks: Map<string, (response: ProviderResponse) => void> =
+  const pendingCallbacks: Map<string, (request: SeedWalletRequest) => void> =
     new Map();
 
   let initialized = false;
-  let scheme = "";
-  let port = 6529;
 
   let connectionObject: ConnectionObject = {
     accounts: [],
     chainId: 1,
   };
+
+  async function handlePendingRequest(name: string, data: SeedWalletRequest) {
+    const { method, params } = data;
+
+    if (!connectionObject.accounts.length) {
+      throw new Error("No accounts found in connection object");
+    }
+
+    switch (method) {
+      case "personal_sign":
+        const signature = await parameters.wallet.signMessage(
+          hexToString(params?.[0])
+        );
+        return signature;
+      case "eth_sendTransaction":
+        console.log(`[${name}] Sending transaction`, params);
+        const provider = new ethers.AnkrProvider({
+          name: connectionObject.chainId === sepolia.id ? "sepolia" : "mainnet",
+          chainId: connectionObject.chainId,
+        });
+        const txResponse = await provider.send(method, params ?? []);
+        console.log(`[${name}] Transaction response`, txResponse);
+        return txResponse;
+    }
+  }
 
   async function init(name: string) {
     if (!window || initialized) return;
@@ -44,11 +65,11 @@ export function browserConnector(parameters: {
       connectionObject = JSON.parse(storedConnection);
     }
 
-    window.api.onWalletConnection((_event: any, data: any) => {
-      const callback = deepLinkCallbacks.get(data.requestId);
+    window.seedConnector.onConfirm((_event: any, data: SeedWalletRequest) => {
+      const callback = pendingCallbacks.get(data.requestId);
       if (callback) {
-        callback(data.data);
-        deepLinkCallbacks.delete(data.requestId);
+        callback(data);
+        pendingCallbacks.delete(data.requestId);
       } else {
         console.log(
           `[${name}] No callback found for requestId`,
@@ -57,9 +78,8 @@ export function browserConnector(parameters: {
       }
     });
 
-    window.api.getInfo().then((newInfo) => {
-      scheme = newInfo.scheme;
-      port = newInfo.port;
+    window.seedConnector.onCancel((_event: any, data: SeedWalletRequest) => {
+      pendingCallbacks.delete(data.requestId);
     });
 
     initialized = true;
@@ -82,14 +102,14 @@ export function browserConnector(parameters: {
     get supportsSimulation() {
       return false;
     },
-    type: "browser",
+    type: "seed-wallet",
     async setup() {
-      //donthing
+      //do nothing
     },
     async connect(params: {
       isReconnecting?: boolean;
     }): Promise<ConnectionObject> {
-      console.log(`[${this.name}] Browser Connect method called`, params);
+      console.log(`[${this.name}] Seed Wallet Connect method called`, params);
       await init(this.name);
       if (connectionObject.accounts.length > 0) {
         return connectionObject;
@@ -101,38 +121,17 @@ export function browserConnector(parameters: {
         );
       }
 
-      return new Promise((resolve, reject) => {
-        const requestId = generateRequestId();
-        const t = Date.now();
-        const url = `http://localhost:${port}/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}`;
-
-        parameters.openUrlFn(url);
-
-        deepLinkCallbacks.set(requestId, async (response: any) => {
-          if (!response || response.error) {
-            reject(new Error(response?.error));
-          } else {
-            connectionObject = {
-              accounts: response.accounts,
-              chainId: response.chainId,
-            };
-            await window.store.set(
-              CONNECTION_STORE,
-              JSON.stringify(connectionObject)
-            );
-            resolve(connectionObject);
-          }
-        });
-
-        setTimeout(() => {
-          console.log(`[${this.name}] Deep link callback timed out`, requestId);
-          deepLinkCallbacks.delete(requestId);
-          reject(new Error("Connection request timed out"));
-        }, 60000);
-      });
+      connectionObject = {
+        accounts: [parameters.wallet.address as `0x${string}`],
+        chainId: 1,
+      };
+      await window.store.set(
+        CONNECTION_STORE,
+        JSON.stringify(connectionObject)
+      );
+      return connectionObject;
     },
     async disconnect() {
-      deepLinkCallbacks.clear();
       connectionObject = {
         accounts: [],
         chainId: 1,
@@ -157,26 +156,29 @@ export function browserConnector(parameters: {
 
           return new Promise((resolve, reject) => {
             const requestId = generateRequestId();
-            const encodedParams = encodeURIComponent(JSON.stringify(params));
-            const t = Date.now();
-            const url = `http://localhost:${port}/app-wallet?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
+            const request: SeedWalletRequest = {
+              requestId,
+              from: connectionObject.accounts[0],
+              method,
+              params,
+            };
 
-            parameters.openUrlFn(url);
-
-            deepLinkCallbacks.set(requestId, (response: any) => {
-              if (!response || response.error) {
-                reject(new Error(response?.error));
-              } else {
+            window.seedConnector.initRequest(request);
+            pendingCallbacks.set(requestId, (request: any) => {
+              try {
+                const response = handlePendingRequest(this.name, request);
                 resolve(response);
+              } catch (error: any) {
+                reject(new Error(error.message));
               }
             });
 
             setTimeout(() => {
               console.log(
-                `[${this.name}] Deep link callback timed out`,
+                `[${this.name}] Pending callback timed out`,
                 requestId
               );
-              deepLinkCallbacks.delete(requestId);
+              pendingCallbacks.delete(requestId);
               reject(new Error("Provider request timed out"));
             }, 60000);
           });
@@ -188,7 +190,6 @@ export function browserConnector(parameters: {
     },
     async switchChain(params: { chainId: number }) {
       console.log(`[${this.name}] Switch Chain method called`, params.chainId);
-      await init(this.name);
       const myChain = params.chainId === sepolia.id ? sepolia : mainnet;
       connectionObject.chainId = myChain.id;
       await window.store.set(

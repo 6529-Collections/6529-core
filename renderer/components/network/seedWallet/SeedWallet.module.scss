@@ -40,3 +40,24 @@
     height: 32px;
   }
 }
+
+.importWalletWordInput {
+  color: $font-color;
+  background-color: transparent;
+  border: none;
+  width: 100%;
+}
+
+.textSuccess {
+  color: $success-color !important;
+}
+
+.textDanger {
+  color: $error-color !important;
+}
+
+.seedWalletAvatar {
+  border-radius: 50%;
+  border: 1px solid $off-white;
+  padding: 2px;
+}

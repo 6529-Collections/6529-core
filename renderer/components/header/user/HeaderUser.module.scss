@@ -3,3 +3,18 @@
 .connectModal {
   --bs-modal-width: 400px;
 }
+
+.connectorCategoryAccordionButton {
+  background-color: rgb(28, 28, 33) !important;
+  border: 1px solid rgb(55, 55, 61) !important;
+  box-shadow: none !important;
+  border-radius: 5px !important;
+}
+
+.seedConnectorImage {
+  border: 1px solid $very-dark-grey;
+  border-radius: 50%;
+  height: 38px;
+  width: 38px;
+  padding: 1px;
+}

@@ -8,8 +8,8 @@ import { Provider } from "react-redux";
 import type { AppProps } from "next/app";
 import { wrapper } from "../store/store";
 
-import { WagmiProvider } from "wagmi";
-import { wagmiConfig } from "../wagmiConfig";
+import { Config, WagmiProvider } from "wagmi";
+import { getWagmiConfig } from "../wagmiConfig";
 
 import { library } from "@fortawesome/fontawesome-svg-core";
 
@@ -95,7 +95,7 @@ import {
 import Head from "next/head";
 import Auth from "../components/auth/Auth";
 import { NextPage, NextPageContext } from "next";
-import { ReactElement, ReactNode, useEffect, useState } from "react";
+import { ReactElement, ReactNode, use, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import ReactQueryWrapper from "../components/react-query-wrapper/ReactQueryWrapper";
@@ -104,6 +104,8 @@ import { CookieConsentProvider } from "../components/cookies/CookieConsentContex
 import { ToastProvider } from "../contexts/ToastContext";
 import { useRouter } from "next/router";
 import { ConfirmProvider } from "../contexts/ConfirmContext";
+import { openInExternalBrowser } from "../helpers";
+import { AboutSection } from "./about/[section]";
 
 library.add(
   faArrowUp,
@@ -211,6 +213,29 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   const { store, props } = wrapper.useWrappedStore(rest);
   const getLayout = Component.getLayout ?? ((page) => page);
 
+  const [wagmiConfig, setWagmiConfig] = useState<Config>();
+
+  useEffect(() => {
+    getWagmiConfig().then((c) => setWagmiConfig(c));
+  }, []);
+
+  useEffect(() => {
+    const updateWagmiConfig = () => {
+      getWagmiConfig().then((c) => setWagmiConfig(c));
+    };
+
+    window.api?.onSeedWalletsChange(updateWagmiConfig);
+    updateWagmiConfig();
+
+    return () => {
+      window.api?.offSeedWalletsChange(updateWagmiConfig);
+    };
+  }, []);
+
+  if (!wagmiConfig) {
+    return <></>;
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
@@ -226,13 +251,125 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
               <ReactQueryWrapper>
                 <Auth>
                   <CookieConsentProvider>
-                    {getLayout(
-                      <Component {...props} hide_footer={hideFooter} />
-                    )}
+                    {getLayout(<Component {...props} />)}
                     <CookiesBanner />
                   </CookieConsentProvider>
                 </Auth>
               </ReactQueryWrapper>
+              {!hideFooter && (
+                <footer
+                  className="d-flex flex-column align-items-center justify-content-center gap-2"
+                  id="footer">
+                  <span className="d-flex align-items-center justify-content-center flex-wrap gap-2">
+                    <a
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser("https://twitter.com/punk6529")
+                      }>
+                      <img
+                        width="0"
+                        height="0"
+                        style={{ height: "18px", width: "auto" }}
+                        src="/twitter.png"
+                        alt="punk6529 Twitter"
+                      />{" "}
+                      &#64;punk6529
+                    </a>
+                    |
+                    <a
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          "https://twitter.com/6529Collections"
+                        )
+                      }>
+                      <img
+                        width="0"
+                        height="0"
+                        style={{ height: "18px", width: "auto" }}
+                        src="/twitter.png"
+                        alt="6529Collections Twitter"
+                      />{" "}
+                      &#64;6529Collections
+                    </a>
+                    |
+                    <a
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser("https://discord.gg/join-om")
+                      }>
+                      <img
+                        width="0"
+                        height="0"
+                        style={{ height: "18px", width: "auto" }}
+                        src="/discord.png"
+                        alt="OM Discord"
+                      />{" "}
+                      OM Discord
+                    </a>
+                    |
+                    <a
+                      href="#"
+                      onClick={() => openInExternalBrowser("https://6529.io")}>
+                      <img
+                        width="0"
+                        height="0"
+                        style={{ height: "18px", width: "auto" }}
+                        src="/Seize_Logo_2.png"
+                        alt="6529.io"
+                      />{" "}
+                      6529.io
+                    </a>
+                    |
+                    <a
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser(
+                          "https://github.com/6529-Collections"
+                        )
+                      }>
+                      <img
+                        width="0"
+                        height="0"
+                        style={{ height: "18px", width: "auto" }}
+                        src="/github_w.png"
+                        alt="6529-Collections"
+                      />{" "}
+                      6529-Collections
+                    </a>
+                  </span>
+                  <span className="d-flex align-items-center justify-content-center flex-wrap gap-2">
+                    <a href={`/about/${AboutSection.TERMS_OF_SERVICE}`}>
+                      Terms of Service
+                    </a>
+                    |{" "}
+                    <a href={`/about/${AboutSection.PRIVACY_POLICY}`}>
+                      Privacy Policy
+                    </a>
+                    | <a href={`/about/${AboutSection.COPYRIGHT}`}>Copyright</a>
+                    |{" "}
+                    <a href={`/about/${AboutSection.COOKIE_POLICY}`}>
+                      Cookie Policy
+                    </a>
+                    | <a href={`/about/${AboutSection.LICENSE}`}>License</a>|{" "}
+                    <a
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser("https://api.seize.io/docs")
+                      }>
+                      API Documentation
+                    </a>
+                    |{" "}
+                    <a
+                      href="#"
+                      onClick={() =>
+                        openInExternalBrowser("https://status.seize.io/")
+                      }>
+                      Status
+                    </a>
+                  </span>
+                </footer>
+              )}
             </Provider>
             <ReactQueryDevtools initialIsOpen={false} />
           </ToastProvider>

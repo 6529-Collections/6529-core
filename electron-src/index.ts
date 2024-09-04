@@ -7,6 +7,7 @@ import {
   deleteSeedWallet,
   getSeedWallet,
   getSeedWallets,
+  importSeedWallet,
   initDb,
 } from "./db";
 import { ipcMain, protocol, shell } from "electron";
@@ -15,6 +16,7 @@ import {
   ADD_SEED_WALLET,
   DELETE_SEED_WALLET,
   GET_SEED_WALLET,
+  IMPORT_SEED_WALLET,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -32,6 +34,7 @@ import {
 } from "./update";
 import contextMenu from "electron-context-menu";
 import { isDev } from "./utils/env";
+import { SeedWalletRequest } from "../shared/types";
 
 contextMenu({
   showInspectElement: false,
@@ -192,7 +195,7 @@ async function createWindow() {
     show: false,
   });
 
-  const url = `http://localhost:${PORT}/network/seed-wallets`;
+  const url = `http://localhost:${PORT}`;
 
   mainWindow.loadURL(url);
 
@@ -236,7 +239,7 @@ protocol.registerSchemesAsPrivileged([
   { scheme: getScheme(), privileges: { secure: true, standard: true } },
 ]);
 
-ipcMain.on(ADD_SEED_WALLET, (event, ...args) => {
+ipcMain.on(ADD_SEED_WALLET, (event, args) => {
   const name = args[0];
   addSeedWallet(name)
     .then((data) => {
@@ -244,6 +247,27 @@ ipcMain.on(ADD_SEED_WALLET, (event, ...args) => {
         error: false,
         data,
       };
+      mainWindow?.webContents.send("seed-wallets-change");
+    })
+    .catch((error) => {
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(IMPORT_SEED_WALLET, (event, args) => {
+  const name = args[0];
+  const address = args[1];
+  const mnemonic = args[2];
+  const privateKey = args[3];
+  importSeedWallet(name, address, mnemonic, privateKey)
+    .then(() => {
+      event.returnValue = {
+        error: false,
+      };
+      mainWindow?.webContents.send("seed-wallets-change");
     })
     .catch((error) => {
       event.returnValue = {
@@ -269,9 +293,9 @@ ipcMain.on(GET_SEED_WALLETS, (event) => {
     });
 });
 
-ipcMain.on(GET_SEED_WALLET, (event, ...args) => {
-  const name = args[0];
-  getSeedWallet(name)
+ipcMain.on(GET_SEED_WALLET, (event, args) => {
+  const address = args[0];
+  getSeedWallet(address)
     .then((data) => {
       event.returnValue = {
         error: false,
@@ -286,13 +310,14 @@ ipcMain.on(GET_SEED_WALLET, (event, ...args) => {
     });
 });
 
-ipcMain.on(DELETE_SEED_WALLET, (event, ...args) => {
-  const name = args[0];
-  deleteSeedWallet(name)
+ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
+  const address = args[0];
+  deleteSeedWallet(address)
     .then(() => {
       event.returnValue = {
         error: false,
       };
+      mainWindow?.webContents.send("seed-wallets-change");
     })
     .catch((error) => {
       event.returnValue = {
@@ -450,4 +475,19 @@ ipcMain.on("download-update", () => {
 
 ipcMain.on("install-update", () => {
   installUpdate();
+});
+
+ipcMain.on(
+  "seed-connector-init-request",
+  (_event, request: SeedWalletRequest) => {
+    mainWindow?.webContents.send("seed-connector-init-request", request);
+  }
+);
+
+ipcMain.on("seed-connector-confirm", (_event, request: SeedWalletRequest) => {
+  mainWindow?.webContents.send("seed-connector-confirm", request);
+});
+
+ipcMain.on("seed-connector-cancel", (_event, request: SeedWalletRequest) => {
+  mainWindow?.webContents.send("seed-connector-cancel", request);
 });
