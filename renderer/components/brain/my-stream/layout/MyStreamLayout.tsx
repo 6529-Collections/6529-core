@@ -20,7 +20,7 @@ export default function MyStreamLayout({
 }) {
   const breadcrumbs: Crumb[] = [
     { display: "Home", href: "/" },
-    { display: "Brain - My Stream" },
+    { display: "My Stream" },
   ];
 
   const { showWaves } = useContext(AuthContext);

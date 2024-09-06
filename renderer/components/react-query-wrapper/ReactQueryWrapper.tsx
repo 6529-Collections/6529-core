@@ -1157,7 +1157,6 @@ export default function ReactQueryWrapper({
     readonly drop: Drop;
   }): Promise<void> => {
     addDropToDrops({ drop });
-    addDropToFeedItems({ drop });
     increaseFeedItemsDropRedropCount({ drop });
     increaseDropsDropRedropCount({ drop });
     if (drop.reply_to) {

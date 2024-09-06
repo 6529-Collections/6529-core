@@ -33,7 +33,11 @@ export default function DropReply(props: DropReplyProps) {
 
   const params = getDropIdAndPartId();
 
-  const { data: replyToDrop, isFetching } = useQuery<Drop>({
+  const {
+    data: replyToDrop,
+    isFetching,
+    error,
+  } = useQuery<Drop>({
     queryKey: [QueryKey.DROP, { drop_id: params?.dropId }],
     queryFn: async () =>
       await commonApiFetch<Drop>({
@@ -58,6 +62,16 @@ export default function DropReply(props: DropReplyProps) {
       return "Loading...";
     }
 
+    if (error) {
+      const regex =
+        /Drop [0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12} not found/;
+
+      if (regex.test(JSON.stringify(error))) {
+        return "This drop has been deleted by the author";
+      }
+      return "Error loading drop";
+    }
+
     if (!finalDrop) {
       return "";
     }
@@ -74,9 +88,13 @@ export default function DropReply(props: DropReplyProps) {
       return "Media";
     }
 
-    const content = part.content?.slice(0, 50).replace(/\n/g, " ") ?? "";
+    const urlRegex = /https?:\/\/[^\s]+/g;
+    const content = part.content
+      .replace(urlRegex, "[link]")
+      .slice(0, 50)
+      .replace(/\n/g, " ");
 
-    return part.content?.length > 50 ? content + "..." : content;
+    return part.content.length > 50 ? content + "..." : content;
   };
 
   const [replyContent, setReplyContent] = useState<string>(getReplyContent());
@@ -87,7 +105,7 @@ export default function DropReply(props: DropReplyProps) {
 
   useEffect(() => {
     setReplyContent(getReplyContent());
-  }, [finalDrop, isFetching]);
+  }, [finalDrop, isFetching, error]);
 
   const onReplyClick = () => {
     router.push(
