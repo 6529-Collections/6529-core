@@ -33,7 +33,6 @@ import EthereumIcon from "../../../user/utils/icons/EthereumIcon";
 import { displayScore } from "./NextGenTokenProperties";
 import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
 import { ETHEREUM_ICON_TEXT } from "../../../../constants";
-import { openInExternalBrowser } from "../../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -191,12 +190,9 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                 placement="right"
                 delay={250}>
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(
-                      getOpenseaLink(NEXTGEN_CHAIN_ID, props.token.id)
-                    )
-                  }
+                  href={getOpenseaLink(NEXTGEN_CHAIN_ID, props.token.id)}
+                  target="_blank"
+                  rel="noreferrer"
                   className="d-flex gap-2 align-items-center decoration-none">
                   <Image
                     className={styles.marketplace}
@@ -250,10 +246,9 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                 placement="right"
                 delay={250}>
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(getBlurLink(props.token.id))
-                  }
+                  href={getBlurLink(props.token.id)}
+                  target="_blank"
+                  rel="noreferrer"
                   className="d-flex gap-2 align-items-center decoration-none">
                   <Image
                     className={styles.marketplace}
@@ -300,10 +295,9 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                 placement="right"
                 delay={250}>
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(getMagicEdenLink(props.token.id))
-                  }
+                  href={getMagicEdenLink(props.token.id)}
+                  target="_blank"
+                  rel="noreferrer"
                   className="d-flex gap-2 align-items-center decoration-none">
                   <Image
                     className={styles.marketplace}

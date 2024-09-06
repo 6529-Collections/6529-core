@@ -1,6 +1,7 @@
 export interface ISeedWallet {
   name: string;
   address: string;
+  address_hashed: string;
   mnemonic: string;
   private_key: string;
   imported: boolean;
@@ -17,4 +18,5 @@ export interface SeedWalletRequest {
   from: string;
   method: string;
   params: any[];
+  privateKey?: string;
 }

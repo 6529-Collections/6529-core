@@ -19,7 +19,6 @@ import {
   getDimensionsFromMetadata,
 } from "../../helpers/nft.helpers";
 import NFTAttributes from "../nftAttributes/NFTAttributes";
-import { openInExternalBrowser } from "../../helpers";
 
 export function MemePageArt(props: {
   show: boolean;
@@ -135,10 +134,9 @@ export function MemePageArt(props: {
                         {props.nft.metadata.image_details.format}{" "}
                         <a
                           className={styles.arweaveLink}
-                          href="#"
-                          onClick={() =>
-                            openInExternalBrowser(props.nft?.metadata.image)
-                          }>
+                          href={props.nft.metadata.image}
+                          target="_blank"
+                          rel="noreferrer">
                           {props.nft.metadata.image}
                         </a>
                         <Download
@@ -155,14 +153,13 @@ export function MemePageArt(props: {
                           {props.nft.metadata.animation_details.format}{" "}
                           <a
                             className={styles.arweaveLink}
-                            href="#"
-                            onClick={() =>
-                              openInExternalBrowser(
-                                props.nft?.metadata.animation
-                                  ? props.nft?.metadata.animation
-                                  : props.nft?.metadata.animation_url
-                              )
-                            }>
+                            href={
+                              props.nft.metadata.animation
+                                ? props.nft.metadata.animation
+                                : props.nft.metadata.animation_url
+                            }
+                            target="_blank"
+                            rel="noreferrer">
                             {props.nft.metadata.animation
                               ? props.nft.metadata.animation
                               : props.nft.metadata.animation_url}
@@ -264,7 +261,6 @@ export function MemePageArt(props: {
                 <Row>
                   <Col>
                     <a
-                      href="#"
                       onClick={() => {
                         if (props.nft && props.nft.has_distribution) {
                           router.push(
@@ -277,9 +273,11 @@ export function MemePageArt(props: {
                           } else {
                             link = `https://github.com/6529-Collections/thememecards/tree/main/card1-3`;
                           }
-                          openInExternalBrowser(link);
+                          window.open(link, "_blank");
                         }
                       }}
+                      target={props.nft.has_distribution ? "_self" : "_blank"}
+                      rel="noreferrer"
                       className={styles.distributionPlanLink}>
                       Distribution Plan
                     </a>

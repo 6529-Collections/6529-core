@@ -8,7 +8,7 @@
 
 .blurry {
   color: $font-color-h;
-  filter: blur(5px);
+  filter: blur(8px);
 }
 
 .seedWalletCard {
@@ -31,14 +31,7 @@
   border: none;
   padding-left: 10px;
   padding-right: 10px;
-
-  @media only screen and (max-width: 1200px) {
-    height: 35px;
-  }
-
-  @media only screen and (max-width: 800px) {
-    height: 32px;
-  }
+  width: 100%;
 }
 
 .importWalletWordInput {
@@ -60,4 +53,21 @@
   border-radius: 50%;
   border: 1px solid $off-white;
   padding: 2px;
+}
+
+.modalHeader {
+  background-color: $bg-color-2;
+  color: $font-color;
+  border: 1px solid $lighter-grey !important;
+  border-radius: 0;
+}
+
+.modalContent {
+  background-color: $bg-color-2;
+  color: $font-color;
+  border-top: 0;
+  border-bottom: 1px solid $lighter-grey !important;
+  border-left: 1px solid $lighter-grey !important;
+  border-right: 1px solid $lighter-grey !important;
+  border-radius: 0;
 }

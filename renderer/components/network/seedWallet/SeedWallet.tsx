@@ -20,10 +20,16 @@ import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { MNEMONIC_NA } from "../../../../constants";
-import { useBalance, useChainId } from "wagmi";
+import { useAccount, useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
-import { getAddressEtherscanLink } from "../../../helpers/Helpers";
+import {
+  areEqualAddresses,
+  fromGWEI,
+  getAddressEtherscanLink,
+} from "../../../helpers/Helpers";
 import Image from "next/image";
+import { UnlockSeedWalletModal } from "./SeedWalletModal";
+import { decryptData } from "../../../../shared/encrypt";
 
 export default function SeedWallet(
   props: Readonly<{
@@ -34,6 +40,7 @@ export default function SeedWallet(
   const chainId = useChainId();
   const { showConfirm } = useConfirm();
   const { showToast } = useToast();
+  const account = useAccount();
 
   const balance = useBalance({
     address: props.address as `0x${string}`,
@@ -43,18 +50,33 @@ export default function SeedWallet(
   const [mnemonicAvailable, setMnemonicAvailable] = useState(false);
 
   const [seedWallet, setSeedWallet] = useState<ISeedWallet | null>(null);
+  const [phrase, setPhrase] = useState<string[]>(Array(12).fill(""));
+  const [privateKey, setPrivateKey] = useState("");
   const [fetching, setFetching] = useState(true);
 
+  const [isRevealingPhrase, setIsRevealingPhrase] = useState(false);
   const [revealPhrase, setRevealPhrase] = useState(false);
+  const [isRevealingPrivateKey, setIsRevealingPrivateKey] = useState(false);
   const [revealPrivateKey, setRevealPrivateKey] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [addressCopied, setAddressCopied] = useState(false);
   const [mnemonicCopied, setMnemonicCopied] = useState(false);
   const [privateKeyCopied, setPrivateKeyCopied] = useState(false);
+
+  function setEncryptedPhrase() {
+    setPhrase(Array(12).fill("x".repeat(8)));
+  }
+
+  function setEncryptedPrivateKey() {
+    setPrivateKey("0x" + "x".repeat(64));
+  }
 
   const fetchWallet = () => {
     getSeedWallet(props.address)
       .then((data) => {
         setSeedWallet(data.data);
+        setEncryptedPhrase();
+        setEncryptedPrivateKey();
         setMnemonicAvailable(data.data.mnemonic !== MNEMONIC_NA);
         setFetching(false);
       })
@@ -68,13 +90,15 @@ export default function SeedWallet(
     fetchWallet();
   }, []);
 
-  const doDownload = (wallet: ISeedWallet) => {
+  const doDownload = (
+    wallet: ISeedWallet,
+    decryptedMnemonic: string,
+    decryptedPrivateKey: string
+  ) => {
     let content = `Name: ${wallet.name}\n\n`;
     content += `Address: ${wallet.address}\n\n`;
-    if (wallet.mnemonic !== MNEMONIC_NA) {
-      content += `Mnemonic: ${wallet.mnemonic}\n\n`;
-    }
-    content += `Private Key: ${wallet.private_key}\n\n`;
+    content += `Mnemonic: ${decryptedMnemonic}\n\n`;
+    content += `Private Key: ${decryptedPrivateKey}\n\n`;
 
     const fileName = `${wallet.name}-6529CORE.txt`;
     const blob = new Blob([content], { type: "text/plain" });
@@ -86,21 +110,31 @@ export default function SeedWallet(
     URL.revokeObjectURL(url);
   };
 
-  const doDelete = useCallback(async (name: string, address: string) => {
-    const data = await deleteSeedWallet(address);
-    if (data.error) {
-      console.error(data.error);
-      showToast(`Error deleting wallet - ${data.error}`, "error");
-    } else {
-      showToast(`Wallet '${name}' deleted successfully`, "success");
-      router.push("/network/seed-wallets");
-    }
-  }, []);
+  const doDelete = useCallback(
+    async (name: string, address: string) => {
+      if (areEqualAddresses(address, account.address)) {
+        showToast(
+          "You are currently connected with this wallet - Disconnect first!",
+          "error"
+        );
+        return;
+      }
+      const data = await deleteSeedWallet(address);
+      if (data.error) {
+        console.error(data.error);
+        showToast(`Error deleting wallet - ${data.error}`, "error");
+      } else {
+        router.push("/network/seed-wallets");
+        showToast(`Wallet '${name}' deleted successfully`, "success");
+      }
+    },
+    [account.address]
+  );
 
   const deleteWallet = (name: string, address: string) => {
     showConfirm(
       "Confirm Delete Wallet",
-      "Are you sure you want to delete your wallet?",
+      `Are you sure you want to delete your wallet '${seedWallet?.name}'?`,
       () => doDelete(name, address)
     );
   };
@@ -167,7 +201,8 @@ export default function SeedWallet(
               <DotLoader />
             ) : balance.data ? (
               <>
-                {Number(balance.data.value)} {balance.data?.symbol}
+                {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
+                {balance.data?.symbol}
                 {chainId === sepolia.id && (
                   <span className="font-color-h"> (sepolia)</span>
                 )}
@@ -187,11 +222,7 @@ export default function SeedWallet(
             </span>
           </span>
           <span className="d-flex align-items-center gap-2">
-            <Tippy
-              content={"View on Etherscan"}
-              hideOnClick={false}
-              placement="top"
-              theme="light">
+            <Tippy content={"View on Etherscan"} placement="top" theme="light">
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={faExternalLink}
@@ -205,16 +236,42 @@ export default function SeedWallet(
             </Tippy>
             <Tippy
               content={"Download Recovery File"}
-              hideOnClick={false}
               placement="top"
               theme="light">
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={faFileDownload}
                 height={22}
-                onClick={() => doDownload(seedWallet)}
+                onClick={() => setIsDownloading(true)}
               />
             </Tippy>
+            <UnlockSeedWalletModal
+              address={seedWallet.address}
+              address_hashed={seedWallet.address_hashed}
+              show={isDownloading}
+              onHide={() => setIsDownloading(false)}
+              onUnlock={(pass: string) => {
+                decryptData(
+                  seedWallet.address,
+                  seedWallet.private_key,
+                  pass
+                ).then(async (decryptedPrivateKey) => {
+                  let decryptedMnemonic = seedWallet.mnemonic;
+                  if (decryptedMnemonic !== MNEMONIC_NA) {
+                    decryptedMnemonic = await decryptData(
+                      seedWallet.address,
+                      seedWallet.mnemonic,
+                      pass
+                    );
+                  }
+                  doDownload(
+                    seedWallet,
+                    decryptedMnemonic,
+                    decryptedPrivateKey
+                  );
+                });
+              }}
+            />
             <Tippy
               content={addressCopied ? "Copied!" : "Copy address to clipboard"}
               hideOnClick={false}
@@ -242,51 +299,74 @@ export default function SeedWallet(
           {mnemonicAvailable && (
             <span className="d-flex gap-3 align-items-center">
               <Tippy
+                hideOnClick={true}
                 content={revealPhrase ? "Hide" : "Reveal"}
-                hideOnClick={false}
                 placement="top"
                 theme="light">
                 <FontAwesomeIcon
                   className="cursor-pointer unselectable"
                   icon={revealPhrase ? faEye : faEyeSlash}
                   height={22}
-                  onClick={() => setRevealPhrase(!revealPhrase)}
-                />
-              </Tippy>
-              <Tippy
-                content={mnemonicCopied ? "Copied!" : "Copy to clipboard"}
-                hideOnClick={false}
-                placement="top"
-                theme="light">
-                <FontAwesomeIcon
-                  className="cursor-pointer unselectable"
-                  icon={faCopy}
-                  height={22}
                   onClick={() => {
-                    navigator.clipboard.writeText(seedWallet.mnemonic);
-                    setMnemonicCopied(true);
-                    setTimeout(() => {
-                      setMnemonicCopied(false);
-                    }, 1500);
+                    if (revealPhrase) {
+                      setRevealPhrase(false);
+                      setEncryptedPhrase();
+                    } else {
+                      setIsRevealingPhrase(true);
+                    }
                   }}
                 />
               </Tippy>
+              <UnlockSeedWalletModal
+                address={seedWallet.address}
+                address_hashed={seedWallet.address_hashed}
+                show={isRevealingPhrase}
+                onHide={() => setIsRevealingPhrase(false)}
+                onUnlock={(pass: string) => {
+                  decryptData(
+                    seedWallet.address,
+                    seedWallet.mnemonic,
+                    pass
+                  ).then((decryptedPhrase) => {
+                    setPhrase(decryptedPhrase.split(" "));
+                    setRevealPhrase(true);
+                  });
+                }}
+              />
+              {revealPhrase && (
+                <Tippy
+                  content={mnemonicCopied ? "Copied!" : "Copy to clipboard"}
+                  hideOnClick={false}
+                  placement="top"
+                  theme="light">
+                  <FontAwesomeIcon
+                    className="cursor-pointer unselectable"
+                    icon={faCopy}
+                    height={22}
+                    onClick={() => {
+                      navigator.clipboard.writeText(phrase.join(" "));
+                      setMnemonicCopied(true);
+                      setTimeout(() => {
+                        setMnemonicCopied(false);
+                      }, 1500);
+                    }}
+                  />
+                </Tippy>
+              )}
             </span>
           )}
         </Col>
       </Row>
       <Row className="pt-2">
         {mnemonicAvailable ? (
-          seedWallet.mnemonic
-            .split(" ")
-            .map((w, i) => (
-              <SeedWalletPhraseWord
-                index={i + 1}
-                word={w}
-                hidden={!revealPhrase}
-                key={getRandomKey()}
-              />
-            ))
+          phrase.map((w, i) => (
+            <SeedWalletPhraseWord
+              index={i + 1}
+              word={w}
+              hidden={!revealPhrase}
+              key={getRandomKey()}
+            />
+          ))
         ) : (
           <Col className="font-color-h">
             Mnemonic phrase not available for this wallet
@@ -299,40 +379,64 @@ export default function SeedWallet(
           <span className="d-flex gap-3 align-items-center">
             <Tippy
               content={revealPrivateKey ? "Hide" : "Reveal"}
-              hideOnClick={false}
               placement="top"
               theme="light">
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={revealPrivateKey ? faEye : faEyeSlash}
                 height={22}
-                onClick={() => setRevealPrivateKey(!revealPrivateKey)}
-              />
-            </Tippy>
-            <Tippy
-              content={privateKeyCopied ? "Copied!" : "Copy to clipboard"}
-              hideOnClick={false}
-              placement="top"
-              theme="light">
-              <FontAwesomeIcon
-                className="cursor-pointer unselectable"
-                icon={faCopy}
-                height={22}
                 onClick={() => {
-                  navigator.clipboard.writeText(seedWallet.private_key);
-                  setPrivateKeyCopied(true);
-                  setTimeout(() => {
-                    setPrivateKeyCopied(false);
-                  }, 1500);
+                  if (revealPrivateKey) {
+                    setRevealPrivateKey(false);
+                    setEncryptedPrivateKey();
+                  } else {
+                    setIsRevealingPrivateKey(true);
+                  }
                 }}
               />
             </Tippy>
+            <UnlockSeedWalletModal
+              address={seedWallet.address}
+              address_hashed={seedWallet.address_hashed}
+              show={isRevealingPrivateKey}
+              onHide={() => setIsRevealingPrivateKey(false)}
+              onUnlock={(pass: string) => {
+                decryptData(
+                  seedWallet.address,
+                  seedWallet.private_key,
+                  pass
+                ).then((decryptedPrivateKey) => {
+                  setPrivateKey(decryptedPrivateKey);
+                  setRevealPrivateKey(true);
+                });
+              }}
+            />
+            {revealPrivateKey && (
+              <Tippy
+                content={privateKeyCopied ? "Copied!" : "Copy to clipboard"}
+                hideOnClick={false}
+                placement="top"
+                theme="light">
+                <FontAwesomeIcon
+                  className="cursor-pointer unselectable"
+                  icon={faCopy}
+                  height={22}
+                  onClick={() => {
+                    navigator.clipboard.writeText(privateKey);
+                    setPrivateKeyCopied(true);
+                    setTimeout(() => {
+                      setPrivateKeyCopied(false);
+                    }, 1500);
+                  }}
+                />
+              </Tippy>
+            )}
           </span>
         </Col>
       </Row>
       <Row className="pt-2">
         <SeedWalletPhraseWord
-          word={seedWallet.private_key}
+          word={privateKey}
           hidden={!revealPrivateKey}
           full_width={true}
         />
@@ -364,14 +468,15 @@ export function SeedWalletPhraseWord(
       sm={props.full_width ? 12 : 4}
       md={props.full_width ? 12 : 3}
       className="pt-2 pb-2">
-      <Container
-        className={`${styles.phrase} ${props.hidden ? styles.blurry : ""}`}>
+      <Container className={styles.phrase}>
         <Row>
-          <Col className="d-flex gap-2">
+          <Col className="d-flex gap-2 unselectable">
             {props.index && (
               <span className="font-color-h font-lighter">{props.index}</span>
             )}
-            <span className="text-break">{props.word}</span>
+            <span className={`text-break ${props.hidden ? styles.blurry : ""}`}>
+              {props.word}
+            </span>
           </Col>
         </Row>
       </Container>

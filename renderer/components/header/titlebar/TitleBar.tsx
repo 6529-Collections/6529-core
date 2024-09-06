@@ -15,7 +15,6 @@ import { AboutSection } from "../../../pages/about/[section]";
 import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
-import ConfirmSeedWalletRequest from "../../confirm/ConfirmSeedWalletRequest";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -238,7 +237,6 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
-      <ConfirmSeedWalletRequest />
       <Modal
         show={showUpdateModal}
         onHide={() => setShowUpdateModal(false)}

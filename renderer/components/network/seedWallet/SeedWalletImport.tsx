@@ -10,13 +10,12 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "../../../contexts/ToastContext";
-import { importSeedWallet } from "../../../electron";
 import { getRandomKey } from "../../../helpers";
 import { MNEMONIC_NA } from "../../../../constants";
 import { ethers } from "ethers";
+import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export default function SeedWalletImport() {
-  const router = useRouter();
   const [isMnemonic, setIsMnemonic] = useState(true);
 
   return (
@@ -287,50 +286,28 @@ function ImportWallet(
     mnemonic: string;
   }>
 ) {
-  const { showToast } = useToast();
   const router = useRouter();
-  const [newWalletName, setNewWalletName] = useState("");
-
-  const importWallet = useCallback(async (name: string) => {
-    const data = await importSeedWallet(
-      name,
-      props.wallet.address,
-      props.mnemonic,
-      props.wallet.privateKey
-    );
-    if (data.error) {
-      showToast(`Error importing wallet - ${data.data}`, "error");
-    } else {
-      showToast("Wallet imported successfully!", "success");
-      router.push("/network/seed-wallets");
-    }
-  }, []);
+  const [showImportModal, setShowImportModal] = useState(false);
 
   return (
     <div className="d-flex gap-2">
-      <input
-        autoFocus
-        type="text"
-        placeholder="Wallet Name"
-        value={newWalletName}
-        className={styles.newWalletInput}
-        onChange={(e) => {
-          const value = e.target.value;
-          if (/^[a-zA-Z0-9 ]*$/.test(value)) {
-            setNewWalletName(value);
-          } else {
-            showToast(
-              "Wallet name can only contain alphanumeric characters and spaces",
-              "error",
-              true
-            );
+      <CreateSeedWalletModal
+        show={showImportModal}
+        onHide={(refresh: boolean) => {
+          setShowImportModal(false);
+          if (refresh) {
+            router.push("/network/seed-wallets");
           }
+        }}
+        import={{
+          address: props.wallet.address,
+          mnemonic: props.mnemonic,
+          privateKey: props.wallet.privateKey,
         }}
       />
       <Button
         variant="primary"
-        onClick={() => importWallet(newWalletName)}
-        disabled={!newWalletName}
+        onClick={() => setShowImportModal(true)}
         className="d-flex align-items-center gap-2">
         <FontAwesomeIcon icon={faPlusCircle} height={16} /> Import Wallet
       </Button>

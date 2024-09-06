@@ -1,6 +1,5 @@
 import { Col, Container, Row } from "react-bootstrap";
 import { MEMES_MINTING_HREF } from "../../constants";
-import { openInExternalBrowser } from "../../helpers";
 import Link from "next/link";
 
 export default function AboutMinting() {
@@ -8,7 +7,7 @@ export default function AboutMinting() {
     <Container>
       <Row>
         <Col>
-          <h1 className="float-none">
+          <h1>
             <span className="font-lightest">Minting</span> Meme Cards
           </h1>
         </Col>
@@ -31,9 +30,7 @@ export default function AboutMinting() {
             <br />
             <li>
               The minting website for The Memes is:{" "}
-              <a
-                href="#"
-                onClick={() => openInExternalBrowser(MEMES_MINTING_HREF)}>
+              <a href={MEMES_MINTING_HREF} target="_blank" rel="noreferrer">
                 {MEMES_MINTING_HREF}
               </a>
             </li>
@@ -45,10 +42,9 @@ export default function AboutMinting() {
             <li>
               Minting time and dates are announced on{" "}
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/6529collections")
-                }>
+                href="https://twitter.com/6529collections"
+                target="_blank"
+                rel="noreferrer">
                 https://twitter.com/6529collections
               </a>
             </li>
@@ -57,10 +53,9 @@ export default function AboutMinting() {
               Currently, the mints are happening Mon/Wed/Fri at 11am ET (4pm
               UTC), but times may vary. Please follow &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/6529collections")
-                }>
+                href="https://twitter.com/6529collections"
+                target="_blank"
+                rel="noreferrer">
                 6529collections
               </a>{" "}
               for details

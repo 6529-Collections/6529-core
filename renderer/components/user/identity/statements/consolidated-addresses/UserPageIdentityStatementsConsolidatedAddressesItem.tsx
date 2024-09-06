@@ -16,11 +16,7 @@ import {
   NEVER_DATE,
 } from "../../../../../constants";
 import { PRIMARY_ADDRESS_USE_CASE } from "../../../../../pages/delegation/[...section]";
-import {
-  useWriteContract,
-  useWaitForTransactionReceipt,
-  useAccount,
-} from "wagmi";
+import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { DELEGATION_ABI } from "../../../../../abis";
 import { AuthContext } from "../../../../auth/Auth";
 import { getTransactionLink } from "../../../../../helpers/Helpers";
@@ -37,21 +33,21 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   readonly canEdit: boolean;
   readonly profile: IProfileAndConsolidations;
 }) {
-  const account = useAccount();
-
   const router = useRouter();
   const { setToast } = useContext(AuthContext);
 
   const goToOpensea = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
     openInExternalBrowser(
-      `https://opensea.io/accounts/${address.wallet.address}`
+      `https://opensea.io/accounts/${address.wallet.address}`,
+      "_blank"
     );
   };
 
   const goToEtherscan = () => {
     openInExternalBrowser(
-      `https://etherscan.io/address/${address.wallet.address}`
+      `https://etherscan.io/address/${address.wallet.address}`,
+      "_blank"
     );
   };
 
@@ -94,15 +90,12 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
         <>
           {writeDelegation.data && (
             <a
-              href="#"
-              onClick={() =>
-                openInExternalBrowser(
-                  getTransactionLink(
-                    DELEGATION_CONTRACT.chain_id,
-                    writeDelegation.data
-                  )
-                )
-              }
+              href={getTransactionLink(
+                DELEGATION_CONTRACT.chain_id,
+                writeDelegation.data
+              )}
+              target="_blank"
+              rel="noreferrer"
               className="tw-text-primary-400 tw-underline">
               View Transaction
             </a>
@@ -154,8 +147,6 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
         true,
         0,
       ],
-      chain: DELEGATION_CONTRACT.chain,
-      account: account.address,
     });
   };
 

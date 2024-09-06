@@ -6,7 +6,6 @@ import { fetchUrl } from "../../services/6529api";
 import styles from "./CommunityDownloads.module.scss";
 import Pagination from "../pagination/Pagination";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import { openInExternalBrowser } from "../../helpers";
 
 const PAGE_SIZE = 25;
 
@@ -39,7 +38,7 @@ export function CommunityDownloadsComponentRow(props: Readonly<RowProps>) {
     <tr>
       <td>{printDate(props.date)}</td>
       <td>
-        <a href="#" onClick={() => openInExternalBrowser(props.url)}>
+        <a href={props.url} target="_blank" rel="noreferrer">
           {props.url}
         </a>
       </td>

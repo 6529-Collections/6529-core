@@ -14,7 +14,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { mainnet } from "viem/chains";
 import { formatNameForUrl, getOpenseaLink } from "../nextgen_helpers";
 import Tippy from "@tippyjs/react";
-import { openInExternalBrowser } from "../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -184,9 +183,7 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
                 <span className="d-flex align-items-center gap-1">
                   <span>
                     {props.collection.on_chain ? "On-Chain" : "Off-Chain"}{" "}
-                    <a
-                      href="#"
-                      onClick={() => openInExternalBrowser(tokenMetadataUrl)}>
+                    <a href={tokenMetadataUrl} target="_blank" rel="noreferrer">
                       <FontAwesomeIcon
                         className={styles.copyIcon}
                         icon="external-link-square"></FontAwesomeIcon>
@@ -199,12 +196,9 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
                 <span className="d-flex gap-4">
                   <Tippy content={"Opensea"} theme={"light"} delay={250}>
                     <a
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          getOpenseaLink(NEXTGEN_CHAIN_ID, props.token_id)
-                        )
-                      }>
+                      href={getOpenseaLink(NEXTGEN_CHAIN_ID, props.token_id)}
+                      target="_blank"
+                      rel="noreferrer">
                       <Image
                         className={styles.marketplace}
                         src="/opensea.png"
@@ -235,7 +229,7 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
       <Container className="pt-5">
         <Row>
           <Col className="text-center">
-            <h4 className="mb-0 float-none">
+            <h4 className="mb-0">
               {tokenNotFound ? (
                 <>Token Not Found</>
               ) : (

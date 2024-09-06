@@ -15,7 +15,6 @@ import { MemeSeason } from "../../entities/ISeason";
 import LeaderboardCardsCollectedComponent from "./LeaderboardCardsCollected";
 import LeaderboardInteractionsComponent from "./LeaderboardInteractions";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
 
 export enum Content {
   ALL = "All",
@@ -191,12 +190,9 @@ export default function Leaderboard(
               <span>
                 TDH Block&nbsp;
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(
-                      `https://etherscan.io/block/${lastTDH.block}`
-                    )
-                  }>
+                  href={`https://etherscan.io/block/${lastTDH.block}`}
+                  rel="noreferrer"
+                  target="_blank">
                   {lastTDH.block}
                 </a>
               </span>

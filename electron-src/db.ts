@@ -1,24 +1,44 @@
 import Database from "better-sqlite3";
 import databasePath from "./utils/databasePath";
-import { SEED_WALLET_TABLE } from "../constants";
+import { MNEMONIC_NA, SEED_WALLET_TABLE } from "../constants";
 import { ISeedWallet } from "../shared/types";
+import { encryptData } from "../shared/encrypt";
 
 import { ethers } from "ethers";
 
 const db = new Database(databasePath);
 
-export function addSeedWallet(name: string): Promise<string | undefined> {
-  return new Promise((resolve, reject) => {
+export function addSeedWallet(
+  name: string,
+  pass: string
+): Promise<string | undefined> {
+  return new Promise(async (resolve, reject) => {
     try {
       const wallet = ethers.Wallet.createRandom();
+      const encryptedAddress = await encryptData(
+        wallet.address,
+        wallet.address,
+        pass
+      );
+      const encryptedMnemonic = await encryptData(
+        wallet.address,
+        wallet.mnemonic!.phrase,
+        pass
+      );
+      const encryptedPrivateKey = await encryptData(
+        wallet.address,
+        wallet.privateKey,
+        pass
+      );
       const prepare = db.prepare(
-        `INSERT INTO ${SEED_WALLET_TABLE} (address, name, mnemonic, private_key) VALUES (?, ?, ?, ?)`
+        `INSERT INTO ${SEED_WALLET_TABLE} (address, address_hashed, name, mnemonic, private_key) VALUES (?, ?, ?, ?, ?)`
       );
       prepare.run(
         wallet.address,
+        encryptedAddress,
         name,
-        wallet.mnemonic?.phrase,
-        wallet.privateKey
+        encryptedMnemonic,
+        encryptedPrivateKey
       );
       resolve(wallet.address);
     } catch (e: any) {
@@ -30,16 +50,29 @@ export function addSeedWallet(name: string): Promise<string | undefined> {
 
 export function importSeedWallet(
   name: string,
+  pass: string,
   address: string,
   mnemonic: string,
   privateKey: string
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
+  return new Promise(async (resolve, reject) => {
     try {
+      const encryptedAddress = await encryptData(address, address, pass);
+      const encryptedMnemonic =
+        mnemonic === MNEMONIC_NA
+          ? mnemonic
+          : await encryptData(address, mnemonic, pass);
+      const encryptedPrivateKey = await encryptData(address, privateKey, pass);
       const prepare = db.prepare(
-        `INSERT INTO ${SEED_WALLET_TABLE} (address, name, mnemonic, private_key, imported) VALUES (?, ?, ?, ?, true)`
+        `INSERT INTO ${SEED_WALLET_TABLE} (address, address_hashed, name, mnemonic, private_key, imported) VALUES (?, ?, ?, ?, ?, true)`
       );
-      prepare.run(address, name, mnemonic, privateKey);
+      prepare.run(
+        address,
+        encryptedAddress,
+        name,
+        encryptedMnemonic,
+        encryptedPrivateKey
+      );
       resolve();
     } catch (e: any) {
       console.error("ERROR IN importSeedWallet", e);
@@ -96,6 +129,7 @@ export function initDb(): void {
   db.exec(`
       CREATE TABLE IF NOT EXISTS ${SEED_WALLET_TABLE} (
         address TEXT PRIMARY KEY COLLATE NOCASE CHECK (address <> ''),
+        address_hashed TEXT NOT NULL CHECK (address_hashed <> ''),
         name TEXT NOT NULL COLLATE NOCASE UNIQUE CHECK (name <> ''),
         mnemonic TEXT NOT NULL CHECK (mnemonic <> ''),
         private_key TEXT NOT NULL CHECK (private_key <> ''),

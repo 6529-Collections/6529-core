@@ -9,6 +9,7 @@ import { ISeedWallet } from "../../../../shared/types";
 import SeedWalletCard from "./SeedWalletCard";
 import { useRouter } from "next/router";
 import { mainnet } from "viem/chains";
+import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export const SEED_WALLETS_NETWORK = mainnet;
 
@@ -17,7 +18,7 @@ export default function SeedWallets() {
   const { showToast } = useToast();
   const [seedWallets, setSeedWallets] = useState<ISeedWallet[]>([]);
 
-  const [newWalletName, setNewWalletName] = useState("");
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchWallets = () => {
     getSeedWallets().then((data) => {
@@ -29,54 +30,26 @@ export default function SeedWallets() {
     fetchWallets();
   }, []);
 
-  const create = useCallback(async (name: string) => {
-    const data = await createSeedWallet(name);
-
-    if (data.error) {
-      showToast(`Error creating wallet - ${data.data}`, "error");
-    } else {
-      showToast(
-        "Wallet created successfully - Download Recovery File immediately!",
-        "success"
-      );
-      setNewWalletName("");
-      fetchWallets();
-    }
-  }, []);
-
   function printCreateRow() {
     return (
       <Container className={seedWallets.length > 0 ? "pt-5" : ""}>
         <Row>
-          <Col className="d-flex align-items-center gap-2 justify-content-between">
-            <span className="d-flex align-items-center gap-2">
-              <input
-                type="text"
-                placeholder="Wallet Name"
-                value={newWalletName}
-                className={styles.newWalletInput}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (/^[a-zA-Z0-9 ]*$/.test(value)) {
-                    setNewWalletName(value);
-                  } else {
-                    showToast(
-                      "Wallet name can only contain alphanumeric characters and spaces",
-                      "error",
-                      true
-                    );
-                  }
-                }}
-              />
-              <Button
-                variant="primary"
-                onClick={() => create(newWalletName)}
-                disabled={!newWalletName}
-                className="d-flex align-items-center gap-2">
-                <FontAwesomeIcon icon={faPlusCircle} height={16} /> Create New
-                Wallet
-              </Button>
-            </span>
+          <Col className="d-flex align-items-center gap-3">
+            <CreateSeedWalletModal
+              show={showCreateModal}
+              onHide={(refresh: boolean) => {
+                setShowCreateModal(false);
+                if (refresh) {
+                  fetchWallets();
+                }
+              }}
+            />
+            <Button
+              variant="primary"
+              onClick={() => setShowCreateModal(true)}
+              className="d-flex align-items-center gap-2">
+              <FontAwesomeIcon icon={faPlusCircle} height={16} /> Create Wallet
+            </Button>
             <Button
               variant="success"
               onClick={() => router.push("/network/seed-wallets/import-wallet")}

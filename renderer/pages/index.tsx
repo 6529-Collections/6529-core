@@ -45,7 +45,6 @@ import {
 import { getProfileLogTypes } from "../helpers/profile-logs.helpers";
 import { ManifoldClaim } from "../hooks/useManifoldClaim";
 import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
-import { openInExternalBrowser } from "../helpers";
 
 export interface IndexPageProps {
   readonly nft: NFTWithMemesExtendedData;
@@ -394,12 +393,9 @@ export default function Home({
                     <Row className="pt-3">
                       <Col>
                         <a
-                          href="#"
-                          onClick={() =>
-                            openInExternalBrowser(
-                              `https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`
-                            )
-                          }>
+                          href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`}
+                          target="_blank"
+                          rel="noreferrer">
                           <Image
                             className={styles.marketplace}
                             src="/opensea.png"
@@ -409,12 +405,9 @@ export default function Home({
                           />
                         </a>
                         <a
-                          href="#"
-                          onClick={() =>
-                            openInExternalBrowser(
-                              `https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`
-                            )
-                          }>
+                          href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`}
+                          target="_blank"
+                          rel="noreferrer">
                           <Image
                             className={styles.marketplace}
                             src="/x2y2.png"

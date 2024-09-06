@@ -47,7 +47,6 @@ import {
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import NFTAttributes from "../nftAttributes/NFTAttributes";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
 
 interface MemeTab {
   focus: MEME_FOCUS;
@@ -461,10 +460,9 @@ export default function LabPage(props: Readonly<Props>) {
                           {nftMeta.website.split(" ").map((w) => (
                             <Fragment key={`meta-website-${w}`}>
                               <a
-                                href="#"
-                                onClick={() =>
-                                  openInExternalBrowser(addProtocol(w))
-                                }>
+                                href={addProtocol(w)}
+                                target="_blank"
+                                rel="noreferrer">
                                 {w}
                               </a>
                               &nbsp;&nbsp;
@@ -654,12 +652,9 @@ export default function LabPage(props: Readonly<Props>) {
             <Row className="pt-4">
               <Col>
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(
-                      `https://opensea.io/assets/ethereum/${MEMELAB_CONTRACT}/${nft.id}`
-                    )
-                  }>
+                  href={`https://opensea.io/assets/ethereum/${MEMELAB_CONTRACT}/${nft.id}`}
+                  target="_blank"
+                  rel="noreferrer">
                   <Image
                     className={styles.marketplace}
                     src="/opensea.png"
@@ -668,13 +663,22 @@ export default function LabPage(props: Readonly<Props>) {
                     height={40}
                   />
                 </a>
+                {/* <a
+                      href={`https://looksrare.org/collections/${MEMELAB_CONTRACT}/${nft.id}`}
+                      target="_blank"
+                      rel="noreferrer">
+                      <Image
+                        className={styles.marketplace}
+                        src="/looksrare.png"
+                        alt="looksrare"
+                        width={40}
+                        height={40}
+                      />
+                    </a> */}
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(
-                      `https://x2y2.io/eth/${MEMELAB_CONTRACT}/${nft.id}`
-                    )
-                  }>
+                  href={`https://x2y2.io/eth/${MEMELAB_CONTRACT}/${nft.id}`}
+                  target="_blank"
+                  rel="noreferrer">
                   <Image
                     className={styles.marketplace}
                     src="/x2y2.png"
@@ -998,10 +1002,9 @@ export default function LabPage(props: Readonly<Props>) {
                           {nft.metadata.image_details.format}{" "}
                           <a
                             className={styles.arweaveLink}
-                            href="#"
-                            onClick={() =>
-                              openInExternalBrowser(nft.metadata.image)
-                            }>
+                            href={nft.metadata.image}
+                            target="_blank"
+                            rel="noreferrer">
                             {nft.metadata.image}
                           </a>
                           <Download
@@ -1018,14 +1021,13 @@ export default function LabPage(props: Readonly<Props>) {
                             {nft.metadata.animation_details.format}{" "}
                             <a
                               className={styles.arweaveLink}
-                              href="#"
-                              onClick={() =>
-                                openInExternalBrowser(
-                                  nft.metadata.animation
-                                    ? nft.metadata.animation
-                                    : nft.metadata.animation_url
-                                )
-                              }>
+                              href={
+                                nft.metadata.animation
+                                  ? nft.metadata.animation
+                                  : nft.metadata.animation_url
+                              }
+                              target="_blank"
+                              rel="noreferrer">
                               {nft.metadata.animation
                                 ? nft.metadata.animation
                                 : nft.metadata.animation_url}

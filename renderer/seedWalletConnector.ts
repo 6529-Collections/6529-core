@@ -3,6 +3,7 @@ import { ethers } from "ethers";
 import { mainnet, sepolia } from "viem/chains";
 import { SeedWalletRequest } from "../shared/types";
 import { hexToString } from "./helpers";
+import { TransactionRejectedRpcError, UserRejectedRequestError } from "viem";
 
 interface ProviderRequest {
   method: string;
@@ -17,14 +18,15 @@ interface ConnectionObject {
 const CONNECTION_STORE = "seize-app-connection-seed-wallet";
 
 export function seedWalletConnector(parameters: {
-  wallet: ethers.Wallet;
+  address: string;
   name: string;
-  icon: string;
-  id: string;
 }) {
-  const pendingCallbacks: Map<string, (request: SeedWalletRequest) => void> =
-    new Map();
+  const pendingCallbacks: Map<
+    string,
+    (request: SeedWalletRequest | Error) => void
+  > = new Map();
 
+  let provider: ethers.Provider;
   let initialized = false;
 
   let connectionObject: ConnectionObject = {
@@ -33,27 +35,46 @@ export function seedWalletConnector(parameters: {
   };
 
   async function handlePendingRequest(name: string, data: SeedWalletRequest) {
-    const { method, params } = data;
+    const { method, privateKey, params } = data;
 
     if (!connectionObject.accounts.length) {
       throw new Error("No accounts found in connection object");
     }
 
+    if (!privateKey) {
+      throw new Error("No privateKey found in request");
+    }
+
+    const wallet = new ethers.Wallet(privateKey);
+
     switch (method) {
       case "personal_sign":
-        const signature = await parameters.wallet.signMessage(
-          hexToString(params?.[0])
-        );
+        const signature = await wallet.signMessage(hexToString(params?.[0]));
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Message signed!",
+        });
         return signature;
       case "eth_sendTransaction":
         console.log(`[${name}] Sending transaction`, params);
-        const provider = new ethers.AnkrProvider({
-          name: connectionObject.chainId === sepolia.id ? "sepolia" : "mainnet",
-          chainId: connectionObject.chainId,
-        });
-        const txResponse = await provider.send(method, params ?? []);
+        const walletConnection = wallet.connect(provider);
+        const txResponse = await walletConnection.sendTransaction(params[0]);
         console.log(`[${name}] Transaction response`, txResponse);
-        return txResponse;
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Transaction sent!",
+        });
+        return txResponse.hash;
+    }
+
+    throw new Error(`[${name}] Unsupported method: ${method}`);
+  }
+
+  function updateProvider() {
+    if (connectionObject.chainId === sepolia.id) {
+      provider = new ethers.JsonRpcProvider("https://rpc.sepolia.org");
+    } else {
+      provider = new ethers.CloudflareProvider();
     }
   }
 
@@ -72,15 +93,27 @@ export function seedWalletConnector(parameters: {
         pendingCallbacks.delete(data.requestId);
       } else {
         console.log(
-          `[${name}] No callback found for requestId`,
+          `[${name}] No callback found for requestId (confirmed)`,
           data.requestId
         );
       }
     });
 
-    window.seedConnector.onCancel((_event: any, data: SeedWalletRequest) => {
-      pendingCallbacks.delete(data.requestId);
+    window.seedConnector.onReject((_event: any, data: SeedWalletRequest) => {
+      const callback = pendingCallbacks.get(data.requestId);
+      if (callback) {
+        console.log(`[${name}] Request rejected`, data);
+        callback(new UserRejectedRequestError(new Error("Request rejected")));
+        pendingCallbacks.delete(data.requestId);
+      } else {
+        console.log(
+          `[${name}] No callback found for requestId (rejected)`,
+          data.requestId
+        );
+      }
     });
+
+    updateProvider();
 
     initialized = true;
   }
@@ -91,10 +124,10 @@ export function seedWalletConnector(parameters: {
 
   return createConnector((config) => ({
     get icon() {
-      return parameters.icon;
+      return `https://robohash.org/${parameters.address}.png`;
     },
     get id() {
-      return parameters.id;
+      return parameters.address;
     },
     get name() {
       return parameters.name;
@@ -122,7 +155,7 @@ export function seedWalletConnector(parameters: {
       }
 
       connectionObject = {
-        accounts: [parameters.wallet.address as `0x${string}`],
+        accounts: [parameters.address as `0x${string}`],
         chainId: 1,
       };
       await window.store.set(
@@ -137,6 +170,7 @@ export function seedWalletConnector(parameters: {
         chainId: 1,
       };
       await window.store.remove(CONNECTION_STORE);
+      window.seedConnector.disconnect();
     },
     async getAccounts() {
       return connectionObject.accounts;
@@ -164,14 +198,25 @@ export function seedWalletConnector(parameters: {
             };
 
             window.seedConnector.initRequest(request);
-            pendingCallbacks.set(requestId, (request: any) => {
-              try {
-                const response = handlePendingRequest(this.name, request);
-                resolve(response);
-              } catch (error: any) {
-                reject(new Error(error.message));
+            pendingCallbacks.set(
+              requestId,
+              (request: SeedWalletRequest | Error) => {
+                if (request instanceof Error) {
+                  reject(request);
+                  return;
+                }
+                try {
+                  const response = handlePendingRequest(this.name, request);
+                  resolve(response);
+                } catch (error: any) {
+                  window.seedConnector.showToast({
+                    type: "error",
+                    message: error.message,
+                  });
+                  reject(new Error(error.message));
+                }
               }
-            });
+            );
 
             setTimeout(() => {
               console.log(
@@ -197,6 +242,7 @@ export function seedWalletConnector(parameters: {
         JSON.stringify(connectionObject)
       );
       console.log(`[${this.name}] Switched to chain`, myChain.name);
+      updateProvider();
       return myChain;
     },
     async onAccountsChanged(accounts) {

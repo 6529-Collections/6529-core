@@ -241,7 +241,8 @@ protocol.registerSchemesAsPrivileged([
 
 ipcMain.on(ADD_SEED_WALLET, (event, args) => {
   const name = args[0];
-  addSeedWallet(name)
+  const pass = args[1];
+  addSeedWallet(name, pass)
     .then((data) => {
       event.returnValue = {
         error: false,
@@ -259,10 +260,11 @@ ipcMain.on(ADD_SEED_WALLET, (event, args) => {
 
 ipcMain.on(IMPORT_SEED_WALLET, (event, args) => {
   const name = args[0];
-  const address = args[1];
-  const mnemonic = args[2];
-  const privateKey = args[3];
-  importSeedWallet(name, address, mnemonic, privateKey)
+  const pass = args[1];
+  const address = args[2];
+  const mnemonic = args[3];
+  const privateKey = args[4];
+  importSeedWallet(name, pass, address, mnemonic, privateKey)
     .then(() => {
       event.returnValue = {
         error: false,
@@ -484,10 +486,21 @@ ipcMain.on(
   }
 );
 
+ipcMain.on(
+  "seed-connector-show-toast",
+  (_event, toast: { type: string; message: string }) => {
+    mainWindow?.webContents.send("seed-connector-show-toast", toast);
+  }
+);
+
 ipcMain.on("seed-connector-confirm", (_event, request: SeedWalletRequest) => {
   mainWindow?.webContents.send("seed-connector-confirm", request);
 });
 
-ipcMain.on("seed-connector-cancel", (_event, request: SeedWalletRequest) => {
-  mainWindow?.webContents.send("seed-connector-cancel", request);
+ipcMain.on("seed-connector-reject", (_event, request: SeedWalletRequest) => {
+  mainWindow?.webContents.send("seed-connector-reject", request);
+});
+
+ipcMain.on("seed-connector-disconnect", () => {
+  mainWindow?.webContents.send("seed-connector-disconnect");
 });

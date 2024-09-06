@@ -55,12 +55,9 @@ export async function getWagmiConfig() {
   if (isElectron()) {
     const seedWallets = await getSeedWallets();
     seedWallets?.data.forEach((wallet: ISeedWallet) => {
-      const ethersWallet = new ethers.Wallet(wallet.private_key);
       const seedConnector = seedWalletConnector({
-        wallet: ethersWallet,
+        address: wallet.address,
         name: wallet.name,
-        id: wallet.address,
-        icon: `https://robohash.org/${ethersWallet.address}.png`,
       });
       connectors.push(seedConnector);
     });

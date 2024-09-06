@@ -26,7 +26,6 @@ import Head from "next/head";
 import { getCommonHeaders } from "../../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../../services/api/common-api";
 import { SEIZE_API_URL, SEIZE_URL } from "../../../../../constants";
-import { openInExternalBrowser } from "../../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -233,13 +232,12 @@ export default function NextGenCollectionHeader(props: Readonly<Props>) {
           {props.show_links && (
             <span className="pt-2 pb-2 d-flex align-items-center justify-content-end gap-4">
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser(
-                    props.collection.opensea_link ||
-                      getOpenseaLink(NEXTGEN_CHAIN_ID)
-                  )
-                }>
+                href={
+                  props.collection.opensea_link ||
+                  getOpenseaLink(NEXTGEN_CHAIN_ID)
+                }
+                target="_blank"
+                rel="noreferrer">
                 <Image
                   className={styles.marketplace}
                   src="/opensea.png"
@@ -363,11 +361,11 @@ export function NextGenCollectionHead(
       />
       <meta property="og:title" content={props.name} />
       <meta property="og:image" content={props.collection.image} />
-      <meta property="og:description" content="NEXTGEN | 6529 CORE" />
+      <meta property="og:description" content="NEXTGEN | 6529 SEIZE" />
       <meta name="twitter:card" content={props.name} />
       <meta name="twitter:image:alt" content={props.name} />
       <meta name="twitter:title" content={props.name} />
-      <meta name="twitter:description" content="NEXTGEN | 6529 CORE" />
+      <meta name="twitter:description" content="NEXTGEN | 6529 SEIZE" />
       <meta name="twitter:image" content={props.collection.image} />
     </Head>
   );

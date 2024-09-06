@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useCopyToClipboard } from "react-use";
-import { openInExternalBrowser } from "../../../helpers";
 
 export default function BlockPickerAdvancedItemBlock({
   block,
@@ -63,12 +62,9 @@ export default function BlockPickerAdvancedItemBlock({
       ) : (
         <a
           className="tw-underline-offset-2 tw-underline tw-transition tw-duration-300 tw-ease-out"
-          href="#"
-          onClick={() =>
-            openInExternalBrowser(
-              `https://etherscan.io/block/countdown/${block}`
-            )
-          }>
+          href={`https://etherscan.io/block/countdown/${block}`}
+          target="_blank"
+          rel="noreferrer">
           {parts}
         </a>
       )}

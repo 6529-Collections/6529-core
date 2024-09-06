@@ -12,7 +12,6 @@ import useManifoldClaim, {
 import { MEMES_MANIFOLD_PROXY_ABI } from "../../abis";
 import MintCountdownBox from "../mintCountdownBox/MintCountdownBox";
 import { useEffect } from "react";
-import { openInExternalBrowser } from "../../helpers";
 
 export default function MemePageMintCountdown(
   props: Readonly<{
@@ -71,10 +70,7 @@ export default function MemePageMintCountdown(
               {
                 label: "Mint on Seize",
                 link: `/the-memes/mint`,
-                onClick: (e) => {
-                  e.preventDefault();
-                  window.location.href = `/the-memes/mint`;
-                },
+                target: "_self",
               },
               {
                 label: (
@@ -86,7 +82,7 @@ export default function MemePageMintCountdown(
                   </span>
                 ),
                 link: MEMES_MINTING_HREF,
-                onClick: (e) => openInExternalBrowser(MEMES_MINTING_HREF, e),
+                target: "_blank",
               },
             ]}
             additional_elements={

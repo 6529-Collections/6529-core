@@ -6,9 +6,7 @@ import Document, {
   DocumentContext,
   DocumentProps,
 } from "next/document";
-import { AboutSection } from "./about/[section]";
 import { SEIZE_API_URL } from "../../constants";
-import { openInExternalBrowser } from "../helpers";
 
 interface MyDocumentProps extends DocumentProps {
   pathname: string;

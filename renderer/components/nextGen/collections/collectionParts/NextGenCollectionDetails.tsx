@@ -9,7 +9,6 @@ import { goerli, sepolia } from "viem/chains";
 import Tippy from "@tippyjs/react";
 import { DistributionLink } from "../NextGen";
 import NextGenTraitSets from "./NextGenTraitSets";
-import { openInExternalBrowser } from "../../../../helpers";
 
 interface CollectionProps {
   collection: NextGenCollection;
@@ -84,10 +83,9 @@ function NextGenCollectionDetailsOverview(props: Readonly<CollectionProps>) {
                         delay={500}>
                         <a
                           className="font-color text-decoration-none"
-                          href="#"
-                          onClick={() =>
-                            openInExternalBrowser(getEtherscanLink())
-                          }>
+                          href={getEtherscanLink()}
+                          target="_blank"
+                          rel="noreferrer">
                           {formatAddress(NEXTGEN_CORE[NEXTGEN_CHAIN_ID])}
                         </a>
                       </Tippy>

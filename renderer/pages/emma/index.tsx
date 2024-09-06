@@ -1,6 +1,5 @@
 import DistributionPlanToolWrapper from "../../components/distribution-plan-tool/wrapper/DistributionPlanToolWrapper";
 import DistributionPlanToolConnect from "../../components/distribution-plan-tool/connect/distributipn-plan-tool-connect";
-import { openInExternalBrowser } from "../../helpers";
 
 export default function DistributionPlanTool() {
   return (
@@ -21,12 +20,9 @@ export default function DistributionPlanTool() {
                   lead to the creation of {""}
                   <a
                     className="tw-font-semibold hover:tw-text-neutral-300 tw-transition tw-duration-300 tw-ease-out"
-                    href="#"
-                    onClick={() =>
-                      openInExternalBrowser(
-                        "https://github.com/6529-Collections/Janus"
-                      )
-                    }>
+                    href="https://github.com/6529-Collections/Janus"
+                    target="_blank"
+                    rel="noreferrer">
                     Janus
                   </a>
                   {""}, a domain-specific language for deeply customized

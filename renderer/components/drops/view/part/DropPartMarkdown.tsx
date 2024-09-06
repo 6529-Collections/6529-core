@@ -11,7 +11,6 @@ import DropListItemContentPart, {
 import { DropMentionedUser } from "../../../../generated/models/DropMentionedUser";
 import { DropReferencedNFT } from "../../../../generated/models/DropReferencedNFT";
 import { SEIZE_URL } from "../../../../../constants";
-import { openInExternalBrowser } from "../../../../helpers";
 import DropPartQuote from "./quote/DropPartQuote";
 import { useRouter } from "next/router";
 import { Tweet } from "react-tweet";
@@ -42,7 +41,7 @@ export default function DropPartMarkdown({
     }
   })();
 
-  const customRenderer = ({
+  const customPartRenderer = ({
     content,
     mentionedUsers,
     referencedNfts,
@@ -92,7 +91,6 @@ export default function DropPartMarkdown({
         `${splitter}${token.match}${splitter}`
       );
     }
-
     const parts = currentContent
       .split(splitter)
       .filter((part) => part !== "")
@@ -115,6 +113,44 @@ export default function DropPartMarkdown({
     return parts;
   };
 
+  const customRenderer = ({
+    content,
+    mentionedUsers,
+    referencedNfts,
+    onImageLoaded,
+  }: {
+    readonly content: ReactNode | undefined;
+    readonly mentionedUsers: Array<DropMentionedUser>;
+    readonly referencedNfts: Array<DropReferencedNFT>;
+    readonly onImageLoaded: () => void;
+  }) => {
+    if (typeof content === "string") {
+      return customPartRenderer({
+        content,
+        mentionedUsers,
+        referencedNfts,
+        onImageLoaded,
+      });
+    }
+
+    if (Array.isArray(content)) {
+      return content.map((child) => {
+        if (typeof child === "string") {
+          return customPartRenderer({
+            content: child,
+            mentionedUsers,
+            referencedNfts,
+            onImageLoaded,
+          });
+        }
+
+        return child;
+      });
+    }
+
+    return content;
+  };
+
   const aHrefRenderer = ({
     node,
     ...props
@@ -127,7 +163,7 @@ export default function DropPartMarkdown({
       return null;
     }
 
-    const baseEndpoint = process.env.BASE_ENDPOINT || "";
+    const baseEndpoint = SEIZE_URL || "";
     const regex =
       /\/waves\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\?drop=([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
     const match = href ? href.match(regex) : null;
@@ -175,14 +211,14 @@ export default function DropPartMarkdown({
       return <p>[invalid link]</p>;
     }
 
-    const isExternalLink = href && !href.startsWith(SEIZE_URL);
-    let externalHref = "";
+    const isExternalLink =
+      href && baseEndpoint && !href.startsWith(baseEndpoint);
 
     if (isExternalLink) {
-      externalHref = href;
-      props.href = "";
+      props.rel = "noopener noreferrer nofollow";
+      props.target = "_blank";
     } else {
-      props.href = href?.replace(SEIZE_URL, "");
+      props.href = href?.replace(baseEndpoint, "");
     }
 
     return (
@@ -191,10 +227,6 @@ export default function DropPartMarkdown({
           e.stopPropagation();
           if (props.onClick) {
             props.onClick(e);
-          }
-          if (isExternalLink) {
-            e.preventDefault();
-            openInExternalBrowser(externalHref);
           }
         }}
         {...props}
@@ -270,7 +302,7 @@ export default function DropPartMarkdown({
         ),
         p: (params) => (
           <p
-            className={`last:tw-mb-0 tw-leading-5 tw-text-iron-50 group-hover:tw-text-iron-400 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
+            className={`last:tw-mb-0 tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
             {customRenderer({
               content: params.children,
               mentionedUsers,

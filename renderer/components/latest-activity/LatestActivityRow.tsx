@@ -27,7 +27,6 @@ import {
   getNextGenIconUrl,
   getNextGenImageUrl,
 } from "../nextGen/collections/nextgenToken/NextGenTokenImage";
-import { openInExternalBrowser } from "../../helpers";
 import Link from "next/link";
 
 function calculateRoyaltiesPercentage(value: number, royalties: number) {
@@ -153,7 +152,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
   function printNft() {
     if (props.nft) {
       return (
-        <a href="#" onClick={() => openInExternalBrowser(getHref())}>
+        <a href={getHref()} target="_blank" rel="noreferrer">
           <Image
             width={0}
             height={0}
@@ -358,13 +357,10 @@ export default function LatestActivityRow(props: Readonly<Props>) {
         )}
         {printGas(props.tr.gas, props.tr.gas_gwei, props.tr.gas_price_gwei)}
         <a
-          href="#"
-          onClick={() =>
-            openInExternalBrowser(
-              `https://etherscan.io/tx/${props.tr.transaction}`
-            )
-          }
-          className={styles.transactionLink}>
+          href={`https://etherscan.io/tx/${props.tr.transaction}`}
+          className={styles.transactionLink}
+          target="_blank"
+          rel="noreferrer">
           <FontAwesomeIcon
             className={styles.gasIcon}
             icon="external-link-square"></FontAwesomeIcon>

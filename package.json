@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -16,7 +16,6 @@
     "clean-win": "rimraf dist main renderer/out renderer/.next",
     "dev": "npm run clean && npm run build-electron && ENVIRONMENT=staging electron . --dev",
     "dev-win": "npm run clean-win && npm run build-electron-win && ENVIRONMENT=staging electron . --dev",
-    "start": "electron . --start",
     "rebuild-sql": "npx electron-rebuild -f -w better-sqlite3",
     "build-renderer": "next build renderer",
     "build-electron": "tsc -p electron-src && cp -r assets main/electron-src/",
@@ -37,7 +36,7 @@
     "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
     "sign-publish-production-win": "npm run clean-win && npm run download-production-win-unsigned && npm run sign-win && npm run upload-production-win-signed",
-    "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish always",
+    "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish never",
     "dist-mac-production": "npm run build && electron-builder --config electron-builder.production.json --mac --arm64 --x64 --publish always",
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",
     "dist-linux-production": "npm run build && electron-builder --config electron-builder.production.json --linux --x64 --publish always",

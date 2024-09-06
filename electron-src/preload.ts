@@ -102,17 +102,41 @@ export const seedConnector = {
   offInitRequest: (callback: any) => {
     ipcRenderer.removeListener("seed-connector-init-request", callback);
   },
+  showToast: (toast: { type: string; message: string }) => {
+    ipcRenderer.send("seed-connector-show-toast", toast);
+  },
+  onShowToast: (callback: any) => {
+    ipcRenderer.on("seed-connector-show-toast", callback);
+  },
+  offShowToast: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-show-toast", callback);
+  },
   confirm: (request: SeedWalletRequest) => {
     ipcRenderer.send("seed-connector-confirm", request);
   },
   onConfirm: (callback: any) => {
     ipcRenderer.on("seed-connector-confirm", callback);
   },
-  cancel: (request: SeedWalletRequest) => {
-    ipcRenderer.send("seed-connector-cancel", request);
+  offConfirm: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-confirm", callback);
   },
-  onCancel: (callback: any) => {
-    ipcRenderer.on("seed-connector-cancel", callback);
+  reject: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-reject", request);
+  },
+  onReject: (callback: any) => {
+    ipcRenderer.on("seed-connector-reject", callback);
+  },
+  offReject: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-reject", callback);
+  },
+  disconnect: () => {
+    ipcRenderer.send("seed-connector-disconnect");
+  },
+  onDisconnect: (callback: any) => {
+    ipcRenderer.on("seed-connector-disconnect", callback);
+  },
+  offDisconnect: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-disconnect", callback);
   },
 };
 

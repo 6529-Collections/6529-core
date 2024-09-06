@@ -24,7 +24,6 @@ import Address from "../address/Address";
 import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
 import { AuthContext } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
 
 interface NftWithOwner extends NFT {
   owner: string;
@@ -257,12 +256,9 @@ export default function GradientPage() {
                 <Row className="pt-4">
                   <Col>
                     <a
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          `https://opensea.io/assets/ethereum/${GRADIENT_CONTRACT}/${nft.id}`
-                        )
-                      }>
+                      href={`https://opensea.io/assets/ethereum/${GRADIENT_CONTRACT}/${nft.id}`}
+                      target="_blank"
+                      rel="noreferrer">
                       <Image
                         className={styles.marketplace}
                         src="/opensea.png"
@@ -271,13 +267,22 @@ export default function GradientPage() {
                         height={40}
                       />
                     </a>
+                    {/* <a
+                      href={`https://looksrare.org/collections/${GRADIENT_CONTRACT}/${nft.id}`}
+                      target="_blank"
+                      rel="noreferrer">
+                      <Image
+                        className={styles.marketplace}
+                        src="/looksrare.png"
+                        alt="looksrare"
+                        width={40}
+                        height={40}
+                      />
+                    </a> */}
                     <a
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          `https://x2y2.io/eth/${GRADIENT_CONTRACT}/${nft.id}`
-                        )
-                      }>
+                      href={`https://x2y2.io/eth/${GRADIENT_CONTRACT}/${nft.id}`}
+                      target="_blank"
+                      rel="noreferrer">
                       <Image
                         className={styles.marketplace}
                         src="/x2y2.png"
