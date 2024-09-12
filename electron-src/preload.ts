@@ -25,6 +25,12 @@ export const api = {
   openExternalBrave: (url: string): void => {
     ipcRenderer.send("open-external-brave", url);
   },
+  showCrashReport: (fileName: string) => {
+    ipcRenderer.send("show-crash-report", fileName);
+  },
+  extractCrashReport: (fileName: string) => {
+    ipcRenderer.send("extract-crash-report", fileName);
+  },
   onAppClose: (callback: any) => ipcRenderer.on("app-close", callback),
   runBackground: () => {
     ipcRenderer.send("run-background");
@@ -44,6 +50,7 @@ export const api = {
   offSeedWalletsChange: (callback: any) =>
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
+  getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);
   },

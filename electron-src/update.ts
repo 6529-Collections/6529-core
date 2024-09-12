@@ -9,7 +9,6 @@ autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;
 
 export function checkForUpdates(window: Electron.BrowserWindow | null) {
-  Logger.info("Checking for updates");
   if (window) {
     mainWindow = window;
   }
@@ -87,7 +86,7 @@ autoUpdater.on("download-progress", (progress) => {
 
 autoUpdater.on("update-downloaded", (info) => {
   Logger.info("Update downloaded", info);
-  mainWindow?.webContents.send("update-downloaded", info);
+  mainWindow?.webContents.send("update-downloaded", info.version);
 });
 
 autoUpdater.on("error", (error) => {
@@ -96,6 +95,6 @@ autoUpdater.on("error", (error) => {
 });
 
 autoUpdater.on("update-not-available", (info) => {
-  Logger.info("Update not available", info);
+  Logger.info("Update not available", info.version);
   mainWindow?.webContents.send("update-not-available", info);
 });

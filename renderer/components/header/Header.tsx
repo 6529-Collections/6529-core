@@ -269,11 +269,9 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <h3>
-                      <span className="font-color-h disabled">
-                        Logs (coming soon)
-                      </span>
-                    </h3>
+                    <Link href="/network/app-logs">
+                      <h3>App Logs</h3>
+                    </Link>
                   </Col>
                 </Row>
                 <Row>
@@ -895,10 +893,9 @@ export default function Header(props: Readonly<Props>) {
                               />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Logs (coming soon)",
-                                  path: "/network/logs",
+                                  name: "App Logs",
+                                  path: "/network/app-logs",
                                 }}
-                                disabled={true}
                               />
                               <NavDropdown.Divider />
                               <HeaderDesktopLink

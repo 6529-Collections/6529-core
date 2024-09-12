@@ -123,7 +123,7 @@ export default function AppInfo() {
   return (
     <Container className="pt-5 pb-5">
       <Row>
-        <Col className="text-center">
+        <Col>
           <h1 className="float-none">
             <span className="font-lightest">6529</span> Core
           </h1>
@@ -291,7 +291,7 @@ function UpdateProgress(props: Readonly<{ progress: ProgressInfo }>) {
   );
 }
 
-function UpdateImage(props: Readonly<{ src: string; alt: string }>) {
+export function UpdateImage(props: Readonly<{ src: string; alt: string }>) {
   return (
     <Image
       priority

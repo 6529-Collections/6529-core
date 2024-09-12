@@ -81,6 +81,7 @@
     "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",
     "lexical": "^0.16.1",
+    "minidump": "^0.26.0",
     "next": "^14.2.6",
     "next-redux-wrapper": "^8.1.0",
     "pdfjs-dist": "^4.4.168",
