@@ -78,12 +78,12 @@ export default function ConfirmSeedWalletRequest() {
   };
 
   const requestHandler = (
-    wallet: ethers.Wallet,
+    wallet: ethers.Wallet | null,
     request: SeedWalletRequest
   ) => {
     setSeedRequest({
       ...request,
-      privateKey: wallet.privateKey,
+      privateKey: wallet?.privateKey,
     });
     balance.refetch();
     setShow(true);

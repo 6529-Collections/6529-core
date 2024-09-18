@@ -9,6 +9,7 @@ import HeaderUserProxyDropdownChains from "./HeaderUserProxyDropdownChains";
 import { useSeizeConnect } from "../../../../hooks/useSeizeConnect";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRepeat } from "@fortawesome/free-solid-svg-icons";
+import HeaderUserConnectModal from "../HeaderUserConnectModal";
 
 export default function HeaderUserProxyDropdown({
   isOpen,
@@ -21,6 +22,8 @@ export default function HeaderUserProxyDropdown({
 }) {
   const account = useAccount();
   const { seizeDisconnect } = useSeizeConnect();
+
+  const [showConnect, setShowConnect] = useState(false);
 
   const { activeProfileProxy, setActiveProfileProxy, receivedProfileProxies } =
     useContext(AuthContext);
@@ -124,7 +127,10 @@ export default function HeaderUserProxyDropdown({
                   <HeaderUserProxyDropdownChains />
                   <div className="tw-h-full tw-px-2 tw-pt-2">
                     <button
-                      onClick={() => seizeDisconnect(true)}
+                      onClick={() => {
+                        seizeDisconnect();
+                        setShowConnect(true);
+                      }}
                       type="button"
                       aria-label="Switch Account"
                       title="Switch Account"
@@ -164,6 +170,10 @@ export default function HeaderUserProxyDropdown({
           </motion.div>
         )}
       </AnimatePresence>
+      <HeaderUserConnectModal
+        show={showConnect}
+        onHide={() => setShowConnect(false)}
+      />
     </div>
   );
 }

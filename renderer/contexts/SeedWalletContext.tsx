@@ -132,11 +132,9 @@ export const SeedWalletProvider: React.FC<{
   useEffect(() => {
     if (isFetched && pendingCallback) {
       if (unlockedWallet) {
-        console.log("Unlocking wallet with pending callback");
         pendingCallback.callback(unlockedWallet, pendingCallback.request);
         setPendingCallback(undefined);
       } else {
-        console.log("Unlocking wallet without pending callback");
         setShowPasswordModal(true);
       }
     }
@@ -212,9 +210,15 @@ export const SeedWalletProvider: React.FC<{
           pendingRequest={pendingCallback?.request}
           onHide={() => {
             setShowPasswordModal(false);
-            if (unlockedWallet && pendingCallback) {
-              pendingCallback.callback(unlockedWallet, pendingCallback.request);
-              console.log("Clearing pending callback from onHide");
+            if (pendingCallback) {
+              if (unlockedWallet) {
+                pendingCallback.callback(
+                  unlockedWallet,
+                  pendingCallback.request
+                );
+              } else {
+                window.seedConnector.reject(pendingCallback.request);
+              }
               setPendingCallback(undefined);
             }
           }}

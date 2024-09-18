@@ -26,8 +26,6 @@ import { LoginRequest } from "../../generated/models/LoginRequest";
 import { LoginResponse } from "../../generated/models/LoginResponse";
 import { ProfileProxy } from "../../generated/models/ProfileProxy";
 import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
-import { useRouter } from "next/router";
-import { isElectron } from "../../helpers";
 import { useEffectOnce } from "../../hooks/useEffectOnce";
 import { Modal, Button } from "react-bootstrap";
 import DotLoader from "../dotLoader/DotLoader";
@@ -144,9 +142,7 @@ export default function Auth({
         removeAuthJwt();
         setActiveProfileProxy(null);
         invalidateAll();
-        if (isElectron()) {
-          requestAuth();
-        }
+        setShowSignModal(true);
       }
     }
   }, [address, activeProfileProxy]);
@@ -433,6 +429,7 @@ export default function Auth({
             onClick={() => {
               setShowSignModal(false);
               seizeDisconnect();
+              signMessage.reset();
             }}>
             Cancel
           </Button>
