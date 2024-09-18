@@ -46,6 +46,8 @@ import {
 } from "../../helpers/nft.helpers";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import NFTAttributes from "../nftAttributes/NFTAttributes";
+import { NftPageStats } from "../nftAttributes/NftStats";
+import { printMemeReferences } from "../rememes/RememePage";
 import { SEIZE_API_URL } from "../../../constants";
 
 interface MemeTab {
@@ -328,88 +330,12 @@ export default function LabPage(props: Readonly<Props>) {
             )}
         </Row>
         <Row>
-          {activeTab === MEME_FOCUS.LIVE && <>{printLiveSub()}</>}
+          {activeTab === MEME_FOCUS.LIVE && (
+            <>{printMemeReferences(originalMemes, originalMemesLoaded)}</>
+          )}
           {activeTab === MEME_FOCUS.YOUR_CARDS && <>{printYourCardsSub()}</>}
         </Row>
       </Container>
-    );
-  }
-
-  function printLiveSub() {
-    return (
-      <>
-        <Row className="pt-3">
-          <Col>
-            <h1>
-              <span className="font-lightest">The</span> Memes
-            </h1>
-          </Col>
-        </Row>
-        <Row className="pt-2 pb-2">
-          <Col>
-            References from <a href="/the-memes">The Memes</a> collection
-          </Col>
-        </Row>
-        {originalMemesLoaded && (
-          <>
-            {originalMemes.length > 0 ? (
-              <Row className="pt-2 pb-2">
-                {originalMemes.map((nft) => {
-                  return (
-                    <Col
-                      key={`${nft.contract}-${nft.id}`}
-                      className="pt-3 pb-3"
-                      xs={{ span: 6 }}
-                      sm={{ span: 4 }}
-                      md={{ span: 3 }}
-                      lg={{ span: 3 }}>
-                      <a
-                        href={`/the-memes/${nft.id}`}
-                        className="decoration-none scale-hover">
-                        <Container fluid className="no-padding">
-                          <Row>
-                            <Col>
-                              <NFTImage
-                                nft={nft}
-                                animation={false}
-                                height={300}
-                                balance={0}
-                                showThumbnail={true}
-                                showUnseized={false}
-                              />
-                            </Col>
-                          </Row>
-                          <Row>
-                            <Col className="text-center pt-2">
-                              <b>
-                                #{nft.id} - {nft.name}
-                              </b>
-                            </Col>
-                          </Row>
-                          <Row>
-                            <Col className="text-center pt-2">
-                              Artist Name: {nft.artist}
-                            </Col>
-                          </Row>
-                          <Row>
-                            <Col className="text-center pt-2">
-                              Artist Profile: <ArtistProfileHandle nft={nft} />
-                            </Col>
-                          </Row>
-                        </Container>
-                      </a>
-                    </Col>
-                  );
-                })}
-              </Row>
-            ) : (
-              <Col>
-                <NothingHereYetSummer />
-              </Col>
-            )}
-          </>
-        )}
-      </>
     );
   }
 
@@ -475,36 +401,7 @@ export default function LabPage(props: Readonly<Props>) {
                       <td>Mint Date</td>
                       <td>{printMintDate(nft.mint_date)}</td>
                     </tr>
-                    <tr>
-                      <td>Mint Price</td>
-                      <td>
-                        {nft.mint_price
-                          ? `${numberWithCommas(
-                              Math.round(nft.mint_price * 100000) / 100000
-                            )} ETH`
-                          : `N/A`}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Floor Price</td>
-                      <td>
-                        {nft.floor_price
-                          ? `${numberWithCommas(
-                              Math.round(nft.floor_price * 100) / 100
-                            )} ETH`
-                          : `N/A`}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td>Market Cap</td>
-                      <td>
-                        {nft.market_cap
-                          ? `${numberWithCommas(
-                              Math.round(nft.market_cap * 100) / 100
-                            )} ETH`
-                          : `N/A`}
-                      </td>
-                    </tr>
+                    <NftPageStats nft={nft} />
                   </tbody>
                 </Table>
               </Col>

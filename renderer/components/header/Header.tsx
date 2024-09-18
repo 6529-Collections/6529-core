@@ -19,6 +19,7 @@ import { faBars } from "@fortawesome/free-solid-svg-icons";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
 import CapacitorWidget from "./capacitor/CapacitorWidget";
+import { useSeizeConnect } from "../../hooks/useSeizeConnect";
 
 interface Props {
   onLoad?: () => void;
@@ -33,6 +34,7 @@ export interface HeaderLink {
 
 export default function Header(props: Readonly<Props>) {
   const capacitor = useCapacitor();
+  const { seizeConnectOpen } = useSeizeConnect();
 
   const { showWaves } = useContext(AuthContext);
   const router = useRouter();
@@ -107,6 +109,12 @@ export default function Header(props: Readonly<Props>) {
       setConsolidations([]);
     }
   }, [account.address]);
+
+  useEffect(() => {
+    if (seizeConnectOpen) {
+      setBurgerMenuOpen(false);
+    }
+  }, [seizeConnectOpen]);
 
   function printMobileRow(name: string, path: string) {
     return (

@@ -23,7 +23,6 @@ interface Props {
 export default function DelegationCenterComponent(props: Readonly<Props>) {
   const [redirect, setRedirect] = useState<DelegationCenterSection>();
   const accountResolution = useAccount();
-
   const [openConnect, setOpenConnect] = useState(false);
 
   useEffect(() => {
