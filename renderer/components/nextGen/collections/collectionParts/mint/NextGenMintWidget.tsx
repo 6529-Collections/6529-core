@@ -40,6 +40,7 @@ import { Spinner } from "./NextGenMint";
 import DotLoader from "../../../../dotLoader/DotLoader";
 import HeaderUserConnectModal from "../../../../header/user/HeaderUserConnectModal";
 import { SEIZE_API_URL } from "../../../../../../constants";
+import { useSeizeConnectModal } from "../../../../../contexts/SeizeConnectModalContext";
 
 export function getJsonData(keccak: string, data: string) {
   const parsed = JSON.parse(data);
@@ -83,7 +84,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
   const account = useAccount();
   const chainId = useChainId();
 
-  const [openConnect, setOpenConnect] = useState(false);
+  const { setShowConnectModal } = useSeizeConnectModal();
 
   const [currentProof, setCurrentProof] = useState<
     | {
@@ -214,10 +215,10 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           setIsMinting(true);
         }
       } else {
-        setOpenConnect(true);
+        setShowConnectModal(true);
       }
     } else {
-      setOpenConnect(true);
+      setShowConnectModal(true);
     }
   };
 
@@ -586,10 +587,6 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           </Form>
         </Col>
       </Row>
-      <HeaderUserConnectModal
-        show={openConnect}
-        onHide={() => setOpenConnect(false)}
-      />
     </Container>
   );
 }

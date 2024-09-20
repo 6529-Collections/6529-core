@@ -23,6 +23,12 @@ export default function HeaderUserConnectModal({
 
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!show) {
+      setActiveKey(null);
+    }
+  }, [show]);
+
   const handleToggle = (key: string) => {
     setActiveKey(activeKey === key ? null : key);
   };

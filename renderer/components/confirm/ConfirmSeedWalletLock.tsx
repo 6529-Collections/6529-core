@@ -9,11 +9,14 @@ import {
   faLock,
   faLockOpen,
 } from "@fortawesome/free-solid-svg-icons";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { SEED_MIN_PASS_LENGTH } from "../network/seedWallet/SeedWalletModal";
 import { SeedWalletRequest } from "../../../shared/types";
 import { useToast } from "../../contexts/ToastContext";
 import { on } from "events";
+import { useModalState } from "../../contexts/ModalStateContext";
+
+const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
 
 export default function ConfirmSeedWalletLock(
   props: Readonly<{
@@ -33,8 +36,21 @@ export default function ConfirmSeedWalletLock(
   const [passHidden, setPassHidden] = useState(true);
   const { showToast } = useToast();
 
+  useEffect(() => {
+    if (!props.show) {
+      setWalletPass("");
+      setPassHidden(true);
+      setUnlocking(false);
+    }
+  }, [props.show]);
+
   const handleKeyPress = (e: any) => {
-    if (e.key === "Enter" && walletPass) {
+    if (
+      e.key === "Enter" &&
+      walletPass &&
+      !unlocking &&
+      walletPass.length >= SEED_MIN_PASS_LENGTH
+    ) {
       handleUnlock(walletPass);
     }
   };
@@ -107,8 +123,30 @@ export default function ConfirmSeedWalletLock(
     );
   }
 
+  const { isTopModal, addModal, removeModal } = useModalState();
+
+  useEffect(() => {
+    if (props.show) {
+      addModal(SEED_WALLET_LOCK_MODAL);
+    } else {
+      removeModal(SEED_WALLET_LOCK_MODAL);
+    }
+
+    return () => {
+      removeModal(SEED_WALLET_LOCK_MODAL);
+    };
+  }, [props.show]);
+
   return (
-    <Modal show={props.show} keyboard={false} centered onHide={props.onHide}>
+    <Modal
+      show={props.show}
+      keyboard={false}
+      centered
+      backdrop="static"
+      onHide={props.onHide}
+      dialogClassName={
+        !isTopModal(SEED_WALLET_LOCK_MODAL) ? "modal-blurred" : ""
+      }>
       <Modal.Header className={styles.modalHeader}>
         <Modal.Title className="d-flex align-items-center gap-3">
           <FontAwesomeIcon

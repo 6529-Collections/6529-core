@@ -9,6 +9,9 @@ import { useAccount, useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import { useSeedWallet } from "../../contexts/SeedWalletContext";
 import { ethers } from "ethers";
+import { useModalState } from "../../contexts/ModalStateContext";
+
+const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
 
 function parseTransactionData(data: string) {
   const functionSelector = data.slice(0, 10);
@@ -46,6 +49,7 @@ function parseTransactionData(data: string) {
 export default function ConfirmSeedWalletRequest() {
   const [show, setShow] = useState(false);
 
+  const { isTopModal, addModal, removeModal } = useModalState();
   const seedWalletContext = useSeedWallet();
 
   const account = useAccount();
@@ -61,6 +65,17 @@ export default function ConfirmSeedWalletRequest() {
   const [seedRequest, setSeedRequest] = useState<SeedWalletRequest>();
 
   const hasMounted = useRef(false);
+
+  useEffect(() => {
+    if (show) {
+      addModal(SEED_WALLET_REQUEST_MODAL);
+    } else {
+      removeModal(SEED_WALLET_REQUEST_MODAL);
+    }
+    return () => {
+      removeModal(SEED_WALLET_REQUEST_MODAL);
+    };
+  }, [show]);
 
   const clear = () => {
     setSeedRequest(undefined);
@@ -196,7 +211,15 @@ export default function ConfirmSeedWalletRequest() {
   }
 
   return (
-    <Modal show={show} backdrop="static" keyboard={false} centered>
+    <Modal
+      size="lg"
+      show={show}
+      backdrop="static"
+      keyboard={false}
+      centered
+      dialogClassName={
+        !isTopModal(SEED_WALLET_REQUEST_MODAL) ? "modal-blurred" : ""
+      }>
       <Modal.Header className={styles.modalHeader}>
         <Modal.Title>Confirm Seed Wallet Request</Modal.Title>
       </Modal.Header>

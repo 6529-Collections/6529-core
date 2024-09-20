@@ -30,6 +30,9 @@ import { useEffectOnce } from "../../hooks/useEffectOnce";
 import { Modal, Button } from "react-bootstrap";
 import DotLoader from "../dotLoader/DotLoader";
 import { useSeizeConnect } from "../../hooks/useSeizeConnect";
+import { useModalState } from "../../contexts/ModalStateContext";
+
+const AUTH_MODAL = "AuthModal";
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
@@ -395,6 +398,19 @@ export default function Auth({
     ]
   );
 
+  const { isTopModal, addModal, removeModal } = useModalState();
+
+  useEffect(() => {
+    if (showSignModal) {
+      addModal(AUTH_MODAL);
+    } else {
+      removeModal(AUTH_MODAL);
+    }
+    return () => {
+      removeModal(AUTH_MODAL);
+    };
+  }, [showSignModal]);
+
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
@@ -403,7 +419,8 @@ export default function Auth({
         onHide={() => setShowSignModal(false)}
         backdrop="static"
         keyboard={false}
-        centered>
+        centered
+        dialogClassName={!isTopModal(AUTH_MODAL) ? "modal-blurred" : ""}>
         <Modal.Header className={styles.signModalHeader}>
           <Modal.Title>Sign Authentication Request</Modal.Title>
         </Modal.Header>

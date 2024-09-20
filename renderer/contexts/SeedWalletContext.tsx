@@ -43,6 +43,7 @@ export const SeedWalletProvider: React.FC<{
   const [isSeedWallet, setIsSeedWallet] = useState<boolean>(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
+  const [isUnlocking, setIsUnlocking] = useState<boolean>(false);
 
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
   const [unlockedWallet, setUnlockedWallet] = useState<ethers.Wallet>();
@@ -208,8 +209,10 @@ export const SeedWalletProvider: React.FC<{
           show={showPasswordModal}
           unlockedWallet={unlockedWallet}
           pendingRequest={pendingCallback?.request}
+          isUnlocking={isUnlocking}
           onHide={() => {
             setShowPasswordModal(false);
+            setIsUnlocking(false);
             if (pendingCallback) {
               if (unlockedWallet) {
                 pendingCallback.callback(
@@ -223,10 +226,12 @@ export const SeedWalletProvider: React.FC<{
             }
           }}
           onUnlock={async (password) => {
+            setIsUnlocking(true);
             const success = await unlockWallet(lockedWallet, password);
             if (success) {
               setShowPasswordModal(false);
             }
+            setIsUnlocking(false);
             return success;
           }}
           onLock={lockWallet}
