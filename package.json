@@ -23,7 +23,7 @@
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "build-win": "npm run clean-win && npm run build-renderer && npm run build-electron-win",
     "dist-win-staging": "npm run build && electron-builder --config electron-builder.staging.json --win --x64 --publish never && npm run upload-staging-win-unsigned",
-    "dist-win-production": "npm run build && electron-builder --config electron-builder.production.json --win --ia32 --x64 --arm64 --publish never && npm run upload-production-win-unsigned",
+    "dist-win-production": "npm run build && electron-builder --config electron-builder.production.json --win --x64 --arm64 --publish never && npm run upload-production-win-unsigned",
     "clear-staging-win-unsigned": "aws s3 rm s3://6529bucket/6529-staging-core-app/win-unsigned/ --recursive",
     "clear-production-win-unsigned": "aws s3 rm s3://6529bucket/6529-core-app/win-unsigned/ --recursive",
     "upload-staging-win-unsigned": "npm run clear-staging-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-staging-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
