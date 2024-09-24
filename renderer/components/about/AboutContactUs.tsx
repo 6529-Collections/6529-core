@@ -1,12 +1,11 @@
 import { Col, Container, Row } from "react-bootstrap";
-import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutContactUs() {
   return (
     <Container>
       <Row>
         <Col>
-          <h1 className="float-none">
+          <h1>
             <span className="font-lightest">Contact</span> Us
           </h1>
         </Col>
@@ -16,10 +15,9 @@ export default function AboutContactUs() {
           <p>
             The best way to find us at:{" "}
             <a
-              href="#"
-              onClick={() =>
-                openInExternalBrowser("https://twitter.com/6529collections")
-              }>
+              href="https://twitter.com/6529collections"
+              target="_blank"
+              rel="noreferrer">
               https://twitter.com/6529collections
             </a>
           </p>
@@ -29,26 +27,23 @@ export default function AboutContactUs() {
             <li>
               Trying to get the attention of &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/punk6529")
-                }>
+                href="https://twitter.com/punk6529"
+                target="_blank"
+                rel="noreferrer">
                 punk6529
               </a>{" "}
               or &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/6529er")
-                }>
+                href="https://twitter.com/6529er"
+                target="_blank"
+                rel="noreferrer">
                 6529er
               </a>{" "}
               or &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/teexels")
-                }>
+                href="https://twitter.com/teexels"
+                target="_blank"
+                rel="noreferrer">
                 teexels
               </a>{" "}
               on Twitter
@@ -57,34 +52,30 @@ export default function AboutContactUs() {
             <li>
               Trying to get the attention of &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/punk6529")
-                }>
+                href="https://twitter.com/punk6529"
+                target="_blank"
+                rel="noreferrer">
                 punk6529
               </a>
               , &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/6529er")
-                }>
+                href="https://twitter.com/6529er"
+                target="_blank"
+                rel="noreferrer">
                 6529er
               </a>{" "}
               or &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/teexels")
-                }>
+                href="https://twitter.com/teexels"
+                target="_blank"
+                rel="noreferrer">
                 teexels
               </a>{" "}
               in the OM Discord (
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://discord.gg/join-om")
-                }>
+                href="https://discord.gg/join-om"
+                target="_blank"
+                rel="noreferrer">
                 https://discord.gg/join-om
               </a>
               ). We don&apos;t answer Discord DMs from people we don&apos;t

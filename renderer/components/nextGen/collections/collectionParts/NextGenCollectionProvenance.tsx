@@ -22,7 +22,6 @@ import {
   printGas,
   printRoyalties,
 } from "../../../latest-activity/LatestActivityRow";
-import { openInExternalBrowser } from "../../../../helpers";
 
 interface Props {
   collection: NextGenCollection;
@@ -277,12 +276,13 @@ export function NextGenCollectionProvenanceRow(
                         log.from_address
                       )}
                     <a
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          getTransactionLink(NEXTGEN_CHAIN_ID, log.transaction)
-                        )
-                      }>
+                      href={getTransactionLink(
+                        NEXTGEN_CHAIN_ID,
+                        log.transaction
+                      )}
+                      onClick={(e) => e.stopPropagation()}
+                      target="_blank"
+                      rel="noreferrer">
                       <FontAwesomeIcon
                         style={{
                           height: "25px",

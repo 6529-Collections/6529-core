@@ -2,6 +2,7 @@ import * as fs from "fs";
 import { app } from "electron";
 import databasePath from "./databasePath";
 import path from "path";
+import Logger from "electron-log";
 
 export function getScheme() {
   let scheme = "";
@@ -38,5 +39,7 @@ export function getInfo() {
     node_version: process.versions.node,
     os: process.platform as string,
     arch: process.arch as string,
+    logs_path: Logger.transports.file.getFile().path,
+    crash_reports_path: path.join(app.getPath("crashDumps")),
   };
 }

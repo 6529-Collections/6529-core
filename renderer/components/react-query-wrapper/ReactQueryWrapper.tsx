@@ -58,6 +58,7 @@ export enum QueryKey {
   GROUP = "GROUP",
   GROUP_WALLET_GROUP_WALLETS = "GROUP_WALLET_GROUP_WALLETS",
   NFTS_SEARCH = "NFTS_SEARCH",
+  NFTS = "NFTS",
   PROFILE_PROXY = "PROFILE_PROXY",
   PROFILE_PROFILE_PROXIES = "PROFILE_PROFILE_PROXIES",
   EMMA_IDENTITY_ALLOWLISTS = "EMMA_IDENTITY_ALLOWLISTS",
@@ -1157,7 +1158,6 @@ export default function ReactQueryWrapper({
     readonly drop: Drop;
   }): Promise<void> => {
     addDropToDrops({ drop });
-    addDropToFeedItems({ drop });
     increaseFeedItemsDropRedropCount({ drop });
     increaseDropsDropRedropCount({ drop });
     if (drop.reply_to) {

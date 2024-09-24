@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.0.6",
+  "version": "0.0.7",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -16,7 +16,6 @@
     "clean-win": "rimraf dist main renderer/out renderer/.next",
     "dev": "npm run clean && npm run build-electron && ENVIRONMENT=staging electron . --dev",
     "dev-win": "npm run clean-win && npm run build-electron-win && ENVIRONMENT=staging electron . --dev",
-    "start": "electron . --start",
     "rebuild-sql": "npx electron-rebuild -f -w better-sqlite3",
     "build-renderer": "next build renderer",
     "build-electron": "tsc -p electron-src && cp -r assets main/electron-src/",
@@ -24,7 +23,7 @@
     "build": "npm run clean && npm run build-renderer && npm run build-electron",
     "build-win": "npm run clean-win && npm run build-renderer && npm run build-electron-win",
     "dist-win-staging": "npm run build && electron-builder --config electron-builder.staging.json --win --x64 --publish never && npm run upload-staging-win-unsigned",
-    "dist-win-production": "npm run build && electron-builder --config electron-builder.production.json --win --ia32 --x64 --arm64 --publish never && npm run upload-production-win-unsigned",
+    "dist-win-production": "npm run build && electron-builder --config electron-builder.production.json --win --x64 --arm64 --publish never && npm run upload-production-win-unsigned",
     "clear-staging-win-unsigned": "aws s3 rm s3://6529bucket/6529-staging-core-app/win-unsigned/ --recursive",
     "clear-production-win-unsigned": "aws s3 rm s3://6529bucket/6529-core-app/win-unsigned/ --recursive",
     "upload-staging-win-unsigned": "npm run clear-staging-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-staging-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
@@ -82,6 +81,7 @@
     "js-cookie": "^3.0.5",
     "jwt-decode": "^4.0.0",
     "lexical": "^0.16.1",
+    "minidump": "^0.26.0",
     "next": "^14.2.6",
     "next-redux-wrapper": "^8.1.0",
     "pdfjs-dist": "^4.4.168",

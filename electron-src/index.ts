@@ -1,18 +1,29 @@
 import { app, BrowserWindow, Menu } from "electron/main";
 import path from "node:path";
-import { initLogs } from "./utils/initLogs";
+import {
+  closeLogs,
+  showCrashReport,
+  extractCrashReport,
+  getCrashReportsList,
+  initLogs,
+  openLogs,
+} from "./utils/initLogs";
 import { getInfo, getScheme } from "./utils/info";
 import {
-  addCustomWallet,
-  deleteCustomWallet,
-  getCustomWallet,
+  addSeedWallet,
+  deleteSeedWallet,
+  getSeedWallet,
+  getSeedWallets,
+  importSeedWallet,
   initDb,
 } from "./db";
-import { ipcMain, protocol, shell } from "electron";
+import { ipcMain, protocol, shell, screen, crashReporter } from "electron";
 import {
-  GET_CUSTOM_WALLET,
-  ADD_CUSTOM_WALLET,
-  DELETE_CUSTOM_WALLET,
+  GET_SEED_WALLETS,
+  ADD_SEED_WALLET,
+  DELETE_SEED_WALLET,
+  GET_SEED_WALLET,
+  IMPORT_SEED_WALLET,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -30,6 +41,7 @@ import {
 } from "./update";
 import contextMenu from "electron-context-menu";
 import { isDev } from "./utils/env";
+import { SeedWalletRequest } from "../shared/types";
 
 contextMenu({
   showInspectElement: false,
@@ -39,7 +51,12 @@ contextMenu({
   showSaveImage: true,
 });
 
+crashReporter.start({
+  uploadToServer: false,
+});
+
 let mainWindow: BrowserWindow | null = null;
+let logsWindow: BrowserWindow | null = null;
 let splash: BrowserWindow | null = null;
 let PORT: number;
 
@@ -209,12 +226,21 @@ async function createWindow() {
       if (isDev) {
         app.relaunch();
         app.quit();
+        Logger.info("Restarting app\n---------- End of Session ----------\n\n");
       }
     } else {
       e.preventDefault();
       mainWindow?.focus();
       mainWindow?.webContents.send("app-close");
     }
+  });
+
+  process.on("uncaughtException", (error) => {
+    Logger.error("Uncaught Exception:", error);
+  });
+
+  process.on("unhandledRejection", (reason, promise) => {
+    Logger.error("Unhandled Rejection at:", promise, "reason:", reason);
   });
 
   mainWindow.webContents.on("did-navigate", updateNavigationState);
@@ -234,15 +260,21 @@ protocol.registerSchemesAsPrivileged([
   { scheme: getScheme(), privileges: { secure: true, standard: true } },
 ]);
 
-ipcMain.on(ADD_CUSTOM_WALLET, (event) => {
-  addCustomWallet()
+ipcMain.on(ADD_SEED_WALLET, (event, args) => {
+  const name = args[0];
+  const pass = args[1];
+  Logger.info(`Creating seed wallet: ${name}`);
+  addSeedWallet(name, pass)
     .then((data) => {
       event.returnValue = {
         error: false,
         data,
       };
+      Logger.info(`Seed wallet created: ${name}`);
+      mainWindow?.webContents.send("seed-wallets-change");
     })
     .catch((error) => {
+      Logger.error(`Error creating seed wallet: ${error}`);
       event.returnValue = {
         error: true,
         data: error,
@@ -250,30 +282,79 @@ ipcMain.on(ADD_CUSTOM_WALLET, (event) => {
     });
 });
 
-ipcMain.on(GET_CUSTOM_WALLET, (event) => {
-  getCustomWallet()
-    .then((data) => {
-      event.returnValue = {
-        error: false,
-        data,
-      };
-    })
-    .catch((error) => {
-      event.returnValue = {
-        error: true,
-        data: error,
-      };
-    });
-});
-
-ipcMain.on(DELETE_CUSTOM_WALLET, (event) => {
-  deleteCustomWallet()
+ipcMain.on(IMPORT_SEED_WALLET, (event, args) => {
+  const name = args[0];
+  const pass = args[1];
+  const address = args[2];
+  const mnemonic = args[3];
+  const privateKey = args[4];
+  Logger.info(`Importing seed wallet: ${name}`);
+  importSeedWallet(name, pass, address, mnemonic, privateKey)
     .then(() => {
       event.returnValue = {
         error: false,
       };
+      Logger.info(`Seed wallet imported: ${name}`);
+      mainWindow?.webContents.send("seed-wallets-change");
     })
     .catch((error) => {
+      Logger.error(`Error importing seed wallet: ${error}`);
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(GET_SEED_WALLETS, (event) => {
+  getSeedWallets()
+    .then((data) => {
+      event.returnValue = {
+        error: false,
+        data,
+      };
+    })
+    .catch((error) => {
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(GET_SEED_WALLET, (event, args) => {
+  const address = args[0];
+  Logger.info(`Retrieving seed wallet: ${address}`);
+  getSeedWallet(address)
+    .then((data) => {
+      Logger.info(`Seed wallet retrieved: ${address}`);
+      event.returnValue = {
+        error: false,
+        data,
+      };
+    })
+    .catch((error) => {
+      Logger.error(`Error retrieving seed wallet: ${error}`);
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
+  const address = args[0];
+  Logger.info(`Deleting seed wallet: ${address}`);
+  deleteSeedWallet(address)
+    .then(() => {
+      event.returnValue = {
+        error: false,
+      };
+      Logger.info(`Seed wallet deleted: ${address}`);
+      mainWindow?.webContents.send("seed-wallets-change");
+    })
+    .catch((error) => {
+      Logger.error(`Error deleting seed wallet: ${error}`);
       event.returnValue = {
         error: true,
         data: error,
@@ -360,6 +441,42 @@ ipcMain.on("open-external-brave", (event, url) => {
   openInBrave(url);
 });
 
+ipcMain.on("open-logs", () => {
+  if (!logsWindow || logsWindow.isDestroyed()) {
+    const { width, height } = screen.getPrimaryDisplay().workAreaSize;
+    logsWindow = new BrowserWindow({
+      width: width * 0.7,
+      height: height * 0.7,
+      x: width * 0.15,
+      y: height * 0.15,
+      title: "6529 CORE Logs",
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, "preload.js"),
+        spellcheck: true,
+      },
+    });
+    logsWindow.on("closed", () => {
+      closeLogs();
+      logsWindow = null;
+    });
+    openLogs(logsWindow);
+  } else {
+    logsWindow.focus();
+  }
+});
+
+ipcMain.on("show-crash-report", (event, fileName) => {
+  event.preventDefault();
+  showCrashReport(fileName);
+});
+
+ipcMain.on("extract-crash-report", (event, fileName) => {
+  event.preventDefault();
+  extractCrashReport(fileName);
+});
+
 ipcMain.on("run-background", () => {
   Logger.info("Running in background");
   mainWindow?.close();
@@ -370,6 +487,7 @@ ipcMain.on("quit", () => {
   mainWindow?.close();
   mainWindow?.destroy();
   mainWindow = null;
+  Logger.info("Quitting app\n---------- End of Session ----------\n\n");
   app.quit();
 });
 
@@ -407,6 +525,10 @@ ipcMain.handle("get-info", () => {
   };
 });
 
+ipcMain.handle("get-crash-reports", () => {
+  return getCrashReportsList();
+});
+
 ipcMain.handle("store:get", (_event, key) => {
   return getValue(key);
 });
@@ -429,4 +551,34 @@ ipcMain.on("download-update", () => {
 
 ipcMain.on("install-update", () => {
   installUpdate();
+});
+
+ipcMain.on(
+  "seed-connector-init-request",
+  (_event, request: SeedWalletRequest) => {
+    Logger.info(`Seed connector init request: ${request.requestId}`);
+    mainWindow?.webContents.send("seed-connector-init-request", request);
+  }
+);
+
+ipcMain.on(
+  "seed-connector-show-toast",
+  (_event, toast: { type: string; message: string }) => {
+    mainWindow?.webContents.send("seed-connector-show-toast", toast);
+  }
+);
+
+ipcMain.on("seed-connector-confirm", (_event, request: SeedWalletRequest) => {
+  Logger.info(`Seed connector confirm: ${request.requestId}`);
+  mainWindow?.webContents.send("seed-connector-confirm", request);
+});
+
+ipcMain.on("seed-connector-reject", (_event, request: SeedWalletRequest) => {
+  Logger.info(`Seed connector reject: ${request.requestId}`);
+  mainWindow?.webContents.send("seed-connector-reject", request);
+});
+
+ipcMain.on("seed-connector-disconnect", () => {
+  Logger.info(`Seed connector disconnect`);
+  mainWindow?.webContents.send("seed-connector-disconnect");
 });

@@ -19,6 +19,7 @@ import { faBars } from "@fortawesome/free-solid-svg-icons";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
 import CapacitorWidget from "./capacitor/CapacitorWidget";
+import { useSeizeConnect } from "../../hooks/useSeizeConnect";
 
 interface Props {
   onLoad?: () => void;
@@ -40,6 +41,7 @@ export default function Header(props: Readonly<Props>) {
   const [consolidations, setConsolidations] = useState<string[]>([]);
   const [burgerMenuOpen, setBurgerMenuOpen] = useState(false);
 
+  const [showBurgerMenuNetwork, setShowBurgerMenuNetwork] = useState(false);
   const [showBurgerMenuCollections, setShowBurgerMenuCollections] =
     useState(false);
   const [showBurgerMenuAbout, setShowBurgerMenuAbout] = useState(false);
@@ -125,7 +127,7 @@ export default function Header(props: Readonly<Props>) {
         className={`inset-safe-area ${styles.burgerMenu} ${
           burgerMenuOpen ? styles.burgerMenuOpen : ""
         }`}>
-        <Container className="pt-2 pb-2">
+        <Container className="pt-3 pb-3">
           <Row>
             <Col className="d-flex justify-content-end">
               <FontAwesomeIcon
@@ -226,7 +228,81 @@ export default function Header(props: Readonly<Props>) {
             <Col>
               <h3
                 onClick={() => {
+                  setShowBurgerMenuNetwork(!showBurgerMenuNetwork);
+                  setShowBurgerMenuCollections(false);
+                  setShowBurgerMenuCommunity(false);
+                  setShowBurgerMenuAbout(false);
+                  setShowBurgerMenuTools(false);
+                  setShowBurgerMenuBrain(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    setShowBurgerMenuNetwork(!showBurgerMenuNetwork);
+                    setShowBurgerMenuCollections(false);
+                    setShowBurgerMenuCommunity(false);
+                    setShowBurgerMenuAbout(false);
+                    setShowBurgerMenuTools(false);
+                    setShowBurgerMenuBrain(false);
+                  }
+                }}
+                className={`${styles.burgerMenuHeader}
+                  ${
+                    showBurgerMenuNetwork
+                      ? styles.burgerMenuCaretClose
+                      : styles.burgerMenuCaretOpen
+                  }`}>
+                Network
+              </h3>
+            </Col>
+            {showBurgerMenuNetwork && (
+              <Container>
+                <Row>
+                  <Col xs={{ span: 6, offset: 3 }}>
+                    <hr />
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link href="/network/app-info">
+                      <h3>App Info</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link href="/network/app-logs">
+                      <h3>App Logs</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={{ span: 6, offset: 3 }}>
+                    <hr />
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link href="/network/seed-wallets">
+                      <h3>
+                        <span>Seed Wallets</span>&nbsp;
+                      </h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={{ span: 6, offset: 3 }}>
+                    <hr />
+                  </Col>
+                </Row>
+              </Container>
+            )}
+          </Row>
+          <Row className="pt-3 pb-3">
+            <Col>
+              <h3
+                onClick={() => {
                   setShowBurgerMenuCollections(!showBurgerMenuCollections);
+                  setShowBurgerMenuNetwork(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuTools(false);
@@ -235,6 +311,7 @@ export default function Header(props: Readonly<Props>) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     setShowBurgerMenuCollections(!showBurgerMenuCollections);
+                    setShowBurgerMenuNetwork(false);
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
                     setShowBurgerMenuTools(false);
@@ -318,6 +395,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuCommunity(!showBurgerMenuCommunity);
+                  setShowBurgerMenuNetwork(false);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuTools(false);
@@ -325,6 +403,7 @@ export default function Header(props: Readonly<Props>) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     setShowBurgerMenuCommunity(!showBurgerMenuCommunity);
+                    setShowBurgerMenuNetwork(false);
                     setShowBurgerMenuCollections(false);
                     setShowBurgerMenuAbout(false);
                     setShowBurgerMenuTools(false);
@@ -425,6 +504,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuTools(!showBurgerMenuTools);
+                  setShowBurgerMenuNetwork(false);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuAbout(false);
@@ -432,6 +512,7 @@ export default function Header(props: Readonly<Props>) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     setShowBurgerMenuTools(!showBurgerMenuTools);
+                    setShowBurgerMenuNetwork(false);
                     setShowBurgerMenuCollections(false);
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
@@ -518,6 +599,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuAbout(!showBurgerMenuAbout);
+                  setShowBurgerMenuNetwork(false);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuTools(false);
@@ -800,7 +882,30 @@ export default function Header(props: Readonly<Props>) {
                                 />
                               </NavDropdown>
                             )}
-
+                            <NavDropdown
+                              title="Network"
+                              align={"start"}
+                              className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "App Info",
+                                  path: "/network/app-info",
+                                }}
+                              />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "App Logs",
+                                  path: "/network/app-logs",
+                                }}
+                              />
+                              <NavDropdown.Divider />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "Seed Wallets",
+                                  path: "/network/seed-wallets",
+                                }}
+                              />
+                            </NavDropdown>
                             <NavDropdown
                               title="Collections"
                               align={"start"}
@@ -954,13 +1059,6 @@ export default function Header(props: Readonly<Props>) {
                                   : ""
                               }`}
                               align={"start"}>
-                              <HeaderDesktopLink
-                                link={{
-                                  name: "6529 CORE",
-                                  path: `/about/${AboutSection.CORE}`,
-                                }}
-                              />
-                              <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{
                                   name: "The Memes",

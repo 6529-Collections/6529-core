@@ -215,6 +215,7 @@ export default function CreateDrop({
         subscribed_actions: [],
       },
       created_at: Date.now(),
+      updated_at: null,
       title: dropRequest.title ?? null,
       parts: dropRequest.parts.map((part, i) => ({
         part_id: i,
@@ -223,7 +224,12 @@ export default function CreateDrop({
           url: media.url,
           mime_type: media.mime_type,
         })),
-        quoted_drop: part.quoted_drop ?? null,
+        quoted_drop: part.quoted_drop
+          ? {
+              ...part.quoted_drop,
+              is_deleted: false,
+            }
+          : null,
         replies_count: 0,
         quotes_count: 0,
       })),

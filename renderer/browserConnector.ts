@@ -36,7 +36,7 @@ export function browserConnector(parameters: {
     chainId: 1,
   };
 
-  async function init() {
+  async function init(name: string) {
     if (!window || initialized) return;
 
     const storedConnection = await window.store.get(CONNECTION_STORE);
@@ -50,7 +50,10 @@ export function browserConnector(parameters: {
         callback(data.data);
         deepLinkCallbacks.delete(data.requestId);
       } else {
-        console.log("No callback found for requestId", data.requestId);
+        console.log(
+          `[${name}] No callback found for requestId`,
+          data.requestId
+        );
       }
     });
 
@@ -86,8 +89,8 @@ export function browserConnector(parameters: {
     async connect(params: {
       isReconnecting?: boolean;
     }): Promise<ConnectionObject> {
-      console.log("Connect method called", params);
-      await init();
+      console.log(`[${this.name}] Browser Connect method called`, params);
+      await init(this.name);
       if (connectionObject.accounts.length > 0) {
         return connectionObject;
       }
@@ -122,7 +125,7 @@ export function browserConnector(parameters: {
         });
 
         setTimeout(() => {
-          console.log("Deep link callback timed out", requestId);
+          console.log(`[${this.name}] Deep link callback timed out`, requestId);
           deepLinkCallbacks.delete(requestId);
           reject(new Error("Connection request timed out"));
         }, 60000);
@@ -143,10 +146,10 @@ export function browserConnector(parameters: {
       return connectionObject.chainId;
     },
     async getProvider(): Promise<any> {
-      await init();
+      await init(this.name);
       return {
         request: async ({ method, params }: ProviderRequest): Promise<any> => {
-          console.log("Provider method called", method, params);
+          console.log(`[${this.name}] Provider method called`, method, params);
 
           if (method === "eth_chainId") {
             return this.getChainId();
@@ -167,10 +170,12 @@ export function browserConnector(parameters: {
                 resolve(response);
               }
             });
-            console.log("i am deepLinkCallbacks", deepLinkCallbacks);
 
             setTimeout(() => {
-              console.log("Deep link callback timed out", requestId);
+              console.log(
+                `[${this.name}] Deep link callback timed out`,
+                requestId
+              );
               deepLinkCallbacks.delete(requestId);
               reject(new Error("Provider request timed out"));
             }, 60000);
@@ -182,15 +187,15 @@ export function browserConnector(parameters: {
       return true;
     },
     async switchChain(params: { chainId: number }) {
-      console.log("Switch Chain method called", params.chainId);
-      await init();
+      console.log(`[${this.name}] Switch Chain method called`, params.chainId);
+      await init(this.name);
       const myChain = params.chainId === sepolia.id ? sepolia : mainnet;
       connectionObject.chainId = myChain.id;
       await window.store.set(
         CONNECTION_STORE,
         JSON.stringify(connectionObject)
       );
-      console.log("Switched to chain", myChain.name);
+      console.log(`[${this.name}] Switched to chain`, myChain.name);
       return myChain;
     },
     async onAccountsChanged(accounts) {

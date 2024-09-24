@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import { SeedWalletRequest } from "../shared/types";
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -6,10 +7,10 @@ export const api = {
       callback(event, args)
     );
   },
-  send: (channel: string, args: any): void => {
+  send: (channel: string, ...args: any[]): void => {
     ipcRenderer.send(channel, args);
   },
-  sendSync: (channel: string, args?: any): any => {
+  sendSync: (channel: string, ...args: any[]): any => {
     return ipcRenderer.sendSync(channel, args);
   },
   openExternal: (url: string): void => {
@@ -24,6 +25,12 @@ export const api = {
   openExternalBrave: (url: string): void => {
     ipcRenderer.send("open-external-brave", url);
   },
+  showCrashReport: (fileName: string) => {
+    ipcRenderer.send("show-crash-report", fileName);
+  },
+  extractCrashReport: (fileName: string) => {
+    ipcRenderer.send("extract-crash-report", fileName);
+  },
   onAppClose: (callback: any) => ipcRenderer.on("app-close", callback),
   runBackground: () => {
     ipcRenderer.send("run-background");
@@ -36,9 +43,14 @@ export const api = {
   getNavigationState: () => ipcRenderer.invoke("get-nav-state"),
   onNavigationStateChange: (callback: any) =>
     ipcRenderer.on("nav-state-change", callback),
-  removeNavigationStateChangeListener: (callback: any) =>
+  offNavigationStateChange: (callback: any) =>
     ipcRenderer.removeListener("nav-state-change", callback),
+  onSeedWalletsChange: (callback: any) =>
+    ipcRenderer.on("seed-wallets-change", callback),
+  offSeedWalletsChange: (callback: any) =>
+    ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
+  getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);
   },
@@ -87,6 +99,57 @@ export const updater = {
 
 contextBridge.exposeInMainWorld("updater", updater);
 
+export const seedConnector = {
+  initRequest: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-init-request", request);
+  },
+  onInitRequest: (callback: any) => {
+    ipcRenderer.on("seed-connector-init-request", callback);
+  },
+  offInitRequest: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-init-request", callback);
+  },
+  showToast: (toast: { type: string; message: string }) => {
+    ipcRenderer.send("seed-connector-show-toast", toast);
+  },
+  onShowToast: (callback: any) => {
+    ipcRenderer.on("seed-connector-show-toast", callback);
+  },
+  offShowToast: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-show-toast", callback);
+  },
+  confirm: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-confirm", request);
+  },
+  onConfirm: (callback: any) => {
+    ipcRenderer.on("seed-connector-confirm", callback);
+  },
+  offConfirm: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-confirm", callback);
+  },
+  reject: (request: SeedWalletRequest) => {
+    ipcRenderer.send("seed-connector-reject", request);
+  },
+  onReject: (callback: any) => {
+    ipcRenderer.on("seed-connector-reject", callback);
+  },
+  offReject: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-reject", callback);
+  },
+  disconnect: () => {
+    ipcRenderer.send("seed-connector-disconnect");
+  },
+  onDisconnect: (callback: any) => {
+    ipcRenderer.on("seed-connector-disconnect", callback);
+  },
+  offDisconnect: (callback: any) => {
+    ipcRenderer.removeListener("seed-connector-disconnect", callback);
+  },
+};
+
+contextBridge.exposeInMainWorld("seedConnector", seedConnector);
+
 export type ElectronAPI = typeof api;
 export type ElectronStore = typeof store;
 export type ElectronUpdater = typeof updater;
+export type ElectronSeedConnector = typeof seedConnector;

@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Col, Container, Row, Image } from "react-bootstrap";
-import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutNakamotoThreshold() {
   return (
@@ -20,12 +19,8 @@ export default function AboutNakamotoThreshold() {
           <p>
             This is a bit of Memes inside-baseball but I am{" "}
             <Link
-              href="#"
-              onClick={() =>
-                openInExternalBrowser(
-                  "https://x.com/punk6529/status/1779105411443949809"
-                )
-              }>
+              href={"https://x.com/punk6529/status/1779105411443949809"}
+              target="_blank">
               tweeting
             </Link>{" "}
             it out so we have it available for reference.

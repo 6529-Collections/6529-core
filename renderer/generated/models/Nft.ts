@@ -33,6 +33,7 @@ export class Nft {
     'tdh_rank': number;
     'market_cap': number;
     'floor_price': number;
+    'floor_price_from': string | null;
     'scaled': string;
     'compressed_animation': string | null;
     'icon': string;
@@ -45,6 +46,8 @@ export class Nft {
     'boosted_tdh': number;
     'artist_seize_handle': string | null;
     'has_distribution': boolean;
+    'highest_offer': number;
+    'highest_offer_from': string | null;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -170,6 +173,12 @@ export class Nft {
             "format": "float"
         },
         {
+            "name": "floor_price_from",
+            "baseName": "floor_price_from",
+            "type": "string",
+            "format": ""
+        },
+        {
             "name": "scaled",
             "baseName": "scaled",
             "type": "string",
@@ -239,6 +248,18 @@ export class Nft {
             "name": "has_distribution",
             "baseName": "has_distribution",
             "type": "boolean",
+            "format": ""
+        },
+        {
+            "name": "highest_offer",
+            "baseName": "highest_offer",
+            "type": "number",
+            "format": "float"
+        },
+        {
+            "name": "highest_offer_from",
+            "baseName": "highest_offer_from",
+            "type": "string",
             "format": ""
         }    ];
 

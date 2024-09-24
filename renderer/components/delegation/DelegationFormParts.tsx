@@ -17,7 +17,6 @@ import {
   SUPPORTED_COLLECTIONS,
 } from "../../pages/delegation/[...section]";
 import { useOrignalDelegatorEnsResolution } from "./delegation_shared";
-import { openInExternalBrowser } from "../../helpers";
 
 export function DelegationAddressInput(
   props: Readonly<{ setAddress: (address: string) => void }>
@@ -299,6 +298,8 @@ export function DelegationSubmitGroups(
     confirmations: 1,
     hash: writeDelegation.data,
   });
+  console.log("i am writeDelegation", writeDelegation);
+  console.log("i am waitWriteDelegation", waitWriteDelegation);
   const [errors, setErrors] = useState<string[]>([]);
 
   function submitDelegation() {
@@ -316,11 +317,9 @@ export function DelegationSubmitGroups(
   }
 
   function getTransactionAnchor(hash: any) {
-    return `<a href="#"
-    onClick={() =>
-      ${openInExternalBrowser(
-        getTransactionLink(DELEGATION_CONTRACT.chain_id, hash)
-      )}
+    return `<a href=${getTransactionLink(DELEGATION_CONTRACT.chain_id, hash)}
+    target="_blank"
+    rel="noreferrer"
     className=${styles.etherscanLink}>
       view
     </a>`;
@@ -328,6 +327,7 @@ export function DelegationSubmitGroups(
 
   useEffect(() => {
     if (writeDelegation.error) {
+      console.error(writeDelegation.error);
       props.onSetToast({
         title: props.title,
         message: writeDelegation.error.message.split("Request Arguments")[0],
@@ -337,9 +337,9 @@ export function DelegationSubmitGroups(
       if (waitWriteDelegation.isLoading) {
         props.onSetToast({
           title: props.title,
-          message: `Transaction submitted...
-                    ${getTransactionAnchor(writeDelegation.data)}
-                    <br />Waiting for confirmation...`,
+          message: `Transaction submitted... ${getTransactionAnchor(
+            writeDelegation.data
+          )}<br />Waiting for confirmation...`,
         });
       } else {
         props.onSetToast({

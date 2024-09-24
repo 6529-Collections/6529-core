@@ -12,15 +12,15 @@ import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { DBResponse } from "../../entities/IDBResponse";
 import { fetchUrl } from "../../services/6529api";
-import NFTImage from "../nft-image/NFTImage";
 import RememeImage from "../nft-image/RememeImage";
 import Pagination from "../pagination/Pagination";
 import { RememeSort } from "../rememes/Rememes";
 import Tippy from "@tippyjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ArtistProfileHandle from "./ArtistProfileHandle";
+import { NftPageStats } from "../nftAttributes/NftStats";
+import { printMemeReferences } from "../rememes/RememePage";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
 
 const REMEMES_PAGE_SIZE = 20;
 
@@ -190,30 +190,7 @@ export function MemePageLiveRightMenu(props: {
                     <td>Mint Date</td>
                     <td>{printMintDate(props.nft.mint_date)}</td>
                   </tr>
-                  <tr>
-                    <td>TDH Rate</td>
-                    <td>{Math.round(props.nft.hodl_rate * 100) / 100}</td>
-                  </tr>
-                  <tr>
-                    <td>Floor Price</td>
-                    <td>
-                      {props.nft.floor_price > 0
-                        ? `${numberWithCommas(
-                            Math.round(props.nft.floor_price * 100) / 100
-                          )} ETH`
-                        : `N/A`}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>Market Cap</td>
-                    <td>
-                      {props.nft.market_cap > 0
-                        ? `${numberWithCommas(
-                            Math.round(props.nft.market_cap * 100) / 100
-                          )} ETH`
-                        : `N/A`}
-                    </td>
-                  </tr>
+                  <NftPageStats nft={props.nft} />
                 </tbody>
               </Table>
             </Col>
@@ -221,18 +198,13 @@ export function MemePageLiveRightMenu(props: {
           <Row>
             <Col>
               <a
-                href="#"
-                onClick={() => {
-                  if (props.nft?.has_distribution) {
-                    return window.open(
-                      `/the-memes/${props.nft.id}/distribution`
-                    );
-                  } else {
-                    return openInExternalBrowser(
-                      `https://github.com/6529-Collections/thememecards/tree/main/card${props.nft?.id}`
-                    );
-                  }
-                }}>
+                href={
+                  props.nft.has_distribution
+                    ? `/the-memes/${props.nft.id}/distribution`
+                    : `https://github.com/6529-Collections/thememecards/tree/main/card${props.nft.id}`
+                }
+                target={props.nft.has_distribution ? "_self" : "_blank"}
+                rel="noreferrer">
                 Distribution Plan
               </a>
             </Col>
@@ -250,12 +222,9 @@ export function MemePageLiveRightMenu(props: {
           <Row className="pt-4">
             <Col>
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser(
-                    `https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft?.id}`
-                  )
-                }>
+                href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft.id}`}
+                target="_blank"
+                rel="noreferrer">
                 <Image
                   className={styles.marketplace}
                   src="/opensea.png"
@@ -264,13 +233,22 @@ export function MemePageLiveRightMenu(props: {
                   height={40}
                 />
               </a>
+              {/* <a
+                      href={`https://looksrare.org/collections/${MEMES_CONTRACT}/${props.nft.id}`}
+                      target="_blank"
+                      rel="noreferrer">
+                      <Image
+                        className={styles.marketplace}
+                        src="/looksrare.png"
+                        alt="looksrare"
+                        width={40}
+                        height={40}
+                      />
+                    </a> */}
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser(
-                    `https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft?.id}`
-                  )
-                }>
+                href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft.id}`}
+                target="_blank"
+                rel="noreferrer">
                 <Image
                   className={styles.marketplace}
                   src="/x2y2.png"
@@ -360,57 +338,7 @@ export function MemePageLiveSubMenu(props: {
             related to The Meme Cards.
           </Col>
         </Row>
-        {memeLabNftsLoaded && memeLabNfts.length === 0 && (
-          <Row className="pt-2 pb-4">
-            <Col>Meme Lab NFTs that reference this NFT will appear here.</Col>
-          </Row>
-        )}
-        {memeLabNfts.length > 0 && (
-          <Row className="pt-2 pb-2">
-            {memeLabNfts.map((nft) => {
-              return (
-                <Col
-                  key={`${nft.contract}-${nft.id}`}
-                  className="pt-3 pb-3"
-                  xs={{ span: 6 }}
-                  sm={{ span: 4 }}
-                  md={{ span: 3 }}
-                  lg={{ span: 3 }}>
-                  <a
-                    href={`/meme-lab/${nft.id}`}
-                    className="decoration-none scale-hover">
-                    <Container fluid className="no-padding">
-                      <Row>
-                        <Col>
-                          <NFTImage
-                            nft={nft}
-                            animation={false}
-                            height={300}
-                            balance={0}
-                            showThumbnail={true}
-                            showUnseized={false}
-                          />
-                        </Col>
-                      </Row>
-                      <Row>
-                        <Col className="text-center pt-2">
-                          <b>
-                            #{nft.id} - {nft.name}
-                          </b>
-                        </Col>
-                      </Row>
-                      <Row>
-                        <Col className="text-center pt-2">
-                          Artists: {nft.artist}
-                        </Col>
-                      </Row>
-                    </Container>
-                  </a>
-                </Col>
-              );
-            })}
-          </Row>
-        )}
+        {printMemeReferences(memeLabNfts, memeLabNftsLoaded, true)}
         <Row className="pt-3" ref={rememesTarget}>
           <Col className="d-flex flex-wrap align-items-center justify-content-between">
             <h1 className="mb-0 pt-2">

@@ -1,12 +1,11 @@
 import { Col, Container, Row } from "react-bootstrap";
-import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutApply() {
   return (
     <Container>
       <Row>
         <Col>
-          <h1 className="float-none">Apply</h1>
+          <h1>Apply</h1>
         </Col>
       </Row>
       <Row className="pt-3 pb-3">
@@ -17,10 +16,9 @@ export default function AboutApply() {
           <p>
             Please send an email to{" "}
             <a
-              href="#"
-              onClick={() =>
-                openInExternalBrowser("mailto:collections@6529.io")
-              }>
+              href="mailto:collections@6529.io"
+              target="_blank"
+              rel="noreferrer">
               collections&#64;6529.io
             </a>{" "}
             with:

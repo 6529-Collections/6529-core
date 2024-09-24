@@ -4,7 +4,6 @@ import styles from "./Timeline.module.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { numberWithCommasFromString } from "../../helpers/Helpers";
 import TimelineMediaComponent, { MediaType } from "./TimelineMedia";
-import { openInExternalBrowser } from "../../helpers";
 
 interface Props {
   nft: BaseNFT;
@@ -88,7 +87,7 @@ export default function Timeline(props: Readonly<Props>) {
     return (
       <Col xs={12}>
         <b>{label}:</b>{" "}
-        <a href="#" onClick={() => openInExternalBrowser(value)}>
+        <a href={value} target="_blank" rel="noreferrer">
           {value}
         </a>
       </Col>
@@ -187,7 +186,7 @@ export default function Timeline(props: Readonly<Props>) {
               index % 2 === 0 ? styles.right : styles.left
             }`}>
             <div className={styles.content}>
-              <h5 className="float-none m-0 mb-3">
+              <h5 className="m-0 mb-3">
                 {`${getDateDisplay(step.transaction_date)} UTC`}
               </h5>
               <Container className="no-padding">
@@ -196,8 +195,9 @@ export default function Timeline(props: Readonly<Props>) {
                     <b>{step.description.event}</b>
                     <span className="d-flex gap-4">
                       <a
-                        href="#"
-                        onClick={() => openInExternalBrowser(step.uri)}
+                        href={step.uri}
+                        target="_blank"
+                        rel="noreferrer"
                         className="d-flex align-items-center justify-content-center gap-2 decoration-none">
                         URI
                         <FontAwesomeIcon
@@ -206,12 +206,9 @@ export default function Timeline(props: Readonly<Props>) {
                         />
                       </a>
                       <a
-                        href="#"
-                        onClick={() =>
-                          openInExternalBrowser(
-                            `https://etherscan.io/tx/${step.transaction_hash}`
-                          )
-                        }
+                        href={`https://etherscan.io/tx/${step.transaction_hash}`}
+                        target="_blank"
+                        rel="noreferrer"
                         className="d-flex align-items-center justify-content-center gap-2 decoration-none">
                         TXN
                         <FontAwesomeIcon

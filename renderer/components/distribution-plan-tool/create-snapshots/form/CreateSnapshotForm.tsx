@@ -16,7 +16,6 @@ import {
   distributionPlanApiFetch,
   distributionPlanApiPost,
 } from "../../../../services/distribution-plan-api";
-import { openInExternalBrowser } from "../../../../helpers";
 interface CreateSnapshotFormValues {
   name: string;
   contract: string;
@@ -163,7 +162,7 @@ export default function CreateSnapshotForm() {
   };
 
   const goToEtherScan = () => {
-    openInExternalBrowser("https://etherscan.io/");
+    window.open("https://etherscan.io/", "_blank");
   };
 
   return (

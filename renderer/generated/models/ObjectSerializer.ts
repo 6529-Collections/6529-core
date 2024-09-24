@@ -1,6 +1,16 @@
 export * from '../models/AcceptActionRequest';
 export * from '../models/AddActionToProxyRequest';
+export * from '../models/AggregatedActivity';
+export * from '../models/AggregatedActivityMemes';
+export * from '../models/AggregatedActivityPage';
+export * from '../models/ArtistItem';
+export * from '../models/ArtistNameItem';
+export * from '../models/ArtistsNft';
+export * from '../models/ArtistsPage';
+export * from '../models/ArtistsWork';
 export * from '../models/AvailableRatingCredit';
+export * from '../models/BlockItem';
+export * from '../models/BlocksPage';
 export * from '../models/BulkRateRequest';
 export * from '../models/BulkRateResponse';
 export * from '../models/BulkRateSkippedIdentity';
@@ -42,7 +52,9 @@ export * from '../models/DropRatingRequest';
 export * from '../models/DropReferencedNFT';
 export * from '../models/DropSubscriptionActions';
 export * from '../models/DropSubscriptionTargetAction';
+export * from '../models/DropTraceItem';
 export * from '../models/DropVote';
+export * from '../models/DropWithoutWave';
 export * from '../models/DropsPage';
 export * from '../models/FeedItem';
 export * from '../models/FeedItemType';
@@ -70,6 +82,8 @@ export * from '../models/Notification';
 export * from '../models/NotificationCause';
 export * from '../models/NotificationsResponse';
 export * from '../models/OutgoingIdentitySubscriptionsPage';
+export * from '../models/OwnerBalance';
+export * from '../models/OwnerBalanceMemes';
 export * from '../models/PageBase';
 export * from '../models/PageWithNextUriBase';
 export * from '../models/ProfileMin';
@@ -77,18 +91,26 @@ export * from '../models/ProfileProxy';
 export * from '../models/ProfileProxyAction';
 export * from '../models/ProfileProxyActionType';
 export * from '../models/QuotedDrop';
+export * from '../models/QuotedDropResponse';
 export * from '../models/RateMatter';
 export * from '../models/RatingWithProfileInfoAndLevel';
 export * from '../models/RatingWithProfileInfoAndLevelPage';
 export * from '../models/RepRating';
 export * from '../models/ReplyToDrop';
+export * from '../models/ReplyToDropResponse';
+export * from '../models/SeizeSettings';
 export * from '../models/TargetAndSubscriptionActions';
+export * from '../models/UpdateDropRequest';
 export * from '../models/UpdateProxyActionRequest';
+export * from '../models/UpdateWaveRequest';
+export * from '../models/UploadItem';
+export * from '../models/UploadsPage';
 export * from '../models/Wave';
 export * from '../models/WaveConfig';
 export * from '../models/WaveContributorOverview';
 export * from '../models/WaveCreditScope';
 export * from '../models/WaveCreditType';
+export * from '../models/WaveDropsFeed';
 export * from '../models/WaveMetadataType';
 export * from '../models/WaveMetrics';
 export * from '../models/WaveMin';
@@ -109,7 +131,17 @@ export * from '../models/WavesOverviewType';
 
 import { AcceptActionRequest, AcceptActionRequestActionEnum   } from '../models/AcceptActionRequest';
 import { AddActionToProxyRequest    } from '../models/AddActionToProxyRequest';
+import { AggregatedActivity } from '../models/AggregatedActivity';
+import { AggregatedActivityMemes } from '../models/AggregatedActivityMemes';
+import { AggregatedActivityPage } from '../models/AggregatedActivityPage';
+import { ArtistItem } from '../models/ArtistItem';
+import { ArtistNameItem } from '../models/ArtistNameItem';
+import { ArtistsNft } from '../models/ArtistsNft';
+import { ArtistsPage } from '../models/ArtistsPage';
+import { ArtistsWork } from '../models/ArtistsWork';
 import { AvailableRatingCredit } from '../models/AvailableRatingCredit';
+import { BlockItem } from '../models/BlockItem';
+import { BlocksPage } from '../models/BlocksPage';
 import { BulkRateRequest     } from '../models/BulkRateRequest';
 import { BulkRateResponse } from '../models/BulkRateResponse';
 import { BulkRateSkippedIdentity } from '../models/BulkRateSkippedIdentity';
@@ -151,7 +183,9 @@ import { DropRatingRequest } from '../models/DropRatingRequest';
 import { DropReferencedNFT } from '../models/DropReferencedNFT';
 import { DropSubscriptionActions } from '../models/DropSubscriptionActions';
 import { DropSubscriptionTargetAction } from '../models/DropSubscriptionTargetAction';
+import { DropTraceItem } from '../models/DropTraceItem';
 import { DropVote } from '../models/DropVote';
+import { DropWithoutWave } from '../models/DropWithoutWave';
 import { DropsPage } from '../models/DropsPage';
 import { FeedItem    } from '../models/FeedItem';
 import { FeedItemType } from '../models/FeedItemType';
@@ -172,13 +206,15 @@ import { IncomingIdentitySubscriptionsPage } from '../models/IncomingIdentitySub
 import { IntRange } from '../models/IntRange';
 import { LoginRequest } from '../models/LoginRequest';
 import { LoginResponse } from '../models/LoginResponse';
-import { Nft      , NftTokenTypeEnum                            } from '../models/Nft';
+import { Nft      , NftTokenTypeEnum                               } from '../models/Nft';
 import { NftsPage } from '../models/NftsPage';
 import { NonceResponse } from '../models/NonceResponse';
 import { Notification        } from '../models/Notification';
 import { NotificationCause } from '../models/NotificationCause';
 import { NotificationsResponse } from '../models/NotificationsResponse';
 import { OutgoingIdentitySubscriptionsPage } from '../models/OutgoingIdentitySubscriptionsPage';
+import { OwnerBalance } from '../models/OwnerBalance';
+import { OwnerBalanceMemes } from '../models/OwnerBalanceMemes';
 import { PageBase } from '../models/PageBase';
 import { PageWithNextUriBase } from '../models/PageWithNextUriBase';
 import { ProfileMin } from '../models/ProfileMin';
@@ -186,18 +222,26 @@ import { ProfileProxy } from '../models/ProfileProxy';
 import { ProfileProxyAction             } from '../models/ProfileProxyAction';
 import { ProfileProxyActionType } from '../models/ProfileProxyActionType';
 import { QuotedDrop } from '../models/QuotedDrop';
+import { QuotedDropResponse } from '../models/QuotedDropResponse';
 import { RateMatter } from '../models/RateMatter';
 import { RatingWithProfileInfoAndLevel } from '../models/RatingWithProfileInfoAndLevel';
 import { RatingWithProfileInfoAndLevelPage } from '../models/RatingWithProfileInfoAndLevelPage';
 import { RepRating } from '../models/RepRating';
 import { ReplyToDrop } from '../models/ReplyToDrop';
+import { ReplyToDropResponse } from '../models/ReplyToDropResponse';
+import { SeizeSettings } from '../models/SeizeSettings';
 import { TargetAndSubscriptionActions } from '../models/TargetAndSubscriptionActions';
+import { UpdateDropRequest } from '../models/UpdateDropRequest';
 import { UpdateProxyActionRequest } from '../models/UpdateProxyActionRequest';
+import { UpdateWaveRequest } from '../models/UpdateWaveRequest';
+import { UploadItem } from '../models/UploadItem';
+import { UploadsPage } from '../models/UploadsPage';
 import { Wave } from '../models/Wave';
 import { WaveConfig        } from '../models/WaveConfig';
 import { WaveContributorOverview } from '../models/WaveContributorOverview';
 import { WaveCreditScope } from '../models/WaveCreditScope';
 import { WaveCreditType } from '../models/WaveCreditType';
+import { WaveDropsFeed } from '../models/WaveDropsFeed';
 import { WaveMetadataType } from '../models/WaveMetadataType';
 import { WaveMetrics } from '../models/WaveMetrics';
 import { WaveMin } from '../models/WaveMin';
@@ -255,7 +299,17 @@ let enumsMap: Set<string> = new Set<string>([
 let typeMap: {[index: string]: any} = {
     "AcceptActionRequest": AcceptActionRequest,
     "AddActionToProxyRequest": AddActionToProxyRequest,
+    "AggregatedActivity": AggregatedActivity,
+    "AggregatedActivityMemes": AggregatedActivityMemes,
+    "AggregatedActivityPage": AggregatedActivityPage,
+    "ArtistItem": ArtistItem,
+    "ArtistNameItem": ArtistNameItem,
+    "ArtistsNft": ArtistsNft,
+    "ArtistsPage": ArtistsPage,
+    "ArtistsWork": ArtistsWork,
     "AvailableRatingCredit": AvailableRatingCredit,
+    "BlockItem": BlockItem,
+    "BlocksPage": BlocksPage,
     "BulkRateRequest": BulkRateRequest,
     "BulkRateResponse": BulkRateResponse,
     "BulkRateSkippedIdentity": BulkRateSkippedIdentity,
@@ -296,7 +350,9 @@ let typeMap: {[index: string]: any} = {
     "DropRatingRequest": DropRatingRequest,
     "DropReferencedNFT": DropReferencedNFT,
     "DropSubscriptionActions": DropSubscriptionActions,
+    "DropTraceItem": DropTraceItem,
     "DropVote": DropVote,
+    "DropWithoutWave": DropWithoutWave,
     "DropsPage": DropsPage,
     "FeedItem": FeedItem,
     "Group": Group,
@@ -319,21 +375,31 @@ let typeMap: {[index: string]: any} = {
     "Notification": Notification,
     "NotificationsResponse": NotificationsResponse,
     "OutgoingIdentitySubscriptionsPage": OutgoingIdentitySubscriptionsPage,
+    "OwnerBalance": OwnerBalance,
+    "OwnerBalanceMemes": OwnerBalanceMemes,
     "PageBase": PageBase,
     "PageWithNextUriBase": PageWithNextUriBase,
     "ProfileMin": ProfileMin,
     "ProfileProxy": ProfileProxy,
     "ProfileProxyAction": ProfileProxyAction,
     "QuotedDrop": QuotedDrop,
+    "QuotedDropResponse": QuotedDropResponse,
     "RatingWithProfileInfoAndLevel": RatingWithProfileInfoAndLevel,
     "RatingWithProfileInfoAndLevelPage": RatingWithProfileInfoAndLevelPage,
     "RepRating": RepRating,
     "ReplyToDrop": ReplyToDrop,
+    "ReplyToDropResponse": ReplyToDropResponse,
+    "SeizeSettings": SeizeSettings,
     "TargetAndSubscriptionActions": TargetAndSubscriptionActions,
+    "UpdateDropRequest": UpdateDropRequest,
     "UpdateProxyActionRequest": UpdateProxyActionRequest,
+    "UpdateWaveRequest": UpdateWaveRequest,
+    "UploadItem": UploadItem,
+    "UploadsPage": UploadsPage,
     "Wave": Wave,
     "WaveConfig": WaveConfig,
     "WaveContributorOverview": WaveContributorOverview,
+    "WaveDropsFeed": WaveDropsFeed,
     "WaveMetrics": WaveMetrics,
     "WaveMin": WaveMin,
     "WaveOutcome": WaveOutcome,

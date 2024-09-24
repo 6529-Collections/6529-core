@@ -1,5 +1,6 @@
+import styles from "./Auth.module.scss";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
-import { Slide, ToastContainer, TypeOptions, toast } from "react-toastify";
+import { Slide, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useAccount, useSignMessage } from "wagmi";
 import {
@@ -25,13 +26,13 @@ import { LoginRequest } from "../../generated/models/LoginRequest";
 import { LoginResponse } from "../../generated/models/LoginResponse";
 import { ProfileProxy } from "../../generated/models/ProfileProxy";
 import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
-import { useRouter } from "next/router";
-import { isElectron } from "../../helpers";
 import { useEffectOnce } from "../../hooks/useEffectOnce";
+import { Modal, Button } from "react-bootstrap";
+import DotLoader from "../dotLoader/DotLoader";
+import { useSeizeConnect } from "../../hooks/useSeizeConnect";
+import { useModalState } from "../../contexts/ModalStateContext";
 
-
-
-
+const AUTH_MODAL = "AuthModal";
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
@@ -72,8 +73,10 @@ export default function Auth({
 }) {
   const { invalidateAll } = useContext(ReactQueryWrapperContext);
   const { address } = useAccount();
+  const { seizeDisconnect } = useSeizeConnect();
 
   const signMessage = useSignMessage();
+  const [showSignModal, setShowSignModal] = useState(false);
 
   const { data: connectedProfile } = useQuery<IProfileAndConsolidations>({
     queryKey: [QueryKey.PROFILE, address?.toLowerCase()],
@@ -131,7 +134,6 @@ export default function Auth({
       removeAuthJwt();
       invalidateAll();
       setActiveProfileProxy(null);
-
       return;
     } else {
       const isAuth = validateJwt({
@@ -143,9 +145,7 @@ export default function Auth({
         removeAuthJwt();
         setActiveProfileProxy(null);
         invalidateAll();
-        if (isElectron()) {
-          requestAuth();
-        }
+        setShowSignModal(true);
       }
     }
   }, [address, activeProfileProxy]);
@@ -210,30 +210,6 @@ export default function Auth({
     }
   };
 
-  const getSignatureWithRetry = async ({
-    message,
-  }: {
-    message: string;
-  }): Promise<{
-    signature: string | null;
-    userRejected: boolean;
-  }> => {
-    const maxRetries = 3;
-    let retryCount = 0;
-    const delayMS = 1000;
-
-    while (retryCount < maxRetries) {
-      const signature = await getSignature({ message });
-      if (signature.signature || signature.userRejected) return signature;
-      retryCount++;
-      await new Promise((r) => setTimeout(r, delayMS));
-    }
-    return {
-      signature: null,
-      userRejected: false,
-    };
-  };
-
   const requestSignIn = async ({
     signerAddress,
     role,
@@ -257,7 +233,7 @@ export default function Auth({
       });
       return { success: false };
     }
-    const clientSignature = await getSignatureWithRetry({ message: nonce });
+    const clientSignature = await getSignature({ message: nonce });
     if (clientSignature.userRejected) {
       setToast({
         message: "Authentication rejected",
@@ -349,7 +325,11 @@ export default function Auth({
         role: activeProfileProxy?.created_by.id ?? null,
       });
     }
-    return { success: !!getAuthJwt() };
+    const isSuccess = !!getAuthJwt();
+    if (isSuccess) {
+      setShowSignModal(false);
+    }
+    return { success: isSuccess };
   };
 
   const onActiveProfileProxy = async (
@@ -418,10 +398,72 @@ export default function Auth({
     ]
   );
 
+  const { isTopModal, addModal, removeModal } = useModalState();
+
+  useEffect(() => {
+    if (showSignModal) {
+      addModal(AUTH_MODAL);
+    } else {
+      removeModal(AUTH_MODAL);
+    }
+    return () => {
+      removeModal(AUTH_MODAL);
+    };
+  }, [showSignModal]);
+
   return (
     <AuthContext.Provider value={contextValue}>
       {children}
-      <ToastContainer />
+      <Modal
+        show={showSignModal}
+        onHide={() => setShowSignModal(false)}
+        backdrop="static"
+        keyboard={false}
+        centered
+        dialogClassName={!isTopModal(AUTH_MODAL) ? "modal-blurred" : ""}>
+        <Modal.Header className={styles.signModalHeader}>
+          <Modal.Title>Sign Authentication Request</Modal.Title>
+        </Modal.Header>
+        <Modal.Body className={styles.signModalContent}>
+          <p className="mt-2 mb-2">
+            To connect your wallet, you will need to sign a message to confirm
+            your identity.
+          </p>
+          <ul className="font-lighter">
+            <li className="mt-1 mb-1">
+              This signature will be used to generate a secure token (JWT) to
+              authenticate your session.
+            </li>
+            <li className="mt-1 mb-1">
+              Your signature will not cost any gas and is purely for
+              authentication purposes.
+            </li>
+          </ul>
+        </Modal.Body>
+        <Modal.Footer className={styles.signModalContent}>
+          <Button
+            variant="danger"
+            onClick={() => {
+              setShowSignModal(false);
+              seizeDisconnect();
+              signMessage.reset();
+            }}>
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => requestAuth()}
+            disabled={signMessage.isPending}>
+            {signMessage.isPending ? (
+              <>
+                Confirm in your wallet <DotLoader />
+              </>
+            ) : (
+              "Sign"
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
     </AuthContext.Provider>
   );
 }

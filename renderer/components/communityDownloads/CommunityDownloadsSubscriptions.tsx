@@ -6,7 +6,6 @@ import Pagination from "../pagination/Pagination";
 import { commonApiFetch } from "../../services/api/common-api";
 import { MEMES_CONTRACT } from "../../constants";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import { openInExternalBrowser } from "../../helpers";
 
 const PAGE_SIZE = 25;
 
@@ -71,10 +70,9 @@ export default function CommunityDownloadsSubscriptions() {
                           <td>{download.token_id.toLocaleString()}</td>
                           <td>
                             <a
-                              href="#"
-                              onClick={() =>
-                                openInExternalBrowser(download.upload_url)
-                              }>
+                              href={download.upload_url}
+                              target="_blank"
+                              rel="noreferrer">
                               {download.upload_url}
                             </a>
                           </td>

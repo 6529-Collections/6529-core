@@ -2,14 +2,13 @@ import { Col, Container, Row, Table } from "react-bootstrap";
 import Image from "next/image";
 import { AboutSection } from "../../pages/about/[section]";
 import Link from "next/link";
-import { openInExternalBrowser } from "../../helpers";
 
 export default function AboutMemes() {
   return (
     <Container>
       <Row>
         <Col>
-          <h1 className="float-none">
+          <h1>
             <span className="font-lightest">Memes</span> Are The Most Important
             Thing In The World
           </h1>
@@ -93,10 +92,9 @@ export default function AboutMemes() {
           <p>
             The Memes Discord:{" "}
             <a
-              href="#"
-              onClick={() =>
-                openInExternalBrowser("https://discord.gg/join-om")
-              }>
+              href="https://discord.gg/join-om"
+              target="_blank"
+              rel="noreferrer">
               discord.gg/join-om
             </a>
           </p>

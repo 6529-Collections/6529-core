@@ -4,7 +4,6 @@ import { NEXTGEN_CHAIN_ID } from "./nextgen_contracts";
 import DotLoader from "../dotLoader/DotLoader";
 import { useEffect, useState } from "react";
 import { NULL_MERKLE } from "../../constants";
-import { openInExternalBrowser } from "../../helpers";
 import Link from "next/link";
 
 const TRANSFER_EVENT =
@@ -93,12 +92,9 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
         <span>
           Transaction {getStatusMessage()}{" "}
           <a
-            href="#"
-            onClick={() =>
-              openInExternalBrowser(
-                getTransactionLink(NEXTGEN_CHAIN_ID, props.hash!)
-              )
-            }>
+            href={getTransactionLink(NEXTGEN_CHAIN_ID, props.hash)}
+            target="_blank"
+            rel="noreferrer">
             view
           </a>
           {waitContractWrite.isLoading && (

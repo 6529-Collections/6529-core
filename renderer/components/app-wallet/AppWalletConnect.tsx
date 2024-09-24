@@ -1,6 +1,6 @@
 import styles from "./AppWallet.module.scss";
 import { useRouter } from "next/router";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { useAccount, useConnect, useConnections, useDisconnect } from "wagmi";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import { Container, Row, Col } from "react-bootstrap";
@@ -25,7 +25,7 @@ export default function AppWalletConnect(
     }
   }, [connect.error]);
 
-  async function openApp() {
+  const openApp = useCallback(() => {
     const connection = connections[0];
     const connectionInfo = {
       accounts: connection.accounts.map((account) => account.toLowerCase()),
@@ -40,7 +40,7 @@ export default function AppWalletConnect(
     )}`;
     window.location.href = deepLink;
     props.setCompleted(true);
-  }
+  }, [connections]);
 
   function onDisconnect() {
     for (const connection of connections) {

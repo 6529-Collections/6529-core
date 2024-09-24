@@ -4,12 +4,14 @@ import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
 import { commonApiFetch } from "../../../services/api/common-api";
 import HeaderUserConnecting from "./HeaderUserConnecting";
 import HeaderUserContext from "./HeaderUserContext";
+import { useSeedWallet } from "../../../contexts/SeedWalletContext";
 
 export default function HeaderUserConnected({
   connectedAddress,
 }: {
   readonly connectedAddress: string;
 }) {
+  const { isSeedWallet, isFetched } = useSeedWallet();
   const { isLoading, data: profile } = useQuery<IProfileAndConsolidations>({
     queryKey: [QueryKey.PROFILE, connectedAddress.toLowerCase()],
     queryFn: async () =>
@@ -19,10 +21,10 @@ export default function HeaderUserConnected({
   });
   return (
     <div>
-      {isLoading || !profile ? (
+      {isLoading || !profile || !isFetched ? (
         <HeaderUserConnecting />
       ) : (
-        <HeaderUserContext profile={profile} />
+        <HeaderUserContext profile={profile} isSeedWallet={isSeedWallet} />
       )}
     </div>
   );

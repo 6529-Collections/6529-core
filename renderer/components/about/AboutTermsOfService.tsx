@@ -1,7 +1,6 @@
 import styles from "./About.module.scss";
 import { Col, Container, Row } from "react-bootstrap";
 import { AboutSection } from "../../pages/about/[section]";
-import { openInExternalBrowser } from "../../helpers";
 import Link from "next/link";
 
 export default function AboutTermsOfService() {
@@ -9,7 +8,7 @@ export default function AboutTermsOfService() {
     <Container>
       <Row>
         <Col>
-          <h1 className="float-none">
+          <h1>
             <span className="font-lightest">Terms</span> Of Service
           </h1>
         </Col>
@@ -49,15 +48,11 @@ export default function AboutTermsOfService() {
               <br />
               <br />
               &quot;Our Platform&quot;: the website located at{" "}
-              <a
-                href="#"
-                onClick={() => openInExternalBrowser("https://seize.io")}>
+              <a href="https://seize.io" target="_blank" rel="noreferrer">
                 seize.io
               </a>{" "}
               , any websites hosted at sub-domains of{" "}
-              <a
-                href="#"
-                onClick={() => openInExternalBrowser("https://seize.io")}>
+              <a href="https://seize.io" target="_blank" rel="noreferrer">
                 seize.io
               </a>{" "}
               , including hosted minting or primary sales pages, any primary
@@ -141,10 +136,9 @@ export default function AboutTermsOfService() {
               <br />
               &#64;
               <a
-                href="#"
-                onClick={() =>
-                  openInExternalBrowser("https://twitter.com/punk6529")
-                }>
+                href="https://twitter.com/punk6529"
+                target="_blank"
+                rel="noreferrer">
                 punk6529
               </a>{" "}
               tweets a lot and has a lot of ideas that may change from time to
@@ -264,9 +258,12 @@ export default function AboutTermsOfService() {
               incorporated by reference into these Terms.
               <br />
               <br />
-              <Link href={`/about/${AboutSection.MINTING}`}>
+              <a
+                href={`/about/${AboutSection.MINTING}`}
+                target="_blank"
+                rel="noreferrer">
                 seize.io/about/{AboutSection.MINTING}
-              </Link>
+              </a>
             </li>
             <br />
             <br />
@@ -278,9 +275,12 @@ export default function AboutTermsOfService() {
               data in the United States or other countries.
               <br />
               <br />
-              <Link href={`/about/${AboutSection.PRIVACY_POLICY}`}>
+              <a
+                href={`/about/${AboutSection.PRIVACY_POLICY}`}
+                target="_blank"
+                rel="noreferrer">
                 seize.io/about/{AboutSection.PRIVACY_POLICY}
-              </Link>
+              </a>
             </li>
             <br />
             <br />
@@ -291,9 +291,12 @@ export default function AboutTermsOfService() {
               Our Copyright policy can be found here
               <br />
               <br />
-              <Link href={`/about/${AboutSection.COPYRIGHT}`}>
+              <a
+                href={`/about/${AboutSection.COPYRIGHT}`}
+                target="_blank"
+                rel="noreferrer">
                 seize.io/about/{AboutSection.COPYRIGHT}
-              </Link>
+              </a>
             </li>
             <br />
             <br />
@@ -433,9 +436,7 @@ export default function AboutTermsOfService() {
               <br />
               <br />
               Our perspectives on the 6529 NFTs can be found on the{" "}
-              <a
-                href="#"
-                onClick={() => openInExternalBrowser("https://seize.io")}>
+              <a href="https://seize.io" target="_blank" rel="noreferrer">
                 seize.io
               </a>{" "}
               website.
@@ -612,9 +613,9 @@ export default function AboutTermsOfService() {
               incorporated by reference into these Terms.
               <br />
               <br />
-              <Link href="/dispute-resolution">
+              <a href="/dispute-resolution" target="_blank" rel="noreferrer">
                 seize.io/dispute-resolution
-              </Link>{" "}
+              </a>{" "}
             </li>
             <br />
             <br />

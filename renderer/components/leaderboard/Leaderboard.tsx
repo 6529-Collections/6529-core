@@ -15,7 +15,7 @@ import { MemeSeason } from "../../entities/ISeason";
 import LeaderboardCardsCollectedComponent from "./LeaderboardCardsCollected";
 import LeaderboardInteractionsComponent from "./LeaderboardInteractions";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
+import { BlocksPage } from "../../generated/models/BlocksPage";
 
 export enum Content {
   ALL = "All",
@@ -75,7 +75,7 @@ export default function Leaderboard(
 
   useEffect(() => {
     fetchUrl(`${SEIZE_API_URL}/api/blocks?page_size=${1}`).then(
-      (response: DBResponse) => {
+      (response: BlocksPage) => {
         if (response.data.length > 0) {
           setLastTDH({
             block: response.data[0].block_number,
@@ -191,12 +191,9 @@ export default function Leaderboard(
               <span>
                 TDH Block&nbsp;
                 <a
-                  href="#"
-                  onClick={() =>
-                    openInExternalBrowser(
-                      `https://etherscan.io/block/${lastTDH.block}`
-                    )
-                  }>
+                  href={`https://etherscan.io/block/${lastTDH.block}`}
+                  rel="noreferrer"
+                  target="_blank">
                   {lastTDH.block}
                 </a>
               </span>

@@ -6,7 +6,7 @@ import Link from "next/link";
 interface MintBtn {
   label: JSX.Element | string;
   link: string;
-  onClick?: (e: any) => void;
+  target: "_blank" | "_self";
 }
 
 interface Props {
@@ -32,7 +32,7 @@ export default function MintCountdownBox(props: Readonly<Props>) {
                   key={btn.link}
                   sm={12}
                   md={props.is_full_width ? 12 : 12 / props.buttons.length}>
-                  <Link href="" onClick={btn.onClick}>
+                  <Link href={btn.link} target={btn.target} rel="noreferrer">
                     <button
                       className={`pt-2 pb-2 btn-block seize-btn no-wrap ${styles.mintBtn}`}>
                       {btn.label}

@@ -15,7 +15,6 @@ import Tippy from "@tippyjs/react";
 import Image from "next/image";
 import { postData } from "../../services/6529api";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
 
 export interface AddRememe {
   contract: string;
@@ -308,12 +307,9 @@ export default function RememeAddComponent(props: Readonly<Props>) {
                             {nftR.name && ` - ${nftR.name}`}&nbsp;&nbsp;
                             <a
                               className="decoration-hover-underline"
-                              href="#"
-                              onClick={() =>
-                                openInExternalBrowser(
-                                  `https://opensea.io/assets/ethereum/${contract}/${nftR.tokenId}`
-                                )
-                              }>
+                              href={`https://opensea.io/assets/ethereum/${contract}/${nftR.tokenId}`}
+                              target="_blank"
+                              rel="noreferrer">
                               <Image
                                 src="/opensea.png"
                                 alt="opensea"

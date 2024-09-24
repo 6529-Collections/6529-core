@@ -68,18 +68,20 @@ export default function DropPartQuote({
   }
 
   return (
-    <div className="tw-ml-[54px] tw-mt-2 tw-px-4 tw-pb-4 tw-pt-1 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid">
+    <div
+      className={`${
+        marginLeft && "tw-ml-[54px]"
+      } tw-mt-2 tw-px-4 tw-pb-4 tw-pt-1 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid`}>
       <DropPart
         profile={drop.author}
         mentionedUsers={drop.mentioned_users}
         referencedNfts={drop.referenced_nfts}
         partContent={quotedPart.content ?? null}
         smallMenuIsShown={false}
-        partMedias={
-          quotedPart.media.map(media => ({
-            mimeType: media.mime_type,
-            mediaSrc: media.url,
-          }))}
+        partMedias={quotedPart.media.map((media) => ({
+          mimeType: media.mime_type,
+          mediaSrc: media.url,
+        }))}
         showFull={false}
         createdAt={drop.created_at}
         dropTitle={drop.title}

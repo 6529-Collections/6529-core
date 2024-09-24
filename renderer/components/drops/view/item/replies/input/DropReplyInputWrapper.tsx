@@ -245,6 +245,7 @@ export default function DropReplyInputWrapper({
       reply_to: {
         drop_id: originalDrop.id,
         drop_part_id: dropPart.part_id,
+        is_deleted: false,
       },
       author: {
         id: connectedProfile.profile.external_id,
@@ -260,6 +261,7 @@ export default function DropReplyInputWrapper({
         archived: false,
       },
       created_at: Date.now(),
+      updated_at: null,
       title: dropRequest.title ?? null,
       parts: dropRequest.parts.map((part, i) => ({
         part_id: i,
@@ -268,7 +270,12 @@ export default function DropReplyInputWrapper({
           url: media.url,
           mime_type: media.mime_type,
         })),
-        quoted_drop: part.quoted_drop ?? null,
+        quoted_drop: part.quoted_drop
+          ? {
+              ...part.quoted_drop,
+              is_deleted: false,
+            }
+          : null,
         replies_count: 0,
         quotes_count: 0,
       })),
@@ -324,6 +331,8 @@ export default function DropReplyInputWrapper({
         ref={dropReplyInputRef}
         editorState={editorState}
         drop={drop}
+        canSubmit={canSubmit}
+        onDrop={onDrop}
         onEditorState={setEditorState}
         onMentionedUser={onMentionedUser}
         onReferencedNft={onReferencedNft}

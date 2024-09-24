@@ -22,8 +22,10 @@ import {
   parseNftDescriptionToHtml,
 } from "../../helpers/Helpers";
 import NFTAttributes from "../nftAttributes/NFTAttributes";
+import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
+import DotLoader from "../dotLoader/DotLoader";
+import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
 
 interface Props {
   contract: string;
@@ -34,6 +36,87 @@ enum Tabs {
   LIVE = "Live",
   METADATA = "Metadata",
   REFERENCES = "References",
+}
+
+export function printMemeReferences(
+  memes: NFT[],
+  memesLoaded: boolean = true,
+  hideTitle: boolean = false
+) {
+  return (
+    <Row className="pt-2">
+      {!hideTitle && (
+        <Col xs={12} className="pt-2">
+          <h1>
+            <span className="font-lightest">The Memes</span> References
+          </h1>
+        </Col>
+      )}
+      {memesLoaded ? (
+        <>
+          {memes.length > 0 ? (
+            <Row className="pt-2 pb-2">
+              {memes.map((nft) => {
+                return (
+                  <Col
+                    key={`${nft.contract}-${nft.id}`}
+                    className="pt-3 pb-3"
+                    xs={{ span: 6 }}
+                    sm={{ span: 4 }}
+                    md={{ span: 3 }}
+                    lg={{ span: 3 }}>
+                    <a
+                      href={`/the-memes/${nft.id}`}
+                      className="decoration-none scale-hover">
+                      <Container fluid className="no-padding">
+                        <Row>
+                          <Col>
+                            <NFTImage
+                              nft={nft}
+                              animation={false}
+                              height={300}
+                              balance={0}
+                              showThumbnail={true}
+                              showUnseized={false}
+                            />
+                          </Col>
+                        </Row>
+                        <Row>
+                          <Col className="text-center pt-2">
+                            <b>
+                              #{nft.id} - {nft.name}
+                            </b>
+                          </Col>
+                        </Row>
+                        <Row>
+                          <Col className="text-center pt-2">
+                            Artist Name: {nft.artist}
+                          </Col>
+                        </Row>
+                        <Row>
+                          <Col className="text-center pt-2">
+                            Artist Profile: <ArtistProfileHandle nft={nft} />
+                          </Col>
+                        </Row>
+                      </Container>
+                    </a>
+                  </Col>
+                );
+              })}
+            </Row>
+          ) : (
+            <Col>
+              <NothingHereYetSummer />
+            </Col>
+          )}
+        </>
+      ) : (
+        <Col>
+          Fetching references <DotLoader />
+        </Col>
+      )}
+    </Row>
+  );
 }
 
 export default function RememePage(props: Readonly<Props>) {
@@ -88,7 +171,7 @@ export default function RememePage(props: Readonly<Props>) {
       case Tabs.METADATA:
         return printMetadata();
       case Tabs.REFERENCES:
-        return printReferences();
+        return printMemeReferences(memes);
     }
   }
 
@@ -159,12 +242,9 @@ export default function RememePage(props: Readonly<Props>) {
                   <Col>
                     <a
                       className={styles.userLink}
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          `https://etherscan.io/token/${rememe.contract}/?a=${rememe.id}`
-                        )
-                      }>
+                      href={`https://etherscan.io/token/${rememe.contract}/?a=${rememe.id}`}
+                      target="_blank"
+                      rel="noreferrer">
                       <Image
                         width="0"
                         height="0"
@@ -198,12 +278,9 @@ export default function RememePage(props: Readonly<Props>) {
                     <Col>
                       <a
                         className={styles.userLink}
-                        href="#"
-                        onClick={() =>
-                          openInExternalBrowser(
-                            `https://twitter.com/${rememe.contract_opensea_data.twitterUsername}`
-                          )
-                        }>
+                        href={`https://twitter.com/${rememe.contract_opensea_data.twitterUsername}`}
+                        target="_blank"
+                        rel="noreferrer">
                         <Image
                           width="0"
                           height="0"
@@ -220,12 +297,9 @@ export default function RememePage(props: Readonly<Props>) {
                 <Row className="pt-5">
                   <Col>
                     <a
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          `https://opensea.io/assets/ethereum/${props.contract}/${props.id}`
-                        )
-                      }>
+                      href={`https://opensea.io/assets/ethereum/${props.contract}/${props.id}`}
+                      target="_blank"
+                      rel="noreferrer">
                       <Image
                         className={styles.marketplaceRememe}
                         src="/opensea.png"
@@ -235,12 +309,9 @@ export default function RememePage(props: Readonly<Props>) {
                       />
                     </a>
                     <a
-                      href="#"
-                      onClick={() =>
-                        openInExternalBrowser(
-                          `https://x2y2.io/eth/${props.contract}/${props.id}`
-                        )
-                      }>
+                      href={`https://x2y2.io/eth/${props.contract}/${props.id}`}
+                      target="_blank"
+                      rel="noreferrer">
                       <Image
                         className={styles.marketplaceRememe}
                         src="/x2y2.png"
@@ -310,8 +381,9 @@ export default function RememePage(props: Readonly<Props>) {
     if (isUrl(s) || isIPFS(s)) {
       return (
         <a
-          href="#"
-          onClick={() => openInExternalBrowser(parseIpfsUrl(s))}
+          href={parseIpfsUrl(s)}
+          target="_blank"
+          rel="noreferrer"
           className={`d-inline-flex align-items-center justify-content-start ${styles.userLink}`}>
           {s}
           <FontAwesomeIcon icon="external-link" className={styles.linkIcon} />
@@ -333,8 +405,9 @@ export default function RememePage(props: Readonly<Props>) {
                     <td className={styles.metadataTableNoBreak}>Token URI</td>
                     <td className={styles.metadataTableBreak}>
                       <a
-                        href="#"
-                        onClick={() => openInExternalBrowser(rememe.token_uri)}
+                        href={rememe.token_uri}
+                        target="_blank"
+                        rel="noreferrer"
                         className={`d-inline-flex align-items-center justify-content-start ${styles.userLink}`}>
                         {rememe.token_uri}
                         <FontAwesomeIcon
@@ -414,56 +487,6 @@ export default function RememePage(props: Readonly<Props>) {
         </>
       );
     }
-  }
-
-  function printReferences() {
-    return (
-      <Row className="pt-4">
-        <Col xs={12}>
-          <h1>
-            <span className="font-lightest">The Memes</span> References
-          </h1>
-        </Col>
-        {memes.map((nft) => (
-          <Col
-            key={`${nft.contract}-${nft.id}`}
-            className="pt-3 pb-3"
-            xs={{ span: 6 }}
-            sm={{ span: 4 }}
-            md={{ span: 3 }}
-            lg={{ span: 3 }}>
-            <a
-              href={`/the-memes/${nft.id}`}
-              className="decoration-none scale-hover">
-              <Container fluid className="no-padding">
-                <Row>
-                  <Col>
-                    <NFTImage
-                      nft={nft}
-                      animation={false}
-                      height={300}
-                      balance={0}
-                      showThumbnail={true}
-                      showUnseized={false}
-                    />
-                  </Col>
-                </Row>
-                <Row>
-                  <Col className="text-center pt-2">
-                    <b>
-                      #{nft.id} - {nft.name}
-                    </b>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col className="text-center pt-2">Artist: {nft.artist}</Col>
-                </Row>
-              </Container>
-            </a>
-          </Col>
-        ))}
-      </Row>
-    );
   }
 
   return (

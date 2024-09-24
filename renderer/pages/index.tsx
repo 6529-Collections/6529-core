@@ -44,8 +44,8 @@ import {
 } from "../helpers/nft.helpers";
 import { getProfileLogTypes } from "../helpers/profile-logs.helpers";
 import { ManifoldClaim } from "../hooks/useManifoldClaim";
+import { NftPageStats } from "../components/nftAttributes/NftStats";
 import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
-import { openInExternalBrowser } from "../helpers";
 
 export interface IndexPageProps {
   readonly nft: NFTWithMemesExtendedData;
@@ -362,44 +362,19 @@ export default function Home({
                             <b>{renderManifoldClaimCost()}</b>
                           </td>
                         </tr>
-                        <tr>
-                          <td>Floor Price</td>
-                          <td>
-                            <b>
-                              {pageProps.nft.floor_price > 0
-                                ? `${numberWithCommas(
-                                    Math.round(
-                                      pageProps.nft.floor_price * 100
-                                    ) / 100
-                                  )} ETH`
-                                : `N/A`}
-                            </b>
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Market Cap</td>
-                          <td>
-                            <b>
-                              {pageProps.nft.market_cap > 0
-                                ? `${numberWithCommas(
-                                    Math.round(pageProps.nft.market_cap * 100) /
-                                      100
-                                  )} ETH`
-                                : `N/A`}
-                            </b>
-                          </td>
-                        </tr>
+                        <NftPageStats
+                          nft={pageProps.nft}
+                          hide_mint_price={true}
+                          hide_hodl_rate={true}
+                        />
                       </tbody>
                     </Table>
                     <Row className="pt-3">
                       <Col>
                         <a
-                          href="#"
-                          onClick={() =>
-                            openInExternalBrowser(
-                              `https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`
-                            )
-                          }>
+                          href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`}
+                          target="_blank"
+                          rel="noreferrer">
                           <Image
                             className={styles.marketplace}
                             src="/opensea.png"
@@ -409,12 +384,9 @@ export default function Home({
                           />
                         </a>
                         <a
-                          href="#"
-                          onClick={() =>
-                            openInExternalBrowser(
-                              `https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`
-                            )
-                          }>
+                          href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`}
+                          target="_blank"
+                          rel="noreferrer">
                           <Image
                             className={styles.marketplace}
                             src="/x2y2.png"

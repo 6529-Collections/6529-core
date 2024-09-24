@@ -38,7 +38,12 @@ export default function NotificationItem({
           />
         );
       case NotificationCause.IdentityMentioned:
-        return <NotificationIdentityMentioned notification={notification} />;
+        return (
+          <NotificationIdentityMentioned
+            notification={notification}
+            availableCredit={availableCredit}
+          />
+        );
       case NotificationCause.IdentitySubscribed:
         return <NotificationIdentitySubscribed notification={notification} />;
       default:

@@ -531,3 +531,7 @@ pre code {
 .inset-safe-area {
   margin-top: env(safe-area-inset-top);
 }
+
+.modal-blurred {
+  filter: blur(5px);
+}

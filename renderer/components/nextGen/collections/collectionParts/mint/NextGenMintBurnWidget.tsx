@@ -32,6 +32,7 @@ import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
 import HeaderUserConnectModal from "../../../../header/user/HeaderUserConnectModal";
 import { SEIZE_API_URL } from "../../../../../../constants";
+import { useSeizeConnectModal } from "../../../../../contexts/SeizeConnectModalContext";
 
 interface Props {
   collection: NextGenCollection;
@@ -49,7 +50,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
   const account = useAccount();
   const chainId = useChainId();
 
-  const [openConnect, setOpenConnect] = useState(false);
+  const { setShowConnectModal } = useSeizeConnectModal();
 
   const alStatus = getStatusFromDates(
     props.collection.allowlist_start,
@@ -168,10 +169,10 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
           setIsMinting(true);
         }
       } else {
-        setOpenConnect(true);
+        setShowConnectModal(true);
       }
     } else {
-      setOpenConnect(true);
+      setShowConnectModal(true);
     }
   };
 
@@ -380,10 +381,6 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
           </Form>
         </Col>
       </Row>
-      <HeaderUserConnectModal
-        show={openConnect}
-        onHide={() => setOpenConnect(false)}
-      />
     </Container>
   );
 }

@@ -16,7 +16,6 @@ import {
   numberOfCardsForCalendarEnd,
   numberOfCardsForSeasonEnd,
 } from "../../../helpers/meme_calendar.helpers";
-import { openInExternalBrowser } from "../../../helpers";
 
 export default function UserPageSubscriptionsTopUp() {
   const [memeCount, setMemeCount] = useState<string>("");
@@ -77,12 +76,12 @@ export default function UserPageSubscriptionsTopUp() {
         <>
           {getStatusMessage()}{" "}
           <a
-            href="#"
-            onClick={() =>
-              openInExternalBrowser(
-                getTransactionLink(SUBSCRIPTIONS_CHAIN.id, sendTransaction.data)
-              )
-            }>
+            href={getTransactionLink(
+              SUBSCRIPTIONS_CHAIN.id,
+              sendTransaction.data
+            )}
+            target="_blank"
+            rel="noreferrer">
             view
           </a>
         </>

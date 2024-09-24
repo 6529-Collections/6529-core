@@ -13,7 +13,7 @@ import router from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import DatePickerModal from "../datePickerModal/DatePickerModal";
 import { SEIZE_API_URL } from "../../../constants";
-import { openInExternalBrowser } from "../../helpers";
+import { ArtistNameItem } from "../../generated/models/ArtistNameItem";
 
 export enum GasRoyaltiesCollectionFocus {
   MEMES = "the-memes",
@@ -78,9 +78,7 @@ export function getUrlParams(
 }
 
 export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
-  const [artists, setArtists] = useState<{ name: string; cards: number[] }[]>(
-    []
-  );
+  const [artists, setArtists] = useState<ArtistNameItem[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showBlockPicker, setShowBlockPicker] = useState(false);
   const [fromDate, setFromDate] = useState<Date>();
@@ -116,12 +114,7 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
     const path =
       props.focus === GasRoyaltiesCollectionFocus.MEMES ? "memes" : "memelab";
     fetchUrl(`${SEIZE_API_URL}/api/${path}/artists_names`).then(
-      (
-        res: {
-          name: string;
-          cards: number[];
-        }[]
-      ) => {
+      (res: ArtistNameItem[]) => {
         setArtists(res);
       }
     );
@@ -337,8 +330,9 @@ interface TokenImageProps {
 export function GasRoyaltiesTokenImage(props: Readonly<TokenImageProps>) {
   return (
     <a
-      href="#"
-      onClick={() => openInExternalBrowser(`/${props.path}/${props.token_id}`)}>
+      href={`/${props.path}/${props.token_id}`}
+      target="_blank"
+      rel="noreferrer">
       <span className="d-flex justify-content-center aling-items-center gap-3">
         <span>{props.token_id} -</span>
         <Tippy

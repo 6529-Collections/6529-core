@@ -15,6 +15,7 @@ import {
 } from "../../constants";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import HeaderUserConnectModal from "../header/user/HeaderUserConnectModal";
+import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 
 interface Props {
   setSection(section: DelegationCenterSection): any;
@@ -24,12 +25,12 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
   const [redirect, setRedirect] = useState<DelegationCenterSection>();
   const accountResolution = useAccount();
 
-  const [openConnect, setOpenConnect] = useState(false);
+  const { setShowConnectModal } = useSeizeConnectModal();
 
   useEffect(() => {
     if (redirect) {
       if (!accountResolution.isConnected) {
-        setOpenConnect(true);
+        setShowConnectModal(true);
       } else {
         props.setSection(redirect);
       }
@@ -247,10 +248,6 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
       <Row className="pt-4">
         <Col>{printCollectionSelection()}</Col>
       </Row>
-      <HeaderUserConnectModal
-        show={openConnect}
-        onHide={() => setOpenConnect(false)}
-      />
     </Container>
   );
 }
