@@ -32,3 +32,5 @@ dev.sqlite
 /renderer_backup
 
 certificate.pfx
+
+.vscode
