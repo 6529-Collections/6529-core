@@ -2,9 +2,7 @@ import { AnchorHTMLAttributes, ClassAttributes, ReactNode } from "react";
 import { DropMentionedUser } from "../../../../../generated/models/DropMentionedUser";
 import { DropReferencedNFT } from "../../../../../generated/models/DropReferencedNFT";
 import { getRandomObjectId } from "../../../../../helpers/AllowlistToolHelpers";
-import DropListItemContentPart, {
-  DropListItemContentPartProps,
-} from "../content/DropListItemContentPart";
+import DropListItemContentPart, { DropListItemContentPartProps } from "../content/DropListItemContentPart";
 import { DropContentPartType } from "../content/DropListItemContent";
 import Markdown, { ExtraProps } from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
@@ -153,53 +151,53 @@ export default function DropReplyMarkdown({
       components={{
         h5: (params) => (
           <p className="last:tw-mb-0 tw-text-md tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out">
-            {customRenderer({
-              content: params.children,
-              mentionedUsers,
-              referencedNfts,
-              onImageLoaded,
-            })}
-          </p>
+          {customRenderer({
+            content: params.children,
+            mentionedUsers,
+            referencedNfts,
+            onImageLoaded,
+          })}
+        </p>
         ),
         h4: (params) => (
           <p className="last:tw-mb-0 tw-text-md tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out">
-            {customRenderer({
-              content: params.children,
-              mentionedUsers,
-              referencedNfts,
-              onImageLoaded,
-            })}
-          </p>
+          {customRenderer({
+            content: params.children,
+            mentionedUsers,
+            referencedNfts,
+            onImageLoaded,
+          })}
+        </p>
         ),
         h3: (params) => (
           <p className="last:tw-mb-0 tw-text-md tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out">
-            {customRenderer({
-              content: params.children,
-              mentionedUsers,
-              referencedNfts,
-              onImageLoaded,
-            })}
-          </p>
+          {customRenderer({
+            content: params.children,
+            mentionedUsers,
+            referencedNfts,
+            onImageLoaded,
+          })}
+        </p>
         ),
         h2: (params) => (
           <p className="last:tw-mb-0 tw-text-md tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out">
-            {customRenderer({
-              content: params.children,
-              mentionedUsers,
-              referencedNfts,
-              onImageLoaded,
-            })}
-          </p>
+          {customRenderer({
+            content: params.children,
+            mentionedUsers,
+            referencedNfts,
+            onImageLoaded,
+          })}
+        </p>
         ),
         h1: (params) => (
           <p className="last:tw-mb-0 tw-text-md tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out">
-            {customRenderer({
-              content: params.children,
-              mentionedUsers,
-              referencedNfts,
-              onImageLoaded,
-            })}
-          </p>
+          {customRenderer({
+            content: params.children,
+            mentionedUsers,
+            referencedNfts,
+            onImageLoaded,
+          })}
+        </p>
         ),
         p: (params) => (
           <p className="last:tw-mb-0 tw-text-md tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out">
@@ -224,7 +222,8 @@ export default function DropReplyMarkdown({
         code: (params) => (
           <code
             style={{ textOverflow: "unset" }}
-            className="tw-text-iron-50 tw-whitespace-pre-wrap tw-break-words">
+            className="tw-text-iron-50 tw-whitespace-pre-wrap tw-break-words"
+          >
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -242,7 +241,8 @@ export default function DropReplyMarkdown({
             className="tw-w-full"
           />
         ),
-      }}>
+      }}
+    >
       {partContent}
     </Markdown>
   );

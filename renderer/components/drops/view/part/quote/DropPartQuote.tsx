@@ -16,7 +16,7 @@ export default function DropPartQuote({
 }: {
   readonly quotedDrop: QuotedDrop;
   readonly marginLeft?: boolean;
-  readonly onRedropClick?: (redropId: string) => void;
+  readonly onRedropClick?: (serialNo: number) => void;
 }) {
   const { connectedProfile } = useContext(AuthContext);
 
@@ -57,7 +57,8 @@ export default function DropPartQuote({
       <div
         className={`${
           marginLeft && "tw-ml-[54px]"
-        } tw-mt-2 tw-px-4 tw-py-2 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid`}>
+        } tw-mt-2 tw-px-4 tw-py-2 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid`}
+      >
         Drop not found
       </div>
     );
@@ -71,17 +72,19 @@ export default function DropPartQuote({
     <div
       className={`${
         marginLeft && "tw-ml-[54px]"
-      } tw-mt-2 tw-px-4 tw-pb-4 tw-pt-1 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid`}>
+      } tw-mt-2 tw-px-4 tw-pb-4 tw-pt-1 tw-border-iron-700 tw-rounded-lg tw-border tw-border-solid`}
+    >
       <DropPart
         profile={drop.author}
         mentionedUsers={drop.mentioned_users}
         referencedNfts={drop.referenced_nfts}
         partContent={quotedPart.content ?? null}
         smallMenuIsShown={false}
-        partMedias={quotedPart.media.map((media) => ({
-          mimeType: media.mime_type,
-          mediaSrc: media.url,
-        }))}
+        partMedias={
+          quotedPart.media.map(media => ({
+            mimeType: media.mime_type,
+            mediaSrc: media.url,
+          }))}
         showFull={false}
         createdAt={drop.created_at}
         dropTitle={drop.title}
@@ -92,7 +95,7 @@ export default function DropPartQuote({
         }}
         size={DropPartSize.SMALL}
         onContentClick={() =>
-          onRedropClick && onRedropClick(quotedDrop.drop_id)
+          onRedropClick && onRedropClick(drop.serial_no)
         }
       />
     </div>

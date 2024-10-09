@@ -18,6 +18,8 @@ export enum MEMES_SEASON {
   SZN5 = "SZN5",
   SZN6 = "SZN6",
   SZN7 = "SZN7",
+  SZN8 = "SZN8",
+  SZN9 = "SZN9",
 }
 
 export enum MemesSort {
@@ -46,4 +48,12 @@ export enum MemeLabSort {
   MARKET_CAP = "market-cap",
   VOLUME = "volume",
   HIGHEST_OFFER = "highest-offer",
+}
+
+export enum CommunityMembersSortOption {
+  DISPLAY = "display",
+  LEVEL = "level",
+  TDH = "tdh",
+  REP = "rep",
+  NIC = "nic",
 }

@@ -150,7 +150,8 @@ export default function GroupCreateWallets({
             <div
               className={`tw-w-full tw-px-4 tw-py-3 tw-flex tw-justify-between tw-gap-x-4 tw-items-center tw-rounded-xl ${
                 isOverLimit ? " tw-border-error" : " tw-border-iron-400"
-              } tw-bg-iron-950 tw-border tw-border-solid`}>
+              } tw-bg-iron-950 tw-border tw-border-solid`}
+            >
               <div className="tw-flex tw-items-center tw-gap-x-2 tw-text-sm">
                 <svg
                   className="tw-size-6 tw-flex-shrink-0 tw-text-iron-300"
@@ -183,7 +184,8 @@ export default function GroupCreateWallets({
               onClick={removeWallets}
               type="button"
               aria-label="Remove wallets"
-              className="tw-rounded-full tw-group tw-flex tw-items-center tw-justify-center tw-p-2 tw-text-xs tw-font-medium tw-border-none tw-ring-1 tw-ring-inset tw-text-iron-400 tw-bg-iron-900 tw-ring-iron-700 hover:tw-ring-iron-650 tw-transition tw-duration-300 tw-ease-out">
+              className="tw-rounded-full tw-group tw-flex tw-items-center tw-justify-center tw-p-2 tw-text-xs tw-font-medium tw-border-none tw-ring-1 tw-ring-inset tw-text-iron-400 tw-bg-iron-900 tw-ring-iron-700 hover:tw-ring-iron-650 tw-transition tw-duration-300 tw-ease-out"
+            >
               <svg
                 className="tw-h-4 tw-w-4 tw-text-error tw-transition tw-duration-300 tw-ease-out"
                 viewBox="0 0 24 24"

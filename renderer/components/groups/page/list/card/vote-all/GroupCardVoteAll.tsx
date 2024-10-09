@@ -9,6 +9,7 @@ import {
 import { CreditDirection } from "../GroupCard";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { Page } from "../../../../../../helpers/Types";
+import { CommunityMembersQuery } from "../../../../../../pages/network/index";
 import { SortDirection } from "../../../../../../entities/ISort";
 import {
   commonApiFetch,
@@ -20,7 +21,7 @@ import GroupCardActionWrapper from "../GroupCardActionWrapper";
 import { RateMatter } from "../../../../../../generated/models/RateMatter";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
 import GroupCardVoteAllInputs from "./GroupCardVoteAllInputs";
-import { CommunityMembersSortOption } from "../../../../../community/CommunityMembers";
+import { CommunityMembersSortOption } from "../../../../../../enums";
 
 export default function GroupCardVoteAll({
   matter,
@@ -32,7 +33,7 @@ export default function GroupCardVoteAll({
   readonly onCancel: () => void;
 }) {
   const SUCCESS_LABEL: Record<RateMatter, string> = {
-    [RateMatter.Cic]: "CIC distributed.",
+    [RateMatter.Cic]: "NIC distributed.",
     [RateMatter.Rep]: "Rep distributed.",
   };
 
@@ -69,7 +70,7 @@ export default function GroupCardVoteAll({
         },
       ],
       queryFn: async () =>
-        await commonApiFetch<Page<CommunityMemberOverview>, any>({
+        await commonApiFetch<Page<CommunityMemberOverview>, CommunityMembersQuery>({
           endpoint: `community-members/top`,
           params: {
             page: 1,

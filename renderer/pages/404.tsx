@@ -3,6 +3,8 @@ import styles from "../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
 
 const Header = dynamic(() => import("../components/header/Header"), {
@@ -11,10 +13,17 @@ const Header = dynamic(() => import("../components/header/Header"), {
 });
 
 export default function Seize404() {
+  const { setTitle, title } = useContext(AuthContext);
+  useEffect(() => {
+    setTitle({
+      title: "NOT FOUND | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>NOT FOUND | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="404 NOT FOUND | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/404`} />

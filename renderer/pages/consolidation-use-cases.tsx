@@ -3,17 +3,24 @@ import styles from "../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import { Container, Row, Col, Table } from "react-bootstrap";
 import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Image from "next/image";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
+import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
-
 const Header = dynamic(() => import("../components/header/Header"), {
   ssr: false,
   loading: () => <HeaderPlaceholder />,
 });
 
 export default function ConsolidationUseCases() {
+  const { setTitle, title } = useContext(AuthContext);
+  useEffect(() => {
+    setTitle({
+      title: "Consolidation Use Cases | 6529 SEIZE",
+    });
+  }, []);
+
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
     { display: "Home", href: "/" },
     { display: "Consolidation Use Cases" },
@@ -39,7 +46,7 @@ export default function ConsolidationUseCases() {
   return (
     <>
       <Head>
-        <title>Consolidation Use Cases | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"

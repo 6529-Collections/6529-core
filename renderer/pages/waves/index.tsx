@@ -3,6 +3,8 @@ import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import Waves from "../../components/waves/Waves";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { AuthContext } from "../../components/auth/Auth";
+import { useContext, useEffect } from "react";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -11,15 +13,22 @@ const Header = dynamic(() => import("../../components/header/Header"), {
 });
 
 export default function WavesPage() {
+  const { setTitle, title } = useContext(AuthContext);
   const breadcrumbs: Crumb[] = [
     { display: "Home", href: "/" },
     { display: "Waves" },
   ];
 
+  useEffect(() => {
+    setTitle({
+      title: "Waves | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>Waves | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Waves | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/waves`} />

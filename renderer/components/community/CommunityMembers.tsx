@@ -1,7 +1,7 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { CommunityMemberOverview } from "../../entities/IProfile";
-import { FullPageRequest, Page } from "../../helpers/Types";
-
+import { Page } from "../../helpers/Types";
+import { CommunityMembersQuery } from "../../pages/network/index";
 import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 import { useEffect, useState } from "react";
 import { commonApiFetch } from "../../services/api/common-api";
@@ -15,19 +15,7 @@ import CommonCardSkeleton from "../utils/animation/CommonCardSkeleton";
 import { useSelector } from "react-redux";
 import { selectActiveGroupId } from "../../store/groupSlice";
 import CommonTablePagination from "../utils/table/paginator/CommonTablePagination";
-
-export enum CommunityMembersSortOption {
-  DISPLAY = "display",
-  LEVEL = "level",
-  TDH = "tdh",
-  REP = "rep",
-  CIC = "cic",
-}
-
-export interface CommunityMembersQuery
-  extends FullPageRequest<CommunityMembersSortOption> {
-  group_id?: string;
-}
+import { CommunityMembersSortOption } from "../../enums";
 
 interface QueryUpdateInput {
   name: keyof typeof SEARCH_PARAMS_FIELDS;
@@ -152,7 +140,10 @@ export default function CommunityMembers() {
       },
     ],
     queryFn: async () =>
-      await commonApiFetch<Page<CommunityMemberOverview>, any>({
+      await commonApiFetch<
+        Page<CommunityMemberOverview>,
+        CommunityMembersQuery
+      >({
         endpoint: `community-members/top`,
         params: debouncedParams,
       }),
@@ -234,12 +225,12 @@ export default function CommunityMembers() {
     setTotalPages(pagesCount);
   }, [members?.count, isLoading]);
 
-  const goToNerd = () => router.push("/community-nerd");
+  const goToNerd = () => router.push("/network/nerd");
 
   return (
     <div>
       <div className="tw-flex tw-items-center tw-justify-between">
-        <h1 className="tw-block tw-float-none">Community</h1>
+        <h1 className="tw-block tw-float-none">Network</h1>
         <div className="tw-inline-flex tw-space-x-3 tw-items-center">
           <button
             type="button"

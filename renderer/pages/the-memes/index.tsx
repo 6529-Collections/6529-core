@@ -1,10 +1,11 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
 
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -18,15 +19,22 @@ const TheMemesComponent = dynamic(
 );
 
 export default function TheMemesPage() {
+  const { setTitle, title } = useContext(AuthContext);
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
     { display: "Home", href: "/" },
     { display: "The Memes" },
   ]);
 
+  useEffect(() => {
+    setTitle({
+      title: "The Memes | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>The Memes | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="The Memes | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/the-memes`} />

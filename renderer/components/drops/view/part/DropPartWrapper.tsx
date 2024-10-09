@@ -23,7 +23,7 @@ export interface DropPartWrapperProps {
   readonly size?: DropPartSize;
   readonly connectingLineType?: DropConnectingLineType | null;
   readonly onDiscussionButtonClick: () => void;
-  readonly onRedropClick?: (redropId: string) => void;
+  readonly onRedropClick?: (serialNo: number) => void;
   readonly children: React.ReactNode;
 }
 
@@ -118,7 +118,8 @@ export default function DropPartWrapper({
               "tw-h-8"
             } ${
               connectingLineType === DropConnectingLineType.BOTTOM && "tw-pt-8"
-            }  tw-absolute tw-z-[1] tw-top-0 tw-left-[2.15rem] tw-bottom-0 tw-flex tw-flex-col tw-items-center`}>
+            }  tw-absolute tw-z-[1] tw-top-0 tw-left-[2.15rem] tw-bottom-0 tw-flex tw-flex-col tw-items-center`}
+          >
             <div
               className={` tw-flex-1 tw-w-[1.5px] tw-bg-iron-700 ${
                 (showReplyInput || isDiscussionOpen) &&
@@ -128,7 +129,8 @@ export default function DropPartWrapper({
                 )
                   ? "tw-visible"
                   : "tw-hidden"
-              }`}></div>
+              }`}
+            ></div>
           </div>
 
           <div className="tw-flex-1 tw-px-2 sm:tw-px-4 tw-relative tw-z-20">
@@ -150,7 +152,8 @@ export default function DropPartWrapper({
               size === DropPartSize.SMALL
                 ? "sm:tw-px-4 sm:tw-ml-[40px]"
                 : "tw-px-4 sm:tw-ml-[54px]"
-            }`}>
+            }`}
+          >
             <DropPartActionTriggers
               drop={drop}
               dropPart={dropPart}
@@ -170,7 +173,8 @@ export default function DropPartWrapper({
             <div className="tw-relative">
               {showInputLine && (
                 <div
-                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}></div>
+                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}
+                ></div>
               )}
               <div className={replyInputIntent}>
                 <DropInputWrapper drop={drop}>
@@ -189,7 +193,8 @@ export default function DropPartWrapper({
             <div className="tw-relative">
               {showInputLine && (
                 <div
-                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}></div>
+                  className={`tw-absolute tw-top-0 tw-h-full tw-bottom-0 tw-left-[2.15rem] tw-w-[1.5px] tw-bg-iron-700 tw-z-[1]`}
+                ></div>
               )}
               <div className={replyInputIntent}>
                 <DropInputWrapper drop={drop}>

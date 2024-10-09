@@ -1,6 +1,6 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
@@ -12,6 +12,7 @@ import {
   MEMELAB_CONTRACT,
   GRADIENT_CONTRACT,
 } from "../../constants";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -176,6 +177,7 @@ export const ALL_USE_CASES = [
 ];
 
 export default function DelegationsDocumentation(props: any) {
+  const { setTitle, title } = useContext(AuthContext);
   const pageProps = props.pageProps;
   const router = useRouter();
   const [activeSection, setActiveSection] = useState<DelegationCenterSection>(
@@ -283,10 +285,16 @@ export default function DelegationsDocumentation(props: any) {
     }
   }, [activeSection, addressQuery, collectionQuery, useCaseQuery]);
 
+  useEffect(() => {
+    setTitle({
+      title: "Delegation | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>Delegation | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Delegation | 6529 CORE" />
         <meta

@@ -26,13 +26,19 @@ import { LoginRequest } from "../../generated/models/LoginRequest";
 import { LoginResponse } from "../../generated/models/LoginResponse";
 import { ProfileProxy } from "../../generated/models/ProfileProxy";
 import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
-import { useEffectOnce } from "../../hooks/useEffectOnce";
 import { Modal, Button } from "react-bootstrap";
 import DotLoader from "../dotLoader/DotLoader";
 import { useSeizeConnect } from "../../hooks/useSeizeConnect";
 import { useModalState } from "../../contexts/ModalStateContext";
 
 const AUTH_MODAL = "AuthModal";
+
+export enum TitleType {
+  PAGE = "PAGE",
+  WAVE = "WAVE",
+  MY_STREAM = "MY_STREAM",
+  NOTIFICATION = "NOTIFICATION",
+}
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
@@ -51,9 +57,15 @@ type AuthContextType = {
   readonly setActiveProfileProxy: (
     profileProxy: ProfileProxy | null
   ) => Promise<void>;
+  readonly setTitle: (param: {
+    title: string | null;
+    type?: TitleType;
+  }) => void;
+  readonly title: string;
 };
-
-export const WAVES_MIN_ACCESS_LEVEL = 10;
+// TODO: change back to 0
+export const WAVES_MIN_ACCESS_LEVEL = 0;
+const DEFAULT_TITLE = "6529 SEIZE";
 
 export const AuthContext = createContext<AuthContextType>({
   connectedProfile: null,
@@ -64,7 +76,13 @@ export const AuthContext = createContext<AuthContextType>({
   requestAuth: async () => ({ success: false }),
   setToast: () => {},
   setActiveProfileProxy: async () => {},
+  setTitle: () => {},
+  title: DEFAULT_TITLE,
 });
+
+export const useAuth = () => {
+  return useContext(AuthContext);
+};
 
 export default function Auth({
   children,
@@ -73,19 +91,26 @@ export default function Auth({
 }) {
   const { invalidateAll } = useContext(ReactQueryWrapperContext);
   const { address } = useAccount();
+
   const { seizeDisconnect } = useSeizeConnect();
 
   const signMessage = useSignMessage();
   const [showSignModal, setShowSignModal] = useState(false);
 
-  const { data: connectedProfile } = useQuery<IProfileAndConsolidations>({
-    queryKey: [QueryKey.PROFILE, address?.toLowerCase()],
-    queryFn: async () =>
-      await commonApiFetch<IProfileAndConsolidations>({
+  const [connectedProfile, setConnectedProfile] =
+    useState<IProfileAndConsolidations>();
+
+  useEffect(() => {
+    if (address && getAuthJwt()) {
+      commonApiFetch<IProfileAndConsolidations>({
         endpoint: `profiles/${address}`,
-      }),
-    enabled: !!address,
-  });
+      }).then((profile) => {
+        setConnectedProfile(profile);
+      });
+    } else {
+      setConnectedProfile(undefined);
+    }
+  }, [address, getAuthJwt()]);
 
   const { data: profileProxies } = useQuery<ProfileProxy[]>({
     queryKey: [
@@ -129,11 +154,15 @@ export default function Auth({
     }
   }, [profileProxies, connectedProfile]);
 
-  useEffectOnce(() => {
+  function reset() {
+    removeAuthJwt();
+    invalidateAll();
+    setActiveProfileProxy(null);
+  }
+
+  useEffect(() => {
     if (!address) {
-      removeAuthJwt();
-      invalidateAll();
-      setActiveProfileProxy(null);
+      reset();
       return;
     } else {
       const isAuth = validateJwt({
@@ -142,9 +171,7 @@ export default function Auth({
         role: activeProfileProxy?.created_by.id ?? null,
       });
       if (!isAuth) {
-        removeAuthJwt();
-        setActiveProfileProxy(null);
-        invalidateAll();
+        reset();
         setShowSignModal(true);
       }
     }
@@ -311,6 +338,7 @@ export default function Auth({
         message: "Please connect your wallet",
         type: "error",
       });
+      invalidateAll();
       return { success: false };
     }
     const isAuth = validateJwt({
@@ -324,6 +352,7 @@ export default function Auth({
         signerAddress: address,
         role: activeProfileProxy?.created_by.id ?? null,
       });
+      invalidateAll();
     }
     const isSuccess = !!getAuthJwt();
     if (isSuccess) {
@@ -411,8 +440,61 @@ export default function Auth({
     };
   }, [showSignModal]);
 
+  const [pageTitle, setPageTitle] = useState<string>(DEFAULT_TITLE);
+  const [titles, setTitles] = useState<Record<TitleType, string | null>>({
+    [TitleType.PAGE]: DEFAULT_TITLE,
+    [TitleType.WAVE]: null,
+    [TitleType.MY_STREAM]: null,
+    [TitleType.NOTIFICATION]: null,
+  });
+
+  const setTitle = ({
+    title,
+    type,
+  }: {
+    title: string | null;
+    type?: TitleType;
+  }) => {
+    setTitles((prev) => ({ ...prev, [type ?? TitleType.PAGE]: title }));
+  };
+
+  useEffect(() => {
+    if (titles[TitleType.WAVE]) {
+      setPageTitle(titles[TitleType.WAVE]);
+      return;
+    }
+    if (titles[TitleType.MY_STREAM]) {
+      setPageTitle(titles[TitleType.MY_STREAM]);
+      return;
+    }
+    if (titles[TitleType.NOTIFICATION]) {
+      setPageTitle(titles[TitleType.NOTIFICATION]);
+      return;
+    }
+    if (titles[TitleType.PAGE]) {
+      setPageTitle(titles[TitleType.PAGE]);
+      return;
+    }
+    setPageTitle(DEFAULT_TITLE);
+  }, [titles]);
+
   return (
-    <AuthContext.Provider value={contextValue}>
+    <AuthContext.Provider
+      value={{
+        requestAuth,
+        setToast,
+        connectedProfile: connectedProfile ?? null,
+        receivedProfileProxies,
+        activeProfileProxy,
+        showWaves,
+        connectionStatus: getProfileConnectedStatus({
+          profile: connectedProfile ?? null,
+          isProxy: !!activeProfileProxy,
+        }),
+        setActiveProfileProxy: onActiveProfileProxy,
+        setTitle,
+        title: pageTitle,
+      }}>
       {children}
       <Modal
         show={showSignModal}

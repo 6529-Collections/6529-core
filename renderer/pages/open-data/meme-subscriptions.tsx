@@ -3,6 +3,8 @@ import styles from "../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import Breadcrumb from "../../components/breadcrumb/Breadcrumb";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -21,16 +23,23 @@ const CommunityDownloadsSubscriptions = dynamic(
 );
 
 export default function MemeSubscriptions() {
+  const { setTitle, title } = useContext(AuthContext);
   const breadcrumbs = [
     { display: "Home", href: "/" },
     { display: "Open Data", href: "/open-data" },
     { display: "Meme Subscriptions" },
   ];
 
+  useEffect(() => {
+    setTitle({
+      title: "Meme Subscriptions Downloads | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>Meme Subscriptions Downloads | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta
           name="description"

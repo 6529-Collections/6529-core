@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import { GRADIENT_CONTRACT } from "../../constants";
 import { fetchUrl } from "../../services/6529api";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_API_URL, SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -19,13 +21,22 @@ const GradientPageComponent = dynamic(
 );
 
 export default function GradientPageIndex(props: any) {
+  const { setTitle, title } = useContext(AuthContext);
+
+
   const pageProps = props.pageProps;
   const pagenameFull = `${pageProps.name} | 6529 CORE`;
+
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, [pagenameFull]);
 
   return (
     <>
       <Head>
-        <title>{pagenameFull}</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content={pagenameFull} />
         <meta

@@ -8,15 +8,9 @@ export enum CapacitorOrientationType {
 const useCapacitor = () => {
   const isCapacitor = false;
   const platform = "desktop";
-  const orientation = CapacitorOrientationType.PORTRAIT;
+  
 
-  function sendNotification(id: number, title: string, body: string) {
-    console.error(
-      "Notifications are not supported in the current environment."
-    );
-  }
-
-  return { isCapacitor, platform, orientation, sendNotification };
+  return { isCapacitor, platform };
 };
 
 export default useCapacitor;

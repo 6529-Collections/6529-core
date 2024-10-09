@@ -540,8 +540,8 @@ export default function AboutMinting() {
             </li>
             <br />
             <li>
-              For our full analysis of our Community Metrics, go here:{" "}
-              <Link href="/community-metrics">seize.io/community-metrics</Link>
+              For our full analysis of our Network Metrics, go here:{" "}
+              <Link href="/network/metrics">seize.io/network/metrics</Link>
             </li>
           </ul>
           <br />

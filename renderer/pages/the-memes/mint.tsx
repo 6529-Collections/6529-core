@@ -10,6 +10,8 @@ import { getCommonHeaders } from "../../helpers/server.helpers";
 import { commonApiFetch } from "../../services/api/common-api";
 import Head from "next/head";
 import { Time } from "../../helpers/time";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -25,6 +27,7 @@ const ManifoldMinting = dynamic(
 );
 
 export default function TheMemesMint(props: any) {
+  const { setTitle, title } = useContext(AuthContext);
   const nft: NFTWithMemesExtendedData = props.pageProps.nft;
 
   const breadcrumbs: Crumb[] = [
@@ -36,10 +39,16 @@ export default function TheMemesMint(props: any) {
   const pagename = `Mint The Memes #${nft.id}`;
   const pagenameFull = `${pagename} | 6529 CORE`;
 
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>{pagenameFull}</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content={pagenameFull} />
         <meta property="og:url" content={`${SEIZE_URL}/the-memes/mint`} />

@@ -1,4 +1,4 @@
-import { AnchorHTMLAttributes, ClassAttributes, ReactNode } from "react";
+import { AnchorHTMLAttributes, ClassAttributes, memo, ReactNode } from "react";
 import Markdown, { ExtraProps } from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize from "rehype-sanitize";
@@ -10,28 +10,36 @@ import DropListItemContentPart, {
 } from "../item/content/DropListItemContentPart";
 import { DropMentionedUser } from "../../../../generated/models/DropMentionedUser";
 import { DropReferencedNFT } from "../../../../generated/models/DropReferencedNFT";
-import { SEIZE_URL } from "../../../../../constants";
-import DropPartQuote from "./quote/DropPartQuote";
-import { useRouter } from "next/router";
 import { Tweet } from "react-tweet";
 import Link from "next/link";
 
-interface DropPartMarkdownProps {
+import DropPartMarkdownImage from "./DropPartMarkdownImage";
+import WaveDetailedDropQuoteWithDropId from "../../../waves/detailed/drops/WaveDetailedDropQuoteWithDropId";
+import WaveDetailedDropQuoteWithSerialNo from "../../../waves/detailed/drops/WaveDetailedDropQuoteWithSerialNo";
+import { Drop } from "../../../../generated/models/Drop";
+import {
+  parseSeizeLink,
+  SeizeLinkInfo,
+} from "../../../../helpers/SeizeLinkParser";
+import { SEIZE_URL } from "../../../../../constants";
+
+export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<DropMentionedUser>;
   readonly referencedNfts: Array<DropReferencedNFT>;
   readonly partContent: string | null;
   readonly onImageLoaded: () => void;
+  readonly onQuoteClick: (drop: Drop) => void;
   readonly textSize?: "sm" | "md";
 }
 
-export default function DropPartMarkdown({
+function DropPartMarkdown({
   mentionedUsers,
   referencedNfts,
   partContent,
   onImageLoaded,
+  onQuoteClick,
   textSize = "md",
 }: DropPartMarkdownProps) {
-  const router = useRouter();
   const textSizeClass = (() => {
     switch (textSize) {
       case "sm":
@@ -163,62 +171,57 @@ export default function DropPartMarkdown({
       return null;
     }
 
-    const baseEndpoint = SEIZE_URL || "";
-    const regex =
-      /\/waves\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\?drop=([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
-    const match = href ? href.match(regex) : null;
-    const isSeizeLink = !!match;
-    const waveId = match ? match[1] : null;
-    const dropId = match ? match[2] : null;
-
-    if (isSeizeLink && dropId && waveId) {
-      const onRedropClick = (redropId: string) => {
-        router.push(`/waves/${waveId}?drop=${redropId}`, undefined, {
-          shallow: true,
-        });
-      };
-      return (
-        <div>
-          <DropPartQuote
-            quotedDrop={{
-              drop_id: dropId,
-              drop_part_id: 1,
-            }}
-            marginLeft={false}
-            onRedropClick={onRedropClick}
-          />
-        </div>
-      );
+    const seizeLinkInfo = parseSeizeLink(href);
+    if (seizeLinkInfo) {
+      return renderSeizeQuote(seizeLinkInfo, onQuoteClick);
     }
 
-    const twitterRegex =
-      /https:\/\/(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/;
-    const twitterMatch = href ? href.match(twitterRegex) : null;
-
+    const twitterMatch = parseTwitterLink(href);
     if (twitterMatch) {
-      const tweetId = twitterMatch[3];
-      return (
-        <Link className="tw-no-underline" target="_blank" href={href}>
-          <Tweet id={tweetId} />
-        </Link>
-      );
+      return renderTweetEmbed(twitterMatch, href);
     }
 
-    const isValidLink =
-      href?.startsWith("..") || href?.startsWith("/") || !href?.includes(".");
-
-    if (isValidLink) {
+    if (!isValidLink(href)) {
       return <p>[invalid link]</p>;
     }
 
-    const isExternalLink =
-      href && baseEndpoint && !href.startsWith(baseEndpoint);
+    return renderExternalOrInternalLink(href, props);
+  };
+
+  const parseTwitterLink = (href: string): string | null => {
+    const twitterRegex =
+      /https:\/\/(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/;
+    const match = href.match(twitterRegex);
+    return match ? match[3] : null;
+  };
+
+  const renderTweetEmbed = (tweetId: string, href: string) => (
+    <Link className="tw-no-underline" target="_blank" href={href}>
+      <Tweet id={tweetId} />
+    </Link>
+  );
+
+  const isValidLink = (href: string): boolean => {
+    try {
+      new URL(href);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const renderExternalOrInternalLink = (
+    href: string,
+    props: AnchorHTMLAttributes<HTMLAnchorElement> & ExtraProps
+  ) => {
+    const baseEndpoint = SEIZE_URL || "";
+    const isExternalLink = baseEndpoint && !href.startsWith(baseEndpoint);
 
     if (isExternalLink) {
       props.rel = "noopener noreferrer nofollow";
       props.target = "_blank";
     } else {
-      props.href = href?.replace(baseEndpoint, "");
+      props.href = href.replace(baseEndpoint, "");
     }
 
     return (
@@ -232,6 +235,34 @@ export default function DropPartMarkdown({
         {...props}
       />
     );
+  };
+
+  const renderSeizeQuote = (
+    seizeLinkInfo: SeizeLinkInfo,
+    onQuoteClick: (drop: Drop) => void
+  ) => {
+    const { waveId, serialNo, dropId } = seizeLinkInfo;
+
+    if (serialNo) {
+      return (
+        <WaveDetailedDropQuoteWithSerialNo
+          serialNo={parseInt(serialNo)}
+          waveId={waveId}
+          onQuoteClick={onQuoteClick}
+        />
+      );
+    } else if (dropId) {
+      return (
+        <WaveDetailedDropQuoteWithDropId
+          dropId={dropId}
+          partId={1}
+          maybeDrop={null}
+          onQuoteClick={onQuoteClick}
+        />
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -251,7 +282,7 @@ export default function DropPartMarkdown({
       className="tw-w-full"
       components={{
         h5: (params) => (
-          <h5 className="tw-text-iron-50 tw-break-words word-break">
+          <h5 className="tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -261,7 +292,7 @@ export default function DropPartMarkdown({
           </h5>
         ),
         h4: (params) => (
-          <h4 className="tw-text-iron-50 tw-break-words word-break">
+          <h4 className="tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -271,7 +302,7 @@ export default function DropPartMarkdown({
           </h4>
         ),
         h3: (params) => (
-          <h3 className="tw-text-iron-50 tw-break-words word-break">
+          <h3 className="tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -281,7 +312,7 @@ export default function DropPartMarkdown({
           </h3>
         ),
         h2: (params) => (
-          <h2 className="tw-text-iron-50 tw-break-words word-break">
+          <h2 className="tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -291,7 +322,7 @@ export default function DropPartMarkdown({
           </h2>
         ),
         h1: (params) => (
-          <h1 className="tw-text-iron-50 tw-break-words word-break">
+          <h1 className="tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -302,7 +333,8 @@ export default function DropPartMarkdown({
         ),
         p: (params) => (
           <p
-            className={`last:tw-mb-0 tw-leading-5 tw-text-iron-50 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
+            className={`last:tw-mb-0 tw-leading-5 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}
+          >
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -312,7 +344,7 @@ export default function DropPartMarkdown({
           </p>
         ),
         li: (params) => (
-          <li className="tw-text-iron-50 tw-break-words word-break">
+          <li className="tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -324,7 +356,8 @@ export default function DropPartMarkdown({
         code: (params) => (
           <code
             style={{ textOverflow: "unset" }}
-            className="tw-text-iron-50 tw-whitespace-pre-wrap tw-break-words">
+            className="tw-text-iron-200 tw-whitespace-pre-wrap tw-break-words"
+          >
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -335,15 +368,26 @@ export default function DropPartMarkdown({
         ),
         a: (params) => aHrefRenderer(params),
         img: (params) => (
-          <img
-            {...params}
-            alt="Seize"
-            onLoad={onImageLoaded}
-            className="tw-w-full"
+          <DropPartMarkdownImage
+            src={params.src ?? ""}
+            onImageLoaded={onImageLoaded}
           />
         ),
-      }}>
+        blockquote: (params) => (
+          <blockquote className="tw-text-iron-200 tw-break-words word-break tw-pl-4 tw-border-l-4 tw-border-l-iron-500 tw-border-solid tw-border-t-0 tw-border-r-0 tw-border-b-0">
+            {customRenderer({
+              content: params.children,
+              mentionedUsers,
+              referencedNfts,
+              onImageLoaded,
+            })}
+          </blockquote>
+        ),
+      }}
+    >
       {partContent}
     </Markdown>
   );
 }
+
+export default memo(DropPartMarkdown);

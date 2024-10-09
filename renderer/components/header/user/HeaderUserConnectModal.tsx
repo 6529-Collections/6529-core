@@ -7,6 +7,7 @@ import { walletConnect } from "wagmi/connectors";
 import { CW_PROJECT_ID } from "../../../constants";
 import { isElectron } from "../../../helpers";
 import Link from "next/link";
+import { formatAddress } from "../../../helpers/Helpers";
 
 interface HeaderUserConnectModalProps {
   show: boolean;
@@ -112,11 +113,11 @@ export default function HeaderUserConnectModal({
                           under Network tab
                           <br />
                           <Link
-                            href="/network/seed-wallets"
+                            href="/core/seed-wallets"
                             onClick={() => {
                               if (
                                 window.location.pathname ===
-                                "/network/seed-wallets"
+                                "/core/seed-wallets"
                               ) {
                                 onHide();
                               }
@@ -266,7 +267,14 @@ function ConnectorSelector(
       onClick={onConnect}
       className="btn-block pt-3 pb-3 d-flex align-items-center justify-content-start gap-3">
       {printImage()}
-      <span>{props.connector.name}</span>
+      <span className="d-flex flex-column align-items-start gap-1">
+        <span>{props.connector.name}</span>
+        {props.connector.type === "seed-wallet" && (
+          <span className="font-smaller">
+            {formatAddress(props.connector.id)}
+          </span>
+        )}
+      </span>
     </Button>
   );
 }

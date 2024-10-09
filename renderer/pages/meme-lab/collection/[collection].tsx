@@ -4,7 +4,8 @@ import styles from "../../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import Breadcrumb, { Crumb } from "../../../components/breadcrumb/Breadcrumb";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../../../components/auth/Auth";
 import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../../components/header/Header"), {
@@ -20,6 +21,7 @@ const LabCollectionComponent = dynamic(
 );
 
 export default function MemeLabIndex(props: any) {
+  const { setTitle, title } = useContext(AuthContext);
   const pageProps = props.pageProps;
   const [connectedWallets, setConnectedWallets] = useState<string[]>([]);
 
@@ -31,10 +33,16 @@ export default function MemeLabIndex(props: any) {
   ]);
   const pagenameFull = `${pageProps.name} | 6529 CORE`;
 
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>{pagenameFull}</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content={pagenameFull} />
         <meta

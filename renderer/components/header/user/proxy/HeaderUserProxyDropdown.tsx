@@ -9,7 +9,6 @@ import HeaderUserProxyDropdownChains from "./HeaderUserProxyDropdownChains";
 import { useSeizeConnect } from "../../../../hooks/useSeizeConnect";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faRepeat } from "@fortawesome/free-solid-svg-icons";
-import HeaderUserConnectModal from "../HeaderUserConnectModal";
 import { useSeizeConnectModal } from "../../../../contexts/SeizeConnectModalContext";
 
 export default function HeaderUserProxyDropdown({
@@ -21,7 +20,7 @@ export default function HeaderUserProxyDropdown({
   readonly profile: IProfileAndConsolidations;
   readonly onClose: () => void;
 }) {
-  const account = useAccount();
+  const { address } = useAccount();
   const { seizeDisconnect } = useSeizeConnect();
   const { setShowConnectModal } = useSeizeConnectModal();
 
@@ -38,20 +37,19 @@ export default function HeaderUserProxyDropdown({
       return profile.profile.handle;
     }
     const wallet = profile?.consolidation.wallets.find(
-      (w) =>
-        w.wallet.address.toLowerCase() === account?.address?.toLocaleLowerCase()
+      (w) => w.wallet.address.toLowerCase() === address?.toLocaleLowerCase()
     );
     if (wallet?.wallet?.ens) {
       return wallet.wallet.ens;
     }
-    if (account.address) {
-      return account.address.slice(0, 6);
+    if (address) {
+      return address.slice(0, 6);
     }
     throw new Error("No label found");
   };
 
   const [label, setLabel] = useState(getLabel());
-  useEffect(() => setLabel(getLabel()), [profile, account.address]);
+  useEffect(() => setLabel(getLabel()), [profile, address]);
 
   return (
     <div>

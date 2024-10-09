@@ -5,12 +5,13 @@ import { commonApiFetch } from "../../../services/api/common-api";
 import GroupItem from "./item/GroupItem";
 import { CommunityMemberOverview } from "../../../entities/IProfile";
 import { Page } from "../../../helpers/Types";
-import { CommunityMembersSortOption } from "../../../pages/community";
+import { CommunityMembersQuery } from "../../../pages/network/index";
 import { SortDirection } from "../../../entities/ISort";
 import { useEffect, useState } from "react";
 import { GroupFull } from "../../../generated/models/GroupFull";
 import { useDispatch } from "react-redux";
 import { setActiveGroupId } from "../../../store/groupSlice";
+import { CommunityMembersSortOption } from "../../../enums";
 
 export default function GroupsSelectActiveGroup({
   activeGroupId,
@@ -38,7 +39,7 @@ export default function GroupsSelectActiveGroup({
       },
     ],
     queryFn: async () =>
-      await commonApiFetch<Page<CommunityMemberOverview>, any>({
+      await commonApiFetch<Page<CommunityMemberOverview>, CommunityMembersQuery>({
         endpoint: `community-members/top`,
         params: {
           page: 1,

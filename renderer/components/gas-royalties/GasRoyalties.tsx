@@ -12,8 +12,8 @@ import Breadcrumb, { Crumb } from "../breadcrumb/Breadcrumb";
 import router from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import DatePickerModal from "../datePickerModal/DatePickerModal";
+import {ArtistNameItem} from "../../generated/models/ArtistNameItem";
 import { SEIZE_API_URL } from "../../../constants";
-import { ArtistNameItem } from "../../generated/models/ArtistNameItem";
 
 export enum GasRoyaltiesCollectionFocus {
   MEMES = "the-memes",
@@ -78,7 +78,9 @@ export function getUrlParams(
 }
 
 export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
-  const [artists, setArtists] = useState<ArtistNameItem[]>([]);
+  const [artists, setArtists] = useState<ArtistNameItem[]>(
+    []
+  );
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showBlockPicker, setShowBlockPicker] = useState(false);
   const [fromDate, setFromDate] = useState<Date>();
@@ -114,7 +116,9 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
     const path =
       props.focus === GasRoyaltiesCollectionFocus.MEMES ? "memes" : "memelab";
     fetchUrl(`${SEIZE_API_URL}/api/${path}/artists_names`).then(
-      (res: ArtistNameItem[]) => {
+      (
+        res: ArtistNameItem[]
+      ) => {
         setArtists(res);
       }
     );
