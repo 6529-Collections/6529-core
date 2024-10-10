@@ -286,7 +286,7 @@ export default function DistributionPage(props: Readonly<Props>) {
         <Col xs={12}>
           Please check back later and make sure to also check the{" "}
           <a
-            href="https://twitter.com/6529Collections"
+            href="https://x.com/6529Collections"
             target="_blank"
             rel="noreferrer">
             &#64;6529Collections

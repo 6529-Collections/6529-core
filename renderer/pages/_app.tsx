@@ -273,7 +273,7 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                         id="footer">
                         <span className="d-flex align-items-center justify-content-center flex-wrap gap-2">
                           <a
-                            href="https://twitter.com/punk6529"
+                            href="https://x.com/punk6529"
                             target="_blank"
                             rel="noreferrer">
                             <img
@@ -287,7 +287,7 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                           </a>
                           |
                           <a
-                            href="https://twitter.com/6529Collections"
+                            href="https://x.com/6529Collections"
                             target="_blank"
                             rel="noreferrer">
                             <img
@@ -366,6 +366,10 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                             target="_blank"
                             rel="noreferrer">
                             API Documentation
+                          </a>
+                          |{" "}
+                          <a href={`/about/${AboutSection.CONTACT_US}`}>
+                            Contact Us
                           </a>
                           |{" "}
                           <a
