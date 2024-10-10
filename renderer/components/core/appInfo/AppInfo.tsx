@@ -228,7 +228,7 @@ function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
             variant="primary"
             onClick={handleInstall}
             className="btn-block pt-2 pb-2 font-bolder">
-            {installing ? "Installing" : "Install"} v{props.info.version}
+            {installing ? "Installing" : "Install!"}
           </Button>
         </Col>
       </Row>
