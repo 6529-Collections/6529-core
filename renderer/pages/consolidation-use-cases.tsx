@@ -8,6 +8,7 @@ import Image from "next/image";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
 import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
+
 const Header = dynamic(() => import("../components/header/Header"), {
   ssr: false,
   loading: () => <HeaderPlaceholder />,

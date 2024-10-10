@@ -93,7 +93,7 @@ export default function DropReply(props: DropReplyProps) {
       .replace(urlRegex, "[link]")
       .slice(0, 50)
       .replace(/\n/g, " ");
-  
+
     return part.content.length > 50 ? content + "..." : content;
   };
 
@@ -118,13 +118,9 @@ export default function DropReply(props: DropReplyProps) {
   };
 
   const onQuoteClick = (drop: Drop) => {
-    router.push(
-      `/waves/${drop.wave.id}?drop=${drop.serial_no}`,
-      undefined,
-      {
-        shallow: true,
-      }
-    );
+    router.push(`/waves/${drop.wave.id}?drop=${drop.serial_no}`, undefined, {
+      shallow: true,
+    });
   };
 
   return (

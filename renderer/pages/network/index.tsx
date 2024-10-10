@@ -12,6 +12,7 @@ import { commonApiFetch } from "../../services/api/common-api";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../components/auth/Auth";
 import { CommunityMembersSortOption } from "../../enums";
+import { SEIZE_URL } from "../../../constants";
 
 export interface CommunityMembersQuery
   extends FullPageRequest<CommunityMembersSortOption> {
@@ -60,15 +61,12 @@ export default function CommunityPage() {
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Network | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/network`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/network`} />
         <meta property="og:title" content="Network" />
         <meta property="og:description" content="6529 SEIZE" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
       </Head>
 

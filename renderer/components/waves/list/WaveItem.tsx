@@ -8,6 +8,8 @@ import WaveItemEnding from "./WaveItemEnding";
 import WaveItemDropped from "./WaveItemDropped";
 import WaveItemFollow from "./WaveItemFollow";
 import { getScaledImageUri, ImageScale } from "../../../helpers/image.helpers";
+import Tippy from "@tippyjs/react";
+import "tippy.js/dist/tippy.css";
 
 export default function WaveItem({ wave }: { readonly wave: Wave }) {
   const banner1 =
@@ -34,8 +36,7 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
           className="tw-relative tw-w-full tw-h-8 tw-rounded-t-xl"
           style={{
             background: `linear-gradient(45deg, ${banner1} 0%, ${banner2} 100%)`,
-          }}
-        ></div>
+          }}></div>
         <div className="tw-flex tw-gap-x-2 tw-px-4">
           {wave.picture && (
             <div className="-tw-mt-5 tw-relative tw-flex-shrink-0">
@@ -51,8 +52,7 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
           <div className="tw-mt-2">
             <Link
               href={`/waves/${wave.id}`}
-              className="tw-no-underline tw-text-lg sm:tw-text-xl tw-font-semibold tw-text-white hover:tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out"
-            >
+              className="tw-no-underline tw-text-lg sm:tw-text-xl tw-font-semibold tw-text-white hover:tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out">
               {wave.name}
             </Link>
           </div>
@@ -61,8 +61,7 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
           <div>
             <Link
               href={`${wave.author.handle}`}
-              className="tw-group tw-no-underline tw-inline-flex tw-items-center tw-gap-x-2"
-            >
+              className="tw-group tw-no-underline tw-inline-flex tw-items-center tw-gap-x-2">
               <div className="tw-h-6 tw-w-6">
                 {wave.author.pfp ? (
                   <img
@@ -81,13 +80,12 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
                 {wave.author.handle}
               </span>
               <div
-                className={`${getColorClasses()} tw-border-none tw-inline-flex tw-items-center tw-rounded-xl tw-bg-transparent tw-px-2 tw-py-1 tw-font-semibold tw-ring-2 tw-ring-inset tw-text-[0.625rem] tw-leading-3`}
-              >
+                className={`${getColorClasses()} tw-border-none tw-inline-flex tw-items-center tw-rounded-xl tw-bg-transparent tw-px-2 tw-py-1 tw-font-semibold tw-ring-2 tw-ring-inset tw-text-[0.625rem] tw-leading-3`}>
                 Level {wave.author.level}
               </div>
             </Link>
           </div>
-          <div className="tw-flex tw-items-center tw-gap-x-4 min-[1400px]:tw-justify-between tw-mt-6">
+          <div className="tw-flex tw-items-center tw-gap-x-4 tw-mt-6">
             <div className="tw-text-sm tw-flex tw-items-center tw-gap-x-2 tw-text-iron-50">
               <svg
                 className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-text-iron-300"
@@ -96,8 +94,7 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
                 aria-hidden="true"
                 viewBox="0 0 24 24"
                 strokeWidth="1.5"
-                stroke="currentColor"
-              >
+                stroke="currentColor">
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -106,29 +103,28 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
               </svg>
               <span className="tw-font-medium">Chat</span>
             </div>
-            <div className="tw-text-sm tw-flex tw-items-center tw-gap-x-2 tw-text-iron-50">
-              <svg
-                className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-text-iron-300"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                aria-hidden="true"
-                viewBox="0 0 24 24"
-                strokeWidth="1.5"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
-                />
-              </svg>
-              <span>
+            <Tippy content="Followers" className="xl:tw-inline-block tw-hidden">
+              <div className="tw-text-sm tw-flex tw-items-center tw-gap-x-2 tw-text-iron-50">
+                <svg
+                  className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-text-iron-300"
+                  xmlns="http://www.w3.org/2000/svg"
+                  fill="none"
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  strokeWidth="1.5"
+                  stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0Zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0Z"
+                  />
+                </svg>
                 <span className="tw-font-medium">
                   {numberWithCommas(wave.metrics.subscribers_count)}
-                </span>{" "}
-                <span className="tw-text-iron-400 xl:tw-hidden min-[1400px]:tw-inline-flex">Followers</span>
-              </span>
-            </div>
+                </span>
+                <span className="tw-text-iron-400 xl:tw-hidden">Followers</span>
+              </div>
+            </Tippy>
             <WaveItemEnding wave={wave} />
           </div>
           <div className="tw-flex lg:tw-flex-col min-[1400px]:tw-flex-row tw-justify-between tw-gap-y-4 tw-mt-4">
@@ -137,17 +133,15 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
               <Link
                 title="View Wave"
                 href={`/waves/${wave.id}`}
-                className="tw-no-underline tw-border tw-border-solid tw-border-iron-800 tw-ring-1 tw-ring-iron-700 hover:tw-ring-iron-650 tw-rounded-lg tw-bg-iron-800 tw-px-2.5 tw-py-2 tw-text-sm tw-font-semibold tw-text-iron-300 tw-shadow-sm hover:tw-bg-iron-700 hover:tw-border-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-iron-700 tw-transition tw-duration-300 tw-ease-out"
-              >
+                className="tw-no-underline tw-border tw-border-solid tw-border-iron-800 tw-ring-1 tw-ring-iron-700 hover:tw-ring-iron-650 tw-rounded-lg tw-bg-iron-800 tw-px-2.5 tw-py-2 tw-text-sm tw-font-semibold tw-text-iron-300 tw-shadow-sm hover:tw-bg-iron-700 hover:tw-border-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-iron-700 tw-transition tw-duration-300 tw-ease-out">
                 <svg
                   className="tw-size-5 tw-flex-shrink-0"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="none"
-                  ara-hidden="true"
+                  aria-hidden="true"
                   viewBox="0 0 24 24"
                   strokeWidth="1.5"
-                  stroke="currentColor"
-                >
+                  stroke="currentColor">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

@@ -66,10 +66,7 @@ export default function CommunityActivityPage({
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/network/activity`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/network/activity`} />
         <meta property="og:title" content="Profiles Activity" />
         <meta
           property="og:image"

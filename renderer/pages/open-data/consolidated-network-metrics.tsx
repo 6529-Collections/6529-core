@@ -45,7 +45,7 @@ export default function ConsolidatedCommunityMetricsDownloads() {
         />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/open-data/consolidated-network-metrics`}
+          content={`${SEIZE_URL}/open-data/consolidated-network-metrics`}
         />
         <meta
           property="og:title"

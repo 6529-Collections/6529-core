@@ -23,9 +23,14 @@ const GradientPageComponent = dynamic(
 export default function GradientPageIndex(props: any) {
   const { setTitle, title } = useContext(AuthContext);
 
-
   const pageProps = props.pageProps;
   const pagenameFull = `${pageProps.name} | 6529 CORE`;
+
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, [pagenameFull]);
 
   useEffect(() => {
     setTitle({

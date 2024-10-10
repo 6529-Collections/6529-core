@@ -18,7 +18,6 @@ import { useScrollBehavior } from "../../../../hooks/useScrollBehavior";
 import CircleLoader, {
   CircleLoaderSize,
 } from "../../../distribution-plan-tool/common/CircleLoader";
-import useCapacitor from "../../../../hooks/useCapacitor";
 import { useRouter } from "next/router";
 
 interface WaveDropsProps {
@@ -36,7 +35,6 @@ export default function WaveDrops({
   activeDrop,
   initialDrop,
 }: WaveDropsProps) {
-  const capacitor = useCapacitor();
   const router = useRouter();
   const { connectedProfile, setTitle } = useContext(AuthContext);
 
@@ -180,23 +178,14 @@ export default function WaveDrops({
 
   const memoizedDrops = useMemo(() => drops, [drops]);
 
-  const containerClassName = useMemo(() => {
-    return `tw-flex tw-flex-col tw-relative ${
-      capacitor.isCapacitor
-        ? "tw-h-[calc(100vh-19.5rem)]"
-        : "tw-h-[calc(100vh-13.7rem)] lg:tw-h-[calc(100vh-12.5rem)]"
-    }`;
-  }, [capacitor.isCapacitor]);
-
   return (
-    <div className={containerClassName}>
+    <div className="tw-flex tw-flex-col tw-relative tw-overflow-y-auto">
       <WaveDropsScrollContainer
         ref={scrollContainerRef}
         onScroll={handleScroll}
         newItemsCount={newItemsCount}
         isFetchingNextPage={isFetchingNextPage}
-        onTopIntersection={handleTopIntersection}
-      >
+        onTopIntersection={handleTopIntersection}>
         <div className="tw-divide-y-2 tw-divide-iron-700 tw-divide-solid tw-divide-x-0">
           <DropsList
             onReplyClick={setSerialNo}

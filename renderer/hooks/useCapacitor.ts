@@ -8,7 +8,6 @@ export enum CapacitorOrientationType {
 const useCapacitor = () => {
   const isCapacitor = false;
   const platform = "desktop";
-  
 
   return { isCapacitor, platform };
 };

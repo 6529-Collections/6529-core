@@ -30,7 +30,6 @@ import {
 import { NextGenMintingFor } from "./NextGenMintShared";
 import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
-import HeaderUserConnectModal from "../../../../header/user/HeaderUserConnectModal";
 import { SEIZE_API_URL } from "../../../../../../constants";
 import { useSeizeConnectModal } from "../../../../../contexts/SeizeConnectModalContext";
 

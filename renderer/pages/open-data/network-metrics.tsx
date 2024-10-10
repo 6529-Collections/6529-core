@@ -45,7 +45,7 @@ export default function CommunityMetricsDownloads() {
         />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/open-data/network-metrics`}
+          content={`${SEIZE_URL}/open-data/network-metrics`}
         />
         <meta property="og:title" content={`Network Metrics Downloads`} />
         <meta property="og:description" content="6529 SEIZE" />

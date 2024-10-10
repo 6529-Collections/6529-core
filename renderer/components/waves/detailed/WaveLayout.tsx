@@ -10,6 +10,7 @@ import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../header/HeaderPlaceholder";
 import Breadcrumb, { Crumb } from "../../breadcrumb/Breadcrumb";
 import { AnimatePresence, motion } from "framer-motion";
+import { SEIZE_URL } from "../../../../constants";
 
 interface WaveLayoutProps {
   readonly wave: Wave;
@@ -21,7 +22,10 @@ const Header = dynamic(() => import("../../header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-export default function WaveLayout({ wave: initialWave, children }: WaveLayoutProps) {
+export default function WaveLayout({
+  wave: initialWave,
+  children,
+}: WaveLayoutProps) {
   const { setTitle, title } = useContext(AuthContext);
   const router = useRouter();
   const wave_id = (router.query.wave as string)?.toLowerCase();
@@ -37,7 +41,7 @@ export default function WaveLayout({ wave: initialWave, children }: WaveLayoutPr
     initialData: initialWave,
   });
 
-    const getBreadCrumbs = (): Crumb[] => {
+  const getBreadCrumbs = (): Crumb[] => {
     return [
       { display: "Home", href: "/" },
       { display: "My Stream", href: "/my-stream" },
@@ -67,21 +71,18 @@ export default function WaveLayout({ wave: initialWave, children }: WaveLayoutPr
       }
     };
   }, []);
-  
-    return (
+
+  return (
     <>
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Waves | 6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/waves`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/waves`} />
         <meta property="og:title" content="Waves" />
         <meta
           property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
+          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
         />
         <meta property="og:description" content="6529 SEIZE" />
         <style>{`
@@ -105,8 +106,7 @@ export default function WaveLayout({ wave: initialWave, children }: WaveLayoutPr
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.3 }}
-                className="tw-mt-4 tw-px-4"
-              >
+                className="tw-mt-4 tw-px-4">
                 <div className="lg:tw-flex lg:tw-items-start tw-justify-center tw-gap-x-4">
                   <div className="tw-w-full tw-flex tw-flex-col tw-gap-y-4 lg:tw-w-[20.5rem]">
                     {[1, 2, 3].map((index) => (
@@ -115,16 +115,14 @@ export default function WaveLayout({ wave: initialWave, children }: WaveLayoutPr
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.3, delay: index * 0.1 }}
-                        className="tw-h-48 tw-bg-iron-900 tw-rounded-xl tw-animate-pulse"
-                      ></motion.div>
+                        className="tw-h-48 tw-bg-iron-900 tw-rounded-xl tw-animate-pulse"></motion.div>
                     ))}
                   </div>
                   <motion.div
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ duration: 0.3, delay: 0.3 }}
-                    className="tw-flex-1"
-                  >
+                    className="tw-flex-1">
                     <div className="tw-h-[calc(100vh-160px)] tw-bg-iron-950 tw-rounded-xl tw-animate-pulse"></div>
                   </motion.div>
                 </div>
@@ -136,8 +134,7 @@ export default function WaveLayout({ wave: initialWave, children }: WaveLayoutPr
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.3 }}
-              >
+                transition={{ duration: 0.3 }}>
                 {children}
               </motion.div>
             )}
@@ -146,4 +143,4 @@ export default function WaveLayout({ wave: initialWave, children }: WaveLayoutPr
       </main>
     </>
   );
-};
+}

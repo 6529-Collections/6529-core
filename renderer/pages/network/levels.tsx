@@ -435,10 +435,7 @@ export default function Levels() {
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/network/levels`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/network/levels`} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content="6529 SEIZE" />
         <meta

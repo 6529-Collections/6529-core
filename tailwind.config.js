@@ -7,7 +7,7 @@ module.exports = {
     "./renderer/components/**/*.{js,ts,jsx,tsx}",
 
     // Or if using `src` directory:
-    "./renderer/src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   prefix: "tw-",
   corePlugins: {

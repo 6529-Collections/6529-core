@@ -18,7 +18,6 @@ import TitleBar from "./titlebar/TitleBar";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
-import { useSeizeConnect } from "../../hooks/useSeizeConnect";
 
 interface Props {
   onLoad?: () => void;

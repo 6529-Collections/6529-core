@@ -33,10 +33,7 @@ export default function CommunityMetrics() {
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="6529 SEIZE" />
-        <meta
-          property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/network/metrics`}
-        />
+        <meta property="og:url" content={`${SEIZE_URL}/network/metrics`} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content="6529 SEIZE" />
         <meta

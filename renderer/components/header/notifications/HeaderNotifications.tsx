@@ -5,12 +5,9 @@ import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
 import { NotificationsResponse } from "../../../generated/models/NotificationsResponse";
 import { commonApiFetch } from "../../../services/api/common-api";
 import Link from "next/link";
-import useCapacitor from "../../../hooks/useCapacitor";
 
 export default function HeaderNotifications() {
   const { connectedProfile, setTitle } = useAuth();
-
-  const capacitor = useCapacitor();
 
   const { data: notifications } = useQuery<NotificationsResponse>({
     queryKey: [
