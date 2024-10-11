@@ -10,14 +10,17 @@ import WaveDetailedAbout from "./WaveDetailedAbout";
 interface WaveDetailedDesktopProps {
   readonly wave: Wave;
   readonly view: WaveDetailedView;
-
   readonly setView: (view: WaveDetailedView) => void;
+  readonly onWaveChange: (wave: Wave) => void;
+  readonly setIsLoading: (isLoading: boolean) => void;
 }
 
 const WaveDetailedDesktop: React.FC<WaveDetailedDesktopProps> = ({
   wave,
   view,
   setView,
+  onWaveChange,
+  setIsLoading,
 }) => {
   const { connectedProfile, activeProfileProxy, showWaves } =
     useContext(AuthContext);
@@ -86,6 +89,8 @@ const WaveDetailedDesktop: React.FC<WaveDetailedDesktopProps> = ({
                 setView={setView}
                 showRequiredMetadata={showRequiredMetadata}
                 showRequiredTypes={showRequiredTypes}
+                onWaveChange={onWaveChange}
+                setIsLoading={setIsLoading}
               />
             </div>
           </div>
