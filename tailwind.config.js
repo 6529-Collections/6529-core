@@ -7,7 +7,7 @@ module.exports = {
     "./renderer/components/**/*.{js,ts,jsx,tsx}",
 
     // Or if using `src` directory:
-    "./renderer/src/**/*.{js,ts,jsx,tsx}",
+    "./src/**/*.{js,ts,jsx,tsx}",
   ],
   prefix: "tw-",
   corePlugins: {
@@ -60,6 +60,15 @@ module.exports = {
       zIndex: {
         1000: "1000",
       },
+      keyframes: {
+        "loading-bar": {
+          "0%": { transform: "translateX(-100%)" },
+          "100%": { transform: "translateX(100%)" },
+        },
+      },
+      animation: {
+        "loading-bar": "loading-bar 1.5s infinite",
+      },
     },
   },
   variants: {
@@ -71,6 +80,7 @@ module.exports = {
     require("@tailwindcss/forms")({
       strategy: "class",
     }),
+    require("tailwind-scrollbar")({ nocompatible: true }),
     function ({ addVariant }) {
       addVariant("not-first", "&:not(:first-child)");
     },

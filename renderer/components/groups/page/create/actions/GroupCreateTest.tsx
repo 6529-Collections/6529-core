@@ -8,14 +8,12 @@ import {
   commonApiPost,
 } from "../../../../../services/api/common-api";
 import { GroupFull } from "../../../../../generated/models/GroupFull";
+import { CommunityMembersQuery } from "../../../../../pages/network/index";
 import { SortDirection } from "../../../../../entities/ISort";
 import { Page } from "../../../../../helpers/Types";
 import { CommunityMemberOverview } from "../../../../../entities/IProfile";
 import { QueryKey } from "../../../../react-query-wrapper/ReactQueryWrapper";
-import {
-  CommunityMembersQuery,
-  CommunityMembersSortOption,
-} from "../../../../community/CommunityMembers";
+import { CommunityMembersSortOption } from "../../../../../enums";
 
 export default function GroupCreateTest({
   groupConfig,

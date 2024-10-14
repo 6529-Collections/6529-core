@@ -1,11 +1,12 @@
 import Head from "next/head";
 import styles from "../styles/Home.module.scss";
 import Image from "next/image";
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
+import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
 
 const Header = dynamic(() => import("../components/header/Header"), {
@@ -14,6 +15,13 @@ const Header = dynamic(() => import("../components/header/Header"), {
 });
 
 export default function Buidl() {
+  const { setTitle, title } = useContext(AuthContext);
+  useEffect(() => {
+    setTitle({
+      title: "BUIDL | 6529 SEIZE",
+    });
+  }, []);
+
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
     { display: "Home", href: "/" },
     { display: "BUIDL" },
@@ -22,7 +30,7 @@ export default function Buidl() {
   return (
     <>
       <Head>
-        <title>BUIDL | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="BUIDL | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/buidl`} />

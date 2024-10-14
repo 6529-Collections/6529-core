@@ -17,6 +17,7 @@ import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "../../react-query-wrapper/ReactQueryWrapper";
+import { AuthContext } from "../../auth/Auth";
 import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../header/Header"), {
@@ -34,6 +35,7 @@ export default function UserPageLayout({
   readonly profile: IProfileAndConsolidations;
   readonly children: ReactNode;
 }) {
+  const { setTitle, title } = useContext(AuthContext);
   const queryClient = useQueryClient();
   const router = useRouter();
   const { setProfile } = useContext(ReactQueryWrapperContext);
@@ -71,16 +73,19 @@ export default function UserPageLayout({
     return formatAddress(handleOrWallet);
   };
 
-  const title = getTitle();
-
-  const pagenameFull = `${title} | 6529 CORE`;
+  const pagenameFull = `${getTitle()} | 6529 SEIZE`;
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
 
   const descriptionArray = [];
 
   descriptionArray.push(`Level: ${formatNumberWithCommas(profile.level)}`);
 
   descriptionArray.push(
-    `CIC: ${formatNumberWithCommas(profile.cic.cic_rating)}`
+    `NIC: ${formatNumberWithCommas(profile.cic.cic_rating)}`
   );
   descriptionArray.push(`Rep: ${formatNumberWithCommas(profile.rep)}`);
   descriptionArray.push(
@@ -121,7 +126,7 @@ export default function UserPageLayout({
   return (
     <>
       <Head>
-        <title>{pagenameFull}</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content={title} />
         <meta property="og:url" content={`${SEIZE_URL}/${handleOrWallet}`} />
@@ -136,7 +141,7 @@ export default function UserPageLayout({
         />
       </Head>
 
-      <main className="tw-min-h-[100dvh]">
+      <main className="tw-min-h-[100dvh] tailwind-scope">
         <Header />
         <div className="tw-bg-iron-950 tw-min-h-screen tw-pb-16 lg:tw-pb-20">
           <UserPageHeader profile={profile} mainAddress={mainAddress} />

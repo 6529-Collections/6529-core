@@ -10,17 +10,19 @@ import {
   faLockOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SEED_MIN_PASS_LENGTH } from "../network/seedWallet/SeedWalletModal";
+import { SEED_MIN_PASS_LENGTH } from "../core/seedWallet/SeedWalletModal";
 import { SeedWalletRequest } from "../../../shared/types";
 import { useToast } from "../../contexts/ToastContext";
 import { on } from "events";
 import { useModalState } from "../../contexts/ModalStateContext";
+import { formatAddress } from "../../helpers/Helpers";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
 
 export default function ConfirmSeedWalletLock(
   props: Readonly<{
     name: string;
+    address: string;
     show: boolean;
     unlockedWallet?: ethers.Wallet;
     pendingRequest?: SeedWalletRequest;
@@ -157,6 +159,7 @@ export default function ConfirmSeedWalletLock(
         </Modal.Title>
       </Modal.Header>
       <Modal.Body className={styles.modalContent}>
+        <div className="font-smaller pb-3">Address: {props.address}</div>
         {props.unlockedWallet ? printUnlocked() : printLocked()}
       </Modal.Body>
       <Modal.Footer

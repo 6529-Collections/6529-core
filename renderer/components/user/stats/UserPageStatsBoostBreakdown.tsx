@@ -75,6 +75,7 @@ export default function UserPageStatsBoostBreakdown({
         rows.push(getMemeRow("SZN5", tdh.boost_breakdown?.memes_szn5));
         rows.push(getMemeRow("SZN6", tdh.boost_breakdown?.memes_szn6));
         rows.push(getMemeRow("SZN7", tdh.boost_breakdown?.memes_szn7));
+        rows.push(getMemeRow("SZN8", tdh.boost_breakdown?.memes_szn8));
       }
     }
 
@@ -123,8 +124,8 @@ export default function UserPageStatsBoostBreakdown({
         </h3>
         <span>
           <a
-            href="/community-metrics#tdh-1.3"
-            className="decoration-hover-underline">
+            href="/network/metrics#tdh-1.3"
+            className="decoration-hover-underline tw-text-sm">
             TDH Version: 1.3
           </a>
         </span>

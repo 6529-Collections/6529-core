@@ -8,7 +8,7 @@ import {
 } from "../../nextgen_entities";
 import Image from "next/image";
 import { NEXTGEN_CHAIN_ID } from "../../nextgen_contracts";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import DateCountdown from "../../../date-countdown/DateCountdown";
 import { fetchUrl } from "../../../../services/6529api";
@@ -25,6 +25,7 @@ import { DistributionLink } from "../NextGen";
 import Head from "next/head";
 import { getCommonHeaders } from "../../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../../services/api/common-api";
+import { AuthContext } from "../../../auth/Auth";
 import { SEIZE_API_URL, SEIZE_URL } from "../../../../../constants";
 
 interface Props {
@@ -348,9 +349,16 @@ export function NextGenMintCounts(
 export function NextGenCollectionHead(
   props: Readonly<{ collection: NextGenCollection; name: string }>
 ) {
+  const { setTitle, title } = useContext(AuthContext);
+  useEffect(() => {
+    setTitle({
+      title: props.name,
+    });
+  }, []);
+
   return (
     <Head>
-      <title>{props.name}</title>
+      <title>{title}</title>
       <link rel="icon" href="/favicon.ico" />
       <meta name="description" content={props.name} />
       <meta

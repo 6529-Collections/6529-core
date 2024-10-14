@@ -78,6 +78,42 @@
   opacity: 0;
 }
 
+.capacitorMainContainer {
+  height: calc($header-height-capacitor + env(safe-area-inset-top));
+  z-index: 600;
+  background-color: #000000;
+  position: fixed;
+  top: -env(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  left: 0;
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.capacitorPlaceholder {
+  height: calc($header-height-capacitor + env(safe-area-inset-top));
+  opacity: 0;
+}
+
+.capacitorMainContainer {
+  height: calc($header-height-capacitor + env(safe-area-inset-top));
+  z-index: 600;
+  background-color: #000000;
+  position: fixed;
+  top: -env(safe-area-inset-top);
+  padding-top: env(safe-area-inset-top);
+  left: 0;
+  width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.capacitorPlaceholder {
+  height: calc($header-height-capacitor + env(safe-area-inset-top));
+  opacity: 0;
+}
+
 .headerRow {
   min-height: $header-height;
   z-index: 10;
@@ -254,6 +290,20 @@
   background-color: $bg-color-1;
 }
 
+.headerPlaceholderCapacitor {
+  z-index: 10;
+  position: relative;
+  min-height: $header-height-capacitor;
+  background-color: $bg-color-1;
+}
+
+.headerPlaceholderCapacitor {
+  z-index: 10;
+  position: relative;
+  min-height: $header-height-capacitor;
+  background-color: $bg-color-1;
+}
+
 .userDropdown {
   background-color: white;
   border-left: 0.5px solid black;
@@ -385,4 +435,21 @@
   font-size: smaller;
   padding: 2px 5px;
   border: 1px solid white;
+}
+
+.mainContainerSmall {
+  font-size: larger;
+  z-index: 600;
+  position: relative;
+  min-height: 60px;
+  background-color: $bg-color-1;
+}
+
+.headerRowSmall {
+  min-height: 60px; 
+}
+
+.logoIconSmall {
+  height: auto;
+  max-width: min(30vw, 180px); 
 }

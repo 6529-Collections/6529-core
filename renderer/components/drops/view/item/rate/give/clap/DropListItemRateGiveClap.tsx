@@ -18,12 +18,14 @@ export default function DropListItemRateGiveClap({
   voteState,
   canVote,
   onSubmit,
+  isMobile = false,
 }: {
   readonly rate: number;
   readonly availableCredit: number;
   readonly voteState: DropVoteState;
   readonly canVote: boolean;
   readonly onSubmit: () => void;
+  readonly isMobile?: boolean;
 }) {
   const positiveRgba = "rgba(39, 174, 96, 1)";
   const negativeRgba = "rgba(192, 57, 43, 1)";
@@ -218,6 +220,7 @@ export default function DropListItemRateGiveClap({
     });
   }, [rate, availableCredit]);
 
+  const svgSize = isMobile ? "tw-size-7" : "tw-h-[18px] tw-w-[18px]";
   return (
     <LazyTippy
       placement="top"
@@ -229,7 +232,7 @@ export default function DropListItemRateGiveClap({
         <button
           disabled={!rate || !canVote}
           id={`clap-${randomID}`}
-          className={`${clapClasses} tw-border-none tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center tw-relative tw-outline-1 tw-outline-transparent tw-bg-iron-900 tw-transition tw-duration-300 tw-ease-out ${styles.clap}`}
+          className={`${clapClasses} tw-border-none tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center tw-relative tw-z-10 tw-outline-1 tw-outline-transparent tw-bg-iron-900 tw-transition tw-duration-300 tw-ease-out ${styles.clap}`}
           onClick={(e) => {
             e.stopPropagation();
             handleClick();
@@ -238,7 +241,7 @@ export default function DropListItemRateGiveClap({
           <span>
             <svg
               id={`clap--icon-${randomID}`}
-              className={`${textClasses} tw-size-[18px] -tw-mt-1 tw-transition tw-duration-300 tw-ease-out`}
+              className={`${textClasses} ${svgSize} -tw-mt-1 tw-transition tw-duration-300 tw-ease-out`}
               viewBox="0 0 346 360"
               fill="none"
               aria-hidden="true"

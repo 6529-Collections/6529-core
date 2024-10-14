@@ -22,7 +22,7 @@ const ACTION: Record<ProfileActivityLogRateType, string> = {
 
 const LOG_MATTER_STR: Record<RateMatter, string> = {
   [RateMatter.REP]: "Rep",
-  [RateMatter.CIC]: "CIC",
+  [RateMatter.NIC]: "NIC",
   [RateMatter.DROP_REP]: "Drop Rep",
 };
 

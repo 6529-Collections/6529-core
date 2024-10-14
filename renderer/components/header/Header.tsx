@@ -15,15 +15,14 @@ import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import { AuthContext } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
 import TitleBar from "./titlebar/TitleBar";
-import { faBars } from "@fortawesome/free-solid-svg-icons";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
-import CapacitorWidget from "./capacitor/CapacitorWidget";
-import { useSeizeConnect } from "../../hooks/useSeizeConnect";
+import { faBars } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   onLoad?: () => void;
   onSetWallets?(wallets: string[]): any;
+  readonly isSmall?: boolean;
 }
 
 export interface HeaderLink {
@@ -41,7 +40,7 @@ export default function Header(props: Readonly<Props>) {
   const [consolidations, setConsolidations] = useState<string[]>([]);
   const [burgerMenuOpen, setBurgerMenuOpen] = useState(false);
 
-  const [showBurgerMenuNetwork, setShowBurgerMenuNetwork] = useState(false);
+  const [showBurgerMenuCore, setShowBurgerMenuCore] = useState(false);
   const [showBurgerMenuCollections, setShowBurgerMenuCollections] =
     useState(false);
   const [showBurgerMenuAbout, setShowBurgerMenuAbout] = useState(false);
@@ -67,6 +66,7 @@ export default function Header(props: Readonly<Props>) {
   useEffect(() => {
     function handleResize() {
       setShowBurgerMenuCollections(false);
+      setShowBurgerMenuCore(false);
       setBurgerMenuOpen(false);
       setShowBurgerMenuAbout(false);
       setShowBurgerMenuCommunity(false);
@@ -127,7 +127,7 @@ export default function Header(props: Readonly<Props>) {
         className={`inset-safe-area ${styles.burgerMenu} ${
           burgerMenuOpen ? styles.burgerMenuOpen : ""
         }`}>
-        <Container className="pt-3 pb-3">
+        <Container className="pt-2 pb-2">
           <Row>
             <Col className="d-flex justify-content-end">
               <FontAwesomeIcon
@@ -136,6 +136,7 @@ export default function Header(props: Readonly<Props>) {
                 onClick={() => {
                   setBurgerMenuOpen(false);
                   setShowBurgerMenuCollections(false);
+                  setShowBurgerMenuCore(false);
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuTools(false);
@@ -171,6 +172,7 @@ export default function Header(props: Readonly<Props>) {
                 <h3
                   onClick={() => {
                     setShowBurgerMenuCollections(false);
+                    setShowBurgerMenuCore(false);
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
                     setShowBurgerMenuTools(false);
@@ -179,6 +181,7 @@ export default function Header(props: Readonly<Props>) {
                   onKeyDown={(e) => {
                     if (e.key === "Enter" || e.key === " ") {
                       setShowBurgerMenuCollections(false);
+                      setShowBurgerMenuCore(false);
                       setShowBurgerMenuCommunity(false);
                       setShowBurgerMenuAbout(false);
                       setShowBurgerMenuTools(false);
@@ -228,7 +231,7 @@ export default function Header(props: Readonly<Props>) {
             <Col>
               <h3
                 onClick={() => {
-                  setShowBurgerMenuNetwork(!showBurgerMenuNetwork);
+                  setShowBurgerMenuCore(!showBurgerMenuCore);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuAbout(false);
@@ -237,7 +240,7 @@ export default function Header(props: Readonly<Props>) {
                 }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    setShowBurgerMenuNetwork(!showBurgerMenuNetwork);
+                    setShowBurgerMenuCore(!showBurgerMenuCore);
                     setShowBurgerMenuCollections(false);
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
@@ -247,14 +250,14 @@ export default function Header(props: Readonly<Props>) {
                 }}
                 className={`${styles.burgerMenuHeader}
                   ${
-                    showBurgerMenuNetwork
+                    showBurgerMenuCore
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
                   }`}>
-                Network
+                Core
               </h3>
             </Col>
-            {showBurgerMenuNetwork && (
+            {showBurgerMenuCore && (
               <Container>
                 <Row>
                   <Col xs={{ span: 6, offset: 3 }}>
@@ -263,14 +266,14 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/network/app-info">
+                    <Link href="/core/app-info">
                       <h3>App Info</h3>
                     </Link>
                   </Col>
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/network/app-logs">
+                    <Link href="/core/app-logs">
                       <h3>App Logs</h3>
                     </Link>
                   </Col>
@@ -282,7 +285,7 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/network/seed-wallets">
+                    <Link href="/core/seed-wallets">
                       <h3>
                         <span>Seed Wallets</span>&nbsp;
                       </h3>
@@ -302,7 +305,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuCollections(!showBurgerMenuCollections);
-                  setShowBurgerMenuNetwork(false);
+                  setShowBurgerMenuCore(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuTools(false);
@@ -311,7 +314,7 @@ export default function Header(props: Readonly<Props>) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     setShowBurgerMenuCollections(!showBurgerMenuCollections);
-                    setShowBurgerMenuNetwork(false);
+                    setShowBurgerMenuCore(false);
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
                     setShowBurgerMenuTools(false);
@@ -357,8 +360,7 @@ export default function Header(props: Readonly<Props>) {
                   <Col>
                     <Link href="/nextgen">
                       <h3>
-                        <span>NextGen</span>&nbsp;
-                        <span className={styles.new}>new</span>
+                        <span>NextGen</span>
                       </h3>
                     </Link>
                   </Col>
@@ -395,7 +397,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuCommunity(!showBurgerMenuCommunity);
-                  setShowBurgerMenuNetwork(false);
+                  setShowBurgerMenuCore(false);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuAbout(false);
                   setShowBurgerMenuTools(false);
@@ -403,7 +405,7 @@ export default function Header(props: Readonly<Props>) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     setShowBurgerMenuCommunity(!showBurgerMenuCommunity);
-                    setShowBurgerMenuNetwork(false);
+                    setShowBurgerMenuCore(false);
                     setShowBurgerMenuCollections(false);
                     setShowBurgerMenuAbout(false);
                     setShowBurgerMenuTools(false);
@@ -415,7 +417,7 @@ export default function Header(props: Readonly<Props>) {
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
                   }`}>
-                Community
+                Network
               </h3>
             </Col>
             {showBurgerMenuCommunity && (
@@ -427,21 +429,21 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/community">
-                      <h3>Community</h3>
+                    <Link href="/network">
+                      <h3>Members</h3>
                     </Link>
                   </Col>
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/community-activity">
-                      <h3>Community Activity</h3>
+                    <Link href="/network/activity">
+                      <h3>Activity</h3>
                     </Link>
                   </Col>
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/groups">
+                    <Link href="/network/groups">
                       <h3>Groups</h3>
                     </Link>
                   </Col>
@@ -460,7 +462,7 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/community/prenodes">
+                    <Link href="/network/prenodes">
                       <h3>Prenodes</h3>
                     </Link>
                   </Col>
@@ -472,21 +474,21 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/community-metrics">
-                      <h3>Community Metrics</h3>
+                    <Link href="/network/metrics">
+                      <h3>Metrics</h3>
                     </Link>
                   </Col>
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/community-stats">
-                      <h3>Community Stats</h3>
+                    <Link href="/network/stats">
+                      <h3>Stats</h3>
                     </Link>
                   </Col>
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/levels">
+                    <Link href="/network/levels">
                       <h3>Levels</h3>
                     </Link>
                   </Col>
@@ -504,7 +506,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuTools(!showBurgerMenuTools);
-                  setShowBurgerMenuNetwork(false);
+                  setShowBurgerMenuCore(false);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuAbout(false);
@@ -512,7 +514,7 @@ export default function Header(props: Readonly<Props>) {
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
                     setShowBurgerMenuTools(!showBurgerMenuTools);
-                    setShowBurgerMenuNetwork(false);
+                    setShowBurgerMenuCore(false);
                     setShowBurgerMenuCollections(false);
                     setShowBurgerMenuCommunity(false);
                     setShowBurgerMenuAbout(false);
@@ -599,7 +601,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 onClick={() => {
                   setShowBurgerMenuAbout(!showBurgerMenuAbout);
-                  setShowBurgerMenuNetwork(false);
+                  setShowBurgerMenuCore(false);
                   setShowBurgerMenuCollections(false);
                   setShowBurgerMenuCommunity(false);
                   setShowBurgerMenuTools(false);
@@ -802,7 +804,15 @@ export default function Header(props: Readonly<Props>) {
     <>
       {printBurgerMenu()}
       <TitleBar />
-      <Container fluid className={styles.mainContainer}>
+      <Container
+        fluid
+        className={`${
+          capacitor.isCapacitor
+            ? styles.capacitorMainContainer
+            : props.isSmall
+            ? styles.mainContainerSmall
+            : styles.mainContainer
+        }`}>
         <Row>
           <Col>
             <Container className={styles.capacitorHeaderRowContainerLandscape}>
@@ -810,6 +820,8 @@ export default function Header(props: Readonly<Props>) {
                 className={
                   capacitor.isCapacitor
                     ? styles.capacitorHeaderRow
+                    : props.isSmall
+                    ? styles.headerRowSmall
                     : styles.headerRow
                 }>
                 <Col
@@ -883,26 +895,26 @@ export default function Header(props: Readonly<Props>) {
                               </NavDropdown>
                             )}
                             <NavDropdown
-                              title="Network"
+                              title="Core"
                               align={"start"}
                               className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                               <HeaderDesktopLink
                                 link={{
                                   name: "App Info",
-                                  path: "/network/app-info",
+                                  path: "/core/app-info",
                                 }}
                               />
                               <HeaderDesktopLink
                                 link={{
                                   name: "App Logs",
-                                  path: "/network/app-logs",
+                                  path: "/core/app-logs",
                                 }}
                               />
                               <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{
                                   name: "Seed Wallets",
-                                  path: "/network/seed-wallets",
+                                  path: "/core/seed-wallets",
                                 }}
                               />
                             </NavDropdown>
@@ -927,7 +939,6 @@ export default function Header(props: Readonly<Props>) {
                                 link={{
                                   name: "NextGen",
                                   path: "/nextgen",
-                                  isNew: true,
                                 }}
                               />
                               <NavDropdown.Divider />
@@ -945,25 +956,25 @@ export default function Header(props: Readonly<Props>) {
                               />
                             </NavDropdown>
                             <NavDropdown
-                              title="Community"
+                              title="Network"
                               align={"start"}
                               className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Community",
-                                  path: "/community",
+                                  name: "Members",
+                                  path: "/network",
                                 }}
                               />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Community Activity",
-                                  path: "/community-activity",
+                                  name: "Activity",
+                                  path: "/network/activity",
                                 }}
                               />
                               <HeaderDesktopLink
                                 link={{
                                   name: "Groups",
-                                  path: "/groups",
+                                  path: "/network/groups",
                                 }}
                               />
                               <HeaderDesktopLink
@@ -976,26 +987,26 @@ export default function Header(props: Readonly<Props>) {
                               <HeaderDesktopLink
                                 link={{
                                   name: "Prenodes",
-                                  path: "/community/prenodes",
+                                  path: "/network/prenodes",
                                 }}
                               />
                               <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Community Metrics",
-                                  path: "/community-metrics",
+                                  name: "Metrics",
+                                  path: "/network/metrics",
                                 }}
                               />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Community Stats",
-                                  path: "/community-stats",
+                                  name: "Stats",
+                                  path: "/network/stats",
                                 }}
                               />
                               <HeaderDesktopLink
                                 link={{
                                   name: "Levels",
-                                  path: "/levels",
+                                  path: "/network/levels",
                                 }}
                               />
                             </NavDropdown>

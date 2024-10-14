@@ -13,10 +13,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { AuthContext } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
-import { SEIZE_API_URL, SEIZE_URL } from "../../../constants";
+import { SEIZE_API_URL } from "../../../constants";
 import Link from "next/link";
 import { SeizeSettings } from "../../generated/models/SeizeSettings";
-import { useSeizeConnect } from "../../hooks/useSeizeConnect";
 
 interface CheckList {
   status: boolean;

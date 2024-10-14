@@ -4,9 +4,7 @@ import IdentitySearch, {
   IdentitySearchSize,
 } from "../../../../utils/input/identity/IdentitySearch";
 import GroupCreateNumericValue from "./common/GroupCreateNumericValue";
-import RepCategorySearch, {
-  RepCategorySearchSize,
-} from "../../../../utils/input/rep-category/RepCategorySearch";
+import RepCategorySearch, { RepCategorySearchSize } from "../../../../utils/input/rep-category/RepCategorySearch";
 import { GroupFilterDirection } from "../../../../../generated/models/GroupFilterDirection";
 
 export default function GroupCreateRep({

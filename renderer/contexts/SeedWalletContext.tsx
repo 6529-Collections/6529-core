@@ -178,7 +178,16 @@ export const SeedWalletProvider: React.FC<{
   }, [connectedAddress]);
 
   useEffect(() => {
+    const reset = () => {
+      lockWallet();
+      setConnectedAddress(null);
+      setLockedWallet(undefined);
+      setIsSeedWallet(false);
+      setIsFetched(true);
+    };
+
     if (!connections || connections.length === 0) {
+      reset();
       return;
     }
 
@@ -186,9 +195,7 @@ export const SeedWalletProvider: React.FC<{
       setConnectedAddress(connections[0].accounts[0]);
       setIsSeedWallet(true);
     } else {
-      lockWallet();
-      setIsSeedWallet(false);
-      setIsFetched(true);
+      reset();
     }
   }, [connections]);
 
@@ -205,6 +212,7 @@ export const SeedWalletProvider: React.FC<{
       {lockedWallet && (
         <ConfirmSeedWalletLock
           name={lockedWallet.name}
+          address={lockedWallet.address}
           show={showPasswordModal}
           unlockedWallet={unlockedWallet}
           pendingRequest={pendingCallback?.request}

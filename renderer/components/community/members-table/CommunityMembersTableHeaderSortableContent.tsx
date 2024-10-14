@@ -4,7 +4,7 @@ import CommonTableSortIcon from "../../user/utils/icons/CommonTableSortIcon";
 import CircleLoader, {
   CircleLoaderSize,
 } from "../../distribution-plan-tool/common/CircleLoader";
-import { CommunityMembersSortOption } from "../CommunityMembers";
+import { CommunityMembersSortOption } from "../../../enums";
 
 export default function CommunityMembersTableHeaderSortableContent({
   sort,
@@ -26,7 +26,7 @@ export default function CommunityMembersTableHeaderSortableContent({
     [CommunityMembersSortOption.LEVEL]: "Level",
     [CommunityMembersSortOption.TDH]: "TDH",
     [CommunityMembersSortOption.REP]: "REP",
-    [CommunityMembersSortOption.CIC]: "CIC",
+    [CommunityMembersSortOption.NIC]: "NIC",
   };
 
   const [rotate, setRotate] = useState<boolean>(false);

@@ -64,7 +64,7 @@ export default function CreateDrop({
   onSuccessfulDrop,
 }: CreateDropProps) {
   const { setToast, requestAuth } = useContext(AuthContext);
-  const { onDropCreate, addOptimisticDrop, invalidateDrops } = useContext(
+  const { waitAndInvalidateDrops, addOptimisticDrop } = useContext(
     ReactQueryWrapperContext
   );
   const [init, setInit] = useState(isClient);
@@ -94,7 +94,6 @@ export default function CreateDrop({
       }),
     onSuccess: (response: Drop) => {
       setDropEditorRefreshKey((prev) => prev + 1);
-      onDropCreate();
       if (onSuccessfulDrop) {
         onSuccessfulDrop();
       }
@@ -104,9 +103,9 @@ export default function CreateDrop({
         message: error as unknown as string,
         type: "error",
       });
-      invalidateDrops();
     },
     onSettled: () => {
+      waitAndInvalidateDrops();
       setSubmitting(false);
     },
   });
@@ -218,7 +217,7 @@ export default function CreateDrop({
       updated_at: null,
       title: dropRequest.title ?? null,
       parts: dropRequest.parts.map((part, i) => ({
-        part_id: i,
+        part_id: i + 1,
         content: part.content ?? null,
         media: part.media.map((media) => ({
           url: media.url,

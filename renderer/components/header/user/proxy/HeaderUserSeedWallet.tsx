@@ -11,7 +11,7 @@ export default function HeaderUserSeedWallet() {
         type="button"
         aria-label="Seed Wallet"
         title="Seed Wallet"
-        className="tw-relative tw-flex tw-items-center tw-justify-center tw-bg-iron-800 tw-px-2 tw-h-11 tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-border-0 tw-text-iron-50 tw-shadow-sm hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 tw-transition tw-duration-300 tw-ease-out">
+        className="tw-relative tw-flex tw-items-center tw-justify-center tw-bg-iron-800 tw-px-2 tw-h-10 tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-border-0 tw-text-iron-50 tw-shadow-sm hover:tw-bg-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 tw-transition tw-duration-300 tw-ease-out">
         <FontAwesomeIcon
           icon={isUnlocked ? faLockOpen : faLock}
           width={18}

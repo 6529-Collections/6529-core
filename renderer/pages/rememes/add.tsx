@@ -1,9 +1,10 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
-import { useState } from "react";
 import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { useContext, useEffect, useState } from "react";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -17,16 +18,23 @@ const AddRememeComponent = dynamic(
 );
 
 export default function ReMemes() {
+  const { setTitle, title } = useContext(AuthContext);
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
     { display: "Home", href: "/" },
     { display: "ReMemes", href: "/rememes" },
     { display: "Add Rememe" },
   ]);
 
+  useEffect(() => {
+    setTitle({
+      title: "Add ReMemes | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>Add ReMemes | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Add ReMemes | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/rememes/add`} />

@@ -1,10 +1,11 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
 
-import { useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -18,6 +19,14 @@ const MemeLabComponent = dynamic(
 );
 
 export default function MemeLab() {
+  const { setTitle, title } = useContext(AuthContext);
+
+  useEffect(() => {
+    setTitle({
+      title: "Meme Lab | 6529 SEIZE",
+    });
+  }, []);
+
   const [connectedWallets, setConnectedWallets] = useState<string[]>([]);
 
   const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
@@ -28,7 +37,7 @@ export default function MemeLab() {
   return (
     <>
       <Head>
-        <title>Meme Lab | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Meme Lab | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/meme-lab`} />

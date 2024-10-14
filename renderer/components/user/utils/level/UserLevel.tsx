@@ -29,7 +29,7 @@ export default function UserLevel({
 
   const classes = `${getColorClasses()} ${getSizeClasses()}`;
   const openLevelsPage = () => {
-    window.open("/levels");
+    window.open("/network/levels", "_blank");
   };
 
   return (

@@ -33,9 +33,8 @@ export default function DropReplyInputWrapper({
   readonly onReply: () => void;
 }) {
   const { setToast, requestAuth, connectedProfile } = useContext(AuthContext);
-  const { onDropCreate, addOptimisticDrop, invalidateDrops } = useContext(
-    ReactQueryWrapperContext
-  );
+  const { waitAndInvalidateDrops, addOptimisticDrop, invalidateDrops } =
+    useContext(ReactQueryWrapperContext);
 
   const [mentionedUsers, setMentionedUsers] = useState<
     Omit<MentionedUser, "current_handle">[]
@@ -96,7 +95,7 @@ export default function DropReplyInputWrapper({
       }),
     onSuccess: (respone: Drop) => {
       setDrop(null);
-      onDropCreate();
+      waitAndInvalidateDrops();
       onReply();
     },
     onError: (error) => {
@@ -264,7 +263,7 @@ export default function DropReplyInputWrapper({
       updated_at: null,
       title: dropRequest.title ?? null,
       parts: dropRequest.parts.map((part, i) => ({
-        part_id: i,
+        part_id: i + 1,
         content: part.content ?? null,
         media: part.media.map((media) => ({
           url: media.url,
@@ -336,7 +335,8 @@ export default function DropReplyInputWrapper({
         onEditorState={setEditorState}
         onMentionedUser={onMentionedUser}
         onReferencedNft={onReferencedNft}
-        onFileChange={setFile}>
+        onFileChange={setFile}
+      >
         <PrimaryButton onClick={onDrop} disabled={!canSubmit} loading={loading}>
           Reply
         </PrimaryButton>

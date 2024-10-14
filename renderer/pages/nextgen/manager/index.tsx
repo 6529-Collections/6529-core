@@ -4,6 +4,8 @@ import Breadcrumb from "../../../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
+import { useContext } from "react";
+import { AuthContext } from "../../../components/auth/Auth";
 import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../../components/header/Header"), {
@@ -19,16 +21,20 @@ const NextGenAdminComponent = dynamic(
 );
 
 export default function NextGenAdmin() {
+  const { setTitle, title } = useContext(AuthContext);
   const breadcrumbs = [
     { display: "Home", href: "/" },
     { display: "NextGen", href: "/nextgen" },
     { display: "Admin" },
   ];
+  setTitle({
+    title: "NextGen Admin | 6529 SEIZE",
+  });
 
   return (
     <>
       <Head>
-        <title>NextGen Admin | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="NextGen Admin | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/nextgen/admin`} />

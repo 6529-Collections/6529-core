@@ -4,6 +4,8 @@ import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
 import { Container, Row, Col } from "react-bootstrap";
 import { AboutSection } from "./about/[section]";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
 
 const Header = dynamic(() => import("../components/header/Header"), {
@@ -12,10 +14,17 @@ const Header = dynamic(() => import("../components/header/Header"), {
 });
 
 export default function DisputeResolution() {
+  const { setTitle, title } = useContext(AuthContext);
+  useEffect(() => {
+    setTitle({
+      title: "Dispute Resolution | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>Dispute Resolution | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Dispute Resolution | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/dispute-resolution`} />

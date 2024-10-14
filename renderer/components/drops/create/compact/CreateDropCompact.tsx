@@ -144,7 +144,8 @@ const CreateDropCompact = forwardRef<
                 onDrop={onDrop}
                 onViewClick={() => onViewChange(CreateDropViewType.FULL)}
                 setFiles={setFiles}
-                onDropPart={onDropPart}>
+                onDropPart={onDropPart}
+              >
                 {showSubmit && (
                   <div>
                     <PrimaryButton
@@ -155,7 +156,8 @@ const CreateDropCompact = forwardRef<
                         screenType === CreateDropScreenType.MOBILE
                           ? PrimaryButtonSize.SMALL
                           : PrimaryButtonSize.MEDIUM
-                      }>
+                      }
+                    >
                       {getSubmitText()}
                     </PrimaryButton>
                   </div>

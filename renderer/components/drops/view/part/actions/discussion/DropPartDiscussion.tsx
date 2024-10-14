@@ -16,7 +16,7 @@ export default function DropPartDiscussion({
   readonly dropPart: DropPart;
   readonly availableCredit: number | null;
   readonly dropReplyDepth: number;
-  readonly activeDiscussionDropId: string | null;
+  readonly activeDiscussionDropId: string | null
   readonly showWaveInfo?: boolean;
   readonly setActiveDiscussionDropId: (id: string | null) => void;
   readonly setRepliesOpen: (state: boolean) => void;

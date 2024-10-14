@@ -1,13 +1,20 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import styles from "../styles/Home.module.scss";
 import Cookies from "js-cookie";
 import { API_AUTH_COOKIE } from "../constants";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Image from "next/image";
+import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
 
 export default function Access() {
+  const { setTitle, title } = useContext(AuthContext);
+  useEffect(() => {
+    setTitle({
+      title: "Access Page | 6529 SEIZE",
+    });
+  }, []);
   const router = useRouter();
   const [image, setImage] = useState();
   const [inputDisabled, setInputDisabled] = useState(false);
@@ -47,7 +54,7 @@ export default function Access() {
   return (
     <>
       <Head>
-        <title>Access Page | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Access Page | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/access`} />

@@ -82,8 +82,7 @@ export default function AboutMemes() {
             All The Memes: <Link href="/the-memes">seize.io/the-memes</Link>
           </p>
           <p>
-            The Memes Community:{" "}
-            <Link href="/community">seize.io/community</Link>
+            The Memes Network: <Link href="/network">seize.io/network</Link>
           </p>
           <p>
             FAQs:{" "}

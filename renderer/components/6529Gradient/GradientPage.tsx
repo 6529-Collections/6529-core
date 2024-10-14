@@ -23,8 +23,8 @@ import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
 import { AuthContext } from "../auth/Auth";
-import { SEIZE_API_URL } from "../../../constants";
 import { NftPageStats } from "../nftAttributes/NftStats";
+import { SEIZE_API_URL } from "../../../constants";
 
 interface NftWithOwner extends NFT {
   owner: string;

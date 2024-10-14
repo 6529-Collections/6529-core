@@ -17,6 +17,8 @@ import { getCommonHeaders } from "../../helpers/server.helpers";
 import { Time } from "../../helpers/time";
 import Image from "next/image";
 import Link from "next/link";
+import { useContext, useEffect } from "react";
+import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
@@ -35,15 +37,22 @@ export default function SubscriptionsReport({
 }: {
   readonly pageProps: SubscriptionsProps;
 }) {
+  const { setTitle, title } = useContext(AuthContext);
   const breadcrumbs: Crumb[] = [
     { display: "Home", href: "/" },
     { display: "Subscriptions Report" },
   ];
 
+  useEffect(() => {
+    setTitle({
+      title: "Subscriptions Report | 6529 SEIZE",
+    });
+  }, []);
+
   return (
     <>
       <Head>
-        <title>Subscriptions Report | 6529 CORE</title>
+        <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Subscriptions Report | 6529 CORE" />
         <meta

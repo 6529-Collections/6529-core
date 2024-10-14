@@ -26,17 +26,17 @@ export default function GroupCreateCIC({
       <div className="tw-flex tw-flex-col">
         <div className="tw-mb-4">
           <p className="tw-mb-0 tw-text-base sm:tw-text-lg tw-font-semibold tw-text-iron-50">
-            CIC
+            NIC
           </p>
           <p className="tw-mt-1 tw-mb-0 tw-text-sm tw-font-normal tw-text-iron-300">
-            Specify the CIC and optionally set the identity who gave it.
+            Specify the NIC and optionally set the identity who gave it.
           </p>
         </div>
         {cic.user_identity && cic.direction && (
           <div className="tw-mb-4">
             <GroupCreateDirection
               direction={cic.direction}
-              label="CIC"
+              label="NIC"
               setDirection={(direction) => setCIC({ ...cic, direction })}
             />
           </div>
@@ -52,7 +52,7 @@ export default function GroupCreateCIC({
           />
           <GroupCreateNumericValue
             value={cic.min}
-            label="CIC at least"
+            label="NIC at least"
             labelId="floating_cic"
             setValue={(value) => setCIC({ ...cic, min: value })}
           />

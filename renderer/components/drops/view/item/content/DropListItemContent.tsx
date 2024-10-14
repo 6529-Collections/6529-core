@@ -89,13 +89,7 @@ export default function DropListItemContent({
   };
 
   const onContentClick = () => {
-    router.push(`/waves/${drop.wave.id}?drop=${drop.id}`, undefined, {
-      shallow: true,
-    });
-  };
-
-  const onRedropClick = (redropId: string) => {
-    router.push(`/waves/${drop.wave.id}?drop=${redropId}`, undefined, {
+    router.push(`/waves/${drop.wave.id}?drop=${drop.serial_no}`, undefined, {
       shallow: true,
     });
   };
@@ -108,7 +102,8 @@ export default function DropListItemContent({
   return (
     <DropListItemContentWrapper
       scrollIntoView={scrollIntoView}
-      shouldWrap={dropReplyDepth === 0}>
+      shouldWrap={dropReplyDepth === 0}
+    >
       <div className="tw-space-y-6 tw-h-full" ref={containerRef}>
         <DropPartWrapper
           dropPart={activePart}
@@ -121,8 +116,8 @@ export default function DropListItemContent({
           isDiscussionOpen={isDiscussionOpen}
           connectingLineType={connectingLineType}
           showWaveInfo={showWaveInfo}
-          onRedropClick={onRedropClick}
-          onDiscussionButtonClick={onDiscussionButtonClick}>
+          onDiscussionButtonClick={onDiscussionButtonClick}
+        >
           <DropPart
             profile={drop.author}
             size={size}

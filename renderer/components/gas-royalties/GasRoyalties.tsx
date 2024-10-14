@@ -12,8 +12,8 @@ import Breadcrumb, { Crumb } from "../breadcrumb/Breadcrumb";
 import router from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import DatePickerModal from "../datePickerModal/DatePickerModal";
-import { SEIZE_API_URL } from "../../../constants";
 import { ArtistNameItem } from "../../generated/models/ArtistNameItem";
+import { SEIZE_API_URL } from "../../../constants";
 
 export enum GasRoyaltiesCollectionFocus {
   MEMES = "the-memes",
