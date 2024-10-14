@@ -16,7 +16,7 @@ import {
   getSeedWallets,
   importSeedWallet,
   initDb,
-} from "./db";
+} from "./db/db";
 import { ipcMain, protocol, shell, screen, crashReporter } from "electron";
 import {
   GET_SEED_WALLETS,
@@ -42,6 +42,7 @@ import {
 import contextMenu from "electron-context-menu";
 import { isDev } from "./utils/env";
 import { SeedWalletRequest } from "../shared/types";
+import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
 
 contextMenu({
   showInspectElement: false,
@@ -125,6 +126,11 @@ if (!gotTheLock) {
     Logger.info("All windows closed");
   });
 
+  app.on("before-quit", () => {
+    Logger.info("Before quitting app");
+    stopSchedulers();
+  });
+
   const menu = Menu.buildFromTemplate(menuTemplate);
   Menu.setApplicationMenu(menu);
 
@@ -168,48 +174,58 @@ if (!gotTheLock) {
 }
 
 async function createWindow() {
-  let iconPath;
-  if (isWindows()) {
-    iconPath = path.join(__dirname, "assets", "icon.ico");
-  } else if (isMac()) {
-    iconPath = path.join(__dirname, "assets", "icon.icns");
-  } else {
-    iconPath = path.join(__dirname, "assets", "icon.png");
-  }
+  // let iconPath;
+  // if (isWindows()) {
+  //   iconPath = path.join(__dirname, "assets", "icon.ico");
+  // } else if (isMac()) {
+  //   iconPath = path.join(__dirname, "assets", "icon.icns");
+  // } else {
+  //   iconPath = path.join(__dirname, "assets", "icon.png");
+  // }
 
-  splash = new BrowserWindow({
+  // splash = new BrowserWindow({
+  //   width: 300,
+  //   height: 300,
+  //   frame: false,
+  //   backgroundColor: "#222",
+  //   transparent: true,
+  // });
+
+  // splash.loadFile(path.join(__dirname, "assets/splash.html"));
+
+  // mainWindow = new BrowserWindow({
+  //   minWidth: 500,
+  //   minHeight: 500,
+  //   icon: iconPath,
+  //   backgroundColor: "#222",
+  //   titleBarStyle: "hidden",
+  //   titleBarOverlay: {
+  //     color: "#000",
+  //     symbolColor: "#fff",
+  //     height: 30,
+  //   },
+  //   webPreferences: {
+  //     nodeIntegration: false,
+  //     contextIsolation: true,
+  //     preload: path.join(__dirname, "preload.js"),
+  //     spellcheck: true,
+  //   },
+  //   show: false,
+  // });
+
+  // const url = `http://localhost:${PORT}`;
+
+  // mainWindow.loadURL(url);
+
+  // TODO: Remove this, replace with commented out code above
+  startSchedulers();
+  mainWindow = new BrowserWindow({
     width: 300,
     height: 300,
     frame: false,
     backgroundColor: "#222",
     transparent: true,
   });
-
-  splash.loadFile(path.join(__dirname, "assets/splash.html"));
-
-  mainWindow = new BrowserWindow({
-    minWidth: 500,
-    minHeight: 500,
-    icon: iconPath,
-    backgroundColor: "#222",
-    titleBarStyle: "hidden",
-    titleBarOverlay: {
-      color: "#000",
-      symbolColor: "#fff",
-      height: 30,
-    },
-    webPreferences: {
-      nodeIntegration: false,
-      contextIsolation: true,
-      preload: path.join(__dirname, "preload.js"),
-      spellcheck: true,
-    },
-    show: false,
-  });
-
-  const url = `http://localhost:${PORT}`;
-
-  mainWindow.loadURL(url);
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
@@ -219,6 +235,7 @@ async function createWindow() {
     splash?.destroy();
     mainWindow?.maximize();
     mainWindow?.show();
+    startSchedulers();
   });
 
   mainWindow.on("close", (e) => {
