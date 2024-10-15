@@ -74,6 +74,15 @@ export const store = {
 
 contextBridge.exposeInMainWorld("store", store);
 
+export const notifications = {
+  showNotification: (id: number, pfp: string, message: string) =>
+    ipcRenderer.send("notifications:show", id, pfp, message),
+  setBadge: (count: number) =>
+    ipcRenderer.send("notifications:set-badge", count),
+};
+
+contextBridge.exposeInMainWorld("notifications", notifications);
+
 export const updater = {
   checkUpdates: () => ipcRenderer.send("check-updates"),
   onUpdateAvailable: (data: any) => ipcRenderer.on("update-available", data),
@@ -153,3 +162,4 @@ export type ElectronAPI = typeof api;
 export type ElectronStore = typeof store;
 export type ElectronUpdater = typeof updater;
 export type ElectronSeedConnector = typeof seedConnector;
+export type ElectronNotifications = typeof notifications;

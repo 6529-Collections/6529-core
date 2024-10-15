@@ -87,7 +87,14 @@ export default function TitleBar() {
 
     const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
-      router.push(url);
+      if (router.pathname !== url) {
+        router.push(url);
+      } else {
+        const reloadUrl = url.includes("?")
+          ? `${url}&reload=true`
+          : `${url}?reload=true`;
+        router.push(reloadUrl);
+      }
     };
     window.api.onNavigate(handleNavigate);
 

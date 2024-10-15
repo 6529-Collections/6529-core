@@ -36,6 +36,7 @@
     "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
     "sign-publish-production-win": "npm run clean-win && npm run download-production-win-unsigned && npm run sign-win && npm run upload-production-win-signed",
+    "build-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish never",
     "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish always",
     "dist-mac-production": "npm run build && electron-builder --config electron-builder.production.json --mac --arm64 --x64 --publish always",
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",

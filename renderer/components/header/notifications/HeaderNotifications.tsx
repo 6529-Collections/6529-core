@@ -5,6 +5,7 @@ import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
 import { NotificationsResponse } from "../../../generated/models/NotificationsResponse";
 import { commonApiFetch } from "../../../services/api/common-api";
 import Link from "next/link";
+import { Notification, app } from "electron";
 
 export default function HeaderNotifications() {
   const { connectedProfile, setTitle } = useAuth();
@@ -43,6 +44,18 @@ export default function HeaderNotifications() {
         : null,
       type: TitleType.NOTIFICATION,
     });
+
+    if (hasUnread) {
+      window.notifications.showNotification(
+        notifications.notifications[0].id,
+        notifications.notifications[0].related_identity?.pfp ?? "",
+        `(${notifications?.unread_count}) unread notification${
+          notifications?.unread_count === 1 ? "" : "s"
+        }`
+      );
+    }
+
+    window.notifications.setBadge(notifications?.unread_count ?? 0);
   }, [notifications]);
 
   return (
