@@ -16,8 +16,8 @@
 
 .slideButtons {
   position: absolute;
-  top: 30px;
-  right: 30px;
+  top: calc(30px + env(safe-area-inset-top));
+  right: 20px;
   display: flex;
   align-items: center;
   gap: 15px;
