@@ -26,7 +26,8 @@ export default function NotificationDropReplied({
               aria-hidden="true"
               viewBox="0 0 24 24"
               strokeWidth="1.5"
-              stroke="currentColor">
+              stroke="currentColor"
+            >
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -53,7 +54,8 @@ export default function NotificationDropReplied({
             <span className="tw-text-sm tw-font-normal tw-text-iron-50">
               <Link
                 href={`/${notification.related_drops[1].author.handle}`}
-                className="tw-no-underline tw-font-semibold">
+                className="tw-no-underline tw-font-semibold"
+              >
                 {notification.related_drops[1].author.handle}
               </Link>{" "}
               replied

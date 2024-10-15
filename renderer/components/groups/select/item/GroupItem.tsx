@@ -5,7 +5,7 @@ import {
 } from "../../../../helpers/image.helpers";
 import Link from "next/link";
 import GroupItemWrapper from "./GroupItemWrapper";
-import { GroupFull } from "../../../../generated/models/GroupFull";
+import { ApiGroupFull } from "../../../../generated/models/ApiGroupFull";
 import { getTimeAgo } from "../../../../helpers/Helpers";
 
 export default function GroupItem({
@@ -13,7 +13,7 @@ export default function GroupItem({
   activeGroupId,
   onActiveGroupId,
 }: {
-  readonly group: GroupFull;
+  readonly group: ApiGroupFull;
   readonly activeGroupId: string | null;
   readonly onActiveGroupId?: (groupId: string | null) => void;
 }) {
@@ -39,7 +39,8 @@ export default function GroupItem({
       group={group}
       isActive={isActive}
       deactivateHover={deactivateHover}
-      onActiveGroupId={onActiveGroupId}>
+      onActiveGroupId={onActiveGroupId}
+    >
       <div className="-tw-mt-1 tw-bg-iron-900 tw-flex tw-flex-col tw-rounded-b-xl tw-relative ">
         {isActive && onActiveGroupId && (
           <div className="tw-absolute -tw-right-2 -tw-top-10">
@@ -51,18 +52,21 @@ export default function GroupItem({
               onMouseEnter={() => setDeactivateHover(true)}
               onMouseLeave={() => setDeactivateHover(false)}
               type="button"
-              className="tw-group tw-p-1.5 tw-bg-iron-800 tw-border-0 tw-flex tw-items-center tw-justify-center tw-rounded-full">
+              className="tw-group tw-p-1.5 tw-bg-iron-800 tw-border-0 tw-flex tw-items-center tw-justify-center tw-rounded-full"
+            >
               <span className="tw-sr-only">Remove</span>
               <svg
                 className="tw-h-4 tw-w-4 tw-text-iron-400 group-hover:tw-text-iron-50 tw-transition tw-duration-300 tw-ease-out"
                 fill="none"
                 viewBox="0 0 24 24"
-                stroke="currentColor">
+                stroke="currentColor"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
                   strokeWidth="2"
-                  d="M6 18L18 6M6 6l12 12"></path>
+                  d="M6 18L18 6M6 6l12 12"
+                ></path>
               </svg>
             </button>
           </div>
@@ -88,7 +92,8 @@ export default function GroupItem({
                   onClick={(e) => {
                     e.stopPropagation();
                   }}
-                  className="tw-no-underline hover:tw-underline tw-group-hover:tw-text-iron-500 tw-transition tw-duration-300 tw-ease-out tw-text-iron-50 tw-text-sm tw-font-medium">
+                  className="tw-no-underline hover:tw-underline tw-group-hover:tw-text-iron-500 tw-transition tw-duration-300 tw-ease-out tw-text-iron-50 tw-text-sm tw-font-medium"
+                >
                   {group.created_by?.handle}
                 </Link>
               </span>

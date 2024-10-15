@@ -51,6 +51,12 @@ export default function TheMemesMint(props: any) {
     });
   }, []);
 
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
+
   return (
     <>
       <Head>

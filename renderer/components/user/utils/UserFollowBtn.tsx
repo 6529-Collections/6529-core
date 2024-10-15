@@ -5,13 +5,13 @@ import {
 } from "../../react-query-wrapper/ReactQueryWrapper";
 import { AuthContext } from "../../auth/Auth";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { IdentitySubscriptionActions } from "../../../generated/models/IdentitySubscriptionActions";
+import { ApiIdentitySubscriptionActions } from "../../../generated/models/ApiIdentitySubscriptionActions";
 import {
   commonApiDeleWithBody,
   commonApiFetch,
   commonApiPost,
 } from "../../../services/api/common-api";
-import { IdentitySubscriptionTargetAction } from "../../../generated/models/IdentitySubscriptionTargetAction";
+import { ApiIdentitySubscriptionTargetAction } from "../../../generated/models/ApiIdentitySubscriptionTargetAction";
 import CircleLoader, {
   CircleLoaderSize,
 } from "../../distribution-plan-tool/common/CircleLoader";
@@ -47,10 +47,10 @@ export default function UserFollowBtn({
   const { setToast, requestAuth } = useContext(AuthContext);
   const [mutating, setMutating] = useState<boolean>(false);
   const { data: subscriptions, isFetching } =
-    useQuery<IdentitySubscriptionActions>({
+    useQuery<ApiIdentitySubscriptionActions>({
       queryKey: [QueryKey.IDENTITY_FOLLOWING_ACTIONS, handle],
       queryFn: async () =>
-        await commonApiFetch<IdentitySubscriptionActions>({
+        await commonApiFetch<ApiIdentitySubscriptionActions>({
           endpoint: `/identities/${handle}/subscriptions`,
         }),
     });
@@ -68,13 +68,13 @@ export default function UserFollowBtn({
   const followMutation = useMutation({
     mutationFn: async () => {
       await commonApiPost<
-        IdentitySubscriptionActions,
-        IdentitySubscriptionActions
+        ApiIdentitySubscriptionActions,
+        ApiIdentitySubscriptionActions
       >({
         endpoint: `identities/${handle}/subscriptions`,
         body: {
-          actions: Object.values(IdentitySubscriptionTargetAction).filter(
-            (i) => i !== IdentitySubscriptionTargetAction.DropVoted
+          actions: Object.values(ApiIdentitySubscriptionTargetAction).filter(
+            (i) => i !== ApiIdentitySubscriptionTargetAction.DropVoted
           ),
         },
       });
@@ -96,13 +96,13 @@ export default function UserFollowBtn({
   const unFollowMutation = useMutation({
     mutationFn: async () => {
       await commonApiDeleWithBody<
-        IdentitySubscriptionActions,
-        IdentitySubscriptionActions
+        ApiIdentitySubscriptionActions,
+        ApiIdentitySubscriptionActions
       >({
         endpoint: `identities/${handle}/subscriptions`,
         body: {
-          actions: Object.values(IdentitySubscriptionTargetAction).filter(
-            (i) => i !== IdentitySubscriptionTargetAction.DropVoted
+          actions: Object.values(ApiIdentitySubscriptionTargetAction).filter(
+            (i) => i !== ApiIdentitySubscriptionTargetAction.DropVoted
           ),
         },
       });
@@ -144,8 +144,7 @@ export default function UserFollowBtn({
         following
           ? "tw-bg-iron-800 tw-ring-iron-800 tw-text-iron-300 hover:tw-bg-iron-700 hover:tw-ring-iron-700"
           : "tw-bg-primary-500 tw-ring-primary-500 hover:tw-bg-primary-600 hover:tw-ring-primary-600 tw-text-white"
-      } tw-flex tw-items-center tw-cursor-pointer tw-rounded-lg tw-font-semibold tw-border-0 tw-ring-1 tw-ring-inset tw-transition tw-duration-300 tw-ease-out`}
-    >
+      } tw-flex tw-items-center tw-cursor-pointer tw-rounded-lg tw-font-semibold tw-border-0 tw-ring-1 tw-ring-inset tw-transition tw-duration-300 tw-ease-out`}>
       {mutating || isFetching ? (
         <CircleLoader size={LOADER_SIZES[size]} />
       ) : following ? (
@@ -156,8 +155,7 @@ export default function UserFollowBtn({
           viewBox="0 0 17 15"
           fill="none"
           aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+          xmlns="http://www.w3.org/2000/svg">
           <path
             fillRule="evenodd"
             clipRule="evenodd"
@@ -171,8 +169,7 @@ export default function UserFollowBtn({
           viewBox="0 0 24 24"
           fill="none"
           aria-hidden="true"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+          xmlns="http://www.w3.org/2000/svg">
           <path
             d="M12 5V19M5 12H19"
             stroke="currentColor"

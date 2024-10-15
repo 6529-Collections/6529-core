@@ -1,35 +1,35 @@
 import { AnimatePresence, motion } from "framer-motion";
 import React, { useEffect, useRef, useState } from "react";
-import { WavesOverviewType } from "../../../generated/models/WavesOverviewType";
+import { ApiWavesOverviewType } from "../../../generated/models/ApiWavesOverviewType";
 
 interface WaveDetailedFollowingWavesSortProps {
-  readonly selectedOption: WavesOverviewType;
-  readonly setSelectedOption: (option: WavesOverviewType) => void;
+  readonly selectedOption: ApiWavesOverviewType;
+  readonly setSelectedOption: (option: ApiWavesOverviewType) => void;
 }
 
 const WaveDetailedFollowingWavesSort: React.FC<
   WaveDetailedFollowingWavesSortProps
 > = ({ selectedOption, setSelectedOption }) => {
-  const LABELS: Record<WavesOverviewType, string> = {
-    [WavesOverviewType.Latest]: "Recently Created",
-    [WavesOverviewType.MostSubscribed]: "Most Subscribed",
-    [WavesOverviewType.HighLevelAuthor]: "High Level Author",
-    [WavesOverviewType.AuthorYouHaveRepped]: "Author You Have Repped",
-    [WavesOverviewType.MostDropped]: "Most Dropped",
-    [WavesOverviewType.MostDroppedByYou]: "Most Dropped By You",
-    [WavesOverviewType.RecentlyDroppedTo]: "Recently Dropped",
-    [WavesOverviewType.RecentlyDroppedToByYou]: "Recently Dropped By You",
+  const LABELS: Record<ApiWavesOverviewType, string> = {
+    [ApiWavesOverviewType.Latest]: "Recently Created",
+    [ApiWavesOverviewType.MostSubscribed]: "Most Subscribed",
+    [ApiWavesOverviewType.HighLevelAuthor]: "High Level Author",
+    [ApiWavesOverviewType.AuthorYouHaveRepped]: "Author You Have Repped",
+    [ApiWavesOverviewType.MostDropped]: "Most Dropped",
+    [ApiWavesOverviewType.MostDroppedByYou]: "Most Dropped By You",
+    [ApiWavesOverviewType.RecentlyDroppedTo]: "Recently Dropped",
+    [ApiWavesOverviewType.RecentlyDroppedToByYou]: "Recently Dropped By You",
   };
 
-  const ORDER: WavesOverviewType[] = [
-    WavesOverviewType.RecentlyDroppedTo,
-    WavesOverviewType.RecentlyDroppedToByYou,
-    WavesOverviewType.MostDropped,
-    WavesOverviewType.MostDroppedByYou,
-    WavesOverviewType.MostSubscribed,
-    WavesOverviewType.HighLevelAuthor,
-    WavesOverviewType.AuthorYouHaveRepped,
-    WavesOverviewType.Latest,
+  const ORDER: ApiWavesOverviewType[] = [
+    ApiWavesOverviewType.RecentlyDroppedTo,
+    ApiWavesOverviewType.RecentlyDroppedToByYou,
+    ApiWavesOverviewType.MostDropped,
+    ApiWavesOverviewType.MostDroppedByYou,
+    ApiWavesOverviewType.MostSubscribed,
+    ApiWavesOverviewType.HighLevelAuthor,
+    ApiWavesOverviewType.AuthorYouHaveRepped,
+    ApiWavesOverviewType.Latest,
   ];
 
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -39,7 +39,7 @@ const WaveDetailedFollowingWavesSort: React.FC<
     setIsDropdownOpen(!isDropdownOpen);
   };
 
-  const handleOptionSelect = (option: WavesOverviewType) => {
+  const handleOptionSelect = (option: ApiWavesOverviewType) => {
     setSelectedOption(option);
     setIsDropdownOpen(false);
   };
@@ -66,7 +66,8 @@ const WaveDetailedFollowingWavesSort: React.FC<
         <button
           type="button"
           onClick={toggleDropdown}
-          className="tw-border-0 tw-flex tw-items-center tw-gap-x-2 tw-justify-between tw-whitespace-nowrap tw-text-xs tw-font-medium tw-text-iron-400 hover:tw-text-primary-400 tw-bg-iron-950 tw-rounded-lg focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-border-primary-400 tw-transition-colors tw-duration-300 tw-ease-out tw-px-2 tw-py-2 -tw-ml-2">
+          className="tw-border-0 tw-flex tw-items-center tw-gap-x-2 tw-justify-between tw-whitespace-nowrap tw-text-xs tw-font-medium tw-text-iron-400 hover:tw-text-primary-400 tw-bg-iron-950 tw-rounded-lg focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-border-primary-400 tw-transition-colors tw-duration-300 tw-ease-out tw-px-2 tw-py-2 -tw-ml-2"
+        >
           <span>{LABELS[selectedOption] || "Sort by"}</span>
           <svg
             className="tw-size-4 tw-flex-shrink-0"
@@ -75,7 +76,8 @@ const WaveDetailedFollowingWavesSort: React.FC<
             viewBox="0 0 24 24"
             aria-hidden="true"
             strokeWidth="1.5"
-            stroke="currentColor">
+            stroke="currentColor"
+          >
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -90,7 +92,8 @@ const WaveDetailedFollowingWavesSort: React.FC<
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="tw-absolute tw-z-20 tw-w-56 tw-right-0 tw-bottom-full tw-mb-1 tw-bg-iron-900 tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-rounded-lg tw-shadow-lg tw-shadow-iron-950/50">
+              className="tw-absolute tw-z-20 tw-w-56 tw-right-0 tw-bottom-full tw-mb-1 tw-bg-iron-900 tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-rounded-lg tw-shadow-lg tw-shadow-iron-950/50"
+            >
               <div className="tw-py-2 tw-px-2 tw-space-y-1.5">
                 {ORDER.map((option) => (
                   <button
@@ -101,7 +104,8 @@ const WaveDetailedFollowingWavesSort: React.FC<
                       selectedOption === option
                         ? "tw-text-iron-100 tw-bg-iron-700"
                         : "tw-text-iron-200 hover:tw-bg-iron-800 hover:tw-text-iron-100 tw-bg-iron-900"
-                    }`}>
+                    }`}
+                  >
                     {LABELS[option]}
                   </button>
                 ))}

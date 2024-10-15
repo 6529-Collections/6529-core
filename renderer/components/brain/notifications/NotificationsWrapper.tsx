@@ -36,13 +36,12 @@ export default function NotificationsWrapper({
       enabled: !!connectedProfile?.profile?.handle && !activeProfileProxy,
     });
 
+
   return (
     <div className="tw-relative">
       <NotificationItems
         items={items}
-        availableCredit={
-          availableRateResponse?.available_credit_for_rating ?? null
-        }
+        availableCredit={availableRateResponse?.available_credit_for_rating ?? null}
         onBottomIntersection={onBottomIntersection}
       />
       {loading && (

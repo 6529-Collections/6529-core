@@ -14,7 +14,6 @@ import {
   GRADIENT_CONTRACT,
 } from "../../constants";
 import { areEqualAddresses } from "../../helpers/Helpers";
-import HeaderUserConnectModal from "../header/user/HeaderUserConnectModal";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 
 interface Props {

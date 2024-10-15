@@ -12,10 +12,10 @@ import { areEqualAddresses, numberWithCommas } from "../../helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { AuthContext } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
-import HeaderUserConnect from "../header/user/HeaderUserConnect";
+import { ApiSeizeSettings } from "../../generated/models/ApiSeizeSettings";
 import { SEIZE_API_URL } from "../../../constants";
 import Link from "next/link";
-import { SeizeSettings } from "../../generated/models/SeizeSettings";
+import HeaderUserConnect from "../header/user/HeaderUserConnect";
 
 interface CheckList {
   status: boolean;
@@ -26,7 +26,7 @@ export default function RememeAddPage() {
   const accountResolution = useAccount();
   const { connectedProfile } = useContext(AuthContext);
 
-  const [seizeSettings, setSeizeSettings] = useState<SeizeSettings>();
+  const [seizeSettings, setSeizeSettings] = useState<ApiSeizeSettings>();
 
   const signMessage = useSignMessage();
   const [memes, setMemes] = useState<NFT[]>([]);
@@ -111,7 +111,7 @@ export default function RememeAddPage() {
 
   useEffect(() => {
     fetchUrl(`${SEIZE_API_URL}/api/settings`).then(
-      (settings: SeizeSettings) => {
+      (settings: ApiSeizeSettings) => {
         setSeizeSettings(settings);
       }
     );

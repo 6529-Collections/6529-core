@@ -248,6 +248,7 @@ const NewMentionsPlugin = forwardRef<
         options={options}
         onOpen={() => setIsOpen(true)}
         onClose={() => setIsOpen(false)}
+        
         menuRenderFn={(
           anchorElementRef,
           { selectedIndex, selectOptionAndCleanUp, setHighlightedIndex }

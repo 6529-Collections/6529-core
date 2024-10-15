@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Wave } from "../../../generated/models/Wave";
+import { ApiWave } from "../../../generated/models/ApiWave";
 import { useContext, useEffect, useRef, useState } from "react";
 import { AuthContext } from "../../auth/Auth";
 import WaveDetailedFollowers from "./followers/WaveDetailedFollowers";
@@ -8,10 +8,10 @@ import { WaveDetailedView } from "./WaveDetailed";
 import WaveDetailedAbout from "./WaveDetailedAbout";
 
 interface WaveDetailedDesktopProps {
-  readonly wave: Wave;
+  readonly wave: ApiWave;
   readonly view: WaveDetailedView;
   readonly setView: (view: WaveDetailedView) => void;
-  readonly onWaveChange: (wave: Wave) => void;
+  readonly onWaveChange: (wave: ApiWave) => void;
   readonly setIsLoading: (isLoading: boolean) => void;
 }
 
@@ -82,7 +82,7 @@ const WaveDetailedDesktop: React.FC<WaveDetailedDesktopProps> = ({
     <div className="tailwind-scope tw-bg-black">
       <div className="tw-mt-3 tw-px-4">
         <div className="tw-flex tw-items-start tw-justify-center tw-gap-x-4">
-          <div className="tw-fixed tw-inset-y-0 tw-left-0 tw-pl-4 tw-overflow-y-auto no-scrollbar tw-mt-28 lg:tw-w-[22rem] tw-w-full">
+          <div className="tw-fixed tw-inset-y-0 tw-left-0 tw-pl-4 tw-overflow-y-auto no-scrollbar tw-mt-36 lg:tw-w-[22rem] tw-w-full">
             <div className="tw-flex tw-flex-1 tw-flex-col">
               <WaveDetailedAbout
                 wave={wave}

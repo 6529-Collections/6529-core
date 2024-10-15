@@ -1,9 +1,9 @@
 import { useContext, useEffect, useState } from "react";
-import { CreateGroup } from "../../../../../generated/models/CreateGroup";
+import { ApiCreateGroup } from "../../../../../generated/models/ApiCreateGroup";
 import { AuthContext } from "../../../../auth/Auth";
 import { useMutation } from "@tanstack/react-query";
 import { commonApiPost } from "../../../../../services/api/common-api";
-import { GroupFull } from "../../../../../generated/models/GroupFull";
+import { ApiGroupFull } from "../../../../../generated/models/ApiGroupFull";
 import CircleLoader from "../../../../distribution-plan-tool/common/CircleLoader";
 import GroupCreateTest from "./GroupCreateTest";
 import { ReactQueryWrapperContext } from "../../../../react-query-wrapper/ReactQueryWrapper";
@@ -14,14 +14,29 @@ export default function GroupCreateActions({
   groupConfig,
   onCompleted,
 }: {
-  readonly originalGroup: GroupFull | null;
-  readonly groupConfig: CreateGroup;
+  readonly originalGroup: ApiGroupFull | null;
+  readonly groupConfig: ApiCreateGroup;
   readonly onCompleted: () => void;
 }) {
   const { requestAuth, setToast, connectedProfile } = useContext(AuthContext);
   const { onGroupCreate } = useContext(ReactQueryWrapperContext);
 
   const getIsActionsDisabled = () => {
+    if (
+      groupConfig.group.identity_addresses?.length &&
+      groupConfig.group.identity_addresses.length > 10000
+    ) {
+      return true;
+    }
+    if (
+      groupConfig.group.excluded_identity_addresses?.length &&
+      groupConfig.group.excluded_identity_addresses.length > 1000
+    ) {
+      return true;
+    }
+    if (groupConfig.group.identity_addresses?.length) {
+      return false;
+    }
     if (
       groupConfig.group.level.min !== null ||
       groupConfig.group.level.max !== null
@@ -58,9 +73,7 @@ export default function GroupCreateActions({
     if (groupConfig.group.owns_nfts.length) {
       return false;
     }
-    if (groupConfig.group.identity_addresses?.length) {
-      return false;
-    }
+
     return true;
   };
 
@@ -79,7 +92,7 @@ export default function GroupCreateActions({
     }) =>
       await commonApiPost<
         { visible: true; old_version_id: string | null },
-        GroupFull
+        ApiGroupFull
       >({
         endpoint: `groups/${param.id}/visible`,
         body: param.body,
@@ -104,8 +117,8 @@ export default function GroupCreateActions({
   });
 
   const createNewFilterMutation = useMutation({
-    mutationFn: async (body: CreateGroup) =>
-      await commonApiPost<CreateGroup, GroupFull>({
+    mutationFn: async (body: ApiCreateGroup) =>
+      await commonApiPost<ApiCreateGroup, ApiGroupFull>({
         endpoint: `groups`,
         body,
       }),

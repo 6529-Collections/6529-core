@@ -25,7 +25,8 @@ const StormButton: React.FC<StormButtonProps> = ({
           </div>
         }
         placement="top"
-        disabled={false}>
+        disabled={false}
+      >
         <button
           onClick={breakIntoStorm}
           disabled={!canAddPart || submitting}
@@ -34,7 +35,8 @@ const StormButton: React.FC<StormButtonProps> = ({
             canAddPart && !submitting
               ? "tw-cursor-pointer tw-text-iron-400 hover:tw-text-primary-400 hover:tw-bg-primary-300/20 tw-bg-iron-800"
               : "tw-cursor-default tw-text-iron-600 hover:tw-text-iron-600 tw-bg-iron-900"
-          }`}>
+          }`}
+        >
           <svg
             className={`tw-h-[1.15rem] tw-w-[1.15rem] tw-flex-shrink-0 ${
               !canAddPart || submitting ? "tw-opacity-50" : ""
@@ -42,7 +44,8 @@ const StormButton: React.FC<StormButtonProps> = ({
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg">
+            xmlns="http://www.w3.org/2000/svg"
+          >
             <path
               d="M21 4H3M20 8L6 8M18 12L9 12M15 16L8 16M17 20H12"
               stroke="currentColor"
