@@ -50,6 +50,21 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuTools, setShowBurgerMenuTools] = useState(false);
   const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
 
+  let logoSrc: string;
+  let logoWidth: number;
+  let logoHeight: number;
+  if (capacitor.isCapacitor) {
+    logoSrc =
+      "https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Icon.png";
+    logoWidth = 40;
+    logoHeight = 40;
+  } else {
+    logoSrc =
+      "https://d3lqz0a4bldqgf.cloudfront.net/seize_images/Seize_Logo_Glasses.png";
+    logoWidth = 319;
+    logoHeight = 50;
+  }
+
   useEffect(() => {
     function handleResize() {
       setShowBurgerMenuCollections(false);

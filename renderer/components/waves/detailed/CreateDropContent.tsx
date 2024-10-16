@@ -305,6 +305,7 @@ const getOptimisticDrop = (
     description_drop: { id: string };
     participation: { authenticated_user_eligible: boolean };
     voting: { authenticated_user_eligible: boolean };
+    chat: { authenticated_user_eligible: boolean };
   },
   activeDrop: ActiveDropState | null
 ): ApiDrop | null => {
@@ -336,6 +337,8 @@ const getOptimisticDrop = (
         wave.participation.authenticated_user_eligible,
       authenticated_user_eligible_to_vote:
         wave.voting.authenticated_user_eligible,
+      authenticated_user_eligible_to_chat:
+        wave.chat.authenticated_user_eligible,
     },
     author: {
       id: connectedProfile.profile.external_id,
@@ -700,7 +703,6 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     await prepareAndSubmitDrop(getUpdatedDrop());
   };
 
-
   useEffect(() => {
     if (!activeDrop) {
       return;
@@ -862,15 +864,13 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             onClicked={onDrop}
             loading={submitting}
             disabled={!canSubmit}
-            padding="tw-px-2.5 lg:tw-px-3.5 tw-py-2.5"
-          >
+            padding="tw-px-2.5 lg:tw-px-3.5 tw-py-2.5">
             <span className="tw-hidden lg:tw-inline">Drop</span>
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 24 24"
               fill="currentColor"
-              className="tw-size-5 lg:tw-hidden"
-            >
+              className="tw-size-5 lg:tw-hidden">
               <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
             </svg>
           </PrimaryButton>
@@ -891,8 +891,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+            transition={{ duration: 0.3 }}>
             <CreateDropMetadata
               disabled={submitting}
               onRemoveMetadata={onRemoveMetadata}

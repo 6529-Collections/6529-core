@@ -10,10 +10,9 @@ import { fetchAllPages } from "../../services/6529api";
 import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import DotLoader from "../dotLoader/DotLoader";
-import { SEIZE_API_URL } from "../../../constants";
 import { GRADIENT_CONTRACT } from "../../constants";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
-
+import { SEIZE_API_URL } from "../../../constants";
 enum Sort {
   ID = "id",
   TDH = "tdh",

@@ -19,8 +19,8 @@ import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import { MEMELAB_CONTRACT } from "../../constants";
 import { printVolumeTypeDropdown, SortButton } from "../the-memes/TheMemes";
 import { MemeLabSort } from "../../enums";
-import { SEIZE_API_URL } from "../../../constants";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
+import { SEIZE_API_URL } from "../../../constants";
 
 interface Props {
   wallets: string[];
