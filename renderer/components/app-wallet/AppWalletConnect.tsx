@@ -4,6 +4,7 @@ import { useCallback, useEffect } from "react";
 import { useAccount, useConnect, useConnections, useDisconnect } from "wagmi";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import { Container, Row, Col } from "react-bootstrap";
+import { getAuthJwt } from "../../services/auth/auth.utils";
 
 export default function AppWalletConnect(
   props: Readonly<{
@@ -30,6 +31,7 @@ export default function AppWalletConnect(
     const connectionInfo = {
       accounts: connection.accounts.map((account) => account.toLowerCase()),
       chainId: connection.chainId,
+      auth: getAuthJwt(),
     };
     const serializedInfo = JSON.stringify({
       requestId,

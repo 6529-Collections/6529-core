@@ -1,11 +1,16 @@
-import { WavesOverviewType } from "../../../generated/models/WavesOverviewType";
+import { ApiWavesOverviewType } from "../../../generated/models/ApiWavesOverviewType";
+import { ApiWaveSubscriptionTargetAction } from "../../../generated/models/ApiWaveSubscriptionTargetAction";
 
 export const WAVE_FOLLOWING_WAVES_PARAMS = {
   limit: 20,
-  initialWavesOverviewType: WavesOverviewType.RecentlyDroppedTo,
+  initialWavesOverviewType: ApiWavesOverviewType.RecentlyDroppedTo,
   only_waves_followed_by_authenticated_user: true,
 };
 
 export const WAVE_DROPS_PARAMS = {
   limit: 50,
 };
+
+export const WAVE_DEFAULT_SUBSCRIPTION_ACTIONS = Object.values(
+  ApiWaveSubscriptionTargetAction
+);

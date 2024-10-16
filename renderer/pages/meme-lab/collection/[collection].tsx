@@ -45,6 +45,18 @@ export default function MemeLabIndex(props: any) {
     });
   }, []);
 
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
+
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
+
   return (
     <>
       <Head>

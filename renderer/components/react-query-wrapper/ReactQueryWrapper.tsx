@@ -15,19 +15,20 @@ import {
   convertActivityLogParams,
 } from "../profile-activity/ProfileActivityLogs";
 import { ProfileRatersParams } from "../user/utils/raters-table/wrapper/ProfileRatersTableWrapper";
-import { Drop } from "../../generated/models/Drop";
-import { ProfileProxy } from "../../generated/models/ProfileProxy";
+import { ApiDrop } from "../../generated/models/ApiDrop";
+import { ApiProfileProxy } from "../../generated/models/ApiProfileProxy";
 import { wait } from "../../helpers/Helpers";
 import { IFeedItemDropCreated, TypedFeedItem } from "../../types/feed.types";
-import { FeedItemType } from "../../generated/models/FeedItemType";
-import { WaveDropsFeed } from "../../generated/models/WaveDropsFeed";
+import { ApiFeedItemType } from "../../generated/models/ApiFeedItemType";
+import { ApiWaveDropsFeed } from "../../generated/models/ApiWaveDropsFeed";
 import { addDropToDrops } from "./utils/addDropsToDrops";
-import { Wave } from "../../generated/models/Wave";
+import { ApiWave } from "../../generated/models/ApiWave";
 import {
   WAVE_DROPS_PARAMS,
   WAVE_FOLLOWING_WAVES_PARAMS,
 } from "./utils/query-utils";
 import { increaseWavesOverviewDropsCount } from "./utils/increaseWavesOverviewDropsCount";
+import { toggleWaveFollowing } from "./utils/toggleWaveFollowing";
 
 export enum QueryKey {
   PROFILE = "PROFILE",
@@ -126,13 +127,13 @@ export interface InitProfileIdentityPageParams {
 
 type ReactQueryWrapperContextType = {
   readonly setProfile: (profile: IProfileAndConsolidations) => void;
-  readonly setWave: (wave: Wave) => void;
-  readonly setWavesOverviewPage: (wavesOverview: Wave[]) => void;
+  readonly setWave: (wave: ApiWave) => void;
+  readonly setWavesOverviewPage: (wavesOverview: ApiWave[]) => void;
   readonly setWaveDrops: (params: {
-    readonly waveDrops: WaveDropsFeed;
+    readonly waveDrops: ApiWaveDropsFeed;
     readonly waveId: string;
   }) => void;
-  readonly setProfileProxy: (profileProxy: ProfileProxy) => void;
+  readonly setProfileProxy: (profileProxy: ApiProfileProxy) => void;
   readonly onProfileProxyModify: ({
     profileProxyId,
     createdByHandle,
@@ -146,7 +147,7 @@ type ReactQueryWrapperContextType = {
     readonly targetProfile: IProfileAndConsolidations;
     readonly connectedProfile: IProfileAndConsolidations | null;
     readonly rater: string | null;
-    readonly profileProxy: ProfileProxy | null;
+    readonly profileProxy: ApiProfileProxy | null;
   }) => void;
   onProfileRepModify: ({
     targetProfile,
@@ -155,7 +156,7 @@ type ReactQueryWrapperContextType = {
   }: {
     readonly targetProfile: IProfileAndConsolidations;
     readonly connectedProfile: IProfileAndConsolidations | null;
-    readonly profileProxy: ProfileProxy | null;
+    readonly profileProxy: ApiProfileProxy | null;
   }) => void;
   onProfileEdit: ({
     profile,
@@ -184,9 +185,9 @@ type ReactQueryWrapperContextType = {
     activityLogs: InitProfileActivityLogsParams;
   }) => void;
   waitAndInvalidateDrops: () => void;
-  addOptimisticDrop: (params: { readonly drop: Drop }) => void;
+  addOptimisticDrop: (params: { readonly drop: ApiDrop }) => void;
   onDropChange: (params: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
     readonly giverHandle: string | null;
   }) => void;
   readonly invalidateDrops: () => void;
@@ -195,7 +196,10 @@ type ReactQueryWrapperContextType = {
   onGroupCreate: () => void;
   onIdentityBulkRate: () => void;
   onWaveCreated: () => void;
-  onWaveFollowChange: () => void;
+  onWaveFollowChange: (param: {
+    readonly waveId: string;
+    following: boolean;
+  }) => void;
   invalidateAll: () => void;
   invalidateNotifications: () => void;
 };
@@ -292,11 +296,14 @@ export default function ReactQueryWrapper({
     }
   };
 
-  const setWave = (wave: Wave) => {
-    queryClient.setQueryData<Wave>([QueryKey.WAVE, { wave_id: wave.id }], wave);
+  const setWave = (wave: ApiWave) => {
+    queryClient.setQueryData<ApiWave>(
+      [QueryKey.WAVE, { wave_id: wave.id }],
+      wave
+    );
   };
 
-  const setWavesOverviewPage = (wavesOverview: Wave[]) => {
+  const setWavesOverviewPage = (wavesOverview: ApiWave[]) => {
     const queryKey = [
       QueryKey.WAVES_OVERVIEW,
       {
@@ -313,7 +320,7 @@ export default function ReactQueryWrapper({
       return;
     } else {
       // If there's no existing data, set the initial data
-      queryClient.setQueryData<InfiniteData<Wave[]>>(queryKey, {
+      queryClient.setQueryData<InfiniteData<ApiWave[]>>(queryKey, {
         pages: [wavesOverview],
         pageParams: [undefined],
       });
@@ -324,7 +331,7 @@ export default function ReactQueryWrapper({
     waveDrops,
     waveId,
   }: {
-    readonly waveDrops: WaveDropsFeed;
+    readonly waveDrops: ApiWaveDropsFeed;
     readonly waveId: string;
   }) => {
     const queryKey = [
@@ -342,15 +349,15 @@ export default function ReactQueryWrapper({
       return;
     } else {
       // If there's no existing data, set the initial data
-      queryClient.setQueryData<InfiniteData<WaveDropsFeed>>(queryKey, {
+      queryClient.setQueryData<InfiniteData<ApiWaveDropsFeed>>(queryKey, {
         pages: [waveDrops],
         pageParams: [undefined],
       });
     }
   };
 
-  const setProfileProxy = (profileProxy: ProfileProxy) => {
-    queryClient.setQueryData<ProfileProxy>(
+  const setProfileProxy = (profileProxy: ApiProfileProxy) => {
+    queryClient.setQueryData<ApiProfileProxy>(
       [QueryKey.PROFILE_PROXY, { id: profileProxy.id }],
       profileProxy
     );
@@ -555,7 +562,7 @@ export default function ReactQueryWrapper({
     readonly targetProfile: IProfileAndConsolidations;
     readonly connectedProfile: IProfileAndConsolidations | null;
     readonly rater: string | null;
-    readonly profileProxy: ProfileProxy | null;
+    readonly profileProxy: ApiProfileProxy | null;
   }) => {
     invalidateProfile(targetProfile);
     invalidateLogs();
@@ -636,7 +643,7 @@ export default function ReactQueryWrapper({
   }: {
     readonly targetProfile: IProfileAndConsolidations;
     readonly connectedProfile: IProfileAndConsolidations | null;
-    readonly profileProxy: ProfileProxy | null;
+    readonly profileProxy: ApiProfileProxy | null;
   }) => {
     invalidateProfile(targetProfile);
     invalidateProfileRepRatings(targetProfile);
@@ -839,7 +846,7 @@ export default function ReactQueryWrapper({
     });
   };
 
-  const addDropToFeedItems = ({ drop }: { readonly drop: Drop }): void => {
+  const addDropToFeedItems = ({ drop }: { readonly drop: ApiDrop }): void => {
     queryClient.setQueryData(
       [QueryKey.FEED_ITEMS],
       (
@@ -856,7 +863,7 @@ export default function ReactQueryWrapper({
         const feedItem: IFeedItemDropCreated = {
           serial_no: Math.floor(Math.random() * (1000000 - 100000) + 100000),
           item: drop,
-          type: FeedItemType.DropCreated,
+          type: ApiFeedItemType.DropCreated,
         };
         pages.at(0)?.unshift(feedItem);
         return {
@@ -870,7 +877,7 @@ export default function ReactQueryWrapper({
   const increaseFeedItemsDropRedropCount = ({
     drop,
   }: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
   }): void => {
     queryClient.setQueryData(
       [QueryKey.FEED_ITEMS],
@@ -893,7 +900,7 @@ export default function ReactQueryWrapper({
         if (quotedDrops.length) {
           const modifiedPages = pages.map((items) => {
             const modifiedItems = items.map((item) => {
-              if (item.type === FeedItemType.DropCreated) {
+              if (item.type === ApiFeedItemType.DropCreated) {
                 const modifiedParts = item.item.parts.map((part) => {
                   const isQuoted = quotedDrops.find(
                     (qd) =>
@@ -924,7 +931,7 @@ export default function ReactQueryWrapper({
                   },
                 };
               }
-              if (item.type === FeedItemType.DropReplied) {
+              if (item.type === ApiFeedItemType.DropReplied) {
                 const modifiedParts = item.item.reply.parts.map((part) => {
                   const isQuoted = quotedDrops.find(
                     (qd) =>
@@ -979,7 +986,7 @@ export default function ReactQueryWrapper({
   const increaseDropsDropRedropCount = ({
     drop,
   }: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
   }): void => {
     queryClient.setQueryData(
       [
@@ -994,14 +1001,14 @@ export default function ReactQueryWrapper({
       (
         oldData:
           | {
-              pages: Drop[][];
+              pages: ApiDrop[][];
             }
           | undefined
       ) => {
         if (!oldData?.pages.length) {
           return oldData;
         }
-        const pages: Drop[][] = JSON.parse(JSON.stringify(oldData.pages));
+        const pages: ApiDrop[][] = JSON.parse(JSON.stringify(oldData.pages));
         const quotedDrops = drop.parts
           .map((part) => part.quoted_drop)
           .filter((quotedDrop) => !!quotedDrop);
@@ -1054,7 +1061,7 @@ export default function ReactQueryWrapper({
   const addReplyToDropDiscussion = ({
     drop,
   }: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
   }): void => {
     queryClient.setQueryData(
       [
@@ -1066,8 +1073,8 @@ export default function ReactQueryWrapper({
         },
       ],
       (
-        oldData: { pages: Page<Drop>[]; pageParams: number[] } | undefined
-      ): { pages: Page<Drop>[]; pageParams: number[] } => {
+        oldData: { pages: Page<ApiDrop>[]; pageParams: number[] } | undefined
+      ): { pages: Page<ApiDrop>[]; pageParams: number[] } => {
         if (!oldData?.pages.length) {
           return {
             pageParams: [1],
@@ -1082,7 +1089,9 @@ export default function ReactQueryWrapper({
           };
         }
 
-        const pages: Page<Drop>[] = JSON.parse(JSON.stringify(oldData.pages));
+        const pages: Page<ApiDrop>[] = JSON.parse(
+          JSON.stringify(oldData.pages)
+        );
         pages.at(-1)?.data.push(drop);
 
         return {
@@ -1096,7 +1105,7 @@ export default function ReactQueryWrapper({
   const increaseFeedItemsDropDiscussionCount = ({
     drop,
   }: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
   }): void => {
     queryClient.setQueryData(
       [QueryKey.FEED_ITEMS],
@@ -1117,7 +1126,7 @@ export default function ReactQueryWrapper({
         if (repliedDrop) {
           const modifiedPages = pages.map((items) => {
             const modifiedItems = items.map((item) => {
-              if (item.type === FeedItemType.DropCreated) {
+              if (item.type === ApiFeedItemType.DropCreated) {
                 const modifiedParts = item.item.parts.map((part) => {
                   const isReplied =
                     item.item.id === repliedDrop.drop_id &&
@@ -1146,7 +1155,7 @@ export default function ReactQueryWrapper({
                   },
                 };
               }
-              if (item.type === FeedItemType.DropReplied) {
+              if (item.type === ApiFeedItemType.DropReplied) {
                 const modifiedParts = item.item.reply.parts.map((part) => {
                   const isReplied =
                     item.item.reply.id === repliedDrop.drop_id &&
@@ -1199,7 +1208,7 @@ export default function ReactQueryWrapper({
   const addOptimisticDrop = async ({
     drop,
   }: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
   }): Promise<void> => {
     addDropToDrops(queryClient, { drop });
     increaseWavesOverviewDropsCount(queryClient, drop.wave.id);
@@ -1222,10 +1231,10 @@ export default function ReactQueryWrapper({
   }: {
     oldData:
       | {
-          pages: Drop[][];
+          pages: ApiDrop[][];
         }
       | undefined;
-    drop: Drop;
+    drop: ApiDrop;
   }) => {
     if (!oldData) {
       return oldData;
@@ -1249,11 +1258,11 @@ export default function ReactQueryWrapper({
   }: {
     oldData:
       | {
-          pages: WaveDropsFeed[];
+          pages: ApiWaveDropsFeed[];
         }
-      | WaveDropsFeed
+      | ApiWaveDropsFeed
       | undefined;
-    drop: Drop;
+    drop: ApiDrop;
   }) => {
     if (!oldData) {
       return oldData;
@@ -1281,7 +1290,7 @@ export default function ReactQueryWrapper({
     drop,
     giverHandle,
   }: {
-    readonly drop: Drop;
+    readonly drop: ApiDrop;
     readonly giverHandle: string | null;
   }) => {
     queryClient.setQueryData(
@@ -1295,7 +1304,7 @@ export default function ReactQueryWrapper({
       (
         oldData:
           | {
-              pages: Drop[][];
+              pages: ApiDrop[][];
             }
           | undefined
       ) => profileDropChangeMutation({ oldData, drop })
@@ -1406,7 +1415,18 @@ export default function ReactQueryWrapper({
 
   const onWaveCreated = () => invalidateAllWaves();
 
-  const onWaveFollowChange = () => invalidateAllWaves();
+  const onWaveFollowChange = ({
+    waveId,
+    following,
+  }: {
+    readonly waveId: string;
+    readonly following: boolean;
+  }) => {
+    toggleWaveFollowing({ waveId, following, queryClient });
+    setTimeout(() => {
+      invalidateAllWaves();
+    }, 1000);
+  };
   const onIdentityFollowChange = () => {
     queryClient.invalidateQueries({
       queryKey: [QueryKey.IDENTITY_FOLLOWING_ACTIONS],

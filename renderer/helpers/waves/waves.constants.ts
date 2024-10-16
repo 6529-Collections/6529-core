@@ -1,41 +1,41 @@
-import { WaveCreditType } from "../../generated/models/WaveCreditType";
-import { WaveMetadataType } from "../../generated/models/WaveMetadataType";
-import { WaveType } from "../../generated/models/WaveType";
+import { ApiWaveCreditType } from "../../generated/models/ApiWaveCreditType";
+import { ApiWaveMetadataType } from "../../generated/models/ApiWaveMetadataType";
+import { ApiWaveType } from "../../generated/models/ApiWaveType";
 import {
   CreateWaveGroupConfigType,
   CreateWaveStep,
   WaveSignatureType,
 } from "../../types/waves.types";
 
-export const WAVE_LABELS: Record<WaveType, string> = {
-  [WaveType.Chat]: "Chat",
-  [WaveType.Rank]: "Rank",
-  [WaveType.Approve]: "Approve",
+export const WAVE_LABELS: Record<ApiWaveType, string> = {
+  [ApiWaveType.Chat]: "Chat",
+  [ApiWaveType.Rank]: "Rank",
+  [ApiWaveType.Approve]: "Approve",
 };
 
-export const WAVE_VOTING_LABELS: Record<WaveCreditType, string> = {
-  [WaveCreditType.Tdh]: "By TDH",
-  [WaveCreditType.Rep]: "By Rep",
-  [WaveCreditType.Unique]: "By Unique Identity",
+export const WAVE_VOTING_LABELS: Record<ApiWaveCreditType, string> = {
+  [ApiWaveCreditType.Tdh]: "By TDH",
+  [ApiWaveCreditType.Rep]: "By Rep",
+  [ApiWaveCreditType.Unique]: "By Unique Identity",
 };
 
 export const WAVE_SIGNATURE_LABELS: Record<
-  WaveType,
+  ApiWaveType,
   Record<WaveSignatureType, string>
 > = {
-  [WaveType.Chat]: {
+  [ApiWaveType.Chat]: {
     [WaveSignatureType.NONE]: "None",
     [WaveSignatureType.DROPS]: "Drops",
     [WaveSignatureType.VOTING]: "Rating",
     [WaveSignatureType.DROPS_AND_VOTING]: "All",
   },
-  [WaveType.Rank]: {
+  [ApiWaveType.Rank]: {
     [WaveSignatureType.NONE]: "None",
     [WaveSignatureType.DROPS]: "Drops",
     [WaveSignatureType.VOTING]: "Voting",
     [WaveSignatureType.DROPS_AND_VOTING]: "All",
   },
-  [WaveType.Approve]: {
+  [ApiWaveType.Approve]: {
     [WaveSignatureType.NONE]: "None",
     [WaveSignatureType.DROPS]: "Drops",
     [WaveSignatureType.VOTING]: "Voting",
@@ -51,17 +51,17 @@ const CREATE_WAVE_DEFAULT_MAIN_STEPS: CreateWaveStep[] = [
   CreateWaveStep.VOTING,
 ];
 
-export const CREATE_WAVE_MAIN_STEPS: Record<WaveType, CreateWaveStep[]> = {
-  [WaveType.Chat]: [
+export const CREATE_WAVE_MAIN_STEPS: Record<ApiWaveType, CreateWaveStep[]> = {
+  [ApiWaveType.Chat]: [
     ...CREATE_WAVE_DEFAULT_MAIN_STEPS,
     CreateWaveStep.DESCRIPTION,
   ],
-  [WaveType.Rank]: [
+  [ApiWaveType.Rank]: [
     ...CREATE_WAVE_DEFAULT_MAIN_STEPS,
     CreateWaveStep.OUTCOMES,
     CreateWaveStep.DESCRIPTION,
   ],
-  [WaveType.Approve]: [
+  [ApiWaveType.Approve]: [
     ...CREATE_WAVE_DEFAULT_MAIN_STEPS,
     CreateWaveStep.APPROVAL,
     CreateWaveStep.OUTCOMES,
@@ -69,11 +69,36 @@ export const CREATE_WAVE_MAIN_STEPS: Record<WaveType, CreateWaveStep[]> = {
   ],
 };
 
+export const CREATE_WAVE_GROUPS: Record<
+  ApiWaveType,
+  CreateWaveGroupConfigType[]
+> = {
+  [ApiWaveType.Chat]: [
+    CreateWaveGroupConfigType.CAN_VIEW,
+    CreateWaveGroupConfigType.CAN_CHAT,
+    CreateWaveGroupConfigType.ADMIN,
+  ],
+  [ApiWaveType.Rank]: [
+    CreateWaveGroupConfigType.CAN_VIEW,
+    CreateWaveGroupConfigType.CAN_DROP,
+    CreateWaveGroupConfigType.CAN_VOTE,
+    CreateWaveGroupConfigType.CAN_CHAT,
+    CreateWaveGroupConfigType.ADMIN,
+  ],
+  [ApiWaveType.Approve]: [
+    CreateWaveGroupConfigType.CAN_VIEW,
+    CreateWaveGroupConfigType.CAN_DROP,
+    CreateWaveGroupConfigType.CAN_VOTE,
+    CreateWaveGroupConfigType.CAN_CHAT,
+    CreateWaveGroupConfigType.ADMIN,
+  ],
+};
+
 export const CREATE_WAVE_STEPS_LABELS: Record<
-  WaveType,
+  ApiWaveType,
   Record<CreateWaveStep, string>
 > = {
-  [WaveType.Chat]: {
+  [ApiWaveType.Chat]: {
     [CreateWaveStep.OVERVIEW]: "Overview",
     [CreateWaveStep.GROUPS]: "Groups",
     [CreateWaveStep.DATES]: "Dates",
@@ -83,7 +108,7 @@ export const CREATE_WAVE_STEPS_LABELS: Record<
     [CreateWaveStep.OUTCOMES]: "Outcomes",
     [CreateWaveStep.DESCRIPTION]: "Description",
   },
-  [WaveType.Rank]: {
+  [ApiWaveType.Rank]: {
     [CreateWaveStep.OVERVIEW]: "Overview",
     [CreateWaveStep.GROUPS]: "Groups",
     [CreateWaveStep.DATES]: "Dates",
@@ -93,7 +118,7 @@ export const CREATE_WAVE_STEPS_LABELS: Record<
     [CreateWaveStep.OUTCOMES]: "Outcomes",
     [CreateWaveStep.DESCRIPTION]: "Description",
   },
-  [WaveType.Approve]: {
+  [ApiWaveType.Approve]: {
     [CreateWaveStep.OVERVIEW]: "Overview",
     [CreateWaveStep.GROUPS]: "Groups",
     [CreateWaveStep.DATES]: "Dates",
@@ -106,25 +131,28 @@ export const CREATE_WAVE_STEPS_LABELS: Record<
 };
 
 export const CREATE_WAVE_SELECT_GROUP_LABELS: Record<
-  WaveType,
+  ApiWaveType,
   Record<CreateWaveGroupConfigType, string>
 > = {
-  [WaveType.Chat]: {
+  [ApiWaveType.Chat]: {
     [CreateWaveGroupConfigType.CAN_VIEW]: "Who can view",
     [CreateWaveGroupConfigType.CAN_DROP]: "Who can drop",
     [CreateWaveGroupConfigType.CAN_VOTE]: "Who can rate",
+    [CreateWaveGroupConfigType.CAN_CHAT]: "Who can chat",
     [CreateWaveGroupConfigType.ADMIN]: "Admin",
   },
-  [WaveType.Rank]: {
+  [ApiWaveType.Rank]: {
     [CreateWaveGroupConfigType.CAN_VIEW]: "Who can view",
     [CreateWaveGroupConfigType.CAN_DROP]: "Who can drop",
     [CreateWaveGroupConfigType.CAN_VOTE]: "Who can vote",
+    [CreateWaveGroupConfigType.CAN_CHAT]: "Who can chat",
     [CreateWaveGroupConfigType.ADMIN]: "Admin",
   },
-  [WaveType.Approve]: {
+  [ApiWaveType.Approve]: {
     [CreateWaveGroupConfigType.CAN_VIEW]: "Who can view",
     [CreateWaveGroupConfigType.CAN_DROP]: "Who can drop",
     [CreateWaveGroupConfigType.CAN_VOTE]: "Who can vote",
+    [CreateWaveGroupConfigType.CAN_CHAT]: "Who can chat",
     [CreateWaveGroupConfigType.ADMIN]: "Admin",
   },
 };
@@ -137,20 +165,19 @@ export const CREATE_WAVE_NONE_GROUP_LABELS: Record<
   [CreateWaveGroupConfigType.CAN_DROP]: "Anyone",
   [CreateWaveGroupConfigType.CAN_VOTE]: "Anyone",
   [CreateWaveGroupConfigType.ADMIN]: "Only me",
+  [CreateWaveGroupConfigType.CAN_CHAT]: "Anyone",
 };
 
-export const CREATE_WAVE_START_DATE_LABELS: Record<WaveType, string> = {
-  [WaveType.Chat]: "Start date",
-  [WaveType.Rank]: "Submissions open",
-  [WaveType.Approve]: "Start date",
+export const CREATE_WAVE_START_DATE_LABELS: Record<ApiWaveType, string> = {
+  [ApiWaveType.Chat]: "Start date",
+  [ApiWaveType.Rank]: "Submissions open",
+  [ApiWaveType.Approve]: "Start date",
 };
-
-
 
 export const CREATE_WAVE_DROPS_REQUIRED_METADATA_TYPES_LABELS: Record<
-  WaveMetadataType,
+  ApiWaveMetadataType,
   string
 > = {
-  [WaveMetadataType.String]: "Text",
-  [WaveMetadataType.Number]: "Number",
+  [ApiWaveMetadataType.String]: "Text",
+  [ApiWaveMetadataType.Number]: "Number",
 };

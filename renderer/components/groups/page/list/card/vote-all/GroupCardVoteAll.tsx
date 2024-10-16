@@ -1,6 +1,6 @@
 import { useContext, useEffect, useRef, useState } from "react";
 import { CommunityMemberOverview } from "../../../../../../entities/IProfile";
-import { GroupFull } from "../../../../../../generated/models/GroupFull";
+import { ApiGroupFull } from "../../../../../../generated/models/ApiGroupFull";
 import { AuthContext } from "../../../../../auth/Auth";
 import {
   QueryKey,
@@ -15,10 +15,10 @@ import {
   commonApiFetch,
   commonApiPost,
 } from "../../../../../../services/api/common-api";
-import { BulkRateRequest } from "../../../../../../generated/models/BulkRateRequest";
-import { BulkRateResponse } from "../../../../../../generated/models/BulkRateResponse";
+import { ApiBulkRateRequest } from "../../../../../../generated/models/ApiBulkRateRequest";
+import { ApiBulkRateResponse } from "../../../../../../generated/models/ApiBulkRateResponse";
 import GroupCardActionWrapper from "../GroupCardActionWrapper";
-import { RateMatter } from "../../../../../../generated/models/RateMatter";
+import { ApiRateMatter } from "../../../../../../generated/models/ApiRateMatter";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
 import GroupCardVoteAllInputs from "./GroupCardVoteAllInputs";
 import { CommunityMembersSortOption } from "../../../../../../enums";
@@ -28,13 +28,13 @@ export default function GroupCardVoteAll({
   group,
   onCancel,
 }: {
-  readonly matter: RateMatter;
-  readonly group: GroupFull;
+  readonly matter: ApiRateMatter;
+  readonly group: ApiGroupFull;
   readonly onCancel: () => void;
 }) {
-  const SUCCESS_LABEL: Record<RateMatter, string> = {
-    [RateMatter.Cic]: "NIC distributed.",
-    [RateMatter.Rep]: "Rep distributed.",
+  const SUCCESS_LABEL: Record<ApiRateMatter, string> = {
+    [ApiRateMatter.Cic]: "NIC distributed.",
+    [ApiRateMatter.Rep]: "Rep distributed.",
   };
 
   // Ref to track if the component is mounted
@@ -70,7 +70,10 @@ export default function GroupCardVoteAll({
         },
       ],
       queryFn: async () =>
-        await commonApiFetch<Page<CommunityMemberOverview>, CommunityMembersQuery>({
+        await commonApiFetch<
+          Page<CommunityMemberOverview>,
+          CommunityMembersQuery
+        >({
           endpoint: `community-members/top`,
           params: {
             page: 1,
@@ -110,7 +113,7 @@ export default function GroupCardVoteAll({
       return true;
     }
 
-    if (matter === RateMatter.Rep && !category) {
+    if (matter === ApiRateMatter.Rep && !category) {
       return true;
     }
     return false;
@@ -128,8 +131,8 @@ export default function GroupCardVoteAll({
   );
 
   const bulkRateMutation = useMutation({
-    mutationFn: async (body: BulkRateRequest) =>
-      await commonApiPost<BulkRateRequest, BulkRateResponse>({
+    mutationFn: async (body: ApiBulkRateRequest) =>
+      await commonApiPost<ApiBulkRateRequest, ApiBulkRateResponse>({
         endpoint: `ratings`,
         body: body,
       }),
@@ -145,7 +148,10 @@ export default function GroupCardVoteAll({
   const getMembersPage = async (
     page: number
   ): Promise<Page<CommunityMemberOverview>> => {
-    return await commonApiFetch<Page<CommunityMemberOverview>, any>({
+    return await commonApiFetch<
+      Page<CommunityMemberOverview>,
+      CommunityMembersQuery
+    >({
       endpoint: `community-members/top`,
       params: {
         page: page,
@@ -217,7 +223,8 @@ export default function GroupCardVoteAll({
       membersCount={membersCount}
       doneMembersCount={doneMembersCount}
       matter={matter}
-      onSave={onSave}>
+      onSave={onSave}
+    >
       <GroupCardVoteAllInputs
         matter={matter}
         category={category}

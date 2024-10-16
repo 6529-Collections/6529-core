@@ -18,7 +18,7 @@ import {
 import { createBreakpoint } from "react-use";
 import UserRateAdjustmentHelper from "../../../utils/rate/UserRateAdjustmentHelper";
 import CircleLoader from "../../../../distribution-plan-tool/common/CircleLoader";
-import { ProfileProxyActionType } from "../../../../../generated/models/ProfileProxyActionType";
+import { ApiProfileProxyActionType } from "../../../../../generated/models/ApiProfileProxyActionType";
 import UserPageIdentityHeaderCICRateStats from "./UserPageIdentityHeaderCICRateStats";
 
 const useBreakpoint = createBreakpoint({ MD: 768, S: 0 });
@@ -88,7 +88,7 @@ export default function UserPageIdentityHeaderCICRate({
 
   const getProxyAvailableCredit = (): number | null => {
     const repProxy = activeProfileProxy?.actions.find(
-      (a) => a.action_type === ProfileProxyActionType.AllocateCic
+      (a) => a.action_type === ApiProfileProxyActionType.AllocateCic
     );
     if (!repProxy) {
       return null;

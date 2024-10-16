@@ -1,5 +1,5 @@
 import { useContext, useEffect, useState } from "react";
-import { Drop } from "../../../generated/models/Drop";
+import { ApiDrop } from "../../../generated/models/ApiDrop";
 import { AuthContext } from "../../auth/Auth";
 import { ProfileConnectedStatus } from "../../../entities/IProfile";
 import { assertUnreachable } from "../../../helpers/AllowlistToolHelpers";
@@ -9,7 +9,7 @@ export default function DropInputWrapper({
   drop,
   children,
 }: {
-  readonly drop: Drop;
+  readonly drop: ApiDrop;
   readonly children: React.ReactNode;
 }) {
   const { connectionStatus } = useContext(AuthContext);
@@ -24,7 +24,7 @@ export default function DropInputWrapper({
         return "Proxy can't drop";
 
       case ProfileConnectedStatus.HAVE_PROFILE:
-        if (!drop.wave.authenticated_user_eligible_to_participate) {
+        if (!drop.wave.authenticated_user_eligible_to_chat) {
           return "You are not eligible to create a drop in this wave";
         }
         return null;

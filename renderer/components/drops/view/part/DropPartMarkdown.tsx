@@ -8,27 +8,27 @@ import { DropContentPartType } from "../item/content/DropListItemContent";
 import DropListItemContentPart, {
   DropListItemContentPartProps,
 } from "../item/content/DropListItemContentPart";
-import { DropMentionedUser } from "../../../../generated/models/DropMentionedUser";
-import { DropReferencedNFT } from "../../../../generated/models/DropReferencedNFT";
+import { ApiDropMentionedUser } from "../../../../generated/models/ApiDropMentionedUser";
+import { ApiDropReferencedNFT } from "../../../../generated/models/ApiDropReferencedNFT";
 import { Tweet } from "react-tweet";
 import Link from "next/link";
 
 import DropPartMarkdownImage from "./DropPartMarkdownImage";
 import WaveDetailedDropQuoteWithDropId from "../../../waves/detailed/drops/WaveDetailedDropQuoteWithDropId";
 import WaveDetailedDropQuoteWithSerialNo from "../../../waves/detailed/drops/WaveDetailedDropQuoteWithSerialNo";
-import { Drop } from "../../../../generated/models/Drop";
+import { ApiDrop } from "../../../../generated/models/ApiDrop";
 import {
   parseSeizeLink,
   SeizeLinkInfo,
 } from "../../../../helpers/SeizeLinkParser";
 import { SEIZE_URL } from "../../../../../constants";
+import { handleAnchorClick } from "../../../../hooks/useAnchorInterceptor";
 
 export interface DropPartMarkdownProps {
-  readonly mentionedUsers: Array<DropMentionedUser>;
-  readonly referencedNfts: Array<DropReferencedNFT>;
+  readonly mentionedUsers: Array<ApiDropMentionedUser>;
+  readonly referencedNfts: Array<ApiDropReferencedNFT>;
   readonly partContent: string | null;
-  readonly onImageLoaded: () => void;
-  readonly onQuoteClick: (drop: Drop) => void;
+  readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly textSize?: "sm" | "md";
 }
 
@@ -36,7 +36,6 @@ function DropPartMarkdown({
   mentionedUsers,
   referencedNfts,
   partContent,
-  onImageLoaded,
   onQuoteClick,
   textSize = "md",
 }: DropPartMarkdownProps) {
@@ -53,12 +52,10 @@ function DropPartMarkdown({
     content,
     mentionedUsers,
     referencedNfts,
-    onImageLoaded,
   }: {
     readonly content: ReactNode | undefined;
-    readonly mentionedUsers: Array<DropMentionedUser>;
-    readonly referencedNfts: Array<DropReferencedNFT>;
-    readonly onImageLoaded: () => void;
+    readonly mentionedUsers: Array<ApiDropMentionedUser>;
+    readonly referencedNfts: Array<ApiDropReferencedNFT>;
   }) => {
     if (typeof content !== "string") {
       return content;
@@ -106,13 +103,7 @@ function DropPartMarkdown({
         const partProps = values[part];
         if (partProps) {
           const randomId = getRandomObjectId();
-          return (
-            <DropListItemContentPart
-              key={randomId}
-              part={partProps}
-              onImageLoaded={onImageLoaded}
-            />
-          );
+          return <DropListItemContentPart key={randomId} part={partProps} />;
         } else {
           return part;
         }
@@ -125,19 +116,16 @@ function DropPartMarkdown({
     content,
     mentionedUsers,
     referencedNfts,
-    onImageLoaded,
   }: {
     readonly content: ReactNode | undefined;
-    readonly mentionedUsers: Array<DropMentionedUser>;
-    readonly referencedNfts: Array<DropReferencedNFT>;
-    readonly onImageLoaded: () => void;
+    readonly mentionedUsers: Array<ApiDropMentionedUser>;
+    readonly referencedNfts: Array<ApiDropReferencedNFT>;
   }) => {
     if (typeof content === "string") {
       return customPartRenderer({
         content,
         mentionedUsers,
         referencedNfts,
-        onImageLoaded,
       });
     }
 
@@ -148,7 +136,6 @@ function DropPartMarkdown({
             content: child,
             mentionedUsers,
             referencedNfts,
-            onImageLoaded,
           });
         }
 
@@ -228,9 +215,7 @@ function DropPartMarkdown({
       <a
         onClick={(e) => {
           e.stopPropagation();
-          if (props.onClick) {
-            props.onClick(e);
-          }
+          handleAnchorClick(e);
         }}
         {...props}
       />
@@ -239,7 +224,7 @@ function DropPartMarkdown({
 
   const renderSeizeQuote = (
     seizeLinkInfo: SeizeLinkInfo,
-    onQuoteClick: (drop: Drop) => void
+    onQuoteClick: (drop: ApiDrop) => void
   ) => {
     const { waveId, serialNo, dropId } = seizeLinkInfo;
 
@@ -287,7 +272,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </h5>
         ),
@@ -297,7 +281,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </h4>
         ),
@@ -307,7 +290,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </h3>
         ),
@@ -317,7 +299,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </h2>
         ),
@@ -327,7 +308,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </h1>
         ),
@@ -338,7 +318,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </p>
         ),
@@ -348,7 +327,6 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </li>
         ),
@@ -360,24 +338,17 @@ function DropPartMarkdown({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </code>
         ),
         a: (params) => aHrefRenderer(params),
-        img: (params) => (
-          <DropPartMarkdownImage
-            src={params.src ?? ""}
-            onImageLoaded={onImageLoaded}
-          />
-        ),
+        img: (params) => <DropPartMarkdownImage src={params.src ?? ""} />,
         blockquote: (params) => (
           <blockquote className="tw-text-iron-200 tw-break-words word-break tw-pl-4 tw-border-l-4 tw-border-l-iron-500 tw-border-solid tw-border-t-0 tw-border-r-0 tw-border-b-0">
             {customRenderer({
               content: params.children,
               mentionedUsers,
               referencedNfts,
-              onImageLoaded,
             })}
           </blockquote>
         ),

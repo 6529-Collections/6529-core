@@ -1,18 +1,23 @@
 import { sha256 } from "ethereum-cryptography/sha256.js";
 import { utf8ToBytes } from "ethereum-cryptography/utils.js";
-import { Drop } from "../../generated/models/Drop";
+import { ApiDrop } from "../../generated/models/ApiDrop";
 import { getRandomObjectId } from "../AllowlistToolHelpers";
 import { TypedFeedItem } from "../../types/feed.types";
-import { FeedItemType } from "../../generated/models/FeedItemType";
+import { ApiFeedItemType } from "../../generated/models/ApiFeedItemType";
 
-export interface ExtendedDrop extends Drop {
+export interface ExtendedDrop extends ApiDrop {
   stableKey: string;
   stableHash: string;
 }
 
-export const getStableDropKey = (drop: Drop, existingDrops: ExtendedDrop[] = []): { key: string, hash: string } => {
+export const getStableDropKey = (
+  drop: ApiDrop,
+  existingDrops: ExtendedDrop[] = []
+): { key: string; hash: string } => {
   const closestMatch = findClosestMatch(drop, existingDrops);
-  const stableCreatedAt = closestMatch ? closestMatch.created_at : drop.created_at;
+  const stableCreatedAt = closestMatch
+    ? closestMatch.created_at
+    : drop.created_at;
 
   const input = {
     wave_id: drop.wave.id,
@@ -31,21 +36,36 @@ export const getStableDropKey = (drop: Drop, existingDrops: ExtendedDrop[] = [])
   const decoder = new TextDecoder("utf-8");
   const key = decoder.decode(hash);
 
-  return { key, hash: Buffer.from(hash).toString('hex') };
+  return { key, hash: Buffer.from(hash).toString("hex") };
 };
 
-const findClosestMatch = (newDrop: Drop, existingDrops: ExtendedDrop[]): ExtendedDrop | null => {
+const findClosestMatch = (
+  newDrop: ApiDrop,
+  existingDrops: ExtendedDrop[]
+): ExtendedDrop | null => {
   const MAX_TIME_DIFFERENCE = 10000; // 10 seconds in milliseconds
 
   return existingDrops.reduce((closest, current) => {
     if (
       current.author.handle === newDrop.author.handle &&
-      current.parts.map(p => p.content).join("") === newDrop.parts.map(p => p.content).join("") &&
-      Math.abs(new Date(current.created_at).getTime() - new Date(newDrop.created_at).getTime()) < MAX_TIME_DIFFERENCE
+      current.parts.map((p) => p.content).join("") ===
+        newDrop.parts.map((p) => p.content).join("") &&
+      Math.abs(
+        new Date(current.created_at).getTime() -
+          new Date(newDrop.created_at).getTime()
+      ) < MAX_TIME_DIFFERENCE
     ) {
-      if (!closest || 
-          Math.abs(new Date(current.created_at).getTime() - new Date(newDrop.created_at).getTime()) <
-          Math.abs(new Date(closest.created_at).getTime() - new Date(newDrop.created_at).getTime())) {
+      if (
+        !closest ||
+        Math.abs(
+          new Date(current.created_at).getTime() -
+            new Date(newDrop.created_at).getTime()
+        ) <
+          Math.abs(
+            new Date(closest.created_at).getTime() -
+              new Date(newDrop.created_at).getTime()
+          )
+      ) {
         return current;
       }
     }
@@ -59,7 +79,7 @@ export const getDropKey = ({
   drop,
   returnOriginal,
 }: {
-  readonly drop: Drop;
+  readonly drop: ApiDrop;
   readonly returnOriginal: boolean;
 }): string => {
   if (returnOriginal) {
@@ -88,6 +108,6 @@ export const getFeedItemKey = ({
   readonly item: TypedFeedItem;
   readonly index: number;
 }): string =>
-  index === 0 && item.type === FeedItemType.DropCreated
+  index === 0 && item.type === ApiFeedItemType.DropCreated
     ? getDropKey({ drop: item.item, returnOriginal: true })
     : `feed-item-${item.serial_no}`;

@@ -235,7 +235,8 @@ const CreateDropInput = forwardRef<
                   <span
                     className={`editor-placeholder ${
                       submitting ? "tw-opacity-50" : ""
-                    }`}>
+                    }`}
+                  >
                     {getPlaceHolderText()}
                   </span>
                 }

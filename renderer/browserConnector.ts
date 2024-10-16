@@ -1,5 +1,6 @@
 import { createConnector } from "@wagmi/core";
 import { mainnet, sepolia } from "viem/chains";
+import { setAuthJwt } from "./services/auth/auth.utils";
 
 interface ProviderRequest {
   method: string;
@@ -116,6 +117,8 @@ export function browserConnector(parameters: {
               accounts: response.accounts,
               chainId: response.chainId,
             };
+            const auth = response.auth;
+            setAuthJwt(auth);
             await window.store.set(
               CONNECTION_STORE,
               JSON.stringify(connectionObject)

@@ -18,6 +18,7 @@ import TitleBar from "./titlebar/TitleBar";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
+import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 
 interface Props {
   onLoad?: () => void;
@@ -37,6 +38,7 @@ export default function Header(props: Readonly<Props>) {
   const { showWaves } = useContext(AuthContext);
   const router = useRouter();
   const account = useAccount();
+  const { showConnectModal } = useSeizeConnectModal();
   const [consolidations, setConsolidations] = useState<string[]>([]);
   const [burgerMenuOpen, setBurgerMenuOpen] = useState(false);
 
@@ -108,6 +110,12 @@ export default function Header(props: Readonly<Props>) {
       setConsolidations([]);
     }
   }, [account.address]);
+
+  useEffect(() => {
+    if (showConnectModal) {
+      setBurgerMenuOpen(false);
+    }
+  }, [showConnectModal]);
 
   function printMobileRow(name: string, path: string) {
     return (
@@ -804,26 +812,11 @@ export default function Header(props: Readonly<Props>) {
     <>
       {printBurgerMenu()}
       <TitleBar />
-      <Container
-        fluid
-        className={`${
-          capacitor.isCapacitor
-            ? styles.capacitorMainContainer
-            : props.isSmall
-            ? styles.mainContainerSmall
-            : styles.mainContainer
-        }`}>
+      <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>
             <Container className={styles.capacitorHeaderRowContainerLandscape}>
-              <Row
-                className={
-                  capacitor.isCapacitor
-                    ? styles.capacitorHeaderRow
-                    : props.isSmall
-                    ? styles.headerRowSmall
-                    : styles.headerRow
-                }>
+              <Row className={styles.headerRow}>
                 <Col
                   xs={{ span: 8 }}
                   sm={{ span: 8 }}

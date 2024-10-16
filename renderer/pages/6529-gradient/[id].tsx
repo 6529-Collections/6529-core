@@ -38,6 +38,18 @@ export default function GradientPageIndex(props: any) {
     });
   }, [pagenameFull]);
 
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, [pagenameFull]);
+
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, [pagenameFull]);
+
   return (
     <>
       <Head>

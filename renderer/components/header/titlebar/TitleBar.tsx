@@ -87,7 +87,14 @@ export default function TitleBar() {
 
     const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
-      router.push(url);
+      if (router.pathname !== url) {
+        router.push(url);
+      } else {
+        const reloadUrl = url.includes("?")
+          ? `${url}&reload=true`
+          : `${url}?reload=true`;
+        router.push(reloadUrl);
+      }
     };
     window.api.onNavigate(handleNavigate);
 
@@ -226,7 +233,7 @@ export default function TitleBar() {
           isMac() ? styles.infoMac : styles.infoWin
         }`}
         placement="left"
-        onClick={() => router.push("/network/app-info")}
+        onClick={() => router.push("/core/app-info")}
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}
@@ -249,8 +256,7 @@ export default function TitleBar() {
         <Modal.Body className={styles.updateModalContent}>
           <p>Version {updateAvailable?.version} is available.</p>
           <span>
-            Visit <Link href={"/network/app-info"}>App Info</Link> page to
-            update.
+            Visit <Link href={"/core/app-info"}>App Info</Link> page to update.
           </span>
         </Modal.Body>
         <Modal.Footer className={styles.updateModalContent}>

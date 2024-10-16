@@ -1,7 +1,7 @@
 import { IProfileAndConsolidations } from "../../entities/IProfile";
-import { ProfileProxy } from "../../generated/models/ProfileProxy";
-import { UpdateWaveRequest } from "../../generated/models/UpdateWaveRequest";
-import { Wave } from "../../generated/models/Wave";
+import { ApiProfileProxy } from "../../generated/models/ApiProfileProxy";
+import { ApiUpdateWaveRequest } from "../../generated/models/ApiUpdateWaveRequest";
+import { ApiWave } from "../../generated/models/ApiWave";
 import { CreateWaveStepStatus } from "../../types/waves.types";
 
 export const getCreateWaveStepStatus = ({
@@ -20,7 +20,9 @@ export const getCreateWaveStepStatus = ({
   return CreateWaveStepStatus.PENDING;
 };
 
-export const convertWaveToUpdateWave = (wave: Wave): UpdateWaveRequest => ({
+export const convertWaveToUpdateWave = (
+  wave: ApiWave
+): ApiUpdateWaveRequest => ({
   name: wave.name,
   picture: wave.picture,
   voting: {
@@ -38,6 +40,12 @@ export const convertWaveToUpdateWave = (wave: Wave): UpdateWaveRequest => ({
     scope: {
       group_id: wave.visibility.scope.group?.id ?? null,
     },
+  },
+  chat: {
+    scope: {
+      group_id: wave.chat.scope.group?.id ?? null,
+    },
+    enabled: wave.chat.enabled,
   },
   participation: {
     scope: {
@@ -72,8 +80,8 @@ export const canEditWave = ({
   wave,
 }: {
   readonly connectedProfile: IProfileAndConsolidations | null;
-  readonly activeProfileProxy: ProfileProxy | null;
-  readonly wave: Wave;
+  readonly activeProfileProxy: ApiProfileProxy | null;
+  readonly wave: ApiWave;
 }): boolean => {
   if (!connectedProfile?.profile?.handle) {
     return false;

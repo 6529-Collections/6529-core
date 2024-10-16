@@ -15,9 +15,9 @@ import {
 import { assertUnreachable } from "../../../helpers/AllowlistToolHelpers";
 import CreateWaveVoting from "./voting/CreateWaveVoting";
 import CreateWaveApproval from "./approval/CreateWaveApproval";
-import { GroupFull } from "../../../generated/models/GroupFull";
-import { WaveCreditType } from "../../../generated/models/WaveCreditType";
-import { WaveType } from "../../../generated/models/WaveType";
+import { ApiGroupFull } from "../../../generated/models/ApiGroupFull";
+import { ApiWaveCreditType } from "../../../generated/models/ApiWaveCreditType";
+import { ApiWaveType } from "../../../generated/models/ApiWaveType";
 import CreateWaveActions from "./utils/CreateWaveActions";
 import CreateWaveDescription, {
   CreateWaveDescriptionHandles,
@@ -28,7 +28,7 @@ import {
   getCreateNewWaveBody,
   getCreateWaveValidationErrors,
 } from "../../../helpers/waves/create-wave.helpers";
-import { CreateNewWave } from "../../../generated/models/CreateNewWave";
+import { ApiCreateNewWave } from "../../../generated/models/ApiCreateNewWave";
 import { AuthContext } from "../../auth/Auth";
 import {
   CreateDropPart,
@@ -38,11 +38,11 @@ import {
 import { commonApiPost } from "../../../services/api/common-api";
 import { useMutation } from "@tanstack/react-query";
 import { ReactQueryWrapperContext } from "../../react-query-wrapper/ReactQueryWrapper";
-import { CreateWaveDropRequest } from "../../../generated/models/CreateWaveDropRequest";
-import { Wave } from "../../../generated/models/Wave";
+import { ApiCreateWaveDropRequest } from "../../../generated/models/ApiCreateWaveDropRequest";
+import { ApiWave } from "../../../generated/models/ApiWave";
 import { useRouter } from "next/router";
-import { GroupFilterDirection } from "../../../generated/models/GroupFilterDirection";
-import { CreateGroup } from "../../../generated/models/CreateGroup";
+import { ApiGroupFilterDirection } from "../../../generated/models/ApiGroupFilterDirection";
+import { ApiCreateGroup } from "../../../generated/models/ApiCreateGroup";
 import { Time } from "../../../helpers/time";
 
 export default function CreateWave({
@@ -57,12 +57,12 @@ export default function CreateWave({
   const { waitAndInvalidateDrops, onWaveCreated } = useContext(
     ReactQueryWrapperContext
   );
-  const initialType = WaveType.Chat;
+  const initialType = ApiWaveType.Chat;
   const initialStep = CreateWaveStep.OVERVIEW;
   const getInitialConfig = ({
     type,
   }: {
-    readonly type: WaveType;
+    readonly type: ApiWaveType;
   }): CreateWaveConfig => ({
     overview: {
       type,
@@ -74,7 +74,11 @@ export default function CreateWave({
       canView: null,
       canDrop: null,
       canVote: null,
+      canChat: null,
       admin: null,
+    },
+    chat: {
+      enabled: true,
     },
     dates: {
       submissionStartDate: Time.currentMillis(),
@@ -88,7 +92,7 @@ export default function CreateWave({
       requiredMetadata: [],
     },
     voting: {
-      type: WaveCreditType.Tdh,
+      type: ApiWaveCreditType.Tdh,
       category: null,
       profileId: null,
     },
@@ -173,7 +177,7 @@ export default function CreateWave({
     group,
     groupType,
   }: {
-    readonly group: GroupFull | null;
+    readonly group: ApiGroupFull | null;
     readonly groupType: CreateWaveGroupConfigType;
   }) => {
     switch (groupType) {
@@ -204,6 +208,15 @@ export default function CreateWave({
           },
         }));
         break;
+      case CreateWaveGroupConfigType.CAN_CHAT:
+        setConfig((prev) => ({
+          ...prev,
+          groups: {
+            ...prev.groups,
+            canChat: group?.id ?? null,
+          },
+        }));
+        break;
       case CreateWaveGroupConfigType.ADMIN:
         setConfig((prev) => ({
           ...prev,
@@ -218,7 +231,7 @@ export default function CreateWave({
     }
   };
 
-  const onVotingTypeChange = (type: WaveCreditType) => {
+  const onVotingTypeChange = (type: ApiWaveCreditType) => {
     setConfig((prev) => ({
       ...prev,
       voting: {
@@ -356,8 +369,8 @@ export default function CreateWave({
   };
 
   const addWaveMutation = useMutation({
-    mutationFn: async (body: CreateNewWave) =>
-      await commonApiPost<CreateNewWave, Wave>({
+    mutationFn: async (body: ApiCreateNewWave) =>
+      await commonApiPost<ApiCreateNewWave, ApiWave>({
         endpoint: `waves`,
         body,
       }),
@@ -391,7 +404,7 @@ export default function CreateWave({
     }) =>
       await commonApiPost<
         { visible: true; old_version_id: string | null },
-        GroupFull
+        ApiGroupFull
       >({
         endpoint: `groups/${param.id}/visible`,
         body: param.body,
@@ -406,8 +419,8 @@ export default function CreateWave({
   });
 
   const createNewGroupMutation = useMutation({
-    mutationFn: async (body: CreateGroup) =>
-      await commonApiPost<CreateGroup, GroupFull>({
+    mutationFn: async (body: ApiCreateGroup) =>
+      await commonApiPost<ApiCreateGroup, ApiGroupFull>({
         endpoint: `groups`,
         body,
       }),
@@ -425,21 +438,21 @@ export default function CreateWave({
   }: {
     readonly primaryWallet: string;
   }): Promise<string | null> => {
-    const groupConfig: CreateGroup = {
+    const groupConfig: ApiCreateGroup = {
       name: `Only ${connectedProfile?.profile?.handle}`,
       group: {
         tdh: { min: null, max: null },
         rep: {
           min: null,
           max: null,
-          direction: GroupFilterDirection.Received,
+          direction: ApiGroupFilterDirection.Received,
           user_identity: null,
           category: null,
         },
         cic: {
           min: null,
           max: null,
-          direction: GroupFilterDirection.Received,
+          direction: ApiGroupFilterDirection.Received,
           user_identity: null,
         },
         level: { min: null, max: null },
@@ -500,7 +513,7 @@ export default function CreateWave({
       drop.parts.map((part) => generateDropPart(part))
     );
 
-    const dropRequest: CreateWaveDropRequest = {
+    const dropRequest: ApiCreateWaveDropRequest = {
       title: drop.title,
       parts: dropParts.map((part) => ({
         content: part.content,
@@ -629,19 +642,22 @@ export default function CreateWave({
           <button
             onClick={onBack}
             type="button"
-            className="tw-py-2 tw-px-2 -tw-ml-2 tw-flex tw-items-center tw-gap-x-2 tw-justify-center tw-text-sm tw-font-semibold tw-border-0 tw-rounded-lg tw-transition tw-duration-300 tw-ease-out tw-cursor-pointer tw-text-iron-400 tw-bg-transparent hover:tw-text-iron-50">
+            className="tw-py-2 tw-px-2 -tw-ml-2 tw-flex tw-items-center tw-gap-x-2 tw-justify-center tw-text-sm tw-font-semibold tw-border-0 tw-rounded-lg tw-transition tw-duration-300 tw-ease-out tw-cursor-pointer tw-text-iron-400 tw-bg-transparent hover:tw-text-iron-50"
+          >
             <svg
               className="tw-flex-shrink-0 tw-w-5 tw-h-5"
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg">
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
                 d="M20 12H4M4 12L10 18M4 12L10 6"
                 stroke="currentColor"
                 strokeWidth="2"
                 strokeLinecap="round"
-                strokeLinejoin="round"></path>
+                strokeLinejoin="round"
+              ></path>
             </svg>
             <span>Back</span>
           </button>

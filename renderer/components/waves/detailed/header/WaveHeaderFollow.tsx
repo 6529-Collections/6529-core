@@ -1,17 +1,19 @@
 import { useContext, useState } from "react";
-import { Wave } from "../../../../generated/models/Wave";
+import { ApiWave } from "../../../../generated/models/ApiWave";
 import { useMutation } from "@tanstack/react-query";
-import { WaveSubscriptionActions } from "../../../../generated/models/WaveSubscriptionActions";
-import { WaveSubscriptionTargetAction } from "../../../../generated/models/WaveSubscriptionTargetAction";
+import { ApiWaveSubscriptionActions } from "../../../../generated/models/ApiWaveSubscriptionActions";
 import {
   commonApiDeleWithBody,
   commonApiPost,
 } from "../../../../services/api/common-api";
 import { AuthContext } from "../../../auth/Auth";
 import { ReactQueryWrapperContext } from "../../../react-query-wrapper/ReactQueryWrapper";
-import CircleLoader, { CircleLoaderSize } from "../../../distribution-plan-tool/common/CircleLoader";
+import CircleLoader, {
+  CircleLoaderSize,
+} from "../../../distribution-plan-tool/common/CircleLoader";
+import { WAVE_DEFAULT_SUBSCRIPTION_ACTIONS } from "../../../react-query-wrapper/utils/query-utils";
 
-export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
+export default function WaveHeaderFollow({ wave }: { readonly wave: ApiWave }) {
   const { setToast, requestAuth } = useContext(AuthContext);
   const { onWaveFollowChange } = useContext(ReactQueryWrapperContext);
   const following = !!wave.subscribed_actions.length;
@@ -20,15 +22,21 @@ export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
 
   const followMutation = useMutation({
     mutationFn: async () => {
-      await commonApiPost<WaveSubscriptionActions, WaveSubscriptionActions>({
+      await commonApiPost<
+        ApiWaveSubscriptionActions,
+        ApiWaveSubscriptionActions
+      >({
         endpoint: `waves/${wave.id}/subscriptions`,
         body: {
-          actions: Object.values(WaveSubscriptionTargetAction),
+          actions: WAVE_DEFAULT_SUBSCRIPTION_ACTIONS,
         },
       });
     },
     onSuccess: () => {
-      onWaveFollowChange();
+      onWaveFollowChange({
+        waveId: wave.id,
+        following: true,
+      });
     },
     onError: (error) => {
       setToast({
@@ -44,17 +52,20 @@ export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
   const unFollowMutation = useMutation({
     mutationFn: async () => {
       await commonApiDeleWithBody<
-        WaveSubscriptionActions,
-        WaveSubscriptionActions
+        ApiWaveSubscriptionActions,
+        ApiWaveSubscriptionActions
       >({
         endpoint: `waves/${wave.id}/subscriptions`,
         body: {
-          actions: Object.values(WaveSubscriptionTargetAction),
+          actions: WAVE_DEFAULT_SUBSCRIPTION_ACTIONS,
         },
       });
     },
     onSuccess: () => {
-      onWaveFollowChange();
+      onWaveFollowChange({
+        waveId: wave.id,
+        following: false,
+      });
     },
     onError: (error) => {
       setToast({
@@ -87,8 +98,7 @@ export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
         following
           ? ""
           : "tw-p-[1px] tw-rounded-lg tw-bg-gradient-to-b tw-from-primary-400 tw-to-primary-500"
-      }`}
-    >
+      }`}>
       <button
         onClick={onFollow}
         disabled={mutating}
@@ -97,8 +107,7 @@ export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
           following
             ? "tw-bg-iron-800 hover:tw-bg-iron-700 hover:tw-border-iron-700 tw-border-iron-800 tw-ring-1 tw-ring-iron-700 hover:tw-ring-iron-650 tw-text-iron-300 focus-visible:tw-outline-iron-700"
             : "tw-border-primary-500 tw-bg-primary-500 hover:tw-bg-primary-600 hover:tw-border-primary-600 focus-visible:tw-outline-primary-600 tw-text-white"
-        }`}
-      >
+        }`}>
         {mutating ? (
           <div className="tw-mr-1">
             <CircleLoader size={CircleLoaderSize.SMALL} />
@@ -111,8 +120,7 @@ export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
             viewBox="0 0 17 15"
             fill="none"
             aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+            xmlns="http://www.w3.org/2000/svg">
             <path
               fillRule="evenodd"
               clipRule="evenodd"
@@ -126,8 +134,7 @@ export default function WaveHeaderFollow({ wave }: { readonly wave: Wave }) {
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+            xmlns="http://www.w3.org/2000/svg">
             <path
               d="M12 5V19M5 12H19"
               stroke="currentColor"

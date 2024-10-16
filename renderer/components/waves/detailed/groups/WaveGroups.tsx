@@ -1,10 +1,11 @@
-import { Wave } from "../../../../generated/models/Wave";
+import { ApiWave } from "../../../../generated/models/ApiWave";
+import { ApiWaveType } from "../../../../generated/models/ApiWaveType";
 import WaveGroup, { WaveGroupType } from "../specs/groups/group/WaveGroup";
 
-export default function WaveGroups({ wave }: { readonly wave: Wave }) {
+export default function WaveGroups({ wave }: { readonly wave: ApiWave }) {
   return (
     <div className="tw-w-full">
-      <div >
+      <div>
         <div className="tw-bg-iron-950 tw-relative tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-rounded-xl">
           <div className="tw-space-y-4 tw-divide-y tw-divide-solid tw-divide-x-0 tw-divide-iron-800">
             <div className="tw-px-5 tw-pt-4 tw-flex tw-justify-between tw-items-start tw-gap-x-6">
@@ -19,18 +20,30 @@ export default function WaveGroups({ wave }: { readonly wave: Wave }) {
                 isEligible={true}
                 wave={wave}
               />
+              {wave.wave.type !== ApiWaveType.Chat && (
+                <>
+                  <WaveGroup
+                    scope={wave.participation.scope}
+                    type={WaveGroupType.DROP}
+                    isEligible={wave.participation.authenticated_user_eligible}
+                    wave={wave}
+                  />
+                  <WaveGroup
+                    scope={wave.voting.scope}
+                    type={WaveGroupType.VOTE}
+                    isEligible={wave.voting.authenticated_user_eligible}
+                    wave={wave}
+                  />
+                </>
+              )}
+
               <WaveGroup
-                scope={wave.participation.scope}
-                type={WaveGroupType.DROP}
-                isEligible={wave.participation.authenticated_user_eligible}
+                scope={wave.chat.scope}
+                type={WaveGroupType.CHAT}
+                isEligible={wave.chat.authenticated_user_eligible}
                 wave={wave}
               />
-              <WaveGroup
-                scope={wave.voting.scope}
-                type={WaveGroupType.VOTE}
-                isEligible={wave.voting.authenticated_user_eligible}
-                wave={wave}
-              />
+
               <WaveGroup
                 scope={wave.wave.admin_group}
                 type={WaveGroupType.ADMIN}

@@ -1,5 +1,5 @@
-import { UpdateWaveRequest } from "../../../../../../../generated/models/UpdateWaveRequest";
-import { Wave } from "../../../../../../../generated/models/Wave";
+import { ApiUpdateWaveRequest } from "../../../../../../../generated/models/ApiUpdateWaveRequest";
+import { ApiWave } from "../../../../../../../generated/models/ApiWave";
 import { assertUnreachable } from "../../../../../../../helpers/AllowlistToolHelpers";
 import { convertWaveToUpdateWave } from "../../../../../../../helpers/waves/waves.helpers";
 import CommonAnimationOpacity from "../../../../../../utils/animation/CommonAnimationOpacity";
@@ -14,13 +14,13 @@ export default function WaveGroupRemove({
   setIsEditOpen,
   onEdit,
 }: {
-  readonly wave: Wave;
+  readonly wave: ApiWave;
   readonly type: WaveGroupType;
   readonly isEditOpen: boolean;
   readonly setIsEditOpen: (isOpen: boolean) => void;
-  readonly onEdit: (body: UpdateWaveRequest) => Promise<void>;
+  readonly onEdit: (body: ApiUpdateWaveRequest) => Promise<void>;
 }) {
-  const getBody = (): UpdateWaveRequest => {
+  const getBody = (): ApiUpdateWaveRequest => {
     const originalBody = convertWaveToUpdateWave(wave);
     switch (type) {
       case WaveGroupType.VIEW:
@@ -56,6 +56,17 @@ export default function WaveGroupRemove({
             },
           },
         };
+      case WaveGroupType.CHAT:
+        return {
+          ...originalBody,
+          chat: {
+            ...originalBody.chat,
+            scope: {
+              ...originalBody.chat.scope,
+              group_id: null,
+            },
+          },
+        };
       case WaveGroupType.ADMIN:
         return {
           ...originalBody,
@@ -85,8 +96,7 @@ export default function WaveGroupRemove({
           key="modal"
           elementClasses="tw-absolute tw-z-50"
           elementRole="dialog"
-          onClicked={(e) => e.stopPropagation()}
-        >
+          onClicked={(e) => e.stopPropagation()}>
           <WaveGroupRemoveModal
             closeModal={() => setIsEditOpen(false)}
             removeGroup={onRemove}

@@ -32,11 +32,7 @@ export default function NotificationItems({
     <div className="tw-flex tw-flex-col lg:tw-w-[672px]">
       {items.map((item, i) => (
         <div key={item.id}>
-          <NotificationItem
-            key={item.id}
-            notification={item}
-            availableCredit={availableCredit}
-          />
+          <NotificationItem key={item.id} notification={item} availableCredit={availableCredit}/>
           {!!intersectionTargetIndex && intersectionTargetIndex === i && (
             <CommonIntersectionElement onIntersection={onBottomIntersection} />
           )}

@@ -1,13 +1,4 @@
-import React, { createContext, useEffect, useMemo } from "react";
-import { NextRouter, useRouter } from "next/router";
-import useCapacitor from "../../hooks/useCapacitor";
-import { useAuth } from "../auth/Auth";
-import { IProfileAndConsolidations } from "../../entities/IProfile";
-import { useAccount } from "wagmi";
-import {
-  commonApiPost,
-  commonApiPostWithoutBodyAndResponse,
-} from "../../services/api/common-api";
+import React, { createContext, useMemo } from "react";
 
 type NotificationsContextType = {};
 

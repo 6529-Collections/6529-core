@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wave } from "../../../generated/models/Wave";
+import { ApiWave } from "../../../generated/models/ApiWave";
 import {
   getRandomColorWithSeed,
   numberWithCommas,
@@ -11,7 +11,7 @@ import { getScaledImageUri, ImageScale } from "../../../helpers/image.helpers";
 import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
 
-export default function WaveItem({ wave }: { readonly wave: Wave }) {
+export default function WaveItem({ wave }: { readonly wave: ApiWave }) {
   const banner1 =
     wave.author.banner1_color ?? getRandomColorWithSeed(wave.author.handle);
   const banner2 =
@@ -36,7 +36,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
           className="tw-relative tw-w-full tw-h-8 tw-rounded-t-xl"
           style={{
             background: `linear-gradient(45deg, ${banner1} 0%, ${banner2} 100%)`,
-          }}></div>
+          }}
+        ></div>
         <div className="tw-flex tw-gap-x-2 tw-px-4">
           {wave.picture && (
             <div className="-tw-mt-5 tw-relative tw-flex-shrink-0">
@@ -52,7 +53,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
           <div className="tw-mt-2">
             <Link
               href={`/waves/${wave.id}`}
-              className="tw-no-underline tw-text-lg sm:tw-text-xl tw-font-semibold tw-text-white hover:tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out">
+              className="tw-no-underline tw-text-lg sm:tw-text-xl tw-font-semibold tw-text-white hover:tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out"
+            >
               {wave.name}
             </Link>
           </div>
@@ -61,7 +63,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
           <div>
             <Link
               href={`${wave.author.handle}`}
-              className="tw-group tw-no-underline tw-inline-flex tw-items-center tw-gap-x-2">
+              className="tw-group tw-no-underline tw-inline-flex tw-items-center tw-gap-x-2"
+            >
               <div className="tw-h-6 tw-w-6">
                 {wave.author.pfp ? (
                   <img
@@ -80,7 +83,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
                 {wave.author.handle}
               </span>
               <div
-                className={`${getColorClasses()} tw-border-none tw-inline-flex tw-items-center tw-rounded-xl tw-bg-transparent tw-px-2 tw-py-1 tw-font-semibold tw-ring-2 tw-ring-inset tw-text-[0.625rem] tw-leading-3`}>
+                className={`${getColorClasses()} tw-border-none tw-inline-flex tw-items-center tw-rounded-xl tw-bg-transparent tw-px-2 tw-py-1 tw-font-semibold tw-ring-2 tw-ring-inset tw-text-[0.625rem] tw-leading-3`}
+              >
                 Level {wave.author.level}
               </div>
             </Link>
@@ -94,7 +98,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
                 aria-hidden="true"
                 viewBox="0 0 24 24"
                 strokeWidth="1.5"
-                stroke="currentColor">
+                stroke="currentColor"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -112,7 +117,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
                   aria-hidden="true"
                   viewBox="0 0 24 24"
                   strokeWidth="1.5"
-                  stroke="currentColor">
+                  stroke="currentColor"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -133,7 +139,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
               <Link
                 title="View Wave"
                 href={`/waves/${wave.id}`}
-                className="tw-no-underline tw-border tw-border-solid tw-border-iron-800 tw-ring-1 tw-ring-iron-700 hover:tw-ring-iron-650 tw-rounded-lg tw-bg-iron-800 tw-px-2.5 tw-py-2 tw-text-sm tw-font-semibold tw-text-iron-300 tw-shadow-sm hover:tw-bg-iron-700 hover:tw-border-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-iron-700 tw-transition tw-duration-300 tw-ease-out">
+                className="tw-no-underline tw-border tw-border-solid tw-border-iron-800 tw-ring-1 tw-ring-iron-700 hover:tw-ring-iron-650 tw-rounded-lg tw-bg-iron-800 tw-px-2.5 tw-py-2 tw-text-sm tw-font-semibold tw-text-iron-300 tw-shadow-sm hover:tw-bg-iron-700 hover:tw-border-iron-700 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-iron-700 tw-transition tw-duration-300 tw-ease-out"
+              >
                 <svg
                   className="tw-size-5 tw-flex-shrink-0"
                   xmlns="http://www.w3.org/2000/svg"
@@ -141,7 +148,8 @@ export default function WaveItem({ wave }: { readonly wave: Wave }) {
                   aria-hidden="true"
                   viewBox="0 0 24 24"
                   strokeWidth="1.5"
-                  stroke="currentColor">
+                  stroke="currentColor"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"

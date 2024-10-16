@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Wave } from "../../../generated/models/Wave";
+import { ApiWave } from "../../../generated/models/ApiWave";
 import { getScaledImageUri, ImageScale } from "../../../helpers/image.helpers";
 import { useContext } from "react";
 import { AuthContext } from "../../auth/Auth";
@@ -14,7 +14,7 @@ export default function WavesList({
   waves,
   type,
 }: {
-  readonly waves: Wave[];
+  readonly waves: ApiWave[];
   readonly type: WavesListType;
 }) {
   const { connectedProfile } = useContext(AuthContext);
@@ -33,7 +33,8 @@ export default function WavesList({
         viewBox="0 0 48 48"
         fill="none"
         aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg">
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <path
           d="M33.8182 12.5455C33.8182 7.28209 29.5361 3 24.2727 3C19.0094 3 14.7273 7.28209 14.7273 12.5455C14.7273 17.8088 19.0094 22.0909 24.2727 22.0909C29.5361 22.0909 33.8182 17.8088 33.8182 12.5455ZM18.5455 12.5455C18.5455 9.38782 21.1151 6.81818 24.2727 6.81818C27.4304 6.81818 30 9.38782 30 12.5455C30 15.7031 27.4304 18.2727 24.2727 18.2727C21.1151 18.2727 18.5455 15.7031 18.5455 12.5455Z"
           fill="currentColor"
@@ -52,7 +53,8 @@ export default function WavesList({
         viewBox="0 0 48 48"
         fill="none"
         aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg">
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <g clipPath="url(#clip0_9330_1241)">
           <path
             d="M36 2V22M26 12H46"
@@ -90,7 +92,8 @@ export default function WavesList({
         viewBox="0 0 48 48"
         fill="none"
         aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg">
+        xmlns="http://www.w3.org/2000/svg"
+      >
         <path
           d="M46.5 40.5C46.5 41.328 45.828 42 45 42C43.083 42 41.835 42.624 40.392 43.347C38.844 44.1225 37.0905 45 34.5 45C31.896 45 30.135 44.1195 28.581 43.3425C27.141 42.6225 25.8975 42 24 42C22.1025 42 20.859 42.6225 19.419 43.3425C17.865 44.1195 16.104 45 13.5 45C10.9095 45 9.156 44.1225 7.608 43.347C6.165 42.624 4.917 42 3 42C2.172 42 1.5 41.328 1.5 40.5C1.5 39.672 2.172 39 3 39C5.6265 39 7.3935 39.885 8.952 40.665C10.383 41.3805 11.619 42 13.5 42C15.396 42 16.638 41.3775 18.078 40.659C19.632 39.8805 21.3945 39 24 39C26.6055 39 28.368 39.8805 29.922 40.659C31.362 41.3775 32.604 42 34.5 42C36.381 42 37.617 41.3805 39.048 40.665C40.6065 39.885 42.3735 39 45 39C45.828 39 46.5 39.672 46.5 40.5Z"
           fill="currentColor"
@@ -136,7 +139,8 @@ export default function WavesList({
               <Link
                 key={wave.id}
                 href={`/waves/${wave.id}`}
-                className="tw-no-underline tw-flex tw-items-center tw-text-white tw-font-medium tw-text-sm hover:tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out">
+                className="tw-no-underline tw-flex tw-items-center tw-text-white tw-font-medium tw-text-sm hover:tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out"
+              >
                 {wave.picture && (
                   <img
                     src={getScaledImageUri(
@@ -155,7 +159,8 @@ export default function WavesList({
             <div className="tw-mt-2 tw-text-right -tw-mb-2">
               <Link
                 href={getShowMoreLink()}
-                className="tw-group -tw-mr-1 tw-no-underline tw-inline-flex tw-bg-transparent tw-border-none tw-text-primary-400 hover:tw-text-primary-300 tw-text-xs tw-font-medium tw-cursor-pointer tw-transition tw-duration-300 tw-ease-out tw-items-center group">
+                className="tw-group -tw-mr-1 tw-no-underline tw-inline-flex tw-bg-transparent tw-border-none tw-text-primary-400 hover:tw-text-primary-300 tw-text-xs tw-font-medium tw-cursor-pointer tw-transition tw-duration-300 tw-ease-out tw-items-center group"
+              >
                 <span className="group-hover:tw-translate-x-[-4px] tw-transition-transform tw-duration-300 tw-ease-out">
                   Show more
                 </span>
@@ -165,7 +170,8 @@ export default function WavesList({
                   viewBox="0 0 24 24"
                   strokeWidth="1.5"
                   stroke="currentColor"
-                  className="tw-w-4 tw-h-4 tw-ml-1 tw-opacity-0 group-hover:tw-opacity-100 tw-transition-opacity tw-duration-300 tw-ease-out">
+                  className="tw-w-4 tw-h-4 tw-ml-1 tw-opacity-0 group-hover:tw-opacity-100 tw-transition-opacity tw-duration-300 tw-ease-out"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
