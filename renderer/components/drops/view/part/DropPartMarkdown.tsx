@@ -22,6 +22,7 @@ import {
   SeizeLinkInfo,
 } from "../../../../helpers/SeizeLinkParser";
 import { SEIZE_URL } from "../../../../../constants";
+import { handleAnchorClick } from "../../../../hooks/useAnchorInterceptor";
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
@@ -214,9 +215,7 @@ function DropPartMarkdown({
       <a
         onClick={(e) => {
           e.stopPropagation();
-          if (props.onClick) {
-            props.onClick(e);
-          }
+          handleAnchorClick(e);
         }}
         {...props}
       />

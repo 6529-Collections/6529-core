@@ -14,8 +14,8 @@ import { commonApiFetch } from "../../services/api/common-api";
 import { MemeSeason } from "../../entities/ISeason";
 import LeaderboardCardsCollectedComponent from "./LeaderboardCardsCollected";
 import LeaderboardInteractionsComponent from "./LeaderboardInteractions";
-import { SEIZE_API_URL } from "../../../constants";
 import { ApiBlocksPage } from "../../generated/models/ApiBlocksPage";
+import { SEIZE_API_URL } from "../../../constants";
 
 export enum Content {
   ALL = "All",

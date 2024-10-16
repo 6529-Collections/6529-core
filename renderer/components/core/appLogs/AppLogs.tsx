@@ -75,13 +75,15 @@ export default function Logs() {
                 onClick={() => window.api.showCrashReport(report.fileName)}>
                 view
               </Button>
+              {/* 
+              TODO: extract crash reports
               <Button
                 variant="primary"
                 size="sm"
                 className="btn-link"
                 onClick={() => window.api.extractCrashReport(report.fileName)}>
                 extract
-              </Button>
+              </Button> */}
             </Col>
           </Row>
         ))

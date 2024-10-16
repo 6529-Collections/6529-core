@@ -56,6 +56,17 @@ export default function WaveGroupRemove({
             },
           },
         };
+      case WaveGroupType.CHAT:
+        return {
+          ...originalBody,
+          chat: {
+            ...originalBody.chat,
+            scope: {
+              ...originalBody.chat.scope,
+              group_id: null,
+            },
+          },
+        };
       case WaveGroupType.ADMIN:
         return {
           ...originalBody,
@@ -85,8 +96,7 @@ export default function WaveGroupRemove({
           key="modal"
           elementClasses="tw-absolute tw-z-50"
           elementRole="dialog"
-          onClicked={(e) => e.stopPropagation()}
-        >
+          onClicked={(e) => e.stopPropagation()}>
           <WaveGroupRemoveModal
             closeModal={() => setIsEditOpen(false)}
             removeGroup={onRemove}

@@ -568,9 +568,13 @@ ipcMain.on(
 );
 
 ipcMain.on("notifications:set-badge", (_event, count: number) => {
-  Logger.info(`Setting badge: ${count}`);
-  const success = app.setBadgeCount(count);
-  Logger.info(`Badge set: ${success.toString()}`);
+  if (count !== app.getBadgeCount()) {
+    Logger.info(`Setting dock badge count: ${count}`);
+    const success = app.setBadgeCount(count);
+    Logger.info(
+      `Dock badge count set: ${success.toString()} [Current: ${app.getBadgeCount()}]`
+    );
+  }
 });
 
 ipcMain.on("check-updates", () => {

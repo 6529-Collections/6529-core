@@ -18,8 +18,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import DotLoader from "../dotLoader/DotLoader";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import { SEIZE_API_URL } from "../../../constants";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
+import { SEIZE_API_URL } from "../../../constants";
 
 const PAGE_SIZE = 40;
 
