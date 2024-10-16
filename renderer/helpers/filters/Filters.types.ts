@@ -1,5 +1,4 @@
-import { GroupFilterDirection } from "../../generated/models/GroupFilterDirection";
-
+import { ApiGroupFilterDirection } from "../../generated/models/ApiGroupFilterDirection";
 
 export interface FilterMinMax {
   readonly min: number | null;
@@ -7,7 +6,7 @@ export interface FilterMinMax {
 }
 
 export interface FilterMinMaxDirectionAndUser extends FilterMinMax {
-  readonly direction: GroupFilterDirection;
+  readonly direction: ApiGroupFilterDirection;
   readonly user: string | null;
 }
 
@@ -18,14 +17,3 @@ export interface RepFilter extends FilterMinMaxDirectionAndUser {
 export type TDHFilter = FilterMinMax;
 export type CICFilter = FilterMinMaxDirectionAndUser;
 export type LevelFilter = FilterMinMax;
-
-export interface ProfileMin {
-  readonly id: string;
-  readonly handle: string;
-  readonly pfp: string | null;
-  readonly cic: number;
-  readonly rep: number;
-  readonly tdh: number;
-  readonly level: number;
-}
-

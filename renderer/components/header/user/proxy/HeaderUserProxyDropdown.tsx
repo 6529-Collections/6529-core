@@ -2,7 +2,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { IProfileAndConsolidations } from "../../../../entities/IProfile";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../../auth/Auth";
-import { ProfileProxy } from "../../../../generated/models/ProfileProxy";
+import { ApiProfileProxy } from "../../../../generated/models/ApiProfileProxy";
 import HeaderUserProxyDropdownItem from "./HeaderUserProxyDropdownItem";
 import { useAccount } from "wagmi";
 import HeaderUserProxyDropdownChains from "./HeaderUserProxyDropdownChains";
@@ -27,7 +27,9 @@ export default function HeaderUserProxyDropdown({
   const { activeProfileProxy, setActiveProfileProxy, receivedProfileProxies } =
     useContext(AuthContext);
 
-  const onActivateProfileProxy = async (profileProxy: ProfileProxy | null) => {
+  const onActivateProfileProxy = async (
+    profileProxy: ApiProfileProxy | null
+  ) => {
     await setActiveProfileProxy(profileProxy);
     onClose();
   };

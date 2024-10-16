@@ -23,6 +23,7 @@ import { commonApiFetch } from "../../services/api/common-api";
 import { AuthContext } from "../auth/Auth";
 import { MemeLabSort, MemesSort } from "../../enums";
 import { SEIZE_API_URL } from "../../../constants";
+import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
 
 interface Meme {
   meme: number;
@@ -436,12 +437,13 @@ export default function TheMemesComponent(props: Readonly<Props>) {
           <Container className="pt-4">
             <>
               <Row>
-                <Col className="d-flex align-items-center justify-content-start">
-                  <h1>
-                    <span className="font-lightest">The</span> Memes
-                  </h1>
-                </Col>
-                <Col className="d-flex align-items-center justify-content-end">
+                <Col className="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                  <span className="d-flex align-items-center gap-3">
+                    <h1 className="no-wrap">
+                      <span className="font-lightest">The</span> Memes
+                    </h1>
+                    <LFGButton contract={MEMES_CONTRACT} />
+                  </span>
                   <SeasonsDropdown
                     seasons={seasons.map((s) => s.id)}
                     selectedSeason={selectedSeason}

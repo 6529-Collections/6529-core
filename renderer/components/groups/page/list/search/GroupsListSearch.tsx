@@ -34,6 +34,7 @@ export default function GroupsListSearch({
       <div className="tw-flex tw-flex-col tw-w-full sm:tw-flex-row sm:tw-items-center tw-gap-4 xl:tw-w-1/2 xl:tw-pr-3">
         {showIdentitySearch && (
           <IdentitySearch
+            size={IdentitySearchSize.SM}
             identity={identity}
             setIdentity={setIdentity}
             label="By Identity"
@@ -53,11 +54,13 @@ export default function GroupsListSearch({
             className={`tw-top-3 tw-pointer-events-none tw-absolute tw-left-3 tw-h-5 tw-w-5 tw-text-iron-300`}
             viewBox="0 0 20 20"
             fill="currentColor"
-            aria-hidden="true">
+            aria-hidden="true"
+          >
             <path
               fillRule="evenodd"
               d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z"
-              clipRule="evenodd"></path>
+              clipRule="evenodd"
+            ></path>
           </svg>
           {!!groupName?.length && (
             <svg
@@ -65,7 +68,8 @@ export default function GroupsListSearch({
               className="tw-top-3 tw-cursor-pointer tw-absolute tw-right-3 tw-h-5 tw-w-5 tw-text-iron-300"
               viewBox="0 0 24 24"
               fill="none"
-              xmlns="http://www.w3.org/2000/svg">
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
                 d="M17 7L7 17M7 7L17 17"
                 stroke="currentColor"

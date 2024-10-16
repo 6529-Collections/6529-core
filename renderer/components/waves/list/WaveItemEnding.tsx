@@ -1,9 +1,9 @@
-import { Wave } from "../../../generated/models/Wave";
+import { ApiWave } from "../../../generated/models/ApiWave";
 import { getTimeUntil } from "../../../helpers/Helpers";
 import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
 
-export default function WaveItemEnding({ wave }: { readonly wave: Wave }) {
+export default function WaveItemEnding({ wave }: { readonly wave: ApiWave }) {
   const ending = wave.wave.period?.max;
   const haveEnding = !!ending;
   const isPast = !!ending && ending < Date.now();
@@ -16,7 +16,8 @@ export default function WaveItemEnding({ wave }: { readonly wave: Wave }) {
         fill="none"
         viewBox="0 0 24 24"
         strokeWidth="1.5"
-        stroke="currentColor">
+        stroke="currentColor"
+      >
         <path
           strokeLinecap="round"
           strokeLinejoin="round"

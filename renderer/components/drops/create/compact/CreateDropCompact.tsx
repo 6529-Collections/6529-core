@@ -17,8 +17,8 @@ import { CreateDropType, CreateDropViewType } from "../CreateDrop";
 import { assertUnreachable } from "../../../../helpers/AllowlistToolHelpers";
 import CreateDropSelectedFilePreview from "../utils/file/CreateDropSelectedFilePreview";
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { WaveParticipationRequirement } from "../../../../generated/models/WaveParticipationRequirement";
-import { WaveRequiredMetadata } from "../../../../generated/models/WaveRequiredMetadata";
+import { ApiWaveParticipationRequirement } from "../../../../generated/models/ApiWaveParticipationRequirement";
+import { ApiWaveRequiredMetadata } from "../../../../generated/models/ApiWaveRequiredMetadata";
 import { ProfileMinWithoutSubs } from "../../../../helpers/ProfileTypes";
 
 export interface CreateDropCompactHandles {
@@ -39,8 +39,8 @@ interface CreateDropCompactProps {
   readonly drop: CreateDropConfig | null;
   readonly showSubmit: boolean;
   readonly showDropError?: boolean;
-  readonly missingMedia: WaveParticipationRequirement[];
-  readonly missingMetadata: WaveRequiredMetadata[];
+  readonly missingMedia: ApiWaveParticipationRequirement[];
+  readonly missingMetadata: ApiWaveRequiredMetadata[];
   readonly children: React.ReactNode;
   readonly onViewChange: (newV: CreateDropViewType) => void;
   readonly onMetadataRemove: (key: string) => void;
@@ -181,13 +181,15 @@ const CreateDropCompact = forwardRef<
                   onClick={() => onFileRemove(file)}
                   type="button"
                   aria-label="Remove file"
-                  className="-tw-mb-0.5 tw-h-8 tw-w-8 tw-flex tw-items-center tw-justify-center tw-bg-transparent tw-border-0 tw-rounded-full hover:tw-bg-iron-800">
+                  className="-tw-mb-0.5 tw-h-8 tw-w-8 tw-flex tw-items-center tw-justify-center tw-bg-transparent tw-border-0 tw-rounded-full hover:tw-bg-iron-800"
+                >
                   <svg
                     className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-red"
                     viewBox="0 0 24 24"
                     fill="none"
                     aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg">
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
                     <path
                       d="M18 6L6 18M6 6L18 18"
                       stroke="currentColor"

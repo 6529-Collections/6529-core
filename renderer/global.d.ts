@@ -4,6 +4,7 @@ import {
   ElectronSeedConnector,
   ElectronStore,
   ElectronUpdater,
+  ElectronNotifications,
 } from "../electron-src/preload";
 
 declare global {
@@ -12,5 +13,6 @@ declare global {
     updater: ElectronUpdater;
     store: ElectronStore;
     seedConnector: ElectronSeedConnector;
+    notifications: ElectronNotifications;
   }
 }

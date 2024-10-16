@@ -11,6 +11,8 @@ import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import DotLoader from "../dotLoader/DotLoader";
 import { SEIZE_API_URL } from "../../../constants";
+import { GRADIENT_CONTRACT } from "../../constants";
+import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
 
 enum Sort {
   ID = "id",
@@ -149,10 +151,11 @@ export default function GradientsComponent(props: Readonly<Props>) {
           <Container className="pt-4">
             <>
               <Row>
-                <Col>
+                <Col className="d-flex align-items-center gap-3">
                   <h1>
                     <span className="font-lightest">6529</span> Gradient
                   </h1>
+                  <LFGButton contract={GRADIENT_CONTRACT} />
                 </Col>
               </Row>
               <Row className="pt-2">

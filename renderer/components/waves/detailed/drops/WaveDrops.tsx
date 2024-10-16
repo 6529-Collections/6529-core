@@ -7,8 +7,8 @@ import {
   useState,
 } from "react";
 import { AuthContext, TitleType } from "../../../auth/Auth";
-import { Wave } from "../../../../generated/models/Wave";
-import { Drop } from "../../../../generated/models/Drop";
+import { ApiWave } from "../../../../generated/models/ApiWave";
+import { ApiDrop } from "../../../../generated/models/ApiDrop";
 import { ActiveDropState } from "../WaveDetailedContent";
 import DropsList from "../../../drops/view/DropsList";
 import { WaveDropsScrollBottomButton } from "./WaveDropsScrollBottomButton";
@@ -21,9 +21,21 @@ import CircleLoader, {
 import { useRouter } from "next/router";
 
 interface WaveDropsProps {
-  readonly wave: Wave;
-  readonly onReply: ({ drop, partId }: { drop: Drop; partId: number }) => void;
-  readonly onQuote: ({ drop, partId }: { drop: Drop; partId: number }) => void;
+  readonly wave: ApiWave;
+  readonly onReply: ({
+    drop,
+    partId,
+  }: {
+    drop: ApiDrop;
+    partId: number;
+  }) => void;
+  readonly onQuote: ({
+    drop,
+    partId,
+  }: {
+    drop: ApiDrop;
+    partId: number;
+  }) => void;
   readonly activeDrop: ActiveDropState | null;
   readonly initialDrop: number | null;
 }
@@ -165,7 +177,7 @@ export default function WaveDrops({
   }, [hasNextPage, isFetching, isFetchingNextPage, fetchNextPage]);
 
   const onQuoteClick = useCallback(
-    (drop: Drop) => {
+    (drop: ApiDrop) => {
       if (drop.wave.id !== wave.id) {
         router.push(`/waves/${drop.wave.id}?drop=${drop.serial_no}`);
       } else {
@@ -184,7 +196,8 @@ export default function WaveDrops({
         onScroll={handleScroll}
         newItemsCount={newItemsCount}
         isFetchingNextPage={isFetchingNextPage}
-        onTopIntersection={handleTopIntersection}>
+        onTopIntersection={handleTopIntersection}
+      >
         <div className="tw-divide-y-2 tw-divide-iron-700 tw-divide-solid tw-divide-x-0">
           <DropsList
             onReplyClick={setSerialNo}
@@ -198,6 +211,7 @@ export default function WaveDrops({
             serialNo={serialNo}
             targetDropRef={targetDropRef}
             onQuoteClick={onQuoteClick}
+            parentContainerRef={scrollContainerRef}
           />
         </div>
       </WaveDropsScrollContainer>

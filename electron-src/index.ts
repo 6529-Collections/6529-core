@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Menu } from "electron/main";
+import { app, BrowserWindow, Menu, Notification } from "electron/main";
 import path from "node:path";
 import {
   closeLogs,
@@ -58,9 +58,12 @@ crashReporter.start({
 let mainWindow: BrowserWindow | null = null;
 let logsWindow: BrowserWindow | null = null;
 let splash: BrowserWindow | null = null;
+let iconPath: string;
 let PORT: number;
 
 const gotTheLock = app.requestSingleInstanceLock();
+
+const shownNotifications = new Set<number>();
 
 async function resolvePort() {
   if (!PORT) {
@@ -143,8 +146,16 @@ if (!gotTheLock) {
       app.setAsDefaultProtocolClient(scheme);
     }
 
+    if (isWindows()) {
+      iconPath = path.join(__dirname, "assets", "icon.ico");
+    } else if (isMac()) {
+      iconPath = path.join(__dirname, "assets", "icon.icns");
+    } else {
+      iconPath = path.join(__dirname, "assets", "icon.png");
+    }
+
     if (isMac()) {
-      app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
+      app.dock.setIcon(iconPath);
     }
 
     await resolvePort();
@@ -159,7 +170,7 @@ if (!gotTheLock) {
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         if (isMac()) {
-          app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
+          app.dock.setIcon(iconPath);
         }
         createWindow();
       }
@@ -168,15 +179,6 @@ if (!gotTheLock) {
 }
 
 async function createWindow() {
-  let iconPath;
-  if (isWindows()) {
-    iconPath = path.join(__dirname, "assets", "icon.ico");
-  } else if (isMac()) {
-    iconPath = path.join(__dirname, "assets", "icon.icns");
-  } else {
-    iconPath = path.join(__dirname, "assets", "icon.png");
-  }
-
   splash = new BrowserWindow({
     width: 300,
     height: 300,
@@ -539,6 +541,36 @@ ipcMain.handle("store:set", (_event, key, value) => {
 
 ipcMain.handle("store:remove", (_event, key) => {
   removeValue(key);
+});
+
+ipcMain.on(
+  "notifications:show",
+  (_event, id: number, pfp: string, message: string) => {
+    Logger.info(`Showing notification: [${id}] ${message}, ${pfp}`);
+
+    if (shownNotifications.has(id)) {
+      Logger.info(`Notification [${id}] already shown`);
+      return;
+    }
+
+    shownNotifications.add(id);
+
+    const notification = new Notification({
+      title: "You have unread notifications!",
+      body: message,
+      icon: pfp,
+    });
+    notification.on("click", () => {
+      mainWindow?.webContents.send("navigate", "/my-stream/notifications");
+    });
+    notification.show();
+  }
+);
+
+ipcMain.on("notifications:set-badge", (_event, count: number) => {
+  Logger.info(`Setting badge: ${count}`);
+  const success = app.setBadgeCount(count);
+  Logger.info(`Badge set: ${success.toString()}`);
 });
 
 ipcMain.on("check-updates", () => {
