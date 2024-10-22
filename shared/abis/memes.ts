@@ -1,5 +1,5 @@
-export const MEMES_START_BLOCK = 14933631;
 export const MEMES_CONTRACT = "0x33fd426905f149f8376e227d0c9d3340aad17af1";
+export const MEMELAB_CONTRACT = "0x4db52a61dc491e15a2f78f5ac001c14ffe3568cb";
 
 export const MEMES_ABI = [
   {

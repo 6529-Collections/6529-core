@@ -1,5 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
-import { SeedWalletRequest } from "../shared/types";
+import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -25,8 +25,11 @@ export const api = {
   openExternalBrave: (url: string): void => {
     ipcRenderer.send("open-external-brave", url);
   },
-  showCrashReport: (fileName: string) => {
-    ipcRenderer.send("show-crash-report", fileName);
+  showFile: (fileName: string) => {
+    ipcRenderer.send("show-file", fileName);
+  },
+  openLogs: (name: string, logFile: string) => {
+    ipcRenderer.send("open-logs", name, logFile);
   },
   extractCrashReport: (fileName: string) => {
     ipcRenderer.send("extract-crash-report", fileName);
@@ -50,6 +53,7 @@ export const api = {
   offSeedWalletsChange: (callback: any) =>
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
+  getScheduledWorkers: () => ipcRenderer.invoke("get-scheduled-workers"),
   getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);
@@ -62,6 +66,72 @@ export const api = {
   },
   offNavigate: (callback: any) =>
     ipcRenderer.removeListener("navigate", callback),
+  onWorkerUpdate: (
+    callback: (
+      namespace: string,
+      status: ScheduledWorkerStatus,
+      message: string,
+      action?: string,
+      progress?: number,
+      target?: number,
+      statusPercentage?: number
+    ) => void
+  ) =>
+    ipcRenderer.on(
+      "worker-update",
+      (
+        _event,
+        namespace,
+        status,
+        message,
+        action,
+        progress,
+        target,
+        statusPercentage
+      ) =>
+        callback(
+          namespace,
+          status,
+          message,
+          action,
+          progress,
+          target,
+          statusPercentage
+        )
+    ),
+  offWorkerUpdate: (
+    callback: (
+      namespace: string,
+      status: ScheduledWorkerStatus,
+      message: string,
+      action?: string,
+      progress?: number,
+      target?: number,
+      statusPercentage?: number
+    ) => void
+  ) =>
+    ipcRenderer.removeListener(
+      "worker-update",
+      (
+        _event,
+        namespace,
+        status,
+        message,
+        action,
+        progress,
+        target,
+        statusPercentage
+      ) =>
+        callback(
+          namespace,
+          status,
+          message,
+          action,
+          progress,
+          target,
+          statusPercentage
+        )
+    ),
 };
 
 contextBridge.exposeInMainWorld("api", api);

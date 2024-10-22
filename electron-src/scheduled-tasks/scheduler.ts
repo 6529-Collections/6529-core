@@ -1,82 +1,91 @@
-import { Worker } from "worker_threads";
-import cron from "node-cron";
-import path from "path";
 import Logger from "electron-log";
-import { getBaseDbParams } from "../db/db";
-import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
+import { ScheduledWorker } from "./scheduled-worker";
+import { ScheduledWorkerStatus } from "../../shared/types";
 
-export interface WorkerData {
-  dbParams: BetterSqlite3ConnectionOptions;
+const DEFAULT_BLOCK_RANGE = 250;
+const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
+
+interface ScheduledWorkerConfig {
+  name: string;
+  interval_minutes: number;
+  enabled: boolean;
+  filePath?: string;
+  blockRange?: number;
+  maxConcurrentRequests?: number;
 }
 
-const TRANSACTIONS_WORKER = "transactions-worker";
+const WORKERS: ScheduledWorkerConfig[] = [
+  {
+    name: "transactions-worker",
+    interval_minutes: 1,
+    enabled: true,
+    blockRange: 2000,
+    maxConcurrentRequests: 20,
+  },
+  {
+    name: "nftdelegation-worker",
+    interval_minutes: 1,
+    enabled: true,
+    blockRange: 2000,
+    maxConcurrentRequests: 20,
+  },
+  {
+    name: "nft-discovery-worker",
+    interval_minutes: 2,
+    enabled: true,
+    filePath: "workers/nft-worker/nft-discovery",
+  },
+  {
+    name: "nft-refresh-worker",
+    interval_minutes: 60,
+    enabled: true,
+    filePath: "workers/nft-worker/nft-refresh",
+  },
+];
 
-let transactionsScheduler: cron.ScheduledTask | null = null;
-
-const runningWorkers = new Set<string>();
-
-export function scheduleMinutes(x: number, taskFunction: () => void) {
-  if (x <= 0 || x > 59) {
-    throw new Error("Minutes must be between 1 and 59");
+export function startSchedulers(
+  rpcUrl: string | null,
+  logDirectory: string,
+  postWorkerUpdate: (
+    namespace: string,
+    status: ScheduledWorkerStatus,
+    message: string,
+    action?: string,
+    progress?: number,
+    target?: number,
+    statusPercentage?: number
+  ) => void
+) {
+  if (!logDirectory) {
+    throw new Error("Log directory is required");
   }
 
-  const cronExpression = `*/${x} * * * *`;
-  return cron.schedule(cronExpression, taskFunction);
-}
-
-export function startSchedulers() {
-  transactionsScheduler = scheduleMinutes(1, () => {
-    if (!runningWorkers.has(TRANSACTIONS_WORKER)) {
-      startWorker(TRANSACTIONS_WORKER);
-    } else {
-      Logger.log(`[${TRANSACTIONS_WORKER}] Worker is already running.`);
+  const scheduledWorkers: ScheduledWorker[] = [];
+  for (const worker of WORKERS) {
+    if (scheduledWorkers.some((sw) => sw.getNamespace() === worker.name)) {
+      Logger.log(`${worker.name} already scheduled`);
+      continue;
     }
-  });
-  startWorker(TRANSACTIONS_WORKER);
-  Logger.log("All Scheduled Tasks started.");
+    const scheduledWorker = new ScheduledWorker(
+      rpcUrl,
+      worker.name,
+      worker.interval_minutes,
+      worker.enabled,
+      worker.blockRange ?? DEFAULT_BLOCK_RANGE,
+      worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
+      logDirectory,
+      postWorkerUpdate,
+      worker.filePath
+    );
+    scheduledWorkers.push(scheduledWorker);
+  }
+  Logger.log("All Tasks scheduled.");
+  return scheduledWorkers;
 }
 
-export function stopSchedulers() {
-  if (transactionsScheduler) {
-    transactionsScheduler.stop();
+export function stopSchedulers(scheduledWorkers: ScheduledWorker[]) {
+  for (const scheduledWorker of scheduledWorkers) {
+    scheduledWorker.stop();
   }
   Logger.log("All Scheduled Tasks stopped.");
 }
-
-const startWorker = (name: string) => {
-  Logger.log(`Starting scheduled task [${name}]`);
-
-  // Path to the compiled worker script
-  const workerPath = path.join(__dirname, `workers/${name}/index.js`);
-
-  // Create a new worker thread for each scheduled execution
-  const worker = new Worker(workerPath, {
-    workerData: {
-      dbParams: getBaseDbParams(),
-    } as WorkerData,
-  });
-
-  // Listen for messages from the worker
-  worker.on("message", (message) => {
-    Logger.log(`[${name}]`, "Worker message:", message);
-  });
-
-  // Handle worker errors
-  worker.on("error", (error) => {
-    Logger.error(`[${name}]`, "Worker error:", error);
-  });
-
-  // Handle worker exit events
-  worker.on("exit", (code) => {
-    if (code !== 0) {
-      Logger.error(`[${name}]`, `Worker stopped with exit code ${code}`);
-    }
-  });
-
-  worker.on("exit", (code) => {
-    runningWorkers.delete(name);
-    Logger.error(`[${name}]`, `Worker exited with code ${code}`);
-  });
-
-  runningWorkers.add(name);
-};

@@ -10,9 +10,12 @@ const Header = dynamic(() => import("../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const AppInfo = dynamic(() => import("../../components/core/appInfo/AppInfo"), {
-  ssr: false,
-});
+const AppInfo = dynamic(
+  () => import("../../components/core/app-info/AppInfo"),
+  {
+    ssr: false,
+  }
+);
 
 export default function AppInfoPage() {
   const breadcrumbs = [

@@ -2,20 +2,30 @@ import { app, BrowserWindow, Menu, Notification } from "electron/main";
 import path from "node:path";
 import {
   closeLogs,
-  showCrashReport,
   extractCrashReport,
   getCrashReportsList,
   initLogs,
   openLogs,
-} from "./utils/initLogs";
-import { getInfo, getScheme } from "./utils/info";
+} from "./utils/app-logs";
 import {
+  getHomeDir,
+  getInfo,
+  getLogDirectory,
+  getMainLogsPath,
+  getScheme,
+} from "./utils/info";
+import {
+  addRpcProvider,
   addSeedWallet,
+  deactivateRpcProvider,
+  deleteRpcProvider,
   deleteSeedWallet,
+  getRpcProviders,
   getSeedWallet,
   getSeedWallets,
   importSeedWallet,
   initDb,
+  setRpcProviderActive,
 } from "./db/db";
 import { ipcMain, protocol, shell, screen, crashReporter } from "electron";
 import {
@@ -24,6 +34,10 @@ import {
   DELETE_SEED_WALLET,
   GET_SEED_WALLET,
   IMPORT_SEED_WALLET,
+  ADD_RPC_PROVIDER,
+  SET_RPC_PROVIDER_ACTIVE,
+  DEACTIVATE_RPC_PROVIDER,
+  DELETE_RPC_PROVIDER,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -41,8 +55,11 @@ import {
 } from "./update";
 import contextMenu from "electron-context-menu";
 import { isDev } from "./utils/env";
-import { SeedWalletRequest } from "../shared/types";
+import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
 import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
+import fs from "fs";
+import { ScheduledWorker } from "./scheduled-tasks/scheduled-worker";
+import { RPCProvider } from "./db/entities/IRpcProvider";
 
 contextMenu({
   showInspectElement: false,
@@ -57,7 +74,9 @@ crashReporter.start({
 });
 
 let mainWindow: BrowserWindow | null = null;
-let logsWindow: BrowserWindow | null = null;
+let scheduledWorkers: ScheduledWorker[] = [];
+let rpcProviders: RPCProvider[] = [];
+const logWindowsMap = new Map<string, BrowserWindow>();
 let splash: BrowserWindow | null = null;
 let iconPath: string;
 let PORT: number;
@@ -131,7 +150,6 @@ if (!gotTheLock) {
 
   app.on("before-quit", () => {
     Logger.info("Before quitting app");
-    stopSchedulers();
   });
 
   const menu = Menu.buildFromTemplate(menuTemplate);
@@ -168,10 +186,12 @@ if (!gotTheLock) {
 
     await prepareNext(PORT);
     await initLogs();
-    initDb();
+    await initDb();
     initStore();
 
     await createWindow();
+
+    await createScheduledTasks();
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
@@ -185,58 +205,57 @@ if (!gotTheLock) {
 }
 
 async function createWindow() {
-  // let iconPath;
-  // if (isWindows()) {
-  //   iconPath = path.join(__dirname, "assets", "icon.ico");
-  // } else if (isMac()) {
-  //   iconPath = path.join(__dirname, "assets", "icon.icns");
-  // } else {
-  //   iconPath = path.join(__dirname, "assets", "icon.png");
-  // }
+  let iconPath;
+  if (isWindows()) {
+    iconPath = path.join(__dirname, "assets", "icon.ico");
+  } else if (isMac()) {
+    iconPath = path.join(__dirname, "assets", "icon.icns");
+  } else {
+    iconPath = path.join(__dirname, "assets", "icon.png");
+  }
 
-  // splash = new BrowserWindow({
-  //   width: 300,
-  //   height: 300,
-  //   frame: false,
-  //   backgroundColor: "#222",
-  //   transparent: true,
-  // });
-
-  // splash.loadFile(path.join(__dirname, "assets/splash.html"));
-
-  // mainWindow = new BrowserWindow({
-  //   minWidth: 500,
-  //   minHeight: 500,
-  //   icon: iconPath,
-  //   backgroundColor: "#222",
-  //   titleBarStyle: "hidden",
-  //   titleBarOverlay: {
-  //     color: "#000",
-  //     symbolColor: "#fff",
-  //     height: 30,
-  //   },
-  //   webPreferences: {
-  //     nodeIntegration: false,
-  //     contextIsolation: true,
-  //     preload: path.join(__dirname, "preload.js"),
-  //     spellcheck: true,
-  //   },
-  //   show: false,
-  // });
-
-  // const url = `http://localhost:${PORT}`;
-
-  // mainWindow.loadURL(url);
-
-  // TODO: Remove this, replace with commented out code above
-  startSchedulers();
-  mainWindow = new BrowserWindow({
+  splash = new BrowserWindow({
     width: 300,
     height: 300,
     frame: false,
     backgroundColor: "#222",
     transparent: true,
   });
+
+  splash.loadFile(path.join(__dirname, "assets/splash.html"));
+
+  mainWindow = new BrowserWindow({
+    minWidth: 500,
+    minHeight: 500,
+    icon: iconPath,
+    backgroundColor: "#222",
+    titleBarStyle: "hidden",
+    titleBarOverlay: {
+      color: "#000",
+      symbolColor: "#fff",
+      height: 30,
+    },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "preload.js"),
+      spellcheck: true,
+    },
+    show: false,
+  });
+
+  const url = `http://localhost:${PORT}/core/workers-hub`;
+
+  mainWindow.loadURL(url);
+
+  // TODO: Remove this, replace with commented out code above
+  // mainWindow = new BrowserWindow({
+  //   width: 300,
+  //   height: 300,
+  //   frame: false,
+  //   backgroundColor: "#222",
+  //   transparent: true,
+  // });
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
@@ -246,7 +265,6 @@ async function createWindow() {
     splash?.destroy();
     mainWindow?.maximize();
     mainWindow?.show();
-    startSchedulers();
   });
 
   mainWindow.on("close", (e) => {
@@ -281,6 +299,17 @@ async function createWindow() {
         `Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`
       );
     }
+  );
+}
+
+async function createScheduledTasks() {
+  stopSchedulers(scheduledWorkers);
+  rpcProviders = await getRpcProviders();
+  const rpcProvider = rpcProviders.find((provider) => provider.active);
+  scheduledWorkers = startSchedulers(
+    rpcProvider?.url ?? null,
+    getLogDirectory(),
+    postWorkerUpdate
   );
 }
 
@@ -469,7 +498,8 @@ ipcMain.on("open-external-brave", (event, url) => {
   openInBrave(url);
 });
 
-ipcMain.on("open-logs", () => {
+ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
+  let logsWindow = logWindowsMap.get(logFile);
   if (!logsWindow || logsWindow.isDestroyed()) {
     const { width, height } = screen.getPrimaryDisplay().workAreaSize;
     logsWindow = new BrowserWindow({
@@ -477,7 +507,7 @@ ipcMain.on("open-logs", () => {
       height: height * 0.7,
       x: width * 0.15,
       y: height * 0.15,
-      title: "6529 CORE Logs",
+      title: name,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true,
@@ -486,18 +516,23 @@ ipcMain.on("open-logs", () => {
       },
     });
     logsWindow.on("closed", () => {
-      closeLogs();
-      logsWindow = null;
+      closeLogs(logFile);
+      logWindowsMap.delete(logFile);
     });
-    openLogs(logsWindow);
+    openLogs(logsWindow, name, logFile);
   } else {
     logsWindow.focus();
   }
 });
 
-ipcMain.on("show-crash-report", (event, fileName) => {
+ipcMain.on("show-file", (event, filePath: string) => {
   event.preventDefault();
-  showCrashReport(fileName);
+  Logger.info("Showing file:", filePath);
+  if (fs.existsSync(filePath)) {
+    shell.showItemInFolder(filePath);
+  } else {
+    Logger.error(`Showing file failed: ${filePath}`);
+  }
 });
 
 ipcMain.on("extract-crash-report", (event, fileName) => {
@@ -515,6 +550,7 @@ ipcMain.on("quit", () => {
   mainWindow?.close();
   mainWindow?.destroy();
   mainWindow = null;
+  stopSchedulers(scheduledWorkers);
   Logger.info("Quitting app\n---------- End of Session ----------\n\n");
   app.quit();
 });
@@ -525,6 +561,34 @@ function updateNavigationState() {
     canGoForward: mainWindow?.webContents.canGoForward(),
   };
   mainWindow?.webContents.send("nav-state-change", navState);
+}
+
+function postWorkerUpdate(
+  namespace: string,
+  status: ScheduledWorkerStatus,
+  message: string,
+  action?: string,
+  progress?: number,
+  target?: number,
+  statusPercentage?: number
+) {
+  Logger.info(
+    `Worker update: ${namespace} [${message}] ${action ? `[${action}]` : ""} ${
+      progress ? `[${progress}/${target}]` : ""
+    } ${statusPercentage ? `(${statusPercentage.toFixed(2)}%)` : ""}`
+  );
+  if (!mainWindow?.isDestroyed()) {
+    mainWindow?.webContents?.send(
+      "worker-update",
+      namespace,
+      status,
+      message,
+      action,
+      progress,
+      target,
+      statusPercentage
+    );
+  }
 }
 
 ipcMain.on("nav-back", () => {
@@ -550,6 +614,29 @@ ipcMain.handle("get-info", () => {
   return {
     ...getInfo(),
     port: PORT,
+  };
+});
+
+ipcMain.handle("get-scheduled-workers", () => {
+  const mainTask = {
+    namespace: "main",
+    logFile: getMainLogsPath(),
+    interval: 0,
+  };
+  const tasks: any[] = [];
+  scheduledWorkers.forEach((worker) => {
+    tasks.push({
+      namespace: worker.getNamespace(),
+      logFile: worker.getLogFilePath(),
+      interval: worker.getInterval(),
+      status: worker.getStatus(),
+    });
+  });
+  return {
+    homeDir: getHomeDir(),
+    mainTask,
+    rpcProviders,
+    tasks,
   };
 });
 
@@ -643,4 +730,63 @@ ipcMain.on("seed-connector-reject", (_event, request: SeedWalletRequest) => {
 ipcMain.on("seed-connector-disconnect", () => {
   Logger.info(`Seed connector disconnect`);
   mainWindow?.webContents.send("seed-connector-disconnect");
+});
+
+ipcMain.on(ADD_RPC_PROVIDER, (event, args: [string, string]) => {
+  const [name, url] = args;
+  Logger.info(`Adding RPC provider: ${name}-${url}`);
+  addRpcProvider(name, url)
+    .then(async (id) => {
+      Logger.info(`RPC provider added: ${id}`);
+      rpcProviders = await getRpcProviders();
+      event.returnValue = {
+        error: false,
+        data: id,
+      };
+    })
+    .catch((error) => {
+      Logger.error(`Error adding RPC provider: ${error}`);
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(SET_RPC_PROVIDER_ACTIVE, async (event, id: number) => {
+  setRpcProviderActive(id)
+    .then(async () => {
+      await createScheduledTasks();
+      event.returnValue = {
+        error: false,
+      };
+    })
+    .catch((error) => {
+      event.returnValue = {
+        error: true,
+        data: error,
+      };
+    });
+});
+
+ipcMain.on(DEACTIVATE_RPC_PROVIDER, (event, id: number) => {
+  deactivateRpcProvider(id)
+    .then(async () => {
+      await createScheduledTasks();
+      event.returnValue = { error: false };
+    })
+    .catch((error) => {
+      event.returnValue = { error: true, data: error };
+    });
+});
+
+ipcMain.on(DELETE_RPC_PROVIDER, (event, id: number) => {
+  deleteRpcProvider(id)
+    .then(async () => {
+      rpcProviders = await getRpcProviders();
+      event.returnValue = { error: false };
+    })
+    .catch((error) => {
+      event.returnValue = { error: true, data: error };
+    });
 });

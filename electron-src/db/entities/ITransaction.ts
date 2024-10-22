@@ -6,7 +6,11 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { TRANSACTIONS_TABLE } from "../../../constants";
+import {
+  TRANSACTIONS_BLOCKS_TABLE,
+  TRANSACTIONS_TABLE,
+} from "../../../constants";
+import { BlockEntity } from "./IBlock";
 
 export class BaseTransaction {
   @CreateDateColumn()
@@ -77,3 +81,6 @@ export class BaseTransaction {
 
 @Entity(TRANSACTIONS_TABLE)
 export class Transaction extends BaseTransaction {}
+
+@Entity(TRANSACTIONS_BLOCKS_TABLE)
+export class TransactionBlock extends BlockEntity {}

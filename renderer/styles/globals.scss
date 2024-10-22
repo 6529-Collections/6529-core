@@ -541,3 +541,9 @@ pre code {
 .modal-blurred {
   filter: blur(5px);
 }
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

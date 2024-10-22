@@ -24,8 +24,8 @@ export async function extractNFTOwnerDeltas(
     ) {
       if (!ownersMap[fromKey]) {
         ownersMap[fromKey] = {
-          address: transaction.from_address,
-          contract: transaction.contract,
+          address: transaction.from_address.toLowerCase(),
+          contract: transaction.contract.toLowerCase(),
           tokenId: transaction.token_id,
           delta: -transaction.token_count,
         };
@@ -36,8 +36,8 @@ export async function extractNFTOwnerDeltas(
 
     if (!ownersMap[toKey]) {
       ownersMap[toKey] = {
-        address: transaction.to_address,
-        contract: transaction.contract,
+        address: transaction.to_address.toLowerCase(),
+        contract: transaction.contract.toLowerCase(),
         tokenId: transaction.token_id,
         delta: transaction.token_count,
       };

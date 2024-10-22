@@ -281,8 +281,10 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/core/app-logs">
-                      <h3>App Logs</h3>
+                    <Link href="/core/seed-wallets">
+                      <h3>
+                        <span>Seed Wallets</span>&nbsp;
+                      </h3>
                     </Link>
                   </Col>
                 </Row>
@@ -293,10 +295,8 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/core/seed-wallets">
-                      <h3>
-                        <span>Seed Wallets</span>&nbsp;
-                      </h3>
+                    <Link href="/core/workers-hub">
+                      <h3>Workers Hub</h3>
                     </Link>
                   </Col>
                 </Row>
@@ -899,15 +899,15 @@ export default function Header(props: Readonly<Props>) {
                               />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "App Logs",
-                                  path: "/core/app-logs",
+                                  name: "Seed Wallets",
+                                  path: "/core/seed-wallets",
                                 }}
                               />
                               <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Seed Wallets",
-                                  path: "/core/seed-wallets",
+                                  name: "Workers Hub",
+                                  path: "/core/workers-hub",
                                 }}
                               />
                             </NavDropdown>

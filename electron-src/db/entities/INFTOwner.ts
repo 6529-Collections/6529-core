@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryColumn,
   UpdateDateColumn,
 } from "typeorm";
@@ -21,6 +22,7 @@ export class NFTOwner {
   @PrimaryColumn({ type: "varchar", length: 50 })
   contract!: string;
 
+  @Index()
   @PrimaryColumn({ type: "bigint" })
   token_id!: number;
 

@@ -11,7 +11,7 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
 });
 
 const SeedWalletImport = dynamic(
-  () => import("../../../components/core/seedWallet/SeedWalletImport"),
+  () => import("../../../components/core/seed-wallet/SeedWalletImport"),
   {
     ssr: false,
   }

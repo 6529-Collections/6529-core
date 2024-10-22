@@ -20,3 +20,12 @@ export interface SeedWalletRequest {
   params: any[];
   privateKey?: string;
 }
+
+export enum ScheduledWorkerStatus {
+  IDLE,
+  DISABLED,
+  RUNNING,
+  COMPLETED,
+  THROTTLED,
+  ERROR,
+}

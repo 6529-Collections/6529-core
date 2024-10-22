@@ -1,11 +1,12 @@
 import { Transaction } from "../../../db/entities/ITransaction";
-import { areEqualAddresses, fromHex } from "../../../../shared/helpers";
+import { areEqualAddresses, sleep } from "../../../../shared/helpers";
 import { ethers, formatEther } from "ethers";
-
 import { MANIFOLD_ADDRESS, NULL_ADDRESS } from "../../../../constants";
 import { SEAPORT_IFACE } from "../../../../shared/abis/opensea";
 import pLimit from "p-limit";
 
+import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
+import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
 const ACK_DEPLOYER = "0x03ee832367e29a5cd001f65093283eabb5382b62";
 const WETH_TOKEN_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const ROYALTIES_ADDRESS = "0x1b1289e34fe05019511d7b436a5138f361904df0";
@@ -13,7 +14,6 @@ const MEMELAB_ROYALTIES_ADDRESS = "0x900b67e6f16291431e469e6ec8208d17de09fc37";
 const MEMES_DEPLOYER = "0x4B76837F8D8Ad0A28590d06E53dCD44b6B7D4554";
 const MEMELAB_CONTRACT = "0x4db52a61dc491e15a2f78f5ac001c14ffe3568cb";
 const NEXTGEN_ROYALTIES_ADDRESS = "0xC8ed02aFEBD9aCB14c33B5330c803feacAF01377";
-const NEXTGEN_CORE_CONTRACT = "0x45882f9bc325E14FBb298a1Df930C43a874B83ae";
 
 const TRANSFER_EVENT =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -56,6 +56,7 @@ export const findTransactionValues = async (
   const transactionValuesPromises = transactions.map(async (t) => {
     return MAX_CONCURRENT_REQUESTS(async () => {
       const parsedTransaction = await resolveValue(provider, t, printStatus);
+      await sleep(100);
       return parsedTransaction;
     });
   });
@@ -79,7 +80,7 @@ async function resolveValue(
   let royaltiesAddress = ROYALTIES_ADDRESS;
   if (areEqualAddresses(t.contract, MEMELAB_CONTRACT)) {
     royaltiesAddress = MEMELAB_ROYALTIES_ADDRESS;
-  } else if (areEqualAddresses(t.contract, NEXTGEN_CORE_CONTRACT)) {
+  } else if (areEqualAddresses(t.contract, NEXTGEN_CONTRACT)) {
     royaltiesAddress = NEXTGEN_ROYALTIES_ADDRESS;
   }
 
@@ -166,7 +167,8 @@ async function resolveValue(
   }
 
   if (
-    areEqualAddresses(t.from_address, NULL_ADDRESS) ||
+    (areEqualAddresses(t.contract, MEMES_CONTRACT) &&
+      areEqualAddresses(t.from_address, NULL_ADDRESS)) ||
     areEqualAddresses(t.from_address, MANIFOLD_ADDRESS) ||
     (areEqualAddresses(t.from_address, ACK_DEPLOYER) &&
       areEqualAddresses(t.contract, MEMELAB_CONTRACT) &&
@@ -256,7 +258,7 @@ const parseSeaportLog = async (
 
   if (tokenConsideration && recipientConsideration) {
     const contract = tokenConsideration.token;
-    const tokenId = fromHex(tokenConsideration.identifier);
+    const tokenId = Number(tokenConsideration[2]);
     const royaltiesAmount = royaltiesConsideration
       ? parseFloat(formatEther(royaltiesConsideration.amount))
       : 0;
@@ -288,18 +290,16 @@ const parseSeaportLog = async (
 
 async function getInternalTransfers(
   provider: ethers.Provider,
-  tokenAddress: string,
+  contractAddress: string,
   block: string
 ) {
   const tokenContract = new ethers.Contract(
-    tokenAddress,
+    contractAddress,
     ["event Transfer(address indexed from, address indexed to, uint256 value)"],
     provider
   );
-
   const filter = tokenContract.filters.Transfer();
   const events = await tokenContract.queryFilter(filter, block, block);
-
   const eventLogs = events.filter((event): event is ethers.EventLog => {
     return (event as ethers.EventLog).topics !== undefined;
   });
