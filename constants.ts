@@ -10,6 +10,7 @@ export const RPC_PROVIDERS_TABLE = "rpc_providers";
 export const WALLETS_TDH_TABLE = "tdh";
 export const CONSOLIDATED_WALLETS_TDH_TABLE = "tdh_consolidation";
 export const TDH_BLOCKS_TABLE = "tdh_blocks";
+export const TDH_MERKLE_ROOT_TABLE = "tdh_merkle_root";
 
 export const ADD_SEED_WALLET = "addSeedWallet";
 export const IMPORT_SEED_WALLET = "importSeedWallet";

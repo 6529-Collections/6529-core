@@ -2,13 +2,12 @@ import { ethers } from "ethers";
 import { parentPort, workerData } from "worker_threads";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
 import { WorkerData } from "../../scheduled-worker";
-import { DataSourceOptions } from "typeorm";
+import { DataSource, DataSourceOptions } from "typeorm";
 import {
   getBlockTimestamp,
   logInfo,
   sendStatusUpdate,
 } from "../../worker-helpers";
-
 import {
   Consolidation,
   ConsolidationEvent,
@@ -20,6 +19,7 @@ import {
 } from "../../../db/entities/IDelegation";
 import { areEqualAddresses, sleep } from "../../../../shared/helpers";
 import {
+  CONSOLIDATED_WALLETS_TDH_TABLE,
   DELEGATION_ALL_ADDRESS,
   DELEGATION_CONTRACT,
   USE_CASE_CONSOLIDATION,
@@ -34,10 +34,54 @@ import {
 } from "./nftdelegation-worker.db";
 import { CoreWorker } from "../core-worker";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
+import {
+  ConsolidatedTDH,
+  TDH,
+  TDHBlock,
+  TDHMerkleRoot,
+} from "../../../db/entities/ITDH";
+import { getLastTDH } from "../tdh-worker/tdh-worker.helpers";
+import { calculateTDH } from "../tdh-worker/tdh";
+import { fetchLatestTransactionsBlockForDate } from "../tdh-worker/tdh-worker.db";
+import {
+  Transaction,
+  TransactionBlock,
+} from "../../../db/entities/ITransaction";
+import { NFT } from "../../../db/entities/INFT";
+import { NFTOwner } from "../../../db/entities/INFTOwner";
 
 const data: WorkerData = workerData;
 
 export const NAMESPACE = "NFT_DELEGATION_WORKER >";
+
+async function getConsolidationsContainingAddress(
+  db: DataSource,
+  wallets: Set<string>
+): Promise<ConsolidatedTDH[]> {
+  const likeConditions = Array.from(wallets)
+    .map((wallet) => `consolidation_key LIKE '%${wallet.toLowerCase()}%'`)
+    .join(" OR ");
+
+  const query = `
+    SELECT * FROM ${CONSOLIDATED_WALLETS_TDH_TABLE}
+    WHERE ${likeConditions}
+  `;
+
+  return await db.query(query);
+}
+
+async function getAffectedWallets(db: DataSource, wallets: Set<string>) {
+  const allConsolidations = await getConsolidationsContainingAddress(
+    db,
+    wallets
+  );
+  allConsolidations.map((c) => {
+    const cWallets = JSON.parse(c.wallets);
+    cWallets.forEach((w: string) => wallets.add(w.toLowerCase()));
+  });
+
+  return wallets;
+}
 
 class NFTDelegationWorker extends CoreWorker {
   constructor(
@@ -50,6 +94,15 @@ class NFTDelegationWorker extends CoreWorker {
       NFTDelegationBlock,
       Delegation,
       Consolidation,
+      TDHBlock,
+      TDH,
+      ConsolidatedTDH,
+      Transaction,
+      TransactionBlock,
+      NFT,
+      NFTOwner,
+      Consolidation,
+      TDHMerkleRoot,
     ]);
   }
 
@@ -230,7 +283,7 @@ class NFTDelegationWorker extends CoreWorker {
     const revocations: DelegationEvent[] = [];
 
     const decodedLogPromises = logs.map((d) => {
-      return this.getMaxConcurrentRequestsLimit()(async () => {
+      this.getBottleneck().schedule(async () => {
         const delResult = DELEGATIONS_IFACE.parseLog(d);
         if (!delResult) {
           return;
@@ -351,7 +404,51 @@ class NFTDelegationWorker extends CoreWorker {
         progress: events.length,
       },
     });
-    // TODO: implement
+
+    const wallets = new Set<string>();
+    events.forEach((c) => {
+      wallets.add(c.wallet1.toLowerCase());
+      wallets.add(c.wallet2.toLowerCase());
+    });
+
+    const affectedWallets = await getAffectedWallets(this.getDb(), wallets);
+
+    if (affectedWallets.size > 0) {
+      logInfo(
+        parentPort,
+        `[RECONSOLIDATING FOR ${affectedWallets.size} DISTINCT WALLETS]`
+      );
+
+      const lastTDHCalc = getLastTDH();
+      const block = await fetchLatestTransactionsBlockForDate(
+        this.getDb(),
+        lastTDHCalc
+      );
+      const blockTimestamp = await getBlockTimestamp(
+        parentPort,
+        this.getProvider(),
+        NAMESPACE,
+        block
+      );
+
+      const walletsArray = Array.from(affectedWallets);
+
+      await calculateTDH(
+        this.getDb(),
+        block,
+        lastTDHCalc,
+        blockTimestamp,
+        walletsArray
+      );
+    } else {
+      logInfo(parentPort, `[NO WALLETS TO RECONSOLIDATE]`);
+      sendStatusUpdate(parentPort, {
+        update: {
+          status: ScheduledWorkerStatus.RUNNING,
+          message: "No wallets to reconsolidate",
+        },
+      });
+    }
   }
 }
 

@@ -3,10 +3,10 @@ import { areEqualAddresses, sleep } from "../../../../shared/helpers";
 import { ethers, formatEther } from "ethers";
 import { MANIFOLD_ADDRESS, NULL_ADDRESS } from "../../../../constants";
 import { SEAPORT_IFACE } from "../../../../shared/abis/opensea";
-import pLimit from "p-limit";
-
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
+import Bottleneck from "bottleneck";
+
 const ACK_DEPLOYER = "0x03ee832367e29a5cd001f65093283eabb5382b62";
 const WETH_TOKEN_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
 const ROYALTIES_ADDRESS = "0x1b1289e34fe05019511d7b436a5138f361904df0";
@@ -22,7 +22,7 @@ const MINT_FROM_ADDRESS =
   "0x0000000000000000000000000000000000000000000000000000000000000000";
 
 const MAX_CURRENT_LIMIT = 5;
-const MAX_CONCURRENT_REQUESTS = pLimit(MAX_CURRENT_LIMIT);
+const BOTTLENECK = new Bottleneck({ maxConcurrent: MAX_CURRENT_LIMIT });
 
 function isZeroAddress(address: string) {
   return /^0x0+$/.test(address);
@@ -53,13 +53,15 @@ export const findTransactionValues = async (
 ) => {
   printStatus("> Processing values", transactions.length);
 
-  const transactionValuesPromises = transactions.map(async (t) => {
-    return MAX_CONCURRENT_REQUESTS(async () => {
-      const parsedTransaction = await resolveValue(provider, t, printStatus);
-      await sleep(100);
-      return parsedTransaction;
-    });
-  });
+  const parseTransaction = async (t: Transaction): Promise<Transaction> => {
+    const parsedTransaction = await resolveValue(provider, t, printStatus);
+    await sleep(100);
+    return parsedTransaction; // Explicitly returns Transaction
+  };
+
+  const transactionValuesPromises: Promise<Transaction>[] = transactions.map(
+    (t) => BOTTLENECK.schedule(() => parseTransaction(t))
+  );
 
   const transactionsWithValues = await Promise.all(transactionValuesPromises);
 

@@ -29,3 +29,11 @@ export enum ScheduledWorkerStatus {
   THROTTLED,
   ERROR,
 }
+
+export enum ScheduledWorkerNames {
+  TRANSACTIONS_WORKER = "transactions-worker",
+  NFT_DELEGATION_WORKER = "nftdelegation-worker",
+  NFT_DISCOVERY_WORKER = "nft-discovery-worker",
+  NFT_REFRESH_WORKER = "nft-refresh-worker",
+  TDH_WORKER = "tdh-worker",
+}

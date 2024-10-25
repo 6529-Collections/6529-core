@@ -1,4 +1,4 @@
-import { DataSource, In, LessThanOrEqual } from "typeorm";
+import { DataSource, In, LessThanOrEqual, MoreThan } from "typeorm";
 import {
   CONSOLIDATIONS_LIMIT,
   CONSOLIDATIONS_TABLE,
@@ -8,10 +8,16 @@ import {
 } from "../../../../constants";
 import { areEqualAddresses, isNullAddress } from "../../../../shared/helpers";
 import { Transaction } from "../../../db/entities/ITransaction";
-import { ConsolidatedTDH, TDH, TDHBlock } from "../../../db/entities/ITDH";
+import {
+  ConsolidatedTDH,
+  TDH,
+  TDHBlock,
+  TDHMerkleRoot,
+} from "../../../db/entities/ITDH";
 import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { batchSave } from "../../worker-helpers";
+import { getMerkleRoot } from "./tdh-worker.merkle";
 
 export async function fetchLatestTransactionsBlockForDate(
   db: DataSource,
@@ -211,12 +217,36 @@ export async function persistTDH(
             .execute();
         })
       );
-      await batchSave(tdhRepo, tdh);
     } else {
       await tdhRepo.clear();
-      await batchSave(tdhRepo, tdh);
     }
+
+    await batchSave(tdhRepo, tdh);
   });
+}
+
+async function computeMerkleRoot(db: DataSource) {
+  type PartialConsolidatedTDH = Pick<
+    ConsolidatedTDH,
+    "consolidation_key" | "boosted_tdh"
+  >;
+  const data = (await db.getRepository(ConsolidatedTDH).find({
+    select: ["consolidation_key", "boosted_tdh"],
+    where: { boosted_tdh: MoreThan(0) },
+    order: {
+      boosted_tdh: "DESC",
+      consolidation_key: "ASC",
+    },
+  })) as PartialConsolidatedTDH[];
+
+  const merkleRoot = getMerkleRoot(
+    data.map((item) => ({
+      key: item.consolidation_key,
+      value: item.boosted_tdh,
+    }))
+  );
+
+  return merkleRoot;
 }
 
 export async function persistTDHBlock(
@@ -224,12 +254,28 @@ export async function persistTDHBlock(
   block: number,
   blockTimestamp: Time
 ) {
-  await db
-    .getRepository(TDHBlock)
-    .upsert(
-      [{ block: block, timestamp: blockTimestamp.toSeconds() }],
-      ["block"]
+  const merkleRoot = await computeMerkleRoot(db);
+  await db.transaction(async (manager) => {
+    const timestamp = blockTimestamp.toSeconds();
+    await manager
+      .getRepository(TDHBlock)
+      .upsert([{ block, timestamp }], ["block"]);
+
+    await manager.getRepository(TDHMerkleRoot).upsert(
+      [
+        {
+          id: 1,
+          block,
+          timestamp,
+          merkle_root: merkleRoot,
+          last_update: Math.floor(Date.now() / 1000),
+        },
+      ],
+      ["id"]
     );
+  });
+
+  return merkleRoot;
 }
 
 export async function fetchAllConsolidatedTdh(db: DataSource) {
@@ -281,18 +327,21 @@ export async function persistConsolidatedTDH(
             .execute();
         })
       );
-      await batchSave(tdhRepo, tdh);
     } else {
       await tdhRepo.clear();
-      await batchSave(tdhRepo, tdh);
     }
+
+    await batchSave(tdhRepo, tdh);
   });
 }
 
 export async function persistNFTs(db: DataSource, nfts: NFT[]) {
+  const distinctContracts = [...new Set(nfts.map((nft) => nft.contract))];
   await db.transaction(async (manager) => {
     const nftRepo = manager.getRepository(NFT);
-    await nftRepo.clear();
+    await nftRepo.delete({
+      contract: In(distinctContracts),
+    });
     await batchSave(nftRepo, nfts);
   });
 }

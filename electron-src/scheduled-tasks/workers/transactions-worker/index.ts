@@ -267,7 +267,7 @@ export class TransactionsWorker extends CoreWorker {
     const transactionRecords: { [key: string]: Transaction } = {};
 
     const decodedLogPromises = logs.map((log) => {
-      return this.getMaxConcurrentRequestsLimit()(async () => {
+      return this.getBottleneck().schedule(async () => {
         let decoded;
         if (log.topics[0] === this.transferSingleTopic) {
           try {

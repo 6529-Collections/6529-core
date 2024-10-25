@@ -54,6 +54,7 @@ export const api = {
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
   getScheduledWorkers: () => ipcRenderer.invoke("get-scheduled-workers"),
+  getTdhInfo: () => ipcRenderer.invoke("get-tdh-info"),
   getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);

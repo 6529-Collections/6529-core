@@ -1,9 +1,9 @@
 import { ethers } from "ethers";
 import { DataSource, DataSourceOptions } from "typeorm";
-import pLimit from "p-limit";
 import { getWorkerDb, initWorkerDb } from "./workers.db";
 import { logError, logInfo, sendStatusUpdate } from "../worker-helpers";
 import { ScheduledWorkerStatus } from "../../../shared/types";
+import Bottleneck from "bottleneck";
 
 export abstract class CoreWorker {
   private provider: ethers.JsonRpcProvider;
@@ -11,7 +11,7 @@ export abstract class CoreWorker {
   private db!: DataSource;
   private blockRange: number;
   private maxConcurrentRequests: number;
-  private maxConcurrentRequestsLimit: pLimit.Limit;
+  private bottleneck: Bottleneck;
   private parentPort: any;
   private entities: Function[];
   constructor(
@@ -26,7 +26,9 @@ export abstract class CoreWorker {
     this.dbParams = dbParams;
     this.blockRange = blockRange;
     this.maxConcurrentRequests = maxConcurrentRequests;
-    this.maxConcurrentRequestsLimit = pLimit(this.maxConcurrentRequests);
+    this.bottleneck = new Bottleneck({
+      maxConcurrent: this.maxConcurrentRequests,
+    });
     this.parentPort = parentPort;
     this.entities = entities;
     this.init();
@@ -87,8 +89,8 @@ export abstract class CoreWorker {
     return this.maxConcurrentRequests;
   }
 
-  protected getMaxConcurrentRequestsLimit(): pLimit.Limit {
-    return this.maxConcurrentRequestsLimit;
+  protected getBottleneck(): Bottleneck {
+    return this.bottleneck;
   }
 
   abstract work(): Promise<void>;

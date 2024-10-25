@@ -1,12 +1,26 @@
-import { Button, Col, Container, Row } from "react-bootstrap";
+import styles from "./WorkersHub.module.scss";
+import { Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
-import { ScheduledWorkerStatus } from "../../../../shared/types";
+import {
+  ScheduledWorkerNames,
+  ScheduledWorkerStatus,
+} from "../../../../shared/types";
 import Link from "next/link";
 import { Task, WorkerCard, WorkerCards } from "./Workers";
 import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
 import { CrashReports } from "./CrashReports";
 import { AddRpcProviderModal } from "./RpcProviderModal";
+import { faCopy } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Tippy from "@tippyjs/react";
+
+interface TDHInfo {
+  block: number;
+  blockTimestamp: number;
+  merkleRoot: string;
+  lastCalculation: number;
+}
 
 export default function WorkersHub() {
   const [fetchingTasks, setFetchingTasks] = useState(true);
@@ -14,11 +28,13 @@ export default function WorkersHub() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [rpcProviders, setRpcProviders] = useState<RPCProvider[]>([]);
 
-  const [homeDir, setHomeDir] = useState<string>();
+  const [homeDir, setHomeDir] = useState<string>("");
 
   const [showAddRpcProviderModal, setShowAddRpcProviderModal] = useState(false);
 
-  const refreshContent = () => {
+  const [tdhInfo, setTdhInfo] = useState<TDHInfo>();
+
+  const fetchContent = () => {
     window.api
       .getScheduledWorkers()
       .then(({ homeDir, mainTask, rpcProviders, tasks }) => {
@@ -30,8 +46,15 @@ export default function WorkersHub() {
       });
   };
 
+  const fetchTdhInfo = () => {
+    window.api.getTdhInfo().then((tdhInfo) => {
+      setTdhInfo(tdhInfo);
+    });
+  };
+
   useEffect(() => {
-    refreshContent();
+    fetchContent();
+    fetchTdhInfo();
   }, []);
 
   useEffect(() => {
@@ -61,6 +84,13 @@ export default function WorkersHub() {
             : task
         )
       );
+
+      if (
+        status === ScheduledWorkerStatus.COMPLETED &&
+        namespace === ScheduledWorkerNames.TDH_WORKER
+      ) {
+        fetchTdhInfo();
+      }
     };
     window.api.onWorkerUpdate(updateWorkerState);
     return () => {
@@ -109,7 +139,7 @@ export default function WorkersHub() {
             <Row className="pt-2">
               <RPCProviderCards
                 rpcProviders={rpcProviders}
-                onRefresh={refreshContent}
+                onRefresh={fetchContent}
               />
             </Row>
             <Row className="pt-5">
@@ -128,6 +158,7 @@ export default function WorkersHub() {
                 />
               </Col>
             </Row>
+            <TDHInfoCard tdhInfo={tdhInfo} />
           </>
         )}
       </Container>
@@ -137,10 +168,80 @@ export default function WorkersHub() {
         onHide={(refresh) => {
           setShowAddRpcProviderModal(false);
           if (refresh) {
-            refreshContent();
+            fetchContent();
           }
         }}
       />
+    </>
+  );
+}
+
+function TDHInfoCard({ tdhInfo }: { tdhInfo?: TDHInfo }) {
+  const [merkleRootCopied, setMerkleRootCopied] = useState(false);
+
+  return (
+    <>
+      <Row className="pt-5">
+        <Col>
+          <h3 className="float-none">
+            <span className="font-lightest">App</span> TDH
+          </h3>
+        </Col>
+      </Row>
+      <Row>
+        <Col>
+          <Container className={styles.logCard}>
+            <Row>
+              <Col>
+                {tdhInfo ? (
+                  <>
+                    <div className="d-flex gap-3">
+                      <span>
+                        Block:{" "}
+                        <span className={styles.progress}>{tdhInfo.block}</span>
+                      </span>
+                      <span>
+                        Last Calculation:{" "}
+                        <span className={styles.progress}>
+                          {new Date(
+                            tdhInfo.lastCalculation * 1000
+                          ).toLocaleString()}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="mt-3 d-flex align-items-center gap-2">
+                      Merkle Root:{" "}
+                      <span className={styles.progress}>
+                        {tdhInfo.merkleRoot}
+                      </span>
+                      <Tippy
+                        content={merkleRootCopied ? "Copied!" : "Copy"}
+                        hideOnClick={false}
+                        placement="top"
+                        theme="light">
+                        <FontAwesomeIcon
+                          className="cursor-pointer unselectable"
+                          icon={faCopy}
+                          height={20}
+                          onClick={() => {
+                            navigator.clipboard.writeText(tdhInfo.merkleRoot);
+                            setMerkleRootCopied(true);
+                            setTimeout(() => {
+                              setMerkleRootCopied(false);
+                            }, 1500);
+                          }}
+                        />
+                      </Tippy>
+                    </div>
+                  </>
+                ) : (
+                  <span>No TDH info</span>
+                )}
+              </Col>
+            </Row>
+          </Container>
+        </Col>
+      </Row>
     </>
   );
 }

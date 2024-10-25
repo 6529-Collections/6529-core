@@ -10,7 +10,12 @@ import { Time } from "../../../../shared/time";
 import { fetchLatestTransactionsBlockForDate } from "./tdh-worker.db";
 import { CoreWorker } from "../core-worker";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
-import { ConsolidatedTDH, TDH, TDHBlock } from "../../../db/entities/ITDH";
+import {
+  ConsolidatedTDH,
+  TDH,
+  TDHBlock,
+  TDHMerkleRoot,
+} from "../../../db/entities/ITDH";
 import { getLastTDH } from "./tdh-worker.helpers";
 import {
   Transaction,
@@ -42,6 +47,7 @@ class TDHWorker extends CoreWorker {
       NFT,
       NFTOwner,
       Consolidation,
+      TDHMerkleRoot,
     ]);
   }
 
@@ -53,7 +59,7 @@ class TDHWorker extends CoreWorker {
       lastTDHCalc
     );
     await this.validateBlock(block);
-    await this.updateTDH(block, lastTDHCalc);
+    const tdhResult = await this.updateTDH(block, lastTDHCalc);
 
     logInfo(parentPort, "Finished");
 
@@ -61,7 +67,9 @@ class TDHWorker extends CoreWorker {
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
-        message: `Completed at ${Time.now().toLocaleDateTimeString()} (runtime ${duration}) - TDH Block: ${block}`,
+        message: `Completed at ${Time.now().toLocaleDateTimeString()} (runtime ${duration}) - TDH Block: ${
+          tdhResult.block
+        }`,
       },
     });
   }
@@ -105,9 +113,14 @@ class TDHWorker extends CoreWorker {
       block
     );
 
-    await calculateTDH(this.getDb(), block, lastTDHCalc, blockTimestamp);
+    const tdhResult = await calculateTDH(
+      this.getDb(),
+      block,
+      lastTDHCalc,
+      blockTimestamp
+    );
 
-    return block;
+    return tdhResult;
   }
 }
 

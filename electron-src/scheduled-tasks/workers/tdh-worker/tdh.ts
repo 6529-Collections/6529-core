@@ -25,8 +25,8 @@ import {
 } from "./tdh-worker.db";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
 import { MEME_8_BURN_TRANSACTION, NULL_ADDRESS } from "../../../../constants";
-import { consolidateTDH } from "./tdh-worker-consolidation";
-import { processNftTdh } from "./tdh-worker-nfts";
+import { consolidateTDH } from "./tdh-worker.consolidation";
+import { processNftTdh } from "./tdh-worker.nfts";
 
 export const TDH_CONTRACTS = [
   MEMES_CONTRACT,
@@ -186,7 +186,7 @@ export const calculateTDH = async (
   lastTDHCalc: Date,
   blockTimestamp: Time,
   startingWallets?: string[]
-) => {
+): Promise<{ block: number; merkleRoot: string }> => {
   logInfo(
     parentPort,
     `[BLOCK ${block}] [TDH TIME ${lastTDHCalc.toLocaleString()}]`
@@ -497,7 +497,6 @@ export const calculateTDH = async (
   });
 
   await persistTDH(db, block, rankedTdh, startingWallets);
-  await persistTDHBlock(db, block, blockTimestamp);
 
   logInfo(
     parentPort,
@@ -513,8 +512,11 @@ export const calculateTDH = async (
   await consolidateTDH(db, block, ADJUSTED_NFTS, startingWallets);
   await processNftTdh(db, ADJUSTED_NFTS);
 
+  const merkleRoot = await persistTDHBlock(db, block, blockTimestamp);
+
   return {
-    block: block,
+    block,
+    merkleRoot,
   };
 };
 

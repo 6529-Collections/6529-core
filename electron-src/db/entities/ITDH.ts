@@ -2,9 +2,10 @@ import { Column, Entity, Index, PrimaryColumn } from "typeorm";
 import {
   CONSOLIDATED_WALLETS_TDH_TABLE,
   TDH_BLOCKS_TABLE,
+  TDH_MERKLE_ROOT_TABLE,
   WALLETS_TDH_TABLE,
 } from "../../../constants";
-import { BlockEntity } from "./IBlock";
+import { BlockEntity, SingletonBlockEntity } from "./IBlock";
 
 @Entity(TDH_BLOCKS_TABLE)
 export class TDHBlock extends BlockEntity {}
@@ -166,4 +167,13 @@ export interface DefaultBoost {
   memes_genesis: BoostInfo;
   memes_nakamoto: BoostInfo;
   gradients: BoostInfo;
+}
+
+@Entity(TDH_MERKLE_ROOT_TABLE)
+export class TDHMerkleRoot extends SingletonBlockEntity {
+  @Column({ type: "bigint" })
+  last_update!: number;
+
+  @Column({ type: "varchar", length: 200 })
+  merkle_root!: string;
 }

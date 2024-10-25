@@ -6,6 +6,7 @@ import path from "path";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
 import useIsMobileScreen from "../../../hooks/isMobileScreen";
 import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
+import { homedir } from "os";
 
 export interface Task {
   namespace: string;
@@ -76,8 +77,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
 };
 
 const cronToLocalTime = (cronExpression: string): string => {
-  const [minute, hour, dayOfMonth, month, dayOfWeek] =
-    cronExpression.split(" ");
+  const [minute, hour] = cronExpression.split(" ");
 
   const d = new Date();
   const utcDate = new Date(
@@ -89,7 +89,10 @@ const cronToLocalTime = (cronExpression: string): string => {
       Number(minute)
     )
   );
-  const localTime = utcDate.toLocaleTimeString().slice(0, 5);
+  const localTime = utcDate.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return `at ${localTime} (local time)`;
 };
@@ -99,7 +102,7 @@ export function WorkerCards({
   rpcProviders,
   tasks,
 }: {
-  readonly homeDir?: string;
+  readonly homeDir: string;
   readonly rpcProviders: RPCProvider[];
   readonly tasks: Task[];
 }) {
@@ -130,15 +133,17 @@ export function WorkerCard({
   homeDir,
   task,
 }: {
-  readonly homeDir?: string;
+  readonly homeDir: string;
   readonly task: Task;
 }) {
-  const name = path
-    .basename(task.logFile)
-    .replaceAll(".log", "")
+  const name = task.namespace
     .replaceAll("-", " ")
     .replaceAll("_", " ")
     .replace(/\b\w/g, (char) => char.toUpperCase());
+
+  const displayPath = task.logFile.startsWith(homeDir)
+    ? `~${task.logFile.replace(homeDir, "")}`
+    : `${task.logFile}`;
 
   const printStatus = () => {
     if (!task.cronExpression) {
@@ -239,7 +244,7 @@ export function WorkerCard({
                     isMobile ? "align-items-center" : "align-items-end"
                   }`}>
                   <span className="font-smaller font-color-h">
-                    &#126;/{path.relative(homeDir ?? "", task.logFile)}
+                    {displayPath}
                   </span>
                   <span className="d-flex align-items-center gap-3">
                     <Button

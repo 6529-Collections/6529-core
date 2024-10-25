@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.0.10",
+  "version": "0.1.0",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -36,7 +36,7 @@
     "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
     "sign-publish-production-win": "npm run clean-win && npm run download-production-win-unsigned && npm run sign-win && npm run upload-production-win-signed",
-    "build-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish never",
+    "dist-mac-local": "npm run build && electron-builder --config electron-builder.local.json --mac --arm64 --publish never",
     "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish always",
     "dist-mac-production": "npm run build && electron-builder --config electron-builder.production.json --mac --arm64 --x64 --publish always",
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",
@@ -65,6 +65,7 @@
     "app-root-path": "^3.1.0",
     "better-sqlite3": "^9.6.0",
     "bootstrap": "^5.3.3",
+    "bottleneck": "^2.19.5",
     "chart.js": "^4.4.3",
     "csv-parser": "^3.0.0",
     "dotenv": "^16.4.5",
@@ -144,6 +145,5 @@
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5"
-  },
-  "overrides": {}
+  }
 }

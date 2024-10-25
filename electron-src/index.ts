@@ -20,6 +20,7 @@ import {
   deactivateRpcProvider,
   deleteRpcProvider,
   deleteSeedWallet,
+  getDb,
   getRpcProviders,
   getSeedWallet,
   getSeedWallets,
@@ -60,6 +61,7 @@ import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
 import fs from "fs";
 import { ScheduledWorker } from "./scheduled-tasks/scheduled-worker";
 import { RPCProvider } from "./db/entities/IRpcProvider";
+import { TDHMerkleRoot } from "./db/entities/ITDH";
 
 contextMenu({
   showInspectElement: false,
@@ -244,7 +246,7 @@ async function createWindow() {
     show: false,
   });
 
-  const url = `http://localhost:${PORT}/core/workers-hub`;
+  const url = `http://localhost:${PORT}`;
 
   mainWindow.loadURL(url);
 
@@ -572,11 +574,11 @@ function postWorkerUpdate(
   target?: number,
   statusPercentage?: number
 ) {
-  Logger.info(
-    `Worker update: ${namespace} [${message}] ${action ? `[${action}]` : ""} ${
-      progress ? `[${progress}/${target}]` : ""
-    } ${statusPercentage ? `(${statusPercentage.toFixed(2)}%)` : ""}`
-  );
+  // Logger.info(
+  //   `Worker update: ${namespace} [${message}] ${action ? `[${action}]` : ""} ${
+  //     progress ? `[${progress}/${target}]` : ""
+  //   } ${statusPercentage ? `(${statusPercentage.toFixed(2)}%)` : ""}`
+  // );
   if (!mainWindow?.isDestroyed()) {
     mainWindow?.webContents?.send(
       "worker-update",
@@ -637,6 +639,22 @@ ipcMain.handle("get-scheduled-workers", () => {
     mainTask,
     rpcProviders,
     tasks,
+  };
+});
+
+ipcMain.handle("get-tdh-info", async () => {
+  const tdhMerkle = await getDb().getRepository(TDHMerkleRoot).findOneBy({
+    id: 1,
+  });
+  if (!tdhMerkle) {
+    return undefined;
+  }
+
+  return {
+    block: tdhMerkle.block,
+    blockTimestamp: tdhMerkle.timestamp,
+    merkleRoot: tdhMerkle.merkle_root,
+    lastCalculation: tdhMerkle.last_update,
   };
 });
 
