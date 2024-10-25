@@ -1,10 +1,10 @@
-import { DataSource } from "typeorm";
+import { DataSource, EntityManager } from "typeorm";
 import {
   Transaction,
   TransactionBlock,
 } from "../../../db/entities/ITransaction";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
-import { NFTOwnerDelta } from "./nft-owners";
+import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
 import { batchUpsert } from "../../worker-helpers";
 
 export async function getLatestTransactionsBlock(
@@ -30,7 +30,6 @@ export async function persistTransactionsAndOwners(
     try {
       await db.transaction(async (transaction) => {
         const transactionRepository = transaction.getRepository(Transaction);
-        const ownerRepository = transaction.getRepository(NFTOwner);
         const transactionBlockRepository =
           transaction.getRepository(TransactionBlock);
 
@@ -42,50 +41,7 @@ export async function persistTransactionsAndOwners(
           "token_id",
         ]);
 
-        const nftOwnerPromises: Promise<NFTOwner>[] = ownerDeltas.map(
-          async (ownerDelta) => {
-            const owner = await ownerRepository.findOne({
-              where: {
-                contract: ownerDelta.contract,
-                address: ownerDelta.address,
-                token_id: ownerDelta.tokenId,
-              },
-            });
-
-            if (owner) {
-              owner.balance += ownerDelta.delta;
-              if (owner.balance < 0) {
-                throw new Error(
-                  `Negative balance while updating existing owner [Delta ${ownerDelta.delta}] [Owner ${owner.address}] [Contract ${owner.contract}] [Token ID ${owner.token_id}] [Balance ${owner.balance}]`
-                );
-              } else {
-                return owner;
-              }
-            } else {
-              if (ownerDelta.delta < 0) {
-                throw new Error(
-                  `Negative balance while creating new owner [Delta ${ownerDelta.delta}] [Owner ${ownerDelta.address}] [Contract ${ownerDelta.contract}] [Token ID ${ownerDelta.tokenId}]`
-                );
-              }
-              return {
-                contract: ownerDelta.contract,
-                address: ownerDelta.address,
-                token_id: ownerDelta.tokenId,
-                balance: ownerDelta.delta,
-              };
-            }
-          }
-        );
-
-        const nftOwners = await Promise.all(nftOwnerPromises);
-
-        await batchUpsert<NFTOwner>(ownerRepository, nftOwners, [
-          "contract",
-          "address",
-          "token_id",
-        ]);
-
-        await ownerRepository.delete({ balance: 0 });
+        await persistOwners(transaction, ownerDeltas);
 
         await transactionBlockRepository.upsert(
           {
@@ -114,4 +70,74 @@ export async function persistTransactionsAndOwners(
       }
     }
   }
+}
+
+export async function rebalanceTransactionOwners(db: DataSource) {
+  const allTransactions = await db.getRepository(Transaction).find();
+
+  console.log("All transactions", allTransactions.length);
+
+  const ownerDeltas = await extractNFTOwnerDeltas(allTransactions);
+
+  console.log("Owner deltas length", ownerDeltas.length);
+
+  await db.transaction(async (transaction) => {
+    await persistOwners(transaction, ownerDeltas);
+  });
+}
+
+export async function extractOwnersFromDeltas(
+  transaction: EntityManager,
+  ownerDeltas: NFTOwnerDelta[]
+) {
+  const ownerRepository = transaction.getRepository(NFTOwner);
+  const nftOwnerPromises: Promise<NFTOwner>[] = ownerDeltas.map(
+    async (ownerDelta) => {
+      const owner = await ownerRepository.findOne({
+        where: {
+          contract: ownerDelta.contract,
+          address: ownerDelta.address,
+          token_id: ownerDelta.tokenId,
+        },
+      });
+
+      if (owner) {
+        owner.balance += ownerDelta.delta;
+        if (owner.balance < 0) {
+          throw new Error(
+            `Negative balance while updating existing owner [Delta ${ownerDelta.delta}] [Owner ${owner.address}] [Contract ${owner.contract}] [Token ID ${owner.token_id}] [Balance ${owner.balance}]`
+          );
+        } else {
+          return owner;
+        }
+      } else {
+        if (ownerDelta.delta < 0) {
+          throw new Error(
+            `Negative balance while creating new owner [Delta ${ownerDelta.delta}] [Owner ${ownerDelta.address}] [Contract ${ownerDelta.contract}] [Token ID ${ownerDelta.tokenId}]`
+          );
+        }
+        return {
+          contract: ownerDelta.contract,
+          address: ownerDelta.address,
+          token_id: ownerDelta.tokenId,
+          balance: ownerDelta.delta,
+        };
+      }
+    }
+  );
+  return await Promise.all(nftOwnerPromises);
+}
+
+export async function persistOwners(
+  transaction: EntityManager,
+  ownerDeltas: NFTOwnerDelta[]
+) {
+  const nftOwners = await extractOwnersFromDeltas(transaction, ownerDeltas);
+  const ownerRepository = transaction.getRepository(NFTOwner);
+  await batchUpsert<NFTOwner>(ownerRepository, nftOwners, [
+    "contract",
+    "address",
+    "token_id",
+  ]);
+  await ownerRepository.delete({ balance: 0 });
 }

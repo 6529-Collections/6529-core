@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryColumn, CreateDateColumn } from "typeorm";
-import { BlockEntity } from "./IBlock";
+import { SingletonBlockEntity } from "./IBlock";
 import {
   CONSOLIDATIONS_TABLE,
   DELEGATIONS_TABLE,
@@ -78,7 +78,7 @@ export interface DelegationEvent extends ConsolidationEvent {
 }
 
 @Entity(NFTDELEGATION_BLOCKS_TABLE)
-export class NFTDelegationBlock extends BlockEntity {}
+export class NFTDelegationBlock extends SingletonBlockEntity {}
 
 export interface WalletConsolidationKey {
   wallet: string;

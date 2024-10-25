@@ -18,14 +18,14 @@ export interface WorkerData {
 export class ScheduledWorker {
   private rpcUrl: string | null;
   private namespace: string;
-  private interval_minutes: number;
+  private cronExpression: string;
   private enabled: boolean;
   private filePath: string;
   private blockRange: number;
   private maxConcurrentRequests: number;
   private logger: WorkerLogger;
   private task: cron.ScheduledTask | null = null;
-  private isWorkerRunning: boolean = false;
+  private worker: Worker | null = null;
 
   private update: CoreWorkerMessageUpdate = {
     status: ScheduledWorkerStatus.IDLE,
@@ -48,7 +48,7 @@ export class ScheduledWorker {
   constructor(
     rpcUrl: string | null,
     namespace: string,
-    interval_minutes: number,
+    cronExpression: string,
     enabled: boolean,
     blockRange: number,
     maxConcurrentRequests: number,
@@ -66,7 +66,10 @@ export class ScheduledWorker {
   ) {
     this.rpcUrl = rpcUrl;
     this.namespace = namespace;
-    this.interval_minutes = interval_minutes;
+    if (!cron.validate(cronExpression)) {
+      throw new Error("Invalid cron expression");
+    }
+    this.cronExpression = cronExpression;
     this.enabled = enabled && !!this.rpcUrl;
     this.filePath = filePath
       ? `${filePath}.js`
@@ -88,30 +91,29 @@ export class ScheduledWorker {
   }
 
   private schedule() {
-    if (this.interval_minutes <= 0 || this.interval_minutes > 60) {
-      throw new Error("Interval minutes must be between 1 and 60");
-    }
-
-    const cronExpression = `*/${this.interval_minutes} * * * *`;
-
     //TODO: remove below
     // this.startWorker();
     // END TODO
 
-    return cron.schedule(cronExpression, () => {
-      this.startWorker();
-    });
+    return cron.schedule(
+      this.cronExpression,
+      () => {
+        this.startWorker();
+      },
+      {
+        timezone: "Etc/UTC",
+      }
+    );
   }
 
   private startWorker() {
-    if (this.isWorkerRunning) {
+    if (this.worker) {
       return;
     }
 
     this.logger.log("info", `Starting task\n\n---------- New Run ----------\n`);
 
     Logger.log(`[${this.namespace}] Starting scheduled task execution`);
-    this.isWorkerRunning = true;
 
     Logger.log(`[${this.namespace}] Starting worker at ${this.filePath}`);
 
@@ -119,7 +121,7 @@ export class ScheduledWorker {
     const workerPath = path.join(__dirname, this.filePath);
 
     // Create a new worker thread for each scheduled execution
-    const worker = new Worker(workerPath, {
+    this.worker = new Worker(workerPath, {
       workerData: {
         rpcUrl: this.rpcUrl,
         dbParams: getBaseDbParams(),
@@ -128,7 +130,7 @@ export class ScheduledWorker {
       } as WorkerData,
     });
 
-    worker.on("message", (message: CoreWorkerMessage) => {
+    this.worker.on("message", (message: CoreWorkerMessage) => {
       if (message.log) {
         if (message.log.level === "error") {
           Logger.error(
@@ -152,15 +154,16 @@ export class ScheduledWorker {
       }
     });
 
-    worker.on("error", (error) => {
+    this.worker.on("error", (error) => {
       Logger.error(`[${this.namespace}]`, error);
       this.logger.error(error);
     });
 
-    worker.on("exit", (code) => {
+    this.worker.on("exit", (code) => {
       this.logger.log("info", `Worker exited with code ${code}`);
       Logger.log(`[${this.namespace}]`, `Worker exited with code ${code}`);
-      this.isWorkerRunning = false;
+      this.worker?.removeAllListeners();
+      this.worker = null;
     });
   }
 
@@ -176,8 +179,8 @@ export class ScheduledWorker {
     return this.logger.getLogFilePath();
   }
 
-  public getInterval(): number {
-    return this.interval_minutes;
+  public getCronExpression(): string {
+    return this.cronExpression;
   }
 
   public getStatus(): {
@@ -199,10 +202,11 @@ export class ScheduledWorker {
   }
 
   public isRunning(): boolean {
-    return this.isWorkerRunning;
+    return !!this.worker;
   }
 
   public stop() {
     this.task?.stop();
+    this.worker?.terminate();
   }
 }

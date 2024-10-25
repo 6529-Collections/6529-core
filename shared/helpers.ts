@@ -1,3 +1,5 @@
+import { NULL_ADDRESS, NULL_ADDRESS_DEAD } from "../constants";
+
 export function areEqualAddresses(w1: string, w2: string) {
   if (!w1 || !w2) {
     return false;
@@ -15,4 +17,27 @@ export function fromHex(hex: string): string {
 
 export async function sleep(millis: number) {
   return new Promise((resolve) => setTimeout(resolve, millis));
+}
+
+export function getDaysDiff(t1: Date, t2: Date, floor = true) {
+  const diff = t1.getTime() - t2.getTime();
+  if (floor) {
+    return Math.floor(diff / (1000 * 3600 * 24));
+  }
+  return Math.ceil(diff / (1000 * 3600 * 24));
+}
+
+export function isNullAddress(address: string) {
+  return (
+    areEqualAddresses(address, NULL_ADDRESS) ||
+    areEqualAddresses(address, NULL_ADDRESS_DEAD)
+  );
+}
+
+export function buildConsolidationKey(wallets: string[]) {
+  const sortedWallets = wallets
+    .map((it) => it.toLowerCase())
+    .slice()
+    .sort((a, b) => a.localeCompare(b));
+  return sortedWallets.join("-");
 }

@@ -48,6 +48,17 @@ export const logWarn = (parentPort: any, ...args: any[]) => {
   logMessage(parentPort, "warn", ...args);
 };
 
+export const batchSave = async <T extends ObjectLiteral>(
+  repository: Repository<T>,
+  entities: T[]
+): Promise<void> => {
+  const batchSize = 500;
+  for (let i = 0; i < entities.length; i += batchSize) {
+    const batch = entities.slice(i, i + batchSize);
+    await repository.save(batch);
+  }
+};
+
 export const batchUpsert = async <T extends ObjectLiteral>(
   repository: Repository<T>,
   entities: T[],

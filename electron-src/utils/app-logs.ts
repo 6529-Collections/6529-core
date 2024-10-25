@@ -80,12 +80,12 @@ export async function extractCrashReport(fileName: string) {
       });
 
       if (!savePath) {
-        console.log("User canceled the download.");
+        Logger.info("User canceled the download.");
         return;
       }
 
       fs.writeFileSync(savePath, report);
-      console.log(`Crash report saved to ${savePath}`);
+      Logger.info(`Crash report saved to ${savePath}`);
     });
   }
 }

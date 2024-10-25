@@ -13,7 +13,7 @@ export class Time {
   }
 
   static fromString(string: string): Time {
-    return Time.fromDate(new Date(string));
+    return Time.millis(new Date(string).getTime());
   }
 
   static fromDate(date: Date): Time {
@@ -22,23 +22,6 @@ export class Time {
 
   static tomorrow(): Time {
     return Time.now().plusDays(1);
-  }
-
-  static todayUtcMidnight(): Time {
-    const now = new Date();
-    const nowUtc = new Date(
-      Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
-        now.getUTCHours(),
-        now.getUTCMinutes(),
-        now.getUTCSeconds(),
-        now.getUTCMilliseconds()
-      )
-    );
-    nowUtc.setHours(0, 0, 0, 0);
-    return Time.millis(nowUtc.getTime());
   }
 
   static millisOrNull(inp: number | undefined | null): Time | undefined {
@@ -228,12 +211,22 @@ export class Time {
     );
   }
 
+  public setTime(hours: number, min?: number, sec?: number): Time {
+    const date = this.toDate();
+    date.setUTCHours(hours, min, sec);
+    return Time.millis(date.getTime());
+  }
+
   public toDate(): Date {
     return new Date(this.ms);
   }
 
   public toIsoString(): string {
     return this.toDate().toISOString();
+  }
+
+  public toIsoDateTimeString(): string {
+    return `${this.toIsoDateString()} ${this.toIsoTimeString()}`;
   }
 
   public toIsoDateString(): string {
@@ -244,21 +237,54 @@ export class Time {
     return this.toIsoString().split("T")[1].split(".")[0];
   }
 
-  public toIsoDateTimeString(): string {
-    return `${this.toIsoDateString()} ${this.toIsoTimeString()}`;
+  public toLocaleDateTimeString(): string {
+    const date = this.toDate();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+    return `${year}-${month}-${day} ${hours}:${minutes}`;
   }
 
   public toString = (): string => {
     return this.formatAsDuration();
   };
 
-  public toMinutesAndSecondsString(): string {
-    const minutes = Math.floor(this.toMinutes());
-    const seconds = Math.floor(this.minusMinutes(minutes).toSeconds());
-    return `${minutes}m ${seconds}s`;
+  public toMonthAndDayString(): string {
+    function getDayWithSuffix(day: number): string {
+      if (day === 1 || day === 21 || day === 31) {
+        return `${day}st`;
+      } else if (day === 2 || day === 22) {
+        return `${day}nd`;
+      } else if (day === 3 || day === 23) {
+        return `${day}rd`;
+      } else {
+        return `${day}th`;
+      }
+    }
+    const isoDateString = this.toIsoDateString();
+    const date = new Date(isoDateString);
+    const month = date.toLocaleString("default", { month: "long" });
+    const day = date.getDate();
+    const dayWithSuffix = getDayWithSuffix(day);
+    return `${this.toDayName()}, ${month} ${dayWithSuffix}`;
   }
 
-  public formatAsDuration() {
+  public toDayName() {
+    const daysOfWeek = [
+      "Sunday",
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday",
+      "Saturday",
+    ];
+    return daysOfWeek[this.toDate().getUTCDay()];
+  }
+
+  public formatAsDuration(hideMillis = false) {
     let left = this.ms;
     const daydf = Math.floor(Time.millis(left).toDays());
     left = left - Time.days(daydf).toMillis();
@@ -280,6 +306,9 @@ export class Time {
     }
     if (secsdf || str.length) {
       str += `${secsdf}s `;
+    }
+    if (hideMillis) {
+      return str;
     }
     return str + `${left}ms`;
   }
@@ -348,42 +377,3 @@ const MILLIS_IN_UNIT: Record<TimeUnit, number> = {
   DAYS: 86400000,
   WEEKS: 604800000,
 };
-
-export class Timer {
-  constructor(private readonly key: string) {}
-
-  private readonly creationTime: Time = Time.now();
-  private readonly ongoingTimers: Record<string, Time> = {};
-  private readonly stoppedTimers: Record<string, Time> = {};
-
-  public start(key: string) {
-    this.ongoingTimers[key] = Time.now();
-  }
-
-  public stop(key: string) {
-    if (this.ongoingTimers[key]) {
-      this.stoppedTimers[key] = this.ongoingTimers[key].diffFromNow();
-      delete this.ongoingTimers[key];
-    }
-  }
-
-  public getTotalTimePassed(): Time {
-    return this.creationTime.diffFromNow();
-  }
-
-  public hasStoppedTimers(): boolean {
-    return Object.keys(this.stoppedTimers).length > 0;
-  }
-
-  public getReport(): string {
-    return JSON.stringify({
-      key: this.key,
-      total: this.getTotalTimePassed(),
-      times: Object.keys(this.stoppedTimers).map((key) => ({
-        key,
-        time: this.stoppedTimers[key].formatAsDuration(),
-      })),
-      ongoingTimers: Object.keys(this.ongoingTimers),
-    });
-  }
-}

@@ -2,44 +2,54 @@ import Logger from "electron-log";
 import { ScheduledWorker } from "./scheduled-worker";
 import { ScheduledWorkerStatus } from "../../shared/types";
 
-const DEFAULT_BLOCK_RANGE = 250;
+const DEFAULT_BLOCK_RANGE = 500;
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
 
 interface ScheduledWorkerConfig {
   name: string;
-  interval_minutes: number;
+  cronExpression: string;
   enabled: boolean;
   filePath?: string;
   blockRange?: number;
   maxConcurrentRequests?: number;
 }
 
+const getCronExpressionMinutes = (intervalMinutes: number) => {
+  return `*/${intervalMinutes} * * * *`;
+};
+
+const getCronExpressionHours = (intervalHours: number) => {
+  return `0 */${intervalHours} * * *`;
+};
+
 const WORKERS: ScheduledWorkerConfig[] = [
   {
     name: "transactions-worker",
-    interval_minutes: 1,
+    cronExpression: getCronExpressionMinutes(1),
     enabled: true,
-    blockRange: 2000,
-    maxConcurrentRequests: 20,
   },
   {
     name: "nftdelegation-worker",
-    interval_minutes: 1,
+    cronExpression: getCronExpressionMinutes(1),
     enabled: true,
-    blockRange: 2000,
-    maxConcurrentRequests: 20,
+    blockRange: 1000,
   },
   {
     name: "nft-discovery-worker",
-    interval_minutes: 2,
+    cronExpression: getCronExpressionMinutes(2),
     enabled: true,
     filePath: "workers/nft-worker/nft-discovery",
   },
   {
     name: "nft-refresh-worker",
-    interval_minutes: 60,
+    cronExpression: getCronExpressionHours(2),
     enabled: true,
     filePath: "workers/nft-worker/nft-refresh",
+  },
+  {
+    name: "tdh-worker",
+    cronExpression: "1 0 * * *",
+    enabled: true,
   },
 ];
 
@@ -69,7 +79,7 @@ export function startSchedulers(
     const scheduledWorker = new ScheduledWorker(
       rpcUrl,
       worker.name,
-      worker.interval_minutes,
+      worker.cronExpression,
       worker.enabled,
       worker.blockRange ?? DEFAULT_BLOCK_RANGE,
       worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,

@@ -5,7 +5,7 @@ import {
   MEMES_ABI,
   MEMES_CONTRACT,
 } from "../../../../shared/abis/memes";
-import { Time } from "../../../../renderer/helpers/time";
+import { Time } from "../../../../shared/time";
 import {
   getLatestTransactionsBlock,
   persistTransactionsAndOwners,
@@ -170,7 +170,7 @@ export class TransactionsWorker extends CoreWorker {
         const logs = await this.getProvider().getLogs(filter);
 
         if (logs.length > 0) {
-          this.setBlockRange(1000);
+          this.setBlockRange(250);
           printContractStatus(
             "Fetched",
             logs.length.toLocaleString(),
@@ -187,8 +187,7 @@ export class TransactionsWorker extends CoreWorker {
           sendUpdate(
             `Finding values (${decodedTransactions.length.toLocaleString()})`
           );
-          // sleep
-          await sleep(500);
+
           const transactionsWithValues = await findTransactionValues(
             this.getProvider(),
             decodedTransactions,
@@ -215,7 +214,7 @@ export class TransactionsWorker extends CoreWorker {
           allContractTransactions.push(...transactionsWithValues);
           allContractOwnerDeltas.push(...ownerDeltas);
         } else {
-          this.setBlockRange(5000);
+          this.setBlockRange(1000);
           printContractStatus("No logs");
         }
       }
@@ -248,7 +247,7 @@ export class TransactionsWorker extends CoreWorker {
 
       currentFromBlock = nextToBlock + 1;
 
-      await sleep(500);
+      await sleep(250);
     }
 
     logInfo(parentPort, "Completed");
@@ -256,7 +255,7 @@ export class TransactionsWorker extends CoreWorker {
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
-        message: `Completed at ${Time.now().toIsoDateTimeString()} - Latest Block: ${toBlock}`,
+        message: `Completed at ${Time.now().toLocaleDateTimeString()} - Latest Block: ${toBlock}`,
       },
     });
   }

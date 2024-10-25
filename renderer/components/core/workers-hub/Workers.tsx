@@ -10,7 +10,7 @@ import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
 export interface Task {
   namespace: string;
   logFile: string;
-  interval: number;
+  cronExpression: string;
   status?: {
     status: ScheduledWorkerStatus;
     message: string;
@@ -20,6 +20,79 @@ export interface Task {
     statusPercentage?: number;
   };
 }
+
+const cronToHumanReadable = (cronExpression: string): string => {
+  const [minute, hour, dayOfMonth, month, dayOfWeek] =
+    cronExpression.split(" ");
+
+  if (
+    minute === "*/1" &&
+    hour === "*" &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
+    return "every 1 minute";
+  }
+
+  if (
+    minute.startsWith("*/") &&
+    hour === "*" &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
+    return `every ${minute.slice(2)} minutes`;
+  }
+
+  if (
+    minute === "0" &&
+    hour === "*/1" &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
+    return "every 1 hour";
+  }
+
+  if (
+    minute === "0" &&
+    hour.startsWith("*/") &&
+    dayOfMonth === "*" &&
+    month === "*" &&
+    dayOfWeek === "*"
+  ) {
+    return `every ${hour.slice(2)} hours`;
+  }
+
+  // Handle the case for "at <specific time>"
+  if (dayOfMonth === "*" && month === "*" && dayOfWeek === "*") {
+    if (minute !== "*" && hour !== "*") {
+      return cronToLocalTime(cronExpression);
+    }
+  }
+
+  return cronExpression;
+};
+
+const cronToLocalTime = (cronExpression: string): string => {
+  const [minute, hour, dayOfMonth, month, dayOfWeek] =
+    cronExpression.split(" ");
+
+  const d = new Date();
+  const utcDate = new Date(
+    Date.UTC(
+      d.getFullYear(),
+      d.getMonth(),
+      d.getDate(),
+      Number(hour),
+      Number(minute)
+    )
+  );
+  const localTime = utcDate.toLocaleTimeString().slice(0, 5);
+
+  return `at ${localTime} (local time)`;
+};
 
 export function WorkerCards({
   homeDir,
@@ -68,7 +141,7 @@ export function WorkerCard({
     .replace(/\b\w/g, (char) => char.toUpperCase());
 
   const printStatus = () => {
-    if (!task.interval) {
+    if (!task.cronExpression) {
       return <span>Always running</span>;
     }
 
@@ -151,10 +224,9 @@ export function WorkerCard({
                         <CircleLoader />
                       ) : null}
                     </span>
-                    {task.interval ? (
+                    {task.cronExpression ? (
                       <span className="font-smaller font-color-h">
-                        (scheduled every {task.interval} minute
-                        {task.interval > 1 ? "s" : ""})
+                        {cronToHumanReadable(task.cronExpression)}
                       </span>
                     ) : null}
                   </span>

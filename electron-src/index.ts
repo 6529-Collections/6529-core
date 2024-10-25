@@ -621,14 +621,14 @@ ipcMain.handle("get-scheduled-workers", () => {
   const mainTask = {
     namespace: "main",
     logFile: getMainLogsPath(),
-    interval: 0,
+    cronExpression: null,
   };
   const tasks: any[] = [];
   scheduledWorkers.forEach((worker) => {
     tasks.push({
       namespace: worker.getNamespace(),
       logFile: worker.getLogFilePath(),
-      interval: worker.getInterval(),
+      cronExpression: worker.getCronExpression(),
       status: worker.getStatus(),
     });
   });

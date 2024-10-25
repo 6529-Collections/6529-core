@@ -71,7 +71,7 @@ class NFTDelegationWorker extends CoreWorker {
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
-        message: `Completed at ${Time.now().toIsoDateTimeString()} - Latest Block: ${
+        message: `Completed at ${Time.now().toLocaleDateTimeString()} - Latest Block: ${
           delegationsResponse.latestBlock
         }`,
       },
@@ -235,16 +235,16 @@ class NFTDelegationWorker extends CoreWorker {
         if (!delResult) {
           return;
         }
-        const collection = delResult.args.collectionAddress;
+        const collection = delResult.args.collectionAddress.toLowerCase();
         const from = delResult.args.delegator
           ? delResult.args.delegator
           : delResult.args.from;
         const to = delResult.args.delegationAddress;
-        const useCase = delResult.args.useCase.toString();
+        const useCase = Number(delResult.args.useCase);
 
         if (
           !areEqualAddresses(from, to) ||
-          useCase === USE_CASE_PRIMARY_ADDRESS.toString()
+          useCase === USE_CASE_PRIMARY_ADDRESS
         ) {
           if (
             [
@@ -258,13 +258,13 @@ class NFTDelegationWorker extends CoreWorker {
               wallet1: from.toLowerCase(),
               wallet2: to.toLowerCase(),
             };
-            if (useCase === USE_CASE_CONSOLIDATION.toString()) {
+            if (useCase === USE_CASE_CONSOLIDATION) {
               if (
                 [MEMES_CONTRACT, DELEGATION_ALL_ADDRESS].includes(collection)
               ) {
                 consolidations.push(e);
               }
-            } else if (useCase === USE_CASE_SUB_DELEGATION.toString()) {
+            } else if (useCase === USE_CASE_SUB_DELEGATION) {
               registrations.push({
                 ...e,
                 use_case: useCase,
@@ -294,7 +294,7 @@ class NFTDelegationWorker extends CoreWorker {
               wallet1: from.toLowerCase(),
               wallet2: to.toLowerCase(),
             };
-            if (useCase === USE_CASE_CONSOLIDATION.toString()) {
+            if (useCase === USE_CASE_CONSOLIDATION) {
               if (
                 [MEMES_CONTRACT, DELEGATION_ALL_ADDRESS].includes(collection)
               ) {

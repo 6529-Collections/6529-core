@@ -1,4 +1,4 @@
-import { MANIFOLD_ADDRESS, NULL_ADDRESS } from "../../../../constants";
+import { NULL_ADDRESS } from "../../../../constants";
 import { areEqualAddresses } from "../../../../shared/helpers";
 import { Transaction } from "../../../db/entities/ITransaction";
 
@@ -18,10 +18,7 @@ export async function extractNFTOwnerDeltas(
     const fromKey = `${transaction.contract}:${transaction.token_id}:${transaction.from_address}`;
     const toKey = `${transaction.contract}:${transaction.token_id}:${transaction.to_address}`;
 
-    if (
-      !areEqualAddresses(transaction.from_address, NULL_ADDRESS) &&
-      !areEqualAddresses(transaction.from_address, MANIFOLD_ADDRESS)
-    ) {
+    if (!areEqualAddresses(transaction.from_address, NULL_ADDRESS)) {
       if (!ownersMap[fromKey]) {
         ownersMap[fromKey] = {
           address: transaction.from_address.toLowerCase(),
@@ -46,5 +43,5 @@ export async function extractNFTOwnerDeltas(
     }
   }
 
-  return Object.values(ownersMap);
+  return Object.values(ownersMap).filter((o) => o.delta !== 0);
 }

@@ -7,6 +7,9 @@ export const DELEGATIONS_TABLE = "delegations";
 export const CONSOLIDATIONS_TABLE = "consolidations";
 export const NFTDELEGATION_BLOCKS_TABLE = "nft_delegation_blocks";
 export const RPC_PROVIDERS_TABLE = "rpc_providers";
+export const WALLETS_TDH_TABLE = "tdh";
+export const CONSOLIDATED_WALLETS_TDH_TABLE = "tdh_consolidation";
+export const TDH_BLOCKS_TABLE = "tdh_blocks";
 
 export const ADD_SEED_WALLET = "addSeedWallet";
 export const IMPORT_SEED_WALLET = "importSeedWallet";
@@ -27,6 +30,7 @@ export const ALCHEMY_API_KEY = "";
 export const MNEMONIC_NA = "N/A";
 
 export const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
+export const NULL_ADDRESS_DEAD = "0x000000000000000000000000000000000000dead";
 export const MANIFOLD_ADDRESS = "0x3A3548e060Be10c2614d0a4Cb0c03CC9093fD799";
 
 export const DELEGATION_CONTRACT: {
@@ -50,3 +54,7 @@ export const USE_CASE_SUB_DELEGATION = 998;
 export const USE_CASE_CONSOLIDATION = 999;
 export const CONSOLIDATIONS_LIMIT = 3;
 export const NEVER_DATE = 64060588800;
+
+export const MEME_8_EDITION_BURN_ADJUSTMENT = -2588;
+export const MEME_8_BURN_TRANSACTION =
+  "0xa6c27335d3c4f87064a938e987e36525885cc3d136ebb726f4c5d374c0d2d854";

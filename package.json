@@ -84,6 +84,7 @@
     "lexical": "^0.16.1",
     "lodash": "^4.17.21",
     "minidump": "^0.26.0",
+    "moment-timezone": "^0.5.46",
     "next": "^14.2.6",
     "next-redux-wrapper": "^8.1.0",
     "node-cron": "^3.0.3",
@@ -143,5 +144,6 @@
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",
     "typescript": "^5.4.5"
-  }
+  },
+  "overrides": {}
 }
