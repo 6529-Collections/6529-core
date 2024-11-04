@@ -142,7 +142,7 @@ function WhatIsEthScannerAccordion() {
                 </a>
                 , to retrieve data from the blockchain.
               </li>
-              <li className="mb-2">
+              <li>
                 You can have multiple RPC Providers but only one can be active
                 at a time.
               </li>
@@ -187,7 +187,7 @@ function WhatIsRpcUrlAccordion() {
                 Broadcasting transactions: Send signed transactions to the
                 blockchain for inclusion in blocks.
               </li>
-              <li className="mb-2">
+              <li>
                 Interacting with smart contracts: Call functions of smart
                 contracts deployed on the blockchain.
               </li>

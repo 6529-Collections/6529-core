@@ -1,5 +1,4 @@
-import styles from "./ETHScanner.module.scss";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
 import {
@@ -7,21 +6,9 @@ import {
   ScheduledWorkerStatus,
 } from "../../../../shared/types";
 import Link from "next/link";
-import { Task, WorkerCard, WorkerCards } from "./Workers";
+import { Task, WorkerCards } from "./Workers";
 import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
 import { AddRpcProviderModal } from "./RpcProviderModal";
-import { faCopy } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import { manualStartWorker } from "../../../electron";
-import { useToast } from "../../../contexts/ToastContext";
-
-interface TDHInfo {
-  block: number;
-  blockTimestamp: number;
-  merkleRoot: string;
-  lastCalculation: number;
-}
 
 export default function ETHScanner() {
   const [fetchingTasks, setFetchingTasks] = useState(true);
@@ -32,28 +19,23 @@ export default function ETHScanner() {
 
   const [showAddRpcProviderModal, setShowAddRpcProviderModal] = useState(false);
 
-  const [tdhInfo, setTdhInfo] = useState<TDHInfo>();
-
   const fetchContent = () => {
     window.api
       .getScheduledWorkers()
       .then(({ homeDir, rpcProviders, tasks }) => {
         setHomeDir(homeDir);
         setRpcProviders(rpcProviders);
-        setTasks(tasks);
+        setTasks(
+          tasks.filter(
+            (t: Task) => t.namespace !== ScheduledWorkerNames.TDH_WORKER
+          )
+        );
         setFetchingTasks(false);
       });
   };
 
-  const fetchTdhInfo = () => {
-    window.api.getTdhInfo().then((tdhInfo) => {
-      setTdhInfo(tdhInfo);
-    });
-  };
-
   useEffect(() => {
     fetchContent();
-    fetchTdhInfo();
   }, []);
 
   useEffect(() => {
@@ -83,13 +65,6 @@ export default function ETHScanner() {
             : task
         )
       );
-
-      if (
-        status === ScheduledWorkerStatus.COMPLETED &&
-        namespace === ScheduledWorkerNames.TDH_WORKER
-      ) {
-        fetchTdhInfo();
-      }
     };
     window.api.onWorkerUpdate(updateWorkerState);
     return () => {
@@ -152,14 +127,6 @@ export default function ETHScanner() {
                 />
               </Col>
             </Row>
-            <TDHInfoCard
-              tdhInfo={tdhInfo}
-              isRunningTDH={
-                tasks?.find(
-                  (task) => task.namespace === ScheduledWorkerNames.TDH_WORKER
-                )?.status?.status === ScheduledWorkerStatus.RUNNING ?? false
-              }
-            />
           </>
         )}
       </Container>
@@ -172,103 +139,6 @@ export default function ETHScanner() {
           }
         }}
       />
-    </>
-  );
-}
-
-function TDHInfoCard({
-  tdhInfo,
-  isRunningTDH,
-}: {
-  tdhInfo?: TDHInfo;
-  isRunningTDH: boolean;
-}) {
-  const { showToast } = useToast();
-
-  const [merkleRootCopied, setMerkleRootCopied] = useState(false);
-
-  const calculateTDHNow = async () => {
-    const status = await manualStartWorker(ScheduledWorkerNames.TDH_WORKER);
-    if (status.error) {
-      showToast(`Error Starting TDH Worker - ${status.data}`, "error");
-    } else {
-      showToast(`TDH Worker Started!`, "success");
-    }
-  };
-
-  return (
-    <>
-      <Row className="pt-5">
-        <Col>
-          <h3 className="float-none">
-            <span className="font-lightest">App</span> TDH
-          </h3>
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <Container className={styles.logCard}>
-            <Row>
-              <Col>
-                {tdhInfo ? (
-                  <div className="d-flex gap-3 justify-content-between align-items-center">
-                    <div className="d-flex flex-column gap-1">
-                      <div className="d-flex gap-3">
-                        <span>
-                          Block:{" "}
-                          <span className={styles.progress}>
-                            {tdhInfo.block}
-                          </span>
-                        </span>
-                        <span>
-                          Last Calculation:{" "}
-                          <span className={styles.progress}>
-                            {new Date(
-                              tdhInfo.lastCalculation * 1000
-                            ).toLocaleString()}
-                          </span>
-                        </span>
-                      </div>
-                      <div className="mt-3 d-flex align-items-center gap-2">
-                        Merkle Root:{" "}
-                        <span className={styles.progress}>
-                          {tdhInfo.merkleRoot}
-                        </span>
-                        <Tippy
-                          content={merkleRootCopied ? "Copied!" : "Copy"}
-                          hideOnClick={false}
-                          placement="top"
-                          theme="light">
-                          <FontAwesomeIcon
-                            className="cursor-pointer unselectable"
-                            icon={faCopy}
-                            height={20}
-                            onClick={() => {
-                              navigator.clipboard.writeText(tdhInfo.merkleRoot);
-                              setMerkleRootCopied(true);
-                              setTimeout(() => {
-                                setMerkleRootCopied(false);
-                              }, 1500);
-                            }}
-                          />
-                        </Tippy>
-                      </div>
-                    </div>
-                    <Button
-                      variant="primary"
-                      disabled={isRunningTDH}
-                      onClick={calculateTDHNow}>
-                      Calculate Now
-                    </Button>
-                  </div>
-                ) : (
-                  <span>No TDH info</span>
-                )}
-              </Col>
-            </Row>
-          </Container>
-        </Col>
-      </Row>
     </>
   );
 }

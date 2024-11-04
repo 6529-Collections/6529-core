@@ -37,3 +37,11 @@ export enum ScheduledWorkerNames {
   NFT_REFRESH_WORKER = "nft-refresh-worker",
   TDH_WORKER = "tdh-worker",
 }
+
+export enum ScheduledWorkerDisplay {
+  TRANSACTIONS_WORKER = "Transactions",
+  NFT_DELEGATION_WORKER = "NFTDelegation",
+  NFT_DISCOVERY_WORKER = "NFT Discovery",
+  NFT_REFRESH_WORKER = "NFT Refresh",
+  TDH_WORKER = "TDH",
+}

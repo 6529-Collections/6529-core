@@ -8,7 +8,7 @@ import { DataSource, In, Not } from "typeorm";
 import Logger from "electron-log";
 import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
 import { RPCProvider } from "./entities/IRpcProvider";
-import { TDHMerkleRoot } from "./entities/ITDH";
+import { ConsolidatedTDH, TDHMerkleRoot } from "./entities/ITDH";
 
 let AppDataSource: DataSource;
 
@@ -150,7 +150,7 @@ export const initDb = async () => {
   try {
     AppDataSource = new DataSource({
       ...baseDataSourceParams,
-      entities: [SeedWallet, RPCProvider, TDHMerkleRoot],
+      entities: [SeedWallet, RPCProvider, TDHMerkleRoot, ConsolidatedTDH],
       synchronize: true,
     });
     await AppDataSource.initialize();

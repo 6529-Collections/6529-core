@@ -62,7 +62,7 @@ import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
 import fs from "fs";
 import { ScheduledWorker } from "./scheduled-tasks/scheduled-worker";
 import { RPCProvider } from "./db/entities/IRpcProvider";
-import { TDHMerkleRoot } from "./db/entities/ITDH";
+import { ConsolidatedTDH, TDHMerkleRoot } from "./db/entities/ITDH";
 
 contextMenu({
   showInspectElement: false,
@@ -623,6 +623,7 @@ ipcMain.handle("get-info", () => {
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {
     namespace: "6529 Core",
+    display: "6529 Core",
     logFile: getMainLogsPath(),
     cronExpression: null,
   };
@@ -637,6 +638,7 @@ ipcMain.handle("get-scheduled-workers", () => {
   scheduledWorkers.forEach((worker) => {
     tasks.push({
       namespace: worker.getNamespace(),
+      display: worker.getDisplay(),
       logFile: worker.getLogFilePath(),
       cronExpression: worker.getCronExpression(),
       status: worker.getStatus(),
@@ -657,11 +659,20 @@ ipcMain.handle("get-tdh-info", async () => {
     return undefined;
   }
 
+  const totalTDH = await getDb()
+    .getRepository(ConsolidatedTDH)
+    .sum("boosted_tdh");
+
+  if (!totalTDH) {
+    return undefined;
+  }
+
   return {
     block: tdhMerkle.block,
     blockTimestamp: tdhMerkle.timestamp,
     merkleRoot: tdhMerkle.merkle_root,
     lastCalculation: tdhMerkle.last_update,
+    totalTDH,
   };
 });
 

@@ -18,6 +18,7 @@ export interface WorkerData {
 export class ScheduledWorker {
   private rpcUrl: string | null;
   private namespace: string;
+  private display: string;
   private cronExpression: string;
   private enabled: boolean;
   private filePath: string;
@@ -48,6 +49,7 @@ export class ScheduledWorker {
   constructor(
     rpcUrl: string | null,
     namespace: string,
+    display: string,
     cronExpression: string,
     enabled: boolean,
     blockRange: number,
@@ -66,6 +68,7 @@ export class ScheduledWorker {
   ) {
     this.rpcUrl = rpcUrl;
     this.namespace = namespace;
+    this.display = display;
     if (!cron.validate(cronExpression)) {
       throw new Error("Invalid cron expression");
     }
@@ -177,6 +180,10 @@ export class ScheduledWorker {
 
   public getNamespace(): string {
     return this.namespace;
+  }
+
+  public getDisplay(): string {
+    return this.display;
   }
 
   public getLogger(): WorkerLogger {

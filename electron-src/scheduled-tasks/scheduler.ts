@@ -1,6 +1,7 @@
 import Logger from "electron-log";
 import { ScheduledWorker } from "./scheduled-worker";
 import {
+  ScheduledWorkerDisplay,
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
 } from "../../shared/types";
@@ -10,6 +11,7 @@ const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
 
 interface ScheduledWorkerConfig {
   name: string;
+  display: ScheduledWorkerDisplay;
   cronExpression: string;
   enabled: boolean;
   filePath?: string;
@@ -28,29 +30,34 @@ const getCronExpressionHours = (intervalHours: number) => {
 const WORKERS: ScheduledWorkerConfig[] = [
   {
     name: ScheduledWorkerNames.TRANSACTIONS_WORKER,
+    display: ScheduledWorkerDisplay.TRANSACTIONS_WORKER,
     cronExpression: getCronExpressionMinutes(1),
     enabled: true,
   },
   {
     name: ScheduledWorkerNames.NFT_DELEGATION_WORKER,
+    display: ScheduledWorkerDisplay.NFT_DELEGATION_WORKER,
     cronExpression: getCronExpressionMinutes(1),
     enabled: true,
     blockRange: 1000,
   },
   {
     name: ScheduledWorkerNames.NFT_DISCOVERY_WORKER,
+    display: ScheduledWorkerDisplay.NFT_DISCOVERY_WORKER,
     cronExpression: getCronExpressionMinutes(2),
     enabled: true,
     filePath: "workers/nft-worker/nft-discovery",
   },
   {
     name: ScheduledWorkerNames.NFT_REFRESH_WORKER,
+    display: ScheduledWorkerDisplay.NFT_REFRESH_WORKER,
     cronExpression: getCronExpressionHours(2),
     enabled: true,
     filePath: "workers/nft-worker/nft-refresh",
   },
   {
     name: ScheduledWorkerNames.TDH_WORKER,
+    display: ScheduledWorkerDisplay.TDH_WORKER,
     cronExpression: "1 0 * * *",
     enabled: true,
   },
@@ -82,6 +89,7 @@ export function startSchedulers(
     const scheduledWorker = new ScheduledWorker(
       rpcUrl,
       worker.name,
+      worker.display,
       worker.cronExpression,
       worker.enabled,
       worker.blockRange ?? DEFAULT_BLOCK_RANGE,

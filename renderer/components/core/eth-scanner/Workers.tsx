@@ -5,9 +5,14 @@ import { RPCProvider } from "./RpcProviders";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
 import useIsMobileScreen from "../../../hooks/isMobileScreen";
 import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
+import { faCopy } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Tippy from "@tippyjs/react";
+import { useState } from "react";
 
 export interface Task {
   namespace: string;
+  display: string;
   logFile: string;
   cronExpression: string;
   status?: {
@@ -18,6 +23,14 @@ export interface Task {
     target?: number;
     statusPercentage?: number;
   };
+}
+
+export interface TDHInfo {
+  block: number;
+  blockTimestamp: number;
+  merkleRoot: string;
+  lastCalculation: number;
+  totalTDH: number;
 }
 
 const cronToHumanReadable = (cronExpression: string): string => {
@@ -134,11 +147,6 @@ export function WorkerCard({
   readonly homeDir: string;
   readonly task: Task;
 }) {
-  const name = task.namespace
-    .replaceAll("-", " ")
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-
   const displayPath = task.logFile.startsWith(homeDir)
     ? `~${task.logFile.replace(homeDir, "")}`
     : `${task.logFile}`;
@@ -222,7 +230,9 @@ export function WorkerCard({
                       isMobile ? "align-items-center" : "align-items-start"
                     }`}>
                     <span className="d-flex align-items-center gap-3">
-                      <span className="font-bolder font-larger">{name}</span>
+                      <span className="font-bolder font-larger">
+                        {task.display}
+                      </span>
                       {task.status?.status === ScheduledWorkerStatus.RUNNING ? (
                         <CircleLoader />
                       ) : null}
@@ -254,7 +264,9 @@ export function WorkerCard({
                     <Button
                       size="sm"
                       variant="dark"
-                      onClick={() => window.api.openLogs(name, task.logFile)}>
+                      onClick={() =>
+                        window.api.openLogs(task.display, task.logFile)
+                      }>
                       <span className="font-smaller">View Logs</span>
                     </Button>
                   </span>
@@ -265,6 +277,77 @@ export function WorkerCard({
               </Row>
             </Container>
           </Col>
+        </Col>
+      </Row>
+    </Container>
+  );
+}
+
+export function TDHWorkerCard({
+  tdhInfo,
+  isRunningTDH,
+  calculateTDHNow,
+}: {
+  readonly tdhInfo?: TDHInfo;
+  readonly isRunningTDH: boolean;
+  readonly calculateTDHNow: () => void;
+}) {
+  const [merkleRootCopied, setMerkleRootCopied] = useState(false);
+
+  return (
+    <Container className={styles.logCard}>
+      <Row>
+        <Col>
+          {tdhInfo ? (
+            <div className="d-flex gap-3 justify-content-between align-items-center">
+              <div className="d-flex flex-column gap-1">
+                <div className="d-flex gap-3">
+                  <span>
+                    Block:{" "}
+                    <span className={styles.progress}>{tdhInfo.block}</span>
+                  </span>
+                  <span>
+                    Last Calculation:{" "}
+                    <span className={styles.progress}>
+                      {new Date(
+                        tdhInfo.lastCalculation * 1000
+                      ).toLocaleString()}
+                    </span>
+                  </span>
+                </div>
+                <div className="mt-3 d-flex align-items-center gap-2">
+                  Merkle Root:{" "}
+                  <span className={styles.progress}>{tdhInfo.merkleRoot}</span>
+                  <Tippy
+                    content={merkleRootCopied ? "Copied!" : "Copy"}
+                    hideOnClick={false}
+                    placement="top"
+                    theme="light">
+                    <FontAwesomeIcon
+                      className="cursor-pointer unselectable"
+                      icon={faCopy}
+                      height={20}
+                      onClick={() => {
+                        navigator.clipboard.writeText(tdhInfo.merkleRoot);
+                        setMerkleRootCopied(true);
+                        setTimeout(() => {
+                          setMerkleRootCopied(false);
+                        }, 1500);
+                      }}
+                    />
+                  </Tippy>
+                </div>
+              </div>
+              <Button
+                variant="primary"
+                disabled={isRunningTDH}
+                onClick={calculateTDHNow}>
+                Calculate Now
+              </Button>
+            </div>
+          ) : (
+            <span>No TDH info</span>
+          )}
         </Col>
       </Row>
     </Container>

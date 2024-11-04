@@ -1,4 +1,4 @@
-import { DataSource, In, LessThanOrEqual, MoreThan } from "typeorm";
+import { DataSource, In, LessThanOrEqual, Like, MoreThan } from "typeorm";
 import {
   CONSOLIDATIONS_LIMIT,
   CONSOLIDATIONS_TABLE,
@@ -208,13 +208,13 @@ export async function persistTDH(
   await db.transaction(async (manager) => {
     const tdhRepo = manager.getRepository(TDH);
     if (wallets) {
+      console.log("hi i am deleting wallets", block, wallets);
       await Promise.all(
         wallets.map(async (wallet) => {
-          await tdhRepo
-            .createQueryBuilder()
-            .delete()
-            .where("wallet = ? AND block = ? ", [wallet.toLowerCase(), block])
-            .execute();
+          await tdhRepo.delete({
+            wallet: wallet.toLowerCase(),
+            block: block,
+          });
         })
       );
     } else {
@@ -320,11 +320,9 @@ export async function persistConsolidatedTDH(
       await Promise.all(
         wallets.map(async (wallet) => {
           const walletPattern = `%${wallet}%`;
-          await tdhRepo
-            .createQueryBuilder()
-            .delete()
-            .where("consolidation_key like ?", [walletPattern])
-            .execute();
+          await tdhRepo.delete({
+            consolidation_key: Like(walletPattern),
+          });
         })
       );
     } else {
