@@ -38,8 +38,8 @@ import { NextGenMintingFor } from "./NextGenMintShared";
 import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
 import DotLoader from "../../../../dotLoader/DotLoader";
+import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
 import { SEIZE_API_URL } from "../../../../../../constants";
-import { useSeizeConnectModal } from "../../../../../contexts/SeizeConnectModalContext";
 
 export function getJsonData(keccak: string, data: string) {
   const parsed = JSON.parse(data);
@@ -82,8 +82,7 @@ function getMintValue(mintCount: number, mintPrice: number) {
 export default function NextGenMintWidget(props: Readonly<Props>) {
   const account = useAccount();
   const chainId = useChainId();
-
-  const { setShowConnectModal } = useSeizeConnectModal();
+  const { seizeConnect } = useSeizeConnectContext();
 
   const [currentProof, setCurrentProof] = useState<
     | {
@@ -214,10 +213,10 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           setIsMinting(true);
         }
       } else {
-        setShowConnectModal(true);
+        seizeConnect();
       }
     } else {
-      setShowConnectModal(true);
+      seizeConnect();
     }
   };
 

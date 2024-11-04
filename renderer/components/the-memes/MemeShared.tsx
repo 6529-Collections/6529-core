@@ -64,6 +64,12 @@ export function SharedHead(
     });
   }, []);
 
+  useEffect(() => {
+    setTitle({
+      title: pagenameFull,
+    });
+  }, []);
+
   return (
     <Head>
       <title>{title}</title>
