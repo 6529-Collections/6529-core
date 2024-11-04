@@ -37,8 +37,7 @@ export default function WaveDetailedDropFollowAuthor({
         viewBox="0 0 17 15"
         fill="none"
         aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+        xmlns="http://www.w3.org/2000/svg">
         <path
           fillRule="evenodd"
           clipRule="evenodd"
@@ -55,8 +54,7 @@ export default function WaveDetailedDropFollowAuthor({
         viewBox="0 0 17 15"
         fill="none"
         aria-hidden="true"
-        xmlns="http://www.w3.org/2000/svg"
-      >
+        xmlns="http://www.w3.org/2000/svg">
         <path
           fillRule="evenodd"
           clipRule="evenodd"
@@ -152,15 +150,16 @@ export default function WaveDetailedDropFollowAuthor({
   };
 
   return (
-    <Tippy content={tooltipText[followState]} placement="top">
+    <Tippy
+      content={<span className="tw-text-xs">{tooltipText[followState]}</span>}
+      placement="top">
       <button
         onClick={(e) => {
           e.stopPropagation();
           onFollow();
         }}
         disabled={mutating}
-        className={`${classes[followState]} tw-text-iron-500 icon tw-px-2 tw-h-full tw-group tw-bg-transparent tw-rounded-full tw-border-0 tw-inline-flex tw-items-center tw-gap-x-1.5 tw-text-xs tw-leading-5 tw-font-medium tw-transition tw-ease-out tw-duration-300`}
-      >
+        className={`${classes[followState]} tw-text-iron-500 icon tw-px-2 tw-h-full tw-group tw-bg-transparent tw-rounded-full tw-border-0 tw-inline-flex tw-items-center tw-gap-x-1.5 tw-text-xs tw-leading-5 tw-font-medium tw-transition tw-ease-out tw-duration-300`}>
         {mutating ? (
           <CircleLoader size={CircleLoaderSize.SMALL} />
         ) : (

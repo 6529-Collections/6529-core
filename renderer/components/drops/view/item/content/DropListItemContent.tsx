@@ -17,7 +17,6 @@ interface DropListItemContentProps {
   readonly drop: ApiDrop;
   readonly voteState: DropVoteState;
   readonly canVote: boolean;
-  readonly availableCredit: number | null;
   readonly showWaveInfo?: boolean;
   readonly smallMenuIsShown: boolean;
   readonly dropReplyDepth: number;
@@ -30,7 +29,6 @@ export default function DropListItemContent({
   drop,
   voteState,
   canVote,
-  availableCredit,
   showWaveInfo = true,
   smallMenuIsShown,
   dropReplyDepth,
@@ -100,8 +98,7 @@ export default function DropListItemContent({
   return (
     <DropListItemContentWrapper
       scrollIntoView={scrollIntoView}
-      shouldWrap={dropReplyDepth === 0}
-    >
+      shouldWrap={dropReplyDepth === 0}>
       <div className="tw-space-y-6 tw-h-full" ref={containerRef}>
         <DropPartWrapper
           dropPart={activePart}
@@ -109,13 +106,11 @@ export default function DropListItemContent({
           voteState={voteState}
           canVote={canVote}
           size={size}
-          availableCredit={availableCredit}
           dropReplyDepth={dropReplyDepth}
           isDiscussionOpen={isDiscussionOpen}
           connectingLineType={connectingLineType}
           showWaveInfo={showWaveInfo}
-          onDiscussionButtonClick={onDiscussionButtonClick}
-        >
+          onDiscussionButtonClick={onDiscussionButtonClick}>
           <DropPart
             profile={drop.author}
             size={size}

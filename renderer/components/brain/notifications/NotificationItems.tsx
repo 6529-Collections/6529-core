@@ -5,13 +5,11 @@ import CommonIntersectionElement from "../../utils/CommonIntersectionElement";
 
 export interface NotificationItemsProps {
   readonly items: TypedNotification[];
-  readonly availableCredit: number | null;
   readonly onBottomIntersection: (state: boolean) => void;
 }
 
 export default function NotificationItems({
   items,
-  availableCredit,
   onBottomIntersection,
 }: NotificationItemsProps) {
   const getIntersectionTargetIndex = () => {
@@ -29,10 +27,10 @@ export default function NotificationItems({
     setIntersectionTargetIndex(getIntersectionTargetIndex());
   }, [items]);
   return (
-    <div className="tw-flex tw-flex-col lg:tw-w-[672px]">
+    <div className="tw-flex tw-flex-col">
       {items.map((item, i) => (
         <div key={item.id}>
-          <NotificationItem key={item.id} notification={item} availableCredit={availableCredit}/>
+          <NotificationItem key={item.id} notification={item} />
           {!!intersectionTargetIndex && intersectionTargetIndex === i && (
             <CommonIntersectionElement onIntersection={onBottomIntersection} />
           )}

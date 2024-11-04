@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
 import { TitleType, useAuth } from "../../auth/Auth";
-import { useQuery } from "@tanstack/react-query";
-import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
-import { ApiNotificationsResponse } from "../../../generated/models/ApiNotificationsResponse";
-import { commonApiFetch } from "../../../services/api/common-api";
+
 import Link from "next/link";
 import { useRouter } from "next/router";
+import { useUnreadNotifications } from "../../../hooks/useUnreadNotifications";
 
 export default function HeaderNotifications() {
   const { connectedProfile, setTitle } = useAuth();
@@ -13,42 +11,18 @@ export default function HeaderNotifications() {
 
   const [linkHref, setLinkHref] = useState("/my-stream/notifications");
 
-  const { data: notifications } = useQuery<ApiNotificationsResponse>({
-    queryKey: [
-      QueryKey.IDENTITY_NOTIFICATIONS,
-      { identity: connectedProfile?.profile?.handle, limit: "1" },
-    ],
-    queryFn: async () =>
-      await commonApiFetch<ApiNotificationsResponse>({
-        endpoint: `notifications`,
-        params: {
-          limit: "1",
-        },
-      }),
-    enabled: !!connectedProfile?.profile?.handle,
-    refetchInterval: 30000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: true,
-    refetchOnReconnect: true,
-    refetchIntervalInBackground: true,
-  });
-
-  const [haveUnreadNotifications, setHaveUnreadNotifications] = useState(
-    !!notifications?.unread_count
+  const { notifications, haveUnreadNotifications } = useUnreadNotifications(
+    connectedProfile?.profile?.handle
   );
 
   useEffect(() => {
-    const hasUnread = !!notifications?.unread_count;
-    setHaveUnreadNotifications(hasUnread);
-
     setTitle({
-      title: hasUnread
+      title: haveUnreadNotifications
         ? `(${notifications?.unread_count}) Notifications | 6529 SEIZE`
         : null,
       type: TitleType.NOTIFICATION,
     });
-
-    if (hasUnread) {
+    if (haveUnreadNotifications && notifications?.notifications?.length) {
       window.notifications.showNotification(
         notifications.notifications[0].id,
         notifications.notifications[0].related_identity?.pfp ?? "",
@@ -59,7 +33,13 @@ export default function HeaderNotifications() {
     }
 
     window.notifications.setBadge(notifications?.unread_count ?? 0);
-  }, [notifications]);
+  }, [haveUnreadNotifications]);
+
+  useEffect(() => {
+    if (router.pathname === "/my-stream/notifications") {
+      setLinkHref("/my-stream/notifications?reload=true");
+    }
+  }, [router.pathname]);
 
   useEffect(() => {
     if (router.pathname === "/my-stream/notifications") {

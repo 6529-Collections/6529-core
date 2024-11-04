@@ -79,14 +79,6 @@ export interface CreateDropRequestPart {
   readonly media: Array<DropMedia>;
 }
 
-// export interface CreateDropRequest {
-//   readonly title: string | null;
-//   readonly parts: Array<CreateDropRequestPart>;
-//   readonly referenced_nfts: Array<ReferencedNft>;
-//   readonly mentioned_users: Array<Omit<MentionedUser, "current_handle">>;
-//   readonly metadata: Array<DropMetadata>;
-// }
-
 export interface CreateDropPart extends Omit<CreateDropRequestPart, "media"> {
   readonly media: Array<File>;
 }
