@@ -1,4 +1,4 @@
-import styles from "./WorkersHub.module.scss";
+import styles from "./ETHScanner.module.scss";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Col, Container, Row, Button } from "react-bootstrap";
@@ -8,12 +8,14 @@ import {
   setRpcProviderActive,
 } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
+import Tippy from "@tippyjs/react";
 
 export interface RPCProvider {
   readonly id: number;
   readonly url: string;
   readonly name: string;
   readonly active: boolean;
+  readonly deletable: boolean;
 }
 
 export function RPCProviderCards({
@@ -88,7 +90,14 @@ function RPCProviderCard({
       <Container className={styles.rpcUrl}>
         <Row>
           <Col className="d-flex align-items-center justify-content-between">
-            <span>{rpcProvider.name}</span>
+            <span className="d-flex align-items-center gap-1">
+              <span>{rpcProvider.name}</span>
+              {!rpcProvider.deletable && (
+                <Tippy content="Default RPC provider - cannot be deleted">
+                  <span className="cursor-help">*</span>
+                </Tippy>
+              )}
+            </span>
             {rpcProvider.active && (
               <span className="d-flex align-items-center gap-1">
                 <FontAwesomeIcon
@@ -125,12 +134,14 @@ function RPCProviderCard({
                   onClick={() => handleMakeActive()}>
                   <span className="font-smaller">Set Active</span>
                 </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  onClick={() => handleDelete()}>
-                  <span className="font-smaller">Delete</span>
-                </Button>
+                {rpcProvider.deletable && (
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDelete()}>
+                    <span className="font-smaller">Delete</span>
+                  </Button>
+                )}
               </span>
             )}
           </Col>

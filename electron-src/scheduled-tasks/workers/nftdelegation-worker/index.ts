@@ -283,7 +283,7 @@ class NFTDelegationWorker extends CoreWorker {
     const revocations: DelegationEvent[] = [];
 
     const decodedLogPromises = logs.map((d) => {
-      this.getBottleneck().schedule(async () => {
+      return this.getBottleneck().schedule(async () => {
         const delResult = DELEGATIONS_IFACE.parseLog(d);
         if (!delResult) {
           return;
@@ -316,6 +316,11 @@ class NFTDelegationWorker extends CoreWorker {
                 [MEMES_CONTRACT, DELEGATION_ALL_ADDRESS].includes(collection)
               ) {
                 consolidations.push(e);
+              } else {
+                logInfo(
+                  parentPort,
+                  `Skipping consolidation for collection [${collection}]`
+                );
               }
             } else if (useCase === USE_CASE_SUB_DELEGATION) {
               registrations.push({
@@ -360,6 +365,8 @@ class NFTDelegationWorker extends CoreWorker {
                 collection: collection.toLowerCase(),
               });
             }
+          } else {
+            logInfo(parentPort, `Skipping [${delResult.name}]`);
           }
         }
       });

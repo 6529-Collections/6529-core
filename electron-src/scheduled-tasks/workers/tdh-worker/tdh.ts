@@ -10,10 +10,9 @@ import { areEqualAddresses, getDaysDiff } from "../../../../shared/helpers";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
 import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
-import { DataSource, LessThanOrEqual } from "typeorm";
+import { DataSource, In, LessThanOrEqual } from "typeorm";
 import { logInfo, sendStatusUpdate } from "../../worker-helpers";
 import { extractNFTOwnerDeltas } from "../transactions-worker/nft-owners";
-import { extractOwnersFromDeltas } from "../transactions-worker/transactions-worker.db";
 import { Time } from "../../../../shared/time";
 import {
   fetchAllConsolidationAddresses,
@@ -24,9 +23,14 @@ import {
   retrieveWalletConsolidations,
 } from "./tdh-worker.db";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
-import { MEME_8_BURN_TRANSACTION, NULL_ADDRESS } from "../../../../constants";
+import {
+  MEME_8_BURN_TRANSACTION,
+  MEME_8_EDITION_BURN_ADJUSTMENT,
+  NULL_ADDRESS,
+} from "../../../../constants";
 import { consolidateTDH } from "./tdh-worker.consolidation";
 import { processNftTdh } from "./tdh-worker.nfts";
+import { NFTOwner } from "../../../db/entities/INFTOwner";
 
 export const TDH_CONTRACTS = [
   MEMES_CONTRACT,
@@ -198,13 +202,22 @@ export const calculateTDH = async (
   const transactions = await db.getRepository(Transaction).find({
     where: {
       block: LessThanOrEqual(block),
+      contract: In(TDH_CONTRACTS),
     },
   });
 
   logInfo(parentPort, `[TRANSACTIONS ${transactions.length}]`);
 
   const ownersDeltas = await extractNFTOwnerDeltas(transactions);
-  const owners = await extractOwnersFromDeltas(db.manager, ownersDeltas);
+
+  const owners: NFTOwner[] = ownersDeltas.map((o) => {
+    return {
+      contract: o.contract,
+      address: o.address,
+      token_id: o.tokenId,
+      balance: o.delta,
+    };
+  });
 
   const netOwners = owners.filter((o) => o.balance > 0);
 
@@ -237,14 +250,26 @@ export const calculateTDH = async (
     },
   });
 
-  const memes = initialMemes.filter(
-    (m) =>
-      m.mint_date &&
-      Time.seconds(m.mint_date).lte(Time.fromDate(lastTDHCalc).minusDays(1))
-  );
+  const memes = initialMemes
+    .filter(
+      (m) =>
+        m.mint_date &&
+        Time.seconds(m.mint_date).lte(Time.fromDate(lastTDHCalc).minusDays(1))
+    )
+    .map((m) => {
+      const tokenOwners = memesOwners.filter((o) => o.token_id === m.id);
+      let editionSize = tokenOwners.reduce((acc, o) => acc + o.balance, 0);
+      if (m.id === 8) {
+        editionSize += MEME_8_EDITION_BURN_ADJUSTMENT;
+      }
+      logInfo(parentPort, `[MEME ${m.id}] [EDITION SIZE ${editionSize}]`);
+      return { ...m, edition_size: editionSize };
+    });
   memes.sort((a, b) => a.id - b.id);
 
   const HODL_INDEX = memes.reduce((acc, m) => Math.max(acc, m.edition_size), 0);
+  logInfo(parentPort, `[HODL_INDEX ${HODL_INDEX}]`);
+
   const ADJUSTED_SEASONS = buildSeasons(memes);
 
   logInfo(
@@ -287,10 +312,6 @@ export const calculateTDH = async (
       message: `[1/2] Block ${block} - Calculating TDH`,
     },
   });
-
-  // const timestamp = new Date(
-  //   (await alchemy.core.getBlock(block)).timestamp * 1000
-  // );
 
   const walletsTDH: TDH[] = [];
   const allGradientsTDH: any[] = [];
@@ -369,6 +390,15 @@ export const calculateTDH = async (
 
           if (areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
             memesData.memes_tdh += tokenTDH.tdh;
+            if (
+              areEqualAddresses(
+                wallet,
+                "0xc6400a5584db71e41b0e5dfbdc769b54b91256cd"
+              ) &&
+              !isFinite(tokenTDH.tdh)
+            ) {
+              console.log("hi i am tokenTDH", tokenTDH);
+            }
             memesData.memes_tdh__raw += tokenTDH.tdh__raw;
             unique_memes++;
             memesData.memes_balance += tokenTDH.balance;
@@ -754,6 +784,14 @@ function getTokenDatesFromConsolidation(
   }
 
   function removeDates(wallet: string, count: number) {
+    if (!tokenDatesMap[wallet]) {
+      console.log(
+        "hi i am wallet",
+        wallet,
+        tokenDatesMap,
+        consolidationTransactions
+      );
+    }
     const removeDates = tokenDatesMap[wallet].splice(
       tokenDatesMap[wallet].length - count,
       count

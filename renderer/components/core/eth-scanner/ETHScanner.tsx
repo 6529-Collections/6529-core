@@ -1,5 +1,5 @@
-import styles from "./WorkersHub.module.scss";
-import { Col, Container, Row } from "react-bootstrap";
+import styles from "./ETHScanner.module.scss";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
 import {
@@ -9,11 +9,12 @@ import {
 import Link from "next/link";
 import { Task, WorkerCard, WorkerCards } from "./Workers";
 import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
-import { CrashReports } from "./CrashReports";
 import { AddRpcProviderModal } from "./RpcProviderModal";
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
+import { manualStartWorker } from "../../../electron";
+import { useToast } from "../../../contexts/ToastContext";
 
 interface TDHInfo {
   block: number;
@@ -22,9 +23,8 @@ interface TDHInfo {
   lastCalculation: number;
 }
 
-export default function WorkersHub() {
+export default function ETHScanner() {
   const [fetchingTasks, setFetchingTasks] = useState(true);
-  const [mainTask, setMainTask] = useState<Task>();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [rpcProviders, setRpcProviders] = useState<RPCProvider[]>([]);
 
@@ -37,9 +37,8 @@ export default function WorkersHub() {
   const fetchContent = () => {
     window.api
       .getScheduledWorkers()
-      .then(({ homeDir, mainTask, rpcProviders, tasks }) => {
+      .then(({ homeDir, rpcProviders, tasks }) => {
         setHomeDir(homeDir);
-        setMainTask(mainTask);
         setRpcProviders(rpcProviders);
         setTasks(tasks);
         setFetchingTasks(false);
@@ -104,10 +103,10 @@ export default function WorkersHub() {
         <Row>
           <Col className="d-flex align-items-center justify-content-between">
             <h1 className="float-none">
-              <span className="font-lightest">Workers</span> Hub
+              <span className="font-lightest">ETH</span> Scanner
             </h1>
             <Link
-              href="/core/workers-hub/faq"
+              href="/core/eth-scanner/faq"
               className="font-larger decoration-hover-underline">
               FAQ
             </Link>
@@ -121,11 +120,6 @@ export default function WorkersHub() {
           </Row>
         ) : (
           <>
-            <Row className="pt-2">
-              <Col>
-                {mainTask && <WorkerCard homeDir={homeDir} task={mainTask} />}
-              </Col>
-            </Row>
             <Row className="pt-5">
               <Col className="d-flex align-items-center gap-3 justify-content-between">
                 <h3>
@@ -158,11 +152,17 @@ export default function WorkersHub() {
                 />
               </Col>
             </Row>
-            <TDHInfoCard tdhInfo={tdhInfo} />
+            <TDHInfoCard
+              tdhInfo={tdhInfo}
+              isRunningTDH={
+                tasks?.find(
+                  (task) => task.namespace === ScheduledWorkerNames.TDH_WORKER
+                )?.status?.status === ScheduledWorkerStatus.RUNNING ?? false
+              }
+            />
           </>
         )}
       </Container>
-      <CrashReports />
       <AddRpcProviderModal
         show={showAddRpcProviderModal}
         onHide={(refresh) => {
@@ -176,8 +176,25 @@ export default function WorkersHub() {
   );
 }
 
-function TDHInfoCard({ tdhInfo }: { tdhInfo?: TDHInfo }) {
+function TDHInfoCard({
+  tdhInfo,
+  isRunningTDH,
+}: {
+  tdhInfo?: TDHInfo;
+  isRunningTDH: boolean;
+}) {
+  const { showToast } = useToast();
+
   const [merkleRootCopied, setMerkleRootCopied] = useState(false);
+
+  const calculateTDHNow = async () => {
+    const status = await manualStartWorker(ScheduledWorkerNames.TDH_WORKER);
+    if (status.error) {
+      showToast(`Error Starting TDH Worker - ${status.data}`, "error");
+    } else {
+      showToast(`TDH Worker Started!`, "success");
+    }
+  };
 
   return (
     <>
@@ -194,46 +211,56 @@ function TDHInfoCard({ tdhInfo }: { tdhInfo?: TDHInfo }) {
             <Row>
               <Col>
                 {tdhInfo ? (
-                  <>
-                    <div className="d-flex gap-3">
-                      <span>
-                        Block:{" "}
-                        <span className={styles.progress}>{tdhInfo.block}</span>
-                      </span>
-                      <span>
-                        Last Calculation:{" "}
-                        <span className={styles.progress}>
-                          {new Date(
-                            tdhInfo.lastCalculation * 1000
-                          ).toLocaleString()}
+                  <div className="d-flex gap-3 justify-content-between align-items-center">
+                    <div className="d-flex flex-column gap-1">
+                      <div className="d-flex gap-3">
+                        <span>
+                          Block:{" "}
+                          <span className={styles.progress}>
+                            {tdhInfo.block}
+                          </span>
                         </span>
-                      </span>
+                        <span>
+                          Last Calculation:{" "}
+                          <span className={styles.progress}>
+                            {new Date(
+                              tdhInfo.lastCalculation * 1000
+                            ).toLocaleString()}
+                          </span>
+                        </span>
+                      </div>
+                      <div className="mt-3 d-flex align-items-center gap-2">
+                        Merkle Root:{" "}
+                        <span className={styles.progress}>
+                          {tdhInfo.merkleRoot}
+                        </span>
+                        <Tippy
+                          content={merkleRootCopied ? "Copied!" : "Copy"}
+                          hideOnClick={false}
+                          placement="top"
+                          theme="light">
+                          <FontAwesomeIcon
+                            className="cursor-pointer unselectable"
+                            icon={faCopy}
+                            height={20}
+                            onClick={() => {
+                              navigator.clipboard.writeText(tdhInfo.merkleRoot);
+                              setMerkleRootCopied(true);
+                              setTimeout(() => {
+                                setMerkleRootCopied(false);
+                              }, 1500);
+                            }}
+                          />
+                        </Tippy>
+                      </div>
                     </div>
-                    <div className="mt-3 d-flex align-items-center gap-2">
-                      Merkle Root:{" "}
-                      <span className={styles.progress}>
-                        {tdhInfo.merkleRoot}
-                      </span>
-                      <Tippy
-                        content={merkleRootCopied ? "Copied!" : "Copy"}
-                        hideOnClick={false}
-                        placement="top"
-                        theme="light">
-                        <FontAwesomeIcon
-                          className="cursor-pointer unselectable"
-                          icon={faCopy}
-                          height={20}
-                          onClick={() => {
-                            navigator.clipboard.writeText(tdhInfo.merkleRoot);
-                            setMerkleRootCopied(true);
-                            setTimeout(() => {
-                              setMerkleRootCopied(false);
-                            }, 1500);
-                          }}
-                        />
-                      </Tippy>
-                    </div>
-                  </>
+                    <Button
+                      variant="primary"
+                      disabled={isRunningTDH}
+                      onClick={calculateTDHNow}>
+                      Calculate Now
+                    </Button>
+                  </div>
                 ) : (
                   <span>No TDH info</span>
                 )}

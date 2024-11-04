@@ -106,6 +106,14 @@ export class ScheduledWorker {
     );
   }
 
+  public manualStart() {
+    if (this.worker || !this.enabled || this.isRunning()) {
+      return false;
+    }
+    this.startWorker();
+    return true;
+  }
+
   private startWorker() {
     if (this.worker) {
       return;

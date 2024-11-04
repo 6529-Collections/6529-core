@@ -10,27 +10,27 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const WorkersHub = dynamic(
-  () => import("../../../components/core/workers-hub/WorkersHub"),
+const ETHScanner = dynamic(
+  () => import("../../../components/core/eth-scanner/ETHScanner"),
   {
     ssr: false,
   }
 );
 
-export default function WorkersHubPage() {
+export default function ETHScannerPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - Workers Hub" },
+    { display: "Core - ETH Scanner" },
   ];
 
   return (
     <>
       <Head>
-        <title>Workers Hub | 6529 CORE</title>
+        <title>ETH Scanner | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Workers Hub | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/workers-hub`} />
-        <meta property="og:title" content={`Workers Hub`} />
+        <meta name="description" content="ETH Scanner | 6529 CORE" />
+        <meta property="og:url" content={`${SEIZE_URL}/core/eth-scanner`} />
+        <meta property="og:title" content={`ETH Scanner`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
@@ -41,7 +41,7 @@ export default function WorkersHubPage() {
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <WorkersHub />
+        <ETHScanner />
       </main>
     </>
   );

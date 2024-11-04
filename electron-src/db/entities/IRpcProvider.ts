@@ -16,4 +16,7 @@ export class RPCProvider {
   @Column({ type: "boolean", default: false })
   @Index()
   active!: boolean;
+
+  @Column({ type: "boolean", default: true })
+  deletable!: boolean;
 }

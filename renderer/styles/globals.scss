@@ -428,6 +428,10 @@ h5:not(.tailwind-scope h5) {
   cursor: pointer;
 }
 
+.cursor-help {
+  cursor: help;
+}
+
 .edit-profile {
   opacity: 0;
   transition: visibility 0s, opacity 0.3s ease-out;

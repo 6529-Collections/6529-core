@@ -281,9 +281,21 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
+                    <Link href="/core/app-logs">
+                      <h3>App Logs</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={{ span: 6, offset: 3 }}>
+                    <hr />
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
                     <Link href="/core/seed-wallets">
                       <h3>
-                        <span>Seed Wallets</span>&nbsp;
+                        <span>Seed Wallets</span>
                       </h3>
                     </Link>
                   </Col>
@@ -295,8 +307,15 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/core/workers-hub">
-                      <h3>Workers Hub</h3>
+                    <Link href="/core/eth-scanner">
+                      <h3>ETH Scanner</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link href="/core/tdh-consensus">
+                      <h3>TDH Consensus</h3>
                     </Link>
                   </Col>
                 </Row>
@@ -899,6 +918,13 @@ export default function Header(props: Readonly<Props>) {
                               />
                               <HeaderDesktopLink
                                 link={{
+                                  name: "App Logs",
+                                  path: "/core/app-logs",
+                                }}
+                              />
+                              <NavDropdown.Divider />
+                              <HeaderDesktopLink
+                                link={{
                                   name: "Seed Wallets",
                                   path: "/core/seed-wallets",
                                 }}
@@ -906,8 +932,14 @@ export default function Header(props: Readonly<Props>) {
                               <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Workers Hub",
-                                  path: "/core/workers-hub",
+                                  name: "ETH Scanner",
+                                  path: "/core/eth-scanner",
+                                }}
+                              />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "TDH Consensus",
+                                  path: "/core/tdh-consensus",
                                 }}
                               />
                             </NavDropdown>

@@ -8,6 +8,7 @@ import {
   SET_RPC_PROVIDER_ACTIVE,
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
+  MANUAL_START_WORKER,
 } from "../constants";
 
 export async function getSeedWallets() {
@@ -66,5 +67,10 @@ export async function deleteRpcProvider(id: number) {
 
 export async function deactivateRpcProvider(id: number) {
   const data = await window.api.sendSync(DEACTIVATE_RPC_PROVIDER, id);
+  return data;
+}
+
+export async function manualStartWorker(namespace: string) {
+  const data = await window.api.sendSync(MANUAL_START_WORKER, namespace);
   return data;
 }

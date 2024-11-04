@@ -4,7 +4,7 @@ import { encryptData } from "../../shared/encrypt";
 
 import { ethers } from "ethers";
 import { SeedWallet } from "./entities/ISeedWallet";
-import { DataSource, Not } from "typeorm";
+import { DataSource, In, Not } from "typeorm";
 import Logger from "electron-log";
 import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
 import { RPCProvider } from "./entities/IRpcProvider";
@@ -91,16 +91,23 @@ export async function deleteSeedWallet(address: string): Promise<void> {
 }
 
 export async function getRpcProviders(): Promise<RPCProvider[]> {
-  return await AppDataSource.getRepository(RPCProvider).find();
+  return await AppDataSource.getRepository(RPCProvider).find({
+    order: {
+      deletable: "ASC",
+      id: "ASC",
+    },
+  });
 }
 
 export async function addRpcProvider(
   name: string,
-  url: string
+  url: string,
+  deletable: boolean = true
 ): Promise<number> {
   const rpcProvider = new RPCProvider();
   rpcProvider.name = name;
   rpcProvider.url = url;
+  rpcProvider.deletable = deletable;
   const result = await AppDataSource.manager.save(rpcProvider);
   return result.id;
 }
@@ -133,6 +140,9 @@ export async function deleteRpcProvider(id: number): Promise<void> {
   if (provider.active) {
     throw new Error("Cannot delete active RPC provider");
   }
+  if (!provider.deletable) {
+    throw new Error("This RPC provider is not deletable");
+  }
   await repo.remove(provider);
 }
 
@@ -145,10 +155,57 @@ export const initDb = async () => {
     });
     await AppDataSource.initialize();
     Logger.info("Database connection established");
+    await populateDefaults();
   } catch (error) {
     Logger.error("Error during Data Source initialization:", error);
   }
 };
+
+async function populateDefaults() {
+  await populateDefaultRpcProviders();
+}
+
+async function populateDefaultRpcProviders() {
+  const defaultProviders = [
+    { name: "6529 Node", url: "https://api.seize.io/rpc" },
+    { name: "Ankr", url: "https://rpc.ankr.com/eth" },
+    { name: "Public Node", url: "https://ethereum.publicnode.com" },
+    { name: "LlamaNodes", url: "https://eth.llamarpc.com" },
+  ];
+  await AppDataSource.transaction(async (transactionalEntityManager) => {
+    const providers = await transactionalEntityManager.find(RPCProvider);
+    for (const provider of defaultProviders) {
+      const existingProvider = providers.find(
+        (p) => p.name === provider.name || p.url === provider.url
+      );
+      if (!existingProvider) {
+        await transactionalEntityManager.insert(RPCProvider, {
+          name: provider.name,
+          url: provider.url,
+          deletable: false,
+        });
+      } else if (
+        existingProvider.deletable ||
+        provider.name !== existingProvider.name ||
+        provider.url !== existingProvider.url
+      ) {
+        await transactionalEntityManager.update(
+          RPCProvider,
+          { id: existingProvider.id },
+          { deletable: false, name: provider.name, url: provider.url }
+        );
+      }
+    }
+    const defaultProviderNames = defaultProviders.map(
+      (provider) => provider.name
+    );
+    await transactionalEntityManager.update(
+      RPCProvider,
+      { name: Not(In(defaultProviderNames)) },
+      { deletable: true }
+    );
+  });
+}
 
 export const getDb = () => AppDataSource;
 export const getBaseDbParams = () => baseDataSourceParams;

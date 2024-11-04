@@ -1,4 +1,4 @@
-import styles from "./WorkersHub.module.scss";
+import styles from "./ETHScanner.module.scss";
 import { useCallback, useRef, useState } from "react";
 import { Modal, Button } from "react-bootstrap";
 import { addRpcProvider } from "../../../electron";
@@ -6,7 +6,7 @@ import { useToast } from "../../../contexts/ToastContext";
 import Link from "next/link";
 import { ethers } from "ethers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCheckCircle, faSpinner } from "@fortawesome/free-solid-svg-icons";
+import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { Spinner } from "../../dotLoader/DotLoader";
 
 export function AddRpcProviderModal(
@@ -88,6 +88,7 @@ export function AddRpcProviderModal(
       setUrlValidation(true);
       nameInputRef.current?.focus();
     } catch (error) {
+      console.error("invalid rpc url", error);
       showError("Invalid RPC URL");
       urlInputRef.current?.select();
     } finally {

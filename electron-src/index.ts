@@ -39,6 +39,7 @@ import {
   SET_RPC_PROVIDER_ACTIVE,
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
+  MANUAL_START_WORKER,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -619,12 +620,19 @@ ipcMain.handle("get-info", () => {
   };
 });
 
-ipcMain.handle("get-scheduled-workers", () => {
+ipcMain.handle("get-main-worker", () => {
   const mainTask = {
-    namespace: "main",
+    namespace: "6529 Core",
     logFile: getMainLogsPath(),
     cronExpression: null,
   };
+  return {
+    homeDir: getHomeDir(),
+    mainTask,
+  };
+});
+
+ipcMain.handle("get-scheduled-workers", () => {
   const tasks: any[] = [];
   scheduledWorkers.forEach((worker) => {
     tasks.push({
@@ -636,7 +644,6 @@ ipcMain.handle("get-scheduled-workers", () => {
   });
   return {
     homeDir: getHomeDir(),
-    mainTask,
     rpcProviders,
     tasks,
   };
@@ -807,4 +814,17 @@ ipcMain.on(DELETE_RPC_PROVIDER, (event, id: number) => {
     .catch((error) => {
       event.returnValue = { error: true, data: error };
     });
+});
+
+ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
+  const worker = scheduledWorkers.find(
+    (worker) => worker.getNamespace() === namespace[0]
+  );
+  let status: boolean;
+  if (worker) {
+    status = worker.manualStart();
+    event.returnValue = { error: !status };
+  } else {
+    event.returnValue = { error: true, data: "Worker not found" };
+  }
 });

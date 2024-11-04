@@ -5,7 +5,7 @@ import {
 } from "../../../db/entities/ITransaction";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
-import { batchUpsert } from "../../worker-helpers";
+import { batchUpsert, logInfo } from "../../worker-helpers";
 
 export async function getLatestTransactionsBlock(
   db: DataSource
@@ -72,18 +72,27 @@ export async function persistTransactionsAndOwners(
   }
 }
 
-export async function rebalanceTransactionOwners(db: DataSource) {
+export async function rebalanceTransactionOwners(
+  db: DataSource,
+  parentPort: any
+) {
+  logInfo(parentPort, "Rebalancing Transactions Owners");
+
   const allTransactions = await db.getRepository(Transaction).find();
 
-  console.log("All transactions", allTransactions.length);
+  logInfo(parentPort, "All transactions", allTransactions.length);
 
   const ownerDeltas = await extractNFTOwnerDeltas(allTransactions);
 
-  console.log("Owner deltas length", ownerDeltas.length);
+  logInfo(parentPort, "All owner deltas", ownerDeltas.length);
 
   await db.transaction(async (transaction) => {
+    const ownerRepository = transaction.getRepository(NFTOwner);
+    await ownerRepository.clear();
     await persistOwners(transaction, ownerDeltas);
   });
+
+  logInfo(parentPort, "All transactions owners rebalanced");
 }
 
 export async function extractOwnersFromDeltas(

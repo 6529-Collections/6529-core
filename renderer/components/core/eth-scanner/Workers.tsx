@@ -1,12 +1,10 @@
-import styles from "./WorkersHub.module.scss";
+import styles from "./ETHScanner.module.scss";
 
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { RPCProvider } from "./RpcProviders";
-import path from "path";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
 import useIsMobileScreen from "../../../hooks/isMobileScreen";
 import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
-import { homedir } from "os";
 
 export interface Task {
   namespace: string;
@@ -248,14 +246,16 @@ export function WorkerCard({
                   </span>
                   <span className="d-flex align-items-center gap-3">
                     <Button
-                      variant="secondary"
+                      size="sm"
+                      variant="dark"
                       onClick={() => window.api.showFile(task.logFile)}>
-                      Locate
+                      <span className="font-smaller">Open Folder</span>
                     </Button>
                     <Button
-                      variant="primary"
+                      size="sm"
+                      variant="dark"
                       onClick={() => window.api.openLogs(name, task.logFile)}>
-                      Follow
+                      <span className="font-smaller">View Logs</span>
                     </Button>
                   </span>
                 </Col>

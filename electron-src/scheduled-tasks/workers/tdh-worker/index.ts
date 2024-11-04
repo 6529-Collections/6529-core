@@ -25,7 +25,10 @@ import { calculateTDH } from "./tdh";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { Consolidation } from "../../../db/entities/IDelegation";
 import { NFT } from "../../../db/entities/INFT";
-import { getLatestTransactionsBlock } from "../transactions-worker/transactions-worker.db";
+import {
+  getLatestTransactionsBlock,
+  // rebalanceTransactionOwners,
+} from "../transactions-worker/transactions-worker.db";
 
 const data: WorkerData = workerData;
 
@@ -53,6 +56,9 @@ class TDHWorker extends CoreWorker {
 
   async work() {
     const startTime = Time.now();
+
+    // await rebalanceTransactionOwners(this.getDb(), parentPort);
+
     const lastTDHCalc = getLastTDH();
     const block = await fetchLatestTransactionsBlockForDate(
       this.getDb(),

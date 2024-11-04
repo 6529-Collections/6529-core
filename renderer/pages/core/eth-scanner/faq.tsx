@@ -15,6 +15,12 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
+const accordionStyle = {
+  backgroundColor: "rgb(34, 34, 34)",
+  color: "white",
+  border: "10px solid rgb(30, 30, 30)",
+};
+
 export default function WorkersHubFaqPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
@@ -76,22 +82,22 @@ export default function WorkersHubFaqPage() {
             <Col>
               <Link
                 className="font-smaller d-flex align-items-center gap-2 decoration-none"
-                href="/core/workers-hub">
+                href="/core/eth-scanner">
                 <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-                Back to Workers Hub
+                Back to ETH Scanner
               </Link>
             </Col>
           </Row>
           <Row className="pt-2">
             <Col className="d-flex align-items-center justify-content-between">
               <h1 className="float-none">
-                <span className="font-lightest">Workers Hub</span> FAQ
+                <span className="font-lightest">ETH Scanner</span> FAQ
               </h1>
             </Col>
           </Row>
           <Row className="pt-4">
             <Col>
-              <WhatIsWorkersHubAccordion />
+              <WhatIsEthScannerAccordion />
               <WhatIsRpcUrlAccordion />
             </Col>
           </Row>
@@ -101,33 +107,33 @@ export default function WorkersHubFaqPage() {
   );
 }
 
-function WhatIsWorkersHubAccordion() {
+function WhatIsEthScannerAccordion() {
   return (
     <Accordion className="mt-2 pb-2">
       <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button id="what-is-workers-hub">
-          <b>What is Workers Hub?</b>
+        <Accordion.Button id="what-is-eth-scanner">
+          <b>What is ETH Scanner?</b>
         </Accordion.Button>
-        <Accordion.Body>
+        <Accordion.Body style={accordionStyle}>
           <Container>
             <ul>
               <li className="mb-2">
-                Workers Hub hosts the logic of pulling data from the blockchain.
+                ETH Scanner hosts the logic of pulling data from the blockchain.
               </li>
               <li className="mb-2">
                 Workers execute tasks and report their status to{" "}
                 <a
-                  href="/core/workers-hub"
+                  href="/core/eth-scanner"
                   style={{
                     color: "inherit",
                   }}>
-                  Workers Hub
+                  ETH Scanner
                 </a>
               </li>
               <li className="mb-2">
                 Workers are assigned dedicated &apos;Task&apos; and the
-                &apos;Logs Directory&apos; which you can monitor in the Workers
-                Hub.
+                &apos;Logs Directory&apos; which you can monitor in the ETH
+                Scanner.
               </li>
               <li className="mb-2">
                 Workers need access to an RPC Provider, which supplies an{" "}
@@ -155,7 +161,7 @@ function WhatIsRpcUrlAccordion() {
         <Accordion.Button>
           <b>What is an RPC URL?</b>
         </Accordion.Button>
-        <Accordion.Body>
+        <Accordion.Body style={accordionStyle}>
           <Container id="what-is-an-rpc-url">
             <p>
               An RPC URL (Remote Procedure Call URL) is the endpoint that allows
