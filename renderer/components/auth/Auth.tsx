@@ -145,6 +145,7 @@ export default function Auth({
     }).received;
     setReceivedProfileProxies(receivedProxies);
     const role = getRole({ jwt: getAuthJwt() });
+
     if (role) {
       const activeProxy = receivedProxies?.find(
         (proxy) => proxy.created_by.id === role
@@ -308,6 +309,7 @@ export default function Auth({
       exp: number;
       role: string;
     }>(jwt);
+
     return decodedJwt.role;
   };
 

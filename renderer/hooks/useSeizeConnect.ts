@@ -1,5 +1,5 @@
 import { useConnections, useDisconnect } from "wagmi";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 
 export const useSeizeConnect = () => {
   const connections = useConnections();

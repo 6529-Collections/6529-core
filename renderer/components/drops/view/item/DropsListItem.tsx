@@ -38,7 +38,6 @@ export default function DropsListItem({
   drop,
   replyToDrop,
   showWaveInfo = true,
-  availableCredit,
   isReply = false,
   dropReplyDepth = 0,
   connectingLineType = DropConnectingLineType.BOTTOM,
@@ -49,7 +48,6 @@ export default function DropsListItem({
   readonly drop: ApiDrop;
   readonly replyToDrop: ApiDrop | null;
   readonly showWaveInfo?: boolean;
-  readonly availableCredit: number | null;
   readonly isReply?: boolean;
   readonly dropReplyDepth?: number;
   readonly connectingLineType?: DropConnectingLineType | null;
@@ -75,7 +73,10 @@ export default function DropsListItem({
     if (connectedProfile.profile.handle === drop.author.handle) {
       return DropVoteState.AUTHOR;
     }
-    if (!availableCredit) {
+    if (
+      !drop.context_profile_context?.max_rating ||
+      !drop.context_profile_context?.min_rating
+    ) {
       return DropVoteState.NO_CREDIT;
     }
 
@@ -86,7 +87,7 @@ export default function DropsListItem({
 
   useEffect(() => {
     setVoteState(getVoteState());
-  }, [connectedProfile, activeProfileProxy, drop, availableCredit]);
+  }, [connectedProfile, activeProfileProxy, drop]);
 
   const getCanVote = () => voteState === DropVoteState.CAN_VOTE;
   const [canVote, setCanVote] = useState(getCanVote());
@@ -148,13 +149,12 @@ export default function DropsListItem({
     <div
       className={`${
         !isReply && "tw-rounded-xl tw-overflow-hidden"
-      }  tw-relative tw-bg-iron-900 ${
+      }  tw-relative tw-bg-iron-950 ${
         dropReplyDepth < 2 && ""
-      }  tw-transition tw-duration-300 tw-ease-out`}
-    >
+      }  tw-transition tw-duration-300 tw-ease-out tw-ring-1 tw-ring-inset tw-ring-iron-800`}>
       <div className={`${dropReplyDepth === 0 && "tw-pb-2 tw-pt-2"}`}>
         {replyProps && dropReplyDepth === 0 && (
-          <div className="tw-mb-1.5">
+          <div className="tw-my-1.5">
             <div className="tw-relative tw-flex tw-justify-end">
               <div className="tw-h-6 tw-absolute tw-top-2.5 tw-left-8 tw-border-iron-700 tw-border-0 tw-border-solid tw-border-t-[1.5px] tw-border-l-[1.5px] tw-cursor-pointer tw-w-6 tw-rounded-tl-[12px]"></div>
             </div>
@@ -168,7 +168,6 @@ export default function DropsListItem({
               drop={drop}
               voteState={voteState}
               canVote={canVote}
-              availableCredit={availableCredit}
               showWaveInfo={showWaveInfo}
               smallMenuIsShown={showOptions}
               dropReplyDepth={dropReplyDepth}

@@ -202,6 +202,7 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 10000,
       refetchOnWindowFocus: false,
+      gcTime: 1000 * 60 * 60 * 24,
     },
   },
 });
@@ -222,6 +223,7 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
     router.pathname === "/app-wallet" || router.pathname.startsWith("/waves");
 
   const { store, props } = wrapper.useWrappedStore(rest);
+
   const getLayout = Component.getLayout ?? ((page) => page);
 
   const [wagmiConfig, setWagmiConfig] = useState<Config>();

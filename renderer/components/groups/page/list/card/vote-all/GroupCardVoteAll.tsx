@@ -15,13 +15,13 @@ import {
   commonApiFetch,
   commonApiPost,
 } from "../../../../../../services/api/common-api";
-import { ApiBulkRateRequest } from "../../../../../../generated/models/ApiBulkRateRequest";
-import { ApiBulkRateResponse } from "../../../../../../generated/models/ApiBulkRateResponse";
 import GroupCardActionWrapper from "../GroupCardActionWrapper";
 import { ApiRateMatter } from "../../../../../../generated/models/ApiRateMatter";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
 import GroupCardVoteAllInputs from "./GroupCardVoteAllInputs";
 import { CommunityMembersSortOption } from "../../../../../../enums";
+import { ApiBulkRateRequest } from "../../../../../../generated/models/ApiBulkRateRequest";
+import { ApiBulkRateResponse } from "../../../../../../generated/models/ApiBulkRateResponse";
 
 export default function GroupCardVoteAll({
   matter,
@@ -186,15 +186,15 @@ export default function GroupCardVoteAll({
       }
       const members = membersPage.data;
       try {
-        await bulkRateMutation.mutateAsync({
-          matter,
-          category,
-          amount_to_add:
-            creditDirection === CreditDirection.ADD
-              ? amountToAdd
-              : -amountToAdd,
-          target_wallet_addresses: members.map((m) => m.wallet.toLowerCase()),
-        });
+        // await bulkRateMutation.mutateAsync({
+        //   matter,
+        //   category,
+        //   amount_to_add:
+        //     creditDirection === CreditDirection.ADD
+        //       ? amountToAdd
+        //       : -amountToAdd,
+        //   target_wallet_addresses: members.map((m) => m.wallet.toLowerCase()),
+        // });
         setDoneMembersCount((prev) => prev + members.length);
       } catch {
         setDoingRates(false);
@@ -223,8 +223,7 @@ export default function GroupCardVoteAll({
       membersCount={membersCount}
       doneMembersCount={doneMembersCount}
       matter={matter}
-      onSave={onSave}
-    >
+      onSave={onSave}>
       <GroupCardVoteAllInputs
         matter={matter}
         category={category}

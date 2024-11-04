@@ -1,29 +1,46 @@
+import { useRouter } from "next/router";
 import { IFeedItemWaveCreated } from "../../../../../types/feed.types";
-import DropsListItem from "../../../../drops/view/item/DropsListItem";
+import WaveDetailedDrop, {
+  DropInteractionParams,
+} from "../../../../waves/detailed/drops/WaveDetailedDrop";
+import { ActiveDropState } from "../../../../waves/detailed/WaveDetailedContent";
+import { ApiDrop } from "../../../../../generated/models/ApiDrop";
 
 export default function FeedItemWaveCreated({
   item,
   showWaveInfo,
-  availableCredit,
+  activeDrop,
+  onReply,
+  onQuote,
 }: {
   readonly item: IFeedItemWaveCreated;
   readonly showWaveInfo: boolean;
-  readonly availableCredit: number | null;
+  readonly activeDrop: ActiveDropState | null;
+  readonly onReply: (param: DropInteractionParams) => void;
+  readonly onQuote: (param: DropInteractionParams) => void;
 }) {
+  const router = useRouter();
+  const onReplyClick = (serialNo: number) => {
+    router.push(`/waves/${item.item.id}?drop=${serialNo}/`);
+  };
+
+  const onQuoteClick = (quote: ApiDrop) => {
+    router.push(`/waves/${quote.wave.id}?drop=${quote.serial_no}/`);
+  };
+
   return (
     <div className="tw-w-full tw-flex tw-gap-x-3">
       <div className="tw-w-full tw-space-y-2">
         <div className="tw-inline-flex tw-items-center">
-          <div className="md:tw-absolute md:-tw-left-12 tw-flex-shrink-0 tw-h-8 tw-w-8 tw-rounded-full tw-bg-iron-800 tw-flex tw-items-center tw-justify-center">
+          <div className="tw-mr-2 tw-size-6 md:tw-absolute md:-tw-left-12 tw-flex-shrink-0 md:tw-size-8 tw-rounded-full tw-bg-iron-800 tw-flex tw-items-center tw-justify-center">
             <svg
-              className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-iron-300"
+              className="tw-flex-shrink-0 tw-size-4 md:tw-size-5 tw-text-iron-300"
               xmlns="http://www.w3.org/2000/svg"
               fill="none"
               aria-hidden="true"
               viewBox="0 0 24 24"
               strokeWidth="1.5"
-              stroke="currentColor"
-            >
+              stroke="currentColor">
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -37,11 +54,22 @@ export default function FeedItemWaveCreated({
           </span>
         </div>
 
-        <DropsListItem
-          drop={item.item.description_drop}
-          replyToDrop={null}
+        <WaveDetailedDrop
+          drop={{
+            ...item.item.description_drop,
+            stableKey: "",
+            stableHash: "",
+          }}
+          previousDrop={null}
+          nextDrop={null}
           showWaveInfo={showWaveInfo}
-          availableCredit={availableCredit}
+          activeDrop={activeDrop}
+          showReplyAndQuote={true}
+          border={true}
+          onReply={onReply}
+          onQuote={onQuote}
+          onReplyClick={onReplyClick}
+          onQuoteClick={onQuoteClick}
         />
       </div>
     </div>

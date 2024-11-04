@@ -15,7 +15,6 @@ interface DropPartActionTriggersProps {
   readonly dropPart: ApiDropPart;
   readonly voteState: DropVoteState;
   readonly canVote: boolean;
-  readonly availableCredit: number | null;
   readonly onDiscussionButtonClick: () => void;
   readonly onQuote: (dropPartId: number) => void;
   readonly onReplyButtonClick: () => void;
@@ -26,7 +25,6 @@ export default function DropPartActionTriggers({
   dropPart,
   voteState,
   canVote,
-  availableCredit,
   onDiscussionButtonClick,
   onQuote,
   onReplyButtonClick,
@@ -43,9 +41,7 @@ export default function DropPartActionTriggers({
 
   return (
     <div className="tw-w-full tw-inline-flex tw-flex-wrap sm:tw-flex-nowrap tw-gap-y-2 tw-justify-between">
-      <div
-        className="tw-px-2 sm:tw-px-0 tw-gap-x-6 tw-flex tw-items-center"
-      >
+      <div className="tw-px-2 sm:tw-px-0 tw-gap-x-6 tw-flex tw-items-center">
         {!!dropPart.replies_count && (
           <DropPartDiscussionButton
             dropPart={dropPart}
@@ -58,16 +54,14 @@ export default function DropPartActionTriggers({
           type="button"
           title="Copy Link"
           className="tw-text-iron-500 icon tw-p-0 tw-group tw-bg-transparent tw-border-0 tw-inline-flex tw-items-center tw-gap-x-2 tw-text-[0.8125rem] tw-leading-5 tw-font-normal tw-transition tw-ease-out tw-duration-300"
-          onClick={copyDropLink}
-        >
+          onClick={copyDropLink}>
           <svg
             className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-transition tw-ease-out tw-duration-300"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth="1.5"
-            stroke="currentColor"
-          >
+            stroke="currentColor">
             <path
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -75,7 +69,9 @@ export default function DropPartActionTriggers({
             />
           </svg>
           {copied && (
-            <span className="tw-text-primary-400 tw-text-xs tw-font-normal">Copied!</span>
+            <span className="tw-text-primary-400 tw-text-xs tw-font-normal">
+              Copied!
+            </span>
           )}
         </button>
       </div>
@@ -91,7 +87,6 @@ export default function DropPartActionTriggers({
           drop={drop}
           voteState={voteState}
           canVote={canVote}
-          availableCredit={availableCredit ?? 0}
         />
       </div>
     </div>
