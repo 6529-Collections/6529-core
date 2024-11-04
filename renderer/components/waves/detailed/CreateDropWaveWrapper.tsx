@@ -69,7 +69,7 @@ export function CreateDropWaveWrapper({
       ? `tw-max-h-[calc(100vh-14.7rem)] ${
           capacitor.keyboardVisible ? "" : "tw-mb-[3.75rem]"
         }`
-      : "tw-max-h-[calc(100vh-8.8rem)] lg:tw-max-h-[calc(100vh-7.5rem)]";
+      : "tw-max-h-[calc(100vh-12rem)] lg:tw-max-h-[calc(100vh-10rem)]";
   }, [capacitor.isCapacitor, capacitor.keyboardVisible]);
   return (
     <div

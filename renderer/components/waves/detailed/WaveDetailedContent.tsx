@@ -76,7 +76,7 @@ export default function WaveDetailedContent({
     return `tw-w-full tw-flex tw-flex-col ${
       capacitor.isCapacitor
         ? "tw-h-[calc(100vh-14.7rem)]"
-        : "tw-h-[calc(100vh-8.8rem)] lg:tw-h-[calc(100vh-7.5rem)]"
+        : "tw-h-[calc(100vh-12rem)] lg:tw-h-[calc(100vh-10rem)]"
     } ${wave.wave.type !== ApiWaveType.Chat ? "tw-pt-10" : ""}`;
   }, [capacitor.isCapacitor]);
 
