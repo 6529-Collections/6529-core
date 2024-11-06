@@ -123,8 +123,17 @@ if (!gotTheLock) {
       const connectionInfo = JSON.parse(encodedData);
       mainWindow?.webContents.send("wallet-connection", connectionInfo);
     } else if (urlObj.host === "navigate") {
-      Logger.info("Handling navigate Deep Link", urlObj.pathname);
-      mainWindow?.webContents.send("navigate", urlObj.pathname);
+      Logger.info(
+        `Handling navigate Deep Link: ${
+          urlObj.pathname
+        }?${urlObj.searchParams.toString()}`
+      );
+      mainWindow?.webContents.send(
+        "navigate",
+        `${urlObj.pathname}?${urlObj.searchParams.toString()}`
+      );
+    } else {
+      Logger.info("Unknown Deep Link", urlObj);
     }
   }
 

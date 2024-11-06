@@ -7,24 +7,14 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckCircle,
   faXmarkCircle,
-  faMinusCircle,
 } from "@fortawesome/free-solid-svg-icons";
 
-export default function TDHValidation() {
-  const [isFetchingLocal, setIsFetchingLocal] = useState(true);
+export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   const [isFetchingRemote, setIsFetchingRemote] = useState(true);
-  const [localInfo, setLocalInfo] = useState<TDHInfo>();
   const [remoteInfo, setRemoteInfo] = useState<{
     tdh: number;
     block: number;
   }>();
-
-  const fetchLocal = () => {
-    window.api.getTdhInfo().then((tdhInfo) => {
-      setLocalInfo(tdhInfo);
-      setIsFetchingLocal(false);
-    });
-  };
 
   const fetchRemote = () => {
     fetch(`${SEIZE_API_URL}/oracle/tdh/total`)
@@ -36,20 +26,14 @@ export default function TDHValidation() {
   };
 
   useEffect(() => {
-    fetchLocal();
     fetchRemote();
-  }, []);
-
-  useEffect(() => {
-    if (!isFetchingLocal && !isFetchingRemote && localInfo && remoteInfo) {
-    }
-  }, [isFetchingLocal, isFetchingRemote]);
+  }, [localInfo]);
 
   function printStatusIcon(icon: IconProp, status: string) {
     return <FontAwesomeIcon icon={icon} color={status} height={30} />;
   }
 
-  if (isFetchingLocal || isFetchingRemote) {
+  if (isFetchingRemote) {
     return <div>Fetching TDH info...</div>;
   }
 

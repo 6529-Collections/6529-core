@@ -4,7 +4,12 @@ import { useCallback, useEffect } from "react";
 import { useAccount, useConnect, useConnections, useDisconnect } from "wagmi";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import { Container, Row, Col } from "react-bootstrap";
-import { getAuthJwt } from "../../services/auth/auth.utils";
+import {
+  getWalletAddress,
+  getAuthJwt,
+  getRefreshToken,
+  getWalletRole,
+} from "../../services/auth/auth.utils";
 
 export default function AppWalletConnect(
   props: Readonly<{
@@ -31,7 +36,7 @@ export default function AppWalletConnect(
     const connectionInfo = {
       accounts: connection.accounts.map((account) => account.toLowerCase()),
       chainId: connection.chainId,
-      auth: getAuthJwt(),
+      auth: getAuth(),
     };
     const serializedInfo = JSON.stringify({
       requestId,
@@ -43,6 +48,15 @@ export default function AppWalletConnect(
     window.location.href = deepLink;
     props.setCompleted(true);
   }, [connections]);
+
+  function getAuth() {
+    return {
+      address: getWalletAddress(),
+      token: getAuthJwt(),
+      refreshToken: getRefreshToken(),
+      role: getWalletRole(),
+    };
+  }
 
   function onDisconnect() {
     for (const connection of connections) {

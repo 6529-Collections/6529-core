@@ -5,7 +5,10 @@ exports.default = async function notarizing(context) {
   const { electronPlatformName, appOutDir } = context;
 
   if (electronPlatformName !== "darwin") {
-    console.log("Notarize skipped: not macOS build", electronPlatformName);
+    console.log(
+      "Notarize skipped: not macOS build - current platform:",
+      electronPlatformName
+    );
     return;
   }
 

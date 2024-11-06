@@ -223,10 +223,10 @@ export const calculateTDH = async (
 
   logInfo(parentPort, `[OWNERS ${netOwners.length}]`);
 
-  const memesOwners = netOwners.filter((o) =>
+  const memeOwners = netOwners.filter((o) =>
     areEqualAddresses(o.contract, MEMES_CONTRACT)
   );
-  const gradientsOwners = netOwners.filter((o) =>
+  const gradientOwners = netOwners.filter((o) =>
     areEqualAddresses(o.contract, GRADIENT_CONTRACT)
   );
   const nextgenOwners = netOwners.filter((o) =>
@@ -257,7 +257,7 @@ export const calculateTDH = async (
         Time.seconds(m.mint_date).lte(Time.fromDate(lastTDHCalc).minusDays(1))
     )
     .map((m) => {
-      const tokenOwners = memesOwners.filter((o) => o.token_id === m.id);
+      const tokenOwners = memeOwners.filter((o) => o.token_id === m.id);
       let editionSize = tokenOwners.reduce((acc, o) => acc + o.balance, 0);
       if (m.id === 8) {
         editionSize += MEME_8_EDITION_BURN_ADJUSTMENT;
@@ -274,11 +274,11 @@ export const calculateTDH = async (
 
   logInfo(
     parentPort,
-    `[MEMES] : [TOKENS ${memes.length}] : [OWNERS ${memesOwners.length}] : [SEASONS ${ADJUSTED_SEASONS.length}] : [HODL_INDEX ${HODL_INDEX}]`
+    `[MEMES] : [TOKENS ${memes.length}] : [OWNERS ${memeOwners.length}] : [SEASONS ${ADJUSTED_SEASONS.length}] : [HODL_INDEX ${HODL_INDEX}]`
   );
   logInfo(
     parentPort,
-    `[GRADIENTS] : [TOKENS ${gradients.length}] : [OWNERS ${gradientsOwners.length}]`
+    `[GRADIENTS] : [TOKENS ${gradients.length}] : [OWNERS ${gradientOwners.length}]`
   );
   logInfo(
     parentPort,

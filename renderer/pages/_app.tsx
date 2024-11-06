@@ -114,6 +114,7 @@ import {
   useSeizeConnectModal,
 } from "../contexts/SeizeConnectModalContext";
 import Footer from "../components/footer/Footer";
+import { SeizeConnectProvider } from "../components/auth/SeizeConnectContext";
 
 library.add(
   faArrowUp,
@@ -254,30 +255,32 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
       <WagmiProvider config={wagmiConfig}>
         <ModalStateProvider>
           <SeizeConnectModalProvider>
-            <ConfirmProvider>
-              <ToastProvider>
-                <SeedWalletProvider>
-                  <Provider store={store}>
-                    <Head>
-                      <meta
-                        name="viewport"
-                        content="width=device-width, initial-scale=1.0, maximum-scale=1"
-                      />
-                    </Head>
-                    <ReactQueryWrapper>
-                      <Auth>
-                        <CookieConsentProvider>
-                          {getLayout(<Component {...props} />)}
-                          <CookiesBanner />
-                        </CookieConsentProvider>
-                      </Auth>
-                    </ReactQueryWrapper>
-                    {!hideFooter && <Footer />}
-                  </Provider>
-                  <ReactQueryDevtools initialIsOpen={false} />
-                </SeedWalletProvider>
-              </ToastProvider>
-            </ConfirmProvider>
+            <SeizeConnectProvider>
+              <ConfirmProvider>
+                <ToastProvider>
+                  <SeedWalletProvider>
+                    <Provider store={store}>
+                      <Head>
+                        <meta
+                          name="viewport"
+                          content="width=device-width, initial-scale=1.0, maximum-scale=1"
+                        />
+                      </Head>
+                      <ReactQueryWrapper>
+                        <Auth>
+                          <CookieConsentProvider>
+                            {getLayout(<Component {...props} />)}
+                            <CookiesBanner />
+                          </CookieConsentProvider>
+                        </Auth>
+                      </ReactQueryWrapper>
+                      {!hideFooter && <Footer />}
+                    </Provider>
+                    <ReactQueryDevtools initialIsOpen={false} />
+                  </SeedWalletProvider>
+                </ToastProvider>
+              </ConfirmProvider>
+            </SeizeConnectProvider>
           </SeizeConnectModalProvider>
         </ModalStateProvider>
       </WagmiProvider>

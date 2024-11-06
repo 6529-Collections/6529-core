@@ -542,16 +542,6 @@ pre code {
   margin-top: env(safe-area-inset-top);
 }
 
-.modal-blurred {
-  filter: blur(5px);
-}
-
-.ellipsis {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 .seize-card {
   padding: 20px;
   border: 1px solid transparent;
@@ -563,4 +553,14 @@ pre code {
     border: 1px solid $dark-grey;
     cursor: pointer;
   }
+}
+
+.modal-blurred {
+  filter: blur(5px);
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

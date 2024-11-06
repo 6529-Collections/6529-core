@@ -1,3 +1,4 @@
+import styles from "./ETHScanner.module.scss";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
@@ -157,7 +158,7 @@ export default function TDHConsensus() {
         </Row>
         <Row className="pt-2">
           <Col>
-            <TDHValidation />
+            <TDHValidation localInfo={tdhInfo} />
           </Col>
         </Row>
       </Container>

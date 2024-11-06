@@ -15,6 +15,7 @@ import {
 } from "../../constants";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 interface Props {
   setSection(section: DelegationCenterSection): any;
