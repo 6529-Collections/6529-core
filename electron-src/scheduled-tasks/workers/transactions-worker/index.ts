@@ -243,6 +243,7 @@ export class TransactionsWorker extends CoreWorker {
         await persistTransactionData();
       } catch (error) {
         if (error instanceof OwnerDeltaError) {
+          sendUpdate("Owner Error - Rebalancing...");
           await rebalanceTransactionOwners(this.getDb(), parentPort);
           await persistTransactionData();
         } else {
