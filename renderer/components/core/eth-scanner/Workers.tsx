@@ -292,6 +292,7 @@ export function TDHWorkerCard({
   readonly isRunningTDH: boolean;
   readonly calculateTDHNow: () => void;
 }) {
+  const [blockCopied, setBlockCopied] = useState(false);
   const [merkleRootCopied, setMerkleRootCopied] = useState(false);
 
   return (
@@ -302,9 +303,31 @@ export function TDHWorkerCard({
             <div className="d-flex gap-3 justify-content-between align-items-center">
               <div className="d-flex flex-column gap-1">
                 <div className="d-flex gap-3">
-                  <span>
-                    Block:{" "}
-                    <span className={styles.progress}>{tdhInfo.block}</span>
+                  <span className="d-flex align-items-center gap-1">
+                    <span>
+                      Block:{" "}
+                      <span className={styles.progress}>{tdhInfo.block}</span>
+                    </span>
+                    <Tippy
+                      content={blockCopied ? "Copied!" : "Copy"}
+                      hideOnClick={false}
+                      placement="top"
+                      theme="light">
+                      <FontAwesomeIcon
+                        className="cursor-pointer unselectable"
+                        icon={faCopy}
+                        height={16}
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            tdhInfo.block.toString()
+                          );
+                          setBlockCopied(true);
+                          setTimeout(() => {
+                            setBlockCopied(false);
+                          }, 1500);
+                        }}
+                      />
+                    </Tippy>
                   </span>
                   <span>
                     Last Calculation:{" "}
@@ -326,7 +349,7 @@ export function TDHWorkerCard({
                     <FontAwesomeIcon
                       className="cursor-pointer unselectable"
                       icon={faCopy}
-                      height={20}
+                      height={18}
                       onClick={() => {
                         navigator.clipboard.writeText(tdhInfo.merkleRoot);
                         setMerkleRootCopied(true);
@@ -342,7 +365,7 @@ export function TDHWorkerCard({
                 variant="primary"
                 disabled={isRunningTDH}
                 onClick={calculateTDHNow}>
-                Calculate Now
+                Recalculate
               </Button>
             </div>
           ) : (

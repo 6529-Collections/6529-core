@@ -6,6 +6,7 @@ import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckCircle,
+  faMinusCircle,
   faXmarkCircle,
 } from "@fortawesome/free-solid-svg-icons";
 
@@ -14,6 +15,7 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   const [remoteInfo, setRemoteInfo] = useState<{
     tdh: number;
     block: number;
+    merkleRoot: string;
   }>();
 
   const fetchRemote = () => {
@@ -43,13 +45,23 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   const blockStatus = localInfo?.block === remoteInfo?.block ? "green" : "red";
   const blockIcon =
     localInfo?.block === remoteInfo?.block ? faCheckCircle : faXmarkCircle;
+  const merkleRootStatus = !remoteInfo?.merkleRoot
+    ? "orange"
+    : localInfo?.merkleRoot === remoteInfo?.merkleRoot
+    ? "green"
+    : "red";
+  const merkleRootIcon = !remoteInfo?.merkleRoot
+    ? faMinusCircle
+    : localInfo?.merkleRoot === remoteInfo?.merkleRoot
+    ? faCheckCircle
+    : faXmarkCircle;
 
   return (
     <div className="d-flex flex-column gap-4 seize-card">
       <div className="d-flex align-items-center gap-2">
         {printStatusIcon(tdhIcon, tdhStatus)}
-        <h5 className="mb-0">TDH Status</h5>
-        {tdhStatus === "red" && (
+        <h5 className="mb-0">TDH</h5>
+        {tdhStatus !== "green" && (
           <span className="font-color-h">
             seize.io value: {remoteInfo?.tdh}
           </span>
@@ -57,10 +69,19 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
       </div>
       <div className="d-flex align-items-center gap-2">
         {printStatusIcon(blockIcon, blockStatus)}
-        <h5 className="mb-0">TDH Block Status</h5>
-        {blockStatus === "red" && (
+        <h5 className="mb-0">TDH Block</h5>
+        {blockStatus !== "green" && (
           <span className="font-color-h">
             seize.io value: {remoteInfo?.block}
+          </span>
+        )}
+      </div>
+      <div className="d-flex align-items-center gap-2">
+        {printStatusIcon(merkleRootIcon, merkleRootStatus)}
+        <h5 className="mb-0">Merkle Root</h5>
+        {merkleRootStatus !== "green" && (
+          <span className="font-color-h">
+            seize.io value: {remoteInfo?.merkleRoot ?? "N/A"}
           </span>
         )}
       </div>

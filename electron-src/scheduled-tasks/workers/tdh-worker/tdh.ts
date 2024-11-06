@@ -262,7 +262,6 @@ export const calculateTDH = async (
       if (m.id === 8) {
         editionSize += MEME_8_EDITION_BURN_ADJUSTMENT;
       }
-      logInfo(parentPort, `[MEME ${m.id}] [EDITION SIZE ${editionSize}]`);
       return { ...m, edition_size: editionSize };
     });
   memes.sort((a, b) => a.id - b.id);
