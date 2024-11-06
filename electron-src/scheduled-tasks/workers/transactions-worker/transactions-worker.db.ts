@@ -15,6 +15,13 @@ export async function getLatestTransactionsBlock(
   return block?.block ?? 0;
 }
 
+export class OwnerDeltaError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OwnerDeltaError";
+  }
+}
+
 export async function persistTransactionsAndOwners(
   db: DataSource,
   transactions: Transaction[],
@@ -113,7 +120,7 @@ export async function extractOwnersFromDeltas(
       if (owner) {
         owner.balance += ownerDelta.delta;
         if (owner.balance < 0) {
-          throw new Error(
+          throw new OwnerDeltaError(
             `Negative balance while updating existing owner [Delta ${ownerDelta.delta}] [Owner ${owner.address}] [Contract ${owner.contract}] [Token ID ${owner.token_id}] [Balance ${owner.balance}]`
           );
         } else {
@@ -121,7 +128,7 @@ export async function extractOwnersFromDeltas(
         }
       } else {
         if (ownerDelta.delta < 0) {
-          throw new Error(
+          throw new OwnerDeltaError(
             `Negative balance while creating new owner [Delta ${ownerDelta.delta}] [Owner ${ownerDelta.address}] [Contract ${ownerDelta.contract}] [Token ID ${ownerDelta.tokenId}]`
           );
         }

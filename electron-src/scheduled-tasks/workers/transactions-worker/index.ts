@@ -8,7 +8,9 @@ import {
 import { Time } from "../../../../shared/time";
 import {
   getLatestTransactionsBlock,
+  OwnerDeltaError,
   persistTransactionsAndOwners,
+  rebalanceTransactionOwners,
 } from "./transactions-worker.db";
 import { WorkerData } from "../../scheduled-worker";
 import { DataSourceOptions } from "typeorm";
@@ -228,13 +230,26 @@ export class TransactionsWorker extends CoreWorker {
         nextToBlock
       );
 
-      await persistTransactionsAndOwners(
-        this.getDb(),
-        allContractTransactions,
-        allContractOwnerDeltas,
-        nextToBlock,
-        blockTimestamp.toSeconds()
-      );
+      const persistTransactionData = async () =>
+        await persistTransactionsAndOwners(
+          this.getDb(),
+          allContractTransactions,
+          allContractOwnerDeltas,
+          nextToBlock,
+          blockTimestamp.toSeconds()
+        );
+
+      try {
+        await persistTransactionData();
+      } catch (error) {
+        if (error instanceof OwnerDeltaError) {
+          await rebalanceTransactionOwners(this.getDb(), parentPort);
+          await persistTransactionData();
+        } else {
+          throw error;
+        }
+      }
+
       printStatus(
         "> Persisted transactions",
         allContractTransactions.length.toLocaleString()
