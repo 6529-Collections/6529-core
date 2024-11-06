@@ -6,8 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import WaveSpecs from "./specs/WaveSpecs";
 import WaveRequiredTypes from "./types/WaveRequiredTypes";
 import WaveRequiredMetadata from "./metadata/WaveRequiredMetadata";
-import WaveLeaderboard from "./leaderboard/WaveLeaderboard";
-import WaveOutcomes from "./outcome/WaveOutcomes";
 import WaveDetailedFollowingWaves from "./WaveDetailedFollowingWaves";
 import WaveGroups from "./groups/WaveGroups";
 import { WaveDetailedView } from "./WaveDetailed";
@@ -64,8 +62,7 @@ const WaveDetailedAbout: React.FC<WaveDetailedAboutProps> = ({
             ? "tw-text-primary-300"
             : "tw-text-iron-300 hover:tw-text-primary-300"
         }`}
-        aria-expanded={isExpanded}
-      >
+        aria-expanded={isExpanded}>
         <span className="tw-text-sm">Wave Info</span>
         <svg
           className={`tw-size-5 tw-transition-all tw-duration-300 ${
@@ -78,8 +75,7 @@ const WaveDetailedAbout: React.FC<WaveDetailedAboutProps> = ({
           aria-hidden="true"
           viewBox="0 0 24 24"
           strokeWidth="1.5"
-          stroke="currentColor"
-        >
+          stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -93,19 +89,12 @@ const WaveDetailedAbout: React.FC<WaveDetailedAboutProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+            transition={{ duration: 0.3 }}>
             <div className="tw-space-y-4 tw-mt-2">
               <WaveSpecs wave={wave} />
               <WaveGroups wave={wave} />
               {showRequiredMetadata && <WaveRequiredMetadata wave={wave} />}
               {showRequiredTypes && <WaveRequiredTypes wave={wave} />}
-              {false && (
-                <>
-                  <WaveLeaderboard wave={wave} />
-                  <WaveOutcomes wave={wave} />
-                </>
-              )}
             </div>
           </motion.div>
         )}

@@ -10,10 +10,8 @@ import DropsListItem from "../../../drops/view/item/DropsListItem";
 
 export default function NotificationDropVoted({
   notification,
-  availableCredit,
 }: {
   readonly notification: INotificationDropVoted;
-  readonly availableCredit: number | null;
 }) {
   const getVoteColor = (vote: number) => {
     if (vote > 0) {
@@ -29,8 +27,8 @@ export default function NotificationDropVoted({
     <div className="tw-flex tw-gap-x-3 tw-w-full">
       <div className="tw-space-y-2 tw-w-full">
         <div className="tw-inline-flex tw-items-center">
-          <div className="md:tw-absolute md:-tw-left-12 tw-flex-shrink-0 tw-h-8 tw-w-8 tw-rounded-full tw-bg-iron-800 tw-flex tw-items-center tw-justify-center">
-            <div className="tw-h-[1.15rem] tw-w-[1.15rem] -tw-mt-2.5 tw-text-iron-300">
+          <div className="tw-mr-2 tw-size-6 md:tw-absolute md:-tw-left-12 tw-flex-shrink-0 md:tw-size-8 tw-rounded-full tw-bg-iron-800 tw-flex tw-items-center tw-justify-center">
+            <div className="tw-size-4 md:tw-size-[1.15rem] md:-tw-mt-2.5 tw-text-iron-300 tw-flex tw-items-center tw-justify-center">
               <RateClapOutlineIcon />
             </div>
           </div>
@@ -52,16 +50,14 @@ export default function NotificationDropVoted({
             <span className="tw-text-sm tw-font-normal tw-text-iron-50">
               <Link
                 href={`/${notification.related_identity.handle}`}
-                className="tw-no-underline tw-font-semibold"
-              >
+                className="tw-no-underline tw-font-semibold">
                 {notification.related_identity.handle}
               </Link>{" "}
               rated
               <span
                 className={`${getVoteColor(
                   notification.additional_context.vote
-                )} tw-pl-1 tw-font-medium`}
-              >
+                )} tw-pl-1 tw-font-medium`}>
                 {notification.additional_context.vote > 0 && "+"}
                 {numberWithCommas(notification.additional_context.vote)}
               </span>
@@ -77,7 +73,6 @@ export default function NotificationDropVoted({
           drop={notification.related_drops[0]}
           replyToDrop={null}
           showWaveInfo={true}
-          availableCredit={availableCredit}
         />
       </div>
     </div>

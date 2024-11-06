@@ -2,8 +2,8 @@ import Link from "next/link";
 import { IProfileAndConsolidations } from "../../../entities/IProfile";
 import HeaderUserProfile from "./HeaderUserProfile";
 import HeaderUserProxy from "./proxy/HeaderUserProxy";
-import { useAccount } from "wagmi";
 import HeaderUserSeedWallet from "./proxy/HeaderUserSeedWallet";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 export default function HeaderUserContext({
   profile,
@@ -12,7 +12,7 @@ export default function HeaderUserContext({
   readonly profile: IProfileAndConsolidations;
   readonly isSeedWallet: boolean;
 }) {
-  const { address } = useAccount();
+  const { address } = useSeizeConnectContext();
   const haveProfile = !!profile.profile?.handle;
   return (
     <div className="tailwind-scope">

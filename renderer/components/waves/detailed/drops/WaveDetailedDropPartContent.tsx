@@ -65,8 +65,7 @@ const WaveDetailedDropPartContent: React.FC<
           e.stopPropagation();
           onClick();
         }}
-        aria-label={`${isPrevious ? "Previous" : "Next"} part`}
-      >
+        aria-label={`${isPrevious ? "Previous" : "Next"} part`}>
         <svg
           className="tw-h-4 tw-w-4 tw-flex-shrink-0"
           xmlns="http://www.w3.org/2000/svg"
@@ -74,8 +73,7 @@ const WaveDetailedDropPartContent: React.FC<
           aria-hidden="true"
           viewBox="0 0 24 24"
           strokeWidth="2"
-          stroke="currentColor"
-        >
+          stroke="currentColor">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -94,16 +92,14 @@ const WaveDetailedDropPartContent: React.FC<
     <div className="tw-pt-1 tw-pb-1 tw-w-full tw-flex tw-justify-between tw-space-x-3 tw-transition tw-duration-300 tw-ease-out">
       {isStorm && renderNavigationButton("previous")}
       <div
-        className="tw-h-full tw-w-full xl:tw-pr-24 active:tw-bg-iron-800"
-        ref={contentRef}
-      >
+        className="tw-h-full tw-w-full xl:tw-pr-24 active:tw-bg-iron-900"
+        ref={contentRef}>
         <motion.div
           key={activePartIndex}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.5 }}
-        >
+          transition={{ duration: 0.5 }}>
           <DropPartMarkdownWithPropLogger
             mentionedUsers={memoizedMentionedUsers}
             referencedNfts={memoizedReferencedNfts}
@@ -126,9 +122,7 @@ const WaveDetailedDropPartContent: React.FC<
           )}
         </motion.div>
         {!!activePart.media.length && (
-          <WaveDetailedDropPartContentMedias
-            activePart={activePart}
-          />
+          <WaveDetailedDropPartContentMedias activePart={activePart} />
         )}
       </div>
       {isStorm && renderNavigationButton("next")}

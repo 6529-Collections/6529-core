@@ -208,6 +208,27 @@ paths:
                 $ref: "#/components/schemas/ApiLoginResponse"
         "400":
           description: Invalid request
+  /auth/redeem-refresh-token:
+    post:
+      tags:
+        - Authentication
+      summary: Redeem refresh token
+      operationId: redeemRefreshToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiRedeemRefreshTokenRequest"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiRedeemRefreshTokenResponse"
+        "400":
+          description: Invalid request
   /drops:
     get:
       tags:
@@ -3200,6 +3221,7 @@ components:
       required:
         - id
         - serial_no
+        - drop_type
         - wave
         - author
         - created_at
@@ -3222,6 +3244,8 @@ components:
           description: Sequence number of the drop in Seize
           type: number
           format: int64
+        drop_type:
+          $ref: "#/components/schemas/ApiDropType"
         wave:
           $ref: "#/components/schemas/ApiWaveMin"
         reply_to:
@@ -3297,10 +3321,22 @@ components:
       type: object
       required:
         - rating
+        - min_rating
+        - max_rating
       properties:
         rating:
           type: number
           format: int64
+        min_rating:
+          type: number
+          format: int64
+        max_rating:
+          type: number
+          format: int64
+        rating_currency:
+          enum:
+            - REP
+            - TDH
     ApiDropMedia:
       type: object
       required:
@@ -3865,8 +3901,11 @@ components:
       type: object
       required:
         - token
+        - refresh_token
       properties:
         token:
+          type: string
+        refresh_token:
           type: string
     ApiNft:
       type: object
@@ -4565,6 +4604,28 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiRatingWithProfileInfoAndLevel"
+    ApiRedeemRefreshTokenRequest:
+      type: object
+      required:
+        - address
+        - token
+      properties:
+        address:
+          type: string
+        token:
+          type: string
+        role:
+          type: string
+    ApiRedeemRefreshTokenResponse:
+      type: object
+      required:
+        - address
+        - token
+      properties:
+        address:
+          type: string
+        token:
+          type: string
     ApiRegisterPushNotificationTokenRequest:
       type: object
       required:

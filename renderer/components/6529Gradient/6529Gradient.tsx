@@ -13,6 +13,7 @@ import DotLoader from "../dotLoader/DotLoader";
 import { GRADIENT_CONTRACT } from "../../constants";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
 import { SEIZE_API_URL } from "../../../constants";
+
 enum Sort {
   ID = "id",
   TDH = "tdh",

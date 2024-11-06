@@ -7,7 +7,6 @@ import { AboutSection } from "../../pages/about/[section]";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DBResponse } from "../../entities/IDBResponse";
 import { fetchUrl } from "../../services/6529api";
-import { useAccount } from "wagmi";
 import HeaderDesktopLink from "./HeaderDesktopLink";
 import Link from "next/link";
 import HeaderUser from "./user/HeaderUser";
@@ -19,6 +18,9 @@ import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
+import HeaderQR from "./qr/HeaderQR";
+import { useAccount } from "wagmi";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 interface Props {
   onLoad?: () => void;
@@ -37,7 +39,7 @@ export default function Header(props: Readonly<Props>) {
 
   const { showWaves } = useContext(AuthContext);
   const router = useRouter();
-  const account = useAccount();
+  const { address, seizeConnectOpen } = useSeizeConnectContext();
   const { showConnectModal } = useSeizeConnectModal();
   const [consolidations, setConsolidations] = useState<string[]>([]);
   const [burgerMenuOpen, setBurgerMenuOpen] = useState(false);
@@ -91,17 +93,17 @@ export default function Header(props: Readonly<Props>) {
       const isConsolidation = consolidations.length > 1;
       if (isConsolidation) {
         props.onSetWallets(consolidations);
-      } else if (account.address) {
-        props.onSetWallets([account.address]);
+      } else if (address) {
+        props.onSetWallets([address]);
       } else {
         props.onSetWallets([]);
       }
     }
-  }, [consolidations, account.address]);
+  }, [consolidations, address]);
 
   useEffect(() => {
-    if (account.address) {
-      fetchUrl(`${SEIZE_API_URL}/api/consolidations/${account.address}`).then(
+    if (address) {
+      fetchUrl(`${SEIZE_API_URL}/api/consolidations/${address}`).then(
         (response: DBResponse) => {
           setConsolidations(Array.from(response.data));
         }
@@ -109,7 +111,13 @@ export default function Header(props: Readonly<Props>) {
     } else {
       setConsolidations([]);
     }
-  }, [account.address]);
+  }, [address]);
+
+  useEffect(() => {
+    if (seizeConnectOpen) {
+      setBurgerMenuOpen(false);
+    }
+  }, [seizeConnectOpen]);
 
   useEffect(() => {
     if (showConnectModal) {
@@ -1191,6 +1199,7 @@ export default function Header(props: Readonly<Props>) {
                             </NavDropdown>
                             <HeaderUser />
                             {showWaves && <HeaderNotifications />}
+                            <HeaderQR />
                             <HeaderSearchButton />
                           </Nav>
                         </Navbar>

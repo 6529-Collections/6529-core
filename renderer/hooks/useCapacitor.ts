@@ -8,8 +8,9 @@ export enum CapacitorOrientationType {
 const useCapacitor = () => {
   const isCapacitor = false;
   const platform = "desktop";
+  const keyboardVisible = false;
 
-  return { isCapacitor, platform };
+  return { isCapacitor, platform, keyboardVisible };
 };
 
 export default useCapacitor;

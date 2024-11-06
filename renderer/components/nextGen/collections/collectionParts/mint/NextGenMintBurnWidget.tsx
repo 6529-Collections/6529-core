@@ -30,8 +30,8 @@ import {
 import { NextGenMintingFor } from "./NextGenMintShared";
 import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
+import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
 import { SEIZE_API_URL } from "../../../../../../constants";
-import { useSeizeConnectModal } from "../../../../../contexts/SeizeConnectModalContext";
 
 interface Props {
   collection: NextGenCollection;
@@ -49,7 +49,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
   const account = useAccount();
   const chainId = useChainId();
 
-  const { setShowConnectModal } = useSeizeConnectModal();
+  const { seizeConnect } = useSeizeConnectContext();
 
   const alStatus = getStatusFromDates(
     props.collection.allowlist_start,
@@ -168,10 +168,10 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
           setIsMinting(true);
         }
       } else {
-        setShowConnectModal(true);
+        seizeConnect();
       }
     } else {
-      setShowConnectModal(true);
+      seizeConnect();
     }
   };
 

@@ -2,7 +2,7 @@
 module.exports = {
   darkMode: "class",
   content: [
-    "./renderer/app/**/*.{js,ts,jsx,tsx}",
+    ".  /app/**/*.{js,ts,jsx,tsx}",
     "./renderer/pages/**/*.{js,ts,jsx,tsx}",
     "./renderer/components/**/*.{js,ts,jsx,tsx}",
 
@@ -83,6 +83,7 @@ module.exports = {
     require("tailwind-scrollbar")({ nocompatible: true }),
     function ({ addVariant }) {
       addVariant("not-first", "&:not(:first-child)");
+      addVariant("desktop-hover", "@media (hover: hover) and (pointer: fine)");
     },
   ],
 };

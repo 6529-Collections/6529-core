@@ -118,7 +118,7 @@ export function browserConnector(parameters: {
               chainId: response.chainId,
             };
             const auth = response.auth;
-            setAuthJwt(auth);
+            setAuthJwt(auth.address, auth.token, auth.refreshToken, auth.role);
             await window.store.set(
               CONNECTION_STORE,
               JSON.stringify(connectionObject)
