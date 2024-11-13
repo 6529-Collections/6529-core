@@ -1,4 +1,4 @@
-import { DataSource, EntityManager } from "typeorm";
+import { DataSource, EntityManager, LessThanOrEqual } from "typeorm";
 import {
   Transaction,
   TransactionBlock,
@@ -8,7 +8,7 @@ import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
 import { batchUpsert, logInfo } from "../../worker-helpers";
 
 export async function getLatestTransactionsBlock(
-  db: DataSource
+  db: EntityManager
 ): Promise<number> {
   const repo = db.getRepository(TransactionBlock);
   const block = await repo.findOne({ where: { id: 1 } });
@@ -80,12 +80,19 @@ export async function persistTransactionsAndOwners(
 }
 
 export async function rebalanceTransactionOwners(
-  db: DataSource,
+  db: EntityManager,
   parentPort: any
 ) {
   logInfo(parentPort, "Rebalancing Transactions Owners");
 
-  const allTransactions = await db.getRepository(Transaction).find();
+  const block = await getLatestTransactionsBlock(db);
+  logInfo(parentPort, "Latest transactions block", block);
+
+  const allTransactions = await db.getRepository(Transaction).find({
+    where: {
+      block: LessThanOrEqual(block),
+    },
+  });
 
   logInfo(parentPort, "All transactions", allTransactions.length);
 

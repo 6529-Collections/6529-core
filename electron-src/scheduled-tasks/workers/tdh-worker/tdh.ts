@@ -12,7 +12,7 @@ import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { DataSource, In, LessThanOrEqual } from "typeorm";
 import { logInfo, sendStatusUpdate } from "../../worker-helpers";
-import { extractNFTOwnerDeltas } from "../transactions-worker/nft-owners";
+import { extractNFTOwners } from "../transactions-worker/nft-owners";
 import { Time } from "../../../../shared/time";
 import {
   fetchAllConsolidationAddresses,
@@ -30,8 +30,7 @@ import {
 } from "../../../../constants";
 import { consolidateTDH } from "./tdh-worker.consolidation";
 import { processNftTdh } from "./tdh-worker.nfts";
-import { NFTOwner } from "../../../db/entities/INFTOwner";
-
+import { ethers } from "ethers";
 export const TDH_CONTRACTS = [
   MEMES_CONTRACT,
   GRADIENT_CONTRACT,
@@ -208,28 +207,17 @@ export const calculateTDH = async (
 
   logInfo(parentPort, `[TRANSACTIONS ${transactions.length}]`);
 
-  const ownersDeltas = await extractNFTOwnerDeltas(transactions);
+  const owners = await extractNFTOwners(transactions);
 
-  const owners: NFTOwner[] = ownersDeltas.map((o) => {
-    return {
-      contract: o.contract,
-      address: o.address,
-      token_id: o.tokenId,
-      balance: o.delta,
-    };
-  });
+  logInfo(parentPort, `[OWNERS ${owners.length}]`);
 
-  const netOwners = owners.filter((o) => o.balance > 0);
-
-  logInfo(parentPort, `[OWNERS ${netOwners.length}]`);
-
-  const memeOwners = netOwners.filter((o) =>
+  const memeOwners = owners.filter((o) =>
     areEqualAddresses(o.contract, MEMES_CONTRACT)
   );
-  const gradientOwners = netOwners.filter((o) =>
+  const gradientOwners = owners.filter((o) =>
     areEqualAddresses(o.contract, GRADIENT_CONTRACT)
   );
-  const nextgenOwners = netOwners.filter((o) =>
+  const nextgenOwners = owners.filter((o) =>
     areEqualAddresses(o.contract, NEXTGEN_CONTRACT)
   );
 
@@ -267,14 +255,11 @@ export const calculateTDH = async (
     });
   memes.sort((a, b) => a.id - b.id);
 
-  const HODL_INDEX = memes.reduce((acc, m) => Math.max(acc, m.edition_size), 0);
-  logInfo(parentPort, `[HODL_INDEX ${HODL_INDEX}]`);
-
   const ADJUSTED_SEASONS = buildSeasons(memes);
 
   logInfo(
     parentPort,
-    `[MEMES] : [TOKENS ${memes.length}] : [OWNERS ${memeOwners.length}] : [SEASONS ${ADJUSTED_SEASONS.length}] : [HODL_INDEX ${HODL_INDEX}]`
+    `[MEMES] : [TOKENS ${memes.length}] : [OWNERS ${memeOwners.length}] : [SEASONS ${ADJUSTED_SEASONS.length}]`
   );
   logInfo(
     parentPort,
@@ -286,6 +271,11 @@ export const calculateTDH = async (
   );
 
   const ADJUSTED_NFTS = [...memes, ...gradients, ...nextgen];
+  const HODL_INDEX = ADJUSTED_NFTS.reduce(
+    (acc, m) => Math.max(acc, m.edition_size),
+    0
+  );
+  logInfo(parentPort, `[HODL_INDEX ${HODL_INDEX}]`);
 
   const combinedAddresses = new Set<string>();
 
@@ -299,7 +289,7 @@ export const calculateTDH = async (
       combinedAddresses.add(w.wallet.toLowerCase())
     );
 
-    netOwners.forEach((w) => combinedAddresses.add(w.address.toLowerCase()));
+    owners.forEach((w) => combinedAddresses.add(w.address.toLowerCase()));
   }
 
   logInfo(
@@ -390,15 +380,6 @@ export const calculateTDH = async (
 
           if (areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
             memesData.memes_tdh += tokenTDH.tdh;
-            if (
-              areEqualAddresses(
-                wallet,
-                "0xc6400a5584db71e41b0e5dfbdc769b54b91256cd"
-              ) &&
-              !isFinite(tokenTDH.tdh)
-            ) {
-              console.log("hi i am tokenTDH", tokenTDH);
-            }
             memesData.memes_tdh__raw += tokenTDH.tdh__raw;
             unique_memes++;
             memesData.memes_balance += tokenTDH.balance;
@@ -779,7 +760,6 @@ function getTokenDatesFromConsolidation(
     if (!tokenDatesMap[wallet]) {
       tokenDatesMap[wallet] = [];
     }
-
     tokenDatesMap[wallet].push(...dates);
   }
 
@@ -806,13 +786,34 @@ function getTokenDatesFromConsolidation(
       return dateComparison;
     }
 
-    const aInConsolidations = consolidations.some((c) =>
-      areEqualAddresses(c, a.from_address)
+    const aInConsolidations = Number(
+      consolidations.some(
+        (c) =>
+          !areEqualAddresses(c, currentWallet) &&
+          areEqualAddresses(c, a.from_address)
+      )
     );
-    const bInConsolidations = consolidations.some((c) =>
-      areEqualAddresses(c, b.from_address)
+
+    const bInConsolidations = Number(
+      consolidations.some(
+        (c) =>
+          !areEqualAddresses(c, currentWallet) &&
+          areEqualAddresses(c, b.from_address)
+      )
     );
-    return Number(bInConsolidations) - Number(aInConsolidations);
+
+    if (aInConsolidations || bInConsolidations) {
+      return bInConsolidations - aInConsolidations;
+    }
+
+    if (areEqualAddresses(a.to_address, currentWallet)) {
+      return -1;
+    }
+    if (areEqualAddresses(b.to_address, currentWallet)) {
+      return 1;
+    }
+
+    return 0;
   });
 
   for (const transaction of consolidationTransactions) {
@@ -1085,4 +1086,49 @@ export function getGenesisAndNaka(memes: TokenTDH[]) {
     genesis,
     naka,
   };
+}
+
+export async function findLatestBlockBeforeTimestamp(
+  provider: ethers.JsonRpcProvider,
+  targetTimestamp: number
+) {
+  logInfo(parentPort, "Finding latest block before timestamp", targetTimestamp);
+  const averageBlockTime = 12; // Approximate average block time in seconds
+  const latestBlock = await provider.getBlock("latest");
+  if (!latestBlock) {
+    throw new Error("Latest block not found");
+  }
+
+  let startBlock = Math.max(
+    0,
+    latestBlock.number -
+      Math.floor((latestBlock.timestamp - targetTimestamp) / averageBlockTime)
+  );
+  let endBlock = latestBlock.number;
+
+  // Perform a binary search
+  while (startBlock <= endBlock) {
+    const midBlockNumber = Math.floor((startBlock + endBlock) / 2);
+    const midBlock = await provider.getBlock(midBlockNumber);
+    if (!midBlock) {
+      throw new Error("Mid block not found");
+    }
+    if (midBlock.timestamp === targetTimestamp) {
+      // Exact match
+      return midBlock;
+    } else if (midBlock.timestamp < targetTimestamp) {
+      // Move search to more recent blocks
+      startBlock = midBlockNumber + 1;
+    } else {
+      // Move search to older blocks
+      endBlock = midBlockNumber - 1;
+    }
+  }
+
+  // `endBlock` is the latest block with a timestamp before the target
+  const blockBefore = await provider.getBlock(endBlock);
+  if (!blockBefore) {
+    throw new Error("Block before not found");
+  }
+  return blockBefore;
 }

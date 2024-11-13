@@ -7,7 +7,6 @@ import {
   sendStatusUpdate,
 } from "../../worker-helpers";
 import { Time } from "../../../../shared/time";
-import { fetchLatestTransactionsBlockForDate } from "./tdh-worker.db";
 import { CoreWorker } from "../core-worker";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
 import {
@@ -21,14 +20,19 @@ import {
   Transaction,
   TransactionBlock,
 } from "../../../db/entities/ITransaction";
-import { calculateTDH } from "./tdh";
+import { calculateTDH, findLatestBlockBeforeTimestamp } from "./tdh";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { Consolidation } from "../../../db/entities/IDelegation";
 import { NFT } from "../../../db/entities/INFT";
-import {
-  getLatestTransactionsBlock,
-  // rebalanceTransactionOwners,
-} from "../transactions-worker/transactions-worker.db";
+import { getLatestTransactionsBlock } from "../transactions-worker/transactions-worker.db";
+import { Contract, ContractType, getTokenUri } from "../nft-worker/nft-worker";
+import { GRADIENT_ABI } from "../../../../shared/abis/gradient";
+import { MEMES_ABI } from "../../../../shared/abis/memes";
+import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
+import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
+import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
+import { NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
+import { ethers } from "ethers";
 
 const data: WorkerData = workerData;
 
@@ -57,19 +61,19 @@ class TDHWorker extends CoreWorker {
   async work() {
     const startTime = Time.now();
 
-    // await rebalanceTransactionOwners(this.getDb(), parentPort);
-
     const lastTDHCalc = getLastTDH();
-    const block = await fetchLatestTransactionsBlockForDate(
-      this.getDb(),
-      lastTDHCalc
+    const blockBefore = await findLatestBlockBeforeTimestamp(
+      this.getProvider(),
+      lastTDHCalc.getTime() / 1000
     );
+    logInfo(parentPort, "Block before", blockBefore.number);
+    const block = blockBefore.number;
     await this.validateBlock(block);
     const tdhResult = await this.updateTDH(block, lastTDHCalc);
 
     logInfo(parentPort, "Finished");
 
-    const duration = startTime.diffFromNow().formatAsDuration(true);
+    const duration = startTime.diffFromNow().formatAsDuration(true).trim();
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
@@ -82,12 +86,12 @@ class TDHWorker extends CoreWorker {
 
   async validateBlock(block: number) {
     const latestTransactionsBlock = await getLatestTransactionsBlock(
-      this.getDb()
+      this.getDb().manager
     );
 
     if (block > latestTransactionsBlock) {
       throw new Error(
-        `Latest block invalid: Latest Transactions Block: ${latestTransactionsBlock} | Latest Chain Block: ${block}`
+        `Latest block invalid: Latest Transactions Block: ${latestTransactionsBlock} | TDH Block: ${block}`
       );
     }
 
@@ -96,9 +100,67 @@ class TDHWorker extends CoreWorker {
       "Latest block validated",
       "Latest Transactions Block:",
       latestTransactionsBlock,
-      "Latest Chain Block:",
+      "TDH Block:",
       block
     );
+
+    await this.validateNFTs();
+  }
+
+  async validateNFTs() {
+    const contracts: Contract[] = [
+      {
+        name: "The Memes",
+        address: MEMES_CONTRACT,
+        abi: MEMES_ABI,
+        type: ContractType.ERC1155,
+      },
+      {
+        name: "6529 Gradient",
+        address: GRADIENT_CONTRACT,
+        abi: GRADIENT_ABI,
+        type: ContractType.ERC721,
+      },
+      {
+        name: "Nextgen",
+        address: NEXTGEN_CONTRACT,
+        abi: NEXTGEN_ABI,
+        type: ContractType.ERC721,
+      },
+    ];
+
+    for (const contract of contracts) {
+      const maxNft: { maxId: number } | undefined = await this.getDb()
+        .getRepository(NFT)
+        .createQueryBuilder("nft")
+        .where("nft.contract = :contractAddress", {
+          contractAddress: contract.address,
+        })
+        .select("MAX(nft.id)", "maxId")
+        .getRawOne();
+
+      if (!maxNft?.maxId) {
+        throw new Error(`No NFTs found for contract ${contract}`);
+      }
+
+      const ethersContract = new ethers.Contract(
+        contract.address,
+        contract.abi,
+        this.getProvider()
+      );
+
+      const nextId = maxNft.maxId + 1;
+      const uri = await getTokenUri(contract.type, ethersContract, nextId);
+
+      if (uri && uri != nextId) {
+        throw new Error(
+          `Missing NFT: ${contract.name} #${nextId} - Sync to latest NFTs`
+        );
+      }
+      logInfo(parentPort, `NFT ${contract.name} #${nextId} validated`, uri);
+    }
+
+    logInfo(parentPort, "NFTs validated");
   }
 
   async updateTDH(block: number, lastTDHCalc: Date) {

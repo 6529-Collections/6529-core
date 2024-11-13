@@ -12,8 +12,7 @@ import {
   persistTransactionsAndOwners,
   rebalanceTransactionOwners,
 } from "./transactions-worker.db";
-import { WorkerData } from "../../scheduled-worker";
-import { DataSourceOptions } from "typeorm";
+import { DataSourceOptions, MoreThan } from "typeorm";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import {
   Transaction,
@@ -34,12 +33,16 @@ import {
 } from "../../../../shared/abis/gradient";
 import { NEXTGEN_ABI, NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { CoreWorker } from "../core-worker";
-import { ScheduledWorkerStatus } from "../../../../shared/types";
+import {
+  ScheduledWorkerStatus,
+  TRANSACTIONS_START_BLOCK,
+  TransactionsWorkerScope,
+} from "../../../../shared/types";
+import { TransactionsWorkerData } from "../../scheduled-worker";
 
-const data: WorkerData = workerData;
+const data: TransactionsWorkerData = workerData;
 
 export const NAMESPACE = "TRANSACTIONS_WORKER >";
-const START_BLOCK = 13360860;
 
 export class TransactionsWorker extends CoreWorker {
   private transferTopic = ethers.id("Transfer(address,address,uint256)");
@@ -50,27 +53,92 @@ export class TransactionsWorker extends CoreWorker {
     "TransferBatch(address,address,address,uint256[],uint256[])"
   );
 
+  private scope?: TransactionsWorkerScope;
+  private block?: number;
+
   constructor(
     rpcUrl: string,
     dbParams: DataSourceOptions,
     blockRange: number,
-    maxConcurrentRequests: number
+    maxConcurrentRequests: number,
+    scope?: TransactionsWorkerScope,
+    block?: number
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       Transaction,
       NFTOwner,
       TransactionBlock,
     ]);
+    this.scope = scope;
+    this.block = block;
   }
 
-  async work() {
-    logInfo(parentPort, "Starting...");
+  private async resetToBlock(block: number) {
+    logInfo(parentPort, `Resetting to block ${block}`);
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: `Reset to block`,
+        target: block,
+      },
+    });
 
-    let fromBlock = await getLatestTransactionsBlock(this.getDb());
+    const blockTimestamp = await getBlockTimestamp(
+      parentPort,
+      this.getProvider(),
+      NAMESPACE,
+      block
+    );
+
+    await this.getDb().transaction(async (manager) => {
+      const transactionsRepo = manager.getRepository(Transaction);
+      const blocksRepo = manager.getRepository(TransactionBlock);
+
+      await transactionsRepo.delete({ block: MoreThan(block) });
+      await blocksRepo.upsert(
+        {
+          id: 1,
+          block,
+          timestamp: Math.round(blockTimestamp.toSeconds()),
+        },
+        ["id"]
+      );
+      await rebalanceTransactionOwners(manager, parentPort);
+    });
+
+    logInfo(parentPort, "Reset to block", block, "completed");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message: `Reset to block ${block} completed`,
+      },
+    });
+  }
+
+  private async rebalanceOwners() {
+    logInfo(parentPort, "Rebalancing owners...");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: "Rebalancing owners...",
+      },
+    });
+    await rebalanceTransactionOwners(this.getDb().manager, parentPort);
+    logInfo(parentPort, "Owners rebalanced");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message: "Owners rebalanced",
+      },
+    });
+  }
+
+  private async baseWork() {
+    let fromBlock = await getLatestTransactionsBlock(this.getDb().manager);
     logInfo(parentPort, "Latest block in DB:", fromBlock);
 
     if (fromBlock === 0) {
-      fromBlock = START_BLOCK;
+      fromBlock = TRANSACTIONS_START_BLOCK;
     }
 
     const toBlock = await this.getProvider().getBlockNumber();
@@ -102,6 +170,20 @@ export class TransactionsWorker extends CoreWorker {
     logInfo(parentPort, "Finished successfully");
   }
 
+  async work() {
+    if (this.scope === TransactionsWorkerScope.RESET_TO_BLOCK) {
+      if (this.block) {
+        await this.resetToBlock(this.block);
+      } else {
+        throw new Error("Block is required for reset to block");
+      }
+    } else if (this.scope === TransactionsWorkerScope.REBALANCE_OWNERS) {
+      await this.rebalanceOwners();
+    } else {
+      await this.baseWork();
+    }
+  }
+
   private async getAllTransactions(
     contracts: { contract: string; iface: Interface }[],
     fromBlock: number,
@@ -118,7 +200,9 @@ export class TransactionsWorker extends CoreWorker {
 
     while (currentFromBlock <= toBlock) {
       const statusPercentage =
-        ((currentFromBlock - START_BLOCK) / (toBlock - START_BLOCK)) * 100;
+        ((currentFromBlock - TRANSACTIONS_START_BLOCK) /
+          (toBlock - TRANSACTIONS_START_BLOCK)) *
+        100;
       const nextToBlock = Math.min(
         currentFromBlock + this.getBlockRange(),
         toBlock
@@ -244,7 +328,7 @@ export class TransactionsWorker extends CoreWorker {
       } catch (error) {
         if (error instanceof OwnerDeltaError) {
           sendUpdate("Owner Error - Rebalancing...");
-          await rebalanceTransactionOwners(this.getDb(), parentPort);
+          await rebalanceTransactionOwners(this.getDb().manager, parentPort);
           await persistTransactionData();
         } else {
           throw error;
@@ -461,5 +545,7 @@ new TransactionsWorker(
   data.rpcUrl,
   data.dbParams,
   data.blockRange,
-  data.maxConcurrentRequests
+  data.maxConcurrentRequests,
+  data.scope,
+  data.block
 );

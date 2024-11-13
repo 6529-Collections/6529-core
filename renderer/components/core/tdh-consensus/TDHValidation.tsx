@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
 import { TDHInfo } from "../eth-scanner/Workers";
-import { SEIZE_API_URL } from "../../../../constants";
-import { Table } from "react-bootstrap";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -9,13 +7,14 @@ import {
   faMinusCircle,
   faXmarkCircle,
 } from "@fortawesome/free-solid-svg-icons";
+import { SEIZE_API_URL } from "../../../../constants";
 
 export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   const [isFetchingRemote, setIsFetchingRemote] = useState(true);
   const [remoteInfo, setRemoteInfo] = useState<{
     tdh: number;
     block: number;
-    merkleRoot: string;
+    merkle_root: string;
   }>();
 
   const fetchRemote = () => {
@@ -45,14 +44,14 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   const blockStatus = localInfo?.block === remoteInfo?.block ? "green" : "red";
   const blockIcon =
     localInfo?.block === remoteInfo?.block ? faCheckCircle : faXmarkCircle;
-  const merkleRootStatus = !remoteInfo?.merkleRoot
+  const merkleRootStatus = !remoteInfo?.merkle_root
     ? "orange"
-    : localInfo?.merkleRoot === remoteInfo?.merkleRoot
+    : localInfo?.merkleRoot === remoteInfo?.merkle_root
     ? "green"
     : "red";
-  const merkleRootIcon = !remoteInfo?.merkleRoot
+  const merkleRootIcon = !remoteInfo?.merkle_root
     ? faMinusCircle
-    : localInfo?.merkleRoot === remoteInfo?.merkleRoot
+    : localInfo?.merkleRoot === remoteInfo?.merkle_root
     ? faCheckCircle
     : faXmarkCircle;
 
@@ -63,7 +62,10 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
         <h5 className="mb-0">TDH</h5>
         {tdhStatus !== "green" && (
           <span className="font-color-h">
-            seize.io value: {remoteInfo?.tdh}
+            seize.io value:{" "}
+            <code style={{ color: "#92f0f3" }}>
+              {remoteInfo?.tdh.toLocaleString()}
+            </code>
           </span>
         )}
       </div>
@@ -72,7 +74,8 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
         <h5 className="mb-0">TDH Block</h5>
         {blockStatus !== "green" && (
           <span className="font-color-h">
-            seize.io value: {remoteInfo?.block}
+            seize.io value:{" "}
+            <code style={{ color: "#92f0f3" }}>{remoteInfo?.block}</code>
           </span>
         )}
       </div>
@@ -81,7 +84,10 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
         <h5 className="mb-0">Merkle Root</h5>
         {merkleRootStatus !== "green" && (
           <span className="font-color-h">
-            seize.io value: {remoteInfo?.merkleRoot ?? "N/A"}
+            seize.io value:{" "}
+            <code style={{ color: "#92f0f3" }}>
+              {remoteInfo?.merkle_root ?? "N/A"}
+            </code>
           </span>
         )}
       </div>

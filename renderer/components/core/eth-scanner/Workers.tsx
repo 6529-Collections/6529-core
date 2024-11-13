@@ -1,14 +1,29 @@
 import styles from "./ETHScanner.module.scss";
 
-import { Container, Row, Col, Button } from "react-bootstrap";
+import { Container, Row, Col, Button, Form, InputGroup } from "react-bootstrap";
 import { RPCProvider } from "./RpcProviders";
-import { ScheduledWorkerStatus } from "../../../../shared/types";
+import {
+  ScheduledWorkerNames,
+  ScheduledWorkerStatus,
+  TRANSACTIONS_START_BLOCK,
+} from "../../../../shared/types";
 import useIsMobileScreen from "../../../hooks/isMobileScreen";
 import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
-import { faCopy } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronDown,
+  faChevronUp,
+  faCopy,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import { useState } from "react";
+import Confirm from "../../confirm/Confirm";
+import {
+  manualStartWorker,
+  rebalanceTransactionsOwners,
+  resetTransactionsToBlock,
+} from "../../../electron";
+import { useToast } from "../../../contexts/ToastContext";
 
 export interface Task {
   namespace: string;
@@ -212,6 +227,44 @@ export function WorkerCard({
 
   const isMobile = useIsMobileScreen();
 
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+
+  const [resetToBlock, setResetToBlock] = useState("");
+  const [showResetToBlockConfirm, setShowResetToBlockConfirm] = useState(false);
+  const [showRebalanceOwnersConfirm, setShowRebalanceOwnersConfirm] =
+    useState(false);
+
+  const { showToast } = useToast();
+
+  const triggerResetToBlock = async () => {
+    resetTransactionsToBlock(Number(resetToBlock))
+      .then((data) => {
+        if (data.error) {
+          showToast(data.data, "error");
+        } else {
+          showToast("Reset to block started", "success");
+        }
+      })
+      .finally(() => {
+        setShowResetToBlockConfirm(false);
+        setResetToBlock("");
+      });
+  };
+
+  const triggerRebalanceTransactionsOwners = async () => {
+    rebalanceTransactionsOwners()
+      .then((data) => {
+        if (data.error) {
+          showToast(data.data, "error");
+        } else {
+          showToast("Rebalance owners started", "success");
+        }
+      })
+      .finally(() => {
+        setShowRebalanceOwnersConfirm(false);
+      });
+  };
+
   return (
     <Container className="no-padding pt-2 pb-2">
       <Row>
@@ -275,10 +328,81 @@ export function WorkerCard({
               <Row className="pt-1">
                 <Col className="d-flex align-items-center justify-content-between"></Col>
               </Row>
+              {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
+                <Row>
+                  <Col>
+                    <Button
+                      variant="link"
+                      className="d-flex align-items-center gap-1 decoration-none"
+                      onClick={() =>
+                        setShowAdvancedOptions(!showAdvancedOptions)
+                      }>
+                      <span>Advanced</span>
+                      <FontAwesomeIcon
+                        icon={showAdvancedOptions ? faChevronUp : faChevronDown}
+                        height={16}
+                      />
+                    </Button>
+                  </Col>
+                </Row>
+              )}
+              {showAdvancedOptions && (
+                <Row className="pt-2">
+                  <Col className="d-flex gap-3 align-items-center">
+                    <InputGroup style={{ width: "350px" }}>
+                      <Form.Control
+                        className="no-glow"
+                        type="number"
+                        autoFocus
+                        placeholder={`Min Block: ${TRANSACTIONS_START_BLOCK}`}
+                        aria-label="Block"
+                        aria-describedby="block-addon"
+                        value={resetToBlock}
+                        onChange={(e) => {
+                          const value = e.target.value;
+                          const num = Number(value);
+                          if (!isNaN(num) && num >= 0) {
+                            setResetToBlock(value);
+                          }
+                        }}
+                      />
+                      <Button
+                        disabled={
+                          !resetToBlock ||
+                          Number(resetToBlock) < TRANSACTIONS_START_BLOCK
+                        }
+                        variant="light"
+                        style={{ borderLeft: "2px solid #ced4da" }}
+                        onClick={() => setShowResetToBlockConfirm(true)}>
+                        Reset to block
+                      </Button>
+                    </InputGroup>
+                    <Button
+                      variant="light"
+                      onClick={() => setShowRebalanceOwnersConfirm(true)}>
+                      Rebalance Owners
+                    </Button>
+                  </Col>
+                </Row>
+              )}
             </Container>
           </Col>
         </Col>
       </Row>
+      <Confirm
+        show={showResetToBlockConfirm}
+        onHide={() => setShowResetToBlockConfirm(false)}
+        onConfirm={triggerResetToBlock}
+        title="Reset to block"
+        message={`Are you sure you want to reset to block ${resetToBlock}?`}
+      />
+      <Confirm
+        show={showRebalanceOwnersConfirm}
+        onHide={() => setShowRebalanceOwnersConfirm(false)}
+        onConfirm={triggerRebalanceTransactionsOwners}
+        title="Rebalance Owners"
+        message={`Are you sure you want to rebalance owners?`}
+      />
     </Container>
   );
 }
@@ -293,6 +417,7 @@ export function TDHWorkerCard({
   readonly calculateTDHNow: () => void;
 }) {
   const [blockCopied, setBlockCopied] = useState(false);
+  const [totalTDHCopied, setTotalTDHCopied] = useState(false);
   const [merkleRootCopied, setMerkleRootCopied] = useState(false);
 
   return (
@@ -300,37 +425,65 @@ export function TDHWorkerCard({
       <Row>
         <Col>
           {tdhInfo ? (
-            <div className="d-flex gap-3 justify-content-between align-items-center">
+            <div className="d-flex flex-wrap gap-3 justify-content-between align-items-center">
               <div className="d-flex flex-column gap-1">
-                <div className="d-flex gap-3">
-                  <span className="d-flex align-items-center gap-1">
-                    <span>
-                      Block:{" "}
+                <div className="d-flex flex-wrap gap-4 align-items-center">
+                  <span className="d-flex flex-column gap-1">
+                    Block
+                    <span className="d-flex align-items-center gap-1">
                       <span className={styles.progress}>{tdhInfo.block}</span>
+                      <Tippy
+                        content={blockCopied ? "Copied!" : "Copy"}
+                        hideOnClick={false}
+                        placement="top"
+                        theme="light">
+                        <FontAwesomeIcon
+                          className="cursor-pointer unselectable"
+                          icon={faCopy}
+                          height={16}
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              tdhInfo.block.toString()
+                            );
+                            setBlockCopied(true);
+                            setTimeout(() => {
+                              setBlockCopied(false);
+                            }, 1500);
+                          }}
+                        />
+                      </Tippy>
                     </span>
-                    <Tippy
-                      content={blockCopied ? "Copied!" : "Copy"}
-                      hideOnClick={false}
-                      placement="top"
-                      theme="light">
-                      <FontAwesomeIcon
-                        className="cursor-pointer unselectable"
-                        icon={faCopy}
-                        height={16}
-                        onClick={() => {
-                          navigator.clipboard.writeText(
-                            tdhInfo.block.toString()
-                          );
-                          setBlockCopied(true);
-                          setTimeout(() => {
-                            setBlockCopied(false);
-                          }, 1500);
-                        }}
-                      />
-                    </Tippy>
                   </span>
-                  <span>
-                    Last Calculation:{" "}
+                  <span className="d-flex flex-column gap-1">
+                    Total TDH
+                    <span className="d-flex align-items-center gap-1">
+                      <span className={styles.progress}>
+                        {tdhInfo.totalTDH.toLocaleString()}
+                      </span>
+                      <Tippy
+                        content={totalTDHCopied ? "Copied!" : "Copy"}
+                        hideOnClick={false}
+                        placement="top"
+                        theme="light">
+                        <FontAwesomeIcon
+                          className="cursor-pointer unselectable"
+                          icon={faCopy}
+                          height={16}
+                          onClick={() => {
+                            navigator.clipboard.writeText(
+                              tdhInfo.totalTDH.toString()
+                            );
+                            setTotalTDHCopied(true);
+                            setTimeout(() => {
+                              setTotalTDHCopied(false);
+                            }, 1500);
+                          }}
+                        />
+                      </Tippy>
+                    </span>
+                  </span>
+                  <span className="d-flex flex-column gap-1">
+                    Last Calculation
                     <span className={styles.progress}>
                       {new Date(
                         tdhInfo.lastCalculation * 1000
@@ -338,27 +491,31 @@ export function TDHWorkerCard({
                     </span>
                   </span>
                 </div>
-                <div className="mt-3 d-flex align-items-center gap-2">
-                  Merkle Root:{" "}
-                  <span className={styles.progress}>{tdhInfo.merkleRoot}</span>
-                  <Tippy
-                    content={merkleRootCopied ? "Copied!" : "Copy"}
-                    hideOnClick={false}
-                    placement="top"
-                    theme="light">
-                    <FontAwesomeIcon
-                      className="cursor-pointer unselectable"
-                      icon={faCopy}
-                      height={18}
-                      onClick={() => {
-                        navigator.clipboard.writeText(tdhInfo.merkleRoot);
-                        setMerkleRootCopied(true);
-                        setTimeout(() => {
-                          setMerkleRootCopied(false);
-                        }, 1500);
-                      }}
-                    />
-                  </Tippy>
+                <div className="mt-3 d-flex flex-column gap-1">
+                  Merkle Root
+                  <span className="d-flex align-items-center gap-1">
+                    <span className={styles.progress}>
+                      {tdhInfo.merkleRoot}
+                    </span>
+                    <Tippy
+                      content={merkleRootCopied ? "Copied!" : "Copy"}
+                      hideOnClick={false}
+                      placement="top"
+                      theme="light">
+                      <FontAwesomeIcon
+                        className="cursor-pointer unselectable"
+                        icon={faCopy}
+                        height={18}
+                        onClick={() => {
+                          navigator.clipboard.writeText(tdhInfo.merkleRoot);
+                          setMerkleRootCopied(true);
+                          setTimeout(() => {
+                            setMerkleRootCopied(false);
+                          }, 1500);
+                        }}
+                      />
+                    </Tippy>
+                  </span>
                 </div>
               </div>
               <Button

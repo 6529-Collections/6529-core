@@ -22,6 +22,8 @@ export const SET_RPC_PROVIDER_ACTIVE = "setRpcProviderActive";
 export const DEACTIVATE_RPC_PROVIDER = "deactivateRpcProvider";
 export const DELETE_RPC_PROVIDER = "deleteRpcProvider";
 export const MANUAL_START_WORKER = "manualStartWorker";
+export const RESET_TRANSACTIONS_TO_BLOCK = "resetTransactionsToBlock";
+export const REBALANCE_TRANSACTIONS_OWNERS = "rebalanceTransactionsOwners";
 
 export const SEIZE_URL = "https://seize.io";
 export const SEIZE_API_URL = "https://api.seize.io";

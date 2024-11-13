@@ -40,6 +40,8 @@ import {
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
   MANUAL_START_WORKER,
+  RESET_TRANSACTIONS_TO_BLOCK,
+  REBALANCE_TRANSACTIONS_OWNERS,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -60,7 +62,10 @@ import { isDev } from "./utils/env";
 import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
 import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
 import fs from "fs";
-import { ScheduledWorker } from "./scheduled-tasks/scheduled-worker";
+import {
+  ScheduledWorker,
+  TransactionsScheduledWorker,
+} from "./scheduled-tasks/scheduled-worker";
 import { RPCProvider } from "./db/entities/IRpcProvider";
 import { ConsolidatedTDH, TDHMerkleRoot } from "./db/entities/ITDH";
 
@@ -645,13 +650,14 @@ ipcMain.handle("get-main-worker", () => {
 ipcMain.handle("get-scheduled-workers", () => {
   const tasks: any[] = [];
   scheduledWorkers.forEach((worker) => {
-    tasks.push({
+    const task: any = {
       namespace: worker.getNamespace(),
       display: worker.getDisplay(),
       logFile: worker.getLogFilePath(),
       cronExpression: worker.getCronExpression(),
       status: worker.getStatus(),
-    });
+    };
+    tasks.push(task);
   });
   return {
     homeDir: getHomeDir(),
@@ -846,5 +852,34 @@ ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
     event.returnValue = { error: !status };
   } else {
     event.returnValue = { error: true, data: "Worker not found" };
+  }
+});
+
+ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, block: any) => {
+  const blockNo = Number(block[0]);
+  Logger.info(`Reset to block: ${blockNo}`);
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) => worker instanceof TransactionsScheduledWorker
+  );
+  if (!transactionsWorker) {
+    event.returnValue = { error: true, data: "Transactions worker not found" };
+  } else {
+    transactionsWorker.resetToBlock(blockNo).then((data) => {
+      event.returnValue = { error: !data.status, data: data.message };
+    });
+  }
+});
+
+ipcMain.on(REBALANCE_TRANSACTIONS_OWNERS, (event) => {
+  Logger.info(`Rebalancing owners`);
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) => worker instanceof TransactionsScheduledWorker
+  );
+  if (!transactionsWorker) {
+    event.returnValue = { error: true, data: "Transactions worker not found" };
+  } else {
+    transactionsWorker.rebalanceTransactionsOwners().then((data) => {
+      event.returnValue = { error: !data.status, data: data.message };
+    });
   }
 });

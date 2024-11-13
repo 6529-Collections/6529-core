@@ -9,6 +9,8 @@ import {
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
   MANUAL_START_WORKER,
+  RESET_TRANSACTIONS_TO_BLOCK,
+  REBALANCE_TRANSACTIONS_OWNERS,
 } from "../constants";
 
 export async function getSeedWallets() {
@@ -72,5 +74,15 @@ export async function deactivateRpcProvider(id: number) {
 
 export async function manualStartWorker(namespace: string) {
   const data = await window.api.sendSync(MANUAL_START_WORKER, namespace);
+  return data;
+}
+
+export async function resetTransactionsToBlock(block: number) {
+  const data = await window.api.sendSync(RESET_TRANSACTIONS_TO_BLOCK, block);
+  return data;
+}
+
+export async function rebalanceTransactionsOwners() {
+  const data = await window.api.sendSync(REBALANCE_TRANSACTIONS_OWNERS);
   return data;
 }

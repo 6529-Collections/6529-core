@@ -45,3 +45,10 @@ export enum ScheduledWorkerDisplay {
   NFT_REFRESH_WORKER = "NFT Refresh",
   TDH_WORKER = "TDH",
 }
+
+export enum TransactionsWorkerScope {
+  REBALANCE_OWNERS,
+  RESET_TO_BLOCK,
+}
+
+export const TRANSACTIONS_START_BLOCK = 13360860;

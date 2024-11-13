@@ -1,5 +1,8 @@
 import Logger from "electron-log";
-import { ScheduledWorker } from "./scheduled-worker";
+import {
+  ScheduledWorker,
+  TransactionsScheduledWorker,
+} from "./scheduled-worker";
 import {
   ScheduledWorkerDisplay,
   ScheduledWorkerNames,
@@ -86,18 +89,34 @@ export function startSchedulers(
       Logger.log(`${worker.name} already scheduled`);
       continue;
     }
-    const scheduledWorker = new ScheduledWorker(
-      rpcUrl,
-      worker.name,
-      worker.display,
-      worker.cronExpression,
-      worker.enabled,
-      worker.blockRange ?? DEFAULT_BLOCK_RANGE,
-      worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
-      logDirectory,
-      postWorkerUpdate,
-      worker.filePath
-    );
+    let scheduledWorker: ScheduledWorker;
+    if (worker.name === ScheduledWorkerNames.TRANSACTIONS_WORKER) {
+      scheduledWorker = new TransactionsScheduledWorker(
+        rpcUrl,
+        worker.name,
+        worker.display,
+        worker.cronExpression,
+        worker.enabled,
+        worker.blockRange ?? DEFAULT_BLOCK_RANGE,
+        worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
+        logDirectory,
+        postWorkerUpdate,
+        worker.filePath
+      );
+    } else {
+      scheduledWorker = new ScheduledWorker(
+        rpcUrl,
+        worker.name,
+        worker.display,
+        worker.cronExpression,
+        worker.enabled,
+        worker.blockRange ?? DEFAULT_BLOCK_RANGE,
+        worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
+        logDirectory,
+        postWorkerUpdate,
+        worker.filePath
+      );
+    }
     scheduledWorkers.push(scheduledWorker);
   }
   Logger.log("All Tasks scheduled.");

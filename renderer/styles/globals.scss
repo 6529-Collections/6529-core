@@ -566,3 +566,13 @@ pre code {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.no-glow {
+  box-shadow: none !important;
+  outline: none !important;
+
+  &:focus {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}

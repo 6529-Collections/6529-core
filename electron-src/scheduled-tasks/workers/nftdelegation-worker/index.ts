@@ -42,13 +42,13 @@ import {
 } from "../../../db/entities/ITDH";
 import { getLastTDH } from "../tdh-worker/tdh-worker.helpers";
 import { calculateTDH } from "../tdh-worker/tdh";
-import { fetchLatestTransactionsBlockForDate } from "../tdh-worker/tdh-worker.db";
 import {
   Transaction,
   TransactionBlock,
 } from "../../../db/entities/ITransaction";
 import { NFT } from "../../../db/entities/INFT";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
+import { findLatestBlockBeforeTimestamp } from "../tdh-worker/tdh";
 
 const data: WorkerData = workerData;
 
@@ -427,10 +427,11 @@ class NFTDelegationWorker extends CoreWorker {
       );
 
       const lastTDHCalc = getLastTDH();
-      const block = await fetchLatestTransactionsBlockForDate(
-        this.getDb(),
-        lastTDHCalc
+      const blockBefore = await findLatestBlockBeforeTimestamp(
+        this.getProvider(),
+        lastTDHCalc.getTime() / 1000
       );
+      const block = blockBefore.number;
       const blockTimestamp = await getBlockTimestamp(
         parentPort,
         this.getProvider(),

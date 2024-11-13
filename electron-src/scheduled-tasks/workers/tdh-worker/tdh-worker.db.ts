@@ -3,7 +3,6 @@ import {
   CONSOLIDATIONS_LIMIT,
   CONSOLIDATIONS_TABLE,
   TDH_BLOCKS_TABLE,
-  TRANSACTIONS_TABLE,
   WALLETS_TDH_TABLE,
 } from "../../../../constants";
 import { areEqualAddresses, isNullAddress } from "../../../../shared/helpers";
@@ -18,21 +17,6 @@ import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { batchSave } from "../../worker-helpers";
 import { getMerkleRoot } from "./tdh-worker.merkle";
-
-export async function fetchLatestTransactionsBlockForDate(
-  db: DataSource,
-  beforeDate: Date
-): Promise<number> {
-  let sql = `SELECT block FROM ${TRANSACTIONS_TABLE}`;
-  const params: any = [];
-  if (beforeDate) {
-    sql += ` WHERE transaction_date <= ? `;
-    params.push(beforeDate.getTime() / 1000);
-  }
-  sql += ` order by block desc limit 1;`;
-  const r = await db.query(sql, params);
-  return r.length > 0 ? r[0].block : 0;
-}
 
 export async function fetchAllConsolidationAddresses(db: DataSource) {
   const sql = `SELECT wallet FROM (

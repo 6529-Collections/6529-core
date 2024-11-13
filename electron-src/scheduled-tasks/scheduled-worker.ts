@@ -6,7 +6,10 @@ import { getBaseDbParams } from "../db/db";
 import { CoreWorkerMessage, CoreWorkerMessageUpdate } from "./worker-helpers";
 import { Worker } from "worker_threads";
 import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
-import { ScheduledWorkerStatus } from "../../shared/types";
+import {
+  ScheduledWorkerStatus,
+  TransactionsWorkerScope,
+} from "../../shared/types";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -15,20 +18,25 @@ export interface WorkerData {
   maxConcurrentRequests: number;
 }
 
-export class ScheduledWorker {
-  private rpcUrl: string | null;
-  private namespace: string;
-  private display: string;
-  private cronExpression: string;
-  private enabled: boolean;
-  private filePath: string;
-  private blockRange: number;
-  private maxConcurrentRequests: number;
-  private logger: WorkerLogger;
-  private task: cron.ScheduledTask | null = null;
-  private worker: Worker | null = null;
+export interface TransactionsWorkerData extends WorkerData {
+  scope?: TransactionsWorkerScope;
+  block?: number;
+}
 
-  private update: CoreWorkerMessageUpdate = {
+export class ScheduledWorker {
+  protected rpcUrl: string | null;
+  protected namespace: string;
+  protected display: string;
+  protected cronExpression: string;
+  protected enabled: boolean;
+  protected filePath: string;
+  protected blockRange: number;
+  protected maxConcurrentRequests: number;
+  protected logger: WorkerLogger;
+  private task: cron.ScheduledTask | null = null;
+  protected worker: Worker | null = null;
+
+  protected update: CoreWorkerMessageUpdate = {
     status: ScheduledWorkerStatus.IDLE,
     message: "",
     progress: 0,
@@ -36,7 +44,7 @@ export class ScheduledWorker {
     statusPercentage: 0,
   };
 
-  private postWorkerUpdate: (
+  protected postWorkerUpdate: (
     namespace: string,
     status: ScheduledWorkerStatus,
     message: string,
@@ -94,10 +102,6 @@ export class ScheduledWorker {
   }
 
   private schedule() {
-    //TODO: remove below
-    // this.startWorker();
-    // END TODO
-
     return cron.schedule(
       this.cronExpression,
       () => {
@@ -117,9 +121,18 @@ export class ScheduledWorker {
     return true;
   }
 
-  private startWorker() {
+  protected startWorker(workerData?: WorkerData | TransactionsWorkerData) {
     if (this.worker) {
       return;
+    }
+
+    if (!workerData) {
+      workerData = {
+        rpcUrl: this.rpcUrl,
+        dbParams: getBaseDbParams(),
+        blockRange: this.blockRange,
+        maxConcurrentRequests: this.maxConcurrentRequests,
+      } as WorkerData;
     }
 
     this.logger.log("info", `Starting task\n\n---------- New Run ----------\n`);
@@ -133,12 +146,7 @@ export class ScheduledWorker {
 
     // Create a new worker thread for each scheduled execution
     this.worker = new Worker(workerPath, {
-      workerData: {
-        rpcUrl: this.rpcUrl,
-        dbParams: getBaseDbParams(),
-        blockRange: this.blockRange,
-        maxConcurrentRequests: this.maxConcurrentRequests,
-      } as WorkerData,
+      workerData,
     });
 
     this.worker.on("message", (message: CoreWorkerMessage) => {
@@ -223,5 +231,89 @@ export class ScheduledWorker {
   public stop() {
     this.task?.stop();
     this.worker?.terminate();
+  }
+}
+
+export class TransactionsScheduledWorker extends ScheduledWorker {
+  constructor(
+    rpcUrl: string | null,
+    namespace: string,
+    display: string,
+    cronExpression: string,
+    enabled: boolean,
+    blockRange: number,
+    maxConcurrentRequests: number,
+    logDirectory: string,
+    postWorkerUpdate: (
+      namespace: string,
+      status: ScheduledWorkerStatus,
+      message: string,
+      action?: string,
+      progress?: number,
+      target?: number,
+      statusPercentage?: number
+    ) => void,
+    filePath?: string
+  ) {
+    super(
+      rpcUrl,
+      namespace,
+      display,
+      cronExpression,
+      enabled,
+      blockRange,
+      maxConcurrentRequests,
+      logDirectory,
+      postWorkerUpdate,
+      filePath
+    );
+  }
+
+  public async resetToBlock(block: number) {
+    if (this.isRunning()) {
+      return {
+        status: false,
+        message: "Transactions worker is already running",
+      };
+    }
+    const workerData: TransactionsWorkerData = {
+      rpcUrl: this.rpcUrl,
+      dbParams: getBaseDbParams(),
+      blockRange: this.blockRange,
+      maxConcurrentRequests: this.maxConcurrentRequests,
+      scope: TransactionsWorkerScope.RESET_TO_BLOCK,
+      block,
+    } as TransactionsWorkerData;
+
+    this.startWorker(workerData);
+
+    return {
+      status: true,
+      message: `Reset to block ${block} started`,
+    };
+  }
+
+  public async rebalanceTransactionsOwners() {
+    if (this.isRunning()) {
+      return {
+        status: false,
+        message: "Transactions worker is already running",
+      };
+    }
+
+    const workerData: TransactionsWorkerData = {
+      rpcUrl: this.rpcUrl,
+      dbParams: getBaseDbParams(),
+      blockRange: this.blockRange,
+      maxConcurrentRequests: this.maxConcurrentRequests,
+      scope: TransactionsWorkerScope.REBALANCE_OWNERS,
+    } as TransactionsWorkerData;
+
+    this.startWorker(workerData);
+
+    return {
+      status: true,
+      message: "Rebalance started",
+    };
   }
 }

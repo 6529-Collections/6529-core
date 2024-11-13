@@ -1,5 +1,4 @@
-import styles from "./ETHScanner.module.scss";
-import { Button, Col, Container, Row } from "react-bootstrap";
+import { Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
 import {
@@ -12,17 +11,7 @@ import {
   TDHInfo,
   TDHWorkerCard,
   WorkerCard,
-  WorkerCards,
 } from "../eth-scanner/Workers";
-import {
-  RPCProvider,
-  RPCProviderAdd,
-  RPCProviderCards,
-} from "../eth-scanner/RpcProviders";
-import { AddRpcProviderModal } from "../eth-scanner/RpcProviderModal";
-import { faCopy } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
 import { manualStartWorker } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
 import TDHValidation from "./TDHValidation";

@@ -1,5 +1,6 @@
 import { NULL_ADDRESS } from "../../../../constants";
 import { areEqualAddresses } from "../../../../shared/helpers";
+import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { Transaction } from "../../../db/entities/ITransaction";
 
 export interface NFTOwnerDelta {
@@ -44,4 +45,20 @@ export async function extractNFTOwnerDeltas(
   }
 
   return Object.values(ownersMap).filter((o) => o.delta !== 0);
+}
+
+export async function extractNFTOwners(
+  transactions: Transaction[]
+): Promise<NFTOwner[]> {
+  const deltas = await extractNFTOwnerDeltas(transactions);
+  return deltas
+    .map((d) => {
+      return {
+        contract: d.contract,
+        address: d.address,
+        token_id: d.tokenId,
+        balance: d.delta,
+      };
+    })
+    .filter((o) => o.balance > 0);
 }
