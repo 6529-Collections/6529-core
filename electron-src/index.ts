@@ -220,6 +220,29 @@ async function createWindow() {
 
   const url = `http://localhost:${PORT}`;
 
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.uniswap.org https://*.uniswap.org https://x.com https://*.x.com; frame-src 'self' https://app.uniswap.org https://*.uniswap.org https://x.com https://*.x.com; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.uniswap.org https://*.uniswap.org https://x.com https://*.x.com; style-src 'self' 'unsafe-inline' https://app.uniswap.org https://*.uniswap.org https://x.com https://*.x.com; img-src 'self' data: https: blob:; connect-src 'self' https: wss: data: blob:;",
+          ],
+        },
+      });
+    }
+  );
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (
+      url.startsWith("https://app.uniswap.org") ||
+      url.startsWith("https://x.com")
+    ) {
+      return { action: "allow" };
+    }
+    return { action: "deny" };
+  });
+
   mainWindow.loadURL(url);
 
   localShortcut.register("CommandOrControl+Shift+C", () => {
@@ -265,6 +288,23 @@ async function createWindow() {
       );
     }
   );
+
+  mainWindow.webContents.session.webRequest.onHeadersReceived(
+    (details, callback) => {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          "Content-Security-Policy": [
+            "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.uniswap.org https://*.uniswap.org https://x.com https://*.x.com; frame-src 'self' https://app.uniswap.org https://*.uniswap.org https://x.com https://*.x.com; img-src 'self' data: https: blob:; connect-src 'self' https: wss: data: blob:; style-src 'self' 'unsafe-inline';",
+          ],
+        },
+      });
+    }
+  );
+
+  mainWindow.webContents.setWindowOpenHandler(() => {
+    return { action: "deny" };
+  });
 }
 
 protocol.registerSchemesAsPrivileged([
