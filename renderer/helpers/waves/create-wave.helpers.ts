@@ -201,10 +201,7 @@ const getVotingValidationErrors = ({
   readonly voting: CreateWaveVotingConfig;
 }): CREATE_WAVE_VALIDATION_ERROR[] => {
   const errors: CREATE_WAVE_VALIDATION_ERROR[] = [];
-  if (
-    voting.type === ApiWaveCreditType.Tdh ||
-    voting.type === ApiWaveCreditType.Unique
-  ) {
+  if (voting.type === ApiWaveCreditType.Tdh) {
     if (voting.profileId) {
       errors.push(CREATE_WAVE_VALIDATION_ERROR.VOTING_PROFILE_ID_MUST_BE_EMPTY);
     }
@@ -442,7 +439,7 @@ const getRankOutcomes = ({
         amount: outcome.winnersConfig.totalAmount,
         distribution: getOutcomesDistribution({
           winnersConfig: outcome.winnersConfig,
-        }),
+        }).map((amount) => ({ amount })),
       });
     } else if (
       outcome.type === CreateWaveOutcomeType.NIC &&
@@ -456,7 +453,7 @@ const getRankOutcomes = ({
         amount: outcome.winnersConfig.totalAmount,
         distribution: getOutcomesDistribution({
           winnersConfig: outcome.winnersConfig,
-        }),
+        }).map((amount) => ({ amount })),
       });
     }
   }
@@ -591,11 +588,7 @@ export const getCreateNewWaveBody = ({
       time_lock_ms: config.approval.thresholdTimeMs,
       admin_group: {
         group_id: config.groups.admin,
-      },
-      period: {
-        min: config.dates.submissionStartDate,
-        max: config.dates.endDate,
-      },
+      }
     },
     outcomes: getOutcomes({ config }),
   };

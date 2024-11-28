@@ -97,7 +97,6 @@ import Auth from "../components/auth/Auth";
 import { NextPage, NextPageContext } from "next";
 import { ReactElement, ReactNode, use, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import ReactQueryWrapper from "../components/react-query-wrapper/ReactQueryWrapper";
 import CookiesBanner from "../components/cookies/CookiesBanner";
 import { CookieConsentProvider } from "../components/cookies/CookieConsentContext";
@@ -276,7 +275,6 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                       </ReactQueryWrapper>
                       {!hideFooter && <Footer />}
                     </Provider>
-                    <ReactQueryDevtools initialIsOpen={false} />
                   </SeedWalletProvider>
                 </ToastProvider>
               </ConfirmProvider>

@@ -48,12 +48,12 @@ export default function AboutTermsOfService() {
               <br />
               <br />
               &quot;Our Platform&quot;: the website located at{" "}
-              <a href="https://seize.io" target="_blank" rel="noreferrer">
-                seize.io
+              <a href="https://6529.io" target="_blank" rel="noreferrer">
+                6529.io
               </a>{" "}
               , any websites hosted at sub-domains of{" "}
-              <a href="https://seize.io" target="_blank" rel="noreferrer">
-                seize.io
+              <a href="https://6529.io" target="_blank" rel="noreferrer">
+                6529.io
               </a>{" "}
               , including hosted minting or primary sales pages, any primary
               mints or sales directly from our smart contracts, any mobile or
@@ -207,19 +207,19 @@ export default function AboutTermsOfService() {
               <br />
               <br />
               <Link href={`/about/${AboutSection.MEMES}`}>
-                seize.io/about/{AboutSection.MEMES}
+                6529.io/about/{AboutSection.MEMES}
               </Link>
               <br />
               <Link href={`/about/${AboutSection.GRADIENTS}`}>
-                seize.io/about/{AboutSection.GRADIENTS}
+                6529.io/about/{AboutSection.GRADIENTS}
               </Link>
               <br />
               <Link href={`/about/${AboutSection.MEME_LAB}`}>
-                seize.io/about/{AboutSection.MEME_LAB}
+                6529.io/about/{AboutSection.MEME_LAB}
               </Link>
               <br />
               <Link href={`/about/${AboutSection.FAQ}`}>
-                seize.io/about/{AboutSection.FAQ}
+                6529.io/about/{AboutSection.FAQ}
               </Link>
             </li>
             <br />
@@ -237,7 +237,7 @@ export default function AboutTermsOfService() {
               <br />
               <br />
               <Link href={`/about/${AboutSection.LICENSE}`}>
-                seize.io/about/{AboutSection.LICENSE}
+                6529.io/about/{AboutSection.LICENSE}
               </Link>
             </li>
             <br />
@@ -259,7 +259,7 @@ export default function AboutTermsOfService() {
                 href={`/about/${AboutSection.MINTING}`}
                 target="_blank"
                 rel="noreferrer">
-                seize.io/about/{AboutSection.MINTING}
+                6529.io/about/{AboutSection.MINTING}
               </a>
             </li>
             <br />
@@ -276,7 +276,7 @@ export default function AboutTermsOfService() {
                 href={`/about/${AboutSection.PRIVACY_POLICY}`}
                 target="_blank"
                 rel="noreferrer">
-                seize.io/about/{AboutSection.PRIVACY_POLICY}
+                6529.io/about/{AboutSection.PRIVACY_POLICY}
               </a>
             </li>
             <br />
@@ -292,7 +292,7 @@ export default function AboutTermsOfService() {
                 href={`/about/${AboutSection.COPYRIGHT}`}
                 target="_blank"
                 rel="noreferrer">
-                seize.io/about/{AboutSection.COPYRIGHT}
+                6529.io/about/{AboutSection.COPYRIGHT}
               </a>
             </li>
             <br />
@@ -430,13 +430,6 @@ export default function AboutTermsOfService() {
               We take no responsibility for these communications, whether we
               agree with them or not, as we have no way to monitor or exercise
               control over them.
-              <br />
-              <br />
-              Our perspectives on the 6529 NFTs can be found on the{" "}
-              <a href="https://seize.io" target="_blank" rel="noreferrer">
-                seize.io
-              </a>{" "}
-              website.
             </li>
             <br />
             <br />
@@ -611,7 +604,7 @@ export default function AboutTermsOfService() {
               <br />
               <br />
               <a href="/dispute-resolution" target="_blank" rel="noreferrer">
-                seize.io/dispute-resolution
+                6529.io/dispute-resolution
               </a>{" "}
             </li>
             <br />

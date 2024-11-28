@@ -1,5 +1,4 @@
 import { Col, Container, Row } from "react-bootstrap";
-import { MEMES_MINTING_HREF } from "../../constants";
 import Link from "next/link";
 
 export default function AboutMinting() {
@@ -30,9 +29,7 @@ export default function AboutMinting() {
             <br />
             <li>
               The minting website for The Memes is:{" "}
-              <a href={MEMES_MINTING_HREF} target="_blank" rel="noreferrer">
-                {MEMES_MINTING_HREF}
-              </a>
+              <Link href="/the-memes/mint">https://6529.io/the-memes/mint</Link>
             </li>
             <br />
             <li>There is no other minting website for The Memes</li>
@@ -541,7 +538,7 @@ export default function AboutMinting() {
             <br />
             <li>
               For our full analysis of our Network Metrics, go here:{" "}
-              <Link href="/network/metrics">seize.io/network/metrics</Link>
+              <Link href="/network/metrics">6529.io/network/metrics</Link>
             </li>
           </ul>
           <br />
@@ -570,7 +567,7 @@ export default function AboutMinting() {
             <li>
               On a daily basis, we publish to Arweave the statistics we use to
               create our own allowlists. You can find them here:{" "}
-              <Link href="/open-data">seize.io/open-data</Link>
+              <Link href="/open-data">6529.io/open-data</Link>
             </li>
             <br />
             <li>
