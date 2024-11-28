@@ -1,6 +1,6 @@
 import { ethers } from "ethers";
 import { DataSource, DataSourceOptions } from "typeorm";
-import { getWorkerDb, initWorkerDb } from "./workers.db";
+import { initWorkerDb } from "./workers.db";
 import { logError, logInfo, sendStatusUpdate } from "../worker-helpers";
 import { ScheduledWorkerStatus } from "../../../shared/types";
 import Bottleneck from "bottleneck";
@@ -38,14 +38,24 @@ export abstract class CoreWorker {
     try {
       sendStatusUpdate(this.parentPort, {
         update: {
-          status: ScheduledWorkerStatus.RUNNING,
-          message: `Starting`,
+          status: ScheduledWorkerStatus.STARTING,
+          message: "Starting",
         },
       });
       logInfo(this.parentPort, "Initializing database");
-      await initWorkerDb(this.dbParams, this.entities);
-      logInfo(this.parentPort, "Database initialized");
-      this.db = getWorkerDb();
+
+      const dbPromise = await initWorkerDb(this.dbParams, this.entities).catch(
+        (error) => {
+          logError(this.parentPort, error);
+        }
+      );
+
+      if (!dbPromise) {
+        throw new Error("Failed to initialize database");
+      }
+
+      this.db = dbPromise;
+      logInfo(this.parentPort, "Database initialized!");
       await this.work();
     } catch (error: any) {
       logError(this.parentPort, error);

@@ -10,7 +10,7 @@ import {
   getLatestTransactionsBlock,
   OwnerDeltaError,
   persistTransactionsAndOwners,
-  rebalanceTransactionOwners,
+  recalculateTransactionOwners,
 } from "./transactions-worker.db";
 import { DataSourceOptions, MoreThan } from "typeorm";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
@@ -75,14 +75,68 @@ export class TransactionsWorker extends CoreWorker {
 
   private async resetToBlock(block: number) {
     logInfo(parentPort, `Resetting to block ${block}`);
+    const latestBlock = await this.getProvider().getBlockNumber();
+    const statusPercentage =
+      ((block - TRANSACTIONS_START_BLOCK) /
+        (latestBlock - TRANSACTIONS_START_BLOCK)) *
+      100;
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.RUNNING,
-        message: `Reset to block`,
-        target: block,
+        message: `Resetting to block ${block}...`,
+        statusPercentage,
       },
     });
 
+    await this.resetToBlockInternal(block);
+
+    logInfo(parentPort, "Reset to block", block, "completed");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message: `Reset to block ${block} completed`,
+        statusPercentage,
+      },
+    });
+  }
+
+  private async recalculateOwners() {
+    const latestBlockDb = await getLatestTransactionsBlock(
+      this.getDb().manager
+    );
+    const resetBlock =
+      latestBlockDb > TRANSACTIONS_START_BLOCK
+        ? latestBlockDb - 5000
+        : latestBlockDb;
+
+    const latestBlockChain = await this.getProvider().getBlockNumber();
+    const statusPercentage =
+      ((resetBlock - TRANSACTIONS_START_BLOCK) /
+        (latestBlockChain - TRANSACTIONS_START_BLOCK)) *
+      100;
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: `Recalculating owners...`,
+        statusPercentage,
+      },
+    });
+    logInfo(parentPort, "Recalculating owners...");
+
+    logInfo(parentPort, "Resetting to block", resetBlock);
+    await this.resetToBlockInternal(resetBlock);
+
+    logInfo(parentPort, "Owner recalculation completed");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message: "Owner recalculation completed",
+        statusPercentage,
+      },
+    });
+  }
+
+  private async resetToBlockInternal(block: number) {
     const blockTimestamp = await getBlockTimestamp(
       parentPort,
       this.getProvider(),
@@ -103,33 +157,7 @@ export class TransactionsWorker extends CoreWorker {
         },
         ["id"]
       );
-      await rebalanceTransactionOwners(manager, parentPort);
-    });
-
-    logInfo(parentPort, "Reset to block", block, "completed");
-    sendStatusUpdate(parentPort, {
-      update: {
-        status: ScheduledWorkerStatus.COMPLETED,
-        message: `Reset to block ${block} completed`,
-      },
-    });
-  }
-
-  private async rebalanceOwners() {
-    logInfo(parentPort, "Rebalancing owners...");
-    sendStatusUpdate(parentPort, {
-      update: {
-        status: ScheduledWorkerStatus.RUNNING,
-        message: "Rebalancing owners...",
-      },
-    });
-    await rebalanceTransactionOwners(this.getDb().manager, parentPort);
-    logInfo(parentPort, "Owners rebalanced");
-    sendStatusUpdate(parentPort, {
-      update: {
-        status: ScheduledWorkerStatus.COMPLETED,
-        message: "Owners rebalanced",
-      },
+      await recalculateTransactionOwners(manager, parentPort);
     });
   }
 
@@ -177,8 +205,8 @@ export class TransactionsWorker extends CoreWorker {
       } else {
         throw new Error("Block is required for reset to block");
       }
-    } else if (this.scope === TransactionsWorkerScope.REBALANCE_OWNERS) {
-      await this.rebalanceOwners();
+    } else if (this.scope === TransactionsWorkerScope.RECALCULATE_OWNERS) {
+      await this.recalculateOwners();
     } else {
       await this.baseWork();
     }
@@ -192,7 +220,7 @@ export class TransactionsWorker extends CoreWorker {
     logInfo(
       parentPort,
       "Blocks",
-      `[${fromBlock}-${toBlock}]`,
+      `[${fromBlock} - ${toBlock}]`,
       "Fetching all transactions..."
     );
 
@@ -212,10 +240,8 @@ export class TransactionsWorker extends CoreWorker {
         sendStatusUpdate(parentPort, {
           update: {
             status: ScheduledWorkerStatus.RUNNING,
-            message: `Syncing Blocks`,
+            message: `Syncing Blocks [${currentFromBlock} - ${toBlock}]`,
             action: action,
-            progress: currentFromBlock,
-            target: toBlock,
             statusPercentage: statusPercentage,
           },
         });
@@ -228,7 +254,7 @@ export class TransactionsWorker extends CoreWorker {
         logInfo(
           parentPort,
           "Blocks",
-          `[${currentFromBlock}-${nextToBlock}]`,
+          `[${currentFromBlock} - ${nextToBlock}]`,
           ...args
         );
       };
@@ -327,8 +353,8 @@ export class TransactionsWorker extends CoreWorker {
         await persistTransactionData();
       } catch (error) {
         if (error instanceof OwnerDeltaError) {
-          sendUpdate("Owner Error - Rebalancing...");
-          await rebalanceTransactionOwners(this.getDb().manager, parentPort);
+          sendUpdate("Owner Error - Recalculating...");
+          await recalculateTransactionOwners(this.getDb().manager, parentPort);
           await persistTransactionData();
         } else {
           throw error;
@@ -356,6 +382,7 @@ export class TransactionsWorker extends CoreWorker {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
         message: `Completed at ${Time.now().toLocaleDateTimeString()} - Latest Block: ${toBlock}`,
+        statusPercentage: 100,
       },
     });
   }

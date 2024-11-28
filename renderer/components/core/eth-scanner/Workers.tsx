@@ -1,6 +1,13 @@
 import styles from "./ETHScanner.module.scss";
-
-import { Container, Row, Col, Button, Form, InputGroup } from "react-bootstrap";
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Form,
+  InputGroup,
+  ProgressBar,
+} from "react-bootstrap";
 import { RPCProvider } from "./RpcProviders";
 import {
   ScheduledWorkerNames,
@@ -9,33 +16,31 @@ import {
 } from "../../../../shared/types";
 import useIsMobileScreen from "../../../hooks/isMobileScreen";
 import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
-import {
-  faChevronDown,
-  faChevronUp,
-  faCopy,
-} from "@fortawesome/free-solid-svg-icons";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import { useState } from "react";
 import Confirm from "../../confirm/Confirm";
 import {
   manualStartWorker,
-  rebalanceTransactionsOwners,
+  recalculateTransactionsOwners,
   resetTransactionsToBlock,
+  resetWorker,
 } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
+import LogsViewer from "../logs-viewer/LogsViewer";
 
 export interface Task {
   namespace: string;
   display: string;
   logFile: string;
   cronExpression: string;
+  description: string;
+  resetable: boolean;
   status?: {
     status: ScheduledWorkerStatus;
     message: string;
     action?: string;
-    progress?: number;
-    target?: number;
     statusPercentage?: number;
   };
 }
@@ -59,7 +64,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
     month === "*" &&
     dayOfWeek === "*"
   ) {
-    return "every 1 minute";
+    return "Runs every 1 minute";
   }
 
   if (
@@ -69,7 +74,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
     month === "*" &&
     dayOfWeek === "*"
   ) {
-    return `every ${minute.slice(2)} minutes`;
+    return `Runs every ${minute.slice(2)} minutes`;
   }
 
   if (
@@ -79,7 +84,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
     month === "*" &&
     dayOfWeek === "*"
   ) {
-    return "every 1 hour";
+    return "Runs every 1 hour";
   }
 
   if (
@@ -89,7 +94,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
     month === "*" &&
     dayOfWeek === "*"
   ) {
-    return `every ${hour.slice(2)} hours`;
+    return `Runs every ${hour.slice(2)} hours`;
   }
 
   // Handle the case for "at <specific time>"
@@ -120,7 +125,14 @@ const cronToLocalTime = (cronExpression: string): string => {
     minute: "2-digit",
   });
 
-  return `at ${localTime} (local time)`;
+  return `Runs at ${localTime} local time (${utcDate.toLocaleTimeString(
+    undefined,
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+    }
+  )} UTC)`;
 };
 
 export function WorkerCards({
@@ -139,11 +151,7 @@ export function WorkerCards({
           {rpcProviders.length > 0 ? (
             <>
               {tasks.map((task) => (
-                <WorkerCard
-                  key={task.namespace}
-                  homeDir={homeDir}
-                  task={task}
-                />
+                <WorkerCard key={task.namespace} task={task} />
               ))}
             </>
           ) : (
@@ -156,16 +164,12 @@ export function WorkerCards({
 }
 
 export function WorkerCard({
-  homeDir,
   task,
+  customStatus,
 }: {
-  readonly homeDir: string;
   readonly task: Task;
+  readonly customStatus?: string;
 }) {
-  const displayPath = task.logFile.startsWith(homeDir)
-    ? `~${task.logFile.replace(homeDir, "")}`
-    : `${task.logFile}`;
-
   const printStatus = () => {
     if (!task.cronExpression) {
       return <span>Always running</span>;
@@ -176,34 +180,15 @@ export function WorkerCard({
     }
 
     if (task.status?.status === ScheduledWorkerStatus.IDLE) {
-      return <span>Idle</span>;
+      if (customStatus) {
+        return <span>{customStatus}</span>;
+      } else {
+        return <span>Idle</span>;
+      }
     }
 
     const printProgress = () => {
       let p = <></>;
-      if (task.status?.progress) {
-        p = (
-          <>
-            :&nbsp;
-            <span className={styles.progress}>{task.status.progress}</span>
-          </>
-        );
-      }
-      if (task.status?.target) {
-        p = (
-          <>
-            {p}&nbsp;&minus;&nbsp;
-            <span className={styles.progress}>{task.status.target}</span>
-          </>
-        );
-      }
-      if (task.status?.statusPercentage) {
-        p = (
-          <>
-            {p}&nbsp;({task.status.statusPercentage.toFixed(2)}%)
-          </>
-        );
-      }
 
       if (task.status?.action) {
         p = (
@@ -217,27 +202,62 @@ export function WorkerCard({
       return p;
     };
 
+    let progressVariant = "info";
+    if (task.status?.status === ScheduledWorkerStatus.COMPLETED) {
+      progressVariant = "success";
+    } else if (task.status?.status === ScheduledWorkerStatus.ERROR) {
+      progressVariant = "danger";
+    }
+
+    const progressNowValue = task.status?.statusPercentage ?? 100;
+    let progressNowLabel;
+    if (task.status?.statusPercentage !== undefined) {
+      progressNowLabel = task.status.statusPercentage;
+    }
+
     return (
       <span>
-        {task.status?.message}
-        {printProgress()}
+        <div className="d-flex align-items-center justify-content-end gap-2">
+          {progressNowLabel && (
+            <span className="font-lighter">
+              {(Math.floor(progressNowLabel * 100) / 100).toLocaleString(
+                "en-US",
+                {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2,
+                }
+              )}
+              %
+            </span>
+          )}
+          <ProgressBar
+            now={progressNowValue}
+            style={{ width: "20vw" }}
+            variant={progressVariant}
+            striped={task.status?.status === ScheduledWorkerStatus.RUNNING}
+            animated={task.status?.status === ScheduledWorkerStatus.RUNNING}
+          />
+        </div>
+        <div className="text-right font-smaller font-color-h mt-1 d-flex font-lighter">
+          <span>{task.status?.message}</span>
+          {printProgress()}
+        </div>
       </span>
     );
   };
 
   const isMobile = useIsMobileScreen();
 
-  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
-
   const [resetToBlock, setResetToBlock] = useState("");
   const [showResetToBlockConfirm, setShowResetToBlockConfirm] = useState(false);
-  const [showRebalanceOwnersConfirm, setShowRebalanceOwnersConfirm] =
+  const [showRecalculateOwnersConfirm, setShowRecalculateOwnersConfirm] =
     useState(false);
-
+  const [showResetWorkerConfirm, setShowResetWorkerConfirm] = useState(false);
+  const [showRunNowConfirm, setShowRunNowConfirm] = useState(false);
   const { showToast } = useToast();
 
   const triggerResetToBlock = async () => {
-    resetTransactionsToBlock(Number(resetToBlock))
+    resetTransactionsToBlock(task.namespace, Number(resetToBlock))
       .then((data) => {
         if (data.error) {
           showToast(data.data, "error");
@@ -251,22 +271,152 @@ export function WorkerCard({
       });
   };
 
-  const triggerRebalanceTransactionsOwners = async () => {
-    rebalanceTransactionsOwners()
+  const triggerRecalculateTransactionsOwners = async () => {
+    recalculateTransactionsOwners()
       .then((data) => {
         if (data.error) {
           showToast(data.data, "error");
         } else {
-          showToast("Rebalance owners started", "success");
+          showToast(data.data, "success");
         }
       })
       .finally(() => {
-        setShowRebalanceOwnersConfirm(false);
+        setShowRecalculateOwnersConfirm(false);
       });
   };
 
+  const triggerResetWorker = async () => {
+    resetWorker(task.namespace)
+      .then((data) => {
+        showToast(data.data, data.error ? "error" : "success");
+      })
+      .finally(() => setShowResetWorkerConfirm(false));
+  };
+
+  const triggerStartWorker = async () => {
+    manualStartWorker(task.namespace)
+      .then((data) => {
+        showToast(data.data, data.error ? "error" : "success");
+      })
+      .finally(() => setShowRunNowConfirm(false));
+  };
+
+  function extraActionContent() {
+    const infoButton = (content: any) => (
+      <Tippy
+        delay={500}
+        placement="bottom"
+        theme="light"
+        trigger="mouseenter"
+        content={
+          <span className="d-flex align-items-center gap-1">
+            <FontAwesomeIcon icon={faInfoCircle} height={15} />
+            Click for more info
+          </span>
+        }>
+        {content}
+      </Tippy>
+    );
+
+    if (task.namespace === ScheduledWorkerNames.TDH_WORKER) {
+      return (
+        <Container className="mt-3 no-padding">
+          <Row>
+            <Col className="d-flex gap-3 align-items-center">
+              {infoButton(
+                <Button
+                  variant="light"
+                  onClick={() => setShowRunNowConfirm(true)}
+                  disabled={
+                    task.status?.status === ScheduledWorkerStatus.RUNNING
+                  }>
+                  Recalculate TDH Now
+                </Button>
+              )}
+            </Col>
+          </Row>
+        </Container>
+      );
+    }
+
+    return (
+      <Container className="mt-3 no-padding">
+        <Row>
+          <Col className="d-flex gap-3 align-items-center">
+            {infoButton(
+              <Button
+                variant="light"
+                onClick={() => setShowRunNowConfirm(true)}
+                disabled={
+                  task.status?.status === ScheduledWorkerStatus.RUNNING
+                }>
+                Run Now
+              </Button>
+            )}
+            {task.resetable &&
+              infoButton(
+                <Button
+                  variant="light"
+                  disabled={
+                    task.status?.status === ScheduledWorkerStatus.RUNNING
+                  }
+                  onClick={() => setShowResetWorkerConfirm(true)}>
+                  Reset
+                </Button>
+              )}
+            {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
+              <>
+                {infoButton(
+                  <Button
+                    disabled={
+                      task.status?.status === ScheduledWorkerStatus.RUNNING
+                    }
+                    variant="light"
+                    onClick={() => setShowRecalculateOwnersConfirm(true)}>
+                    Recalculate Owners
+                  </Button>
+                )}
+                <InputGroup style={{ width: "350px" }}>
+                  <Form.Control
+                    className="no-glow"
+                    type="number"
+                    autoFocus
+                    placeholder={`Min Block: ${TRANSACTIONS_START_BLOCK}`}
+                    aria-label="Block"
+                    aria-describedby="block-addon"
+                    value={resetToBlock}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const num = Number(value);
+                      if (!isNaN(num) && num >= 0) {
+                        setResetToBlock(value);
+                      }
+                    }}
+                  />
+                  {infoButton(
+                    <Button
+                      disabled={
+                        !resetToBlock ||
+                        Number(resetToBlock) < TRANSACTIONS_START_BLOCK ||
+                        task.status?.status === ScheduledWorkerStatus.RUNNING
+                      }
+                      variant="light"
+                      style={{ borderLeft: "2px solid #ced4da" }}
+                      onClick={() => setShowResetToBlockConfirm(true)}>
+                      Reset to block
+                    </Button>
+                  )}
+                </InputGroup>
+              </>
+            )}
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+
   return (
-    <Container className="no-padding pt-2 pb-2">
+    <Container className="no-padding pt-2 pb-4">
       <Row>
         <Col>
           <Col xs={12}>
@@ -290,13 +440,15 @@ export function WorkerCard({
                         <CircleLoader />
                       ) : null}
                     </span>
+                    <span className="font-smaller font-color-h">
+                      {task.description}
+                    </span>
                     {task.cronExpression ? (
                       <span className="font-smaller font-color-h">
                         {cronToHumanReadable(task.cronExpression)}
                       </span>
                     ) : null}
                   </span>
-                  {printStatus()}
                 </Col>
                 <Col
                   xs={12}
@@ -304,87 +456,18 @@ export function WorkerCard({
                   className={`pt-2 pb-2 d-flex flex-column gap-3 justify-content-center ${
                     isMobile ? "align-items-center" : "align-items-end"
                   }`}>
-                  <span className="font-smaller font-color-h">
-                    {displayPath}
-                  </span>
-                  <span className="d-flex align-items-center gap-3">
-                    <Button
-                      size="sm"
-                      variant="dark"
-                      onClick={() => window.api.showFile(task.logFile)}>
-                      <span className="font-smaller">Open Folder</span>
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="dark"
-                      onClick={() =>
-                        window.api.openLogs(task.display, task.logFile)
-                      }>
-                      <span className="font-smaller">View Logs</span>
-                    </Button>
-                  </span>
+                  {printStatus()}
                 </Col>
               </Row>
-              <Row className="pt-1">
-                <Col className="d-flex align-items-center justify-content-between"></Col>
+              <Row className="mt-3">
+                <Col>
+                  <LogsViewer
+                    filePath={task.logFile}
+                    extraAction="Advanced Options"
+                    extraActionContent={extraActionContent()}
+                  />
+                </Col>
               </Row>
-              {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
-                <Row>
-                  <Col>
-                    <Button
-                      variant="link"
-                      className="d-flex align-items-center gap-1 decoration-none"
-                      onClick={() =>
-                        setShowAdvancedOptions(!showAdvancedOptions)
-                      }>
-                      <span>Advanced</span>
-                      <FontAwesomeIcon
-                        icon={showAdvancedOptions ? faChevronUp : faChevronDown}
-                        height={16}
-                      />
-                    </Button>
-                  </Col>
-                </Row>
-              )}
-              {showAdvancedOptions && (
-                <Row className="pt-2">
-                  <Col className="d-flex gap-3 align-items-center">
-                    <InputGroup style={{ width: "350px" }}>
-                      <Form.Control
-                        className="no-glow"
-                        type="number"
-                        autoFocus
-                        placeholder={`Min Block: ${TRANSACTIONS_START_BLOCK}`}
-                        aria-label="Block"
-                        aria-describedby="block-addon"
-                        value={resetToBlock}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          const num = Number(value);
-                          if (!isNaN(num) && num >= 0) {
-                            setResetToBlock(value);
-                          }
-                        }}
-                      />
-                      <Button
-                        disabled={
-                          !resetToBlock ||
-                          Number(resetToBlock) < TRANSACTIONS_START_BLOCK
-                        }
-                        variant="light"
-                        style={{ borderLeft: "2px solid #ced4da" }}
-                        onClick={() => setShowResetToBlockConfirm(true)}>
-                        Reset to block
-                      </Button>
-                    </InputGroup>
-                    <Button
-                      variant="light"
-                      onClick={() => setShowRebalanceOwnersConfirm(true)}>
-                      Rebalance Owners
-                    </Button>
-                  </Col>
-                </Row>
-              )}
             </Container>
           </Col>
         </Col>
@@ -394,142 +477,37 @@ export function WorkerCard({
         onHide={() => setShowResetToBlockConfirm(false)}
         onConfirm={triggerResetToBlock}
         title="Reset to block"
-        message={`Are you sure you want to reset to block ${resetToBlock}?`}
+        message={`Roll back to block number ${resetToBlock}. All transactions after this block will be deleted, and ownership balances will be recalculated as if the sync only reached this block. Subsequent sync processes will update the data from this point forward.`}
       />
       <Confirm
-        show={showRebalanceOwnersConfirm}
-        onHide={() => setShowRebalanceOwnersConfirm(false)}
-        onConfirm={triggerRebalanceTransactionsOwners}
-        title="Rebalance Owners"
-        message={`Are you sure you want to rebalance owners?`}
+        show={showRecalculateOwnersConfirm}
+        onHide={() => setShowRecalculateOwnersConfirm(false)}
+        onConfirm={triggerRecalculateTransactionsOwners}
+        title="Recalculate Owners"
+        message={`Re-process all NFT transactions stored in the local database and recalculates ownership and balances for each owner, ensuring accurate and up-to-date data for every token based on the transaction history. Use this if discrepancies in ownership or balance are detected.`}
       />
-    </Container>
-  );
-}
-
-export function TDHWorkerCard({
-  tdhInfo,
-  isRunningTDH,
-  calculateTDHNow,
-}: {
-  readonly tdhInfo?: TDHInfo;
-  readonly isRunningTDH: boolean;
-  readonly calculateTDHNow: () => void;
-}) {
-  const [blockCopied, setBlockCopied] = useState(false);
-  const [totalTDHCopied, setTotalTDHCopied] = useState(false);
-  const [merkleRootCopied, setMerkleRootCopied] = useState(false);
-
-  return (
-    <Container className={styles.logCard}>
-      <Row>
-        <Col>
-          {tdhInfo ? (
-            <div className="d-flex flex-wrap gap-3 justify-content-between align-items-center">
-              <div className="d-flex flex-column gap-1">
-                <div className="d-flex flex-wrap gap-4 align-items-center">
-                  <span className="d-flex flex-column gap-1">
-                    Block
-                    <span className="d-flex align-items-center gap-1">
-                      <span className={styles.progress}>{tdhInfo.block}</span>
-                      <Tippy
-                        content={blockCopied ? "Copied!" : "Copy"}
-                        hideOnClick={false}
-                        placement="top"
-                        theme="light">
-                        <FontAwesomeIcon
-                          className="cursor-pointer unselectable"
-                          icon={faCopy}
-                          height={16}
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              tdhInfo.block.toString()
-                            );
-                            setBlockCopied(true);
-                            setTimeout(() => {
-                              setBlockCopied(false);
-                            }, 1500);
-                          }}
-                        />
-                      </Tippy>
-                    </span>
-                  </span>
-                  <span className="d-flex flex-column gap-1">
-                    Total TDH
-                    <span className="d-flex align-items-center gap-1">
-                      <span className={styles.progress}>
-                        {tdhInfo.totalTDH.toLocaleString()}
-                      </span>
-                      <Tippy
-                        content={totalTDHCopied ? "Copied!" : "Copy"}
-                        hideOnClick={false}
-                        placement="top"
-                        theme="light">
-                        <FontAwesomeIcon
-                          className="cursor-pointer unselectable"
-                          icon={faCopy}
-                          height={16}
-                          onClick={() => {
-                            navigator.clipboard.writeText(
-                              tdhInfo.totalTDH.toString()
-                            );
-                            setTotalTDHCopied(true);
-                            setTimeout(() => {
-                              setTotalTDHCopied(false);
-                            }, 1500);
-                          }}
-                        />
-                      </Tippy>
-                    </span>
-                  </span>
-                  <span className="d-flex flex-column gap-1">
-                    Last Calculation
-                    <span className={styles.progress}>
-                      {new Date(
-                        tdhInfo.lastCalculation * 1000
-                      ).toLocaleString()}
-                    </span>
-                  </span>
-                </div>
-                <div className="mt-3 d-flex flex-column gap-1">
-                  Merkle Root
-                  <span className="d-flex align-items-center gap-1">
-                    <span className={styles.progress}>
-                      {tdhInfo.merkleRoot}
-                    </span>
-                    <Tippy
-                      content={merkleRootCopied ? "Copied!" : "Copy"}
-                      hideOnClick={false}
-                      placement="top"
-                      theme="light">
-                      <FontAwesomeIcon
-                        className="cursor-pointer unselectable"
-                        icon={faCopy}
-                        height={18}
-                        onClick={() => {
-                          navigator.clipboard.writeText(tdhInfo.merkleRoot);
-                          setMerkleRootCopied(true);
-                          setTimeout(() => {
-                            setMerkleRootCopied(false);
-                          }, 1500);
-                        }}
-                      />
-                    </Tippy>
-                  </span>
-                </div>
-              </div>
-              <Button
-                variant="primary"
-                disabled={isRunningTDH}
-                onClick={calculateTDHNow}>
-                Recalculate
-              </Button>
-            </div>
-          ) : (
-            <span>No TDH info</span>
-          )}
-        </Col>
-      </Row>
+      <Confirm
+        show={showResetWorkerConfirm}
+        onHide={() => setShowResetWorkerConfirm(false)}
+        onConfirm={triggerResetWorker}
+        title="Reset Worker"
+        message={`Reset all data to the start block. This will delete all transactions from the database. Subsequent sync processes will start syncing from the beginning.`}
+      />
+      <Confirm
+        show={showRunNowConfirm}
+        onHide={() => setShowRunNowConfirm(false)}
+        onConfirm={triggerStartWorker}
+        title={
+          task.namespace === ScheduledWorkerNames.TDH_WORKER
+            ? "Run TDH Calculation Now"
+            : `Run ${task.display} Now`
+        }
+        message={
+          task.namespace === ScheduledWorkerNames.TDH_WORKER
+            ? `Recalculate TDH for today now. This will delete all existing TDH data and recalculate it from the last TDH block.`
+            : `Trigger the worker to run immediately, without affecting its scheduled runs.`
+        }
+      />
     </Container>
   );
 }

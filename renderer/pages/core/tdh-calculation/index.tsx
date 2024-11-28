@@ -10,8 +10,8 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const TDHConsensus = dynamic(
-  () => import("../../../components/core/tdh-consensus/TDHConsensus"),
+const TDHCalculation = dynamic(
+  () => import("../../../components/core/tdh-calculation/TDHCalculation"),
   {
     ssr: false,
   }
@@ -20,7 +20,7 @@ const TDHConsensus = dynamic(
 export default function TDHConsensusPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - ETH Scanner" },
+    { display: "Core - TDH Calculation" },
   ];
 
   return (
@@ -28,9 +28,9 @@ export default function TDHConsensusPage() {
       <Head>
         <title>TDH Consensus | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="TDH Consensus | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/tdh-consensus`} />
-        <meta property="og:title" content={`TDH Consensus`} />
+        <meta name="description" content="TDH Calculation | 6529 CORE" />
+        <meta property="og:url" content={`${SEIZE_URL}/core/tdh-calculation`} />
+        <meta property="og:title" content={`TDH Calculation`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
@@ -41,7 +41,7 @@ export default function TDHConsensusPage() {
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <TDHConsensus />
+        <TDHCalculation />
       </main>
     </>
   );

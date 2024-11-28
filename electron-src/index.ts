@@ -20,7 +20,6 @@ import {
   deactivateRpcProvider,
   deleteRpcProvider,
   deleteSeedWallet,
-  getDb,
   getRpcProviders,
   getSeedWallet,
   getSeedWallets,
@@ -28,7 +27,15 @@ import {
   initDb,
   setRpcProviderActive,
 } from "./db/db";
-import { ipcMain, protocol, shell, screen, crashReporter } from "electron";
+import {
+  ipcMain,
+  protocol,
+  shell,
+  screen,
+  crashReporter,
+  IpcMainEvent,
+  IpcMainInvokeEvent,
+} from "electron";
 import {
   GET_SEED_WALLETS,
   ADD_SEED_WALLET,
@@ -41,7 +48,8 @@ import {
   DELETE_RPC_PROVIDER,
   MANUAL_START_WORKER,
   RESET_TRANSACTIONS_TO_BLOCK,
-  REBALANCE_TRANSACTIONS_OWNERS,
+  RECALCULATE_TRANSACTIONS_OWNERS,
+  RESET_WORKER,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -63,11 +71,12 @@ import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
 import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
 import fs from "fs";
 import {
+  ResettableScheduledWorker,
   ScheduledWorker,
   TransactionsScheduledWorker,
 } from "./scheduled-tasks/scheduled-worker";
 import { RPCProvider } from "./db/entities/IRpcProvider";
-import { ConsolidatedTDH, TDHMerkleRoot } from "./db/entities/ITDH";
+import { Tail } from "tail";
 
 contextMenu({
   showInspectElement: false,
@@ -92,6 +101,12 @@ let PORT: number;
 const gotTheLock = app.requestSingleInstanceLock();
 
 const shownNotifications = new Set<number>();
+
+interface TailInstances {
+  [filePath: string]: Tail;
+}
+
+const tails: TailInstances = {};
 
 async function resolvePort() {
   if (!PORT) {
@@ -208,8 +223,6 @@ if (!gotTheLock) {
 
     await createWindow();
 
-    await createScheduledTasks();
-
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         if (isMac()) {
@@ -265,20 +278,12 @@ async function createWindow() {
 
   mainWindow.loadURL(url);
 
-  // TODO: Remove this, replace with commented out code above
-  // mainWindow = new BrowserWindow({
-  //   width: 300,
-  //   height: 300,
-  //   frame: false,
-  //   backgroundColor: "#222",
-  //   transparent: true,
-  // });
-
   localShortcut.register("CommandOrControl+Shift+C", () => {
     mainWindow?.webContents.openDevTools();
   });
 
-  mainWindow.once("ready-to-show", () => {
+  mainWindow.once("ready-to-show", async () => {
+    await createScheduledTasks();
     splash?.destroy();
     mainWindow?.maximize();
     mainWindow?.show();
@@ -544,7 +549,7 @@ ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
 
 ipcMain.on("show-file", (event, filePath: string) => {
   event.preventDefault();
-  Logger.info("Showing file:", filePath);
+  Logger.info("Opening file:", filePath);
   if (fs.existsSync(filePath)) {
     shell.showItemInFolder(filePath);
   } else {
@@ -585,8 +590,6 @@ function postWorkerUpdate(
   status: ScheduledWorkerStatus,
   message: string,
   action?: string,
-  progress?: number,
-  target?: number,
   statusPercentage?: number
 ) {
   // Logger.info(
@@ -601,8 +604,6 @@ function postWorkerUpdate(
       status,
       message,
       action,
-      progress,
-      target,
       statusPercentage
     );
   }
@@ -656,6 +657,8 @@ ipcMain.handle("get-scheduled-workers", () => {
       logFile: worker.getLogFilePath(),
       cronExpression: worker.getCronExpression(),
       status: worker.getStatus(),
+      description: worker.getDescription(),
+      resetable: worker instanceof ResettableScheduledWorker,
     };
     tasks.push(task);
   });
@@ -663,31 +666,6 @@ ipcMain.handle("get-scheduled-workers", () => {
     homeDir: getHomeDir(),
     rpcProviders,
     tasks,
-  };
-});
-
-ipcMain.handle("get-tdh-info", async () => {
-  const tdhMerkle = await getDb().getRepository(TDHMerkleRoot).findOneBy({
-    id: 1,
-  });
-  if (!tdhMerkle) {
-    return undefined;
-  }
-
-  const totalTDH = await getDb()
-    .getRepository(ConsolidatedTDH)
-    .sum("boosted_tdh");
-
-  if (!totalTDH) {
-    return undefined;
-  }
-
-  return {
-    block: tdhMerkle.block,
-    blockTimestamp: tdhMerkle.timestamp,
-    merkleRoot: tdhMerkle.merkle_root,
-    lastCalculation: tdhMerkle.last_update,
-    totalTDH,
   };
 });
 
@@ -855,14 +833,19 @@ ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
   }
 });
 
-ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, block: any) => {
-  const blockNo = Number(block[0]);
-  Logger.info(`Reset to block: ${blockNo}`);
+ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, args: [string, number]) => {
+  const [namespace, blockNo] = args;
+  Logger.info(`[${namespace}] Reset to block: ${blockNo}`);
   const transactionsWorker = scheduledWorkers.find(
-    (worker) => worker instanceof TransactionsScheduledWorker
-  );
+    (worker) =>
+      worker instanceof TransactionsScheduledWorker &&
+      worker.getNamespace() === namespace
+  ) as TransactionsScheduledWorker | undefined;
   if (!transactionsWorker) {
-    event.returnValue = { error: true, data: "Transactions worker not found" };
+    event.returnValue = {
+      error: true,
+      data: "Transactions worker not found",
+    };
   } else {
     transactionsWorker.resetToBlock(blockNo).then((data) => {
       event.returnValue = { error: !data.status, data: data.message };
@@ -870,16 +853,122 @@ ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, block: any) => {
   }
 });
 
-ipcMain.on(REBALANCE_TRANSACTIONS_OWNERS, (event) => {
-  Logger.info(`Rebalancing owners`);
+ipcMain.on(RECALCULATE_TRANSACTIONS_OWNERS, (event) => {
+  Logger.info(`Recalculating owners`);
   const transactionsWorker = scheduledWorkers.find(
     (worker) => worker instanceof TransactionsScheduledWorker
   );
   if (!transactionsWorker) {
     event.returnValue = { error: true, data: "Transactions worker not found" };
   } else {
-    transactionsWorker.rebalanceTransactionsOwners().then((data) => {
+    transactionsWorker.recalculateTransactionsOwners().then((data) => {
       event.returnValue = { error: !data.status, data: data.message };
     });
   }
 });
+
+ipcMain.on(RESET_WORKER, (event, args: [string]) => {
+  const [namespace] = args;
+  Logger.info(`[${namespace}] Reset worker`);
+  const worker = scheduledWorkers.find(
+    (worker) =>
+      worker instanceof ResettableScheduledWorker &&
+      worker.getNamespace() === namespace
+  ) as ResettableScheduledWorker | undefined;
+  if (!worker) {
+    event.returnValue = {
+      error: true,
+      data: "Worker not found",
+    };
+  } else {
+    worker.reset().then((data) => {
+      event.returnValue = { error: !data.status, data: data.message };
+    });
+  }
+});
+
+ipcMain.handle(
+  "get-last-lines",
+  async (_event: IpcMainInvokeEvent, filePath: string, numLines: number) => {
+    try {
+      const data = await fs.promises.readFile(filePath, "utf-8");
+      const allLines = data.split("\n");
+      const totalLines = allLines.length;
+      const lines = allLines.slice(-numLines);
+      const startLineNumber = totalLines - lines.length;
+
+      const lineObjects = lines.map((content, index) => ({
+        id: startLineNumber + index, // Line number
+        content,
+      }));
+
+      return { lines: lineObjects };
+    } catch (error) {
+      console.error(error);
+      return { lines: [] };
+    }
+  }
+);
+
+ipcMain.on("start-tail", async (event: IpcMainEvent, filePath: string) => {
+  if (tails[filePath]) return; // Prevent duplicate tails
+
+  let lineNumber = 0;
+  try {
+    const data = await fs.promises.readFile(filePath, "utf-8");
+    lineNumber = data.split("\n").length;
+  } catch (error) {
+    console.error("Error reading file to get line number:", error);
+    lineNumber = 0;
+  }
+
+  const tail = new Tail(filePath);
+
+  tail.on("line", (data: string) => {
+    event.sender.send("tail-line", filePath, {
+      id: lineNumber++,
+      content: data,
+    });
+  });
+
+  tail.on("error", (error: Error) => {
+    console.error("Tail error:", error);
+  });
+
+  tails[filePath] = tail;
+});
+
+ipcMain.on("stop-tail", (_event: IpcMainEvent, filePath: string) => {
+  if (tails[filePath]) {
+    tails[filePath].unwatch();
+    delete tails[filePath];
+  }
+});
+
+ipcMain.handle(
+  "get-previous-lines",
+  async (
+    _event: IpcMainInvokeEvent,
+    filePath: string,
+    startLine: number,
+    numLines: number
+  ) => {
+    try {
+      const data = await fs.promises.readFile(filePath, "utf-8");
+      const allLines = data.split("\n");
+
+      const endLine = startLine + numLines;
+      const lines = allLines.slice(startLine, endLine);
+
+      const lineObjects = lines.map((content, index) => ({
+        id: startLine + index, // Line number
+        content,
+      }));
+
+      return { lines: lineObjects };
+    } catch (error) {
+      console.error(error);
+      return { lines: [] };
+    }
+  }
+);

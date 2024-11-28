@@ -192,7 +192,6 @@ export async function persistTDH(
   await db.transaction(async (manager) => {
     const tdhRepo = manager.getRepository(TDH);
     if (wallets) {
-      console.log("hi i am deleting wallets", block, wallets);
       await Promise.all(
         wallets.map(async (wallet) => {
           await tdhRepo.delete({

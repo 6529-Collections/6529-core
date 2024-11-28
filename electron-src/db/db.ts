@@ -9,6 +9,8 @@ import Logger from "electron-log";
 import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
 import { RPCProvider } from "./entities/IRpcProvider";
 import { ConsolidatedTDH, TDHMerkleRoot } from "./entities/ITDH";
+import { registerIpcHandlers } from "./db-operations";
+import { ipcMain } from "electron";
 
 let AppDataSource: DataSource;
 
@@ -156,6 +158,7 @@ export const initDb = async () => {
     await AppDataSource.initialize();
     Logger.info("Database connection established");
     await populateDefaults();
+    registerIpcHandlers(ipcMain);
   } catch (error) {
     Logger.error("Error during Data Source initialization:", error);
   }
@@ -167,7 +170,7 @@ async function populateDefaults() {
 
 async function populateDefaultRpcProviders() {
   const defaultProviders = [
-    { name: "6529 Node", url: "https://api.seize.io/rpc" },
+    { name: "6529 Node", url: "https://rpc1.6529.io" },
     { name: "Ankr", url: "https://rpc.ankr.com/eth" },
     { name: "Public Node", url: "https://ethereum.publicnode.com" },
     { name: "LlamaNodes", url: "https://eth.llamarpc.com" },

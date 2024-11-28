@@ -9,9 +9,7 @@ import {
   Event,
 } from "../../../db/entities/IDelegation";
 
-export async function fetchLatestNftDelegationBlock(
-  db: DataSource
-): Promise<number> {
+export async function getLatestNFTDBlock(db: DataSource): Promise<number> {
   const repo = db.getRepository(NFTDelegationBlock);
   const block = await repo.findOne({ where: { id: 1 } });
   return block?.block ?? 0;
@@ -183,7 +181,7 @@ async function persistDelegations(
   }
 }
 
-async function persistNftDelegationBlock(
+export async function persistNftDelegationBlock(
   transaction: EntityManager,
   blockNo: number,
   timestamp: number

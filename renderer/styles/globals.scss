@@ -394,6 +394,7 @@ h5:not(.tailwind-scope h5) {
 }
 
 .btn-white {
+  border: none;
   background-color: white !important;
   color: black !important;
 
@@ -408,6 +409,16 @@ h5:not(.tailwind-scope h5) {
 
   &:hover {
     background-color: $dark-grey !important;
+  }
+}
+
+.btn-grey {
+  border: none;
+  background-color: $lighter-grey;
+  color: white !important;
+
+  &:hover {
+    background-color: lighten($color: $dark-grey, $amount: 5);
   }
 }
 
@@ -553,6 +564,21 @@ pre code {
   &:hover {
     transform: scale(1.01);
     border: 1px solid $dark-grey;
+    cursor: pointer;
+  }
+}
+
+.seize-card-white {
+  padding: 20px;
+  border: 1px solid transparent;
+  box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.seize-card-white-clickable {
+  &:hover {
+    transform: scale(1.01);
+    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.75);
     cursor: pointer;
   }
 }

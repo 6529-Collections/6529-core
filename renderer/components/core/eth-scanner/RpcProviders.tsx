@@ -1,7 +1,14 @@
 import styles from "./ETHScanner.module.scss";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Col, Container, Row, Button } from "react-bootstrap";
+import {
+  Col,
+  Container,
+  Row,
+  Button,
+  Accordion,
+  AccordionBody,
+} from "react-bootstrap";
 import {
   deactivateRpcProvider,
   deleteRpcProvider,
@@ -25,6 +32,31 @@ export function RPCProviderCards({
   readonly rpcProviders: RPCProvider[];
   readonly onRefresh: () => void;
 }) {
+  return (
+    <Accordion>
+      <Accordion.Item
+        className={`${styles.rpcProvidersAccordionItem}`}
+        eventKey={"0"}>
+        <Accordion.Header>Providers List</Accordion.Header>
+        <Accordion.Body
+          className="d-flex flex-wrap gap-2"
+          style={{ backgroundColor: "var($bg-color-2)" }}>
+          <Container>
+            <Row>
+              {rpcProviders.map((r) => (
+                <RPCProviderCard
+                  key={r.url}
+                  rpcProvider={r}
+                  onRefresh={onRefresh}
+                />
+              ))}
+            </Row>
+          </Container>
+        </Accordion.Body>
+      </Accordion.Item>
+    </Accordion>
+  );
+
   return (
     <>
       {rpcProviders.length > 0 ? (
@@ -153,7 +185,7 @@ function RPCProviderCard({
 
 export function RPCProviderAdd({ onClick }: { readonly onClick: () => void }) {
   return (
-    <Button variant="success" onClick={onClick}>
+    <Button variant="primary" onClick={onClick}>
       Add RPC Provider
     </Button>
   );

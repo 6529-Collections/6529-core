@@ -11,7 +11,7 @@ export const initWorkerDb = async (
     entities,
     synchronize: true,
   });
-  await AppDataSource.initialize();
+  return await AppDataSource.initialize();
 };
 
 export const getWorkerDb = () => AppDataSource;

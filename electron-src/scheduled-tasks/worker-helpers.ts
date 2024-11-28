@@ -14,8 +14,6 @@ export interface CoreWorkerMessageUpdate {
   status: ScheduledWorkerStatus;
   message: string;
   action?: string;
-  progress?: number;
-  target?: number;
   statusPercentage?: number;
 }
 

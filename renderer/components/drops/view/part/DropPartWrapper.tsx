@@ -129,7 +129,7 @@ export default function DropPartWrapper({
               }`}></div>
           </div>
 
-          <div className="tw-flex-1 tw-px-2 sm:tw-px-4 tw-relative tw-z-20">
+          <div className="tw-flex-1 tw-px-2 sm:tw-px-4 tw-relative tw-z-5">
             {children}
             <div>
               {quotedDrop && (

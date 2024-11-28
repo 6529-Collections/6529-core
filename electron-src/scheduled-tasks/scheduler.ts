@@ -1,5 +1,6 @@
 import Logger from "electron-log";
 import {
+  ResettableScheduledWorker,
   ScheduledWorker,
   TransactionsScheduledWorker,
 } from "./scheduled-worker";
@@ -17,6 +18,7 @@ interface ScheduledWorkerConfig {
   display: ScheduledWorkerDisplay;
   cronExpression: string;
   enabled: boolean;
+  description: string;
   filePath?: string;
   blockRange?: number;
   maxConcurrentRequests?: number;
@@ -26,16 +28,14 @@ const getCronExpressionMinutes = (intervalMinutes: number) => {
   return `*/${intervalMinutes} * * * *`;
 };
 
-const getCronExpressionHours = (intervalHours: number) => {
-  return `0 */${intervalHours} * * *`;
-};
-
 const WORKERS: ScheduledWorkerConfig[] = [
   {
     name: ScheduledWorkerNames.TRANSACTIONS_WORKER,
     display: ScheduledWorkerDisplay.TRANSACTIONS_WORKER,
     cronExpression: getCronExpressionMinutes(1),
     enabled: true,
+    description:
+      "Fetches blockchain transactions related to the 6529 contracts.",
   },
   {
     name: ScheduledWorkerNames.NFT_DELEGATION_WORKER,
@@ -43,26 +43,24 @@ const WORKERS: ScheduledWorkerConfig[] = [
     cronExpression: getCronExpressionMinutes(1),
     enabled: true,
     blockRange: 1000,
+    description:
+      "Monitors and updates events from the NFT Delegation contract.",
   },
   {
-    name: ScheduledWorkerNames.NFT_DISCOVERY_WORKER,
-    display: ScheduledWorkerDisplay.NFT_DISCOVERY_WORKER,
+    name: ScheduledWorkerNames.NFTS_WORKER,
+    display: ScheduledWorkerDisplay.NFTS_WORKER,
     cronExpression: getCronExpressionMinutes(2),
     enabled: true,
     filePath: "workers/nft-worker/nft-discovery",
-  },
-  {
-    name: ScheduledWorkerNames.NFT_REFRESH_WORKER,
-    display: ScheduledWorkerDisplay.NFT_REFRESH_WORKER,
-    cronExpression: getCronExpressionHours(2),
-    enabled: true,
-    filePath: "workers/nft-worker/nft-refresh",
+    description:
+      "Discovers new NFTs and refreshes existing NFTs in your node's database.",
   },
   {
     name: ScheduledWorkerNames.TDH_WORKER,
     display: ScheduledWorkerDisplay.TDH_WORKER,
     cronExpression: "1 0 * * *",
     enabled: true,
+    description: "The computer process in your node that calculates TDH.",
   },
 ];
 
@@ -74,8 +72,6 @@ export function startSchedulers(
     status: ScheduledWorkerStatus,
     message: string,
     action?: string,
-    progress?: number,
-    target?: number,
     statusPercentage?: number
   ) => void
 ) {
@@ -97,6 +93,21 @@ export function startSchedulers(
         worker.display,
         worker.cronExpression,
         worker.enabled,
+        worker.description,
+        worker.blockRange ?? DEFAULT_BLOCK_RANGE,
+        worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
+        logDirectory,
+        postWorkerUpdate,
+        worker.filePath
+      );
+    } else if (worker.name === ScheduledWorkerNames.NFT_DELEGATION_WORKER) {
+      scheduledWorker = new ResettableScheduledWorker(
+        rpcUrl,
+        worker.name,
+        worker.display,
+        worker.cronExpression,
+        worker.enabled,
+        worker.description,
         worker.blockRange ?? DEFAULT_BLOCK_RANGE,
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
@@ -110,12 +121,17 @@ export function startSchedulers(
         worker.display,
         worker.cronExpression,
         worker.enabled,
+        worker.description,
         worker.blockRange ?? DEFAULT_BLOCK_RANGE,
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
         worker.filePath
       );
+    }
+    if (worker.enabled && worker.name !== ScheduledWorkerNames.TDH_WORKER) {
+      Logger.log(`Starting ${worker.name}`);
+      scheduledWorker.manualStart();
     }
     scheduledWorkers.push(scheduledWorker);
   }

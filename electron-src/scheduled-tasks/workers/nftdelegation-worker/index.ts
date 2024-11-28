@@ -1,7 +1,7 @@
 import { ethers } from "ethers";
 import { parentPort, workerData } from "worker_threads";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
-import { WorkerData } from "../../scheduled-worker";
+import { ResettableWorkerData } from "../../scheduled-worker";
 import { DataSource, DataSourceOptions } from "typeorm";
 import {
   getBlockTimestamp,
@@ -29,7 +29,8 @@ import {
 import { DELEGATIONS_IFACE } from "../../../../shared/abis/delegations";
 import { Time } from "../../../../shared/time";
 import {
-  fetchLatestNftDelegationBlock,
+  getLatestNFTDBlock,
+  persistNftDelegationBlock,
   persistNftDelegations,
 } from "./nftdelegation-worker.db";
 import { CoreWorker } from "../core-worker";
@@ -50,7 +51,7 @@ import { NFT } from "../../../db/entities/INFT";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { findLatestBlockBeforeTimestamp } from "../tdh-worker/tdh";
 
-const data: WorkerData = workerData;
+const data: ResettableWorkerData = workerData;
 
 export const NAMESPACE = "NFT_DELEGATION_WORKER >";
 
@@ -84,11 +85,14 @@ async function getAffectedWallets(db: DataSource, wallets: Set<string>) {
 }
 
 class NFTDelegationWorker extends CoreWorker {
+  private reset?: boolean;
+
   constructor(
     rpcUrl: string,
     dbParams: DataSourceOptions,
     blockRange: number,
-    maxConcurrentRequests: number
+    maxConcurrentRequests: number,
+    reset?: boolean
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       NFTDelegationBlock,
@@ -101,12 +105,58 @@ class NFTDelegationWorker extends CoreWorker {
       TransactionBlock,
       NFT,
       NFTOwner,
-      Consolidation,
       TDHMerkleRoot,
     ]);
+    this.reset = reset;
   }
 
   async work() {
+    if (this.reset) {
+      await this.resetWork();
+    } else {
+      await this.baseWork();
+    }
+  }
+
+  async resetWork() {
+    logInfo(parentPort, "Resetting to block", DELEGATION_CONTRACT.deploy_block);
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: `Resetting to block ${DELEGATION_CONTRACT.deploy_block}...`,
+      },
+    });
+
+    const blockTimestamp = await getBlockTimestamp(
+      parentPort,
+      this.getProvider(),
+      NAMESPACE,
+      DELEGATION_CONTRACT.deploy_block
+    );
+
+    await this.getDb().transaction(async (manager) => {
+      const delegationsRepo = manager.getRepository(Delegation);
+      const consolidationRepo = manager.getRepository(Consolidation);
+
+      await delegationsRepo.clear();
+      await consolidationRepo.clear();
+      await persistNftDelegationBlock(
+        manager,
+        DELEGATION_CONTRACT.deploy_block,
+        blockTimestamp.toSeconds()
+      );
+    });
+
+    logInfo(parentPort, "Reset to block", "completed");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message: `Reset completed`,
+      },
+    });
+  }
+
+  async baseWork() {
     const delegationsResponse = await this.findNewDelegations();
     if (delegationsResponse.consolidations.length > 0) {
       await this.reconsolidateWallets(delegationsResponse.consolidations);
@@ -127,6 +177,7 @@ class NFTDelegationWorker extends CoreWorker {
         message: `Completed at ${Time.now().toLocaleDateTimeString()} - Latest Block: ${
           delegationsResponse.latestBlock
         }`,
+        statusPercentage: 100,
       },
     });
   }
@@ -137,7 +188,7 @@ class NFTDelegationWorker extends CoreWorker {
     registrations: DelegationEvent[];
     revocations: DelegationEvent[];
   }> {
-    let startBlock = await fetchLatestNftDelegationBlock(this.getDb());
+    let startBlock = await getLatestNFTDBlock(this.getDb());
     if (startBlock === 0) {
       startBlock = DELEGATION_CONTRACT.deploy_block;
     }
@@ -202,10 +253,8 @@ class NFTDelegationWorker extends CoreWorker {
         sendStatusUpdate(parentPort, {
           update: {
             status: ScheduledWorkerStatus.RUNNING,
-            message: "Syncing Blocks",
+            message: `Syncing Blocks [${currentFromBlock}-${nextToBlock}]`,
             action,
-            progress: currentFromBlock,
-            target: toBlock,
             statusPercentage: statusPercentage,
           },
         });
@@ -407,8 +456,7 @@ class NFTDelegationWorker extends CoreWorker {
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.RUNNING,
-        message: "Reconsolidating wallets",
-        progress: events.length,
+        message: `Reconsolidating wallets [${events.length}]`,
       },
     });
 
@@ -464,5 +512,6 @@ new NFTDelegationWorker(
   data.rpcUrl,
   data.dbParams,
   data.blockRange,
-  data.maxConcurrentRequests
+  data.maxConcurrentRequests,
+  data.reset
 );

@@ -29,9 +29,34 @@ import { Transaction } from "../../../db/entities/ITransaction";
 
 const data: WorkerData = workerData;
 
-export const NAMESPACE = "NFT_DISCOVERY_WORKER >";
+const MEMES_CONTRACT_OBJECT: Contract = {
+  name: "The Memes",
+  address: MEMES_CONTRACT,
+  abi: MEMES_ABI,
+  type: ContractType.ERC1155,
+};
+const GRADIENT_CONTRACT_OBJECT: Contract = {
+  name: "6529 Gradient",
+  address: GRADIENT_CONTRACT,
+  abi: GRADIENT_ABI,
+  type: ContractType.ERC721,
+};
+const MEMELAB_CONTRACT_OBJECT: Contract = {
+  name: "Meme Lab",
+  address: MEMELAB_CONTRACT,
+  abi: MEMES_ABI,
+  type: ContractType.ERC1155,
+};
+const NEXTGEN_CONTRACT_OBJECT: Contract = {
+  name: "NextGen",
+  address: NEXTGEN_CONTRACT,
+  abi: NEXTGEN_ABI,
+  type: ContractType.ERC721,
+};
 
-class NFTDiscoveryWorker extends CoreWorker {
+export const NAMESPACE = "NFTS_WORKER >";
+
+class NFTWorker extends CoreWorker {
   constructor(
     rpcUrl: string,
     dbParams: DataSourceOptions,
@@ -44,26 +69,55 @@ class NFTDiscoveryWorker extends CoreWorker {
     ]);
   }
 
+  async sendStatusMessage() {
+    const message = await this.getStatusMessage([
+      MEMES_CONTRACT_OBJECT,
+      GRADIENT_CONTRACT_OBJECT,
+      NEXTGEN_CONTRACT_OBJECT,
+      MEMELAB_CONTRACT_OBJECT,
+    ]);
+
+    logInfo(parentPort, message);
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message,
+      },
+    });
+  }
+
   async work() {
+    const now = new Date();
+    const currentHour = now.getUTCHours();
+    const currentMinute = now.getUTCMinutes();
+
+    if (currentHour % 2 === 0 && currentMinute === 0) {
+      return await this.refreshWork();
+    } else {
+      return await this.normalWork();
+    }
+  }
+
+  private async refreshWork() {
     const contracts: Contract[] = [
-      {
-        name: "The Memes",
-        address: MEMES_CONTRACT,
-        abi: MEMES_ABI,
-        type: ContractType.ERC1155,
-      },
-      {
-        name: "6529 Gradient",
-        address: GRADIENT_CONTRACT,
-        abi: GRADIENT_ABI,
-        type: ContractType.ERC721,
-      },
-      {
-        name: "Meme Lab",
-        address: MEMELAB_CONTRACT,
-        abi: MEMES_ABI,
-        type: ContractType.ERC1155,
-      },
+      MEMES_CONTRACT_OBJECT,
+      GRADIENT_CONTRACT_OBJECT,
+      MEMELAB_CONTRACT_OBJECT,
+      NEXTGEN_CONTRACT_OBJECT,
+    ];
+
+    for (const contract of contracts) {
+      await this.processContractRefresh(contract);
+    }
+
+    await this.sendStatusMessage();
+  }
+
+  private async normalWork() {
+    const contracts: Contract[] = [
+      MEMES_CONTRACT_OBJECT,
+      GRADIENT_CONTRACT_OBJECT,
+      MEMELAB_CONTRACT_OBJECT,
     ];
 
     for (const contract of contracts) {
@@ -72,13 +126,7 @@ class NFTDiscoveryWorker extends CoreWorker {
 
     await this.processNextgen();
 
-    logInfo(parentPort, "Completed");
-    sendStatusUpdate(parentPort, {
-      update: {
-        status: ScheduledWorkerStatus.COMPLETED,
-        message: `Completed at ${Time.now().toLocaleDateTimeString()}`,
-      },
-    });
+    await this.sendStatusMessage();
   }
 
   async processContract(contract: Contract) {
@@ -252,9 +300,113 @@ class NFTDiscoveryWorker extends CoreWorker {
       }
     }
   }
+
+  async processContractRefresh(contract: Contract) {
+    const ethersContract = new ethers.Contract(
+      contract.address,
+      contract.abi,
+      this.getProvider()
+    );
+
+    const existingNfts = await this.getDb()
+      .getRepository(NFT)
+      .find({
+        where: {
+          contract: contract.address,
+        },
+        order: {
+          id: "ASC",
+        },
+      });
+
+    const updatedNfts: NFT[] = [];
+    for (const nft of existingNfts) {
+      sendStatusUpdate(parentPort, {
+        update: {
+          status: ScheduledWorkerStatus.RUNNING,
+          message: `[${contract.name} Refresh] Processing NFT #${nft.id}`,
+          action: "- Reading from chain",
+        },
+      });
+      const uri = await getTokenUri(contract.type, ethersContract, nft.id);
+      const editionSizes = await getEditionSizes(
+        this.getDb(),
+        contract.address,
+        ethersContract,
+        nft.id
+      );
+      let updatedNft: NFT | undefined = undefined;
+      if (
+        editionSizes.editionSize !== nft.edition_size ||
+        editionSizes.burnt !== nft.burns
+      ) {
+        updatedNft = {
+          ...nft,
+          edition_size: editionSizes.editionSize,
+          burns: editionSizes.burnt,
+        };
+      }
+      if (uri && uri != nft.uri) {
+        sendStatusUpdate(parentPort, {
+          update: {
+            status: ScheduledWorkerStatus.RUNNING,
+            message: `[${contract.name} Refresh] Processing NFT #${nft.id}`,
+            action: "- Retrieving Metadata",
+          },
+        });
+        updatedNft = await retrieveNftFromURI(
+          this.getDb(),
+          contract.address,
+          nft.id,
+          uri,
+          editionSizes
+        );
+      }
+      if (updatedNft) {
+        updatedNfts.push(updatedNft);
+      }
+    }
+
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: `Updating Database`,
+      },
+    });
+
+    logInfo(parentPort, "Updating Database");
+    await persistNfts(this.getDb(), updatedNfts);
+
+    logInfo(parentPort, "Finished successfully");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message: `Completed at ${Time.now().toLocaleDateTimeString()}`,
+      },
+    });
+  }
+
+  private async getStatusMessage(contracts: Contract[]) {
+    let message = "";
+    for (const contract of contracts) {
+      const contractCount = await this.getDb()
+        .getRepository(NFT)
+        .count({
+          where: {
+            contract: contract.address,
+          },
+        });
+      if (message) {
+        message += " / ";
+      }
+      message += `${contract.name}: ${contractCount.toLocaleString()}`;
+    }
+
+    return message;
+  }
 }
 
-new NFTDiscoveryWorker(
+new NFTWorker(
   data.rpcUrl,
   data.dbParams,
   data.blockRange,

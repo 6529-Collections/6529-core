@@ -44,8 +44,6 @@ export default function ETHScanner() {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      progress?: number,
-      target?: number,
       statusPercentage?: number
     ) => {
       setTasks((tasks) =>
@@ -57,8 +55,6 @@ export default function ETHScanner() {
                   status,
                   message,
                   action,
-                  progress,
-                  target,
                   statusPercentage,
                 },
               }
@@ -78,13 +74,8 @@ export default function ETHScanner() {
         <Row>
           <Col className="d-flex align-items-center justify-content-between">
             <h1 className="float-none">
-              <span className="font-lightest">ETH</span> Scanner
+              <span className="font-lightest">ETH</span> Transactions
             </h1>
-            <Link
-              href="/core/eth-scanner/faq"
-              className="font-larger decoration-hover-underline">
-              FAQ
-            </Link>
           </Col>
         </Row>
         {fetchingTasks ? (
@@ -97,7 +88,7 @@ export default function ETHScanner() {
           <>
             <Row className="pt-5">
               <Col className="d-flex align-items-center gap-3 justify-content-between">
-                <h3>
+                <h3 className="mb-0">
                   <span className="font-lightest">RPC</span> Providers
                 </h3>
                 <RPCProviderAdd
@@ -105,7 +96,7 @@ export default function ETHScanner() {
                 />
               </Col>
             </Row>
-            <Row className="pt-2">
+            <Row className="pt-3">
               <RPCProviderCards
                 rpcProviders={rpcProviders}
                 onRefresh={fetchContent}

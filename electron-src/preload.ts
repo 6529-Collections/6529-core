@@ -1,5 +1,9 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
-import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
+import {
+  LogLine,
+  ScheduledWorkerStatus,
+  SeedWalletRequest,
+} from "../shared/types";
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -55,7 +59,6 @@ export const api = {
   getInfo: () => ipcRenderer.invoke("get-info"),
   getMainWorker: () => ipcRenderer.invoke("get-main-worker"),
   getScheduledWorkers: () => ipcRenderer.invoke("get-scheduled-workers"),
-  getTdhInfo: () => ipcRenderer.invoke("get-tdh-info"),
   getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),
   onWalletConnection: (connectionData: any) => {
     ipcRenderer.on("wallet-connection", connectionData);
@@ -74,32 +77,13 @@ export const api = {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      progress?: number,
-      target?: number,
       statusPercentage?: number
     ) => void
   ) =>
     ipcRenderer.on(
       "worker-update",
-      (
-        _event,
-        namespace,
-        status,
-        message,
-        action,
-        progress,
-        target,
-        statusPercentage
-      ) =>
-        callback(
-          namespace,
-          status,
-          message,
-          action,
-          progress,
-          target,
-          statusPercentage
-        )
+      (_event, namespace, status, message, action, statusPercentage) =>
+        callback(namespace, status, message, action, statusPercentage)
     ),
   offWorkerUpdate: (
     callback: (
@@ -107,33 +91,39 @@ export const api = {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      progress?: number,
-      target?: number,
       statusPercentage?: number
     ) => void
   ) =>
     ipcRenderer.removeListener(
       "worker-update",
-      (
-        _event,
-        namespace,
-        status,
-        message,
-        action,
-        progress,
-        target,
-        statusPercentage
-      ) =>
-        callback(
-          namespace,
-          status,
-          message,
-          action,
-          progress,
-          target,
-          statusPercentage
-        )
+      (_event, namespace, status, message, action, statusPercentage) =>
+        callback(namespace, status, message, action, statusPercentage)
     ),
+  getLastLines: (
+    filePath: string,
+    numLines: number
+  ): Promise<{ lines: LogLine[] }> =>
+    ipcRenderer.invoke("get-last-lines", filePath, numLines),
+
+  startTail: (filePath: string): void =>
+    ipcRenderer.send("start-tail", filePath),
+
+  stopTail: (filePath: string): void => ipcRenderer.send("stop-tail", filePath),
+
+  onTailLine: (callback: (filePath: string, line: LogLine) => void): void => {
+    ipcRenderer.on(
+      "tail-line",
+      (_event: IpcRendererEvent, filePath: string, line: LogLine) =>
+        callback(filePath, line)
+    );
+  },
+
+  getPreviousLines: (
+    filePath: string,
+    startLine: number,
+    numLines: number
+  ): Promise<{ lines: LogLine[] }> =>
+    ipcRenderer.invoke("get-previous-lines", filePath, startLine, numLines),
 };
 
 contextBridge.exposeInMainWorld("api", api);
@@ -230,8 +220,17 @@ export const seedConnector = {
 
 contextBridge.exposeInMainWorld("seedConnector", seedConnector);
 
+export const localDb = {
+  getTdhInfo: () => ipcRenderer.invoke("get-tdh-info"),
+  getTdhInfoForKey: (key: string) =>
+    ipcRenderer.invoke("get-tdh-info-for-key", key),
+};
+
+contextBridge.exposeInMainWorld("localDb", localDb);
+
 export type ElectronAPI = typeof api;
 export type ElectronStore = typeof store;
 export type ElectronUpdater = typeof updater;
 export type ElectronSeedConnector = typeof seedConnector;
 export type ElectronNotifications = typeof notifications;
+export type ElectronLocalDB = typeof localDb;

@@ -79,11 +79,11 @@ export async function persistTransactionsAndOwners(
   }
 }
 
-export async function rebalanceTransactionOwners(
+export async function recalculateTransactionOwners(
   db: EntityManager,
   parentPort: any
 ) {
-  logInfo(parentPort, "Rebalancing Transactions Owners");
+  logInfo(parentPort, "Recalculating Transactions Owners");
 
   const block = await getLatestTransactionsBlock(db);
   logInfo(parentPort, "Latest transactions block", block);
@@ -106,7 +106,7 @@ export async function rebalanceTransactionOwners(
     await persistOwners(transaction, ownerDeltas);
   });
 
-  logInfo(parentPort, "All transactions owners rebalanced");
+  logInfo(parentPort, "All transactions owners recalculated");
 }
 
 export async function extractOwnersFromDeltas(

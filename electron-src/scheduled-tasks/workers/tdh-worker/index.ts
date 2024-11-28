@@ -22,7 +22,10 @@ import {
 } from "../../../db/entities/ITransaction";
 import { calculateTDH, findLatestBlockBeforeTimestamp } from "./tdh";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
-import { Consolidation } from "../../../db/entities/IDelegation";
+import {
+  Consolidation,
+  NFTDelegationBlock,
+} from "../../../db/entities/IDelegation";
 import { NFT } from "../../../db/entities/INFT";
 import { getLatestTransactionsBlock } from "../transactions-worker/transactions-worker.db";
 import { Contract, ContractType, getTokenUri } from "../nft-worker/nft-worker";
@@ -33,6 +36,7 @@ import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
 import { ethers } from "ethers";
+import { getLatestNFTDBlock } from "../nftdelegation-worker/nftdelegation-worker.db";
 
 const data: WorkerData = workerData;
 
@@ -55,6 +59,7 @@ class TDHWorker extends CoreWorker {
       NFTOwner,
       Consolidation,
       TDHMerkleRoot,
+      NFTDelegationBlock,
     ]);
   }
 
@@ -91,7 +96,15 @@ class TDHWorker extends CoreWorker {
 
     if (block > latestTransactionsBlock) {
       throw new Error(
-        `Latest block invalid: Latest Transactions Block: ${latestTransactionsBlock} | TDH Block: ${block}`
+        `Not Synced: Latest Transactions Block: ${latestTransactionsBlock} | TDH Block: ${block}`
+      );
+    }
+
+    const latestNFTDBlock = await getLatestNFTDBlock(this.getDb());
+
+    if (block > latestNFTDBlock) {
+      throw new Error(
+        `Not Synced: Latest NFT Delegations Block: ${latestNFTDBlock} | TDH Block: ${block}`
       );
     }
 

@@ -1,0 +1,23 @@
+.tableContainer table {
+  table-layout: fixed; /* Ensures consistent column widths */
+  width: 100%; /* Spans the entire container */
+}
+
+.tableContainer tr {
+  display: flex; /* Turns rows into flex containers */
+  flex-direction: row; /* Ensures horizontal alignment */
+  align-items: stretch; /* Ensures cells stretch to equal height */
+}
+
+.tableContainer th,
+.tableContainer td {
+  flex: 1; /* Equal column widths */
+  display: flex; /* Flex container for cells */
+  align-items: center; /* Vertically centers content */
+  padding: 8px; /* Ensures spacing between content and borders */
+  gap: 8px;
+}
+
+.tableContainer td {
+  min-height: 65px;
+}

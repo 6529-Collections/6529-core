@@ -23,12 +23,17 @@ export interface TransactionsWorkerData extends WorkerData {
   block?: number;
 }
 
+export interface ResettableWorkerData extends WorkerData {
+  reset?: boolean;
+}
+
 export class ScheduledWorker {
   protected rpcUrl: string | null;
   protected namespace: string;
   protected display: string;
   protected cronExpression: string;
   protected enabled: boolean;
+  protected description: string;
   protected filePath: string;
   protected blockRange: number;
   protected maxConcurrentRequests: number;
@@ -39,8 +44,6 @@ export class ScheduledWorker {
   protected update: CoreWorkerMessageUpdate = {
     status: ScheduledWorkerStatus.IDLE,
     message: "",
-    progress: 0,
-    target: 0,
     statusPercentage: 0,
   };
 
@@ -49,8 +52,6 @@ export class ScheduledWorker {
     status: ScheduledWorkerStatus,
     message: string,
     action?: string,
-    progress?: number,
-    target?: number,
     statusPercentage?: number
   ) => void;
 
@@ -60,6 +61,7 @@ export class ScheduledWorker {
     display: string,
     cronExpression: string,
     enabled: boolean,
+    description: string,
     blockRange: number,
     maxConcurrentRequests: number,
     logDirectory: string,
@@ -68,8 +70,6 @@ export class ScheduledWorker {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      progress?: number,
-      target?: number,
       statusPercentage?: number
     ) => void,
     filePath?: string
@@ -82,6 +82,7 @@ export class ScheduledWorker {
     }
     this.cronExpression = cronExpression;
     this.enabled = enabled && !!this.rpcUrl;
+    this.description = description;
     this.filePath = filePath
       ? `${filePath}.js`
       : `workers/${this.namespace}/index.js`;
@@ -166,8 +167,6 @@ export class ScheduledWorker {
           this.update.status,
           this.update.message,
           this.update.action,
-          this.update.progress,
-          this.update.target,
           this.update.statusPercentage
         );
       }
@@ -210,18 +209,18 @@ export class ScheduledWorker {
     message: string;
     status: ScheduledWorkerStatus;
     action?: string;
-    progress?: number;
-    target?: number;
     statusPercentage?: number;
   } {
     return {
       message: this.update.message,
       status: this.update.status,
       action: this.update.action,
-      progress: this.update.progress,
-      target: this.update.target,
       statusPercentage: this.update.statusPercentage,
     };
+  }
+
+  public getDescription(): string {
+    return this.description;
   }
 
   public isRunning(): boolean {
@@ -241,6 +240,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     display: string,
     cronExpression: string,
     enabled: boolean,
+    description: string,
     blockRange: number,
     maxConcurrentRequests: number,
     logDirectory: string,
@@ -249,8 +249,6 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      progress?: number,
-      target?: number,
       statusPercentage?: number
     ) => void,
     filePath?: string
@@ -261,6 +259,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       display,
       cronExpression,
       enabled,
+      description,
       blockRange,
       maxConcurrentRequests,
       logDirectory,
@@ -293,7 +292,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     };
   }
 
-  public async rebalanceTransactionsOwners() {
+  public async recalculateTransactionsOwners() {
     if (this.isRunning()) {
       return {
         status: false,
@@ -306,14 +305,73 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       dbParams: getBaseDbParams(),
       blockRange: this.blockRange,
       maxConcurrentRequests: this.maxConcurrentRequests,
-      scope: TransactionsWorkerScope.REBALANCE_OWNERS,
+      scope: TransactionsWorkerScope.RECALCULATE_OWNERS,
     } as TransactionsWorkerData;
 
     this.startWorker(workerData);
 
     return {
       status: true,
-      message: "Rebalance started",
+      message: "Owner recalculation started",
+    };
+  }
+}
+
+export class ResettableScheduledWorker extends ScheduledWorker {
+  constructor(
+    rpcUrl: string | null,
+    namespace: string,
+    display: string,
+    cronExpression: string,
+    enabled: boolean,
+    description: string,
+    blockRange: number,
+    maxConcurrentRequests: number,
+    logDirectory: string,
+    postWorkerUpdate: (
+      namespace: string,
+      status: ScheduledWorkerStatus,
+      message: string,
+      action?: string,
+      statusPercentage?: number
+    ) => void,
+    filePath?: string
+  ) {
+    super(
+      rpcUrl,
+      namespace,
+      display,
+      cronExpression,
+      enabled,
+      description,
+      blockRange,
+      maxConcurrentRequests,
+      logDirectory,
+      postWorkerUpdate,
+      filePath
+    );
+  }
+
+  public async reset() {
+    if (this.isRunning()) {
+      return {
+        status: false,
+        message: "Worker is already running",
+      };
+    }
+    const workerData: ResettableWorkerData = {
+      rpcUrl: this.rpcUrl,
+      dbParams: getBaseDbParams(),
+      blockRange: this.blockRange,
+      maxConcurrentRequests: this.maxConcurrentRequests,
+      reset: true,
+    } as ResettableWorkerData;
+
+    this.startWorker(workerData);
+
+    return {
+      status: true,
+      message: `Reset started`,
     };
   }
 }

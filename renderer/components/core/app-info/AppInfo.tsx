@@ -2,6 +2,8 @@ import { Button, Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import DotLoader from "../../dotLoader/DotLoader";
+import { Task } from "../eth-scanner/Workers";
+import LogsViewer from "../logs-viewer/LogsViewer";
 
 interface ProgressInfo {
   total: number;
@@ -33,11 +35,24 @@ export default function AppInfo() {
   const [updateProgress, setUpdateProgress] = useState<ProgressInfo>();
   const [updateError, setUpdateError] = useState<any>();
 
+  const [mainTask, setMainTask] = useState<Task>();
+  const [homeDir, setHomeDir] = useState<string>("");
+
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
       setInfo(newInfo);
-      window.updater.checkUpdates();
     });
+  }, []);
+
+  const fetchMainWorker = () => {
+    window.api.getMainWorker().then(({ homeDir, mainTask }) => {
+      setHomeDir(homeDir);
+      setMainTask(mainTask);
+    });
+  };
+
+  useEffect(() => {
+    fetchMainWorker();
   }, []);
 
   useEffect(() => {
@@ -101,56 +116,72 @@ export default function AppInfo() {
     };
   }, []);
 
-  function printInfo(key: string, value: string) {
+  function printAppVersion() {
     return (
-      <Col sm={12} md={6} className="pt-2 pb-2">
-        <Container>
-          <Row>
-            <Col
-              className="pt-3 pb-3 d-flex flex-column text-center"
-              style={{
-                border: "1px solid #e5e5e5",
-              }}>
-              <span>{key}</span>
-              <span className="font-larger font-bolder">{value}</span>
-            </Col>
-          </Row>
-        </Container>
-      </Col>
+      <Container className="seize-card">
+        <Row className="pt-2 pb-2">
+          <Col xs={12}>
+            <div className="d-flex justify-content-between">
+              <div>
+                <span className="d-flex flex-column">
+                  <h4>v{info.app_version}</h4>
+                  <span className="font-smaller font-color-h">
+                    {info.os}:{info.arch} / {info.scheme}
+                  </span>
+                </span>
+              </div>
+              <span>
+                {checkingForUpdates && (
+                  <>
+                    Checking For Updates <DotLoader />
+                  </>
+                )}
+                {updateProgress && <UpdateProgress progress={updateProgress} />}
+                {updateAvailable && <UpdateAvailable info={updateAvailable} />}
+                {updateNotAvailable && (
+                  <UpdateNotAvailable info={updateNotAvailable} />
+                )}
+                {updateError && <UpdateError error={updateError} />}
+                {updateDownloaded && (
+                  <UpdateDownloaded info={updateDownloaded} />
+                )}
+              </span>
+            </div>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+
+  function printMainWorkerLogs(filePath: string) {
+    return (
+      <Container className="no-padding">
+        <Row>
+          <Col>
+            <LogsViewer name="App Logs" filePath={filePath} width={"100%"} />
+          </Col>
+        </Row>
+      </Container>
     );
   }
 
   return (
     <Container className="pt-5 pb-5">
-      <Row>
+      <Row className="mt-3">
         <Col>
           <h1 className="float-none">
-            <span className="font-lightest">6529</span> Core
+            <span className="font-lightest">Core</span> Info
           </h1>
         </Col>
       </Row>
-      <Row className="pt-3">
-        {printInfo("APP VERSION", info.app_version)}
-        {printInfo("APP PORT", `:${info.port}`)}
-        {printInfo("OS", `${info.os}:${info.arch}`)}
-        {printInfo("PROTOCOL", `${info.scheme}`)}
+      <Row className="mt-3">
+        <Col>{printAppVersion()}</Col>
       </Row>
-      <Row className="pt-5">
-        <Col xs={12} className="text-center">
-          {checkingForUpdates && (
-            <>
-              Checking For Updates <DotLoader />
-            </>
-          )}
-          {updateProgress && <UpdateProgress progress={updateProgress} />}
-          {updateAvailable && <UpdateAvailable info={updateAvailable} />}
-          {updateNotAvailable && (
-            <UpdateNotAvailable info={updateNotAvailable} />
-          )}
-          {updateError && <UpdateError error={updateError} />}
-          {updateDownloaded && <UpdateDownloaded info={updateDownloaded} />}
-        </Col>
-      </Row>
+      {mainTask?.logFile && (
+        <Row className="mt-3">
+          <Col>{printMainWorkerLogs(mainTask.logFile)}</Col>
+        </Row>
+      )}
     </Container>
   );
 }
@@ -169,7 +200,7 @@ function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
             alt="update"
           />
         </Col>
-        <Col xs={12} className="pb-3 text-center">
+        <Col xs={12} className="text-center">
           New Update Available!
         </Col>
         <Col xs={12} sm={{ span: 8, offset: 2 }} md={{ span: 6, offset: 3 }}>
@@ -195,7 +226,7 @@ function UpdateNotAvailable(props: Readonly<{ info: UpdateInfo }>) {
             alt="6529"
           />
         </Col>
-        <Col xs={12} className="pb-3 text-center">
+        <Col xs={12} className="text-center">
           You are running the latest version!
         </Col>
       </Row>
@@ -219,7 +250,7 @@ function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
             alt="downloaded"
           />
         </Col>
-        <Col xs={12} className="pb-3 text-center">
+        <Col xs={12} className="text-center">
           Update Downloaded
         </Col>
         <Col xs={12} sm={{ span: 8, offset: 2 }} md={{ span: 6, offset: 3 }}>
@@ -248,10 +279,10 @@ function UpdateError(
             alt="error"
           />
         </Col>
-        <Col xs={12} className="pb-3 text-center">
+        <Col xs={12} className="text-center">
           Something went wrong
         </Col>
-        <Col xs={12} className="pb-3 text-center">
+        <Col xs={12} className="text-center">
           {props.error.stack}
         </Col>
       </Row>
@@ -269,7 +300,7 @@ function UpdateProgress(props: Readonly<{ progress: ProgressInfo }>) {
             alt="progress"
           />
         </Col>
-        <Col xs={12} className="pb-3 text-center">
+        <Col xs={12} className="text-center">
           Downloading Update
         </Col>
         <Col

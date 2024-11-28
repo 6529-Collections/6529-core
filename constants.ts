@@ -23,11 +23,12 @@ export const DEACTIVATE_RPC_PROVIDER = "deactivateRpcProvider";
 export const DELETE_RPC_PROVIDER = "deleteRpcProvider";
 export const MANUAL_START_WORKER = "manualStartWorker";
 export const RESET_TRANSACTIONS_TO_BLOCK = "resetTransactionsToBlock";
-export const REBALANCE_TRANSACTIONS_OWNERS = "rebalanceTransactionsOwners";
+export const RECALCULATE_TRANSACTIONS_OWNERS = "recalculateTransactionsOwners";
+export const RESET_WORKER = "resetWorker";
 
-export const SEIZE_URL = "https://seize.io";
-export const SEIZE_API_URL = "https://api.seize.io";
-export const ALLOWLIST_API_ENDPOINT = "https://allowlist-api.seize.io";
+export const SEIZE_URL = "https://6529.io";
+export const SEIZE_API_URL = "https://api.6529.io";
+export const ALLOWLIST_API_ENDPOINT = "https://allowlist-api.6529.io";
 export const NEXTGEN_CHAIN_ID_ENV = "1";
 export const ALCHEMY_API_KEY = "";
 
