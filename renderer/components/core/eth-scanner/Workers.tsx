@@ -125,14 +125,18 @@ const cronToLocalTime = (cronExpression: string): string => {
     minute: "2-digit",
   });
 
-  return `Runs at ${localTime} local time (${utcDate.toLocaleTimeString(
-    undefined,
-    {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: "UTC",
-    }
-  )} UTC)`;
+  const utcTime = utcDate.toLocaleTimeString(undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "UTC",
+  });
+
+  let utcDisplay = "";
+  if (localTime !== utcTime) {
+    utcDisplay = `(${utcTime} UTC)`;
+  }
+
+  return `Runs at ${localTime} local time ${utcDisplay}`;
 };
 
 export function WorkerCards({

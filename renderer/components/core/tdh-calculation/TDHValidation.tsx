@@ -77,7 +77,7 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
               Your Node
             </th>
             <th className="px-3" style={{ maxWidth: "25vw" }}>
-              Seize.io
+              6529.io
             </th>
             <th
               className="px-3 justify-content-center"

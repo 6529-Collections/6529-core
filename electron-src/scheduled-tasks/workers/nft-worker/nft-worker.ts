@@ -116,7 +116,7 @@ export const getExternalUrl = (contract: string, tokenId: number) => {
     path = `nextgen/token/${tokenId}`;
   }
 
-  return `https://seize.io/${path}`;
+  return `https://6529.io/${path}`;
 };
 
 export const getEditionSizes = async (
