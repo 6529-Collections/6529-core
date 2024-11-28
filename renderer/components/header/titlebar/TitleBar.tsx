@@ -307,7 +307,7 @@ function SharePopup(props: {
   };
 
   const copyWebLink = () => {
-    const link = `https://seize.io/${getLinkPath()}`;
+    const link = `https://6529.io/${getLinkPath()}`;
     navigator.clipboard.writeText(link).then(() => {
       setIsDesktopLinkCopied(false);
       setIsWebLinkCopied(true);
