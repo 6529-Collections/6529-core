@@ -7,20 +7,16 @@ import {
 } from "../../../../shared/types";
 import { Task, TDHInfo, WorkerCard } from "../eth-scanner/Workers";
 import TDHValidation from "./TDHValidation";
-import { Time } from "../../../helpers/time";
 
 export default function TDHCalculation() {
   const [fetchingTask, setFetchingTask] = useState(true);
   const [tdhTask, setTdhTask] = useState<Task>();
 
-  const [homeDir, setHomeDir] = useState<string>("");
-
   const [fetchingTdhInfo, setFetchingTdhInfo] = useState(true);
   const [tdhInfo, setTdhInfo] = useState<TDHInfo>();
 
   const fetchContent = () => {
-    window.api.getScheduledWorkers().then(({ homeDir, tasks }) => {
-      setHomeDir(homeDir);
+    window.api.getScheduledWorkers().then(({ tasks }) => {
       setTdhTask(
         tasks.find((t: Task) => t.namespace === ScheduledWorkerNames.TDH_WORKER)
       );
@@ -108,7 +104,7 @@ export default function TDHCalculation() {
         {fetchingTdhInfo || !tdhInfo ? (
           <Row className="pt-3 pb-3">
             <Col>
-              Fetching <DotLoader />
+              Fetching TDH Info <DotLoader />
             </Col>
           </Row>
         ) : (
@@ -121,7 +117,7 @@ export default function TDHCalculation() {
         {fetchingTask ? (
           <Row className="pt-3">
             <Col>
-              Fetching <DotLoader />
+              Fetching TDH Task <DotLoader />
             </Col>
           </Row>
         ) : tdhTask ? (

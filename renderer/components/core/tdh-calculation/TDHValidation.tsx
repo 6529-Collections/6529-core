@@ -45,7 +45,7 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   }
 
   if (isFetchingRemote) {
-    return <div>Fetching TDH info...</div>;
+    return <div>Fetching Remote TDH Info...</div>;
   }
 
   const tdhStatus = localInfo?.totalTDH === remoteInfo?.tdh ? "green" : "red";
