@@ -50,6 +50,7 @@ export enum QueryKey {
   IDENTITY_FOLLOWING_ACTIONS = "IDENTITY_FOLLOWING_ACTIONS",
   IDENTITY_FOLLOWERS = "IDENTITY_FOLLOWERS",
   IDENTITY_NOTIFICATIONS = "IDENTITY_NOTIFICATIONS",
+  IDENTITY_SEARCH = "IDENTITY_SEARCH",
   WALLET_TDH = "WALLET_TDH",
   WALLET_TDH_HISTORY = "WALLET_TDH_HISTORY",
   REP_CATEGORIES_SEARCH = "REP_CATEGORIES_SEARCH",
@@ -1212,6 +1213,7 @@ export default function ReactQueryWrapper({
   }: {
     readonly drop: ApiDrop;
   }): Promise<void> => {
+    console.log(drop)
     addDropToDrops(queryClient, { drop });
     increaseWavesOverviewDropsCount(queryClient, drop.wave.id);
     increaseFeedItemsDropRedropCount({ drop });

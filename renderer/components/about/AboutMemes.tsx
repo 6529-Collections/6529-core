@@ -79,14 +79,14 @@ export default function AboutMemes() {
             <b>Learn More About The Memes:</b>
           </p>
           <p>
-            All The Memes: <Link href="/the-memes">seize.io/the-memes</Link>
+            All The Memes: <Link href="/the-memes">6529.io/the-memes</Link>
           </p>
           <p>
-            The Memes Network: <Link href="/network">seize.io/network</Link>
+            The Memes Network: <Link href="/network">6529.io/network</Link>
           </p>
           <p>
             FAQs:{" "}
-            <Link href={`/about/${AboutSection.FAQ}`}>seize.io/about/faq</Link>
+            <Link href={`/about/${AboutSection.FAQ}`}>6529.io/about/faq</Link>
           </p>
           <p>
             The Memes Discord:{" "}
@@ -100,7 +100,7 @@ export default function AboutMemes() {
           <p>
             Minting Memes:{" "}
             <Link href={`/about/${AboutSection.MINTING}`}>
-              seize.io/about/minting
+              6529.io/about/minting
             </Link>
           </p>
         </Col>
