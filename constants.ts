@@ -5,9 +5,9 @@ export const DELETE_SEED_WALLET = "deleteSeedWallet";
 export const GET_SEED_WALLETS = "getSeedWallets";
 export const GET_SEED_WALLET = "getSeedWallet";
 
-export const SEIZE_URL = "https://seize.io";
-export const SEIZE_API_URL = "https://api.seize.io";
-export const ALLOWLIST_API_ENDPOINT = "https://allowlist-api.seize.io";
+export const SEIZE_URL = "https://6529.io";
+export const SEIZE_API_URL = "https://api.6529.io";
+export const ALLOWLIST_API_ENDPOINT = "https://allowlist-api.6529.io";
 export const NEXTGEN_CHAIN_ID_ENV = "1";
 export const ALCHEMY_API_KEY = "";
 
