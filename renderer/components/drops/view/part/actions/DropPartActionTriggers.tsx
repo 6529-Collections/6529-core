@@ -9,6 +9,7 @@ import DropPartReplyButton from "./discussion/DropPartReplyButton";
 import DropPartActionTriggersVoteVoters from "./vote/DropPartActionTriggersVoteVoters";
 import DropPartActionTriggersVoteVotings from "./vote/DropPartActionTriggersVoteVotings";
 import { useCopyToClipboard } from "react-use";
+import { SEIZE_URL } from "../../../../../../constants";
 
 interface DropPartActionTriggersProps {
   readonly drop: ApiDrop;
@@ -33,7 +34,7 @@ export default function DropPartActionTriggers({
   const [_, copyToClipboard] = useCopyToClipboard();
   const copyDropLink = () => {
     copyToClipboard(
-      `${window.location.protocol}//${window.location.host}/waves/${drop.wave.id}?drop=${drop.serial_no}`
+      `${SEIZE_URL}/waves/${drop.wave.id}?drop=${drop.serial_no}`
     );
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
