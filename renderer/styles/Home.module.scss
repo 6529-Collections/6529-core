@@ -170,3 +170,66 @@
     padding: 0.5rem !important;
   }
 }
+
+.appCard {
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border-radius: 16px;
+  padding: 24px;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+
+  &.comingSoon {
+    opacity: 0.6;
+    cursor: not-allowed;
+
+    &:hover {
+      transform: none;
+    }
+  }
+}
+
+.appIcon {
+  width: 48px;
+  height: 48px;
+  margin-bottom: 16px;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+}
+
+.appInfo {
+  h3 {
+    color: #fff;
+    margin: 0 0 8px;
+    font-size: 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  p {
+    color: #888;
+    margin: 0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+}
+
+.comingSoonBadge {
+  font-size: 0.75rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-weight: normal;
+}
