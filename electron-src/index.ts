@@ -176,7 +176,8 @@ if (!gotTheLock) {
     handleUrl(url);
   });
 
-  app.on("window-all-closed", () => {
+  app.on("window-all-closed", (event: any) => {
+    event.preventDefault();
     Logger.info("All windows closed");
   });
 
@@ -223,18 +224,35 @@ if (!gotTheLock) {
 
     await createWindow();
 
-    app.on("activate", () => {
-      if (BrowserWindow.getAllWindows().length === 0) {
-        if (isMac()) {
-          app.dock.setIcon(iconPath);
-        }
-        createWindow();
+    app.on("activate", async () => {
+      if (!mainWindow || mainWindow.isDestroyed()) {
+        await createWindow();
+      } else {
+        mainWindow.show();
+        mainWindow.focus();
       }
     });
   });
 }
 
+function createSplash() {
+  splash = new BrowserWindow({
+    width: 300,
+    height: 300,
+    frame: false,
+    backgroundColor: "#222",
+    transparent: true,
+  });
+  splash.loadFile(path.join(__dirname, "assets/splash.html"));
+}
+
 async function createWindow() {
+  Logger.info("Creating window");
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    Logger.info("Window already exists");
+    return;
+  }
+
   let iconPath;
   if (isWindows()) {
     iconPath = path.join(__dirname, "assets", "icon.ico");
@@ -244,16 +262,13 @@ async function createWindow() {
     iconPath = path.join(__dirname, "assets", "icon.png");
   }
 
-  splash = new BrowserWindow({
-    width: 300,
-    height: 300,
-    frame: false,
-    backgroundColor: "#222",
-    transparent: true,
-  });
+  Logger.info("Creating splash");
+  if (!splash) {
+    Logger.info("Splash does not exist, creating");
+    createSplash();
+  }
 
-  splash.loadFile(path.join(__dirname, "assets/splash.html"));
-
+  Logger.info("Creating main window");
   mainWindow = new BrowserWindow({
     minWidth: 500,
     minHeight: 500,
@@ -283,13 +298,16 @@ async function createWindow() {
   });
 
   mainWindow.once("ready-to-show", async () => {
+    Logger.info("Main window ready to show");
     await createScheduledTasks();
-    splash?.destroy();
     mainWindow?.maximize();
+    splash?.destroy();
     mainWindow?.show();
+    splash = null;
   });
 
   mainWindow.on("close", (e) => {
+    Logger.info("Main window closing");
     if (isUpdateInitiatedQuit) {
       if (isDev) {
         app.relaunch();
@@ -311,10 +329,13 @@ async function createWindow() {
     Logger.error("Unhandled Rejection at:", promise, "reason:", reason);
   });
 
-  mainWindow.webContents.on("did-navigate", updateNavigationState);
-  mainWindow.webContents.on("did-navigate-in-page", updateNavigationState);
+  initListeners(mainWindow);
+}
 
-  mainWindow.webContents.on(
+function initListeners(mw: BrowserWindow) {
+  mw.webContents.on("did-navigate", updateNavigationState);
+  mw.webContents.on("did-navigate-in-page", updateNavigationState);
+  mw.webContents.on(
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL) => {
       Logger.error(
@@ -564,11 +585,36 @@ ipcMain.on("extract-crash-report", (event, fileName) => {
 
 ipcMain.on("run-background", () => {
   Logger.info("Running in background");
-  mainWindow?.close();
-  mainWindow?.destroy();
+
+  if (mainWindow) {
+    mainWindow.webContents.removeAllListeners();
+
+    for (const logFile of logWindowsMap.keys()) {
+      closeLogs(logFile);
+      logWindowsMap.delete(logFile);
+    }
+    for (const k of Object.keys(tails)) {
+      tails[k].unwatch();
+      delete tails[k];
+    }
+
+    if (!splash) {
+      createSplash();
+    }
+    splash?.minimize();
+    splash?.on("restore", async () => {
+      Logger.info("Splash window restored");
+      await createWindow();
+    });
+
+    mainWindow?.close();
+    mainWindow?.destroy();
+    mainWindow = null;
+  }
 });
 
 ipcMain.on("quit", () => {
+  mainWindow?.webContents.removeAllListeners();
   mainWindow?.close();
   mainWindow?.destroy();
   mainWindow = null;
@@ -592,11 +638,6 @@ function postWorkerUpdate(
   action?: string,
   statusPercentage?: number
 ) {
-  // Logger.info(
-  //   `Worker update: ${namespace} [${message}] ${action ? `[${action}]` : ""} ${
-  //     progress ? `[${progress}/${target}]` : ""
-  //   } ${statusPercentage ? `(${statusPercentage.toFixed(2)}%)` : ""}`
-  // );
   if (!mainWindow?.isDestroyed()) {
     mainWindow?.webContents?.send(
       "worker-update",

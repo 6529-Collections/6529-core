@@ -603,19 +603,6 @@ pre code {
   }
 }
 
-.seize-card {
-  padding: 20px;
-  border: 1px solid transparent;
-  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
-  transition: transform 0.3s ease;
-
-  &:hover {
-    transform: scale(1.01);
-    border: 1px solid $dark-grey;
-    cursor: pointer;
-  }
-}
-
 .header-wp {
   @media (max-width: 1000px) {
     .container {
