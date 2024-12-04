@@ -301,8 +301,8 @@ async function createWindow() {
     Logger.info("Main window ready to show");
     await createScheduledTasks();
     mainWindow?.maximize();
-    splash?.destroy();
     mainWindow?.show();
+    splash?.destroy();
     splash = null;
   });
 
