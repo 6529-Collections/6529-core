@@ -11,7 +11,7 @@ import { defaultWagmiConfig } from "@web3modal/wagmi/react/config";
 import { SEIZE_URL } from "../constants";
 import { browserConnector } from "./browserConnector";
 import { isElectron } from "./helpers";
-import { SEED_WALLETS_NETWORK } from "./components/core/seed-wallet/SeedWallets";
+import { SEED_WALLETS_NETWORK } from "./components/core/core-wallet/SeedWallets";
 import { getSeedWallets } from "./electron";
 import { ISeedWallet } from "../shared/types";
 import { ethers } from "ethers";

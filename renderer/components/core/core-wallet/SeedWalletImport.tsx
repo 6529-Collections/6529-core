@@ -25,9 +25,9 @@ export default function SeedWalletImport() {
           <Col>
             <Link
               className="font-smaller d-flex align-items-center gap-2 decoration-none"
-              href="/core/seed-wallets">
+              href="/core/core-wallets">
               <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-              Back to Seed Wallets
+              Back to Core Wallets
             </Link>
           </Col>
         </Row>
@@ -296,7 +296,7 @@ function ImportWallet(
         onHide={(refresh: boolean) => {
           setShowImportModal(false);
           if (refresh) {
-            router.push("/core/seed-wallets");
+            router.push("/core/core-wallets");
           }
         }}
         import={{

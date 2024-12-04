@@ -123,8 +123,8 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
             </td>
             <td className="px-3" style={{ maxWidth: "25vw" }}>
               {remoteInfo?.block}
-              {localInfo?.block && (
-                <CopyIcon text={localInfo.block.toString()} />
+              {remoteInfo?.block && (
+                <CopyIcon text={remoteInfo.block.toString()} />
               )}
             </td>
             <td className="px-3 text-center" style={{ maxWidth: "10vw" }}>

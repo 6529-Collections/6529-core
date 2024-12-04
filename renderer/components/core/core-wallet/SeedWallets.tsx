@@ -52,7 +52,7 @@ export default function SeedWallets() {
             </Button>
             <Button
               variant="success"
-              onClick={() => router.push("/core/seed-wallets/import-wallet")}
+              onClick={() => router.push("/core/core-wallets/import-wallet")}
               className="d-flex align-items-center gap-2">
               <FontAwesomeIcon icon={faPlusCircle} height={16} /> Import Wallet
             </Button>
@@ -68,7 +68,7 @@ export default function SeedWallets() {
         <Row className="pt-2 pb-4">
           <Col className="d-flex align-items-center justify-content-between gap-2">
             <h1>
-              <span className="font-lightest">Seed</span> Wallets
+              <span className="font-lightest">Core</span> Wallets
             </h1>
           </Col>
         </Row>

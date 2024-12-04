@@ -124,7 +124,7 @@ export default function SeedWallet(
         console.error(data.error);
         showToast(`Error deleting wallet - ${data.error}`, "error");
       } else {
-        router.push("/core/seed-wallets");
+        router.push("/core/core-wallets");
         showToast(`Wallet '${name}' deleted successfully`, "success");
       }
     },
@@ -170,9 +170,9 @@ export default function SeedWallet(
         <Col>
           <Link
             className="font-smaller d-flex align-items-center gap-2 decoration-none"
-            href="/core/seed-wallets">
+            href="/core/core-wallets">
             <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-            Back to Seed Wallets
+            Back to Core Wallets
           </Link>
         </Col>
       </Row>

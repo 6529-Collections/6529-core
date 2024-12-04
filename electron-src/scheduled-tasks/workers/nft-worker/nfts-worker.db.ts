@@ -1,5 +1,6 @@
 import { DataSource } from "typeorm";
 import { NFT } from "../../../db/entities/INFT";
+import { batchUpsert } from "../../worker-helpers";
 
 export const persistNfts = async (
   db: DataSource,
@@ -12,7 +13,7 @@ export const persistNfts = async (
   while (attempt < maxRetries) {
     try {
       const nftsRepository = db.getRepository(NFT);
-      await nftsRepository.upsert(nfts, ["id", "contract"]);
+      await batchUpsert(nftsRepository, nfts, ["id", "contract"]);
       return;
     } catch (error) {
       if (

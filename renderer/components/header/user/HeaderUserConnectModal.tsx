@@ -113,11 +113,11 @@ export default function HeaderUserConnectModal({
                           under Network tab
                           <br />
                           <Link
-                            href="/core/seed-wallets"
+                            href="/core/core-wallets"
                             onClick={() => {
                               if (
                                 window.location.pathname ===
-                                "/core/seed-wallets"
+                                "/core/core-wallets"
                               ) {
                                 onHide();
                               }

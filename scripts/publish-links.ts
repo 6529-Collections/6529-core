@@ -92,7 +92,7 @@ function getFileName(url: string) {
     if (filePath?.includes("x64")) {
       return "Intel";
     } else if (filePath?.includes("arm64")) {
-      return "Silicon";
+      return "Apple Silicon";
     }
   } else if (url.includes("/linux/")) {
     if (filePath?.endsWith("AppImage")) {
