@@ -100,7 +100,10 @@ export function startSchedulers(
         postWorkerUpdate,
         worker.filePath
       );
-    } else if (worker.name === ScheduledWorkerNames.NFT_DELEGATION_WORKER) {
+    } else if (
+      worker.name === ScheduledWorkerNames.NFT_DELEGATION_WORKER ||
+      worker.name === ScheduledWorkerNames.NFTS_WORKER
+    ) {
       scheduledWorker = new ResettableScheduledWorker(
         rpcUrl,
         worker.name,
