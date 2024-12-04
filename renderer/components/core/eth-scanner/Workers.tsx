@@ -257,6 +257,7 @@ export function WorkerCard({
   const [showRecalculateOwnersConfirm, setShowRecalculateOwnersConfirm] =
     useState(false);
   const [showResetWorkerConfirm, setShowResetWorkerConfirm] = useState(false);
+  const [showRefreshNFTsConfirm, setShowRefreshNFTsConfirm] = useState(false);
   const [showRunNowConfirm, setShowRunNowConfirm] = useState(false);
   const { showToast } = useToast();
 
@@ -294,7 +295,10 @@ export function WorkerCard({
       .then((data) => {
         showToast(data.data, data.error ? "error" : "success");
       })
-      .finally(() => setShowResetWorkerConfirm(false));
+      .finally(() => {
+        setShowResetWorkerConfirm(false);
+        setShowRefreshNFTsConfirm(false);
+      });
   };
 
   const triggerStartWorker = async () => {
@@ -364,8 +368,16 @@ export function WorkerCard({
                   disabled={
                     task.status?.status === ScheduledWorkerStatus.RUNNING
                   }
-                  onClick={() => setShowResetWorkerConfirm(true)}>
-                  Reset
+                  onClick={() => {
+                    if (task.namespace === ScheduledWorkerNames.NFTS_WORKER) {
+                      setShowRefreshNFTsConfirm(true);
+                    } else {
+                      setShowResetWorkerConfirm(true);
+                    }
+                  }}>
+                  {task.namespace === ScheduledWorkerNames.NFTS_WORKER
+                    ? "Refresh All NFTs"
+                    : "Reset"}
                 </Button>
               )}
             {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
@@ -496,6 +508,13 @@ export function WorkerCard({
         onConfirm={triggerResetWorker}
         title="Reset Worker"
         message={`Reset all data to the start block. This will delete all transactions from the database. Subsequent sync processes will start syncing from the beginning.`}
+      />
+      <Confirm
+        show={showRefreshNFTsConfirm}
+        onHide={() => setShowRefreshNFTsConfirm(false)}
+        onConfirm={triggerResetWorker}
+        title="Refresh All NFTs"
+        message={`This will iterate through all NFTs in your database and refresh their data from the blockchain.`}
       />
       <Confirm
         show={showRunNowConfirm}

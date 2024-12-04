@@ -1,5 +1,5 @@
 import { parentPort, workerData } from "worker_threads";
-import { WorkerData } from "../../scheduled-worker";
+import { ResettableWorkerData } from "../../scheduled-worker";
 import { CoreWorker } from "../core-worker";
 import { ethers } from "ethers";
 import {
@@ -13,6 +13,7 @@ import {
   Contract,
   ContractType,
   getEditionSizes,
+  getMintDate,
   getTokenUri,
   retrieveNftFromURI,
 } from "./nft-worker";
@@ -27,7 +28,7 @@ import {
 import { NEXTGEN_CONTRACT, NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
 import { Transaction } from "../../../db/entities/ITransaction";
 
-const data: WorkerData = workerData;
+const data: ResettableWorkerData = workerData;
 
 const MEMES_CONTRACT_OBJECT: Contract = {
   name: "The Memes",
@@ -57,16 +58,20 @@ const NEXTGEN_CONTRACT_OBJECT: Contract = {
 export const NAMESPACE = "NFTS_WORKER >";
 
 class NFTWorker extends CoreWorker {
+  private reset?: boolean;
+
   constructor(
     rpcUrl: string,
     dbParams: DataSourceOptions,
     blockRange: number,
-    maxConcurrentRequests: number
+    maxConcurrentRequests: number,
+    reset?: boolean
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       NFT,
       Transaction,
     ]);
+    this.reset = reset;
   }
 
   async sendStatusMessage() {
@@ -91,7 +96,7 @@ class NFTWorker extends CoreWorker {
     const currentHour = now.getUTCHours();
     const currentMinute = now.getUTCMinutes();
 
-    if (currentHour % 2 === 0 && currentMinute === 0) {
+    if (this.reset || (currentHour % 2 === 0 && currentMinute === 0)) {
       return await this.refreshWork();
     } else {
       return await this.normalWork();
@@ -335,18 +340,18 @@ class NFTWorker extends CoreWorker {
         ethersContract,
         nft.id
       );
-      let updatedNft: NFT | undefined = undefined;
-      if (
+      const mintDate = await getMintDate(
+        this.getDb(),
+        contract.address,
+        nft.id
+      );
+
+      const isChanged =
         editionSizes.editionSize !== nft.edition_size ||
-        editionSizes.burnt !== nft.burns
-      ) {
-        updatedNft = {
-          ...nft,
-          edition_size: editionSizes.editionSize,
-          burns: editionSizes.burnt,
-        };
-      }
-      if (uri && uri != nft.uri) {
+        editionSizes.burnt !== nft.burns ||
+        mintDate !== nft.mint_date;
+
+      if ((uri && uri != nft.uri) || isChanged) {
         sendStatusUpdate(parentPort, {
           update: {
             status: ScheduledWorkerStatus.RUNNING,
@@ -354,15 +359,13 @@ class NFTWorker extends CoreWorker {
             action: "- Retrieving Metadata",
           },
         });
-        updatedNft = await retrieveNftFromURI(
+        const updatedNft = await retrieveNftFromURI(
           this.getDb(),
           contract.address,
           nft.id,
           uri,
           editionSizes
         );
-      }
-      if (updatedNft) {
         updatedNfts.push(updatedNft);
       }
     }
@@ -410,5 +413,6 @@ new NFTWorker(
   data.rpcUrl,
   data.dbParams,
   data.blockRange,
-  data.maxConcurrentRequests
+  data.maxConcurrentRequests,
+  data.reset
 );

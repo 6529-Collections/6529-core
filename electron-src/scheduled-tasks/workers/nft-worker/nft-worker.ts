@@ -49,10 +49,7 @@ export const retrieveNftFromURI = async (
 
   const json = await response.json();
 
-  const firstTransaction = await db.getRepository(Transaction).findOne({
-    where: { contract: contract.toLowerCase(), token_id: tokenId },
-    order: { block: "ASC" },
-  });
+  const mintDate = await getMintDate(db, contract, tokenId);
 
   const season =
     json.attributes.find((m: any) => m.trait_type === "Type - Season")?.value ??
@@ -68,7 +65,7 @@ export const retrieveNftFromURI = async (
     contract: contract.toLowerCase(),
     uri,
     full_metadata: json,
-    mint_date: firstTransaction?.transaction_date ?? Time.now().toSeconds(),
+    mint_date: mintDate,
     edition_size: editionSizes.editionSize,
     burns: editionSizes.burnt,
     name: json.name,
@@ -192,4 +189,17 @@ export const getBurns = async (
     .getRawOne();
 
   return result.sum ?? 0;
+};
+
+export const getMintDate = async (
+  db: DataSource,
+  contract: string,
+  tokenId: number
+) => {
+  const firstTransaction = await db.getRepository(Transaction).findOne({
+    where: { contract: contract.toLowerCase(), token_id: tokenId },
+    order: { block: "ASC" },
+  });
+
+  return firstTransaction?.transaction_date ?? Time.now().toSeconds();
 };
