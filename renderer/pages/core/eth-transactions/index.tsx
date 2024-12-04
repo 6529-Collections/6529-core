@@ -10,31 +10,27 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const SeedWalletImport = dynamic(
-  () => import("../../../components/core/seedWallet/SeedWalletImport"),
+const ETHScanner = dynamic(
+  () => import("../../../components/core/eth-scanner/ETHScanner"),
   {
     ssr: false,
   }
 );
 
-export default function SeedWalletPage(props: any) {
+export default function ETHScannerPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - Seed Wallets", href: "/core/seed-wallets" },
-    { display: "Import" },
+    { display: "Core - ETH Scanner" },
   ];
 
   return (
     <>
       <Head>
-        <title>Seed Wallet Import | 6529 CORE</title>
+        <title>ETH Scanner | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Seed Wallets | 6529 CORE" />
-        <meta
-          property="og:url"
-          content={`${SEIZE_URL}/core/seed-wallets/import-wallet`}
-        />
-        <meta property="og:title" content={`Seed Wallets Import`} />
+        <meta name="description" content="ETH Scanner | 6529 CORE" />
+        <meta property="og:url" content={`${SEIZE_URL}/core/eth-scanner`} />
+        <meta property="og:title" content={`ETH Scanner`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
@@ -45,7 +41,7 @@ export default function SeedWalletPage(props: any) {
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <SeedWalletImport />
+        <ETHScanner />
       </main>
     </>
   );

@@ -283,15 +283,10 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/core/app-info">
-                      <h3>App Info</h3>
-                    </Link>
-                  </Col>
-                </Row>
-                <Row className="pt-3">
-                  <Col>
-                    <Link href="/core/app-logs">
-                      <h3>App Logs</h3>
+                    <Link href="/core/core-wallets">
+                      <h3>
+                        <span>Core Wallets</span>
+                      </h3>
                     </Link>
                   </Col>
                 </Row>
@@ -302,10 +297,27 @@ export default function Header(props: Readonly<Props>) {
                 </Row>
                 <Row className="pt-3">
                   <Col>
-                    <Link href="/core/seed-wallets">
-                      <h3>
-                        <span>Seed Wallets</span>&nbsp;
-                      </h3>
+                    <Link href="/core/eth-transactions">
+                      <h3>ETH Transactions</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link href="/core/tdh-calculation">
+                      <h3>TDH Calculation</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={{ span: 6, offset: 3 }}>
+                    <hr />
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link href="/core/core-info">
+                      <h3>Core Info</h3>
                     </Link>
                   </Col>
                 </Row>
@@ -639,21 +651,28 @@ export default function Header(props: Readonly<Props>) {
                               className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
                               <HeaderDesktopLink
                                 link={{
-                                  name: "App Info",
-                                  path: "/core/app-info",
-                                }}
-                              />
-                              <HeaderDesktopLink
-                                link={{
-                                  name: "App Logs",
-                                  path: "/core/app-logs",
+                                  name: "Core Wallets",
+                                  path: "/core/core-wallets",
                                 }}
                               />
                               <NavDropdown.Divider />
                               <HeaderDesktopLink
                                 link={{
-                                  name: "Seed Wallets",
-                                  path: "/core/seed-wallets",
+                                  name: "ETH Transactions",
+                                  path: "/core/eth-transactions",
+                                }}
+                              />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "TDH Calculation",
+                                  path: "/core/tdh-calculation",
+                                }}
+                              />
+                              <NavDropdown.Divider />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "Core Info",
+                                  path: "/core/core-info",
                                 }}
                               />
                             </NavDropdown>

@@ -10,26 +10,23 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const SeedWallet = dynamic(
-  () => import("../../../components/core/seedWallet/SeedWallet"),
+const SeedWallets = dynamic(
+  () => import("../../../components/core/seed-wallet/SeedWallets"),
   {
     ssr: false,
   }
 );
 
-export default function SeedWalletPage(props: any) {
-  const pageProps = props.pageProps;
-  const address: string = pageProps.address;
+export default function SeedWalletPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - Seed Wallets", href: "/core/seed-wallets" },
-    { display: `${address}` },
+    { display: "Core - Seed Wallets" },
   ];
 
   return (
     <>
       <Head>
-        <title>Seed Wallet {address} | 6529 CORE</title>
+        <title>Seed Wallets | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="Seed Wallets | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/core/seed-wallets`} />
@@ -44,17 +41,8 @@ export default function SeedWalletPage(props: any) {
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <SeedWallet address={address} />
+        <SeedWallets />
       </main>
     </>
   );
-}
-
-export async function getServerSideProps(req: any, res: any, resolvedUrl: any) {
-  const address = req.query.address;
-  return {
-    props: {
-      address,
-    },
-  };
 }

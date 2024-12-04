@@ -1,0 +1,29 @@
+.tableContainer {
+  padding: 20px;
+  border: 1px solid transparent;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+
+  table {
+    table-layout: fixed; /* Ensures consistent column widths */
+    width: 100%; /* Spans the entire container */
+  }
+
+  tr {
+    display: flex; /* Turns rows into flex containers */
+    flex-direction: row; /* Ensures horizontal alignment */
+    align-items: stretch; /* Ensures cells stretch to equal height */
+  }
+
+  th,
+  td {
+    flex: 1; /* Equal column widths */
+    display: flex; /* Flex container for cells */
+    align-items: center; /* Vertically centers content */
+    padding: 8px; /* Ensures spacing between content and borders */
+    gap: 8px;
+  }
+
+  td {
+    min-height: 65px;
+  }
+}

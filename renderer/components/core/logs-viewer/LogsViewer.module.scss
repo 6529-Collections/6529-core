@@ -1,0 +1,5 @@
+.accordionButtonOpen {
+  &::after {
+    transform: rotate(180deg);
+  }
+}

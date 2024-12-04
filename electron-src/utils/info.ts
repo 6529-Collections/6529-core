@@ -1,8 +1,9 @@
 import * as fs from "fs";
 import { app } from "electron";
 import databasePath from "./databasePath";
-import path from "path";
+import path, { dirname } from "path";
 import Logger from "electron-log";
+import os from "os";
 
 export function getScheme() {
   let scheme = "";
@@ -23,10 +24,23 @@ export function getScheme() {
   return scheme;
 }
 
+export function getLogDirectory() {
+  return dirname(getMainLogsPath());
+}
+
+export function getHomeDir() {
+  return os.homedir();
+}
+
+export function getMainLogsPath() {
+  return Logger.transports.file.getFile().path;
+}
+
 export function getInfo() {
   const scheme = getScheme();
 
   return {
+    home_dir: getHomeDir(),
     environment: process.env.ENVIRONMENT,
     app_path: app.getAppPath(),
     scheme: scheme,
@@ -39,7 +53,8 @@ export function getInfo() {
     node_version: process.versions.node,
     os: process.platform as string,
     arch: process.arch as string,
-    logs_path: Logger.transports.file.getFile().path,
+    logs_path: getMainLogsPath(),
+    logs_directory: getLogDirectory(),
     crash_reports_path: path.join(app.getPath("crashDumps")),
   };
 }

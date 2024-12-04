@@ -1,0 +1,112 @@
+{
+  "appId": "com.6529.6529stagingcore",
+  "productName": "6529 STAGING CORE",
+  "asar": true,
+  "extraMetadata": {
+    "env": {
+      "ENVIRONMENT": "local"
+    }
+  },
+  "protocols": [
+    {
+      "name": "6529stagingcore",
+      "schemes": ["stagingcore6529"]
+    }
+  ],
+  "files": [
+    "main/**/*",
+    "next.config.mjs",
+    "renderer/out/**/*",
+    "renderer/public/**/*"
+  ],
+  "extraResources": ["assets/**/*"],
+  "publish": [
+    {
+      "provider": "s3",
+      "bucket": "6529bucket",
+      "region": "eu-west-1",
+      "path": "6529-staging-core-app/${os}/",
+      "acl": null
+    },
+    {
+      "provider": "generic",
+      "url": "https://d3lqz0a4bldqgf.cloudfront.net/6529-staging-core-app/${os}/"
+    }
+  ],
+  "mac": {
+    "identity": "6529 Collection LLC (4962266Y3D)",
+    "icon": "assets/icon.icns",
+    "hardenedRuntime": true,
+    "notarize": false,
+    "target": [
+      {
+        "target": "dmg",
+        "arch": ["arm64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["arm64"]
+      }
+    ],
+    "artifactName": "6529-STAGING-CORE-mac-${arch}-${version}.${ext}",
+    "extendInfo": {
+      "CFBundleURLTypes": [
+        {
+          "CFBundleURLName": "com.6529.6529stagingcore",
+          "CFBundleURLSchemes": ["stagingcore6529"]
+        }
+      ]
+    }
+  },
+  "win": {
+    "publisherName": "6529 Collection LLC",
+    "icon": "assets/icon.ico",
+    "target": [
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "6529-STAGING-CORE-win-${arch}-${version}.${ext}",
+    "signingHashAlgorithms": ["sha256"]
+  },
+  "nsis": {
+    "oneClick": false,
+    "perMachine": true,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "6529 STAGING CORE"
+  },
+  "linux": {
+    "icon": "assets",
+    "executableName": "6529-staging-core",
+    "category": "Utility",
+    "executableArgs": ["--no-sandbox"],
+    "target": [
+      {
+        "target": "AppImage",
+        "arch": ["x64"]
+      },
+      {
+        "target": "zip",
+        "arch": ["x64"]
+      }
+    ],
+    "artifactName": "6529-STAGING-CORE-linux-${arch}-${version}.${ext}",
+    "desktop": {
+      "Name": "6529 STAGING Core",
+      "Type": "Application",
+      "Terminal": false,
+      "MimeType": "x-scheme-handler/stagingcore6529;",
+      "Categories": "Utility;Network;",
+      "Comment": "6529 Staging Core Application"
+    },
+    "protocols": [
+      {
+        "name": "6529 Staging Core Protocol",
+        "schemes": ["stagingcore6529"]
+      }
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 import Logger from "electron-log";
 import { getInfo } from "./info";
-import { app, BrowserWindow, dialog, shell } from "electron";
+import { app, BrowserWindow, dialog } from "electron";
 import fs from "fs";
 import path from "path";
 import minidump from "minidump";
@@ -12,13 +12,17 @@ export async function initLogs(): Promise<void> {
   }
 }
 
-export function openLogs(logsWindow: BrowserWindow): void {
-  const logsPath = Logger.transports.file.getFile().path;
-  Logger.info("Opening logs at:", logsPath);
+export function openLogs(
+  logsWindow: BrowserWindow,
+  name: string,
+  logFile: string
+): void {
+  Logger.info("Opening logs at:", logFile);
   logsWindow.loadFile(path.join(__dirname, "..", "assets/logs.html"));
+  logsWindow.setTitle(`${name} | Logs | 6529 Core`);
 
   const loadLogs = () => {
-    fs.readFile(logsPath, "utf8", (err, logs) => {
+    fs.readFile(logFile, "utf8", (err, logs) => {
       if (err) {
         Logger.error("Error reading log file:", err);
         return;
@@ -29,14 +33,13 @@ export function openLogs(logsWindow: BrowserWindow): void {
 
   loadLogs();
 
-  fs.watchFile(logsPath, { interval: 1000 }, () => {
+  fs.watchFile(logFile, { interval: 1000 }, () => {
     loadLogs();
   });
 }
 
-export function closeLogs(): void {
-  const logsPath = Logger.transports.file.getFile().path;
-  fs.unwatchFile(logsPath);
+export function closeLogs(logFile: string): void {
+  fs.unwatchFile(logFile);
 }
 
 export function getCrashReportsList(): { fileName: string; date: number }[] {
@@ -55,17 +58,10 @@ export function getCrashReportsList(): { fileName: string; date: number }[] {
 
     return {
       fileName: file,
+      path: filePath,
       date: stats.mtimeMs,
     };
   });
-}
-
-export function showCrashReport(fileName: string) {
-  const crashReportsDir = path.join(app.getPath("crashDumps"), "pending");
-  const filePath = path.join(crashReportsDir, fileName);
-  if (fs.existsSync(filePath)) {
-    shell.showItemInFolder(filePath);
-  }
 }
 
 export async function extractCrashReport(fileName: string) {
@@ -84,12 +80,12 @@ export async function extractCrashReport(fileName: string) {
       });
 
       if (!savePath) {
-        console.log("User canceled the download.");
+        Logger.info("User canceled the download.");
         return;
       }
 
       fs.writeFileSync(savePath, report);
-      console.log(`Crash report saved to ${savePath}`);
+      Logger.info(`Crash report saved to ${savePath}`);
     });
   }
 }

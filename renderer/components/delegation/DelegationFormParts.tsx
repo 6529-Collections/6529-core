@@ -298,8 +298,6 @@ export function DelegationSubmitGroups(
     confirmations: 1,
     hash: writeDelegation.data,
   });
-  console.log("i am writeDelegation", writeDelegation);
-  console.log("i am waitWriteDelegation", waitWriteDelegation);
   const [errors, setErrors] = useState<string[]>([]);
 
   function submitDelegation() {

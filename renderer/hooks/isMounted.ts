@@ -1,11 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 export function useIsMounted(): boolean {
-  let [isMounted, setIsMounted] = useState(false);
+  const isMounted = useRef(false);
 
   useEffect(() => {
-    setIsMounted(true);
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
   }, []);
 
-  return isMounted;
+  return isMounted.current ?? false;
 }

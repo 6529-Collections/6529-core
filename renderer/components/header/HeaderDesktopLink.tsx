@@ -1,11 +1,11 @@
 import { NavDropdown } from "react-bootstrap";
+import { useRouter } from "next/router";
 import styles from "./Header.module.scss";
 import { HeaderLink } from "./Header";
 import Link from "next/link";
 
 export default function HeaderDesktopLink({
   link,
-  disabled,
 }: {
   readonly link: HeaderLink;
   readonly disabled?: boolean;

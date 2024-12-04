@@ -10,27 +10,27 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const SeedWallets = dynamic(
-  () => import("../../../components/core/seedWallet/SeedWallets"),
+const TDHCalculation = dynamic(
+  () => import("../../../components/core/tdh-calculation/TDHCalculation"),
   {
     ssr: false,
   }
 );
 
-export default function SeedWalletPage() {
+export default function TDHConsensusPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - Seed Wallets" },
+    { display: "Core - TDH Calculation" },
   ];
 
   return (
     <>
       <Head>
-        <title>Seed Wallets | 6529 CORE</title>
+        <title>TDH Consensus | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Seed Wallets | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/seed-wallets`} />
-        <meta property="og:title" content={`Seed Wallets`} />
+        <meta name="description" content="TDH Calculation | 6529 CORE" />
+        <meta property="og:url" content={`${SEIZE_URL}/core/tdh-calculation`} />
+        <meta property="og:title" content={`TDH Calculation`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
@@ -41,7 +41,7 @@ export default function SeedWalletPage() {
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <SeedWallets />
+        <TDHCalculation />
       </main>
     </>
   );

@@ -10,24 +10,27 @@ const Header = dynamic(() => import("../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const AppInfo = dynamic(() => import("../../components/core/appInfo/AppInfo"), {
-  ssr: false,
-});
+const AppInfo = dynamic(
+  () => import("../../components/core/app-info/AppInfo"),
+  {
+    ssr: false,
+  }
+);
 
 export default function AppInfoPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - App Info" },
+    { display: "Core - Info" },
   ];
 
   return (
     <>
       <Head>
-        <title>App Info | 6529 CORE</title>
+        <title>Core Info | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="App Info | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/app-info`} />
-        <meta property="og:title" content={`App Info`} />
+        <meta name="description" content="Core Info | 6529 CORE" />
+        <meta property="og:url" content={`${SEIZE_URL}/core/core-info`} />
+        <meta property="og:title" content={`Core Info`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
