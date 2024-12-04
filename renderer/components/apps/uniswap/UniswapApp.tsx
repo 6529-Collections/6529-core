@@ -32,7 +32,7 @@ export default function UniswapApp() {
   useEffect(() => {
     async function fetchPrice() {
       try {
-        const provider = new ethers.JsonRpcProvider(
+        const provider = new ethers.providers.JsonRpcProvider(
           "https://eth-mainnet.public.blastapi.io"
         );
         const poolContract = new ethers.Contract(
@@ -76,13 +76,13 @@ export default function UniswapApp() {
       }
 
       try {
-        const provider = new ethers.JsonRpcProvider(
+        const provider = new ethers.providers.JsonRpcProvider(
           "https://eth-mainnet.public.blastapi.io"
         );
 
         // Get ETH balance
         const rawEthBalance = await provider.getBalance(address);
-        const formattedEthBalance = ethers.formatUnits(rawEthBalance, 18);
+        const formattedEthBalance = ethers.utils.formatUnits(rawEthBalance, 18);
         setEthBalance(parseFloat(formattedEthBalance).toFixed(4));
 
         // Get USDC balance
@@ -93,7 +93,7 @@ export default function UniswapApp() {
         );
         const rawUsdcBalance = await usdcContract.balanceOf(address);
         const usdcDecimals = await usdcContract.decimals();
-        const formattedUsdcBalance = ethers.formatUnits(
+        const formattedUsdcBalance = ethers.utils.formatUnits(
           rawUsdcBalance,
           usdcDecimals
         );

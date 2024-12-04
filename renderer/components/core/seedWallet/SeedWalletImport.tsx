@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "../../../contexts/ToastContext";
 import { getRandomKey } from "../../../helpers";
 import { MNEMONIC_NA } from "../../../../constants";
-import { ethers } from "ethers";
+import { ethers } from "ethersv6";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export default function SeedWalletImport() {
@@ -25,7 +25,8 @@ export default function SeedWalletImport() {
           <Col>
             <Link
               className="font-smaller d-flex align-items-center gap-2 decoration-none"
-              href="/core/seed-wallets">
+              href="/core/seed-wallets"
+            >
               <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
               Back to Seed Wallets
             </Link>
@@ -43,7 +44,8 @@ export default function SeedWalletImport() {
             <Button
               variant={isMnemonic ? "info" : "outline-info"}
               onClick={() => setIsMnemonic(true)}
-              className="btn-block">
+              className="btn-block"
+            >
               Mnemonic
             </Button>
           </Col>
@@ -51,7 +53,8 @@ export default function SeedWalletImport() {
             <Button
               variant={!isMnemonic ? "info" : "outline-info"}
               onClick={() => setIsMnemonic(false)}
-              className="btn-block">
+              className="btn-block"
+            >
               Private Key
             </Button>
           </Col>
@@ -151,14 +154,16 @@ function SeedWalletImportMnemonic() {
             variant="warning"
             onClick={clear}
             className="font-bolder"
-            disabled={!phrase.some((w) => w) && !isCompletePhrase()}>
+            disabled={!phrase.some((w) => w) && !isCompletePhrase()}
+          >
             Clear
           </Button>
           <Button
             variant="primary"
             disabled={!isCompletePhrase() || isReadonly}
             onClick={validate}
-            className="font-bolder">
+            className="font-bolder"
+          >
             Validate
           </Button>
         </Col>
@@ -229,14 +234,16 @@ function SeedWalletImportPrivateKey() {
             variant="warning"
             onClick={clear}
             className="font-bolder"
-            disabled={!privateKey}>
+            disabled={!privateKey}
+          >
             Clear
           </Button>
           <Button
             variant="primary"
             disabled={!privateKey || isReadonly}
             onClick={validate}
-            className="font-bolder">
+            className="font-bolder"
+          >
             Validate
           </Button>
         </Col>
@@ -308,7 +315,8 @@ function ImportWallet(
       <Button
         variant="primary"
         onClick={() => setShowImportModal(true)}
-        className="d-flex align-items-center gap-2">
+        className="d-flex align-items-center gap-2"
+      >
         <FontAwesomeIcon icon={faPlusCircle} height={16} /> Import Wallet
       </Button>
     </div>

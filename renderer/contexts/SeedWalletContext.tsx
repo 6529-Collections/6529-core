@@ -5,7 +5,7 @@ import React, {
   useCallback,
   useEffect,
 } from "react";
-import { ethers } from "ethers";
+import { ethers } from "ethersv6";
 import { useConnections } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";

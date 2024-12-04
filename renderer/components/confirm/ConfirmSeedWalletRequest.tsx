@@ -8,7 +8,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import { useSeedWallet } from "../../contexts/SeedWalletContext";
-import { ethers } from "ethers";
+import { ethers } from "ethersv6";
 import { useModalState } from "../../contexts/ModalStateContext";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
@@ -150,7 +150,8 @@ export default function ConfirmSeedWalletRequest() {
               className="pt-3 pb-3"
               dangerouslySetInnerHTML={{
                 __html: getHtml(index, param),
-              }}></code>
+              }}
+            ></code>
           ))}
         </>
       );
@@ -177,7 +178,8 @@ export default function ConfirmSeedWalletRequest() {
                 width: "fit-content",
                 fontSize: "smaller",
               }}
-              onClick={() => setShowParsed(!showParsed)}>
+              onClick={() => setShowParsed(!showParsed)}
+            >
               {showParsed ? "Hide" : "Show"} Parsed Data
             </Button>
           </span>
@@ -219,12 +221,14 @@ export default function ConfirmSeedWalletRequest() {
       centered
       dialogClassName={
         !isTopModal(SEED_WALLET_REQUEST_MODAL) ? "modal-blurred" : ""
-      }>
+      }
+    >
       <Modal.Header className={styles.modalHeader}>
         <Modal.Title>Confirm Seed Wallet Request</Modal.Title>
       </Modal.Header>
       <Modal.Body
-        className={`${styles.modalContent} ${styles.modalContentSeedRequest}`}>
+        className={`${styles.modalContent} ${styles.modalContentSeedRequest}`}
+      >
         <div className="mt-2 mb-2">
           <span className="d-flex flex-column">
             <span>Method</span>
@@ -236,7 +240,8 @@ export default function ConfirmSeedWalletRequest() {
         </div>
       </Modal.Body>
       <Modal.Footer
-        className={`${styles.modalContent} d-flex align-items-center justify-content-between`}>
+        className={`${styles.modalContent} d-flex align-items-center justify-content-between`}
+      >
         <span>
           {balance.data && (
             <>
