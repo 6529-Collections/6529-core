@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethersv5";
 import { Token, TokenPair } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
+import { RPC_URLS } from "../constants";
+import { useAccount } from "wagmi";
 
 interface PriceData {
   forward: string | null;
@@ -11,6 +13,7 @@ interface PriceData {
 }
 
 export function usePoolPrice(pair: TokenPair | null) {
+  const { chain } = useAccount();
   const [priceData, setPriceData] = useState<PriceData>({
     forward: null,
     reverse: null,
@@ -19,13 +22,13 @@ export function usePoolPrice(pair: TokenPair | null) {
   });
 
   const fetchPrice = useCallback(async () => {
-    if (!pair) return;
+    if (!pair || !chain) return;
 
     setPriceData((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
       const provider = new ethers.providers.JsonRpcProvider(
-        "https://eth-mainnet.public.blastapi.io"
+        RPC_URLS[chain.id as keyof typeof RPC_URLS] || RPC_URLS[1]
       );
 
       const poolContract = new ethers.Contract(
@@ -65,10 +68,10 @@ export function usePoolPrice(pair: TokenPair | null) {
         forward: null,
         reverse: null,
         loading: false,
-        error: "Failed to fetch price",
+        error: `Failed to fetch price on ${chain.name}`,
       });
     }
-  }, [pair]);
+  }, [pair, chain]);
 
   useEffect(() => {
     fetchPrice();

@@ -15,61 +15,36 @@ import {
   SwapRouter,
 } from "@uniswap/v3-sdk";
 import { parseUnits } from "ethersv5/lib/utils";
-import { TOKENS, TOKEN_PAIRS, TICK_LENS_ADDRESS } from "./constants";
+import {
+  CHAIN_POOLS,
+  CHAIN_TOKENS,
+  RPC_URLS,
+  CHAIN_QUOTER_ADDRESSES,
+  CHAIN_ROUTER_ADDRESSES,
+} from "./constants";
 import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
 import { SwatchBook } from "lucide-react";
 
-const SWAP_ROUTER_ADDRESS = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
-const QUOTER_CONTRACT_ADDRESS = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
-
-// Add this interface
-interface Tick {
-  liquidityGross: bigint;
-  liquidityNet: bigint;
-  tickIdx: number;
-}
-
-// Add this class
-class TickDataProvider {
-  private ticks: Tick[] = [];
-
-  constructor(private readonly provider: ethers.providers.Provider) {}
-
-  async getTick(tick: number): Promise<Tick> {
-    if (this.ticks[tick]) {
-      return this.ticks[tick];
-    }
-    return {
-      liquidityGross: BigInt(0),
-      liquidityNet: BigInt(0),
-      tickIdx: tick,
-    };
-  }
-
-  async nextInitializedTickWithinOneWord(
-    tick: number,
-    lte: boolean,
-    tickSpacing: number
-  ): Promise<[number, boolean]> {
-    // For simplicity, return the next tick based on tickSpacing
-    const nextTick = Math.ceil(tick / tickSpacing) * tickSpacing;
-    return [nextTick, false];
-  }
-}
-
-// Add this ABI
 const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
 ];
 
 export default function UniswapApp() {
-  const { address } = useAccount();
-  const [selectedPair, setSelectedPair] = useState(TOKEN_PAIRS[0]);
+  const { address, chain } = useAccount();
+  const chainId = chain?.id || 1;
 
-  // Create a fixed display pair that doesn't change with swapping
-  const displayPair = useMemo(() => TOKEN_PAIRS[0], []); // Always ETH/USDC for display
+  // Use chain-specific token pairs
+  const [selectedPair, setSelectedPair] = useState(
+    CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0]
+  );
+
+  // Create a fixed display pair that doesn't change with swapping but respects chain
+  const displayPair = useMemo(
+    () => CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0],
+    [chainId]
+  );
   const {
     forward,
     reverse,
@@ -114,18 +89,25 @@ export default function UniswapApp() {
   }
 
   async function getQuote() {
-    if (!inputAmount || !address || !forward) return;
+    if (!inputAmount || !address || !forward || !chain) return;
 
     setSwapLoading(true);
     setSwapError(null);
 
     try {
       const provider = new ethers.providers.JsonRpcProvider(
-        "https://eth-mainnet.public.blastapi.io"
+        RPC_URLS[chain.id as keyof typeof RPC_URLS] || RPC_URLS[1]
       );
 
+      // Check if we have a pool for this chain
+      if (!CHAIN_POOLS[chain.id as keyof typeof CHAIN_POOLS]) {
+        throw new Error(`No liquidity pool available on ${chain.name}`);
+      }
+
       const quoterContract = new ethers.Contract(
-        QUOTER_CONTRACT_ADDRESS,
+        CHAIN_QUOTER_ADDRESSES[
+          chain.id as keyof typeof CHAIN_QUOTER_ADDRESSES
+        ] || CHAIN_QUOTER_ADDRESSES[1],
         QUOTER_ABI,
         provider
       );
@@ -153,20 +135,21 @@ export default function UniswapApp() {
       let formattedOutput: string;
 
       if (num < 0.0001) {
-        // Use scientific notation for very small numbers
         formattedOutput = num.toExponential(6);
       } else if (num < 1) {
-        // Use more decimals for small numbers
         formattedOutput = num.toFixed(8);
       } else {
-        // Use fewer decimals for larger numbers
         formattedOutput = num.toFixed(4);
       }
 
       setOutputAmount(formattedOutput);
     } catch (err) {
       console.error("Error getting quote:", err);
-      setSwapError("Failed to get quote. Please try again.");
+      setSwapError(
+        `Failed to get quote on ${chain?.name}. ${
+          err instanceof Error ? err.message : "Please try again."
+        }`
+      );
       setOutputAmount("");
     } finally {
       setSwapLoading(false);
@@ -175,7 +158,7 @@ export default function UniswapApp() {
 
   // Execute swap
   async function executeSwap() {
-    if (!address || !outputAmount) return;
+    if (!address || !outputAmount || !chain) return;
 
     setSwapLoading(true);
     setSwapError(null);
@@ -185,14 +168,15 @@ export default function UniswapApp() {
       const signer = provider.getSigner();
 
       const tokenIn = new Token(
-        1,
+        chain.id, // Use current chain ID instead of hardcoded 1
         selectedPair.inputToken.address,
         selectedPair.inputToken.decimals,
         selectedPair.inputToken.symbol,
         selectedPair.inputToken.name
       );
+
       const tokenOut = new Token(
-        1,
+        chain.id, // Use current chain ID instead of hardcoded 1
         selectedPair.outputToken.address,
         selectedPair.outputToken.decimals,
         selectedPair.outputToken.symbol,
@@ -227,7 +211,10 @@ export default function UniswapApp() {
 
       const tx = await signer.sendTransaction({
         data: swapParams.calldata,
-        to: SWAP_ROUTER_ADDRESS,
+        to:
+          CHAIN_ROUTER_ADDRESSES[
+            chain.id as keyof typeof CHAIN_ROUTER_ADDRESSES
+          ] || CHAIN_ROUTER_ADDRESSES[1],
         value: swapParams.value,
         from: address,
       });
@@ -236,7 +223,9 @@ export default function UniswapApp() {
       fetchBalances();
     } catch (err) {
       console.error("Error executing swap:", err);
-      setSwapError("Failed to execute swap. Please try again.");
+      setSwapError(
+        `Failed to execute swap on ${chain.name}. Please try again.`
+      );
     } finally {
       setSwapLoading(false);
     }
@@ -252,7 +241,7 @@ export default function UniswapApp() {
 
     try {
       const provider = new ethers.providers.JsonRpcProvider(
-        "https://eth-mainnet.public.blastapi.io"
+        RPC_URLS[chainId as keyof typeof RPC_URLS]
       );
 
       // Get ETH balance
@@ -260,9 +249,9 @@ export default function UniswapApp() {
       const formattedEthBalance = ethers.utils.formatUnits(rawEthBalance, 18);
       setEthBalance(parseFloat(formattedEthBalance).toFixed(4));
 
-      // Get USDC balance
+      // Get USDC balance using chain-specific address
       const usdcContract = new ethers.Contract(
-        TOKENS.USDC.address,
+        CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].USDC.address,
         ERC20_ABI,
         provider
       );
@@ -297,6 +286,9 @@ export default function UniswapApp() {
     <Container fluid className={styles.uniswapContainer}>
       <Row className="w-100 justify-content-center">
         <Col xs={12} sm={10} md={8} lg={6} xl={5}>
+          <div className={styles.chainIndicator}>
+            Current Network: {chain?.name || "Ethereum"}
+          </div>
           <div className={styles.swapCard}>
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h3>Swap</h3>
