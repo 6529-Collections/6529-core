@@ -1,5 +1,5 @@
 import { createConnector } from "@wagmi/core";
-import { ethers } from "ethersv6";
+import { ethers } from "ethers";
 import { mainnet, sepolia } from "viem/chains";
 import { SeedWalletRequest } from "../shared/types";
 import { hexToString } from "./helpers";

@@ -12,7 +12,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "../../../contexts/ToastContext";
 import { getRandomKey } from "../../../helpers";
 import { MNEMONIC_NA } from "../../../../constants";
-import { ethers } from "ethersv6";
+import { ethers } from "ethers";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export default function SeedWalletImport() {

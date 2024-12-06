@@ -8,7 +8,7 @@ import { useToast } from "../../contexts/ToastContext";
 import { useAccount, useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import { useSeedWallet } from "../../contexts/SeedWalletContext";
-import { ethers } from "ethersv6";
+import { ethers } from "ethers";
 import { useModalState } from "../../contexts/ModalStateContext";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";

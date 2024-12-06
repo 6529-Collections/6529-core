@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
 import { useAccount } from "wagmi";
-import { ethers } from "ethers";
+import { ethers } from "ethersv5";
 import styles from "./UniswapApp.module.scss";
 import { Token, CurrencyAmount, TradeType, Percent } from "@uniswap/sdk-core";
 import {
@@ -14,11 +14,12 @@ import {
   SwapQuoter,
   SwapRouter,
 } from "@uniswap/v3-sdk";
-import { parseUnits } from "ethers/lib/utils";
+import { parseUnits } from "ethersv5/lib/utils";
 import { TOKENS, TOKEN_PAIRS, TICK_LENS_ADDRESS } from "./constants";
 import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
+import { SwatchBook } from "lucide-react";
 
 const SWAP_ROUTER_ADDRESS = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 const QUOTER_CONTRACT_ADDRESS = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
@@ -65,13 +66,16 @@ const QUOTER_ABI = [
 
 export default function UniswapApp() {
   const { address } = useAccount();
-  const [selectedPair] = useState(TOKEN_PAIRS[0]); // For now, just use the first pair
+  const [selectedPair, setSelectedPair] = useState(TOKEN_PAIRS[0]);
+
+  // Create a fixed display pair that doesn't change with swapping
+  const displayPair = useMemo(() => TOKEN_PAIRS[0], []); // Always ETH/USDC for display
   const {
     forward,
     reverse,
     loading: priceLoading,
     error: priceError,
-  } = usePoolPrice(selectedPair);
+  } = usePoolPrice(displayPair);
   const [inputAmount, setInputAmount] = useState("");
   const [outputAmount, setOutputAmount] = useState("");
   const [swapLoading, setSwapLoading] = useState(false);
@@ -91,7 +95,7 @@ export default function UniswapApp() {
     provider: ethers.providers.Provider
   ) {
     const poolContract = new ethers.Contract(
-      TOKEN_PAIRS[0].poolAddress,
+      selectedPair.poolAddress,
       UNISWAP_V3_POOL_ABI,
       provider
     );
@@ -120,28 +124,46 @@ export default function UniswapApp() {
         "https://eth-mainnet.public.blastapi.io"
       );
 
-      const pair = TOKEN_PAIRS[0];
       const quoterContract = new ethers.Contract(
         QUOTER_CONTRACT_ADDRESS,
         QUOTER_ABI,
         provider
       );
 
-      const inputAmountWei = parseUnits(inputAmount, pair.inputToken.decimals);
+      const inputAmountWei = parseUnits(
+        inputAmount,
+        selectedPair.inputToken.decimals
+      );
 
       const quote = await quoterContract.callStatic.quoteExactInputSingle(
-        pair.inputToken.address,
-        pair.outputToken.address,
-        pair.fee,
+        selectedPair.inputToken.address,
+        selectedPair.outputToken.address,
+        selectedPair.fee,
         inputAmountWei,
         0
       );
 
       const outputAmountFormatted = ethers.utils.formatUnits(
         quote,
-        pair.outputToken.decimals
+        selectedPair.outputToken.decimals
       );
-      setOutputAmount(parseFloat(outputAmountFormatted).toFixed(2));
+
+      // Format the output amount with more precision
+      const num = parseFloat(outputAmountFormatted);
+      let formattedOutput: string;
+
+      if (num < 0.0001) {
+        // Use scientific notation for very small numbers
+        formattedOutput = num.toExponential(6);
+      } else if (num < 1) {
+        // Use more decimals for small numbers
+        formattedOutput = num.toFixed(8);
+      } else {
+        // Use fewer decimals for larger numbers
+        formattedOutput = num.toFixed(4);
+      }
+
+      setOutputAmount(formattedOutput);
     } catch (err) {
       console.error("Error getting quote:", err);
       setSwapError("Failed to get quote. Please try again.");
@@ -162,24 +184,26 @@ export default function UniswapApp() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
 
-      const pair = TOKEN_PAIRS[0];
       const tokenIn = new Token(
         1,
-        pair.inputToken.address,
-        pair.inputToken.decimals,
-        pair.inputToken.symbol,
-        pair.inputToken.name
+        selectedPair.inputToken.address,
+        selectedPair.inputToken.decimals,
+        selectedPair.inputToken.symbol,
+        selectedPair.inputToken.name
       );
       const tokenOut = new Token(
         1,
-        pair.outputToken.address,
-        pair.outputToken.decimals,
-        pair.outputToken.symbol,
-        pair.outputToken.name
+        selectedPair.outputToken.address,
+        selectedPair.outputToken.decimals,
+        selectedPair.outputToken.symbol,
+        selectedPair.outputToken.name
       );
 
-      const pool = await getPool(tokenIn, tokenOut, pair.fee, provider);
-      const inputAmountWei = parseUnits(inputAmount, pair.inputToken.decimals);
+      const pool = await getPool(tokenIn, tokenOut, selectedPair.fee, provider);
+      const inputAmountWei = parseUnits(
+        inputAmount,
+        selectedPair.inputToken.decimals
+      );
       const typedValueParsed = CurrencyAmount.fromRawAmount(
         tokenIn,
         inputAmountWei.toString()
@@ -256,6 +280,19 @@ export default function UniswapApp() {
     }
   }
 
+  // Add this function to swap tokens
+  const handleSwapTokens = () => {
+    setSelectedPair((prev) => ({
+      ...prev,
+      inputToken: prev.outputToken,
+      outputToken: prev.inputToken,
+    }));
+    // Clear input/output amounts when swapping
+    setInputAmount("");
+    setOutputAmount("");
+    setSwapError(null);
+  };
+
   return (
     <Container fluid className={styles.uniswapContainer}>
       <Row className="w-100 justify-content-center">
@@ -264,7 +301,7 @@ export default function UniswapApp() {
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h3>Swap</h3>
               <PriceDisplay
-                pair={selectedPair}
+                pair={displayPair}
                 forward={forward}
                 reverse={reverse}
                 loading={priceLoading}
@@ -284,7 +321,11 @@ export default function UniswapApp() {
                   <div className={styles.inputLabel}>
                     <span>You Pay</span>
                     <span className={styles.balance}>
-                      Balance: {ethBalance ?? "..."} ETH
+                      Balance:{" "}
+                      {selectedPair.inputToken.symbol === "ETH"
+                        ? ethBalance
+                        : usdcBalance ?? "..."}{" "}
+                      {selectedPair.inputToken.symbol}
                     </span>
                   </div>
                   <div className={styles.inputWrapper}>
@@ -301,15 +342,32 @@ export default function UniswapApp() {
                       step="0.01"
                       className={styles.tokenInput}
                     />
-                    <div className={styles.tokenSelector}>ETH</div>
+                    <div className={styles.tokenSelector}>
+                      {selectedPair.inputToken.symbol}
+                    </div>
                   </div>
+                </div>
+
+                {/* Add swap direction button */}
+                <div className={styles.swapDirectionButton}>
+                  <button
+                    type="button"
+                    onClick={handleSwapTokens}
+                    className={styles.directionButton}
+                  >
+                    <SwatchBook />
+                  </button>
                 </div>
 
                 <div className={styles.inputGroup}>
                   <div className={styles.inputLabel}>
                     <span>You Receive</span>
                     <span className={styles.balance}>
-                      Balance: {usdcBalance ?? "..."} USDC
+                      Balance:{" "}
+                      {selectedPair.outputToken.symbol === "ETH"
+                        ? ethBalance
+                        : usdcBalance ?? "..."}{" "}
+                      {selectedPair.outputToken.symbol}
                     </span>
                   </div>
                   <div className={styles.inputWrapper}>
@@ -320,7 +378,9 @@ export default function UniswapApp() {
                       placeholder="0.0"
                       className={styles.tokenInput}
                     />
-                    <div className={styles.tokenSelector}>USDC</div>
+                    <div className={styles.tokenSelector}>
+                      {selectedPair.outputToken.symbol}
+                    </div>
                   </div>
                 </div>
 

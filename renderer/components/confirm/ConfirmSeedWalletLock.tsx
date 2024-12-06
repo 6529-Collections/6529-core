@@ -1,6 +1,6 @@
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";
-import { ethers } from "ethersv6";
+import { ethers } from "ethers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckCircle,

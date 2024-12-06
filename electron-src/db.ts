@@ -4,7 +4,7 @@ import { MNEMONIC_NA, SEED_WALLET_TABLE } from "../constants";
 import { ISeedWallet } from "../shared/types";
 import { encryptData } from "../shared/encrypt";
 
-import { ethers } from "ethersv6";
+import { ethers } from "ethers";
 
 const db = new Database(databasePath);
 

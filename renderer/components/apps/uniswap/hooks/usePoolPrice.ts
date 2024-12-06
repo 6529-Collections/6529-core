@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ethers } from "ethers";
+import { ethers } from "ethersv5";
 import { Token, TokenPair } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
 
