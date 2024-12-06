@@ -193,7 +193,7 @@ export default function TransactionsLocalData() {
         </Table>
       </div>
 
-      {transactions?.total && transactions?.total > queryParams.limit && (
+      {transactions?.total && transactions?.total > queryParams.limit ? (
         <div className="text-center mt-4">
           <Pagination
             page={queryParams.page}
@@ -204,6 +204,8 @@ export default function TransactionsLocalData() {
             }}
           />
         </div>
+      ) : (
+        <></>
       )}
     </div>
   );
