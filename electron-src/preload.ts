@@ -224,6 +224,20 @@ export const localDb = {
   getTdhInfo: () => ipcRenderer.invoke("get-tdh-info"),
   getTdhInfoForKey: (key: string) =>
     ipcRenderer.invoke("get-tdh-info-for-key", key),
+  getTransactions: (
+    startDate?: number,
+    endDate?: number,
+    page?: number,
+    limit?: number,
+    contractAddress?: string
+  ) =>
+    ipcRenderer.invoke("get-transactions", {
+      startDate,
+      endDate,
+      page,
+      limit,
+      contractAddress,
+    }),
 };
 
 contextBridge.exposeInMainWorld("localDb", localDb);

@@ -11,7 +11,7 @@ export default function SeedWalletCard(
 ) {
   return (
     <Link
-      href={`/core/seed-wallets/${props.wallet.address}`}
+      href={`/core/core-wallets/${props.wallet.address}`}
       className="decoration-none">
       <Container className={styles.seedWalletCard}>
         <Row>

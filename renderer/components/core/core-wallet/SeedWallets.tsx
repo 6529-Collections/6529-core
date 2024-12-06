@@ -1,9 +1,8 @@
-import styles from "./SeedWallet.module.scss";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { getSeedWallets, createSeedWallet } from "../../../electron";
+import { getSeedWallets } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
 import { ISeedWallet } from "../../../../shared/types";
 import SeedWalletCard from "./SeedWalletCard";
@@ -52,7 +51,7 @@ export default function SeedWallets() {
             </Button>
             <Button
               variant="success"
-              onClick={() => router.push("/core/seed-wallets/import-wallet")}
+              onClick={() => router.push("/core/core-wallets/import-wallet")}
               className="d-flex align-items-center gap-2">
               <FontAwesomeIcon icon={faPlusCircle} height={16} /> Import Wallet
             </Button>
@@ -68,7 +67,7 @@ export default function SeedWallets() {
         <Row className="pt-2 pb-4">
           <Col className="d-flex align-items-center justify-content-between gap-2">
             <h1>
-              <span className="font-lightest">Seed</span> Wallets
+              <span className="font-lightest">Core</span> Wallets
             </h1>
           </Col>
         </Row>

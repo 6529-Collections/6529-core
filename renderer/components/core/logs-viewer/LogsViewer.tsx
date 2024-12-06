@@ -8,8 +8,10 @@ interface LogsViewerProps {
   name?: string;
   height?: number;
   width?: number | string;
-  extraAction?: string;
-  extraActionContent?: React.ReactNode;
+  extraActions?: {
+    name: string;
+    content: React.ReactNode;
+  }[];
 }
 
 function LogsViewerToggle({
@@ -45,8 +47,7 @@ export default function LogsViewer({
   name,
   height = 30,
   width = 250,
-  extraAction,
-  extraActionContent,
+  extraActions,
 }: LogsViewerProps) {
   const [selectedText, setSelectedText] = useState<string>("");
   const [isCopied, setIsCopied] = useState<boolean>(false);
@@ -54,8 +55,6 @@ export default function LogsViewer({
   const [selectedAccordionKey, setSelectedAccordionKey] = useState<string>("");
 
   const [isLogsOpen, setIsLogsOpen] = useState<boolean>(false);
-
-  const hasExtraAction = extraAction && extraActionContent;
 
   const locateFile = () => {
     window.api.showFile(filePath);
@@ -70,10 +69,7 @@ export default function LogsViewer({
   };
 
   useEffect(() => {
-    if (
-      (selectedAccordionKey === "1" && hasExtraAction) ||
-      (selectedAccordionKey === "0" && !hasExtraAction)
-    ) {
+    if (selectedAccordionKey === extraActions?.length.toString()) {
       setIsLogsOpen(true);
     } else {
       setIsLogsOpen(false);
@@ -84,18 +80,19 @@ export default function LogsViewer({
     <Accordion
       onSelect={(eventKey) => setSelectedAccordionKey(eventKey as string)}>
       <div className="d-flex align-items-center gap-2">
-        {hasExtraAction && (
+        {extraActions?.map((action, index) => (
           <LogsViewerToggle
+            key={action.name}
             width={width}
-            eventKey="0"
-            isOpen={selectedAccordionKey === "0"}>
-            <b>{extraAction}</b>
+            eventKey={index.toString()}
+            isOpen={selectedAccordionKey === index.toString()}>
+            <b>{action.name}</b>
           </LogsViewerToggle>
-        )}
+        ))}
         <LogsViewerToggle
           width={width}
-          eventKey={hasExtraAction ? "1" : "0"}
-          isOpen={selectedAccordionKey === (hasExtraAction ? "1" : "0")}>
+          eventKey={extraActions?.length.toString() ?? "0"}
+          isOpen={selectedAccordionKey === extraActions?.length.toString()}>
           <b>{name ?? "Logs"}</b>
         </LogsViewerToggle>
         {isLogsOpen && (
@@ -112,12 +109,12 @@ export default function LogsViewer({
           </Button>
         )}
       </div>
-      {hasExtraAction && (
-        <Accordion.Collapse eventKey={"0"}>
-          <div>{extraActionContent}</div>
+      {extraActions?.map((action, index) => (
+        <Accordion.Collapse key={action.name} eventKey={index.toString()}>
+          <div>{action.content}</div>
         </Accordion.Collapse>
-      )}
-      <Accordion.Collapse eventKey={hasExtraAction ? "1" : "0"}>
+      ))}
+      <Accordion.Collapse eventKey={extraActions?.length.toString() ?? "0"}>
         <LogsViewerInternal
           filePath={filePath}
           height={height}

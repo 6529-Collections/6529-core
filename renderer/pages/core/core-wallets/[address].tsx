@@ -11,7 +11,7 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
 });
 
 const SeedWallet = dynamic(
-  () => import("../../../components/core/seed-wallet/SeedWallet"),
+  () => import("../../../components/core/core-wallet/SeedWallet"),
   {
     ssr: false,
   }
@@ -22,18 +22,24 @@ export default function SeedWalletPage(props: any) {
   const address: string = pageProps.address;
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - Seed Wallets", href: "/core/seed-wallets" },
+    { display: "Core - Core Wallets", href: "/core/core-wallets" },
     { display: `${address}` },
   ];
 
   return (
     <>
       <Head>
-        <title>Seed Wallet {address} | 6529 CORE</title>
+        <title>Core Wallet {address} | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Seed Wallets | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/seed-wallets`} />
-        <meta property="og:title" content={`Seed Wallets`} />
+        <meta
+          name="description"
+          content={`Core Wallet ${address} | 6529 CORE`}
+        />
+        <meta
+          property="og:url"
+          content={`${SEIZE_URL}/core/core-wallets/${address}`}
+        />
+        <meta property="og:title" content={`Core Wallets`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"

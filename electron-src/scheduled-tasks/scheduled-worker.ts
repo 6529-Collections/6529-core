@@ -269,12 +269,20 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
   }
 
   public async resetToBlock(block: number) {
-    if (this.isRunning()) {
+    if (this.worker || this.isRunning()) {
       return {
         status: false,
         message: "Transactions worker is already running",
       };
     }
+
+    if (!this.enabled) {
+      return {
+        status: false,
+        message: "Worker is disabled",
+      };
+    }
+
     const workerData: TransactionsWorkerData = {
       rpcUrl: this.rpcUrl,
       dbParams: getBaseDbParams(),
@@ -293,10 +301,17 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
   }
 
   public async recalculateTransactionsOwners() {
-    if (this.isRunning()) {
+    if (this.worker || this.isRunning()) {
       return {
         status: false,
         message: "Transactions worker is already running",
+      };
+    }
+
+    if (!this.enabled) {
+      return {
+        status: false,
+        message: "Worker is disabled",
       };
     }
 
@@ -353,12 +368,20 @@ export class ResettableScheduledWorker extends ScheduledWorker {
   }
 
   public async reset() {
-    if (this.isRunning()) {
+    if (this.worker || this.isRunning()) {
       return {
         status: false,
         message: "Worker is already running",
       };
     }
+
+    if (!this.enabled) {
+      return {
+        status: false,
+        message: "Worker is disabled",
+      };
+    }
+
     const workerData: ResettableWorkerData = {
       rpcUrl: this.rpcUrl,
       dbParams: getBaseDbParams(),

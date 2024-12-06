@@ -11,6 +11,7 @@ import { RPCProvider } from "./entities/IRpcProvider";
 import { ConsolidatedTDH, TDHMerkleRoot } from "./entities/ITDH";
 import { registerIpcHandlers } from "./db-operations";
 import { ipcMain } from "electron";
+import { Transaction } from "./entities/ITransaction";
 
 let AppDataSource: DataSource;
 
@@ -152,7 +153,13 @@ export const initDb = async () => {
   try {
     AppDataSource = new DataSource({
       ...baseDataSourceParams,
-      entities: [SeedWallet, RPCProvider, TDHMerkleRoot, ConsolidatedTDH],
+      entities: [
+        SeedWallet,
+        RPCProvider,
+        TDHMerkleRoot,
+        ConsolidatedTDH,
+        Transaction,
+      ],
       synchronize: true,
     });
     await AppDataSource.initialize();

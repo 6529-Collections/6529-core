@@ -19,7 +19,7 @@ import {
   TransactionBlock,
 } from "../../../db/entities/ITransaction";
 import { findTransactionValues } from "./transaction-values";
-import { sleep } from "../../../../shared/helpers";
+import { areEqualAddresses, sleep } from "../../../../shared/helpers";
 import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
 import {
   getBlockTimestamp,
@@ -43,6 +43,21 @@ import { TransactionsWorkerData } from "../../scheduled-worker";
 const data: TransactionsWorkerData = workerData;
 
 export const NAMESPACE = "TRANSACTIONS_WORKER >";
+
+function getInterface(contract: string) {
+  switch (contract) {
+    case MEMES_CONTRACT:
+      return new ethers.Interface(MEMES_ABI);
+    case GRADIENT_CONTRACT:
+      return new ethers.Interface(GRADIENT_ABI);
+    case NEXTGEN_CONTRACT:
+      return new ethers.Interface(NEXTGEN_ABI);
+    case MEMELAB_CONTRACT:
+      return new ethers.Interface(MEMES_ABI);
+  }
+
+  throw new Error(`Unknown contract: ${contract}`);
+}
 
 export class TransactionsWorker extends CoreWorker {
   private transferTopic = ethers.id("Transfer(address,address,uint256)");
@@ -124,6 +139,7 @@ export class TransactionsWorker extends CoreWorker {
     logInfo(parentPort, "Recalculating owners...");
 
     logInfo(parentPort, "Resetting to block", resetBlock);
+
     await this.resetToBlockInternal(resetBlock);
 
     logInfo(parentPort, "Owner recalculation completed");
@@ -157,7 +173,22 @@ export class TransactionsWorker extends CoreWorker {
         },
         ["id"]
       );
-      await recalculateTransactionOwners(manager, parentPort);
+
+      try {
+        await recalculateTransactionOwners(manager, parentPort);
+      } catch (error: any) {
+        if (error instanceof OwnerDeltaError) {
+          await this.findMissingTransactions(
+            block,
+            error.getAddress(),
+            error.getContract(),
+            error.getTokenId()
+          );
+          await recalculateTransactionOwners(manager, parentPort);
+        } else {
+          throw error;
+        }
+      }
     });
   }
 
@@ -353,6 +384,13 @@ export class TransactionsWorker extends CoreWorker {
         await persistTransactionData();
       } catch (error) {
         if (error instanceof OwnerDeltaError) {
+          sendUpdate("Owner Error - Searching for missing transactions...");
+          await this.findMissingTransactions(
+            currentFromBlock,
+            error.getAddress(),
+            error.getContract(),
+            error.getTokenId()
+          );
           sendUpdate("Owner Error - Recalculating...");
           await recalculateTransactionOwners(this.getDb().manager, parentPort);
           await persistTransactionData();
@@ -426,7 +464,7 @@ export class TransactionsWorker extends CoreWorker {
                 from_address: decoded.from.toLowerCase(),
                 to_address: decoded.to.toLowerCase(),
                 contract: contract.contract.toLowerCase(),
-                token_id: decoded.id,
+                token_id: Number(decoded.id),
                 token_count: decodedValue,
                 value: 0,
                 primary_proceeds: 0,
@@ -551,7 +589,8 @@ export class TransactionsWorker extends CoreWorker {
                 gas_usd: 0,
               };
             } else {
-              throw new Error("Transaction already exists for key: " + key);
+              transactionRecords[key].token_count =
+                transactionRecords[key].token_count + tokenCount;
             }
           } catch (error) {
             logWarn(parentPort, "Failed to decode Transfer log:", error);
@@ -565,6 +604,148 @@ export class TransactionsWorker extends CoreWorker {
     return Object.values(transactionRecords).sort((a, b) => {
       return a.block - b.block || a.transaction_date - b.transaction_date;
     });
+  }
+
+  private async findMissingTransactions(
+    block: number,
+    address: string,
+    contract: string,
+    tokenId: number
+  ): Promise<Transaction | null> {
+    const blockStep = 25_000;
+    const iface = getInterface(contract);
+    let currentBlock = block;
+
+    logInfo(
+      parentPort,
+      "[Missing Transactions]",
+      `[Address ${address}]`,
+      `[${contract} - #${tokenId}]`
+    );
+
+    while (currentBlock > TRANSACTIONS_START_BLOCK) {
+      const fromBlock = Math.max(
+        currentBlock - blockStep,
+        TRANSACTIONS_START_BLOCK
+      );
+      const toBlock = currentBlock;
+
+      logInfo(
+        parentPort,
+        "[Missing Transactions]",
+        "> Checking blocks",
+        `[${fromBlock} - ${toBlock}]`
+      );
+
+      const filterFrom: Filter = {
+        address: contract,
+        fromBlock,
+        toBlock,
+        topics: [
+          [
+            this.transferTopic,
+            this.transferSingleTopic,
+            this.transferBatchTopic,
+          ],
+          null,
+          ethers.zeroPadValue(address, 32),
+          null,
+        ],
+      };
+
+      const filterTo: Filter = {
+        address: contract,
+        fromBlock: fromBlock,
+        toBlock: toBlock,
+        topics: [
+          [
+            this.transferTopic,
+            this.transferSingleTopic,
+            this.transferBatchTopic,
+          ],
+          null,
+          null,
+          ethers.zeroPadValue(address, 32),
+        ],
+      };
+
+      const logsFrom = await this.getProvider().getLogs(filterFrom);
+      const logsTo = await this.getProvider().getLogs(filterTo);
+
+      const uniqueLogs = [...logsFrom, ...logsTo]
+        .filter((log) => {
+          const first32Bytes = log.data.slice(0, 66);
+          const logTokenId = BigInt(first32Bytes);
+          return logTokenId === BigInt(tokenId);
+        })
+        .filter(
+          (log, index, self) =>
+            index ===
+            self.findIndex((t) =>
+              areEqualAddresses(t.transactionHash, log.transactionHash)
+            )
+        );
+
+      if (uniqueLogs.length > 0) {
+        const decodedTransactions = await this.decodeLogs(uniqueLogs, {
+          contract,
+          iface,
+        });
+
+        decodedTransactions.sort((a, b) => b.block - a.block);
+
+        for (const decodedTransaction of decodedTransactions) {
+          const transactionExists = await this.checkTransactionExists(
+            decodedTransaction
+          );
+
+          if (!transactionExists) {
+            const transactionsWithValues = await findTransactionValues(
+              this.getProvider(),
+              [decodedTransaction],
+              () => {}
+            );
+            const repo = this.getDb().getRepository(Transaction);
+            await repo.save(transactionsWithValues[0]);
+            logInfo(
+              parentPort,
+              "[Missing Transactions]",
+              "> Found missing transaction!",
+              transactionsWithValues[0].transaction
+            );
+            return transactionsWithValues[0];
+          }
+        }
+      }
+
+      currentBlock = fromBlock;
+    }
+
+    logInfo(
+      parentPort,
+      "[Missing Transactions]",
+      "> No missing transactions found"
+    );
+    return null;
+  }
+
+  private async checkTransactionExists(
+    transaction: Transaction
+  ): Promise<boolean> {
+    const repo = this.getDb().getRepository(Transaction);
+    const existingTransaction = await repo.findOne({
+      where: {
+        transaction: transaction.transaction,
+        block: transaction.block,
+        from_address: transaction.from_address,
+        to_address: transaction.to_address,
+        contract: transaction.contract,
+        token_id: transaction.token_id,
+        token_count: transaction.token_count,
+      },
+    });
+
+    return !!existingTransaction;
   }
 }
 

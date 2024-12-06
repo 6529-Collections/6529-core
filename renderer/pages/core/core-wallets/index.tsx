@@ -10,8 +10,8 @@ const Header = dynamic(() => import("../../../components/header/Header"), {
   loading: () => <HeaderPlaceholder />,
 });
 
-const SeedWallets = dynamic(
-  () => import("../../../components/core/seed-wallet/SeedWallets"),
+const CoreWallets = dynamic(
+  () => import("../../../components/core/core-wallet/SeedWallets"),
   {
     ssr: false,
   }
@@ -20,17 +20,17 @@ const SeedWallets = dynamic(
 export default function SeedWalletPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - Seed Wallets" },
+    { display: "Core - Core Wallets" },
   ];
 
   return (
     <>
       <Head>
-        <title>Seed Wallets | 6529 CORE</title>
+        <title>Core Wallets | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Seed Wallets | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/seed-wallets`} />
-        <meta property="og:title" content={`Seed Wallets`} />
+        <meta name="description" content="Core Wallets | 6529 CORE" />
+        <meta property="og:url" content={`${SEIZE_URL}/core/core-wallets`} />
+        <meta property="og:title" content={`Core Wallets`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"
@@ -41,7 +41,7 @@ export default function SeedWalletPage() {
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <SeedWallets />
+        <CoreWallets />
       </main>
     </>
   );
