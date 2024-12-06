@@ -81,7 +81,7 @@ export default function TransactionsLocalData() {
                   ? new Date(Number(queryParams.startDate) + 86400000)
                       .toISOString()
                       .split("T")[0]
-                  : ""
+                  : undefined
               }
               onChange={(e) =>
                 updateQueryParams(
@@ -106,7 +106,7 @@ export default function TransactionsLocalData() {
                   ? new Date(Number(queryParams.endDate))
                       .toISOString()
                       .split("T")[0]
-                  : ""
+                  : undefined
               }
               onChange={(e) =>
                 updateQueryParams(

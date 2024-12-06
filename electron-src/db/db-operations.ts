@@ -110,7 +110,6 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
   ipcMain.handle(
     IPC_DB_CHANNELS.GET_TRANSACTIONS,
     async (_event, { startDate, endDate, page, limit, contractAddress }) => {
-      console.log("getting", startDate, endDate, page, limit, contractAddress);
       const transactions = await fetchTransactions(
         startDate,
         endDate,
