@@ -16,9 +16,41 @@ export async function getLatestTransactionsBlock(
 }
 
 export class OwnerDeltaError extends Error {
-  constructor(message: string) {
-    super(message);
+  private delta: number;
+  private address: string;
+  private contract: string;
+  private tokenId: number;
+
+  constructor(
+    delta: number,
+    address: string,
+    contract: string,
+    tokenId: number
+  ) {
+    super(
+      `Negative balance while updating existing owner [Delta ${delta}] [Owner ${address}] [Contract ${contract}] [Token ID ${tokenId}]`
+    );
     this.name = "OwnerDeltaError";
+    this.delta = delta;
+    this.address = address;
+    this.contract = contract;
+    this.tokenId = tokenId;
+  }
+
+  getDelta() {
+    return this.delta;
+  }
+
+  getAddress() {
+    return this.address;
+  }
+
+  getContract() {
+    return this.contract;
+  }
+
+  getTokenId() {
+    return this.tokenId;
   }
 }
 
@@ -128,7 +160,10 @@ export async function extractOwnersFromDeltas(
         owner.balance += ownerDelta.delta;
         if (owner.balance < 0) {
           throw new OwnerDeltaError(
-            `Negative balance while updating existing owner [Delta ${ownerDelta.delta}] [Owner ${owner.address}] [Contract ${owner.contract}] [Token ID ${owner.token_id}] [Balance ${owner.balance}]`
+            ownerDelta.delta,
+            owner.address,
+            owner.contract,
+            owner.token_id
           );
         } else {
           return owner;
@@ -136,7 +171,10 @@ export async function extractOwnersFromDeltas(
       } else {
         if (ownerDelta.delta < 0) {
           throw new OwnerDeltaError(
-            `Negative balance while creating new owner [Delta ${ownerDelta.delta}] [Owner ${ownerDelta.address}] [Contract ${ownerDelta.contract}] [Token ID ${ownerDelta.tokenId}]`
+            ownerDelta.delta,
+            ownerDelta.address,
+            ownerDelta.contract,
+            ownerDelta.tokenId
           );
         }
         return {

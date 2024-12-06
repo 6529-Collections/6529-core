@@ -29,6 +29,7 @@ import {
 } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
 import LogsViewer from "../logs-viewer/LogsViewer";
+import TransactionsLocalData from "./TransactionsLocalData";
 
 export interface Task {
   namespace: string;
@@ -309,7 +310,7 @@ export function WorkerCard({
       .finally(() => setShowRunNowConfirm(false));
   };
 
-  function extraActionContent() {
+  function advancedOptionsContent() {
     const infoButton = (content: any) => (
       <Tippy
         delay={500}
@@ -431,6 +432,24 @@ export function WorkerCard({
     );
   }
 
+  function getExtraActions() {
+    const extraActions = [
+      {
+        name: "Advanced Options",
+        content: advancedOptionsContent(),
+      },
+    ];
+
+    if (task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER) {
+      extraActions.unshift({
+        name: "Data",
+        content: <TransactionsLocalData />,
+      });
+    }
+
+    return extraActions;
+  }
+
   return (
     <Container className="no-padding pt-2 pb-4">
       <Row>
@@ -479,8 +498,7 @@ export function WorkerCard({
                 <Col>
                   <LogsViewer
                     filePath={task.logFile}
-                    extraAction="Advanced Options"
-                    extraActionContent={extraActionContent()}
+                    extraActions={getExtraActions()}
                   />
                 </Col>
               </Row>
@@ -500,7 +518,7 @@ export function WorkerCard({
         onHide={() => setShowRecalculateOwnersConfirm(false)}
         onConfirm={triggerRecalculateTransactionsOwners}
         title="Recalculate Owners"
-        message={`Re-process all NFT transactions stored in the local database and recalculates ownership and balances for each owner, ensuring accurate and up-to-date data for every token based on the transaction history. Use this if discrepancies in ownership or balance are detected.`}
+        message={`Roll back the transactions database by 5,000 block, then re-process all NFT transactions stored in the local database and recalculates ownership and balances for each owner, ensuring accurate and up-to-date data for every token based on the transaction history. Use this if discrepancies in ownership or balance are detected.`}
       />
       <Confirm
         show={showResetWorkerConfirm}

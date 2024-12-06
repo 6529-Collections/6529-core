@@ -56,3 +56,10 @@ export interface LogLine {
   id: number;
   content: string;
 }
+
+export interface PaginatedResponseLocal<T> {
+  page: number;
+  total: number;
+  totalPages: number;
+  data: T[];
+}

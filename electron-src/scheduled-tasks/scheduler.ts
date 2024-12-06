@@ -58,7 +58,7 @@ const WORKERS: ScheduledWorkerConfig[] = [
   {
     name: ScheduledWorkerNames.TDH_WORKER,
     display: ScheduledWorkerDisplay.TDH_WORKER,
-    cronExpression: "1 0 * * *",
+    cronExpression: "2 0 * * *",
     enabled: true,
     description: "The computer process in your node that calculates TDH.",
   },

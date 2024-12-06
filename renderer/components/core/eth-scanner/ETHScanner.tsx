@@ -5,7 +5,6 @@ import {
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
 } from "../../../../shared/types";
-import Link from "next/link";
 import { Task, WorkerCards } from "./Workers";
 import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
 import { AddRpcProviderModal } from "./RpcProviderModal";
@@ -14,7 +13,6 @@ export default function ETHScanner() {
   const [fetchingTasks, setFetchingTasks] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [rpcProviders, setRpcProviders] = useState<RPCProvider[]>([]);
-
   const [homeDir, setHomeDir] = useState<string>("");
 
   const [showAddRpcProviderModal, setShowAddRpcProviderModal] = useState(false);
