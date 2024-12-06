@@ -8,11 +8,22 @@ export interface Token {
   logoURI?: string;
 }
 
+export interface PoolData {
+  address: string;
+  fee: number;
+  token0: Token;
+  token1: Token;
+  sqrtPriceX96?: bigint;
+  liquidity?: bigint;
+  tick?: number;
+}
+
 export interface TokenPair {
   inputToken: Token;
   outputToken: Token;
   poolAddress: string;
   fee: number;
+  poolData?: PoolData;
 }
 
 export interface TokenAmount {

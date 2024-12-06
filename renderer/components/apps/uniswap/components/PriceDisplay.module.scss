@@ -1,0 +1,54 @@
+.priceDisplay {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  transition: all 0.2s ease;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+
+  &.error {
+    color: #ff6b6b;
+    background: rgba(255, 107, 107, 0.1);
+    border-color: rgba(255, 107, 107, 0.2);
+  }
+
+  @media (max-width: 768px) {
+    padding: 0.625rem 0.875rem;
+    font-size: 0.85rem;
+  }
+}
+
+.priceRow {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  &:not(:last-child) {
+    margin-bottom: 0.375rem;
+  }
+
+  @media (max-width: 768px) {
+    gap: 0.25rem;
+
+    &:not(:last-child) {
+      margin-bottom: 0.25rem;
+    }
+  }
+}
+
+.amount {
+  font-weight: 500;
+  font-feature-settings: "tnum" on, "lnum" on;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.token {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.equals {
+  color: rgba(255, 255, 255, 0.5);
+  margin: 0 0.125rem;
+}

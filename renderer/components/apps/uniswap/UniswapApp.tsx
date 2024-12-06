@@ -17,6 +17,8 @@ import {
 import { parseUnits } from "ethers/lib/utils";
 import { TOKENS, TOKEN_PAIRS, TICK_LENS_ADDRESS } from "./constants";
 import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
+import { usePoolPrice } from "./hooks/usePoolPrice";
+import PriceDisplay from "./components/PriceDisplay";
 
 const SWAP_ROUTER_ADDRESS = "0xE592427A0AEce92De3Edee1F18E0157C05861564";
 const QUOTER_CONTRACT_ADDRESS = "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6";
@@ -63,51 +65,19 @@ const QUOTER_ABI = [
 
 export default function UniswapApp() {
   const { address } = useAccount();
+  const [selectedPair] = useState(TOKEN_PAIRS[0]); // For now, just use the first pair
+  const {
+    forward,
+    reverse,
+    loading: priceLoading,
+    error: priceError,
+  } = usePoolPrice(selectedPair);
   const [inputAmount, setInputAmount] = useState("");
   const [outputAmount, setOutputAmount] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [swapLoading, setSwapLoading] = useState(false);
+  const [swapError, setSwapError] = useState<string | null>(null);
   const [ethBalance, setEthBalance] = useState<string | null>(null);
   const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
-  const [currentPrice, setCurrentPrice] = useState<string | null>(null);
-
-  // Get pool price
-  useEffect(() => {
-    async function fetchPrice() {
-      try {
-        const provider = new ethers.providers.JsonRpcProvider(
-          "https://eth-mainnet.public.blastapi.io"
-        );
-        const poolContract = new ethers.Contract(
-          TOKEN_PAIRS[0].poolAddress,
-          UNISWAP_V3_POOL_ABI,
-          provider
-        );
-
-        const slot0 = await poolContract.slot0();
-        const sqrtPriceX96 = BigInt(slot0[0].toString());
-        const Q96 = BigInt(2 ** 96);
-
-        // Calculate WETH/USDC price with decimal adjustment
-        const priceInUSDC = Number(
-          (BigInt(1e12) * (Q96 * Q96)) / (sqrtPriceX96 * sqrtPriceX96)
-        );
-
-        if (priceInUSDC <= 0 || isNaN(priceInUSDC)) {
-          throw new Error("Invalid price calculation");
-        }
-
-        setCurrentPrice(priceInUSDC.toFixed(2));
-      } catch (err) {
-        console.error("Error fetching price:", err);
-        setCurrentPrice(null);
-      }
-    }
-
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 10000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Get user's ETH and USDC balances
   useEffect(() => {
@@ -140,10 +110,10 @@ export default function UniswapApp() {
   }
 
   async function getQuote() {
-    if (!inputAmount || !address || !currentPrice) return;
+    if (!inputAmount || !address || !forward) return;
 
-    setLoading(true);
-    setError(null);
+    setSwapLoading(true);
+    setSwapError(null);
 
     try {
       const provider = new ethers.providers.JsonRpcProvider(
@@ -174,10 +144,10 @@ export default function UniswapApp() {
       setOutputAmount(parseFloat(outputAmountFormatted).toFixed(2));
     } catch (err) {
       console.error("Error getting quote:", err);
-      setError("Failed to get quote. Please try again.");
+      setSwapError("Failed to get quote. Please try again.");
       setOutputAmount("");
     } finally {
-      setLoading(false);
+      setSwapLoading(false);
     }
   }
 
@@ -185,8 +155,8 @@ export default function UniswapApp() {
   async function executeSwap() {
     if (!address || !outputAmount) return;
 
-    setLoading(true);
-    setError(null);
+    setSwapLoading(true);
+    setSwapError(null);
 
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -242,9 +212,9 @@ export default function UniswapApp() {
       fetchBalances();
     } catch (err) {
       console.error("Error executing swap:", err);
-      setError("Failed to execute swap. Please try again.");
+      setSwapError("Failed to execute swap. Please try again.");
     } finally {
-      setLoading(false);
+      setSwapLoading(false);
     }
   }
 
@@ -293,11 +263,13 @@ export default function UniswapApp() {
           <div className={styles.swapCard}>
             <div className="d-flex justify-content-between align-items-center mb-4">
               <h3>Swap</h3>
-              {currentPrice && (
-                <div className={styles.priceInfo}>
-                  1 ETH = {currentPrice} USDC
-                </div>
-              )}
+              <PriceDisplay
+                pair={selectedPair}
+                forward={forward}
+                reverse={reverse}
+                loading={priceLoading}
+                error={priceError}
+              />
             </div>
 
             {!address ? (
@@ -322,7 +294,7 @@ export default function UniswapApp() {
                       onChange={(e) => {
                         setInputAmount(e.target.value);
                         setOutputAmount("");
-                        setError(null);
+                        setSwapError(null);
                       }}
                       placeholder="0.0"
                       min="0"
@@ -352,28 +324,28 @@ export default function UniswapApp() {
                   </div>
                 </div>
 
-                {error && (
+                <Button
+                  variant="primary"
+                  onClick={getQuote}
+                  disabled={swapLoading || !inputAmount}
+                  className={styles.actionButton}
+                >
+                  {swapLoading ? "Getting Quote..." : "Get Quote"}
+                </Button>
+
+                {swapError && (
                   <div className="alert alert-danger mb-3 py-2" role="alert">
-                    {error}
+                    {swapError}
                   </div>
                 )}
 
                 <Button
-                  variant="primary"
-                  onClick={getQuote}
-                  disabled={loading || !inputAmount}
-                  className={styles.actionButton}
-                >
-                  {loading ? "Getting Quote..." : "Get Quote"}
-                </Button>
-
-                <Button
                   variant="success"
                   onClick={executeSwap}
-                  disabled={!outputAmount || loading}
+                  disabled={!outputAmount || swapLoading}
                   className={styles.actionButton}
                 >
-                  {loading ? "Swapping..." : "Swap"}
+                  {swapLoading ? "Swapping..." : "Swap"}
                 </Button>
               </Form>
             )}
