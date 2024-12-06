@@ -1,3 +1,5 @@
+import { CurrencyAmount, Token as SDKToken } from "@uniswap/sdk-core";
+
 export interface Token {
   symbol: string;
   name: string;
@@ -16,4 +18,14 @@ export interface TokenPair {
 export interface TokenAmount {
   token: Token;
   amount: string;
+}
+
+export interface SwapRoute {
+  quote: CurrencyAmount<SDKToken>;
+  quoteGasAdjusted: CurrencyAmount<SDKToken>;
+  methodParameters?: {
+    calldata: string;
+    value: string;
+  };
+  gasPriceWei: string;
 }

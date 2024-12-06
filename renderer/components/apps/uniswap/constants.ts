@@ -40,3 +40,5 @@ export const TOKEN_PAIRS: TokenPair[] = [
   },
   // Add more pairs as needed
 ];
+
+export const TICK_LENS_ADDRESS = "0xbfd8137f7d1516D3ea5cA83523914859ec47F573";
