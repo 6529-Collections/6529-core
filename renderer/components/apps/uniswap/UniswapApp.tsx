@@ -411,13 +411,6 @@ export default function UniswapApp() {
 
   return (
     <Container fluid className={styles.uniswapContainer}>
-      <div className={styles.header}>
-        <h2>Swap</h2>
-        {chain?.name && (
-          <span className={styles.networkBadge}>{chain.name}</span>
-        )}
-      </div>
-
       <Row className="w-100 justify-content-center align-items-center">
         <Col xs={12} sm={10} md={8} lg={6} xl={5}>
           <div className={styles.swapCard}>
