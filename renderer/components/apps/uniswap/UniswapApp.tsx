@@ -336,9 +336,46 @@ export default function UniswapApp() {
     setSwapError(null);
   };
 
+  function formatBalance(balance: string, token: Token): string {
+    if (balance === "...") return balance;
+
+    const num = parseFloat(balance);
+
+    // Handle zero balance
+    if (num === 0) return "0";
+
+    // Handle stablecoins (USDC, USDT, etc.)
+    if (token.decimals <= 6) {
+      return num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+
+    // Handle ETH and other tokens
+    if (num < 0.0001) {
+      return "<0.0001";
+    } else if (num < 1) {
+      return num.toLocaleString(undefined, {
+        minimumFractionDigits: 4,
+        maximumFractionDigits: 4,
+      });
+    } else if (num < 1000) {
+      return num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 4,
+      });
+    } else {
+      return num.toLocaleString(undefined, {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    }
+  }
+
   function getTokenBalance(token: Token): string {
     const balance = tokenBalances[token.address.toLowerCase()];
-    return balance ?? "...";
+    return formatBalance(balance ?? "...", token);
   }
 
   return (
