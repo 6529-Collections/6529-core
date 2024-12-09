@@ -33,6 +33,11 @@ const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
 ];
 
+// Add loading indicator component
+function LoadingSpinner() {
+  return <div className={styles.loadingSpinner} />;
+}
+
 export default function UniswapApp() {
   const { address, chain } = useAccount();
   const chainId = chain?.id || 1;
@@ -378,16 +383,45 @@ export default function UniswapApp() {
     return formatBalance(balance ?? "...", token);
   }
 
+  // Add this function to handle percentage clicks
+  function handlePercentageClick(percentage: number) {
+    const balance =
+      tokenBalances[selectedPair.inputToken.address.toLowerCase()];
+    if (!balance) return;
+
+    const balanceNum = parseFloat(balance);
+    const amount = (balanceNum * percentage) / 100;
+
+    // Format the input amount appropriately
+    let formattedAmount: string;
+    if (selectedPair.inputToken.decimals <= 6) {
+      // For stablecoins, show 2 decimals
+      formattedAmount = amount.toFixed(2);
+    } else {
+      // For ETH and other tokens, show 4 decimals
+      formattedAmount = amount.toFixed(4);
+    }
+
+    setInputAmount(formattedAmount);
+  }
+
+  // Add this near your other state declarations
+  const [inputFocused, setInputFocused] = useState(false);
+  const [outputFocused, setOutputFocused] = useState(false);
+
   return (
     <Container fluid className={styles.uniswapContainer}>
-      <Row className="w-100 justify-content-center">
+      <div className={styles.header}>
+        <h2>Swap</h2>
+        {chain?.name && (
+          <span className={styles.networkBadge}>{chain.name}</span>
+        )}
+      </div>
+
+      <Row className="w-100 justify-content-center align-items-center">
         <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-          <div className={styles.chainIndicator}>
-            Current Network: {chain?.name || "Ethereum"}
-          </div>
           <div className={styles.swapCard}>
-            <div className="d-flex justify-content-between align-items-center mb-4">
-              <h3>Swap</h3>
+            <div className={styles.priceHeader}>
               <PriceDisplay
                 pair={displayPair}
                 forward={forward}
@@ -398,10 +432,8 @@ export default function UniswapApp() {
             </div>
 
             {!address ? (
-              <div className="text-center p-4 bg-dark rounded">
-                <p className="mb-0">
-                  Please connect your wallet to swap tokens
-                </p>
+              <div className={styles.connectPrompt}>
+                <p>Please connect your wallet to swap tokens</p>
               </div>
             ) : (
               <Form>
@@ -413,7 +445,11 @@ export default function UniswapApp() {
                       {selectedPair.inputToken.symbol}
                     </span>
                   </div>
-                  <div className={styles.inputWrapper}>
+                  <div
+                    className={`${styles.inputWrapper} ${
+                      inputFocused ? styles.focused : ""
+                    }`}
+                  >
                     <Form.Control
                       type="number"
                       value={inputAmount}
@@ -422,9 +458,11 @@ export default function UniswapApp() {
                         setOutputAmount("");
                         setSwapError(null);
                       }}
+                      onFocus={() => setInputFocused(true)}
+                      onBlur={() => setInputFocused(false)}
                       placeholder="0.0"
                       min="0"
-                      step="0.01"
+                      step="any"
                       className={styles.tokenInput}
                     />
                     <TokenSelect
@@ -433,6 +471,19 @@ export default function UniswapApp() {
                       onSelect={(token) => handleTokenSelect(true, token)}
                       disabled={swapLoading}
                     />
+                  </div>
+                  <div className={styles.percentageButtons}>
+                    {[25, 50, 75, 100].map((percent) => (
+                      <button
+                        key={percent}
+                        type="button"
+                        onClick={() => handlePercentageClick(percent)}
+                        className={styles.percentButton}
+                        disabled={swapLoading}
+                      >
+                        {percent === 100 ? "MAX" : `${percent}%`}
+                      </button>
+                    ))}
                   </div>
                 </div>
 
@@ -478,7 +529,15 @@ export default function UniswapApp() {
                   disabled={!outputAmount || swapLoading || !inputAmount}
                   className={styles.actionButton}
                 >
-                  {swapLoading ? "Swapping..." : "Swap"}
+                  {swapLoading ? (
+                    <LoadingSpinner />
+                  ) : swapError ? (
+                    "Try Again"
+                  ) : !inputAmount || !outputAmount ? (
+                    "Enter an amount"
+                  ) : (
+                    "Swap"
+                  )}
                 </Button>
 
                 {swapError && (

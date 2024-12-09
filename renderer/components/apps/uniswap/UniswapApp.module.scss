@@ -1,39 +1,92 @@
 .uniswapContainer {
-  padding: 2rem;
-  min-height: calc(100vh - 100px);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  background: #111111;
+}
+
+.header {
+  width: 100%;
+  padding: 1.5rem 2rem;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  position: fixed;
+  top: 0;
+  z-index: 10;
+
+  h2 {
+    color: white;
+    font-size: 1.75rem;
+    font-weight: 600;
+    margin: 0;
+  }
 
   @media (max-width: 768px) {
     padding: 1rem;
-    min-height: calc(100vh - 80px);
+
+    h2 {
+      font-size: 1.5rem;
+    }
   }
 }
 
+.networkBadge {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
 .swapCard {
-  background: #1a1a1a;
-  border-radius: 20px;
-  padding: 2rem;
+  background: rgba(26, 26, 26, 0.8);
+  backdrop-filter: blur(20px);
+  border-radius: 24px;
+  padding: 1.75rem;
   width: 100%;
-  max-width: 560px;
+  max-width: 480px;
   border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+  margin: auto;
+  margin-top: 6rem; // Account for fixed header
 
   @media (max-width: 768px) {
-    padding: 1.5rem;
-    border-radius: 16px;
+    margin-top: 4.5rem;
+    padding: 1.25rem;
+    border-radius: 20px;
   }
 
-  h3 {
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: #fff;
-    margin: 0;
+  @media (max-width: 576px) {
+    margin: 4rem 1rem 1rem;
+  }
+}
 
-    @media (max-width: 768px) {
-      font-size: 1.5rem;
-    }
+.priceHeader {
+  margin-bottom: 1.5rem;
+
+  @media (max-width: 768px) {
+    margin-bottom: 1.25rem;
+  }
+}
+
+.connectPrompt {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+
+  p {
+    color: rgba(255, 255, 255, 0.7);
+    margin: 0;
+    font-size: 1rem;
   }
 }
 
@@ -65,18 +118,28 @@
 
 .inputWrapper {
   position: relative;
-  background: #2a2a2a;
+  background: rgba(42, 42, 42, 0.5);
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
 
-  &:focus-within {
+  &.focused {
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  &:hover:not(.focused) {
     border-color: rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
   }
 
   @media (max-width: 768px) {
     border-radius: 12px;
+  }
+
+  @media (max-width: 576px) {
+    border-radius: 14px;
   }
 }
 
@@ -85,17 +148,15 @@
   border: none !important;
   color: #fff !important;
   font-size: 1.5rem !important;
+  font-weight: 500 !important;
   padding: 1.25rem 1.5rem !important;
-  padding-right: 6rem !important;
+  padding-right: 7.5rem !important;
   width: 100%;
+  font-feature-settings: "tnum" on, "lnum" on;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.3);
-  }
-
-  &:focus {
-    outline: none !important;
-    box-shadow: none !important;
   }
 
   &::-webkit-outer-spin-button,
@@ -104,14 +165,16 @@
     margin: 0;
   }
 
-  &[type="number"] {
-    -moz-appearance: textfield;
-  }
-
   @media (max-width: 768px) {
     font-size: 1.25rem !important;
     padding: 1rem 1.25rem !important;
     padding-right: 5rem !important;
+  }
+
+  @media (max-width: 576px) {
+    font-size: 1.25rem !important;
+    padding: 1rem !important;
+    padding-right: 6rem !important;
   }
 }
 
@@ -204,4 +267,95 @@
   color: rgba(255, 255, 255, 0.7);
   font-size: 0.9rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.percentageButtons {
+  display: flex;
+  gap: 0.375rem;
+  margin-top: 0.75rem;
+  padding: 0 0.25rem;
+
+  @media (max-width: 576px) {
+    gap: 0.25rem;
+    margin-top: 0.5rem;
+  }
+}
+
+.percentButton {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  padding: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-1px);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  @media (max-width: 576px) {
+    font-size: 0.8125rem;
+    padding: 0.3125rem;
+  }
+}
+
+.swapButton {
+  background: #2ecc71;
+  border: none;
+  color: white;
+  width: 100%;
+  padding: 1rem;
+  border-radius: 16px;
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin-top: 1rem;
+  transition: all 0.2s ease;
+
+  &:disabled {
+    background: rgba(46, 204, 113, 0.5);
+    cursor: not-allowed;
+  }
+
+  &:not(:disabled):hover {
+    background: #27ae60;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
+  }
+
+  @media (max-width: 576px) {
+    padding: 0.875rem;
+    font-size: 1rem;
+    border-radius: 14px;
+  }
+}
+
+.loadingSpinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

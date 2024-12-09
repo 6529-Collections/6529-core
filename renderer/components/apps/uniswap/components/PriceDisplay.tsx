@@ -1,4 +1,5 @@
-import { TokenPair } from "../types";
+import { Token, TokenPair } from "../types";
+import { RotateCw } from "lucide-react";
 import styles from "./PriceDisplay.module.scss";
 
 interface Props {
@@ -58,39 +59,46 @@ export default function PriceDisplay({
   loading,
   error,
 }: Props) {
-  if (loading) {
-    return <div className={styles.priceDisplay}>Fetching price...</div>;
-  }
-
   if (error) {
     return (
-      <div className={`${styles.priceDisplay} ${styles.error}`}>{error}</div>
+      <div className={`${styles.priceDisplay} ${styles.error}`}>
+        <div className={styles.errorContent}>
+          <span>{error}</span>
+          <button className={styles.retryButton}>
+            <RotateCw size={14} />
+          </button>
+        </div>
+      </div>
     );
-  }
-
-  if (!forward || !reverse) {
-    return null;
   }
 
   return (
     <div className={styles.priceDisplay}>
-      <div className={styles.priceRow}>
-        <span className={styles.amount}>1</span>
-        <span className={styles.token}>{pair.inputToken.symbol}</span>
-        <span className={styles.equals}>=</span>
-        <span className={styles.amount}>
-          {formatPrice(forward, pair.outputToken)}
-        </span>
-        <span className={styles.token}>{pair.outputToken.symbol}</span>
-      </div>
-      <div className={styles.priceRow}>
-        <span className={styles.amount}>1</span>
-        <span className={styles.token}>{pair.outputToken.symbol}</span>
-        <span className={styles.equals}>=</span>
-        <span className={styles.amount}>
-          {formatPrice(reverse, pair.inputToken)}
-        </span>
-        <span className={styles.token}>{pair.inputToken.symbol}</span>
+      <div className={styles.priceContent}>
+        <div className={styles.priceRow}>
+          <div className={styles.priceLabel}>
+            <span className={styles.amount}>1</span>
+            <span className={styles.symbol}>{pair.inputToken.symbol}</span>
+          </div>
+          <div
+            className={`${styles.priceValue} ${loading ? styles.loading : ""}`}
+          >
+            {forward ? formatPrice(forward, pair.outputToken) : "0.00"}
+            <span className={styles.symbol}>{pair.outputToken.symbol}</span>
+          </div>
+        </div>
+        <div className={styles.priceRow}>
+          <div className={styles.priceLabel}>
+            <span className={styles.amount}>1</span>
+            <span className={styles.symbol}>{pair.outputToken.symbol}</span>
+          </div>
+          <div
+            className={`${styles.priceValue} ${loading ? styles.loading : ""}`}
+          >
+            {reverse ? formatPrice(reverse, pair.inputToken) : "0.00"}
+            <span className={styles.symbol}>{pair.inputToken.symbol}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

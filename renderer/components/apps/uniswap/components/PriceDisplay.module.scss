@@ -1,56 +1,126 @@
 .priceDisplay {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(26, 26, 26, 0.8);
   border-radius: 12px;
-  padding: 0.75rem 1rem;
+  padding: 0.75rem 1.25rem;
   font-size: 0.9rem;
   color: rgba(255, 255, 255, 0.9);
   transition: all 0.2s ease;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  min-height: 72px;
+  display: flex;
+  align-items: center;
 
   &.error {
     color: #ff6b6b;
     background: rgba(255, 107, 107, 0.1);
     border-color: rgba(255, 107, 107, 0.2);
+    justify-content: center;
   }
 
   @media (max-width: 768px) {
-    padding: 0.625rem 0.875rem;
+    min-height: 64px;
+    padding: 0.625rem 1rem;
     font-size: 0.85rem;
   }
+}
+
+.priceContent {
+  width: 100%;
 }
 
 .priceRow {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
+  justify-content: space-between;
+  gap: 1.5rem;
 
   &:not(:last-child) {
-    margin-bottom: 0.375rem;
+    margin-bottom: 0.5rem;
+  }
+}
+
+.priceLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  white-space: nowrap;
+  min-width: 80px;
+
+  .amount {
+    color: rgba(255, 255, 255, 0.9);
   }
 
-  @media (max-width: 768px) {
-    gap: 0.25rem;
+  .symbol {
+    color: rgba(255, 255, 255, 0.6);
+  }
+}
 
-    &:not(:last-child) {
-      margin-bottom: 0.25rem;
+.priceValue {
+  font-weight: 500;
+  font-feature-settings: "tnum" on, "lnum" on;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  text-align: right;
+  position: relative;
+  white-space: nowrap;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+
+  .symbol {
+    color: rgba(255, 255, 255, 0.6);
+  }
+
+  &.loading {
+    &::after {
+      content: "";
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 25%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.05) 75%
+      );
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 4px;
     }
   }
 }
 
-.amount {
-  font-weight: 500;
-  font-feature-settings: "tnum" on, "lnum" on;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  min-width: 80px;
-  text-align: right;
+.errorContent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  justify-content: center;
 }
 
-.token {
-  color: rgba(255, 255, 255, 0.7);
-  font-weight: 500;
+.retryButton {
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: all 0.2s ease;
+
+  &:hover {
+    opacity: 1;
+    transform: rotate(180deg);
+  }
 }
 
-.equals {
-  color: rgba(255, 255, 255, 0.5);
-  margin: 0 0.125rem;
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
