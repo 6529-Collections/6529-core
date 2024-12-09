@@ -40,3 +40,23 @@ export interface SwapRoute {
   };
   gasPriceWei: string;
 }
+
+// Add utility functions for token conversion
+export function toSDKToken(token: Token, chainId: number): SDKToken {
+  return new SDKToken(
+    chainId,
+    token.address,
+    token.decimals,
+    token.symbol,
+    token.name
+  );
+}
+
+export function fromSDKToken(token: SDKToken): Token {
+  return {
+    symbol: token.symbol ?? "",
+    name: token.name ?? "",
+    address: token.address,
+    decimals: token.decimals,
+  };
+}

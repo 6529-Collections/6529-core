@@ -26,6 +26,13 @@ export const CHAIN_TOKENS: ChainTokens = {
       decimals: 6,
       logoURI: "/images/tokens/usdc.png",
     },
+    UNI: {
+      symbol: "UNI",
+      name: "Uniswap",
+      address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      decimals: 18,
+      logoURI: "/images/tokens/uni.png",
+    },
   },
   11155111: {
     // Sepolia
@@ -43,6 +50,13 @@ export const CHAIN_TOKENS: ChainTokens = {
       decimals: 6,
       logoURI: "/images/tokens/usdc.png",
     },
+    UNI: {
+      symbol: "UNI",
+      name: "Uniswap",
+      address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", // Using mainnet address for testing
+      decimals: 18,
+      logoURI: "/images/tokens/uni.png",
+    },
   },
 };
 
@@ -54,12 +68,24 @@ export const CHAIN_POOLS: ChainPools = {
       poolAddress: "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8",
       fee: 3000,
     },
+    {
+      inputToken: CHAIN_TOKENS[1].ETH,
+      outputToken: CHAIN_TOKENS[1].UNI,
+      poolAddress: "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7",
+      fee: 3000,
+    },
   ],
   11155111: [
     {
       inputToken: CHAIN_TOKENS[11155111].ETH,
       outputToken: CHAIN_TOKENS[11155111].USDC,
       poolAddress: "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1", // Updated Sepolia pool
+      fee: 3000,
+    },
+    {
+      inputToken: CHAIN_TOKENS[11155111].ETH,
+      outputToken: CHAIN_TOKENS[11155111].UNI,
+      poolAddress: "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7", // Using mainnet pool for testing
       fee: 3000,
     },
   ],

@@ -37,28 +37,32 @@ export function usePoolPrice(pair: TokenPair | null) {
         provider
       );
 
-      const [slot0, token0] = await Promise.all([
+      const [slot0, token0Address] = await Promise.all([
         poolContract.slot0(),
         poolContract.token0(),
       ]);
 
       const sqrtPriceX96 = BigInt(slot0[0].toString());
+      const Q96 = BigInt(2 ** 96);
 
-      // Calculate price from sqrtPriceX96
-      const price =
-        (Number(sqrtPriceX96) *
-          Number(sqrtPriceX96) *
-          10 ** (pair.outputToken.decimals - pair.inputToken.decimals)) /
-        2 ** 192;
-
-      // Check if we need to invert the price based on token order
+      // Determine if we need to invert the price based on token order
       const isToken0Input =
-        token0.toLowerCase() === pair.inputToken.address.toLowerCase();
-      const adjustedPrice = isToken0Input ? price : 1 / price;
+        token0Address.toLowerCase() === pair.inputToken.address.toLowerCase();
+
+      // Calculate price using string operations to maintain precision
+      const price = (Number(sqrtPriceX96) * Number(sqrtPriceX96)) / 2 ** 192;
+
+      // Apply decimal adjustment
+      const decimalAdjustment =
+        10 ** (pair.outputToken.decimals - pair.inputToken.decimals);
+      const adjustedPrice = price * decimalAdjustment;
+
+      // Determine final price based on token order
+      const finalPrice = isToken0Input ? adjustedPrice : 1 / adjustedPrice;
 
       setPriceData({
-        forward: adjustedPrice.toString(),
-        reverse: (1 / adjustedPrice).toString(),
+        forward: finalPrice.toString(),
+        reverse: (1 / finalPrice).toString(),
         loading: false,
         error: null,
       });

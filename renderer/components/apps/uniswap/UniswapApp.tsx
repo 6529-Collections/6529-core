@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
 import { useAccount } from "wagmi";
 import { ethers } from "ethersv5";
 import styles from "./UniswapApp.module.scss";
-import { Token, CurrencyAmount, TradeType, Percent } from "@uniswap/sdk-core";
+import { CurrencyAmount, TradeType, Percent } from "@uniswap/sdk-core";
 import {
   Pool,
   Position,
@@ -26,6 +26,8 @@ import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
 import { SwatchBook } from "lucide-react";
+import TokenSelect from "./components/TokenSelect";
+import { Token, TokenPair, toSDKToken } from "./types";
 
 const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
@@ -41,10 +43,7 @@ export default function UniswapApp() {
   );
 
   // Create a fixed display pair that doesn't change with swapping but respects chain
-  const displayPair = useMemo(
-    () => CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0],
-    [chainId]
-  );
+  const displayPair = useMemo(() => selectedPair, [selectedPair]);
   const {
     forward,
     reverse,
@@ -55,13 +54,70 @@ export default function UniswapApp() {
   const [outputAmount, setOutputAmount] = useState("");
   const [swapLoading, setSwapLoading] = useState(false);
   const [swapError, setSwapError] = useState<string | null>(null);
-  const [ethBalance, setEthBalance] = useState<string | null>(null);
-  const [usdcBalance, setUsdcBalance] = useState<string | null>(null);
+  const [tokenBalances, setTokenBalances] = useState<{
+    [address: string]: string | null;
+  }>({});
+
+  // Add new state for available tokens
+  const availableTokens = useMemo(() => {
+    if (!chain?.id) return [];
+    return Object.values(CHAIN_TOKENS[chain.id as keyof typeof CHAIN_TOKENS]);
+  }, [chain?.id]);
+
+  // Function to find pool for token pair
+  const findPool = useCallback(
+    (tokenA: Token, tokenB: Token) => {
+      if (!chain?.id) return null;
+
+      const pools = CHAIN_POOLS[chain.id as keyof typeof CHAIN_POOLS];
+      return pools.find(
+        (pool) =>
+          (pool.inputToken.address.toLowerCase() ===
+            tokenA.address.toLowerCase() &&
+            pool.outputToken.address.toLowerCase() ===
+              tokenB.address.toLowerCase()) ||
+          (pool.inputToken.address.toLowerCase() ===
+            tokenB.address.toLowerCase() &&
+            pool.outputToken.address.toLowerCase() ===
+              tokenA.address.toLowerCase())
+      );
+    },
+    [chain?.id]
+  );
+
+  // Handle token selection
+  const handleTokenSelect = useCallback(
+    (isInput: boolean, token: Token) => {
+      setSelectedPair((prev) => {
+        const otherToken = isInput ? prev.outputToken : prev.inputToken;
+        const pool = findPool(token, otherToken);
+
+        if (!pool) return prev; // Keep existing pair if no pool exists
+
+        // Determine correct order based on pool configuration
+        const newPair = {
+          ...pool,
+          inputToken: isInput ? token : otherToken,
+          outputToken: isInput ? otherToken : token,
+        };
+
+        // Clear amounts when changing tokens
+        setInputAmount("");
+        setOutputAmount("");
+        setSwapError(null);
+
+        return newPair;
+      });
+    },
+    [findPool]
+  );
 
   // Get user's ETH and USDC balances
   useEffect(() => {
     fetchBalances();
-  }, [address]);
+    const interval = setInterval(fetchBalances, 15000); // Refresh every 15 seconds
+    return () => clearInterval(interval);
+  }, [address, chain?.id]);
 
   async function getPool(
     tokenA: Token,
@@ -77,9 +133,13 @@ export default function UniswapApp() {
 
     const slot0 = await poolContract.slot0();
 
+    // Convert to SDK tokens
+    const sdkTokenA = toSDKToken(tokenA, chain?.id || 1);
+    const sdkTokenB = toSDKToken(tokenB, chain?.id || 1);
+
     return new Pool(
-      tokenA,
-      tokenB,
+      sdkTokenA,
+      sdkTokenB,
       fee,
       slot0.sqrtPriceX96.toString(),
       "0", // Use minimal liquidity since we only need price
@@ -167,23 +227,16 @@ export default function UniswapApp() {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
 
-      const tokenIn = new Token(
-        chain.id, // Use current chain ID instead of hardcoded 1
-        selectedPair.inputToken.address,
-        selectedPair.inputToken.decimals,
-        selectedPair.inputToken.symbol,
-        selectedPair.inputToken.name
+      const tokenIn = toSDKToken(selectedPair.inputToken, chain.id);
+      const tokenOut = toSDKToken(selectedPair.outputToken, chain.id);
+
+      const pool = await getPool(
+        selectedPair.inputToken,
+        selectedPair.outputToken,
+        selectedPair.fee,
+        provider
       );
 
-      const tokenOut = new Token(
-        chain.id, // Use current chain ID instead of hardcoded 1
-        selectedPair.outputToken.address,
-        selectedPair.outputToken.decimals,
-        selectedPair.outputToken.symbol,
-        selectedPair.outputToken.name
-      );
-
-      const pool = await getPool(tokenIn, tokenOut, selectedPair.fee, provider);
       const inputAmountWei = parseUnits(
         inputAmount,
         selectedPair.inputToken.decimals
@@ -233,39 +286,54 @@ export default function UniswapApp() {
 
   // Move this function outside useEffect
   async function fetchBalances() {
-    if (!address) {
-      setEthBalance(null);
-      setUsdcBalance(null);
-      return;
-    }
+    if (!address || !chain?.id) return;
 
     try {
       const provider = new ethers.providers.JsonRpcProvider(
-        RPC_URLS[chainId as keyof typeof RPC_URLS]
+        RPC_URLS[chain.id as keyof typeof RPC_URLS] || RPC_URLS[1]
       );
 
-      // Get ETH balance
-      const rawEthBalance = await provider.getBalance(address);
-      const formattedEthBalance = ethers.utils.formatUnits(rawEthBalance, 18);
-      setEthBalance(parseFloat(formattedEthBalance).toFixed(4));
+      // Get all unique tokens from the available pairs
+      const uniqueTokens = Array.from(
+        new Set(
+          CHAIN_POOLS[chain.id as keyof typeof CHAIN_POOLS].flatMap((pair) => [
+            pair.inputToken,
+            pair.outputToken,
+          ])
+        )
+      );
 
-      // Get USDC balance using chain-specific address
-      const usdcContract = new ethers.Contract(
-        CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].USDC.address,
-        ERC20_ABI,
-        provider
-      );
-      const rawUsdcBalance = await usdcContract.balanceOf(address);
-      const usdcDecimals = await usdcContract.decimals();
-      const formattedUsdcBalance = ethers.utils.formatUnits(
-        rawUsdcBalance,
-        usdcDecimals
-      );
-      setUsdcBalance(parseFloat(formattedUsdcBalance).toFixed(2));
+      const balancePromises = uniqueTokens.map(async (token) => {
+        try {
+          const balance =
+            token.symbol === "ETH"
+              ? await provider.getBalance(address)
+              : await new ethers.Contract(
+                  token.address,
+                  ERC20_ABI,
+                  provider
+                ).balanceOf(address);
+
+          return {
+            address: token.address,
+            balance: ethers.utils.formatUnits(balance, token.decimals),
+          };
+        } catch (err) {
+          console.error(`Error fetching balance for ${token.symbol}:`, err);
+          return { address: token.address, balance: null };
+        }
+      });
+
+      const balances = await Promise.all(balancePromises);
+      const balanceMap = balances.reduce((acc, { address, balance }) => {
+        acc[address.toLowerCase()] = balance;
+        return acc;
+      }, {} as { [address: string]: string | null });
+
+      setTokenBalances(balanceMap);
     } catch (err) {
       console.error("Error fetching balances:", err);
-      setEthBalance(null);
-      setUsdcBalance(null);
+      setTokenBalances({});
     }
   }
 
@@ -281,6 +349,11 @@ export default function UniswapApp() {
     setOutputAmount("");
     setSwapError(null);
   };
+
+  function getTokenBalance(token: Token): string {
+    const balance = tokenBalances[token.address.toLowerCase()];
+    return balance ?? "...";
+  }
 
   return (
     <Container fluid className={styles.uniswapContainer}>
@@ -313,10 +386,7 @@ export default function UniswapApp() {
                   <div className={styles.inputLabel}>
                     <span>You Pay</span>
                     <span className={styles.balance}>
-                      Balance:{" "}
-                      {selectedPair.inputToken.symbol === "ETH"
-                        ? ethBalance
-                        : usdcBalance ?? "..."}{" "}
+                      Balance: {getTokenBalance(selectedPair.inputToken)}{" "}
                       {selectedPair.inputToken.symbol}
                     </span>
                   </div>
@@ -334,9 +404,12 @@ export default function UniswapApp() {
                       step="0.01"
                       className={styles.tokenInput}
                     />
-                    <div className={styles.tokenSelector}>
-                      {selectedPair.inputToken.symbol}
-                    </div>
+                    <TokenSelect
+                      tokens={availableTokens}
+                      selectedToken={selectedPair.inputToken}
+                      onSelect={(token) => handleTokenSelect(true, token)}
+                      disabled={swapLoading}
+                    />
                   </div>
                 </div>
 
@@ -355,10 +428,7 @@ export default function UniswapApp() {
                   <div className={styles.inputLabel}>
                     <span>You Receive</span>
                     <span className={styles.balance}>
-                      Balance:{" "}
-                      {selectedPair.outputToken.symbol === "ETH"
-                        ? ethBalance
-                        : usdcBalance ?? "..."}{" "}
+                      Balance: {getTokenBalance(selectedPair.outputToken)}{" "}
                       {selectedPair.outputToken.symbol}
                     </span>
                   </div>
@@ -370,9 +440,12 @@ export default function UniswapApp() {
                       placeholder="0.0"
                       className={styles.tokenInput}
                     />
-                    <div className={styles.tokenSelector}>
-                      {selectedPair.outputToken.symbol}
-                    </div>
+                    <TokenSelect
+                      tokens={availableTokens}
+                      selectedToken={selectedPair.outputToken}
+                      onSelect={(token) => handleTokenSelect(false, token)}
+                      disabled={swapLoading}
+                    />
                   </div>
                 </div>
 
