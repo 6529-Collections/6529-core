@@ -43,26 +43,35 @@ export function usePoolPrice(pair: TokenPair | null) {
       ]);
 
       const sqrtPriceX96 = BigInt(slot0[0].toString());
+
+      // Get token addresses in lowercase for comparison
+      const token0 = token0Address.toLowerCase();
+      const inputToken = pair.inputToken.address.toLowerCase();
+      const outputToken = pair.outputToken.address.toLowerCase();
+
+      // Calculate the raw sqrt price
       const Q96 = BigInt(2 ** 96);
+      const price0Per1 = Number(sqrtPriceX96) / Number(Q96);
+      const price = price0Per1 * price0Per1;
 
-      // Determine if we need to invert the price based on token order
-      const isToken0Input =
-        token0Address.toLowerCase() === pair.inputToken.address.toLowerCase();
-
-      // Calculate price using string operations to maintain precision
-      const price = (Number(sqrtPriceX96) * Number(sqrtPriceX96)) / 2 ** 192;
-
-      // Apply decimal adjustment
-      const decimalAdjustment =
-        10 ** (pair.outputToken.decimals - pair.inputToken.decimals);
-      const adjustedPrice = price * decimalAdjustment;
-
-      // Determine final price based on token order
-      const finalPrice = isToken0Input ? adjustedPrice : 1 / adjustedPrice;
+      // Determine price based on token order and apply decimal adjustment
+      let adjustedPrice: number;
+      if (token0 === inputToken) {
+        // If input token is token0, price needs to be inverted
+        adjustedPrice =
+          (1 / price) *
+          10 ** (pair.outputToken.decimals - pair.inputToken.decimals);
+      } else if (token0 === outputToken) {
+        // If input token is token1, use price directly
+        adjustedPrice =
+          price * 10 ** (pair.outputToken.decimals - pair.inputToken.decimals);
+      } else {
+        throw new Error("Token not found in pool");
+      }
 
       setPriceData({
-        forward: finalPrice.toString(),
-        reverse: (1 / finalPrice).toString(),
+        forward: adjustedPrice.toString(),
+        reverse: (1 / adjustedPrice).toString(),
         loading: false,
         error: null,
       });

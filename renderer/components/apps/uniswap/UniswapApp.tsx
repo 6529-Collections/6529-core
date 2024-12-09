@@ -148,73 +148,33 @@ export default function UniswapApp() {
     );
   }
 
-  async function getQuote() {
-    if (!inputAmount || !address || !forward || !chain) return;
-
-    setSwapLoading(true);
-    setSwapError(null);
+  // Add effect to calculate output amount when input changes
+  useEffect(() => {
+    if (!inputAmount || !forward) return;
 
     try {
-      const provider = new ethers.providers.JsonRpcProvider(
-        RPC_URLS[chain.id as keyof typeof RPC_URLS] || RPC_URLS[1]
-      );
+      const inputNum = parseFloat(inputAmount);
+      const priceNum = parseFloat(forward);
+      const outputNum = inputNum * priceNum;
 
-      // Check if we have a pool for this chain
-      if (!CHAIN_POOLS[chain.id as keyof typeof CHAIN_POOLS]) {
-        throw new Error(`No liquidity pool available on ${chain.name}`);
-      }
-
-      const quoterContract = new ethers.Contract(
-        CHAIN_QUOTER_ADDRESSES[
-          chain.id as keyof typeof CHAIN_QUOTER_ADDRESSES
-        ] || CHAIN_QUOTER_ADDRESSES[1],
-        QUOTER_ABI,
-        provider
-      );
-
-      const inputAmountWei = parseUnits(
-        inputAmount,
-        selectedPair.inputToken.decimals
-      );
-
-      const quote = await quoterContract.callStatic.quoteExactInputSingle(
-        selectedPair.inputToken.address,
-        selectedPair.outputToken.address,
-        selectedPair.fee,
-        inputAmountWei,
-        0
-      );
-
-      const outputAmountFormatted = ethers.utils.formatUnits(
-        quote,
-        selectedPair.outputToken.decimals
-      );
-
-      // Format the output amount with more precision
-      const num = parseFloat(outputAmountFormatted);
+      // Format the output amount with appropriate precision
       let formattedOutput: string;
-
-      if (num < 0.0001) {
-        formattedOutput = num.toExponential(6);
-      } else if (num < 1) {
-        formattedOutput = num.toFixed(8);
+      if (outputNum < 0.0001) {
+        formattedOutput = outputNum.toExponential(6);
+      } else if (outputNum < 1) {
+        formattedOutput = outputNum.toFixed(8);
       } else {
-        formattedOutput = num.toFixed(4);
+        formattedOutput = outputNum.toFixed(4);
       }
 
       setOutputAmount(formattedOutput);
+      setSwapError(null);
     } catch (err) {
-      console.error("Error getting quote:", err);
-      setSwapError(
-        `Failed to get quote on ${chain?.name}. ${
-          err instanceof Error ? err.message : "Please try again."
-        }`
-      );
+      console.error("Error calculating output amount:", err);
       setOutputAmount("");
-    } finally {
-      setSwapLoading(false);
+      setSwapError("Failed to calculate output amount");
     }
-  }
+  }, [inputAmount, forward]);
 
   // Execute swap
   async function executeSwap() {
@@ -224,12 +184,39 @@ export default function UniswapApp() {
     setSwapError(null);
 
     try {
+      // Get provider and signer
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
 
+      // Verify the quote on-chain before executing the swap
+      const quoterContract = new ethers.Contract(
+        CHAIN_QUOTER_ADDRESSES[
+          chain.id as keyof typeof CHAIN_QUOTER_ADDRESSES
+        ] || CHAIN_QUOTER_ADDRESSES[1],
+        QUOTER_ABI,
+        provider
+      );
+
+      // Calculate amounts and get pool
+      const amountIn = parseUnits(
+        inputAmount,
+        selectedPair.inputToken.decimals
+      );
+
+      // Get final quote before swap
+      const quoteAmount = await quoterContract.callStatic.quoteExactInputSingle(
+        selectedPair.inputToken.address,
+        selectedPair.outputToken.address,
+        selectedPair.fee,
+        amountIn,
+        0
+      );
+
+      // Convert tokens to SDK format
       const tokenIn = toSDKToken(selectedPair.inputToken, chain.id);
       const tokenOut = toSDKToken(selectedPair.outputToken, chain.id);
 
+      // Get pool instance
       const pool = await getPool(
         selectedPair.inputToken,
         selectedPair.outputToken,
@@ -237,13 +224,10 @@ export default function UniswapApp() {
         provider
       );
 
-      const inputAmountWei = parseUnits(
-        inputAmount,
-        selectedPair.inputToken.decimals
-      );
+      // Create trade
       const typedValueParsed = CurrencyAmount.fromRawAmount(
         tokenIn,
-        inputAmountWei.toString()
+        amountIn.toString()
       );
 
       const route = new Route([pool], tokenIn, tokenOut);
@@ -253,6 +237,7 @@ export default function UniswapApp() {
         TradeType.EXACT_INPUT
       );
 
+      // Prepare swap parameters
       const slippageTolerance = new Percent("50", "10000"); // 0.5%
       const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
 
@@ -262,6 +247,7 @@ export default function UniswapApp() {
         deadline,
       });
 
+      // Execute the swap
       const tx = await signer.sendTransaction({
         data: swapParams.calldata,
         to:
@@ -450,12 +436,12 @@ export default function UniswapApp() {
                 </div>
 
                 <Button
-                  variant="primary"
-                  onClick={getQuote}
-                  disabled={swapLoading || !inputAmount}
+                  variant="success"
+                  onClick={executeSwap}
+                  disabled={!outputAmount || swapLoading || !inputAmount}
                   className={styles.actionButton}
                 >
-                  {swapLoading ? "Getting Quote..." : "Get Quote"}
+                  {swapLoading ? "Swapping..." : "Swap"}
                 </Button>
 
                 {swapError && (
@@ -463,15 +449,6 @@ export default function UniswapApp() {
                     {swapError}
                   </div>
                 )}
-
-                <Button
-                  variant="success"
-                  onClick={executeSwap}
-                  disabled={!outputAmount || swapLoading}
-                  className={styles.actionButton}
-                >
-                  {swapLoading ? "Swapping..." : "Swap"}
-                </Button>
               </Form>
             )}
           </div>
