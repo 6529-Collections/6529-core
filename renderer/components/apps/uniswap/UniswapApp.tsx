@@ -487,14 +487,37 @@ export default function UniswapApp() {
                   </div>
                 </div>
 
-                {/* Add swap direction button */}
+                {/* Swap direction button */}
                 <div className={styles.swapDirectionButton}>
                   <button
                     type="button"
                     onClick={handleSwapTokens}
                     className={styles.directionButton}
+                    disabled={swapLoading}
+                    title="Swap tokens"
                   >
-                    <SwatchBook />
+                    <svg
+                      width="16"
+                      height="16"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                    >
+                      <path
+                        d="M4 2.5L4 10.5M4 10.5L6.5 8M4 10.5L1.5 8"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M12 13.5L12 5.5M12 5.5L9.5 8M12 5.5L14.5 8"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </button>
                 </div>
 
