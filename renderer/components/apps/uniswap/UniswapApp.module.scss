@@ -207,15 +207,32 @@
   margin-bottom: 1rem !important;
   border: none !important;
   transition: all 0.2s ease !important;
+  background: #2ecc71 !important;
+  color: white !important;
 
   &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+    background: rgba(46, 204, 113, 0.5) !important;
   }
 
   &:not(:disabled):hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 4px 12px rgba(46, 204, 113, 0.2);
+    background: #27ae60 !important;
+  }
+
+  &.error {
+    background: #e74c3c !important;
+
+    &:hover {
+      background: #c0392b !important;
+    }
+  }
+
+  &.loading {
+    background: #7f8c8d !important;
+    cursor: wait !important;
   }
 
   @media (max-width: 768px) {

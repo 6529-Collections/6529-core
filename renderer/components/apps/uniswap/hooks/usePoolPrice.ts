@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethersv5";
 import { Token, TokenPair } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
-import { RPC_URLS } from "../constants";
+import { RPC_URLS, FALLBACK_RPC_URLS, SupportedChainId } from "../constants";
 import { useAccount } from "wagmi";
 
 interface PriceData {
@@ -27,9 +27,25 @@ export function usePoolPrice(pair: TokenPair | null) {
     setPriceData((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const provider = new ethers.providers.JsonRpcProvider(
-        RPC_URLS[chain.id as keyof typeof RPC_URLS] || RPC_URLS[1]
-      );
+      let provider;
+      try {
+        provider = new ethers.providers.JsonRpcProvider(
+          RPC_URLS[chain.id as SupportedChainId]
+        );
+      } catch (error) {
+        console.warn("Primary RPC failed, using fallback:", error);
+        provider = new ethers.providers.JsonRpcProvider(
+          FALLBACK_RPC_URLS[chain.id as SupportedChainId]
+        );
+      }
+
+      // Verify pool contract exists
+      const code = await provider.getCode(pair.poolAddress);
+      if (code === "0x") {
+        throw new Error(
+          `No liquidity pool found for ${pair.inputToken.symbol}/${pair.outputToken.symbol} on ${chain.name}`
+        );
+      }
 
       const poolContract = new ethers.Contract(
         pair.poolAddress,
@@ -37,10 +53,24 @@ export function usePoolPrice(pair: TokenPair | null) {
         provider
       );
 
-      const [slot0, token0Address] = await Promise.all([
-        poolContract.slot0(),
-        poolContract.token0(),
+      // Check pool initialization and liquidity
+      const [slot0, liquidity, token0Address] = await Promise.all([
+        retry(() => poolContract.slot0(), 3),
+        retry(() => poolContract.liquidity(), 3),
+        retry(() => poolContract.token0(), 3),
       ]);
+
+      if (!slot0) {
+        throw new Error(
+          `Pool ${pair.inputToken.symbol}/${pair.outputToken.symbol} is not initialized`
+        );
+      }
+
+      if (liquidity.eq(0)) {
+        throw new Error(
+          `No liquidity available in ${pair.inputToken.symbol}/${pair.outputToken.symbol} pool`
+        );
+      }
 
       const sqrtPriceX96 = BigInt(slot0[0].toString());
 
@@ -66,7 +96,9 @@ export function usePoolPrice(pair: TokenPair | null) {
         adjustedPrice =
           price * 10 ** (pair.outputToken.decimals - pair.inputToken.decimals);
       } else {
-        throw new Error("Token not found in pool");
+        throw new Error(
+          `Token mismatch in pool. Expected ${pair.inputToken.symbol} or ${pair.outputToken.symbol}, got different tokens`
+        );
       }
 
       setPriceData({
@@ -75,16 +107,28 @@ export function usePoolPrice(pair: TokenPair | null) {
         loading: false,
         error: null,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error fetching price:", err);
       setPriceData({
         forward: null,
         reverse: null,
         loading: false,
-        error: `Failed to fetch price on ${chain.name}`,
+        error: err.message || "Failed to fetch price",
       });
     }
   }, [pair, chain]);
+
+  // Add retry helper function
+  const retry = async (fn: () => Promise<any>, attempts: number) => {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (i === attempts - 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+  };
 
   useEffect(() => {
     fetchPrice();

@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
-import { useAccount } from "wagmi";
+import { useAccount, usePublicClient } from "wagmi";
 import { ethers } from "ethersv5";
 import styles from "./UniswapApp.module.scss";
 import { CurrencyAmount, TradeType, Percent } from "@uniswap/sdk-core";
@@ -21,6 +21,8 @@ import {
   RPC_URLS,
   CHAIN_QUOTER_ADDRESSES,
   CHAIN_ROUTER_ADDRESSES,
+  SupportedChainId,
+  FALLBACK_RPC_URLS,
 } from "./constants";
 import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
@@ -28,6 +30,8 @@ import PriceDisplay from "./components/PriceDisplay";
 import { SwatchBook } from "lucide-react";
 import TokenSelect from "./components/TokenSelect";
 import { Token, TokenPair, toSDKToken } from "./types";
+import { useUniswapSwap } from "./hooks/useUniswapSwap";
+import { SwapButton } from "./components/SwapButton";
 
 const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
@@ -40,6 +44,7 @@ function LoadingSpinner() {
 
 export default function UniswapApp() {
   const { address, chain } = useAccount();
+  const publicClient = usePublicClient();
   const chainId = chain?.id || 1;
 
   // Use chain-specific token pairs
@@ -90,31 +95,90 @@ export default function UniswapApp() {
     [chain?.id]
   );
 
-  // Handle token selection
+  // Add this function to check pool availability
+  const checkPoolAvailability = useCallback(
+    async (token1: Token, token2: Token) => {
+      if (!chain?.id) return false;
+
+      const pool = findPool(token1, token2);
+      if (!pool) {
+        setSwapError(
+          `No liquidity pool available for ${token1.symbol}/${token2.symbol}`
+        );
+        return false;
+      }
+
+      try {
+        const provider = new ethers.providers.JsonRpcProvider(
+          RPC_URLS[chain.id as SupportedChainId]
+        );
+
+        const poolContract = new ethers.Contract(
+          pool.poolAddress,
+          UNISWAP_V3_POOL_ABI,
+          provider
+        );
+
+        const [code, liquidity] = await Promise.all([
+          provider.getCode(pool.poolAddress),
+          poolContract.liquidity(),
+        ]);
+
+        if (code === "0x") {
+          setSwapError(
+            `No liquidity pool contract found for ${token1.symbol}/${token2.symbol}`
+          );
+          return false;
+        }
+
+        if (liquidity.eq(0)) {
+          setSwapError(
+            `Pool exists but has no liquidity for ${token1.symbol}/${token2.symbol}`
+          );
+          return false;
+        }
+
+        return true;
+      } catch (err) {
+        console.error("Error checking pool availability:", err);
+        setSwapError(
+          `Error checking ${token1.symbol}/${token2.symbol} pool availability`
+        );
+        return false;
+      }
+    },
+    [chain?.id, findPool]
+  );
+
+  // Update handleTokenSelect to use pool availability check
   const handleTokenSelect = useCallback(
-    (isInput: boolean, token: Token) => {
+    async (isInput: boolean, token: Token) => {
       setSelectedPair((prev) => {
         const otherToken = isInput ? prev.outputToken : prev.inputToken;
-        const pool = findPool(token, otherToken);
 
-        if (!pool) return prev; // Keep existing pair if no pool exists
-
-        // Determine correct order based on pool configuration
-        const newPair = {
-          ...pool,
-          inputToken: isInput ? token : otherToken,
-          outputToken: isInput ? otherToken : token,
-        };
-
-        // Clear amounts when changing tokens
+        // Clear amounts and errors
         setInputAmount("");
         setOutputAmount("");
         setSwapError(null);
 
-        return newPair;
+        // Check pool availability asynchronously
+        checkPoolAvailability(token, otherToken).then((isAvailable) => {
+          if (!isAvailable) {
+            return prev; // Keep existing pair if pool is not available
+          }
+        });
+
+        const pool = findPool(token, otherToken);
+        if (!pool) return prev;
+
+        return {
+          ...pool,
+          inputToken: isInput ? token : otherToken,
+          outputToken: isInput ? otherToken : token,
+        };
       });
     },
-    [findPool]
+    [findPool, checkPoolAvailability]
   );
 
   // Get user's ETH and USDC balances
@@ -181,97 +245,81 @@ export default function UniswapApp() {
     }
   }, [inputAmount, forward]);
 
-  // Execute swap
-  async function executeSwap() {
-    if (!address || !outputAmount || !chain) return;
+  const { executeSwap } = useUniswapSwap();
 
-    setSwapLoading(true);
-    setSwapError(null);
+  // Update executeSwap function
+  async function handleSwap(e: React.MouseEvent<HTMLButtonElement>) {
+    e.preventDefault();
+
+    if (!address || !outputAmount || !chain || !inputAmount || !publicClient) {
+      setSwapStatus({
+        loading: false,
+        error: "Missing required connection details",
+      });
+      return;
+    }
+
+    setSwapStatus({ loading: true, error: null });
 
     try {
-      // Get provider and signer
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
+      // Check allowance for non-ETH tokens
+      if (selectedPair.inputToken.symbol !== "ETH") {
+        const provider = new ethers.providers.Web3Provider(
+          publicClient.transport
+        );
+        const tokenContract = new ethers.Contract(
+          selectedPair.inputToken.address,
+          ERC20_ABI,
+          provider.getSigner()
+        );
 
-      // Verify the quote on-chain before executing the swap
-      const quoterContract = new ethers.Contract(
-        CHAIN_QUOTER_ADDRESSES[
-          chain.id as keyof typeof CHAIN_QUOTER_ADDRESSES
-        ] || CHAIN_QUOTER_ADDRESSES[1],
-        QUOTER_ABI,
-        provider
-      );
+        const routerAddress =
+          CHAIN_ROUTER_ADDRESSES[chain.id as SupportedChainId];
+        const allowance = await tokenContract.allowance(address, routerAddress);
+        const inputAmountWei = parseUnits(
+          inputAmount,
+          selectedPair.inputToken.decimals
+        );
 
-      // Calculate amounts and get pool
-      const amountIn = parseUnits(
-        inputAmount,
-        selectedPair.inputToken.decimals
-      );
+        if (allowance.lt(inputAmountWei)) {
+          const approveTx = await tokenContract.approve(
+            routerAddress,
+            ethers.constants.MaxUint256
+          );
+          await approveTx.wait();
+        }
+      }
 
-      // Get final quote before swap
-      const quoteAmount = await quoterContract.callStatic.quoteExactInputSingle(
-        selectedPair.inputToken.address,
-        selectedPair.outputToken.address,
-        selectedPair.fee,
-        amountIn,
-        0
-      );
+      // Execute swap
+      const hash = await executeSwap(selectedPair, inputAmount);
+      setSwapStatus((prev) => ({ ...prev, hash }));
 
-      // Convert tokens to SDK format
-      const tokenIn = toSDKToken(selectedPair.inputToken, chain.id);
-      const tokenOut = toSDKToken(selectedPair.outputToken, chain.id);
+      try {
+        // Wait for transaction confirmation
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
 
-      // Get pool instance
-      const pool = await getPool(
-        selectedPair.inputToken,
-        selectedPair.outputToken,
-        selectedPair.fee,
-        provider
-      );
-
-      // Create trade
-      const typedValueParsed = CurrencyAmount.fromRawAmount(
-        tokenIn,
-        amountIn.toString()
-      );
-
-      const route = new Route([pool], tokenIn, tokenOut);
-      const trade = await Trade.fromRoute(
-        route,
-        typedValueParsed,
-        TradeType.EXACT_INPUT
-      );
-
-      // Prepare swap parameters
-      const slippageTolerance = new Percent("50", "10000"); // 0.5%
-      const deadline = Math.floor(Date.now() / 1000) + 1800; // 30 minutes
-
-      const swapParams = SwapRouter.swapCallParameters(trade, {
-        slippageTolerance,
-        recipient: address,
-        deadline,
-      });
-
-      // Execute the swap
-      const tx = await signer.sendTransaction({
-        data: swapParams.calldata,
-        to:
-          CHAIN_ROUTER_ADDRESSES[
-            chain.id as keyof typeof CHAIN_ROUTER_ADDRESSES
-          ] || CHAIN_ROUTER_ADDRESSES[1],
-        value: swapParams.value,
-        from: address,
-      });
-
-      await tx.wait();
-      fetchBalances();
-    } catch (err) {
+        if (receipt.status === "success") {
+          // Reset form and fetch new balances
+          setInputAmount("");
+          setOutputAmount("");
+          await fetchBalances();
+          setSwapStatus({ loading: false, error: null });
+        } else {
+          throw new Error("Transaction failed");
+        }
+      } catch (confirmError: any) {
+        console.error("Transaction confirmation error:", confirmError);
+        setSwapStatus({
+          loading: false,
+          error: "Failed to confirm transaction. Please check your wallet.",
+        });
+      }
+    } catch (err: any) {
       console.error("Error executing swap:", err);
-      setSwapError(
-        `Failed to execute swap on ${chain.name}. Please try again.`
-      );
-    } finally {
-      setSwapLoading(false);
+      setSwapStatus({
+        loading: false,
+        error: err.message || "Failed to execute swap",
+      });
     }
   }
 
@@ -280,9 +328,18 @@ export default function UniswapApp() {
     if (!address || !chain?.id) return;
 
     try {
-      const provider = new ethers.providers.JsonRpcProvider(
-        RPC_URLS[chain.id as keyof typeof RPC_URLS] || RPC_URLS[1]
-      );
+      // Use primary RPC with fallback
+      let provider;
+      try {
+        provider = new ethers.providers.JsonRpcProvider(
+          RPC_URLS[chain.id as SupportedChainId]
+        );
+      } catch (error) {
+        console.warn("Primary RPC failed, using fallback:", error);
+        provider = new ethers.providers.JsonRpcProvider(
+          FALLBACK_RPC_URLS[chain.id as SupportedChainId]
+        );
+      }
 
       // Get all unique tokens from the available pairs
       const uniqueTokens = Array.from(
@@ -408,6 +465,15 @@ export default function UniswapApp() {
   // Add this near your other state declarations
   const [inputFocused, setInputFocused] = useState(false);
   const [outputFocused, setOutputFocused] = useState(false);
+
+  const [swapStatus, setSwapStatus] = useState<{
+    loading: boolean;
+    error: string | null;
+    hash?: `0x${string}`;
+  }>({
+    loading: false,
+    error: null,
+  });
 
   return (
     <Container fluid className={styles.uniswapContainer}>
@@ -539,22 +605,16 @@ export default function UniswapApp() {
                   </div>
                 </div>
 
-                <Button
-                  variant="success"
-                  onClick={executeSwap}
-                  disabled={!outputAmount || swapLoading || !inputAmount}
-                  className={styles.actionButton}
-                >
-                  {swapLoading ? (
-                    <LoadingSpinner />
-                  ) : swapError ? (
-                    "Try Again"
-                  ) : !inputAmount || !outputAmount ? (
-                    "Enter an amount"
-                  ) : (
-                    "Swap"
-                  )}
-                </Button>
+                <SwapButton
+                  disabled={
+                    !outputAmount || swapLoading || !inputAmount || !address
+                  }
+                  loading={swapLoading}
+                  onClick={handleSwap}
+                  error={swapError}
+                  inputAmount={inputAmount}
+                  outputAmount={outputAmount}
+                />
 
                 {swapError && (
                   <div className="alert alert-danger mb-3 py-2" role="alert">
