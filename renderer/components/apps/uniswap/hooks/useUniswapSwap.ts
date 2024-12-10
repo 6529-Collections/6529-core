@@ -41,6 +41,27 @@ export function useUniswapSwap() {
   const publicClient = usePublicClient();
   const { data: walletClient } = useWalletClient();
 
+  const retryPromise = async <T>(
+    fn: () => Promise<T>,
+    attempts = 3
+  ): Promise<T> => {
+    for (let i = 0; i < attempts; i++) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        console.error(`Attempt ${i + 1} failed:`, {
+          error,
+          message: error.message,
+          reason: error.reason,
+          code: error.code,
+        });
+        if (i === attempts - 1) throw error;
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
+    }
+    throw new Error("Max retry attempts reached");
+  };
+
   const executeSwap = useCallback(
     async (
       pair: TokenPair,
@@ -52,6 +73,21 @@ export function useUniswapSwap() {
       }
 
       try {
+        // Debug: Log initial swap parameters
+        console.log("Swap Parameters:", {
+          chainId: chain.id,
+          inputToken: {
+            symbol: pair.inputToken.symbol,
+            address: pair.inputToken.address,
+          },
+          outputToken: {
+            symbol: pair.outputToken.symbol,
+            address: pair.outputToken.address,
+          },
+          amount: inputAmount,
+          poolAddress: pair.poolAddress,
+        });
+
         // Create provider using publicClient
         const provider = new ethers.providers.Web3Provider(
           publicClient.transport
@@ -76,6 +112,15 @@ export function useUniswapSwap() {
           retryPromise(() => poolContract.token1()) as Promise<string>,
         ]);
 
+        // Debug: Log pool data
+        console.log("Pool Data:", {
+          token0,
+          token1,
+          sqrtPriceX96: slot0.sqrtPriceX96.toString(),
+          liquidity: liquidity.toString(),
+          tick: slot0.tick,
+        });
+
         if (!slot0 || !liquidity || !token0 || !token1) {
           throw new Error("Failed to fetch pool data");
         }
@@ -91,61 +136,59 @@ export function useUniswapSwap() {
             : "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14" // Sepolia WETH
         );
 
-        const [token0Lower, token1Lower] = [
-          token0.toLowerCase(),
-          token1.toLowerCase(),
-        ];
-        const [inputLower, outputLower] = [
-          pair.inputToken.address.toLowerCase(),
-          pair.outputToken.address.toLowerCase(),
-        ];
+        // Create SDK tokens with proper WETH substitution
+        const inputToken = toSDKToken(
+          {
+            ...pair.inputToken,
+            address:
+              pair.inputToken.symbol === "ETH"
+                ? WETH_ADDRESS
+                : pair.inputToken.address,
+          },
+          chain.id
+        );
 
-        const isInputETH = pair.inputToken.symbol === "ETH";
-        const isOutputETH = pair.outputToken.symbol === "ETH";
-        const inputAddressToCheck = isInputETH
-          ? WETH_ADDRESS.toLowerCase()
-          : inputLower;
-        const outputAddressToCheck = isOutputETH
-          ? WETH_ADDRESS.toLowerCase()
-          : outputLower;
+        const outputToken = toSDKToken(
+          {
+            ...pair.outputToken,
+            address:
+              pair.outputToken.symbol === "ETH"
+                ? WETH_ADDRESS
+                : pair.outputToken.address,
+          },
+          chain.id
+        );
 
-        // Check if tokens match (in either order)
-        const tokensMatch =
-          (token0Lower === inputAddressToCheck &&
-            token1Lower === outputAddressToCheck) ||
-          (token0Lower === outputAddressToCheck &&
-            token1Lower === inputAddressToCheck);
+        // Debug: Log token addresses after WETH substitution
+        console.log("Token Addresses:", {
+          inputToken: inputToken.address,
+          outputToken: outputToken.address,
+          poolToken0: token0,
+          poolToken1: token1,
+        });
 
-        if (!tokensMatch) {
-          console.error("Token mismatch:", {
-            poolToken0: token0Lower,
-            poolToken1: token1Lower,
-            inputToken: inputAddressToCheck,
-            outputToken: outputAddressToCheck,
-            chainId: chain.id,
-          });
-          throw new Error("Pool tokens do not match the requested pair");
-        }
-
-        // Create Pool instance with proper token ordering
-        const [token0Sdk, token1Sdk] = [
-          toSDKToken(
-            isInputETH
-              ? { ...pair.inputToken, address: WETH_ADDRESS }
-              : pair.inputToken,
-            chain.id
-          ),
-          toSDKToken(
-            isOutputETH
-              ? { ...pair.outputToken, address: WETH_ADDRESS }
-              : pair.outputToken,
-            chain.id
-          ),
-        ];
-
+        // Create Pool instance with correct token ordering based on pool's token0/token1
         const pool = new Pool(
-          token0Sdk,
-          token1Sdk,
+          toSDKToken(
+            {
+              ...pair.inputToken,
+              address:
+                token0.toLowerCase() === pair.inputToken.address.toLowerCase()
+                  ? pair.inputToken.address
+                  : pair.outputToken.address,
+            },
+            chain.id
+          ),
+          toSDKToken(
+            {
+              ...pair.outputToken,
+              address:
+                token1.toLowerCase() === pair.outputToken.address.toLowerCase()
+                  ? pair.outputToken.address
+                  : pair.inputToken.address,
+            },
+            chain.id
+          ),
           pair.fee,
           slot0.sqrtPriceX96.toString(),
           liquidity.toString(),
@@ -153,33 +196,43 @@ export function useUniswapSwap() {
         );
 
         // Parse input amount with proper decimals
+        const parsedAmount = ethers.utils.parseUnits(
+          inputAmount,
+          pair.inputToken.decimals
+        );
+
         const amountIn = CurrencyAmount.fromRawAmount(
-          token0Sdk,
-          ethers.utils
-            .parseUnits(inputAmount, pair.inputToken.decimals)
-            .toString()
+          inputToken,
+          parsedAmount.toString()
         );
 
         // Create trade with proper route
-        const route = new Route([pool], token0Sdk, token1Sdk);
+        const route = new Route([pool], inputToken, outputToken);
         const trade = await Trade.createUncheckedTrade({
           route,
           inputAmount: amountIn,
-          outputAmount: CurrencyAmount.fromRawAmount(token1Sdk, "0"),
+          outputAmount: CurrencyAmount.fromRawAmount(outputToken, "0"),
           tradeType: TradeType.EXACT_INPUT,
         });
 
-        // Prepare swap parameters with proper deadline
+        // Prepare swap parameters with proper value handling
         const options = {
           slippageTolerance,
-          deadline: Math.floor(Date.now() / 1000) + 1800, // 30 minutes
+          deadline: Math.floor(Date.now() / 1000) + 1800,
           recipient: address,
         };
 
-        // Get swap calldata
+        // Add value for ETH swaps
+        const swapOptions = {
+          ...options,
+          ...(pair.inputToken.symbol === "ETH"
+            ? { value: parsedAmount.toString() }
+            : {}),
+        };
+
         const { calldata, value } = SwapRouter.swapCallParameters(
           [trade],
-          options
+          swapOptions
         );
 
         // Get router address for the current chain
@@ -211,39 +264,44 @@ export function useUniswapSwap() {
         // Calculate gas buffer using BigInt constructor instead of literals
         const gasWithBuffer = calculateGasWithBuffer(gasEstimate, 20); // 20% buffer
 
-        // Send transaction with proper gas settings
+        // Debug the transaction parameters
+        console.log("Transaction Parameters:", {
+          from: address,
+          to: formattedAddress,
+          value:
+            pair.inputToken.symbol === "ETH" ? parsedAmount.toString() : "0",
+          calldata: formattedData,
+        });
+
+        // Send transaction with proper value
         const hash = await walletClient.sendTransaction({
+          account: address,
           to: formattedAddress,
           data: formattedData,
-          value: BigInt(value),
+          value:
+            pair.inputToken.symbol === "ETH"
+              ? BigInt(parsedAmount.toString())
+              : BigInt(0),
           gas: gasWithBuffer,
         });
 
         return hash;
       } catch (error: any) {
-        console.error("Swap execution error:", error);
-        throw new Error(
-          error.message || "Failed to execute swap. Please try again."
-        );
+        console.error("Swap execution error:", {
+          error,
+          errorMessage: error.message,
+          errorReason: error.reason,
+          errorCode: error.code,
+          errorData: error.data,
+          poolAddress: pair.poolAddress,
+          inputToken: pair.inputToken.address,
+          outputToken: pair.outputToken.address,
+        });
+        throw error;
       }
     },
     [address, chain?.id, publicClient, walletClient]
   );
 
   return { executeSwap };
-}
-
-// Utility function for retrying promises
-async function retryPromise<T>(
-  fn: () => Promise<T>,
-  retries = 3,
-  delay = 1000
-): Promise<T> {
-  try {
-    return await fn();
-  } catch (error) {
-    if (retries === 0) throw error;
-    await new Promise((resolve) => setTimeout(resolve, delay));
-    return retryPromise(fn, retries - 1, delay);
-  }
 }

@@ -83,14 +83,14 @@ export const CHAIN_POOLS: ChainPools = {
   11155111: [
     {
       inputToken: CHAIN_TOKENS[11155111].ETH,
-      outputToken: CHAIN_TOKENS[11155111].USDC,
-      poolAddress: "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
+      outputToken: CHAIN_TOKENS[11155111].UNI,
+      poolAddress: "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7",
       fee: 3000,
     },
     {
       inputToken: CHAIN_TOKENS[11155111].ETH,
-      outputToken: CHAIN_TOKENS[11155111].UNI,
-      poolAddress: "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7",
+      outputToken: CHAIN_TOKENS[11155111].USDC,
+      poolAddress: "0x3289680dD4d6C10bb19b899729cda5eEF58AEfF1",
       fee: 3000,
     },
   ],
