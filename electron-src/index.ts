@@ -50,6 +50,7 @@ import {
   RESET_TRANSACTIONS_TO_BLOCK,
   RECALCULATE_TRANSACTIONS_OWNERS,
   RESET_WORKER,
+  STOP_WORKER,
 } from "../constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
@@ -923,6 +924,25 @@ ipcMain.on(RESET_WORKER, (event, args: [string]) => {
     };
   } else {
     worker.reset().then((data) => {
+      event.returnValue = { error: !data.status, data: data.message };
+    });
+  }
+});
+
+ipcMain.on(STOP_WORKER, (event, args: [string]) => {
+  const [namespace] = args;
+  Logger.info(`[${namespace}] Stop worker`);
+  const worker = scheduledWorkers.find(
+    (worker) =>
+      worker instanceof ScheduledWorker && worker.getNamespace() === namespace
+  ) as ScheduledWorker | undefined;
+  if (!worker) {
+    event.returnValue = {
+      error: true,
+      data: "Worker not found",
+    };
+  } else {
+    worker.manualStop().then((data) => {
       event.returnValue = { error: !data.status, data: data.message };
     });
   }

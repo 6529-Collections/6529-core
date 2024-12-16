@@ -144,7 +144,7 @@ export function startSchedulers(
 
 export function stopSchedulers(scheduledWorkers: ScheduledWorker[]) {
   for (const scheduledWorker of scheduledWorkers) {
-    scheduledWorker.stop();
+    scheduledWorker.terminate();
   }
   Logger.log("All Scheduled Tasks stopped.");
 }

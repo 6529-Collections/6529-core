@@ -7,6 +7,7 @@ import {
   Form,
   InputGroup,
   ProgressBar,
+  Modal,
 } from "react-bootstrap";
 import { RPCProvider } from "./RpcProviders";
 import {
@@ -26,6 +27,7 @@ import {
   recalculateTransactionsOwners,
   resetTransactionsToBlock,
   resetWorker,
+  stopWorker,
 } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
 import LogsViewer from "../logs-viewer/LogsViewer";
@@ -253,17 +255,17 @@ export function WorkerCard({
 
   const isMobile = useIsMobileScreen();
 
-  const [resetToBlock, setResetToBlock] = useState("");
   const [showResetToBlockConfirm, setShowResetToBlockConfirm] = useState(false);
   const [showRecalculateOwnersConfirm, setShowRecalculateOwnersConfirm] =
     useState(false);
   const [showResetWorkerConfirm, setShowResetWorkerConfirm] = useState(false);
   const [showRefreshNFTsConfirm, setShowRefreshNFTsConfirm] = useState(false);
   const [showRunNowConfirm, setShowRunNowConfirm] = useState(false);
+  const [showStopWorkerConfirm, setShowStopWorkerConfirm] = useState(false);
   const { showToast } = useToast();
 
-  const triggerResetToBlock = async () => {
-    resetTransactionsToBlock(task.namespace, Number(resetToBlock))
+  const triggerResetToBlock = async (block: number) => {
+    resetTransactionsToBlock(task.namespace, block)
       .then((data) => {
         if (data.error) {
           showToast(data.data, "error");
@@ -273,7 +275,6 @@ export function WorkerCard({
       })
       .finally(() => {
         setShowResetToBlockConfirm(false);
-        setResetToBlock("");
       });
   };
 
@@ -308,6 +309,14 @@ export function WorkerCard({
         showToast(data.data, data.error ? "error" : "success");
       })
       .finally(() => setShowRunNowConfirm(false));
+  };
+
+  const triggerStopWorker = async () => {
+    stopWorker(task.namespace)
+      .then((data) => {
+        showToast(data.data, data.error ? "error" : "success");
+      })
+      .finally(() => setShowStopWorkerConfirm(false));
   };
 
   function advancedOptionsContent() {
@@ -352,16 +361,21 @@ export function WorkerCard({
       <Container className="mt-3 no-padding">
         <Row>
           <Col className="d-flex gap-3 align-items-center">
-            {infoButton(
-              <Button
-                variant="light"
-                onClick={() => setShowRunNowConfirm(true)}
-                disabled={
-                  task.status?.status === ScheduledWorkerStatus.RUNNING
-                }>
-                Run Now
-              </Button>
-            )}
+            {task.status?.status === ScheduledWorkerStatus.RUNNING
+              ? infoButton(
+                  <Button
+                    variant="light"
+                    onClick={() => setShowStopWorkerConfirm(true)}>
+                    Stop
+                  </Button>
+                )
+              : infoButton(
+                  <Button
+                    variant="light"
+                    onClick={() => setShowRunNowConfirm(true)}>
+                    Run Now
+                  </Button>
+                )}
             {task.resetable &&
               infoButton(
                 <Button
@@ -381,51 +395,29 @@ export function WorkerCard({
                     : "Reset"}
                 </Button>
               )}
-            {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
-              <>
-                {infoButton(
-                  <Button
-                    disabled={
-                      task.status?.status === ScheduledWorkerStatus.RUNNING
-                    }
-                    variant="light"
-                    onClick={() => setShowRecalculateOwnersConfirm(true)}>
-                    Recalculate Owners
-                  </Button>
-                )}
-                <InputGroup style={{ width: "350px" }}>
-                  <Form.Control
-                    className="no-glow"
-                    type="number"
-                    autoFocus
-                    placeholder={`Min Block: ${TRANSACTIONS_START_BLOCK}`}
-                    aria-label="Block"
-                    aria-describedby="block-addon"
-                    value={resetToBlock}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      const num = Number(value);
-                      if (!isNaN(num) && num >= 0) {
-                        setResetToBlock(value);
-                      }
-                    }}
-                  />
-                  {infoButton(
-                    <Button
-                      disabled={
-                        !resetToBlock ||
-                        Number(resetToBlock) < TRANSACTIONS_START_BLOCK ||
-                        task.status?.status === ScheduledWorkerStatus.RUNNING
-                      }
-                      variant="light"
-                      style={{ borderLeft: "2px solid #ced4da" }}
-                      onClick={() => setShowResetToBlockConfirm(true)}>
-                      Reset to block
-                    </Button>
-                  )}
-                </InputGroup>
-              </>
-            )}
+            {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
+              infoButton(
+                <Button
+                  disabled={
+                    task.status?.status === ScheduledWorkerStatus.RUNNING
+                  }
+                  variant="light"
+                  onClick={() => setShowRecalculateOwnersConfirm(true)}>
+                  Recalculate Owners
+                </Button>
+              )}
+            {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
+              infoButton(
+                <Button
+                  disabled={
+                    task.status?.status === ScheduledWorkerStatus.RUNNING
+                  }
+                  variant="light"
+                  style={{ borderLeft: "2px solid #ced4da" }}
+                  onClick={() => setShowResetToBlockConfirm(true)}>
+                  Reset
+                </Button>
+              )}
           </Col>
         </Row>
       </Container>
@@ -506,13 +498,14 @@ export function WorkerCard({
           </Col>
         </Col>
       </Row>
-      <Confirm
-        show={showResetToBlockConfirm}
-        onHide={() => setShowResetToBlockConfirm(false)}
-        onConfirm={triggerResetToBlock}
-        title="Reset to block"
-        message={`Roll back to block number ${resetToBlock}. All transactions after this block will be deleted, and ownership balances will be recalculated as if the sync only reached this block. Subsequent sync processes will update the data from this point forward.`}
-      />
+      {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
+        <ResetToBlockConfirm
+          show={showResetToBlockConfirm}
+          minBlock={TRANSACTIONS_START_BLOCK}
+          onHide={() => setShowResetToBlockConfirm(false)}
+          onConfirm={(block) => triggerResetToBlock(block)}
+        />
+      )}
       <Confirm
         show={showRecalculateOwnersConfirm}
         onHide={() => setShowRecalculateOwnersConfirm(false)}
@@ -549,6 +542,90 @@ export function WorkerCard({
             : `Trigger the worker to run immediately, without affecting its scheduled runs.`
         }
       />
+      <Confirm
+        show={showStopWorkerConfirm}
+        onHide={() => setShowStopWorkerConfirm(false)}
+        onConfirm={triggerStopWorker}
+        title={`Stop ${task.display}`}
+        message={`Stop the current execution of this worker. The worker will be paused and will not run again until the next scheduled run.`}
+      />
     </Container>
+  );
+}
+
+function ResetToBlockConfirm({
+  show,
+  minBlock,
+  onHide,
+  onConfirm,
+}: {
+  show: boolean;
+  minBlock: number;
+  onHide: () => void;
+  onConfirm: (block: number) => void;
+}) {
+  const [block, setBlock] = useState("");
+  return (
+    <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
+      <Modal.Header className={styles.modalHeader}>
+        <Modal.Title>Reset to block</Modal.Title>
+      </Modal.Header>
+      <Modal.Body className={styles.modalContent}>
+        <p className="mt-2 mb-2">
+          Roll back to a specific block number. All transactions after this
+          block will be deleted, and ownership balances will be recalculated as
+          if the sync only reached this block. Subsequent sync processes will
+          update the data from this point forward.
+        </p>
+        <p>
+          Use &apos;Min Block&apos; button to reset to the earliest available
+          block for this worker - {minBlock}.
+        </p>
+        <InputGroup className="tw-w-100 mt-4">
+          <Form.Control
+            className="no-glow"
+            type="number"
+            autoFocus
+            min={minBlock}
+            placeholder={`Enter block number`}
+            aria-label="Block"
+            aria-describedby="block-addon"
+            value={block}
+            onChange={(e) => {
+              const value = e.target.value;
+              const num = Number(value);
+              if (!isNaN(num) && num >= 0) {
+                setBlock(value);
+              }
+            }}
+          />
+          <Button
+            variant="light"
+            style={{ borderLeft: "2px solid #ced4da" }}
+            onClick={() => setBlock(minBlock.toString())}>
+            Min Block
+          </Button>
+        </InputGroup>
+      </Modal.Body>
+      <Modal.Footer className={styles.modalContent}>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            onHide();
+            setBlock("");
+          }}>
+          Cancel
+        </Button>
+        <Button
+          variant="primary"
+          onClick={() => {
+            onConfirm(Number(block));
+            setBlock("");
+          }}
+          disabled={!block || Number(block) < minBlock}>
+          Confirm
+        </Button>
+      </Modal.Footer>
+    </Modal>
   );
 }

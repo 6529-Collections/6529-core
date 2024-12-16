@@ -101,10 +101,10 @@ export default function TDHCalculation() {
             will reach consensus solely among the nodes.
           </Col>
         </Row>
-        {fetchingTdhInfo || !tdhInfo ? (
+        {fetchingTdhInfo ? (
           <Row className="pt-3 pb-3">
             <Col>
-              Fetching TDH Info <DotLoader />
+              Fetching local TDH Info <DotLoader />
             </Col>
           </Row>
         ) : (

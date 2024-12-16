@@ -12,6 +12,7 @@ import {
   RESET_TRANSACTIONS_TO_BLOCK,
   RECALCULATE_TRANSACTIONS_OWNERS,
   RESET_WORKER,
+  STOP_WORKER,
 } from "../constants";
 
 export async function getSeedWallets() {
@@ -75,6 +76,11 @@ export async function deactivateRpcProvider(id: number) {
 
 export async function manualStartWorker(namespace: string) {
   const data = await window.api.sendSync(MANUAL_START_WORKER, namespace);
+  return data;
+}
+
+export async function stopWorker(namespace: string) {
+  const data = await window.api.sendSync(STOP_WORKER, namespace);
   return data;
 }
 

@@ -25,6 +25,7 @@ export enum ScheduledWorkerStatus {
   IDLE,
   DISABLED,
   STARTING,
+  STOPPED,
   RUNNING,
   COMPLETED,
   THROTTLED,
