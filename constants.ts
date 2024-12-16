@@ -25,6 +25,7 @@ export const MANUAL_START_WORKER = "manualStartWorker";
 export const RESET_TRANSACTIONS_TO_BLOCK = "resetTransactionsToBlock";
 export const RECALCULATE_TRANSACTIONS_OWNERS = "recalculateTransactionsOwners";
 export const RESET_WORKER = "resetWorker";
+export const STOP_WORKER = "stopWorker";
 
 export const SEIZE_URL = "https://6529.io";
 export const SEIZE_API_URL = "https://api.6529.io";

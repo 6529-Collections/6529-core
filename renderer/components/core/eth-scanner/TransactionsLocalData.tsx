@@ -2,7 +2,6 @@ import styles from "./ETHScanner.module.scss";
 import { useEffect, useState } from "react";
 import { PaginatedResponseLocal } from "../../../../shared/types";
 import { Transaction } from "../../../entities/ITransaction";
-import { formatAddress } from "../../../helpers/Helpers";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import { Button, Table } from "react-bootstrap";
 import Pagination from "../../pagination/Pagination";

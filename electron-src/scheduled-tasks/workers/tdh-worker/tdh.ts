@@ -359,7 +359,9 @@ export const calculateTDH = async (
           ...consolidationTransactions,
         ].filter(
           (t) =>
-            t.token_id == nft.id && areEqualAddresses(t.contract, nft.contract)
+            t.token_id == nft.id &&
+            areEqualAddresses(t.contract, nft.contract) &&
+            !areEqualAddresses(t.from_address, t.to_address)
         );
 
         const hodlRate = HODL_INDEX / nft.edition_size;

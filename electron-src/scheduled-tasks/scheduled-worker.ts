@@ -227,9 +227,29 @@ export class ScheduledWorker {
     return !!this.worker;
   }
 
-  public stop() {
+  public async terminate() {
     this.task?.stop();
-    this.worker?.terminate();
+    return await this.manualStop();
+  }
+
+  public async manualStop() {
+    await this.worker?.terminate();
+    this.worker?.removeAllListeners();
+    this.worker = null;
+    this.update.status = ScheduledWorkerStatus.STOPPED;
+    this.update.message = "Worker stopped";
+    this.postWorkerUpdate(
+      this.namespace,
+      this.update.status,
+      this.update.message,
+      "",
+      this.update.statusPercentage
+    );
+
+    return {
+      status: true,
+      message: "Worker stopped",
+    };
   }
 }
 
