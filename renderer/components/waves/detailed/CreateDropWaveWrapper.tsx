@@ -2,8 +2,14 @@ import React, { useEffect, useCallback, useMemo, useRef } from "react";
 import useCapacitor from "../../../hooks/useCapacitor";
 import { useDebouncedCallback } from "use-debounce";
 
+export enum CreateDropWaveWrapperContext {
+  WAVE_CHAT = "WAVE_CHAT",
+  SINGLE_DROP = "SINGLE_DROP",
+}
+
 interface CreateDropWaveWrapperProps {
   readonly children: React.ReactNode;
+  readonly context?: CreateDropWaveWrapperContext;
 }
 
 function useResizeObserver(
@@ -56,6 +62,7 @@ function useResizeObserver(
 
 export function CreateDropWaveWrapper({
   children,
+  context = CreateDropWaveWrapperContext.WAVE_CHAT,
 }: CreateDropWaveWrapperProps) {
   const capacitor = useCapacitor();
 
@@ -65,12 +72,19 @@ export function CreateDropWaveWrapper({
   useResizeObserver(containerRef, fixedBottomRef);
 
   const containerClassName = useMemo(() => {
-    return capacitor.isCapacitor
-      ? `tw-max-h-[calc(100vh-14.7rem)] ${
-          capacitor.keyboardVisible ? "" : "tw-mb-[3.75rem]"
-        }`
-      : "tw-max-h-[calc(100vh-12rem)] lg:tw-max-h-[calc(100vh-10rem)]";
-  }, [capacitor.isCapacitor, capacitor.keyboardVisible]);
+    const shouldApplyBottomMargin =
+      context !== CreateDropWaveWrapperContext.SINGLE_DROP;
+
+    if (capacitor.isCapacitor) {
+      const marginClass =
+        !capacitor.keyboardVisible && shouldApplyBottomMargin
+          ? "tw-mb-[3.75rem]"
+          : "";
+      return `tw-max-h-[calc(100vh-14.7rem)] ${marginClass}`;
+    }
+
+    return "tw-max-h-[calc(100vh-8.5rem)] lg:tw-max-h-[calc(100vh-7.5rem)]";
+  }, [capacitor.isCapacitor, capacitor.keyboardVisible, context]);
   return (
     <div
       ref={containerRef}
