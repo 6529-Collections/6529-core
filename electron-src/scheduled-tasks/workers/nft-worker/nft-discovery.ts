@@ -96,11 +96,37 @@ class NFTWorker extends CoreWorker {
     const currentHour = now.getUTCHours();
     const currentMinute = now.getUTCMinutes();
 
-    if (this.reset || (currentHour % 2 === 0 && currentMinute === 0)) {
+    if (this.reset) {
+      return await this.resetWork();
+    } else if (currentHour % 2 === 0 && currentMinute === 0) {
       return await this.refreshWork();
     } else {
       return await this.normalWork();
     }
+  }
+
+  private async resetWork() {
+    logInfo(parentPort, "Resetting Database");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: "Resetting NFTs",
+      },
+    });
+
+    await this.getDb().getRepository(NFT).clear();
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    logInfo(parentPort, "All NFTs deleted, starting sync...");
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.RUNNING,
+        message: "All NFTs deleted, starting sync...",
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    return await this.normalWork();
   }
 
   private async refreshWork() {

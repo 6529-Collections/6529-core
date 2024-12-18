@@ -614,12 +614,12 @@ ipcMain.on("run-background", () => {
   }
 });
 
-ipcMain.on("quit", () => {
+ipcMain.on("quit", async () => {
   mainWindow?.webContents.removeAllListeners();
   mainWindow?.close();
   mainWindow?.destroy();
   mainWindow = null;
-  stopSchedulers(scheduledWorkers);
+  await stopSchedulers(scheduledWorkers);
   Logger.info("Quitting app\n---------- End of Session ----------\n\n");
   app.quit();
 });
