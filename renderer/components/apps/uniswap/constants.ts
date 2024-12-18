@@ -126,18 +126,30 @@ export type SupportedChainId = 1 | 11155111;
 
 export const CHAIN_ROUTER_ADDRESSES: Record<SupportedChainId, string> = {
   1: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD", // Mainnet Universal Router
-  11155111: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD", // Sepolia Universal Router
+  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E", // Sepolia Universal Router
 };
 
 export const TICK_LENS_ADDRESS: Record<SupportedChainId, string> = {
   1: "0xbfd8137f7d1516D3ea5cA83523914859ec47F573",
-  11155111: "0xA13E04fAEe08E784A44C27e9E77Ca7a02D45BFd7",
+  11155111: "",
 };
 
-export const SWAP_ROUTER_ADDRESS = "0xE592427A0AEce92De3Edee1F18E0157C05861564"; // Mainnet V3 SwapRouter
+export const SWAP_ROUTER_ADDRESS: Record<SupportedChainId, string> = {
+  1: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
+  11155111: "0x3bFA47769FB0eeeF4092A91052A61C0c6B2E68EF",
+};
 
-export const WETH_ADDRESS: { [chainId: number]: string } = {
-  1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2", // Mainnet
-  11155111: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // Sepolia
-  // Add other networks as needed
+export const UNIVERSAL_ROUTER_ADDRESS: Record<SupportedChainId, string> = {
+  1: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
+  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+};
+
+export const WETH_ADDRESS: Record<SupportedChainId, string> = {
+  1: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+  11155111: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14",
+};
+
+export const UNISWAP_V3_FACTORY_ADDRESS: Record<SupportedChainId, string> = {
+  1: "0x1F98431c8aD98523631AE4a59f267346ea31F984",
+  11155111: "0x0227628F3F023bb08980b67D528571c95c6DaC1c",
 };
