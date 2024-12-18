@@ -259,7 +259,7 @@ export function WorkerCard({
   const [showRecalculateOwnersConfirm, setShowRecalculateOwnersConfirm] =
     useState(false);
   const [showResetWorkerConfirm, setShowResetWorkerConfirm] = useState(false);
-  const [showRefreshNFTsConfirm, setShowRefreshNFTsConfirm] = useState(false);
+  const [showResetNFTsConfirm, setShowResetNFTsConfirm] = useState(false);
   const [showRunNowConfirm, setShowRunNowConfirm] = useState(false);
   const [showStopWorkerConfirm, setShowStopWorkerConfirm] = useState(false);
   const { showToast } = useToast();
@@ -299,7 +299,7 @@ export function WorkerCard({
       })
       .finally(() => {
         setShowResetWorkerConfirm(false);
-        setShowRefreshNFTsConfirm(false);
+        setShowResetNFTsConfirm(false);
       });
   };
 
@@ -385,14 +385,12 @@ export function WorkerCard({
                   }
                   onClick={() => {
                     if (task.namespace === ScheduledWorkerNames.NFTS_WORKER) {
-                      setShowRefreshNFTsConfirm(true);
+                      setShowResetNFTsConfirm(true);
                     } else {
                       setShowResetWorkerConfirm(true);
                     }
                   }}>
-                  {task.namespace === ScheduledWorkerNames.NFTS_WORKER
-                    ? "Refresh All NFTs"
-                    : "Reset"}
+                  Reset
                 </Button>
               )}
             {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
@@ -521,11 +519,11 @@ export function WorkerCard({
         message={`Reset all data to the start block. This will delete all transactions from the database. Subsequent sync processes will start syncing from the beginning.`}
       />
       <Confirm
-        show={showRefreshNFTsConfirm}
-        onHide={() => setShowRefreshNFTsConfirm(false)}
+        show={showResetNFTsConfirm}
+        onHide={() => setShowResetNFTsConfirm(false)}
         onConfirm={triggerResetWorker}
-        title="Refresh All NFTs"
-        message={`This will iterate through all NFTs in your database and refresh their data from the blockchain.`}
+        title="Reset All NFTs"
+        message={`This will delete all NFTs in your database and start syncing from the beginning.`}
       />
       <Confirm
         show={showRunNowConfirm}

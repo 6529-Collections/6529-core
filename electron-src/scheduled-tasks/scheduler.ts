@@ -142,9 +142,9 @@ export function startSchedulers(
   return scheduledWorkers;
 }
 
-export function stopSchedulers(scheduledWorkers: ScheduledWorker[]) {
+export async function stopSchedulers(scheduledWorkers: ScheduledWorker[]) {
   for (const scheduledWorker of scheduledWorkers) {
-    scheduledWorker.terminate();
+    await scheduledWorker.terminate();
   }
   Logger.log("All Scheduled Tasks stopped.");
 }
