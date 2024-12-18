@@ -42,6 +42,53 @@ function LoadingSpinner() {
   return <div className={styles.loadingSpinner} />;
 }
 
+// Add new swap status type
+interface SwapStatus {
+  stage: "idle" | "approving" | "swapping" | "confirming";
+  loading: boolean;
+  error: string | null;
+  hash?: `0x${string}`;
+}
+
+// Add these helper functions before the UniswapApp component
+
+async function checkApprovalNeeded(
+  token: Token,
+  amount: string,
+  chainId: number,
+  address: string,
+  publicClient: any
+): Promise<boolean> {
+  if (token.symbol === "ETH") return false;
+
+  const provider = new ethers.providers.Web3Provider(publicClient.transport);
+  const tokenContract = new ethers.Contract(token.address, ERC20_ABI, provider);
+  const routerAddress = CHAIN_ROUTER_ADDRESSES[chainId as SupportedChainId];
+
+  const allowance = await tokenContract.allowance(address, routerAddress);
+  const inputAmountWei = parseUnits(amount, token.decimals);
+
+  return allowance.lt(inputAmountWei);
+}
+
+async function handleTokenApproval(
+  token: Token,
+  amount: string,
+  chainId: number,
+  publicClient: any
+): Promise<void> {
+  const provider = new ethers.providers.Web3Provider(publicClient.transport);
+  const signer = provider.getSigner();
+  const tokenContract = new ethers.Contract(token.address, ERC20_ABI, signer);
+  const routerAddress = CHAIN_ROUTER_ADDRESSES[chainId as SupportedChainId];
+
+  const tx = await tokenContract.approve(
+    routerAddress,
+    ethers.constants.MaxUint256
+  );
+  await tx.wait();
+}
+
 export default function UniswapApp() {
   const { address, chain } = useAccount();
   const publicClient = usePublicClient();
@@ -253,72 +300,87 @@ export default function UniswapApp() {
 
     if (!address || !outputAmount || !chain || !inputAmount || !publicClient) {
       setSwapStatus({
+        stage: "idle",
         loading: false,
         error: "Missing required connection details",
       });
       return;
     }
 
-    setSwapStatus({ loading: true, error: null });
+    setSwapStatus({
+      stage: "approving",
+      loading: true,
+      error: null,
+    });
 
     try {
-      // Check allowance for non-ETH tokens
+      // Handle token approval if needed
       if (selectedPair.inputToken.symbol !== "ETH") {
-        const provider = new ethers.providers.Web3Provider(
-          publicClient.transport
-        );
-        const tokenContract = new ethers.Contract(
-          selectedPair.inputToken.address,
-          ERC20_ABI,
-          provider.getSigner()
-        );
-
-        const routerAddress =
-          CHAIN_ROUTER_ADDRESSES[chain.id as SupportedChainId];
-        const allowance = await tokenContract.allowance(address, routerAddress);
-        const inputAmountWei = parseUnits(
+        const approvalNeeded = await checkApprovalNeeded(
+          selectedPair.inputToken,
           inputAmount,
-          selectedPair.inputToken.decimals
+          chain.id,
+          address,
+          publicClient
         );
 
-        if (allowance.lt(inputAmountWei)) {
-          const approveTx = await tokenContract.approve(
-            routerAddress,
-            ethers.constants.MaxUint256
+        if (approvalNeeded) {
+          await handleTokenApproval(
+            selectedPair.inputToken,
+            inputAmount,
+            chain.id,
+            publicClient
           );
-          await approveTx.wait();
         }
       }
 
-      // Execute swap
-      const hash = await executeSwap(selectedPair, inputAmount);
-      setSwapStatus((prev) => ({ ...prev, hash }));
+      setSwapStatus({
+        stage: "swapping",
+        loading: true,
+        error: null,
+      });
 
-      try {
-        // Wait for transaction confirmation
-        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+      // Execute swap
+      const result = await executeSwap(selectedPair, inputAmount);
+
+      if (result.status === "error") {
+        throw new Error(result.error);
+      }
+
+      setSwapStatus({
+        stage: "confirming",
+        loading: true,
+        error: null,
+        hash: result.hash,
+      });
+
+      // Wait for confirmation
+      if (result.hash) {
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash: result.hash,
+        });
 
         if (receipt.status === "success") {
           // Reset form and fetch new balances
           setInputAmount("");
           setOutputAmount("");
           await fetchBalances();
-          setSwapStatus({ loading: false, error: null });
+
+          setSwapStatus({
+            stage: "idle",
+            loading: false,
+            error: null,
+          });
         } else {
           throw new Error("Transaction failed");
         }
-      } catch (confirmError: any) {
-        console.error("Transaction confirmation error:", confirmError);
-        setSwapStatus({
-          loading: false,
-          error: "Failed to confirm transaction. Please check your wallet.",
-        });
       }
-    } catch (err: any) {
-      console.error("Error executing swap:", err);
+    } catch (error: any) {
+      console.error("Swap failed:", error);
       setSwapStatus({
+        stage: "idle",
         loading: false,
-        error: err.message || "Failed to execute swap",
+        error: error.message || "Failed to execute swap",
       });
     }
   }
@@ -466,11 +528,8 @@ export default function UniswapApp() {
   const [inputFocused, setInputFocused] = useState(false);
   const [outputFocused, setOutputFocused] = useState(false);
 
-  const [swapStatus, setSwapStatus] = useState<{
-    loading: boolean;
-    error: string | null;
-    hash?: `0x${string}`;
-  }>({
+  const [swapStatus, setSwapStatus] = useState<SwapStatus>({
+    stage: "idle",
     loading: false,
     error: null,
   });
@@ -607,11 +666,13 @@ export default function UniswapApp() {
 
                 <SwapButton
                   disabled={
-                    !outputAmount || swapLoading || !inputAmount || !address
+                    !outputAmount ||
+                    swapStatus.loading ||
+                    !inputAmount ||
+                    !address
                   }
-                  loading={swapLoading}
+                  status={swapStatus}
                   onClick={handleSwap}
-                  error={swapError}
                   inputAmount={inputAmount}
                   outputAmount={outputAmount}
                 />
