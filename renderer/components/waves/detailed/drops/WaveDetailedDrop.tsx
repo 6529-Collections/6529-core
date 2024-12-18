@@ -235,7 +235,8 @@ const WaveDetailedDrop = ({
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchMove}>
         {drop.reply_to &&
-          drop.reply_to.drop_id !== previousDrop?.reply_to?.drop_id &&
+          (drop.reply_to.drop_id !== previousDrop?.reply_to?.drop_id ||
+            drop.author.handle !== previousDrop?.author.handle) &&
           drop.reply_to.drop_id !== dropViewDropId && (
             <WaveDetailedDropReply
               onReplyClick={onReplyClick}
