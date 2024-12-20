@@ -78,6 +78,7 @@ import {
 } from "./scheduled-tasks/scheduled-worker";
 import { RPCProvider } from "./db/entities/IRpcProvider";
 import { Tail } from "tail";
+import IPFSServer from "./ipfs/ipfs.server";
 
 contextMenu({
   showInspectElement: false,
@@ -97,7 +98,12 @@ let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
 let splash: BrowserWindow | null = null;
 let iconPath: string;
+
 let PORT: number;
+
+let IPFS_PORT: number;
+let IPFS_RPC_PORT: number;
+let IPFS_SERVER: IPFSServer;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
@@ -109,7 +115,7 @@ interface TailInstances {
 
 const tails: TailInstances = {};
 
-async function resolvePort() {
+async function resolvePorts() {
   if (!PORT) {
     PORT = await getPort({
       random: true,
@@ -117,6 +123,22 @@ async function resolvePort() {
       portRange: [3000, 8000],
     });
     Logger.info("PORT:", PORT);
+  }
+  if (!IPFS_PORT) {
+    IPFS_PORT = await getPort({
+      random: true,
+      port: 9255,
+      portRange: [3000, 8000],
+    });
+    Logger.info("IPFS_PORT:", IPFS_PORT);
+  }
+  if (!IPFS_RPC_PORT) {
+    IPFS_RPC_PORT = await getPort({
+      random: true,
+      port: 9256,
+      portRange: [3000, 8000],
+    });
+    Logger.info("IPFS_RPC_PORT:", IPFS_RPC_PORT);
   }
 }
 
@@ -216,12 +238,19 @@ if (!gotTheLock) {
       app.dock.setIcon(iconPath);
     }
 
-    await resolvePort();
+    await resolvePorts();
 
     await prepareNext(PORT);
     await initLogs();
     await initDb();
     initStore();
+
+    IPFS_SERVER = new IPFSServer(IPFS_PORT, IPFS_RPC_PORT);
+    await IPFS_SERVER.init(PORT);
+    // const addFileResult = await IPFS_SERVER.addFile(
+    //   "/Users/ppan/Downloads/lala.csv"
+    // );
+    // console.log("addFileResult", addFileResult);
 
     await createWindow();
 
@@ -620,6 +649,7 @@ ipcMain.on("quit", async () => {
   mainWindow?.destroy();
   mainWindow = null;
   await stopSchedulers(scheduledWorkers);
+  await IPFS_SERVER.shutdown();
   Logger.info("Quitting app\n---------- End of Session ----------\n\n");
   app.quit();
 });
@@ -674,6 +704,13 @@ ipcMain.handle("get-info", () => {
   return {
     ...getInfo(),
     port: PORT,
+  };
+});
+
+ipcMain.handle("get-ipfs-info", () => {
+  return {
+    ipfsPort: IPFS_PORT,
+    rpcPort: IPFS_RPC_PORT,
   };
 });
 

@@ -16,7 +16,11 @@ import { SEIZE_API_URL } from "../../../constants";
 import TitleBar from "./titlebar/TitleBar";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
-import { faBars, faChevronRight } from "@fortawesome/free-solid-svg-icons";
+import {
+  faBars,
+  faChevronRight,
+  faExternalLinkAlt,
+} from "@fortawesome/free-solid-svg-icons";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 import HeaderQR from "./qr/HeaderQR";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
@@ -31,8 +35,9 @@ interface Props {
 
 export interface HeaderLink {
   readonly name: string;
-  readonly path: `/${string}`;
+  readonly path: string;
   readonly isNew?: boolean;
+  readonly isExternal?: boolean;
 }
 
 export default function Header(props: Readonly<Props>) {
@@ -55,17 +60,16 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuTools, setShowBurgerMenuTools] = useState(false);
   const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
 
-  let logoSrc: string = "/6529.png";
-  let logoWidth: number = 60;
-  let logoHeight: number = 60;
-  if (capacitor.isCapacitor) {
-    logoWidth = 40;
-    logoHeight = 40;
-  }
-  if (isMobile) {
-    logoWidth = 50;
-    logoHeight = 50;
-  }
+  const [ipfsInfo, setIpfsInfo] = useState({
+    ipfsPort: 0,
+    rpcPort: 0,
+  });
+
+  useEffect(() => {
+    window.api.getIpfsInfo().then((info) => {
+      setIpfsInfo(info);
+    });
+  }, []);
 
   useEffect(() => {
     function handleResize() {
@@ -306,6 +310,24 @@ export default function Header(props: Readonly<Props>) {
                   <Col>
                     <Link href="/core/tdh-calculation">
                       <h3>TDH Calculation</h3>
+                    </Link>
+                  </Col>
+                </Row>
+                <Row>
+                  <Col xs={{ span: 6, offset: 3 }}>
+                    <hr />
+                  </Col>
+                </Row>
+                <Row className="pt-3">
+                  <Col>
+                    <Link
+                      href={`http://127.0.0.1:${ipfsInfo.rpcPort}/webui`}
+                      target="_blank"
+                      rel="noopener noreferrer">
+                      <h3>
+                        My IPFS
+                        <FontAwesomeIcon icon={faExternalLinkAlt} />
+                      </h3>
                     </Link>
                   </Col>
                 </Row>
@@ -666,6 +688,14 @@ export default function Header(props: Readonly<Props>) {
                                 link={{
                                   name: "TDH Calculation",
                                   path: "/core/tdh-calculation",
+                                }}
+                              />
+                              <NavDropdown.Divider />
+                              <HeaderDesktopLink
+                                link={{
+                                  name: "My IPFS",
+                                  path: `http://127.0.0.1:${ipfsInfo.rpcPort}/webui`,
+                                  isExternal: true,
                                 }}
                               />
                               <NavDropdown.Divider />

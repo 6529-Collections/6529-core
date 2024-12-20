@@ -39,6 +39,13 @@
     "icon": "assets/icon.icns",
     "hardenedRuntime": true,
     "notarize": false,
+    "extraResources": [
+      {
+        "from": "ipfs-binaries/darwin/${arch}",
+        "to": "ipfs-binaries",
+        "filter": ["**/*"]
+      }
+    ],
     "target": [
       {
         "target": "dmg",
