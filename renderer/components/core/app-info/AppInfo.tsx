@@ -36,7 +36,6 @@ export default function AppInfo() {
   const [updateError, setUpdateError] = useState<any>();
 
   const [mainTask, setMainTask] = useState<Task>();
-  const [homeDir, setHomeDir] = useState<string>("");
 
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
@@ -46,7 +45,6 @@ export default function AppInfo() {
 
   const fetchMainWorker = () => {
     window.api.getMainWorker().then(({ homeDir, mainTask }) => {
-      setHomeDir(homeDir);
       setMainTask(mainTask);
     });
   };

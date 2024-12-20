@@ -72,6 +72,7 @@ type AuthContextType = {
 export const WAVES_MIN_ACCESS_LEVEL = 10;
 const DEFAULT_TITLE = "6529 SEIZE";
 
+
 export const AuthContext = createContext<AuthContextType>({
   connectedProfile: null,
   receivedProfileProxies: [],
