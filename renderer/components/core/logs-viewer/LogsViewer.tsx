@@ -69,7 +69,7 @@ export default function LogsViewer({
   };
 
   useEffect(() => {
-    if (selectedAccordionKey === extraActions?.length.toString()) {
+    if (selectedAccordionKey === (extraActions?.length ?? 0).toString()) {
       setIsLogsOpen(true);
     } else {
       setIsLogsOpen(false);
@@ -91,8 +91,10 @@ export default function LogsViewer({
         ))}
         <LogsViewerToggle
           width={width}
-          eventKey={extraActions?.length.toString() ?? "0"}
-          isOpen={selectedAccordionKey === extraActions?.length.toString()}>
+          eventKey={(extraActions?.length ?? 0).toString()}
+          isOpen={
+            selectedAccordionKey === (extraActions?.length ?? 0).toString()
+          }>
           <b>{name ?? "Logs"}</b>
         </LogsViewerToggle>
         {isLogsOpen && (
@@ -114,7 +116,7 @@ export default function LogsViewer({
           <div>{action.content}</div>
         </Accordion.Collapse>
       ))}
-      <Accordion.Collapse eventKey={extraActions?.length.toString() ?? "0"}>
+      <Accordion.Collapse eventKey={(extraActions?.length ?? 0).toString()}>
         <LogsViewerInternal
           filePath={filePath}
           height={height}
