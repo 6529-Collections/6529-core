@@ -2,89 +2,28 @@ import { useCallback } from "react";
 import { ethers } from "ethersv5";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import {
-  Token as SDKToken,
-  Percent,
   CurrencyAmount,
+  Percent,
+  Token as SDKToken,
   TradeType,
 } from "@uniswap/sdk-core";
-import { Pool, SwapRouter, Trade, Route } from "@uniswap/v3-sdk";
-import { TokenPair, toSDKToken } from "../types";
+import { SwapRouter, Pool, Trade, Route, SwapQuoter } from "@uniswap/v3-sdk";
+import { TokenPair, Token } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
 import {
-  CHAIN_ROUTER_ADDRESSES,
-  ensureChecksum,
-  type SupportedChainId,
+  QUOTER_CONTRACT_ADDRESS,
+  SWAP_ROUTER_ADDRESS,
+  SupportedChainId,
 } from "../constants";
+import { toSDKToken } from "../types";
 
-function calculateGasWithBuffer(gas: bigint, bufferPercent: number): bigint {
-  return (gas * BigInt(100 + bufferPercent)) / BigInt(100);
+interface SwapResult {
+  status: "pending" | "error";
+  hash?: `0x${string}`;
+  error?: string;
 }
 
-// Update WETH9 constant to ensure addresses are checksummed
-const WETH9 = {
-  [1]: "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
-  [11155111]: "0xfFf9976782d46CC05630D1f6eBAb18b2324d6B14", // Sepolia WETH
-} as const;
-
-// Add this helper to decode router errors
-const decodeRouterError = async (
-  error: any,
-  provider: ethers.providers.Web3Provider,
-  routerAddress: string,
-  calldata: string,
-  value: bigint
-) => {
-  console.log("\n=== Router Error Debug ===");
-  console.log("Router Address:", routerAddress);
-  console.log("Calldata:", calldata);
-  console.log("Value:", value.toString());
-
-  try {
-    // Try to simulate the transaction to get more details
-    await provider.call({
-      to: routerAddress,
-      data: calldata,
-      value: value.toString(),
-    });
-  } catch (simulationError: any) {
-    console.log("\nTransaction Simulation Error:");
-    console.log("Error Data:", simulationError.data);
-
-    // Try to decode the revert reason
-    if (simulationError.data) {
-      try {
-        const decodedError = ethers.utils.toUtf8String(
-          "0x" + simulationError.data.slice(138)
-        );
-        console.log("Decoded Error:", decodedError);
-      } catch (e) {
-        console.log("Could not decode error data");
-      }
-    }
-  }
-};
-
-// Enhance the debug swap params function
-const debugSwapParams = async (
-  pool: Pool,
-  trade: Trade<SDKToken, SDKToken, TradeType>,
-  provider: ethers.providers.Web3Provider,
-  poolAddress: string
-) => {
-  const poolContract = new ethers.Contract(
-    poolAddress,
-    UNISWAP_V3_POOL_ABI,
-    provider
-  );
-
-  console.log("\n=== Swap Debug Info ===");
-  console.log("Pool Address:", poolAddress);
-  console.log("Pool Fee:", pool.fee);
-  console.log("Pool Liquidity:", pool.liquidity.toString());
-  console.log("Pool Tick:", pool.tickCurrent);
-  console.log("Pool SqrtPrice:", pool.sqrtRatioX96.toString());
-
-  // Get current pool state
+async function getPoolInfo(poolContract: ethers.Contract) {
   const [slot0, liquidity, token0, token1] = await Promise.all([
     poolContract.slot0(),
     poolContract.liquidity(),
@@ -92,228 +31,40 @@ const debugSwapParams = async (
     poolContract.token1(),
   ]);
 
-  console.log("\nPool Token Info:");
-  console.log("Token0:", token0);
-  console.log("Token1:", token1);
-
-  console.log("\nCurrent Pool State:");
-  console.log("- Current Liquidity:", liquidity.toString());
-  console.log("- Current Tick:", slot0.tick);
-  console.log("- Current SqrtPrice:", slot0.sqrtPriceX96.toString());
-
-  console.log("\nTrade Info:");
-  console.log("Input Token:", trade.inputAmount.currency.address);
-  console.log("Output Token:", trade.outputAmount.currency.address);
-  console.log("Input Amount:", trade.inputAmount.toSignificant(6));
-  console.log("Output Amount:", trade.outputAmount.toSignificant(6));
-  console.log("Execution Price:", trade.executionPrice.toSignificant(6));
-  console.log("Price Impact:", trade.priceImpact.toSignificant(2), "%");
-
-  // Add route info
-  console.log("\nRoute Info:");
-  trade.route.pools.forEach((pool, index) => {
-    console.log(`Pool ${index + 1}:`);
-    console.log("- Token0:", pool.token0.address);
-    console.log("- Token1:", pool.token1.address);
-    console.log("- Fee:", pool.fee);
-  });
-};
-
-// Add this helper to convert values to bigint
-const toBigInt = (value: string | ethers.BigNumber | number): bigint => {
-  if (typeof value === "string") {
-    return BigInt(value);
-  }
-  if (typeof value === "number") {
-    return BigInt(value);
-  }
-  return BigInt(value.toString());
-};
-
-// Add this helper function to create a tick data provider
-const createTickDataProvider = (
-  poolContract: ethers.Contract,
-  tickSpacing: number
-) => {
   return {
-    async getTick(tick: number) {
-      try {
-        const { liquidityNet } = await poolContract.ticks(tick);
-        return {
-          liquidityNet: liquidityNet.toString(),
-          liquidityGross: "0", // Not needed for basic swaps
-        };
-      } catch (error) {
-        console.warn(`Failed to get tick ${tick}:`, error);
-        return {
-          liquidityNet: "0",
-          liquidityGross: "0",
-        };
-      }
-    },
-
-    async nextInitializedTickWithinOneWord(
-      tick: number,
-      lte: boolean,
-      tickSpacing: number
-    ): Promise<[number, boolean]> {
-      try {
-        // Align tick on spacing
-        const compressed = Math.floor(tick / tickSpacing);
-        const next = lte
-          ? compressed * tickSpacing
-          : (compressed + 1) * tickSpacing;
-
-        // Check if this tick is initialized
-        const { liquidityNet } = await poolContract.ticks(next);
-        const initialized = !liquidityNet.isZero();
-
-        return [next, initialized];
-      } catch (error) {
-        console.warn(`Failed to get next tick for ${tick}:`, error);
-        return [tick + (lte ? -tickSpacing : tickSpacing), false];
-      }
-    },
+    liquidity: liquidity.toString(),
+    sqrtPriceX96: slot0.sqrtPriceX96.toString(),
+    tick: slot0.tick,
+    token0,
+    token1,
   };
-};
+}
 
-// Update WETH ABI to include interface
-const WETH_INTERFACE = new ethers.utils.Interface([
-  "function deposit() payable",
-  "function withdraw(uint256) public",
-  "function approve(address, uint256) public returns (bool)",
-]);
+async function getTokenTransferApproval(
+  token: Token,
+  amount: string,
+  spender: string,
+  provider: ethers.providers.Web3Provider
+) {
+  if (token.symbol === "ETH") return true;
 
-// Add this helper function at the top
-const getMaxGasPrice = async (publicClient: any) => {
-  const feeData = await publicClient.getFeeHistory({
-    blockCount: 4,
-    rewardPercentiles: [75],
-  });
-
-  // Use the max gas price from recent blocks with a buffer
-  const maxGasPrice = Math.max(
-    ...feeData.baseFeePerGas.map((fee: any) => Number(fee))
+  const tokenContract = new ethers.Contract(
+    token.address,
+    ["function approve(address spender, uint256 amount) returns (bool)"],
+    provider.getSigner()
   );
-  return BigInt(Math.floor(maxGasPrice * 1.5)); // 50% buffer
-};
 
-interface SwapResult {
-  status: "pending" | "success" | "error";
-  hash?: `0x${string}`;
-  error?: string;
-}
-
-// Add these helper functions before the useUniswapSwap hook
-
-async function getPoolInstance(
-  pair: TokenPair,
-  provider: ethers.providers.Provider,
-  chainId: number
-): Promise<Pool | null> {
   try {
-    const poolContract = new ethers.Contract(
-      pair.poolAddress,
-      UNISWAP_V3_POOL_ABI,
-      provider
+    const transaction = await tokenContract.approve(
+      spender,
+      ethers.constants.MaxUint256
     );
-
-    const [slot0, liquidity] = await Promise.all([
-      poolContract.slot0(),
-      poolContract.liquidity(),
-    ]);
-
-    const token0 = toSDKToken(pair.inputToken, chainId);
-    const token1 = toSDKToken(pair.outputToken, chainId);
-
-    return new Pool(
-      token0,
-      token1,
-      pair.fee,
-      slot0.sqrtPriceX96.toString(),
-      liquidity.toString(),
-      slot0.tick
-    );
-  } catch (error) {
-    console.error("Failed to get pool instance:", error);
-    return null;
+    await transaction.wait();
+    return true;
+  } catch (e) {
+    console.error("Error getting token transfer approval:", e);
+    return false;
   }
-}
-
-async function createAndValidateTrade(
-  pool: Pool,
-  pair: TokenPair,
-  parsedAmount: ethers.BigNumber,
-  chainId: number,
-  isInputETH: boolean,
-  isOutputETH: boolean
-): Promise<{
-  success: boolean;
-  data?: Trade<SDKToken, SDKToken, TradeType>;
-  error?: string;
-}> {
-  try {
-    const inputToken = toSDKToken(pair.inputToken, chainId);
-    const outputToken = toSDKToken(pair.outputToken, chainId);
-
-    const inputAmount = CurrencyAmount.fromRawAmount(
-      inputToken,
-      parsedAmount.toString()
-    );
-
-    const route = new Route([pool], inputToken, outputToken);
-
-    // Calculate the output amount using the route
-    const outputAmount = await pool.getOutputAmount(inputAmount);
-
-    // Create the trade with both input and output amounts
-    const trade = Trade.createUncheckedTrade({
-      route,
-      inputAmount,
-      outputAmount: outputAmount[0],
-      tradeType: TradeType.EXACT_INPUT,
-    });
-
-    return { success: true, data: trade };
-  } catch (error: any) {
-    return { success: false, error: error.message };
-  }
-}
-
-async function calculateGasLimit(
-  routerAddress: string,
-  swapParams: { calldata: string; value: string },
-  publicClient: any,
-  address: string
-): Promise<bigint> {
-  const gasEstimate = await publicClient.estimateGas({
-    account: address,
-    to: routerAddress,
-    data: swapParams.calldata as `0x${string}`,
-    value: BigInt(swapParams.value),
-  });
-
-  return calculateGasWithBuffer(gasEstimate, 20); // Add 20% buffer
-}
-
-async function approveToken(
-  tokenAddress: string,
-  amount: ethers.BigNumber,
-  chainId: number,
-  walletClient: any,
-  address: string
-): Promise<`0x${string}`> {
-  const routerAddress = CHAIN_ROUTER_ADDRESSES[chainId as SupportedChainId];
-
-  const approveData = new ethers.utils.Interface([
-    "function approve(address spender, uint256 amount) public returns (bool)",
-  ]).encodeFunctionData("approve", [routerAddress, amount.toString()]);
-
-  return await walletClient.sendTransaction({
-    to: tokenAddress as `0x${string}`,
-    data: approveData as `0x${string}`,
-    account: address,
-  });
 }
 
 export function useUniswapSwap() {
@@ -325,7 +76,7 @@ export function useUniswapSwap() {
     async (
       pair: TokenPair,
       inputAmount: string,
-      slippageTolerance: Percent = new Percent(50, 10_000) // 0.5% default slippage
+      slippageTolerance: Percent = new Percent(50, 10_000)
     ): Promise<SwapResult> => {
       if (!address || !chain?.id || !walletClient || !publicClient) {
         return {
@@ -334,85 +85,224 @@ export function useUniswapSwap() {
         };
       }
 
-      const provider = new ethers.providers.Web3Provider(
-        publicClient.transport
-      );
-
       try {
+        console.log("Starting swap execution with params:", {
+          pair,
+          inputAmount,
+          slippageTolerance: slippageTolerance.toFixed(),
+          chainId: chain.id,
+          userAddress: address,
+        });
+
+        // 1. Create provider and pool contract
+        const provider = new ethers.providers.Web3Provider(
+          publicClient.transport
+        );
+        const poolContract = new ethers.Contract(
+          pair.poolAddress,
+          UNISWAP_V3_POOL_ABI,
+          provider
+        );
+
+        // 2. Get pool information
+        console.log("Fetching pool info from:", pair.poolAddress);
+        const poolInfo = await getPoolInfo(poolContract);
+        console.log("Pool info:", poolInfo);
+
+        // 3. Create SDK tokens and ensure correct ordering
+        const [token0, token1] = [
+          poolInfo.token0.toLowerCase() ===
+          pair.inputToken.address.toLowerCase()
+            ? toSDKToken(pair.inputToken, chain.id)
+            : toSDKToken(pair.outputToken, chain.id),
+          poolInfo.token0.toLowerCase() ===
+          pair.inputToken.address.toLowerCase()
+            ? toSDKToken(pair.outputToken, chain.id)
+            : toSDKToken(pair.inputToken, chain.id),
+        ];
+
+        console.log("SDK Tokens created:", {
+          token0: {
+            symbol: token0.symbol,
+            address: token0.address,
+            decimals: token0.decimals,
+          },
+          token1: {
+            symbol: token1.symbol,
+            address: token1.address,
+            decimals: token1.decimals,
+          },
+        });
+
+        // 4. Create Pool instance with correctly ordered tokens
+        const pool = new Pool(
+          token0,
+          token1,
+          pair.fee,
+          poolInfo.sqrtPriceX96,
+          poolInfo.liquidity,
+          poolInfo.tick
+        );
+        console.log("Pool instance created:", {
+          fee: pair.fee,
+          liquidity: poolInfo.liquidity,
+          tick: poolInfo.tick,
+        });
+
+        // 5. Create Route
+        const route = new Route([pool], token0, token1);
+        try {
+          const midPrice = route.midPrice;
+          console.log("Route created:", {
+            path: route.tokenPath.map((t) => t.symbol),
+            midPrice: {
+              adjusted: midPrice.toSignificant(6),
+              numerator: midPrice.numerator.toString(),
+              denominator: midPrice.denominator.toString(),
+              quote: `1 ${route.input.symbol} = ${midPrice.toSignificant(6)} ${
+                route.output.symbol
+              }`,
+            },
+          });
+        } catch (error) {
+          console.error("Error logging route price:", error);
+        }
+
+        // 6. Get quote for the swap
         const parsedAmount = ethers.utils.parseUnits(
           inputAmount,
           pair.inputToken.decimals
         );
+        console.log("Parsed input amount:", parsedAmount.toString());
 
-        const isInputETH = pair.inputToken.symbol === "ETH";
-        const isOutputETH = pair.outputToken.symbol === "ETH";
+        // Create input amount using the correct token (token0)
+        const inputCurrencyAmount = CurrencyAmount.fromRawAmount(
+          poolInfo.token0.toLowerCase() ===
+            pair.inputToken.address.toLowerCase()
+            ? token0
+            : token1,
+          parsedAmount.toString()
+        );
 
-        // Handle ETH wrapping if needed
-        if (isInputETH) {
-          const wrapResult = await handleETHWrapping(
-            parsedAmount,
-            chain.id,
-            address,
-            publicClient,
-            walletClient
+        console.log("Input currency amount:", {
+          raw: inputCurrencyAmount.quotient.toString(),
+          formatted: inputCurrencyAmount.toExact(),
+        });
+
+        // Get quote using SwapQuoter
+        console.log(
+          "Getting quote from Quoter contract:",
+          QUOTER_CONTRACT_ADDRESS
+        );
+
+        // Create quote parameters with the correct token order
+        const { calldata: quoteCalldata } = SwapQuoter.quoteCallParameters(
+          route,
+          inputCurrencyAmount,
+          TradeType.EXACT_INPUT,
+          {
+            useQuoterV2: true,
+          }
+        );
+
+        // Call quoter contract
+        console.log("Calling Quoter contract...");
+        const quoteCallReturnData = await provider.call({
+          to: QUOTER_CONTRACT_ADDRESS,
+          data: quoteCalldata,
+        });
+        console.log("Quote return data:", quoteCallReturnData);
+
+        // Decode the quote
+        console.log("Decoding quote response...");
+        const [amountOut] = ethers.utils.defaultAbiCoder.decode(
+          ["uint256"],
+          quoteCallReturnData
+        );
+        console.log("Decoded amount out:", {
+          raw: amountOut.toString(),
+          formatted: ethers.utils.formatUnits(
+            amountOut,
+            pair.outputToken.decimals
+          ),
+        });
+
+        // 7. Create unchecked trade
+        const trade = Trade.createUncheckedTrade({
+          route,
+          inputAmount: CurrencyAmount.fromRawAmount(
+            route.input,
+            parsedAmount.toString()
+          ),
+          outputAmount: CurrencyAmount.fromRawAmount(
+            route.output,
+            amountOut.toString()
+          ),
+          tradeType: TradeType.EXACT_INPUT,
+        });
+        console.log("Trade created:", {
+          route: {
+            input: route.input.symbol,
+            output: route.output.symbol,
+          },
+          amounts: {
+            input: trade.inputAmount.toSignificant(6),
+            output: trade.outputAmount.toSignificant(6),
+          },
+          executionPrice: trade.executionPrice.toSignificant(6),
+          priceImpact: trade.priceImpact.toSignificant(2),
+        });
+
+        // 8. Get token approval if needed
+        const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
+        if (pair.inputToken.symbol !== "ETH") {
+          const approved = await getTokenTransferApproval(
+            pair.inputToken,
+            inputAmount,
+            routerAddress,
+            provider
           );
 
-          if (!wrapResult.success) {
-            return {
-              status: "error",
-              error: wrapResult.error,
-            };
+          if (!approved) {
+            throw new Error("Failed to approve token transfer");
           }
         }
 
-        // Get pool instance
-        const pool = await getPoolInstance(pair, provider, chain.id);
-        if (!pool) {
-          return {
-            status: "error",
-            error: "Failed to get pool instance",
-          };
-        }
-
-        // Create and validate trade
-        const trade = await createAndValidateTrade(
-          pool,
-          pair,
-          parsedAmount,
-          chain.id,
-          isInputETH,
-          isOutputETH
-        );
-
-        if (!trade.success || !trade.data) {
-          return {
-            status: "error",
-            error: trade.error || "Failed to create trade",
-          };
-        }
-
-        // Get swap parameters
-        const swapParams = SwapRouter.swapCallParameters(trade.data, {
+        // 9. Set swap options
+        const swapOptions = {
           slippageTolerance,
+          deadline: Math.floor(Date.now() / 1000) + 60 * 20,
           recipient: address,
-          deadline: Math.floor(Date.now() / 1000) + 1800, // 30 min deadline
+        };
+
+        // 10. Generate swap parameters
+        const swapParams = SwapRouter.swapCallParameters(trade, swapOptions);
+
+        // 11. Prepare transaction
+        const value =
+          pair.inputToken.symbol === "ETH"
+            ? ethers.utils
+                .parseUnits(inputAmount, pair.inputToken.decimals)
+                .toString()
+            : "0";
+
+        // 12. Estimate gas with buffer
+        const gasEstimate = await publicClient.estimateGas({
+          account: address,
+          to: routerAddress as `0x${string}`,
+          data: swapParams.calldata as `0x${string}`,
+          value: BigInt(value),
         });
 
-        // Execute the swap
-        const routerAddress = ensureChecksum(
-          CHAIN_ROUTER_ADDRESSES[chain.id as SupportedChainId]
-        ) as `0x${string}`;
+        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100); // 20% buffer
 
+        // 13. Send transaction
         const hash = await walletClient.sendTransaction({
-          to: routerAddress,
+          to: routerAddress as `0x${string}`,
           data: swapParams.calldata as `0x${string}`,
-          value: BigInt(swapParams.value),
-          gas: await calculateGasLimit(
-            routerAddress,
-            swapParams,
-            publicClient,
-            address
-          ),
+          value: BigInt(value),
+          gas: gasLimit,
+          account: address,
         });
 
         return {
@@ -420,7 +310,13 @@ export function useUniswapSwap() {
           hash,
         };
       } catch (error: any) {
-        console.error("Swap execution error:", error);
+        console.error("Swap Execution Error:", {
+          error,
+          message: error.message,
+          code: error.code,
+          data: error.data,
+          stack: error.stack,
+        });
         return {
           status: "error",
           error: error.message || "Failed to execute swap",
@@ -432,54 +328,3 @@ export function useUniswapSwap() {
 
   return { executeSwap };
 }
-
-// Helper functions
-async function handleETHWrapping(
-  amount: ethers.BigNumber,
-  chainId: number,
-  address: string,
-  publicClient: any,
-  walletClient: any
-) {
-  try {
-    const wethAddress = WETH9[chainId as keyof typeof WETH9];
-    const depositCalldata = WETH_INTERFACE.encodeFunctionData("deposit");
-
-    // Estimate gas with buffer
-    const gasEstimate = await publicClient.estimateGas({
-      account: address,
-      to: wethAddress as `0x${string}`,
-      data: depositCalldata as `0x${string}`,
-      value: BigInt(amount.toString()),
-    });
-
-    const wrapTxHash = await walletClient.sendTransaction({
-      to: wethAddress as `0x${string}`,
-      data: depositCalldata as `0x${string}`,
-      value: BigInt(amount.toString()),
-      gas: calculateGasWithBuffer(gasEstimate, 20),
-    });
-
-    await publicClient.waitForTransactionReceipt({ hash: wrapTxHash });
-
-    // Approve WETH spending
-    const approveHash = await approveToken(
-      wethAddress,
-      amount,
-      chainId,
-      walletClient,
-      address
-    );
-
-    await publicClient.waitForTransactionReceipt({ hash: approveHash });
-
-    return { success: true };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: `ETH wrapping failed: ${error.message}`,
-    };
-  }
-}
-
-// ... Add other helper functions ...

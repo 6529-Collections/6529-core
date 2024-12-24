@@ -343,7 +343,7 @@ export default function UniswapApp() {
       // Execute swap
       const result = await executeSwap(selectedPair, inputAmount);
 
-      if (result.status === "error") {
+      if (result?.status === "error") {
         throw new Error(result.error);
       }
 
@@ -351,13 +351,13 @@ export default function UniswapApp() {
         stage: "confirming",
         loading: true,
         error: null,
-        hash: result.hash,
+        hash: result?.hash,
       });
 
       // Wait for confirmation
-      if (result.hash) {
+      if (result?.hash) {
         const receipt = await publicClient.waitForTransactionReceipt({
-          hash: result.hash,
+          hash: result?.hash,
         });
 
         if (receipt.status === "success") {

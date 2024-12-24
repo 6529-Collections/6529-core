@@ -18,3 +18,8 @@ export const UNISWAP_V3_POOL_ABI = [
 export const UNISWAP_V3_FACTORY_ABI = [
   "function getPool(address tokenA, address tokenB, uint24 fee) external view returns (address pool)",
 ];
+
+export const QUOTER_V2_ABI = [
+  "function quoteExactInputSingle(tuple(address tokenIn, address tokenOut, uint256 amountIn, uint24 fee, uint160 sqrtPriceLimitX96) params) external returns (uint256 amountOut, uint160 sqrtPriceX96After, uint32 initializedTicksCrossed, uint256 gasEstimate)",
+  "function quoteExactInput(bytes path, uint256 amountIn) external returns (uint256 amountOut, uint160[] sqrtPriceX96AfterList, uint32[] initializedTicksCrossed, uint256 gasEstimate)",
+];

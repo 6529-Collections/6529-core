@@ -1,4 +1,4 @@
-import { CurrencyAmount, Token as SDKToken } from "@uniswap/sdk-core";
+import { CurrencyAmount, Token as SDKToken, Currency } from "@uniswap/sdk-core";
 
 export interface Token {
   symbol: string;
@@ -13,9 +13,9 @@ export interface PoolData {
   fee: number;
   token0: Token;
   token1: Token;
-  sqrtPriceX96?: bigint;
-  liquidity?: bigint;
-  tick?: number;
+  sqrtPriceX96: bigint;
+  liquidity: bigint;
+  tick: number;
 }
 
 export interface TokenPair {
@@ -52,11 +52,14 @@ export function toSDKToken(token: Token, chainId: number): SDKToken {
   );
 }
 
-export function fromSDKToken(token: SDKToken): Token {
-  return {
-    symbol: token.symbol ?? "",
-    name: token.name ?? "",
-    address: token.address,
-    decimals: token.decimals,
-  };
+export function fromSDKToken(token: SDKToken | Currency): Token {
+  if (token instanceof SDKToken) {
+    return {
+      symbol: token.symbol ?? "",
+      name: token.name ?? "",
+      address: token.address,
+      decimals: token.decimals,
+    };
+  }
+  throw new Error("Cannot convert non-token currency to Token");
 }

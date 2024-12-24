@@ -27,18 +27,29 @@ export function useTokenData(
           provider
         );
 
-        const slot0 = await poolContract.slot0();
+        const [slot0, token0Address] = await Promise.all([
+          poolContract.slot0(),
+          poolContract.token0(),
+        ]);
+
         const sqrtPriceX96 = BigInt(slot0[0].toString());
         const Q96 = BigInt(2 ** 96);
 
-        const decimalsAdjustment = BigInt(
-          10 ** (pair.outputToken.decimals - pair.inputToken.decimals)
-        );
-        const priceValue = Number(
-          (decimalsAdjustment * (Q96 * Q96)) / (sqrtPriceX96 * sqrtPriceX96)
-        );
+        const price0Per1 = Number(sqrtPriceX96) / Number(Q96);
+        const basePrice = price0Per1 * price0Per1;
 
-        setPrice(priceValue.toFixed(pair.outputToken.decimals));
+        const isInputToken0 =
+          pair.inputToken.address.toLowerCase() === token0Address.toLowerCase();
+
+        const decimalAdjustment = isInputToken0
+          ? 10 ** (pair.outputToken.decimals - pair.inputToken.decimals)
+          : 10 ** (pair.inputToken.decimals - pair.outputToken.decimals);
+
+        const price = isInputToken0
+          ? basePrice * decimalAdjustment
+          : 1 / (basePrice * decimalAdjustment);
+
+        setPrice(price.toFixed(pair.outputToken.decimals));
       } catch (err) {
         console.error("Error fetching price:", err);
         setPrice(null);

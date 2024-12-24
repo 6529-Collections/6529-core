@@ -1,5 +1,6 @@
 import { Token, TokenPair } from "./types";
 import { ethers } from "ethersv5";
+import { CurrencyAmount, TradeType } from "@uniswap/sdk-core";
 
 interface ChainTokens {
   [chainId: number]: {
@@ -82,8 +83,8 @@ export const CHAIN_POOLS: ChainPools = {
   ],
   11155111: [
     {
-      inputToken: CHAIN_TOKENS[11155111].ETH,
-      outputToken: CHAIN_TOKENS[11155111].UNI,
+      inputToken: CHAIN_TOKENS[11155111].UNI,
+      outputToken: CHAIN_TOKENS[11155111].ETH,
       poolAddress: "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7",
       fee: 3000,
     },
@@ -113,13 +114,12 @@ export const FALLBACK_RPC_URLS: Record<SupportedChainId, string> = {
     "https://cosmological-thrumming-meme.ethereum-sepolia.quiknode.pro/b0c4b6585d341d9bad54707aa3dca895f7c17899",
 };
 
-export const CHAIN_QUOTER_ADDRESSES = {
-  1: "0xb27308f9F90D607463bb33eA1BeBb41C27CE5AB6", // Mainnet
-  11155111: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e", // Sepolia Quoter
+export const CHAIN_QUOTER_ADDRESSES: Record<SupportedChainId, string> = {
+  1: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e", // Mainnet Quoter V2
+  11155111: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3", // Sepolia Quoter V2
 };
 
-// For backward compatibility
-export const QUOTER_CONTRACT_ADDRESS = CHAIN_QUOTER_ADDRESSES[1];
+export const QUOTER_CONTRACT_ADDRESS = CHAIN_QUOTER_ADDRESSES[11155111];
 
 // Add type for supported chain IDs
 export type SupportedChainId = 1 | 11155111;
@@ -136,12 +136,12 @@ export const TICK_LENS_ADDRESS: Record<SupportedChainId, string> = {
 
 export const SWAP_ROUTER_ADDRESS: Record<SupportedChainId, string> = {
   1: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-  11155111: "0x3bFA47769FB0eeeF4092A91052A61C0c6B2E68EF",
+  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
 };
 
 export const UNIVERSAL_ROUTER_ADDRESS: Record<SupportedChainId, string> = {
   1: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
-  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
+  11155111: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
 };
 
 export const WETH_ADDRESS: Record<SupportedChainId, string> = {
