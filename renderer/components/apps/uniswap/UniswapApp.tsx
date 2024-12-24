@@ -295,84 +295,79 @@ export default function UniswapApp() {
   const { executeSwap } = useUniswapSwap();
 
   // Update executeSwap function
-  async function handleSwap(e: React.MouseEvent<HTMLButtonElement>) {
-    e.preventDefault();
-
-    if (!address || !outputAmount || !chain || !inputAmount || !publicClient) {
-      setSwapStatus({
-        stage: "idle",
-        loading: false,
-        error: "Missing required connection details",
-      });
-      return;
-    }
-
-    setSwapStatus({
-      stage: "approving",
-      loading: true,
-      error: null,
-    });
-
+  const handleSwap = async () => {
     try {
-      // Handle token approval if needed
-      if (selectedPair.inputToken.symbol !== "ETH") {
-        const approvalNeeded = await checkApprovalNeeded(
-          selectedPair.inputToken,
-          inputAmount,
-          chain.id,
-          address,
-          publicClient
-        );
-
-        if (approvalNeeded) {
-          await handleTokenApproval(
-            selectedPair.inputToken,
-            inputAmount,
-            chain.id,
-            publicClient
-          );
-        }
+      if (!address || !chain?.id || !publicClient) {
+        setSwapError("Please connect your wallet");
+        return;
       }
 
-      setSwapStatus({
-        stage: "swapping",
-        loading: true,
-        error: null,
+      setSwapStatus({ stage: "swapping", loading: true, error: null });
+
+      if (!inputAmount || parseFloat(inputAmount) <= 0) {
+        throw new Error("Invalid input amount");
+      }
+
+      // Use a more conservative slippage tolerance
+      const slippageTolerance = new Percent(100, 10_000); // 1%
+
+      console.log("Starting swap with params:", {
+        inputToken: selectedPair.inputToken.symbol,
+        outputToken: selectedPair.outputToken.symbol,
+        inputAmount,
+        slippageTolerance: slippageTolerance.toFixed(2),
+        inputDecimals: selectedPair.inputToken.decimals,
+        outputDecimals: selectedPair.outputToken.decimals,
       });
 
-      // Execute swap
-      const result = await executeSwap(selectedPair, inputAmount);
+      const result = await executeSwap(
+        selectedPair,
+        inputAmount,
+        slippageTolerance
+      );
 
-      if (result?.status === "error") {
-        throw new Error(result.error);
+      if (result.status === "error") {
+        console.error("Swap failed:", result.error);
+        setSwapStatus({
+          stage: "idle",
+          loading: false,
+          error: result.error || "Swap failed",
+        });
+        return;
       }
 
       setSwapStatus({
         stage: "confirming",
         loading: true,
         error: null,
-        hash: result?.hash,
+        hash: result.hash,
       });
 
-      // Wait for confirmation
-      if (result?.hash) {
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash: result?.hash,
-        });
+      // Wait for transaction confirmation
+      if (result.hash) {
+        try {
+          const receipt = await publicClient.waitForTransactionReceipt({
+            hash: result.hash,
+          });
 
-        if (receipt.status === "success") {
-          // Reset form and fetch new balances
-          setInputAmount("");
-          setOutputAmount("");
-          await fetchBalances();
-
+          if (receipt.status === "success") {
+            setSwapStatus({
+              stage: "idle",
+              loading: false,
+              error: null,
+              hash: result.hash,
+            });
+            // Refresh balances after successful swap
+            await fetchBalances();
+          } else {
+            throw new Error("Transaction failed");
+          }
+        } catch (error: any) {
           setSwapStatus({
             stage: "idle",
             loading: false,
-            error: null,
+            error: "Transaction failed: " + (error.message || "Unknown error"),
           });
-        } else {
-          throw new Error("Transaction failed");
         }
       }
     } catch (error: any) {
@@ -380,10 +375,10 @@ export default function UniswapApp() {
       setSwapStatus({
         stage: "idle",
         loading: false,
-        error: error.message || "Failed to execute swap",
+        error: error.message || "Unknown error occurred",
       });
     }
-  }
+  };
 
   // Move this function outside useEffect
   async function fetchBalances() {
