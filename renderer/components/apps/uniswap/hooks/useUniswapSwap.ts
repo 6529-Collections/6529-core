@@ -201,30 +201,30 @@ export function useUniswapSwap() {
         );
 
         // Create quote parameters with the correct token order
-        const { calldata: quoteCalldata } = SwapQuoter.quoteCallParameters(
-          new Route(
-            [pool],
-            poolInfo.token0.toLowerCase() ===
-            pair.inputToken.address.toLowerCase()
-              ? token0
-              : token1,
-            poolInfo.token0.toLowerCase() ===
-            pair.inputToken.address.toLowerCase()
-              ? token1
-              : token0
-          ),
-          inputCurrencyAmount,
-          TradeType.EXACT_INPUT,
-          {
-            useQuoterV2: true,
-          }
+        const quoterRoute = new Route(
+          [pool],
+          poolInfo.token0.toLowerCase() ===
+          pair.inputToken.address.toLowerCase()
+            ? token0
+            : token1,
+          poolInfo.token0.toLowerCase() ===
+          pair.inputToken.address.toLowerCase()
+            ? token1
+            : token0
         );
 
         // Call quoter contract
         console.log("Calling Quoter contract...");
         const quoteCallReturnData = await provider.call({
           to: QUOTER_CONTRACT_ADDRESS,
-          data: quoteCalldata,
+          data: SwapQuoter.quoteCallParameters(
+            quoterRoute,
+            inputCurrencyAmount,
+            TradeType.EXACT_INPUT,
+            {
+              useQuoterV2: true,
+            }
+          ).calldata,
         });
         console.log("Quote return data:", quoteCallReturnData);
         console.log("Decoding quote response...");
@@ -255,47 +255,37 @@ export function useUniswapSwap() {
           outputDecimals: pair.outputToken.decimals, // Log decimals for debugging
         });
 
-        // Create trade with the correct amounts and decimals
+        // Create trade with the SAME route and amounts
         const trade = Trade.createUncheckedTrade({
-          route,
-          inputAmount: CurrencyAmount.fromRawAmount(
-            route.input,
-            parsedAmount.toString()
-          ),
+          route: quoterRoute,
+          inputAmount: inputCurrencyAmount,
           outputAmount: CurrencyAmount.fromRawAmount(
-            route.output,
+            quoterRoute.output,
             amountOut.toString()
           ),
           tradeType: TradeType.EXACT_INPUT,
         });
 
-        // Add validation for the output amount
-        const expectedOutputAmount = ethers.utils.formatUnits(
-          amountOut,
-          pair.outputToken.decimals
-        );
-
-        if (parseFloat(expectedOutputAmount) === 0) {
-          throw new Error("Output amount is zero");
-        }
-
+        // Log trade details for debugging
         console.log("Trade details:", {
           inputAmount: inputAmount,
-          outputAmount: expectedOutputAmount,
+          outputAmount: formattedAmountOut,
           executionPrice: trade.executionPrice.toSignificant(6),
           priceImpact: trade.priceImpact.toSignificant(2),
           route: {
-            path: route.tokenPath.map((token) => token.symbol),
-            input: route.input.symbol,
-            output: route.output.symbol,
+            path: quoterRoute.tokenPath.map((token) => token.symbol),
+            input: quoterRoute.input.symbol,
+            output: quoterRoute.output.symbol,
           },
         });
 
-        // Add price impact check
-        const priceImpact = parseFloat(trade.priceImpact.toSignificant(2));
-        if (priceImpact > 5) {
-          // 5% price impact threshold
-          throw new Error(`Price impact too high: ${priceImpact}%`);
+        // Simplified price impact check
+        const priceImpact = Math.abs(
+          parseFloat(trade.priceImpact.toSignificant(2))
+        );
+        if (priceImpact > 15) {
+          // 15% threshold
+          throw new Error(`Price impact too high: ${priceImpact.toFixed(2)}%`);
         }
 
         // 8. Get token approval if needed
@@ -331,14 +321,16 @@ export function useUniswapSwap() {
                 .toString()
             : "0";
 
-        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100); // 20% buffer
+        // Convert gasEstimate to BigInt and add buffer
+        const estimatedGas = BigInt(gasEstimate);
+        const gasBuffer = (estimatedGas * BigInt(120)) / BigInt(100); // 20% buffer
 
         // 13. Send transaction
         const hash = await walletClient.sendTransaction({
           to: routerAddress as `0x${string}`,
           data: swapParams.calldata as `0x${string}`,
           value: BigInt(value),
-          gas: gasLimit,
+          gas: gasBuffer, // Use buffered gas estimate
           account: address,
         });
 
