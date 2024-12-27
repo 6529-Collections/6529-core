@@ -134,10 +134,7 @@ export const TICK_LENS_ADDRESS: Record<SupportedChainId, string> = {
   11155111: "",
 };
 
-export const SWAP_ROUTER_ADDRESS: Record<SupportedChainId, string> = {
-  1: "0xE592427A0AEce92De3Edee1F18E0157C05861564",
-  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E",
-};
+export const SWAP_ROUTER_ADDRESS = CHAIN_ROUTER_ADDRESSES;
 
 export const UNIVERSAL_ROUTER_ADDRESS: Record<SupportedChainId, string> = {
   1: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD",
