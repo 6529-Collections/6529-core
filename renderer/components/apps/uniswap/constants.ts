@@ -125,8 +125,8 @@ export const QUOTER_CONTRACT_ADDRESS = CHAIN_QUOTER_ADDRESSES[11155111];
 export type SupportedChainId = 1 | 11155111;
 
 export const CHAIN_ROUTER_ADDRESSES: Record<SupportedChainId, string> = {
-  1: "0x3fC91A3afd70395Cd496C647d5a6CC9D4B2b7FAD", // Mainnet Universal Router
-  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E", // Sepolia Universal Router
+  1: "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45", // Mainnet SwapRouter02
+  11155111: "0x3bFA4769FB09eefC5a80d6E87c3B9C650f7Ae48E", // Sepolia SwapRouter02
 };
 
 export const TICK_LENS_ADDRESS: Record<SupportedChainId, string> = {
