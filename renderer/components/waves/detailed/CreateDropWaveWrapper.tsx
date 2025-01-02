@@ -5,6 +5,7 @@ import { useDebouncedCallback } from "use-debounce";
 export enum CreateDropWaveWrapperContext {
   WAVE_CHAT = "WAVE_CHAT",
   SINGLE_DROP = "SINGLE_DROP",
+  MY_STREAM = "MY_STREAM",
 }
 
 interface CreateDropWaveWrapperProps {
@@ -72,14 +73,16 @@ export function CreateDropWaveWrapper({
   useResizeObserver(containerRef, fixedBottomRef);
 
   const containerClassName = useMemo(() => {
-    const shouldApplyBottomMargin =
-      context !== CreateDropWaveWrapperContext.SINGLE_DROP;
+    const isMyStreamOrWaveChat =
+      context === CreateDropWaveWrapperContext.MY_STREAM ||
+      context === CreateDropWaveWrapperContext.WAVE_CHAT;
 
     if (capacitor.isCapacitor) {
       const marginClass =
-        !capacitor.keyboardVisible && shouldApplyBottomMargin
+        isMyStreamOrWaveChat && !capacitor.keyboardVisible
           ? "tw-mb-[3.75rem]"
           : "";
+
       return `tw-max-h-[calc(100vh-14.7rem)] ${marginClass}`;
     }
 

@@ -120,6 +120,7 @@ export const WaveChat: React.FC<WaveChatProps> = ({
           {isNotChatWave && (
             <div className="tw-hidden lg:tw-flex tw-items-center tw-h-12 tw-bg-iron-950 tw-border-b tw-border-iron-800 tw-border-solid tw-border-t-0 tw-border-x-0">
               <WaveDetailedDesktopTabs
+                wave={wave}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
               />

@@ -98,7 +98,7 @@ import { NextPage, NextPageContext } from "next";
 import { ReactElement, ReactNode, use, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ReactQueryWrapper from "../components/react-query-wrapper/ReactQueryWrapper";
-import CookiesBanner from "../components/cookies/CookiesBanner";
+import "../components/drops/create/lexical/lexical.styles.scss";
 import { CookieConsentProvider } from "../components/cookies/CookieConsentContext";
 import { ToastProvider } from "../contexts/ToastContext";
 import { useRouter } from "next/router";
@@ -114,6 +114,7 @@ import {
 } from "../contexts/SeizeConnectModalContext";
 import Footer from "../components/footer/Footer";
 import { SeizeConnectProvider } from "../components/auth/SeizeConnectContext";
+import { EULAConsentProvider } from "../components/eula/EULAConsentContext";
 
 library.add(
   faArrowUp,
@@ -268,8 +269,9 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                       <ReactQueryWrapper>
                         <Auth>
                           <CookieConsentProvider>
-                            {getLayout(<Component {...props} />)}
-                            <CookiesBanner />
+                            <EULAConsentProvider>
+                              {getLayout(<Component {...props} />)}
+                            </EULAConsentProvider>
                           </CookieConsentProvider>
                         </Auth>
                       </ReactQueryWrapper>
