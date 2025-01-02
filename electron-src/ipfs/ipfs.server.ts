@@ -4,6 +4,20 @@ import * as fs from "fs";
 import axios from "axios";
 import { app } from "electron";
 import FormData from "form-data";
+import Logger from "electron-log";
+
+function getOS(): string {
+  switch (process.platform) {
+    case "darwin":
+      return "mac";
+    case "win32":
+      return "win";
+    case "linux":
+      return "linux";
+    default:
+      throw new Error(`Unsupported platform: ${process.platform}`);
+  }
+}
 
 export default class IPFSServer {
   private ipfsProcess: ChildProcess | null = null;
@@ -19,29 +33,46 @@ export default class IPFSServer {
   }
 
   async init(appPort: number): Promise<void> {
+    Logger.info("[IPFS] Init", appPort);
     if (this.ipfsProcess) {
-      console.log("IPFS daemon is already running.");
+      Logger.info("[IPFS] Daemon is already running.");
       return;
     }
 
-    const platform = process.platform;
-    const arch = process.arch;
-    console.log("Starting IPFS daemon...", platform, arch);
+    Logger.info("[IPFS] Starting daemon...", getOS(), process.arch);
 
-    const ipfsBinaryPath = path.join(
-      app.getAppPath(),
-      "ipfs-binaries",
-      platform,
-      arch,
-      "ipfs"
-    );
+    Logger.info("[IPFS] Is Packaged:", app.isPackaged);
 
-    console.log("IPFS binary path:", ipfsBinaryPath);
+    let ipfsBinaryPath;
+    if (!app.isPackaged) {
+      ipfsBinaryPath = path.join(
+        app.getAppPath(),
+        "ipfs-binaries",
+        getOS(),
+        process.arch,
+        "ipfs"
+      );
+    } else {
+      ipfsBinaryPath = path.join(
+        process.resourcesPath,
+        "ipfs-binaries",
+        "ipfs"
+      );
+    }
 
-    await this.configureIPFS(appPort);
+    Logger.info("[IPFS] Binary path:", ipfsBinaryPath);
+
+    await this.configureIPFS(appPort, ipfsBinaryPath);
 
     await this.resetBootstrapNodes(ipfsBinaryPath);
 
+    const attached = await this.attachToDaemon();
+    if (attached) {
+      Logger.info("[IPFS] Successfully attached to existing daemon.");
+      return;
+    }
+
+    Logger.info("[IPFS] Spawning a new daemon...");
     this.ipfsProcess = spawn(ipfsBinaryPath, ["daemon", "--migrate"], {
       stdio: "pipe",
       env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
@@ -52,18 +83,47 @@ export default class IPFSServer {
     await this.configureMFS();
   }
 
+  private async attachToDaemon(): Promise<boolean> {
+    const apiEndpoint = `http://127.0.0.1:${this.rpcPort}/api/v0`;
+
+    try {
+      const response = await axios.post(`${apiEndpoint}/id`);
+      Logger.info("[IPFS] Found running daemon with ID:", response.data.ID);
+
+      // Create a fake ChildProcess-like object
+      this.ipfsProcess = {
+        stdout: null,
+        stderr: null,
+        pid: -1, // Indicates an attached process
+        kill: () => {
+          Logger.info("[IPFS] Cannot kill attached process.");
+        },
+        on: (event: string, _: any) => {
+          if (event === "close") {
+            Logger.warn("[IPFS] Attached daemon does not emit 'close'.");
+          }
+        },
+      } as unknown as ChildProcess;
+
+      return true;
+    } catch (error) {
+      Logger.info("[IPFS] No running daemon found to attach.");
+      return false;
+    }
+  }
+
   private async waitForDaemon(): Promise<void> {
     return new Promise((resolve, reject) => {
       let initialized = false;
 
       this.ipfsProcess?.stdout?.on("data", async (data) => {
         const output = data.toString();
-        console.log(`[IPFS] ${output}`);
+        Logger.info(`[IPFS] ${output}`);
 
         if (output.includes("Daemon is ready")) {
           initialized = true;
-          console.log(
-            `IPFS daemon fully initialized. Gateway on port ${this.ipfsPort}, RPC on port ${this.rpcPort}`
+          Logger.info(
+            `[IPFS] Daemon fully initialized. Gateway on port ${this.ipfsPort}, RPC on port ${this.rpcPort}`
           );
           await this.verifyConnectivity();
           await this.connectToPublicGateways();
@@ -72,37 +132,33 @@ export default class IPFSServer {
       });
 
       this.ipfsProcess?.stderr?.on("data", (data) => {
-        console.error(`[IPFS ERROR] ${data.toString()}`);
+        Logger.error(`[IPFS] ${data.toString()}`);
       });
 
       this.ipfsProcess?.on("error", (err) => {
-        console.error("Failed to start IPFS daemon:", err);
+        Logger.error(`[IPFS] Failed to start daemon:`, err);
         reject(err);
       });
 
       this.ipfsProcess?.on("close", (code) => {
         if (!initialized) {
-          console.error(`IPFS daemon exited prematurely with code ${code}`);
+          Logger.error(`[IPFS] Daemon exited prematurely with code ${code}`);
           reject(new Error(`Daemon exited with code ${code}`));
         }
       });
     });
   }
 
-  private async configureIPFS(appPort: number): Promise<void> {
-    console.log("configureIPFS", appPort);
+  private async configureIPFS(
+    appPort: number,
+    ipfsBinaryPath: string
+  ): Promise<void> {
+    Logger.info(`[IPFS] Configuring`, appPort);
     const configFilePath = path.join(this.ipfsRepoPath, "config");
-    const ipfsBinaryPath = path.join(
-      app.getAppPath(),
-      "ipfs-binaries",
-      process.platform,
-      process.arch,
-      "ipfs"
-    );
 
     // Initialize the repo if it doesn't exist
     if (!fs.existsSync(this.ipfsRepoPath)) {
-      console.log("Initializing IPFS repo...");
+      Logger.info("[IPFS] Initializing repo...");
       spawn(ipfsBinaryPath, ["init"], {
         env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
         stdio: "inherit",
@@ -116,7 +172,7 @@ export default class IPFSServer {
 
     // Fetch the public IP address dynamically
     const publicIP = await this.getPublicIP();
-    console.log(`Public IP Address: ${publicIP}`);
+    Logger.info(`[IPFS] Public IP Address: ${publicIP}`);
 
     // Update the configuration
     const config = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
@@ -146,12 +202,13 @@ export default class IPFSServer {
     config.Swarm.DisableNatPortMap = false;
 
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
-    console.log(
-      `IPFS config updated with Gateway port ${this.ipfsPort}, RPC port ${this.rpcPort}, and Public IP ${publicIP}.`
+    Logger.info(
+      `[IPFS] Config updated with Gateway port ${this.ipfsPort}, RPC port ${this.rpcPort}, and Public IP ${publicIP}.`
     );
   }
 
   private async resetBootstrapNodes(ipfsBinaryPath: string): Promise<void> {
+    Logger.info(`[IPFS] Resetting bootstrap nodes`);
     return new Promise((resolve, reject) => {
       const bootstrapProcess = spawn(
         ipfsBinaryPath,
@@ -164,16 +221,18 @@ export default class IPFSServer {
 
       bootstrapProcess.on("close", (code) => {
         if (code === 0) {
-          console.log("Default bootstrap nodes added successfully.");
+          Logger.info(`[IPFS] Default bootstrap nodes added successfully.`);
           resolve();
         } else {
-          console.error(`Failed to add bootstrap nodes. Exit code: ${code}`);
+          Logger.error(
+            `[IPFS] Failed to add bootstrap nodes. Exit code: ${code}`
+          );
           reject(new Error(`Bootstrap process exited with code ${code}`));
         }
       });
 
       bootstrapProcess.on("error", (err) => {
-        console.error("Error resetting bootstrap nodes:", err);
+        Logger.error(`[IPFS] Error resetting bootstrap nodes:`, err);
         reject(err);
       });
     });
@@ -184,7 +243,7 @@ export default class IPFSServer {
       const response = await axios.get("https://api.ipify.org?format=json");
       return response.data.ip;
     } catch (error) {
-      console.error("Failed to fetch public IP:", error);
+      Logger.error(`[IPFS] Failed to fetch public IP:`, error);
       throw new Error("Unable to determine public IP address.");
     }
   }
@@ -195,10 +254,10 @@ export default class IPFSServer {
       await axios.post(
         `${baseDomain}/api/v0/files/mkdir?arg=${this.mfsPath}&parents=true`
       );
-      console.log(`MFS directory ${this.mfsPath} configured.`);
+      Logger.info(`[IPFS] MFS directory ${this.mfsPath} configured.`);
     } catch (error: any) {
-      console.error(
-        `Failed to create MFS directory ${this.mfsPath}:`,
+      Logger.error(
+        `[IPFS] Failed to create MFS directory ${this.mfsPath}:`,
         error.response?.data || error.message
       );
       throw new Error(`MFS configuration failed: ${error.message}`);
@@ -211,10 +270,10 @@ export default class IPFSServer {
         `http://127.0.0.1:${this.rpcPort}/api/v0/swarm/peers`
       );
       const peers = response.data.Peers || [];
-      console.log(`Connected to ${peers.length} peers.`);
+      Logger.info(`[IPFS] Connected to ${peers.length} peers.`);
     } catch (error: any) {
-      console.error(
-        "Failed to verify IPFS connectivity:",
+      Logger.error(
+        `[IPFS] Failed to verify connectivity:`,
         error.response?.data || error.message
       );
       throw new Error("IPFS connectivity verification failed.");
@@ -228,14 +287,14 @@ export default class IPFSServer {
 
     for (const address of publicGateways) {
       try {
-        console.log(`Connecting to gateway: ${address}`);
+        Logger.info(`[IPFS] Connecting to gateway: ${address}`);
         const response = await axios.post(
           `http://127.0.0.1:${this.rpcPort}/api/v0/swarm/connect?arg=${address}`
         );
-        console.log(`Connected to gateway: ${address}`, response.data);
+        Logger.info(`[IPFS] Connected to gateway: ${address}`, response.data);
       } catch (error: any) {
-        console.error(
-          `Failed to connect to gateway ${address}:`,
+        Logger.error(
+          `[IPFS] Failed to connect to gateway ${address}:`,
           error.response?.data || error.message
         );
       }
@@ -244,23 +303,23 @@ export default class IPFSServer {
 
   async shutdown(): Promise<void> {
     if (!this.ipfsProcess) {
-      console.log("IPFS daemon is not running.");
+      Logger.info("[IPFS] Daemon is not running.");
       return;
     }
 
     return new Promise((resolve, reject) => {
       this.ipfsProcess?.on("close", (code) => {
-        if (code === 0) {
-          console.log("IPFS daemon stopped successfully.");
+        if (!code) {
+          Logger.info("[IPFS] Daemon stopped successfully.");
           this.ipfsProcess = null;
           resolve();
         } else {
-          console.error(`IPFS daemon shutdown failed with code ${code}`);
+          Logger.error(`[IPFS] Daemon shutdown failed with code ${code}`);
           reject(new Error(`Daemon shutdown failed with code ${code}`));
         }
       });
 
-      console.log("Stopping IPFS daemon...");
+      Logger.info("[IPFS] Stopping daemon...");
       this.ipfsProcess?.kill("SIGTERM");
     });
   }
@@ -284,18 +343,18 @@ export default class IPFSServer {
       );
 
       const cid = addResponse.data.Hash;
-      console.log("File added to IPFS with CID:", cid);
+      Logger.info("[IPFS] File added to IPFS with CID:", cid);
 
       const fileName = path.basename(filePath);
       await axios.post(
         `${baseDomain}/api/v0/files/cp?arg=/ipfs/${cid}&arg=${this.mfsPath}/${fileName}`
       );
 
-      console.log(`File added to MFS at ${this.mfsPath}/${fileName}`);
+      Logger.info(`[IPFS] File added to MFS at ${this.mfsPath}/${fileName}`);
       return cid;
     } catch (error: any) {
-      console.error(
-        "Failed to add file to IPFS or MFS:",
+      Logger.error(
+        `[IPFS] Failed to add file to IPFS or MFS:`,
         error.response?.data || error.message
       );
       throw error;

@@ -246,11 +246,6 @@ if (!gotTheLock) {
     initStore();
 
     IPFS_SERVER = new IPFSServer(IPFS_PORT, IPFS_RPC_PORT);
-    await IPFS_SERVER.init(PORT);
-    // const addFileResult = await IPFS_SERVER.addFile(
-    //   "/Users/ppan/Downloads/lala.csv"
-    // );
-    // console.log("addFileResult", addFileResult);
 
     await createWindow();
 
@@ -318,6 +313,8 @@ async function createWindow() {
     },
     show: false,
   });
+
+  await IPFS_SERVER.init(PORT);
 
   const url = `http://localhost:${PORT}`;
 

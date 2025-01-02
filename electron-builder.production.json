@@ -20,7 +20,14 @@
     "renderer/out/**/*",
     "renderer/public/**/*"
   ],
-  "extraResources": ["assets/**/*"],
+  "extraResources": [
+    "assets/**/*",
+    {
+      "from": "ipfs-binaries/${os}/${arch}",
+      "to": "ipfs-binaries",
+      "filter": ["**/*"]
+    }
+  ],
   "publish": [
     {
       "provider": "s3",
@@ -91,19 +98,19 @@
     "target": [
       {
         "target": "AppImage",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64"]
       },
       {
         "target": "deb",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64"]
       },
       {
         "target": "rpm",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64"]
       },
       {
         "target": "zip",
-        "arch": ["x64"]
+        "arch": ["x64", "arm64"]
       }
     ],
     "artifactName": "6529-CORE-linux-${arch}-${version}.${ext}",
