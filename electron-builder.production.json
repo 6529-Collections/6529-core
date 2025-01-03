@@ -98,19 +98,19 @@
     "target": [
       {
         "target": "AppImage",
-        "arch": ["x64", "arm64"]
+        "arch": ["x64"]
       },
       {
         "target": "deb",
-        "arch": ["x64", "arm64"]
+        "arch": ["x64"]
       },
       {
         "target": "rpm",
-        "arch": ["x64", "arm64"]
+        "arch": ["x64"]
       },
       {
         "target": "zip",
-        "arch": ["x64", "arm64"]
+        "arch": ["x64"]
       }
     ],
     "artifactName": "6529-CORE-linux-${arch}-${version}.${ext}",
