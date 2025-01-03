@@ -60,14 +60,11 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuTools, setShowBurgerMenuTools] = useState(false);
   const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
 
-  const [ipfsInfo, setIpfsInfo] = useState({
-    ipfsPort: 0,
-    rpcPort: 0,
-  });
+  const [ipfsUrl, setIpfsUrl] = useState("");
 
   useEffect(() => {
     window.api.getIpfsInfo().then((info) => {
-      setIpfsInfo(info);
+      setIpfsUrl(info.apiEndpoint);
     });
   }, []);
 
@@ -321,7 +318,7 @@ export default function Header(props: Readonly<Props>) {
                 <Row className="pt-3">
                   <Col>
                     <Link
-                      href={`http://127.0.0.1:${ipfsInfo.rpcPort}/webui`}
+                      href={`${ipfsUrl}/webui`}
                       target="_blank"
                       rel="noopener noreferrer">
                       <h3>
@@ -694,7 +691,7 @@ export default function Header(props: Readonly<Props>) {
                               <HeaderDesktopLink
                                 link={{
                                   name: "My IPFS",
-                                  path: `http://127.0.0.1:${ipfsInfo.rpcPort}/webui`,
+                                  path: `${ipfsUrl}/webui`,
                                   isExternal: true,
                                 }}
                               />
