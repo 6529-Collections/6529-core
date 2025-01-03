@@ -79,8 +79,6 @@ export default class IPFSServer {
     });
 
     await this.waitForDaemon();
-
-    await this.configureMFS();
   }
 
   private async attachToDaemon(): Promise<boolean> {
@@ -248,22 +246,6 @@ export default class IPFSServer {
     }
   }
 
-  private async configureMFS(): Promise<void> {
-    try {
-      const baseDomain = `http://127.0.0.1:${this.rpcPort}`;
-      await axios.post(
-        `${baseDomain}/api/v0/files/mkdir?arg=${this.mfsPath}&parents=true`
-      );
-      Logger.info(`[IPFS] MFS directory ${this.mfsPath} configured.`);
-    } catch (error: any) {
-      Logger.error(
-        `[IPFS] Failed to create MFS directory ${this.mfsPath}:`,
-        error.response?.data || error.message
-      );
-      throw new Error(`MFS configuration failed: ${error.message}`);
-    }
-  }
-
   private async verifyConnectivity(): Promise<void> {
     try {
       const response = await axios.post(
@@ -299,6 +281,18 @@ export default class IPFSServer {
         );
       }
     }
+  }
+
+  getApiEndpoint(): string {
+    return `http://127.0.0.1:${this.rpcPort}`;
+  }
+
+  getGatewayEndpoint(): string {
+    return `http://127.0.0.1:${this.ipfsPort}`;
+  }
+
+  getMfsPath(): string {
+    return this.mfsPath;
   }
 
   async shutdown(): Promise<void> {

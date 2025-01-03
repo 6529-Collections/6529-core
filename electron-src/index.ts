@@ -706,8 +706,9 @@ ipcMain.handle("get-info", () => {
 
 ipcMain.handle("get-ipfs-info", () => {
   return {
-    ipfsPort: IPFS_PORT,
-    rpcPort: IPFS_RPC_PORT,
+    apiEndpoint: IPFS_SERVER.getApiEndpoint(),
+    gatewayEndpoint: IPFS_SERVER.getGatewayEndpoint(),
+    mfsPath: IPFS_SERVER.getMfsPath(),
   };
 });
 
