@@ -57,6 +57,7 @@ export const api = {
   offSeedWalletsChange: (callback: any) =>
     ipcRenderer.removeListener("seed-wallets-change", callback),
   getInfo: () => ipcRenderer.invoke("get-info"),
+  getIpfsInfo: () => ipcRenderer.invoke("get-ipfs-info"),
   getMainWorker: () => ipcRenderer.invoke("get-main-worker"),
   getScheduledWorkers: () => ipcRenderer.invoke("get-scheduled-workers"),
   getCrashReports: () => ipcRenderer.invoke("get-crash-reports"),

@@ -20,17 +20,20 @@ const ETHScanner = dynamic(
 export default function ETHScannerPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
-    { display: "Core - ETH Scanner" },
+    { display: "Core - ETH Transactions" },
   ];
 
   return (
     <>
       <Head>
-        <title>ETH Scanner | 6529 CORE</title>
+        <title>ETH Transactions | 6529 CORE</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="ETH Scanner | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/core/eth-scanner`} />
-        <meta property="og:title" content={`ETH Scanner`} />
+        <meta name="description" content="ETH Transactions | 6529 CORE" />
+        <meta
+          property="og:url"
+          content={`${SEIZE_URL}/core/eth-transactions`}
+        />
+        <meta property="og:title" content={`ETH Transactions`} />
         <meta property="og:description" content="6529 CORE" />
         <meta
           property="og:image"

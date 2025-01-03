@@ -14,9 +14,7 @@ import { isElectron } from "./helpers";
 import { SEED_WALLETS_NETWORK } from "./components/core/core-wallet/SeedWallets";
 import { getSeedWallets } from "./electron";
 import { ISeedWallet } from "../shared/types";
-import { ethers } from "ethers";
 import { seedWalletConnector } from "./seedWalletConnector";
-import { WalletAddress } from "./components/address/WalletAddress";
 
 export function getChains() {
   const chains: Chain[] = [mainnet];
@@ -100,10 +98,6 @@ export async function getWagmiConfig() {
       email: false,
     },
     connectors,
-    transports: {
-      [mainnet.id]: http(),
-      [sepolia.id]: http(),
-    },
   });
 
   return wagmiConfig;

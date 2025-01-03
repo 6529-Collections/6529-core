@@ -19,7 +19,14 @@
     "renderer/out/**/*",
     "renderer/public/**/*"
   ],
-  "extraResources": ["assets/**/*"],
+  "extraResources": [
+    "assets/**/*",
+    {
+      "from": "ipfs-binaries/${os}/${arch}",
+      "to": "ipfs-binaries",
+      "filter": ["**/*"]
+    }
+  ],
   "publish": [
     {
       "provider": "s3",

@@ -14,14 +14,15 @@ interface IpfsContextType {
 const IpfsContext = createContext<IpfsContextType | undefined>(undefined);
 
 const getEnv = async () => {
-  const apiEndpoint = process.env.IPFS_API_ENDPOINT;
-  const gatewayEndpoint = process.env.IPFS_GATEWAY_ENDPOINT;
+  const ipfsInfo = await window.api.getIpfsInfo();
+  const apiEndpoint = ipfsInfo.apiEndpoint;
+  const gatewayEndpoint = ipfsInfo.gatewayEndpoint;
 
   if (!apiEndpoint || !gatewayEndpoint) {
     throw new Error("Missing IPFS_API_ENDPOINT or IPFS_GATEWAY_ENDPOINT");
   }
 
-  const mfsPath = process.env.IPFS_MFS_PATH;
+  const mfsPath = ipfsInfo.mfsPath;
 
   return { apiEndpoint, gatewayEndpoint, mfsPath };
 };
