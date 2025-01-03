@@ -114,6 +114,7 @@ import {
 } from "../contexts/SeizeConnectModalContext";
 import Footer from "../components/footer/Footer";
 import { SeizeConnectProvider } from "../components/auth/SeizeConnectContext";
+import { IpfsProvider, resolveIpfsUrl } from "../components/ipfs/IPFSContext";
 import { EULAConsentProvider } from "../components/eula/EULAConsentContext";
 
 library.add(
@@ -229,6 +230,32 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
 
   const [wagmiConfig, setWagmiConfig] = useState<Config>();
 
+  const updateImagesSrc = () => {
+    const elementsWithSrc = document.querySelectorAll("[src]");
+    Array.from(elementsWithSrc).forEach((el) => {
+      const src = el.getAttribute("src")!;
+      const newSrc = resolveIpfsUrl(src);
+      el.setAttribute("src", newSrc);
+    });
+  };
+
+  useEffect(() => {
+    updateImagesSrc();
+
+    const observer = new MutationObserver(() => {
+      updateImagesSrc();
+    });
+
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, []);
+
   useEffect(() => {
     getWagmiConfig().then((c) => setWagmiConfig(c));
   }, []);
@@ -254,34 +281,36 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
         <ModalStateProvider>
-          <SeizeConnectModalProvider>
-            <SeizeConnectProvider>
-              <ConfirmProvider>
-                <ToastProvider>
-                  <SeedWalletProvider>
-                    <Provider store={store}>
-                      <Head>
-                        <meta
-                          name="viewport"
-                          content="width=device-width, initial-scale=1.0, maximum-scale=1"
-                        />
-                      </Head>
-                      <ReactQueryWrapper>
-                        <Auth>
-                          <CookieConsentProvider>
-                            <EULAConsentProvider>
-                              {getLayout(<Component {...props} />)}
-                            </EULAConsentProvider>
-                          </CookieConsentProvider>
-                        </Auth>
-                      </ReactQueryWrapper>
-                      {!hideFooter && <Footer />}
-                    </Provider>
-                  </SeedWalletProvider>
-                </ToastProvider>
-              </ConfirmProvider>
-            </SeizeConnectProvider>
-          </SeizeConnectModalProvider>
+          <IpfsProvider>
+            <SeizeConnectModalProvider>
+              <SeizeConnectProvider>
+                <ConfirmProvider>
+                  <ToastProvider>
+                    <SeedWalletProvider>
+                      <Provider store={store}>
+                        <Head>
+                          <meta
+                            name="viewport"
+                            content="width=device-width, initial-scale=1.0, maximum-scale=1"
+                          />
+                        </Head>
+                        <ReactQueryWrapper>
+                          <Auth>
+                            <CookieConsentProvider>
+                              <EULAConsentProvider>
+                                {getLayout(<Component {...props} />)}
+                              </EULAConsentProvider>
+                            </CookieConsentProvider>
+                          </Auth>
+                        </ReactQueryWrapper>
+                        {!hideFooter && <Footer />}
+                      </Provider>
+                    </SeedWalletProvider>
+                  </ToastProvider>
+                </ConfirmProvider>
+              </SeizeConnectProvider>
+            </SeizeConnectModalProvider>
+          </IpfsProvider>
         </ModalStateProvider>
       </WagmiProvider>
     </QueryClientProvider>
