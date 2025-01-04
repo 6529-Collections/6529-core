@@ -1,6 +1,10 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Container, Row, Col, Form, Button } from "react-bootstrap";
-import { useAccount, usePublicClient } from "wagmi";
+import {
+  useAccount,
+  usePublicClient,
+  useWaitForTransactionReceipt,
+} from "wagmi";
 import { ethers } from "ethersv5";
 import styles from "./UniswapApp.module.scss";
 import { CurrencyAmount, TradeType, Percent } from "@uniswap/sdk-core";
@@ -44,7 +48,7 @@ function LoadingSpinner() {
 
 // Add new swap status type
 interface SwapStatus {
-  stage: "idle" | "approving" | "swapping" | "confirming";
+  stage: "idle" | "approving" | "swapping" | "confirming" | "success";
   loading: boolean;
   error: string | null;
   hash?: `0x${string}`;
@@ -294,7 +298,108 @@ export default function UniswapApp() {
 
   const { executeSwap } = useUniswapSwap();
 
-  // Update executeSwap function
+  // Add this function to handle percentage clicks
+  function handlePercentageClick(percentage: number) {
+    const balance =
+      tokenBalances[selectedPair.inputToken.address.toLowerCase()];
+    if (!balance) return;
+
+    const balanceNum = parseFloat(balance);
+    const amount = (balanceNum * percentage) / 100;
+
+    // Format the input amount appropriately
+    let formattedAmount: string;
+    if (selectedPair.inputToken.decimals <= 6) {
+      // For stablecoins, show 2 decimals
+      formattedAmount = amount.toFixed(2);
+    } else {
+      // For ETH and other tokens, show 4 decimals
+      formattedAmount = amount.toFixed(4);
+    }
+
+    setInputAmount(formattedAmount);
+  }
+
+  // Add this near your other state declarations
+  const [inputFocused, setInputFocused] = useState(false);
+  const [outputFocused, setOutputFocused] = useState(false);
+
+  const [swapStatus, setSwapStatus] = useState<SwapStatus>({
+    stage: "idle",
+    loading: false,
+    error: null,
+  });
+
+  const { data: transactionReceipt, isLoading: isWaitingForReceipt } =
+    useWaitForTransactionReceipt({
+      hash: swapStatus.hash as `0x${string}`,
+      retryCount: 5,
+      pollingInterval: 10_000,
+      timeout: 40_000,
+      onReplaced: (response) => {
+        console.log("[Transaction] Replaced:", response);
+      },
+    });
+
+  // Watch for transaction receipt updates with logging
+  useEffect(() => {
+    if (swapStatus.hash) {
+      console.log("[Transaction] Waiting for receipt:", {
+        hash: swapStatus.hash,
+        isWaiting: isWaitingForReceipt,
+      });
+    }
+  }, [swapStatus.hash, isWaitingForReceipt]);
+
+  useEffect(() => {
+    if (transactionReceipt && swapStatus.stage === "confirming") {
+      console.log("[Transaction] Receipt received:", {
+        receipt: transactionReceipt,
+        status: transactionReceipt.status,
+        blockNumber: transactionReceipt.blockNumber,
+        blockHash: transactionReceipt.blockHash,
+      });
+
+      if (transactionReceipt.status === "success") {
+        setSwapStatus({
+          stage: "success",
+          loading: false,
+          error: null,
+          hash: swapStatus.hash,
+        });
+
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Swap completed successfully!",
+        });
+
+        // Reset form after short delay
+        setTimeout(() => {
+          setInputAmount("");
+          setOutputAmount("");
+          setSwapStatus({
+            stage: "idle",
+            loading: false,
+            error: null,
+          });
+          fetchBalances();
+        }, 2000);
+      } else {
+        console.log("[Transaction] Failed:", transactionReceipt);
+        setSwapStatus({
+          stage: "idle",
+          loading: false,
+          error: "Transaction failed",
+        });
+
+        window.seedConnector.showToast({
+          type: "error",
+          message: "Transaction failed",
+        });
+      }
+    }
+  }, [transactionReceipt, swapStatus.stage, swapStatus.hash]);
+
   const handleSwap = async () => {
     try {
       if (!address || !chain?.id || !publicClient) {
@@ -302,23 +407,17 @@ export default function UniswapApp() {
         return;
       }
 
-      setSwapStatus({ stage: "swapping", loading: true, error: null });
+      setSwapStatus({
+        stage: "swapping",
+        loading: true,
+        error: null,
+      });
 
       if (!inputAmount || parseFloat(inputAmount) <= 0) {
         throw new Error("Invalid input amount");
       }
 
-      // Use a more conservative slippage tolerance
       const slippageTolerance = new Percent(100, 10_000); // 1%
-
-      console.log("Starting swap with params:", {
-        inputToken: selectedPair.inputToken.symbol,
-        outputToken: selectedPair.outputToken.symbol,
-        inputAmount,
-        slippageTolerance: slippageTolerance.toFixed(2),
-        inputDecimals: selectedPair.inputToken.decimals,
-        outputDecimals: selectedPair.outputToken.decimals,
-      });
 
       const result = await executeSwap(
         selectedPair,
@@ -327,48 +426,22 @@ export default function UniswapApp() {
       );
 
       if (result.status === "error") {
-        console.error("Swap failed:", result.error);
-        setSwapStatus({
-          stage: "idle",
-          loading: false,
-          error: result.error || "Swap failed",
-        });
-        return;
+        throw new Error(result.error || "Swap failed");
       }
 
-      setSwapStatus({
-        stage: "confirming",
-        loading: true,
-        error: null,
-        hash: result.hash,
-      });
-
-      // Wait for transaction confirmation
       if (result.hash) {
-        try {
-          const receipt = await publicClient.waitForTransactionReceipt({
-            hash: result.hash,
-          });
+        console.log("Transaction submitted with hash:", result.hash); // Add logging
+        setSwapStatus({
+          stage: "confirming",
+          loading: true,
+          error: null,
+          hash: result.hash,
+        });
 
-          if (receipt.status === "success") {
-            setSwapStatus({
-              stage: "idle",
-              loading: false,
-              error: null,
-              hash: result.hash,
-            });
-            // Refresh balances after successful swap
-            await fetchBalances();
-          } else {
-            throw new Error("Transaction failed");
-          }
-        } catch (error: any) {
-          setSwapStatus({
-            stage: "idle",
-            loading: false,
-            error: "Transaction failed: " + (error.message || "Unknown error"),
-          });
-        }
+        window.seedConnector.showToast({
+          type: "info",
+          message: "Transaction submitted",
+        });
       }
     } catch (error: any) {
       console.error("Swap failed:", error);
@@ -376,6 +449,11 @@ export default function UniswapApp() {
         stage: "idle",
         loading: false,
         error: error.message || "Unknown error occurred",
+      });
+
+      window.seedConnector.showToast({
+        type: "error",
+        message: error.message || "Swap failed",
       });
     }
   };
@@ -496,38 +574,6 @@ export default function UniswapApp() {
     const balance = tokenBalances[token.address.toLowerCase()];
     return formatBalance(balance ?? "...", token);
   }
-
-  // Add this function to handle percentage clicks
-  function handlePercentageClick(percentage: number) {
-    const balance =
-      tokenBalances[selectedPair.inputToken.address.toLowerCase()];
-    if (!balance) return;
-
-    const balanceNum = parseFloat(balance);
-    const amount = (balanceNum * percentage) / 100;
-
-    // Format the input amount appropriately
-    let formattedAmount: string;
-    if (selectedPair.inputToken.decimals <= 6) {
-      // For stablecoins, show 2 decimals
-      formattedAmount = amount.toFixed(2);
-    } else {
-      // For ETH and other tokens, show 4 decimals
-      formattedAmount = amount.toFixed(4);
-    }
-
-    setInputAmount(formattedAmount);
-  }
-
-  // Add this near your other state declarations
-  const [inputFocused, setInputFocused] = useState(false);
-  const [outputFocused, setOutputFocused] = useState(false);
-
-  const [swapStatus, setSwapStatus] = useState<SwapStatus>({
-    stage: "idle",
-    loading: false,
-    error: null,
-  });
 
   return (
     <Container fluid className={styles.uniswapContainer}>

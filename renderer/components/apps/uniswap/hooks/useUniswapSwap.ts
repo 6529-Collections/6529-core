@@ -7,7 +7,7 @@ import { SWAP_ROUTER_ABI, ERC20_ABI } from "../abis";
 import { SWAP_ROUTER_ADDRESS, SupportedChainId } from "../constants";
 
 interface SwapResult {
-  status: "pending" | "error";
+  status: "pending" | "success" | "error";
   hash?: `0x${string}`;
   error?: string;
 }
@@ -133,9 +133,17 @@ export function useUniswapSwap() {
           account: address,
         });
 
-        return {
-          status: "pending",
+        // Wait for transaction confirmation
+        const receipt = await publicClient.waitForTransactionReceipt({
           hash,
+          confirmations: 1,
+        });
+
+        return {
+          status: receipt.status === "success" ? "success" : "error",
+          hash,
+          error:
+            receipt.status === "success" ? undefined : "Transaction failed",
         };
       } catch (error: any) {
         console.error("Swap Error:", {
