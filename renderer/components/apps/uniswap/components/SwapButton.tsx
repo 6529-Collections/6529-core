@@ -4,7 +4,13 @@ import styles from "../UniswapApp.module.scss";
 interface SwapButtonProps {
   disabled: boolean;
   status: {
-    stage: "idle" | "approving" | "swapping" | "confirming" | "success";
+    stage:
+      | "idle"
+      | "approving"
+      | "swapping"
+      | "confirming"
+      | "success"
+      | "pending";
     loading: boolean;
     error: string | null;
     hash?: `0x${string}`;
@@ -32,6 +38,8 @@ export function SwapButton({
         return "Swapping...";
       case "confirming":
         return "Confirming...";
+      case "pending":
+        return "Pending...";
       case "success":
         return "Swap Complete";
       default:

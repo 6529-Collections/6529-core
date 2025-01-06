@@ -5,9 +5,10 @@ import { Percent } from "@uniswap/sdk-core";
 import { TokenPair, Token } from "../types";
 import { SWAP_ROUTER_ABI, ERC20_ABI } from "../abis";
 import { SWAP_ROUTER_ADDRESS, SupportedChainId } from "../constants";
+import { useEthersProvider } from "./useEthersProvider";
 
 interface SwapResult {
-  status: "pending" | "success" | "error";
+  status: "success" | "error" | "pending";
   hash?: `0x${string}`;
   error?: string;
 }
@@ -56,7 +57,7 @@ async function getTokenTransferApproval(
 export function useUniswapSwap() {
   const { address, chain } = useAccount();
   const { data: walletClient } = useWalletClient();
-  const publicClient = usePublicClient();
+  const provider = useEthersProvider();
 
   const executeSwap = useCallback(
     async (
@@ -64,11 +65,17 @@ export function useUniswapSwap() {
       inputAmount: string,
       slippageTolerance: Percent = new Percent(50, 10_000)
     ): Promise<SwapResult> => {
-      if (!address || !chain?.id || !walletClient || !publicClient) {
+      if (!address || !chain?.id || !walletClient || !provider) {
         throw new Error("Wallet not connected");
       }
 
       try {
+        console.log("[Swap] Starting swap execution", {
+          pair,
+          inputAmount,
+          slippage: slippageTolerance.toFixed(),
+        });
+
         const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
         const routerInterface = new ethers.utils.Interface(SWAP_ROUTER_ABI);
 
@@ -78,7 +85,7 @@ export function useUniswapSwap() {
             pair.inputToken,
             inputAmount,
             routerAddress,
-            publicClient,
+            provider,
             walletClient
           );
 
@@ -114,43 +121,138 @@ export function useUniswapSwap() {
         ]);
 
         // Estimate gas
-        const gasEstimate = await publicClient.estimateGas({
-          account: address,
-          to: routerAddress as `0x${string}`,
-          data: data as `0x${string}`,
-          value: BigInt(value),
+        const gasEstimate = await provider.estimateGas({
+          from: address,
+          to: routerAddress,
+          data: data,
+          value: ethers.BigNumber.from(value),
         });
 
         // Add 20% buffer to gas estimate
-        const gasBuffer = (gasEstimate * BigInt(120)) / BigInt(100);
+        const gasBuffer = gasEstimate.mul(120).div(100);
 
         // Send transaction
         const hash = await walletClient.sendTransaction({
           to: routerAddress as `0x${string}`,
           data: data as `0x${string}`,
           value: BigInt(value),
-          gas: gasBuffer,
+          gas: BigInt(gasBuffer.toString()),
           account: address,
         });
 
-        // Wait for transaction confirmation
-        const receipt = await publicClient.waitForTransactionReceipt({
+        console.log("[Swap] Transaction submitted", {
           hash,
-          confirmations: 1,
+          chainId: chain.id,
+          from: address,
+          to: routerAddress,
         });
 
+        // Wait for transaction confirmation with increased timeout
+        if (provider) {
+          console.log("[Swap] Waiting for transaction receipt...");
+
+          let retryCount = 0;
+          const maxRetries = 3;
+
+          while (retryCount < maxRetries) {
+            try {
+              const receipt = await provider.waitForTransaction(hash, 1, 60000);
+
+              console.log("[Swap] Transaction receipt received", {
+                receipt,
+                status: receipt.status,
+                blockNumber: receipt.blockNumber,
+                gasUsed: receipt.gasUsed?.toString(),
+              });
+
+              return {
+                status: receipt.status === 1 ? "success" : "error",
+                hash: receipt.transactionHash as `0x${string}`,
+                error: receipt.status === 1 ? undefined : "Transaction failed",
+              };
+            } catch (waitError: any) {
+              console.log("[Swap] Wait attempt failed", {
+                attempt: retryCount + 1,
+                error: waitError.message,
+              });
+
+              // If it's not a timeout error, throw immediately
+              if (!waitError.message?.includes("Timed out")) {
+                throw waitError;
+              }
+
+              retryCount++;
+
+              // Check transaction status directly
+              try {
+                const tx = await provider.getTransaction(hash);
+                console.log("[Swap] Transaction status check", {
+                  hash,
+                  exists: !!tx,
+                  blockNumber: tx?.blockNumber,
+                });
+
+                if (tx?.blockNumber) {
+                  return {
+                    status: "success",
+                    hash,
+                  };
+                }
+              } catch (checkError) {
+                console.error(
+                  "[Swap] Transaction status check failed",
+                  checkError
+                );
+              }
+            }
+          }
+
+          // If we've exhausted retries but transaction exists
+          try {
+            const tx = await provider.getTransaction(hash);
+            if (tx) {
+              console.log(
+                "[Swap] Transaction exists but receipt wait timed out",
+                {
+                  hash,
+                  blockNumber: tx.blockNumber,
+                }
+              );
+              return {
+                status: "pending",
+                hash,
+                error: "Transaction submitted but confirmation timed out",
+              };
+            }
+          } catch (finalCheckError) {
+            console.error(
+              "[Swap] Final transaction check failed",
+              finalCheckError
+            );
+          }
+        }
+
+        // If no provider or all retries failed
         return {
-          status: receipt.status === "success" ? "success" : "error",
+          status: "pending",
           hash,
-          error:
-            receipt.status === "success" ? undefined : "Transaction failed",
+          error: "Transaction submitted but status unknown",
         };
       } catch (error: any) {
-        console.error("Swap Error:", {
+        console.error("[Swap] Error:", {
           error,
           message: error.message,
           data: error.data,
+          stack: error.stack,
         });
+
+        if (error.message?.includes("Timed out")) {
+          return {
+            status: "pending",
+            hash: error.hash,
+            error: "Transaction pending - please check your wallet for status",
+          };
+        }
 
         return {
           status: "error",
@@ -158,7 +260,7 @@ export function useUniswapSwap() {
         };
       }
     },
-    [address, chain?.id, publicClient, walletClient]
+    [address, chain?.id, provider, walletClient]
   );
 
   return { executeSwap };

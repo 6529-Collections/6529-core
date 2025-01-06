@@ -33,9 +33,10 @@ import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
 import { SwatchBook } from "lucide-react";
 import TokenSelect from "./components/TokenSelect";
-import { Token, TokenPair, toSDKToken } from "./types";
+import { Token, TokenPair, toSDKToken, SwapStatus } from "./types";
 import { useUniswapSwap } from "./hooks/useUniswapSwap";
 import { SwapButton } from "./components/SwapButton";
+import { useEthersProvider } from "./hooks/useEthersProvider";
 
 const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
@@ -44,14 +45,6 @@ const QUOTER_ABI = [
 // Add loading indicator component
 function LoadingSpinner() {
   return <div className={styles.loadingSpinner} />;
-}
-
-// Add new swap status type
-interface SwapStatus {
-  stage: "idle" | "approving" | "swapping" | "confirming" | "success";
-  loading: boolean;
-  error: string | null;
-  hash?: `0x${string}`;
 }
 
 // Add these helper functions before the UniswapApp component
@@ -95,7 +88,7 @@ async function handleTokenApproval(
 
 export default function UniswapApp() {
   const { address, chain } = useAccount();
-  const publicClient = usePublicClient();
+  const provider = useEthersProvider();
   const chainId = chain?.id || 1;
 
   // Use chain-specific token pairs
@@ -352,57 +345,109 @@ export default function UniswapApp() {
   }, [swapStatus.hash, isWaitingForReceipt]);
 
   useEffect(() => {
-    if (transactionReceipt && swapStatus.stage === "confirming") {
-      console.log("[Transaction] Receipt received:", {
-        receipt: transactionReceipt,
-        status: transactionReceipt.status,
-        blockNumber: transactionReceipt.blockNumber,
-        blockHash: transactionReceipt.blockHash,
-      });
-
-      if (transactionReceipt.status === "success") {
-        setSwapStatus({
-          stage: "success",
-          loading: false,
-          error: null,
-          hash: swapStatus.hash,
-        });
-
-        window.seedConnector.showToast({
-          type: "success",
-          message: "Swap completed successfully!",
-        });
-
-        // Reset form after short delay
-        setTimeout(() => {
-          setInputAmount("");
-          setOutputAmount("");
-          setSwapStatus({
-            stage: "idle",
-            loading: false,
-            error: null,
+    if (swapStatus.hash && swapStatus.stage === "confirming" && provider) {
+      const checkTransaction = async () => {
+        try {
+          console.log("[Transaction] Starting confirmation check", {
+            hash: swapStatus.hash,
+            stage: swapStatus.stage,
           });
-          fetchBalances();
-        }, 2000);
-      } else {
-        console.log("[Transaction] Failed:", transactionReceipt);
-        setSwapStatus({
-          stage: "idle",
-          loading: false,
-          error: "Transaction failed",
-        });
 
-        window.seedConnector.showToast({
-          type: "error",
-          message: "Transaction failed",
-        });
-      }
+          // First check if transaction already exists
+          try {
+            const tx = await provider.getTransaction(swapStatus.hash as string);
+            console.log("[Transaction] Existing transaction check", {
+              exists: !!tx,
+              blockNumber: tx?.blockNumber,
+            });
+          } catch (checkError) {
+            console.log(
+              "[Transaction] Existing transaction check failed",
+              checkError
+            );
+          }
+
+          const receipt = await provider.waitForTransaction(
+            swapStatus.hash as string,
+            1,
+            60000
+          );
+
+          console.log("[Transaction] Receipt received", {
+            receipt,
+            status: receipt.status,
+            blockNumber: receipt.blockNumber,
+          });
+
+          if (receipt.status === 1) {
+            // Ethers uses 1 for success
+            setSwapStatus({
+              stage: "success",
+              loading: false,
+              error: null,
+              hash: swapStatus.hash,
+            });
+
+            window.seedConnector.showToast({
+              type: "success",
+              message: "Transaction successful",
+            });
+
+            // Reset form after success
+            setTimeout(() => {
+              setInputAmount("");
+              setOutputAmount("");
+              fetchBalances();
+            }, 2000);
+          } else {
+            console.log("[Transaction] Failed with receipt:", receipt);
+            setSwapStatus({
+              stage: "idle",
+              loading: false,
+              error: "Transaction failed",
+            });
+
+            window.seedConnector.showToast({
+              type: "error",
+              message: "Transaction failed",
+            });
+          }
+        } catch (error: any) {
+          console.log("[Transaction] Error during confirmation:", {
+            error,
+            message: error.message,
+            stage: swapStatus.stage,
+          });
+
+          // Don't set error status if it's just a timeout
+          if (!error.message?.includes("Timed out")) {
+            setSwapStatus({
+              stage: "idle",
+              loading: false,
+              error: error.message || "Transaction failed",
+            });
+
+            window.seedConnector.showToast({
+              type: "error",
+              message: error.message || "Transaction failed",
+            });
+          }
+        }
+      };
+
+      checkTransaction();
     }
-  }, [transactionReceipt, swapStatus.stage, swapStatus.hash]);
+  }, [
+    transactionReceipt,
+    swapStatus.stage,
+    swapStatus.hash,
+    provider,
+    fetchBalances,
+  ]);
 
   const handleSwap = async () => {
     try {
-      if (!address || !chain?.id || !publicClient) {
+      if (!address || !chain?.id || !provider) {
         setSwapError("Please connect your wallet");
         return;
       }
@@ -430,7 +475,7 @@ export default function UniswapApp() {
       }
 
       if (result.hash) {
-        console.log("Transaction submitted with hash:", result.hash); // Add logging
+        console.log("Transaction submitted with hash:", result.hash);
         setSwapStatus({
           stage: "confirming",
           loading: true,
@@ -440,7 +485,10 @@ export default function UniswapApp() {
 
         window.seedConnector.showToast({
           type: "info",
-          message: "Transaction submitted",
+          message:
+            result.status === "pending"
+              ? "Transaction pending - please wait"
+              : "Transaction submitted",
         });
       }
     } catch (error: any) {

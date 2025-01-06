@@ -63,3 +63,17 @@ export function fromSDKToken(token: SDKToken | Currency): Token {
   }
   throw new Error("Cannot convert non-token currency to Token");
 }
+
+// Add this interface to types.ts if you want to share it across components
+export interface SwapStatus {
+  stage:
+    | "idle"
+    | "approving"
+    | "swapping"
+    | "confirming"
+    | "success"
+    | "pending";
+  loading: boolean;
+  error: string | null;
+  hash?: `0x${string}`;
+}
