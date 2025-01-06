@@ -289,7 +289,8 @@ export default function UniswapApp() {
     }
   }, [inputAmount, forward]);
 
-  const { executeSwap } = useUniswapSwap();
+  const { executeSwap, approve, checkApproval, approvalStatus } =
+    useUniswapSwap();
 
   // Add this function to handle percentage clicks
   function handlePercentageClick(percentage: number) {
@@ -317,7 +318,18 @@ export default function UniswapApp() {
   const [inputFocused, setInputFocused] = useState(false);
   const [outputFocused, setOutputFocused] = useState(false);
 
-  const [swapStatus, setSwapStatus] = useState<SwapStatus>({
+  const [swapStatus, setSwapStatus] = useState<{
+    stage:
+      | "idle"
+      | "approving"
+      | "swapping"
+      | "confirming"
+      | "success"
+      | "pending";
+    loading: boolean;
+    error: string | null;
+    hash?: `0x${string}`;
+  }>({
     stage: "idle",
     loading: false,
     error: null,
@@ -445,66 +457,92 @@ export default function UniswapApp() {
     fetchBalances,
   ]);
 
-  const handleSwap = async () => {
+  // Add a new handler for approve button
+  const handleApprove = async () => {
     try {
-      if (!address || !chain?.id || !provider) {
-        setSwapError("Please connect your wallet");
-        return;
+      setSwapStatus({
+        stage: "approving",
+        loading: true,
+        error: null,
+      });
+
+      const approved = await approve(selectedPair, inputAmount);
+      if (!approved) {
+        throw new Error("Failed to approve token");
       }
 
+      // Update status after successful approval
+      setSwapStatus({
+        stage: "idle",
+        loading: false,
+        error: null,
+      });
+
+      // Show success toast
+      window.seedConnector.showToast({
+        type: "success",
+        message: "Token approved successfully",
+      });
+    } catch (error: any) {
+      setSwapStatus({
+        stage: "idle",
+        loading: false,
+        error: error.message || "Failed to approve token",
+      });
+
+      window.seedConnector.showToast({
+        type: "error",
+        message: error.message || "Failed to approve token",
+      });
+    }
+  };
+
+  // Update handleSwap to remove approval logic
+  const handleSwap = async () => {
+    if (!inputAmount || !outputAmount) return;
+
+    try {
+      // Proceed with swap
       setSwapStatus({
         stage: "swapping",
         loading: true,
         error: null,
       });
 
-      if (!inputAmount || parseFloat(inputAmount) <= 0) {
-        throw new Error("Invalid input amount");
-      }
+      const result = await executeSwap(selectedPair, inputAmount);
 
-      const slippageTolerance = new Percent(100, 10_000); // 1%
-
-      const result = await executeSwap(
-        selectedPair,
-        inputAmount,
-        slippageTolerance
-      );
-
-      if (result.status === "error") {
-        throw new Error(result.error || "Swap failed");
-      }
-
-      if (result.hash) {
-        console.log("Transaction submitted with hash:", result.hash);
+      if (result.status === "success") {
         setSwapStatus({
-          stage: "confirming",
-          loading: true,
+          stage: "success",
+          loading: false,
           error: null,
           hash: result.hash,
         });
-
-        window.seedConnector.showToast({
-          type: "info",
-          message:
-            result.status === "pending"
-              ? "Transaction pending - please wait"
-              : "Transaction submitted",
+      } else if (result.status === "pending") {
+        setSwapStatus({
+          stage: "pending",
+          loading: true,
+          error: result.error || null,
+          hash: result.hash,
         });
+      } else {
+        throw new Error(result.error || "Swap failed");
       }
     } catch (error: any) {
-      console.error("Swap failed:", error);
       setSwapStatus({
         stage: "idle",
         loading: false,
-        error: error.message || "Unknown error occurred",
-      });
-
-      window.seedConnector.showToast({
-        type: "error",
-        message: error.message || "Swap failed",
+        error: error.message || "Failed to execute swap",
       });
     }
   };
+
+  // Update useEffect to check approval when input changes
+  useEffect(() => {
+    if (inputAmount && selectedPair) {
+      checkApproval(selectedPair, inputAmount);
+    }
+  }, [inputAmount, selectedPair, checkApproval]);
 
   // Move this function outside useEffect
   async function fetchBalances() {
@@ -761,7 +799,9 @@ export default function UniswapApp() {
                     !address
                   }
                   status={swapStatus}
-                  onClick={handleSwap}
+                  approvalStatus={approvalStatus}
+                  onApprove={handleApprove}
+                  onSwap={handleSwap}
                   inputAmount={inputAmount}
                   outputAmount={outputAmount}
                 />

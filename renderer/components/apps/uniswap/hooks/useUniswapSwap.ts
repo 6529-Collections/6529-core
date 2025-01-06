@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ethers } from "ethersv5";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { Percent } from "@uniswap/sdk-core";
@@ -6,6 +6,13 @@ import { TokenPair, Token } from "../types";
 import { SWAP_ROUTER_ABI, ERC20_ABI } from "../abis";
 import { SWAP_ROUTER_ADDRESS, SupportedChainId } from "../constants";
 import { useEthersProvider } from "./useEthersProvider";
+
+interface ApprovalStatus {
+  required: boolean;
+  approved: boolean;
+  loading: boolean;
+  error: string | null;
+}
 
 interface SwapResult {
   status: "success" | "error" | "pending";
@@ -17,40 +24,99 @@ async function getTokenTransferApproval(
   token: Token,
   amount: string,
   spender: string,
-  publicClient: any,
+  provider: ethers.providers.Provider,
   walletClient: any
 ) {
   if (token.symbol === "ETH") return true;
 
   try {
+    // Create contract interface and contract with our provider
     const tokenContract = new ethers.Contract(
       token.address,
       ERC20_ABI,
-      new ethers.providers.Web3Provider(publicClient.transport)
+      provider
     );
 
-    // First check current allowance
+    // First check current allowance using our provider
     const currentAllowance = await tokenContract.allowance(
-      await walletClient.account.address,
+      walletClient.account.address,
       spender
     );
 
+    // If there's an existing allowance, approve zero first
     if (currentAllowance.gt(0)) {
-      // If there's an existing allowance, approve zero first
-      const zeroTx = await tokenContract.approve(spender, 0);
-      await zeroTx.wait();
+      console.log("[Approval] Resetting existing allowance to zero");
+      const zeroTx = await walletClient.sendTransaction({
+        to: token.address as `0x${string}`,
+        data: tokenContract.interface.encodeFunctionData("approve", [
+          spender,
+          0,
+        ]) as `0x${string}`,
+        account: walletClient.account.address,
+      });
+
+      // Wait for confirmation using our provider
+      const zeroReceipt = await provider.waitForTransaction(zeroTx, 1, 60000);
+      if (!zeroReceipt.status) {
+        throw new Error("Failed to reset allowance");
+      }
     }
 
     // Then approve the maximum amount
-    const transaction = await tokenContract.approve(
-      spender,
-      ethers.constants.MaxUint256
+    console.log("[Approval] Setting maximum allowance");
+    const tx = await walletClient.sendTransaction({
+      to: token.address as `0x${string}`,
+      data: tokenContract.interface.encodeFunctionData("approve", [
+        spender,
+        ethers.constants.MaxUint256,
+      ]) as `0x${string}`,
+      account: walletClient.account.address,
+    });
+
+    // Wait for confirmation using our provider
+    const receipt = await provider.waitForTransaction(tx, 1, 60000);
+    if (!receipt.status) {
+      throw new Error("Approval transaction failed");
+    }
+
+    // Verify the allowance after approval using our provider
+    const newAllowance = await tokenContract.allowance(
+      walletClient.account.address,
+      spender
     );
-    await transaction.wait();
+
+    if (newAllowance.lt(ethers.constants.MaxUint256)) {
+      throw new Error("Allowance not set correctly");
+    }
+
     return true;
   } catch (e) {
-    console.error("Error getting token transfer approval:", e);
+    console.error("[Approval] Error:", e);
     return false;
+  }
+}
+
+async function checkApprovalNeeded(
+  token: Token,
+  amount: string,
+  spender: string,
+  provider: ethers.providers.Provider,
+  address: string
+): Promise<boolean> {
+  if (token.symbol === "ETH") return false;
+
+  try {
+    const tokenContract = new ethers.Contract(
+      token.address,
+      ERC20_ABI,
+      provider
+    );
+    const amountWei = ethers.utils.parseUnits(amount, token.decimals);
+    const allowance = await tokenContract.allowance(address, spender);
+    return allowance.lt(amountWei);
+  } catch (e) {
+    console.error("Error checking approval:", e);
+    return true; // Assume approval needed on error
   }
 }
 
@@ -58,6 +124,96 @@ export function useUniswapSwap() {
   const { address, chain } = useAccount();
   const { data: walletClient } = useWalletClient();
   const provider = useEthersProvider();
+  const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>({
+    required: false,
+    approved: false,
+    loading: false,
+    error: null,
+  });
+
+  const checkApproval = useCallback(
+    async (pair: TokenPair, amount: string) => {
+      if (
+        !address ||
+        !chain?.id ||
+        !provider ||
+        pair.inputToken.symbol === "ETH"
+      ) {
+        setApprovalStatus({
+          required: false,
+          approved: true,
+          loading: false,
+          error: null,
+        });
+        return;
+      }
+
+      try {
+        const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
+        const needsApproval = await checkApprovalNeeded(
+          pair.inputToken,
+          amount,
+          routerAddress,
+          provider,
+          address
+        );
+
+        setApprovalStatus({
+          required: needsApproval,
+          approved: !needsApproval,
+          loading: false,
+          error: null,
+        });
+      } catch (e: any) {
+        setApprovalStatus({
+          required: true,
+          approved: false,
+          loading: false,
+          error: e.message,
+        });
+      }
+    },
+    [address, chain?.id, provider]
+  );
+
+  const approve = useCallback(
+    async (pair: TokenPair, amount: string): Promise<boolean> => {
+      if (!address || !chain?.id || !walletClient || !provider) {
+        throw new Error("Wallet not connected");
+      }
+
+      setApprovalStatus((prev) => ({ ...prev, loading: true, error: null }));
+
+      try {
+        const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
+        const approved = await getTokenTransferApproval(
+          pair.inputToken,
+          amount,
+          routerAddress,
+          provider,
+          walletClient
+        );
+
+        setApprovalStatus({
+          required: !approved,
+          approved: approved,
+          loading: false,
+          error: null,
+        });
+
+        return approved;
+      } catch (e: any) {
+        setApprovalStatus({
+          required: true,
+          approved: false,
+          loading: false,
+          error: e.message,
+        });
+        return false;
+      }
+    },
+    [address, chain?.id, provider, walletClient]
+  );
 
   const executeSwap = useCallback(
     async (
@@ -78,21 +234,6 @@ export function useUniswapSwap() {
 
         const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
         const routerInterface = new ethers.utils.Interface(SWAP_ROUTER_ABI);
-
-        // Get token approval if needed
-        if (pair.inputToken.symbol !== "ETH") {
-          const approved = await getTokenTransferApproval(
-            pair.inputToken,
-            inputAmount,
-            routerAddress,
-            provider,
-            walletClient
-          );
-
-          if (!approved) {
-            throw new Error("Failed to approve token transfer");
-          }
-        }
 
         // Calculate the value (ETH amount) to send
         const value =
@@ -263,5 +404,5 @@ export function useUniswapSwap() {
     [address, chain?.id, provider, walletClient]
   );
 
-  return { executeSwap };
+  return { executeSwap, approve, checkApproval, approvalStatus };
 }

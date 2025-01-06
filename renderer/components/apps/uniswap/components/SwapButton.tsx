@@ -15,7 +15,14 @@ interface SwapButtonProps {
     error: string | null;
     hash?: `0x${string}`;
   };
-  onClick: () => void;
+  approvalStatus: {
+    required: boolean;
+    approved: boolean;
+    loading: boolean;
+    error: string | null;
+  };
+  onApprove: () => void;
+  onSwap: () => void;
   inputAmount: string;
   outputAmount: string;
 }
@@ -23,13 +30,18 @@ interface SwapButtonProps {
 export function SwapButton({
   disabled,
   status,
-  onClick,
+  approvalStatus,
+  onApprove,
+  onSwap,
   inputAmount,
   outputAmount,
 }: SwapButtonProps) {
   const getButtonText = () => {
     if (status.error) return "Try Again";
     if (!inputAmount || !outputAmount) return "Enter an amount";
+    if (approvalStatus.required && !approvalStatus.approved) {
+      return approvalStatus.loading ? "Approving..." : "Approve";
+    }
 
     switch (status.stage) {
       case "approving":
@@ -47,11 +59,27 @@ export function SwapButton({
     }
   };
 
+  const isDisabled =
+    disabled ||
+    status.loading ||
+    approvalStatus.loading ||
+    (!approvalStatus.approved && status.stage !== "idle");
+
+  const handleClick = () => {
+    if (approvalStatus.required && !approvalStatus.approved) {
+      onApprove();
+    } else {
+      onSwap();
+    }
+  };
+
   return (
     <button
-      className={`btn btn-primary w-100 ${status.loading ? "loading" : ""}`}
-      disabled={disabled || status.loading}
-      onClick={onClick}
+      className={`btn btn-primary w-100 ${
+        status.loading || approvalStatus.loading ? "loading" : ""
+      }`}
+      disabled={isDisabled}
+      onClick={handleClick}
     >
       {getButtonText()}
     </button>
