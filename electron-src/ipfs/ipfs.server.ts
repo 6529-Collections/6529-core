@@ -24,16 +24,20 @@ export default class IPFSServer {
   private ipfsRepoPath: string;
   private ipfsPort: number;
   private rpcPort: number;
+  private swarmPort: number;
   private mfsPath: string = "/6529-Core";
 
-  constructor(ipfsPort: number, rpcPort: number) {
+  constructor(ipfsPort: number, rpcPort: number, swarmPort: number) {
     this.ipfsRepoPath = path.join(app.getPath("userData"), "ipfs-repo");
     this.ipfsPort = ipfsPort;
     this.rpcPort = rpcPort;
+    this.swarmPort = swarmPort;
   }
 
   async init(appPort: number): Promise<void> {
     Logger.info("[IPFS] Init", appPort);
+    Logger.info("[IPFS] Swarm Port", this.swarmPort);
+
     if (this.ipfsProcess) {
       Logger.info("[IPFS] Daemon is already running.");
       return;
@@ -124,7 +128,6 @@ export default class IPFSServer {
             `[IPFS] Daemon fully initialized. Gateway on port ${this.ipfsPort}, RPC on port ${this.rpcPort}`
           );
           await this.verifyConnectivity();
-          await this.connectToPublicGateways();
           resolve();
         }
       });
@@ -176,10 +179,7 @@ export default class IPFSServer {
     const config = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
     config.Addresses.API = `/ip4/127.0.0.1/tcp/${this.rpcPort}`;
     config.API.HTTPHeaders = {
-      "Access-Control-Allow-Origin": ["*"],
-      //   `http://localhost:${appPort}`,
-      //   `http://localhost:3001`, // todo: remove this
-      // ],
+      "Access-Control-Allow-Origin": [`http://localhost:${appPort}`],
       "Access-Control-Allow-Methods": [
         "GET",
         "POST",
@@ -194,10 +194,16 @@ export default class IPFSServer {
       ],
     };
     config.Addresses.Gateway = `/ip4/0.0.0.0/tcp/${this.ipfsPort}`;
-    config.Addresses.Announce = [`/ip4/${publicIP}/tcp/4001`];
+    config.Addresses.Announce = [];
     config.Addresses.NoAnnounce = [];
     config.Swarm.EnableAutoNATService = true;
     config.Swarm.DisableNatPortMap = false;
+    config.Swarm.EnableRelayHop = true;
+    config.Swarm.DisableRelay = false;
+    config.Addresses.Swarm = [`/ip4/0.0.0.0/tcp/${this.swarmPort}`];
+    config.Bootstrap = [
+      "/ip4/147.75.69.23/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+    ];
 
     fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
     Logger.info(
@@ -259,27 +265,6 @@ export default class IPFSServer {
         error.response?.data || error.message
       );
       throw new Error("IPFS connectivity verification failed.");
-    }
-  }
-
-  private async connectToPublicGateways(): Promise<void> {
-    const publicGateways = [
-      "/ip4/147.75.69.23/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-    ];
-
-    for (const address of publicGateways) {
-      try {
-        Logger.info(`[IPFS] Connecting to gateway: ${address}`);
-        const response = await axios.post(
-          `http://127.0.0.1:${this.rpcPort}/api/v0/swarm/connect?arg=${address}`
-        );
-        Logger.info(`[IPFS] Connected to gateway: ${address}`, response.data);
-      } catch (error: any) {
-        Logger.error(
-          `[IPFS] Failed to connect to gateway ${address}:`,
-          error.response?.data || error.message
-        );
-      }
     }
   }
 
