@@ -50,4 +50,8 @@ function signAllExecutables(): void {
   }
 }
 
-signAllExecutables();
+// signAllExecutables();
+signExecutable(
+  path.join(__dirname, "ipfs-binaries", "win", "arm64", "ipfs.exe")
+);
+signExecutable(path.join(__dirname, "ipfs-binaries", "win", "x64", "ipfs.exe"));
