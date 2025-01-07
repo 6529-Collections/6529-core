@@ -28,6 +28,7 @@ import AboutNakamotoThreshold from "../../components/about/AboutNakamotoThreshol
 import AboutCopyright from "../../components/about/AboutCopyright";
 import AboutPrimaryAddress from "../../components/about/AboutPrimaryAddress";
 import { AuthContext } from "../../components/auth/Auth";
+import useCapacitor from "../../hooks/useCapacitor";
 import { SEIZE_URL } from "../../../constants";
 
 const AboutCookiePolicy = dynamic(
@@ -293,6 +294,7 @@ function AboutMenu(
     setSection: (section: AboutSection) => void;
   }>
 ) {
+  const capacitor = useCapacitor();
   const { currentSection, setSection } = props;
 
   return (
@@ -313,12 +315,14 @@ function AboutMenu(
         setSection={setSection}
         title="The Memes"
       />
-      <AboutRow
-        section={AboutSection.SUBSCRIPTIONS}
-        currentSection={currentSection}
-        setSection={setSection}
-        title="Subscriptions"
-      />
+      {capacitor.platform !== "ios" && (
+        <AboutRow
+          section={AboutSection.SUBSCRIPTIONS}
+          currentSection={currentSection}
+          setSection={setSection}
+          title="Subscriptions"
+        />
+      )}
       <AboutRow
         section={AboutSection.MEMES_CALENDAR}
         currentSection={currentSection}
