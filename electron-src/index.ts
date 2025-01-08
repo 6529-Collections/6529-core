@@ -103,6 +103,7 @@ let PORT: number;
 
 let IPFS_PORT: number;
 let IPFS_RPC_PORT: number;
+let IPFS_SWARM_PORT: number;
 let IPFS_SERVER: IPFSServer;
 
 const gotTheLock = app.requestSingleInstanceLock();
@@ -139,6 +140,14 @@ async function resolvePorts() {
       portRange: [3000, 8000],
     });
     Logger.info("IPFS_RPC_PORT:", IPFS_RPC_PORT);
+  }
+  if (!IPFS_SWARM_PORT) {
+    IPFS_SWARM_PORT = await getPort({
+      random: true,
+      port: 9257,
+      portRange: [3000, 8000],
+    });
+    Logger.info("IPFS_SWARM_PORT:", IPFS_SWARM_PORT);
   }
 }
 
@@ -245,7 +254,7 @@ if (!gotTheLock) {
     await initDb();
     initStore();
 
-    IPFS_SERVER = new IPFSServer(IPFS_PORT, IPFS_RPC_PORT);
+    IPFS_SERVER = new IPFSServer(IPFS_PORT, IPFS_RPC_PORT, IPFS_SWARM_PORT);
 
     await createWindow();
 

@@ -3,8 +3,12 @@ import * as path from "path";
 import * as fs from "fs";
 import axios from "axios";
 import { app } from "electron";
-import FormData from "form-data";
 import Logger from "electron-log";
+
+const bootstrapNodes = [
+  "/ip4/147.75.69.23/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
+  "/dns/api-ipfs.6529.io/tcp/4001/p2p/12D3KooWSxNuefKxYjTH9xBH2Nt6yVh9LLoaxoMf3KZwDnXmXKdB",
+];
 
 function getOS(): string {
   switch (process.platform) {
@@ -24,23 +28,26 @@ export default class IPFSServer {
   private ipfsRepoPath: string;
   private ipfsPort: number;
   private rpcPort: number;
+  private swarmPort: number;
   private mfsPath: string = "/6529-Core";
 
-  constructor(ipfsPort: number, rpcPort: number) {
+  constructor(ipfsPort: number, rpcPort: number, swarmPort: number) {
     this.ipfsRepoPath = path.join(app.getPath("userData"), "ipfs-repo");
     this.ipfsPort = ipfsPort;
     this.rpcPort = rpcPort;
+    this.swarmPort = swarmPort;
   }
 
   async init(appPort: number): Promise<void> {
     Logger.info("[IPFS] Init", appPort);
+    Logger.info("[IPFS] Swarm Port", this.swarmPort);
+
     if (this.ipfsProcess) {
       Logger.info("[IPFS] Daemon is already running.");
       return;
     }
 
     Logger.info("[IPFS] Starting daemon...", getOS(), process.arch);
-
     Logger.info("[IPFS] Is Packaged:", app.isPackaged);
 
     let ipfsBinaryPath;
@@ -64,6 +71,7 @@ export default class IPFSServer {
 
     await this.configureIPFS(appPort, ipfsBinaryPath);
 
+    // Ensure we reset and set only our trusted bootstrap nodes.
     await this.resetBootstrapNodes(ipfsBinaryPath);
 
     const attached = await this.attachToDaemon();
@@ -79,6 +87,140 @@ export default class IPFSServer {
     });
 
     await this.waitForDaemon();
+  }
+
+  private async configureIPFS(
+    appPort: number,
+    ipfsBinaryPath: string
+  ): Promise<void> {
+    Logger.info(`[IPFS] Configuring`, appPort);
+    const configFilePath = path.join(this.ipfsRepoPath, "config");
+
+    // Initialize the repo if it doesn't exist
+    if (!fs.existsSync(this.ipfsRepoPath)) {
+      Logger.info("[IPFS] Initializing repo...");
+      spawn(ipfsBinaryPath, ["init"], {
+        env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
+        stdio: "inherit",
+      });
+    }
+
+    // Wait for the config file to be created
+    while (!fs.existsSync(configFilePath)) {
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    // Fetch the public IP address dynamically
+    const publicIP = await this.getPublicIP();
+    Logger.info(`[IPFS] Public IP Address: ${publicIP}`);
+
+    // Read existing config
+    const config = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
+
+    // Configure RPC (API) port and HTTP headers
+    config.Addresses.API = `/ip4/127.0.0.1/tcp/${this.rpcPort}`;
+    config.API.HTTPHeaders = {
+      "Access-Control-Allow-Origin": [`http://localhost:${appPort}`],
+      "Access-Control-Allow-Methods": [
+        "GET",
+        "POST",
+        "OPTIONS",
+        "PUT",
+        "DELETE",
+      ],
+      "Access-Control-Allow-Headers": [
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+      ],
+    };
+
+    // Configure Gateway
+    config.Addresses.Gateway = `/ip4/0.0.0.0/tcp/${this.ipfsPort}`;
+    config.Addresses.Swarm = [`/ip4/0.0.0.0/tcp/${this.swarmPort}`];
+    config.Addresses.Announce = [];
+    config.Addresses.NoAnnounce = [];
+
+    // Disable dynamic peer discovery & NAT features to avoid Malwarebytes Trojan blocks
+    config.Swarm.EnableAutoNATService = false;
+    config.Swarm.DisableNatPortMap = true;
+    config.Swarm.EnableRelayHop = false;
+    config.Swarm.DisableRelay = true;
+    config.Discovery = {
+      MDNS: { Enabled: false },
+    };
+    config.Routing = {
+      Type: "none",
+    };
+
+    // Set only our trusted bootstrap nodes here
+    config.Bootstrap = bootstrapNodes;
+
+    fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
+    Logger.info(
+      `[IPFS] Config updated with Gateway port ${this.ipfsPort}, RPC port ${this.rpcPort}, and Public IP ${publicIP}.`
+    );
+  }
+
+  private async resetBootstrapNodes(ipfsBinaryPath: string): Promise<void> {
+    Logger.info(`[IPFS] Resetting bootstrap nodes`);
+    return new Promise((resolve, reject) => {
+      const removeProcess = spawn(
+        ipfsBinaryPath,
+        ["bootstrap", "rm", "--all"],
+        {
+          stdio: "pipe",
+          env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
+        }
+      );
+
+      removeProcess.on("close", async (code) => {
+        if (code !== 0) {
+          Logger.error(
+            `[IPFS] Failed to remove existing bootstrap nodes. Exit code: ${code}`
+          );
+          return reject(
+            new Error(`Failed to remove existing bootstrap nodes.`)
+          );
+        }
+
+        let addedCount = 0;
+
+        for (const node of bootstrapNodes) {
+          const addProcess = spawn(ipfsBinaryPath, ["bootstrap", "add", node], {
+            stdio: "pipe",
+            env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
+          });
+
+          addProcess.on("close", (addCode) => {
+            if (addCode === 0) {
+              Logger.info(`[IPFS] Added bootstrap node: ${node}`);
+              addedCount++;
+              if (addedCount === bootstrapNodes.length) {
+                resolve();
+              }
+            } else {
+              Logger.error(
+                `[IPFS] Failed to add bootstrap node: ${node}. Exit code: ${addCode}`
+              );
+              reject(new Error(`Failed to add bootstrap node: ${node}`));
+            }
+          });
+
+          addProcess.on("error", (err) => {
+            Logger.error(`[IPFS] Error adding bootstrap node: ${node}`, err);
+            reject(err);
+          });
+
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+        }
+      });
+
+      removeProcess.on("error", (err) => {
+        Logger.error(`[IPFS] Error removing bootstrap nodes:`, err);
+        reject(err);
+      });
+    });
   }
 
   private async attachToDaemon(): Promise<boolean> {
@@ -124,7 +266,6 @@ export default class IPFSServer {
             `[IPFS] Daemon fully initialized. Gateway on port ${this.ipfsPort}, RPC on port ${this.rpcPort}`
           );
           await this.verifyConnectivity();
-          await this.connectToPublicGateways();
           resolve();
         }
       });
@@ -147,105 +288,6 @@ export default class IPFSServer {
     });
   }
 
-  private async configureIPFS(
-    appPort: number,
-    ipfsBinaryPath: string
-  ): Promise<void> {
-    Logger.info(`[IPFS] Configuring`, appPort);
-    const configFilePath = path.join(this.ipfsRepoPath, "config");
-
-    // Initialize the repo if it doesn't exist
-    if (!fs.existsSync(this.ipfsRepoPath)) {
-      Logger.info("[IPFS] Initializing repo...");
-      spawn(ipfsBinaryPath, ["init"], {
-        env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
-        stdio: "inherit",
-      });
-    }
-
-    // Wait for the config file to be created
-    while (!fs.existsSync(configFilePath)) {
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    // Fetch the public IP address dynamically
-    const publicIP = await this.getPublicIP();
-    Logger.info(`[IPFS] Public IP Address: ${publicIP}`);
-
-    // Update the configuration
-    const config = JSON.parse(fs.readFileSync(configFilePath, "utf-8"));
-    config.Addresses.API = `/ip4/127.0.0.1/tcp/${this.rpcPort}`;
-    config.API.HTTPHeaders = {
-      "Access-Control-Allow-Origin": ["*"],
-      //   `http://localhost:${appPort}`,
-      //   `http://localhost:3001`, // todo: remove this
-      // ],
-      "Access-Control-Allow-Methods": [
-        "GET",
-        "POST",
-        "OPTIONS",
-        "PUT",
-        "DELETE",
-      ],
-      "Access-Control-Allow-Headers": [
-        "Authorization",
-        "Content-Type",
-        "X-Requested-With",
-      ],
-    };
-    config.Addresses.Gateway = `/ip4/0.0.0.0/tcp/${this.ipfsPort}`;
-    config.Addresses.Announce = [`/ip4/${publicIP}/tcp/4001`];
-    config.Addresses.NoAnnounce = [];
-    config.Swarm.EnableAutoNATService = true;
-    config.Swarm.DisableNatPortMap = false;
-
-    fs.writeFileSync(configFilePath, JSON.stringify(config, null, 2));
-    Logger.info(
-      `[IPFS] Config updated with Gateway port ${this.ipfsPort}, RPC port ${this.rpcPort}, and Public IP ${publicIP}.`
-    );
-  }
-
-  private async resetBootstrapNodes(ipfsBinaryPath: string): Promise<void> {
-    Logger.info(`[IPFS] Resetting bootstrap nodes`);
-    return new Promise((resolve, reject) => {
-      const bootstrapProcess = spawn(
-        ipfsBinaryPath,
-        ["bootstrap", "add", "--default"],
-        {
-          stdio: "pipe",
-          env: { ...process.env, IPFS_PATH: this.ipfsRepoPath },
-        }
-      );
-
-      bootstrapProcess.on("close", (code) => {
-        if (code === 0) {
-          Logger.info(`[IPFS] Default bootstrap nodes added successfully.`);
-          resolve();
-        } else {
-          Logger.error(
-            `[IPFS] Failed to add bootstrap nodes. Exit code: ${code}`
-          );
-          reject(new Error(`Bootstrap process exited with code ${code}`));
-        }
-      });
-
-      bootstrapProcess.on("error", (err) => {
-        Logger.error(`[IPFS] Error resetting bootstrap nodes:`, err);
-        reject(err);
-      });
-    });
-  }
-
-  private async getPublicIP(): Promise<string> {
-    try {
-      const response = await axios.get("https://api.ipify.org?format=json");
-      return response.data.ip;
-    } catch (error) {
-      Logger.error(`[IPFS] Failed to fetch public IP:`, error);
-      throw new Error("Unable to determine public IP address.");
-    }
-  }
-
   private async verifyConnectivity(): Promise<void> {
     try {
       const response = await axios.post(
@@ -259,27 +301,6 @@ export default class IPFSServer {
         error.response?.data || error.message
       );
       throw new Error("IPFS connectivity verification failed.");
-    }
-  }
-
-  private async connectToPublicGateways(): Promise<void> {
-    const publicGateways = [
-      "/ip4/147.75.69.23/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
-    ];
-
-    for (const address of publicGateways) {
-      try {
-        Logger.info(`[IPFS] Connecting to gateway: ${address}`);
-        const response = await axios.post(
-          `http://127.0.0.1:${this.rpcPort}/api/v0/swarm/connect?arg=${address}`
-        );
-        Logger.info(`[IPFS] Connected to gateway: ${address}`, response.data);
-      } catch (error: any) {
-        Logger.error(
-          `[IPFS] Failed to connect to gateway ${address}:`,
-          error.response?.data || error.message
-        );
-      }
     }
   }
 
@@ -318,40 +339,13 @@ export default class IPFSServer {
     });
   }
 
-  async addFile(filePath: string): Promise<string> {
+  private async getPublicIP(): Promise<string> {
     try {
-      const fileStream = fs.createReadStream(filePath);
-      const formData = new FormData();
-      formData.append("file", fileStream);
-
-      const baseDomain = `http://127.0.0.1:${this.rpcPort}`;
-
-      const addResponse = await axios.post(
-        `${baseDomain}/api/v0/add?pin=true`,
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders(),
-          },
-        }
-      );
-
-      const cid = addResponse.data.Hash;
-      Logger.info("[IPFS] File added to IPFS with CID:", cid);
-
-      const fileName = path.basename(filePath);
-      await axios.post(
-        `${baseDomain}/api/v0/files/cp?arg=/ipfs/${cid}&arg=${this.mfsPath}/${fileName}`
-      );
-
-      Logger.info(`[IPFS] File added to MFS at ${this.mfsPath}/${fileName}`);
-      return cid;
-    } catch (error: any) {
-      Logger.error(
-        `[IPFS] Failed to add file to IPFS or MFS:`,
-        error.response?.data || error.message
-      );
-      throw error;
+      const response = await axios.get("https://api.ipify.org?format=json");
+      return response.data.ip;
+    } catch (error) {
+      Logger.error(`[IPFS] Failed to fetch public IP:`, error);
+      throw new Error("Unable to determine public IP address.");
     }
   }
 }
