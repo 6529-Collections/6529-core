@@ -190,7 +190,12 @@ const WaveDetailedDropMobileMenu: FC<WaveDetailedDropMobileMenuProps> = ({
           isMobile={true}
           onRated={closeMenu}
         />
-        {showOptions && <WaveDetailedDropMobileMenuDelete drop={drop} />}
+        {showOptions && (
+          <WaveDetailedDropMobileMenuDelete
+            drop={drop}
+            onDropDeleted={closeMenu}
+          />
+        )}
       </div>
     </CommonDropdownItemsMobileWrapper>,
     document.body
