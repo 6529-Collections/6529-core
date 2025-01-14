@@ -41,7 +41,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const [showAppWalletModal, setShowAppWalletModal] = useState(false);
 
-  const walletType = "core";
+  const walletType = "core-wallet";
 
   const account = useAccount();
   const [connectedAddress, setConnectedAddress] = useState<string | null>(
