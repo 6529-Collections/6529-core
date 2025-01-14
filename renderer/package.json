@@ -17,6 +17,7 @@
   },
   "dependencies": {
     "@capacitor/device": "^6.0.1",
+    "@capacitor/filesystem": "^6.0.2",
     "@capacitor/keyboard": "^6.0.2",
     "@capacitor/push-notifications": "^6.0.2",
     "@capacitor/share": "^6.0.2",
@@ -38,8 +39,10 @@
     "@types/lodash": "^4.17.10",
     "@web3modal/wagmi": "^5.0.2",
     "bootstrap": "^5.3.3",
+    "capacitor-secure-storage-plugin": "^0.10.0",
     "csv-parser": "^3.0.0",
     "ethereum-cryptography": "^2.2.0",
+    "ethers": "^6.13.5",
     "framer-motion": "^11.2.11",
     "fs": "^0.0.1-security",
     "hammerjs": "^2.0.8",

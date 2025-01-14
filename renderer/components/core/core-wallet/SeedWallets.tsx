@@ -3,7 +3,6 @@ import { Container, Row, Col, Button } from "react-bootstrap";
 import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getSeedWallets } from "../../../electron";
-import { useToast } from "../../../contexts/ToastContext";
 import { ISeedWallet } from "../../../../shared/types";
 import SeedWalletCard from "./SeedWalletCard";
 import { useRouter } from "next/router";
@@ -14,7 +13,6 @@ export const SEED_WALLETS_NETWORK = mainnet;
 
 export default function SeedWallets() {
   const router = useRouter();
-  const { showToast } = useToast();
   const [seedWallets, setSeedWallets] = useState<ISeedWallet[]>([]);
 
   const [showCreateModal, setShowCreateModal] = useState(false);

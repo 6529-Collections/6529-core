@@ -25,6 +25,7 @@ import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 import HeaderQR from "./qr/HeaderQR";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
+import { useAppWallets } from "../app-wallets/AppWalletsContext";
 
 interface Props {
   onLoad?: () => void;
@@ -42,6 +43,7 @@ export interface HeaderLink {
 
 export default function Header(props: Readonly<Props>) {
   const capacitor = useCapacitor();
+  const { appWalletsSupported } = useAppWallets();
 
   const { showWaves } = useContext(AuthContext);
   const isMobile = useIsMobileScreen();
@@ -148,7 +150,7 @@ export default function Header(props: Readonly<Props>) {
 
   function printMobileRow(name: string, path: string) {
     return (
-      <Row className="pt-3">
+      <Row className="pt-3 pb-1">
         <Col>
           <a href={path}>
             <h3>{name}</h3>
@@ -466,6 +468,12 @@ export default function Header(props: Readonly<Props>) {
             </Col>
             {showBurgerMenuTools && (
               <Container>
+                {appWalletsSupported && (
+                  <>
+                    {printMobileHr()}
+                    {printMobileRow("App Wallets", "/tools/app-wallets")}
+                  </>
+                )}
                 {printMobileHr()}
                 {printMobileSubheader("NFT Delegation")}
                 {printMobileRow(
@@ -818,6 +826,17 @@ export default function Header(props: Readonly<Props>) {
                               title="Tools"
                               align={"start"}
                               className={`${styles.mainNavLink} ${styles.mainNavLinkPadding}`}>
+                              {appWalletsSupported && (
+                                <>
+                                  <HeaderDesktopLink
+                                    link={{
+                                      name: "App Wallets",
+                                      path: "/tools/app-wallets",
+                                    }}
+                                  />
+                                  <NavDropdown.Divider />
+                                </>
+                              )}
                               <NavDropdown.Item
                                 className={styles.submenuContainer}>
                                 <div className="d-flex justify-content-between align-items-center gap-3 submenu-trigger">

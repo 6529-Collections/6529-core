@@ -31,7 +31,7 @@ export default function AboutTermsOfService() {
               &quot;Terms&quot;: Terms of Service
               <br />
               <br />
-              &quot;We&quot;: 6529 Collections LLC
+              &quot;We&quot;: 6529 Collection LLC
               <br />
               <br />
               &quot;6529 NFTs&quot;: The Memes, 6529 Gradient, Meme Lab,

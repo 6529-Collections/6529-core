@@ -96,7 +96,7 @@ export default function Auth({
 }) {
   const { invalidateAll } = useContext(ReactQueryWrapperContext);
 
-  const { address, isConnected, seizeDisconnectAndLogout } =
+  const { address, walletType, isConnected, seizeDisconnectAndLogout } =
     useSeizeConnectContext();
 
   const signMessage = useSignMessage();
@@ -305,7 +305,8 @@ export default function Auth({
         signerAddress,
         tokenResponse.token,
         tokenResponse.refresh_token,
-        role ?? undefined
+        role ?? undefined,
+        walletType ?? undefined
       );
       return { success: true };
     } catch {
@@ -371,7 +372,8 @@ export default function Auth({
             redeemResponse.address,
             redeemResponse.token,
             refreshToken,
-            walletRole ?? undefined
+            walletRole ?? undefined,
+            walletType ?? undefined
           );
           return true;
         }
