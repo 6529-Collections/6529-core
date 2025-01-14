@@ -30,20 +30,27 @@ async function getTokenTransferApproval(
   if (token.symbol === "ETH") return true;
 
   try {
-    // Create contract interface and contract with our provider
     const tokenContract = new ethers.Contract(
       token.address,
       ERC20_ABI,
       provider
     );
 
-    // First check current allowance using our provider
+    // Parse the exact amount needed
+    const amountToApprove = ethers.utils.parseUnits(amount, token.decimals);
+
+    // Check current allowance
     const currentAllowance = await tokenContract.allowance(
       walletClient.account.address,
       spender
     );
 
-    // If there's an existing allowance, approve zero first
+    // If current allowance is sufficient, no need to approve
+    if (currentAllowance.gte(amountToApprove)) {
+      return true;
+    }
+
+    // If there's an existing insufficient allowance, reset it first
     if (currentAllowance.gt(0)) {
       console.log("[Approval] Resetting existing allowance to zero");
       const zeroTx = await walletClient.sendTransaction({
@@ -55,37 +62,40 @@ async function getTokenTransferApproval(
         account: walletClient.account.address,
       });
 
-      // Wait for confirmation using our provider
       const zeroReceipt = await provider.waitForTransaction(zeroTx, 1, 60000);
       if (!zeroReceipt.status) {
         throw new Error("Failed to reset allowance");
       }
     }
 
-    // Then approve the maximum amount
-    console.log("[Approval] Setting maximum allowance");
+    // Add 10% buffer for slippage and gas price fluctuations
+    const bufferMultiplier = 1.1; // 10% buffer
+    const amountWithBuffer = amountToApprove
+      .mul(ethers.utils.parseUnits(bufferMultiplier.toFixed(1), 1))
+      .div(ethers.utils.parseUnits("1", 1));
+
+    console.log("[Approval] Setting exact allowance with buffer");
     const tx = await walletClient.sendTransaction({
       to: token.address as `0x${string}`,
       data: tokenContract.interface.encodeFunctionData("approve", [
         spender,
-        ethers.constants.MaxUint256,
+        amountWithBuffer,
       ]) as `0x${string}`,
       account: walletClient.account.address,
     });
 
-    // Wait for confirmation using our provider
     const receipt = await provider.waitForTransaction(tx, 1, 60000);
     if (!receipt.status) {
       throw new Error("Approval transaction failed");
     }
 
-    // Verify the allowance after approval using our provider
+    // Verify the allowance
     const newAllowance = await tokenContract.allowance(
       walletClient.account.address,
       spender
     );
 
-    if (newAllowance.lt(ethers.constants.MaxUint256)) {
+    if (newAllowance.lt(amountToApprove)) {
       throw new Error("Allowance not set correctly");
     }
 
