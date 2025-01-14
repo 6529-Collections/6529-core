@@ -27,6 +27,7 @@ import { getCommonHeaders } from "../../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../../services/api/common-api";
 import { AuthContext } from "../../../auth/Auth";
 import { SEIZE_API_URL, SEIZE_URL } from "../../../../../constants";
+import useCapacitor from "../../../../hooks/useCapacitor";
 
 interface Props {
   collection: NextGenCollection;
@@ -196,6 +197,7 @@ export function NextGenPhases(props: Readonly<PhaseProps>) {
 }
 
 export default function NextGenCollectionHeader(props: Readonly<Props>) {
+  const capacitor = useCapacitor();
   const [available, setAvailable] = useState<number>(0);
 
   function showMint() {
@@ -230,7 +232,7 @@ export default function NextGenCollectionHeader(props: Readonly<Props>) {
               available={available}
             />
           }
-          {props.show_links && (
+          {props.show_links && capacitor.platform !== "ios" && (
             <span className="pt-2 pb-2 d-flex align-items-center justify-content-end gap-4">
               <a
                 href={

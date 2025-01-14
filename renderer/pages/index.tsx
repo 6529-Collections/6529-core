@@ -46,6 +46,7 @@ import { getProfileLogTypes } from "../helpers/profile-logs.helpers";
 import { ManifoldClaim } from "../hooks/useManifoldClaim";
 import { NftPageStats } from "../components/nftAttributes/NftStats";
 import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
+import useCapacitor from "../hooks/useCapacitor";
 
 export interface IndexPageProps {
   readonly nft: NFTWithMemesExtendedData;
@@ -89,6 +90,7 @@ export default function Home({
 }: {
   readonly pageProps: IndexPageProps;
 }) {
+  const capacitor = useCapacitor();
   const { initLandingPage } = useContext(ReactQueryWrapperContext);
   initLandingPage({
     activityLogs: {
@@ -374,34 +376,36 @@ export default function Home({
                         />
                       </tbody>
                     </Table>
-                    <Row className="pt-3">
-                      <Col>
-                        <a
-                          href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`}
-                          target="_blank"
-                          rel="noreferrer">
-                          <Image
-                            className={styles.marketplace}
-                            src="/opensea.png"
-                            alt="opensea"
-                            width={40}
-                            height={40}
-                          />
-                        </a>
-                        <a
-                          href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`}
-                          target="_blank"
-                          rel="noreferrer">
-                          <Image
-                            className={styles.marketplace}
-                            src="/x2y2.png"
-                            alt="x2y2"
-                            width={40}
-                            height={40}
-                          />
-                        </a>
-                      </Col>
-                    </Row>
+                    {capacitor.platform !== "ios" && (
+                      <Row className="pt-3">
+                        <Col>
+                          <a
+                            href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`}
+                            target="_blank"
+                            rel="noreferrer">
+                            <Image
+                              className={styles.marketplace}
+                              src="/opensea.png"
+                              alt="opensea"
+                              width={40}
+                              height={40}
+                            />
+                          </a>
+                          <a
+                            href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`}
+                            target="_blank"
+                            rel="noreferrer">
+                            <Image
+                              className={styles.marketplace}
+                              src="/x2y2.png"
+                              alt="x2y2"
+                              width={40}
+                              height={40}
+                            />
+                          </a>
+                        </Col>
+                      </Row>
+                    )}
                   </Container>
                 </Col>
               </Row>

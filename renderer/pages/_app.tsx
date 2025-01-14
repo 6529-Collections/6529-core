@@ -95,7 +95,7 @@ import {
 import Head from "next/head";
 import Auth from "../components/auth/Auth";
 import { NextPage, NextPageContext } from "next";
-import { ReactElement, ReactNode, use, useEffect, useState } from "react";
+import { ReactElement, ReactNode, useEffect, useState } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ReactQueryWrapper from "../components/react-query-wrapper/ReactQueryWrapper";
 import "../components/drops/create/lexical/lexical.styles.scss";
@@ -103,15 +103,10 @@ import { CookieConsentProvider } from "../components/cookies/CookieConsentContex
 import { ToastProvider } from "../contexts/ToastContext";
 import { useRouter } from "next/router";
 import { ConfirmProvider } from "../contexts/ConfirmContext";
-import { AboutSection } from "./about/[section]";
 import { SeedWalletProvider } from "../contexts/SeedWalletContext";
 import { useAnchorInterceptor } from "../hooks/useAnchorInterceptor";
 import { ModalStateProvider } from "../contexts/ModalStateContext";
-import HeaderUserConnectModal from "../components/header/user/HeaderUserConnectModal";
-import {
-  SeizeConnectModalProvider,
-  useSeizeConnectModal,
-} from "../contexts/SeizeConnectModalContext";
+import { SeizeConnectModalProvider } from "../contexts/SeizeConnectModalContext";
 import Footer from "../components/footer/Footer";
 import { SeizeConnectProvider } from "../components/auth/SeizeConnectContext";
 import { IpfsProvider, resolveIpfsUrl } from "../components/ipfs/IPFSContext";
