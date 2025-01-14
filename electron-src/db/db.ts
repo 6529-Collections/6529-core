@@ -9,9 +9,10 @@ import Logger from "electron-log";
 import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
 import { RPCProvider } from "./entities/IRpcProvider";
 import { ConsolidatedTDH, TDHMerkleRoot } from "./entities/ITDH";
-import { registerIpcHandlers } from "./db-operations";
+import { registerIpcHandlers } from "./db.operations";
 import { ipcMain } from "electron";
 import { Transaction } from "./entities/ITransaction";
+import { CoreMigration } from "./entities/ICoreMigration";
 
 let AppDataSource: DataSource;
 
@@ -159,6 +160,7 @@ export const initDb = async () => {
         TDHMerkleRoot,
         ConsolidatedTDH,
         Transaction,
+        CoreMigration,
       ],
       synchronize: true,
     });

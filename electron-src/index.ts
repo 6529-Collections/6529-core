@@ -20,6 +20,7 @@ import {
   deactivateRpcProvider,
   deleteRpcProvider,
   deleteSeedWallet,
+  getDb,
   getRpcProviders,
   getSeedWallet,
   getSeedWallets,
@@ -79,6 +80,7 @@ import {
 import { RPCProvider } from "./db/entities/IRpcProvider";
 import { Tail } from "tail";
 import IPFSServer from "./ipfs/ipfs.server";
+import { runCoreMigrations } from "./db/db.migrations";
 
 contextMenu({
   showInspectElement: false,
@@ -251,7 +253,6 @@ if (!gotTheLock) {
 
     await prepareNext(PORT);
     await initLogs();
-    await initDb();
     initStore();
 
     IPFS_SERVER = new IPFSServer(IPFS_PORT, IPFS_RPC_PORT, IPFS_SWARM_PORT);
@@ -276,8 +277,19 @@ function createSplash() {
     frame: false,
     backgroundColor: "#222",
     transparent: true,
+    webPreferences: {
+      preload: path.join(__dirname, "preload-splash.js"),
+    },
   });
-  splash.loadFile(path.join(__dirname, "assets/splash.html"));
+  const splashPath = path.join(__dirname, "assets", "splash.html");
+  const splashURL = `file://${splashPath}`;
+  splash.loadURL(splashURL);
+}
+
+function updateSplashMessage(newMessage: string) {
+  if (splash && splash.webContents) {
+    splash.webContents.send("update-message", newMessage);
+  }
 }
 
 async function createWindow() {
@@ -302,6 +314,16 @@ async function createWindow() {
     createSplash();
   }
 
+  updateSplashMessage("Initializing Database");
+  await initDb();
+
+  updateSplashMessage("Running Database Migrations");
+  await runCoreMigrations(getDb());
+
+  updateSplashMessage("Initializing IPFS");
+  await IPFS_SERVER.init(PORT);
+
+  updateSplashMessage("Creating main window");
   Logger.info("Creating main window");
   mainWindow = new BrowserWindow({
     minWidth: 500,
@@ -323,7 +345,7 @@ async function createWindow() {
     show: false,
   });
 
-  await IPFS_SERVER.init(PORT);
+  updateSplashMessage("Loading main window");
 
   const url = `http://localhost:${PORT}`;
 
