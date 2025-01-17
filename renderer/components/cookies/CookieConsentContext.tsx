@@ -17,6 +17,7 @@ import {
   CONSENT_PERFORMANCE_COOKIE,
 } from "../../constants";
 import { AuthContext } from "../auth/Auth";
+import CookiesBanner from "./CookiesBanner";
 
 const GTM_ID = "G-71NLVV3KY3";
 
@@ -102,10 +103,6 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({
       await commonApiPost({ endpoint: `policies/cookies-consent`, body: {} });
       Cookies.set(CONSENT_ESSENTIAL_COOKIE, "true", { expires: 365 });
       Cookies.set(CONSENT_PERFORMANCE_COOKIE, "true", { expires: 365 });
-      setToast({
-        type: "success",
-        message: "Cookie policy accepted!",
-      });
       getCookieConsent();
     } catch (error) {
       console.error("Failed to post cookie consent", error);
@@ -154,8 +151,8 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({
   };
 
   const value = useMemo(
-    () => ({ showCookieConsent, consent, reject }),
-    [showCookieConsent, consent, reject]
+    () => ({ consent, reject, showCookieConsent }),
+    [consent, reject]
   );
 
   useEffect(() => {
@@ -165,6 +162,7 @@ export const CookieConsentProvider: React.FC<CookieConsentProviderProps> = ({
   return (
     <CookieConsentContext.Provider value={value}>
       {children}
+      {showCookieConsent && <CookiesBanner />}
     </CookieConsentContext.Provider>
   );
 };

@@ -159,7 +159,7 @@ export function getDateDisplay(date: Date) {
   if (2 > days) {
     return `${Math.round(secondsAgo / (60 * 60))} hours ago`;
   }
-  return `${days} days ago`;
+  return `${days.toLocaleString()} days ago`;
 }
 
 export function areEqualAddresses(w1: any, w2: any) {
@@ -649,15 +649,15 @@ export const getTimeAgoShort = (milliseconds: number): string => {
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  const months = Math.floor(days / 30);
-  const years = Math.floor(months / 12);
 
-  if (years > 0) {
-    return `${years}y`;
-  } else if (months > 0) {
-    return `${months}M`;
-  } else if (days > 0) {
-    return `${days}d`;
+  if (days > 1) {
+    const date = new Date(milliseconds);
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+  } else if (days === 1) {
+    return "Yesterday";
   } else if (hours > 0) {
     return `${hours}h`;
   } else if (minutes > 0) {

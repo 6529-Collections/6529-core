@@ -394,6 +394,7 @@ h5:not(.tailwind-scope h5) {
 }
 
 .btn-white {
+  border: none;
   background-color: white !important;
   color: black !important;
 
@@ -408,6 +409,16 @@ h5:not(.tailwind-scope h5) {
 
   &:hover {
     background-color: $dark-grey !important;
+  }
+}
+
+.btn-grey {
+  border: none;
+  background-color: $lighter-grey;
+  color: white !important;
+
+  &:hover {
+    background-color: lighten($color: $dark-grey, $amount: 5);
   }
 }
 
@@ -426,6 +437,10 @@ h5:not(.tailwind-scope h5) {
 
 .cursor-pointer {
   cursor: pointer;
+}
+
+.cursor-help {
+  cursor: help;
 }
 
 .edit-profile {
@@ -538,6 +553,90 @@ pre code {
   margin-top: env(safe-area-inset-top);
 }
 
+.seize-card {
+  padding: 20px;
+  border: 1px solid transparent;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.seize-card-clickable {
+  &:hover {
+    transform: scale(1.01);
+    border: 1px solid $dark-grey;
+    cursor: pointer;
+  }
+}
+
+.seize-card-white {
+  padding: 20px;
+  border: 1px solid transparent;
+  box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
+  transition: transform 0.3s ease;
+}
+
+.seize-card-white-clickable {
+  &:hover {
+    transform: scale(1.01);
+    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.75);
+    cursor: pointer;
+  }
+}
+
 .modal-blurred {
   filter: blur(5px);
+}
+
+.ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.no-glow {
+  box-shadow: none !important;
+  outline: none !important;
+
+  &:focus {
+    box-shadow: none !important;
+    outline: none !important;
+  }
+}
+
+.header-wp {
+  @media (max-width: 1000px) {
+    .container {
+      width: 850px !important;
+    }
+  }
+
+  @media (max-width: 1100px) {
+    .container {
+      width: 950px !important;
+    }
+  }
+
+  @media (min-width: 1200px) {
+    .container {
+      width: 1050px !important;
+    }
+  }
+
+  @media (min-width: 1300px) {
+    .container {
+      width: 1150px !important;
+    }
+  }
+
+  @media (min-width: 1400px) {
+    .container {
+      width: 1250px !important;
+    }
+  }
+
+  @media (min-width: 1500px) {
+    .container {
+      width: 1280px !important;
+    }
+  }
 }

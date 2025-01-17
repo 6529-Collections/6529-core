@@ -7,6 +7,7 @@ import WaveDetailedDropMobileMenuDelete from "./WaveDetailedDropMobileMenuDelete
 import WaveDetailedDropMobileMenuFollow from "./WaveDetailedDropMobileMenuFollow";
 import WaveDetailedDropActionsRate from "./WaveDetailedDropActionsRate";
 import useCapacitor from "../../../../hooks/useCapacitor";
+import { SEIZE_URL } from "../../../../../constants";
 
 interface WaveDetailedDropMobileMenuProps {
   readonly drop: ApiDrop;
@@ -38,7 +39,7 @@ const WaveDetailedDropMobileMenu: FC<WaveDetailedDropMobileMenuProps> = ({
     if (longPressTriggered) return;
     if (isTemporaryDrop) return;
 
-    const dropLink = `${window.location.protocol}//${window.location.host}/waves/${drop.wave.id}?drop=${drop.serial_no}`;
+    const dropLink = `${SEIZE_URL}/waves/${drop.wave.id}?drop=${drop.serial_no}`;
 
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(dropLink).then(() => {
@@ -189,7 +190,12 @@ const WaveDetailedDropMobileMenu: FC<WaveDetailedDropMobileMenuProps> = ({
           isMobile={true}
           onRated={closeMenu}
         />
-        {showOptions && <WaveDetailedDropMobileMenuDelete drop={drop} />}
+        {showOptions && (
+          <WaveDetailedDropMobileMenuDelete
+            drop={drop}
+            onDropDeleted={closeMenu}
+          />
+        )}
       </div>
     </CommonDropdownItemsMobileWrapper>,
     document.body

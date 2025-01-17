@@ -32,6 +32,7 @@ import { toggleWaveFollowing } from "./utils/toggleWaveFollowing";
 import { useQueryKeyListener } from "../../hooks/useQueryKeyListener";
 import Cookies from "js-cookie";
 import { Time } from "../../helpers/time";
+import { changeDropInCache } from "./utils/onDropRateChange";
 
 export enum QueryKey {
   PROFILE = "PROFILE",
@@ -50,6 +51,7 @@ export enum QueryKey {
   IDENTITY_FOLLOWING_ACTIONS = "IDENTITY_FOLLOWING_ACTIONS",
   IDENTITY_FOLLOWERS = "IDENTITY_FOLLOWERS",
   IDENTITY_NOTIFICATIONS = "IDENTITY_NOTIFICATIONS",
+  IDENTITY_SEARCH = "IDENTITY_SEARCH",
   WALLET_TDH = "WALLET_TDH",
   WALLET_TDH_HISTORY = "WALLET_TDH_HISTORY",
   REP_CATEGORIES_SEARCH = "REP_CATEGORIES_SEARCH",
@@ -63,6 +65,7 @@ export enum QueryKey {
   COMMUNITY_MEMBERS_TOP = "COMMUNITY_MEMBERS_TOP",
   RESERVOIR_NFT = "RESERVOIR_NFT",
   DROPS = "DROPS",
+  DROPS_LEADERBOARD = "DROPS_LEADERBOARD",
   DROP = "DROP",
   DROP_DISCUSSION = "DROP_DISCUSSION",
   GROUPS = "GROUPS",
@@ -79,6 +82,8 @@ export enum QueryKey {
   WAVES = "WAVES",
   WAVES_PUBLIC = "WAVES_PUBLIC",
   WAVE = "WAVE",
+  WAVE_LOGS = "WAVE_LOGS",
+  WAVE_VOTERS = "WAVE_VOTERS",
   WAVE_FOLLOWERS = "WAVE_FOLLOWERS",
   FOLLOWING_WAVES = "FOLLOWING_WAVES",
   FEED_ITEMS = "FEED_ITEMS",
@@ -188,7 +193,7 @@ type ReactQueryWrapperContextType = {
   }) => void;
   waitAndInvalidateDrops: () => void;
   addOptimisticDrop: (params: { readonly drop: ApiDrop }) => void;
-  onDropChange: (params: {
+  onDropRateChange: (params: {
     readonly drop: ApiDrop;
     readonly giverHandle: string | null;
   }) => void;
@@ -226,7 +231,7 @@ export const ReactQueryWrapperContext =
     initCommunityActivityPage: () => {},
     waitAndInvalidateDrops: () => {},
     addOptimisticDrop: () => {},
-    onDropChange: () => {},
+    onDropRateChange: () => {},
     invalidateDrops: () => {},
     onGroupRemoved: () => {},
     onGroupChanged: () => {},
@@ -1227,119 +1232,13 @@ export default function ReactQueryWrapper({
     invalidateDrops();
   };
 
-  const profileDropChangeMutation = ({
-    oldData,
-    drop,
-  }: {
-    oldData:
-      | {
-          pages: ApiDrop[][];
-        }
-      | undefined;
-    drop: ApiDrop;
-  }) => {
-    if (!oldData) {
-      return oldData;
-    }
-    return {
-      ...oldData,
-      pages: oldData.pages.map((page) => {
-        return page.map((d) => {
-          if (d.id === drop.id) {
-            return drop;
-          }
-          return d;
-        });
-      }),
-    };
-  };
-
-  const dropsDropChangeMutation = ({
-    oldData,
-    drop,
-  }: {
-    oldData:
-      | {
-          pages: ApiWaveDropsFeed[];
-        }
-      | ApiWaveDropsFeed
-      | undefined;
-    drop: ApiDrop;
-  }) => {
-    if (!oldData) {
-      return oldData;
-    }
-
-    // Handle infinite query data structure
-    if ("pages" in oldData) {
-      return {
-        ...oldData,
-        pages: oldData.pages.map((page) => ({
-          ...page,
-          drops: page.drops.map((d) => (d.id === drop.id ? drop : d)),
-        })),
-      };
-    }
-
-    // Handle regular query data structure
-    return {
-      ...oldData,
-      drops: oldData.drops.map((d) => (d.id === drop.id ? drop : d)),
-    };
-  };
-
-  const onDropChange = ({
+  const onDropRateChange = async ({
     drop,
     giverHandle,
   }: {
     readonly drop: ApiDrop;
     readonly giverHandle: string | null;
-  }) => {
-    queryClient.setQueryData(
-      [
-        QueryKey.PROFILE_DROPS,
-        {
-          handleOrWallet: drop.author.handle.toLowerCase(),
-          context_profile: giverHandle,
-        },
-      ],
-      (
-        oldData:
-          | {
-              pages: ApiDrop[][];
-            }
-          | undefined
-      ) => profileDropChangeMutation({ oldData, drop })
-    );
-    queryClient.setQueriesData(
-      {
-        queryKey: [QueryKey.DROPS],
-      },
-      (oldData: any) => dropsDropChangeMutation({ oldData, drop })
-    );
-    invalidateQueries({
-      key: QueryKey.DROP_DISCUSSION,
-      values: [{ drop_id: drop.id }],
-    });
-
-    invalidateQueries({
-      key: QueryKey.WAVE,
-      values: [{ wave_id: drop.wave.id }],
-    });
-    invalidateQueries({
-      key: QueryKey.DROP,
-      values: [{ drop_id: drop.id }],
-    });
-    queryClient.invalidateQueries({
-      queryKey: [QueryKey.DROPS],
-    });
-    queryClient.invalidateQueries({
-      queryKey: [QueryKey.FEED_ITEMS],
-    });
-    queryClient.invalidateQueries({
-      queryKey: [QueryKey.IDENTITY_NOTIFICATIONS],
-    });
-  };
+  }) => await changeDropInCache(queryClient, drop, giverHandle);
 
   const onIdentityBulkRate = () => {
     queryClient.invalidateQueries({
@@ -1398,6 +1297,9 @@ export default function ReactQueryWrapper({
   const invalidateDrops = () => {
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROPS],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [QueryKey.DROPS_LEADERBOARD],
     });
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP],
@@ -1478,7 +1380,7 @@ export default function ReactQueryWrapper({
       onGroupChanged,
       waitAndInvalidateDrops,
       addOptimisticDrop,
-      onDropChange,
+      onDropRateChange,
       onIdentityBulkRate,
       onGroupCreate,
       onWaveCreated,
@@ -1508,7 +1410,7 @@ export default function ReactQueryWrapper({
       onGroupChanged,
       waitAndInvalidateDrops,
       addOptimisticDrop,
-      onDropChange,
+      onDropRateChange,
       onIdentityBulkRate,
       onGroupCreate,
       onWaveCreated,

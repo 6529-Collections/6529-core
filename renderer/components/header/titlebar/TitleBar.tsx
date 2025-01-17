@@ -233,7 +233,7 @@ export default function TitleBar() {
           isMac() ? styles.infoMac : styles.infoWin
         }`}
         placement="left"
-        onClick={() => router.push("/core/app-info")}
+        onClick={() => router.push("/core/core-info")}
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}
@@ -256,7 +256,7 @@ export default function TitleBar() {
         <Modal.Body className={styles.updateModalContent}>
           <p>Version {updateAvailable?.version} is available.</p>
           <span>
-            Visit <Link href={"/core/app-info"}>App Info</Link> page to update.
+            Visit <Link href={"/core/core-info"}>App Info</Link> page to update.
           </span>
         </Modal.Body>
         <Modal.Footer className={styles.updateModalContent}>
@@ -307,7 +307,7 @@ function SharePopup(props: {
   };
 
   const copyWebLink = () => {
-    const link = `https://seize.io/${getLinkPath()}`;
+    const link = `https://6529.io/${getLinkPath()}`;
     navigator.clipboard.writeText(link).then(() => {
       setIsDesktopLinkCopied(false);
       setIsWebLinkCopied(true);

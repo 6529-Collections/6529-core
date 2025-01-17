@@ -21,6 +21,7 @@ import ArtistProfileHandle from "./ArtistProfileHandle";
 import { NftPageStats } from "../nftAttributes/NftStats";
 import { printMemeReferences } from "../rememes/RememePage";
 import { SEIZE_API_URL } from "../../../constants";
+import useCapacitor from "../../hooks/useCapacitor";
 
 const REMEMES_PAGE_SIZE = 20;
 
@@ -30,6 +31,7 @@ export function MemePageLiveRightMenu(props: {
   nftMeta: MemesExtendedData | undefined;
   nftBalance: number;
 }) {
+  const capacitor = useCapacitor();
   if (props.show && props.nft && props.nftMeta) {
     return (
       <Col
@@ -219,21 +221,22 @@ export function MemePageLiveRightMenu(props: {
               </Col>
             </Row>
           )}
-          <Row className="pt-4">
-            <Col>
-              <a
-                href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft.id}`}
-                target="_blank"
-                rel="noreferrer">
-                <Image
-                  className={styles.marketplace}
-                  src="/opensea.png"
-                  alt="opensea"
-                  width={40}
-                  height={40}
-                />
-              </a>
-              {/* <a
+          {capacitor.platform !== "ios" && (
+            <Row className="pt-4">
+              <Col>
+                <a
+                  href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft.id}`}
+                  target="_blank"
+                  rel="noreferrer">
+                  <Image
+                    className={styles.marketplace}
+                    src="/opensea.png"
+                    alt="opensea"
+                    width={40}
+                    height={40}
+                  />
+                </a>
+                {/* <a
                       href={`https://looksrare.org/collections/${MEMES_CONTRACT}/${props.nft.id}`}
                       target="_blank"
                       rel="noreferrer">
@@ -245,20 +248,21 @@ export function MemePageLiveRightMenu(props: {
                         height={40}
                       />
                     </a> */}
-              <a
-                href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft.id}`}
-                target="_blank"
-                rel="noreferrer">
-                <Image
-                  className={styles.marketplace}
-                  src="/x2y2.png"
-                  alt="x2y2"
-                  width={40}
-                  height={40}
-                />
-              </a>
-            </Col>
-          </Row>
+                <a
+                  href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft.id}`}
+                  target="_blank"
+                  rel="noreferrer">
+                  <Image
+                    className={styles.marketplace}
+                    src="/x2y2.png"
+                    alt="x2y2"
+                    width={40}
+                    height={40}
+                  />
+                </a>
+              </Col>
+            </Row>
+          )}
         </Container>
       </Col>
     );

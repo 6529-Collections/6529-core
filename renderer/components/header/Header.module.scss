@@ -3,7 +3,7 @@
 .mainContainer {
   margin-top: 30px;
   font-size: larger;
-  z-index: 10;
+  z-index: 1000;
   position: relative;
   min-height: $header-height;
   background-color: $bg-color-1;
@@ -210,6 +210,13 @@
 .logoIcon {
   height: auto;
   max-width: min(40vw, 250px);
+  position: relative;
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+
+  &:hover {
+    transform: scale(1.02); /* Optional: Adds a slight zoom effect */
+    box-shadow: 0 0 10px 8px rgba(200, 200, 200, 0.2);
+  }
 }
 
 .headerRight {
@@ -282,7 +289,11 @@
 
 .burgerMenuClose {
   width: 35px;
+  height: 35px;
   cursor: pointer;
+  position: fixed;
+  right: 20px;
+  top: calc(20px + env(safe-area-inset-top));
 }
 
 .mainNavLink {
@@ -552,5 +563,36 @@
 
 .logoIconSmall {
   height: auto;
-  max-width: min(30vw, 180px);
+  max-width: min(10vw, 40px);
+  position: relative;
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+
+  &:hover {
+    transform: scale(1.02); /* Optional: Adds a slight zoom effect */
+    box-shadow: 0 0 20px 10px rgba(255, 215, 215, 0.3);
+  }
+}
+
+.submenuContainer {
+  position: relative;
+}
+
+.nestedMenu {
+  position: absolute;
+  border-top: 3px solid $font-color;
+  left: 100%;
+  top: 0;
+  display: none;
+  background-color: black;
+  padding: 0.5rem;
+  z-index: 1050;
+  min-width: 160px;
+}
+
+.submenuContainer:hover .nestedMenu {
+  display: block;
+}
+
+.burgerMenuSubheader {
+  color: $font-color-h !important;
 }

@@ -10,7 +10,7 @@ import {
   faLockOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { SEED_MIN_PASS_LENGTH } from "../core/seedWallet/SeedWalletModal";
+import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
 import { SeedWalletRequest } from "../../../shared/types";
 import { useToast } from "../../contexts/ToastContext";
 import { on } from "events";

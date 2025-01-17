@@ -16,7 +16,6 @@ export const WAVE_LABELS: Record<ApiWaveType, string> = {
 export const WAVE_VOTING_LABELS: Record<ApiWaveCreditType, string> = {
   [ApiWaveCreditType.Tdh]: "By TDH",
   [ApiWaveCreditType.Rep]: "By Rep",
-  [ApiWaveCreditType.Unique]: "By Unique Identity",
 };
 
 export const WAVE_SIGNATURE_LABELS: Record<
@@ -43,26 +42,27 @@ export const WAVE_SIGNATURE_LABELS: Record<
   },
 };
 
-const CREATE_WAVE_DEFAULT_MAIN_STEPS: CreateWaveStep[] = [
-  CreateWaveStep.OVERVIEW,
-  CreateWaveStep.GROUPS,
-  CreateWaveStep.DATES,
-  CreateWaveStep.DROPS,
-  CreateWaveStep.VOTING,
-];
-
 export const CREATE_WAVE_MAIN_STEPS: Record<ApiWaveType, CreateWaveStep[]> = {
   [ApiWaveType.Chat]: [
-    ...CREATE_WAVE_DEFAULT_MAIN_STEPS,
+    CreateWaveStep.OVERVIEW,
+    CreateWaveStep.GROUPS,
     CreateWaveStep.DESCRIPTION,
   ],
   [ApiWaveType.Rank]: [
-    ...CREATE_WAVE_DEFAULT_MAIN_STEPS,
+    CreateWaveStep.OVERVIEW,
+    CreateWaveStep.GROUPS,
+    CreateWaveStep.DATES,
+    CreateWaveStep.DROPS,
+    CreateWaveStep.VOTING,
     CreateWaveStep.OUTCOMES,
     CreateWaveStep.DESCRIPTION,
   ],
   [ApiWaveType.Approve]: [
-    ...CREATE_WAVE_DEFAULT_MAIN_STEPS,
+    CreateWaveStep.OVERVIEW,
+    CreateWaveStep.GROUPS,
+    CreateWaveStep.DATES,
+    CreateWaveStep.DROPS,
+    CreateWaveStep.VOTING,
     CreateWaveStep.APPROVAL,
     CreateWaveStep.OUTCOMES,
     CreateWaveStep.DESCRIPTION,
