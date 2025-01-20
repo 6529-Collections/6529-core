@@ -935,6 +935,12 @@ export default function Header(props: Readonly<Props>) {
                                       path: "/meme-gas",
                                     }}
                                   />
+                                  <HeaderDesktopLink
+                                    link={{
+                                      name: "Apps",
+                                      path: "/apps",
+                                    }}
+                                  />
                                 </div>
                               </NavDropdown.Item>
                               <NavDropdown.Divider />
