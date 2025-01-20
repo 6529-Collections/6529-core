@@ -37,6 +37,10 @@ import { Token, TokenPair, toSDKToken, SwapStatus } from "./types";
 import { useUniswapSwap } from "./hooks/useUniswapSwap";
 import { SwapButton } from "./components/SwapButton";
 import { useEthersProvider } from "./hooks/useEthersProvider";
+import {
+  TransactionController,
+  TransactionStatus,
+} from "./controllers/TransactionController";
 
 const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
@@ -318,144 +322,62 @@ export default function UniswapApp() {
   const [inputFocused, setInputFocused] = useState(false);
   const [outputFocused, setOutputFocused] = useState(false);
 
-  const [swapStatus, setSwapStatus] = useState<{
-    stage:
-      | "idle"
-      | "approving"
-      | "swapping"
-      | "confirming"
-      | "success"
-      | "pending";
-    loading: boolean;
-    error: string | null;
-    hash?: `0x${string}`;
-  }>({
+  // Enhance swap status type
+  type SwapStage =
+    | "idle"
+    | "approving"
+    | "swapping"
+    | "confirming"
+    | "success"
+    | "pending"
+    | "complete";
+
+  const [swapStatus, setSwapStatus] = useState<TransactionStatus>({
     stage: "idle",
     loading: false,
     error: null,
   });
 
-  const { data: transactionReceipt, isLoading: isWaitingForReceipt } =
-    useWaitForTransactionReceipt({
-      hash: swapStatus.hash as `0x${string}`,
-      retryCount: 5,
-      pollingInterval: 10_000,
-      timeout: 40_000,
-      onReplaced: (response) => {
-        console.log("[Transaction] Replaced:", response);
-      },
+  // Declare resetSwapForm first using function declaration
+  function resetSwapForm() {
+    setInputAmount("");
+    setOutputAmount("");
+    setSwapStatus({
+      stage: "idle",
+      loading: false,
+      error: null,
     });
+    fetchBalances();
+  }
 
-  // Watch for transaction receipt updates with logging
+  // Then use it in transactionController
+  const transactionController = useMemo(() => {
+    if (!provider) return null;
+
+    return new TransactionController(provider, {
+      onStatusChange: setSwapStatus,
+      onSuccess: () => {
+        setTimeout(resetSwapForm, 2000);
+      },
+      onError: (error) => {
+        setSwapError(error);
+      },
+      showToast: window.seedConnector.showToast,
+    });
+  }, [provider, resetSwapForm]);
+
+  // Handle transaction monitoring
   useEffect(() => {
-    if (swapStatus.hash) {
-      console.log("[Transaction] Waiting for receipt:", {
-        hash: swapStatus.hash,
-        isWaiting: isWaitingForReceipt,
-      });
+    if (
+      !transactionController ||
+      !swapStatus.hash ||
+      swapStatus.stage !== "pending"
+    ) {
+      return;
     }
-  }, [swapStatus.hash, isWaitingForReceipt]);
 
-  useEffect(() => {
-    if (swapStatus.hash && swapStatus.stage === "confirming" && provider) {
-      const checkTransaction = async () => {
-        try {
-          console.log("[Transaction] Starting confirmation check", {
-            hash: swapStatus.hash,
-            stage: swapStatus.stage,
-          });
-
-          // First check if transaction already exists
-          try {
-            const tx = await provider.getTransaction(swapStatus.hash as string);
-            console.log("[Transaction] Existing transaction check", {
-              exists: !!tx,
-              blockNumber: tx?.blockNumber,
-            });
-          } catch (checkError) {
-            console.log(
-              "[Transaction] Existing transaction check failed",
-              checkError
-            );
-          }
-
-          const receipt = await provider.waitForTransaction(
-            swapStatus.hash as string,
-            1,
-            60000
-          );
-
-          console.log("[Transaction] Receipt received", {
-            receipt,
-            status: receipt.status,
-            blockNumber: receipt.blockNumber,
-          });
-
-          if (receipt.status === 1) {
-            // Ethers uses 1 for success
-            setSwapStatus({
-              stage: "success",
-              loading: false,
-              error: null,
-              hash: swapStatus.hash,
-            });
-
-            window.seedConnector.showToast({
-              type: "success",
-              message: "Transaction successful",
-            });
-
-            // Reset form after success
-            setTimeout(() => {
-              setInputAmount("");
-              setOutputAmount("");
-              fetchBalances();
-            }, 2000);
-          } else {
-            console.log("[Transaction] Failed with receipt:", receipt);
-            setSwapStatus({
-              stage: "idle",
-              loading: false,
-              error: "Transaction failed",
-            });
-
-            window.seedConnector.showToast({
-              type: "error",
-              message: "Transaction failed",
-            });
-          }
-        } catch (error: any) {
-          console.log("[Transaction] Error during confirmation:", {
-            error,
-            message: error.message,
-            stage: swapStatus.stage,
-          });
-
-          // Don't set error status if it's just a timeout
-          if (!error.message?.includes("Timed out")) {
-            setSwapStatus({
-              stage: "idle",
-              loading: false,
-              error: error.message || "Transaction failed",
-            });
-
-            window.seedConnector.showToast({
-              type: "error",
-              message: error.message || "Transaction failed",
-            });
-          }
-        }
-      };
-
-      checkTransaction();
-    }
-  }, [
-    transactionReceipt,
-    swapStatus.stage,
-    swapStatus.hash,
-    provider,
-    fetchBalances,
-  ]);
+    transactionController.monitorTransaction(swapStatus.hash);
+  }, [transactionController, swapStatus.hash, swapStatus.stage]);
 
   // Add a new handler for approve button
   const handleApprove = async () => {
@@ -497,12 +419,11 @@ export default function UniswapApp() {
     }
   };
 
-  // Update handleSwap to remove approval logic
+  // Handle swap
   const handleSwap = async () => {
-    if (!inputAmount || !outputAmount) return;
+    if (!inputAmount || !outputAmount || !transactionController) return;
 
     try {
-      // Proceed with swap
       setSwapStatus({
         stage: "swapping",
         loading: true,
@@ -513,16 +434,9 @@ export default function UniswapApp() {
 
       if (result.status === "success") {
         setSwapStatus({
-          stage: "success",
-          loading: false,
-          error: null,
-          hash: result.hash,
-        });
-      } else if (result.status === "pending") {
-        setSwapStatus({
           stage: "pending",
           loading: true,
-          error: result.error || null,
+          error: null,
           hash: result.hash,
         });
       } else {
@@ -796,7 +710,8 @@ export default function UniswapApp() {
                     !outputAmount ||
                     swapStatus.loading ||
                     !inputAmount ||
-                    !address
+                    !address ||
+                    swapStatus.stage === "complete"
                   }
                   status={swapStatus}
                   approvalStatus={approvalStatus}

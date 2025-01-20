@@ -52,7 +52,6 @@ async function getTokenTransferApproval(
 
     // If there's an existing insufficient allowance, reset it first
     if (currentAllowance.gt(0)) {
-      console.log("[Approval] Resetting existing allowance to zero");
       const zeroTx = await walletClient.sendTransaction({
         to: token.address as `0x${string}`,
         data: tokenContract.interface.encodeFunctionData("approve", [
@@ -74,7 +73,6 @@ async function getTokenTransferApproval(
       .mul(ethers.utils.parseUnits(bufferMultiplier.toFixed(1), 1))
       .div(ethers.utils.parseUnits("1", 1));
 
-    console.log("[Approval] Setting exact allowance with buffer");
     const tx = await walletClient.sendTransaction({
       to: token.address as `0x${string}`,
       data: tokenContract.interface.encodeFunctionData("approve", [
@@ -101,7 +99,6 @@ async function getTokenTransferApproval(
 
     return true;
   } catch (e) {
-    console.error("[Approval] Error:", e);
     return false;
   }
 }
@@ -125,7 +122,6 @@ async function checkApprovalNeeded(
     const allowance = await tokenContract.allowance(address, spender);
     return allowance.lt(amountWei);
   } catch (e) {
-    console.error("Error checking approval:", e);
     return true; // Assume approval needed on error
   }
 }
@@ -231,17 +227,11 @@ export function useUniswapSwap() {
       inputAmount: string,
       slippageTolerance: Percent = new Percent(50, 10_000)
     ): Promise<SwapResult> => {
-      if (!address || !chain?.id || !walletClient || !provider) {
-        throw new Error("Wallet not connected");
+      if (!provider || !address || !chain?.id) {
+        throw new Error("Provider not ready or missing requirements");
       }
 
       try {
-        console.log("[Swap] Starting swap execution", {
-          pair,
-          inputAmount,
-          slippage: slippageTolerance.toFixed(),
-        });
-
         const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
         const routerInterface = new ethers.utils.Interface(SWAP_ROUTER_ABI);
 
@@ -282,6 +272,10 @@ export function useUniswapSwap() {
         // Add 20% buffer to gas estimate
         const gasBuffer = gasEstimate.mul(120).div(100);
 
+        if (!walletClient) {
+          throw new Error("Wallet client not found");
+        }
+
         // Send transaction
         const hash = await walletClient.sendTransaction({
           to: routerAddress as `0x${string}`,
@@ -291,17 +285,8 @@ export function useUniswapSwap() {
           account: address,
         });
 
-        console.log("[Swap] Transaction submitted", {
-          hash,
-          chainId: chain.id,
-          from: address,
-          to: routerAddress,
-        });
-
         // Wait for transaction confirmation with increased timeout
         if (provider) {
-          console.log("[Swap] Waiting for transaction receipt...");
-
           let retryCount = 0;
           const maxRetries = 3;
 
@@ -309,24 +294,12 @@ export function useUniswapSwap() {
             try {
               const receipt = await provider.waitForTransaction(hash, 1, 60000);
 
-              console.log("[Swap] Transaction receipt received", {
-                receipt,
-                status: receipt.status,
-                blockNumber: receipt.blockNumber,
-                gasUsed: receipt.gasUsed?.toString(),
-              });
-
               return {
                 status: receipt.status === 1 ? "success" : "error",
                 hash: receipt.transactionHash as `0x${string}`,
                 error: receipt.status === 1 ? undefined : "Transaction failed",
               };
             } catch (waitError: any) {
-              console.log("[Swap] Wait attempt failed", {
-                attempt: retryCount + 1,
-                error: waitError.message,
-              });
-
               // If it's not a timeout error, throw immediately
               if (!waitError.message?.includes("Timed out")) {
                 throw waitError;
@@ -337,11 +310,6 @@ export function useUniswapSwap() {
               // Check transaction status directly
               try {
                 const tx = await provider.getTransaction(hash);
-                console.log("[Swap] Transaction status check", {
-                  hash,
-                  exists: !!tx,
-                  blockNumber: tx?.blockNumber,
-                });
 
                 if (tx?.blockNumber) {
                   return {
@@ -349,12 +317,7 @@ export function useUniswapSwap() {
                     hash,
                   };
                 }
-              } catch (checkError) {
-                console.error(
-                  "[Swap] Transaction status check failed",
-                  checkError
-                );
-              }
+              } catch (checkError) {}
             }
           }
 
@@ -362,25 +325,13 @@ export function useUniswapSwap() {
           try {
             const tx = await provider.getTransaction(hash);
             if (tx) {
-              console.log(
-                "[Swap] Transaction exists but receipt wait timed out",
-                {
-                  hash,
-                  blockNumber: tx.blockNumber,
-                }
-              );
               return {
                 status: "pending",
                 hash,
                 error: "Transaction submitted but confirmation timed out",
               };
             }
-          } catch (finalCheckError) {
-            console.error(
-              "[Swap] Final transaction check failed",
-              finalCheckError
-            );
-          }
+          } catch (finalCheckError) {}
         }
 
         // If no provider or all retries failed
@@ -390,13 +341,6 @@ export function useUniswapSwap() {
           error: "Transaction submitted but status unknown",
         };
       } catch (error: any) {
-        console.error("[Swap] Error:", {
-          error,
-          message: error.message,
-          data: error.data,
-          stack: error.stack,
-        });
-
         if (error.message?.includes("Timed out")) {
           return {
             status: "pending",

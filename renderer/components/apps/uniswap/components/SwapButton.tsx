@@ -10,7 +10,8 @@ interface SwapButtonProps {
       | "swapping"
       | "confirming"
       | "success"
-      | "pending";
+      | "pending"
+      | "complete";
     loading: boolean;
     error: string | null;
     hash?: `0x${string}`;
@@ -53,6 +54,8 @@ export function SwapButton({
       case "pending":
         return "Pending...";
       case "success":
+        return "Success";
+      case "complete":
         return "Swap Complete";
       default:
         return "Swap";
@@ -63,6 +66,7 @@ export function SwapButton({
     disabled ||
     status.loading ||
     approvalStatus.loading ||
+    status.stage === "complete" ||
     (!approvalStatus.approved && status.stage !== "idle");
 
   const handleClick = () => {

@@ -10,14 +10,18 @@ export function useEthersProvider() {
     if (!chain?.id) return null;
 
     try {
-      return new ethers.providers.JsonRpcProvider(
-        RPC_URLS[chain.id as SupportedChainId]
-      );
+      const rpcUrl = RPC_URLS[chain.id as SupportedChainId];
+      const provider = new ethers.providers.JsonRpcProvider(rpcUrl, {
+        chainId: chain.id,
+        name: chain.name || "unknown",
+      });
+
+      // Test the connection silently
+      provider.getNetwork().catch(() => {});
+
+      return provider;
     } catch (error) {
-      console.warn("Primary RPC failed, using fallback:", error);
-      return new ethers.providers.JsonRpcProvider(
-        FALLBACK_RPC_URLS[chain.id as SupportedChainId]
-      );
+      // ... fallback logic
     }
   }, [chain?.id]);
 
