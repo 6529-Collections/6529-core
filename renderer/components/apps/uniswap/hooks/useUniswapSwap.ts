@@ -12,6 +12,7 @@ interface ApprovalStatus {
   approved: boolean;
   loading: boolean;
   error: string | null;
+  allowance?: string;
 }
 
 interface SwapResult {
@@ -135,47 +136,64 @@ export function useUniswapSwap() {
     approved: false,
     loading: false,
     error: null,
+    allowance: undefined,
   });
 
   const checkApproval = useCallback(
-    async (pair: TokenPair, amount: string) => {
-      if (
-        !address ||
-        !chain?.id ||
-        !provider ||
-        pair.inputToken.symbol === "ETH"
-      ) {
+    async (pair: TokenPair, amount?: string) => {
+      if (!address || !chain?.id || !provider) {
         setApprovalStatus({
           required: false,
-          approved: true,
+          approved: false,
           loading: false,
           error: null,
+          allowance: undefined,
         });
         return;
       }
 
       try {
         const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
-        const needsApproval = await checkApprovalNeeded(
-          pair.inputToken,
-          amount,
-          routerAddress,
-          provider,
-          address
+        const tokenContract = new ethers.Contract(
+          pair.inputToken.address,
+          ERC20_ABI,
+          provider
         );
+
+        // Get both allowance and required approval
+        const [allowance, needsApproval] = await Promise.all([
+          pair.inputToken.symbol === "ETH"
+            ? Promise.resolve(undefined)
+            : tokenContract
+                .allowance(address, routerAddress)
+                .then((val: ethers.BigNumber) =>
+                  ethers.utils.formatUnits(val, pair.inputToken.decimals)
+                ),
+          amount
+            ? checkApprovalNeeded(
+                pair.inputToken,
+                amount,
+                routerAddress,
+                provider,
+                address
+              )
+            : Promise.resolve(false),
+        ]);
 
         setApprovalStatus({
           required: needsApproval,
           approved: !needsApproval,
           loading: false,
           error: null,
+          allowance,
         });
       } catch (e: any) {
         setApprovalStatus({
-          required: true,
+          required: false,
           approved: false,
           loading: false,
           error: e.message,
+          allowance: undefined,
         });
       }
     },
@@ -184,13 +202,13 @@ export function useUniswapSwap() {
 
   const approve = useCallback(
     async (pair: TokenPair, amount: string): Promise<boolean> => {
-      if (!address || !chain?.id || !walletClient || !provider) {
-        throw new Error("Wallet not connected");
+      if (!address || !chain?.id || !provider || !walletClient) {
+        return false;
       }
 
-      setApprovalStatus((prev) => ({ ...prev, loading: true, error: null }));
-
       try {
+        setApprovalStatus((prev) => ({ ...prev, loading: true }));
+
         const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
         const approved = await getTokenTransferApproval(
           pair.inputToken,
@@ -200,21 +218,37 @@ export function useUniswapSwap() {
           walletClient
         );
 
-        setApprovalStatus({
-          required: !approved,
-          approved: approved,
-          loading: false,
-          error: null,
-        });
+        // Immediately check and update the new allowance
+        if (approved) {
+          const tokenContract = new ethers.Contract(
+            pair.inputToken.address,
+            ERC20_ABI,
+            provider
+          );
+          const newAllowance = await tokenContract.allowance(
+            address,
+            routerAddress
+          );
+
+          setApprovalStatus((prev) => ({
+            ...prev,
+            loading: false,
+            approved: true,
+            required: false,
+            allowance: ethers.utils.formatUnits(
+              newAllowance,
+              pair.inputToken.decimals
+            ),
+          }));
+        }
 
         return approved;
       } catch (e: any) {
-        setApprovalStatus({
-          required: true,
-          approved: false,
+        setApprovalStatus((prev) => ({
+          ...prev,
           loading: false,
           error: e.message,
-        });
+        }));
         return false;
       }
     },
@@ -358,5 +392,87 @@ export function useUniswapSwap() {
     [address, chain?.id, provider, walletClient]
   );
 
-  return { executeSwap, approve, checkApproval, approvalStatus };
+  const revokeApproval = useCallback(
+    async (pair: TokenPair): Promise<boolean> => {
+      if (
+        !address ||
+        !chain?.id ||
+        !provider ||
+        !walletClient ||
+        pair.inputToken.symbol === "ETH"
+      ) {
+        return false;
+      }
+
+      try {
+        setApprovalStatus((prev) => ({ ...prev, loading: true }));
+
+        const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
+        const tokenContract = new ethers.Contract(
+          pair.inputToken.address,
+          ERC20_ABI,
+          provider
+        );
+
+        // Set allowance to 0 using walletClient
+        const tx = await walletClient.sendTransaction({
+          to: pair.inputToken.address as `0x${string}`,
+          data: tokenContract.interface.encodeFunctionData("approve", [
+            routerAddress,
+            0,
+          ]) as `0x${string}`,
+          account: walletClient.account.address,
+        });
+
+        await provider.waitForTransaction(tx, 1, 60000);
+
+        // Immediately check and update the new allowance
+        const newAllowance = await tokenContract.allowance(
+          address,
+          routerAddress
+        );
+
+        setApprovalStatus((prev) => ({
+          ...prev,
+          loading: false,
+          approved: false,
+          required: true,
+          allowance: ethers.utils.formatUnits(
+            newAllowance,
+            pair.inputToken.decimals
+          ),
+        }));
+
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Approval revoked successfully",
+        });
+
+        return true;
+      } catch (e: any) {
+        console.error("Error revoking approval:", e);
+        setApprovalStatus((prev) => ({
+          ...prev,
+          loading: false,
+          error: e.message,
+        }));
+
+        window.seedConnector.showToast({
+          type: "error",
+          message: e.message || "Failed to revoke approval",
+        });
+
+        return false;
+      }
+    },
+    [address, chain?.id, provider, walletClient]
+  );
+
+  return {
+    executeSwap,
+    approve,
+    checkApproval,
+    approvalStatus,
+    revokeApproval,
+  };
 }

@@ -90,6 +90,15 @@ async function handleTokenApproval(
   await tx.wait();
 }
 
+function formatAllowance(allowance: string | undefined): string {
+  if (!allowance) return "0";
+  const num = parseFloat(allowance);
+  if (num > 1_000_000) return "∞";
+  return num.toLocaleString(undefined, {
+    maximumFractionDigits: 4,
+  });
+}
+
 export default function UniswapApp() {
   const { address, chain } = useAccount();
   const provider = useEthersProvider();
@@ -293,8 +302,13 @@ export default function UniswapApp() {
     }
   }, [inputAmount, forward]);
 
-  const { executeSwap, approve, checkApproval, approvalStatus } =
-    useUniswapSwap();
+  const {
+    executeSwap,
+    approve,
+    checkApproval,
+    approvalStatus,
+    revokeApproval,
+  } = useUniswapSwap();
 
   // Add this function to handle percentage clicks
   function handlePercentageClick(percentage: number) {
@@ -451,7 +465,14 @@ export default function UniswapApp() {
     }
   };
 
-  // Update useEffect to check approval when input changes
+  // Add effect to check approval when input token changes
+  useEffect(() => {
+    if (selectedPair?.inputToken) {
+      checkApproval(selectedPair);
+    }
+  }, [selectedPair?.inputToken, checkApproval]);
+
+  // Keep the existing effect for input amount changes
   useEffect(() => {
     if (inputAmount && selectedPair) {
       checkApproval(selectedPair, inputAmount);
@@ -575,6 +596,23 @@ export default function UniswapApp() {
     return formatBalance(balance ?? "...", token);
   }
 
+  const handleRevokeApproval = async () => {
+    try {
+      const revoked = await revokeApproval(selectedPair);
+      if (revoked) {
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Approval revoked successfully",
+        });
+      }
+    } catch (error: any) {
+      window.seedConnector.showToast({
+        type: "error",
+        message: error.message || "Failed to revoke approval",
+      });
+    }
+  };
+
   return (
     <Container fluid className={styles.uniswapContainer}>
       <Row className="w-100 justify-content-center align-items-center">
@@ -631,6 +669,24 @@ export default function UniswapApp() {
                       disabled={swapLoading}
                     />
                   </div>
+                  {selectedPair.inputToken.symbol !== "ETH" && (
+                    <div className={styles.allowanceContainer}>
+                      <div className={styles.allowanceInfo}>
+                        Approved: {formatAllowance(approvalStatus.allowance)}{" "}
+                        {selectedPair.inputToken.symbol}
+                      </div>
+                      {approvalStatus.allowance &&
+                        parseFloat(approvalStatus.allowance) > 0 && (
+                          <button
+                            onClick={handleRevokeApproval}
+                            className={styles.revokeButton}
+                            disabled={approvalStatus.loading}
+                          >
+                            Revoke
+                          </button>
+                        )}
+                    </div>
+                  )}
                   <div className={styles.percentageButtons}>
                     {[25, 50, 75, 100].map((percent) => (
                       <button
