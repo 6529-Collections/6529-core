@@ -17,12 +17,10 @@ function formatPrice(
 ): string {
   const num = parseFloat(price);
 
-  // Handle very small numbers
   if (num < 0.0001) {
     return num.toExponential(4);
   }
 
-  // Handle stable coins (USDC, USDT, etc.)
   if (token.decimals <= 6) {
     return num.toLocaleString(undefined, {
       minimumFractionDigits: 2,
@@ -30,21 +28,17 @@ function formatPrice(
     });
   }
 
-  // Handle ETH and similar tokens
   if (num >= 1000) {
-    // Large numbers: show fewer decimals
     return num.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
     });
   } else if (num >= 1) {
-    // Medium numbers: show more precision
     return num.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: 4,
     });
   } else {
-    // Small numbers: show even more precision
     return num.toLocaleString(undefined, {
       minimumFractionDigits: 2,
       maximumFractionDigits: maxDecimals,

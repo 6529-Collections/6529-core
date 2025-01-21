@@ -16,13 +16,10 @@ export function useEthersProvider() {
         name: chain.name || "unknown",
       });
 
-      // Test the connection silently
       provider.getNetwork().catch(() => {});
 
       return provider;
-    } catch (error) {
-      // ... fallback logic
-    }
+    } catch (error) {}
   }, [chain?.id]);
 
   return provider;

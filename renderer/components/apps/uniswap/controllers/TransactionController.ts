@@ -60,7 +60,6 @@ export class TransactionController {
 
       console.debug("[Transaction] Monitoring transaction:", { hash });
 
-      // Wait for transaction to be mined
       const receipt = await this.provider.waitForTransaction(hash, 1, 60000);
 
       if (receipt.status === 1) {
