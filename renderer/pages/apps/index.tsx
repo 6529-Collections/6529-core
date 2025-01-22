@@ -6,6 +6,8 @@ import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
 import { Container, Row, Col } from "react-bootstrap";
 import { SEIZE_URL } from "../../../constants";
 import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faArrowRightArrowLeft } from "@fortawesome/free-solid-svg-icons";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -15,7 +17,7 @@ const Header = dynamic(() => import("../../components/header/Header"), {
 interface AppCard {
   title: string;
   description: string;
-  icon: string;
+  icon: any; // FontAwesome icon
   link: string;
   status: "live" | "coming-soon";
 }
@@ -24,7 +26,7 @@ const AVAILABLE_APPS: AppCard[] = [
   {
     title: "Swap",
     description: "Swap tokens and provide liquidity on Ethereum",
-    icon: "/apps/uniswap-logo.svg",
+    icon: faArrowRightArrowLeft,
     link: "/apps/swap",
     status: "live",
   },
@@ -53,20 +55,27 @@ export default function AppsPage() {
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
         <Container fluid className={styles.mainContainer}>
-          <Row>
-            <Col>
-              <h1>
+          <Row className="justify-content-center tw-mt-8">
+            <Col xs={12} className="text-center mb-5 ">
+              <h1 className={styles.title}>
                 <span className="font-lightest">Decentralized</span> Apps
               </h1>
-              <p className="text-muted">
+              <p className={styles.subtitle}>
                 Explore and interact with decentralized applications directly
                 from 6529 CORE
               </p>
             </Col>
           </Row>
-          <Row className="pt-4">
+          <Row className="justify-content-center">
             {AVAILABLE_APPS.map((app) => (
-              <Col key={app.title} xs={12} md={4} lg={3} className="mb-4">
+              <Col
+                key={app.title}
+                xs={12}
+                sm={8}
+                md={6}
+                lg={4}
+                className="mb-4"
+              >
                 <Link
                   href={app.status === "live" ? app.link : "#"}
                   className={`${styles.appCard} ${
@@ -74,12 +83,7 @@ export default function AppsPage() {
                   }`}
                 >
                   <div className={styles.appIcon}>
-                    <img
-                      src={app.icon}
-                      alt={app.title}
-                      width={48}
-                      height={48}
-                    />
+                    <FontAwesomeIcon icon={app.icon} />
                   </div>
                   <div className={styles.appInfo}>
                     <h3>
