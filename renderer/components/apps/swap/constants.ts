@@ -116,23 +116,13 @@ export const CHAIN_POOLS: ChainPools = {
 export const TOKENS = CHAIN_TOKENS[1];
 export const TOKEN_PAIRS = CHAIN_POOLS[1];
 
-export const RPC_URLS: Record<SupportedChainId, string> = {
-  1: "https://indulgent-proud-fog.quiknode.pro/73611d5899c8b69ff77e118e4bd964123fa0602e", // Replace with your Alchemy/Infura key
-  11155111:
-    "https://cosmological-thrumming-meme.ethereum-sepolia.quiknode.pro/b0c4b6585d341d9bad54707aa3dca895f7c17899", // Replace with your Alchemy/Infura key
-};
-
-// Add fallback RPC URLs if needed
-export const FALLBACK_RPC_URLS: Record<SupportedChainId, string> = {
-  1: "https://indulgent-proud-fog.quiknode.pro/73611d5899c8b69ff77e118e4bd964123fa0602e",
-  11155111:
-    "https://cosmological-thrumming-meme.ethereum-sepolia.quiknode.pro/b0c4b6585d341d9bad54707aa3dca895f7c17899",
-};
-
 export const CHAIN_QUOTER_ADDRESSES: Record<SupportedChainId, string> = {
   1: "0x61fFE014bA17989E743c5F6cB21bF9697530B21e", // Mainnet Quoter V2
   11155111: "0xEd1f6473345F45b75F8179591dd5bA1888cf2FB3", // Sepolia Quoter V2
 };
+
+export const SEPOLIA_RPC =
+  "https://cosmological-thrumming-meme.ethereum-sepolia.quiknode.pro/b0c4b6585d341d9bad54707aa3dca895f7c17899";
 
 export const QUOTER_CONTRACT_ADDRESS = CHAIN_QUOTER_ADDRESSES[11155111];
 

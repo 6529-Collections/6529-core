@@ -22,11 +22,8 @@ import { parseUnits } from "ethersv5/lib/utils";
 import {
   CHAIN_POOLS,
   CHAIN_TOKENS,
-  RPC_URLS,
-  CHAIN_QUOTER_ADDRESSES,
-  CHAIN_ROUTER_ADDRESSES,
+  SEPOLIA_RPC,
   SupportedChainId,
-  FALLBACK_RPC_URLS,
 } from "./constants";
 import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
@@ -41,54 +38,7 @@ import {
   TransactionStatus,
 } from "./controllers/TransactionController";
 import { TokenSelect } from "./components/TokenSelect";
-
-const QUOTER_ABI = [
-  "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
-];
-
-// Add loading indicator component
-function LoadingSpinner() {
-  return <div className={styles.loadingSpinner} />;
-}
-
-// Add these helper functions before the UniswapApp component
-
-async function checkApprovalNeeded(
-  token: Token,
-  amount: string,
-  chainId: number,
-  address: string,
-  publicClient: any
-): Promise<boolean> {
-  if (token.symbol === "ETH") return false;
-
-  const provider = new ethers.providers.Web3Provider(publicClient.transport);
-  const tokenContract = new ethers.Contract(token.address, ERC20_ABI, provider);
-  const routerAddress = CHAIN_ROUTER_ADDRESSES[chainId as SupportedChainId];
-
-  const allowance = await tokenContract.allowance(address, routerAddress);
-  const inputAmountWei = parseUnits(amount, token.decimals);
-
-  return allowance.lt(inputAmountWei);
-}
-
-async function handleTokenApproval(
-  token: Token,
-  amount: string,
-  chainId: number,
-  publicClient: any
-): Promise<void> {
-  const provider = new ethers.providers.Web3Provider(publicClient.transport);
-  const signer = provider.getSigner();
-  const tokenContract = new ethers.Contract(token.address, ERC20_ABI, signer);
-  const routerAddress = CHAIN_ROUTER_ADDRESSES[chainId as SupportedChainId];
-
-  const tx = await tokenContract.approve(
-    routerAddress,
-    ethers.constants.MaxUint256
-  );
-  await tx.wait();
-}
+import { sepolia } from "wagmi/chains";
 
 function formatAllowance(allowance: string | undefined): string {
   if (!allowance) return "0";
@@ -215,9 +165,16 @@ export default function UniswapApp() {
       }
 
       try {
-        const provider = new ethers.providers.JsonRpcProvider(
-          RPC_URLS[chain.id as SupportedChainId]
-        );
+        let provider: ethers.providers.Provider;
+
+        if (chain.id === sepolia.id) {
+          provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
+            chainId: chain.id,
+            name: "sepolia",
+          });
+        } else {
+          provider = new ethers.providers.CloudflareProvider();
+        }
 
         const poolContract = new ethers.Contract(
           pool.poolAddress,
@@ -533,16 +490,15 @@ export default function UniswapApp() {
     if (!address || !chain?.id) return;
 
     try {
-      let provider;
-      try {
-        provider = new ethers.providers.JsonRpcProvider(
-          RPC_URLS[chain.id as SupportedChainId]
-        );
-      } catch (error) {
-        console.warn("Primary RPC failed, using fallback:", error);
-        provider = new ethers.providers.JsonRpcProvider(
-          FALLBACK_RPC_URLS[chain.id as SupportedChainId]
-        );
+      let provider: ethers.providers.Provider;
+
+      if (chain.id === sepolia.id) {
+        provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
+          chainId: chain.id,
+          name: "sepolia",
+        });
+      } else {
+        provider = new ethers.providers.CloudflareProvider();
       }
 
       // Get all unique tokens from the available pairs

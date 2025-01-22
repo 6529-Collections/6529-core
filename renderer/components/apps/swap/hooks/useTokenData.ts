@@ -1,25 +1,36 @@
 import { useEffect, useState } from "react";
-import { ethers } from "ethers";
+import { ethers } from "ethersv5";
 import { TokenPair } from "../types";
 import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "../abis";
+import { sepolia } from "wagmi/chains";
+import { useAccount } from "wagmi";
+import { SEPOLIA_RPC } from "../constants";
 
 export function useTokenData(
   pair: TokenPair | null,
   userAddress: string | undefined
 ) {
   const [price, setPrice] = useState<string | null>(null);
+  const { chain } = useAccount();
   const [inputBalance, setInputBalance] = useState<string | null>(null);
   const [outputBalance, setOutputBalance] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!pair) return;
+    if (!pair || !chain?.id) return;
 
     const fetchPrice = async () => {
       try {
-        const provider = new ethers.JsonRpcProvider(
-          "https://eth-mainnet.public.blastapi.io"
-        );
+        let provider: ethers.providers.Provider;
+
+        if (chain.id === sepolia.id) {
+          provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
+            chainId: chain.id,
+            name: "sepolia",
+          });
+        } else {
+          provider = new ethers.providers.CloudflareProvider();
+        }
 
         const poolContract = new ethers.Contract(
           pair.poolAddress,
@@ -57,16 +68,19 @@ export function useTokenData(
     };
 
     const fetchBalances = async () => {
-      if (!userAddress) {
-        setInputBalance(null);
-        setOutputBalance(null);
-        return;
-      }
+      if (!userAddress || !chain?.id) return;
 
       try {
-        const provider = new ethers.JsonRpcProvider(
-          "https://eth-mainnet.public.blastapi.io"
-        );
+        let provider: ethers.providers.Provider;
+
+        if (chain.id === sepolia.id) {
+          provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
+            chainId: chain.id,
+            name: "sepolia",
+          });
+        } else {
+          provider = new ethers.providers.CloudflareProvider();
+        }
 
         // Fetch balances
         const [inputBalance, outputBalance] = await Promise.all([
@@ -85,10 +99,10 @@ export function useTokenData(
         ]);
 
         setInputBalance(
-          ethers.formatUnits(inputBalance, pair.inputToken.decimals)
+          ethers.utils.formatUnits(inputBalance, pair.inputToken.decimals)
         );
         setOutputBalance(
-          ethers.formatUnits(outputBalance, pair.outputToken.decimals)
+          ethers.utils.formatUnits(outputBalance, pair.outputToken.decimals)
         );
       } catch (err) {
         console.error("Error fetching balances:", err);
@@ -102,7 +116,7 @@ export function useTokenData(
 
     const interval = setInterval(fetchPrice, 10000);
     return () => clearInterval(interval);
-  }, [pair, userAddress]);
+  }, [pair, userAddress, chain?.id]);
 
   return {
     price,

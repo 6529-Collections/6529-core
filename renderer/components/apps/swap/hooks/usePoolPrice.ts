@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { ethers } from "ethersv5";
 import { TokenPair } from "../types";
-import { RPC_URLS, SupportedChainId } from "../constants";
 import { useAccount } from "wagmi";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
+import { sepolia } from "wagmi/chains";
+import { SEPOLIA_RPC } from "../constants";
 
 interface PriceData {
   forward: string | null;
@@ -27,10 +28,16 @@ export function usePoolPrice(pair: TokenPair | null) {
     setPriceData((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      const provider = new ethers.providers.JsonRpcProvider(
-        RPC_URLS[chain.id as SupportedChainId]
-      );
+      let provider: ethers.providers.Provider;
 
+      if (chain.id === sepolia.id) {
+        provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
+          chainId: chain.id,
+          name: "sepolia",
+        });
+      } else {
+        provider = new ethers.providers.CloudflareProvider();
+      }
       const poolContract = new ethers.Contract(
         pair.poolAddress,
         UNISWAP_V3_POOL_ABI,

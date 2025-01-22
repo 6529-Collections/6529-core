@@ -1,7 +1,8 @@
 import { useEffect, useMemo } from "react";
 import { ethers } from "ethersv5";
 import { useAccount } from "wagmi";
-import { RPC_URLS, FALLBACK_RPC_URLS, SupportedChainId } from "../constants";
+import { sepolia } from "wagmi/chains";
+import { SEPOLIA_RPC } from "../constants";
 
 export function useEthersProvider() {
   const { chain } = useAccount();
@@ -10,16 +11,24 @@ export function useEthersProvider() {
     if (!chain?.id) return null;
 
     try {
-      const rpcUrl = RPC_URLS[chain.id as SupportedChainId];
-      const provider = new ethers.providers.JsonRpcProvider(rpcUrl, {
-        chainId: chain.id,
-        name: chain.name || "unknown",
-      });
+      let provider: ethers.providers.Provider;
+
+      if (chain.id === sepolia.id) {
+        provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
+          chainId: chain.id,
+          name: "sepolia",
+        });
+      } else {
+        provider = new ethers.providers.CloudflareProvider();
+      }
 
       provider.getNetwork().catch(() => {});
 
       return provider;
-    } catch (error) {}
+    } catch (error) {
+      console.error("Failed to create provider:", error);
+      return null;
+    }
   }, [chain?.id]);
 
   return provider;
