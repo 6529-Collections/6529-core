@@ -1,5 +1,8 @@
-import { Loader2 } from "lucide-react";
+import { useState } from "react";
+import { Loader2, Settings } from "lucide-react";
 import styles from "../UniswapApp.module.scss";
+import { RevokeModal } from "./RevokeModal";
+import { TokenPair } from "../types";
 
 interface SwapButtonProps {
   disabled: boolean;
@@ -28,6 +31,8 @@ interface SwapButtonProps {
   outputAmount: string;
   ethBalance: string;
   minRequiredBalance?: string;
+  onRevoke: () => Promise<void>;
+  selectedPair: TokenPair;
 }
 
 export function SwapButton({
@@ -40,7 +45,12 @@ export function SwapButton({
   outputAmount,
   ethBalance,
   minRequiredBalance = "0.001",
+  onRevoke,
+  selectedPair,
 }: SwapButtonProps) {
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [revokeLoading, setRevokeLoading] = useState(false);
+
   const hasEnoughEth = parseFloat(ethBalance) >= parseFloat(minRequiredBalance);
 
   const getButtonText = () => {
@@ -87,15 +97,27 @@ export function SwapButton({
     }
   };
 
+  const handleRevoke = async () => {
+    setRevokeLoading(true);
+    try {
+      await onRevoke();
+      setShowRevokeModal(false);
+    } finally {
+      setRevokeLoading(false);
+    }
+  };
+
   return (
-    <button
-      className={`btn btn-primary w-100 ${
-        status.loading || approvalStatus.loading ? "loading" : ""
-      }`}
-      disabled={isDisabled}
-      onClick={handleClick}
-    >
-      {getButtonText()}
-    </button>
+    <div className={styles.buttonContainer}>
+      <button
+        className={`btn btn-primary w-100 ${
+          status.loading || approvalStatus.loading ? "loading" : ""
+        }`}
+        disabled={isDisabled}
+        onClick={handleClick}
+      >
+        {getButtonText()}
+      </button>
+    </div>
   );
 }

@@ -39,6 +39,8 @@ import {
 } from "./controllers/TransactionController";
 import { TokenSelect } from "./components/TokenSelect";
 import { sepolia } from "wagmi/chains";
+import { Settings } from "lucide-react";
+import { RevokeModal } from "./components/RevokeModal";
 
 function formatAllowance(allowance: string | undefined): string {
   if (!allowance) return "0";
@@ -73,13 +75,12 @@ function formatEthBalance(balance: string): string {
   }
 }
 
-// Update the GasWarning component
 function GasWarning({ ethBalance }: { ethBalance: string }) {
   const lowBalanceThreshold = 0.001; // 0.001 ETH
   const balance = parseFloat(ethBalance);
   const formattedBalance = formatEthBalance(ethBalance);
 
-  if (balance <= lowBalanceThreshold) {
+  if (ethBalance !== "0" && balance <= lowBalanceThreshold) {
     return (
       <div className={styles.gasWarning}>
         <div className={styles.gasWarningIcon}>⚠️</div>
@@ -620,6 +621,8 @@ export default function UniswapApp() {
           type: "success",
           message: "Approval revoked successfully",
         });
+
+        await checkApproval(selectedPair);
       }
     } catch (error: any) {
       window.seedConnector.showToast({
@@ -635,6 +638,8 @@ export default function UniswapApp() {
 
     return rawBalance || "0";
   }, [tokenBalances, chainId]);
+
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
 
   return (
     <Container fluid className={styles.uniswapContainer}>
@@ -692,24 +697,22 @@ export default function UniswapApp() {
                       disabled={swapLoading}
                     />
                   </div>
-                  {selectedPair.inputToken.symbol !== "ETH" && (
-                    <div className={styles.allowanceContainer}>
-                      <div className={styles.allowanceInfo}>
-                        Approved: {formatAllowance(approvalStatus.allowance)}{" "}
-                        {selectedPair.inputToken.symbol}
-                      </div>
-                      {approvalStatus.allowance &&
-                        parseFloat(approvalStatus.allowance) > 0 && (
-                          <button
-                            onClick={handleRevokeApproval}
-                            className={styles.revokeButton}
-                            disabled={approvalStatus.loading}
-                          >
-                            Revoke
-                          </button>
-                        )}
-                    </div>
-                  )}
+                  <div className={styles.approvalInfo}>
+                    <span>
+                      Approved: {formatAllowance(approvalStatus.allowance)}{" "}
+                      {selectedPair.inputToken.symbol}
+                    </span>
+                    {approvalStatus.approved && (
+                      <button
+                        type="button"
+                        onClick={() => setShowRevokeModal(true)}
+                        className={styles.settingsButton}
+                        title="Manage token approval"
+                      >
+                        <Settings size={16} />
+                      </button>
+                    )}
+                  </div>
                   <div className={styles.percentageButtons}>
                     {[25, 50, 75, 100].map((percent) => (
                       <button
@@ -784,7 +787,12 @@ export default function UniswapApp() {
                   </div>
                 </div>
 
-                {address && <GasWarning ethBalance={ethBalance} />}
+                {address &&
+                  tokenBalances[
+                    CHAIN_TOKENS[
+                      chainId as keyof typeof CHAIN_TOKENS
+                    ].ETH.address.toLowerCase()
+                  ] !== undefined && <GasWarning ethBalance={ethBalance} />}
 
                 <SwapButton
                   disabled={
@@ -801,6 +809,8 @@ export default function UniswapApp() {
                   inputAmount={inputAmount}
                   outputAmount={outputAmount}
                   ethBalance={ethBalance}
+                  onRevoke={handleRevokeApproval}
+                  selectedPair={selectedPair}
                 />
 
                 {swapError && (
@@ -813,6 +823,14 @@ export default function UniswapApp() {
           </div>
         </Col>
       </Row>
+
+      <RevokeModal
+        show={showRevokeModal}
+        onHide={() => setShowRevokeModal(false)}
+        onRevoke={handleRevokeApproval}
+        pair={selectedPair}
+        loading={false}
+      />
     </Container>
   );
 }
