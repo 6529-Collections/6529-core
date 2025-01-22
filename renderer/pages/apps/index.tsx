@@ -22,10 +22,10 @@ interface AppCard {
 
 const AVAILABLE_APPS: AppCard[] = [
   {
-    title: "Uniswap",
+    title: "Swap",
     description: "Swap tokens and provide liquidity on Ethereum",
     icon: "/apps/uniswap-logo.svg",
-    link: "/apps/uniswap",
+    link: "/apps/swap",
     status: "live",
   },
   // Add more apps here as they become available

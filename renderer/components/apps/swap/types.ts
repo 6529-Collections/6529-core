@@ -1,4 +1,5 @@
 import { CurrencyAmount, Token as SDKToken, Currency } from "@uniswap/sdk-core";
+import { CHAIN_TOKENS } from "./constants";
 
 export interface Token {
   symbol: string;
@@ -6,6 +7,8 @@ export interface Token {
   address: string;
   decimals: number;
   logoURI?: string;
+  isNative?: boolean;
+  isWrapped?: boolean;
 }
 
 export interface PoolData {
@@ -23,6 +26,7 @@ export interface TokenPair {
   outputToken: Token;
   poolAddress: string;
   fee: number;
+  useWETH?: boolean;
   poolData?: PoolData;
 }
 
@@ -43,6 +47,17 @@ export interface SwapRoute {
 
 // Add utility functions for token conversion
 export function toSDKToken(token: Token, chainId: number): SDKToken {
+  if (token.isNative) {
+    // Use WETH for SDK operations
+    const weth = CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].WETH;
+    return new SDKToken(
+      chainId,
+      weth.address,
+      weth.decimals,
+      weth.symbol,
+      weth.name
+    );
+  }
   return new SDKToken(
     chainId,
     token.address,
@@ -76,4 +91,20 @@ export interface SwapStatus {
   loading: boolean;
   error: string | null;
   hash?: `0x${string}`;
+}
+
+// Add utility function to get wrapped version of token
+export function getWrappedToken(token: Token, chainId: number): Token {
+  if (token.isNative) {
+    return CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].WETH;
+  }
+  return token;
+}
+
+// Add utility function to get display version of token
+export function getDisplayToken(token: Token, chainId: number): Token {
+  if (token.isWrapped) {
+    return CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].ETH;
+  }
+  return token;
 }

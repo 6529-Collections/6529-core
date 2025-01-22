@@ -11,7 +11,7 @@ const Header = dynamic(() => import("../../components/header/Header"), {
 });
 
 const UniswapApp = dynamic(
-  () => import("../../components/apps/uniswap/UniswapApp"),
+  () => import("../../components/apps/swap/UniswapApp"),
   {
     ssr: false,
   }
@@ -21,7 +21,7 @@ export default function UniswapPage() {
   const breadcrumbs = [
     { display: "Home", href: "/" },
     { display: "Apps", href: "/apps" },
-    { display: "Uniswap" },
+    { display: "Swap" },
   ];
 
   return (

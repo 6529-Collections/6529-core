@@ -26,6 +26,8 @@ interface SwapButtonProps {
   onSwap: () => void;
   inputAmount: string;
   outputAmount: string;
+  ethBalance: string;
+  minRequiredBalance?: string;
 }
 
 export function SwapButton({
@@ -36,8 +38,15 @@ export function SwapButton({
   onSwap,
   inputAmount,
   outputAmount,
+  ethBalance,
+  minRequiredBalance = "0.001",
 }: SwapButtonProps) {
+  const hasEnoughEth = parseFloat(ethBalance) >= parseFloat(minRequiredBalance);
+
   const getButtonText = () => {
+    if (!hasEnoughEth) {
+      return "Insufficient ETH for gas";
+    }
     if (status.error) return "Try Again";
     if (!inputAmount || !outputAmount) return "Enter an amount";
     if (approvalStatus.required && !approvalStatus.approved) {
@@ -64,6 +73,7 @@ export function SwapButton({
 
   const isDisabled =
     disabled ||
+    !hasEnoughEth ||
     status.loading ||
     approvalStatus.loading ||
     status.stage === "complete" ||

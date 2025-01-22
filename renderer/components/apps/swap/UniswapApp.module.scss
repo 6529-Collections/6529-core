@@ -4,6 +4,8 @@
   flex-direction: column;
   padding: 0;
   background: #111111;
+  position: relative;
+  z-index: 0;
 }
 
 .header {
@@ -17,7 +19,7 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   position: fixed;
   top: 0;
-  z-index: 10;
+  z-index: 5;
 
   h2 {
     color: white;
@@ -56,6 +58,9 @@
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   margin: auto;
   margin-top: 6rem; // Account for fixed header
+  position: relative;
+  isolation: isolate;
+  z-index: 1;
 
   @media (max-width: 768px) {
     margin-top: 4.5rem;
@@ -93,9 +98,15 @@
 .inputGroup {
   margin-bottom: 2rem;
   margin-top: 2rem;
+  position: relative;
+  z-index: 3;
 
   @media (max-width: 768px) {
     margin-bottom: 1.25rem;
+  }
+
+  &:has(.tokenSelect:focus-within) {
+    z-index: 4;
   }
 }
 
@@ -119,28 +130,16 @@
 
 .inputWrapper {
   position: relative;
-  background: rgba(42, 42, 42, 0.5);
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
+  transition: border-color 0.2s ease;
+  z-index: 1;
 
-  &.focused {
-    border-color: rgba(255, 255, 255, 0.15);
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1),
-      0 4px 12px rgba(0, 0, 0, 0.1);
-  }
-
-  &:hover:not(.focused) {
-    border-color: rgba(255, 255, 255, 0.1);
-  }
-
-  @media (max-width: 768px) {
-    border-radius: 12px;
-  }
-
-  @media (max-width: 576px) {
-    border-radius: 14px;
+  &:focus-within {
+    border-color: rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -165,37 +164,61 @@
     -webkit-appearance: none;
     margin: 0;
   }
+}
 
-  @media (max-width: 768px) {
-    font-size: 1.25rem !important;
-    padding: 1rem 1.25rem !important;
-    padding-right: 5rem !important;
+.tokenSelect {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 2;
+}
+
+.tokenButton {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.5rem 0.75rem;
+  color: white;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 110px;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
   }
 
-  @media (max-width: 576px) {
-    font-size: 1.25rem !important;
-    padding: 1rem !important;
-    padding-right: 6rem !important;
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 }
 
-.tokenSelector {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.6rem 1rem;
-  border-radius: 12px;
-  font-weight: 500;
-  color: #fff;
-  font-size: 1rem;
+.tokenButtonContent {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 
-  @media (max-width: 768px) {
-    padding: 0.5rem 0.875rem;
-    font-size: 0.95rem;
-    border-radius: 10px;
-  }
+.tokenLogo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tokenSymbol {
+  font-size: 1rem;
+  font-weight: 500;
 }
 
 .actionButton {
@@ -209,6 +232,8 @@
   transition: all 0.2s ease !important;
   background: #2ecc71 !important;
   color: white !important;
+  position: relative;
+  z-index: 1;
 
   &:disabled {
     opacity: 0.6 !important;
@@ -264,6 +289,8 @@
   transition: all 0.2s ease;
   color: rgba(255, 255, 255, 0.9);
   padding: 0;
+  position: relative;
+  z-index: 1;
 
   &:hover:not(:disabled) {
     background: rgba(255, 255, 255, 0.12);
@@ -350,6 +377,8 @@
   font-weight: 600;
   margin-top: 1rem;
   transition: all 0.2s ease;
+  position: relative;
+  z-index: 1;
 
   &:disabled {
     background: rgba(46, 204, 113, 0.5);
@@ -417,4 +446,136 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+.gasWarning {
+  background: rgba(255, 176, 25, 0.1);
+  border: 1px solid rgba(255, 176, 25, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin: 1rem 0;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  position: relative;
+  z-index: 1;
+}
+
+.gasWarningIcon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.gasWarningContent {
+  flex: 1;
+}
+
+.gasWarningTitle {
+  color: #ffb019;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.gasWarningText {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.875rem;
+  line-height: 1.4;
+}
+
+.gasWarningBalance {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-feature-settings: "tnum" on, "lnum" on;
+  font-weight: 500;
+}
+
+// Add responsive styles
+@media (max-width: 768px) {
+  .tokenInput {
+    font-size: 1.25rem !important;
+    padding: 1rem 1.25rem !important;
+    padding-right: 6.5rem !important;
+  }
+
+  .tokenButton {
+    padding: 0.4rem 0.6rem;
+    min-width: 90px;
+  }
+
+  .tokenLogo {
+    width: 20px;
+    height: 20px;
+  }
+
+  .tokenSymbol {
+    font-size: 0.9rem;
+  }
+}
+
+.tokenDropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: rgba(26, 26, 26, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 0.5rem;
+  min-width: 240px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 3;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+
+  // Scrollbar styling
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+  }
+}
+
+.tokenOption {
+  width: 100%;
+  padding: 0.75rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.tokenOptionContent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.tokenInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  text-align: left;
+}
+
+.tokenName {
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.6);
 }

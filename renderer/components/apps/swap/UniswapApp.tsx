@@ -32,7 +32,6 @@ import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
 import { SwatchBook } from "lucide-react";
-import TokenSelect from "./components/TokenSelect";
 import { Token, TokenPair, toSDKToken, SwapStatus } from "./types";
 import { useUniswapSwap } from "./hooks/useUniswapSwap";
 import { SwapButton } from "./components/SwapButton";
@@ -41,6 +40,7 @@ import {
   TransactionController,
   TransactionStatus,
 } from "./controllers/TransactionController";
+import { TokenSelect } from "./components/TokenSelect";
 
 const QUOTER_ABI = [
   "function quoteExactInputSingle(address tokenIn, address tokenOut, uint24 fee, uint256 amountIn, uint160 sqrtPriceLimitX96) external returns (uint256 amountOut)",
@@ -97,6 +97,55 @@ function formatAllowance(allowance: string | undefined): string {
   return num.toLocaleString(undefined, {
     maximumFractionDigits: 4,
   });
+}
+
+// Add this helper function for ETH balance formatting
+function formatEthBalance(balance: string): string {
+  const num = parseFloat(balance);
+
+  if (num === 0) return "0";
+
+  if (num < 0.0001) {
+    // Show in scientific notation for very small amounts
+    return num.toExponential(4);
+  } else if (num < 0.001) {
+    // Show more decimals for small amounts
+    return num.toFixed(8);
+  } else if (num < 1) {
+    // Show fewer decimals for medium amounts
+    return num.toFixed(6);
+  } else {
+    // Show 4 decimals for larger amounts
+    return num.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    });
+  }
+}
+
+// Update the GasWarning component
+function GasWarning({ ethBalance }: { ethBalance: string }) {
+  const lowBalanceThreshold = 0.001; // 0.001 ETH
+  const balance = parseFloat(ethBalance);
+  const formattedBalance = formatEthBalance(ethBalance);
+
+  if (balance <= lowBalanceThreshold) {
+    return (
+      <div className={styles.gasWarning}>
+        <div className={styles.gasWarningIcon}>⚠️</div>
+        <div className={styles.gasWarningContent}>
+          <div className={styles.gasWarningTitle}>Low ETH Balance</div>
+          <div className={styles.gasWarningText}>
+            Your ETH balance (
+            <span className={styles.gasWarningBalance}>{formattedBalance}</span>{" "}
+            ETH) is too low for gas fees. Add more ETH to perform transactions.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 export default function UniswapApp() {
@@ -479,12 +528,11 @@ export default function UniswapApp() {
     }
   }, [inputAmount, selectedPair, checkApproval]);
 
-  // Move this function outside useEffect
+  // Update the fetchBalances function
   async function fetchBalances() {
     if (!address || !chain?.id) return;
 
     try {
-      // Use primary RPC with fallback
       let provider;
       try {
         provider = new ethers.providers.JsonRpcProvider(
@@ -507,24 +555,36 @@ export default function UniswapApp() {
         )
       );
 
+      const ethToken = CHAIN_TOKENS[chain.id as keyof typeof CHAIN_TOKENS].ETH;
+      if (!uniqueTokens.find((token) => token.isNative)) {
+        uniqueTokens.push(ethToken);
+      }
+
       const balancePromises = uniqueTokens.map(async (token) => {
         try {
-          const balance =
-            token.symbol === "ETH"
-              ? await provider.getBalance(address)
-              : await new ethers.Contract(
-                  token.address,
-                  ERC20_ABI,
-                  provider
-                ).balanceOf(address);
+          let balance;
+          if (token.isNative) {
+            balance = await provider.getBalance(address);
+          } else {
+            balance = await new ethers.Contract(
+              token.address,
+              ERC20_ABI,
+              provider
+            ).balanceOf(address);
+          }
+
+          const formattedBalance = ethers.utils.formatUnits(
+            balance,
+            token.decimals
+          );
 
           return {
-            address: token.address,
-            balance: ethers.utils.formatUnits(balance, token.decimals),
+            address: token.address.toLowerCase(), // Make sure to lowercase the address
+            balance: formattedBalance,
           };
         } catch (err) {
           console.error(`Error fetching balance for ${token.symbol}:`, err);
-          return { address: token.address, balance: null };
+          return { address: token.address.toLowerCase(), balance: null };
         }
       });
 
@@ -612,6 +672,13 @@ export default function UniswapApp() {
       });
     }
   };
+
+  const ethBalance = useMemo(() => {
+    const ethToken = CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].ETH;
+    const rawBalance = tokenBalances[ethToken.address.toLowerCase()];
+
+    return rawBalance || "0";
+  }, [tokenBalances, chainId]);
 
   return (
     <Container fluid className={styles.uniswapContainer}>
@@ -761,6 +828,8 @@ export default function UniswapApp() {
                   </div>
                 </div>
 
+                {address && <GasWarning ethBalance={ethBalance} />}
+
                 <SwapButton
                   disabled={
                     !outputAmount ||
@@ -775,6 +844,7 @@ export default function UniswapApp() {
                   onSwap={handleSwap}
                   inputAmount={inputAmount}
                   outputAmount={outputAmount}
+                  ethBalance={ethBalance}
                 />
 
                 {swapError && (
