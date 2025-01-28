@@ -256,8 +256,24 @@
   }
 
   &.loading {
-    background: #7f8c8d !important;
+    position: relative;
+    color: transparent !important;
     cursor: wait !important;
+
+    &:after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-top: -10px;
+      margin-left: -10px;
+    }
   }
 
   @media (max-width: 768px) {
@@ -265,6 +281,12 @@
     font-size: 1rem !important;
     border-radius: 12px !important;
     margin-bottom: 0.875rem !important;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -637,5 +659,14 @@
 
   &:active {
     transform: translateY(1px);
+  }
+}
+
+.success {
+  background: #2ecc71 !important;
+  cursor: default !important;
+  &:hover {
+    transform: none !important;
+    box-shadow: none !important;
   }
 }

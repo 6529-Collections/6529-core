@@ -11,6 +11,7 @@ export type TransactionStage =
   | "complete";
 
 export interface TransactionStatus {
+  status: "idle" | "confirming" | "success" | "error";
   stage: TransactionStage;
   loading: boolean;
   error: string | null;
@@ -36,6 +37,7 @@ export class TransactionController {
     this.provider = provider;
     this.callbacks = callbacks;
     this.currentStatus = {
+      status: "idle",
       stage: "idle",
       loading: false,
       error: null,
@@ -46,6 +48,7 @@ export class TransactionController {
     this.currentStatus = {
       ...this.currentStatus,
       ...status,
+      stage: status.stage ?? this.currentStatus.stage,
     };
     this.callbacks.onStatusChange(this.currentStatus);
   }
@@ -53,63 +56,40 @@ export class TransactionController {
   async monitorTransaction(hash: string): Promise<void> {
     try {
       this.updateStatus({
+        status: "confirming",
         stage: "confirming",
         loading: true,
         hash: hash as `0x${string}`,
       });
 
-      console.debug("[Transaction] Monitoring transaction:", { hash });
-
       const receipt = await this.provider.waitForTransaction(hash, 1, 60000);
 
       if (receipt.status === 1) {
-        console.debug("[Transaction] Transaction successful:", receipt);
         this.updateStatus({
-          stage: "complete",
+          status: "success",
+          stage: "success",
           loading: false,
-        });
-
-        this.callbacks.showToast({
-          type: "success",
-          message: "Transaction successful, hash: " + hash,
+          error: null,
+          hash: hash as `0x${string}`,
         });
 
         this.callbacks.onSuccess();
       } else {
-        throw new Error("Transaction failed");
+        this.updateStatus({
+          status: "error",
+          stage: "idle",
+          loading: false,
+          error: "Transaction reverted",
+        });
       }
     } catch (error: any) {
-      console.error("[Transaction] Monitoring error:", error);
-
-      if (error.message?.includes("Timed out")) {
-        this.updateStatus({
-          stage: "idle",
-          loading: false,
-          error: "Transaction timed out - check your wallet for status",
-        });
-      } else {
-        this.updateStatus({
-          stage: "idle",
-          loading: false,
-          error: error.message || "Transaction failed",
-        });
-      }
-
-      this.callbacks.showToast({
-        type: "error",
-        message: error.message || "Transaction failed",
+      this.updateStatus({
+        status: "error",
+        stage: "idle",
+        loading: false,
+        error: error.message,
       });
-
-      this.callbacks.onError(error.message || "Transaction failed");
+      throw error;
     }
-  }
-
-  resetStatus(): void {
-    this.currentStatus = {
-      stage: "idle",
-      loading: false,
-      error: null,
-    };
-    this.callbacks.onStatusChange(this.currentStatus);
   }
 }
