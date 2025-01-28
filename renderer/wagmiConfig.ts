@@ -18,6 +18,7 @@ import { seedWalletConnector } from "./seedWalletConnector";
 
 export function getChains() {
   const chains: Chain[] = [mainnet];
+  chains.push(sepolia);
   if (
     DELEGATION_CONTRACT.chain_id === sepolia.id ||
     (NEXTGEN_CHAIN_ID as number) === sepolia.id ||

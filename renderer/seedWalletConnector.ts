@@ -4,6 +4,7 @@ import { mainnet, sepolia } from "viem/chains";
 import { SeedWalletRequest } from "../shared/types";
 import { hexToString } from "./helpers";
 import { TransactionRejectedRpcError, UserRejectedRequestError } from "viem";
+import { SEPOLIA_RPC } from "./components/apps/swap/constants";
 
 interface ProviderRequest {
   method: string;
@@ -72,7 +73,10 @@ export function seedWalletConnector(parameters: {
 
   function updateProvider() {
     if (connectionObject.chainId === sepolia.id) {
-      provider = new ethers.JsonRpcProvider("https://rpc.sepolia.org");
+      provider = new ethers.JsonRpcProvider(SEPOLIA_RPC, {
+        chainId: connectionObject.chainId,
+        name: "sepolia",
+      });
     } else {
       provider = new ethers.CloudflareProvider();
     }
