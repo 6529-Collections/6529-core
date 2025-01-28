@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, memo } from "react";
+import { useState } from "react";
 import { Loader2, Settings } from "lucide-react";
 import styles from "../UniswapApp.module.scss";
 import { RevokeModal } from "./RevokeModal";
@@ -7,7 +7,14 @@ import { TokenPair } from "../types";
 interface SwapButtonProps {
   disabled: boolean;
   status: {
-    status: "idle" | "confirming" | "success" | "error";
+    stage:
+      | "idle"
+      | "approving"
+      | "swapping"
+      | "confirming"
+      | "success"
+      | "pending"
+      | "complete";
     loading: boolean;
     error: string | null;
     hash?: `0x${string}`;
@@ -28,7 +35,7 @@ interface SwapButtonProps {
   selectedPair: TokenPair;
 }
 
-export const SwapButton = memo(function SwapButton({
+export function SwapButton({
   disabled,
   status,
   approvalStatus,
@@ -44,37 +51,51 @@ export const SwapButton = memo(function SwapButton({
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revokeLoading, setRevokeLoading] = useState(false);
 
-  // Add debug logs for status changes
-  useEffect(() => {
-    console.log("[SwapButton] Status update:", status);
-  }, [status]);
-
   const hasEnoughEth = parseFloat(ethBalance) >= parseFloat(minRequiredBalance);
 
-  // Update button text calculation
-  const getButtonText = useCallback(() => {
-    if (status.status === "success") return "Success!";
-    if (status.status === "confirming") return "Confirming...";
-    if (status.loading) return "Processing...";
-    if (approvalStatus.loading) return "Approving...";
-    if (status.status === "error") return "Try Again";
-    if (!hasEnoughEth) return "Insufficient ETH for gas";
+  const getButtonText = () => {
+    if (!hasEnoughEth) {
+      return "Insufficient ETH for gas";
+    }
+    if (status.error) return "Try Again";
     if (!inputAmount || !outputAmount) return "Enter an amount";
-    if (approvalStatus.required && !approvalStatus.approved) return "Approve";
-    return "Swap";
-  }, [status, approvalStatus, hasEnoughEth, inputAmount, outputAmount]);
+    if (approvalStatus.required && !approvalStatus.approved) {
+      return approvalStatus.loading ? "Approving..." : "Approve";
+    }
+
+    switch (status.stage) {
+      case "approving":
+        return "Approving...";
+      case "swapping":
+        return "Swapping...";
+      case "confirming":
+        return "Confirming...";
+      case "pending":
+        return "Pending...";
+      case "success":
+        return "Success";
+      case "complete":
+        return "Swap Complete";
+      default:
+        return "Swap";
+    }
+  };
 
   const isDisabled =
     disabled ||
     !hasEnoughEth ||
     status.loading ||
     approvalStatus.loading ||
-    status.status === "confirming";
+    status.stage === "complete" ||
+    (!approvalStatus.approved && status.stage !== "idle");
 
-  // Add success state class
-  const buttonClass = `${styles.actionButton} ${
-    status.status === "success" ? styles.success : ""
-  } ${status.loading || status.status === "confirming" ? styles.loading : ""}`;
+  const handleClick = () => {
+    if (approvalStatus.required && !approvalStatus.approved) {
+      onApprove();
+    } else {
+      onSwap();
+    }
+  };
 
   const handleRevoke = async () => {
     setRevokeLoading(true);
@@ -89,16 +110,14 @@ export const SwapButton = memo(function SwapButton({
   return (
     <div className={styles.buttonContainer}>
       <button
-        className={buttonClass}
+        className={`btn btn-primary w-100 ${
+          status.loading || approvalStatus.loading ? "loading" : ""
+        }`}
         disabled={isDisabled}
-        onClick={
-          approvalStatus.required && !approvalStatus.approved
-            ? onApprove
-            : onSwap
-        }
+        onClick={handleClick}
       >
         {getButtonText()}
       </button>
     </div>
   );
-});
+}

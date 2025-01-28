@@ -1,12 +1,6 @@
-import { useCallback, useState, useEffect, useMemo } from "react";
+import { useCallback, useState } from "react";
 import { ethers } from "ethersv5";
-import {
-  useAccount,
-  usePublicClient,
-  useWalletClient,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from "wagmi";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { Percent } from "@uniswap/sdk-core";
 import { TokenPair, Token } from "../types";
 import { SWAP_ROUTER_ABI, ERC20_ABI } from "../abis";
@@ -14,7 +8,6 @@ import { SWAP_ROUTER_ADDRESS, SupportedChainId } from "../constants";
 import { useEthersProvider } from "./useEthersProvider";
 import { getWrappedToken } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
-import { Abi, Address } from "viem";
 
 interface ApprovalStatus {
   required: boolean;
@@ -25,8 +18,8 @@ interface ApprovalStatus {
 }
 
 interface SwapResult {
-  status: "idle" | "confirming" | "success" | "error";
-  hash?: Address;
+  status: "success" | "error" | "pending";
+  hash?: `0x${string}`;
   error?: string;
 }
 
@@ -156,52 +149,6 @@ export function useUniswapSwap() {
     allowance: undefined,
   });
 
-  const {
-    writeContract: initiateSwap,
-    isPending: isSwapPending,
-    isError: isSwapError,
-    error: swapError,
-    data: swapHash,
-  } = useWriteContract();
-
-  const {
-    data: swapReceipt,
-    isError: isSwapReceiptError,
-    isLoading: isSwapConfirming,
-  } = useWaitForTransactionReceipt({
-    hash: swapHash,
-    query: { enabled: !!swapHash },
-  });
-
-  const {
-    writeContract: initiateApprove,
-    isPending: isApprovePending,
-    isError: isApproveError,
-    error: approveError,
-    data: approveHash,
-  } = useWriteContract();
-
-  const {
-    data: approveReceipt,
-    isError: isApproveReceiptError,
-    isLoading: isApproveConfirming,
-  } = useWaitForTransactionReceipt({
-    hash: approveHash,
-    query: { enabled: !!approveHash },
-  });
-
-  // Add swap status state
-  const [internalSwapStatus, setInternalSwapStatus] = useState<{
-    status: "idle" | "confirming" | "success" | "error";
-    loading: boolean;
-    error: string | null;
-    hash?: Address;
-  }>({
-    status: "idle",
-    loading: false,
-    error: null,
-  });
-
   const checkApproval = useCallback(
     async (pair: TokenPair, amount?: string) => {
       if (!address || !chain?.id || !provider) {
@@ -264,37 +211,58 @@ export function useUniswapSwap() {
   );
 
   const approve = useCallback(
-    async (pair: TokenPair, amount: string) => {
-      if (!chain?.id || !address) return false;
+    async (pair: TokenPair, amount: string): Promise<boolean> => {
+      if (!address || !chain?.id || !provider || !walletClient) {
+        return false;
+      }
 
       try {
         setApprovalStatus((prev) => ({ ...prev, loading: true }));
 
         const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
-        const amountToApprove = ethers.utils.parseUnits(
+        const approved = await getTokenTransferApproval(
+          pair.inputToken,
           amount,
-          pair.inputToken.decimals
+          routerAddress,
+          provider,
+          walletClient
         );
 
-        initiateApprove({
-          address: pair.inputToken.address as Address,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [routerAddress, amountToApprove],
-          account: address as Address,
-        });
+        // Immediately check and update the new allowance
+        if (approved) {
+          const tokenContract = new ethers.Contract(
+            pair.inputToken.address,
+            ERC20_ABI,
+            provider
+          );
+          const newAllowance = await tokenContract.allowance(
+            address,
+            routerAddress
+          );
 
-        return true;
-      } catch (error) {
-        console.error("Approval error:", error);
+          setApprovalStatus((prev) => ({
+            ...prev,
+            loading: false,
+            approved: true,
+            required: false,
+            allowance: ethers.utils.formatUnits(
+              newAllowance,
+              pair.inputToken.decimals
+            ),
+          }));
+        }
+
+        return approved;
+      } catch (e: any) {
         setApprovalStatus((prev) => ({
           ...prev,
-          error: error instanceof Error ? error.message : "Approval failed",
+          loading: false,
+          error: e.message,
         }));
         return false;
       }
     },
-    [chain?.id, address, initiateApprove]
+    [address, chain?.id, provider, walletClient]
   );
 
   const estimateTransactionCost = async (txParams: {
@@ -346,25 +314,14 @@ export function useUniswapSwap() {
     }
   };
 
-  // Add explicit loading state tracking
-  const isLoading = useMemo(
-    () =>
-      isSwapPending ||
-      isSwapConfirming ||
-      isApprovePending ||
-      isApproveConfirming,
-    [isSwapPending, isSwapConfirming, isApprovePending, isApproveConfirming]
-  );
-
-  // Update executeSwap to handle states better
   const executeSwap = useCallback(
     async (
       pair: TokenPair,
       inputAmount: string,
       slippageTolerance: Percent = new Percent(50, 10_000)
     ): Promise<SwapResult> => {
-      if (!chain?.id || !address) {
-        return { status: "error", error: "Missing chain ID or address" };
+      if (!provider || !address || !chain?.id) {
+        throw new Error("Provider not ready or missing requirements");
       }
 
       try {
@@ -465,141 +422,174 @@ export function useUniswapSwap() {
           hasEnoughBalance: gasEstimate.hasEnoughBalance,
         });
 
-        initiateSwap({
-          address: routerAddress as Address,
-          abi: SWAP_ROUTER_ABI as Abi,
-          functionName: steps.length > 1 ? "multicall" : "exactInputSingle",
-          args: steps.length > 1 ? [steps] : [params],
+        if (!walletClient) {
+          throw new Error("Wallet client not found");
+        }
+
+        // Send transaction
+        const hash = await walletClient.sendTransaction({
+          to: routerAddress as `0x${string}`,
+          data: data as `0x${string}`,
           value: BigInt(value),
-          account: address as Address,
+          account: address as `0x${string}`,
         });
 
-        // Return immediately after initiating swap
+        console.log("Transaction sent:", { hash });
+
+        // Wait for transaction confirmation with increased timeout
+        if (provider) {
+          let retryCount = 0;
+          const maxRetries = 3;
+
+          while (retryCount < maxRetries) {
+            try {
+              const receipt = await provider.waitForTransaction(hash, 1, 60000);
+
+              return {
+                status: receipt.status === 1 ? "success" : "error",
+                hash: receipt.transactionHash as `0x${string}`,
+                error: receipt.status === 1 ? undefined : "Transaction failed",
+              };
+            } catch (waitError: any) {
+              // If it's not a timeout error, throw immediately
+              if (!waitError.message?.includes("Timed out")) {
+                throw waitError;
+              }
+
+              retryCount++;
+
+              // Check transaction status directly
+              try {
+                const tx = await provider.getTransaction(hash);
+
+                if (tx?.blockNumber) {
+                  return {
+                    status: "success",
+                    hash,
+                  };
+                }
+              } catch (checkError) {}
+            }
+          }
+
+          // If we've exhausted retries but transaction exists
+          try {
+            const tx = await provider.getTransaction(hash);
+            if (tx) {
+              return {
+                status: "pending",
+                hash,
+                error: "Transaction submitted but confirmation timed out",
+              };
+            }
+          } catch (finalCheckError) {}
+        }
+
+        // If no provider or all retries failed
         return {
-          status: "confirming",
-          hash: swapHash!,
+          status: "pending",
+          hash,
+          error: "Transaction submitted but status unknown",
         };
       } catch (error: any) {
-        console.error("Swap error:", error);
+        console.error("Swap execution error:", {
+          message: error.message,
+          code: error.code,
+          data: error.data,
+          stack: error.stack,
+        });
+
+        if (error.message?.includes("Timed out")) {
+          return {
+            status: "pending",
+            hash: error.hash,
+            error: "Transaction pending - please check your wallet for status",
+          };
+        }
+
         return {
           status: "error",
           error: error.message || "Failed to execute swap",
         };
       }
     },
-    [chain?.id, address, initiateSwap]
+    [address, chain?.id, provider, walletClient]
   );
 
-  // Update status effects
-  useEffect(() => {
-    if (isApprovePending || isSwapPending) {
-      setApprovalStatus((prev) => ({ ...prev, loading: true }));
-    }
-  }, [isApprovePending, isSwapPending]);
-
-  useEffect(() => {
-    if (approveReceipt?.status === "success") {
-      setApprovalStatus((prev) => ({
-        ...prev,
-        loading: false,
-        approved: true,
-        required: false,
-      }));
-    }
-  }, [approveReceipt]);
-
-  useEffect(() => {
-    if (swapReceipt) {
-      console.log("[Swap] Receipt status:", swapReceipt.status);
-      if (swapReceipt.status === "success") {
-        console.log("[Swap] Transaction confirmed successfully");
-        setInternalSwapStatus({
-          status: "success",
-          loading: false,
-          hash: swapHash,
-          error: null,
-        });
-
-        window.seedConnector.showToast({
-          type: "success",
-          message: `Swap confirmed: ${swapHash?.slice(
-            0,
-            6
-          )}...${swapHash?.slice(-4)}`,
-        });
-
-        if (swapHash) {
-          setTimeout(() => {
-            console.log("[Swap] Triggering balance refresh");
-          }, 2500);
-        }
-      } else if (swapReceipt.status === "reverted") {
-        console.error("[Swap] Transaction reverted");
-        setInternalSwapStatus({
-          status: "error",
-          loading: false,
-          error: "Transaction reverted",
-          hash: swapHash,
-        });
-
-        window.seedConnector.showToast({
-          type: "error",
-          message: "Swap failed - transaction reverted",
-        });
-      }
-    }
-  }, [swapReceipt, swapHash]);
-
-  // Add effect to handle transaction submission
-  useEffect(() => {
-    if (swapHash && !swapReceipt) {
-      setInternalSwapStatus({
-        status: "confirming",
-        loading: true,
-        hash: swapHash,
-        error: null,
-      });
-    }
-  }, [swapHash, swapReceipt]);
-
-  // Error handling effects
-  useEffect(() => {
-    if (isApproveError && approveError) {
-      setApprovalStatus((prev) => ({
-        ...prev,
-        loading: false,
-        error: approveError.message,
-      }));
-    }
-  }, [isApproveError, approveError]);
-
   const revokeApproval = useCallback(
-    async (pair: TokenPair) => {
-      if (!chain?.id || !address) return false;
+    async (pair: TokenPair): Promise<boolean> => {
+      if (
+        !address ||
+        !chain?.id ||
+        !provider ||
+        !walletClient ||
+        pair.inputToken.symbol === "ETH"
+      ) {
+        return false;
+      }
 
       try {
         setApprovalStatus((prev) => ({ ...prev, loading: true }));
-        const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
 
-        initiateApprove({
-          address: pair.inputToken.address as Address,
-          abi: ERC20_ABI,
-          functionName: "approve",
-          args: [routerAddress, 0],
-          account: address as Address,
+        const routerAddress = SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId];
+        const tokenContract = new ethers.Contract(
+          pair.inputToken.address,
+          ERC20_ABI,
+          provider
+        );
+
+        // Set allowance to 0 using walletClient
+        const tx = await walletClient.sendTransaction({
+          to: pair.inputToken.address as `0x${string}`,
+          data: tokenContract.interface.encodeFunctionData("approve", [
+            routerAddress,
+            0,
+          ]) as `0x${string}`,
+          account: walletClient.account.address,
+        });
+
+        await provider.waitForTransaction(tx, 1, 60000);
+
+        // Immediately check and update the new allowance
+        const newAllowance = await tokenContract.allowance(
+          address,
+          routerAddress
+        );
+
+        setApprovalStatus((prev) => ({
+          ...prev,
+          loading: false,
+          approved: false,
+          required: true,
+          allowance: ethers.utils.formatUnits(
+            newAllowance,
+            pair.inputToken.decimals
+          ),
+        }));
+
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Approval revoked successfully",
         });
 
         return true;
-      } catch (error) {
-        console.error("Revoke error:", error);
+      } catch (e: any) {
+        console.error("Error revoking approval:", e);
         setApprovalStatus((prev) => ({
           ...prev,
-          error: error instanceof Error ? error.message : "Revoke failed",
+          loading: false,
+          error: e.message,
         }));
+
+        window.seedConnector.showToast({
+          type: "error",
+          message: e.message || "Failed to revoke approval",
+        });
+
         return false;
       }
     },
-    [chain?.id, address, initiateApprove]
+    [address, chain?.id, provider, walletClient]
   );
 
   // Add this function to check pool liquidity
@@ -636,17 +626,7 @@ export function useUniswapSwap() {
     executeSwap,
     approve,
     checkApproval,
-    approvalStatus: {
-      ...approvalStatus,
-      loading: isApprovePending || isApproveConfirming,
-      error: (approvalStatus.error || approveError?.message) ?? null,
-    },
-    swapStatus: {
-      status: internalSwapStatus.status,
-      loading: internalSwapStatus.loading || isSwapPending || isSwapConfirming,
-      error: internalSwapStatus.error || swapError?.message,
-      hash: swapHash,
-    },
+    approvalStatus,
     revokeApproval,
     estimateTransactionCost,
   };
