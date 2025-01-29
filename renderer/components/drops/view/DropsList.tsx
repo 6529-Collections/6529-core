@@ -1,7 +1,7 @@
 import { useMemo, RefObject, useCallback, memo } from "react";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
 import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
-import { ActiveDropState } from "../../waves/detailed/chat/WaveChat";
+import { ActiveDropState } from "../../../types/dropInteractionTypes";
 import Drop, { DropLocation } from "../../waves/detailed/drops/Drop";
 
 type DropActionHandler = ({
@@ -22,7 +22,7 @@ interface DropsListProps {
   readonly onQuote: DropActionHandler;
   readonly onReplyClick: (serialNo: number) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
-  readonly onDropClick: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
   readonly serialNo: number | null;
   readonly targetDropRef: RefObject<HTMLDivElement> | null;
   readonly dropViewDropId: string | null;
@@ -44,7 +44,7 @@ const DropsList = memo(function DropsList({
   targetDropRef,
   parentContainerRef,
   onQuoteClick,
-  onDropClick,
+  onDropContentClick,
   dropViewDropId,
 }: DropsListProps) {
   const handleReply = useCallback<DropActionHandler>(
@@ -89,7 +89,7 @@ const DropsList = memo(function DropsList({
             showReplyAndQuote={showReplyAndQuote}
             onQuoteClick={onQuoteClick}
             parentContainerRef={parentContainerRef}
-            onDropClick={onDropClick}
+            onDropContentClick={onDropContentClick}
           />
         </div>
       )),

@@ -138,9 +138,9 @@ export class ScheduledWorker {
 
     this.logger.log("info", `Starting task\n\n---------- New Run ----------\n`);
 
-    Logger.log(`[${this.namespace}] Starting scheduled task execution`);
-
-    Logger.log(`[${this.namespace}] Starting worker at ${this.filePath}`);
+    Logger.log(
+      `[${this.namespace}] Starting scheduled task execution at ${this.filePath}`
+    );
 
     // Path to the compiled worker script
     const workerPath = path.join(__dirname, this.filePath);

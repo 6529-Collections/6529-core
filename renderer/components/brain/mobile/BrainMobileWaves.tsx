@@ -8,10 +8,12 @@ interface BrainMobileWavesProps {
   readonly activeWaveId: string;
 }
 
-const BrainMobileWaves: React.FC<BrainMobileWavesProps> = ({ activeWaveId }) => {
+const BrainMobileWaves: React.FC<BrainMobileWavesProps> = ({
+  activeWaveId,
+}) => {
   const capacitor = useCapacitor();
 
-  const containerClassName = `tw-h-[calc(100vh-10.75rem)] tw-overflow-y-auto no-scrollbar tw-space-y-4 tw-px-2 sm:tw-px-4 md:tw-px-6 ${
+  const containerClassName = `tw-h-[calc(100vh-10rem)] tw-overflow-y-auto no-scrollbar tw-space-y-4 tw-px-2 sm:tw-px-4 md:tw-px-6 tw-pt-2 ${
     capacitor.isCapacitor ? " tw-pb-[calc(4rem+80px)]" : ""
   }`;
 

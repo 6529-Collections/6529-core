@@ -9,16 +9,13 @@ import React, {
 import { useAccount, useConnections, useDisconnect } from "wagmi";
 import {
   getWalletAddress,
-  getWalletType,
   removeAuthJwt,
 } from "../../services/auth/auth.utils";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 
 interface SeizeConnectContextType {
   address: string | null;
-  walletType: string | null;
   seizeConnect: () => void;
-  seizeConnectAppWallet: () => void;
   seizeDisconnect: () => void;
   seizeDisconnectAndLogout: (reconnect?: boolean) => void;
   seizeAcceptConnection: (address: string) => void;
@@ -49,8 +46,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   useEffect(() => {
-    setConnectedAddress(account.address ?? getWalletAddress());
-  }, [account.address]);
+    if (account.address && account.isConnected) {
+      setConnectedAddress(account.address);
+    } else {
+      setConnectedAddress(getWalletAddress());
+    }
+  }, [account.address, account.isConnected]);
 
   const seizeDisconnect = useCallback(() => {
     for (const connection of connections) {
@@ -84,9 +85,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const contextValue = useMemo(() => {
     return {
       address: connectedAddress,
-      walletType,
       seizeConnect: () => setShowConnectModal(true),
-      seizeConnectAppWallet: () => setShowAppWalletModal(true),
       seizeDisconnect,
       seizeDisconnectAndLogout,
       seizeAcceptConnection,

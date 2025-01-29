@@ -11,7 +11,7 @@ import { ApiDrop } from "../../../../generated/models/ApiDrop";
 import useIsMobileDevice from "../../../../hooks/isMobileDevice";
 import WaveDetailedDropMobileMenu from "./WaveDetailedDropMobileMenu";
 import { ApiDropType } from "../../../../generated/models/ApiDropType";
-import { ActiveDropState } from "../chat/WaveChat";
+import { ActiveDropState } from "../../../../types/dropInteractionTypes";
 import { DropInteractionParams, DropLocation } from "./Drop";
 
 enum GroupingThreshold {
@@ -105,7 +105,7 @@ interface WaveDetailedDropProps {
   readonly onQuote: (param: DropInteractionParams) => void;
   readonly onReplyClick: (serialNo: number) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
-  readonly onDropClick: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
   readonly parentContainerRef?: React.RefObject<HTMLElement>;
 }
 
@@ -121,7 +121,7 @@ const WaveDetailedDrop = ({
   onQuote,
   onReplyClick,
   onQuoteClick,
-  onDropClick,
+  onDropContentClick,
   showReplyAndQuote,
   parentContainerRef,
 }: WaveDetailedDropProps) => {
@@ -188,10 +188,6 @@ const WaveDetailedDrop = ({
     }
   }, []);
 
-  const handleDropClick = useCallback(() => {
-    onDropClick(drop);
-  }, [onDropClick, drop]);
-
   const handleOnReply = useCallback(() => {
     setIsSlideUp(false);
     onReply({ drop, partId: drop.parts[activePartIndex].part_id });
@@ -219,8 +215,8 @@ const WaveDetailedDrop = ({
   );
 
   const onContainerClick = () => {
-    if (drop.drop_type === ApiDropType.Participatory) {
-      onDropClick(drop);
+    if (drop.drop_type === ApiDropType.Participatory && onDropContentClick) {
+      onDropContentClick(drop);
     }
   };
 
@@ -249,9 +245,11 @@ const WaveDetailedDrop = ({
               }
             />
           )}
-        <div
+        <button
           onClick={onContainerClick}
-          className={`tw-flex tw-gap-x-3 tw-relative tw-z-10 ${
+          type="button"
+          disabled={drop.drop_type !== ApiDropType.Participatory}
+          className={`tw-flex tw-gap-x-3 tw-relative tw-z-10 tw-w-full tw-text-left tw-bg-transparent tw-border-0 ${
             drop.drop_type === ApiDropType.Participatory
               ? "tw-cursor-pointer"
               : ""
@@ -275,14 +273,14 @@ const WaveDetailedDrop = ({
                 activePartIndex={activePartIndex}
                 setActivePartIndex={setActivePartIndex}
                 onLongPress={handleLongPress}
-                onDropClick={handleDropClick}
+                onDropContentClick={onDropContentClick}
                 onQuoteClick={onQuoteClick}
                 setLongPressTriggered={setLongPressTriggered}
                 parentContainerRef={parentContainerRef}
               />
             </div>
           </div>
-        </div>
+        </button>
         {!isMobile && showReplyAndQuote && (
           <WaveDetailedDropActions
             drop={drop}
@@ -312,4 +310,3 @@ const WaveDetailedDrop = ({
 };
 
 export default memo(WaveDetailedDrop);
-// http://localhost:3001/waves/5ad50a5f-c427-4a61-873c-d9b7ee9d8834?drop=3834
