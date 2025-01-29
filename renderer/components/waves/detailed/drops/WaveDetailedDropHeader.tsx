@@ -57,8 +57,8 @@ const WaveDetailedDropHeader: React.FC<WaveDetailedDropHeaderProps> = ({
       <div className="tw-mt-0.5">
         {showWaveInfo && (
           <Link
-            onClick={e => e.stopPropagation()}
-            href={`/waves/${drop.wave.id}`}
+            onClick={(e) => e.stopPropagation()}
+            href={`/my-stream?wave=${drop.wave.id}`}
             className="tw-text-[11px] tw-leading-0 -tw-mt-1 tw-text-iron-500 hover:tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out tw-no-underline">
             {drop.wave.name}
           </Link>

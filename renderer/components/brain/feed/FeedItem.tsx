@@ -4,7 +4,7 @@ import { TypedFeedItem } from "../../../types/feed.types";
 import FeedItemDropReplied from "./items/drop-replied/FeedItemDropReplied";
 import FeedItemDropCreated from "./items/drop-created/FeedItemDropCreated";
 import FeedItemWaveCreated from "./items/wave-created/FeedItemWaveCreated";
-import { ActiveDropState } from "../../waves/detailed/chat/WaveChat";
+import { ActiveDropState } from "../../../types/dropInteractionTypes";
 import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
 import { DropInteractionParams } from "../../waves/detailed/drops/Drop";
 
@@ -14,7 +14,7 @@ export interface FeedItemProps {
   readonly activeDrop: ActiveDropState | null;
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
-  readonly onDropClick: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
 }
 
 export default function FeedItem({
@@ -23,7 +23,7 @@ export default function FeedItem({
   activeDrop,
   onReply,
   onQuote,
-  onDropClick,
+  onDropContentClick,
 }: FeedItemProps) {
   const getComponent = (): JSX.Element => {
     switch (item.type) {
@@ -35,7 +35,7 @@ export default function FeedItem({
             activeDrop={activeDrop}
             onReply={onReply}
             onQuote={onQuote}
-            onDropClick={onDropClick}
+            onDropContentClick={onDropContentClick}
           />
         );
       case ApiFeedItemType.DropCreated:
@@ -46,7 +46,7 @@ export default function FeedItem({
             activeDrop={activeDrop}
             onReply={onReply}
             onQuote={onQuote}
-            onDropClick={onDropClick}
+            onDropContentClick={onDropContentClick}
           />
         );
       case ApiFeedItemType.DropReplied:
@@ -57,7 +57,7 @@ export default function FeedItem({
             activeDrop={activeDrop}
             onReply={onReply}
             onQuote={onQuote}
-            onDropClick={onDropClick}
+            onDropContentClick={onDropContentClick}
           />
         );
       default:
