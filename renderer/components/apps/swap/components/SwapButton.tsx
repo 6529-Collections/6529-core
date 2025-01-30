@@ -2,23 +2,12 @@ import { useState } from "react";
 import { Loader2, Settings } from "lucide-react";
 import styles from "../UniswapApp.module.scss";
 import { RevokeModal } from "./RevokeModal";
-import { TokenPair } from "../types";
+import { TokenPair, SwapStatus } from "../types";
+import { Button } from "react-bootstrap";
 
 interface SwapButtonProps {
   disabled: boolean;
-  status: {
-    stage:
-      | "idle"
-      | "approving"
-      | "swapping"
-      | "confirming"
-      | "success"
-      | "pending"
-      | "complete";
-    loading: boolean;
-    error: string | null;
-    hash?: `0x${string}`;
-  };
+  status: SwapStatus;
   approvalStatus: {
     required: boolean;
     approved: boolean;
@@ -33,6 +22,7 @@ interface SwapButtonProps {
   minRequiredBalance?: string;
   onRevoke: () => Promise<void>;
   selectedPair: TokenPair;
+  onClear: () => void;
 }
 
 export function SwapButton({
@@ -47,6 +37,7 @@ export function SwapButton({
   minRequiredBalance = "0.001",
   onRevoke,
   selectedPair,
+  onClear,
 }: SwapButtonProps) {
   const [showRevokeModal, setShowRevokeModal] = useState(false);
   const [revokeLoading, setRevokeLoading] = useState(false);
@@ -110,14 +101,26 @@ export function SwapButton({
   return (
     <div className={styles.buttonContainer}>
       <button
-        className={`btn btn-primary w-100 ${
-          status.loading || approvalStatus.loading ? "loading" : ""
-        }`}
+        className={`btn btn-primary w-100 
+          ${status.stage === "success" ? styles.successState : ""}
+          ${status.loading ? "loading" : ""}`}
         disabled={isDisabled}
         onClick={handleClick}
       >
         {getButtonText()}
       </button>
+      {status.error && (
+        <div className={styles.errorMessage}>
+          ❌ {status.error}
+          <Button
+            variant="link"
+            onClick={onClear}
+            className={styles.clearError}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

@@ -639,3 +639,26 @@
     transform: translateY(1px);
   }
 }
+
+.successState {
+  background: #4caf50 !important;
+  &:hover {
+    background: #45a049 !important;
+  }
+}
+
+.errorMessage {
+  color: #ff4444;
+  margin-top: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.25rem;
+  width: 100%;
+
+  .clearError {
+    align-self: flex-end;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+  }
+}

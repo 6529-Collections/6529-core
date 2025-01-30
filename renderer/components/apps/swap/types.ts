@@ -1,5 +1,8 @@
 import { CurrencyAmount, Token as SDKToken, Currency } from "@uniswap/sdk-core";
 import { CHAIN_TOKENS } from "./constants";
+import { getBalance, readContracts } from "wagmi/actions";
+import { getWagmiConfig } from "../../../wagmiConfig";
+import { erc20Abi } from "viem";
 
 export interface Token {
   symbol: string;
@@ -9,6 +12,7 @@ export interface Token {
   logoURI?: string;
   isNative?: boolean;
   isWrapped?: boolean;
+  chainId: number;
 }
 
 export interface PoolData {
@@ -74,20 +78,25 @@ export function fromSDKToken(token: SDKToken | Currency): Token {
       name: token.name ?? "",
       address: token.address,
       decimals: token.decimals,
+      chainId: token.chainId,
     };
   }
   throw new Error("Cannot convert non-token currency to Token");
 }
 
 // Add this interface to types.ts if you want to share it across components
+export type TransactionStage =
+  | "idle"
+  | "approving"
+  | "swapping"
+  | "confirming"
+  | "success"
+  | "error"
+  | "pending"
+  | "complete";
+
 export interface SwapStatus {
-  stage:
-    | "idle"
-    | "approving"
-    | "swapping"
-    | "confirming"
-    | "success"
-    | "pending";
+  stage: TransactionStage;
   loading: boolean;
   error: string | null;
   hash?: `0x${string}`;
@@ -107,4 +116,31 @@ export function getDisplayToken(token: Token, chainId: number): Token {
     return CHAIN_TOKENS[chainId as keyof typeof CHAIN_TOKENS].ETH;
   }
   return token;
+}
+
+// Updated getTokenBalance with proper config handling
+export async function getTokenBalance(
+  token: Token,
+  address: string
+): Promise<bigint> {
+  if (token.isNative) {
+    const balance = await getBalance(await getWagmiConfig(), {
+      address: address as `0x${string}`,
+      chainId: token.chainId,
+    });
+    return balance.value;
+  }
+
+  const result = await readContracts(await getWagmiConfig(), {
+    contracts: [
+      {
+        address: token.address as `0x${string}`,
+        abi: erc20Abi,
+        functionName: "balanceOf",
+        args: [address as `0x${string}`],
+      },
+    ],
+  });
+
+  return result[0].result ? BigInt(result[0].result.toString()) : BigInt(0);
 }

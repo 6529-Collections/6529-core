@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { ethers } from "ethersv5";
 import { TokenPair } from "../types";
-import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "../abis";
+import { UNISWAP_V3_POOL_ABI } from "../abis";
 import { sepolia } from "wagmi/chains";
 import { useAccount } from "wagmi";
 import { SEPOLIA_RPC } from "../constants";
+import { erc20Abi } from "viem";
 
 export function useTokenData(
   pair: TokenPair | null,
@@ -88,12 +89,12 @@ export function useTokenData(
             ? provider.getBalance(userAddress)
             : new ethers.Contract(
                 pair.inputToken.address,
-                ERC20_ABI,
+                erc20Abi,
                 provider
               ).balanceOf(userAddress),
           new ethers.Contract(
             pair.outputToken.address,
-            ERC20_ABI,
+            erc20Abi,
             provider
           ).balanceOf(userAddress),
         ]);

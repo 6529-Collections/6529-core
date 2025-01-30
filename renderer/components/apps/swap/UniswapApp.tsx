@@ -25,7 +25,7 @@ import {
   SEPOLIA_RPC,
   SupportedChainId,
 } from "./constants";
-import { ERC20_ABI, UNISWAP_V3_POOL_ABI } from "./abis";
+import { UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
 import { SwatchBook } from "lucide-react";
@@ -41,6 +41,7 @@ import { TokenSelect } from "./components/TokenSelect";
 import { sepolia } from "wagmi/chains";
 import { Settings } from "lucide-react";
 import { RevokeModal } from "./components/RevokeModal";
+import { erc20Abi, formatUnits } from "viem";
 
 function formatAllowance(allowance: string | undefined): string {
   if (!allowance) return "0";
@@ -51,34 +52,14 @@ function formatAllowance(allowance: string | undefined): string {
   });
 }
 
-// Add this helper function for ETH balance formatting
-function formatEthBalance(balance: string): string {
-  const num = parseFloat(balance);
-
-  if (num === 0) return "0";
-
-  if (num < 0.0001) {
-    // Show in scientific notation for very small amounts
-    return num.toExponential(4);
-  } else if (num < 0.001) {
-    // Show more decimals for small amounts
-    return num.toFixed(8);
-  } else if (num < 1) {
-    // Show fewer decimals for medium amounts
-    return num.toFixed(6);
-  } else {
-    // Show 4 decimals for larger amounts
-    return num.toLocaleString(undefined, {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    });
-  }
+// Update balance formatting
+function formatEthBalance(balance: bigint): string {
+  return formatUnits(balance, 18);
 }
 
 function GasWarning({ ethBalance }: { ethBalance: string }) {
   const lowBalanceThreshold = 0.001; // 0.001 ETH
   const balance = parseFloat(ethBalance);
-  const formattedBalance = formatEthBalance(ethBalance);
 
   if (ethBalance !== "0" && balance <= lowBalanceThreshold) {
     return (
@@ -88,8 +69,8 @@ function GasWarning({ ethBalance }: { ethBalance: string }) {
           <div className={styles.gasWarningTitle}>Low ETH Balance</div>
           <div className={styles.gasWarningText}>
             Your ETH balance (
-            <span className={styles.gasWarningBalance}>{formattedBalance}</span>{" "}
-            ETH) is too low for gas fees. Add more ETH to perform transactions.
+            <span className={styles.gasWarningBalance}>{ethBalance}</span> ETH)
+            is too low for gas fees. Add more ETH to perform transactions.
           </div>
         </div>
       </div>
@@ -353,23 +334,24 @@ export default function UniswapApp() {
     | "pending"
     | "complete";
 
-  const [swapStatus, setSwapStatus] = useState<TransactionStatus>({
+  const [swapStatus, setSwapStatus] = useState<SwapStatus>({
     stage: "idle",
     loading: false,
     error: null,
   });
 
   // Declare resetSwapForm first using function declaration
-  function resetSwapForm() {
+  const resetSwapForm = useCallback(() => {
     setInputAmount("");
     setOutputAmount("");
-    setSwapStatus({
-      stage: "idle",
-      loading: false,
-      error: null,
-    });
-    fetchBalances();
-  }
+    setSwapError(null);
+    // Preserve token selection
+    setSelectedPair((prev) => ({
+      ...prev,
+      inputAmount: "",
+      outputAmount: "",
+    }));
+  }, []);
 
   // Then use it in transactionController
   const transactionController = useMemo(() => {
@@ -409,65 +391,95 @@ export default function UniswapApp() {
         error: null,
       });
 
-      const approved = await approve(selectedPair, inputAmount);
-      if (!approved) {
-        throw new Error("Failed to approve token");
+      let retries = 0;
+      const maxRetries = 2;
+
+      while (retries < maxRetries) {
+        try {
+          const approved = await approve(selectedPair, inputAmount);
+          if (approved) {
+            setSwapStatus({
+              stage: "idle",
+              loading: false,
+              error: null,
+            });
+
+            // Add success notification here
+            window.seedConnector.showToast({
+              type: "success",
+              message: "Token approval successful",
+            });
+
+            return;
+          }
+        } catch (error) {
+          if (retries === maxRetries - 1) throw error;
+          console.warn(`Approval failed, retry ${retries + 1}`);
+        }
+        retries++;
       }
-
-      // Update status after successful approval
-      setSwapStatus({
-        stage: "idle",
-        loading: false,
-        error: null,
-      });
-
-      // Show success toast
-      window.seedConnector.showToast({
-        type: "success",
-        message: "Token approved successfully",
-      });
     } catch (error: any) {
       setSwapStatus({
-        stage: "idle",
+        stage: "error",
         loading: false,
-        error: error.message || "Failed to approve token",
+        error: error.message || "Approval failed after retries",
       });
 
+      // Add error notification
       window.seedConnector.showToast({
         type: "error",
-        message: error.message || "Failed to approve token",
+        message: error.message || "Approval failed",
       });
     }
   };
 
   // Handle swap
   const handleSwap = async () => {
-    if (!inputAmount || !outputAmount || !transactionController) return;
-
     try {
-      setSwapStatus({
-        stage: "swapping",
-        loading: true,
-        error: null,
-      });
+      if (!inputAmount || !outputAmount || !transactionController) return;
 
+      setSwapStatus({ stage: "swapping", loading: true, error: null });
       const result = await executeSwap(selectedPair, inputAmount);
 
       if (result.status === "success") {
+        // Reset form first
+        resetSwapForm();
+
+        // Show success state temporarily
         setSwapStatus({
-          stage: "pending",
-          loading: true,
+          stage: "success",
+          loading: false,
           error: null,
           hash: result.hash,
         });
+
+        // Show notification
+        window.seedConnector.showToast({
+          type: "success",
+          message: "Swap executed successfully",
+        });
+
+        // Reset to idle after 2 seconds
+        setTimeout(() => {
+          setSwapStatus({
+            stage: "idle",
+            loading: false,
+            error: null,
+          });
+        }, 2000);
       } else {
-        throw new Error(result.error || "Swap failed");
+        setSwapStatus({
+          stage: "error",
+          loading: false,
+          error: result.error || "Swap failed",
+        });
       }
-    } catch (error: any) {
+    } catch (error) {
+      console.error("Swap execution error:", error);
       setSwapStatus({
-        stage: "idle",
+        stage: "error",
         loading: false,
-        error: error.message || "Failed to execute swap",
+        error: error instanceof Error ? error.message : "Unknown error",
       });
     }
   };
@@ -525,7 +537,7 @@ export default function UniswapApp() {
           } else {
             balance = await new ethers.Contract(
               token.address,
-              ERC20_ABI,
+              erc20Abi,
               provider
             ).balanceOf(address);
           }
@@ -810,6 +822,14 @@ export default function UniswapApp() {
                   outputAmount={outputAmount}
                   ethBalance={ethBalance}
                   onRevoke={handleRevokeApproval}
+                  onClear={() => {
+                    setSwapStatus({
+                      stage: "idle",
+                      loading: false,
+                      error: null,
+                    });
+                    resetSwapForm();
+                  }}
                   selectedPair={selectedPair}
                 />
 
