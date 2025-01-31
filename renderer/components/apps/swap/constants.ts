@@ -24,11 +24,12 @@ export const NATIVE_ETH: Token = {
   decimals: 18,
   logoURI: "/tokens/eth.svg",
   isNative: true,
+  chainId: 1,
 };
 
 export const CHAIN_TOKENS: ChainTokens = {
   1: {
-    ETH: NATIVE_ETH,
+    ETH: { ...NATIVE_ETH, chainId: 1 },
     WETH: {
       symbol: "WETH",
       name: "Wrapped Ether",
@@ -36,6 +37,7 @@ export const CHAIN_TOKENS: ChainTokens = {
       decimals: 18,
       logoURI: "/tokens/weth.svg",
       isWrapped: true,
+      chainId: 1,
     },
     USDC: {
       symbol: "USDC",
@@ -43,6 +45,7 @@ export const CHAIN_TOKENS: ChainTokens = {
       address: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
       decimals: 6,
       logoURI: "/tokens/usdc.svg",
+      chainId: 1,
     },
     UNI: {
       symbol: "UNI",
@@ -50,6 +53,7 @@ export const CHAIN_TOKENS: ChainTokens = {
       address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
       decimals: 18,
       logoURI: "/tokens/uni.svg",
+      chainId: 1,
     },
   },
   11155111: {
@@ -62,6 +66,7 @@ export const CHAIN_TOKENS: ChainTokens = {
       decimals: 18,
       logoURI: "/tokens/weth.svg",
       isWrapped: true,
+      chainId: 11155111,
     },
     USDC: {
       symbol: "USDC",
@@ -69,6 +74,7 @@ export const CHAIN_TOKENS: ChainTokens = {
       address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // Sepolia USDC
       decimals: 6,
       logoURI: "/tokens/usdc.svg",
+      chainId: 11155111,
     },
     UNI: {
       symbol: "UNI",
@@ -76,6 +82,7 @@ export const CHAIN_TOKENS: ChainTokens = {
       address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984", // Using mainnet address for testing
       decimals: 18,
       logoURI: "/tokens/uni.svg",
+      chainId: 11155111,
     },
   },
 };
