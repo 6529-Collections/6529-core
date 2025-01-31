@@ -102,7 +102,6 @@ export function SwapButton({
     <div className={styles.buttonContainer}>
       <button
         className={`btn btn-primary w-100 
-          ${status.stage === "success" ? styles.successState : ""}
           ${status.loading ? "loading" : ""}`}
         disabled={isDisabled}
         onClick={handleClick}
