@@ -46,6 +46,7 @@
     "publish-links-arweave": "ts-node scripts/publish-links.ts"
   },
   "dependencies": {
+    "@capacitor/barcode-scanner": "^2.0.0",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",

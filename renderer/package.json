@@ -16,6 +16,8 @@
     "test:watch": "nodemon --watch tests --watch src --ext ts,tsx,js,jsx --exec \"npx playwright test\""
   },
   "dependencies": {
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/barcode-scanner": "^1.0.4",
     "@capacitor/device": "^6.0.1",
     "@capacitor/filesystem": "^6.0.2",
     "@capacitor/keyboard": "^6.0.2",
