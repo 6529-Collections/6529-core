@@ -204,11 +204,7 @@ export default function Header(props: Readonly<Props>) {
               <h3
                 className={`d-flex justify-content-center ${styles.burgerMenuHeader} gap-2`}>
                 <HeaderUser />
-                <HeaderQRScanner
-                  onScanSuccess={() => {
-                    setBurgerMenuOpen(false);
-                  }}
-                />
+                <HeaderQRScanner />
               </h3>
             </Col>
           </Row>
