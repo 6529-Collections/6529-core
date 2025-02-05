@@ -26,6 +26,7 @@ import HeaderQR from "./qr/HeaderQR";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
 import { useAppWallets } from "../app-wallets/AppWalletsContext";
+import HeaderQRScanner from "./qr/HeaderQRScanner";
 
 interface Props {
   onLoad?: () => void;
@@ -201,8 +202,13 @@ export default function Header(props: Readonly<Props>) {
           <Row className="pt-4 pb-3">
             <Col>
               <h3
-                className={`d-flex justify-content-center ${styles.burgerMenuHeader}`}>
+                className={`d-flex justify-content-center ${styles.burgerMenuHeader} gap-2`}>
                 <HeaderUser />
+                <HeaderQRScanner
+                  onScanSuccess={() => {
+                    setBurgerMenuOpen(false);
+                  }}
+                />
               </h3>
             </Col>
           </Row>
