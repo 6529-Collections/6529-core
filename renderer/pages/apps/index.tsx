@@ -7,7 +7,10 @@ import { Container, Row, Col } from "react-bootstrap";
 import { SEIZE_URL } from "../../../constants";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faArrowRightArrowLeft } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowRightArrowLeft,
+  faSignature,
+} from "@fortawesome/free-solid-svg-icons";
 
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
@@ -28,6 +31,13 @@ const AVAILABLE_APPS: AppCard[] = [
     description: "Swap tokens and provide liquidity on Ethereum",
     icon: faArrowRightArrowLeft,
     link: "/apps/swap",
+    status: "live",
+  },
+  {
+    title: "ENS",
+    description: "Search, register and manage ENS names",
+    icon: faSignature,
+    link: "/apps/ens",
     status: "live",
   },
   // Add more apps here as they become available
