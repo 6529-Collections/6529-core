@@ -6,7 +6,6 @@ import {
   usePublicClient,
   useWalletClient,
   useEnsAddress,
-  useEnsResolver,
   useEnsText,
 } from "wagmi";
 import { parseEther } from "viem"; // For Ether -> wei conversions if needed
@@ -44,45 +43,189 @@ function ENSRegistrationModal({
   const [duration, setDuration] = useState<number>(1);
   const publicClient = usePublicClient({ chainId });
   const walletClient = useWalletClient({ chainId });
-
-  // Local state for transaction progress
   const [isRegistering, setIsRegistering] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | null>(null);
 
-  // Example function to register the ENS
+  // Get the resolver directly from constants
+  const resolverAddress = ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS]
+    ?.publicResolver as `0x${string}`;
+
+  // Generate a random secret
+  function generateSecret(): `0x${string}` {
+    const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+    return `0x${Array.from(randomBytes)
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("")}` as `0x${string}`;
+  }
+
+  const MIN_REGISTRATION_DURATION = BigInt(28 * 24 * 60 * 60); // 28 days in seconds
+  const MAX_REGISTRATION_DURATION = BigInt(365 * 24 * 60 * 60); // 1 year in seconds
+
   async function registerENS() {
-    if (!walletClient.data || !publicClient) return;
+    if (!walletClient.data || !publicClient || !resolverAddress) return;
 
     try {
       setIsRegistering(true);
+      console.log("Using resolver:", resolverAddress);
 
-      // 1. Simulate contract call to get the properly formatted request.
-      const { request } = await publicClient.simulateContract({
+      const durationInSeconds = BigInt(duration * 365 * 24 * 60 * 60);
+
+      // Verify duration
+      if (
+        durationInSeconds < MIN_REGISTRATION_DURATION ||
+        durationInSeconds > MAX_REGISTRATION_DURATION
+      ) {
+        throw new Error("Invalid registration duration");
+      }
+
+      // 1. Get price first
+      const price = await publicClient.readContract({
         address: controllerAddress!,
         abi: ENS_CONTROLLER_ABI,
-        functionName: "register", // Example method
-        account: walletClient.data.account, // The signing account
+        functionName: "rentPrice",
+        args: [ensName.replace(".eth", ""), durationInSeconds],
+      });
+      console.log("Registration price:", price.toString(), "wei");
+
+      // Add this check before making the commitment
+      if (
+        resolverAddress !==
+        ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS].publicResolver
+      ) {
+        console.warn("Resolver mismatch:", {
+          using: resolverAddress,
+          expected:
+            ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS].publicResolver,
+        });
+      }
+
+      // Generate commitment parameters
+      const secret = generateSecret();
+      const emptyData: `0x${string}`[] = [];
+      const reverseRecord = true;
+      const ownerControlledFuses = 0;
+
+      // Log all parameters for debugging
+      console.log("Registration parameters:", {
+        name: ensName.replace(".eth", ""),
+        owner: walletClient.data.account.address,
+        duration: durationInSeconds.toString(),
+        secret,
+        resolver: resolverAddress,
+        data: emptyData,
+        reverseRecord,
+        ownerControlledFuses,
+        value: price.toString(),
+      });
+
+      // 2. Make commitment
+      const commitment = await publicClient.readContract({
+        address: controllerAddress!,
+        abi: ENS_CONTROLLER_ABI,
+        functionName: "makeCommitment",
         args: [
           ensName.replace(".eth", ""),
           walletClient.data.account.address,
-          BigInt(duration),
+          durationInSeconds,
+          secret,
+          resolverAddress,
+          emptyData,
+          reverseRecord,
+          ownerControlledFuses,
         ],
-        // If your ENS registration requires ETH, specify `value`:
-        // value: parseEther("0.01"),
       });
 
-      // 2. Send the transaction
-      const hash = await walletClient.data.writeContract(request);
-      setTxHash(hash);
+      // 3. Submit commitment
+      const { request: commitRequest } = await publicClient.simulateContract({
+        address: controllerAddress!,
+        abi: ENS_CONTROLLER_ABI,
+        functionName: "commit",
+        account: walletClient.data.account,
+        args: [commitment],
+      });
 
-      // 3. (Optional) Wait for the transaction to be mined
-      const receipt = await publicClient.waitForTransactionReceipt({ hash });
-      console.info("Registration transaction mined:", receipt);
+      const commitHash = await walletClient.data.writeContract(commitRequest);
+      const commitReceipt = await publicClient.waitForTransactionReceipt({
+        hash: commitHash,
+      });
 
-      // 4. Close the modal or show success message
-      onHide();
-    } catch (error) {
-      console.error("Error registering ENS:", error);
+      // 4. Wait for commitment age
+      const minAge = await publicClient.readContract({
+        address: controllerAddress!,
+        abi: ENS_CONTROLLER_ABI,
+        functionName: "minCommitmentAge",
+      });
+
+      const waitTime = (Number(minAge) + 5) * 1000;
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
+
+      // 5. Verify commitment is still valid
+      try {
+        // Try simulating the registration first
+        const { request } = await publicClient.simulateContract({
+          address: controllerAddress!,
+          abi: ENS_CONTROLLER_ABI,
+          functionName: "register",
+          account: walletClient.data.account,
+          args: [
+            ensName.replace(".eth", ""),
+            walletClient.data.account.address,
+            durationInSeconds,
+            secret,
+            resolverAddress,
+            emptyData,
+            reverseRecord,
+            ownerControlledFuses,
+          ],
+          value: price,
+        });
+
+        // If simulation succeeds, send the actual transaction
+        const hash = await walletClient.data.writeContract(request);
+        const receipt = await publicClient.waitForTransactionReceipt({ hash });
+        console.log("Registration complete:", receipt);
+
+        onHide();
+      } catch (simError: any) {
+        console.error("Simulation error details:", {
+          error: simError,
+          args: {
+            name: ensName.replace(".eth", ""),
+            owner: walletClient.data.account.address,
+            duration: durationInSeconds.toString(),
+            secret,
+            resolver: resolverAddress,
+            data: emptyData,
+            reverseRecord,
+            ownerControlledFuses,
+            value: price.toString(),
+          },
+        });
+        throw simError;
+      }
+    } catch (error: any) {
+      console.error("Error registering ENS:", {
+        error,
+        message: error.message,
+        details: error.details,
+        cause: error.cause,
+      });
+
+      // More user-friendly error messages
+      let errorMessage = "Registration failed: ";
+      if (error.message.includes("CommitmentTooNew")) {
+        errorMessage += "Please wait longer after committing";
+      } else if (error.message.includes("CommitmentTooOld")) {
+        errorMessage += "Commitment has expired, please try again";
+      } else if (error.message.includes("InsufficientValue")) {
+        errorMessage += "Insufficient payment amount";
+      } else if (error.message.includes("NameNotAvailable")) {
+        errorMessage += "Name is no longer available";
+      } else {
+        errorMessage += error.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setIsRegistering(false);
     }
@@ -94,6 +237,14 @@ function ENSRegistrationModal({
       alert("No valid controller address for this chain.");
       return;
     }
+
+    if (!isValidRegistration(ensName)) {
+      alert(
+        "Invalid ENS name. Names must be 3-63 characters long and contain only lowercase letters, numbers, and hyphens."
+      );
+      return;
+    }
+
     registerENS();
   };
 
@@ -160,10 +311,6 @@ export function ENSDetails({ ensName }: Props) {
   // WAGMI v2: for reads, we can use useEnsAddress, useEnsResolver, etc.
   // Or we can do them manually with publicClient.readContract(...) if we prefer.
   const { data: ensOwner } = useEnsAddress({
-    name: ensName,
-    chainId,
-  });
-  const { data: ensResolver } = useEnsResolver({
     name: ensName,
     chainId,
   });
@@ -249,7 +396,6 @@ export function ENSDetails({ ensName }: Props) {
     chainId,
     ensName,
     ensOwner,
-    ensResolver,
     isAvailable,
     controllerAddress,
   };
@@ -257,6 +403,17 @@ export function ENSDetails({ ensName }: Props) {
     "Debug data (lossless BigInt serialization):",
     serialize(debugData)
   );
+
+  console.log("ENS Resolution details:", {
+    name: ensName,
+    isAvailable,
+    queriedResolver:
+      ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS].publicResolver,
+  });
+
+  // Instead, get the resolver from constants
+  const resolverAddress =
+    ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS]?.publicResolver;
 
   return (
     <>
@@ -281,8 +438,10 @@ export function ENSDetails({ ensName }: Props) {
             <div className={styles.detailItem}>
               <span className={styles.label}>Resolver</span>
               <span className={styles.value}>
-                {ensResolver
-                  ? `${ensResolver.slice(0, 6)}...${ensResolver.slice(-4)}`
+                {resolverAddress
+                  ? `${resolverAddress.slice(0, 6)}...${resolverAddress.slice(
+                      -4
+                    )}`
                   : "No resolver"}
               </span>
             </div>
@@ -310,4 +469,25 @@ export function ENSDetails({ ensName }: Props) {
       />
     </>
   );
+}
+
+function isValidRegistration(name: string): boolean {
+  const nameWithoutSuffix = name.replace(".eth", "");
+
+  // Check length (3-63 characters)
+  if (nameWithoutSuffix.length < 3 || nameWithoutSuffix.length > 63) {
+    return false;
+  }
+
+  // Only lowercase letters, numbers, and hyphens
+  if (!/^[a-z0-9-]+$/.test(nameWithoutSuffix)) {
+    return false;
+  }
+
+  // Cannot start or end with hyphen
+  if (nameWithoutSuffix.startsWith("-") || nameWithoutSuffix.endsWith("-")) {
+    return false;
+  }
+
+  return true;
 }
