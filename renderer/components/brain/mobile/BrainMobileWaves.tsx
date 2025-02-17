@@ -1,6 +1,5 @@
 import React from "react";
 import useCapacitor from "../../../hooks/useCapacitor";
-import BrainLeftSidebarCreateAWaveButton from "../left-sidebar/BrainLeftSidebarCreateAWaveButton";
 import BrainLeftSidebarSearchWave from "../left-sidebar/search-wave/BrainLeftSidebarSearchWave";
 import BrainLeftSidebarWaves from "../left-sidebar/waves/BrainLeftSidebarWaves";
 
@@ -19,7 +18,6 @@ const BrainMobileWaves: React.FC<BrainMobileWavesProps> = ({
 
   return (
     <div className={containerClassName}>
-      <BrainLeftSidebarCreateAWaveButton />
       <BrainLeftSidebarSearchWave />
       <BrainLeftSidebarWaves activeWaveId={activeWaveId} />
     </div>
