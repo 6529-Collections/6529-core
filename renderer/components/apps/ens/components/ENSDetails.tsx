@@ -39,11 +39,10 @@ export function ENSDetails({ ensName }: ENSDetailsProps) {
   const contracts = ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS];
   const controllerAddress = contracts?.controller as `0x${string}` | undefined;
 
-  console.log(chainId, "CHAINID");
   const publicClient = usePublicClient({ chainId });
-  const [isAvailable, setIsAvailable] = useState<boolean | undefined>(false);
 
-  console.log(publicClient, "PUBLIC CLIENT");
+  console.log("Public client:", publicClient, chainId, controllerAddress);
+  const [isAvailable, setIsAvailable] = useState<boolean | undefined>(false);
 
   // Basic check for name validity
   const isValidName = (name: string) => {
