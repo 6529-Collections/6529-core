@@ -1,6 +1,5 @@
 import React from "react";
 import useCapacitor from "../../../hooks/useCapacitor";
-import BrainLeftSidebarCreateAWaveButton from "../left-sidebar/BrainLeftSidebarCreateAWaveButton";
 import BrainLeftSidebarSearchWave from "../left-sidebar/search-wave/BrainLeftSidebarSearchWave";
 import BrainLeftSidebarWaves from "../left-sidebar/waves/BrainLeftSidebarWaves";
 
@@ -8,16 +7,17 @@ interface BrainMobileWavesProps {
   readonly activeWaveId: string;
 }
 
-const BrainMobileWaves: React.FC<BrainMobileWavesProps> = ({ activeWaveId }) => {
+const BrainMobileWaves: React.FC<BrainMobileWavesProps> = ({
+  activeWaveId,
+}) => {
   const capacitor = useCapacitor();
 
-  const containerClassName = `tw-h-[calc(100vh-10.75rem)] tw-overflow-y-auto no-scrollbar tw-space-y-4 tw-px-2 sm:tw-px-4 md:tw-px-6 ${
+  const containerClassName = `tw-h-[calc(100vh-10rem)] tw-overflow-y-auto no-scrollbar tw-space-y-4 tw-px-2 sm:tw-px-4 md:tw-px-6 tw-pt-2 ${
     capacitor.isCapacitor ? " tw-pb-[calc(4rem+80px)]" : ""
   }`;
 
   return (
     <div className={containerClassName}>
-      <BrainLeftSidebarCreateAWaveButton />
       <BrainLeftSidebarSearchWave />
       <BrainLeftSidebarWaves activeWaveId={activeWaveId} />
     </div>

@@ -37,7 +37,7 @@ export default function HeaderQR() {
   }
 
   return (
-    <div className="tailwind-scope tw-relative xl:tw-mr-3 tw-self-center">
+    <div className="tailwind-scope tw-relative min-[1200px]:tw-mr-3 tw-self-center">
       <button
         type="button"
         aria-label="QR Code"
@@ -51,7 +51,7 @@ export default function HeaderQR() {
   );
 }
 
-export function HeaderQRModal({
+function HeaderQRModal({
   show,
   onClose,
 }: {
@@ -175,7 +175,7 @@ export function HeaderQRModal({
           style={{
             maxWidth: "100%",
             height: "auto",
-            border: "20px solid #000",
+            border: "10px solid #fff",
           }}
         />
         <div className="d-flex align-items-center gap-2 mt-2">

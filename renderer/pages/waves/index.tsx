@@ -5,8 +5,6 @@ import dynamic from "next/dynamic";
 import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
 import { AuthContext } from "../../components/auth/Auth";
 import { useContext, useEffect } from "react";
-import { SEIZE_URL } from "../../../constants";
-
 const Header = dynamic(() => import("../../components/header/Header"), {
   ssr: false,
   loading: () => <HeaderPlaceholder />,
@@ -30,14 +28,17 @@ export default function WavesPage() {
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Waves | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/waves`} />
+        <meta name="description" content="Waves | 6529 SEIZE" />
+        <meta
+          property="og:url"
+          content={`${process.env.BASE_ENDPOINT}/waves`}
+        />
         <meta property="og:title" content="Waves" />
         <meta
           property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
+          content={`${process.env.BASE_ENDPOINT}/Seize_Logo_Glasses_2.png`}
         />
-        <meta property="og:description" content="6529 CORE" />
+        <meta property="og:description" content="6529 SEIZE" />
       </Head>
       <div className="tailwind-scope lg:tw-min-h-screen tw-bg-iron-950 tw-overflow-x-hidden">
         <div>

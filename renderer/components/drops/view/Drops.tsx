@@ -115,8 +115,10 @@ export default function Drops() {
   }, [drops]);
 
   const onQuoteClick = (drop: ApiDrop) => {
-    router.push(`/waves/${drop.wave.id}?drop=${drop.serial_no}`);
+    router.push(`/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`);
   };
+
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   if (!drops.length && !isFetching) {
     return (
@@ -127,8 +129,9 @@ export default function Drops() {
   }
 
   return (
-    <div className="tw-overflow-hidden">
+    <div className="tw-overflow-hidden" ref={scrollContainerRef}>
       <DropsList
+        scrollContainerRef={scrollContainerRef}
         drops={drops}
         showWaveInfo={true}
         onReply={() => {}}
@@ -141,8 +144,6 @@ export default function Drops() {
         isFetchingNextPage={isFetchingNextPage}
         onQuoteClick={onQuoteClick}
         dropViewDropId={null}
-        // TODO: Implement this
-        onDropClick={() => {}}
       />
       <div ref={bottomRef} style={{ height: "1px" }} />
     </div>

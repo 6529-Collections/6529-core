@@ -5,11 +5,11 @@ import {
 } from "../../../../helpers/image.helpers";
 import { INotificationDropReplied } from "../../../../types/feed.types";
 import { getTimeAgoShort } from "../../../../helpers/Helpers";
-import { ActiveDropState } from "../../../waves/detailed/chat/WaveChat";
+import { ActiveDropState } from "../../../../types/dropInteractionTypes";
 import Drop, {
   DropInteractionParams,
   DropLocation,
-} from "../../../waves/detailed/drops/Drop";
+} from "../../../waves/drops/Drop";
 import { ExtendedDrop } from "../../../../helpers/waves/drop.helpers";
 import { useRouter } from "next/router";
 import { ApiDrop } from "../../../../generated/models/ApiDrop";
@@ -19,23 +19,23 @@ export default function NotificationDropReplied({
   activeDrop,
   onReply,
   onQuote,
-  onDropClick,
+  onDropContentClick,
 }: {
   readonly notification: INotificationDropReplied;
   readonly activeDrop: ActiveDropState | null;
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
-  readonly onDropClick: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
 }) {
   const router = useRouter();
   const onReplyClick = (serialNo: number) => {
     router.push(
-      `/waves/${notification.related_drops[1].wave.id}?drop=${serialNo}/`
+      `/my-stream?wave=${notification.related_drops[1].wave.id}&serialNo=${serialNo}/`
     );
   };
 
   const onQuoteClick = (quote: ApiDrop) => {
-    router.push(`/waves/${quote.wave.id}?drop=${quote.serial_no}/`);
+    router.push(`/my-stream?wave=${quote.wave.id}&serialNo=${quote.serial_no}/`);
   };
   return (
     <div className="tw-w-full tw-flex tw-gap-x-3">
@@ -105,7 +105,7 @@ export default function NotificationDropReplied({
           onQuote={onQuote}
           onReplyClick={onReplyClick}
           onQuoteClick={onQuoteClick}
-          onDropClick={onDropClick}
+          onDropContentClick={onDropContentClick}
         />
       </div>
     </div>

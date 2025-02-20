@@ -14,6 +14,7 @@ import {
 } from "../helpers/waves/wave-drops.helpers";
 import { WAVE_DROPS_PARAMS } from "../components/react-query-wrapper/utils/query-utils";
 import { useWavePolling } from "./useWavePolling";
+import useCapacitor from "./useCapacitor";
 
 export enum WaveDropsSearchStrategy {
   FIND_OLDER = "FIND_OLDER",
@@ -47,6 +48,7 @@ export function useWaveDrops({
   reverse,
   dropId,
 }: UseWaveDropsProps) {
+  const { isCapacitor } = useCapacitor();
   const queryClient = useQueryClient();
   const isTabVisible = useTabVisibility();
 
@@ -137,10 +139,14 @@ export function useWaveDrops({
     refetchOnWindowFocus: true,
     refetchOnMount: true,
     refetchOnReconnect: true,
-    refetchIntervalInBackground: true,
+    refetchIntervalInBackground: !isCapacitor,
   });
 
-  const processDrops = (pages: ApiWaveDropsFeed[] | undefined, previousDrops: ExtendedDrop[], isReverse: boolean) => {
+  const processDrops = (
+    pages: ApiWaveDropsFeed[] | undefined,
+    previousDrops: ExtendedDrop[],
+    isReverse: boolean
+  ) => {
     const newDrops = pages
       ? mapToExtendedDrops(
           pages.map((page) => ({ wave: page.wave, drops: page.drops })),
@@ -151,7 +157,7 @@ export function useWaveDrops({
     return generateUniqueKeys(newDrops, previousDrops);
   };
 
-  const [drops, setDrops] = useState<ExtendedDrop[]>(() => 
+  const [drops, setDrops] = useState<ExtendedDrop[]>(() =>
     processDrops(data?.pages, [], reverse)
   );
 
@@ -162,15 +168,8 @@ export function useWaveDrops({
   const {
     hasNewDrops,
     error: pollingError,
-    lastPolledData
-  } = useWavePolling(
-    queryKey,
-    waveId,
-    dropId,
-    drops,
-    isTabVisible,
-    refetch
-  );
+    lastPolledData,
+  } = useWavePolling(queryKey, waveId, dropId, drops, isTabVisible, refetch);
 
   const manualFetch = useCallback(async () => {
     if (hasNextPage) {
@@ -182,12 +181,12 @@ export function useWaveDrops({
     drops,
     fetchNextPage,
     hasNextPage,
-    isFetching: isFetching ,
+    isFetching,
     isFetchingNextPage,
     refetch,
     haveNewDrops: hasNewDrops,
     manualFetch,
     error: mainQueryError || pollingError,
-    lastPolledData
+    lastPolledData,
   };
 }

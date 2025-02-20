@@ -4,13 +4,15 @@ import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
 import { TabToggle } from "../../common/TabToggle";
 import WaveHeader, {
   WaveHeaderPinnedSide,
-} from "../../waves/detailed/header/WaveHeader";
-import { WaveDetailedSmallLeaderboard } from "../../waves/detailed/small-leaderboard/WaveDetailedSmallLeaderboard";
-import { WaveWinnersSmall } from "../../waves/detailed/winners/WaveWinnersSmall";
+} from "../../waves/header/WaveHeader";
+import { WaveWinnersSmall } from "../../waves/winners/WaveWinnersSmall";
 import BrainRightSidebarContent from "./BrainRightSidebarContent";
 import BrainRightSidebarFollowers from "./BrainRightSidebarFollowers";
 import { Mode, SidebarTab } from "./BrainRightSidebar";
 import { useWaveState, WaveVotingState } from "../../../hooks/useWaveState";
+import { WaveSmallLeaderboard } from "../../waves/small-leaderboard/WaveSmallLeaderboard";
+import { WaveLeaderboardRightSidebarVoters } from "../../waves/leaderboard/sidebar/WaveLeaderboardRightSidebarVoters";
+import { WaveLeaderboardRightSidebarActivityLogs } from "../../waves/leaderboard/sidebar/WaveLeaderboardRightSidebarActivityLogs";
 
 interface WaveContentProps {
   readonly wave: ApiWave;
@@ -42,7 +44,53 @@ export const WaveContent: React.FC<WaveContentProps> = ({
       key: SidebarTab.LEADERBOARD,
       label: hasVotingEnded ? "Winners" : "Leaderboard",
     },
+    { key: SidebarTab.TOP_VOTERS, label: "Voters" },
+    { key: SidebarTab.ACTIVITY_LOG, label: "Activity" },
   ] as const;
+
+  const rankWaveComponents: Record<SidebarTab, JSX.Element> = {
+    [SidebarTab.ABOUT]: (
+      <div className="tw-mt-4 tw-h-full tw-divide-y tw-divide-solid tw-divide-iron-800 tw-divide-x-0">
+        <WaveHeader
+          wave={wave}
+          onFollowersClick={onFollowersClick}
+          useRing={false}
+          useRounded={false}
+          pinnedSide={WaveHeaderPinnedSide.LEFT}
+        />
+        {mode === Mode.CONTENT ? (
+          <BrainRightSidebarContent wave={wave} />
+        ) : (
+          <BrainRightSidebarFollowers
+            wave={wave}
+            closeFollowers={() => setMode(Mode.CONTENT)}
+          />
+        )}
+      </div>
+    ),
+    [SidebarTab.LEADERBOARD]: (
+      <div>
+        {hasVotingEnded ? (
+          <WaveWinnersSmall wave={wave} onDropClick={onDropClick} />
+        ) : (
+          <WaveSmallLeaderboard wave={wave} onDropClick={onDropClick} />
+        )}
+      </div>
+    ),
+    [SidebarTab.TOP_VOTERS]: (
+      <div className="tw-p-4">
+        <WaveLeaderboardRightSidebarVoters wave={wave} />
+      </div>
+    ),
+    [SidebarTab.ACTIVITY_LOG]: (
+      <div className="tw-p-4">
+        <WaveLeaderboardRightSidebarActivityLogs
+          wave={wave}
+          onDropClick={onDropClick}
+        />
+      </div>
+    ),
+  };
 
   if (!isRankWave) {
     return (
@@ -75,36 +123,7 @@ export const WaveContent: React.FC<WaveContentProps> = ({
           onSelect={(key) => setActiveTab(key as SidebarTab)}
         />
       </div>
-      {activeTab === SidebarTab.ABOUT ? (
-        <div className="tw-mt-4 tw-h-full tw-divide-y tw-divide-solid tw-divide-iron-800 tw-divide-x-0">
-          <WaveHeader
-            wave={wave}
-            onFollowersClick={onFollowersClick}
-            useRing={false}
-            useRounded={false}
-            pinnedSide={WaveHeaderPinnedSide.LEFT}
-          />
-          {mode === Mode.CONTENT ? (
-            <BrainRightSidebarContent wave={wave} />
-          ) : (
-            <BrainRightSidebarFollowers
-              wave={wave}
-              closeFollowers={() => setMode(Mode.CONTENT)}
-            />
-          )}
-        </div>
-      ) : (
-        <div>
-          {hasVotingEnded ? (
-            <WaveWinnersSmall wave={wave} onDropClick={onDropClick} />
-          ) : (
-            <WaveDetailedSmallLeaderboard
-              wave={wave}
-              onDropClick={onDropClick}
-            />
-          )}
-        </div>
-      )}
+      <div>{rankWaveComponents[activeTab]}</div>
     </>
   );
 };

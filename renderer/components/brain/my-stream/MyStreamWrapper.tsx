@@ -8,12 +8,9 @@ import {
   useMyStreamQuery,
   usePollingQuery,
 } from "../../../hooks/useMyStreamQuery";
-import {
-  ActiveDropAction,
-  ActiveDropState,
-} from "../../waves/detailed/chat/WaveChat";
+import { ActiveDropAction, ActiveDropState } from "../../../types/dropInteractionTypes";
 import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
-import { DropInteractionParams } from "../../waves/detailed/drops/Drop";
+import { DropInteractionParams } from "../../waves/drops/Drop";
 
 const MyStreamWrapper: React.FC = () => {
   const { setTitle } = useContext(AuthContext);
@@ -27,14 +24,9 @@ const MyStreamWrapper: React.FC = () => {
 
   const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>(null);
 
-  const onDropClick = (drop: ExtendedDrop) => {
-    const currentQuery = { ...router.query };
-    currentQuery.drop = drop.id;
+  const onDropContentClick = (drop: ExtendedDrop) => {
     router.push(
-      {
-        pathname: router.pathname,
-        query: currentQuery,
-      },
+      `/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}/`,
       undefined,
       { shallow: true }
     );
@@ -73,9 +65,9 @@ const MyStreamWrapper: React.FC = () => {
     status,
     refetch,
     isInitialQueryDone,
-  } = useMyStreamQuery();
+  } = useMyStreamQuery({ reverse: true });
 
-  const { haveNewItems } = usePollingQuery(isInitialQueryDone, items);
+  const { haveNewItems } = usePollingQuery(isInitialQueryDone, items, true);
 
   const onBottomIntersection = (state: boolean) => {
     if (
@@ -119,15 +111,12 @@ const MyStreamWrapper: React.FC = () => {
   }, [haveNewItems]);
 
   const component = serialisedWaveId ? (
-    <MyStreamWave
-      waveId={serialisedWaveId}
-      onDropClick={onDropClick}
-    />
+    <MyStreamWave waveId={serialisedWaveId} />
   ) : (
     <MyStream
       onReply={onReply}
       onQuote={onQuote}
-      onDropClick={onDropClick}
+      onDropContentClick={onDropContentClick}
       activeDrop={activeDrop}
       items={items}
       isFetching={isFetching}

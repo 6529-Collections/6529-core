@@ -8,7 +8,7 @@ import { ProfileMinWithoutSubs } from "../../../../helpers/ProfileTypes";
 import { ApiDrop } from "../../../../generated/models/ApiDrop";
 import { useRouter } from "next/router";
 import DropPartContent from "./DropPartContent";
-import DropContentWrapper from "../../../waves/detailed/drops/DropContentWrapper";
+import DropContentWrapper from "../../../waves/drops/DropContentWrapper";
 
 export enum DropPartSize {
   SMALL = "SMALL",
@@ -75,7 +75,7 @@ const DropPart = memo(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const onQuoteClick = (drop: ApiDrop) => {
-      router.push(`/waves/${drop.wave.id}?drop=${drop.serial_no}`, undefined, {
+      router.push(`/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`, undefined, {
         shallow: true,
       });
     };
@@ -105,7 +105,7 @@ const DropPart = memo(
                   {wave?.id && (
                     <Link
                       onClick={(e) => e.stopPropagation()}
-                      href={`/waves/${wave.id}`}
+                      href={`/my-stream?wave=${wave.id}`}
                       className="tw-mb-0 tw-pb-0 tw-no-underline tw-text-xs tw-text-iron-400 hover:tw-text-iron-50 tw-transition tw-duration-300 tw-ease-out"
                     >
                       <span>{wave.name}</span>
