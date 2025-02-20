@@ -71,43 +71,190 @@
 
 .modal {
   background: rgba(0, 0, 0, 0.8) !important;
-  color: white;
 
   & :global(.modal-content) {
     background: rgba(26, 26, 26, 0.95);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
   }
+
+  & :global(.modal-title) {
+    color: #000000;
+    font-weight: 600;
+    font-size: 1.25rem;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  }
+
+  & :global(.modal-header .btn-close) {
+    color: #e5e5e5;
+    opacity: 0.8;
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  & :global(.modal-body) {
+    color: #e5e5e5;
+
+    p {
+      color: #b8b8b8;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+  }
 }
 
 .modalHeader {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.5rem;
 }
 
 .formLabel {
-  color: rgba(255, 255, 255, 0.8) !important;
-  margin-bottom: 0.5rem;
+  color: #ffffff !important;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
 }
 
-.input {
+.formControl {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
-  color: white !important;
+  color: #ffffff !important;
+  padding: 0.75rem;
+  border-radius: 8px;
 
   option {
     background: rgba(26, 26, 26, 0.95);
-    color: white;
+    color: #ffffff;
+    padding: 8px;
   }
 
   &:focus {
-    box-shadow: none !important;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.25) !important;
     border-color: #3498db !important;
     background: rgba(255, 255, 255, 0.08) !important;
   }
 }
 
+.input {
+  composes: formControl;
+}
+
+.form-select {
+  composes: formControl;
+}
+
 .disclaimer {
-  color: rgba(255, 255, 255, 0.6);
+  color: #b8b8b8;
   margin: 1rem 0;
   font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.processInfo {
+  margin-bottom: 2rem;
+}
+
+.balanceInfo {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.balanceLabel {
+  color: #b8b8b8;
+  font-size: 0.95rem;
+}
+
+.balanceValue {
+  color: #ffffff;
+  font-family: monospace;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.processTitle {
+  color: #e5e5e5;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.processList {
+  color: #e5e5e5;
+  padding-left: 1.5rem;
+  margin-bottom: 1.5rem;
+
+  li {
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+
+    strong {
+      color: #3498db;
+    }
+  }
+}
+
+.costNote {
+  background: rgba(52, 152, 219, 0.1);
+  border-left: 3px solid #3498db;
+  padding: 1rem;
+  border-radius: 0 4px 4px 0;
+  color: #e5e5e5;
+  font-size: 0.95rem;
+
+  ul {
+    margin-top: 0.5rem;
+    padding-left: 1.5rem;
+
+    li {
+      margin-bottom: 0.25rem;
+      color: #b8b8b8;
+    }
+  }
+}
+
+.infoIcon {
+  color: #3498db;
+  margin-right: 0.5rem;
+  vertical-align: text-bottom;
+}
+
+.toastContainer {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  z-index: 1100;
+}
+
+.successToast {
+  background: rgba(46, 204, 113, 0.95) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+
+  :global(.toast-header) {
+    background: rgba(46, 204, 113, 0.95) !important;
+    color: #ffffff !important;
+    border: none !important;
+    padding: 0.75rem 1rem;
+
+    strong {
+      font-weight: 600;
+    }
+
+    .btn-close {
+      filter: invert(1);
+    }
+  }
+
+  :global(.toast-body) {
+    color: #ffffff;
+    padding: 0.75rem 1rem;
+    font-size: 0.95rem;
+  }
 }

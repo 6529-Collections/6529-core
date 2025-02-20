@@ -1,9 +1,19 @@
+// abis.ts
+/**
+ * Minimal ABIs relevant to the flow:
+ * 1) ENS Controller (for registering .eth names)
+ * 2) Registry & Resolver (if you want to query or set records)
+ */
+
 export const ENS_REGISTRY_ABI = [
-  /* ... */
+  // If you need registry lookups beyond wagmi's built-in hooks
+  // For example: function owner(bytes32 node) external view returns (address);
 ] as const;
 
 export const ENS_RESOLVER_ABI = [
-  /* ... */
+  // If you need to read or set addresses/text records, e.g.:
+  // function addr(bytes32 node) external view returns (address);
+  // function text(bytes32 node, string calldata key) external view returns (string memory);
 ] as const;
 
 export const ENS_CONTROLLER_ABI = [
@@ -77,32 +87,12 @@ export const ENS_CONTROLLER_ABI = [
     inputs: [],
     outputs: [{ name: "", type: "uint256" }],
   },
-  // Add custom errors
-  {
-    type: "error",
-    name: "CommitmentTooNew",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "CommitmentTooOld",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "InsufficientValue",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "NameNotAvailable",
-    inputs: [],
-  },
-  {
-    type: "error",
-    name: "DurationTooShort",
-    inputs: [],
-  },
+  // Custom errors from the contract:
+  { type: "error", name: "CommitmentTooNew", inputs: [] },
+  { type: "error", name: "CommitmentTooOld", inputs: [] },
+  { type: "error", name: "InsufficientValue", inputs: [] },
+  { type: "error", name: "NameNotAvailable", inputs: [] },
+  { type: "error", name: "DurationTooShort", inputs: [] },
   {
     type: "error",
     name: "ResolverRequiredWhenDataSupplied",

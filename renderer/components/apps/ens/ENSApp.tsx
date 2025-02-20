@@ -1,7 +1,9 @@
+// ENSApp.tsx
 import { useState } from "react";
 import { Container, Row, Col } from "react-bootstrap";
 import { useAccount } from "wagmi";
 import styles from "./ENSApp.module.scss";
+
 import { SearchBar } from "./components/SearchBar";
 import { MyENSNames } from "./components/MyENSNames";
 import { ENSDetails } from "./components/ENSDetails";
@@ -63,7 +65,7 @@ export default function ENSApp() {
 
           {activeTab === "manage" && !isConnected && (
             <div className={styles.connectPrompt}>
-              <p>Please connect your wallet to manage your ENS names</p>
+              <p>Please connect your wallet to manage your ENS names.</p>
             </div>
           )}
         </Col>
