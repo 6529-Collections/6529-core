@@ -72,14 +72,10 @@ export function seedWalletConnector(parameters: {
   }
 
   function updateProvider() {
-    if (connectionObject.chainId === sepolia.id) {
-      provider = new ethers.JsonRpcProvider(SEPOLIA_RPC, {
-        chainId: connectionObject.chainId,
-        name: "sepolia",
-      });
-    } else {
-      provider = new ethers.CloudflareProvider();
-    }
+    provider = new ethers.JsonRpcProvider("https://rpc1.6529.io", {
+      chainId: connectionObject.chainId,
+      name: "6529RPC",
+    });
   }
 
   async function init(name: string) {
