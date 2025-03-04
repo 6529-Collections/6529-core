@@ -1,24 +1,11 @@
 // components/ENSDetails.tsx
 import { useState, useEffect } from "react";
-import { Card, Button, Modal, Form } from "react-bootstrap";
-import {
-  useAccount,
-  useChainId,
-  usePublicClient,
-  useWalletClient,
-  useEnsText,
-  useEnsAddress,
-  useBalance,
-} from "wagmi";
-import { serialize } from "wagmi";
-import { formatEther } from "viem";
-import {
-  ENS_CONTRACTS,
-  MIN_REGISTRATION_DURATION,
-  MAX_REGISTRATION_DURATION,
-} from "../constants";
+import { Card, Button, Badge } from "react-bootstrap";
+import { useChainId, usePublicClient, useEnsText, useEnsAddress } from "wagmi";
+import { ENS_CONTRACTS } from "../constants";
 import { ENS_CONTROLLER_ABI } from "../abis";
-import styles from "./ENSDetails.module.scss";
+import { ENSRegistrationModal } from "./ENSRegistrationModal";
+
 interface ENSDetailsProps {
   ensName: string;
 }
@@ -41,7 +28,6 @@ export function ENSDetails({ ensName }: ENSDetailsProps) {
 
   const publicClient = usePublicClient({ chainId });
 
-  console.log("Public client:", publicClient, chainId, controllerAddress);
   const [isAvailable, setIsAvailable] = useState<boolean | undefined>(false);
 
   // Basic check for name validity
@@ -51,17 +37,20 @@ export function ENSDetails({ ensName }: ENSDetailsProps) {
 
   useEffect(() => {
     async function checkAvailability() {
-      if (!ensName || !isValidName(ensName) || ensOwner || !controllerAddress) {
+      if (!ensName || !isValidName(ensName) || !controllerAddress) {
         setIsAvailable(false);
         return;
       }
+
       try {
+        const label = ensName.replace(".eth", "");
         const result = await publicClient?.readContract({
           address: controllerAddress,
           abi: ENS_CONTROLLER_ABI,
           functionName: "available",
-          args: [ensName.replace(".eth", "")],
+          args: [label],
         });
+
         setIsAvailable(Boolean(result));
       } catch (error) {
         console.error("Error checking name availability:", error);
@@ -75,51 +64,80 @@ export function ENSDetails({ ensName }: ENSDetailsProps) {
   // Modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
-  // Debug info
-  console.log(
-    "ENS Details debug:",
-    serialize({
-      chainId,
-      ensName,
-      ensOwner,
-      isAvailable,
-      controllerAddress,
-    })
-  );
+  // Handle successful registration
+  const handleRegistrationSuccess = () => {
+    setIsAvailable(false);
+  };
 
   return (
     <>
-      <Card className={styles.detailsCard}>
-        <Card.Body>
-          <h3 className={styles.ensName}>{ensName}</h3>
+      <Card className="tw-bg-zinc-900/80 tw-border tw-border-zinc-800 tw-rounded-xl tw-text-white tw-backdrop-blur-md tw-shadow-xl tw-overflow-hidden tw-transition-all tw-duration-300 tw-animate-fadeIn">
+        <div className="tw-bg-gradient-to-r tw-from-black/50 tw-to-zinc-900/50 tw-h-16 tw-relative">
+          <div className="tw-absolute tw-inset-0 tw-flex tw-items-center tw-justify-center">
+            <h3 className="tw-text-2xl tw-font-bold tw-text-white tw-drop-shadow-md">
+              {ensName}
+            </h3>
+          </div>
+        </div>
 
+        <Card.Body className="tw-p-6">
           {avatar && (
-            <div className={styles.avatarContainer}>
-              <img src={avatar} alt="ENS Avatar" className={styles.avatar} />
+            <div className="tw-text-center tw-mb-6 tw--mt-12">
+              <img
+                src={avatar}
+                alt="ENS Avatar"
+                className="tw-w-24 tw-h-24 tw-rounded-full tw-border-4 tw-border-zinc-900 tw-shadow-xl tw-mx-auto tw-object-cover"
+              />
             </div>
           )}
 
-          <div className={styles.detailsGrid}>
-            <div className={styles.detailItem}>
-              <span className={styles.label}>Address:</span>
-              <span className={styles.value}>
+          <div className="tw-grid tw-gap-5 tw-mt-4">
+            <div className="tw-flex tw-flex-col tw-gap-2">
+              <span className="tw-text-white/60 tw-text-sm tw-uppercase tw-tracking-wider tw-font-medium">
+                Address:
+              </span>
+              <span className="tw-font-mono tw-break-all tw-bg-black/20 tw-p-2 tw-rounded-md tw-text-sm">
                 {ensOwner || "Not registered"}
               </span>
             </div>
 
-            <div className={styles.detailItem}>
-              <span className={styles.label}>Status:</span>
-              <span className={styles.value}>
-                {isAvailable ? "Available" : ensOwner ? "Owned" : "Unknown"}
+            <div className="tw-flex tw-flex-col tw-gap-2">
+              <span className="tw-text-white/60 tw-text-sm tw-uppercase tw-tracking-wider tw-font-medium">
+                Status:
               </span>
+              <div>
+                {isAvailable ? (
+                  <Badge
+                    bg="success"
+                    className="tw-bg-zinc-700 tw-text-white tw-font-normal tw-py-1.5 tw-px-3"
+                  >
+                    Available
+                  </Badge>
+                ) : ensOwner ? (
+                  <Badge
+                    bg="danger"
+                    className="tw-bg-zinc-800 tw-text-white tw-font-normal tw-py-1.5 tw-px-3"
+                  >
+                    Owned and Configured
+                  </Badge>
+                ) : (
+                  <Badge
+                    bg="warning"
+                    className="tw-bg-zinc-600 tw-text-white tw-font-normal tw-py-1.5 tw-px-3"
+                  >
+                    Registered but Not Configured
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
           {isAvailable && (
-            <div className={styles.registerContainer}>
+            <div className="tw-mt-8 tw-text-center">
               <Button
                 variant="primary"
                 onClick={() => setShowRegisterModal(true)}
+                className="tw-bg-zinc-800 hover:tw-bg-zinc-700 tw-border-0 tw-py-3 tw-px-8 tw-text-lg tw-rounded-lg tw-transition-all tw-shadow-lg hover:tw-shadow-xl"
               >
                 Register {ensName}
               </Button>
@@ -132,327 +150,8 @@ export function ENSDetails({ ensName }: ENSDetailsProps) {
         show={showRegisterModal}
         onHide={() => setShowRegisterModal(false)}
         ensName={ensName}
+        onRegistrationSuccess={handleRegistrationSuccess}
       />
     </>
-  );
-}
-
-/* ------------------------------------------------------------------
-   Registration Modal: Handles commit/wait/register flow 
------------------------------------------------------------------- */
-interface RegistrationModalProps {
-  show: boolean;
-  onHide: () => void;
-  ensName: string;
-}
-
-function ENSRegistrationModal({
-  show,
-  onHide,
-  ensName,
-}: RegistrationModalProps) {
-  const { address: userAddress } = useAccount();
-  const { data: balance } = useBalance({
-    address: userAddress,
-  });
-  const chainIdBigInt = useChainId();
-  const chainId = Number(chainIdBigInt);
-  const publicClient = usePublicClient({ chainId });
-  const walletClient = useWalletClient({ chainId });
-
-  const [durationYears, setDurationYears] = useState(1);
-  const [isRegistering, setIsRegistering] = useState(false);
-
-  const controllerAddress =
-    ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS]?.controller;
-  const resolverAddress =
-    ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS]?.publicResolver;
-
-  // Generate a random secret
-  function generateSecret(): `0x${string}` {
-    const randomBytes = crypto.getRandomValues(new Uint8Array(32));
-    return ("0x" +
-      Array.from(randomBytes, (byte) =>
-        byte.toString(16).padStart(2, "0")
-      ).join("")) as `0x${string}`;
-  }
-
-  async function registerENS() {
-    try {
-      if (!walletClient.data || !publicClient) {
-        alert("Wallet not connected or public client unavailable.");
-        return;
-      }
-      if (!controllerAddress || !resolverAddress) {
-        alert("No valid ENS controller/resolver on this chain.");
-        return;
-      }
-      if (!userAddress) {
-        alert("No user address found. Connect your wallet first.");
-        return;
-      }
-
-      setIsRegistering(true);
-
-      // 1) Duration
-      const durationInSeconds = BigInt(durationYears * 365 * 24 * 60 * 60);
-      if (
-        durationInSeconds < MIN_REGISTRATION_DURATION ||
-        durationInSeconds > MAX_REGISTRATION_DURATION
-      ) {
-        throw new Error(
-          `Duration must be between 28 days and 1 year. You chose ${durationYears} year(s).`
-        );
-      }
-
-      // 2) Rent price
-      const price = await publicClient.readContract({
-        address: controllerAddress as `0x${string}`,
-        abi: ENS_CONTROLLER_ABI,
-        functionName: "rentPrice",
-        args: [ensName.replace(".eth", ""), durationInSeconds],
-      });
-      console.log(`Rent price for ${ensName}: ${price.toString()} wei`);
-
-      // Check user balance
-      const userBalance = await publicClient.getBalance({
-        address: walletClient.data.account.address,
-      });
-      console.log("User test ETH balance:", userBalance.toString());
-
-      // 3) Make commitment
-      const secret = generateSecret();
-      const emptyData: `0x${string}`[] = [];
-      // Set reverseRecord based on network
-      const reverseRecord = chainId === 1; // true for mainnet, false for others
-      const ownerControlledFuses = 0;
-      const label = ensName.replace(".eth", "");
-
-      // We'll console.log all commit parameters
-      console.log("Commit parameters =>", {
-        name: label,
-        owner: userAddress,
-        duration: durationInSeconds.toString(),
-        secret: secret,
-        resolver: resolverAddress,
-        data: emptyData,
-        reverseRecord,
-        ownerControlledFuses,
-      });
-
-      const commitment = await publicClient.readContract({
-        address: controllerAddress as `0x${string}`,
-        abi: ENS_CONTROLLER_ABI,
-        functionName: "makeCommitment",
-        args: [
-          label,
-          userAddress,
-          durationInSeconds,
-          secret,
-          resolverAddress as `0x${string}`,
-          emptyData,
-          reverseRecord,
-          ownerControlledFuses,
-        ],
-      });
-
-      const { request: commitRequest } = await publicClient.simulateContract({
-        address: controllerAddress as `0x${string}`,
-        abi: ENS_CONTROLLER_ABI,
-        functionName: "commit",
-        account: walletClient.data.account,
-        args: [commitment],
-      });
-
-      const commitTxHash = await walletClient.data.writeContract(commitRequest);
-      const commitReceipt = await publicClient.waitForTransactionReceipt({
-        hash: commitTxHash,
-      });
-      console.log("Commit transaction mined:", commitTxHash);
-
-      // 4) Wait minCommitmentAge
-      const commitBlockNumber = commitReceipt.blockNumber;
-      const commitBlock = await publicClient.getBlock({
-        blockNumber: commitBlockNumber,
-      });
-      const commitBlockTimestamp = Number(commitBlock.timestamp);
-
-      const minCommitmentAge = (await publicClient.readContract({
-        address: controllerAddress as `0x${string}`,
-        abi: ENS_CONTROLLER_ABI,
-        functionName: "minCommitmentAge",
-      })) as bigint;
-
-      const minCommitmentAgeNum = Number(minCommitmentAge);
-
-      // Add buffer depending on chain
-      const extraBuffer = chainId === 11155111 ? 60 : 10; // e.g., 60 more seconds on Sepolia
-      const requiredOnChainSeconds = minCommitmentAgeNum + extraBuffer;
-
-      while (true) {
-        const currentBlock = await publicClient.getBlock();
-        const currentTimestamp = Number(currentBlock.timestamp);
-        const delta = currentTimestamp - commitBlockTimestamp;
-        console.log(
-          `On-chain seconds since commit: ${delta}; need >= ${requiredOnChainSeconds}`
-        );
-        if (delta >= requiredOnChainSeconds) break;
-        await new Promise((r) => setTimeout(r, 5000));
-      }
-
-      console.log("Sufficient on-chain time passed; calling register...");
-
-      // (Optional) final availability check
-      const stillAvailable = await publicClient.readContract({
-        address: controllerAddress as `0x${string}`,
-        abi: ENS_CONTROLLER_ABI,
-        functionName: "available",
-        args: [label],
-      });
-      if (!stillAvailable) {
-        throw new Error("NameNotAvailable: Another user registered it.");
-      }
-
-      // We'll console.log all register parameters
-      console.log("Register parameters =>", {
-        name: label,
-        owner: userAddress,
-        duration: durationInSeconds.toString(),
-        secret,
-        resolver: resolverAddress,
-        data: emptyData,
-        reverseRecord,
-        ownerControlledFuses,
-        value: price.toString() + " wei", // Payment for rentPrice
-      });
-
-      const { request: registerRequest } = await publicClient.simulateContract({
-        address: controllerAddress as `0x${string}`,
-        abi: ENS_CONTROLLER_ABI,
-        functionName: "register",
-        account: walletClient.data.account,
-        args: [
-          label,
-          userAddress,
-          durationInSeconds,
-          secret,
-          resolverAddress as `0x${string}`,
-          emptyData,
-          reverseRecord,
-          ownerControlledFuses,
-        ],
-        value: price,
-      });
-
-      const registerTxHash = await walletClient.data.writeContract(
-        registerRequest
-      );
-      const registerReceipt = await publicClient.waitForTransactionReceipt({
-        hash: registerTxHash,
-      });
-      console.log("Registration complete:", registerReceipt);
-
-      window.seedConnector.showToast({
-        type: "success",
-        message: `Successfully registered ${ensName}!`,
-      });
-      onHide();
-    } catch (err: any) {
-      console.error("Registration error:", err);
-      let msg = "Registration failed. ";
-
-      // Attempt to parse known revert reasons
-      if (err.message?.includes("CommitmentTooNew")) {
-        msg += "Please wait longer after committing.";
-      } else if (err.message?.includes("CommitmentTooOld")) {
-        msg += "Commitment has expired, please try again.";
-      } else if (err.message?.includes("InsufficientValue")) {
-        msg += "Insufficient payment amount (or insufficient balance).";
-      } else if (err.message?.includes("NameNotAvailable")) {
-        msg += "Name is no longer available.";
-      } else {
-        msg += err.message || "Unknown error.";
-      }
-      alert(msg);
-    } finally {
-      setIsRegistering(false);
-    }
-  }
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    registerENS();
-  };
-
-  return (
-    <Modal show={show} onHide={onHide} centered className={styles.modal}>
-      <Modal.Header closeButton className={styles.modalHeader}>
-        <Modal.Title>Register {ensName}</Modal.Title>
-      </Modal.Header>
-      <Modal.Body>
-        <div className={styles.processInfo}>
-          <h6 className={styles.processTitle}>Registration Process</h6>
-          {balance && (
-            <div className={styles.balanceInfo}>
-              <span className={styles.balanceLabel}>Your Balance:</span>
-              <span className={styles.balanceValue}>
-                {Number(formatEther(balance.value)).toFixed(4)} {balance.symbol}
-              </span>
-            </div>
-          )}
-          <ol className={styles.processList}>
-            <li>
-              <strong>Commit Phase:</strong> First transaction to commit your
-              intention to register. This helps prevent front-running.
-            </li>
-            <li>
-              <strong>Waiting Period:</strong> Please expect a waiting period of
-              around {chainId === 11155111 ? "60" : "10"} seconds after the
-              commit transaction.
-            </li>
-            <li>
-              <strong>Registration Phase:</strong> Second transaction to
-              complete the registration and secure your ENS name.
-            </li>
-          </ol>
-          <div className={styles.costNote}>
-            <svg
-              className={styles.infoIcon}
-              viewBox="0 0 24 24"
-              width="16"
-              height="16"
-            >
-              <path
-                fill="currentColor"
-                d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"
-              />
-            </svg>
-            Please ensure you have sufficient{" "}
-            {chainId === 1 ? "ETH" : "test ETH"} to cover both:
-            <ul>
-              <li>Registration fee (varies by name length and duration)</li>
-              <li>Gas fees for both transactions</li>
-            </ul>
-          </div>
-        </div>
-        <Form onSubmit={handleSubmit}>
-          <Form.Group className="mb-3">
-            <Form.Label>Registration Duration (in years)</Form.Label>
-            <Form.Select
-              value={durationYears}
-              onChange={(e) => setDurationYears(Number(e.target.value))}
-            >
-              <option value={1}>1 year</option>
-              <option value={2}>2 years</option>
-              <option value={3}>3 years</option>
-            </Form.Select>
-          </Form.Group>
-
-          <Button variant="primary" type="submit" disabled={isRegistering}>
-            {isRegistering ? "Processing..." : "Register"}
-          </Button>
-        </Form>
-      </Modal.Body>
-    </Modal>
   );
 }
