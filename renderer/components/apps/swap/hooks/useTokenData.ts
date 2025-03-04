@@ -1,11 +1,25 @@
 import { useEffect, useState } from "react";
-import { ethers } from "ethersv5";
 import { TokenPair } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
 import { sepolia } from "wagmi/chains";
-import { useAccount } from "wagmi";
-import { SEPOLIA_RPC } from "../constants";
-import { erc20Abi } from "viem";
+import { useAccount, usePublicClient } from "wagmi";
+import {
+  getContract,
+  formatUnits,
+  type Address,
+  ContractFunctionExecutionError,
+  erc20Abi,
+} from "viem";
+
+interface Slot0Response {
+  sqrtPriceX96: bigint;
+  tick: number;
+  observationIndex: number;
+  observationCardinality: number;
+  observationCardinalityNext: number;
+  feeProtocol: number;
+  unlocked: boolean;
+}
 
 export function useTokenData(
   pair: TokenPair | null,
@@ -13,41 +27,34 @@ export function useTokenData(
 ) {
   const [price, setPrice] = useState<string | null>(null);
   const { chain } = useAccount();
+  const publicClient = usePublicClient();
   const [inputBalance, setInputBalance] = useState<string | null>(null);
   const [outputBalance, setOutputBalance] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!pair || !chain?.id) return;
+    if (!pair || !chain?.id || !publicClient) return;
 
     const fetchPrice = async () => {
       try {
-        let provider: ethers.providers.Provider;
+        const poolContract = getContract({
+          address: pair.poolAddress as Address,
+          abi: UNISWAP_V3_POOL_ABI,
+          client: publicClient,
+        });
 
-        if (chain.id === sepolia.id) {
-          provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
-            chainId: chain.id,
-            name: "sepolia",
-          });
-        } else {
-          provider = new ethers.providers.CloudflareProvider();
-        }
-
-        const poolContract = new ethers.Contract(
-          pair.poolAddress,
-          UNISWAP_V3_POOL_ABI,
-          provider
-        );
-
-        const [slot0, token0Address] = await Promise.all([
-          poolContract.slot0(),
-          poolContract.token0(),
+        const [slot0Data, token0Address] = await Promise.all([
+          poolContract.read.slot0() as Promise<Slot0Response>,
+          poolContract.read.token0() as Promise<Address>,
         ]);
 
-        const sqrtPriceX96 = BigInt(slot0[0].toString());
-        const Q96 = BigInt(2 ** 96);
+        const sqrtPriceX96 = slot0Data.sqrtPriceX96;
+        const Q96 = BigInt(Math.pow(2, 96));
+        const scaleFactor = BigInt(10000);
 
-        const price0Per1 = Number(sqrtPriceX96) / Number(Q96);
+        // Calculate raw price using BigInt operations
+        const priceRatio = (sqrtPriceX96 * scaleFactor) / Q96;
+        const price0Per1 = Number(priceRatio) / Number(scaleFactor);
         const basePrice = price0Per1 * price0Per1;
 
         const isInputToken0 =
@@ -57,11 +64,11 @@ export function useTokenData(
           ? 10 ** (pair.outputToken.decimals - pair.inputToken.decimals)
           : 10 ** (pair.inputToken.decimals - pair.outputToken.decimals);
 
-        const price = isInputToken0
+        const finalPrice = isInputToken0
           ? basePrice * decimalAdjustment
           : 1 / (basePrice * decimalAdjustment);
 
-        setPrice(price.toFixed(pair.outputToken.decimals));
+        setPrice(finalPrice.toFixed(pair.outputToken.decimals));
       } catch (err) {
         console.error("Error fetching price:", err);
         setPrice(null);
@@ -69,46 +76,54 @@ export function useTokenData(
     };
 
     const fetchBalances = async () => {
-      if (!userAddress || !chain?.id) return;
+      if (!userAddress || !chain?.id || !publicClient) return;
 
       try {
-        let provider: ethers.providers.Provider;
-
-        if (chain.id === sepolia.id) {
-          provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
-            chainId: chain.id,
-            name: "sepolia",
-          });
-        } else {
-          provider = new ethers.providers.CloudflareProvider();
-        }
+        setLoading(true);
 
         // Fetch balances
-        const [inputBalance, outputBalance] = await Promise.all([
-          pair.inputToken.symbol === "ETH"
-            ? provider.getBalance(userAddress)
-            : new ethers.Contract(
-                pair.inputToken.address,
-                erc20Abi,
-                provider
-              ).balanceOf(userAddress),
-          new ethers.Contract(
-            pair.outputToken.address,
-            erc20Abi,
-            provider
-          ).balanceOf(userAddress),
-        ]);
+        const balancePromises = [];
 
-        setInputBalance(
-          ethers.utils.formatUnits(inputBalance, pair.inputToken.decimals)
+        // Handle native ETH balance
+        if (pair.inputToken.symbol === "ETH") {
+          balancePromises.push(
+            publicClient.getBalance({ address: userAddress as Address })
+          );
+        } else {
+          const inputTokenContract = getContract({
+            address: pair.inputToken.address as Address,
+            abi: erc20Abi,
+            client: publicClient,
+          });
+          balancePromises.push(
+            inputTokenContract.read.balanceOf([userAddress as Address])
+          );
+        }
+
+        // Handle output token balance
+        const outputTokenContract = getContract({
+          address: pair.outputToken.address as Address,
+          abi: erc20Abi,
+          client: publicClient,
+        });
+        balancePromises.push(
+          outputTokenContract.read.balanceOf([userAddress as Address])
         );
+
+        const [inputBalanceRaw, outputBalanceRaw] = await Promise.all(
+          balancePromises
+        );
+
+        setInputBalance(formatUnits(inputBalanceRaw, pair.inputToken.decimals));
         setOutputBalance(
-          ethers.utils.formatUnits(outputBalance, pair.outputToken.decimals)
+          formatUnits(outputBalanceRaw, pair.outputToken.decimals)
         );
       } catch (err) {
         console.error("Error fetching balances:", err);
         setInputBalance(null);
         setOutputBalance(null);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -117,7 +132,7 @@ export function useTokenData(
 
     const interval = setInterval(fetchPrice, 10000);
     return () => clearInterval(interval);
-  }, [pair, userAddress, chain?.id]);
+  }, [pair, userAddress, chain?.id, publicClient]);
 
   return {
     price,

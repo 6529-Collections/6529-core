@@ -3,20 +3,25 @@ import {
   useAccount,
   usePublicClient,
   useWalletClient,
-  useReadContract,
   useWriteContract,
-  useSimulateContract,
-  useEstimateFeesPerGas,
-  useEstimateGas,
 } from "wagmi";
-import { Percent } from "@uniswap/sdk-core";
-import { TokenPair, Token } from "../types";
+import { TokenPair } from "../types";
 import { SWAP_ROUTER_ABI } from "../abis";
-import { SWAP_ROUTER_ADDRESS, SupportedChainId } from "../constants";
-import { useEthersProvider } from "./useEthersProvider";
-import { getWrappedToken } from "../types";
+import {
+  SupportedChainId,
+  CHAIN_ROUTER_ADDRESSES,
+  WETH_ADDRESS,
+} from "../constants";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
-import { parseUnits, encodeFunctionData, formatUnits, erc20Abi } from "viem";
+import {
+  parseUnits,
+  encodeFunctionData,
+  formatUnits,
+  erc20Abi,
+  type Address,
+  type Hash,
+  BaseError,
+} from "viem";
 
 interface ApprovalStatus {
   required: boolean;
@@ -28,7 +33,7 @@ interface ApprovalStatus {
 
 interface SwapResult {
   status: "success" | "error" | "pending";
-  hash?: `0x${string}`;
+  hash?: Hash;
   error?: string;
 }
 
@@ -39,6 +44,19 @@ interface GasEstimate {
   formattedCost: string;
   remainingBalance: string;
 }
+
+interface SwapParams {
+  tokenIn: Address;
+  tokenOut: Address;
+  fee: number;
+  recipient: Address;
+  deadline: bigint;
+  amountIn: bigint;
+  amountOutMinimum: bigint;
+  sqrtPriceLimitX96: bigint;
+}
+
+const THIRTY_MINUTES = 1800;
 
 export function useUniswapSwap() {
   const { address, chain } = useAccount();
@@ -53,296 +71,541 @@ export function useUniswapSwap() {
     allowance: undefined,
   });
 
-  // Move allowance check inside the hook with proper typing
-  const getAllowance = useCallback(
-    async (pair: TokenPair) => {
-      if (!address || !chain?.id) return BigInt(0);
+  const getRouterAddress = useCallback((chainId: number): Address => {
+    const routerAddress = CHAIN_ROUTER_ADDRESSES[chainId as SupportedChainId];
+    if (!routerAddress) {
+      throw new Error(`Unsupported chain ID: ${chainId}`);
+    }
+    return routerAddress as Address;
+  }, []);
 
-      try {
-        return (
-          (await publicClient?.readContract({
-            address: pair.inputToken.address as `0x${string}`,
-            abi: erc20Abi,
-            functionName: "allowance",
-            args: [
-              address,
-              SWAP_ROUTER_ADDRESS[
-                chain.id as SupportedChainId
-              ] as `0x${string}`,
-            ],
-          })) ?? BigInt(0)
-        );
-      } catch (error) {
-        console.error("Allowance check error:", error);
-        return BigInt(0);
-      }
-    },
-    [address, chain?.id, publicClient]
-  );
+  const getWethAddress = useCallback((chainId: number): Address => {
+    const wethAddress = WETH_ADDRESS[chainId as SupportedChainId];
+    if (!wethAddress) {
+      throw new Error(`No WETH address for chain ID: ${chainId}`);
+    }
+    return wethAddress as Address;
+  }, []);
 
   const checkApproval = useCallback(
     async (pair: TokenPair, amount?: string) => {
-      if (!amount) return;
+      if (!address || !chain?.id || !publicClient) {
+        setApprovalStatus((prev) => ({
+          ...prev,
+          required: true,
+          approved: false,
+          loading: false,
+          error: "No wallet connected",
+        }));
+        return;
+      }
 
-      const requiredAllowance = parseUnits(amount, pair.inputToken.decimals);
-      const currentAllowance = await getAllowance(pair);
-      const hasAllowance = currentAllowance >= requiredAllowance;
+      if (pair.inputToken.isNative) {
+        setApprovalStatus((prev) => ({
+          ...prev,
+          required: false,
+          approved: true,
+          loading: false,
+          error: null,
+        }));
+        return;
+      }
 
-      setApprovalStatus({
-        required: !hasAllowance,
-        approved: hasAllowance,
-        loading: false,
-        error: null,
-        allowance: formatUnits(currentAllowance, pair.inputToken.decimals),
-      });
+      try {
+        const routerAddress = getRouterAddress(chain.id);
+        const allowance = await publicClient.readContract({
+          address: pair.inputToken.address as Address,
+          abi: erc20Abi,
+          functionName: "allowance",
+          args: [address, routerAddress],
+        });
+
+        const formattedAllowance = formatUnits(
+          allowance,
+          pair.inputToken.decimals
+        );
+        const isApproved = amount
+          ? parseFloat(formattedAllowance) >= parseFloat(amount)
+          : parseFloat(formattedAllowance) > 0;
+
+        setApprovalStatus((prev) => ({
+          ...prev,
+          required: !isApproved,
+          approved: isApproved,
+          loading: false,
+          error: null,
+          allowance: formattedAllowance,
+        }));
+      } catch (err) {
+        console.error("Error checking approval:", err);
+        setApprovalStatus((prev) => ({
+          ...prev,
+          required: true,
+          approved: false,
+          loading: false,
+          error: "Failed to check token approval",
+        }));
+      }
     },
-    [getAllowance]
+    [address, chain?.id, publicClient, getRouterAddress]
   );
 
   const approve = useCallback(
-    async (pair: TokenPair, amount: string) => {
+    async (pair: TokenPair, amount: string): Promise<boolean> => {
+      if (!walletClient?.account || !chain?.id || !publicClient) return false;
+      if (pair.inputToken.isNative) return true;
+
       try {
-        setApprovalStatus((prev) => ({ ...prev, loading: true, error: null }));
-
-        if (!publicClient) {
-          throw new Error("Public client not available");
-        }
-
+        const routerAddress = getRouterAddress(chain.id);
         const amountToApprove = parseUnits(amount, pair.inputToken.decimals);
 
-        const gasEstimate = await publicClient.estimateGas({
-          account: address as `0x${string}`,
-          to: pair.inputToken.address as `0x${string}`,
-          data: encodeFunctionData({
-            abi: erc20Abi,
-            functionName: "approve",
-            args: [
-              SWAP_ROUTER_ADDRESS[
-                chain?.id as SupportedChainId
-              ] as `0x${string}`,
-              amountToApprove,
-            ],
-          }),
-        });
-
-        const hash = await writeContractAsync({
-          address: pair.inputToken.address as `0x${string}`,
+        // Prepare the approval call data
+        const approvalData = encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
-          args: [
-            SWAP_ROUTER_ADDRESS[chain?.id as SupportedChainId] as `0x${string}`,
-            amountToApprove,
-          ],
-          gas: (gasEstimate * BigInt(150)) / BigInt(100),
+          args: [routerAddress, amountToApprove],
         });
 
+        // Estimate gas with a buffer
+        const gasEstimate = await publicClient.estimateGas({
+          account: walletClient.account.address,
+          to: pair.inputToken.address as Address,
+          data: approvalData,
+        });
+
+        // Add 20% buffer to gas estimate
+        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+
+        // Get current gas price with 10% priority fee
+        const gasPrice = await publicClient.getGasPrice();
+        const priorityGasPrice = (gasPrice * BigInt(110)) / BigInt(100);
+
+        const hash = await walletClient.writeContract({
+          address: pair.inputToken.address as Address,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [routerAddress, amountToApprove],
+          gas: gasLimit,
+          gasPrice: priorityGasPrice,
+        });
+
+        // Wait for confirmation with shorter timeout
         const receipt = await publicClient.waitForTransactionReceipt({
           hash,
-          confirmations: 2,
+          confirmations: 1,
+          timeout: 30_000, // 30 seconds timeout
         });
 
-        if (!receipt) {
-          throw new Error("Transaction receipt not found");
+        if (receipt.status !== "success") {
+          throw new Error("Approval transaction failed");
         }
-        console.log("Swap confirmed in block:", receipt.blockNumber);
 
-        if (receipt.status === "success") {
-          setApprovalStatus((prev) => ({
-            ...prev,
-            approved: true,
-            loading: false,
-            allowance: formatUnits(amountToApprove, pair.inputToken.decimals),
-          }));
-          return true;
-        }
-        return false;
-      } catch (error: any) {
+        await checkApproval(pair, amount);
+        return true;
+      } catch (err) {
+        console.error("Approval error:", err);
         setApprovalStatus((prev) => ({
           ...prev,
-          error: error.shortMessage || error.message,
+          error: err instanceof Error ? err.message : "Approval failed",
           loading: false,
         }));
         return false;
       }
     },
-    [chain?.id, publicClient, writeContractAsync, getAllowance, address]
+    [walletClient, chain?.id, publicClient, getRouterAddress, checkApproval]
   );
 
-  // Fixed gas estimation without nested hooks
   const estimateTransactionCost = useCallback(
-    async (txParams: { value: bigint; data: `0x${string}` }) => {
+    async (params: SwapParams): Promise<GasEstimate> => {
       if (!publicClient || !address || !chain?.id) {
         throw new Error("Client not available");
       }
 
       try {
-        const [gasPrice, gasEstimate] = await Promise.all([
+        const routerAddress = getRouterAddress(chain.id);
+        const encodedData = encodeFunctionData({
+          abi: SWAP_ROUTER_ABI,
+          functionName: "exactInputSingle",
+          args: [params],
+        });
+
+        const [gasPrice, gasEstimate, balance] = await Promise.all([
           publicClient.getGasPrice(),
           publicClient.estimateGas({
-            account: address as `0x${string}`,
-            to: SWAP_ROUTER_ADDRESS[
-              chain.id as SupportedChainId
-            ] as `0x${string}`,
-            data: txParams.data,
-            value: txParams.value,
+            account: address as Address,
+            to: routerAddress,
+            data: encodedData,
+            value: BigInt(0),
           }),
+          publicClient.getBalance({ address: address as Address }),
         ]);
 
         const estimatedCost = gasEstimate * gasPrice;
-        const balance = await publicClient.getBalance({
-          address: address as `0x${string}`,
-        });
 
         return {
           estimatedGasLimit: gasEstimate,
           estimatedCost,
-          hasEnoughBalance: balance >= estimatedCost + txParams.value,
+          hasEnoughBalance: balance >= estimatedCost,
           formattedCost: formatUnits(estimatedCost, 18),
-          remainingBalance: formatUnits(
-            balance - estimatedCost - txParams.value,
-            18
-          ),
+          remainingBalance: formatUnits(balance - estimatedCost, 18),
         };
       } catch (error) {
         console.error("Gas estimation error:", error);
-        throw error;
+        throw error instanceof BaseError
+          ? error
+          : new Error("Gas estimation failed");
       }
     },
-    [publicClient, address, chain?.id]
+    [publicClient, address, chain?.id, getRouterAddress]
   );
 
-  // Fixed revokeApproval using viem
   const revokeApproval = useCallback(
     async (pair: TokenPair): Promise<boolean> => {
-      if (!address || !chain?.id || pair.inputToken.symbol === "ETH") {
+      if (
+        !walletClient?.account ||
+        !chain?.id ||
+        !publicClient ||
+        pair.inputToken.isNative
+      ) {
         return false;
       }
 
       try {
-        setApprovalStatus((prev) => ({ ...prev, loading: true, error: null }));
+        setApprovalStatus((prev) => ({
+          ...prev,
+          loading: true,
+          error: null,
+        }));
 
-        const hash = await writeContractAsync({
-          address: pair.inputToken.address as `0x${string}`,
+        const routerAddress = getRouterAddress(chain.id);
+
+        // Prepare the revoke call data
+        const revokeData = encodeFunctionData({
           abi: erc20Abi,
           functionName: "approve",
-          args: [
-            SWAP_ROUTER_ADDRESS[chain.id as SupportedChainId] as `0x${string}`,
-            BigInt(0),
-          ],
+          args: [routerAddress, BigInt(0)],
         });
 
-        const receipt = await publicClient?.waitForTransactionReceipt({ hash });
-        if (receipt?.status === "success") {
-          setApprovalStatus((prev) => ({
-            ...prev,
-            loading: false,
-            approved: false,
-            required: true,
-            allowance: "0",
-          }));
-          return true;
+        // Estimate gas with buffer
+        const gasEstimate = await publicClient.estimateGas({
+          account: walletClient.account.address,
+          to: pair.inputToken.address as Address,
+          data: revokeData,
+        });
+
+        // Add 20% buffer to gas estimate
+        const gasLimit = (gasEstimate * BigInt(120)) / BigInt(100);
+
+        // Get current gas price with 10% priority fee
+        const gasPrice = await publicClient.getGasPrice();
+        const priorityGasPrice = (gasPrice * BigInt(110)) / BigInt(100);
+
+        const hash = await walletClient.writeContract({
+          address: pair.inputToken.address as Address,
+          abi: erc20Abi,
+          functionName: "approve",
+          args: [routerAddress, BigInt(0)],
+          gas: gasLimit,
+          gasPrice: priorityGasPrice,
+        });
+
+        // Wait for confirmation with shorter timeout
+        const receipt = await publicClient.waitForTransactionReceipt({
+          hash,
+          confirmations: 1,
+          timeout: 30_000, // 30 seconds timeout
+        });
+
+        if (receipt.status !== "success") {
+          throw new Error("Revoke transaction failed");
         }
-        return false;
-      } catch (error: any) {
+
+        await checkApproval(pair);
+
         setApprovalStatus((prev) => ({
           ...prev,
           loading: false,
-          error: error.shortMessage || error.message,
+          error: null,
+          approved: false,
+          required: true,
+          allowance: "0",
+        }));
+
+        return true;
+      } catch (err) {
+        console.error("Revoke approval error:", err);
+        setApprovalStatus((prev) => ({
+          ...prev,
+          loading: false,
+          error:
+            err instanceof Error ? err.message : "Failed to revoke approval",
         }));
         return false;
       }
     },
-    [address, chain?.id, publicClient, writeContractAsync]
+    [walletClient, chain?.id, publicClient, getRouterAddress, checkApproval]
   );
 
-  // Add this function to check pool liquidity
-  const checkPoolLiquidity = async (pair: TokenPair) => {
-    if (!publicClient) throw new Error("Provider not available");
+  const checkPoolLiquidity = useCallback(
+    async (pair: TokenPair): Promise<boolean> => {
+      if (!publicClient) throw new Error("Client not available");
 
-    try {
-      const liquidity = (await publicClient.readContract({
-        address: pair.poolAddress as `0x${string}`,
-        abi: UNISWAP_V3_POOL_ABI,
-        functionName: "liquidity",
-      })) as bigint;
+      try {
+        const liquidity = (await publicClient.readContract({
+          address: pair.poolAddress as Address,
+          abi: UNISWAP_V3_POOL_ABI,
+          functionName: "liquidity",
+        })) as bigint;
 
-      console.log("Pool liquidity:", {
-        poolAddress: pair.poolAddress,
-        liquidity: liquidity.toString(),
-      });
+        if (liquidity === BigInt(0)) {
+          throw new Error("Pool has no liquidity");
+        }
 
-      if (liquidity === BigInt(0)) {
-        throw new Error("Pool has no liquidity");
+        return true;
+      } catch (error) {
+        console.error("Liquidity check failed:", error);
+        throw error instanceof BaseError
+          ? error
+          : new Error("Liquidity check failed");
       }
+    },
+    [publicClient]
+  );
 
-      return true;
-    } catch (error) {
-      console.error("Liquidity check failed:", error);
-      throw error;
-    }
-  };
-
-  // Add executeSwap implementation
   const executeSwap = useCallback(
     async (pair: TokenPair, inputAmount: string): Promise<SwapResult> => {
-      if (!walletClient || !publicClient || !address || !chain?.id) {
-        return { status: "error", error: "Missing required parameters" };
+      if (!walletClient?.account || !chain?.id || !publicClient) {
+        return { status: "error", error: "No wallet connected" };
       }
 
       try {
-        const amountIn = parseUnits(inputAmount, pair.inputToken.decimals);
-        const routerAddress = SWAP_ROUTER_ADDRESS[
-          chain.id as SupportedChainId
-        ] as `0x${string}`;
+        const routerAddress = getRouterAddress(chain.id);
+        const wethAddress = getWethAddress(chain.id);
+        const parsedAmount = parseUnits(inputAmount, pair.inputToken.decimals);
+        const deadline = BigInt(Math.floor(Date.now() / 1000) + THIRTY_MINUTES);
 
-        // Encode swap data
-        const data = encodeFunctionData({
-          abi: SWAP_ROUTER_ABI,
-          functionName: "exactInputSingle",
-          args: [
-            {
-              tokenIn: pair.inputToken.address as `0x${string}`,
-              tokenOut: pair.outputToken.address as `0x${string}`,
-              fee: pair.fee,
-              recipient: address,
-              amountIn,
-              amountOutMinimum: BigInt(0), // Should calculate properly with slippage
-              sqrtPriceLimitX96: BigInt(0),
-            },
-          ],
-        });
+        // Check user's ETH balance
+        if (pair.inputToken.isNative) {
+          const balance = await publicClient.getBalance({
+            address: address as Address,
+          });
+          if (balance < parsedAmount) {
+            return {
+              status: "error",
+              error: "Insufficient ETH balance",
+            };
+          }
+        }
 
-        // Send transaction
-        const hash = await walletClient.sendTransaction({
-          to: routerAddress,
-          data,
-          value: pair.inputToken.isNative ? amountIn : BigInt(0),
-          account: address as `0x${string}`,
-        });
+        // Check pool liquidity
+        try {
+          await checkPoolLiquidity(pair);
+        } catch (error) {
+          return {
+            status: "error",
+            error: "Insufficient pool liquidity",
+          };
+        }
 
-        // Wait for confirmation
-        const receipt = await publicClient.waitForTransactionReceipt({
-          hash,
-          confirmations: 2, // Wait for 2 confirmations
-        });
+        let hash: Hash;
 
-        console.log("Swap confirmed in block:", receipt.blockNumber);
+        if (pair.inputToken.isNative) {
+          // For ETH input swaps
+          const params: SwapParams = {
+            tokenIn: wethAddress,
+            tokenOut: pair.outputToken.address as Address,
+            fee: pair.fee,
+            recipient: walletClient.account.address,
+            deadline,
+            amountIn: parsedAmount,
+            amountOutMinimum: BigInt(0),
+            sqrtPriceLimitX96: BigInt(0),
+          };
 
-        return {
-          status: receipt.status === "success" ? "success" : "error",
-          hash,
-          error:
-            receipt.status === "success" ? undefined : "Transaction failed",
-        };
-      } catch (error: any) {
-        console.error("Swap error:", error);
+          // First, simulate the swap to ensure it will succeed
+          try {
+            await publicClient.simulateContract({
+              address: routerAddress,
+              abi: SWAP_ROUTER_ABI,
+              functionName: "exactInputSingle",
+              args: [params],
+              value: parsedAmount,
+              account: address as Address,
+            });
+          } catch (error) {
+            console.error("Swap simulation failed:", error);
+            return {
+              status: "error",
+              error: "Swap simulation failed. The transaction would revert.",
+            };
+          }
+
+          // If simulation succeeds, proceed with the actual swap
+          hash = await walletClient.writeContract({
+            address: routerAddress,
+            abi: SWAP_ROUTER_ABI,
+            functionName: "exactInputSingle",
+            args: [params],
+            value: parsedAmount,
+          });
+
+          // Wait for transaction confirmation
+          try {
+            const receipt = await publicClient.waitForTransactionReceipt({
+              hash,
+              confirmations: 1,
+              timeout: 60_000,
+            });
+
+            if (receipt.status === "success") {
+              return { status: "success", hash };
+            } else {
+              return {
+                status: "error",
+                error: "Transaction failed",
+                hash,
+              };
+            }
+          } catch (error) {
+            console.error("Transaction confirmation error:", error);
+            return {
+              status: "error",
+              error: "Failed to confirm transaction",
+              hash,
+            };
+          }
+        } else if (pair.outputToken.isNative) {
+          // For ETH output swaps
+          const params: SwapParams = {
+            tokenIn: pair.inputToken.address as Address,
+            tokenOut: wethAddress,
+            fee: pair.fee,
+            recipient: routerAddress,
+            deadline,
+            amountIn: parsedAmount,
+            amountOutMinimum: BigInt(0),
+            sqrtPriceLimitX96: BigInt(0),
+          };
+
+          // Prepare multicall data
+          const multicallData = [
+            encodeFunctionData({
+              abi: SWAP_ROUTER_ABI,
+              functionName: "exactInputSingle",
+              args: [params],
+            }),
+            encodeFunctionData({
+              abi: SWAP_ROUTER_ABI,
+              functionName: "unwrapWETH9",
+              args: [BigInt(0), walletClient.account.address],
+            }),
+          ];
+
+          hash = await walletClient.writeContract({
+            address: routerAddress,
+            abi: SWAP_ROUTER_ABI,
+            functionName: "multicall",
+            args: [multicallData],
+          });
+
+          // Wait for transaction confirmation
+          try {
+            const receipt = await publicClient.waitForTransactionReceipt({
+              hash,
+              confirmations: 1,
+              timeout: 60_000, // 60 seconds
+            });
+
+            if (receipt.status === "success") {
+              return { status: "success", hash };
+            } else {
+              return {
+                status: "error",
+                error: "Transaction failed",
+                hash,
+              };
+            }
+          } catch (error) {
+            console.error("Transaction confirmation error:", error);
+            return {
+              status: "error",
+              error: "Failed to confirm transaction",
+              hash,
+            };
+          }
+        } else {
+          // For token to token swaps
+          const params: SwapParams = {
+            tokenIn: pair.inputToken.address as Address,
+            tokenOut: pair.outputToken.address as Address,
+            fee: pair.fee,
+            recipient: walletClient.account.address,
+            deadline,
+            amountIn: parsedAmount,
+            amountOutMinimum: BigInt(0),
+            sqrtPriceLimitX96: BigInt(0),
+          };
+
+          hash = await walletClient.writeContract({
+            address: routerAddress,
+            abi: SWAP_ROUTER_ABI,
+            functionName: "exactInputSingle",
+            args: [params],
+          });
+
+          // Wait for transaction confirmation
+          try {
+            const receipt = await publicClient.waitForTransactionReceipt({
+              hash,
+              confirmations: 1,
+              timeout: 60_000, // 60 seconds
+            });
+
+            if (receipt.status === "success") {
+              return { status: "success", hash };
+            } else {
+              return {
+                status: "error",
+                error: "Transaction failed",
+                hash,
+              };
+            }
+          } catch (error) {
+            console.error("Transaction confirmation error:", error);
+            return {
+              status: "error",
+              error: "Failed to confirm transaction",
+              hash,
+            };
+          }
+        }
+      } catch (err) {
+        console.error("Swap error:", err);
+        if (err instanceof BaseError) {
+          const reason = err.shortMessage || err.message;
+          if (reason.includes("STF")) {
+            return {
+              status: "error",
+              error:
+                "Safe Transfer Failed: The swap could not be executed. Please check your balance and the pool liquidity.",
+            };
+          }
+        }
         return {
           status: "error",
-          error: error.shortMessage || error.message,
+          error: err instanceof Error ? err.message : "Unknown error occurred",
         };
       }
     },
-    [walletClient, publicClient, address, chain?.id]
+    [
+      walletClient,
+      chain?.id,
+      publicClient,
+      getRouterAddress,
+      getWethAddress,
+      address,
+      checkPoolLiquidity,
+    ]
   );
 
   return {
@@ -352,5 +615,6 @@ export function useUniswapSwap() {
     approvalStatus,
     revokeApproval,
     estimateTransactionCost,
+    checkPoolLiquidity,
   };
 }

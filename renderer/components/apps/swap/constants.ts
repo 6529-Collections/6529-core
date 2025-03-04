@@ -1,6 +1,4 @@
 import { Token, TokenPair } from "./types";
-import { ethers } from "ethersv5";
-import { CurrencyAmount, TradeType } from "@uniswap/sdk-core";
 
 interface ChainTokens {
   [chainId: number]: {
@@ -10,10 +8,6 @@ interface ChainTokens {
 
 interface ChainPools {
   [chainId: number]: TokenPair[];
-}
-
-export function ensureChecksum(address: string): string {
-  return ethers.utils.getAddress(address.toLowerCase());
 }
 
 // Add native ETH definition
@@ -92,9 +86,9 @@ export const CHAIN_POOLS: ChainPools = {
     {
       inputToken: CHAIN_TOKENS[1].ETH,
       outputToken: CHAIN_TOKENS[1].USDC,
-      poolAddress: "0x8ad599c3A0ff1De082011EFDDc58f1908eb6e6D8",
-      fee: 3000,
-      useWETH: true, // Add this flag
+      poolAddress: "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640", // USDC/ETH 0.05% fee pool
+      fee: 500, // 0.05% fee
+      useWETH: true,
     },
     {
       inputToken: CHAIN_TOKENS[1].ETH,

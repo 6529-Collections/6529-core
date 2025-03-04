@@ -1,100 +1,206 @@
-import { useState, useEffect, useCallback } from "react";
-import { ethers } from "ethersv5";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import { usePublicClient } from "wagmi";
 import { TokenPair } from "../types";
-import { useAccount } from "wagmi";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
-import { sepolia } from "wagmi/chains";
-import { SEPOLIA_RPC } from "../constants";
+import { Address, ContractFunctionExecutionError } from "viem";
+import { Pool } from "@uniswap/v3-sdk";
+import { Token as UniswapToken, Currency } from "@uniswap/sdk-core";
+import { toSDKToken, formatTokenAmount } from "../utils/tokenUtils";
+import { CHAIN_TOKENS } from "../constants";
 
-interface PriceData {
+export interface PoolPriceData {
   forward: string | null;
   reverse: string | null;
   loading: boolean;
   error: string | null;
+  pool: Pool | null;
 }
 
-export function usePoolPrice(pair: TokenPair | null) {
-  const { chain } = useAccount();
-  const [priceData, setPriceData] = useState<PriceData>({
+// Helper function to sort tokens
+function sortTokens(
+  tokenA: UniswapToken,
+  tokenB: UniswapToken
+): [UniswapToken, UniswapToken] {
+  return tokenA.address.toLowerCase() < tokenB.address.toLowerCase()
+    ? [tokenA, tokenB]
+    : [tokenB, tokenA];
+}
+
+/**
+ * Custom hook to fetch and calculate real-time prices from a Uniswap V3 pool
+ * @param pair The token pair to get prices for
+ * @returns PoolPriceData containing forward and reverse prices, loading state, and error if any
+ */
+export function usePoolPrice(pair: TokenPair | null): PoolPriceData {
+  const publicClient = usePublicClient();
+  const [priceData, setPriceData] = useState<PoolPriceData>({
     forward: null,
     reverse: null,
     loading: false,
     error: null,
+    pool: null,
   });
 
-  const fetchPrice = useCallback(async () => {
-    if (!pair || !chain) return;
+  // Convert tokens to Uniswap SDK format
+  const tokens = useMemo(() => {
+    if (!pair) return null;
+    try {
+      let token0 = toSDKToken(pair.inputToken);
+      let token1 = toSDKToken(pair.outputToken);
+
+      // If either token is native ETH, use WETH instead for pool calculations
+      if (pair.inputToken.isNative) {
+        token0 = toSDKToken(CHAIN_TOKENS[pair.inputToken.chainId].WETH);
+      }
+      if (pair.outputToken.isNative) {
+        token1 = toSDKToken(CHAIN_TOKENS[pair.outputToken.chainId].WETH);
+      }
+
+      // Ensure tokens are UniswapToken instances
+      if (
+        !(token0 instanceof UniswapToken) ||
+        !(token1 instanceof UniswapToken)
+      ) {
+        throw new Error("Invalid token conversion");
+      }
+
+      return { token0, token1 };
+    } catch (err) {
+      console.error("Error converting tokens:", err);
+      return null;
+    }
+  }, [pair]);
+
+  // Format price considering token decimals
+  const formatPrice = useCallback(
+    (price: { toSignificant: (decimals: number) => string }): string => {
+      try {
+        const rawPrice = parseFloat(price.toSignificant(6));
+        return formatTokenAmount(
+          rawPrice,
+          Math.max(
+            pair?.inputToken.decimals || 18,
+            pair?.outputToken.decimals || 18
+          )
+        );
+      } catch (err) {
+        console.error("Error formatting price:", err);
+        return "0";
+      }
+    },
+    [pair]
+  );
+
+  // Fetch pool data and calculate prices
+  const fetchPoolPrice = useCallback(async () => {
+    if (!pair?.poolAddress || !publicClient || !tokens) {
+      setPriceData((prev) => ({ ...prev, error: "Missing required data" }));
+      return;
+    }
 
     setPriceData((prev) => ({ ...prev, loading: true, error: null }));
 
     try {
-      let provider: ethers.providers.Provider;
+      const poolContract = {
+        address: pair.poolAddress as Address,
+        abi: UNISWAP_V3_POOL_ABI,
+      };
 
-      if (chain.id === sepolia.id) {
-        provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
-          chainId: chain.id,
-          name: "sepolia",
-        });
-      } else {
-        provider = new ethers.providers.CloudflareProvider();
-      }
-      const poolContract = new ethers.Contract(
-        pair.poolAddress,
-        UNISWAP_V3_POOL_ABI,
-        provider
+      // Type-safe contract reads
+      const [slot0Result, liquidityResult, token0AddressResult] =
+        await Promise.all([
+          publicClient.readContract({
+            ...poolContract,
+            functionName: "slot0",
+          }) as Promise<
+            [bigint, number, number, number, number, number, boolean]
+          >,
+          publicClient.readContract({
+            ...poolContract,
+            functionName: "liquidity",
+          }) as Promise<bigint>,
+          publicClient.readContract({
+            ...poolContract,
+            functionName: "token0",
+          }) as Promise<Address>,
+        ]);
+
+      // Extract slot0 data with proper typing
+      const [sqrtPriceX96, tick] = slot0Result;
+
+      // Sort tokens according to their addresses
+      const [token0, token1] = sortTokens(tokens.token0, tokens.token1);
+
+      // Create pool instance with sorted tokens
+      const pool = new Pool(
+        token0,
+        token1,
+        pair.fee,
+        sqrtPriceX96.toString(),
+        liquidityResult.toString(),
+        tick
       );
 
-      // Get pool data
-      const [slot0, token0Address] = await Promise.all([
-        poolContract.slot0(),
-        poolContract.token0(),
-      ]);
+      // Calculate prices using SDK
+      const token0Price = pool.token0Price;
+      const token1Price = pool.token1Price;
 
-      const sqrtPriceX96 = BigInt(slot0[0].toString());
-      const Q96 = BigInt(2 ** 96);
+      // Determine forward and reverse prices based on token order
+      const isToken0Input =
+        tokens.token0.address.toLowerCase() ===
+        token0AddressResult.toLowerCase();
 
-      // Calculate raw price (token1 in terms of token0)
-      const price0Per1 = Number(sqrtPriceX96) / Number(Q96);
-      const basePrice = price0Per1 * price0Per1;
-
-      // Determine if our input token is token0 or token1 in the pool
-      const isInputToken0 =
-        pair.inputToken.address.toLowerCase() === token0Address.toLowerCase();
-
-      // Apply decimal adjustment
-      const decimalAdjustment = isInputToken0
-        ? 10 ** (pair.outputToken.decimals - pair.inputToken.decimals)
-        : 10 ** (pair.inputToken.decimals - pair.outputToken.decimals);
-
-      // If input token is token0, we use the price directly
-      // If input token is token1, we need to use the inverse
-      const forwardPrice = isInputToken0
-        ? basePrice * decimalAdjustment
-        : 1 / (basePrice * decimalAdjustment);
-      const reversePrice = 1 / forwardPrice;
+      // Format prices with proper decimal handling
+      const forward = formatPrice(isToken0Input ? token0Price : token1Price);
+      const reverse = formatPrice(isToken0Input ? token1Price : token0Price);
 
       setPriceData({
-        forward: forwardPrice.toString(),
-        reverse: reversePrice.toString(),
+        forward,
+        reverse,
         loading: false,
         error: null,
+        pool,
       });
-    } catch (err: any) {
-      console.error("Error fetching price:", err);
-      setPriceData({
+    } catch (err) {
+      console.error("Error fetching pool price:", err);
+      let errorMessage = "Failed to fetch price";
+
+      if (err instanceof ContractFunctionExecutionError) {
+        errorMessage = `Contract error: ${err.shortMessage}`;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+
+      setPriceData((prev) => ({
+        ...prev,
         forward: null,
         reverse: null,
         loading: false,
-        error: err.message || "Failed to fetch price",
-      });
+        error: errorMessage,
+        pool: null,
+      }));
     }
-  }, [pair, chain]);
+  }, [pair, publicClient, tokens, formatPrice]);
 
+  // Set up polling interval with cleanup
   useEffect(() => {
-    fetchPrice();
-    const interval = setInterval(fetchPrice, 10000);
-    return () => clearInterval(interval);
-  }, [fetchPrice]);
+    let mounted = true;
+
+    const fetchAndUpdatePrice = async () => {
+      if (!mounted) return;
+      await fetchPoolPrice();
+    };
+
+    fetchAndUpdatePrice();
+
+    if (pair?.poolAddress && publicClient) {
+      const interval = setInterval(fetchAndUpdatePrice, 10000);
+      return () => {
+        mounted = false;
+        clearInterval(interval);
+      };
+    }
+  }, [fetchPoolPrice, pair?.poolAddress, publicClient]);
 
   return priceData;
 }

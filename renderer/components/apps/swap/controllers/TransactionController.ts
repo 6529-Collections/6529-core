@@ -1,5 +1,4 @@
-import { ethers } from "ethersv5";
-import { TransactionReceipt } from "@ethersproject/abstract-provider";
+import type { PublicClient, Hash } from "viem";
 
 export type TransactionStage =
   | "idle"
@@ -14,7 +13,7 @@ export interface TransactionStatus {
   stage: TransactionStage;
   loading: boolean;
   error: string | null;
-  hash?: `0x${string}`;
+  hash?: Hash;
 }
 
 interface TransactionCallbacks {
@@ -25,15 +24,12 @@ interface TransactionCallbacks {
 }
 
 export class TransactionController {
-  private provider: ethers.providers.Provider;
+  private client: PublicClient;
   private callbacks: TransactionCallbacks;
   private currentStatus: TransactionStatus;
 
-  constructor(
-    provider: ethers.providers.Provider,
-    callbacks: TransactionCallbacks
-  ) {
-    this.provider = provider;
+  constructor(client: PublicClient, callbacks: TransactionCallbacks) {
+    this.client = client;
     this.callbacks = callbacks;
     this.currentStatus = {
       stage: "idle",
@@ -50,19 +46,23 @@ export class TransactionController {
     this.callbacks.onStatusChange(this.currentStatus);
   }
 
-  async monitorTransaction(hash: string): Promise<void> {
+  async monitorTransaction(hash: Hash): Promise<void> {
     try {
       this.updateStatus({
         stage: "confirming",
         loading: true,
-        hash: hash as `0x${string}`,
+        hash,
       });
 
       console.debug("[Transaction] Monitoring transaction:", { hash });
 
-      const receipt = await this.provider.waitForTransaction(hash, 1, 60000);
+      const receipt = await this.client.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+        timeout: 60_000,
+      });
 
-      if (receipt.status === 1) {
+      if (receipt.status === "success") {
         console.debug("[Transaction] Transaction successful:", receipt);
         this.updateStatus({
           stage: "complete",

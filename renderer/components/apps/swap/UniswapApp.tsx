@@ -1,47 +1,20 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Container, Row, Col, Form, Button } from "react-bootstrap";
-import {
-  useAccount,
-  usePublicClient,
-  useWaitForTransactionReceipt,
-} from "wagmi";
-import { ethers } from "ethersv5";
+import { Container, Row, Col, Form } from "react-bootstrap";
+import { useAccount, usePublicClient } from "wagmi";
 import styles from "./UniswapApp.module.scss";
-import { CurrencyAmount, TradeType, Percent } from "@uniswap/sdk-core";
-import {
-  Pool,
-  Position,
-  nearestUsableTick,
-  TickMath,
-  Trade,
-  Route,
-  SwapQuoter,
-  SwapRouter,
-} from "@uniswap/v3-sdk";
-import { parseUnits } from "ethersv5/lib/utils";
-import {
-  CHAIN_POOLS,
-  CHAIN_TOKENS,
-  SEPOLIA_RPC,
-  SupportedChainId,
-} from "./constants";
+import { Pool } from "@uniswap/v3-sdk";
+import { CHAIN_POOLS, CHAIN_TOKENS } from "./constants";
 import { UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
-import { SwatchBook } from "lucide-react";
-import { Token, TokenPair, toSDKToken, SwapStatus } from "./types";
+import { Token, toSDKToken, SwapStatus } from "./types";
 import { useUniswapSwap } from "./hooks/useUniswapSwap";
 import { SwapButton } from "./components/SwapButton";
-import { useEthersProvider } from "./hooks/useEthersProvider";
-import {
-  TransactionController,
-  TransactionStatus,
-} from "./controllers/TransactionController";
+import { TransactionController } from "./controllers/TransactionController";
 import { TokenSelect } from "./components/TokenSelect";
-import { sepolia } from "wagmi/chains";
 import { Settings } from "lucide-react";
 import { RevokeModal } from "./components/RevokeModal";
-import { erc20Abi, formatUnits } from "viem";
+import { erc20Abi, formatUnits, type Address, getContract } from "viem";
 
 function formatAllowance(allowance: string | undefined): string {
   if (!allowance) return "0";
@@ -50,11 +23,6 @@ function formatAllowance(allowance: string | undefined): string {
   return num.toLocaleString(undefined, {
     maximumFractionDigits: 4,
   });
-}
-
-// Update balance formatting
-function formatEthBalance(balance: bigint): string {
-  return formatUnits(balance, 18);
 }
 
 function GasWarning({ ethBalance }: { ethBalance: string }) {
@@ -82,7 +50,7 @@ function GasWarning({ ethBalance }: { ethBalance: string }) {
 
 export default function UniswapApp() {
   const { address, chain } = useAccount();
-  const provider = useEthersProvider();
+  const publicClient = usePublicClient();
   const chainId = chain?.id || 1;
 
   // Use chain-specific token pairs
@@ -133,10 +101,10 @@ export default function UniswapApp() {
     [chain?.id]
   );
 
-  // Add this function to check pool availability
+  // Update checkPoolAvailability to use viem/wagmi
   const checkPoolAvailability = useCallback(
     async (token1: Token, token2: Token) => {
-      if (!chain?.id) return false;
+      if (!chain?.id || !publicClient) return false;
 
       const pool = findPool(token1, token2);
       if (!pool) {
@@ -147,36 +115,25 @@ export default function UniswapApp() {
       }
 
       try {
-        let provider: ethers.providers.Provider;
-
-        if (chain.id === sepolia.id) {
-          provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
-            chainId: chain.id,
-            name: "sepolia",
-          });
-        } else {
-          provider = new ethers.providers.CloudflareProvider();
-        }
-
-        const poolContract = new ethers.Contract(
-          pool.poolAddress,
-          UNISWAP_V3_POOL_ABI,
-          provider
-        );
-
-        const [code, liquidity] = await Promise.all([
-          provider.getCode(pool.poolAddress),
-          poolContract.liquidity(),
+        const [code, poolContract] = await Promise.all([
+          publicClient.getBytecode({ address: pool.poolAddress as Address }),
+          getContract({
+            address: pool.poolAddress as Address,
+            abi: UNISWAP_V3_POOL_ABI,
+            client: publicClient,
+          }),
         ]);
 
-        if (code === "0x") {
+        if (!code || code === "0x") {
           setSwapError(
             `No liquidity pool contract found for ${token1.symbol}/${token2.symbol}`
           );
           return false;
         }
 
-        if (liquidity.eq(0)) {
+        const liquidity = await poolContract.read.liquidity();
+
+        if (liquidity === BigInt(0)) {
           setSwapError(
             `Pool exists but has no liquidity for ${token1.symbol}/${token2.symbol}`
           );
@@ -192,7 +149,7 @@ export default function UniswapApp() {
         return false;
       }
     },
-    [chain?.id, findPool]
+    [chain?.id, findPool, publicClient]
   );
 
   // Update handleTokenSelect to use pool availability check
@@ -232,35 +189,6 @@ export default function UniswapApp() {
     const interval = setInterval(fetchBalances, 15000); // Refresh every 15 seconds
     return () => clearInterval(interval);
   }, [address, chain?.id]);
-
-  async function getPool(
-    tokenA: Token,
-    tokenB: Token,
-    fee: number,
-    provider: ethers.providers.Provider
-  ) {
-    const poolContract = new ethers.Contract(
-      selectedPair.poolAddress,
-      UNISWAP_V3_POOL_ABI,
-      provider
-    );
-
-    const slot0 = await poolContract.slot0();
-
-    // Convert to SDK tokens
-    const sdkTokenA = toSDKToken(tokenA, chain?.id || 1);
-    const sdkTokenB = toSDKToken(tokenB, chain?.id || 1);
-
-    return new Pool(
-      sdkTokenA,
-      sdkTokenB,
-      fee,
-      slot0.sqrtPriceX96.toString(),
-      "0", // Use minimal liquidity since we only need price
-      slot0.tick,
-      [] // Pass empty array instead of tick provider
-    );
-  }
 
   // Add effect to calculate output amount when input changes
   useEffect(() => {
@@ -355,9 +283,9 @@ export default function UniswapApp() {
 
   // Then use it in transactionController
   const transactionController = useMemo(() => {
-    if (!provider) return null;
+    if (!publicClient) return null;
 
-    return new TransactionController(provider, {
+    return new TransactionController(publicClient, {
       onStatusChange: setSwapStatus,
       onSuccess: () => {
         setTimeout(resetSwapForm, 2000);
@@ -367,7 +295,7 @@ export default function UniswapApp() {
       },
       showToast: window.seedConnector.showToast,
     });
-  }, [provider, resetSwapForm]);
+  }, [publicClient, resetSwapForm]);
 
   // Handle transaction monitoring
   useEffect(() => {
@@ -498,22 +426,11 @@ export default function UniswapApp() {
     }
   }, [inputAmount, selectedPair, checkApproval]);
 
-  // Update the fetchBalances function
+  // Update fetchBalances to use viem/wagmi
   async function fetchBalances() {
-    if (!address || !chain?.id) return;
+    if (!address || !chain?.id || !publicClient) return;
 
     try {
-      let provider: ethers.providers.Provider;
-
-      if (chain.id === sepolia.id) {
-        provider = new ethers.providers.JsonRpcProvider(SEPOLIA_RPC, {
-          chainId: chain.id,
-          name: "sepolia",
-        });
-      } else {
-        provider = new ethers.providers.CloudflareProvider();
-      }
-
       // Get all unique tokens from the available pairs
       const uniqueTokens = Array.from(
         new Set(
@@ -533,23 +450,22 @@ export default function UniswapApp() {
         try {
           let balance;
           if (token.isNative) {
-            balance = await provider.getBalance(address);
+            balance = await publicClient.getBalance({
+              address: address as Address,
+            });
           } else {
-            balance = await new ethers.Contract(
-              token.address,
-              erc20Abi,
-              provider
-            ).balanceOf(address);
+            const tokenContract = getContract({
+              address: token.address as Address,
+              abi: erc20Abi,
+              client: publicClient,
+            });
+
+            balance = await tokenContract.read.balanceOf([address as Address]);
           }
 
-          const formattedBalance = ethers.utils.formatUnits(
-            balance,
-            token.decimals
-          );
-
           return {
-            address: token.address.toLowerCase(), // Make sure to lowercase the address
-            balance: formattedBalance,
+            address: token.address.toLowerCase(),
+            balance: formatUnits(balance, token.decimals),
           };
         } catch (err) {
           console.error(`Error fetching balance for ${token.symbol}:`, err);
@@ -653,6 +569,11 @@ export default function UniswapApp() {
 
   const [showRevokeModal, setShowRevokeModal] = useState(false);
 
+  // Add form submit handler
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault(); // Prevent form from submitting and reloading
+  };
+
   return (
     <Container fluid className={styles.uniswapContainer}>
       <Row className="w-100 justify-content-center align-items-center">
@@ -673,7 +594,7 @@ export default function UniswapApp() {
                 <p>Please connect your wallet to swap tokens</p>
               </div>
             ) : (
-              <Form>
+              <Form onSubmit={handleSubmit}>
                 <div className={styles.inputGroup}>
                   <div className={styles.inputLabel}>
                     <span>You Pay</span>
