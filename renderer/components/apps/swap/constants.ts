@@ -41,14 +41,6 @@ export const CHAIN_TOKENS: ChainTokens = {
       logoURI: "/tokens/usdc.svg",
       chainId: 1,
     },
-    UNI: {
-      symbol: "UNI",
-      name: "Uniswap",
-      address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
-      decimals: 18,
-      logoURI: "/tokens/uni.svg",
-      chainId: 1,
-    },
   },
   11155111: {
     // Sepolia
@@ -89,12 +81,6 @@ export const CHAIN_POOLS: ChainPools = {
       poolAddress: "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640", // USDC/ETH 0.05% fee pool
       fee: 500, // 0.05% fee
       useWETH: true,
-    },
-    {
-      inputToken: CHAIN_TOKENS[1].ETH,
-      outputToken: CHAIN_TOKENS[1].UNI,
-      poolAddress: "0x287B0e934ed0439E2a7b1d5F0FC25eA2c24b64f7",
-      fee: 3000,
     },
   ],
   11155111: [

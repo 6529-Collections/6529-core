@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Container, Row, Col, Form } from "react-bootstrap";
 import { useAccount, usePublicClient } from "wagmi";
-import styles from "./UniswapApp.module.scss";
 import { Pool } from "@uniswap/v3-sdk";
 import { CHAIN_POOLS, CHAIN_TOKENS } from "./constants";
 import { UNISWAP_V3_POOL_ABI } from "./abis";
@@ -31,14 +30,16 @@ function GasWarning({ ethBalance }: { ethBalance: string }) {
 
   if (ethBalance !== "0" && balance <= lowBalanceThreshold) {
     return (
-      <div className={styles.gasWarning}>
-        <div className={styles.gasWarningIcon}>⚠️</div>
-        <div className={styles.gasWarningContent}>
-          <div className={styles.gasWarningTitle}>Low ETH Balance</div>
-          <div className={styles.gasWarningText}>
+      <div className="tw-bg-[#ffb019]/10 tw-border tw-border-[#ffb019]/20 tw-rounded-xl tw-p-4 tw-my-4 tw-flex tw-gap-4 tw-items-start tw-relative tw-z-1">
+        <div className="tw-text-xl tw-leading-none">⚠️</div>
+        <div className="tw-flex-1">
+          <div className="tw-text-[#ffb019] tw-font-semibold tw-mb-1">
+            Low ETH Balance
+          </div>
+          <div className="tw-text-white/70 tw-text-sm tw-leading-relaxed">
             Your ETH balance (
-            <span className={styles.gasWarningBalance}>{ethBalance}</span> ETH)
-            is too low for gas fees. Add more ETH to perform transactions.
+            <span className="tw-font-mono tw-font-medium">{ethBalance}</span>{" "}
+            ETH) is too low for gas fees. Add more ETH to perform transactions.
           </div>
         </div>
       </div>
@@ -73,6 +74,13 @@ export default function UniswapApp() {
   const [tokenBalances, setTokenBalances] = useState<{
     [address: string]: string | null;
   }>({});
+  // Add state for pool availability warning
+  const [poolWarning, setPoolWarning] = useState<{
+    message: string;
+    token1: Token;
+    token2: Token;
+    countdown: number;
+  } | null>(null);
 
   // Add new state for available tokens
   const availableTokens = useMemo(() => {
@@ -108,9 +116,28 @@ export default function UniswapApp() {
 
       const pool = findPool(token1, token2);
       if (!pool) {
-        setSwapError(
-          `No liquidity pool available for ${token1.symbol}/${token2.symbol}`
-        );
+        setPoolWarning({
+          message: `No liquidity pool available for ${token1.symbol}/${token2.symbol}`,
+          token1,
+          token2,
+          countdown: 5,
+        });
+
+        // Reset to default pair after 5 seconds
+        const resetTimer = setTimeout(() => {
+          setPoolWarning(null);
+          // Only reset if this is still the active warning
+          setSelectedPair((current) => {
+            if (
+              current.inputToken.address === token1.address &&
+              current.outputToken.address === token2.address
+            ) {
+              return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
+            }
+            return current;
+          });
+        }, 5000);
+
         return false;
       }
 
@@ -125,36 +152,96 @@ export default function UniswapApp() {
         ]);
 
         if (!code || code === "0x") {
-          setSwapError(
-            `No liquidity pool contract found for ${token1.symbol}/${token2.symbol}`
-          );
+          setPoolWarning({
+            message: `No liquidity pool contract found for ${token1.symbol}/${token2.symbol}`,
+            token1,
+            token2,
+            countdown: 5,
+          });
+
+          // Reset to default pair after 5 seconds
+          const resetTimer = setTimeout(() => {
+            setPoolWarning(null);
+            // Only reset if this is still the active warning
+            setSelectedPair((current) => {
+              if (
+                current.inputToken.address === token1.address &&
+                current.outputToken.address === token2.address
+              ) {
+                return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
+              }
+              return current;
+            });
+          }, 5000);
+
           return false;
         }
 
         const liquidity = await poolContract.read.liquidity();
 
         if (liquidity === BigInt(0)) {
-          setSwapError(
-            `Pool exists but has no liquidity for ${token1.symbol}/${token2.symbol}`
-          );
+          setPoolWarning({
+            message: `Pool exists but has no liquidity for ${token1.symbol}/${token2.symbol}`,
+            token1,
+            token2,
+            countdown: 5,
+          });
+
+          // Reset to default pair after 5 seconds
+          const resetTimer = setTimeout(() => {
+            setPoolWarning(null);
+            // Only reset if this is still the active warning
+            setSelectedPair((current) => {
+              if (
+                current.inputToken.address === token1.address &&
+                current.outputToken.address === token2.address
+              ) {
+                return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
+              }
+              return current;
+            });
+          }, 5000);
+
           return false;
         }
 
         return true;
       } catch (err) {
         console.error("Error checking pool availability:", err);
-        setSwapError(
-          `Error checking ${token1.symbol}/${token2.symbol} pool availability`
-        );
+        setPoolWarning({
+          message: `Error checking ${token1.symbol}/${token2.symbol} pool availability`,
+          token1,
+          token2,
+          countdown: 5,
+        });
+
+        // Reset to default pair after 5 seconds
+        const resetTimer = setTimeout(() => {
+          setPoolWarning(null);
+          // Only reset if this is still the active warning
+          setSelectedPair((current) => {
+            if (
+              current.inputToken.address === token1.address &&
+              current.outputToken.address === token2.address
+            ) {
+              return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
+            }
+            return current;
+          });
+        }, 5000);
+
         return false;
       }
     },
-    [chain?.id, findPool, publicClient]
+    [chain?.id, findPool, publicClient, chainId]
   );
 
   // Update handleTokenSelect to use pool availability check
   const handleTokenSelect = useCallback(
     async (isInput: boolean, token: Token) => {
+      // Clear any existing pool warnings
+      setPoolWarning(null);
+
       setSelectedPair((prev) => {
         const otherToken = isInput ? prev.outputToken : prev.inputToken;
 
@@ -574,12 +661,36 @@ export default function UniswapApp() {
     e.preventDefault(); // Prevent form from submitting and reloading
   };
 
+  // Add effect for countdown timer
+  useEffect(() => {
+    if (!poolWarning) return;
+
+    const countdownInterval = setInterval(() => {
+      setPoolWarning((current) => {
+        if (!current) return null;
+
+        const newCountdown = current.countdown - 1;
+        if (newCountdown <= 0) {
+          clearInterval(countdownInterval);
+          return current; // Will be cleared by the timeout in checkPoolAvailability
+        }
+
+        return {
+          ...current,
+          countdown: newCountdown,
+        };
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
+  }, [poolWarning]);
+
   return (
-    <Container fluid className={styles.uniswapContainer}>
+    <div className="tw-min-h-screen tw-flex tw-flex-col tw-p-0 tw-bg-[#111111] tw-relative tw-z-0">
       <Row className="w-100 justify-content-center align-items-center">
         <Col xs={12} sm={10} md={8} lg={6} xl={5}>
-          <div className={styles.swapCard}>
-            <div className={styles.priceHeader}>
+          <div className="tw-bg-[#1a1a1a]/80 tw-backdrop-blur-xl tw-rounded-3xl tw-p-7 tw-w-full tw-max-w-[480px] tw-border tw-border-white/5 tw-shadow-lg tw-mx-auto tw-mt-24 tw-relative tw-isolate tw-z-1">
+            <div className="tw-mb-6">
               <PriceDisplay
                 pair={displayPair}
                 forward={forward}
@@ -589,24 +700,61 @@ export default function UniswapApp() {
               />
             </div>
 
+            {/* Pool Availability Warning */}
+            {poolWarning && (
+              <div className="tw-bg-[#ffb019]/10 tw-border tw-border-[#ffb019]/20 tw-rounded-xl tw-p-4 tw-mb-6 tw-flex tw-gap-4 tw-items-start tw-relative tw-z-1 tw-animate-pulse">
+                <div className="tw-text-xl tw-leading-none">⚠️</div>
+                <div className="tw-flex-1">
+                  <div className="tw-text-[#ffb019] tw-font-semibold tw-mb-1 tw-flex tw-items-center tw-gap-2">
+                    <span>Liquidity Pool Unavailable</span>
+                    <div className="tw-ml-auto tw-text-sm tw-bg-[#ffb019]/20 tw-px-2 tw-py-0.5 tw-rounded-full">
+                      Resetting in {poolWarning.countdown}s
+                    </div>
+                  </div>
+                  <div className="tw-text-white/70 tw-text-sm tw-leading-relaxed">
+                    {poolWarning.message}
+                  </div>
+                  <div className="tw-flex tw-items-center tw-gap-2 tw-mt-2">
+                    <button
+                      onClick={() => {
+                        setPoolWarning(null);
+                        setSelectedPair(
+                          CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0]
+                        );
+                      }}
+                      className="tw-text-[#ffb019] tw-text-sm tw-font-medium tw-bg-[#ffb019]/20 tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-[#ffb019]/30 tw-transition-colors"
+                    >
+                      Reset Now
+                    </button>
+                    <button
+                      onClick={() => setPoolWarning(null)}
+                      className="tw-text-white/60 tw-text-sm tw-font-medium tw-bg-white/5 tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-white/10 tw-transition-colors"
+                    >
+                      Dismiss
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {!address ? (
-              <div className={styles.connectPrompt}>
-                <p>Please connect your wallet to swap tokens</p>
+              <div className="tw-text-center tw-py-8 tw-px-4 tw-bg-white/[0.02] tw-rounded-2xl tw-border tw-border-white/5">
+                <p className="tw-text-white/70 tw-m-0 tw-text-base">
+                  Please connect your wallet to swap tokens
+                </p>
               </div>
             ) : (
               <Form onSubmit={handleSubmit}>
-                <div className={styles.inputGroup}>
-                  <div className={styles.inputLabel}>
-                    <span>You Pay</span>
-                    <span className={styles.balance}>
+                <div className="tw-mb-8 tw-mt-8 tw-relative tw-z-1">
+                  <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                    <span className="tw-text-white tw-text-base">You Pay</span>
+                    <span className="tw-text-white/60 tw-text-base">
                       Balance: {getTokenBalance(selectedPair.inputToken)}{" "}
                       {selectedPair.inputToken.symbol}
                     </span>
                   </div>
                   <div
-                    className={`${styles.inputWrapper} ${
-                      inputFocused ? styles.focused : ""
-                    }`}
+                    className={`tw-relative tw-flex tw-items-center tw-bg-black/20 tw-border tw-border-white/10 tw-rounded-2xl tw-transition-colors tw-duration-200 tw-z-[1]`}
                   >
                     <Form.Control
                       type="number"
@@ -621,38 +769,43 @@ export default function UniswapApp() {
                       placeholder="0.0"
                       min="0"
                       step="any"
-                      className={styles.tokenInput}
+                      className="tw-bg-transparent tw-border-none tw-text-white/90 tw-text-2xl tw-font-medium tw-py-5 tw-px-6 tw-pr-30 tw-w-full tw-font-mono focus:tw-outline-none focus:tw-ring-0 hover:tw-bg-transparent focus:tw-bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:tw-appearance-none [&::-webkit-inner-spin-button]:tw-appearance-none focus:tw-text-white/90"
                     />
-                    <TokenSelect
-                      tokens={availableTokens}
-                      selectedToken={selectedPair.inputToken}
-                      onSelect={(token) => handleTokenSelect(true, token)}
-                      disabled={swapLoading}
-                    />
+                    <div className="tw-absolute tw-right-2 tw-top-1/2 tw-transform tw--translate-y-1/2">
+                      <TokenSelect
+                        tokens={availableTokens}
+                        selectedToken={selectedPair.inputToken}
+                        onSelect={(token) => handleTokenSelect(true, token)}
+                        disabled={swapLoading}
+                      />
+                    </div>
                   </div>
-                  <div className={styles.approvalInfo}>
-                    <span>
-                      Approved: {formatAllowance(approvalStatus.allowance)}{" "}
-                      {selectedPair.inputToken.symbol}
-                    </span>
-                    {approvalStatus.approved && (
-                      <button
-                        type="button"
-                        onClick={() => setShowRevokeModal(true)}
-                        className={styles.settingsButton}
-                        title="Manage token approval"
-                      >
-                        <Settings size={16} />
-                      </button>
-                    )}
-                  </div>
-                  <div className={styles.percentageButtons}>
+                  {/* Show approval section for non-native tokens, otherwise show a spacer */}
+                  {!selectedPair.inputToken.isNative ? (
+                    <div className="tw-flex tw-items-center tw-justify-between tw-h-[28px] tw-mt-3 tw-mb-3">
+                      <div className="tw-flex tw-items-center tw-gap-2">
+                        <span className="tw-text-white/70 tw-text-sm">
+                          Approved: {formatAllowance(approvalStatus.allowance)}{" "}
+                          {selectedPair.inputToken.symbol}
+                        </span>
+                        <button
+                          className="tw-bg-white/[0.08] tw-border tw-border-white/10 tw-rounded-xl tw-w-7 tw-h-7 tw-flex tw-items-center tw-justify-center tw-text-white/70 hover:tw-bg-white/[0.12] hover:tw-text-white tw-transition-all tw-duration-200"
+                          onClick={() => setShowRevokeModal(true)}
+                        >
+                          <Settings size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="tw-h-[28px] tw-mt-3 tw-mb-3"></div>
+                  )}
+                  <div className="tw-flex tw-gap-1.5 tw-mt-3 tw-px-1">
                     {[25, 50, 75, 100].map((percent) => (
                       <button
                         key={percent}
                         type="button"
                         onClick={() => handlePercentageClick(percent)}
-                        className={styles.percentButton}
+                        className="tw-flex-1 tw-bg-white/5 tw-border tw-border-white/10 tw-rounded-xl tw-text-white/90 tw-py-1.5 tw-px-1 tw-text-sm tw-font-medium tw-cursor-pointer tw-transition-all tw-duration-150 hover:tw-bg-white/10 hover:tw-border-white/20 hover:tw-transform hover:tw--translate-y-px active:tw-transform active:tw-translate-y-0 disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
                         disabled={swapLoading}
                       >
                         {percent === 100 ? "MAX" : `${percent}%`}
@@ -662,17 +815,17 @@ export default function UniswapApp() {
                 </div>
 
                 {/* Swap direction button */}
-                <div className={styles.swapDirectionButton}>
+                <div className="tw-flex tw-justify-center tw-my-[-12px] tw-relative tw-z-[2]">
                   <button
                     type="button"
                     onClick={handleSwapTokens}
-                    className={styles.directionButton}
+                    className="tw-bg-white/[0.08] tw-border tw-border-white/10 tw-rounded-xl tw-w-10 tw-h-10 tw-flex tw-items-center tw-justify-center tw-cursor-pointer tw-transition-all tw-duration-200 tw-text-white/80 tw-p-0 tw-relative tw-shadow-md hover:tw-bg-white/[0.12] hover:tw-text-white hover:tw-shadow-lg hover:tw-transform hover:tw-scale-105 active:tw-transform active:tw-translate-y-px disabled:tw-opacity-50 disabled:tw-cursor-not-allowed"
                     disabled={swapLoading}
                     title="Swap tokens"
                   >
                     <svg
-                      width="16"
-                      height="16"
+                      width="18"
+                      height="18"
                       viewBox="0 0 16 16"
                       fill="none"
                       xmlns="http://www.w3.org/2000/svg"
@@ -680,14 +833,14 @@ export default function UniswapApp() {
                       <path
                         d="M4 2.5L4 10.5M4 10.5L6.5 8M4 10.5L1.5 8"
                         stroke="currentColor"
-                        strokeWidth="1.5"
+                        strokeWidth="1.75"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
                       <path
                         d="M12 13.5L12 5.5M12 5.5L9.5 8M12 5.5L14.5 8"
                         stroke="currentColor"
-                        strokeWidth="1.5"
+                        strokeWidth="1.75"
                         strokeLinecap="round"
                         strokeLinejoin="round"
                       />
@@ -695,28 +848,38 @@ export default function UniswapApp() {
                   </button>
                 </div>
 
-                <div className={styles.inputGroup}>
-                  <div className={styles.inputLabel}>
-                    <span>You Receive</span>
-                    <span className={styles.balance}>
+                <div className="tw-mb-8 tw-mt-8 tw-relative tw-z-1">
+                  <div className="tw-flex tw-justify-between tw-items-center tw-mb-3">
+                    <span className="tw-text-white tw-text-base">
+                      You Receive
+                    </span>
+                    <span className="tw-text-white/60 tw-text-base">
                       Balance: {getTokenBalance(selectedPair.outputToken)}{" "}
                       {selectedPair.outputToken.symbol}
                     </span>
                   </div>
-                  <div className={styles.inputWrapper}>
+                  <div
+                    className={`tw-relative tw-flex tw-items-center tw-bg-black/20 tw-border tw-border-white/10 tw-rounded-2xl tw-transition-colors tw-duration-200 tw-z-[1] ${
+                      outputFocused ? "tw-border-white/15" : ""
+                    }`}
+                  >
                     <Form.Control
                       type="text"
                       value={outputAmount}
                       readOnly
+                      onFocus={() => setOutputFocused(true)}
+                      onBlur={() => setOutputFocused(false)}
                       placeholder="0.0"
-                      className={styles.tokenInput}
+                      className="tw-bg-transparent tw-border-none tw-text-white/90 tw-text-2xl tw-font-medium tw-py-5 tw-px-6 tw-pr-30 tw-w-full tw-font-mono focus:tw-outline-none focus:tw-ring-0 hover:tw-bg-transparent focus:tw-bg-transparent focus:tw-text-white/90"
                     />
-                    <TokenSelect
-                      tokens={availableTokens}
-                      selectedToken={selectedPair.outputToken}
-                      onSelect={(token) => handleTokenSelect(false, token)}
-                      disabled={swapLoading}
-                    />
+                    <div className="tw-absolute tw-right-2 tw-top-1/2 tw-transform tw--translate-y-1/2">
+                      <TokenSelect
+                        tokens={availableTokens}
+                        selectedToken={selectedPair.outputToken}
+                        onSelect={(token) => handleTokenSelect(false, token)}
+                        disabled={swapLoading}
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -733,7 +896,20 @@ export default function UniswapApp() {
                     swapStatus.loading ||
                     !inputAmount ||
                     !address ||
-                    swapStatus.stage === "complete"
+                    swapStatus.stage === "complete" ||
+                    // Check if user has enough balance of the input token
+                    Boolean(
+                      inputAmount &&
+                        tokenBalances[
+                          selectedPair.inputToken.address.toLowerCase()
+                        ] &&
+                        parseFloat(inputAmount) >
+                          parseFloat(
+                            tokenBalances[
+                              selectedPair.inputToken.address.toLowerCase()
+                            ] || "0"
+                          )
+                    )
                   }
                   status={swapStatus}
                   approvalStatus={approvalStatus}
@@ -742,6 +918,18 @@ export default function UniswapApp() {
                   inputAmount={inputAmount}
                   outputAmount={outputAmount}
                   ethBalance={ethBalance}
+                  hasEnoughTokenBalance={Boolean(
+                    inputAmount &&
+                      tokenBalances[
+                        selectedPair.inputToken.address.toLowerCase()
+                      ] &&
+                      parseFloat(inputAmount) <=
+                        parseFloat(
+                          tokenBalances[
+                            selectedPair.inputToken.address.toLowerCase()
+                          ] || "0"
+                        )
+                  )}
                   onRevoke={handleRevokeApproval}
                   onClear={() => {
                     setSwapStatus({
@@ -755,7 +943,10 @@ export default function UniswapApp() {
                 />
 
                 {swapError && (
-                  <div className="alert alert-danger mb-3 py-2" role="alert">
+                  <div
+                    className="tw-bg-red-500/10 tw-border tw-border-red-500/20 tw-rounded-xl tw-p-3 tw-mb-3 tw-text-red-400"
+                    role="alert"
+                  >
                     {swapError}
                   </div>
                 )}
@@ -772,6 +963,6 @@ export default function UniswapApp() {
         pair={selectedPair}
         loading={false}
       />
-    </Container>
+    </div>
   );
 }
