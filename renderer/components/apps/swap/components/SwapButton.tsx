@@ -4,6 +4,71 @@ import { RevokeModal } from "./RevokeModal";
 import { TokenPair, SwapStatus } from "../types";
 import { Button } from "react-bootstrap";
 
+// Add error formatting utility
+function formatErrorMessage(error: string): string {
+  // Check if it's a user rejection error with long technical details
+  if (error.includes("User rejected") && error.includes("Request Arguments:")) {
+    return "Transaction was cancelled by user.";
+  }
+
+  // Check if it's a user rejection error (simpler case)
+  if (
+    error.includes("User rejected") ||
+    error.includes("user rejected") ||
+    error.includes("Request rejected")
+  ) {
+    return "Transaction was cancelled by user.";
+  }
+
+  // Check if it's a contract call error with a long hex string
+  if (error.includes("0x") && error.length > 100) {
+    // For contract errors with long hex data
+    if (error.includes("Contract Call:")) {
+      return "Transaction failed due to contract error. Please try again or adjust your swap settings.";
+    }
+
+    // For other technical errors with hex data
+    return "Transaction failed. Please try again or adjust your swap amount.";
+  }
+
+  // For slippage errors
+  if (error.toLowerCase().includes("slippage")) {
+    return "Price moved too much. Try increasing slippage tolerance in settings.";
+  }
+
+  // For gas errors
+  if (
+    error.toLowerCase().includes("gas") ||
+    error.toLowerCase().includes("fee")
+  ) {
+    return "Insufficient ETH for gas fees. Add more ETH to your wallet.";
+  }
+
+  // For insufficient balance errors
+  if (
+    error.toLowerCase().includes("balance") ||
+    error.toLowerCase().includes("insufficient")
+  ) {
+    return "Insufficient token balance for this swap.";
+  }
+
+  // For timeout errors
+  if (
+    error.toLowerCase().includes("timeout") ||
+    error.toLowerCase().includes("timed out")
+  ) {
+    return "Transaction timed out. Please try again.";
+  }
+
+  // If the error is already short enough, return it as is
+  if (error.length < 100) {
+    return error;
+  }
+
+  // Default fallback for any other errors
+  return "Swap failed. Please try again with different parameters.";
+}
+
 interface SwapButtonProps {
   disabled: boolean;
   status: SwapStatus;
@@ -90,6 +155,11 @@ export function SwapButton({
     (!approvalStatus.approved && status.stage !== "idle");
 
   const handleClick = () => {
+    if (status.error) {
+      onClear(); // Clear error state first
+      return;
+    }
+
     if (approvalStatus.required && !approvalStatus.approved) {
       onApprove();
     } else {
@@ -121,8 +191,13 @@ export function SwapButton({
       return "tw-bg-gradient-to-r tw-from-[#e53935] tw-to-[#f44336] hover:tw-from-[#d32f2f] hover:tw-to-[#e53935]";
     }
 
-    if (status.loading) {
+    if (status.loading || approvalStatus.loading) {
       return "tw-bg-gradient-to-r tw-from-[#546e7a] tw-to-[#78909c] tw-cursor-wait";
+    }
+
+    // For approval button
+    if (approvalStatus.required && !approvalStatus.approved) {
+      return "tw-bg-gradient-to-r tw-from-[#3498db] tw-to-[#2980b9] hover:tw-from-[#2980b9] hover:tw-to-[#2573a7]";
     }
 
     return "tw-bg-gradient-to-r tw-from-[#2ecc71] tw-to-[#27ae60] hover:tw-from-[#27ae60] hover:tw-to-[#219653]";
@@ -142,31 +217,40 @@ export function SwapButton({
           boxShadow: "0 4px 14px 0 rgba(0, 0, 0, 0.2)",
         }}
       >
-        <div className="tw-flex tw-items-center tw-justify-center tw-gap-2">
-          {status.loading ? (
-            <div className="tw-flex tw-items-center tw-gap-2">
+        <div className="tw-flex tw-items-center tw-justify-center tw-gap-2 tw-w-full">
+          {status.loading || approvalStatus.loading ? (
+            <div className="tw-flex tw-items-center tw-justify-center tw-gap-2 tw-w-full">
               <div className="tw-w-5 tw-h-5 tw-border-2 tw-border-white/30 tw-border-t-white tw-rounded-full tw-animate-spin"></div>
               <span>{getButtonText()}</span>
             </div>
           ) : (
-            <span>{getButtonText()}</span>
+            <span className="tw-text-center tw-w-full">{getButtonText()}</span>
           )}
         </div>
       </button>
 
       {status.error && (
-        <div className="tw-bg-red-500/10 tw-border tw-border-red-500/20 tw-rounded-xl tw-p-3 tw-mb-3 tw-text-red-400 tw-flex tw-flex-col tw-items-start tw-gap-1 tw-w-full">
-          <div className="tw-flex tw-items-center tw-gap-2">
-            <span className="tw-text-lg">❌</span>
-            <span>{status.error}</span>
+        <div className="tw-bg-red-500/10 tw-border tw-border-red-500/20 tw-rounded-xl tw-p-4 tw-mb-4 tw-flex tw-gap-4 tw-items-start tw-relative tw-z-1 tw-overflow-hidden">
+          <div className="tw-text-xl tw-leading-none tw-text-red-400">❌</div>
+          <div className="tw-flex-1">
+            <div className="tw-text-red-400 tw-font-semibold tw-mb-1">
+              {status.error.includes("rejected") ||
+              status.error.includes("Rejected")
+                ? "Transaction Cancelled"
+                : "Transaction Failed"}
+            </div>
+            <div className="tw-text-white/70 tw-text-sm tw-leading-relaxed">
+              {formatErrorMessage(status.error)}
+            </div>
+            <div className="tw-flex tw-items-center tw-justify-end tw-mt-2">
+              <button
+                onClick={onClear}
+                className="tw-text-white/60 tw-text-sm tw-font-medium tw-bg-white/5 tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-white/10 tw-transition-colors"
+              >
+                Clear
+              </button>
+            </div>
           </div>
-          <Button
-            variant="link"
-            onClick={onClear}
-            className="tw-self-end tw-py-1 tw-px-2 tw-text-sm tw-text-red-400 hover:tw-text-red-300"
-          >
-            Clear
-          </Button>
         </div>
       )}
     </div>

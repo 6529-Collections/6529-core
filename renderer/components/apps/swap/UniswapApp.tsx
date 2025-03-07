@@ -685,6 +685,71 @@ export default function UniswapApp() {
     return () => clearInterval(countdownInterval);
   }, [poolWarning]);
 
+  // Add this helper function near the other utility functions at the top of the file
+  function formatErrorMessage(error: string): string {
+    console.log("Error:", error);
+    // Check if it's a user rejection error with long technical details
+    if (
+      error.includes("User rejected") &&
+      error.includes("Request Arguments:")
+    ) {
+      return "Transaction was cancelled by user.";
+    }
+
+    // Check if it's a user rejection error (simpler case)
+    if (error.includes("User rejected") || error.includes("user rejected")) {
+      return "Transaction was cancelled by user.";
+    }
+
+    // Check if it's a contract call error with a long hex string
+    if (error.includes("0x") && error.length > 100) {
+      // For contract errors with long hex data
+      if (error.includes("Contract Call:")) {
+        return "Transaction failed due to contract error. Please try again or adjust your swap settings.";
+      }
+
+      // For other technical errors with hex data
+      return "Transaction failed. Please try again or adjust your swap amount.";
+    }
+
+    // For slippage errors
+    if (error.toLowerCase().includes("slippage")) {
+      return "Price moved too much. Try increasing slippage tolerance in settings.";
+    }
+
+    // For gas errors
+    if (
+      error.toLowerCase().includes("gas") ||
+      error.toLowerCase().includes("fee")
+    ) {
+      return "Insufficient ETH for gas fees. Add more ETH to your wallet.";
+    }
+
+    // For insufficient balance errors
+    if (
+      error.toLowerCase().includes("balance") ||
+      error.toLowerCase().includes("insufficient")
+    ) {
+      return "Insufficient token balance for this swap.";
+    }
+
+    // For timeout errors
+    if (
+      error.toLowerCase().includes("timeout") ||
+      error.toLowerCase().includes("timed out")
+    ) {
+      return "Transaction timed out. Please try again.";
+    }
+
+    // If the error is already short enough, return it as is
+    if (error.length < 100) {
+      return error;
+    }
+
+    // Default fallback for any other errors
+    return "Swap failed. Please try again with different parameters.";
+  }
+
   return (
     <div className="tw-min-h-screen tw-flex tw-flex-col tw-p-0 tw-bg-[#111111] tw-relative tw-z-0">
       <Row className="w-100 justify-content-center align-items-center">
@@ -944,10 +1009,10 @@ export default function UniswapApp() {
 
                 {swapError && (
                   <div
-                    className="tw-bg-red-500/10 tw-border tw-border-red-500/20 tw-rounded-xl tw-p-3 tw-mb-3 tw-text-red-400"
+                    className="tw-bg-red-500/10 tw-border tw-border-red-500/20 tw-rounded-xl tw-p-3 tw-mb-3 tw-text-red-400 tw-overflow-hidden"
                     role="alert"
                   >
-                    {swapError}
+                    {formatErrorMessage(swapError)}
                   </div>
                 )}
               </Form>
