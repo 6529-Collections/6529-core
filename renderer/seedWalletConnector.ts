@@ -231,7 +231,7 @@ export function seedWalletConnector(parameters: {
       };
     },
     async isAuthorized() {
-      return true;
+      return !!connectionObject.accounts.length;
     },
     async switchChain(params: { chainId: number }) {
       console.log(`[${this.name}] Switch Chain method called`, params.chainId);
