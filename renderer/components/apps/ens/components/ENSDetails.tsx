@@ -61,10 +61,8 @@ export function ENSDetails({ ensName }: ENSDetailsProps) {
     checkAvailability();
   }, [ensName, ensOwner, publicClient, controllerAddress]);
 
-  // Modal state
   const [showRegisterModal, setShowRegisterModal] = useState(false);
 
-  // Handle successful registration
   const handleRegistrationSuccess = () => {
     setIsAvailable(false);
   };

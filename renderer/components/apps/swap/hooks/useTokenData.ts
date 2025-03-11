@@ -1,15 +1,8 @@
 import { useEffect, useState } from "react";
 import { TokenPair } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
-import { sepolia } from "wagmi/chains";
 import { useAccount, usePublicClient } from "wagmi";
-import {
-  getContract,
-  formatUnits,
-  type Address,
-  ContractFunctionExecutionError,
-  erc20Abi,
-} from "viem";
+import { getContract, formatUnits, type Address, erc20Abi } from "viem";
 
 interface Slot0Response {
   sqrtPriceX96: bigint;

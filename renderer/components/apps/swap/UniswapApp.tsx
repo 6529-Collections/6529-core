@@ -1,12 +1,11 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Container, Row, Col, Form } from "react-bootstrap";
+import { Row, Col, Form } from "react-bootstrap";
 import { useAccount, usePublicClient } from "wagmi";
-import { Pool } from "@uniswap/v3-sdk";
 import { CHAIN_POOLS, CHAIN_TOKENS } from "./constants";
 import { UNISWAP_V3_POOL_ABI } from "./abis";
 import { usePoolPrice } from "./hooks/usePoolPrice";
 import PriceDisplay from "./components/PriceDisplay";
-import { Token, toSDKToken, SwapStatus } from "./types";
+import { Token, SwapStatus } from "./types";
 import { useUniswapSwap } from "./hooks/useUniswapSwap";
 import { SwapButton } from "./components/SwapButton";
 import { TransactionController } from "./controllers/TransactionController";

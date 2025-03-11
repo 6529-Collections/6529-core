@@ -1,8 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Settings } from "lucide-react";
-import { RevokeModal } from "./RevokeModal";
 import { TokenPair, SwapStatus } from "../types";
-import { Button } from "react-bootstrap";
 
 // Add error formatting utility
 function formatErrorMessage(error: string): string {
@@ -226,17 +223,6 @@ export function SwapButton({
     }
   };
 
-  const handleRevoke = async () => {
-    setRevokeLoading(true);
-    try {
-      await onRevoke();
-      setRevocationSuccessful(true); // Mark that revocation was successful
-      setShowRevokeModal(false);
-    } finally {
-      setRevokeLoading(false);
-    }
-  };
-
   // Determine button class based on status
   const getButtonClass = () => {
     if (!hasEnoughTokenBalance && inputAmount && outputAmount) {
@@ -336,7 +322,7 @@ export function SwapButton({
                 </div>
                 <div className="tw-flex tw-items-center tw-justify-end tw-mt-2">
                   <button
-                    onClick={() => handleClear(false)} // Not from close button
+                    onClick={() => handleClear(false)}
                     className="tw-text-white/60 tw-text-sm tw-font-medium tw-bg-white/5 tw-px-3 tw-py-1 tw-rounded-lg hover:tw-bg-white/10 tw-transition-colors"
                   >
                     Clear

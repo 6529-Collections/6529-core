@@ -1,6 +1,6 @@
-import { Token, TokenPair, PoolData } from "../types";
+import { TokenPair, PoolData } from "../types";
 import { ethers } from "ethersv5";
-import { Pool, TickMath, TICK_SPACINGS, Trade, Route } from "@uniswap/v3-sdk";
+import { Pool, Trade, Route } from "@uniswap/v3-sdk";
 import {
   CurrencyAmount,
   Percent,

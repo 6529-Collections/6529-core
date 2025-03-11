@@ -61,7 +61,6 @@ export default function PriceDisplay({
   const [ethPrice, setEthPrice] = useState<number | null>(null);
   const [fetchingGas, setFetchingGas] = useState(false);
 
-  // Fetch gas price
   useEffect(() => {
     const fetchGasPrice = async () => {
       if (!publicClient) return;
@@ -72,7 +71,6 @@ export default function PriceDisplay({
         const gasPriceGwei = formatUnits(gasPrice, 9); // Convert to gwei
         setGasPrice(gasPriceGwei);
 
-        // Fetch ETH price in USD from Coingecko
         const response = await fetch(
           "https://api.coingecko.com/api/v3/simple/price?ids=ethereum&vs_currencies=usd"
         );
@@ -81,7 +79,6 @@ export default function PriceDisplay({
         setEthPrice(ethUsdPrice);
 
         // Calculate gas price in USD (for a standard transaction of ~21000 gas)
-        // 1 gwei = 0.000000001 ETH
         const gasPriceEth = parseFloat(gasPriceGwei) * 0.000000001 * 21000;
         const gasPriceUsd = (gasPriceEth * ethUsdPrice).toFixed(2);
         setGasPriceUsd(gasPriceUsd);
@@ -157,7 +154,6 @@ export default function PriceDisplay({
         </div>
       </div>
 
-      {/* Gas Price Information */}
       <div className="tw-w-full tw-mt-2 tw-pt-2 tw-border-t tw-border-white/5">
         <div className="tw-flex tw-items-center tw-justify-between tw-gap-2">
           <div className="tw-flex tw-items-center tw-gap-1.5 tw-text-[rgba(255,255,255,0.6)] tw-font-medium tw-whitespace-nowrap">

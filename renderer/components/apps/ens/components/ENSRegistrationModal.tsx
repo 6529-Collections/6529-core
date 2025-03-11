@@ -29,14 +29,13 @@ interface ENSRegistrationModalProps {
   onRegistrationSuccess?: () => void;
 }
 
-// Define registration steps
 type RegistrationStep =
-  | "initial" // Initial state - form display
-  | "committing" // Sending commit transaction
-  | "waiting" // Waiting for commit to be ready
-  | "registering" // Sending registration transaction
-  | "complete" // Registration complete
-  | "error"; // Error state
+  | "initial"
+  | "committing"
+  | "waiting"
+  | "registering"
+  | "complete"
+  | "error";
 
 export function ENSRegistrationModal({
   show,
@@ -67,7 +66,6 @@ export function ENSRegistrationModal({
   const resolverAddress =
     ENS_CONTRACTS[chainId as keyof typeof ENS_CONTRACTS]?.publicResolver;
 
-  // Reset state when modal is opened
   useEffect(() => {
     if (show) {
       setCurrentStep("initial");
@@ -80,7 +78,6 @@ export function ENSRegistrationModal({
     }
   }, [show]);
 
-  // Fetch estimated price when duration changes
   useEffect(() => {
     async function fetchEstimatedPrice() {
       if (!publicClient || !controllerAddress || currentStep !== "initial")
@@ -103,7 +100,6 @@ export function ENSRegistrationModal({
     fetchEstimatedPrice();
   }, [durationYears, publicClient, controllerAddress, ensName, currentStep]);
 
-  // Progress bar update for waiting period
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
@@ -128,7 +124,6 @@ export function ENSRegistrationModal({
     };
   }, [currentStep, waitingTimeTotal]);
 
-  // Generate a random secret
   function generateSecret(): `0x${string}` {
     const randomBytes = crypto.getRandomValues(new Uint8Array(32));
     return ("0x" +
@@ -155,7 +150,7 @@ export function ENSRegistrationModal({
         return;
       }
 
-      // 1) Duration validation
+      // Duration validation
       const durationInSeconds = BigInt(durationYears * 365 * 24 * 60 * 60);
       if (
         durationInSeconds < MIN_REGISTRATION_DURATION ||
@@ -168,7 +163,7 @@ export function ENSRegistrationModal({
         return;
       }
 
-      // 2) Rent price
+      // Rent price
       const price = await publicClient.readContract({
         address: controllerAddress as `0x${string}`,
         abi: ENS_CONTROLLER_ABI,
@@ -192,7 +187,7 @@ export function ENSRegistrationModal({
         return;
       }
 
-      // 3) Make commitment
+      // Make commitment
       setCurrentStep("committing");
       const newSecret = generateSecret();
       setSecret(newSecret);
@@ -232,7 +227,7 @@ export function ENSRegistrationModal({
         hash: commitTxHash,
       });
 
-      // 4) Wait minCommitmentAge
+      // Wait minCommitmentAge
       setCurrentStep("waiting");
       const commitBlockNumber = commitReceipt.blockNumber;
       const commitBlock = await publicClient.getBlock({
@@ -285,7 +280,7 @@ export function ENSRegistrationModal({
         return;
       }
 
-      // 5) Register
+      // Register
       setCurrentStep("registering");
       const { request: registerRequest } = await publicClient.simulateContract({
         address: controllerAddress as `0x${string}`,
@@ -312,7 +307,7 @@ export function ENSRegistrationModal({
         hash: registerTxHash,
       });
 
-      // 6) Complete
+      // Complete
       setCurrentStep("complete");
       window.seedConnector.showToast({
         type: "success",
@@ -345,7 +340,6 @@ export function ENSRegistrationModal({
     }
   }
 
-  // Handle modal close attempts
   const handleModalClose = () => {
     // Prevent closing during active operations
     if (["committing", "waiting", "registering"].includes(currentStep)) {
@@ -356,7 +350,6 @@ export function ENSRegistrationModal({
     onHide();
   };
 
-  // Render different content based on current step
   const renderModalContent = () => {
     switch (currentStep) {
       case "initial":

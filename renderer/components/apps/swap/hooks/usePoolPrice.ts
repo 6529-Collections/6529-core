@@ -4,7 +4,7 @@ import { TokenPair } from "../types";
 import { UNISWAP_V3_POOL_ABI } from "../abis";
 import { Address, ContractFunctionExecutionError } from "viem";
 import { Pool } from "@uniswap/v3-sdk";
-import { Token as UniswapToken, Currency } from "@uniswap/sdk-core";
+import { Token as UniswapToken } from "@uniswap/sdk-core";
 import { toSDKToken, formatTokenAmount } from "../utils/tokenUtils";
 import { CHAIN_TOKENS } from "../constants";
 

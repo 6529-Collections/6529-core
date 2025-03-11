@@ -3,7 +3,6 @@ import { TokenPair } from "../types";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 
-// Define transaction status types
 type TransactionStatus = "idle" | "pending" | "success" | "error";
 
 interface RevokeModalProps {
@@ -21,12 +20,10 @@ export function RevokeModal({
   pair,
   loading: initialLoading,
 }: RevokeModalProps) {
-  // Track transaction status
   const [status, setStatus] = useState<TransactionStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(initialLoading);
 
-  // Handle revoke action with status tracking
   const handleRevoke = async () => {
     try {
       setLoading(true);
@@ -54,7 +51,6 @@ export function RevokeModal({
     }
   };
 
-  // Reset state when closing
   const handleClose = () => {
     // Only allow closing if not in pending state
     if (status !== "pending") {
