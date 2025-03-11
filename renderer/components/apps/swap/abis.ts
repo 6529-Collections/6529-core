@@ -1,5 +1,5 @@
-import { abi as IUniswapV3Pool } from "@uniswap/v3-core/artifacts/contracts/interfaces/IUniswapV3Pool.sol/IUniswapV3Pool.json";
-import { abi as IQuoterV2 } from "@uniswap/v3-periphery/artifacts/contracts/lens/QuoterV2.sol/QuoterV2.json";
+import UniswapV3PoolJson from "@uniswap/v3-core/artifacts/contracts/UniswapV3Pool.sol/UniswapV3Pool.json";
+import QuoterV2Json from "@uniswap/swap-router-contracts/artifacts/contracts/lens/QuoterV2.sol/QuoterV2.json";
 
 const SWAP_ROUTER02_ABI = [
   {
@@ -488,8 +488,7 @@ const SWAP_ROUTER02_ABI = [
   { stateMutability: "payable", type: "receive" },
 ];
 
-export {
-  SWAP_ROUTER02_ABI as SWAP_ROUTER_ABI,
-  IUniswapV3Pool as UNISWAP_V3_POOL_ABI,
-  IQuoterV2 as QUOTER_V2_ABI,
-};
+export const UNISWAP_V3_POOL_ABI = UniswapV3PoolJson.abi;
+export const QUOTER_V2_ABI = QuoterV2Json.abi;
+
+export { SWAP_ROUTER02_ABI as SWAP_ROUTER_ABI };
