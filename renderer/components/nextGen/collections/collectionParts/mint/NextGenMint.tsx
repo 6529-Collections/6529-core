@@ -1,5 +1,5 @@
 import styles from "../../NextGen.module.scss";
-import { useAccount, useReadContract, useReadContracts } from "wagmi";
+import { useReadContract, useReadContracts } from "wagmi";
 import { DELEGATION_ABI } from "../../../../../abis";
 import {
   DELEGATION_ALL_ADDRESS,
@@ -38,6 +38,7 @@ import {
   MINTING_USE_CASE,
 } from "../../../../../pages/delegation/[...section]";
 import { SEIZE_API_URL } from "../../../../../../constants";
+import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
 
 interface Props {
   collection: NextGenCollection;
@@ -54,7 +55,7 @@ export function Spinner() {
 }
 
 export default function NextGenMint(props: Readonly<Props>) {
-  const account = useAccount();
+  const account = useSeizeConnectContext();
 
   const [collection, setCollection] = useState<CollectionWithMerkle>();
   const [collectionLoaded, setCollectionLoaded] = useState<boolean>(false);

@@ -1,7 +1,7 @@
 import styles from "./AppWallet.module.scss";
 import { useRouter } from "next/router";
 import { useCallback, useEffect } from "react";
-import { useAccount, useConnect, useConnections, useDisconnect } from "wagmi";
+import { useConnect, useConnections, useDisconnect } from "wagmi";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import { Container, Row, Col } from "react-bootstrap";
 import {
@@ -10,6 +10,7 @@ import {
   getRefreshToken,
   getWalletRole,
 } from "../../services/auth/auth.utils";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 export default function AppWalletConnect(
   props: Readonly<{
@@ -18,7 +19,7 @@ export default function AppWalletConnect(
   }>
 ) {
   const router = useRouter();
-  const account = useAccount();
+  const account = useSeizeConnectContext();
   const connect = useConnect();
   const connections = useConnections();
   const { disconnect } = useDisconnect();

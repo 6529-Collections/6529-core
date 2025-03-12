@@ -192,8 +192,7 @@ function DropPartMarkdown({
         className="tw-no-underline"
         target="_blank"
         href={href}
-        data-theme="dark"
-      >
+        data-theme="dark">
         <Tweet id={tweetId} />
       </Link>
     </div>
@@ -275,7 +274,7 @@ function DropPartMarkdown({
         [rehypeSanitize],
       ]}
       remarkPlugins={[remarkGfm]}
-      className="tw-w-full"
+      className="tw-w-full tw-space-y-1"
       components={{
         h5: (params) => (
           <h5 className="tw-text-iron-200 tw-break-words word-break">
@@ -324,7 +323,7 @@ function DropPartMarkdown({
         ),
         p: (params) => (
           <p
-            className={`last:tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
+            className={`tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
             {customRenderer({
               content: params.children,
               mentionedUsers,

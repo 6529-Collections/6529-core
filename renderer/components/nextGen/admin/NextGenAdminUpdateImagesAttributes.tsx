@@ -4,7 +4,6 @@ import NextGenContractWriteStatus from "../NextGenContractWriteStatus";
 import { printAdminErrors } from "./NextGenAdmin";
 import { useCoreContractWrite } from "../nextgen_helpers";
 import { NextGenAdminHeadingRow } from "./NextGenAdminShared";
-import { useAccount } from "wagmi";
 
 interface Props {
   close: () => void;
@@ -13,7 +12,6 @@ interface Props {
 export default function NextGenAdminUpdateImagesAttributes(
   props: Readonly<Props>
 ) {
-  const account = useAccount();
   const [tokenIds, setTokenIds] = useState<string[]>([]);
   const [images, setImages] = useState<string[]>([]);
   const [attributes, setAttributes] = useState<string[]>([]);
@@ -66,7 +64,6 @@ export default function NextGenAdminUpdateImagesAttributes(
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
-        account: account.address,
         args: [tokenIds.map((tId) => parseInt(tId)), images, attributes],
       });
     }

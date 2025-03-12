@@ -1,6 +1,6 @@
 import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import styles from "./NextGenAdmin.module.scss";
-import { useAccount, useSignMessage } from "wagmi";
+import { useSignMessage } from "wagmi";
 import { useEffect, useRef, useState } from "react";
 import { v4 as uuidv4 } from "uuid";
 import { FunctionSelectors } from "../nextgen_contracts";
@@ -22,6 +22,7 @@ import {
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
 import { SEIZE_API_URL } from "../../../../constants";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 interface Props {
   close: () => void;
@@ -30,7 +31,7 @@ interface Props {
 export default function NextGenAdminInitializeExternalBurnSwap(
   props: Readonly<Props>
 ) {
-  const account = useAccount();
+  const account = useSeizeConnectContext();
   const signMessage = useSignMessage();
   const uuid = useRef(uuidv4()).current;
 
@@ -84,7 +85,6 @@ export default function NextGenAdminInitializeExternalBurnSwap(
     if (valid) {
       signMessage.signMessage({
         message: uuid,
-        account: account.address,
       });
     } else {
       setLoading(false);
@@ -171,7 +171,6 @@ export default function NextGenAdminInitializeExternalBurnSwap(
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
-        account: account.address,
         args: [
           erc721Collection,
           burnCollectionID,

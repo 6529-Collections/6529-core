@@ -112,6 +112,7 @@ import { SeizeConnectProvider } from "../components/auth/SeizeConnectContext";
 import { IpfsProvider, resolveIpfsUrl } from "../components/ipfs/IPFSContext";
 import { EULAConsentProvider } from "../components/eula/EULAConsentContext";
 import { AppWalletsProvider } from "../components/app-wallets/AppWalletsContext";
+import { SeizeSettingsProvider } from "../contexts/SeizeSettingsContext";
 
 library.add(
   faArrowUp,
@@ -279,38 +280,40 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
         <ModalStateProvider>
-          <IpfsProvider>
-            <AppWalletsProvider>
-              <SeizeConnectModalProvider>
-                <SeizeConnectProvider>
-                  <ConfirmProvider>
-                    <ToastProvider>
-                      <SeedWalletProvider>
-                        <Provider store={store}>
-                          <Head>
-                            <meta
-                              name="viewport"
-                              content="width=device-width, initial-scale=1.0, maximum-scale=1"
-                            />
-                          </Head>
-                          <ReactQueryWrapper>
-                            <Auth>
-                              <CookieConsentProvider>
-                                <EULAConsentProvider>
-                                  {getLayout(<Component {...props} />)}
-                                </EULAConsentProvider>
-                              </CookieConsentProvider>
-                            </Auth>
-                          </ReactQueryWrapper>
-                          {!hideFooter && <Footer />}
-                        </Provider>
-                      </SeedWalletProvider>
-                    </ToastProvider>
-                  </ConfirmProvider>
-                </SeizeConnectProvider>
-              </SeizeConnectModalProvider>
-            </AppWalletsProvider>
-          </IpfsProvider>
+          <SeizeSettingsProvider>
+            <IpfsProvider>
+              <AppWalletsProvider>
+                <SeizeConnectModalProvider>
+                  <SeizeConnectProvider>
+                    <ConfirmProvider>
+                      <ToastProvider>
+                        <SeedWalletProvider>
+                          <Provider store={store}>
+                            <Head>
+                              <meta
+                                name="viewport"
+                                content="width=device-width, initial-scale=1.0, maximum-scale=1"
+                              />
+                            </Head>
+                            <ReactQueryWrapper>
+                              <Auth>
+                                <CookieConsentProvider>
+                                  <EULAConsentProvider>
+                                    {getLayout(<Component {...props} />)}
+                                  </EULAConsentProvider>
+                                </CookieConsentProvider>
+                              </Auth>
+                            </ReactQueryWrapper>
+                            {!hideFooter && <Footer />}
+                          </Provider>
+                        </SeedWalletProvider>
+                      </ToastProvider>
+                    </ConfirmProvider>
+                  </SeizeConnectProvider>
+                </SeizeConnectModalProvider>
+              </AppWalletsProvider>
+            </IpfsProvider>
+          </SeizeSettingsProvider>
         </ModalStateProvider>
       </WagmiProvider>
     </QueryClientProvider>

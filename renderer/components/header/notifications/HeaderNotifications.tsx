@@ -22,6 +22,7 @@ export default function HeaderNotifications() {
         : null,
       type: TitleType.NOTIFICATION,
     });
+
     if (haveUnreadNotifications && notifications?.notifications?.length) {
       window.notifications.showNotification(
         notifications.notifications[0].id,

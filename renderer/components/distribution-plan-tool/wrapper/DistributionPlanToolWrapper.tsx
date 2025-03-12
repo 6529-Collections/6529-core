@@ -3,13 +3,13 @@ import Breadcrumb, { Crumb } from "../../breadcrumb/Breadcrumb";
 import HeaderPlaceholder from "../../header/HeaderPlaceholder";
 import { Poppins } from "next/font/google";
 import { useContext, useEffect, useState } from "react";
-import { useAccount } from "wagmi";
 import { useRouter } from "next/router";
 import "react-toastify/dist/ReactToastify.css";
 import { ToastContainer } from "react-toastify";
 import Head from "next/head";
 import { AuthContext } from "../../auth/Auth";
 import { SEIZE_URL } from "../../../../constants";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 const Header = dynamic(() => import("../../header/Header"), {
   ssr: false,
@@ -28,7 +28,7 @@ export default function DistributionPlanToolWrapper({
   children: React.ReactNode;
 }) {
   const { setTitle, title } = useContext(AuthContext);
-  const { address } = useAccount();
+  const { address } = useSeizeConnectContext();
   const router = useRouter();
   const [defaultBreadCrumbs] = useState<Crumb[]>([
     { display: "Home", href: "/" },

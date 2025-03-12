@@ -6,6 +6,7 @@ import { AuthContext } from "../../auth/Auth";
 import WaveDropMobileMenuDelete from "./WaveDropMobileMenuDelete";
 import WaveDropMobileMenuFollow from "./WaveDropMobileMenuFollow";
 import WaveDropActionsRate from "./WaveDropActionsRate";
+import { SEIZE_URL } from "../../../../constants";
 
 interface WaveDropMobileMenuProps {
   readonly drop: ApiDrop;
@@ -35,7 +36,7 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
     if (longPressTriggered) return;
     if (isTemporaryDrop) return;
 
-    const dropLink = `${window.location.protocol}//${window.location.host}/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`;
+    const dropLink = `${SEIZE_URL}/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`;
 
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(dropLink).then(() => {
@@ -178,21 +179,11 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
         </button>
 
         {!isAuthor && (
-          <WaveDropMobileMenuFollow
-            drop={drop}
-            onFollowChange={closeMenu}
-          />
+          <WaveDropMobileMenuFollow drop={drop} onFollowChange={closeMenu} />
         )}
-        <WaveDropActionsRate
-          drop={drop}
-          isMobile={true}
-          onRated={closeMenu}
-        />
+        <WaveDropActionsRate drop={drop} isMobile={true} onRated={closeMenu} />
         {showOptions && (
-          <WaveDropMobileMenuDelete
-            drop={drop}
-            onDropDeleted={closeMenu}
-          />
+          <WaveDropMobileMenuDelete drop={drop} onDropDeleted={closeMenu} />
         )}
       </div>
     </CommonDropdownItemsMobileWrapper>,
