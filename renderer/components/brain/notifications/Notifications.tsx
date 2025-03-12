@@ -53,9 +53,9 @@ export default function Notifications() {
   const markAllAsReadMutation = useMutation({
     mutationFn: async () =>
       await commonApiPostWithoutBodyAndResponse({
-        endpoint: `notifications/all/read`,
+        endpoint: `notifications/read`,
       }),
-    onSuccess: () => {
+    onSuccess: async () => {
       invalidateNotifications();
     },
     onError: (error) => {

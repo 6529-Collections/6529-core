@@ -295,8 +295,16 @@ function SharePopup(props: {
     return path;
   };
 
+  const getQueryParams = () => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const queryString = queryParams.toString();
+    return queryString ? `?${queryString}` : "";
+  };
+
   const copyAppLink = () => {
-    const link = `${props.scheme}://navigate/${getLinkPath()}`;
+    const link = `${
+      props.scheme
+    }://navigate/${getLinkPath()}${getQueryParams()}`;
     navigator.clipboard.writeText(link).then(() => {
       setIsWebLinkCopied(false);
       setIsDesktopLinkCopied(true);

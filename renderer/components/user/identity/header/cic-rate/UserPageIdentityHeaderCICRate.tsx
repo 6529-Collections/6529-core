@@ -9,7 +9,6 @@ import {
   commonApiFetch,
   commonApiPost,
 } from "../../../../../services/api/common-api";
-import { useAccount } from "wagmi";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   QueryKey,
@@ -20,6 +19,7 @@ import UserRateAdjustmentHelper from "../../../utils/rate/UserRateAdjustmentHelp
 import CircleLoader from "../../../../distribution-plan-tool/common/CircleLoader";
 import { ApiProfileProxyActionType } from "../../../../../generated/models/ApiProfileProxyActionType";
 import UserPageIdentityHeaderCICRateStats from "./UserPageIdentityHeaderCICRateStats";
+import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
 
 const useBreakpoint = createBreakpoint({ MD: 768, S: 0 });
 
@@ -30,7 +30,7 @@ export default function UserPageIdentityHeaderCICRate({
   readonly profile: IProfileAndConsolidations;
   readonly isTooltip: boolean;
 }) {
-  const { address } = useAccount();
+  const { address } = useSeizeConnectContext();
   const { requestAuth, setToast, connectedProfile, activeProfileProxy } =
     useContext(AuthContext);
 

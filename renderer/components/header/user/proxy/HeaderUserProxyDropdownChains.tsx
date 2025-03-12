@@ -1,9 +1,9 @@
-import { useAccount, useSwitchChain } from "wagmi";
+import { useChainId, useSwitchChain } from "wagmi";
 import { getChains } from "../../../../wagmiConfig";
 import { useEffect } from "react";
 
 export default function HeaderUserProxyDropdownChains() {
-  const account = useAccount();
+  const chainId = useChainId();
   const switchChain = useSwitchChain();
   const myChains = getChains();
 
@@ -18,10 +18,10 @@ export default function HeaderUserProxyDropdownChains() {
   return (
     <div className="tw-h-full tw-px-2 tw-pt-2">
       <span className="tw-bg-transparent tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-500 tw-rounded-lg tw-relative tw-select-none tw-px-3 focus:tw-outline-none tw-transition tw-duration-300 tw-ease-out">
-        Current Chain: {account.chain?.name}
+        Current Chain: {myChains.find((c) => c.id === chainId)?.name}
       </span>
       {myChains
-        .filter((c) => c.id !== account.chain?.id)
+        .filter((c) => c.id !== chainId)
         .map((c) => (
           <button
             key={`switch-chain-${c.id}`}

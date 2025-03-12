@@ -5,18 +5,18 @@ import { useState, useEffect } from "react";
 import { NFT } from "../../entities/INFT";
 import { fetchUrl, postData } from "../../services/6529api";
 import RememeAddComponent, { ProcessedRememe } from "./RememeAddComponent";
-import { useAccount, useSignMessage } from "wagmi";
+import { useSignMessage } from "wagmi";
 import { DBResponse } from "../../entities/IDBResponse";
 import { ConsolidatedTDH } from "../../entities/ITDH";
 import { areEqualAddresses, numberWithCommas } from "../../helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
-import { ApiSeizeSettings } from "../../generated/models/ApiSeizeSettings";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { SEIZE_API_URL } from "../../../constants";
 import Link from "next/link";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
+import { useSeizeSettings } from "../../contexts/SeizeSettingsContext";
 
 interface CheckList {
   status: boolean;
@@ -24,11 +24,11 @@ interface CheckList {
 }
 
 export default function RememeAddPage() {
-  const accountResolution = useAccount();
   const { connectedProfile } = useAuth();
-  const { seizeConnect, seizeConnectOpen } = useSeizeConnectContext();
+  const { address, isConnected, seizeConnect, seizeConnectOpen } =
+    useSeizeConnectContext();
 
-  const [seizeSettings, setSeizeSettings] = useState<ApiSeizeSettings>();
+  const seizeSettings = useSeizeSettings();
 
   const signMessage = useSignMessage();
   const [memes, setMemes] = useState<NFT[]>([]);
@@ -54,7 +54,7 @@ export default function RememeAddPage() {
   useEffect(() => {
     const mychecklist: CheckList[] = [];
     if (addRememe) {
-      if (!seizeSettings || !seizeSettings.rememes_submission_tdh_threshold) {
+      if (!seizeSettings?.rememes_submission_tdh_threshold) {
         mychecklist.push({
           status: false,
           note: "Something went wrong fetching global settings",
@@ -62,7 +62,7 @@ export default function RememeAddPage() {
       } else {
         const isDeployer = areEqualAddresses(
           addRememe.contract.contractDeployer,
-          accountResolution.address
+          address
         );
 
         if (isDeployer) {
@@ -112,14 +112,6 @@ export default function RememeAddPage() {
   }, []);
 
   useEffect(() => {
-    fetchUrl(`${SEIZE_API_URL}/api/settings`).then(
-      (settings: ApiSeizeSettings) => {
-        setSeizeSettings(settings);
-      }
-    );
-  }, []);
-
-  useEffect(() => {
     async function fetchTdh() {
       commonApiFetch<ConsolidatedTDH>({
         endpoint: `tdh/consolidation/${connectedProfile?.consolidation.consolidation_key}`,
@@ -139,7 +131,7 @@ export default function RememeAddPage() {
     if (signMessage.isSuccess && signMessage.data) {
       setSubmitting(true);
       postData(`${SEIZE_API_URL}/api/rememes/add`, {
-        address: accountResolution.address,
+        address: address,
         signature: signMessage.data,
         rememe: buildRememeObject(),
       }).then((response) => {
@@ -266,7 +258,7 @@ export default function RememeAddPage() {
                     </ul>
                   )}
                 </span>
-                {accountResolution.isConnected ? (
+                {isConnected ? (
                   <span className="d-flex flex-column gap-2">
                     <Button
                       className="seize-btn"
@@ -275,7 +267,7 @@ export default function RememeAddPage() {
                         !addRememe.valid ||
                         (!userTDH &&
                           !areEqualAddresses(
-                            accountResolution.address,
+                            address,
                             addRememe.contract.contractDeployer
                           )) ||
                         checkList.some((c) => !c.status) ||
@@ -286,7 +278,6 @@ export default function RememeAddPage() {
                         setSubmissionResult(undefined);
                         if (addRememe) {
                           signMessage.signMessage({
-                            account: accountResolution.address,
                             message: JSON.stringify(buildRememeObject()),
                           });
                         }

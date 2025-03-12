@@ -20,7 +20,7 @@ import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { MNEMONIC_NA } from "../../../../constants";
-import { useAccount, useBalance, useChainId } from "wagmi";
+import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import {
   areEqualAddresses,
@@ -30,6 +30,7 @@ import {
 import Image from "next/image";
 import { UnlockSeedWalletModal } from "./SeedWalletModal";
 import { decryptData } from "../../../../shared/encrypt";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 export default function SeedWallet(
   props: Readonly<{
@@ -40,7 +41,7 @@ export default function SeedWallet(
   const chainId = useChainId();
   const { showConfirm } = useConfirm();
   const { showToast } = useToast();
-  const account = useAccount();
+  const account = useSeizeConnectContext();
 
   const balance = useBalance({
     address: props.address as `0x${string}`,

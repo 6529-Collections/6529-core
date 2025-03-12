@@ -1,9 +1,4 @@
-import {
-  useAccount,
-  useReadContract,
-  useReadContracts,
-  useWriteContract,
-} from "wagmi";
+import { useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import {
   NEXTGEN_ADMIN,
   NEXTGEN_CHAIN,
@@ -28,6 +23,7 @@ import { useEffect, useState } from "react";
 import { Crumb } from "../breadcrumb/Breadcrumb";
 import { goerli, mainnet, sepolia } from "viem/chains";
 import { NextGenCollection } from "../../entities/INextgen";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 export function useGlobalAdmin(address: string) {
   return useReadContract({
@@ -551,7 +547,7 @@ export function useSharedState() {
 }
 
 export function useMintSharedState() {
-  const account = useAccount();
+  const account = useSeizeConnectContext();
   const [available, setAvailable] = useState<number>(0);
   const [delegators, setDelegators] = useState<string[]>([]);
   const [addressMintCounts, setAddressMintCounts] = useState<TokensPerAddress>({

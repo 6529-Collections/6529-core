@@ -5,7 +5,6 @@ import {
 import UserPageHeaderName from "./name/UserPageHeaderName";
 import UserLevel from "../utils/level/UserLevel";
 import UserPageHeaderStats from "./stats/UserPageHeaderStats";
-import { useAccount } from "wagmi";
 import { useContext, useEffect, useState } from "react";
 import {
   amIUser,
@@ -22,6 +21,7 @@ import { STATEMENT_GROUP, STATEMENT_TYPE } from "../../../helpers/Types";
 import { AuthContext } from "../../auth/Auth";
 import dynamic from "next/dynamic";
 import UserFollowBtn from "../utils/UserFollowBtn";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 const DEFAULT_BANNER_1 = getRandomColor();
 const DEFAULT_BANNER_2 = getRandomColor();
@@ -46,13 +46,27 @@ export default function UserPageHeader({
 }) {
   const router = useRouter();
   const user = (router.query.user as string).toLowerCase();
-  const { address } = useAccount();
+  const { address } = useSeizeConnectContext();
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
-  const [isMyProfile, setIsMyProfile] = useState<boolean>(false);
-  useEffect(
-    () => setIsMyProfile(amIUser({ profile, address })),
-    [profile, address]
-  );
+
+  // Initialize with a check to prevent button flash
+  const initialIsMyProfile =
+    connectedProfile?.profile?.handle && profile.profile?.handle
+      ? connectedProfile.profile.handle.toLowerCase() ===
+        profile.profile.handle.toLowerCase()
+      : false;
+
+  const [isMyProfile, setIsMyProfile] = useState<boolean>(initialIsMyProfile);
+
+  useEffect(() => {
+    setIsMyProfile(
+      amIUser({
+        profile,
+        address,
+        connectedHandle: connectedProfile?.profile?.handle,
+      })
+    );
+  }, [profile, address, connectedProfile?.profile?.handle]);
 
   const getCanEdit = (): boolean => {
     return !!(profile.profile?.handle && isMyProfile && !activeProfileProxy);
@@ -126,10 +140,9 @@ export default function UserPageHeader({
                 </UserPageHeaderPfpWrapper>
               </div>
               <div className="tw-mt-4">
-                {connectedProfile?.profile?.handle &&
-                  !activeProfileProxy &&
-                  !isMyProfile &&
-                  profile.profile?.handle && (
+                {!isMyProfile &&
+                  profile.profile?.handle &&
+                  connectedProfile?.profile?.handle && (
                     <UserFollowBtn handle={profile.profile.handle} />
                   )}
               </div>
@@ -153,7 +166,9 @@ export default function UserPageHeader({
             <UserPageHeaderStats profile={profile} />
             {profile.profile?.created_at && (
               <div className="tw-mt-2">
-                <p className="tw-mb-0 tw-text-iron-400 tw-text-sm tw-font-normal">
+                <p
+                  className="tw-mb-0 tw-text-iron-400 tw-text-sm tw-font-normal"
+                  suppressHydrationWarning>
                   Profile Enabled:{" "}
                   {formatTimestampToMonthYear(
                     new Date(profile.profile.created_at).getTime()

@@ -5,11 +5,12 @@ import { SeedWalletRequest } from "../../../shared/types";
 import { hexToString } from "../../helpers";
 import { fromGWEI, isValidEthAddress } from "../../helpers/Helpers";
 import { useToast } from "../../contexts/ToastContext";
-import { useAccount, useBalance, useChainId } from "wagmi";
+import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import { useSeedWallet } from "../../contexts/SeedWalletContext";
 import { ethers } from "ethers";
 import { useModalState } from "../../contexts/ModalStateContext";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
 
@@ -52,10 +53,10 @@ export default function ConfirmSeedWalletRequest() {
   const { isTopModal, addModal, removeModal } = useModalState();
   const seedWalletContext = useSeedWallet();
 
-  const account = useAccount();
+  const account = useSeizeConnectContext();
   const chainId = useChainId();
   const balance = useBalance({
-    address: account.address,
+    address: account.address as `0x${string}`,
     chainId: chainId,
   });
 
