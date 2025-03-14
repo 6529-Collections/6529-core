@@ -36,18 +36,18 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
 
-  const account = useAccount();
   const [connectedAddress, setConnectedAddress] = useState<string | undefined>(
-    account.address ?? getWalletAddress() ?? undefined
+    connections?.[0]?.accounts?.[0] ?? getWalletAddress() ?? undefined
   );
 
   useEffect(() => {
-    if (account.address && account.isConnected) {
-      setConnectedAddress(account.address);
+    const address = connections?.[0]?.accounts?.[0];
+    if (address) {
+      setConnectedAddress(address);
     } else {
       setConnectedAddress(getWalletAddress() ?? undefined);
     }
-  }, [account.address, account.isConnected]);
+  }, [connections]);
 
   const seizeDisconnect = useCallback(() => {
     for (const connection of connections) {
@@ -65,7 +65,6 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
       removeAuthJwt();
-      setConnectedAddress(undefined);
 
       if (reconnect) {
         setShowConnectModal(true);
@@ -86,7 +85,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeAcceptConnection,
       seizeConnectOpen: showConnectModal,
-      isConnected: account.isConnected,
+      isConnected: !!connections?.[0]?.accounts?.[0],
       isAuthenticated: !!connectedAddress,
     };
   }, [
@@ -95,8 +94,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     seizeDisconnect,
     seizeDisconnectAndLogout,
     seizeAcceptConnection,
-    open,
-    account.isConnected,
+    connections,
+    showConnectModal,
   ]);
 
   return (

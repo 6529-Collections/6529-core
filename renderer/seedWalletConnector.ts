@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import { mainnet, sepolia } from "viem/chains";
 import { SeedWalletRequest } from "../shared/types";
 import { hexToString } from "./helpers";
-import { TransactionRejectedRpcError, UserRejectedRequestError } from "viem";
+import { UserRejectedRequestError } from "viem";
 
 interface ProviderRequest {
   method: string;
@@ -57,7 +57,9 @@ export function seedWalletConnector(parameters: {
         return signature;
       case "eth_sendTransaction":
         console.log(`[${name}] Sending transaction`, params);
+
         const walletConnection = wallet.connect(provider);
+
         const txResponse = await walletConnection.sendTransaction(params[0]);
         console.log(`[${name}] Transaction response`, txResponse);
         window.seedConnector.showToast({
@@ -72,9 +74,9 @@ export function seedWalletConnector(parameters: {
 
   function updateProvider() {
     if (connectionObject.chainId === sepolia.id) {
-      provider = new ethers.JsonRpcProvider("https://rpc.sepolia.org");
+      provider = new ethers.JsonRpcProvider(sepolia.rpcUrls.default.http[0]);
     } else {
-      provider = new ethers.CloudflareProvider();
+      provider = new ethers.JsonRpcProvider("https://rpc1.6529.io");
     }
   }
 

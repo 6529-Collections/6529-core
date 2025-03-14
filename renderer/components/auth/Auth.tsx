@@ -500,31 +500,6 @@ export default function Auth({
     setShowWaves(getShowWaves());
   }, [connectedProfile, activeProfileProxy, address]);
 
-  const contextValue = useMemo(
-    () => ({
-      requestAuth,
-      setToast,
-      connectedProfile: connectedProfile ?? null,
-      receivedProfileProxies,
-      activeProfileProxy,
-      showWaves,
-      connectionStatus: getProfileConnectedStatus({
-        profile: connectedProfile ?? null,
-        isProxy: !!activeProfileProxy,
-      }),
-      setActiveProfileProxy: onActiveProfileProxy,
-    }),
-    [
-      requestAuth,
-      setToast,
-      connectedProfile,
-      receivedProfileProxies,
-      activeProfileProxy,
-      showWaves,
-      onActiveProfileProxy,
-    ]
-  );
-
   const { isTopModal, addModal, removeModal } = useModalState();
 
   useEffect(() => {

@@ -20,17 +20,10 @@ export default function AppWalletConnect(
 ) {
   const router = useRouter();
   const account = useSeizeConnectContext();
-  const connect = useConnect();
   const connections = useConnections();
   const { disconnect } = useDisconnect();
 
   const { requestId } = router.query;
-
-  useEffect(() => {
-    if (connect.error) {
-      console.error(connect.error);
-    }
-  }, [connect.error]);
 
   const openApp = useCallback(() => {
     const connection = connections[0];

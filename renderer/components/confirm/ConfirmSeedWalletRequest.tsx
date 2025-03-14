@@ -8,13 +8,17 @@ import { useToast } from "../../contexts/ToastContext";
 import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import { useSeedWallet } from "../../contexts/SeedWalletContext";
-import { ethers } from "ethers";
+import { ethers, formatUnits } from "ethers";
 import { useModalState } from "../../contexts/ModalStateContext";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
 
 function parseTransactionData(data: string) {
+  if (!data) {
+    return;
+  }
+
   const functionSelector = data.slice(0, 10);
 
   const args = data.slice(10);
@@ -45,6 +49,12 @@ function parseTransactionData(data: string) {
     selector: functionSelector,
     args: decodedArgs,
   };
+}
+
+function hexToNumber(hex: string) {
+  const weiValue = BigInt(hex);
+  const ethValue = formatUnits(weiValue, 18);
+  return ethValue;
 }
 
 export default function ConfirmSeedWalletRequest() {
@@ -145,7 +155,7 @@ export default function ConfirmSeedWalletRequest() {
       return (
         <>
           <span>Parameters</span>
-          {seedRequest?.params?.map((param, index) => (
+          {request?.params?.map((param, index) => (
             <code
               key={param}
               className="pt-3 pb-3"
@@ -156,45 +166,49 @@ export default function ConfirmSeedWalletRequest() {
         </>
       );
     } else if (request.method === "eth_sendTransaction") {
-      const param = seedRequest?.params[0];
+      const param = request?.params[0];
       const parsedData = parseTransactionData(param.data);
       return (
         <>
+          {param.value && (
+            <>
+              <span className="pt-3">Value</span>
+              <code className="pb-3">{hexToNumber(param.value)}</code>
+            </>
+          )}
           <span className="pt-3">From</span>
           <code className="pb-3">{param.from}</code>
           <span className="pt-3">To</span>
           <code className="pb-3">{param.to}</code>
-          {param.value && (
+          {parsedData && (
             <>
-              <span className="pt-3">Value</span>
-              <code className="pb-3">{param.value}</code>
+              <span className="pt-3 d-flex align-items-center justify-content-between">
+                <span>Data</span>
+                <Button
+                  variant="secondary"
+                  style={{
+                    width: "fit-content",
+                    fontSize: "smaller",
+                  }}
+                  onClick={() => setShowParsed(!showParsed)}>
+                  {showParsed ? "Hide" : "Show"} Parsed Data
+                </Button>
+              </span>
+              {showParsed ? (
+                <>
+                  <span className="pt-3">Function Selector</span>
+                  <code className="pb-1">{parsedData?.selector}</code>
+                  <span className="pt-1 pb-1">Arguments</span>
+                  {parsedData?.args.map((arg, index) => (
+                    <code key={arg} className="pb-1">
+                      {index + 1}. {arg}
+                    </code>
+                  ))}
+                </>
+              ) : (
+                <code className="pt-3 pb-3 text-break">{param.data}</code>
+              )}
             </>
-          )}
-          <span className="pt-3 d-flex align-items-center justify-content-between">
-            <span>Data</span>
-            <Button
-              variant="secondary"
-              style={{
-                width: "fit-content",
-                fontSize: "smaller",
-              }}
-              onClick={() => setShowParsed(!showParsed)}>
-              {showParsed ? "Hide" : "Show"} Parsed Data
-            </Button>
-          </span>
-          {showParsed ? (
-            <>
-              <span className="pt-3">Function Selector</span>
-              <code className="pb-1">{parsedData?.selector}</code>
-              <span className="pt-1 pb-1">Arguments</span>
-              {parsedData?.args.map((arg, index) => (
-                <code key={arg} className="pb-1">
-                  {index + 1}. {arg}
-                </code>
-              ))}
-            </>
-          ) : (
-            <code className="pt-3 pb-3 text-break">{param.data}</code>
           )}
         </>
       );
@@ -241,7 +255,7 @@ export default function ConfirmSeedWalletRequest() {
         <span>
           {balance.data && (
             <>
-              {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
+              Balance: {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
               {balance.data?.symbol}
               {chainId === sepolia.id && (
                 <span className="font-color-h"> (sepolia)</span>
