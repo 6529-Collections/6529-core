@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { useAccount, useConnections, useDisconnect } from "wagmi";
+import { useConnections, useDisconnect } from "wagmi";
 import {
   getWalletAddress,
   removeAuthJwt,

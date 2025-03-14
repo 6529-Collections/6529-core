@@ -1,6 +1,6 @@
 import styles from "./AppWallet.module.scss";
 import { useEffect, useState } from "react";
-import { useAccount, useSendTransaction, useSignMessage } from "wagmi";
+import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
 import { Container, Row, Col } from "react-bootstrap";
 import { hexToString } from "viem";
 import { areEqualAddresses } from "../../helpers/Helpers";
@@ -13,6 +13,7 @@ export default function AppWalletProvider(
   }>
 ) {
   const account = useSeizeConnectContext();
+  const chainId = useChainId();
   const [methodParams, setMethodParams] = useState<any>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [requesterAddress, setRequesterAddress] = useState<string | null>(null);
@@ -108,7 +109,7 @@ export default function AppWalletProvider(
         if (params[0].value) {
           sendParams.value = params[0].value;
         }
-        sendTransaction(sendParams);
+        sendTransaction({ ...sendParams, chainId: chainId });
         break;
       }
       default:

@@ -150,6 +150,11 @@ export default function ConfirmSeedWalletRequest() {
     return `${index + 1}: ${content}`;
   }
 
+  function hasEnoughBalance(request: SeedWalletRequest) {
+    const param = request?.params[0];
+    return balance.data?.value && balance.data.value >= BigInt(param.value);
+  }
+
   function printParams(request: SeedWalletRequest) {
     if (request.method === "personal_sign") {
       return (
@@ -252,22 +257,32 @@ export default function ConfirmSeedWalletRequest() {
       </Modal.Body>
       <Modal.Footer
         className={`${styles.modalContent} d-flex align-items-center justify-content-between`}>
-        <span>
-          {balance.data && (
-            <>
-              Balance: {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
-              {balance.data?.symbol}
-              {chainId === sepolia.id && (
-                <span className="font-color-h"> (sepolia)</span>
-              )}
-            </>
+        <span className="d-flex flex-column gap-2">
+          <span>
+            {balance.data && (
+              <>
+                Balance: {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
+                {balance.data?.symbol}
+                {chainId === sepolia.id && (
+                  <span className="font-color-h"> (sepolia)</span>
+                )}
+              </>
+            )}
+          </span>
+          {!hasEnoughBalance(seedRequest) && (
+            <span className="text-danger">
+              Insufficient balance for transaction
+            </span>
           )}
         </span>
         <span className="d-flex gap-2">
           <Button variant="danger" onClick={() => onReject(seedRequest)}>
             Reject
           </Button>
-          <Button variant="primary" onClick={() => onConfirm(seedRequest)}>
+          <Button
+            variant="primary"
+            onClick={() => onConfirm(seedRequest)}
+            disabled={!hasEnoughBalance(seedRequest)}>
             Confirm
           </Button>
         </span>

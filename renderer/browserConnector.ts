@@ -89,10 +89,14 @@ export function browserConnector(parameters: {
     },
     async connect(params: {
       isReconnecting?: boolean;
+      chainId?: number;
     }): Promise<ConnectionObject> {
       console.log(`[${this.name}] Browser Connect method called`, params);
       await init(this.name);
-      if (connectionObject.accounts.length > 0) {
+      if (
+        connectionObject.accounts.length > 0 &&
+        (!params.chainId || connectionObject.chainId === params.chainId)
+      ) {
         return connectionObject;
       }
 
@@ -105,7 +109,8 @@ export function browserConnector(parameters: {
       return new Promise((resolve, reject) => {
         const requestId = generateRequestId();
         const t = Date.now();
-        const url = `http://localhost:${port}/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}`;
+        const chainId = params.chainId || connectionObject.chainId;
+        const url = `http://localhost:${port}/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
 
         parameters.openUrlFn(url);
 
@@ -191,15 +196,10 @@ export function browserConnector(parameters: {
     },
     async switchChain(params: { chainId: number }) {
       console.log(`[${this.name}] Switch Chain method called`, params.chainId);
-      await init(this.name);
-      const myChain = params.chainId === sepolia.id ? sepolia : mainnet;
-      connectionObject.chainId = myChain.id;
-      await window.store.set(
-        CONNECTION_STORE,
-        JSON.stringify(connectionObject)
-      );
-      console.log(`[${this.name}] Switched to chain`, myChain.name);
-      return myChain;
+      await this.connect({
+        chainId: params.chainId,
+      });
+      return connectionObject.chainId === sepolia.id ? sepolia : mainnet;
     },
     async onAccountsChanged(accounts) {
       //do nothing

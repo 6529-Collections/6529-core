@@ -130,7 +130,7 @@ export default function HeaderUserProxyDropdown({
                       />
                     ))}
                   </div>
-                  <HeaderUserProxyDropdownChains />
+                  <HeaderUserProxyDropdownChains onSwitchChain={onClose} />
                   <div className="tw-h-full tw-px-2 tw-pt-2">
                     {isConnected ? (
                       <button
