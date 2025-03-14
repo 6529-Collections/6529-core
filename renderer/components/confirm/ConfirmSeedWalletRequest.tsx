@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";
 import { SeedWalletRequest } from "../../../shared/types";
@@ -51,12 +51,6 @@ function parseTransactionData(data: string) {
   };
 }
 
-function hexToNumber(hex: string) {
-  const weiValue = BigInt(hex);
-  const ethValue = formatUnits(weiValue, 18);
-  return ethValue;
-}
-
 export default function ConfirmSeedWalletRequest() {
   const [show, setShow] = useState(false);
 
@@ -76,6 +70,14 @@ export default function ConfirmSeedWalletRequest() {
   const [seedRequest, setSeedRequest] = useState<SeedWalletRequest>();
 
   const hasMounted = useRef(false);
+
+  const hasEnoughBalance = useMemo(() => {
+    if (!seedRequest || !balance.data) {
+      return false;
+    }
+    const param = seedRequest?.params[0];
+    return balance.data.value >= BigInt(param.value);
+  }, [seedRequest, balance.data]);
 
   useEffect(() => {
     if (show) {
@@ -150,11 +152,6 @@ export default function ConfirmSeedWalletRequest() {
     return `${index + 1}: ${content}`;
   }
 
-  function hasEnoughBalance(request: SeedWalletRequest) {
-    const param = request?.params[0];
-    return balance.data?.value && balance.data.value >= BigInt(param.value);
-  }
-
   function printParams(request: SeedWalletRequest) {
     if (request.method === "personal_sign") {
       return (
@@ -178,7 +175,7 @@ export default function ConfirmSeedWalletRequest() {
           {param.value && (
             <>
               <span className="pt-3">Value</span>
-              <code className="pb-3">{hexToNumber(param.value)}</code>
+              <code className="pb-3">{formatUnits(BigInt(param.value))}</code>
             </>
           )}
           <span className="pt-3">From</span>
@@ -269,7 +266,7 @@ export default function ConfirmSeedWalletRequest() {
               </>
             )}
           </span>
-          {!hasEnoughBalance(seedRequest) && (
+          {!hasEnoughBalance && (
             <span className="text-danger">
               Insufficient balance for transaction
             </span>
@@ -282,7 +279,7 @@ export default function ConfirmSeedWalletRequest() {
           <Button
             variant="primary"
             onClick={() => onConfirm(seedRequest)}
-            disabled={!hasEnoughBalance(seedRequest)}>
+            disabled={!hasEnoughBalance}>
             Confirm
           </Button>
         </span>

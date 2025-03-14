@@ -62,10 +62,6 @@ export default function AppWalletConnect(
     };
   }
 
-  function onDisconnect() {
-    account.seizeDisconnectAndLogout();
-  }
-
   return (
     <Container>
       <Row className="pb-3">
@@ -83,7 +79,7 @@ export default function AppWalletConnect(
                 </Col>
                 <Col xs={12}>
                   <button
-                    onClick={() => onDisconnect()}
+                    onClick={() => account.seizeDisconnectAndLogout()}
                     className="mt-3 tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
                     Disconnect
                   </button>
