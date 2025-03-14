@@ -28,7 +28,10 @@ export default function UserPageHeaderStats({
   const [concensusColor, setConcensusColor] = useState<string>();
 
   useEffect(() => {
-    if (!profile.consolidation.consolidation_key) return;
+    if (!profile.consolidation.consolidation_key) {
+      setTdhConsensusInfo(undefined);
+      return;
+    }
 
     setFetchingTdhConsensus(true);
     window.localDb
@@ -39,7 +42,7 @@ export default function UserPageHeaderStats({
       .finally(() => {
         setFetchingTdhConsensus(false);
       });
-  }, [profile.consolidation.consolidation_key]);
+  }, [profile]);
 
   useEffect(() => {
     if (!tdhConsensusInfo && profile.consolidation.tdh > 0) {

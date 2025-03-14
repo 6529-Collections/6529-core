@@ -202,8 +202,7 @@ export default function SeedWallet(
               <DotLoader />
             ) : balance.data ? (
               <>
-                {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
-                {balance.data?.symbol}
+                {fromGWEI(Number(balance.data.value))} {balance.data?.symbol}
                 {chainId === sepolia.id && (
                   <span className="font-color-h"> (sepolia)</span>
                 )}
