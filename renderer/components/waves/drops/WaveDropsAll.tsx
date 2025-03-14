@@ -19,6 +19,7 @@ import CircleLoader, {
 import { useRouter } from "next/router";
 import { ActiveDropState } from "../../../types/dropInteractionTypes";
 import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
+import { commonApiPostWithoutBodyAndResponse } from "../../../services/api/common-api";
 
 export interface WaveDropsAllProps {
   readonly waveId: string;
@@ -143,6 +144,12 @@ export default function WaveDropsAll({
       smallestSerialNo.current = null;
     }
   }, [drops]);
+
+  useEffect(() => {
+    void commonApiPostWithoutBodyAndResponse({
+      endpoint: `notifications/wave/${waveId}/read`,
+    }).catch((error) => console.error("Failed to mark feed as read:", error));
+  }, [waveId]);
 
   const fetchAndScrollToDrop = useCallback(async () => {
     if (!serialNo) return;
