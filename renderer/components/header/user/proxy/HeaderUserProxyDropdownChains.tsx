@@ -1,6 +1,5 @@
-import { useChainId, useConnections, useSwitchChain } from "wagmi";
+import { useConnections, useSwitchChain } from "wagmi";
 import { getChains } from "../../../../wagmiConfig";
-import { useEffect } from "react";
 
 export default function HeaderUserProxyDropdownChains({
   onSwitchChain,
@@ -13,23 +12,17 @@ export default function HeaderUserProxyDropdownChains({
 
   const chainId = connections?.[0]?.chainId;
 
-  useEffect(() => {
-    if (switchChain.data) {
-      window.location.reload();
-    }
-  }, [switchChain.data]);
-
   const handleSwitchChain = async (chainId: number) => {
     try {
+      onSwitchChain();
       await switchChain.switchChainAsync({ chainId: chainId });
+      window.location.reload();
     } catch (error) {
       console.error(error);
-    } finally {
-      onSwitchChain();
     }
   };
 
-  if (myChains.length <= 1 && myChains.some((c2) => c2.id === chainId)) {
+  if (!chainId || (myChains.length === 1 && myChains[0].id === chainId)) {
     return <></>;
   }
 

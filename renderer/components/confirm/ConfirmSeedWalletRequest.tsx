@@ -11,6 +11,8 @@ import { useSeedWallet } from "../../contexts/SeedWalletContext";
 import { ethers, formatUnits } from "ethers";
 import { useModalState } from "../../contexts/ModalStateContext";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
 
@@ -72,11 +74,11 @@ export default function ConfirmSeedWalletRequest() {
   const hasMounted = useRef(false);
 
   const hasEnoughBalance = useMemo(() => {
-    if (!seedRequest || !balance.data) {
-      return false;
+    if (!seedRequest?.params[0]?.value || !balance.data) {
+      return true;
     }
-    const param = seedRequest?.params[0];
-    return balance.data.value >= BigInt(param.value);
+    const paramValue = seedRequest.params[0]?.value;
+    return balance.data.value >= BigInt(paramValue);
   }, [seedRequest, balance.data]);
 
   useEffect(() => {
@@ -279,8 +281,15 @@ export default function ConfirmSeedWalletRequest() {
           <Button
             variant="primary"
             onClick={() => onConfirm(seedRequest)}
-            disabled={!hasEnoughBalance}>
-            Confirm
+            className="d-flex align-items-center gap-1">
+            <span>Confirm</span>
+            {!hasEnoughBalance && (
+              <FontAwesomeIcon
+                icon={faExclamationTriangle}
+                height={14}
+                width={14}
+              />
+            )}
           </Button>
         </span>
       </Modal.Footer>
