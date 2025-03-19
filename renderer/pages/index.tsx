@@ -185,7 +185,7 @@ export default function Home({
         />
         {isHeaderLoaded && (
           <>
-            <Container className={`pt-4 ${styles.mainContainer}`}>
+            <Container className="pt-4">
               <Row>
                 <Col>
                   <h1>
@@ -456,7 +456,7 @@ export default function Home({
                 </ProfileActivityLogs>
               </div>
             </div>
-            <Container className={styles.mainContainer}>
+            <Container>
               <Row className="pt-3">
                 <Col xs={12} sm={12} md={12} lg={12}>
                   <LatestActivity page={1} pageSize={12} showMore={false} />
