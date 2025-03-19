@@ -11,6 +11,7 @@ import BrainContentInput from "../content/input/BrainContentInput";
 import { FeedScrollContainer } from "../feed/FeedScrollContainer";
 import { useNotificationsQuery } from "../../../hooks/useNotificationsQuery";
 import useCapacitor from "../../../hooks/useCapacitor";
+import { useElectron } from "../../../hooks/useElectron";
 
 export default function Notifications() {
   const { connectedProfile, activeProfileProxy, setToast } =
@@ -18,11 +19,20 @@ export default function Notifications() {
   const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const capacitor = useCapacitor();
+  const isElectron = useElectron();
 
-  const containerClassName =
-    `tw-relative tw-flex tw-flex-col tw-h-[calc(100vh-10rem)] lg:tw-h-[calc(100vh-7.625rem)] min-[1200px]:tw-h-[calc(100vh-9.375rem)] ${
-      capacitor.isCapacitor ? "tw-pb-[calc(4rem+88px)]" : ""
-    }` as const;
+  let containerClassName =
+    "tw-relative tw-flex tw-flex-col tw-h-[calc(100vh-9.5rem)] lg:tw-h-[calc(100vh-6.625rem)] min-[1200px]:tw-h-[calc(100vh-7.375rem)]";
+  if (isElectron) {
+    containerClassName =
+      "tw-relative tw-flex tw-flex-col tw-h-[calc(100vh-10rem)] lg:tw-h-[calc(100vh-7.625rem)] min-[1200px]:tw-h-[calc(100vh-9.375rem)]";
+  }
+
+  if (capacitor.isIos) {
+    containerClassName = `${containerClassName} tw-pb-[calc(4rem+80px)]`;
+  } else if (capacitor.isAndroid && !capacitor.keyboardVisible) {
+    containerClassName = `${containerClassName} tw-pb-[70px]`;
+  }
 
   const router = useRouter();
   const { reload } = router.query;

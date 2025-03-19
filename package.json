@@ -46,6 +46,8 @@
     "publish-links-arweave": "ts-node scripts/publish-links.ts"
   },
   "dependencies": {
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
     "@fortawesome/fontawesome-svg-core": "^6.6.0",
     "@fortawesome/free-solid-svg-icons": "^6.6.0",
     "@fortawesome/react-fontawesome": "^0.2.2",
@@ -75,6 +77,7 @@
     "electron-notarize": "^1.2.2",
     "electron-store": "^10.0.0",
     "electron-updater": "^6.2.1",
+    "emoji-mart": "^5.6.0",
     "ethereum-cryptography": "^2.2.0",
     "ethers": "^6.13.2",
     "framer-motion": "^11.3.9",

@@ -87,7 +87,7 @@ export const BrainDesktop: React.FC<Props> = ({ children }) => {
     }`;
 
   const heightClass = isElectron
-    ? "tw-h-[calc(100vh-8.25rem)]"
+    ? "tw-h-[calc(100vh-8.5rem)]"
     : "lg:tw-h-[calc(100vh-5.5rem)] min-[1200px]:tw-h-[calc(100vh-6.25rem)]";
 
   return (
