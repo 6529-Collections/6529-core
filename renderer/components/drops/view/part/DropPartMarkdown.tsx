@@ -22,6 +22,8 @@ import {
 } from "../../../../helpers/SeizeLinkParser";
 import { SEIZE_URL } from "../../../../../constants";
 import { handleAnchorClick } from "../../../../hooks/useAnchorInterceptor";
+import useIsMobileScreen from "../../../../hooks/isMobileScreen";
+import { useEmoji } from "../../../../contexts/EmojiContext";
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
@@ -41,14 +43,16 @@ function DropPartMarkdown({
   referencedNfts,
   partContent,
   onQuoteClick,
-  textSize = "md",
+  textSize,
 }: DropPartMarkdownProps) {
+  const isMobile = useIsMobileScreen();
+  const { emojiMap } = useEmoji();
   const textSizeClass = (() => {
     switch (textSize) {
       case "sm":
-        return "tw-text-sm";
+        return isMobile ? "tw-text-xs" : "tw-text-sm";
       default:
-        return "tw-text-md";
+        return isMobile ? "tw-text-sm" : "tw-text-md";
     }
   })();
 
@@ -109,7 +113,16 @@ function DropPartMarkdown({
           const randomId = getRandomObjectId();
           return <DropListItemContentPart key={randomId} part={partProps} />;
         } else {
-          return part;
+          const emojiRegex = /(:\w+:)/g;
+          const parts = part.split(emojiRegex);
+
+          return parts.map((part) =>
+            part.match(emojiRegex) ? (
+              <span key={getRandomObjectId()}>{renderEmoji(part)}</span>
+            ) : (
+              <span key={getRandomObjectId()}>{part}</span>
+            )
+          );
         }
       });
 
@@ -148,6 +161,21 @@ function DropPartMarkdown({
     }
 
     return content;
+  };
+
+  const renderEmoji = (emojiProps: string) => {
+    const emojiId = emojiProps.replaceAll(":", "");
+    const emoji = emojiMap
+      .flatMap((cat) => cat.emojis)
+      .find((e) => e.id === emojiId);
+
+    if (!emoji) {
+      return <span>{`:${emojiId}:`}</span>;
+    }
+
+    return (
+      <img src={emoji.skins[0].src} alt={emojiId} className="emoji-node" />
+    );
   };
 
   const aHrefRenderer = ({
