@@ -236,7 +236,7 @@ export default class IPFSServer {
         stderr: null,
         pid: -1, // Indicates an attached process
         kill: () => {
-          Logger.info("[IPFS] Cannot kill attached process.");
+          Logger.info("[IPFS] Attached daemon does not emit 'kill'.");
         },
         on: (event: string, _: any) => {
           if (event === "close") {
@@ -319,6 +319,19 @@ export default class IPFSServer {
   async shutdown(): Promise<void> {
     if (!this.ipfsProcess) {
       Logger.info("[IPFS] Daemon is not running.");
+      return;
+    }
+
+    if (this.ipfsProcess.pid === -1) {
+      // Attached to an existing daemon, use API shutdown instead of killing process
+      Logger.info("[IPFS] Attempting to shut down attached daemon via API...");
+      try {
+        await axios.post(`http://127.0.0.1:${this.rpcPort}/api/v0/shutdown`);
+        Logger.info("[IPFS] Attached daemon shut down successfully.");
+        this.ipfsProcess = null;
+      } catch (error) {
+        Logger.error("[IPFS] Failed to shut down attached daemon:", error);
+      }
       return;
     }
 

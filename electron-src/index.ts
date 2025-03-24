@@ -323,11 +323,15 @@ async function createWindow() {
   updateSplashMessage("Initializing IPFS");
   await IPFS_SERVER.init(PORT);
 
+  const windowState = getValue("window-state");
+
   updateSplashMessage("Creating main window");
   Logger.info("Creating main window");
   mainWindow = new BrowserWindow({
-    minWidth: 500,
-    minHeight: 500,
+    x: windowState?.x ?? undefined,
+    y: windowState?.y ?? undefined,
+    width: windowState?.width ?? 500,
+    height: windowState?.height ?? 500,
     icon: iconPath,
     backgroundColor: "#222",
     titleBarStyle: "hidden",
@@ -358,7 +362,11 @@ async function createWindow() {
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
     await createScheduledTasks();
-    mainWindow?.maximize();
+    if (windowState) {
+      mainWindow?.setBounds(windowState);
+    } else {
+      mainWindow?.maximize();
+    }
     mainWindow?.show();
     splash?.destroy();
     splash = null;
@@ -672,6 +680,17 @@ ipcMain.on("run-background", () => {
 });
 
 ipcMain.on("quit", async () => {
+  if (mainWindow) {
+    const bounds = mainWindow.getBounds();
+    setValue("window-state", {
+      x: bounds.x,
+      y: bounds.y,
+      width: bounds.width,
+      height: bounds.height,
+      isMaximized: mainWindow.isMaximized(),
+    });
+  }
+
   mainWindow?.webContents.removeAllListeners();
   mainWindow?.close();
   mainWindow?.destroy();
