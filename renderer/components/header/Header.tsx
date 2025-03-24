@@ -22,11 +22,11 @@ import {
   faExternalLinkAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
-import HeaderQR from "./qr/HeaderQR";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
 import { useAppWallets } from "../app-wallets/AppWalletsContext";
-import HeaderQRScanner from "./qr/HeaderQRScanner";
+import HeaderQR from "./share/HeaderShare";
+import HeaderQRScanner from "./share/HeaderQRScanner";
 
 interface Props {
   onLoad?: () => void;

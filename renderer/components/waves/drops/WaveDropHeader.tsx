@@ -7,6 +7,7 @@ import UserCICAndLevel, {
 import { ApiDrop } from "../../../generated/models/ApiDrop";
 import { DropTrophyIcon } from "../DropThrophyIcon";
 import { ApiDropType } from "../../../generated/models/ApiDropType";
+import { Time } from "../../../helpers/time";
 
 interface WaveDropHeaderProps {
   readonly drop: ApiDrop;
@@ -57,6 +58,10 @@ const WaveDropHeader: React.FC<WaveDropHeaderProps> = ({
           <p className="tw-text-md tw-mb-0 tw-whitespace-nowrap tw-font-normal tw-leading-none tw-text-iron-500">
             {getTimeAgoShort(drop.created_at)}
           </p>
+          <div className="tw-size-[3px] tw-bg-iron-600 tw-rounded-full tw-flex-shrink-0"></div>
+          <p className="tw-text-md tw-mb-0 tw-whitespace-nowrap tw-font-normal tw-leading-none tw-text-iron-500">
+            {Time.millis(drop.created_at).toIsoTimeStringWithoutSeconds()}
+          </p>
         </div>
         {drop.drop_type === ApiDropType.Participatory && (
           <DropTrophyIcon rank={drop.rank} />
@@ -65,7 +70,9 @@ const WaveDropHeader: React.FC<WaveDropHeaderProps> = ({
       <div>
         {showWaveInfo && (
           <Link
-            onClick={(e) => handleNavigation(e, `/my-stream?wave=${drop.wave.id}`)}
+            onClick={(e) =>
+              handleNavigation(e, `/my-stream?wave=${drop.wave.id}`)
+            }
             href={`/my-stream?wave=${drop.wave.id}`}
             className="tw-text-[11px] tw-leading-0 -tw-mt-1 tw-text-iron-500 hover:tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out tw-no-underline">
             {drop.wave.name}
