@@ -3,16 +3,14 @@ import { ApiWave } from "../../../generated/models/ApiWave";
 import { getTimeUntil, numberWithCommas } from "../../../helpers/Helpers";
 import WaveHeaderFollow from "./WaveHeaderFollow";
 import { AuthContext } from "../../auth/Auth";
-import {
-  getScaledImageUri,
-  ImageScale,
-} from "../../../helpers/image.helpers";
+import { getScaledImageUri, ImageScale } from "../../../helpers/image.helpers";
 import WaveHeaderOptions from "./options/WaveHeaderOptions";
 import WaveHeaderName from "./name/WaveHeaderName";
 import WaveHeaderFollowers from "./WaveHeaderFollowers";
 import WaveHeaderPinned from "./WaveHeaderPinned";
 import { ApiWaveType } from "../../../generated/models/ObjectSerializer";
 import Link from "next/link";
+import WavePicture from "../WavePicture";
 
 export enum WaveHeaderPinnedSide {
   LEFT = "LEFT",
@@ -52,8 +50,7 @@ export default function WaveHeader({
             useRounded
               ? "tw-rounded-t-xl tw-ring-1 tw-ring-inset tw-ring-iron-800"
               : "tw-rounded-t-xl"
-          } tw-overflow-hidden`}
-        >
+          } tw-overflow-hidden`}>
           <div
             className="tw-h-14 tw-w-full tw-object-cover"
             style={{
@@ -65,21 +62,10 @@ export default function WaveHeader({
           <div className="tw-flex">
             <div className="tw-relative tw-size-20">
               <div
-                className={`tw-absolute tw-inset-0 tw-rounded-full tw-bg-iron-900 ${
+                className={`tw-absolute tw-inset-0 tw-rounded-full tw-bg-iron-900 tw-overflow-hidden ${
                   isDropWave ? "tw-ring-2 tw-ring-primary-400" : ""
                 }`}>
-                {wave.picture ? (
-                  <img
-                    className="tw-w-full tw-h-full tw-rounded-full tw-object-cover"
-                    src={getScaledImageUri(
-                      wave.picture,
-                      ImageScale.W_200_H_200
-                    )}
-                    alt={wave.name}
-                  />
-                ) : (
-                  <div className="tw-w-full tw-h-full tw-rounded-full tw-bg-gradient-to-br tw-from-iron-900 tw-to-iron-800" />
-                )}
+                <WavePicture wave={wave} />
               </div>
               {isDropWave && (
                 <div className="tw-absolute tw-bottom-0 tw-right-0 tw-size-6 tw-flex tw-items-center tw-justify-center tw-bg-iron-950 tw-rounded-full tw-shadow-lg">
