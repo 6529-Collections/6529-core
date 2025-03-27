@@ -371,11 +371,11 @@ export function NextGenCollectionHead(
       />
       <meta property="og:title" content={props.name} />
       <meta property="og:image" content={props.collection.image} />
-      <meta property="og:description" content="NEXTGEN | 6529 SEIZE" />
+      <meta property="og:description" content="NEXTGEN | 6529 CORE" />
       <meta name="twitter:card" content={props.name} />
       <meta name="twitter:image:alt" content={props.name} />
       <meta name="twitter:title" content={props.name} />
-      <meta name="twitter:description" content="NEXTGEN | 6529 SEIZE" />
+      <meta name="twitter:description" content="NEXTGEN | 6529 CORE" />
       <meta name="twitter:image" content={props.collection.image} />
     </Head>
   );

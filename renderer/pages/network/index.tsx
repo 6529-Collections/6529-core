@@ -23,7 +23,7 @@ export default function CommunityPage() {
   const { setTitle, title } = useContext(AuthContext);
   useEffect(() => {
     setTitle({
-      title: "Network | 6529 SEIZE",
+      title: "Network | 6529 CORE",
     });
   }, []);
 
@@ -60,14 +60,11 @@ export default function CommunityPage() {
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Network | 6529 SEIZE" />
+        <meta name="description" content="Network | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/network`} />
         <meta property="og:title" content="Network" />
-        <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:description" content="6529 CORE" />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <SidebarLayout breadcrumbs={breadcrumbs}>

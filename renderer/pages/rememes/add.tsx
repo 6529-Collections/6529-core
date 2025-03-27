@@ -27,7 +27,7 @@ export default function ReMemes() {
 
   useEffect(() => {
     setTitle({
-      title: "Add ReMemes | 6529 SEIZE",
+      title: "Add ReMemes | 6529 CORE",
     });
   }, []);
 

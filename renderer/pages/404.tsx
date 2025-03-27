@@ -16,7 +16,7 @@ export default function Seize404() {
   const { setTitle, title } = useContext(AuthContext);
   useEffect(() => {
     setTitle({
-      title: "NOT FOUND | 6529 SEIZE",
+      title: "NOT FOUND | 6529 CORE",
     });
   }, []);
 

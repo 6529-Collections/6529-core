@@ -97,17 +97,14 @@ export default function AcceptConnectionSharing(
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="6529 SEIZE" />
+        <meta name="description" content="6529.io" />
         <meta
           property="og:url"
           content={`${SEIZE_URL}/accept-connection-sharing`}
         />
         <meta property="og:title" content={title} />
-        <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:description" content="6529.io" />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className="tw-min-h-[100dvh] tw-bg-iron-950">

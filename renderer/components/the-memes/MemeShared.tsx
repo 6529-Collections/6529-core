@@ -40,30 +40,6 @@ export function SharedHead(
     });
   }, []);
 
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, []);
-
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, []);
-
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, []);
-
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, []);
-
   return (
     <Head>
       <title>{title}</title>
@@ -72,11 +48,11 @@ export function SharedHead(
       <meta property="og:url" content={`${SEIZE_URL}/${path}`} />
       <meta property="og:title" content={pageProps.name} />
       <meta property="og:image" content={pageProps.image} />
-      <meta property="og:description" content="6529 CORE" />
+      <meta property="og:description" content="6529.io" />
       <meta name="twitter:card" content={pagenameFull} />
       <meta name="twitter:image:alt" content={pageProps.name} />
       <meta name="twitter:title" content={pageProps.name} />
-      <meta name="twitter:description" content="6529 CORE" />
+      <meta name="twitter:description" content="6529.io" />
       <meta name="twitter:image" content={pageProps.image} />
     </Head>
   );
@@ -93,7 +69,7 @@ export async function getSharedServerSideProps(req: any, contract: string) {
   const response = await fetchUrl(
     `${SEIZE_API_URL}/api/${urlPath}?contract=${contract}&id=${id}`
   );
-  let image = `${SEIZE_URL}/Seize_Logo_Glasses_2.png`;
+  let image = `${SEIZE_URL}/6529io.png`;
   if (response?.data?.length > 0) {
     name = `${response.data[0].name} | ${name}`;
     if (response.data[0].thumbnail) {

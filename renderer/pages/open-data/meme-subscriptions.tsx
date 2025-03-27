@@ -32,7 +32,7 @@ export default function MemeSubscriptions() {
 
   useEffect(() => {
     setTitle({
-      title: "Meme Subscriptions Downloads | 6529 SEIZE",
+      title: "Meme Subscriptions Downloads | 6529 CORE",
     });
   }, []);
 
@@ -51,10 +51,7 @@ export default function MemeSubscriptions() {
         />
         <meta property="og:title" content={`Meme Subscriptions Downloads`} />
         <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>
