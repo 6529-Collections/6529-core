@@ -167,8 +167,7 @@ export default function Decisions({
       }
       isExpanded={isExpanded}
       onToggle={() => setIsExpanded(!isExpanded)}
-      collapsedContent={renderCollapsedContent()}
-    >
+      collapsedContent={renderCollapsedContent()}>
       <div className="tw-px-5 tw-pt-2 tw-pb-1">
         <div className="tw-border-b tw-border-iron-700/50 tw-pb-3 tw-mb-3">
           <p className="tw-mb-0 tw-text-sm tw-text-iron-300">
@@ -189,8 +188,7 @@ export default function Decisions({
       </div>
       <div
         className="tw-grid tw-grid-cols-1 tw-gap-y-6 tw-gap-x-10 md:tw-grid-cols-2 tw-px-5 tw-pb-5 tw-divide-y tw-divide-solid tw-divide-x-0 tw-divide-iron-700"
-        onClick={onInteraction}
-      >
+        onClick={onInteraction}>
         {/* First Decision Date and Time */}
         <DecisionsFirst
           firstDecisionTime={dates.firstDecisionTime}
