@@ -29,7 +29,7 @@ export default function RememesDownloads() {
 
   useEffect(() => {
     setTitle({
-      title: "Rememes Downloads | 6529 SEIZE",
+      title: "Rememes Downloads | 6529 CORE",
     });
   }, []);
 
@@ -42,10 +42,7 @@ export default function RememesDownloads() {
         <meta property="og:url" content={`${SEIZE_URL}/open-data/rememes`} />
         <meta property="og:title" content={`Rememes Downloads`} />
         <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>

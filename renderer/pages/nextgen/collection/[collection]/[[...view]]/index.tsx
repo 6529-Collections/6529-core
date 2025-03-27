@@ -41,7 +41,7 @@ export default function NextGenCollectionPage(props: any) {
 
   useEffect(() => {
     setTitle({
-      title: `${collection.name} | NEXTGEN | 6529 SEIZE`,
+      title: `${collection.name} | NEXTGEN | 6529 CORE`,
     });
   }, []);
 

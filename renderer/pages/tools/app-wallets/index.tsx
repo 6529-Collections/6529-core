@@ -28,7 +28,7 @@ export default function AppWallets() {
 
   useEffect(() => {
     setTitle({
-      title: "App Wallets | 6529 SEIZE",
+      title: "App Wallets | 6529 CORE",
     });
   }, []);
 
@@ -37,14 +37,11 @@ export default function AppWallets() {
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="App Wallets | 6529 SEIZE" />
+        <meta name="description" content="App Wallets | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/tools/app-wallets`} />
         <meta property="og:title" content="App Wallets" />
-        <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:description" content="6529 CORE" />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>

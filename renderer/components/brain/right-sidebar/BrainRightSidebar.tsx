@@ -25,6 +25,7 @@ export enum Mode {
 export enum SidebarTab {
   ABOUT = "ABOUT",
   LEADERBOARD = "LEADERBOARD",
+  WINNERS = "WINNERS",
   TOP_VOTERS = "TOP_VOTERS",
   ACTIVITY_LOG = "ACTIVITY_LOG",
 }
@@ -52,12 +53,6 @@ const BrainRightSidebar: React.FC<BrainRightSidebarProps> = ({
 
   const [mode, setMode] = useState<Mode>(Mode.CONTENT);
 
-  const buttonTopClass = isElectron ? "tw-top-[9.5rem]" : "tw-top-28";
-
-  const marginClass = isElectron
-    ? "tw-mt-[8rem]"
-    : "tw-mt-[5.25rem] min-[1200px]:tw-mt-[6rem]";
-
   return (
     <motion.div
       className="tw-fixed tw-right-0 tw-top-0 tw-h-screen tw-z-40 tw-bg-iron-950 tw-flex tw-flex-col
@@ -75,7 +70,7 @@ const BrainRightSidebar: React.FC<BrainRightSidebarProps> = ({
       <button
         type="button"
         aria-label="Toggle sidebar"
-        className={`${buttonTopClass} tw-absolute tw-z-50 tw-bg-primary-500 desktop-hover:hover:tw-opacity-80 tw-border tw-border-solid
+        className={`tw-absolute tw-z-50 tw-top-[9.25rem] tw-bg-primary-500 desktop-hover:hover:tw-opacity-80 tw-border tw-border-solid
           tw-border-primary-400 tw-size-7 tw-text-white desktop-hover:hover:tw-text-white tw-ring-1 tw-ring-white/20
           focus:tw-outline-none tw-flex tw-items-center tw-justify-center tw-transition-all tw-duration-300 tw-ease-out
           ${
@@ -101,9 +96,9 @@ const BrainRightSidebar: React.FC<BrainRightSidebarProps> = ({
         </svg>
       </button>
       <div
-        className={`${marginClass} tw-text-iron-500 tw-text-sm tw-overflow-y-auto 
+        className="tw-mt-[6.2rem] tw-text-iron-500 tw-text-sm tw-overflow-y-auto 
         tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 
-        hover:tw-scrollbar-thumb-iron-300 tw-h-full`}>
+        hover:tw-scrollbar-thumb-iron-300 tw-h-full">
         {wave && (
           <WaveContent
             wave={wave}

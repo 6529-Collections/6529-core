@@ -8,7 +8,11 @@ import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import useCapacitor from "../../../../../../hooks/useCapacitor";
 import { openInExternalBrowser } from "../../../../../../helpers";
 
-function DropListItemContentMediaImage({ src }: { readonly src: string }) {
+function DropListItemContentMediaImage({ 
+  src
+}: { 
+  readonly src: string;
+}) {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 });
@@ -154,6 +158,9 @@ function DropListItemContentMediaImage({ src }: { readonly src: string }) {
                     src={src}
                     alt="Full size drop media"
                     className="tw-max-w-full tw-max-h-[calc(95vh-60px)] tw-object-contain"
+                    style={{
+                      pointerEvents: "auto",
+                    }}
                   />
                 </TransformComponent>
                 <button
@@ -175,7 +182,7 @@ function DropListItemContentMediaImage({ src }: { readonly src: string }) {
 
   return (
     <>
-      <div className="sm:tw-max-w-lg tw-relative">
+      <div className="sm:tw-max-w-lg tw-relative tw-mx-[1px]">
         {isLoading && (
           <div
             className="tw-bg-iron-800 tw-animate-pulse tw-rounded-xl"

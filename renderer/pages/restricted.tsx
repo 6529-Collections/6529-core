@@ -12,7 +12,7 @@ export default function Access() {
   const { setTitle, title } = useContext(AuthContext);
   useEffect(() => {
     setTitle({
-      title: "Restricted | 6529 SEIZE",
+      title: "Restricted | 6529 CORE",
     });
   }, []);
   const router = useRouter();
@@ -50,10 +50,7 @@ export default function Access() {
         <meta property="og:url" content={`${SEIZE_URL}/restricted`} />
         <meta property="og:title" content={`Restricted`} />
         <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
       <main className={styles.login}>
         {image && <LoginImage image={image} alt="access" />}

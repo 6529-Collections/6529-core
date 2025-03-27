@@ -29,7 +29,7 @@ export default function AppWalletImportPage(props: any) {
 
   useEffect(() => {
     setTitle({
-      title: "Import App Wallet | 6529 SEIZE",
+      title: "Import App Wallet | 6529 CORE",
     });
   }, []);
 
@@ -38,17 +38,14 @@ export default function AppWalletImportPage(props: any) {
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="App Wallets | 6529 SEIZE" />
+        <meta name="description" content="App Wallets | 6529 CORE" />
         <meta
           property="og:url"
           content={`${SEIZE_URL}/tools/app-wallets/import-wallet`}
         />
         <meta property="og:title" content={`Import App Wallet`} />
-        <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:description" content="6529 CORE" />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>
