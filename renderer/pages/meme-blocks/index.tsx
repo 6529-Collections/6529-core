@@ -204,7 +204,7 @@ export default function BlockPicker() {
 
   useEffect(() => {
     setTitle({
-      title: "Meme Blocks | 6529 SEIZE",
+      title: "Meme Blocks | 6529 CORE",
     });
   }, []);
 
@@ -217,10 +217,7 @@ export default function BlockPicker() {
         <meta property="og:url" content={`${SEIZE_URL}/meme-blocks`} />
         <meta property="og:title" content="Meme Blocks" />
         <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
       <Header />
       <Breadcrumb breadcrumbs={breadcrumbs} />
@@ -257,8 +254,7 @@ export default function BlockPicker() {
                   onClicked={onSubmit}
                   disabled={false}
                   loading={loading}
-                  padding="tw-px-4 tw-py-3"
-                >
+                  padding="tw-px-4 tw-py-3">
                   Submit
                 </PrimaryButton>
               </div>

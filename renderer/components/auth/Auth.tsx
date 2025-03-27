@@ -70,8 +70,7 @@ type AuthContextType = {
   readonly title: string;
 };
 
-export const WAVES_MIN_ACCESS_LEVEL = 5;
-const DEFAULT_TITLE = "6529 SEIZE";
+const DEFAULT_TITLE = "6529";
 
 export const AuthContext = createContext<AuthContextType>({
   connectedProfile: null,
@@ -481,9 +480,7 @@ export default function Auth({
     if (!connectedProfile?.profile?.handle) {
       return false;
     }
-    if (connectedProfile.level < WAVES_MIN_ACCESS_LEVEL) {
-      return false;
-    }
+
     if (activeProfileProxy) {
       return false;
     }

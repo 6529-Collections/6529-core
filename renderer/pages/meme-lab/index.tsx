@@ -23,7 +23,7 @@ export default function MemeLab() {
 
   useEffect(() => {
     setTitle({
-      title: "Meme Lab | 6529 SEIZE",
+      title: "Meme Lab | 6529 CORE",
     });
   }, []);
 

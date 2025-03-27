@@ -287,7 +287,7 @@ export default function DelegationsDocumentation(props: any) {
 
   useEffect(() => {
     setTitle({
-      title: "Delegation | 6529 SEIZE",
+      title: "Delegation | 6529 CORE",
     });
   }, []);
 
@@ -303,10 +303,7 @@ export default function DelegationsDocumentation(props: any) {
         />
         <meta property="og:title" content="Delegation" />
         <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>

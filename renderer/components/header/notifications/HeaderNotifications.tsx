@@ -18,7 +18,7 @@ export default function HeaderNotifications() {
   useEffect(() => {
     setTitle({
       title: haveUnreadNotifications
-        ? `(${notifications?.unread_count}) Notifications | 6529 SEIZE`
+        ? `(${notifications?.unread_count}) Notifications | 6529 CORE`
         : null,
       type: TitleType.NOTIFICATION,
     });
