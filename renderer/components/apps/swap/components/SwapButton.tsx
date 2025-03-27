@@ -291,17 +291,11 @@ export function SwapButton({
               boxShadow: "0 4px 14px 0 rgba(0, 0, 0, 0.2)",
             }}
           >
-            <div className="tw-flex tw-items-center tw-justify-center tw-gap-2 tw-w-full">
-              {status.loading || approvalStatus.loading ? (
-                <div className="tw-flex tw-items-center tw-justify-center tw-gap-2 tw-w-full">
-                  <div className="tw-w-5 tw-h-5 tw-border-2 tw-border-white/30 tw-border-t-white tw-rounded-full tw-animate-spin"></div>
-                  <span>{getButtonText()}</span>
-                </div>
-              ) : (
-                <span className="tw-text-center tw-w-full">
-                  {getButtonText()}
-                </span>
+            <div className="tw-relative tw-flex tw-items-center tw-justify-center tw-w-full">
+              {(status.loading || approvalStatus.loading) && (
+                <div className="tw-absolute tw-right-[-30px] tw-w-5 tw-h-5 tw-border-2 tw-border-white/30 tw-border-t-white tw-rounded-full tw-animate-spin"></div>
               )}
+              <span>{getButtonText()}</span>
             </div>
           </button>
 

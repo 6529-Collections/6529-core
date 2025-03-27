@@ -1,10 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  useAccount,
-  usePublicClient,
-  useWalletClient,
-  useWriteContract,
-} from "wagmi";
+import { useAccount, usePublicClient, useWalletClient } from "wagmi";
 import { TokenPair } from "../types";
 import { SWAP_ROUTER_ABI } from "../abis";
 import {
@@ -62,7 +57,6 @@ export function useUniswapSwap() {
   const { address, chain } = useAccount();
   const { data: walletClient } = useWalletClient();
   const publicClient = usePublicClient();
-  const { writeContractAsync } = useWriteContract();
   const [approvalStatus, setApprovalStatus] = useState<ApprovalStatus>({
     required: false,
     approved: false,
