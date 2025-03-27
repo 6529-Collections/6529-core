@@ -27,7 +27,7 @@ export default function TheMemesPage() {
 
   useEffect(() => {
     setTitle({
-      title: "The Memes | 6529 SEIZE",
+      title: "The Memes | 6529 CORE",
     });
   }, []);
 

@@ -1,5 +1,5 @@
 import { mainnet, goerli, sepolia } from "viem/chains";
-import { Chain, http } from "viem";
+import { Chain } from "viem";
 import { NEXTGEN_CHAIN_ID } from "./components/nextGen/nextgen_contracts";
 import {
   CW_PROJECT_ID,

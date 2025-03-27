@@ -18,7 +18,7 @@ export default function HeaderUserConnectModal({
   show,
   onHide,
 }: Readonly<HeaderUserConnectModalProps>) {
-  const connectors = useConnectors();
+  const connectors = useConnectors().filter((c) => c.id !== "w3mAuth");
 
   const isBrowser = !isElectron();
 
@@ -54,10 +54,11 @@ export default function HeaderUserConnectModal({
   }
 
   function printOtherConnectors(extraClass: string = "") {
+    const conns = otherConnectors();
     return (
       <div
         className={`${extraClass} d-flex flex-wrap align-items-center justify-content-center gap-2`}>
-        {otherConnectors().map((c) => (
+        {conns.map((c) => (
           <ConnectorSelector
             key={c.id}
             connector={c}

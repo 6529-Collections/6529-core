@@ -6,7 +6,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { useAccount, useConnections, useDisconnect } from "wagmi";
+import { useConnections, useDisconnect } from "wagmi";
 import {
   getWalletAddress,
   removeAuthJwt,
@@ -14,7 +14,7 @@ import {
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 
 interface SeizeConnectContextType {
-  address: string | null;
+  address: string | undefined;
   seizeConnect: () => void;
   seizeDisconnect: () => void;
   seizeDisconnectAndLogout: (reconnect?: boolean) => void;
@@ -36,22 +36,18 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
 
-  const [showAppWalletModal, setShowAppWalletModal] = useState(false);
-
-  const walletType = "core-wallet";
-
-  const account = useAccount();
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(
-    account.address ?? getWalletAddress()
+  const [connectedAddress, setConnectedAddress] = useState<string | undefined>(
+    connections?.[0]?.accounts?.[0] ?? getWalletAddress() ?? undefined
   );
 
   useEffect(() => {
-    if (account.address && account.isConnected) {
-      setConnectedAddress(account.address);
+    const address = connections?.[0]?.accounts?.[0];
+    if (address) {
+      setConnectedAddress(address);
     } else {
-      setConnectedAddress(getWalletAddress());
+      setConnectedAddress(getWalletAddress() ?? undefined);
     }
-  }, [account.address, account.isConnected]);
+  }, [connections]);
 
   const seizeDisconnect = useCallback(() => {
     for (const connection of connections) {
@@ -69,7 +65,6 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
       removeAuthJwt();
-      setConnectedAddress(null);
 
       if (reconnect) {
         setShowConnectModal(true);
@@ -90,7 +85,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeAcceptConnection,
       seizeConnectOpen: showConnectModal,
-      isConnected: account.isConnected,
+      isConnected: !!connections?.[0]?.accounts?.[0],
       isAuthenticated: !!connectedAddress,
     };
   }, [
@@ -99,8 +94,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     seizeDisconnect,
     seizeDisconnectAndLogout,
     seizeAcceptConnection,
-    open,
-    account.isConnected,
+    connections,
+    showConnectModal,
   ]);
 
   return (

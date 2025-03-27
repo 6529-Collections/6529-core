@@ -22,6 +22,8 @@ import {
 } from "../../../../helpers/SeizeLinkParser";
 import { SEIZE_URL } from "../../../../../constants";
 import { handleAnchorClick } from "../../../../hooks/useAnchorInterceptor";
+import useIsMobileScreen from "../../../../hooks/isMobileScreen";
+import { useEmoji } from "../../../../contexts/EmojiContext";
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
@@ -41,14 +43,16 @@ function DropPartMarkdown({
   referencedNfts,
   partContent,
   onQuoteClick,
-  textSize = "md",
+  textSize,
 }: DropPartMarkdownProps) {
+  const isMobile = useIsMobileScreen();
+  const { emojiMap } = useEmoji();
   const textSizeClass = (() => {
     switch (textSize) {
       case "sm":
-        return "tw-text-sm";
+        return isMobile ? "tw-text-xs" : "tw-text-sm";
       default:
-        return "tw-text-md";
+        return "tw-text-md"; // Always use medium text for both mobile and desktop
     }
   })();
 
@@ -109,7 +113,34 @@ function DropPartMarkdown({
           const randomId = getRandomObjectId();
           return <DropListItemContentPart key={randomId} part={partProps} />;
         } else {
-          return part;
+          const emojiRegex = /(:\w+:)/g;
+          const parts = part.split(emojiRegex);
+
+          const isEmoji = (str: string): boolean => {
+            const emojiTextRegex =
+              /^(?:\ud83c[\udffb-\udfff]|\ud83d[\udc00-\ude4f\ude80-\udfff]|\ud83e[\udd00-\uddff]|\u00a9|\u00ae|\u200d|\u203c|\u2049|\u2122|\u2139|\u2194-\u21aa|\u231a-\u23fa|\u24c2|\u25aa-\u25fe|\u2600-\u27bf|\u2934-\u2b55|\u3030|\u303d|\u3297|\u3299|\ufe0f)$/;
+            return emojiTextRegex.test(str.trim());
+          };
+
+          const areAllPartsEmojis = parts
+            .filter((p) => !!p)
+            .every((part) => part.match(emojiRegex) || isEmoji(part));
+
+          return parts.map((part) =>
+            part.match(emojiRegex) ? (
+              <span key={getRandomObjectId()}>
+                {renderEmoji(part, areAllPartsEmojis)}
+              </span>
+            ) : (
+              <span
+                key={getRandomObjectId()}
+                className={`${
+                  areAllPartsEmojis ? "emoji-text-node" : "tw-align-middle"
+                }`}>
+                {part}
+              </span>
+            )
+          );
         }
       });
 
@@ -148,6 +179,25 @@ function DropPartMarkdown({
     }
 
     return content;
+  };
+
+  const renderEmoji = (emojiProps: string, bigEmoji: boolean) => {
+    const emojiId = emojiProps.replaceAll(":", "");
+    const emoji = emojiMap
+      .flatMap((cat) => cat.emojis)
+      .find((e) => e.id === emojiId);
+
+    if (!emoji) {
+      return <span>{`:${emojiId}:`}</span>;
+    }
+
+    return (
+      <img
+        src={emoji.skins[0].src}
+        alt={emojiId}
+        className={`${bigEmoji ? "emoji-node-big" : "emoji-node"}`}
+      />
+    );
   };
 
   const aHrefRenderer = ({
@@ -192,8 +242,7 @@ function DropPartMarkdown({
         className="tw-no-underline"
         target="_blank"
         href={href}
-        data-theme="dark"
-      >
+        data-theme="dark">
         <Tweet id={tweetId} />
       </Link>
     </div>
@@ -275,7 +324,7 @@ function DropPartMarkdown({
         [rehypeSanitize],
       ]}
       remarkPlugins={[remarkGfm]}
-      className="tw-w-full"
+      className="tw-w-full tw-space-y-1"
       components={{
         h5: (params) => (
           <h5 className="tw-text-iron-200 tw-break-words word-break">
@@ -324,7 +373,7 @@ function DropPartMarkdown({
         ),
         p: (params) => (
           <p
-            className={`last:tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
+            className={`tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -333,7 +382,7 @@ function DropPartMarkdown({
           </p>
         ),
         li: (params) => (
-          <li className="tw-text-iron-200 tw-break-words word-break">
+          <li className="tw-text-md tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
               content: params.children,
               mentionedUsers,

@@ -4,6 +4,7 @@ import BrainLeftSidebar from "./left-sidebar/BrainLeftSidebar";
 import BrainRightSidebar, {
   SidebarTab,
 } from "./right-sidebar/BrainRightSidebar";
+import { ContentTabProvider } from "./ContentTabContext";
 import { useRouter } from "next/router";
 import BrainDesktopDrop from "./BrainDesktopDrop";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -11,16 +12,26 @@ import { ApiDrop } from "../../generated/models/ApiDrop";
 import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 import { commonApiFetch } from "../../services/api/common-api";
 import { ExtendedDrop } from "../../helpers/waves/drop.helpers";
+import { useLayout } from "./my-stream/layout/LayoutContext";
+import Cookies from "js-cookie";
 
 interface Props {
   readonly children: ReactNode;
 }
 
+const SIDEBAR_COLLAPSED_COOKIE = "brain-right-sidebar-collapsed";
+
 export const BrainDesktop: React.FC<Props> = ({ children }) => {
   const router = useRouter();
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    const cookie = Cookies.get(SIDEBAR_COLLAPSED_COOKIE);
+    return cookie ? JSON.parse(cookie) : false;
+  });
   const [showRightSidebar, setShowRightSidebar] = useState(false);
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>(SidebarTab.ABOUT);
+
+  // Access layout context for pre-calculated styles
+  const { contentContainerStyle } = useLayout();
 
   const { data: drop } = useQuery<ApiDrop>({
     queryKey: [QueryKey.DROP, { drop_id: router.query.drop as string }],
@@ -37,9 +48,14 @@ export const BrainDesktop: React.FC<Props> = ({ children }) => {
       setShowRightSidebar(true);
     } else {
       setShowRightSidebar(false);
-      setIsCollapsed(false);
     }
   }, [router.query.wave]);
+
+  useEffect(() => {
+    Cookies.set(SIDEBAR_COLLAPSED_COOKIE, isCollapsed, {
+      expires: 365,
+    });
+  }, [isCollapsed]);
 
   const onDropClose = () => {
     const currentQuery = { ...router.query };
@@ -74,23 +90,23 @@ export const BrainDesktop: React.FC<Props> = ({ children }) => {
     }`;
 
   return (
-    <div className="tw-relative tw-min-h-screen tw-flex tw-flex-col">
+    <div className="tw-relative tw-flex tw-flex-col">
       <div className="tw-relative tw-flex tw-flex-grow">
         <motion.div
           layout={!isDropOpen}
           className={isDropOpen ? "tw-w-full xl:tw-pl-6" : contentClasses}
           transition={{ duration: 0.3 }}
-          style={{ transition: "none" }}
-        >
-          <div className="tw-h-screen lg:tw-h-[calc(100vh-5.5rem)] min-[1200px]:tw-h-[calc(100vh-6.25rem)] tw-flex-grow tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-gap-x-6 tw-gap-y-4">
+          style={{ transition: "none" }}>
+          <div
+            className="tw-flex tw-flex-col lg:tw-flex-row tw-justify-between tw-gap-x-6 tw-gap-y-4 tw-w-full tw-overflow-hidden"
+            style={contentContainerStyle}>
             <BrainLeftSidebar activeWaveId={router.query.wave as string} />
-            <div className="tw-flex-grow xl:tw-relative">
+            <div className="tw-flex-grow tw-flex tw-flex-col tw-h-full">
               {children}
               {isDropOpen && (
                 <div
                   className="tw-absolute tw-inset-0 tw-z-[1000]"
-                  style={{ transition: "none" }}
-                >
+                  style={{ transition: "none" }}>
                   <BrainDesktopDrop
                     drop={{
                       ...drop,
@@ -121,4 +137,10 @@ export const BrainDesktop: React.FC<Props> = ({ children }) => {
   );
 };
 
-export default BrainDesktop;
+const BrainDesktopWithProvider: React.FC<Props> = (props) => (
+  <ContentTabProvider>
+    <BrainDesktop {...props} />
+  </ContentTabProvider>
+);
+
+export default BrainDesktopWithProvider;

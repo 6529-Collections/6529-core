@@ -14,6 +14,7 @@ export const menuTemplate: Array<MenuItemConstructorOptions | MenuItem> = [
       { role: "cut" },
       { role: "copy" },
       { role: "paste" },
+      { role: "selectAll" },
     ],
   },
   {

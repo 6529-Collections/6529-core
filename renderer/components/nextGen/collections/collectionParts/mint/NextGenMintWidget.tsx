@@ -20,13 +20,7 @@ import {
   Status,
   TokensPerAddress,
 } from "../../../nextgen_entities";
-import {
-  useAccount,
-  useChainId,
-  useEnsAddress,
-  useEnsName,
-  useWriteContract,
-} from "wagmi";
+import { useChainId, useEnsAddress, useEnsName, useWriteContract } from "wagmi";
 import { useEffect, useState } from "react";
 import { NULL_ADDRESS } from "../../../../../constants";
 import { fetchUrl } from "../../../../../services/6529api";
@@ -80,9 +74,8 @@ function getMintValue(mintCount: number, mintPrice: number) {
 }
 
 export default function NextGenMintWidget(props: Readonly<Props>) {
-  const account = useAccount();
   const chainId = useChainId();
-  const { seizeConnect } = useSeizeConnectContext();
+  const { address, isConnected, seizeConnect } = useSeizeConnectContext();
 
   const [currentProof, setCurrentProof] = useState<
     | {
@@ -150,7 +143,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
   }
 
   useEffect(() => {
-    if (account.address && props.collection.allowlist_end > 0) {
+    if (address && props.collection.allowlist_end > 0) {
       if (mintForAddress) {
         setFetchingProofs(true);
         const merkleRoot = props.collection.merkle_root;
@@ -181,7 +174,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
         });
       }
     }
-  }, [props.collection, account.address, mintForAddress]);
+  }, [props.collection, address, mintForAddress]);
 
   const mintWrite = useWriteContract();
 
@@ -204,7 +197,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
   }
 
   const handleMintClick = () => {
-    if (account.isConnected) {
+    if (isConnected) {
       if (chainId === NEXTGEN_CHAIN_ID) {
         const e = validate();
         if (e.length > 0) {
@@ -221,7 +214,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
   };
 
   function disableMint() {
-    if (!account.isConnected || chainId !== NEXTGEN_CHAIN_ID) {
+    if (!isConnected || chainId !== NEXTGEN_CHAIN_ID) {
       return false;
     }
     if (props.available_supply <= 0) {
@@ -266,22 +259,21 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           currentProof && alStatus == Status.LIVE
             ? currentProof.proof.proof
             : [],
-          areEqualAddresses(mintForAddress, account.address)
+          areEqualAddresses(mintForAddress, address)
             ? NULL_ADDRESS
             : mintForAddress,
           salt,
         ],
         chain: NEXTGEN_CHAIN,
-        account: account.address,
       });
     }
   }, [isMinting]);
 
   useEffect(() => {
     setProofResponse([]);
-    if (account.address) {
-      setMintToAddress(account.address);
-      setMintToInput(account.address);
+    if (address) {
+      setMintToAddress(address);
+      setMintToInput(address);
     } else {
       setMintToInput("");
       setMintToAddress("");
@@ -289,8 +281,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
     setMintCount(0);
     mintWrite.reset();
     props.refreshMintCounts();
-    props.mintForAddress((account.address as string) ?? "");
-  }, [account.address]);
+    props.mintForAddress((address as string) ?? "");
+  }, [address]);
 
   const mintToAddressEns = useEnsName({
     address:
@@ -400,7 +392,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
   }
 
   function renderButtonText() {
-    if (!account.isConnected) {
+    if (!isConnected) {
       return "Connect Wallet";
     }
     if (chainId !== NEXTGEN_CHAIN_ID) {
@@ -455,7 +447,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   className={`${styles.formInput} ${styles.formInputDisabled}`}
                   type="text"
                   placeholder="0x..."
-                  disabled={!account.isConnected || disableMint()}
+                  disabled={!isConnected || disableMint()}
                   value={mintToInput}
                   onChange={(e) => {
                     setMintToInput(e.target.value);
@@ -530,7 +522,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   className={styles.mintSelect}
                   value={mintCount}
                   disabled={
-                    !account.isConnected ||
+                    !isConnected ||
                     (publicStatus !== Status.LIVE &&
                       currentProof?.proof &&
                       currentProof.proof.spots <= 0) ||

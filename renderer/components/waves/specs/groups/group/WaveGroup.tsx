@@ -29,8 +29,10 @@ export default function WaveGroup({
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
   const getShowEdit = () =>
     canEditWave({ connectedProfile, activeProfileProxy, wave });
-  const [showEdit, setShowEdit] = useState(getShowEdit());
-  useEffect(() => setShowEdit(getShowEdit()), [connectedProfile, wave]);
+
+  const canEditGroup = () => getShowEdit() && !scope.group?.is_direct_message;
+  const [showEdit, setShowEdit] = useState(canEditGroup());
+  useEffect(() => setShowEdit(canEditGroup()), [connectedProfile, wave]);
 
   return (
     <div className="tw-group tw-text-sm tw-flex tw-flex-col tw-gap-y-1.5">

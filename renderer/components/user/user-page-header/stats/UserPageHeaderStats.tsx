@@ -28,7 +28,10 @@ export default function UserPageHeaderStats({
   const [concensusColor, setConcensusColor] = useState<string>();
 
   useEffect(() => {
-    if (!profile.consolidation.consolidation_key) return;
+    if (!profile.consolidation.consolidation_key) {
+      setTdhConsensusInfo(undefined);
+      return;
+    }
 
     setFetchingTdhConsensus(true);
     window.localDb
@@ -39,7 +42,7 @@ export default function UserPageHeaderStats({
       .finally(() => {
         setFetchingTdhConsensus(false);
       });
-  }, [profile.consolidation.consolidation_key]);
+  }, [profile]);
 
   useEffect(() => {
     if (!tdhConsensusInfo && profile.consolidation.tdh > 0) {
@@ -82,7 +85,7 @@ export default function UserPageHeaderStats({
         </Link>
         <UserPageFollowers profile={profile} />
       </div>
-      <Link href="/core/tdh-consensus" className="tw-no-underline">
+      <Link href="/core/tdh-calculation" className="tw-no-underline">
         <div className="tw-mt-2 seize-card-white seize-card-white-clickable tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-y-3">
           <span className="font-lighter">TDH Consensus</span>
           <span className="font-bolder tw-flex tw-items-center tw-gap-x-3">

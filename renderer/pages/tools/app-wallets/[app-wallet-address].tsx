@@ -6,13 +6,14 @@ import { useContext, useEffect } from "react";
 import { AuthContext } from "../../../components/auth/Auth";
 import Breadcrumb, { Crumb } from "../../../components/breadcrumb/Breadcrumb";
 import { formatAddress } from "../../../helpers/Helpers";
+import { SEIZE_URL } from "../../../../constants";
 
 const Header = dynamic(() => import("../../../components/header/Header"), {
   ssr: false,
   loading: () => <HeaderPlaceholder />,
 });
 
-const AppWallet = dynamic(
+const AppWalletComponent = dynamic(
   () => import("../../../components/app-wallets/AppWallet"),
   {
     ssr: false,
@@ -33,7 +34,7 @@ export default function AppWalletPage(props: any) {
 
   useEffect(() => {
     setTitle({
-      title: `${formatAddress(address)} | App Wallets | 6529 SEIZE`,
+      title: `${formatAddress(address)} | App Wallets | 6529 CORE`,
     });
   }, []);
 
@@ -45,17 +46,17 @@ export default function AppWalletPage(props: any) {
         <meta name="description" content={title} />
         <meta
           property="og:url"
-          content={`${process.env.BASE_ENDPOINT}/the-memes/${pageProps.id}`}
+          content={`${SEIZE_URL}/the-memes/${pageProps.id}`}
         />
         <meta property="og:title" content={pageProps.name} />
         <meta property="og:image" content={pageProps.image} />
-        <meta property="og:description" content="6529 SEIZE" />
+        <meta property="og:description" content="6529 CORE" />
       </Head>
 
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <AppWallet address={address} />
+        <AppWalletComponent address={address} />
       </main>
     </>
   );

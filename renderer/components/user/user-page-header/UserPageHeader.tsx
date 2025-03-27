@@ -5,7 +5,6 @@ import {
 import UserPageHeaderName from "./name/UserPageHeaderName";
 import UserLevel from "../utils/level/UserLevel";
 import UserPageHeaderStats from "./stats/UserPageHeaderStats";
-import { useAccount } from "wagmi";
 import { useContext, useEffect, useState } from "react";
 import {
   amIUser,
@@ -22,6 +21,8 @@ import { STATEMENT_GROUP, STATEMENT_TYPE } from "../../../helpers/Types";
 import { AuthContext } from "../../auth/Auth";
 import dynamic from "next/dynamic";
 import UserFollowBtn from "../utils/UserFollowBtn";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import { createDirectMessageWave } from "../../../helpers/waves/waves.helpers";
 
 const DEFAULT_BANNER_1 = getRandomColor();
 const DEFAULT_BANNER_2 = getRandomColor();
@@ -46,13 +47,31 @@ export default function UserPageHeader({
 }) {
   const router = useRouter();
   const user = (router.query.user as string).toLowerCase();
-  const { address } = useAccount();
-  const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
-  const [isMyProfile, setIsMyProfile] = useState<boolean>(false);
-  useEffect(
-    () => setIsMyProfile(amIUser({ profile, address })),
-    [profile, address]
-  );
+  const { address } = useSeizeConnectContext();
+  const { connectedProfile, activeProfileProxy, setToast } =
+    useContext(AuthContext);
+
+  const [directMessageLoading, setDirectMessageLoading] =
+    useState<boolean>(false);
+
+  // Initialize with a check to prevent button flash
+  const initialIsMyProfile =
+    connectedProfile?.profile?.handle && profile.profile?.handle
+      ? connectedProfile.profile.handle.toLowerCase() ===
+        profile.profile.handle.toLowerCase()
+      : false;
+
+  const [isMyProfile, setIsMyProfile] = useState<boolean>(initialIsMyProfile);
+
+  useEffect(() => {
+    setIsMyProfile(
+      amIUser({
+        profile,
+        address,
+        connectedHandle: connectedProfile?.profile?.handle,
+      })
+    );
+  }, [profile, address, connectedProfile?.profile?.handle]);
 
   const getCanEdit = (): boolean => {
     return !!(profile.profile?.handle && isMyProfile && !activeProfileProxy);
@@ -99,6 +118,30 @@ export default function UserPageHeader({
     setShowAbout(false);
   }, [aboutStatement, canEdit, isFetched]);
 
+  const handleCreateDirectMessage = async (
+    primaryWallet: string | undefined
+  ) => {
+    if (!primaryWallet) {
+      return;
+    }
+
+    setDirectMessageLoading(true);
+
+    try {
+      const wave = await createDirectMessageWave({
+        addresses: [primaryWallet],
+      });
+      router.push(`/waves/${wave.id}`);
+    } catch (error) {
+      console.error(error);
+      setToast({
+        message: `Failed to create direct message: ${error}`,
+        type: "error",
+      });
+      setDirectMessageLoading(false);
+    }
+  };
+
   return (
     <div className="tailwind-scope">
       <section className="tw-pb-6 md:tw-pb-8">
@@ -126,11 +169,21 @@ export default function UserPageHeader({
                 </UserPageHeaderPfpWrapper>
               </div>
               <div className="tw-mt-4">
-                {connectedProfile?.profile?.handle &&
-                  !activeProfileProxy &&
-                  !isMyProfile &&
-                  profile.profile?.handle && (
-                    <UserFollowBtn handle={profile.profile.handle} />
+                {!isMyProfile &&
+                  profile.profile?.handle &&
+                  connectedProfile?.profile?.handle && (
+                    <UserFollowBtn
+                      handle={profile.profile.handle}
+                      onDirectMessage={
+                        profile.profile?.primary_wallet
+                          ? () =>
+                              handleCreateDirectMessage(
+                                profile.profile?.primary_wallet
+                              )
+                          : undefined
+                      }
+                      directMessageLoading={directMessageLoading}
+                    />
                   )}
               </div>
             </div>
@@ -153,7 +206,9 @@ export default function UserPageHeader({
             <UserPageHeaderStats profile={profile} />
             {profile.profile?.created_at && (
               <div className="tw-mt-2">
-                <p className="tw-mb-0 tw-text-iron-400 tw-text-sm tw-font-normal">
+                <p
+                  className="tw-mb-0 tw-text-iron-400 tw-text-sm tw-font-normal"
+                  suppressHydrationWarning>
                   Profile Enabled:{" "}
                   {formatTimestampToMonthYear(
                     new Date(profile.profile.created_at).getTime()

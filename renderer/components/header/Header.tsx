@@ -11,7 +11,7 @@ import HeaderDesktopLink from "./HeaderDesktopLink";
 import Link from "next/link";
 import HeaderUser from "./user/HeaderUser";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
-import { AuthContext } from "../auth/Auth";
+import { AuthContext, useAuth } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
 import TitleBar from "./titlebar/TitleBar";
 import HeaderNotifications from "./notifications/HeaderNotifications";
@@ -22,11 +22,11 @@ import {
   faExternalLinkAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
-import HeaderQR from "./qr/HeaderQR";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
 import { useAppWallets } from "../app-wallets/AppWalletsContext";
-import HeaderQRScanner from "./qr/HeaderQRScanner";
+import HeaderQR from "./share/HeaderShare";
+import HeaderQRScanner from "./share/HeaderQRScanner";
 
 interface Props {
   onLoad?: () => void;
@@ -46,8 +46,7 @@ export default function Header(props: Readonly<Props>) {
   const capacitor = useCapacitor();
   const { appWalletsSupported } = useAppWallets();
 
-  const { showWaves } = useContext(AuthContext);
-  const isMobile = useIsMobileScreen();
+  const { showWaves } = useAuth();
 
   const router = useRouter();
   const { address, seizeConnectOpen } = useSeizeConnectContext();

@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
 import Tippy from "@tippyjs/react";
 import "tippy.js/dist/tippy.css";
+import { SEIZE_URL } from "../../../../constants";
 
 interface WaveDropActionsCopyLinkProps {
   readonly drop: ApiDrop;
@@ -19,7 +20,7 @@ const WaveDropActionsCopyLink: React.FC<WaveDropActionsCopyLinkProps> = ({
   const copyToClipboard = () => {
     if (isTemporaryDrop(drop)) return;
 
-    const dropLink = `${window.location.protocol}//${window.location.host}/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`;
+    const dropLink = `${SEIZE_URL}/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`;
     navigator.clipboard.writeText(dropLink).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);

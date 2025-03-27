@@ -30,7 +30,7 @@ export default function ReMemes(props: Readonly<Props>) {
 
   useEffect(() => {
     setTitle({
-      title: "ReMemes | 6529 SEIZE",
+      title: "ReMemes | 6529 CORE",
     });
   }, []);
 

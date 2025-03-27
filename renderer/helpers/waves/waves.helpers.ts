@@ -2,6 +2,7 @@ import { IProfileAndConsolidations } from "../../entities/IProfile";
 import { ApiProfileProxy } from "../../generated/models/ApiProfileProxy";
 import { ApiUpdateWaveRequest } from "../../generated/models/ApiUpdateWaveRequest";
 import { ApiWave } from "../../generated/models/ApiWave";
+import { commonApiPost } from "../../services/api/common-api";
 import { CreateWaveStepStatus } from "../../types/waves.types";
 
 export const getCreateWaveStepStatus = ({
@@ -56,8 +57,10 @@ export const convertWaveToUpdateWave = (
     required_metadata: wave.participation.required_metadata,
     signature_required: !!wave.participation.signature_required,
     period: wave.participation.period,
+    terms: wave.participation.terms,
   },
   wave: {
+    admin_drop_deletion_enabled: wave.wave.admin_drop_deletion_enabled,
     type: wave.wave.type,
     winning_thresholds:
       wave.wave.winning_thresholds?.max || wave.wave.winning_thresholds?.min
@@ -68,6 +71,7 @@ export const convertWaveToUpdateWave = (
     admin_group: {
       group_id: wave.wave.admin_group.group?.id ?? null,
     },
+    decisions_strategy: wave.wave.decisions_strategy,
   },
   outcomes: wave.outcomes,
 });
@@ -94,4 +98,17 @@ export const canEditWave = ({
     return true;
   }
   return false;
+};
+
+export const createDirectMessageWave = ({
+  addresses,
+}: {
+  readonly addresses: string[];
+}): Promise<ApiWave> => {
+  return commonApiPost({
+    endpoint: "waves/direct-message/new",
+    body: {
+      identity_addresses: addresses,
+    },
+  });
 };
