@@ -150,21 +150,24 @@ export function useUniswapSwap() {
       if (pair.inputToken.isNative) return true;
 
       try {
+        setApprovalStatus((prev) => ({
+          ...prev,
+          loading: true,
+          error: null,
+        }));
+
         const routerAddress = getRouterAddress(chain.id);
         const amountToApprove = parseUnits(amount, pair.inputToken.decimals);
-
-        // Prepare the approval call data
-        const approvalData = encodeFunctionData({
-          abi: erc20Abi,
-          functionName: "approve",
-          args: [routerAddress, amountToApprove],
-        });
 
         // Estimate gas with a buffer
         const gasEstimate = await publicClient.estimateGas({
           account: walletClient.account.address,
           to: pair.inputToken.address as Address,
-          data: approvalData,
+          data: encodeFunctionData({
+            abi: erc20Abi,
+            functionName: "approve",
+            args: [routerAddress, amountToApprove],
+          }),
         });
 
         // Add 20% buffer to gas estimate
@@ -198,11 +201,33 @@ export function useUniswapSwap() {
         return true;
       } catch (err) {
         console.error("Approval error:", err);
-        setApprovalStatus((prev) => ({
-          ...prev,
-          error: err instanceof Error ? err.message : "Approval failed",
-          loading: false,
-        }));
+
+        const errorMessage =
+          err instanceof Error ? err.message : "Approval failed";
+        const isUserRejection =
+          errorMessage.toLowerCase().includes("rejected") ||
+          errorMessage.toLowerCase().includes("cancel") ||
+          errorMessage.toLowerCase().includes("denied") ||
+          errorMessage.toLowerCase().includes("user refused");
+
+        if (isUserRejection) {
+          // For user rejections, set a specific cancellation error message
+          setApprovalStatus((prev) => ({
+            ...prev,
+            loading: false,
+            error: "Transaction was cancelled by user.",
+            required: true,
+            approved: false,
+          }));
+        } else {
+          // For other errors
+          setApprovalStatus((prev) => ({
+            ...prev,
+            loading: false,
+            error: errorMessage,
+          }));
+        }
+
         return false;
       }
     },
@@ -602,6 +627,14 @@ export function useUniswapSwap() {
     ]
   );
 
+  const clearErrors = useCallback(() => {
+    setApprovalStatus((prev) => ({
+      ...prev,
+      error: null,
+      loading: false,
+    }));
+  }, []);
+
   return {
     executeSwap,
     approve,
@@ -610,5 +643,6 @@ export function useUniswapSwap() {
     revokeApproval,
     estimateTransactionCost,
     checkPoolLiquidity,
+    clearErrors,
   };
 }

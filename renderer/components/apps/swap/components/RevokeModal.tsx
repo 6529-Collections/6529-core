@@ -1,6 +1,6 @@
 import { Modal, Button } from "react-bootstrap";
 import { TokenPair } from "../types";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 
 type TransactionStatus = "idle" | "pending" | "success" | "error";
@@ -24,6 +24,20 @@ export function RevokeModal({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(initialLoading);
 
+  useEffect(() => {
+    if (!show) {
+      setTimeout(() => {
+        setStatus("idle");
+        setError(null);
+        setLoading(false);
+      }, 200);
+    } else {
+      setStatus("idle");
+      setError(null);
+      setLoading(false);
+    }
+  }, [show]);
+
   const handleRevoke = async () => {
     try {
       setLoading(true);
@@ -31,20 +45,11 @@ export function RevokeModal({
       setError(null);
 
       await onRevoke();
-
-      setStatus("success");
-
-      // Auto-close after success (3 seconds)
-      setTimeout(() => {
-        if (status === "success") {
-          handleClose();
-        }
-      }, 3000);
-    } catch (err) {
-      console.error("Revoke error:", err);
+    } catch (error) {
+      console.error("Revoke error:", error);
       setStatus("error");
       setError(
-        err instanceof Error ? err.message : "Failed to revoke approval"
+        error instanceof Error ? error.message : "Failed to revoke approval"
       );
     } finally {
       setLoading(false);
@@ -52,8 +57,7 @@ export function RevokeModal({
   };
 
   const handleClose = () => {
-    // Only allow closing if not in pending state
-    if (status !== "pending") {
+    if (!loading) {
       setStatus("idle");
       setError(null);
       onHide();
@@ -66,7 +70,7 @@ export function RevokeModal({
       onHide={handleClose}
       centered
       contentClassName="tw-bg-[rgba(26,26,26,0.95)] tw-backdrop-blur-[20px] tw-border tw-border-[rgba(255,255,255,0.1)] tw-rounded-2xl tw-text-white"
-      backdrop="static" // Prevent closing by clicking outside when transaction is pending
+      backdrop="static"
     >
       <Modal.Header
         closeButton={status !== "pending"}

@@ -13,6 +13,7 @@ import { TokenSelect } from "./components/TokenSelect";
 import { Settings } from "lucide-react";
 import { RevokeModal } from "./components/RevokeModal";
 import { erc20Abi, formatUnits, type Address, getContract } from "viem";
+import { formatErrorMessage } from "./utils/errorFormatting";
 
 function formatAllowance(allowance: string | undefined): string {
   if (!allowance) return "0";
@@ -24,7 +25,7 @@ function formatAllowance(allowance: string | undefined): string {
 }
 
 function GasWarning({ ethBalance }: { ethBalance: string }) {
-  const lowBalanceThreshold = 0.001; // 0.001 ETH
+  const lowBalanceThreshold = 0.001;
   const balance = parseFloat(ethBalance);
 
   if (ethBalance !== "0" && balance <= lowBalanceThreshold) {
@@ -158,21 +159,6 @@ export default function UniswapApp() {
             countdown: 5,
           });
 
-          // Reset to default pair after 5 seconds
-          const resetTimer = setTimeout(() => {
-            setPoolWarning(null);
-            // Only reset if this is still the active warning
-            setSelectedPair((current) => {
-              if (
-                current.inputToken.address === token1.address &&
-                current.outputToken.address === token2.address
-              ) {
-                return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
-              }
-              return current;
-            });
-          }, 5000);
-
           return false;
         }
 
@@ -186,21 +172,6 @@ export default function UniswapApp() {
             countdown: 5,
           });
 
-          // Reset to default pair after 5 seconds
-          const resetTimer = setTimeout(() => {
-            setPoolWarning(null);
-            // Only reset if this is still the active warning
-            setSelectedPair((current) => {
-              if (
-                current.inputToken.address === token1.address &&
-                current.outputToken.address === token2.address
-              ) {
-                return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
-              }
-              return current;
-            });
-          }, 5000);
-
           return false;
         }
 
@@ -213,21 +184,6 @@ export default function UniswapApp() {
           token2,
           countdown: 5,
         });
-
-        // Reset to default pair after 5 seconds
-        const resetTimer = setTimeout(() => {
-          setPoolWarning(null);
-          // Only reset if this is still the active warning
-          setSelectedPair((current) => {
-            if (
-              current.inputToken.address === token1.address &&
-              current.outputToken.address === token2.address
-            ) {
-              return CHAIN_POOLS[chainId as keyof typeof CHAIN_POOLS][0];
-            }
-            return current;
-          });
-        }, 5000);
 
         return false;
       }
@@ -310,6 +266,7 @@ export default function UniswapApp() {
     checkApproval,
     approvalStatus,
     revokeApproval,
+    clearErrors,
   } = useUniswapSwap();
 
   // Add this function to handle percentage clicks
@@ -338,23 +295,12 @@ export default function UniswapApp() {
   const [inputFocused, setInputFocused] = useState(false);
   const [outputFocused, setOutputFocused] = useState(false);
 
-  // Enhance swap status type
-  type SwapStage =
-    | "idle"
-    | "approving"
-    | "swapping"
-    | "confirming"
-    | "success"
-    | "pending"
-    | "complete";
-
   const [swapStatus, setSwapStatus] = useState<SwapStatus>({
     stage: "idle",
     loading: false,
     error: null,
   });
 
-  // Declare resetSwapForm first using function declaration
   const resetSwapForm = useCallback(() => {
     setInputAmount("");
     setOutputAmount("");
@@ -627,10 +573,19 @@ export default function UniswapApp() {
     return formatBalance(balance ?? "...", token);
   }
 
+  const [showRevokeModal, setShowRevokeModal] = useState(false);
+  const [revocationSuccessful, setRevocationSuccessful] = useState(false);
+
   const handleRevokeApproval = async () => {
     try {
       const revoked = await revokeApproval(selectedPair);
+
+      // Make sure to close the modal when successful
+      setShowRevokeModal(false);
+
       if (revoked) {
+        setRevocationSuccessful(true);
+
         window.seedConnector.showToast({
           type: "success",
           message: "Approval revoked successfully",
@@ -639,9 +594,25 @@ export default function UniswapApp() {
         await checkApproval(selectedPair);
       }
     } catch (error: any) {
+      setShowRevokeModal(false);
+
+      const errorMessage = error.message || "Failed to revoke approval";
+      const isRejection =
+        errorMessage.toLowerCase().includes("reject") ||
+        errorMessage.toLowerCase().includes("cancel") ||
+        errorMessage.toLowerCase().includes("denied");
+
+      setSwapStatus({
+        stage: "error",
+        loading: false,
+        error: isRejection
+          ? "Transaction was cancelled by user."
+          : errorMessage,
+      });
+
       window.seedConnector.showToast({
         type: "error",
-        message: error.message || "Failed to revoke approval",
+        message: isRejection ? "Transaction cancelled" : errorMessage,
       });
     }
   };
@@ -653,14 +624,10 @@ export default function UniswapApp() {
     return rawBalance || "0";
   }, [tokenBalances, chainId]);
 
-  const [showRevokeModal, setShowRevokeModal] = useState(false);
-
-  // Add form submit handler
   const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault(); // Prevent form from submitting and reloading
+    e.preventDefault();
   };
 
-  // Add effect for countdown timer
   useEffect(() => {
     if (!poolWarning) return;
 
@@ -671,7 +638,7 @@ export default function UniswapApp() {
         const newCountdown = current.countdown - 1;
         if (newCountdown <= 0) {
           clearInterval(countdownInterval);
-          return current; // Will be cleared by the timeout in checkPoolAvailability
+          return current;
         }
 
         return {
@@ -684,70 +651,26 @@ export default function UniswapApp() {
     return () => clearInterval(countdownInterval);
   }, [poolWarning]);
 
-  // Add this helper function near the other utility functions at the top of the file
-  function formatErrorMessage(error: string): string {
-    console.log("Error:", error);
-    // Check if it's a user rejection error with long technical details
-    if (
-      error.includes("User rejected") &&
-      error.includes("Request Arguments:")
-    ) {
-      return "Transaction was cancelled by user.";
-    }
+  // Create a single clear function that handles everything
+  const handleClearAll = useCallback(() => {
+    // Clear swap status
+    setSwapStatus({
+      stage: "idle",
+      loading: false,
+      error: null,
+    });
 
-    // Check if it's a user rejection error (simpler case)
-    if (error.includes("User rejected") || error.includes("user rejected")) {
-      return "Transaction was cancelled by user.";
-    }
+    // Clear approval errors
+    clearErrors();
 
-    // Check if it's a contract call error with a long hex string
-    if (error.includes("0x") && error.length > 100) {
-      // For contract errors with long hex data
-      if (error.includes("Contract Call:")) {
-        return "Transaction failed due to contract error. Please try again or adjust your swap settings.";
-      }
+    // Reset form
+    resetSwapForm();
+  }, [clearErrors, resetSwapForm]);
 
-      // For other technical errors with hex data
-      return "Transaction failed. Please try again or adjust your swap amount.";
-    }
-
-    // For slippage errors
-    if (error.toLowerCase().includes("slippage")) {
-      return "Price moved too much. Try increasing slippage tolerance in settings.";
-    }
-
-    // For gas errors
-    if (
-      error.toLowerCase().includes("gas") ||
-      error.toLowerCase().includes("fee")
-    ) {
-      return "Insufficient ETH for gas fees. Add more ETH to your wallet.";
-    }
-
-    // For insufficient balance errors
-    if (
-      error.toLowerCase().includes("balance") ||
-      error.toLowerCase().includes("insufficient")
-    ) {
-      return "Insufficient token balance for this swap.";
-    }
-
-    // For timeout errors
-    if (
-      error.toLowerCase().includes("timeout") ||
-      error.toLowerCase().includes("timed out")
-    ) {
-      return "Transaction timed out. Please try again.";
-    }
-
-    // If the error is already short enough, return it as is
-    if (error.length < 100) {
-      return error;
-    }
-
-    // Default fallback for any other errors
-    return "Swap failed. Please try again with different parameters.";
-  }
+  // Add handler for closing revocation success message
+  const handleRevocationClose = useCallback(() => {
+    setRevocationSuccessful(false);
+  }, []);
 
   return (
     <div className="tw-min-h-screen tw-flex tw-flex-col tw-p-0 tw-bg-[#111111] tw-relative tw-z-0">
@@ -878,7 +801,6 @@ export default function UniswapApp() {
                   </div>
                 </div>
 
-                {/* Swap direction button */}
                 <div className="tw-flex tw-justify-center tw-my-[-12px] tw-relative tw-z-[2]">
                   <button
                     type="button"
@@ -961,7 +883,6 @@ export default function UniswapApp() {
                     !inputAmount ||
                     !address ||
                     swapStatus.stage === "complete" ||
-                    // Check if user has enough balance of the input token
                     Boolean(
                       inputAmount &&
                         tokenBalances[
@@ -995,15 +916,10 @@ export default function UniswapApp() {
                         )
                   )}
                   onRevoke={handleRevokeApproval}
-                  onClear={() => {
-                    setSwapStatus({
-                      stage: "idle",
-                      loading: false,
-                      error: null,
-                    });
-                    resetSwapForm();
-                  }}
+                  onClear={handleClearAll}
                   selectedPair={selectedPair}
+                  revocationSuccessful={revocationSuccessful}
+                  onRevocationClose={handleRevocationClose}
                 />
 
                 {swapError && (
