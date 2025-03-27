@@ -107,7 +107,7 @@ export default function Auth({
     useState<IProfileAndConsolidations>();
 
   useEffect(() => {
-    if (address && getAuthJwt()) {
+    if (address) {
       commonApiFetch<IProfileAndConsolidations>({
         endpoint: `profiles/${address}`,
       }).then((profile) => {
@@ -116,7 +116,7 @@ export default function Auth({
     } else {
       setConnectedProfile(undefined);
     }
-  }, [address, getAuthJwt()]);
+  }, [address]);
 
   const { data: profileProxies } = useQuery<ApiProfileProxy[]>({
     queryKey: [
@@ -481,9 +481,7 @@ export default function Auth({
     if (!connectedProfile?.profile?.handle) {
       return false;
     }
-    if (connectedProfile.level < WAVES_MIN_ACCESS_LEVEL) {
-      return false;
-    }
+
     if (activeProfileProxy) {
       return false;
     }
