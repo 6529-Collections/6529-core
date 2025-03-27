@@ -24,13 +24,13 @@ export function SearchBar({ onSearch }: SearchBarProps) {
 
   return (
     <Form onSubmit={handleSubmit} className="tw-mb-6">
-      <InputGroup className="tw-shadow-lg tw-rounded-xl tw-overflow-hidden">
+      <InputGroup className="tw-shadow-lg tw-rounded-lg tw-overflow-hidden">
         <Form.Control
           type="text"
           placeholder="Search for an ENS name..."
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
-          className="tw-bg-zinc-800/70 tw-border-zinc-700 tw-text-white tw-py-3 tw-px-4 tw-text-lg tw-placeholder-zinc-400 focus:tw-ring-zinc-500 focus:tw-border-zinc-500 tw-border-r-0"
+          className="tw-bg-zinc-800 tw-border-zinc-700 tw-text-white tw-py-3 tw-px-4 tw-text-lg tw-placeholder-zinc-400 focus:tw-ring-zinc-500 focus:tw-border-zinc-500 tw-border-r-0"
         />
         <Button
           variant="primary"
