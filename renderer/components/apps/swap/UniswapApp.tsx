@@ -660,17 +660,41 @@ export default function UniswapApp() {
       error: null,
     });
 
-    // Clear approval errors
     clearErrors();
 
-    // Reset form
     resetSwapForm();
   }, [clearErrors, resetSwapForm]);
 
-  // Add handler for closing revocation success message
   const handleRevocationClose = useCallback(() => {
     setRevocationSuccessful(false);
   }, []);
+
+  const calculateDollarValue = useCallback(
+    (amount: string, token: Token): { value: string; isValid: boolean } => {
+      if (!amount || amount === "0" || !token) {
+        return { value: "$0.00", isValid: true };
+      }
+
+      const numericAmount = parseFloat(amount);
+      if (isNaN(numericAmount)) {
+        return { value: "$0.00", isValid: false };
+      }
+
+      if (
+        token.symbol === "USDC" ||
+        token.symbol === "USDT" ||
+        token.symbol === "DAI"
+      ) {
+        return {
+          value: `$${numericAmount.toFixed(2)}`,
+          isValid: true,
+        };
+      }
+
+      return { value: "$ --", isValid: false };
+    },
+    []
+  );
 
   return (
     <div className="tw-min-h-screen tw-flex tw-flex-col tw-p-0 tw-bg-[#111111] tw-relative tw-z-0">
@@ -741,24 +765,35 @@ export default function UniswapApp() {
                     </span>
                   </div>
                   <div
-                    className={`tw-relative tw-flex tw-items-center tw-bg-black/20 tw-border tw-border-white/10 tw-rounded-2xl tw-transition-colors tw-duration-200 tw-z-[1]`}
+                    className={`tw-relative tw-flex tw-flex-col tw-bg-black/20 tw-border tw-border-white/10 tw-rounded-2xl tw-transition-colors tw-duration-200 tw-z-[1]`}
                   >
-                    <Form.Control
-                      type="number"
-                      value={inputAmount}
-                      onChange={(e) => {
-                        setInputAmount(e.target.value);
-                        setOutputAmount("");
-                        setSwapError(null);
-                      }}
-                      onFocus={() => setInputFocused(true)}
-                      onBlur={() => setInputFocused(false)}
-                      placeholder="0.0"
-                      min="0"
-                      step="any"
-                      className="tw-bg-transparent tw-border-none tw-text-white/90 tw-text-2xl tw-font-medium tw-py-5 tw-px-6 tw-pr-30 tw-w-full tw-font-mono focus:tw-outline-none focus:tw-ring-0 hover:tw-bg-transparent focus:tw-bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:tw-appearance-none [&::-webkit-inner-spin-button]:tw-appearance-none focus:tw-text-white/90"
-                    />
-                    <div className="tw-absolute tw-right-2 tw-top-1/2 tw-transform tw--translate-y-1/2">
+                    <div className="tw-flex tw-items-center tw-w-full tw-pr-[110px]">
+                      <Form.Control
+                        type="number"
+                        value={inputAmount}
+                        onChange={(e) => {
+                          setInputAmount(e.target.value);
+                          setOutputAmount("");
+                          setSwapError(null);
+                        }}
+                        onFocus={() => setInputFocused(true)}
+                        onBlur={() => setInputFocused(false)}
+                        placeholder="0.0"
+                        min="0"
+                        step="any"
+                        className="tw-bg-transparent tw-border-none tw-text-white/90 tw-text-2xl tw-font-medium tw-py-2 tw-pt-4 tw-pb-0 tw-px-6 tw-w-full tw-font-mono focus:tw-outline-none focus:tw-ring-0 hover:tw-bg-transparent focus:tw-bg-transparent [appearance:textfield] [&::-webkit-outer-spin-button]:tw-appearance-none [&::-webkit-inner-spin-button]:tw-appearance-none focus:tw-text-white/90"
+                      />
+                    </div>
+                    <div className="tw-text-white/40 tw-text-sm tw-font-medium tw-px-6 tw-mt-[-2px] tw-pb-3 tw-h-[20px]">
+                      {(() => {
+                        const dollarValue = calculateDollarValue(
+                          inputAmount,
+                          selectedPair.inputToken
+                        );
+                        return dollarValue.isValid ? dollarValue.value : "";
+                      })()}
+                    </div>
+                    <div className="tw-absolute tw-right-2 tw-top-1/2 tw-transform tw--translate-y-[60%]">
                       <TokenSelect
                         tokens={availableTokens}
                         selectedToken={selectedPair.inputToken}
@@ -845,20 +880,31 @@ export default function UniswapApp() {
                     </span>
                   </div>
                   <div
-                    className={`tw-relative tw-flex tw-items-center tw-bg-black/20 tw-border tw-border-white/10 tw-rounded-2xl tw-transition-colors tw-duration-200 tw-z-[1] ${
+                    className={`tw-relative tw-flex tw-flex-col tw-bg-black/20 tw-border tw-border-white/10 tw-rounded-2xl tw-transition-colors tw-duration-200 tw-z-[1] ${
                       outputFocused ? "tw-border-white/15" : ""
                     }`}
                   >
-                    <Form.Control
-                      type="text"
-                      value={outputAmount}
-                      readOnly
-                      onFocus={() => setOutputFocused(true)}
-                      onBlur={() => setOutputFocused(false)}
-                      placeholder="0.0"
-                      className="tw-bg-transparent tw-border-none tw-text-white/90 tw-text-2xl tw-font-medium tw-py-5 tw-px-6 tw-pr-30 tw-w-full tw-font-mono focus:tw-outline-none focus:tw-ring-0 hover:tw-bg-transparent focus:tw-bg-transparent focus:tw-text-white/90"
-                    />
-                    <div className="tw-absolute tw-right-2 tw-top-1/2 tw-transform tw--translate-y-1/2">
+                    <div className="tw-flex tw-items-center tw-w-full tw-pr-[110px]">
+                      <Form.Control
+                        type="text"
+                        value={outputAmount}
+                        readOnly
+                        onFocus={() => setOutputFocused(true)}
+                        onBlur={() => setOutputFocused(false)}
+                        placeholder="0.0"
+                        className="tw-bg-transparent tw-border-none tw-text-white/90 tw-text-2xl tw-font-medium tw-py-2 tw-pt-4 tw-pb-0 tw-px-6 tw-w-full tw-font-mono focus:tw-outline-none focus:tw-ring-0 hover:tw-bg-transparent focus:tw-bg-transparent focus:tw-text-white/90"
+                      />
+                    </div>
+                    <div className="tw-text-white/40 tw-text-sm tw-font-medium tw-px-6 tw-mt-[-2px] tw-pb-3 tw-h-[20px]">
+                      {(() => {
+                        const dollarValue = calculateDollarValue(
+                          outputAmount,
+                          selectedPair.outputToken
+                        );
+                        return dollarValue.isValid ? dollarValue.value : "";
+                      })()}
+                    </div>
+                    <div className="tw-absolute tw-right-2 tw-top-1/2 tw-transform tw--translate-y-[60%]">
                       <TokenSelect
                         tokens={availableTokens}
                         selectedToken={selectedPair.outputToken}
