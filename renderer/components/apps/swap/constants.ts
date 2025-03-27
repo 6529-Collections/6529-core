@@ -41,6 +41,38 @@ export const CHAIN_TOKENS: ChainTokens = {
       logoURI: "/tokens/usdc.svg",
       chainId: 1,
     },
+    WBTC: {
+      symbol: "WBTC",
+      name: "Wrapped Bitcoin",
+      address: "0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599",
+      decimals: 8,
+      logoURI: "/tokens/wbtc.svg",
+      chainId: 1,
+    },
+    DAI: {
+      symbol: "DAI",
+      name: "Dai Stablecoin",
+      address: "0x6B175474E89094C44Da98b954EedeAC495271d0F",
+      decimals: 18,
+      logoURI: "/tokens/dai.svg",
+      chainId: 1,
+    },
+    LINK: {
+      symbol: "LINK",
+      name: "Chainlink",
+      address: "0x514910771AF9Ca656af840dff83E8264EcF986CA",
+      decimals: 18,
+      logoURI: "/tokens/link.svg",
+      chainId: 1,
+    },
+    UNI: {
+      symbol: "UNI",
+      name: "Uniswap",
+      address: "0x1f9840a85d5aF5bf1D1762F925BDADdC4201F984",
+      decimals: 18,
+      logoURI: "/tokens/uni.svg",
+      chainId: 1,
+    },
   },
   11155111: {
     // Sepolia
@@ -80,6 +112,48 @@ export const CHAIN_POOLS: ChainPools = {
       outputToken: CHAIN_TOKENS[1].USDC,
       poolAddress: "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640", // USDC/ETH 0.05% fee pool
       fee: 500, // 0.05% fee
+      useWETH: true,
+    },
+    {
+      inputToken: CHAIN_TOKENS[1].ETH,
+      outputToken: CHAIN_TOKENS[1].USDC,
+      poolAddress: "0x88e6A0c2dDD26FEEb64F039a2c41296FcB3f5640", // USDC/ETH 0.05% fee pool
+      fee: 500, // 0.05% fee
+      useWETH: true,
+    },
+    {
+      inputToken: CHAIN_TOKENS[1].WBTC,
+      outputToken: CHAIN_TOKENS[1].USDC,
+      poolAddress: "0x99ac8cA7087fA4A2A1FB6357269965A2014ABc35",
+      fee: 500,
+      useWETH: true,
+    },
+    {
+      inputToken: CHAIN_TOKENS[1].WBTC,
+      outputToken: CHAIN_TOKENS[1].ETH,
+      poolAddress: "0xCBCdF9626bC03E24f779434178A73a0B4bad62eD",
+      fee: 500,
+      useWETH: true,
+    },
+    {
+      inputToken: CHAIN_TOKENS[1].LINK,
+      outputToken: CHAIN_TOKENS[1].ETH,
+      poolAddress: "0xa6Cc3C2531FdaA6Ae1A3CA84c2855806728693e8",
+      fee: 500,
+      useWETH: true,
+    },
+    {
+      inputToken: CHAIN_TOKENS[1].UNI,
+      outputToken: CHAIN_TOKENS[1].ETH,
+      poolAddress: "0x1d42064Fc4Beb5F8aAF85F4617AE8b3b5B8Bd801",
+      fee: 500,
+      useWETH: true,
+    },
+    {
+      inputToken: CHAIN_TOKENS[1].DAI,
+      outputToken: CHAIN_TOKENS[1].USDC,
+      poolAddress: "0x5777d92f208679DB4b9778590Fa3CAB3aC9e2168",
+      fee: 500,
       useWETH: true,
     },
   ],
