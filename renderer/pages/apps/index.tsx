@@ -20,7 +20,7 @@ const Header = dynamic(() => import("../../components/header/Header"), {
 interface AppCard {
   title: string;
   description: string;
-  icon: any; // FontAwesome icon
+  icon: any;
   link: string;
   status: "live" | "coming-soon";
 }
@@ -33,14 +33,6 @@ const AVAILABLE_APPS: AppCard[] = [
     link: "/apps/swap",
     status: "live",
   },
-  {
-    title: "ENS",
-    description: "Search, register and manage ENS names",
-    icon: faSignature,
-    link: "/apps/ens",
-    status: "live",
-  },
-  // Add more apps here as they become available
 ];
 
 export default function AppsPage() {
