@@ -33,7 +33,7 @@ export default function GroupsPage() {
         <link rel="icon" href="/favicon.ico" />
         <meta name="description" content="6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/network/groups`} />
-        <meta property="og:title" content={title} />
+        <meta property="og:title" content="Network Groups" />
         <meta property="og:description" content="6529 CORE" />
         <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
