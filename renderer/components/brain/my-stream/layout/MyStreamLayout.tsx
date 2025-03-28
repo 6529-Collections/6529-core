@@ -62,10 +62,7 @@ function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
         <meta name="description" content="My Stream | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/my-stream`} />
         <meta property="og:title" content="My Stream" />
-        <meta
-          property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/6529io.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
         <meta property="og:description" content="6529.io" />
         <style>{`
         body {

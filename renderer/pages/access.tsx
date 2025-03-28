@@ -61,10 +61,7 @@ export default function Access() {
         <meta property="og:url" content={`${SEIZE_URL}/access`} />
         <meta property="og:title" content={`Access Page`} />
         <meta property="og:description" content="6529.io" />
-        <meta
-          property="og:image"
-          content={`${process.env.BASE_ENDPOINT}/6529io.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
       <main className={styles.login}>
         {image && <LoginImage image={image} alt="access" />}
