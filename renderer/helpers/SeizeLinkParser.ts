@@ -1,3 +1,5 @@
+import { SEIZE_URL } from "../../constants";
+
 export interface SeizeQuoteLinkInfo {
   waveId: string;
   serialNo?: string;
@@ -22,7 +24,7 @@ export function parseSeizeQueryLink(
 ): string | null {
   try {
     const url = new URL(href);
-    if (url.origin !== process.env.BASE_ENDPOINT) return null;
+    if (url.origin !== SEIZE_URL) return null;
     if (url.pathname !== path) return null;
 
     const value = url.searchParams.get(query);

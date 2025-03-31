@@ -20,6 +20,7 @@ import {
   NEXTGEN_CORE,
 } from "../components/nextGen/nextgen_contracts";
 import { Period } from "./Types";
+import { SEIZE_URL } from "../../constants";
 
 export function formatAddress(address: string) {
   if (
@@ -901,5 +902,5 @@ export const wait = async (ms: number): Promise<void> => {
 };
 
 export const removeBaseEndpoint = (link: string) => {
-  return link.replace(process.env.BASE_ENDPOINT ?? "", "");
+  return link.replace(SEIZE_URL ?? "", "");
 };

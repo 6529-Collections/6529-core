@@ -15,6 +15,7 @@ import { AboutSection } from "../../../pages/about/[section]";
 import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
+import { SEIZE_URL } from "../../../../constants";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -315,7 +316,7 @@ function SharePopup(props: {
   };
 
   const copyWebLink = () => {
-    const link = `https://6529.io/${getLinkPath()}`;
+    const link = `${SEIZE_URL}/${getLinkPath()}${getQueryParams()}`;
     navigator.clipboard.writeText(link).then(() => {
       setIsDesktopLinkCopied(false);
       setIsWebLinkCopied(true);
@@ -335,10 +336,10 @@ function SharePopup(props: {
           }
         }}>
         <button className={styles.sharePopupBtn} onClick={copyAppLink}>
-          {isDesktopLinkCopied ? "Copied!" : "Copy Desktop App link"}
+          {isDesktopLinkCopied ? "Copied!" : "Core URL"}
         </button>
         <button className={styles.sharePopupBtn} onClick={copyWebLink}>
-          {isWebLinkCopied ? "Copied!" : "Copy Web link"}
+          {isWebLinkCopied ? "Copied!" : "Browser URL"}
         </button>
       </div>
       <div
