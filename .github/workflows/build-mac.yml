@@ -1,0 +1,60 @@
+name: Build MacOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Select environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: "staging"
+
+run-name: Build MacOS / ${{ github.event.inputs.env }}
+
+jobs:
+  build-mac:
+    name: Build MacOS / ${{ github.event.inputs.env }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Get version
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Log version
+        run: |
+          echo "Building version: ${{ steps.get_version.outputs.version }}"
+          echo "## Version: ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Build for MacOS
+        run: |
+          if [ "${{ github.event.inputs.env }}" = "staging" ]; then
+            echo "Building for STAGING..."
+            npm run dist-mac-staging
+          else
+            echo "Building for PRODUCTION..."
+            npm run dist-mac-production
+          fi
