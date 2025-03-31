@@ -12,7 +12,7 @@ on:
           - production
         default: "staging"
 
-name: Build Linux / ${{ github.event.inputs.env }}
+run-name: Build Linux / ${{ github.event.inputs.env }}
 
 jobs:
   build-linux:
