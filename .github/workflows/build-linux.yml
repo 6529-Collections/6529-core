@@ -12,6 +12,8 @@ on:
           - production
         default: "staging"
 
+name: Build Linux / ${{ github.event.inputs.env }}
+
 jobs:
   build-linux:
     name: Build Linux / ${{ github.event.inputs.env }}
