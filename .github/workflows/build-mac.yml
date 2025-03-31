@@ -16,7 +16,7 @@ on:
         required: true
         type: string
 
-run-name: Build MacOS / ${{ github.event.inputs.env }}
+run-name: Build MacOS / ${{ github.event.inputs.env }} / v${{ github.event.inputs.version }}
 
 jobs:
   build-mac:
