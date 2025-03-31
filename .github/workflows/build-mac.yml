@@ -11,6 +11,10 @@ on:
           - staging
           - production
         default: "staging"
+      version:
+        description: "Version to build (must match package.json)"
+        required: true
+        type: string
 
 run-name: Build MacOS / ${{ github.event.inputs.env }}
 
@@ -25,16 +29,18 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Get version
+      - name: Get version from package.json
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: ✨ Add version info to summary
+      - name: Verify input version matches package.json version
         run: |
-          echo "# ✅ Build Details" >> $GITHUB_STEP_SUMMARY
-          echo "- **Environment:** ${{ github.event.inputs.env }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Version:** v${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+          echo "Input version: ${{ github.event.inputs.version }}"
+          echo "Package.json version: ${{ steps.get_version.outputs.version }}"
+          if [ "${{ github.event.inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+            echo "❌ Version mismatch!"
+            exit 1
+          fi
 
       - name: Set up Node
         uses: actions/setup-node@v3
