@@ -29,10 +29,12 @@ jobs:
         id: get_version
         run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
-      - name: Log version
+      - name: ✨ Add version info to summary
         run: |
-          echo "Building version: ${{ steps.get_version.outputs.version }}"
-          echo "## Version: ${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "# ✅ Build Details" >> $GITHUB_STEP_SUMMARY
+          echo "- **Environment:** ${{ github.event.inputs.env }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v${{ steps.get_version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
 
       - name: Set up Node
         uses: actions/setup-node@v3
@@ -48,6 +50,12 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Inject secrets into .env file
+        run: |
+          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> .env
+          echo "APPLE_ID_PASSWORD=${{ secrets.APPLE_ID_PASSWORD }}" >> .env
+          echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}" >> .env
 
       - name: Build for MacOS
         run: |
