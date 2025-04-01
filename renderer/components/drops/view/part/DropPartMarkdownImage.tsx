@@ -5,9 +5,12 @@ import { createPortal } from "react-dom";
 import useKeyPressEvent from "react-use/lib/useKeyPressEvent";
 import { fullScreenSupported } from "../../../../helpers/Helpers";
 import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import Link from "next/link";
 import useCapacitor from "../../../../hooks/useCapacitor";
 import { openInExternalBrowser } from "../../../../helpers";
+import {
+  ImageScale,
+  getScaledImageUri,
+} from "../../../../helpers/image.helpers";
 
 interface DropPartMarkdownImageProps {
   readonly src: string;
@@ -151,7 +154,7 @@ const DropPartMarkdownImage: React.FC<DropPartMarkdownImageProps> = ({
                   <img
                     src={src}
                     alt={alt}
-                    className="tw-max-w-full tw-max-h-[calc(95vh-60px)] tw-object-contain"
+                    className="tw-max-w-full tw-max-h-[calc(100vh-120px)] lg:tw-max-h-[calc(100vh-60px)] tw-object-contain"
                     style={{
                       pointerEvents: "auto",
                     }}
@@ -190,7 +193,7 @@ const DropPartMarkdownImage: React.FC<DropPartMarkdownImageProps> = ({
         )}
         <img
           ref={imgRef}
-          src={src}
+          src={getScaledImageUri(src, ImageScale.AUTOx450)}
           alt={alt}
           onLoad={handleImageLoad}
           onClick={handleImageClick}

@@ -250,7 +250,9 @@ const WaveDrop = ({
           )}
         <div className="tw-flex tw-gap-x-3 tw-relative tw-z-10 tw-w-full tw-text-left tw-bg-transparent tw-border-0">
           {!shouldGroupWithPreviousDrop && <WaveDropAuthorPfp drop={drop} />}
-          <div className="tw-flex tw-flex-col tw-w-full tw-gap-y-1">
+          <div
+            className="tw-flex tw-flex-col tw-w-full tw-gap-y-1"
+            style={{ maxWidth: "calc(100% - 2.5rem - 0.75rem)" }}>
             {!shouldGroupWithPreviousDrop && (
               <WaveDropHeader
                 drop={drop}
@@ -265,8 +267,7 @@ const WaveDrop = ({
                 shouldGroupWithPreviousDrop
                   ? "tw-ml-[3.25rem] tw-py-[0.15625rem]"
                   : ""
-              }
-            >
+              }>
               <WaveDropContent
                 drop={drop}
                 activePartIndex={activePartIndex}

@@ -33,7 +33,13 @@ export const SeizeSettingsProvider = ({
   useEffect(() => {
     fetchUrl(`${SEIZE_API_URL}/api/settings`).then(
       (settings: ApiSeizeSettings) => {
-        setSeizeSettings(settings);
+        setSeizeSettings({
+          ...settings,
+          memes_wave_id:
+            process.env.NODE_ENV === "development"
+              ? "b6128077-ea78-4dd9-b381-52c4eadb2077"
+              : settings.memes_wave_id,
+        });
       }
     );
   }, []);

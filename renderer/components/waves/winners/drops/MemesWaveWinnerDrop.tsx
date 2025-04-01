@@ -18,6 +18,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import MemeDropTraits from "../../../memes/drops/MemeDropTraits";
 import DropListItemContentMedia from "../../../drops/view/item/content/media/DropListItemContentMedia";
 
+
 interface MemesWaveWinnersDropProps {
   readonly winner: ApiWaveDecisionWinner;
   readonly wave: ApiWave;
@@ -29,6 +30,7 @@ export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
   wave,
   onDropClick,
 }) => {
+
   const title =
     winner.drop.metadata?.find((m) => m.data_key === "title")?.data_value ||
     "Artwork Title";
@@ -110,7 +112,7 @@ export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
           </div>
 
           {artworkMedia && (
-            <div className="tw-flex tw-justify-center tw-bg-iron-900/30">
+            <div className="tw-flex tw-justify-center tw-bg-iron-900/40">
               <DropListItemContentMedia
                 media_mime_type={artworkMedia.mime_type}
                 media_url={artworkMedia.url}
