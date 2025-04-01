@@ -5,6 +5,7 @@ import React, {
   ReactNode,
   useCallback,
 } from "react";
+import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
 
 /**
  * Props for VirtualScrollWrapper
@@ -17,6 +18,8 @@ interface VirtualScrollWrapperProps {
   readonly delay?: number;
 
   readonly scrollContainerRef: React.RefObject<HTMLDivElement>;
+
+  readonly drop: ExtendedDrop;
 
   /**
    * The child components to be rendered or virtualized.
@@ -46,10 +49,30 @@ interface VirtualScrollWrapperProps {
  * </VirtualScrollWrapper>
  */
 export default function VirtualScrollWrapper({
-  delay = 3000,
+  delay = 10000,
   scrollContainerRef,
   children,
+  drop,
 }: VirtualScrollWrapperProps) {
+  const getShouldAlwaysRender = () => {
+    const haveQuoteOrMedia = drop.parts.some(
+      (part) => !!part.quoted_drop || !!part.media.length
+    );
+    const haveReply = !!drop.reply_to;
+    const haveEmbeddedTweet = drop.parts.some(
+      (part) => !!part.content?.match(/https:\/\/(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/)
+    );
+    return haveQuoteOrMedia || haveReply || haveEmbeddedTweet;
+  };
+
+  const [shouldAlwaysRender, setShouldAlwaysRender] = useState<boolean>(
+    getShouldAlwaysRender()
+  );
+
+  useEffect(() => {
+    setShouldAlwaysRender(getShouldAlwaysRender());
+  }, [drop]);
+
   /**
    * allMediaLoaded: Tracks whether all media elements inside
    * the wrapper have loaded or errored.
@@ -89,6 +112,7 @@ export default function VirtualScrollWrapper({
    * it sets allMediaLoaded to true.
    */
   useEffect(() => {
+    if (shouldAlwaysRender) return;
     const container = containerRef.current;
     if (!container) return;
 
@@ -147,6 +171,7 @@ export default function VirtualScrollWrapper({
    * async changes to settle.
    */
   useEffect(() => {
+    if (shouldAlwaysRender) return;
     if (allMediaLoaded) {
       const timer = setTimeout(() => {
         measureHeight();
@@ -163,6 +188,7 @@ export default function VirtualScrollWrapper({
    * - Update isInView state accordingly.
    */
   useEffect(() => {
+    if (shouldAlwaysRender) return;
     // Avoid running Intersection Observer on the server
     if (typeof window === "undefined") return;
 
@@ -178,7 +204,10 @@ export default function VirtualScrollWrapper({
         }
       },
       {
-        rootMargin: "1000px 0px 1000px 0px",
+        // For a reversed layout, we need a large margin at both top and bottom
+        // This ensures elements are detected well before they enter/leave the viewport
+        // Using a large value for both directions ensures smooth operation in both regular and reversed layouts
+        rootMargin: "1500px 0px 1500px 0px",
         threshold: 0.0,
         root: scrollContainerRef.current,
       }
@@ -208,7 +237,8 @@ export default function VirtualScrollWrapper({
    *    also render children so we can measure them.
    */
   const isServer = typeof window === "undefined";
-  const shouldRenderChildren = isServer || isInView || measuredHeight === null;
+  const shouldRenderChildren =
+    shouldAlwaysRender || isServer || isInView || measuredHeight === null;
 
   return (
     <div ref={containerRef}>

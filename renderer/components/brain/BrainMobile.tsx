@@ -1,11 +1,10 @@
-import React, { ReactNode, useState } from "react";
+import React, { ReactNode, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BrainMobileTabs from "./mobile/BrainMobileTabs";
 import BrainMobileWaves from "./mobile/BrainMobileWaves";
 import { useRouter } from "next/router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { ApiDrop, ApiWaveType } from "../../generated/models/ObjectSerializer";
-import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 import { commonApiFetch } from "../../services/api/common-api";
 import BrainDesktopDrop from "./BrainDesktopDrop";
 import BrainMobileAbout from "./mobile/BrainMobileAbout";
@@ -14,12 +13,16 @@ import { useWaveData } from "../../hooks/useWaveData";
 import MyStreamWaveLeaderboard from "./my-stream/MyStreamWaveLeaderboard";
 import MyStreamWaveOutcome from "./my-stream/MyStreamWaveOutcome";
 import Notifications from "./notifications/Notifications";
+import { WaveWinners } from "../waves/winners/WaveWinners";
+import { useWaveTimers } from "../../hooks/useWaveTimers";
+import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 
 export enum BrainView {
   DEFAULT = "DEFAULT",
   WAVES = "WAVES",
   ABOUT = "ABOUT",
   LEADERBOARD = "LEADERBOARD",
+  WINNERS = "WINNERS",
   OUTCOME = "OUTCOME",
   NOTIFICATIONS = "NOTIFICATIONS",
 }
@@ -42,6 +45,10 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
   });
 
   const { data: wave } = useWaveData(router.query.wave as string);
+  const {
+    voting: { isCompleted },
+    decisions: { firstDecisionDone },
+  } = useWaveTimers(wave);
 
   const onDropClick = (drop: ExtendedDrop) => {
     const currentQuery = { ...router.query };
@@ -70,6 +77,24 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
 
   const isRankWave = wave?.wave.type === ApiWaveType.Rank;
 
+  // Handle tab visibility changes
+  useEffect(() => {
+    if (!wave) return;
+
+    const isInLeaderboardAndVotingHasEnded =
+      activeView === BrainView.LEADERBOARD && isCompleted;
+    const isInWinnersAndFirstDecisionHasntPassed =
+      activeView === BrainView.WINNERS && !firstDecisionDone;
+
+    // If on Leaderboard tab and voting has ended, switch to Default
+    if (
+      isInLeaderboardAndVotingHasEnded ||
+      isInWinnersAndFirstDecisionHasntPassed
+    ) {
+      setActiveView(BrainView.DEFAULT);
+    }
+  }, [wave, isCompleted, firstDecisionDone, activeView]);
+
   const viewComponents: Record<BrainView, ReactNode> = {
     [BrainView.WAVES]: (
       <BrainMobileWaves activeWaveId={router.query.wave as string} />
@@ -81,6 +106,12 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
     [BrainView.LEADERBOARD]:
       isRankWave && !!wave ? (
         <MyStreamWaveLeaderboard wave={wave} onDropClick={onDropClick} />
+      ) : null,
+    [BrainView.WINNERS]:
+      isRankWave && !!wave ? (
+        <div className="tw-px-2 sm:tw-px-4">
+          <WaveWinners wave={wave} onDropClick={onDropClick} />
+        </div>
       ) : null,
     [BrainView.OUTCOME]:
       isRankWave && !!wave ? <MyStreamWaveOutcome wave={wave} /> : null,

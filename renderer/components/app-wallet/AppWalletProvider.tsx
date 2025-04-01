@@ -1,9 +1,10 @@
 import styles from "./AppWallet.module.scss";
 import { useEffect, useState } from "react";
-import { useAccount, useSendTransaction, useSignMessage } from "wagmi";
+import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
 import { Container, Row, Col } from "react-bootstrap";
 import { hexToString } from "viem";
 import { areEqualAddresses } from "../../helpers/Helpers";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 export default function AppWalletProvider(
   props: Readonly<{
@@ -11,7 +12,8 @@ export default function AppWalletProvider(
     setCompleted: (value: boolean) => void;
   }>
 ) {
-  const account = useAccount();
+  const account = useSeizeConnectContext();
+  const chainId = useChainId();
   const [methodParams, setMethodParams] = useState<any>(null);
   const [requestId, setRequestId] = useState<string | null>(null);
   const [requesterAddress, setRequesterAddress] = useState<string | null>(null);
@@ -107,7 +109,7 @@ export default function AppWalletProvider(
         if (params[0].value) {
           sendParams.value = params[0].value;
         }
-        sendTransaction(sendParams);
+        sendTransaction({ ...sendParams, chainId: chainId });
         break;
       }
       default:
@@ -127,7 +129,7 @@ export default function AppWalletProvider(
     props.setCompleted(true);
   }
 
-  if ((!account.isConnected && !account.isConnecting) || missingInfo) {
+  if (!account.isConnected || missingInfo) {
     let errorMessage = missingInfo
       ? "Missing required information to process this transaction."
       : "The account is not connected.";

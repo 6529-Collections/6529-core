@@ -210,7 +210,6 @@ export default function UserPageSubscriptionsTopUp() {
                 <Col xs={3} sm={4}>
                   <Button
                     className={styles.sendBtn}
-                    size="lg"
                     type="submit"
                     disabled={
                       sendTransaction.isPending || waitSendTransaction.isLoading
@@ -261,7 +260,6 @@ function CardCountTopup(
           <Col xs={3} sm={4}>
             <Button
               className={styles.sendBtn}
-              size="lg"
               type="submit"
               disabled={props.disabled}>
               Send

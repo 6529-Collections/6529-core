@@ -1,18 +1,17 @@
 import React, { useContext } from "react";
 import { ApiWave } from "../../../generated/models/ApiWave";
-import { getTimeUntil, numberWithCommas } from "../../../helpers/Helpers";
+import { getTimeAgo, numberWithCommas } from "../../../helpers/Helpers";
 import WaveHeaderFollow from "./WaveHeaderFollow";
 import { AuthContext } from "../../auth/Auth";
-import {
-  getScaledImageUri,
-  ImageScale,
-} from "../../../helpers/image.helpers";
+import { getScaledImageUri, ImageScale } from "../../../helpers/image.helpers";
 import WaveHeaderOptions from "./options/WaveHeaderOptions";
 import WaveHeaderName from "./name/WaveHeaderName";
 import WaveHeaderFollowers from "./WaveHeaderFollowers";
 import WaveHeaderPinned from "./WaveHeaderPinned";
 import { ApiWaveType } from "../../../generated/models/ObjectSerializer";
 import Link from "next/link";
+import WavePicture from "../WavePicture";
+import { Time } from "../../../helpers/time";
 
 export enum WaveHeaderPinnedSide {
   LEFT = "LEFT",
@@ -35,13 +34,13 @@ export default function WaveHeader({
   pinnedSide = WaveHeaderPinnedSide.RIGHT,
 }: WaveHeaderProps) {
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
-  const created = getTimeUntil(wave.created_at);
+  const created = getTimeAgo(wave.created_at);
   const firstXContributors = wave.contributors_overview.slice(0, 10);
   const isDropWave = wave.wave.type !== ApiWaveType.Chat;
 
   const ringClasses = useRing
     ? "tw-rounded-xl tw-ring-1 tw-ring-inset tw-ring-iron-800"
-    : "tw-rounded-t-xl lg:tw-rounded-t-none";
+    : useRounded ? "tw-rounded-t-xl lg:tw-rounded-t-none" : "";
 
   return (
     <div>
@@ -51,11 +50,11 @@ export default function WaveHeader({
           className={`${
             useRounded
               ? "tw-rounded-t-xl tw-ring-1 tw-ring-inset tw-ring-iron-800"
-              : "tw-rounded-t-xl"
+              : ""
           } tw-overflow-hidden`}
         >
           <div
-            className="tw-h-14 tw-w-full tw-object-cover"
+            className="tw-h-14 tw-w-full tw-object-cover tw-rounded-t-xl lg:tw-rounded-t-none"
             style={{
               background: `linear-gradient(45deg, ${wave.author.banner1_color} 0%, ${wave.author.banner2_color} 100%)`,
             }}></div>
@@ -65,21 +64,10 @@ export default function WaveHeader({
           <div className="tw-flex">
             <div className="tw-relative tw-size-20">
               <div
-                className={`tw-absolute tw-inset-0 tw-rounded-full tw-bg-iron-900 ${
+                className={`tw-absolute tw-inset-0 tw-rounded-full tw-bg-iron-900 tw-overflow-hidden ${
                   isDropWave ? "tw-ring-2 tw-ring-primary-400" : ""
                 }`}>
-                {wave.picture ? (
-                  <img
-                    className="tw-w-full tw-h-full tw-rounded-full tw-object-cover"
-                    src={getScaledImageUri(
-                      wave.picture,
-                      ImageScale.W_200_H_200
-                    )}
-                    alt={wave.name}
-                  />
-                ) : (
-                  <div className="tw-w-full tw-h-full tw-rounded-full tw-bg-gradient-to-br tw-from-iron-900 tw-to-iron-800" />
-                )}
+                <WavePicture wave={wave} />
               </div>
               {isDropWave && (
                 <div className="tw-absolute tw-bottom-0 tw-right-0 tw-size-6 tw-flex tw-items-center tw-justify-center tw-bg-iron-950 tw-rounded-full tw-shadow-lg">
@@ -118,10 +106,10 @@ export default function WaveHeader({
           <WaveHeaderName wave={wave} />
           <div className="tw-flex tw-items-center tw-flex-wrap tw-gap-x-2 tw-gap-y-1 tw-mt-1">
             <div className="tw-text-sm">
-              <span className="tw-font-normal tw-text-iron-400 tw-pr-0.5">
-                Created
+              <span className="tw-font-normal tw-text-iron-400">
+                Created {created} -{" "}
+                {Time.millis(wave.created_at).toDate().toLocaleDateString()}
               </span>
-              <span className="tw-font-normal tw-text-iron-400">{created}</span>
             </div>
           </div>
           <div className="tw-mt-4 tw-flex tw-flex-col tw-gap-y-4">
@@ -138,7 +126,7 @@ export default function WaveHeader({
                   {firstXContributors.map((item) => (
                     <img
                       key={item.contributor_identity}
-                      className="tw-inline-block tw-size-6 tw-rounded-md tw-ring-2 tw-ring-black tw-bg-iron-900"
+                      className="tw-inline-block tw-size-6 tw-rounded-md tw-ring-2 tw-ring-black tw-bg-iron-900 tw-object-contain"
                       src={getScaledImageUri(
                         item.contributor_pfp,
                         ImageScale.W_AUTO_H_50

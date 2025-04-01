@@ -1,29 +1,21 @@
 import React, { useMemo } from "react";
 import { ApiWave } from "../../../generated/models/ApiWave";
-import useCapacitor from "../../../hooks/useCapacitor";
 import { WaveOutcome } from "../../waves/outcome/WaveOutcome";
+import { useLayout } from "./layout/LayoutContext";
 
 interface MyStreamWaveOutcomeProps {
   readonly wave: ApiWave;
 }
 
-const calculateHeight = (isCapacitor: boolean) => {
-  if (isCapacitor) {
-    return "tw-h-[calc(100vh-18rem)]";
-  }
-  return `tw-h-[calc(100vh-10.25rem)] min-[1200px]:tw-h-[calc(100vh-12.5rem)] lg:tw-pr-2`;
-};
-
 const MyStreamWaveOutcome: React.FC<MyStreamWaveOutcomeProps> = ({ wave }) => {
-  const capacitor = useCapacitor();
+  // Get the pre-calculated style from LayoutContext
+  const { outcomeViewStyle } = useLayout();
 
   const containerClassName = useMemo(() => {
-    return `lg:tw-pt-4 tw-pb-4 tw-w-full tw-flex tw-flex-col tw-overflow-y-auto no-scrollbar lg:tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 ${calculateHeight(
-      capacitor.isCapacitor
-    )}`;
-  }, [capacitor.isCapacitor]);
+    return `lg:tw-pt-4 tw-pb-4 tw-w-full tw-flex tw-flex-col tw-overflow-y-auto no-scrollbar lg:tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 tw-flex-grow lg:tw-pr-2`;
+  }, []);
   return (
-    <div className={containerClassName}>
+    <div className={containerClassName} style={outcomeViewStyle}>
       <div className="tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0 tw-space-y-4">
         {wave.outcomes.map((outcome, index) => (
           <WaveOutcome

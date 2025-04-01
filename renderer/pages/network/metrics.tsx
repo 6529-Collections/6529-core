@@ -32,20 +32,17 @@ export default function CommunityMetrics() {
       <Head>
         <title>{title}</title>
         <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="6529 SEIZE" />
+        <meta name="description" content="6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/network/metrics`} />
         <meta property="og:title" content={title} />
-        <meta property="og:description" content="6529 SEIZE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:description" content="6529 CORE" />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={`${styles.main} ${styles.tdhMain}`}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <Container fluid className={styles.mainContainer}>
+        <Container fluid>
           <Row>
             <Col>
               <Container className="pt-4">
@@ -199,7 +196,7 @@ export default function CommunityMetrics() {
                       <u>Category A</u>
                     </p>
                     <ol>
-                      <li>A complete set of all Meme Cards: 1.45x</li>
+                      <li>A complete set of all Meme Cards: 1.50x</li>
                       <li>
                         Additional complete set of Meme Cards: 1.02x (up to a
                         maximum of 2 additional sets)
@@ -227,6 +224,7 @@ export default function CommunityMetrics() {
                       <li>SZN7: Complete Set: 1.05x</li>
                       <li>SZN8: Complete Set: 1.05x</li>
                       <li>SZN9: Complete Set: 1.05x</li>
+                      <li>SZN10: Complete Set: 1.05x</li>
                     </ol>
                     <p>
                       <u>Category C</u>

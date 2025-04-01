@@ -1,19 +1,26 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";
 import { SeedWalletRequest } from "../../../shared/types";
 import { hexToString } from "../../helpers";
 import { fromGWEI, isValidEthAddress } from "../../helpers/Helpers";
 import { useToast } from "../../contexts/ToastContext";
-import { useAccount, useBalance, useChainId } from "wagmi";
+import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import { useSeedWallet } from "../../contexts/SeedWalletContext";
-import { ethers } from "ethers";
+import { ethers, formatUnits } from "ethers";
 import { useModalState } from "../../contexts/ModalStateContext";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
 
 function parseTransactionData(data: string) {
+  if (!data) {
+    return;
+  }
+
   const functionSelector = data.slice(0, 10);
 
   const args = data.slice(10);
@@ -52,10 +59,10 @@ export default function ConfirmSeedWalletRequest() {
   const { isTopModal, addModal, removeModal } = useModalState();
   const seedWalletContext = useSeedWallet();
 
-  const account = useAccount();
+  const account = useSeizeConnectContext();
   const chainId = useChainId();
   const balance = useBalance({
-    address: account.address,
+    address: account.address as `0x${string}`,
     chainId: chainId,
   });
 
@@ -65,6 +72,14 @@ export default function ConfirmSeedWalletRequest() {
   const [seedRequest, setSeedRequest] = useState<SeedWalletRequest>();
 
   const hasMounted = useRef(false);
+
+  const hasEnoughBalance = useMemo(() => {
+    if (!seedRequest?.params[0]?.value || !balance.data) {
+      return true;
+    }
+    const paramValue = seedRequest.params[0]?.value;
+    return balance.data.value >= BigInt(paramValue);
+  }, [seedRequest, balance.data]);
 
   useEffect(() => {
     if (show) {
@@ -144,58 +159,60 @@ export default function ConfirmSeedWalletRequest() {
       return (
         <>
           <span>Parameters</span>
-          {seedRequest?.params?.map((param, index) => (
+          {request?.params?.map((param, index) => (
             <code
               key={param}
               className="pt-3 pb-3"
               dangerouslySetInnerHTML={{
                 __html: getHtml(index, param),
-              }}
-            ></code>
+              }}></code>
           ))}
         </>
       );
     } else if (request.method === "eth_sendTransaction") {
-      const param = seedRequest?.params[0];
+      const param = request?.params[0];
       const parsedData = parseTransactionData(param.data);
       return (
         <>
+          {param.value && (
+            <>
+              <span className="pt-3">Value</span>
+              <code className="pb-3">{formatUnits(BigInt(param.value))}</code>
+            </>
+          )}
           <span className="pt-3">From</span>
           <code className="pb-3">{param.from}</code>
           <span className="pt-3">To</span>
           <code className="pb-3">{param.to}</code>
-          {param.value && (
+          {parsedData && (
             <>
-              <span className="pt-3">Value</span>
-              <code className="pb-3">{param.value}</code>
+              <span className="pt-3 d-flex align-items-center justify-content-between">
+                <span>Data</span>
+                <Button
+                  variant="secondary"
+                  style={{
+                    width: "fit-content",
+                    fontSize: "smaller",
+                  }}
+                  onClick={() => setShowParsed(!showParsed)}>
+                  {showParsed ? "Hide" : "Show"} Parsed Data
+                </Button>
+              </span>
+              {showParsed ? (
+                <>
+                  <span className="pt-3">Function Selector</span>
+                  <code className="pb-1">{parsedData?.selector}</code>
+                  <span className="pt-1 pb-1">Arguments</span>
+                  {parsedData?.args.map((arg, index) => (
+                    <code key={arg} className="pb-1">
+                      {index + 1}. {arg}
+                    </code>
+                  ))}
+                </>
+              ) : (
+                <code className="pt-3 pb-3 text-break">{param.data}</code>
+              )}
             </>
-          )}
-          <span className="pt-3 d-flex align-items-center justify-content-between">
-            <span>Data</span>
-            <Button
-              variant="secondary"
-              style={{
-                width: "fit-content",
-                fontSize: "smaller",
-              }}
-              onClick={() => setShowParsed(!showParsed)}
-            >
-              {showParsed ? "Hide" : "Show"} Parsed Data
-            </Button>
-          </span>
-          {showParsed ? (
-            <>
-              <span className="pt-3">Function Selector</span>
-              <code className="pb-1">{parsedData?.selector}</code>
-              <span className="pt-1 pb-1">Arguments</span>
-              {parsedData?.args.map((arg, index) => (
-                <code key={arg} className="pb-1">
-                  {index + 1}. {arg}
-                </code>
-              ))}
-            </>
-          ) : (
-            <code className="pt-3 pb-3 text-break">{param.data}</code>
           )}
         </>
       );
@@ -221,14 +238,12 @@ export default function ConfirmSeedWalletRequest() {
       centered
       dialogClassName={
         !isTopModal(SEED_WALLET_REQUEST_MODAL) ? "modal-blurred" : ""
-      }
-    >
+      }>
       <Modal.Header className={styles.modalHeader}>
         <Modal.Title>Confirm Seed Wallet Request</Modal.Title>
       </Modal.Header>
       <Modal.Body
-        className={`${styles.modalContent} ${styles.modalContentSeedRequest}`}
-      >
+        className={`${styles.modalContent} ${styles.modalContentSeedRequest}`}>
         <div className="mt-2 mb-2">
           <span className="d-flex flex-column">
             <span>Method</span>
@@ -240,25 +255,41 @@ export default function ConfirmSeedWalletRequest() {
         </div>
       </Modal.Body>
       <Modal.Footer
-        className={`${styles.modalContent} d-flex align-items-center justify-content-between`}
-      >
-        <span>
-          {balance.data && (
-            <>
-              {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
-              {balance.data?.symbol}
-              {chainId === sepolia.id && (
-                <span className="font-color-h"> (sepolia)</span>
-              )}
-            </>
+        className={`${styles.modalContent} d-flex align-items-center justify-content-between`}>
+        <span className="d-flex flex-column gap-2">
+          <span>
+            {balance.data && (
+              <>
+                Balance: {fromGWEI(Number(balance.data.value)).toLocaleString()}{" "}
+                {balance.data?.symbol}
+                {chainId === sepolia.id && (
+                  <span className="font-color-h"> (sepolia)</span>
+                )}
+              </>
+            )}
+          </span>
+          {!hasEnoughBalance && (
+            <span className="text-danger">
+              Insufficient balance for transaction
+            </span>
           )}
         </span>
         <span className="d-flex gap-2">
           <Button variant="danger" onClick={() => onReject(seedRequest)}>
             Reject
           </Button>
-          <Button variant="primary" onClick={() => onConfirm(seedRequest)}>
-            Confirm
+          <Button
+            variant="primary"
+            onClick={() => onConfirm(seedRequest)}
+            className="d-flex align-items-center gap-1">
+            <span>Confirm</span>
+            {!hasEnoughBalance && (
+              <FontAwesomeIcon
+                icon={faExclamationTriangle}
+                height={14}
+                width={14}
+              />
+            )}
           </Button>
         </span>
       </Modal.Footer>

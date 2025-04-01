@@ -166,7 +166,7 @@ export default function About(props: any) {
 
   useEffect(() => {
     setTitle({
-      title: `About - ${sectionTitle} | 6529 SEIZE`,
+      title: `About - ${sectionTitle} | 6529 CORE`,
     });
   }, [sectionTitle]);
 
@@ -182,15 +182,12 @@ export default function About(props: any) {
         <meta property="og:url" content={`${SEIZE_URL}/about/${section}`} />
         <meta property="og:title" content={`About - ${sectionTitle}`} />
         <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <Container fluid className={styles.mainContainer}>
+        <Container fluid>
           <Row>
             <Col>
               <Container className="pt-4">

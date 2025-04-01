@@ -3,8 +3,7 @@ import { ethers } from "ethers";
 import { mainnet, sepolia } from "viem/chains";
 import { SeedWalletRequest } from "../shared/types";
 import { hexToString } from "./helpers";
-import { TransactionRejectedRpcError, UserRejectedRequestError } from "viem";
-import { SEPOLIA_RPC } from "./components/apps/swap/constants";
+import { UserRejectedRequestError } from "viem";
 
 interface ProviderRequest {
   method: string;
@@ -58,7 +57,9 @@ export function seedWalletConnector(parameters: {
         return signature;
       case "eth_sendTransaction":
         console.log(`[${name}] Sending transaction`, params);
+
         const walletConnection = wallet.connect(provider);
+
         const txResponse = await walletConnection.sendTransaction(params[0]);
         console.log(`[${name}] Transaction response`, txResponse);
         window.seedConnector.showToast({
@@ -72,10 +73,11 @@ export function seedWalletConnector(parameters: {
   }
 
   function updateProvider() {
-    provider = new ethers.JsonRpcProvider("https://rpc1.6529.io", {
-      chainId: connectionObject.chainId,
-      name: "6529RPC",
-    });
+    if (connectionObject.chainId === sepolia.id) {
+      provider = new ethers.JsonRpcProvider(sepolia.rpcUrls.default.http[0]);
+    } else {
+      provider = new ethers.JsonRpcProvider("https://rpc1.6529.io");
+    }
   }
 
   async function init(name: string) {
@@ -231,7 +233,7 @@ export function seedWalletConnector(parameters: {
       };
     },
     async isAuthorized() {
-      return true;
+      return !!connectionObject.accounts.length;
     },
     async switchChain(params: { chainId: number }) {
       console.log(`[${this.name}] Switch Chain method called`, params.chainId);

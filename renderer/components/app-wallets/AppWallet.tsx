@@ -13,7 +13,7 @@ import { Container, Row, Col, Button } from "react-bootstrap";
 import { ReactNode, useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { useAccount, useBalance, useChainId } from "wagmi";
+import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 
 import { useAppWallets, AppWallet } from "./AppWalletsContext";
@@ -30,6 +30,7 @@ import { decryptData } from "./app-wallet-helpers";
 import { getRandomObjectId } from "../../helpers/AllowlistToolHelpers";
 import AppWalletAvatar from "./AppWalletAvatar";
 import AppWalletsUnsupported from "./AppWalletsUnsupported";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
 const MNEMONIC_NA = "N/A";
 
@@ -52,7 +53,7 @@ export default function AppWalletComponent(
   const router = useRouter();
   const chainId = useChainId();
   const { setToast } = useAuth();
-  const account = useAccount();
+  const account = useSeizeConnectContext();
 
   const balance = useBalance({
     address: props.address as `0x${string}`,

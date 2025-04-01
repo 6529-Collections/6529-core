@@ -84,7 +84,7 @@ export default function NextGen(props: any) {
         <meta property="og:url" content={`${SEIZE_URL}/${path}`} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content="6529 CORE" />
-        <meta property="og:image" content={`${SEIZE_URL}/nextgen.png`} />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>

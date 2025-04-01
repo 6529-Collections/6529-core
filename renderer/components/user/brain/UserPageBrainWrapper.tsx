@@ -1,13 +1,12 @@
 import { useRouter } from "next/router";
 import { IProfileAndConsolidations } from "../../../entities/IProfile";
 import { useQuery } from "@tanstack/react-query";
-import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
 import { commonApiFetch } from "../../../services/api/common-api";
 import UserPageDrops from "./UserPageDrops";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../../auth/Auth";
-import { useAccount } from "wagmi";
-
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
 export default function UserPageBrainWrapper({
   profile: initialProfile,
 }: {
@@ -16,7 +15,7 @@ export default function UserPageBrainWrapper({
   const router = useRouter();
   const user = (router.query.user as string).toLowerCase();
 
-  const { address } = useAccount();
+  const { address } = useSeizeConnectContext();
   const { connectedProfile, activeProfileProxy, showWaves } =
     useContext(AuthContext);
 
@@ -25,7 +24,7 @@ export default function UserPageBrainWrapper({
       return;
     }
     if (connectedProfile || !address) {
-      router.push(`${user}/rep`);
+      router.push(`/${user}/rep`);
     }
   }, [connectedProfile, activeProfileProxy, address, showWaves]);
 

@@ -1,6 +1,6 @@
 import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import { v4 as uuidv4 } from "uuid";
-import { useAccount, useSignMessage } from "wagmi";
+import { useSignMessage } from "wagmi";
 import { useEffect, useRef, useState } from "react";
 import { postFormData } from "../../../services/6529api";
 import { FunctionSelectors } from "../nextgen_contracts";
@@ -18,6 +18,8 @@ import {
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
 import { SEIZE_API_URL } from "../../../../constants";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+
 interface Props {
   close: () => void;
 }
@@ -31,7 +33,7 @@ export enum Type {
 }
 
 export default function NextGenAdminUploadAL(props: Readonly<Props>) {
-  const account = useAccount();
+  const account = useSeizeConnectContext();
   const signMessage = useSignMessage();
   const uuid = useRef(uuidv4()).current;
 
@@ -82,7 +84,6 @@ export default function NextGenAdminUploadAL(props: Readonly<Props>) {
     signMessage.reset();
     setUploading(true);
     signMessage.signMessage({
-      account: account.address,
       message: uuid,
     });
   }

@@ -20,6 +20,7 @@ import {
   NEXTGEN_CORE,
 } from "../components/nextGen/nextgen_contracts";
 import { Period } from "./Types";
+import { SEIZE_URL } from "../../constants";
 
 export function formatAddress(address: string) {
   if (
@@ -599,13 +600,28 @@ export const cicToType = (cic: number): CICType => {
 export const amIUser = ({
   profile,
   address,
+  connectedHandle,
 }: {
   profile: IProfileAndConsolidations;
   address: string | undefined;
-}): boolean =>
-  profile.consolidation.wallets.some(
-    (wallet) => wallet.wallet.address.toLowerCase() === address?.toLowerCase()
+  connectedHandle?: string;
+}): boolean => {
+  if (connectedHandle && profile.profile?.handle) {
+    if (
+      connectedHandle.toLowerCase() === profile.profile.handle.toLowerCase()
+    ) {
+      return true;
+    }
+  }
+
+  if (!address || !profile.consolidation?.wallets) {
+    return false;
+  }
+
+  return profile.consolidation.wallets.some(
+    (wallet) => wallet.wallet.address.toLowerCase() === address.toLowerCase()
   );
+};
 
 export const createPossessionStr = (name: string | null): string => {
   if (name) {
@@ -671,9 +687,8 @@ export const getTimeUntil = (milliseconds: number): string => {
   const currentTime = new Date().getTime();
   let timeDifference = milliseconds - currentTime;
 
-  // Determine if the time is in the future or past
   const isFuture = timeDifference >= 0;
-  // Use absolute value to handle future times
+
   timeDifference = Math.abs(timeDifference);
 
   const seconds = Math.floor(timeDifference / 1000);
@@ -884,4 +899,8 @@ export function getNameForContract(contract: string) {
 
 export const wait = async (ms: number): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, ms));
+};
+
+export const removeBaseEndpoint = (link: string) => {
+  return link.replace(SEIZE_URL ?? "", "");
 };

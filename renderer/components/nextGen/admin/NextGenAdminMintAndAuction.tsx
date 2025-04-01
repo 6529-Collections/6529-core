@@ -1,5 +1,4 @@
 import { Container, Row, Col, Button, Form } from "react-bootstrap";
-import { useAccount } from "wagmi";
 import { useEffect, useState } from "react";
 import { FunctionSelectors } from "../nextgen_contracts";
 import {
@@ -18,13 +17,14 @@ import {
   NextGenAdminHeadingRow,
   NextGenAdminTextFormGroup,
 } from "./NextGenAdminShared";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 interface Props {
   close: () => void;
 }
 
 export default function NextGenAdminMintAndAuction(props: Readonly<Props>) {
-  const account = useAccount();
+  const account = useSeizeConnectContext();
 
   const globalAdmin = useGlobalAdmin(account.address as string);
   const functionAdmin = useFunctionAdmin(
@@ -94,7 +94,6 @@ export default function NextGenAdminMintAndAuction(props: Readonly<Props>) {
     if (submitting) {
       contractWrite.writeContract({
         ...contractWrite.params,
-        account: account.address,
         args: [recipient, tokenData, salt, collectionID, endTime],
       });
     }

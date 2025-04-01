@@ -32,30 +32,6 @@ export default function GradientPageIndex(props: any) {
     });
   }, [pagenameFull]);
 
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, [pagenameFull]);
-
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, [pagenameFull]);
-
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, [pagenameFull]);
-
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, [pagenameFull]);
-
   return (
     <>
       <Head>
@@ -85,7 +61,7 @@ export async function getServerSideProps(req: any, res: any, resolvedUrl: any) {
     `${SEIZE_API_URL}/api/nfts?contract=${GRADIENT_CONTRACT}&id=${id}`
   );
   let name = `Gradient #${id}`;
-  let image = `${SEIZE_URL}/Seize_Logo_Glasses_2.png`;
+  let image = `${SEIZE_URL}/6529io.png`;
   if (response && response.data && response.data.length > 0) {
     name = response.data[0].name;
     image = response.data[0].thumbnail

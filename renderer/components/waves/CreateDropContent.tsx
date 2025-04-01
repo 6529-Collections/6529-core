@@ -34,7 +34,10 @@ import { createBreakpoint } from "react-use";
 import "tippy.js/dist/tippy.css";
 import { ApiDropType } from "../../generated/models/ApiDropType";
 import { ApiWaveType } from "../../generated/models/ApiWaveType";
-import { ActiveDropAction, ActiveDropState } from "../../types/dropInteractionTypes";
+import {
+  ActiveDropAction,
+  ActiveDropState,
+} from "../../types/dropInteractionTypes";
 import { ApiReplyToDropResponse } from "../../generated/models/ApiReplyToDropResponse";
 import { CreateDropDropModeToggle } from "./CreateDropDropModeToggle";
 import { CreateDropSubmit } from "./CreateDropSubmit";
@@ -42,7 +45,13 @@ import { DropPrivileges } from "../../hooks/useDropPriviledges";
 
 import { ApiWaveCreditType } from "../../generated/models/ApiWaveCreditType";
 import { useDropMetadata } from "./hooks/useDropMetadata";
-import { getMissingRequirements, MissingRequirements } from "./utils/getMissingRequirements";
+import {
+  getMissingRequirements,
+  MissingRequirements,
+} from "./utils/getMissingRequirements";
+import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
+import { useDropSignature } from "../../hooks/drops/useDropSignature";
+import { useWave } from "../../hooks/useWave";
 
 export type CreateDropMetadataType =
   | {
@@ -317,6 +326,7 @@ const getOptimisticDrop = (
     voting: {
       authenticated_user_eligible: boolean;
       credit_type: ApiWaveCreditType;
+      period?: { min: number | null; max: number | null };
     };
     chat: { authenticated_user_eligible: boolean };
   },
@@ -355,6 +365,15 @@ const getOptimisticDrop = (
       authenticated_user_eligible_to_chat:
         wave.chat.authenticated_user_eligible,
       voting_credit_type: wave.voting.credit_type,
+      voting_period_start: wave.voting.period?.min ?? null,
+      voting_period_end: wave.voting.period?.max ?? null,
+      visibility_group_id: null,
+      participation_group_id: null,
+      chat_group_id: null,
+      voting_group_id: null,
+      admin_group_id: null,
+      admin_drop_deletion_enabled: false,
+      authenticated_user_admin: false,
     },
     author: {
       id: connectedProfile.profile.external_id,
@@ -399,6 +418,8 @@ const getOptimisticDrop = (
     subscribed_actions: [],
     drop_type: dropType,
     rank: null,
+    realtime_rating: 0,
+    is_signed: false,
   };
 };
 
@@ -419,6 +440,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const breakpoint = useBreakpoint();
   const { requestAuth, setToast, connectedProfile } = useContext(AuthContext);
   const { addOptimisticDrop } = useContext(ReactQueryWrapperContext);
+  const { signDrop } = useDropSignature();
+  const { isMemesWave } = useWave(wave);
 
   const [submitting, setSubmitting] = useState(false);
   const [editorState, setEditorState] = useState<EditorState | null>(null);
@@ -437,6 +460,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
           MENTION_TRANSFORMER,
           HASHTAG_TRANSFORMER,
           IMAGE_TRANSFORMER,
+          EMOJI_TRANSFORMER,
         ])
       ) ?? null,
     [editorState]
@@ -514,6 +538,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         mentioned_users: drop?.mentioned_users ?? [],
         referenced_nfts: drop?.referenced_nfts ?? [],
         metadata: convertMetadataToDropMetadata(metadata),
+        signature: null,
         drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
       };
     }
@@ -546,6 +571,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       mentioned_users: allMentions,
       referenced_nfts: allNfts,
       metadata: convertMetadataToDropMetadata(metadata),
+      signature: null,
     };
   };
 
@@ -604,6 +630,30 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     setDropEditorRefreshKey((prev) => prev + 1);
   };
 
+  const getUpdatedDropRequest = async (
+    requestBody: ApiCreateDropRequest
+  ): Promise<ApiCreateDropRequest | null> => {
+    if (requestBody.drop_type === ApiDropType.Chat) {
+      return requestBody;
+    }
+    if (!wave.participation.signature_required) {
+      return requestBody;
+    }
+    const { success, signature } = await signDrop({
+      drop: requestBody,
+      termsOfService: wave.participation.terms,
+    });
+
+    if (!success || !signature) {
+      return null;
+    }
+
+    const updatedDropRequest = {
+      ...requestBody,
+      signature,
+    };
+    return updatedDropRequest;
+  };
   const prepareAndSubmitDrop = async (dropRequest: CreateDropConfig) => {
     if (submitting) {
       return;
@@ -636,8 +686,15 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         wave_id: wave.id,
         parts,
       };
+
+      const updatedDropRequest = await getUpdatedDropRequest(requestBody);
+      if (!updatedDropRequest) {
+        setSubmitting(false);
+        return;
+      }
+
       const optimisticDrop = getOptimisticDrop(
-        requestBody,
+        updatedDropRequest,
         connectedProfile,
         wave,
         activeDrop,
@@ -649,7 +706,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       !!getMarkdown?.length && createDropInputRef.current?.clearEditorState();
       setFiles([]);
       refreshState();
-      submitDrop(requestBody);
+      submitDrop(updatedDropRequest);
     } catch (error) {
       setToast({
         message: error instanceof Error ? error.message : String(error),
@@ -854,7 +911,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         </div>
         <div className="tw-ml-2 lg:tw-ml-3">
           <div className="tw-flex tw-items-center tw-gap-x-3">
-            {isParticipatory && !dropId && (
+            {isParticipatory && !dropId && !isMemesWave && (
               <CreateDropDropModeToggle
                 isDropMode={isDropMode}
                 onDropModeChange={onDropModeChange}

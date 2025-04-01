@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.1.11",
+  "version": "0.1.20",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -46,8 +46,11 @@
     "publish-links-arweave": "ts-node scripts/publish-links.ts"
   },
   "dependencies": {
-    "@fortawesome/fontawesome-svg-core": "^6.6.0",
-    "@fortawesome/free-solid-svg-icons": "^6.6.0",
+    "@emoji-mart/data": "^1.2.1",
+    "@emoji-mart/react": "^1.1.1",
+    "@fortawesome/fontawesome-svg-core": "^6.7.2",
+    "@fortawesome/free-regular-svg-icons": "^6.7.2",
+    "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@google/model-viewer": "^3.5.0",
     "@headlessui/react": "^2.0.4",
@@ -66,7 +69,7 @@
     "@uniswap/v4-sdk": "^1.12.1",
     "@walletconnect/modal": "^2.6.2",
     "@walletconnect/sign-client": "^2.14.0",
-    "@web3modal/wagmi": "^5.1.1",
+    "@web3modal/wagmi": "^5.1.11",
     "app-root-path": "^3.1.0",
     "axios": "^1.7.9",
     "better-sqlite3": "^9.6.0",
@@ -81,6 +84,7 @@
     "electron-notarize": "^1.2.2",
     "electron-store": "^10.0.0",
     "electron-updater": "^6.2.1",
+    "emoji-mart": "^5.6.0",
     "ethereum-cryptography": "^2.2.0",
     "ethers": "^6.13.2",
     "ethersv5": "npm:ethers@^5.7.2",
@@ -88,6 +92,8 @@
     "fs": "^0.0.1-security",
     "get-port-please": "^3.1.2",
     "js-cookie": "^3.0.5",
+    "js-sha256": "^0.11.0",
+    "js-yaml": "^4.1.0",
     "jwt-decode": "^4.0.0",
     "lexical": "^0.16.1",
     "lodash": "^4.17.21",
@@ -112,6 +118,7 @@
     "react-tweet": "^3.2.1",
     "react-use": "^17.5.0",
     "react-use-downloader": "^1.2.8",
+    "react-zoom-pan-pinch": "^3.7.0",
     "read-last-lines": "^1.8.0",
     "reflect-metadata": "^0.2.2",
     "rehype-external-links": "^3.0.0",
@@ -125,9 +132,8 @@
     "typeorm": "^0.3.20",
     "use-debounce": "^10.0.3",
     "uuid": "^10.0.0",
-    "viem": "^2.17.11",
-    "wagmi": "^2.12.0",
-    "web3": "^4.11.0"
+    "viem": "^2.23.10",
+    "wagmi": "^2.14.13"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.637.0",

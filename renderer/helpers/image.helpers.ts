@@ -2,10 +2,10 @@ export enum ImageScale {
   W_AUTO_H_50 = "AUTOx50",
   W_100_H_AUTO = "100xAUTO",
   W_200_H_200 = "200x200",
+  AUTOx450 = "AUTOx450",
 }
 
 const SCALABLE_PREFIXES = [
-  "https://d3lqz0a4bldqgf.cloudfront.net/images/",
   "https://d3lqz0a4bldqgf.cloudfront.net/pfp/",
   "https://d3lqz0a4bldqgf.cloudfront.net/rememes/",
   "https://d3lqz0a4bldqgf.cloudfront.net/drops/",

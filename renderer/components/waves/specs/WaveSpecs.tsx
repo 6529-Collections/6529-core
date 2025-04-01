@@ -3,6 +3,7 @@ import { ApiWave } from "../../../generated/models/ApiWave";
 import WaveAuthor from "./WaveAuthor";
 import WaveTypeIcon from "./WaveTypeIcon";
 import WaveRating from "./WaveRating";
+import WaveNotificationSettings from "./WaveNotificationSettings";
 
 interface WaveSpecsProps {
   readonly wave: ApiWave;
@@ -24,7 +25,8 @@ export default function WaveSpecs({ wave, useRing = true }: WaveSpecsProps) {
               General
             </p>
           </div>
-          <div className="tw-px-5 tw-py-5 tw-flex tw-flex-col tw-gap-y-6">
+          <div className="tw-px-5 tw-py-5 tw-flex tw-flex-col tw-gap-y-4">
+            <WaveNotificationSettings wave={wave} />
             <WaveTypeIcon waveType={wave.wave.type} />
             <WaveRating wave={wave} />
             <WaveAuthor wave={wave} />

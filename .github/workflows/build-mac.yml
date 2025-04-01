@@ -1,0 +1,74 @@
+name: Build MacOS
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Select environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: "staging"
+      version:
+        description: "Version to build (must match package.json)"
+        required: true
+        type: string
+
+run-name: Build MacOS / ${{ github.event.inputs.env }} / v${{ github.event.inputs.version }}
+
+jobs:
+  build-mac:
+    name: Build MacOS / ${{ github.event.inputs.env }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Verify input version matches package.json version
+        run: |
+          echo "Input version: ${{ github.event.inputs.version }}"
+          echo "Package.json version: ${{ steps.get_version.outputs.version }}"
+          if [ "${{ github.event.inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+            echo "❌ Version mismatch!"
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Inject secrets into .env file
+        run: |
+          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> .env
+          echo "APPLE_ID_PASSWORD=${{ secrets.APPLE_ID_PASSWORD }}" >> .env
+          echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}" >> .env
+
+      - name: Build for MacOS
+        run: |
+          if [ "${{ github.event.inputs.env }}" = "staging" ]; then
+            echo "Building for STAGING..."
+            npm run dist-mac-staging
+          else
+            echo "Building for PRODUCTION..."
+            npm run dist-mac-production
+          fi

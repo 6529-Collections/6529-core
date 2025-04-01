@@ -18,7 +18,7 @@ export default function Buidl() {
   const { setTitle, title } = useContext(AuthContext);
   useEffect(() => {
     setTitle({
-      title: "BUIDL | 6529 SEIZE",
+      title: "BUIDL | 6529 CORE",
     });
   }, []);
 
@@ -35,19 +35,14 @@ export default function Buidl() {
         <meta name="description" content="BUIDL | 6529 CORE" />
         <meta property="og:url" content={`${SEIZE_URL}/buidl`} />
         <meta property="og:title" content="BUIDL" />
-        <meta property="og:description" content="6529 CORE" />
-        <meta
-          property="og:image"
-          content={`${SEIZE_URL}/Seize_Logo_Glasses_2.png`}
-        />
+        <meta property="og:description" content="6529.io" />
+        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
       <main className={styles.main}>
         <Header />
         <Breadcrumb breadcrumbs={breadcrumbs} />
-        <Container
-          fluid
-          className={`${styles.mainContainer} ${styles.pageNotFound} text-center`}>
+        <Container fluid className={`${styles.pageNotFound} text-center`}>
           <Row>
             <Col>
               <Image
