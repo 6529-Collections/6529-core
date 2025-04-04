@@ -257,7 +257,13 @@ export default function TitleBar() {
         <Modal.Body className={styles.updateModalContent}>
           <p>Version {updateAvailable?.version} is available.</p>
           <span>
-            Visit <Link href={"/core/core-info"}>App Info</Link> page to update.
+            Visit{" "}
+            <Link
+              href={"/core/core-info"}
+              onClick={() => setShowUpdateModal(false)}>
+              App Info
+            </Link>{" "}
+            page to update.
           </span>
         </Modal.Body>
         <Modal.Footer className={styles.updateModalContent}>
