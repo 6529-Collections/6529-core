@@ -1,7 +1,5 @@
 import { ReactElement } from "react";
 import { NextPageWithLayout } from "../_app";
-import MyStreamLayout from "../../components/brain/my-stream/layout/MyStreamLayout";
-import MyStreamWrapper from "../../components/brain/my-stream/MyStreamWrapper";
 import { getCommonHeaders } from "../../helpers/server.helpers";
 import {
   dehydrate,
@@ -13,6 +11,20 @@ import { prefetchWavesOverview } from "../../helpers/stream.helpers";
 import { GetServerSidePropsContext } from "next";
 import { QueryKey } from "../../components/react-query-wrapper/ReactQueryWrapper";
 import { Time } from "../../helpers/time";
+import dynamic from "next/dynamic";
+
+const MyStreamWrapper = dynamic(
+  () => import("../../components/brain/my-stream/MyStreamWrapper"),
+  {
+    ssr: false,
+  }
+);
+const MyStreamLayout = dynamic(
+  () => import("../../components/brain/my-stream/layout/MyStreamLayout"),
+  {
+    ssr: false,
+  }
+);
 
 interface Props {
   dehydratedState: DehydratedState;
@@ -38,10 +50,10 @@ export async function getServerSideProps(
   const feedItemsFetched =
     context?.req.cookies[[QueryKey.FEED_ITEMS].toString()];
 
-
   if (feedItemsFetched && +feedItemsFetched < Time.now().toMillis() - 60000) {
     const waveId = (context.query.wave as string | undefined) ?? null;
     await prefetchWavesOverview({ queryClient, headers, waveId });
   }
+
   return { props: { dehydratedState: dehydrate(queryClient) } };
 }
