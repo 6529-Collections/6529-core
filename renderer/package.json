@@ -58,9 +58,11 @@
     "jwt-decode": "^4.0.0",
     "lexical": "^0.14.2",
     "lodash": "^4.17.21",
+    "luxon": "^3.6.1",
     "next": "^14.2.6",
     "next-redux-wrapper": "^8.1.0",
     "next-sitemap": "^4.2.3",
+    "p-retry": "^6.2.1",
     "pdfjs-dist": "^4.4.168",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
@@ -97,6 +99,7 @@
     "@types/jest": "^29.5.14",
     "@types/js-cookie": "^3.0.6",
     "@types/js-yaml": "^4.0.9",
+    "@types/luxon": "^3.6.0",
     "@types/node": "^20.14.6",
     "@types/qrcode": "^1.5.5",
     "@types/react": "^18.3.3",
@@ -131,6 +134,9 @@
     "viem": {
       "ws": "8.17.1"
     },
-    "axios": "1.8.2"
+    "axios": "1.8.2",
+    "@nestjs/axios": "4.0.0",
+    "@nestjs/core": "11.0.12",
+    "@nestjs/common": "11.0.12"
   }
 }

@@ -1,4 +1,12 @@
-import { AnchorHTMLAttributes, ClassAttributes, memo, ReactNode } from "react";
+import {
+  AnchorHTMLAttributes,
+  Children,
+  ClassAttributes,
+  HTMLAttributes,
+  isValidElement,
+  memo,
+  ReactNode,
+} from "react";
 import Markdown, { ExtraProps } from "react-markdown";
 import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize from "rehype-sanitize";
@@ -27,6 +35,8 @@ import useIsMobileScreen from "../../../../hooks/isMobileScreen";
 import { useEmoji } from "../../../../contexts/EmojiContext";
 import GroupCardChat from "../../../groups/page/list/card/GroupCardChat";
 import WaveItemChat from "../../../waves/list/WaveItemChat";
+import DropItemChat from "../../../waves/drops/DropItemChat";
+import ChatItemHrefButtons from "../../../waves/ChatItemHrefButtons";
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
@@ -40,6 +50,11 @@ export enum DropContentPartType {
   MENTION = "MENTION",
   HASHTAG = "HASHTAG",
 }
+
+type SmartLinkHandler<T> = {
+  parse: (href: string) => T | null;
+  render: (result: T, href: string) => JSX.Element | null;
+};
 
 function DropPartMarkdown({
   mentionedUsers,
@@ -203,6 +218,50 @@ function DropPartMarkdown({
     );
   };
 
+  const parseTwitterLink = (href: string): string | null => {
+    const twitterRegex =
+      /https:\/\/(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/;
+    const match = href.match(twitterRegex);
+    return match ? match[3] : null;
+  };
+
+  const smartLinkHandlers: SmartLinkHandler<any>[] = [
+    {
+      parse: parseSeizeQuoteLink,
+      render: (result: SeizeQuoteLinkInfo, href: string) =>
+        renderSeizeQuote(result, onQuoteClick, href),
+    },
+    {
+      parse: (href: string) => parseSeizeQueryLink(href, "/network", ["group"]),
+      render: (result: { group: string }, href: string) => (
+        <GroupCardChat href={href} groupId={result.group} />
+      ),
+    },
+    {
+      parse: (href: string) =>
+        parseSeizeQueryLink(href, "/my-stream", ["wave"], true),
+      render: (result: { wave: string }, href: string) => (
+        <WaveItemChat href={href} waveId={result.wave} />
+      ),
+    },
+    {
+      parse: (href: string) =>
+        parseSeizeQueryLink(href, "/my-stream", ["wave", "drop"], true),
+      render: (result: { drop: string }, href: string) => (
+        <DropItemChat href={href} dropId={result.drop} />
+      ),
+    },
+    {
+      parse: parseTwitterLink,
+      render: (tweetId: string, href: string) =>
+        renderTweetEmbed(tweetId, href),
+    },
+  ];
+
+  const isSmartLink = (href: string): boolean => {
+    return smartLinkHandlers.some((handler) => !!handler.parse(href));
+  };
+
   const aHrefRenderer = ({
     node,
     ...props
@@ -210,39 +269,18 @@ function DropPartMarkdown({
     AnchorHTMLAttributes<HTMLAnchorElement> &
     ExtraProps) => {
     const { href } = props;
-
     if (!href || !isValidLink(href)) {
       return null;
     }
 
-    const quoteInfo = parseSeizeQuoteLink(href);
-    if (quoteInfo) {
-      return renderSeizeQuote(quoteInfo, onQuoteClick);
-    }
-
-    const groupId = parseSeizeQueryLink(href, "/network", "group");
-    if (groupId) {
-      return <GroupCardChat href={href} groupId={groupId} />;
-    }
-
-    const waveId = parseSeizeQueryLink(href, "/my-stream", "wave");
-    if (waveId) {
-      return <WaveItemChat href={href} waveId={waveId} />;
-    }
-
-    const twitterMatch = parseTwitterLink(href);
-    if (twitterMatch) {
-      return renderTweetEmbed(twitterMatch, href);
+    for (const { parse, render } of smartLinkHandlers) {
+      const result = parse(href);
+      if (result) {
+        return render(result, href);
+      }
     }
 
     return renderExternalOrInternalLink(href, props);
-  };
-
-  const parseTwitterLink = (href: string): string | null => {
-    const twitterRegex =
-      /https:\/\/(?:twitter\.com|x\.com)\/(?:#!\/)?(\w+)\/status(es)?\/(\d+)/;
-    const match = href.match(twitterRegex);
-    return match ? match[3] : null;
   };
 
   const renderTweetEmbed = (tweetId: string, href: string) => (
@@ -293,30 +331,95 @@ function DropPartMarkdown({
 
   const renderSeizeQuote = (
     quoteLinkInfo: SeizeQuoteLinkInfo,
-    onQuoteClick: (drop: ApiDrop) => void
+    onQuoteClick: (drop: ApiDrop) => void,
+    href: string
   ) => {
     const { waveId, serialNo, dropId } = quoteLinkInfo;
 
     if (serialNo) {
       return (
-        <WaveDropQuoteWithSerialNo
-          serialNo={parseInt(serialNo)}
-          waveId={waveId}
-          onQuoteClick={onQuoteClick}
-        />
+        <div className="tw-flex tw-items-stretch tw-w-full tw-gap-x-1">
+          <div className="tw-flex-1">
+            <WaveDropQuoteWithSerialNo
+              serialNo={parseInt(serialNo)}
+              waveId={waveId}
+              onQuoteClick={onQuoteClick}
+            />
+          </div>
+          <ChatItemHrefButtons href={href} />
+        </div>
       );
     } else if (dropId) {
       return (
-        <WaveDropQuoteWithDropId
-          dropId={dropId}
-          partId={1}
-          maybeDrop={null}
-          onQuoteClick={onQuoteClick}
-        />
+        <div className="tw-flex tw-items-stretch tw-w-full tw-gap-x-1">
+          <div className="tw-flex-1">
+            <WaveDropQuoteWithDropId
+              dropId={dropId}
+              partId={1}
+              maybeDrop={null}
+              onQuoteClick={onQuoteClick}
+            />
+          </div>
+          <ChatItemHrefButtons
+            href={href}
+            relativeHref={`/my-stream?wave=${waveId}&drop=${dropId}`}
+          />
+        </div>
       );
     }
 
     return null;
+  };
+
+  const renderParagraph = (
+    params: ClassAttributes<HTMLParagraphElement> &
+      HTMLAttributes<HTMLParagraphElement> &
+      ExtraProps
+  ) => {
+    const renderP = (
+      params: ClassAttributes<HTMLParagraphElement> &
+        HTMLAttributes<HTMLParagraphElement> &
+        ExtraProps
+    ) => (
+      <p
+        key={getRandomObjectId()}
+        className={`tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
+        {customRenderer({
+          content: params.children,
+          mentionedUsers,
+          referencedNfts,
+        })}
+      </p>
+    );
+
+    const { children } = params;
+
+    // Flatten children (could be string, JSX, or array)
+    const flattened = Children.toArray(children);
+
+    const elements: React.ReactNode[] = [];
+    let currentTextChunk: React.ReactNode[] = [];
+
+    const flushTextChunk = () => {
+      if (currentTextChunk.length > 0) {
+        elements.push(renderP({ children: currentTextChunk }));
+        currentTextChunk = [];
+      }
+    };
+
+    for (const node of flattened) {
+      const href = isValidElement(node) && node.props?.href;
+      if (href && isSmartLink(href)) {
+        flushTextChunk();
+        elements.push(node);
+      } else {
+        currentTextChunk.push(node);
+      }
+    }
+
+    flushTextChunk();
+
+    return <>{elements}</>;
   };
 
   return (
@@ -380,16 +483,7 @@ function DropPartMarkdown({
             })}
           </h1>
         ),
-        p: (params) => (
-          <p
-            className={`tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
-            {customRenderer({
-              content: params.children,
-              mentionedUsers,
-              referencedNfts,
-            })}
-          </p>
-        ),
+        p: renderParagraph,
         li: (params) => (
           <li className="tw-text-md tw-text-iron-200 tw-break-words word-break">
             {customRenderer({
