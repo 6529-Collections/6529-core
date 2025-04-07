@@ -28,11 +28,9 @@ exports.default = async function notarizing(context) {
       appleId: process.env.APPLE_ID,
       appleIdPassword: process.env.APPLE_ID_PASSWORD,
     });
-    console.log("Notarization successful! Stapling...");
-    await staple(appPath);
-    console.log("Notarization and Stapling successful for app:", appName);
+    console.log("Notarization successful for app:", appName);
   } catch (error) {
-    console.error("Notarization or stapling failed:", error);
+    console.error("Notarization failed:", error);
     throw error;
   }
   console.log("End Time:", new Date().toLocaleTimeString());
