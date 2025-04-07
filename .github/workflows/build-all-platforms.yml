@@ -25,7 +25,7 @@ on:
           - mac
           - linux
 
-run-name: Build Platforms: ${inputs.platform} / ${{ inputs.env }} / v${{ inputs.version }}
+run-name: Build Platforms: ${{ inputs.platform }} / ${{ inputs.env }} / v${{ inputs.version }}
 
 jobs:
   build-mac:
