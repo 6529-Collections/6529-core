@@ -8,9 +8,9 @@ on:
         required: true
         type: choice
         options:
-          - staging
-          - production
-        default: "staging"
+          - Staging
+          - Production
+        default: "Staging"
       version:
         description: "Version to build"
         required: true
@@ -18,19 +18,19 @@ on:
       os:
         description: "Which OS to build"
         required: true
-        default: "all"
+        default: "All"
         type: choice
         options:
-          - all
-          - mac
-          - linux
+          - All
+          - MacOS
+          - Linux
 
-run-name: "Build OS: ${{ inputs.os }} / ${{ inputs.env }} / v${{ inputs.version }}"
+run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
 
 jobs:
   build-mac:
-    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'mac' }}
-    name: Build for Mac
+    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os === 'MacOS' }}
+    name: MacOS / ${{ inputs.env }} / v${{ inputs.version }}
     uses: ./.github/workflows/build-mac.yml
     with:
       env: ${{ github.event.inputs.env }}
@@ -38,8 +38,8 @@ jobs:
     secrets: inherit
 
   build-linux:
-    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'linux' }}
-    name: Build for Linux
+    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os === 'Linux' }}
+    name: Linux / ${{ inputs.env }} / v${{ inputs.version }}
     uses: ./.github/workflows/build-linux.yml
     with:
       env: ${{ github.event.inputs.env }}

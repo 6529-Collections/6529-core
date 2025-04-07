@@ -10,8 +10,6 @@ on:
         required: true
         type: string
 
-run-name: Build Linux / ${{ inputs.env }} / v${{ inputs.version }}
-
 jobs:
   build-linux:
     name: Build Linux / ${{ inputs.env }}
@@ -53,10 +51,10 @@ jobs:
 
       - name: Build for Linux
         run: |
-          if [ "${{ inputs.env }}" = "staging" ]; then
-            echo "Building for STAGING..."
+          if [ "${{ inputs.env }}" = "Staging" ]; then
+            echo "Building for Staging..."
             npm run dist-linux-staging
           else
-            echo "Building for PRODUCTION..."
+            echo "Building for Production..."
             npm run dist-linux-production
           fi
