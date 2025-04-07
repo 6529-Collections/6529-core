@@ -15,8 +15,8 @@ on:
         description: "Version to build"
         required: true
         type: string
-      platform:
-        description: "Which platform to build"
+      os:
+        description: "Which OS to build"
         required: true
         default: "all"
         type: choice
@@ -25,11 +25,11 @@ on:
           - mac
           - linux
 
-run-name: "Build Platforms / ${{ inputs.platforms }} / ${{ inputs.env }} / v${{ inputs.version }}"
+run-name: "Build OS: ${{ inputs.os }} / ${{ inputs.env }} / v${{ inputs.version }}"
 
 jobs:
   build-mac:
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'mac' }}
+    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'mac' }}
     name: Build for Mac
     uses: ./.github/workflows/build-mac.yml
     with:
@@ -38,7 +38,7 @@ jobs:
     secrets: inherit
 
   build-linux:
-    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux' }}
+    if: ${{ github.event.inputs.os == 'all' || github.event.inputs.os == 'linux' }}
     name: Build for Linux
     uses: ./.github/workflows/build-linux.yml
     with:
@@ -47,10 +47,10 @@ jobs:
     secrets: inherit
 
   final-step:
-    name: Final Step After All Platforms
+    name: Publish Links
     runs-on: ubuntu-latest
     needs: [build-mac, build-linux]
     if: always()
     steps:
       - name: Done!
-        run: echo "🎉 All Platforms Builds Completed!"
+        run: echo "🎉 All OS Builds Completed!"
