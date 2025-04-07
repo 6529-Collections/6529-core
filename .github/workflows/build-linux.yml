@@ -9,7 +9,6 @@ on:
       version:
         required: true
         type: string
-    secrets: inherit
 
 run-name: Build Linux / ${{ inputs.env }} / v${{ inputs.version }}
 

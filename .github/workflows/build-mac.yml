@@ -9,7 +9,6 @@ on:
       version:
         required: true
         type: string
-    secrets: inherit
 
 run-name: Build MacOS / ${{ inputs.env }} / v${{ inputs.version }}
 
