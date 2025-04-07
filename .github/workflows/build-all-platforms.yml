@@ -1,0 +1,56 @@
+name: Build All Platforms
+
+on:
+  workflow_dispatch:
+    inputs:
+      env:
+        description: "Select environment"
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+        default: "staging"
+      version:
+        description: "Version to build"
+        required: true
+        type: string
+      platform:
+        description: "Which platform to build"
+        required: true
+        default: "all"
+        type: choice
+        options:
+          - all
+          - mac
+          - linux
+
+run-name: Build Platforms: ${inputs.platform} / ${{ inputs.env }} / v${{ inputs.version }}
+
+jobs:
+  build-mac:
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'mac' }}
+    name: Build for Mac
+    uses: ./.github/workflows/build-mac.yml
+    with:
+      env: ${{ github.event.inputs.env }}
+      version: ${{ github.event.inputs.version }}
+    secrets: inherit
+
+  build-linux:
+    if: ${{ github.event.inputs.platform == 'all' || github.event.inputs.platform == 'linux' }}
+    name: Build for Linux
+    uses: ./.github/workflows/build-linux.yml
+    with:
+      env: ${{ github.event.inputs.env }}
+      version: ${{ github.event.inputs.version }}
+    secrets: inherit
+
+  final-step:
+    name: Final Step After All Platforms
+    runs-on: ubuntu-latest
+    needs: [build-mac, build-linux]
+    if: always()
+    steps:
+      - name: Done!
+        run: echo "🎉 All Platforms Builds Completed!"

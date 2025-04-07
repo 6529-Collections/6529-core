@@ -1,26 +1,21 @@
 name: Build Linux
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       env:
-        description: "Select environment"
-        required: true
-        type: choice
-        options:
-          - staging
-          - production
-        default: "staging"
-      version:
-        description: "Version to build (must match package.json)"
         required: true
         type: string
+      version:
+        required: true
+        type: string
+    secrets: inherit
 
-run-name: Build Linux / ${{ github.event.inputs.env }} / v${{ github.event.inputs.version }}
+run-name: Build Linux / ${{ inputs.env }} / v${{ inputs.version }}
 
 jobs:
   build-linux:
-    name: Build Linux / ${{ github.event.inputs.env }}
+    name: Build Linux / ${{ inputs.env }}
     runs-on: ubuntu-latest
 
     steps:
@@ -35,9 +30,9 @@ jobs:
 
       - name: Verify input version matches package.json version
         run: |
-          echo "Input version: ${{ github.event.inputs.version }}"
+          echo "Input version: ${{ inputs.version }}"
           echo "Package.json version: ${{ steps.get_version.outputs.version }}"
-          if [ "${{ github.event.inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+          if [ "${{ inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
             echo "❌ Version mismatch!"
             exit 1
           fi
@@ -59,7 +54,7 @@ jobs:
 
       - name: Build for Linux
         run: |
-          if [ "${{ github.event.inputs.env }}" = "staging" ]; then
+          if [ "${{ inputs.env }}" = "staging" ]; then
             echo "Building for STAGING..."
             npm run dist-linux-staging
           else
