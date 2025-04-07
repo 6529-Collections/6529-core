@@ -24,6 +24,22 @@ jobs:
     runs-on: macos-latest
 
     steps:
+      - name: Decode signing certificate
+        run: |
+          mkdir -p certs
+          echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > certs/signing_certificate.p12
+
+      - name: Import signing certificate
+        run: |
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: List code signing identities
+        run: security find-identity -v -p codesigning
+
       - name: Check out
         uses: actions/checkout@v3
         with:
