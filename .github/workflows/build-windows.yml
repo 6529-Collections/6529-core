@@ -12,6 +12,7 @@ on:
 
 jobs:
   build-windows:
+    name: Build Windows / ${{ inputs.env }} - v${{ inputs.version }}
     runs-on: windows-latest
 
     steps:
