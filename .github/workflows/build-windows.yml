@@ -11,6 +11,60 @@ on:
         type: string
 
 jobs:
+  build-windows:
+    name: ${{ inputs.env }} - v${{ inputs.version }} | BUILD
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Verify input version matches package.json version
+        run: |
+          echo "Input version: ${{ inputs.version }}"
+          echo "Package.json version: ${{ steps.get_version.outputs.version }}"
+          if [ "${{ inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+            echo "❌ Version mismatch!"
+            exit 1
+          fi
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install Python 3.11 with distutils
+        run: |
+          brew install python@3.11
+          echo "PATH=/opt/homebrew/opt/python@3.11/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Set Python 3.11 as default
+        run: echo "PYTHON=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Build for Windows
+        run: |
+          if [ "${{ inputs.env }}" = "Staging" ]; then
+            npm run dist-win-staging-upload
+          else
+            npm run dist-win-production-upload
+          fi
+
   sign-windows:
     name: ${{ inputs.env }} - v${{ inputs.version }} | SIGN
     needs: build-windows
@@ -26,9 +80,9 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 20
-          cache: "npm"
 
-      - name: Install full dependencies (once)
+      - name: Install signing deps
+        working-directory: ./sign-win
         run: npm ci
 
       - name: Set up environment variables
