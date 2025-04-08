@@ -82,7 +82,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install typescript ts-node dotenv rimraf
 
       - name: Set up environment variables
         run: |
