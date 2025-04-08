@@ -12,8 +12,8 @@ on:
 
 jobs:
   build-windows:
-    name: ${{ inputs.env }} - v${{ inputs.version }}
-    runs-on: windows-latest
+    name: ${{ inputs.env }} - v${{ inputs.version }} | BUILD
+    runs-on: ubuntu-latest
 
     steps:
       - name: Check out code
@@ -23,19 +23,16 @@ jobs:
 
       - name: Get version from package.json
         id: get_version
-        shell: pwsh
-        run: |
-          $version = node -p "require('./package.json').version"
-          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
 
       - name: Verify input version matches package.json version
         run: |
           echo "Input version: ${{ inputs.version }}"
           echo "Package.json version: ${{ steps.get_version.outputs.version }}"
-          if ("${{ inputs.version }}" -ne "${{ steps.get_version.outputs.version }}") {
-            Write-Error "❌ Version mismatch!"
+          if [ "${{ inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+            echo "❌ Version mismatch!"
             exit 1
-          }
+          fi
 
       - name: Set up Node.js
         uses: actions/setup-node@v3
@@ -45,6 +42,20 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Build for Windows
+        run: |
+          if [ "${{ inputs.env }}" = "Staging" ]; then
+            npm run dist-win-staging-upload
+          else
+            npm run dist-win-production-upload
+          fi
+
+  sign-windows:
+    name: ${{ inputs.env }} - v${{ inputs.version }} | SIGN
+    needs: build-windows
+    runs-on: windows-latest
+
+    steps:
       - name: Set up environment variables
         run: |
           echo "AZURE_KEY_VAULT_URL=${{ secrets.AZURE_KEY_VAULT_URL }}" >> $env:GITHUB_ENV
@@ -53,21 +64,11 @@ jobs:
           echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $env:GITHUB_ENV
           echo "CERT_NAME=${{ secrets.CERT_NAME }}" >> $env:GITHUB_ENV
 
-      - name: Build for Windows
+      - name: Sign executables & upload to S3
+        shell: pwsh
         run: |
           if ("${{ inputs.env }}" -eq "Staging") {
-            npm run dist-win-staging
+            npm run sign-publish-staging-win
           } else {
-            npm run dist-win-production
-          }
-
-      - name: Sign executables
-        run: npm run sign-win
-
-      - name: Upload to S3
-        run: |
-          if ("${{ inputs.env }}" -eq "Staging") {
-            npm run upload-staging-win-signed
-          } else {
-            npm run upload-production-win-signed
+            npm run sign-publish-production-win
           }
