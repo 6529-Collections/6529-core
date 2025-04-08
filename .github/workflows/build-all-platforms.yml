@@ -23,6 +23,7 @@ on:
         options:
           - All
           - MacOS
+          - Windows
           - Linux
 
 run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
@@ -32,6 +33,15 @@ jobs:
     if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os === 'MacOS' }}
     name: MacOS / ${{ inputs.env }} / v${{ inputs.version }}
     uses: ./.github/workflows/build-mac.yml
+    with:
+      env: ${{ github.event.inputs.env }}
+      version: ${{ github.event.inputs.version }}
+    secrets: inherit
+
+  build-windows:
+    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Windows' }}
+    name: Windows / ${{ inputs.env }} / v${{ inputs.version }}
+    uses: ./.github/workflows/build-windows.yml
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
@@ -49,7 +59,7 @@ jobs:
   final-step:
     name: Publish Links
     runs-on: ubuntu-latest
-    needs: [build-mac, build-linux]
+    needs: [build-mac, build-windows, build-linux]
     if: always()
     steps:
       - name: Done!

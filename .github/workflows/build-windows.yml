@@ -1,0 +1,70 @@
+name: Build Windows
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+
+jobs:
+  build-windows:
+    name: Build Windows / ${{ inputs.env }}
+    runs-on: windows-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Get version from package.json
+        id: get_version
+        run: echo "version=$(node -p \"require('./package.json').version\")" >> $env:GITHUB_OUTPUT
+
+      - name: Verify input version matches package.json version
+        run: |
+          echo "Input version: ${{ inputs.version }}"
+          echo "Package.json version: ${{ steps.get_version.outputs.version }}"
+          if ("${{ inputs.version }}" -ne "${{ steps.get_version.outputs.version }}") {
+            Write-Error "❌ Version mismatch!"
+            exit 1
+          }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up environment variables
+        run: |
+          echo "AZURE_KEY_VAULT_URL=${{ secrets.AZURE_KEY_VAULT_URL }}" >> $env:GITHUB_ENV
+          echo "AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $env:GITHUB_ENV
+          echo "AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $env:GITHUB_ENV
+          echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $env:GITHUB_ENV
+          echo "CERT_NAME=${{ secrets.CERT_NAME }}" >> $env:GITHUB_ENV
+
+      - name: Build for Windows
+        run: |
+          if ("${{ inputs.env }}" -eq "Staging") {
+            npm run dist-win-staging
+          } else {
+            npm run dist-win-production
+          }
+
+      - name: Sign executables
+        run: npm run sign-win
+
+      - name: Upload to S3
+        run: |
+          if ("${{ inputs.env }}" -eq "Staging") {
+            npm run upload-staging-win-signed
+          } else {
+            npm run upload-production-win-signed
+          }
