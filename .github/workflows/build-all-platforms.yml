@@ -30,7 +30,7 @@ run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env 
 
 jobs:
   build-mac:
-    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os === 'MacOS' }}
+    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'MacOS' }}
     name: MacOS / ${{ inputs.env }} / v${{ inputs.version }}
     uses: ./.github/workflows/build-mac.yml
     with:
@@ -48,7 +48,7 @@ jobs:
     secrets: inherit
 
   build-linux:
-    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os === 'Linux' }}
+    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Linux' }}
     name: Linux / ${{ inputs.env }} / v${{ inputs.version }}
     uses: ./.github/workflows/build-linux.yml
     with:
