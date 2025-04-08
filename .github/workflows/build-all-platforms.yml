@@ -60,83 +60,28 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     needs: [build-mac, build-windows, build-linux]
-    if: >
-      (
-        (
-          github.event.inputs.os != 'MacOS' &&
-          github.event.inputs.os != 'All'
-        ) || (
-          needs.build-mac.result == 'success'
-        )
-      ) &&
-      (
-        (
-          github.event.inputs.os != 'Windows' &&
-          github.event.inputs.os != 'All'
-        ) || (
-          needs.build-windows.result == 'success'
-        )
-      ) &&
-      (
-        (
-          github.event.inputs.os != 'Linux' &&
-          github.event.inputs.os != 'All'
-        ) || (
-          needs.build-linux.result == 'success'
-        )
-      )
     steps:
-      - name: Check out
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Set up Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 22
-
-      - name: Publish S3 Links
+      - name: Set failure flag if any required build failed
         run: |
-          if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
-            npm run publish-links-staging
-          else
-            npm run publish-links-production
+          SHOULD_FAIL=false
+
+          if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "MacOS" ]]; then
+            [[ "${{ needs.build-mac.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
 
-      - name: Notify success
-        uses: sarisia/actions-status-discord@v1
-        if: success()
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        with:
-          title: "6529 Core: Internal links published ✅"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
-          color: 0x00bfff
-
-      - name: Publish Arweave Links
-        run: |
-          if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
-            npm run publish-links-staging-arweave
-          else
-            npm run publish-links-production-arweave
+          if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "Windows" ]]; then
+            [[ "${{ needs.build-windows.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
 
-      - name: Final success - After Arweave
-        uses: sarisia/actions-status-discord@v1
-        if: success()
-        continue-on-error: true
-        env:
-          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
-        with:
-          title: "6529 Core: Build complete 🚀"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
-          color: 0x00ff00
+          if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "Linux" ]]; then
+            [[ "${{ needs.build-linux.result }}" != "success" ]] && SHOULD_FAIL=true
+          fi
 
-      - name: Notify about failure
+          echo "SHOULD_FAIL=$SHOULD_FAIL" >> $GITHUB_ENV
+
+      - name: Notify required build failure
+        if: env.SHOULD_FAIL == 'true'
         uses: sarisia/actions-status-discord@v1
-        if: failure()
         continue-on-error: true
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
@@ -146,7 +91,72 @@ jobs:
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
+      - name: Check out
+        if: env.SHOULD_FAIL != 'true'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        if: env.SHOULD_FAIL != 'true'
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Publish S3 Links
+        if: env.SHOULD_FAIL != 'true'
+        run: |
+          if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
+            npm run publish-links-staging
+          else
+            npm run publish-links-production
+          fi
+
+      - name: Notify success
+        if: success() && env.SHOULD_FAIL != 'true'
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Core: Internal links published ✅"
+          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          color: 0x00bfff
+
+      - name: Publish Arweave Links
+        if: env.SHOULD_FAIL != 'true'
+        run: |
+          if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
+            npm run publish-links-staging-arweave
+          else
+            npm run publish-links-production-arweave
+          fi
+
+      - name: Final success - After Arweave
+        if: success() && env.SHOULD_FAIL != 'true'
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Core: Build complete 🚀"
+          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          color: 0x00ff00
+
+      - name: Fallback: Notify if publish job fails
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Core: Publish job failed ❌"
+          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          content: "<@&1162355330798325861>"
+          color: 0xff0000
+
       - name: Summary
+        if: always()
         uses: actions/github-script@v7
         with:
           script: |
@@ -158,24 +168,3 @@ jobs:
                 ["Version", "${{ github.event.inputs.version }}"]
               ])
               .write()
-
-  publish-failure-notification:
-    name: Publish Failure Notification
-    runs-on: ubuntu-latest
-    needs: publish
-    if: ${{ needs.publish.result == 'failure' || needs.publish.result == 'skipped' }}
-    steps:
-      - name: Publish Conditions Check
-        run: |
-          echo "OS: ${{ github.event.inputs.os }}"
-          echo "Build Mac result: ${{ needs.build-mac.result }}"
-          echo "Build Windows result: ${{ needs.build-windows.result }}"
-          echo "Build Linux result: ${{ needs.build-linux.result }}"
-
-      - name: Notify publish failure
-        uses: sarisia/actions-status-discord@v1
-        with:
-          title: "6529 Core: Publish job failed ❌"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
-          content: "<@&1162355330798325861>"
-          color: 0xff0000
