@@ -15,9 +15,8 @@ on:
 
 jobs:
   sign-windows:
-    name: ${{ inputs.env }} - v${{ inputs.version }} | SIGN
+    name: Windows Sign
     runs-on: windows-latest
-    if: ${{ inputs.should_run }}
 
     env:
       AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
@@ -27,28 +26,38 @@ jobs:
       CERT_NAME: ${{ secrets.CERT_NAME }}
 
     steps:
+      - name: Check if should run
+        if: ${{ !inputs.should_run }}
+        run: echo "Skipping because should_run=false"
+
       - name: Check out
+        if: ${{ inputs.should_run }}
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
 
       - name: Set up Node
+        if: ${{ inputs.should_run }}
         uses: actions/setup-node@v3
         with:
           node-version: 20
 
       - name: Install signing dependencies
+        if: ${{ inputs.should_run }}
         working-directory: ./sign-win
         run: npm ci
 
       - name: Install AzureSignTool
+        if: ${{ inputs.should_run }}
         run: dotnet tool install --global AzureSignTool
 
       - name: Add dotnet tools to PATH
+        if: ${{ inputs.should_run }}
         run: echo "$env:USERPROFILE\\.dotnet\\tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
         shell: pwsh
 
       - name: Configure AWS Credentials
+        if: ${{ inputs.should_run }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -56,6 +65,7 @@ jobs:
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Sign executables & upload to S3
+        if: ${{ inputs.should_run }}
         working-directory: ./sign-win
         shell: pwsh
         run: |
