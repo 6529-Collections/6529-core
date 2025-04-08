@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-linux:
-    name: Linux Build
+    name: ${{ inputs.should_run && 'Build' || 'Skipped' }}
     runs-on: ubuntu-latest
 
     steps:

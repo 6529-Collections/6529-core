@@ -15,7 +15,7 @@ on:
 
 jobs:
   sign-windows:
-    name: Windows Sign
+    name: ${{ inputs.should_run && 'Sign' || 'Skipped' }}
     runs-on: windows-latest
 
     env:
