@@ -19,6 +19,13 @@ jobs:
     runs-on: windows-latest
     if: ${{ inputs.should_run == 'true' }}
 
+    env:
+      AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CERT_NAME: ${{ secrets.CERT_NAME }}
+
     steps:
       - name: Check out
         uses: actions/checkout@v3
@@ -33,14 +40,6 @@ jobs:
       - name: Install signing dependencies
         working-directory: ./sign-win
         run: npm ci
-
-      - name: Set up environment variables
-        run: |
-          echo "AZURE_KEY_VAULT_URL=${{ secrets.AZURE_KEY_VAULT_URL }}" >> $env:GITHUB_ENV
-          echo "AZURE_CLIENT_ID=${{ secrets.AZURE_CLIENT_ID }}" >> $env:GITHUB_ENV
-          echo "AZURE_CLIENT_SECRET=${{ secrets.AZURE_CLIENT_SECRET }}" >> $env:GITHUB_ENV
-          echo "AZURE_TENANT_ID=${{ secrets.AZURE_TENANT_ID }}" >> $env:GITHUB_ENV
-          echo "CERT_NAME=${{ secrets.CERT_NAME }}" >> $env:GITHUB_ENV
 
       - name: Install AzureSignTool
         run: dotnet tool install --global AzureSignTool

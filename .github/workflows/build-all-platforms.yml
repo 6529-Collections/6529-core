@@ -32,7 +32,6 @@ jobs:
   build-mac:
     name: MacOS
     uses: ./.github/workflows/build-mac.yml
-    if: always()
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
@@ -42,7 +41,6 @@ jobs:
   build-windows:
     name: Windows
     uses: ./.github/workflows/build-windows.yml
-    if: always()
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
@@ -52,7 +50,6 @@ jobs:
   build-linux:
     name: Linux
     uses: ./.github/workflows/build-linux.yml
-    if: always()
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}

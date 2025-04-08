@@ -19,18 +19,28 @@ jobs:
     runs-on: macos-latest
     if: ${{ inputs.should_run == 'true' }}
 
+    env:
+      CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+      CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
     steps:
       - name: Decode signing certificate
         run: |
           mkdir -p certs
-          echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > certs/signing_certificate.p12
+          echo "$CERTIFICATE_P12" | base64 --decode > certs/signing_certificate.p12
 
       - name: Import signing certificate
         run: |
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
-          security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
+          security import certs/signing_certificate.p12 -k build.keychain -P $CERT_PASSWORD -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
       - name: List code signing identities
@@ -65,15 +75,15 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: $AWS_ACCESS_KEY_ID
+          aws-secret-access-key: $AWS_SECRET_ACCESS_KEY
+          aws-region: $AWS_REGION
 
       - name: Inject secrets into .env file
         run: |
-          echo "APPLE_ID=${{ secrets.APPLE_ID }}" >> .env
-          echo "APPLE_ID_PASSWORD=${{ secrets.APPLE_ID_PASSWORD }}" >> .env
-          echo "APPLE_TEAM_ID=${{ secrets.APPLE_TEAM_ID }}" >> .env
+          echo "APPLE_ID=$APPLE_ID" >> .env
+          echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
 
       - name: Build for MacOS
         run: |
