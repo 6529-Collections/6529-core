@@ -32,8 +32,8 @@
     "upload-production-win-unsigned": "npm run clear-production-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ./dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ./dist",
-    "win-update-latest": "ts-node sign-win/win-update-latest.ts",
-    "sign-win": "ts-node sign-win/sign-win.ts && npm run win-update-latest",
+    "win-update-latest": "tsx sign-win/win-update-latest.ts",
+    "sign-win": "tsx sign-win/sign-win.ts && npm run win-update-latest",
     "upload-staging-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-staging-core-app/win/",
     "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
@@ -44,10 +44,10 @@
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",
     "dist-linux-production": "npm run build && electron-builder --config electron-builder.production.json --linux --x64 --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json",
-    "publish-links-staging": "ts-node scripts/publish-links.ts --staging --skip-arweave",
-    "publish-links-staging-arweave": "ts-node scripts/publish-links.ts --staging",
-    "publish-links-production": "ts-node scripts/publish-links.ts --skip-arweave",
-    "publish-links-production-arweave": "ts-node scripts/publish-links.ts"
+    "publish-links-staging": "tsx scripts/publish-links.ts --staging --skip-arweave",
+    "publish-links-staging-arweave": "tsx scripts/publish-links.ts --staging",
+    "publish-links-production": "tsx scripts/publish-links.ts --skip-arweave",
+    "publish-links-production-arweave": "tsx scripts/publish-links.ts"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
@@ -162,6 +162,7 @@
     "postcss": "^8.4.38",
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",
+    "tsx": "^4.19.3",
     "typescript": "^5.4.5"
   },
   "overrides": {
