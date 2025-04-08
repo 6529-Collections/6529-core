@@ -84,7 +84,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core: Build failed ❌"
+          title: "6529 Core - Build failed ❌"
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -129,7 +129,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core: S3 links published ✅"
+          title: "6529 Core - S3 links published ✅"
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
@@ -151,7 +151,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core: Build complete 🚀"
+          title: "6529 Core - Build complete 🚀"
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
@@ -162,7 +162,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core: Publish job failed ❌"
+          title: "6529 Core - Publish job failed ❌"
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
