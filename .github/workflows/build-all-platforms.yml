@@ -91,6 +91,13 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
+      - name: Publish Conditions
+        run: |
+          echo "OS: ${{ github.event.inputs.os }}"
+          echo "Build Mac result: ${{ needs.build-mac.result }}"
+          echo "Build Windows result: ${{ needs.build-windows.result }}"
+          echo "Build Linux result: ${{ needs.build-linux.result }}"
+
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
