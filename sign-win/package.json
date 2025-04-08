@@ -1,8 +1,8 @@
 {
   "private": true,
-  "type": "module",
   "scripts": {
-    "sign-win": "ts-node --project ./tsconfig.json ../scripts/sign-win.ts",
+    "win-update-latest": "ts-node scripts/win-update-latest.ts",
+    "sign-win": "ts-node --project ./tsconfig.json ./sign-win.ts && npm run win-update-latest",
     "clean-win": "rimraf ../dist main renderer/out renderer/.next",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ../dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ../dist",
