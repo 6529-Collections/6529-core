@@ -113,7 +113,7 @@ jobs:
             npm run publish-links-production
           fi
 
-      - name: Notify success
+      - name: Notify Success
         if: success() && env.SHOULD_FAIL != 'true'
         uses: sarisia/actions-status-discord@v1
         continue-on-error: true
@@ -133,7 +133,7 @@ jobs:
             npm run publish-links-production-arweave
           fi
 
-      - name: Final success - After Arweave
+      - name: Final Success - After Arweave
         if: success() && env.SHOULD_FAIL != 'true'
         uses: sarisia/actions-status-discord@v1
         continue-on-error: true
@@ -144,7 +144,7 @@ jobs:
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
-      - name: Fallback: Notify if publish job fails
+      - name: Notify Publish Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
         continue-on-error: true
