@@ -17,7 +17,7 @@ jobs:
   sign-windows:
     name: ${{ inputs.env }} - v${{ inputs.version }} | SIGN
     runs-on: windows-latest
-    if: ${{ inputs.should_run == 'true' }}
+    if: ${{ inputs.should_run }}
 
     env:
       AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
