@@ -39,10 +39,13 @@ jobs:
         with:
           node-version: 20
 
-      - name: Use Python 3.11 (with distutils)
+      - name: Install Python 3.11 with distutils
         run: |
           brew install python@3.11
-          echo "PATH=\"/opt/homebrew/opt/python@3.11/bin:$PATH\"" >> $GITHUB_ENV
+          echo "PATH=/opt/homebrew/opt/python@3.11/bin:$PATH" >> $GITHUB_ENV
+
+      - name: Set Python 3.11 as default
+        run: echo "PYTHON=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
 
       - name: Install dependencies
         run: npm ci
