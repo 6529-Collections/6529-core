@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "sign-win": "ts-node --project ./tsconfig.json ../scripts/sign-win.ts",
+    "sign-win": "cross-env NODE_PATH=./node_modules ts-node --project ./tsconfig.json ../scripts/sign-win.ts",
     "clean-win": "rimraf ../dist main renderer/out renderer/.next",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ../dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ../dist",
@@ -15,6 +15,7 @@
     "rimraf": "^6.0.1"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3"
   }
