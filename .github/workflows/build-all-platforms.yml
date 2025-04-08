@@ -30,30 +30,33 @@ run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env 
 
 jobs:
   build-mac:
-    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'MacOS' }}
     name: MacOS
     uses: ./.github/workflows/build-mac.yml
+    if: always()
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
+      should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'MacOS' }}
     secrets: inherit
 
   build-windows:
-    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Windows' }}
     name: Windows
     uses: ./.github/workflows/build-windows.yml
+    if: always()
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
+      should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Windows' }}
     secrets: inherit
 
   build-linux:
-    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Linux' }}
     name: Linux
     uses: ./.github/workflows/build-linux.yml
+    if: always()
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
+      should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Linux' }}
     secrets: inherit
 
   publish:
@@ -61,18 +64,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-mac, build-windows, build-linux]
     steps:
-      - name: Set failure flag if any required build failed
+      - name: Determine required builds status
         run: |
           SHOULD_FAIL=false
 
           if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "MacOS" ]]; then
             [[ "${{ needs.build-mac.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
-
           if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "Windows" ]]; then
             [[ "${{ needs.build-windows.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
-
           if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "Linux" ]]; then
             [[ "${{ needs.build-linux.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
@@ -143,7 +144,7 @@ jobs:
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
-      - name: Notify publish failure
+      - name: Fallback: Notify if publish job fails
         if: failure()
         uses: sarisia/actions-status-discord@v1
         continue-on-error: true

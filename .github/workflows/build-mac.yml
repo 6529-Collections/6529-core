@@ -9,11 +9,15 @@ on:
       version:
         required: true
         type: string
+      should_run:
+        required: true
+        type: boolean
 
 jobs:
   build-mac:
     name: ${{ inputs.env }} - v${{ inputs.version }}
     runs-on: macos-latest
+    if: ${{ inputs.should_run == 'true' }}
 
     steps:
       - name: Decode signing certificate

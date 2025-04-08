@@ -9,11 +9,15 @@ on:
       version:
         required: true
         type: string
+      should_run:
+        required: true
+        type: boolean
 
 jobs:
   sign-windows:
     name: ${{ inputs.env }} - v${{ inputs.version }} | SIGN
     runs-on: windows-latest
+    if: ${{ inputs.should_run == 'true' }}
 
     steps:
       - name: Check out
