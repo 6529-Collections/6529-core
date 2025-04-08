@@ -129,12 +129,14 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core: Internal links published ✅"
+          title: "6529 Core: S3 links published ✅"
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
       - name: Publish Arweave Links
         if: env.SHOULD_FAIL != 'true'
+        env:
+          ARWEAVE_KEY: ${{ secrets.ARWEAVE_KEY }}
         run: |
           if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
             npm run publish-links-staging-arweave
