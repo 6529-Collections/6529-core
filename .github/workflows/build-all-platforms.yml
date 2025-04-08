@@ -91,13 +91,6 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Publish Conditions
-        run: |
-          echo "OS: ${{ github.event.inputs.os }}"
-          echo "Build Mac result: ${{ needs.build-mac.result }}"
-          echo "Build Windows result: ${{ needs.build-windows.result }}"
-          echo "Build Linux result: ${{ needs.build-linux.result }}"
-
       - name: Set up Node
         uses: actions/setup-node@v3
         with:
@@ -165,3 +158,23 @@ jobs:
                 ["Version", "${{ github.event.inputs.version }}"]
               ])
               .write()
+
+  publish-skipped-notification:
+    name: Publish Skipped Notification
+    runs-on: ubuntu-latest
+    if: ${{ needs.publish.result == 'skipped' }} # Only runs when the publish job is skipped
+    steps:
+      - name: Publish Conditions Check
+        run: |
+          echo "OS: ${{ github.event.inputs.os }}"
+          echo "Build Mac result: ${{ needs.build-mac.result }}"
+          echo "Build Windows result: ${{ needs.build-windows.result }}"
+          echo "Build Linux result: ${{ needs.build-linux.result }}"
+
+      - name: Notify publish skipped
+        uses: sarisia/actions-status-discord@v1
+        with:
+          title: "6529 Core: Publish job skipped ❌"
+          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          content: "<@&1162355330798325861>"
+          color: 0xff0000
