@@ -2,8 +2,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "win-update-latest": "node --loader ts-node/esm ./win-update-latest.ts",
-    "sign-win": "node --loader ts-node/esm ./sign-win.ts && npm run win-update-latest",
+    "win-update-latest": "tsx ./win-update-latest.ts",
+    "sign-win": "tsx ./sign-win.ts && npm run win-update-latest",
     "clean-win": "rimraf ../dist main renderer/out renderer/.next",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ../dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ../dist",
@@ -19,6 +19,7 @@
   "devDependencies": {
     "js-yaml": "^4.1.0",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.3",
     "typescript": "^5.8.3"
   }
 }
