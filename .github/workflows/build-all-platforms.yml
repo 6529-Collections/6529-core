@@ -62,9 +62,28 @@ jobs:
     needs: [build-mac, build-windows, build-linux]
     if: >
       (
-        (!contains(needs.build-mac.result, 'failure') && !contains(needs.build-mac.result, 'cancelled')) &&
-        (!contains(needs.build-windows.result, 'failure') && !contains(needs.build-windows.result, 'cancelled')) &&
-        (!contains(needs.build-linux.result, 'failure') && !contains(needs.build-linux.result, 'cancelled'))
+        (
+          github.event.inputs.os != 'MacOS' &&
+          github.event.inputs.os != 'All'
+        ) || (
+          needs.build-mac.result == 'success'
+        )
+      ) &&
+      (
+        (
+          github.event.inputs.os != 'Windows' &&
+          github.event.inputs.os != 'All'
+        ) || (
+          needs.build-windows.result == 'success'
+        )
+      ) &&
+      (
+        (
+          github.event.inputs.os != 'Linux' &&
+          github.event.inputs.os != 'All'
+        ) || (
+          needs.build-linux.result == 'success'
+        )
       )
     steps:
       - name: Check out
