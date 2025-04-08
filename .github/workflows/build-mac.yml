@@ -19,8 +19,6 @@ jobs:
     runs-on: macos-latest
 
     env:
-      CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
-      CERT_PASSWORD: ${{ secrets.CERT_PASSWORD }}
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -34,7 +32,7 @@ jobs:
         if: ${{ inputs.should_run }}
         run: |
           mkdir -p certs
-          echo "$CERTIFICATE_P12" | base64 --decode > certs/signing_certificate.p12
+          echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > certs/signing_certificate.p12
 
       - name: Import signing certificate
         if: ${{ inputs.should_run }}
@@ -42,7 +40,7 @@ jobs:
           security create-keychain -p "" build.keychain
           security default-keychain -s build.keychain
           security unlock-keychain -p "" build.keychain
-          security import certs/signing_certificate.p12 -k build.keychain -P $CERT_PASSWORD -T /usr/bin/codesign
+          security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
           security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
 
       - name: List code signing identities
