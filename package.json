@@ -32,7 +32,7 @@
     "upload-production-win-unsigned": "npm run clear-production-win-unsigned && aws s3 sync ./dist s3://6529bucket/6529-core-app/win-unsigned/ --exclude '*' --include '*.exe' --include '*.blockmap' --include 'latest.yml' --exclude '*/**'",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ./dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ./dist",
-    "win-update-latest": "ts-node scripts/win-update-latest.ts",
+    "win-update-latest": "ts-node sign-win/win-update-latest.ts",
     "sign-win": "ts-node sign-win/sign-win.ts && npm run win-update-latest",
     "upload-staging-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-staging-core-app/win/",
     "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
