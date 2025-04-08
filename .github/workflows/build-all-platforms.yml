@@ -31,6 +31,7 @@ run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env 
 jobs:
   build-mac:
     if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'MacOS' }}
+    name: MacOS
     uses: ./.github/workflows/build-mac.yml
     with:
       env: ${{ github.event.inputs.env }}
@@ -39,6 +40,7 @@ jobs:
 
   build-windows:
     if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Windows' }}
+    name: Windows
     uses: ./.github/workflows/build-windows.yml
     with:
       env: ${{ github.event.inputs.env }}
@@ -47,6 +49,7 @@ jobs:
 
   build-linux:
     if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Linux' }}
+    name: Linux
     uses: ./.github/workflows/build-linux.yml
     with:
       env: ${{ github.event.inputs.env }}

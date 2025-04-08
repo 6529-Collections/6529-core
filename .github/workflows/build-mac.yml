@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-mac:
-    name: Build MacOS / ${{ inputs.env }} - v${{ inputs.version }}
+    name: ${{ inputs.env }} - v${{ inputs.version }}
     runs-on: macos-latest
 
     steps:

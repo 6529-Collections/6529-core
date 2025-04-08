@@ -12,7 +12,7 @@ on:
 
 jobs:
   build-linux:
-    name: Build Linux / ${{ inputs.env }} - v${{ inputs.version }}
+    name: ${{ inputs.env }} - v${{ inputs.version }}
     runs-on: ubuntu-latest
 
     steps:
