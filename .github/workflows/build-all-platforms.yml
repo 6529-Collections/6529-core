@@ -143,7 +143,7 @@ jobs:
           description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
-      - name: Fallback: Notify if publish job fails
+      - name: Notify publish failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
         continue-on-error: true
