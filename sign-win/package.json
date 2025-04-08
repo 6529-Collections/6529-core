@@ -1,5 +1,6 @@
 {
   "private": true,
+  "type": "module",
   "scripts": {
     "win-update-latest": "ts-node scripts/win-update-latest.ts",
     "sign-win": "ts-node --project ./tsconfig.json ./sign-win.ts && npm run win-update-latest",
