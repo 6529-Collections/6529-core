@@ -33,7 +33,7 @@ function signExecutable(filePath: string): void {
 }
 
 function signAllExecutables(): void {
-  const dirPath = path.join(__dirname, "dist");
+  const dirPath = path.join(__dirname, "../dist");
 
   if (fs.existsSync(dirPath)) {
     const files = fs

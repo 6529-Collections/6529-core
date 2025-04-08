@@ -81,7 +81,7 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install signing deps
+      - name: Install signing dependencies
         working-directory: ./sign-win
         run: npm ci
 
