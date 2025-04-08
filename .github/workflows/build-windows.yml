@@ -13,10 +13,10 @@ on:
 jobs:
   build-windows:
     name: ${{ inputs.env }} - v${{ inputs.version }} | BUILD
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
 
     steps:
-      - name: Check out code
+      - name: Check out
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
@@ -34,13 +34,20 @@ jobs:
             exit 1
           fi
 
-      - name: Set up Node.js
+      - name: Set up Node
         uses: actions/setup-node@v3
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Build for Windows
         run: |
@@ -56,12 +63,12 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Check out code
+      - name: Check out
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
 
-      - name: Set up Node.js
+      - name: Set up Node
         uses: actions/setup-node@v3
         with:
           node-version: 22

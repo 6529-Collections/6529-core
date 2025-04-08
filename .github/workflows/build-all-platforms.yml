@@ -67,5 +67,30 @@ jobs:
         (needs.build-linux.result == 'success' || needs.build-linux.result == 'skipped')
       )
     steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Publish links
+        run: |
+          if [ "${{ inputs.env }}" = "Staging" ]; then
+            npm run publish-links-staging
+          else
+            npm run publish-links-production
+          fi
+      - name: Public links - Arweave
+        run: |
+          if [ "${{ inputs.env }}" = "Staging" ]; then
+            npm run publish-links-staging-arweave
+          else
+            npm run publish-links-production-arweave
+          fi
+
       - name: Done!
         run: echo "🎉 All OS Builds Completed!"

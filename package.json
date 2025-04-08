@@ -44,8 +44,10 @@
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --x64 --publish always",
     "dist-linux-production": "npm run build && electron-builder --config electron-builder.production.json --linux --x64 --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json",
-    "publish-links": "ts-node scripts/publish-links.ts --skip-arweave",
-    "publish-links-arweave": "ts-node scripts/publish-links.ts"
+    "publish-links-staging": "ts-node scripts/publish-links.ts --staging --skip-arweave",
+    "publish-links-staging-arweave": "ts-node scripts/publish-links.ts --staging",
+    "publish-links-production": "ts-node scripts/publish-links.ts --skip-arweave",
+    "publish-links-production-arweave": "ts-node scripts/publish-links.ts"
   },
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",

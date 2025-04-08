@@ -3,8 +3,11 @@ import { arweaveFileUploader } from "./arweave";
 import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
 const BUCKET = "6529bucket";
-const BUCKET_PATH = "6529-core-app";
 const BASE_PATH = `https://${BUCKET}.s3.eu-west-1.amazonaws.com`;
+
+const BUCKET_PATH_PRODUCTION = "6529-core-app";
+const BUCKET_PATH_STAGING = "6529-staging-core-app";
+
 const CF_PATH = "https://d3lqz0a4bldqgf.cloudfront.net";
 const s3 = new S3Client({ region: "eu-west-1" });
 
@@ -107,12 +110,13 @@ function getFileName(url: string) {
 }
 
 function getTitle(platform: string, version: string) {
+  const appName = isStaging ? "6529 STAGING CORE" : "6529 CORE";
   if (platform === "mac") {
-    return `6529 CORE v${version} for macOS`;
+    return `${appName} v${version} for macOS`;
   } else if (platform === "win") {
-    return `6529 CORE v${version} for Windows`;
+    return `${appName} v${version} for Windows`;
   } else if (platform === "linux") {
-    return `6529 CORE v${version} for Linux`;
+    return `${appName} v${version} for Linux`;
   }
   return platform;
 }
@@ -221,6 +225,9 @@ async function processNewVersion(
 }
 
 async function processAllPlatforms(skipArweave: boolean) {
+  console.log("Bucket Path", BUCKET_PATH);
+  console.log("Skip Arweave", skipArweave);
+
   console.time("Total Processing");
   await Promise.all([
     processNewVersion("mac", "latest-mac.yml", skipArweave),
@@ -231,4 +238,6 @@ async function processAllPlatforms(skipArweave: boolean) {
 }
 
 const skipArweave = process.argv.includes("--skip-arweave");
+const isStaging = process.argv.includes("--staging");
+const BUCKET_PATH = isStaging ? BUCKET_PATH_STAGING : BUCKET_PATH_PRODUCTION;
 processAllPlatforms(skipArweave);
