@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-mac:
-    name: Build (skipped=${{ !inputs.should_run }})
+    name: ${{ inputs.should_run && 'Build' || 'Skipped' }}
     runs-on: macos-latest
 
     env:
