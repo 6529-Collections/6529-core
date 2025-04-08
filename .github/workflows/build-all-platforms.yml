@@ -101,6 +101,10 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install dependencies
+        if: env.SHOULD_FAIL != 'true'
+        run: npm ci
+
       - name: Publish S3 Links
         if: env.SHOULD_FAIL != 'true'
         run: |
