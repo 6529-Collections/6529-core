@@ -1,7 +1,7 @@
 {
   "private": true,
   "scripts": {
-    "sign-win": "ts-node --project ./tsconfig.json ./scripts/sign-win.ts",
+    "sign-win": "ts-node --project ./tsconfig.json ../scripts/sign-win.ts",
     "clean-win": "rimraf ../dist main renderer/out renderer/.next",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ../dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ../dist",
