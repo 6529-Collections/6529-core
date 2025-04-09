@@ -73,7 +73,7 @@ jobs:
         if: ${{ inputs.should_run }}
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
@@ -99,8 +99,8 @@ jobs:
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
             echo "Building for Staging..."
-            npm run dist-mac-staging
+            DEBUG=electron-builder npm run dist-mac-staging
           else
             echo "Building for Production..."
-            npm run dist-mac-production
+            DEBUG=electron-builder npm run dist-mac-production
           fi
