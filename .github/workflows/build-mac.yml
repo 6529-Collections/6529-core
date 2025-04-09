@@ -107,5 +107,5 @@ jobs:
             npm run dist-mac-staging
           else
             echo "Building for Production..."
-            npm run dist-mac-production-arm64
+            npm run dist-mac-production-x64
           fi
