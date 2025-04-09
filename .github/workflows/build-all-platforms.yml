@@ -25,6 +25,7 @@ on:
           - MacOS
           - Windows
           - Linux
+          - Publish
 
 run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
 
@@ -99,7 +100,7 @@ jobs:
         if: env.SHOULD_FAIL != 'true'
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install dependencies
         if: env.SHOULD_FAIL != 'true'
