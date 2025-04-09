@@ -7,6 +7,7 @@ import {
 } from "../services/api/common-api";
 import { ExtendedDrop } from "../helpers/waves/drop.helpers";
 import useCapacitor from "./useCapacitor";
+import { getDefaultQueryRetry } from "../components/react-query-wrapper/utils/query-utils";
 
 interface PollingState {
   hasNewDrops: boolean;
@@ -90,7 +91,7 @@ export function useWavePolling(
     refetchOnMount: true,
     refetchOnReconnect: true,
     refetchIntervalInBackground: !isCapacitor,
-    retry: 3,
+    ...getDefaultQueryRetry(),
   });
 
   const readAllForWave = async () => {

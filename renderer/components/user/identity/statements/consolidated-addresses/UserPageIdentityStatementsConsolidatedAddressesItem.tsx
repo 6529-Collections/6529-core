@@ -39,7 +39,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   const goToOpensea = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
     openInExternalBrowser(
-      `https://opensea.io/accounts/${address.wallet.address}`,
+      `https://opensea.io/${address.wallet.address}`,
       "_blank"
     );
   };

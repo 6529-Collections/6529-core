@@ -1,16 +1,19 @@
 import React, { useEffect, useMemo, useRef } from "react";
-import { EnhancedWave } from "../../../../hooks/useWavesList";
-import BrainLeftSidebarWave from "./BrainLeftSidebarWave";
 import BrainLeftSidebarCreateADirectMessageButton from "../BrainLeftSidebarCreateADirectMessageButton";
 import CommonSwitch from "../../../utils/switch/CommonSwitch";
 import { useShowFollowingWaves } from "../../../../hooks/useShowFollowingWaves";
 import { useAuth } from "../../../auth/Auth";
-import { motion } from "framer-motion";
+import { MinimalWave } from "../../../../contexts/wave/MyStreamContext";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Link from "next/link";
+import { UnifiedWavesListLoader } from "./UnifiedWavesListLoader";
+import UnifiedWavesListEmpty from "./UnifiedWavesListEmpty";
+import UnifiedWavesListWaves from "./UnifiedWavesListWaves";
 
 interface UnifiedWavesListProps {
-  readonly waves: EnhancedWave[];
+  readonly waves: MinimalWave[];
   readonly activeWaveId: string | null;
-  readonly resetWaveCount: (waveId: string) => void;
   readonly fetchNextPage: () => void;
   readonly hasNextPage: boolean | undefined;
   readonly isFetchingNextPage: boolean;
@@ -19,7 +22,6 @@ interface UnifiedWavesListProps {
 const UnifiedWavesList: React.FC<UnifiedWavesListProps> = ({
   waves,
   activeWaveId,
-  resetWaveCount,
   fetchNextPage,
   hasNextPage,
   isFetchingNextPage,
@@ -37,7 +39,7 @@ const UnifiedWavesList: React.FC<UnifiedWavesListProps> = ({
   const sortedWaves = useMemo(() => {
     if (!activeWaveId) return waves;
 
-    return waves.reduce<EnhancedWave[]>((acc, wave) => {
+    return waves.reduce<MinimalWave[]>((acc, wave) => {
       if (wave.id === activeWaveId) {
         // Place active wave at the beginning
         acc.unshift(wave);
@@ -100,59 +102,43 @@ const UnifiedWavesList: React.FC<UnifiedWavesListProps> = ({
   return (
     <div className="tw-mb-4">
       <div className="tw-h-full tw-bg-iron-950 tw-rounded-xl tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-py-4">
-        {/* Create Wave Button */}
         <div className="tw-px-4 tw-mb-4 tw-flex tw-items-center tw-justify-between tw-gap-2">
           <BrainLeftSidebarCreateADirectMessageButton />
+          <Link
+            href="/waves?new=true"
+            className="tw-no-underline tw-ring-1 tw-ring-inset tw-ring-iron-700 desktop-hover:hover:tw-ring-iron-700 tw-text-iron-300 tw-flex tw-items-center tw-justify-center tw-gap-x-2 tw-rounded-lg tw-py-2 tw-px-4 tw-text-xs tw-bg-iron-800 desktop-hover:hover:tw-text-primary-400 tw-font-semibold tw-transition-all tw-duration-300"
+          >
+            <FontAwesomeIcon
+              icon={faPlus}
+              className="tw-size-3 -tw-ml-1.5 tw-flex-shrink-0"
+            />
+            <span className="tw-text-xs tw-font-semibold">Wave</span>
+          </Link>
           {isConnectedIdentity && (
             <CommonSwitch
-              label="Following"
+              label="Joined"
               isOn={following}
               setIsOn={setFollowing}
             />
           )}
         </div>
 
-        {/* Non-scrollable container for all waves - parent will handle scrolling */}
         <div className="tw-w-full">
           {/* Unified Waves List */}
-          {sortedWaves.length > 0 && (
-            <div className="tw-flex tw-flex-col">
-              {sortedWaves.map((wave) => (
-                <div key={wave.id}>
-                  <BrainLeftSidebarWave
-                    wave={wave}
-                    resetWaveCount={resetWaveCount}
-                    activeWaveId={activeWaveId}
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+          <UnifiedWavesListWaves waves={sortedWaves} />
 
           {/* Loading indicator and intersection trigger */}
-          {(hasNextPage || isFetchingNextPage) && (
-            <div ref={loadMoreRef}>
-              {isFetchingNextPage && (
-                <motion.div
-                  className="tw-flex tw-justify-center tw-items-center tw-gap-1  tw-py-4"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="tw-w-1.5 tw-h-1.5 tw-bg-iron-400 tw-rounded-full tw-animate-pulse"></div>
-                  <div className="tw-w-1.5 tw-h-1.5 tw-bg-iron-400 tw-rounded-full tw-animate-pulse tw-animation-delay-200"></div>
-                  <div className="tw-w-1.5 tw-h-1.5 tw-bg-iron-400 tw-rounded-full tw-animate-pulse tw-animation-delay-400"></div>
-                </motion.div>
-              )}
-            </div>
-          )}
+          <UnifiedWavesListLoader
+            loadMoreRef={loadMoreRef}
+            isFetchingNextPage={isFetchingNextPage}
+            hasNextPage={!!hasNextPage}
+          />
 
           {/* Empty state */}
-          {sortedWaves.length === 0 && !isFetchingNextPage && (
-            <div className="tw-px-5 tw-py-8 tw-text-center tw-text-iron-500">
-              <p>No waves to display</p>
-            </div>
-          )}
+          <UnifiedWavesListEmpty
+            sortedWaves={sortedWaves}
+            isFetchingNextPage={isFetchingNextPage}
+          />
         </div>
       </div>
     </div>

@@ -18,6 +18,7 @@ import { useDropInteractionRules } from "../../../hooks/drops/useDropInteraction
 import { WinnerBadge } from "./WinnerBadge";
 import { SingleWaveDropTraits } from "./SingleWaveDropTraits";
 import { ApiDropType } from "../../../generated/models/ApiDropType";
+import WaveDropDeleteButton from "../../utils/button/WaveDropDeleteButton";
 
 interface MemesSingleWaveDropInfoPanelProps {
   readonly drop: ExtendedDrop;
@@ -31,7 +32,7 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
 > = ({ drop, wave, activeTab, onClose }) => {
   // State for fullscreen artwork view
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const { isWinner } = useDropInteractionRules(drop);
+  const { isWinner, canDelete } = useDropInteractionRules(drop);
   // Extract metadata
   const title =
     drop.metadata?.find((m) => m.data_key === "title")?.data_value ||
@@ -61,7 +62,7 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
             )}
             {isWinner && <WinnerBadge drop={drop} showBadge={true} />}
           </div>
-          <div className="tw-flex tw-flex-row tw-items-center tw-gap-x-3 tw-px-6">
+          <div className="tw-flex tw-items-center tw-justify-between tw-gap-x-3 tw-px-6">
             <h3 className="tw-text-lg tw-font-semibold tw-text-iron-100 tw-mb-0">
               {title}
             </h3>
@@ -71,7 +72,7 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
           </div>
           <div className="tw-mt-4">
             {artworkMedia && (
-              <div className="tw-flex tw-justify-center tw-h-96">
+              <div className="tw-flex tw-justify-center tw-max-h-96">
                 <DropListItemContentMedia
                   media_mime_type={artworkMedia.mime_type}
                   media_url={artworkMedia.url}
@@ -94,6 +95,12 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
           </div>
 
           <SingleWaveDropInfoDetails drop={drop} />
+
+          {canDelete && (
+            <div className="tw-border-t tw-border-iron-800 tw-border-solid tw-border-x-0 tw-border-b-0 tw-pt-4 tw-px-6 tw-pb-6">
+              <WaveDropDeleteButton drop={drop} onDelete={onClose} />
+            </div>
+          )}
         </div>
       </SingleWaveDropInfoContainer>
 

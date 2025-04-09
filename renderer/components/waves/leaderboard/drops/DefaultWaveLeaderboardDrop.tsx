@@ -7,6 +7,8 @@ import { ApiWave } from "../../../../generated/models/ObjectSerializer";
 import { useDropInteractionRules } from "../../../../hooks/drops/useDropInteractionRules";
 import { WaveLeaderboardDropRaters } from "./header/WaveleaderboardDropRaters";
 import { SingleWaveDropVote } from "../../drop/SingleWaveDropVote";
+import WaveDropActionsOptions from "../../drops/WaveDropActionsOptions";
+import WaveDropActionsOpen from "../../drops/WaveDropActionsOpen";
 
 interface DefaultWaveLeaderboardDropProps {
   readonly drop: ExtendedDrop;
@@ -17,7 +19,7 @@ interface DefaultWaveLeaderboardDropProps {
 export const DefaultWaveLeaderboardDrop: React.FC<
   DefaultWaveLeaderboardDropProps
 > = ({ drop, wave, onDropClick }) => {
-  const { canShowVote } = useDropInteractionRules(drop);
+  const { canShowVote, canDelete } = useDropInteractionRules(drop);
 
   const getBorderClasses = () => {
     const rank = drop.rank && drop.rank <= 3 ? drop.rank : "default";
@@ -42,14 +44,21 @@ export const DefaultWaveLeaderboardDrop: React.FC<
   return (
     <div
       onClick={() => onDropClick(drop)}
-      className="tw-group tw-cursor-pointer tw-rounded-xl tw-transition tw-duration-300 tw-ease-out tw-w-full"
+      className="tw-group tw-cursor-pointer tw-rounded-xl tw-transition tw-duration-300 tw-ease-out tw-w-full tw-relative"
     >
       <div className={getBorderClasses()}>
         <div className="tw-flex tw-flex-col">
           <div className="tw-flex tw-flex-col tw-gap-3">
             <div className="tw-flex tw-items-center tw-justify-between tw-gap-4">
               <WaveLeaderboardDropHeader drop={drop} />
-              {/* Removed raters from header, now always in footer */}
+              <div className="tw-flex tw-items-center">
+                <div className="tw-h-8 tw-hidden lg:tw-block">
+                  <WaveDropActionsOpen drop={drop} />
+                </div>
+                <div className="tw-h-8 tw-hidden lg:tw-block">
+                  {canDelete && <WaveDropActionsOptions drop={drop} />}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -64,7 +73,6 @@ export const DefaultWaveLeaderboardDrop: React.FC<
               </div>
             )}
           </div>
-          {/* Responsive footer layout with pure Tailwind */}
           <div className="tw-mt-3 tw-grid tw-grid-cols-[auto,1fr] tw-gap-x-4 tw-items-center sm:tw-ml-[3.25rem]">
             <div className="tw-contents">
               <WaveLeaderboardDropRaters drop={drop} />
