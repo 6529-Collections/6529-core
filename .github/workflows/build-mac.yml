@@ -100,14 +100,14 @@ jobs:
           echo "Building for Staging..."
           DEBUG=electron-builder npm run dist-mac-staging
 
-      - name: Build for MacOS (Production - x64)
-        if: ${{ inputs.should_run && inputs.env == 'Production' }}
-        run: |
-          echo "Building Production x64..."
-          DEBUG=electron-builder npm run dist-mac-production-x64
-
       - name: Build for MacOS (Production - arm64)
         if: ${{ inputs.should_run && inputs.env == 'Production' }}
         run: |
           echo "Building Production arm64..."
           DEBUG=electron-builder npm run dist-mac-production-arm64
+
+      - name: Build for MacOS (Production - x64)
+        if: ${{ inputs.should_run && inputs.env == 'Production' }}
+        run: |
+          echo "Building Production x64..."
+          DEBUG=electron-builder npm run dist-mac-production-x64
