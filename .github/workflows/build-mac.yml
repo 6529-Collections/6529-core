@@ -13,9 +13,91 @@ on:
         required: true
         type: boolean
 
+defaults:
+  check_should_run: &check_should_run
+    name: Check if should run
+    if: ${{ !inputs.should_run }}
+    run: echo "Skipping because should_run=false"
+
+  decode_cert: &decode_cert
+    name: Decode signing certificate
+    if: ${{ inputs.should_run }}
+    run: |
+      mkdir -p certs
+      echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > certs/signing_certificate.p12
+
+  import_cert: &import_cert
+    name: Import signing certificate
+    if: ${{ inputs.should_run }}
+    run: |
+      security create-keychain -p "" build.keychain
+      security default-keychain -s build.keychain
+      security unlock-keychain -p "" build.keychain
+      security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
+      security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+  list_signing_ids: &list_signing_ids
+    name: List code signing identities
+    if: ${{ inputs.should_run }}
+    run: security find-identity -v -p codesigning
+
+  checkout: &checkout
+    name: Check out
+    if: ${{ inputs.should_run }}
+    uses: actions/checkout@v3
+    with:
+      ref: ${{ github.ref_name }}
+      lfs: true
+
+  get_version: &get_version
+    name: Get version from package.json
+    if: ${{ inputs.should_run }}
+    id: get_version
+    run: echo "version=$(node -p \"require('./package.json').version\")" >> $GITHUB_OUTPUT
+
+  verify_version: &verify_version
+    name: Verify input version matches package.json version
+    if: ${{ inputs.should_run }}
+    run: |
+      echo "Input version: ${{ inputs.version }}"
+      echo "Package.json version: ${{ steps.get_version.outputs.version }}"
+      if [ "${{ inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+        echo "❌ Version mismatch!"
+        exit 1
+      fi
+
+  setup_node: &setup_node
+    name: Set up Node
+    if: ${{ inputs.should_run }}
+    uses: actions/setup-node@v3
+    with:
+      node-version: 20
+
+  install_deps: &install_deps
+    name: Install dependencies
+    if: ${{ inputs.should_run }}
+    run: npm ci
+
+  configure_aws: &configure_aws
+    name: Configure AWS Credentials
+    if: ${{ inputs.should_run }}
+    uses: aws-actions/configure-aws-credentials@v4
+    with:
+      aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      aws-region: ${{ secrets.AWS_REGION }}
+
+  inject_env: &inject_env
+    name: Inject secrets into .env file
+    if: ${{ inputs.should_run }}
+    run: |
+      echo "APPLE_ID=$APPLE_ID" >> .env
+      echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
+      echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
+
 jobs:
-  build-mac:
-    name: ${{ inputs.should_run && 'Build & Sign' || 'Skipped' }}
+  build-mac-arm64:
+    name: ${{ inputs.should_run && 'Build & Sign (arm64)' || 'Skipped' }}
     runs-on: macos-latest
 
     env:
@@ -24,82 +106,19 @@ jobs:
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
     steps:
-      - name: Check if should run
-        if: ${{ !inputs.should_run }}
-        run: echo "Skipping because should_run=false"
+      - <<: *check_should_run
+      - <<: *decode_cert
+      - <<: *import_cert
+      - <<: *list_signing_ids
+      - <<: *checkout
+      - <<: *get_version
+      - <<: *verify_version
+      - <<: *setup_node
+      - <<: *install_deps
+      - <<: *configure_aws
+      - <<: *inject_env
 
-      - name: Decode signing certificate
-        if: ${{ inputs.should_run }}
-        run: |
-          mkdir -p certs
-          echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > certs/signing_certificate.p12
-
-      - name: Import signing certificate
-        if: ${{ inputs.should_run }}
-        run: |
-          security create-keychain -p "" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "" build.keychain
-          security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
-
-      - name: List code signing identities
-        if: ${{ inputs.should_run }}
-        run: security find-identity -v -p codesigning
-
-      - name: Install Rosetta
-        if: ${{ inputs.should_run }}
-        run: |
-          softwareupdate --install-rosetta --agree-to-license
-
-      - name: Check out
-        if: ${{ inputs.should_run }}
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
-          lfs: true
-
-      - name: Get version from package.json
-        if: ${{ inputs.should_run }}
-        id: get_version
-        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
-
-      - name: Verify input version matches package.json version
-        if: ${{ inputs.should_run }}
-        run: |
-          echo "Input version: ${{ inputs.version }}"
-          echo "Package.json version: ${{ steps.get_version.outputs.version }}"
-          if [ "${{ inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
-            echo "❌ Version mismatch!"
-            exit 1
-          fi
-
-      - name: Set up Node
-        if: ${{ inputs.should_run }}
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-
-      - name: Install dependencies
-        if: ${{ inputs.should_run }}
-        run: npm ci
-
-      - name: Configure AWS Credentials
-        if: ${{ inputs.should_run }}
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
-
-      - name: Inject secrets into .env file
-        if: ${{ inputs.should_run }}
-        run: |
-          echo "APPLE_ID=$APPLE_ID" >> .env
-          echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
-          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
-
-      - name: Build for MacOS
+      - name: Build for MacOS (arm64)
         if: ${{ inputs.should_run }}
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
@@ -109,3 +128,30 @@ jobs:
             echo "Building for Production..."
             npm run dist-mac-production-arm64
           fi
+
+  build-mac-x64:
+    name: ${{ inputs.should_run && 'Build & Sign (x64)' || 'Skipped' }}
+    if: ${{ inputs.env == 'Production' }}
+    runs-on: macos-latest
+
+    env:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+    steps:
+      - <<: *check_should_run
+      - <<: *decode_cert
+      - <<: *import_cert
+      - <<: *list_signing_ids
+      - <<: *checkout
+      - <<: *get_version
+      - <<: *verify_version
+      - <<: *setup_node
+      - <<: *install_deps
+      - <<: *configure_aws
+      - <<: *inject_env
+
+      - name: Build for MacOS (x64)
+        if: ${{ inputs.should_run }}
+        run: npm run dist-mac-production-x64
