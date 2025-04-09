@@ -4,6 +4,7 @@ import React, { memo, useEffect, useState } from "react";
 import StormButton from "./StormButton";
 import CreateDropGifPicker from "./CreateDropGifPicker";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
+import { TENOR_API_KEY } from "../../../constants";
 
 interface CreateDropActionsProps {
   readonly isStormMode: boolean;
@@ -34,7 +35,7 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
     onGifDrop,
   }) => {
     const isMobile = useIsMobileScreen();
-    const gifPickerKey = process.env.TENOR_API_KEY;
+    const gifPickerKey = TENOR_API_KEY;
     const gifPickerEnabled = !!gifPickerKey;
     const [showGifPicker, setShowGifPicker] = useState(false);
 
