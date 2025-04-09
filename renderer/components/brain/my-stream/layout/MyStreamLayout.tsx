@@ -7,6 +7,7 @@ import Brain from "../../Brain";
 import { AuthContext } from "../../../auth/Auth";
 import { LayoutProvider, useLayout } from "./LayoutContext";
 import { SEIZE_URL } from "../../../../../constants";
+import { MyStreamProvider } from "../../../../contexts/wave/MyStreamContext";
 
 const Header = dynamic(() => import("../../../header/Header"), {
   ssr: false,
@@ -101,8 +102,10 @@ export default function MyStreamLayout({
   readonly children: ReactNode;
 }) {
   return (
-    <LayoutProvider>
-      <MyStreamLayoutContent>{children}</MyStreamLayoutContent>
-    </LayoutProvider>
+    <MyStreamProvider>
+      <LayoutProvider>
+        <MyStreamLayoutContent>{children}</MyStreamLayoutContent>
+      </LayoutProvider>
+    </MyStreamProvider>
   );
 }

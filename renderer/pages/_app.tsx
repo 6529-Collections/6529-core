@@ -114,6 +114,7 @@ import { EULAConsentProvider } from "../components/eula/EULAConsentContext";
 import { AppWalletsProvider } from "../components/app-wallets/AppWalletsContext";
 import { SeizeSettingsProvider } from "../contexts/SeizeSettingsContext";
 import { EmojiProvider } from "../contexts/EmojiContext";
+import { AppWebSocketProvider } from "../services/websocket/AppWebSocketProvider";
 
 library.add(
   faArrowUp,

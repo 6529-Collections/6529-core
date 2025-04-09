@@ -1,11 +1,12 @@
-import { useContext, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { AuthContext } from "../components/auth/Auth";
+
 import { WavesOverviewParams } from "../types/waves.types";
 import { ApiWavesOverviewType } from "../generated/models/ApiWavesOverviewType";
 import { commonApiFetch } from "../services/api/common-api";
 import { ApiWave } from "../generated/models/ApiWave";
 import { QueryKey } from "../components/react-query-wrapper/ReactQueryWrapper";
+import { getDefaultQueryRetry } from "../components/react-query-wrapper/utils/query-utils";
 
 interface UseWavesOverviewProps {
   readonly type: ApiWavesOverviewType;
@@ -18,26 +19,19 @@ export const useWavesOverview = ({
   type,
   limit = 20,
   following = false,
-  refetchInterval,
+  refetchInterval = Infinity,
 }: UseWavesOverviewProps) => {
-  const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
-
-  const getUsePublicWaves = () =>
-    !connectedProfile?.profile?.handle || !!activeProfileProxy;
-  const [usePublicWaves, setUsePublicWaves] = useState(getUsePublicWaves());
-
-  useEffect(
-    () => setUsePublicWaves(getUsePublicWaves()),
-    [connectedProfile, activeProfileProxy]
-  );
-
   const params: Omit<WavesOverviewParams, "offset"> = {
     limit,
     type,
     only_waves_followed_by_authenticated_user: following,
   };
 
-  const authQuery = useInfiniteQuery({
+  const [lastErrorTimestamp, setLastErrorTimestamp] = useState<number | null>(
+    null
+  );
+
+  const query = useInfiniteQuery({
     queryKey: [QueryKey.WAVES_OVERVIEW, params],
     queryFn: async ({ pageParam }: { pageParam: number }) => {
       const queryParams: Record<string, string> = {
@@ -55,54 +49,49 @@ export const useWavesOverview = ({
     initialPageParam: 0,
     getNextPageParam: (_, allPages) =>
       allPages.at(-1)?.length === params.limit ? allPages.flat().length : null,
-    enabled: !usePublicWaves,
     placeholderData: keepPreviousData,
-    refetchInterval: refetchInterval ?? false,
+    refetchInterval,
+    ...getDefaultQueryRetry(() => setLastErrorTimestamp(Date.now())),
   });
 
-  const publicQuery = useInfiniteQuery({
-    queryKey: [QueryKey.WAVES_OVERVIEW_PUBLIC, params],
-    queryFn: async ({ pageParam }: { pageParam: number }) => {
-      const queryParams: Record<string, string> = {
-        limit: `${params.limit}`,
-        offset: `${pageParam}`,
-        type: params.type,
-        only_waves_followed_by_authenticated_user: `${params.only_waves_followed_by_authenticated_user}`,
-      };
-
-      return await commonApiFetch<ApiWave[]>({
-        endpoint: `public/waves-overview`,
-        params: queryParams,
-      });
-    },
-    initialPageParam: 0,
-    getNextPageParam: (_, allPages) =>
-      allPages.at(-1)?.length === params.limit ? allPages.flat().length : null,
-    enabled: usePublicWaves,
-    placeholderData: keepPreviousData,
-    refetchInterval: refetchInterval ?? false,
-  });
-
-  const getWaves = (): ApiWave[] => {
-    if (usePublicWaves) {
-      return publicQuery.data?.pages.flat() ?? [];
-    }
-    return authQuery.data?.pages.flat() ?? [];
-  };
+  const getWaves = (): ApiWave[] => query.data?.pages.flat() ?? [];
 
   const [waves, setWaves] = useState<ApiWave[]>(getWaves());
   useEffect(() => {
     setWaves(getWaves());
-  }, [authQuery.data, publicQuery.data, usePublicWaves]);
+  }, [query.data]);
 
-  const activeQuery = usePublicWaves ? publicQuery : authQuery;
+  const fetchNextPage = useCallback(() => {
+    if (lastErrorTimestamp && Date.now() - lastErrorTimestamp < 30000) {
+      setTimeout(() => {
+        query.fetchNextPage();
+      }, 30000);
+      return;
+    }
+    query.fetchNextPage();
+  }, [lastErrorTimestamp, query]);
 
-  return {
-    waves,
-    isFetching: activeQuery.isFetching,
-    isFetchingNextPage: activeQuery.isFetchingNextPage,
-    hasNextPage: activeQuery.hasNextPage,
-    fetchNextPage: activeQuery.fetchNextPage,
-    status: activeQuery.status,
-  };
+  const refetch = useCallback(() => {
+    if (lastErrorTimestamp && Date.now() - lastErrorTimestamp < 30000) {
+      setTimeout(() => {
+        query.refetch();
+      }, 30000);
+      return;
+    }
+    query.refetch();
+  }, [lastErrorTimestamp, query]);
+
+  const returnValue = useMemo(() => {
+    return {
+      waves,
+      isFetching: query.isFetching,
+      isFetchingNextPage: query.isFetchingNextPage,
+      hasNextPage: query.hasNextPage,
+      fetchNextPage,
+      status: query.status,
+      refetch,
+    };
+  }, [waves, query, fetchNextPage, refetch]);
+
+  return returnValue;
 };

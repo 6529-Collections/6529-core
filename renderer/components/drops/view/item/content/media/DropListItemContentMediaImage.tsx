@@ -157,7 +157,7 @@ function DropListItemContentMediaImage({
                   <img
                     src={src}
                     alt="Full size drop media"
-                    className="tw-max-w-full tw-max-h-[calc(100vh-150px)] lg:tw-max-h-[calc(100vh-100px)] tw-object-contain"
+                    className="tw-max-w-[90vw] tw-max-h-[calc(100vh-120px)] lg:tw-max-h-[calc(100vh-60px)] tw-object-contain"
                     style={{
                       pointerEvents: "auto",
                     }}
