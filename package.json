@@ -88,6 +88,7 @@
     "framer-motion": "^11.3.9",
     "fs": "^0.0.1-security",
     "get-port-please": "^3.1.2",
+    "gif-picker-react": "^1.4.0",
     "js-cookie": "^3.0.5",
     "js-sha256": "^0.11.0",
     "js-yaml": "^4.1.0",

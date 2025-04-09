@@ -302,7 +302,9 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                 <Auth>
                                   <CookieConsentProvider>
                                     <EULAConsentProvider>
-                                      {getLayout(<Component {...props} />)}
+                                      <AppWebSocketProvider>
+                                        {getLayout(<Component {...props} />)}
+                                      </AppWebSocketProvider>
                                     </EULAConsentProvider>
                                   </CookieConsentProvider>
                                 </Auth>
