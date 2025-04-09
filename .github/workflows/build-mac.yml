@@ -47,6 +47,11 @@ jobs:
         if: ${{ inputs.should_run }}
         run: security find-identity -v -p codesigning
 
+      - name: Install Rosetta
+        if: ${{ inputs.should_run }}
+        run: |
+          softwareupdate --install-rosetta --agree-to-license
+
       - name: Check out
         if: ${{ inputs.should_run }}
         uses: actions/checkout@v3
@@ -75,16 +80,6 @@ jobs:
         with:
           node-version: 20
 
-      - name: Install Python 3.11 with distutils
-        if: ${{ inputs.should_run }}
-        run: |
-          brew install python@3.11
-          echo "PATH=/opt/homebrew/opt/python@3.11/bin:$PATH" >> $GITHUB_ENV
-
-      - name: Set Python 3.11 as default
-        if: ${{ inputs.should_run }}
-        run: echo "PYTHON=/opt/homebrew/opt/python@3.11/bin/python3.11" >> $GITHUB_ENV
-
       - name: Install dependencies
         if: ${{ inputs.should_run }}
         run: npm ci
@@ -104,20 +99,13 @@ jobs:
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
 
-      - name: Build for MacOS (Staging)
-        if: ${{ inputs.should_run && inputs.env == 'Staging' }}
+      - name: Build for MacOS
+        if: ${{ inputs.should_run }}
         run: |
-          echo "Building for Staging..."
-          npm run dist-mac-staging
-
-      - name: Build for MacOS (Production - arm64)
-        if: ${{ inputs.should_run && inputs.env == 'Production' }}
-        run: |
-          echo "Building Production arm64..."
-          npm run dist-mac-production-arm64
-
-      - name: Build for MacOS (Production - x64)
-        if: ${{ inputs.should_run && inputs.env == 'Production' }}
-        run: |
-          echo "Building Production x64..."
-          npm run dist-mac-production-x64
+          if [ "${{ inputs.env }}" = "Staging" ]; then
+            echo "Building for Staging..."
+            npm run dist-mac-staging
+          else
+            echo "Building for Production..."
+            npm run dist-mac-production
+          fi
