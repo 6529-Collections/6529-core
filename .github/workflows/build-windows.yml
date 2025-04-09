@@ -15,7 +15,7 @@ on:
 
 jobs:
   build-windows:
-    name: ${{ inputs.should_run && 'Build' || 'Skipped' }}
+    name: ${{ inputs.should_run && 'Build' || 'Build Skipped' }}
     runs-on: macos-latest
 
     steps:
@@ -83,7 +83,7 @@ jobs:
           fi
 
   sign-windows:
-    name: ${{ inputs.should_run && 'Sign' || 'Skipped' }}
+    name: ${{ inputs.should_run && 'Sign' || 'Sign Skipped' }}
     runs-on: windows-latest
     needs: build-windows
 
