@@ -99,7 +99,7 @@ jobs:
         if: env.SHOULD_FAIL != 'true'
         uses: actions/setup-node@v3
         with:
-          node-version: 22
+          node-version: 20
 
       - name: Install dependencies
         if: env.SHOULD_FAIL != 'true'
