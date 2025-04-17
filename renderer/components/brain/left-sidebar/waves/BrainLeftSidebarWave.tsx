@@ -5,14 +5,17 @@ import { usePrefetchWaveData } from "../../../../hooks/usePrefetchWaveData";
 import { ApiWaveType } from "../../../../generated/models/ApiWaveType";
 import WavePicture from "../../../waves/WavePicture";
 import BrainLeftSidebarWaveDropTime from "./BrainLeftSidebarWaveDropTime";
-import { MinimalWave } from "../../../../contexts/wave/MyStreamContext";
+import { MinimalWave } from "../../../../contexts/wave/hooks/useEnhancedWavesList";
+import BrainLeftSidebarWavePin from "./BrainLeftSidebarWavePin";
 
 interface BrainLeftSidebarWaveProps {
   readonly wave: MinimalWave;
+  readonly onHover: (waveId: string) => void;
 }
 
 const BrainLeftSidebarWave: React.FC<BrainLeftSidebarWaveProps> = ({
   wave,
+  onHover,
 }) => {
   const router = useRouter();
   const prefetchWaveData = usePrefetchWaveData();
@@ -27,8 +30,11 @@ const BrainLeftSidebarWave: React.FC<BrainLeftSidebarWaveProps> = ({
 
   const haveNewDrops = wave.newDropsCount.count > 0;
 
-  const onHover = (waveId: string) => {
-    if (waveId !== router.query.wave) prefetchWaveData(waveId);
+  const onWaveHover = (waveId: string) => {
+    if (waveId !== router.query.wave) {
+      onHover(waveId);
+      prefetchWaveData(waveId);
+    }
   };
 
   const isActive = wave.id === router.query.wave;
@@ -47,7 +53,7 @@ const BrainLeftSidebarWave: React.FC<BrainLeftSidebarWaveProps> = ({
 
   return (
     <div
-      className={`tw-flex tw-px-5 tw-py-2 tw-group tw-transition-colors tw-duration-200 tw-ease-in-out ${
+      className={`tw-flex tw-items-start tw-gap-x-4 tw-px-5 tw-py-2 tw-group tw-transition-colors tw-duration-200 tw-ease-in-out ${
         isActive
           ? "tw-bg-primary-300/10 desktop-hover:hover:tw-bg-primary-300/20"
           : "desktop-hover:hover:tw-bg-iron-900"
@@ -55,7 +61,7 @@ const BrainLeftSidebarWave: React.FC<BrainLeftSidebarWaveProps> = ({
     >
       <Link
         href={getHref(wave.id)}
-        onMouseEnter={() => onHover(wave.id)}
+        onMouseEnter={() => onWaveHover(wave.id)}
         onClick={onLinkClick}
         className={`tw-flex tw-flex-1 tw-space-x-3 tw-no-underline tw-py-1 ${
           isActive
@@ -109,6 +115,7 @@ const BrainLeftSidebarWave: React.FC<BrainLeftSidebarWaveProps> = ({
           )}
         </div>
       </Link>
+      <BrainLeftSidebarWavePin waveId={wave.id} isPinned={!!wave.isPinned} />
     </div>
   );
 };

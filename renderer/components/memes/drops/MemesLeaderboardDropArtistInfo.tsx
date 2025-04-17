@@ -1,12 +1,13 @@
 import React from "react";
 import Link from "next/link";
-import { cicToType, getTimeAgoShort } from "../../../helpers/Helpers";
+import { cicToType } from "../../../helpers/Helpers";
 import UserCICAndLevel, {
   UserCICAndLevelSize,
 } from "../../user/utils/UserCICAndLevel";
 import WaveDropAuthorPfp from "../../waves/drops/WaveDropAuthorPfp";
 import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
 import WinnerDropBadge from "../../waves/drops/winner/WinnerDropBadge";
+import WaveDropTime from "../../waves/drops/time/WaveDropTime";
 
 interface MemesLeaderboardDropArtistInfoProps {
   readonly drop: ExtendedDrop;
@@ -43,11 +44,11 @@ export const MemesLeaderboardDropArtistInfo: React.FC<
             </span>
           </Link>
 
+          {/* Divider followed by WaveDropTime component */}
           <div className="tw-size-[3px] tw-bg-iron-600 tw-rounded-full tw-flex-shrink-0"></div>
-
-          <span className="tw-text-md tw-mb-0 tw-whitespace-nowrap tw-font-normal tw-leading-none tw-text-iron-500">
-            {getTimeAgoShort(drop.created_at)}
-          </span>
+          <WaveDropTime 
+            timestamp={drop.created_at}
+          />
         </div>
         <WinnerDropBadge
           rank={drop.rank}

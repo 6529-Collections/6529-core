@@ -2,12 +2,14 @@ import { FC, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import CommonDropdownItemsMobileWrapper from "../../utils/select/dropdown/CommonDropdownItemsMobileWrapper";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
+import { ApiDropType } from "../../../generated/models/ApiDropType";
 import { AuthContext } from "../../auth/Auth";
 import WaveDropMobileMenuDelete from "./WaveDropMobileMenuDelete";
 import WaveDropMobileMenuFollow from "./WaveDropMobileMenuFollow";
 import WaveDropMobileMenuOpen from "./WaveDropMobileMenuOpen";
 import WaveDropActionsRate from "./WaveDropActionsRate";
 import { SEIZE_URL } from "../../../../constants";
+import { useSeizeSettings } from "../../../contexts/SeizeSettingsContext";
 
 interface WaveDropMobileMenuProps {
   readonly drop: ApiDrop;
@@ -17,6 +19,9 @@ interface WaveDropMobileMenuProps {
   readonly setOpen: (open: boolean) => void;
   readonly onReply: () => void;
   readonly onQuote: () => void;
+  readonly showOpenOption?: boolean;
+  readonly showCopyOption?: boolean;
+  readonly showFollowOption?: boolean;
 }
 
 const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
@@ -27,9 +32,18 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
   setOpen,
   onReply,
   onQuote,
+  showOpenOption = true,
+  showCopyOption = true,
+  showFollowOption = true,
 }) => {
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
+  const { isMemesWave } = useSeizeSettings();
   const isTemporaryDrop = drop.id.startsWith("temp-");
+
+  // Check if we should hide the clap icon
+  // Hide only for memes participation drops
+  const shouldHideClap =
+    drop.drop_type === ApiDropType.Participatory && isMemesWave(drop.wave?.id); // Only hide for memes participation drops
 
   const [copied, setCopied] = useState(false);
 
@@ -150,45 +164,59 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
             </button>
           </>
         )}
-        <WaveDropMobileMenuOpen drop={{
-          ...drop,
-          stableHash: drop.id,
-          stableKey: drop.id,
-        }} onOpenChange={closeMenu} />
 
-        <button
-          className={`tw-border-0 tw-flex tw-items-center tw-gap-x-4 tw-p-4 tw-bg-iron-950 tw-rounded-xl ${
-            isTemporaryDrop
-              ? "tw-opacity-50 tw-cursor-default"
-              : "active:tw-bg-iron-800"
-          } tw-transition-colors tw-duration-200`}
-          onClick={copyToClipboard}
-          disabled={isTemporaryDrop}>
-          <svg
-            className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-iron-300"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth="1.5"
-            stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
-            />
-          </svg>
-          <span
-            className={`tw-font-semibold tw-text-base ${
-              copied ? "tw-text-primary-400" : "tw-text-iron-300"
-            }`}>
-            {copied ? "Copied!" : "Copy link"}
-          </span>
-        </button>
+        {showOpenOption && (
+          <WaveDropMobileMenuOpen
+            drop={{
+              ...drop,
+              stableHash: drop.id,
+              stableKey: drop.id,
+            }}
+            onOpenChange={closeMenu}
+          />
+        )}
 
-        {!isAuthor && (
+        {showCopyOption && (
+          <button
+            className={`tw-border-0 tw-flex tw-items-center tw-gap-x-4 tw-p-4 tw-bg-iron-950 tw-rounded-xl ${
+              isTemporaryDrop
+                ? "tw-opacity-50 tw-cursor-default"
+                : "active:tw-bg-iron-800"
+            } tw-transition-colors tw-duration-200`}
+            onClick={copyToClipboard}
+            disabled={isTemporaryDrop}>
+            <svg
+              className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-iron-300"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.19 8.688a4.5 4.5 0 011.242 7.244l-4.5 4.5a4.5 4.5 0 01-6.364-6.364l1.757-1.757m13.35-.622l1.757-1.757a4.5 4.5 0 00-6.364-6.364l-4.5 4.5a4.5 4.5 0 001.242 7.244"
+              />
+            </svg>
+            <span
+              className={`tw-font-semibold tw-text-base ${
+                copied ? "tw-text-primary-400" : "tw-text-iron-300"
+              }`}>
+              {copied ? "Copied!" : "Copy link"}
+            </span>
+          </button>
+        )}
+
+        {showFollowOption && !isAuthor && (
           <WaveDropMobileMenuFollow drop={drop} onFollowChange={closeMenu} />
         )}
-        <WaveDropActionsRate drop={drop} isMobile={true} onRated={closeMenu} />
+        {!shouldHideClap && (
+          <WaveDropActionsRate
+            drop={drop}
+            isMobile={true}
+            onRated={closeMenu}
+          />
+        )}
         {showOptions && (
           <WaveDropMobileMenuDelete drop={drop} onDropDeleted={closeMenu} />
         )}

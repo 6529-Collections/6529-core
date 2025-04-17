@@ -220,8 +220,9 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   const router = useRouter();
   useAnchorInterceptor();
 
-  const hideFooter =
-    router.pathname === "/app-wallet" || router.pathname.startsWith("/waves");
+  const hideFooter = ["/waves", "/my-stream", "/open-mobile"].some((path) =>
+    router.pathname.startsWith(path)
+  );
 
   const { store, props } = wrapper.useWrappedStore(rest);
 

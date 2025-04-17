@@ -35,9 +35,11 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
   const { isWinner, canDelete } = useDropInteractionRules(drop);
   // Extract metadata
   const title =
-    drop.metadata?.find((m) => m.data_key === "title")?.data_value ||
-    drop.title ||
+    drop.metadata?.find((m) => m.data_key === "title")?.data_value ??
+    drop.title ??
     "Artwork Title";
+  const description =
+    drop.metadata?.find((m) => m.data_key === "description")?.data_value ?? "";
 
   // Get artwork media URL if available
   const artworkMedia = drop.parts?.at(0)?.media?.at(0);
@@ -67,12 +69,17 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
               {title}
             </h3>
           </div>
+          {description && (
+            <div className="tw-px-6 tw-mt-2">
+              <p className="tw-text-iron-400 tw-text-md tw-mb-0">{description}</p>
+            </div>
+          )}
           <div className="tw-px-6 tw-mt-2">
             <SingleWaveDropVotes drop={drop} />
           </div>
           <div className="tw-mt-4">
             {artworkMedia && (
-              <div className="tw-flex tw-justify-center tw-max-h-96">
+              <div className="tw-flex tw-justify-center tw-h-96">
                 <DropListItemContentMedia
                   media_mime_type={artworkMedia.mime_type}
                   media_url={artworkMedia.url}
@@ -96,9 +103,9 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
 
           <SingleWaveDropInfoDetails drop={drop} />
 
-          {canDelete && (
+          {canDelete && drop.drop_type !== ApiDropType.Winner && (
             <div className="tw-border-t tw-border-iron-800 tw-border-solid tw-border-x-0 tw-border-b-0 tw-pt-4 tw-px-6 tw-pb-6">
-              <WaveDropDeleteButton drop={drop} onDelete={onClose} />
+              <WaveDropDeleteButton drop={drop} />
             </div>
           )}
         </div>
@@ -115,11 +122,16 @@ export const MemesSingleWaveDropInfoPanel: React.FC<
           >
             {/* Header bar with title, badge, and close button */}
             <div className="tw-w-full tw-max-w-5xl tw-flex tw-justify-between tw-items-center tw-mb-4">
-              <div className="tw-flex tw-items-center tw-gap-x-3">
-                <SingleWaveDropPosition rank={drop.rank || 1} drop={drop} />
-                <h3 className="tw-text-xl tw-font-semibold tw-text-iron-100">
-                  {title}
-                </h3>
+              <div className="tw-flex tw-flex-col">
+                <div className="tw-flex tw-items-center tw-gap-x-3">
+                  <SingleWaveDropPosition rank={drop.rank ?? 1} drop={drop} />
+                  <h3 className="tw-text-xl tw-font-semibold tw-text-iron-100">
+                    {title}
+                  </h3>
+                </div>
+                {description && (
+                  <p className="tw-text-iron-400 tw-text-md tw-mt-1 tw-ml-10">{description}</p>
+                )}
               </div>
 
               {/* Votes info */}

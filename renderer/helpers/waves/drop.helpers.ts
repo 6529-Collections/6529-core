@@ -39,11 +39,12 @@ export const getStableDropKey = (
   return { key, hash: Buffer.from(hash).toString("hex") };
 };
 
-const findClosestMatch = (
+export const findClosestMatch = (
   newDrop: ApiDrop,
-  existingDrops: ExtendedDrop[]
+  existingDrops: ExtendedDrop[],
+  maxDiff?: number
 ): ExtendedDrop | null => {
-  const MAX_TIME_DIFFERENCE = 10000; // 10 seconds in milliseconds
+  const MAX_TIME_DIFFERENCE = maxDiff ?? 10000;
 
   return existingDrops.reduce((closest, current) => {
     if (
@@ -74,6 +75,8 @@ const findClosestMatch = (
 };
 
 export const getOptimisticDropId = (): string => `temp-${getRandomObjectId()}`;
+export const getOptimisticDropSerialNo = (): number =>
+  Math.floor(Math.random() * 1000000);
 
 /**
  * Convert an ApiDrop to ExtendedDrop by adding stable keys
@@ -83,7 +86,7 @@ export const convertApiDropToExtendedDrop = (drop: ApiDrop): ExtendedDrop => {
   return {
     ...drop,
     stableKey: key,
-    stableHash: hash
+    stableHash: hash,
   };
 };
 

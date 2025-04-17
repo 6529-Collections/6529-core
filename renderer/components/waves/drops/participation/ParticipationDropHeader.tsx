@@ -5,7 +5,7 @@ import UserCICAndLevel, {
   UserCICAndLevelSize,
 } from "../../../user/utils/UserCICAndLevel";
 import WinnerDropBadge from "../winner/WinnerDropBadge";
-import { Time } from "../../../../helpers/time";
+import WaveDropTime from "../time/WaveDropTime";
 
 interface ParticipationDropHeaderProps {
   readonly drop: ExtendedDrop;
@@ -41,9 +41,7 @@ export default function ParticipationDropHeader({
           </div>
 
           <div className="tw-size-[3px] tw-bg-iron-600 tw-rounded-full tw-flex-shrink-0"></div>
-          <p className="tw-text-xs tw-m-0 tw-whitespace-nowrap tw-font-medium tw-leading-none tw-text-iron-400">
-            {Time.millis(drop.created_at).toLocaleDropDateAndTimeString()}
-          </p>
+          <WaveDropTime timestamp={drop.created_at} />
         </div>
 
         {drop.rank && (

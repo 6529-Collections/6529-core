@@ -8,7 +8,7 @@
  * - Typed message subscriptions
  */
 
-import { SEIZE_API_URL } from "../../../constants";
+import { SEIZE_API_URL, SEIZE_WS_ENDPOINT } from "../../../constants";
 
 // Types
 export * from "./WebSocketTypes";
@@ -31,7 +31,8 @@ export { useWebSocketAuth } from "./useWebSocketAuth";
 // Default configuration
 export const DEFAULT_WEBSOCKET_CONFIG = {
   url:
-    SEIZE_API_URL.replace("https://api", "wss://ws") ||
+    SEIZE_WS_ENDPOINT ??
+    SEIZE_API_URL?.replace("https://api", "wss://ws") ??
     "wss://default-fallback-url",
   reconnectDelay: 2000,
   maxReconnectAttempts: 20,

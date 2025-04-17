@@ -48,6 +48,7 @@ export enum TitleType {
 
 type AuthContextType = {
   readonly connectedProfile: IProfileAndConsolidations | null;
+  readonly fetchingProfile: boolean;
   readonly connectionStatus: ProfileConnectedStatus;
   readonly receivedProfileProxies: ApiProfileProxy[];
   readonly activeProfileProxy: ApiProfileProxy | null;
@@ -74,6 +75,7 @@ const DEFAULT_TITLE = "6529";
 
 export const AuthContext = createContext<AuthContextType>({
   connectedProfile: null,
+  fetchingProfile: false,
   receivedProfileProxies: [],
   activeProfileProxy: null,
   connectionStatus: ProfileConnectedStatus.NOT_CONNECTED,
@@ -104,14 +106,20 @@ export default function Auth({
 
   const [connectedProfile, setConnectedProfile] =
     useState<IProfileAndConsolidations>();
+  const [fetchingProfile, setFetchingProfile] = useState(false);
 
   useEffect(() => {
     if (address) {
+      setFetchingProfile(true);
       commonApiFetch<IProfileAndConsolidations>({
         endpoint: `profiles/${address}`,
-      }).then((profile) => {
-        setConnectedProfile(profile);
-      });
+      })
+        .then((profile) => {
+          setConnectedProfile(profile);
+        })
+        .finally(() => {
+          setFetchingProfile(false);
+        });
     } else {
       setConnectedProfile(undefined);
     }
@@ -554,6 +562,7 @@ export default function Auth({
         requestAuth,
         setToast,
         connectedProfile: connectedProfile ?? null,
+        fetchingProfile,
         receivedProfileProxies,
         activeProfileProxy,
         showWaves,
