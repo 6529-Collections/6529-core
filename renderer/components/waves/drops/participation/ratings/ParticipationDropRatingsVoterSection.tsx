@@ -20,11 +20,7 @@ export default function ParticipationDropRatingsVoterSection({
   const { hasRaters } = ratingsData;
 
   return (
-    <div className="tw-flex tw-items-center tw-gap-x-1">
-      <span className="tw-text-sm tw-font-medium tw-text-iron-500">
-        Voters
-      </span>
-      
+    <div className="tw-flex tw-items-center tw-gap-x-1.5">
       {hasRaters && (
         <div className="tw-flex tw-items-center -tw-space-x-1.5">
           {drop.top_raters.slice(0, 5).map((rater, index) => (
@@ -33,7 +29,8 @@ export default function ParticipationDropRatingsVoterSection({
               content={
                 <span className="tw-text-sm tw-font-medium">
                   {rater.profile.handle} •{" "}
-                  {formatNumberWithCommas(rater.rating)} {drop.wave.voting_credit_type}
+                  {formatNumberWithCommas(rater.rating)}{" "}
+                  {drop.wave.voting_credit_type}
                 </span>
               }
               interactive={true}
@@ -54,7 +51,7 @@ export default function ParticipationDropRatingsVoterSection({
                         ImageScale.W_AUTO_H_50
                       )}
                       alt={`${rater.profile.handle}'s avatar`}
-                      className={`tw-h-5 tw-w-5 tw-rounded-md tw-ring-1 ${theme.ring} tw-bg-iron-900`}
+                      className={`tw-h-5 tw-w-5 tw-rounded-md tw-ring-1 tw-object-cover ${theme.ring} tw-bg-iron-900`}
                     />
                   </Link>
                 )}
@@ -70,9 +67,16 @@ export default function ParticipationDropRatingsVoterSection({
           )}
         </div>
       )}
-      
-      <span className={`tw-text-sm tw-font-bold tw-ml-1 ${theme.text}`}>
-        {drop.raters_count}
+
+      <span>
+        <span
+          className={`tw-text-sm tw-font-semibold tw-text-iron-50 ${theme.text}`}
+        >
+          {drop.raters_count}
+        </span>{" "}
+        <span className="tw-text-sm tw-font-normal tw-text-iron-500">
+          Voters
+        </span>
       </span>
     </div>
   );

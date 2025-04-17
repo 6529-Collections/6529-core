@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { useConnections, useDisconnect } from "wagmi";
 import {
+  migrateCookiesToLocalStorage,
   getWalletAddress,
   removeAuthJwt,
 } from "../../services/auth/auth.utils";
@@ -39,6 +40,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const [connectedAddress, setConnectedAddress] = useState<string | undefined>(
     connections?.[0]?.accounts?.[0] ?? getWalletAddress() ?? undefined
   );
+
+  useEffect(() => {
+    migrateCookiesToLocalStorage();
+  }, []);
 
   useEffect(() => {
     const address = connections?.[0]?.accounts?.[0];

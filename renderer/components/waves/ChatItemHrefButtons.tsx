@@ -4,9 +4,11 @@ import { useState } from "react";
 export default function ChatItemHrefButtons({
   href,
   relativeHref,
+  hideLink = false,
 }: {
   href: string;
   relativeHref?: string;
+  hideLink?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -36,9 +38,10 @@ export default function ChatItemHrefButtons({
           />
         </svg>
       </button>
-      {relativeHref && (
+      {!hideLink && (
         <Link
-          href={relativeHref}
+          href={relativeHref ?? href}
+          target={relativeHref ? undefined : "_blank"}
           className={`tw-border-0 tw-flex tw-items-center tw-gap-x-2 tw-p-2 tw-bg-iron-900 tw-rounded-xl`}>
           <svg
             className={`tw-flex-shrink-0 tw-w-4 tw-h-4 tw-transition tw-ease-out tw-duration-300`}

@@ -4,12 +4,12 @@ import { ApiWave } from "../../../generated/models/ApiWave";
 import Link from "next/link";
 import {
   formatNumberWithCommas,
-  getTimeAgoShort,
 } from "../../../helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "../../../helpers/image.helpers";
 import { DropContentSmall } from "./drops/DropContentSmall";
 import { WaveWinnersSmallOutcome } from "./WaveWinnersSmallOutcome";
 import WinnerDropBadge from "../drops/winner/WinnerDropBadge";
+import WaveDropTime from "../drops/time/WaveDropTime";
 
 interface MemesWaveWinnerDropSmallProps {
   readonly drop: ExtendedDrop;
@@ -59,7 +59,7 @@ export const MemesWaveWinnerDropSmall = memo<MemesWaveWinnerDropSmallProps>(
         onClick={handleDropClick}
         className="tw-w-full tw-text-left tw-cursor-pointer tw-group tw-rounded-xl tw-overflow-hidden"
       >
-        <div className="tw-rounded-xl tw-bg-iron-900 tw-p-4 tw-relative desktop-hover:hover:tw-bg-iron-800/60 tw-transition-all tw-duration-300 tw-ease-out">
+        <div className="tw-rounded-xl tw-bg-iron-900 tw-p-4 tw-relative desktop-hover:hover:tw-bg-iron-800/80 tw-transition-all tw-duration-300 tw-ease-out">
           <div className="tw-flex tw-flex-col tw-relative">
             <div className="tw-flex tw-items-start tw-justify-between tw-gap-x-4">
               <div className="tw-flex tw-items-center tw-gap-x-3">
@@ -140,9 +140,7 @@ export const MemesWaveWinnerDropSmall = memo<MemesWaveWinnerDropSmallProps>(
                 </span>
               </Link>
               <span className="tw-size-[3px] tw-bg-iron-600 tw-rounded-full tw-flex-shrink-0"></span>
-              <span className="tw-text-sm tw-text-iron-400 tw-flex-shrink-0">
-                {getTimeAgoShort(drop.created_at)}
-              </span>
+              <WaveDropTime timestamp={drop.created_at} />
             </div>
           </div>
 

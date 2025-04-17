@@ -29,6 +29,7 @@ export const STOP_WORKER = "stopWorker";
 
 export const SEIZE_URL = "https://6529.io";
 export const SEIZE_API_URL = "https://api.6529.io";
+export const SEIZE_WS_ENDPOINT = "wss://ws.6529.io";
 export const ALLOWLIST_API_ENDPOINT = "https://allowlist-api.6529.io";
 export const NEXTGEN_CHAIN_ID_ENV = "1";
 export const ALCHEMY_API_KEY = "";

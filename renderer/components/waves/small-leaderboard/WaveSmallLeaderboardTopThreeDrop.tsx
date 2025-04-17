@@ -7,7 +7,6 @@ import { assertUnreachable } from "../../../helpers/AllowlistToolHelpers";
 import { WaveSmallLeaderboardItemContent } from "./WaveSmallLeaderboardItemContent";
 import { WaveSmallLeaderboardItemOutcomes } from "./WaveSmallLeaderboardItemOutcomes";
 import { ApiWave } from "../../../generated/models/ApiWave";
-import WaveDropActionsRate from "../drops/WaveDropActionsRate";
 import WinnerDropBadge from "../drops/winner/WinnerDropBadge";
 import DropVoteProgressing from "../../drops/view/utils/DropVoteProgressing";
 
@@ -64,7 +63,7 @@ export const WaveSmallLeaderboardTopThreeDrop: React.FC<
       <div className="tw-space-y-3">
         <li className="tw-relative tw-flex tw-flex-col">
           <div
-            className="tw-@container tw-rounded-xl tw-bg-iron-900 tw-p-4 tw-relative desktop-hover:hover:tw-bg-iron-800/60 tw-transition-all tw-duration-300 tw-ease-out"
+            className="tw-@container tw-rounded-xl tw-bg-iron-900 tw-p-4 tw-relative desktop-hover:hover:tw-bg-iron-800/80 tw-transition-all tw-duration-300 tw-ease-out"
             style={{
               border: "1px solid transparent",
               boxShadow: `inset 2px 0 0 ${
@@ -99,7 +98,7 @@ export const WaveSmallLeaderboardTopThreeDrop: React.FC<
             <div>
               <div className="tw-w-full tw-inline-flex tw-items-center tw-justify-between">
                 {trophyIcon(drop.rank, drop.winning_context?.decision_time)}
-                <WaveDropActionsRate drop={drop} />
+                {/* Removed WaveDropActionsRate (clap icon) */}
               </div>
 
               <div className="tw-flex-1">
@@ -120,9 +119,7 @@ export const WaveSmallLeaderboardTopThreeDrop: React.FC<
                         alt={drop.author.handle}
                       />
                     ) : (
-                      <div
-                        className="tw-size-6 tw-flex-shrink-0 tw-rounded-lg tw-bg-iron-800 tw-ring-1 tw-ring-inset tw-ring-iron-700"
-                      />
+                      <div className="tw-size-6 tw-flex-shrink-0 tw-rounded-lg tw-bg-iron-800 tw-ring-1 tw-ring-inset tw-ring-iron-700" />
                     )}
                     <span className="tw-text-iron-50 tw-text-sm tw-font-semibold">
                       {drop.author.handle}

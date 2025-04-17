@@ -46,7 +46,11 @@ export default function Access() {
         alert("Access Denied!");
       } else {
         alert("gm!");
-        Cookies.set(API_AUTH_COOKIE, pass);
+        Cookies.set(API_AUTH_COOKIE, pass, {
+          expires: 7,
+          secure: true,
+          sameSite: "strict",
+        });
         window.location.href = "/";
       }
     });
