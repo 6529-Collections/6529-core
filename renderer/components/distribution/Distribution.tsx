@@ -1,10 +1,8 @@
 import styles from "./Distribution.module.scss";
-
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Container, Row, Col, Carousel, Table, Button } from "react-bootstrap";
 import { DBResponse } from "../../entities/IDBResponse";
-import Breadcrumb, { Crumb } from "../breadcrumb/Breadcrumb";
 import { useRouter } from "next/router";
 import { fetchAllPages, fetchUrl } from "../../services/6529api";
 import { Distribution, DistributionPhoto } from "../../entities/IDistribution";
@@ -48,7 +46,6 @@ export default function DistributionPage(props: Readonly<Props>) {
   }>({ page: 1, pageSize: 150 });
 
   const [nftId, setNftId] = useState<string>();
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([]);
 
   const [distributions, setDistributions] = useState<Distribution[]>([]);
   const [distributionsPhases, setDistributionsPhases] = useState<string[]>([]);
@@ -99,13 +96,6 @@ export default function DistributionPage(props: Readonly<Props>) {
 
   useEffect(() => {
     if (nftId) {
-      setBreadcrumbs([
-        { display: "Home", href: "/" },
-        { display: props.header, href: props.link },
-        { display: `Card ${nftId}`, href: `${props.link}/${nftId}` },
-        { display: `Distribution` },
-      ]);
-
       const distributionPhotosUrl = `${SEIZE_API_URL}/api/distribution_photos/${props.contract}/${nftId}`;
 
       fetchAllPages(distributionPhotosUrl).then((distributionPhotos: any[]) => {
@@ -299,7 +289,6 @@ export default function DistributionPage(props: Readonly<Props>) {
 
   return (
     <>
-      <Breadcrumb breadcrumbs={breadcrumbs} />
       <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>

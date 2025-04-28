@@ -251,7 +251,7 @@ export default function NewAssignPrimaryAddress(props: Readonly<Props>) {
   );
 }
 
-export function getAssignPrimartAddressConfig(toAddress: string) {
+function getAssignPrimartAddressConfig(toAddress: string) {
   return {
     address: DELEGATION_CONTRACT.contract,
     abi: DELEGATION_ABI,

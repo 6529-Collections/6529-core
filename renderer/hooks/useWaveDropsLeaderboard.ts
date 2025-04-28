@@ -34,7 +34,7 @@ interface UseWaveDropsLeaderboardProps {
   readonly pausePolling?: boolean;
 }
 
-export const SORT_DIRECTION_MAP: Record<
+const SORT_DIRECTION_MAP: Record<
   WaveDropsLeaderboardSort,
   string | undefined
 > = {
@@ -289,7 +289,7 @@ export function useWaveDropsLeaderboard({
     drops,
     fetchNextPage,
     hasNextPage,
-    isFetching: isFetching ?? !hasInitialized,
+    isFetching: isFetching || !hasInitialized,
     isFetchingNextPage,
     refetch,
     haveNewDrops,

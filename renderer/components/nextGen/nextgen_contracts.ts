@@ -13,7 +13,7 @@ export interface NextGenContract {
   abi: any;
 }
 
-export function getNextGenChainId() {
+function getNextGenChainId() {
   if (NEXTGEN_CHAIN_ID_ENV) {
     const chainId: number = parseInt(NEXTGEN_CHAIN_ID_ENV);
     if (chainId == sepolia.id) {

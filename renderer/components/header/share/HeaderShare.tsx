@@ -112,8 +112,8 @@ function HeaderQRModal({
       routerPath = routerPath.slice(1);
     }
 
-    const appScheme = process.env.MOBILE_APP_SCHEME ?? "mobile6529";
-    const coreScheme = process.env.CORE_SCHEME ?? "core6529";
+    const appScheme = "mobile6529";
+    const coreScheme = "core6529";
 
     const browserUrl = `${window.location.origin}${routerPath}`;
     const appUrl = `${appScheme}://${DeepLinkScope.NAVIGATE}${routerPath}`;

@@ -55,7 +55,7 @@ export function isMemeLabContract(contract: string) {
   return contract.toUpperCase() === MEMELAB_CONTRACT.toUpperCase();
 }
 
-export const fetchMeta = async (uri: string) => {
+const fetchMeta = async (uri: string) => {
   try {
     new URL(uri);
     const response = await fetch(uri);
@@ -65,12 +65,12 @@ export const fetchMeta = async (uri: string) => {
   }
 };
 
-export const fetchBlockTimestamp = async (provider: any, block: number) => {
+const fetchBlockTimestamp = async (provider: any, block: number) => {
   const blockEvent = await provider.getBlock(block);
   return blockEvent.timestamp * 1000;
 };
 
-export function getDaysDiff(t1: number, t2: number, floor = true) {
+function getDaysDiff(t1: number, t2: number, floor = true) {
   const diff = t1 - t2;
   if (floor) {
     return Math.floor(diff / (1000 * 3600 * 24));
@@ -82,7 +82,7 @@ export function fromGWEI(from: number) {
   return from / 1e18;
 }
 
-export function isNumeric(str: string) {
+function isNumeric(str: string) {
   return /^[+-]?(\d+(\.\d*)?|\.\d+)$/.test(str);
 }
 
@@ -186,7 +186,7 @@ export const fullScreenSupported = (): boolean => {
   return check;
 };
 
-export const isInFullScreen = (): boolean => {
+const isInFullScreen = (): boolean => {
   const doc: any = document;
   return !!(
     doc.fullscreenElement ||
@@ -221,7 +221,7 @@ export const enterArtFullScreen = async (elementId: string): Promise<void> => {
   }
 };
 
-export function nextTdh() {
+function nextTdh() {
   const now = new Date();
   const utcMidnight = new Date(now).setUTCHours(24, 0, 0, 0);
 
@@ -237,7 +237,7 @@ export function nextTdh() {
   return result.toString();
 }
 
-export function splitArtists(artists: string) {
+function splitArtists(artists: string) {
   const a = artists
     .split(" / ")
     .join(",")
@@ -248,7 +248,7 @@ export function splitArtists(artists: string) {
   return a;
 }
 
-export function removeProtocol(link: string) {
+function removeProtocol(link: string) {
   if (!link) {
     return link;
   }
@@ -306,7 +306,7 @@ export function getAddressEtherscanLink(chain_id: number, address: string) {
   }
 }
 
-export async function getContentTypeFromURL(url: string) {
+async function getContentTypeFromURL(url: string) {
   try {
     const response = await fetch(url, { method: "HEAD" });
     const contentType = response.headers.get("Content-Type");
@@ -388,13 +388,13 @@ export function getRandomColor() {
   return `#${r}${g}${b}`;
 }
 
-export const scrollToDiv = (divRef: any, block: "start" | "end") => {
+const scrollToDiv = (divRef: any, block: "start" | "end") => {
   if (divRef.current) {
     divRef.current.scrollIntoView({ behavior: "smooth", block });
   }
 };
 
-export const isDivInViewport = (divRef: any) => {
+const isDivInViewport = (divRef: any) => {
   if (divRef.current) {
     const rect = divRef.current.getBoundingClientRect();
     return (
@@ -438,7 +438,7 @@ export function createArray(startNum: number, endNum: number) {
 
   return result;
 }
-export const formatNumber = (num: number): string => {
+const formatNumber = (num: number): string => {
   // For numbers less than 1000, return the number as is
   if (num < 1000) {
     return num.toString();
@@ -723,7 +723,7 @@ export const getTimeUntil = (milliseconds: number): string => {
   }
 };
 
-export const truncateMiddle = (value: string): string => {
+const truncateMiddle = (value: string): string => {
   if (value.length > 50) {
     return `${value.substring(0, 10)}...${value.substring(value.length - 30)}`;
   }
@@ -772,7 +772,7 @@ export function getRoyaltyImage(royaltiesPercentage: number) {
     : "pepe-smile.png";
 }
 
-export const convertStringOrNullToNumberOrNull = (
+const convertStringOrNullToNumberOrNull = (
   value: string | null
 ): number | null => {
   if (value === null) {
@@ -856,7 +856,7 @@ export const getRandomColorWithSeed = (seedString: string) => {
   return `#${r}${g}${b}`;
 };
 
-export const waitForMilliseconds = async (
+const waitForMilliseconds = async (
   milliseconds: number
 ): Promise<void> => {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));

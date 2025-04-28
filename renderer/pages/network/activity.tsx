@@ -12,7 +12,6 @@ import ProfileActivityLogs, {
 import { FilterTargetType } from "../../components/utils/CommonFilterTargetSelect";
 import { useContext, useEffect } from "react";
 import { ReactQueryWrapperContext } from "../../components/react-query-wrapper/ReactQueryWrapper";
-import { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import SidebarLayout from "../../components/utils/sidebar/SidebarLayout";
 import { getProfileLogTypes } from "../../helpers/profile-logs.helpers";
 import { AuthContext } from "../../components/auth/Auth";
@@ -46,11 +45,6 @@ export default function CommunityActivityPage({
     });
   }, []);
 
-  const breadcrumbs: Crumb[] = [
-    { display: "Home", href: "/" },
-    { display: "Network", href: "/network" },
-    { display: "Activity" },
-  ];
 
   const { initCommunityActivityPage } = useContext(ReactQueryWrapperContext);
   initCommunityActivityPage({
@@ -72,7 +66,7 @@ export default function CommunityActivityPage({
         <meta property="og:description" content="6529 CORE" />
       </Head>
 
-      <SidebarLayout breadcrumbs={breadcrumbs}>
+      <SidebarLayout>
         <ProfileActivityLogs
           initialParams={INITIAL_ACTIVITY_LOGS_PARAMS}
           withFilters={true}>

@@ -11,24 +11,45 @@ import {
   ImageScale,
 } from "../../../../../../helpers/image.helpers";
 import { openInExternalBrowser } from "../../../../../../helpers";
+import { useInView } from "../../../../../../hooks/useInView";
 
 function DropListItemContentMediaImage({
   src,
+  maxRetries = 0,
   onContainerClick,
 }: {
   readonly src: string;
+  readonly maxRetries?: number;
   readonly onContainerClick?: () => void;
 }) {
-  const [isLoading, setIsLoading] = useState(true);
+  const [ref, inView] = useInView<HTMLDivElement>();
+  const [loaded, setLoaded] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [errorCount, setErrorCount] = useState(0);
+  const [retryTick, setRetryTick] = useState(0);
 
   const imgRef = useRef<HTMLImageElement>(null);
   const [isZoomed, setIsZoomed] = useState(false);
   const { isCapacitor } = useCapacitor();
 
   const handleImageLoad = useCallback(() => {
-    setIsLoading(false);
+    setLoaded(true);
   }, []);
+
+  const handleError = useCallback(() => {
+    if (errorCount >= maxRetries) return; // give up – show fallback
+    const delay = 500 * 2 ** errorCount; // 0.5s, 1s, 2s …
+    setTimeout(() => {
+      setErrorCount((n) => n + 1);
+      setRetryTick((t) => t + 1); // changes key -> reload
+    }, delay);
+  }, [errorCount, maxRetries]);
+
+  const manualRetry = () => {
+    setErrorCount(0);
+    setLoaded(false);
+    setRetryTick((t) => t + 1);
+  };
 
   const handleImageClick = useCallback(
     (event: React.MouseEvent<HTMLImageElement>) => {
@@ -196,27 +217,48 @@ function DropListItemContentMediaImage({
 
   return (
     <>
-      <div className="tw-w-full tw-h-full tw-flex tw-items-center tw-justify-center tw-relative tw-mx-[1px]">
-        {isLoading && (
+      <div
+        ref={ref}
+        className="tw-w-full tw-h-full tw-flex tw-items-center tw-justify-center tw-relative tw-mx-[1px]">
+        {!loaded && errorCount <= maxRetries && (
           <div
             className="tw-bg-iron-800 tw-animate-pulse tw-rounded-xl"
             style={loadingPlaceholderStyle}
           />
         )}
-        <img
-          ref={imgRef}
-          src={getScaledImageUri(src, ImageScale.AUTOx450)}
-          alt="Drop media"
-          className={`tw-object-contain tw-max-w-full ${
-            isLoading ? "tw-opacity-0" : "tw-opacity-100"
-          } tw-cursor-pointer`}
-          style={{
-            maxWidth: "100%",
-            maxHeight: "100%",
-          }}
-          onLoad={handleImageLoad}
-          onClick={handleImageClick}
-        />
+
+        {inView && errorCount <= maxRetries && (
+          <img
+            key={retryTick} // bust cache on each retry
+            ref={imgRef}
+            src={getScaledImageUri(src, ImageScale.AUTOx450)}
+            alt="Drop media"
+            className={`tw-object-contain tw-max-w-full ${
+              !loaded ? "tw-opacity-0" : "tw-opacity-100"
+            } tw-cursor-pointer`}
+            style={{
+              maxWidth: "100%",
+              maxHeight: "100%",
+            }}
+            loading="lazy"
+            decoding="async"
+            onLoad={handleImageLoad}
+            onClick={handleImageClick}
+            onError={handleError}
+          />
+        )}
+        {errorCount > maxRetries && (
+          <div className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-2">
+            <span className="tw-text-sm tw-text-iron-400">
+              Couldn’t load image.
+            </span>
+            <button
+              onClick={manualRetry}
+              className="tw-bg-iron-700 hover:tw-bg-iron-600 tw-text-white tw-px-3 tw-py-1 tw-rounded-md tw-text-xs">
+              Retry
+            </button>
+          </div>
+        )}
       </div>
       {isModalOpen && createPortal(modalContent, document.body)}
     </>

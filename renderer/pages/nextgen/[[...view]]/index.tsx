@@ -1,9 +1,7 @@
 import Head from "next/head";
 import styles from "../../../styles/Home.module.scss";
-import Breadcrumb, { Crumb } from "../../../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import { getCommonHeaders } from "../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../services/api/common-api";
 import { NextGenCollection } from "../../../entities/INextgen";
@@ -14,11 +12,6 @@ import NextGenNavigationHeader, {
 } from "../../../components/nextGen/collections/NextGenNavigationHeader";
 import Image from "next/image";
 import { SEIZE_URL } from "../../../../constants";
-
-const Header = dynamic(() => import("../../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const NextGenComponent = dynamic(
   () => import("../../../components/nextGen/collections/NextGen"),
@@ -47,18 +40,6 @@ export default function NextGen(props: any) {
   const [view, setView] = useState<NextGenView | undefined>(
     props.pageProps.view
   );
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([]);
-
-  function setCrumbs() {
-    const crumbs: Crumb[] = [{ display: "Home", href: "/" }];
-    if (view) {
-      crumbs.push({ display: "NextGen", href: "/nextgen" });
-      crumbs.push({ display: view });
-    } else {
-      crumbs.push({ display: "NextGen" });
-    }
-    setBreadcrumbs(crumbs);
-  }
 
   useEffect(() => {
     if (view) {
@@ -68,7 +49,6 @@ export default function NextGen(props: any) {
     } else {
       router.push("/nextgen", undefined, { shallow: true });
     }
-    setCrumbs();
   }, [view]);
 
   const title = view ? view + " | NextGen | 6529 CORE" : "NextGen | 6529 CORE";
@@ -88,8 +68,6 @@ export default function NextGen(props: any) {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         {collection?.id ? (
           <>
             <NextGenNavigationHeader view={view} setView={setView} />

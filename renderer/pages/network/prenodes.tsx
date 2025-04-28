@@ -1,9 +1,7 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
-import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
 import { AuthContext } from "../../components/auth/Auth";
 import { useContext, useEffect } from "react";
 import { SEIZE_URL } from "../../../constants";
@@ -13,11 +11,6 @@ const PrenodesStatus = dynamic(
   { ssr: false }
 );
 
-const Header = dynamic(() => import("../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
-
 export default function PrenodesPage() {
   const { setTitle, title } = useContext(AuthContext);
   useEffect(() => {
@@ -25,12 +18,6 @@ export default function PrenodesPage() {
       title: "Prenodes | Network",
     });
   }, []);
-
-  const breadcrumbs: Crumb[] = [
-    { display: "Home", href: "/" },
-    { display: "Network", href: "/network" },
-    { display: "Prenodes" },
-  ];
 
   return (
     <>
@@ -45,8 +32,6 @@ export default function PrenodesPage() {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <Container fluid className={styles.leaderboardContainer}>
           <Row>
             <Col>

@@ -24,6 +24,8 @@ dist
 .env
 .next
 /renderer/out
+/renderer/.cursor
+/renderer/.windsurfrules
 /out
 /main
 

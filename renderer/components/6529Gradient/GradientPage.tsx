@@ -14,7 +14,6 @@ import {
   numberWithCommas,
   printMintDate,
 } from "../../helpers/Helpers";
-import Breadcrumb, { Crumb } from "../breadcrumb/Breadcrumb";
 import LatestActivityRow from "../latest-activity/LatestActivityRow";
 import { Transaction } from "../../entities/ITransaction";
 import { useRouter } from "next/router";
@@ -40,8 +39,6 @@ export default function GradientPage() {
 
   const [nftId, setNftId] = useState<string>();
 
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([]);
-
   const [nft, setNft] = useState<NftWithOwner>();
   const [isOwner, setIsOwner] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -56,23 +53,7 @@ export default function GradientPage() {
         setNftId(router.query.id as string);
       }
     }
-  }, [router.isReady]);
-
-  useEffect(() => {
-    if (nft) {
-      setBreadcrumbs([
-        { display: "Home", href: "/" },
-        { display: "6529 Gradient", href: "/6529-gradient" },
-        { display: `${nft.name}` },
-      ]);
-    } else {
-      setBreadcrumbs([
-        { display: "Home", href: "/" },
-        { display: "6529 Gradient", href: "/6529-gradient" },
-        { display: `${nftId}` },
-      ]);
-    }
-  }, [nft]);
+  }, [router.isReady, router.query.id]);
 
   useEffect(() => {
     setIsOwner(
@@ -316,8 +297,6 @@ export default function GradientPage() {
   }
 
   return (
-    <>
-      <Breadcrumb breadcrumbs={breadcrumbs} />
       <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>
@@ -379,6 +358,5 @@ export default function GradientPage() {
           </Col>
         </Row>
       </Container>
-    </>
   );
 }

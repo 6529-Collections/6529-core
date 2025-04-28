@@ -1,5 +1,6 @@
 import { SortDirection } from "../entities/ISort";
 import { ApiDrop } from "../generated/models/ApiDrop";
+import { ApiProfileMin } from "../generated/models/ApiProfileMin";
 
 export interface FullPageRequest<SORT_BY_OPTIONS> {
   readonly sort_direction: SortDirection;
@@ -17,7 +18,7 @@ export interface Page<T> {
 
 export type CountlessPage<T> = Omit<Page<T>, "count">;
 
-export type NonNullableRequired<T> = {
+type NonNullableRequired<T> = {
   [P in keyof T]-?: NonNullable<T[P]>;
 };
 
@@ -306,11 +307,11 @@ export const CONTACT_STATEMENT_TYPES = [
 
 export type CONTACT_STATEMENT_TYPE = (typeof CONTACT_STATEMENT_TYPES)[number];
 
-export const SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPES = [
+const SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPES = [
   STATEMENT_TYPE.LINK,
 ] as const;
 
-export type SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPE =
+type SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPE =
   (typeof SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPES)[number];
 
 export enum Period {
@@ -322,8 +323,22 @@ export enum Period {
 }
 
 export enum WsMessageType {
-  DROP_UPDATE = 'DROP_UPDATE',
-  DROP_DELETE = 'DROP_DELETE'
+  DROP_UPDATE = "DROP_UPDATE",
+  DROP_DELETE = "DROP_DELETE",
+  DROP_RATING_UPDATE = "DROP_RATING_UPDATE",
+  USER_IS_TYPING = "USER_IS_TYPING",
+  SUBSCRIBE_TO_WAVE = "SUBSCRIBE_TO_WAVE",
+}
+
+
+
+export interface WsTypingMessage {
+  readonly type: WsMessageType.USER_IS_TYPING;
+  readonly data: {
+    wave_id: string;
+    profile: ApiProfileMin;
+    timestamp: number; 
+  };
 }
 
 export interface WsDropUpdateMessage {

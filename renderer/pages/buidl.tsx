@@ -1,18 +1,11 @@
 import Head from "next/head";
 import styles from "../styles/Home.module.scss";
 import Image from "next/image";
-import { useContext, useEffect, useState } from "react";
-import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
+import { useContext, useEffect } from "react";
 import { Container, Row, Col } from "react-bootstrap";
-import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
 import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
 
-const Header = dynamic(() => import("../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 export default function Buidl() {
   const { setTitle, title } = useContext(AuthContext);
@@ -21,11 +14,6 @@ export default function Buidl() {
       title: "BUIDL | 6529 CORE",
     });
   }, []);
-
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
-    { display: "Home", href: "/" },
-    { display: "BUIDL" },
-  ]);
 
   return (
     <>
@@ -40,8 +28,6 @@ export default function Buidl() {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <Container fluid className={`${styles.pageNotFound} text-center`}>
           <Row>
             <Col>

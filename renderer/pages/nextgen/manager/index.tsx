@@ -1,17 +1,10 @@
 import Head from "next/head";
 import styles from "../../../styles/Home.module.scss";
-import Breadcrumb from "../../../components/breadcrumb/Breadcrumb";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import { useContext } from "react";
 import { AuthContext } from "../../../components/auth/Auth";
 import { SEIZE_URL } from "../../../../constants";
-
-const Header = dynamic(() => import("../../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const NextGenAdminComponent = dynamic(
   () => import("../../../components/nextGen/admin/NextGenAdmin"),
@@ -22,11 +15,6 @@ const NextGenAdminComponent = dynamic(
 
 export default function NextGenAdmin() {
   const { setTitle, title } = useContext(AuthContext);
-  const breadcrumbs = [
-    { display: "Home", href: "/" },
-    { display: "NextGen", href: "/nextgen" },
-    { display: "Admin" },
-  ];
   setTitle({
     title: "NextGen Admin | 6529 CORE",
   });
@@ -44,8 +32,6 @@ export default function NextGenAdmin() {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <Container fluid className={`${styles.main}`}>
           <Row>
             <Col>

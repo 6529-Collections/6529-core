@@ -6,7 +6,6 @@ import { Container, Row, Col } from "react-bootstrap";
 import { MEMES_CONTRACT } from "../../constants";
 import { DBResponse } from "../../entities/IDBResponse";
 
-import Breadcrumb, { Crumb } from "../breadcrumb/Breadcrumb";
 import { Transaction } from "../../entities/ITransaction";
 import { useRouter } from "next/router";
 import { ConsolidatedTDH } from "../../entities/ITDH";
@@ -37,7 +36,7 @@ interface MemeTab {
   title: string;
 }
 
-export enum MEME_FOCUS {
+enum MEME_FOCUS {
   LIVE = "live",
   YOUR_CARDS = "your-cards",
   THE_ART = "the-art",
@@ -62,8 +61,6 @@ export default function MemePage() {
   const [nftId, setNftId] = useState<string>();
 
   const [activeTab, setActiveTab] = useState<MEME_FOCUS>();
-
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([]);
 
   const [nft, setNft] = useState<NFT>();
   const [nftMeta, setNftMeta] = useState<MemesExtendedData>();
@@ -172,23 +169,9 @@ export default function MemePage() {
             ).then((response: DBResponse) => {
               const mynft = response.data[0];
               setNft(mynft);
-              setBreadcrumbs([
-                { display: "Home", href: "/" },
-                { display: "The Memes", href: "/the-memes" },
-                {
-                  display: `SZN${nftMetas[0].season}`,
-                  href: `/the-memes?szn=${nftMetas[0].season}&sort=age&sort_dir=ASC`,
-                },
-                { display: `Card ${nftId} - ${mynft.name}` },
-              ]);
             });
           } else {
             setNftMeta(undefined);
-            setBreadcrumbs([
-              { display: "Home", href: "/" },
-              { display: "The Memes", href: "/the-memes" },
-              { display: `${nftId}` },
-            ]);
           }
         }
       );
@@ -212,7 +195,9 @@ export default function MemePage() {
   useEffect(() => {
     if (connectedWallets.length && nftId) {
       fetchUrl(
-        `${SEIZE_API_URL}/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
+        `${
+          process.env.API_ENDPOINT
+        }/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
           ","
         )}&id=${nftId}`
       ).then((response: DBResponse) => {
@@ -330,65 +315,62 @@ export default function MemePage() {
   }
 
   return (
-    <>
-      <Breadcrumb breadcrumbs={breadcrumbs} />
-      <Container fluid className={styles.mainContainer}>
-        <Row>
-          <Col>
-            <Container className="pt-4 pb-4">
-              <Row>
-                <Col>
-                  <h1>
-                    <span className="font-lightest">The</span> Memes
-                  </h1>
-                </Col>
-              </Row>
-              {nftMeta && nft && (
-                <>
-                  <Row className="pt-3 pb-3">
-                    <Col className="d-flex gap-2 align-items-center">
-                      {nftId && (
-                        <>
-                          <MemeNavigationBtn nft={nftMeta} icon="previous" />
-                          <MemeNavigationBtn nft={nftMeta} icon="next" />
-                        </>
-                      )}
-                    </Col>
-                  </Row>
-                  <Row className="pt-2">
-                    <Col>
-                      <h2 className="float-left">
-                        <a
-                          href={`/the-memes?szn=${nftMeta.season}&sort=age&sort_dir=ASC`}>
-                          SZN{nftMeta.season}
-                        </a>
-                      </h2>
-                      <h2 className="float-left">
-                        &nbsp;| Card {nft.id} -&nbsp;
-                      </h2>
-                      <h2 className="float-left">{nft.name}</h2>
-                    </Col>
-                  </Row>
-                  <Row className="pt-3 pb-3">
-                    <Col>
-                      {MEME_TABS.map((tab) => (
-                        <TabButton
-                          key={`${nft.id}-${nft.contract}-${tab.focus}-tab`}
-                          tab={tab}
-                          activeTab={activeTab}
-                          setActiveTab={setActiveTab}
-                        />
-                      ))}
-                    </Col>
-                  </Row>
-                  {printContent()}
-                </>
-              )}
-            </Container>
-          </Col>
-        </Row>
-      </Container>
-    </>
+    <Container fluid className={styles.mainContainer}>
+      <Row>
+        <Col>
+          <Container className="pt-4 pb-4">
+            <Row>
+              <Col>
+                <h1>
+                  <span className="font-lightest">The</span> Memes
+                </h1>
+              </Col>
+            </Row>
+            {nftMeta && nft && (
+              <>
+                <Row className="pt-3 pb-3">
+                  <Col className="d-flex gap-2 align-items-center">
+                    {nftId && (
+                      <>
+                        <MemeNavigationBtn nft={nftMeta} icon="previous" />
+                        <MemeNavigationBtn nft={nftMeta} icon="next" />
+                      </>
+                    )}
+                  </Col>
+                </Row>
+                <Row className="pt-2">
+                  <Col>
+                    <h2 className="float-left">
+                      <a
+                        href={`/the-memes?szn=${nftMeta.season}&sort=age&sort_dir=ASC`}>
+                        SZN{nftMeta.season}
+                      </a>
+                    </h2>
+                    <h2 className="float-left">
+                      &nbsp;| Card {nft.id} -&nbsp;
+                    </h2>
+                    <h2 className="float-left">{nft.name}</h2>
+                  </Col>
+                </Row>
+                <Row className="pt-3 pb-3">
+                  <Col>
+                    {MEME_TABS.map((tab) => (
+                      <TabButton
+                        key={`${nft.id}-${nft.contract}-${tab.focus}-tab`}
+                        tab={tab}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                      />
+                    ))}
+                  </Col>
+                </Row>
+                {printContent()}
+              </>
+            )}
+          </Container>
+        </Col>
+      </Row>
+    </Container>
   );
 }
 

@@ -12,7 +12,7 @@ const OpenMobilePage = () => {
   useEffect(() => {
     if (typeof window === "undefined" || !path) return;
 
-    const appScheme = process.env.MOBILE_APP_SCHEME ?? "mobile6529";
+    const appScheme = "mobile6529";
     const decoded = decodeURIComponent(Array.isArray(path) ? path[0] : path);
     const deepLink = `${appScheme}://navigate${decoded}`;
     setDecodedPath(decoded);

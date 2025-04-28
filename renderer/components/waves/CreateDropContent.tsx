@@ -53,6 +53,10 @@ import { useWave } from "../../hooks/useWave";
 import { multiPartUpload } from "./create-wave/services/multiPartUpload";
 import { useMyStream } from "../../contexts/wave/MyStreamContext";
 import { DropMutationBody } from "./CreateDrop";
+import { ProcessIncomingDropType } from "../../contexts/wave/hooks/useWaveRealtimeUpdater";
+import throttle from "lodash/throttle";
+import { useWebSocket } from "../../services/websocket";
+import { WsMessageType } from "../../helpers/Types";
 
 export type CreateDropMetadataType =
   | {
@@ -253,6 +257,7 @@ const getOptimisticDrop = (
       authenticated_user_eligible: boolean;
       credit_type: ApiWaveCreditType;
       period?: { min: number | null; max: number | null };
+      forbid_negative_votes: boolean;
     };
     chat: { authenticated_user_eligible: boolean };
   },
@@ -300,6 +305,7 @@ const getOptimisticDrop = (
       admin_group_id: null,
       admin_drop_deletion_enabled: false,
       authenticated_user_admin: false,
+      forbid_negative_votes: wave.voting.forbid_negative_votes,
     },
     author: {
       id: connectedProfile.profile.external_id,
@@ -364,6 +370,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   submitDrop,
   privileges,
 }) => {
+  const { send } = useWebSocket();
   const breakpoint = useBreakpoint();
   const { requestAuth, setToast, connectedProfile } = useContext(AuthContext);
   const { addOptimisticDrop } = useContext(ReactQueryWrapperContext);
@@ -393,6 +400,18 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       ) ?? null,
     [editorState]
   );
+
+  const throttleHandle = useMemo(() => {
+    return throttle(() => {
+      send(WsMessageType.USER_IS_TYPING, { wave_id: wave.id });
+    }, 4000);
+  }, []);
+
+  useEffect(() => {
+    if (getMarkdown?.length) {
+      throttleHandle();
+    }
+  }, [getMarkdown]);
 
   const getCanSubmitStorm = () => {
     const markdown = getMarkdown;
@@ -656,7 +675,14 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       );
       if (optimisticDrop) {
         addOptimisticDrop({ drop: optimisticDrop });
-        setTimeout(() => processIncomingDrop(optimisticDrop), 0);
+        setTimeout(
+          () =>
+            processIncomingDrop(
+              optimisticDrop,
+              ProcessIncomingDropType.DROP_INSERT
+            ),
+          0
+        );
       }
       !!getMarkdown?.length && createDropInputRef.current?.clearEditorState();
       setFiles([]);
@@ -910,8 +936,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+            transition={{ duration: 0.3 }}>
             <CreateDropMetadata
               disabled={submitting}
               onRemoveMetadata={onRemoveMetadata}

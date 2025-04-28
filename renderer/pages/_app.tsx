@@ -115,6 +115,9 @@ import { AppWalletsProvider } from "../components/app-wallets/AppWalletsContext"
 import { SeizeSettingsProvider } from "../contexts/SeizeSettingsContext";
 import { EmojiProvider } from "../contexts/EmojiContext";
 import { AppWebSocketProvider } from "../services/websocket/AppWebSocketProvider";
+import MainLayout from "../components/layout/MainLayout";
+import { HeaderProvider } from "../contexts/HeaderContext";
+import TitleBar from "../components/header/titlebar/TitleBar";
 
 library.add(
   faArrowUp,
@@ -304,7 +307,14 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                   <CookieConsentProvider>
                                     <EULAConsentProvider>
                                       <AppWebSocketProvider>
-                                        {getLayout(<Component {...props} />)}
+                                        <HeaderProvider>
+                                          <MainLayout>
+                                            <TitleBar />
+                                            {getLayout(
+                                              <Component {...props} />
+                                            )}
+                                          </MainLayout>
+                                        </HeaderProvider>
                                       </AppWebSocketProvider>
                                     </EULAConsentProvider>
                                   </CookieConsentProvider>

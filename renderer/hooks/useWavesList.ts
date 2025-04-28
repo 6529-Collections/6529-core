@@ -15,7 +15,7 @@ import { ApiWave } from "../generated/models/ApiWave";
 import { useShowFollowingWaves } from "./useShowFollowingWaves";
 
 // Enhanced wave interface with isPinned field and newDropsCount
-export interface EnhancedWave extends ApiWave {
+interface EnhancedWave extends ApiWave {
   isPinned: boolean;
 }
 
@@ -39,18 +39,18 @@ const useIndividualWaveData = (
   waveId: string | null,
   onWaveNotFound: () => void = () => {}
 ) => {
-  const { data, isLoading, isError } = useWaveData({
+  const { data, isLoading, isError, refetch } = useWaveData({
     waveId,
     onWaveNotFound,
   });
-  return { data, isLoading, isError };
+  return { data, isLoading, isError, refetch };
 };
 
 /**
  * Hook for managing and fetching waves list including pinned waves
  * @returns Wave list data and loading states
  */
-export const useWavesList = () => {
+const useWavesList = () => {
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
   const { pinnedIds, addId, removeId } = usePinnedWaves();
   const [following] = useShowFollowingWaves();
@@ -151,6 +151,17 @@ export const useWavesList = () => {
     wave9,
     wave10,
   ];
+  // Function to refetch all waves (main and pinned)
+  const refetchAllWaves = useCallback(() => {
+    // Refetch main waves overview
+    mainWavesRefetch();
+    // Refetch individually fetched pinned waves
+    waveDataArray.forEach(({ refetch }) => {
+      if (refetch) {
+        refetch();
+      }
+    });
+  }, [mainWavesRefetch, waveDataArray]);
 
   // Get separately fetched pinned waves
   const separatelyFetchedPinnedWaves = useMemo(() => {
@@ -296,6 +307,8 @@ export const useWavesList = () => {
       mainWaves: prevMainWavesRef.current,
       missingPinnedIds,
       mainWavesRefetch,
+      // Refetch all waves including main and pinned
+      refetchAllWaves,
     }),
     [
       allWaves,
@@ -312,6 +325,7 @@ export const useWavesList = () => {
       prevMainWavesRef.current,
       missingPinnedIds,
       mainWavesRefetch,
+      refetchAllWaves,
     ]
   );
 };

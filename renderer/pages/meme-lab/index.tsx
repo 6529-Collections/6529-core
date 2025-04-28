@@ -1,17 +1,9 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
-
-import { useContext, useEffect, useState } from "react";
-import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
+import { useContext, useEffect } from "react";
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
-import { AuthContext } from "../../components/auth/Auth";
+import { AuthContext, useAuth } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
-
-const Header = dynamic(() => import("../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const MemeLabComponent = dynamic(
   () => import("../../components/memelab/MemeLab"),
@@ -27,12 +19,7 @@ export default function MemeLab() {
     });
   }, []);
 
-  const [connectedWallets, setConnectedWallets] = useState<string[]>([]);
-
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
-    { display: "Home", href: "/" },
-    { display: "Meme Lab" },
-  ]);
+  const { connectedProfile } = useAuth();
 
   return (
     <>
@@ -47,9 +34,13 @@ export default function MemeLab() {
       </Head>
 
       <main className={styles.main}>
-        <Header onSetWallets={(wallets) => setConnectedWallets(wallets)} />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
-        <MemeLabComponent wallets={connectedWallets} />
+        <MemeLabComponent
+          wallets={
+            connectedProfile?.consolidation.wallets.map(
+              (w) => w.wallet.address
+            ) ?? []
+          }
+        />
       </main>
     </>
   );
