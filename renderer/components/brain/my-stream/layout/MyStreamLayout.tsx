@@ -51,7 +51,7 @@ function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
       );
     }
 
-    if (!connectedProfile?.profile?.handle && !fetchingProfile) {
+    if (!connectedProfile?.handle && !fetchingProfile) {
       return (
         <>
           <h1 className="tw-text-xl tw-font-bold">
@@ -76,7 +76,8 @@ function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
   ) : (
     <div
       id="my-stream-connect"
-      className="tw-flex-1 tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-center tw-gap-8 tw-p-6">
+      className="tw-flex-1 tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-center tw-gap-8 tw-p-6"
+    >
       <Image
         priority
         loading="eager"

@@ -18,7 +18,8 @@ const GroupsSidebarToggleButton = forwardRef<HTMLButtonElement, Props>(
       <button
         ref={ref}
         className={`${color} tw-fixed tw-mt-2 tw-z-40 tw-bg-iron-950 tw-border tw-border-l-0 tw-border-solid tw-border-neutral-600 tw-p-2 tw-rounded-r-lg  focus:tw-outline-none tw-transition tw-duration-300 tw-ease-out`}
-        onClick={() => setOpen(!open)}>
+        onClick={() => setOpen(!open)}
+      >
         {open ? (
           <svg
             className="tw-h-6 tw-w-6"

@@ -34,11 +34,7 @@ export default function GradientsPage() {
 
       <main className={styles.main}>
         <GradientsComponent
-          wallets={
-            connectedProfile?.consolidation.wallets.map(
-              (w) => w.wallet.address
-            ) ?? []
-          }
+          wallets={connectedProfile?.wallets?.map((w) => w.wallet) ?? []}
         />
       </main>
     </>

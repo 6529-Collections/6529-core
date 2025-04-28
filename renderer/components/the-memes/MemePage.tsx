@@ -53,9 +53,7 @@ export default function MemePage() {
   const [connectedWallets, setConnectedWallets] = useState<string[]>([]);
 
   useEffect(() => {
-    setConnectedWallets(
-      connectedProfile?.consolidation.wallets.map((w) => w.wallet.address) ?? []
-    );
+    setConnectedWallets(connectedProfile?.wallets?.map((w) => w.wallet) ?? []);
   }, [connectedProfile]);
 
   const [nftId, setNftId] = useState<string>();
@@ -215,7 +213,7 @@ export default function MemePage() {
   useEffect(() => {
     if (connectedWallets.length > 0 && nftId) {
       commonApiFetch<ConsolidatedTDH>({
-        endpoint: `tdh/consolidation/${connectedProfile?.consolidation.consolidation_key}`,
+        endpoint: `tdh/consolidation/${connectedProfile?.consolidation_key}`,
       }).then((response) => {
         setMyOwner(response);
         setMyTDH(response.memes.find((m) => m.id === parseInt(nftId)));
@@ -248,7 +246,8 @@ export default function MemePage() {
                     sm={{ span: 12 }}
                     md={{ span: 6 }}
                     lg={{ span: 6 }}
-                    className={`${styles.nftImageWrapper} pt-2 pb-5`}>
+                    className={`${styles.nftImageWrapper} pt-2 pb-5`}
+                  >
                     <NFTImage
                       nft={nft}
                       animation={true}
@@ -426,7 +425,8 @@ function TabButton(
       }`}
       onClick={() => {
         props.setActiveTab(props.tab.focus);
-      }}>
+      }}
+    >
       {props.tab.title}
     </button>
   );

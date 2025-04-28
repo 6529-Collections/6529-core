@@ -92,7 +92,7 @@ export default function WaveDropsAll({
 
   const typingMessage = useWaveIsTyping(
     waveId,
-    connectedProfile?.profile?.handle ?? null
+    connectedProfile?.handle ?? null
   );
 
   // Effect to update the ref whenever waveMessages changes
@@ -313,7 +313,8 @@ export default function WaveDropsAll({
             typingMessage
               ? "tw-opacity-100 tw-visible"
               : "tw-opacity-0 tw-invisible tw-hidden"
-          }`}>
+          }`}
+        >
           <div className="tw-flex tw-items-center tw-gap-x-0.5">
             <FontAwesomeIcon
               icon={faCircle}

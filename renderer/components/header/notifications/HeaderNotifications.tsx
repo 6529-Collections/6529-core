@@ -12,7 +12,7 @@ export default function HeaderNotifications() {
   const [linkHref, setLinkHref] = useState("/my-stream/notifications");
 
   const { notifications, haveUnreadNotifications } = useUnreadNotifications(
-    connectedProfile?.profile?.handle
+    connectedProfile?.handle ?? null
   );
 
   useEffect(() => {

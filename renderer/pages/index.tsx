@@ -104,7 +104,7 @@ export default function Home({
   const [manifoldClaim, setManifoldClaim] = useState<ManifoldClaim>();
 
   useEffect(() => {
-    if (connectedProfile?.consolidation.consolidation_key && pageProps.nft) {
+    if (connectedProfile?.consolidation_key && pageProps.nft) {
       fetchUrl(
         `${SEIZE_API_URL}/api/nft-owners/consolidation/${connectedProfile?.consolidation.consolidation_key}?contract=${pageProps.nft.contract}&token_id=${pageProps.nft.id}`
       ).then((response: DBResponse) => {

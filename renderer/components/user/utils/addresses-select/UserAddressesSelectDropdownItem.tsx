@@ -1,16 +1,16 @@
 import { useCopyToClipboard } from "react-use";
-import { IProfileConsolidation } from "../../../../entities/IProfile";
 import { openInExternalBrowser } from "../../../../helpers";
+import { ApiWallet } from "../../../../generated/models/ApiWallet";
 
 export default function UserAddressesSelectDropdownItem({
-  item,
+  wallet,
   onCopy,
 }: {
-  readonly item: IProfileConsolidation;
+  readonly wallet: ApiWallet;
   readonly onCopy?: () => void;
 }) {
   const [_, copyToClipboard] = useCopyToClipboard();
-  const getEnsOrWallet = () => item.wallet.ens ?? item.wallet.address;
+  const getEnsOrWallet = () => wallet.display ?? wallet.wallet;
 
   const copyAddress = (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
