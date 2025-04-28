@@ -15,8 +15,13 @@ import useWaveMessagesStore, {
 } from "./hooks/useWaveMessagesStore";
 import { useWaveDataManager } from "./hooks/useWaveDataManager";
 import { ApiDrop } from "../../generated/models/ApiDrop";
-import { useWaveRealtimeUpdater } from "./hooks/useWaveRealtimeUpdater";
+import {
+  ProcessIncomingDropType,
+  useWaveRealtimeUpdater,
+} from "./hooks/useWaveRealtimeUpdater";
 import { WaveMessages } from "./hooks/types";
+import { useWebsocketStatus } from "../../services/websocket/useWebSocketMessage";
+import useCapacitor from "../../hooks/useCapacitor";
 
 // Define nested structures for context data
 interface WavesContextData {
@@ -48,7 +53,10 @@ interface MyStreamContextType {
   readonly waveMessagesStore: WaveMessagesStoreData;
   readonly registerWave: (waveId: string, syncNewest?: boolean) => void;
   readonly fetchNextPageForWave: (waveId: string) => Promise<ApiDrop[] | null>;
-  readonly processIncomingDrop: (drop: ApiDrop) => void;
+  readonly processIncomingDrop: (
+    drop: ApiDrop,
+    type: ProcessIncomingDropType
+  ) => void;
   readonly processDropRemoved: (waveId: string, dropId: string) => void;
 }
 
@@ -57,15 +65,17 @@ interface MyStreamProviderProps {
 }
 
 // Create the context
-export const MyStreamContext = createContext<MyStreamContextType | null>(null);
+const MyStreamContext = createContext<MyStreamContextType | null>(null);
 
 // Create a provider component
 export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   children,
 }) => {
+  const { isCapacitor } = useCapacitor();
   const { activeWaveId, setActiveWave } = useActiveWaveManager();
   const wavesHookData = useEnhancedWavesList(activeWaveId);
   const waveMessagesStore = useWaveMessagesStore();
+  const websocketStatus = useWebsocketStatus();
 
   // Instantiate the data manager, passing the updater function from the store
   const waveDataManager = useWaveDataManager({
@@ -84,7 +94,21 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   });
 
   useEffect(() => {
+    if (websocketStatus !== "connected") {
+      return;
+    }
     if (activeWaveId) {
+      waveDataManager.registerWave(activeWaveId, true);
+    }
+    wavesHookData.refetchAllWaves();
+    if (isCapacitor) {
+      wavesHookData.resetAllWavesNewDropsCount();
+    }
+  }, [websocketStatus, activeWaveId, isCapacitor]);
+
+  useEffect(() => {
+    if (activeWaveId) {
+
       waveDataManager.registerWave(activeWaveId, true);
     }
   }, [activeWaveId]);

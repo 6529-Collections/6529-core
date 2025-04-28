@@ -2,7 +2,6 @@ import Head from "next/head";
 import styles from "../../../../../styles/Home.module.scss";
 
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../../../../components/header/HeaderPlaceholder";
 import { NextGenCollection } from "../../../../../entities/INextgen";
 import { isEmptyObject } from "../../../../../helpers/Helpers";
 import { commonApiFetch } from "../../../../../services/api/common-api";
@@ -13,14 +12,6 @@ import { formatNameForUrl } from "../../../../../components/nextGen/nextgen_help
 import { ContentView } from "../../../../../components/nextGen/collections/collectionParts/NextGenCollection";
 import { AuthContext } from "../../../../../components/auth/Auth";
 import { SEIZE_URL } from "../../../../../../constants";
-
-const Header = dynamic(
-  () => import("../../../../../components/header/Header"),
-  {
-    ssr: false,
-    loading: () => <HeaderPlaceholder />,
-  }
-);
 
 const NextGenCollectionComponent = dynamic(
   () =>
@@ -68,7 +59,6 @@ export default function NextGenCollectionPage(props: any) {
       </Head>
 
       <main className={styles.main}>
-        <Header />
         <NextGenCollectionComponent collection={collection} view={view} />
       </main>
     </>

@@ -29,12 +29,12 @@ export enum WaveDropsLeaderboardSort {
 
 interface UseWaveDropsLeaderboardProps {
   readonly waveId: string;
-  readonly connectedProfileHandle: string | undefined;
+  readonly connectedProfileHandle: string | null;
   readonly sort?: WaveDropsLeaderboardSort;
   readonly pausePolling?: boolean;
 }
 
-export const SORT_DIRECTION_MAP: Record<
+const SORT_DIRECTION_MAP: Record<
   WaveDropsLeaderboardSort,
   string | undefined
 > = {
@@ -289,7 +289,7 @@ export function useWaveDropsLeaderboard({
     drops,
     fetchNextPage,
     hasNextPage,
-    isFetching: isFetching ?? !hasInitialized,
+    isFetching: isFetching || !hasInitialized,
     isFetchingNextPage,
     refetch,
     haveNewDrops,

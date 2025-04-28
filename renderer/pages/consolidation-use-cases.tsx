@@ -1,18 +1,10 @@
 import Head from "next/head";
 import styles from "../styles/Home.module.scss";
-import dynamic from "next/dynamic";
 import { Container, Row, Col, Table } from "react-bootstrap";
-import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
 import { useContext, useEffect, useState } from "react";
 import Image from "next/image";
-import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
 import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_URL } from "../../constants";
-
-const Header = dynamic(() => import("../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 export default function ConsolidationUseCases() {
   const { setTitle, title } = useContext(AuthContext);
@@ -21,11 +13,6 @@ export default function ConsolidationUseCases() {
       title: "Consolidation Use Cases | 6529 CORE",
     });
   }, []);
-
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
-    { display: "Home", href: "/" },
-    { display: "Consolidation Use Cases" },
-  ]);
 
   const [html, setHtml] = useState("");
   const [error, setError] = useState(false);
@@ -62,8 +49,6 @@ export default function ConsolidationUseCases() {
         <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
       <main className={`${styles.main} ${styles.tdhMain}`}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <Container fluid>
           <Row>
             <Col>

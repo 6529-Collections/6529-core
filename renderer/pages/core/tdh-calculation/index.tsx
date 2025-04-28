@@ -1,14 +1,7 @@
 import Head from "next/head";
 import styles from "../../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import Breadcrumb from "../../../components/breadcrumb/Breadcrumb";
-import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import { SEIZE_URL } from "../../../../constants";
-
-const Header = dynamic(() => import("../../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const TDHCalculation = dynamic(
   () => import("../../../components/core/tdh-calculation/TDHCalculation"),
@@ -18,11 +11,6 @@ const TDHCalculation = dynamic(
 );
 
 export default function TDHConsensusPage() {
-  const breadcrumbs = [
-    { display: "Home", href: "/" },
-    { display: "Core - TDH Calculation" },
-  ];
-
   return (
     <>
       <Head>
@@ -39,8 +27,6 @@ export default function TDHConsensusPage() {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <TDHCalculation />
       </main>
     </>

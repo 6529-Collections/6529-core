@@ -14,10 +14,12 @@ import WaveDropsEmptyPlaceholder from "./WaveDropsEmptyPlaceholder";
 import WaveDropsScrollingOverlay from "./WaveDropsScrollingOverlay";
 import { commonApiPostWithoutBodyAndResponse } from "../../../services/api/common-api";
 import { useVirtualizedWaveDrops } from "../../../hooks/useVirtualizedWaveDrops";
-import useCapacitor from "../../../hooks/useCapacitor";
-import { useMyStream } from "../../../contexts/wave/MyStreamContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCircle } from "@fortawesome/free-solid-svg-icons";
+import { useWaveIsTyping } from "../../../hooks/useWaveIsTyping";
+import { useAuth } from "../../auth/Auth";
 
-export interface WaveDropsAllProps {
+interface WaveDropsAllProps {
   readonly waveId: string;
   readonly dropId: string | null;
   readonly onReply: ({
@@ -48,19 +50,8 @@ export default function WaveDropsAll({
   initialDrop,
   onDropContentClick,
 }: WaveDropsAllProps) {
-  const { registerWave } = useMyStream();
-  const { isActive } = useCapacitor();
-  const previousIsActiveRef = useRef<boolean | undefined>(isActive);
-
-  useEffect(() => {
-    const previousIsActive = previousIsActiveRef.current;
-    if (previousIsActive === false && isActive === true) {
-      registerWave(waveId, true);
-    }
-    previousIsActiveRef.current = isActive;
-  }, [isActive, registerWave, waveId]);
-
   const router = useRouter();
+  const { connectedProfile } = useAuth();
 
   const { waveMessages, fetchNextPage } = useVirtualizedWaveDrops(
     waveId,
@@ -98,6 +89,11 @@ export default function WaveDropsAll({
 
   const smallestSerialNo = useRef<number | null>(null);
   const [init, setInit] = useState(false);
+
+  const typingMessage = useWaveIsTyping(
+    waveId,
+    connectedProfile?.handle ?? null
+  );
 
   // Effect to update the ref whenever waveMessages changes
   useEffect(() => {
@@ -311,6 +307,32 @@ export default function WaveDropsAll({
             setUserHasManuallyScrolled(false); // Reset manual scroll flag when user clicks to bottom
           }}
         />
+
+        <div
+          className={`tw-absolute tw-bottom-0 tw-left-0 tw-z-10 tw-inset-x-0 tw-mr-2 tw-px-4 tw-py-1 tw-flex tw-items-center tw-gap-x-2 tw-bg-iron-950 tw-transition-opacity tw-duration-300 tw-ease-in-out ${
+            typingMessage
+              ? "tw-opacity-100 tw-visible"
+              : "tw-opacity-0 tw-invisible tw-hidden"
+          }`}
+        >
+          <div className="tw-flex tw-items-center tw-gap-x-0.5">
+            <FontAwesomeIcon
+              icon={faCircle}
+              className="tw-text-iron-300 tw-h-1 tw-w-1 tw-animate-pulse"
+            />
+            <FontAwesomeIcon
+              icon={faCircle}
+              className="tw-text-iron-400 tw-h-1 tw-w-1 tw-animate-pulse"
+              style={{ animationDelay: "150ms" }}
+            />
+            <FontAwesomeIcon
+              icon={faCircle}
+              className="tw-text-iron-500 tw-h-1 tw-w-1 tw-animate-pulse"
+              style={{ animationDelay: "300ms" }}
+            />
+          </div>
+          <span className="tw-text-xs tw-text-iron-400">{typingMessage}</span>
+        </div>
       </>
     );
   };

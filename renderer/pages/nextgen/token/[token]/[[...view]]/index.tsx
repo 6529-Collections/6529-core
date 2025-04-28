@@ -1,9 +1,6 @@
 import Head from "next/head";
 import styles from "../../../../../styles/Home.module.scss";
-
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../../../../components/header/HeaderPlaceholder";
-import Breadcrumb from "../../../../../components/breadcrumb/Breadcrumb";
 import {
   NextGenCollection,
   NextGenToken,
@@ -14,18 +11,10 @@ import { getCommonHeaders } from "../../../../../helpers/server.helpers";
 import { commonApiFetch } from "../../../../../services/api/common-api";
 import { ContentView } from "../../../../../components/nextGen/collections/collectionParts/NextGenCollection";
 import NextGenNavigationHeader from "../../../../../components/nextGen/collections/NextGenNavigationHeader";
-import { formatNameForUrl } from "../../../../../components/nextGen/nextgen_helpers";
 import { AuthContext } from "../../../../../components/auth/Auth";
 import { useContext, useEffect } from "react";
 import { SEIZE_URL } from "../../../../../../constants";
 
-const Header = dynamic(
-  () => import("../../../../../components/header/Header"),
-  {
-    ssr: false,
-    loading: () => <HeaderPlaceholder />,
-  }
-);
 
 const NextGenTokenComponent = dynamic(
   () =>
@@ -56,19 +45,6 @@ export default function NextGenCollectionToken(props: any) {
   const pageImage = token?.image_url ?? collection.image;
   const tokenView = props.pageProps.view;
 
-  const breadcrumbs = [
-    { display: "Home", href: "/" },
-    { display: "NextGen", href: "/nextgen" },
-    {
-      display: collection.name,
-      href: `/nextgen/collection/${formatNameForUrl(collection.name)}`,
-    },
-    {
-      display: token
-        ? `#${token.normalised_id}`
-        : `#${tokenId - collection.id * 10000000000}`,
-    },
-  ];
 
   useEffect(() => {
     setTitle({
@@ -98,8 +74,6 @@ export default function NextGenCollectionToken(props: any) {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <NextGenNavigationHeader />
         {token ? (
           <NextGenTokenComponent

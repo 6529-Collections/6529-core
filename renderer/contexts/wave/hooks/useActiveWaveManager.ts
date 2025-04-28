@@ -40,5 +40,3 @@ export function useActiveWaveManager() {
     setActiveWave,
   };
 }
-
-export default useActiveWaveManager;

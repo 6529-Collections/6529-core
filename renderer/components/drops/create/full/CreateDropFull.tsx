@@ -12,7 +12,7 @@ import {
   MentionedUser,
   ReferencedNft,
 } from "../../../../entities/IDrop";
-import { CreateDropType, CreateDropViewType } from "../CreateDrop";
+import { CreateDropType, CreateDropViewType } from "../types";
 import { forwardRef, useImperativeHandle, useRef } from "react";
 import { ApiWaveParticipationRequirement } from "../../../../generated/models/ApiWaveParticipationRequirement";
 import { ApiWaveRequiredMetadata } from "../../../../generated/models/ApiWaveRequiredMetadata";
@@ -22,13 +22,13 @@ export interface CreateDropFullHandles {
   clearEditorState: () => void;
 }
 
-export interface CreateDropFullWaveProps {
+interface CreateDropFullWaveProps {
   readonly name: string;
   readonly image: string | null;
   readonly id: string | null;
 }
 
-export interface CreateDropFullProps {
+interface CreateDropFullProps {
   readonly screenType: CreateDropScreenType;
   readonly profile: ProfileMinWithoutSubs;
   readonly title: string | null;

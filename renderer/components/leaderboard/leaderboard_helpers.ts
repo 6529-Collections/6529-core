@@ -30,7 +30,7 @@ export enum LeaderboardInteractionsSort {
   "burns" = "burns",
 }
 
-export type LeaderboardSortType =
+type LeaderboardSortType =
   | LeaderboardCardsCollectedSort
   | LeaderboardInteractionsSort;
 
@@ -92,7 +92,7 @@ export function getLeaderboardDownloadFileName(
   return `${csvFileName}.csv`;
 }
 
-export async function fetchLeaderboardData<T>(
+async function fetchLeaderboardData<T>(
   endpoint: string,
   pageSize: number,
   page: number,

@@ -14,7 +14,6 @@ import {
   numberWithCommas,
   printMintDate,
 } from "../../helpers/Helpers";
-import Breadcrumb, { Crumb } from "../breadcrumb/Breadcrumb";
 import LatestActivityRow from "../latest-activity/LatestActivityRow";
 import { Transaction } from "../../entities/ITransaction";
 import { useRouter } from "next/router";
@@ -40,8 +39,6 @@ export default function GradientPage() {
 
   const [nftId, setNftId] = useState<string>();
 
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([]);
-
   const [nft, setNft] = useState<NftWithOwner>();
   const [isOwner, setIsOwner] = useState(false);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -56,28 +53,12 @@ export default function GradientPage() {
         setNftId(router.query.id as string);
       }
     }
-  }, [router.isReady]);
-
-  useEffect(() => {
-    if (nft) {
-      setBreadcrumbs([
-        { display: "Home", href: "/" },
-        { display: "6529 Gradient", href: "/6529-gradient" },
-        { display: `${nft.name}` },
-      ]);
-    } else {
-      setBreadcrumbs([
-        { display: "Home", href: "/" },
-        { display: "6529 Gradient", href: "/6529-gradient" },
-        { display: `${nftId}` },
-      ]);
-    }
-  }, [nft]);
+  }, [router.isReady, router.query.id]);
 
   useEffect(() => {
     setIsOwner(
-      connectedProfile?.consolidation.wallets?.some((w) =>
-        areEqualAddresses(w.wallet.address, nft?.owner)
+      connectedProfile?.wallets?.some((w) =>
+        areEqualAddresses(w.wallet, nft?.owner)
       ) ?? false
     );
   }, [nft, connectedProfile]);
@@ -135,7 +116,8 @@ export default function GradientPage() {
             sm={{ span: 12 }}
             md={{ span: 6 }}
             lg={{ span: 6 }}
-            className="pt-2 position-relative">
+            className="pt-2 position-relative"
+          >
             {nft && (
               <NFTImage
                 id={fullscreenElementId}
@@ -154,7 +136,8 @@ export default function GradientPage() {
               sm={{ span: 12 }}
               md={{ span: 6 }}
               lg={{ span: 6 }}
-              className="pt-2">
+              className="pt-2"
+            >
               <Container>
                 <Row>
                   <Col>
@@ -235,7 +218,8 @@ export default function GradientPage() {
                       <a
                         href={`https://opensea.io/assets/ethereum/${GRADIENT_CONTRACT}/${nft.id}`}
                         target="_blank"
-                        rel="noreferrer">
+                        rel="noreferrer"
+                      >
                         <Image
                           className={styles.marketplace}
                           src="/opensea.png"
@@ -259,7 +243,8 @@ export default function GradientPage() {
                       <a
                         href={`https://x2y2.io/eth/${GRADIENT_CONTRACT}/${nft.id}`}
                         target="_blank"
-                        rel="noreferrer">
+                        rel="noreferrer"
+                      >
                         <Image
                           className={styles.marketplace}
                           src="/x2y2.png"
@@ -316,8 +301,6 @@ export default function GradientPage() {
   }
 
   return (
-    <>
-      <Breadcrumb breadcrumbs={breadcrumbs} />
       <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>
@@ -348,7 +331,8 @@ export default function GradientPage() {
                                   parseInt(nftId) === 0
                                     ? styles.nftPreviousdisabled
                                     : ""
-                                }`}>
+                                }`}
+                              >
                                 <FontAwesomeIcon icon="chevron-circle-left" />
                               </a>
                             </h2>
@@ -360,7 +344,8 @@ export default function GradientPage() {
                                   parseInt(nftId) === 100
                                     ? styles.nftPreviousdisabled
                                     : ""
-                                }`}>
+                                }`}
+                              >
                                 <FontAwesomeIcon icon="chevron-circle-right" />
                               </a>
                             </h2>
@@ -379,6 +364,5 @@ export default function GradientPage() {
           </Col>
         </Row>
       </Container>
-    </>
   );
 }

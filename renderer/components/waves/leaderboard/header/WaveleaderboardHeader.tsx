@@ -32,7 +32,7 @@ export const WaveLeaderboardHeader: React.FC<WaveLeaderboardHeaderProps> = ({
         <div className="tw-flex tw-items-center tw-gap-x-2 lg:tw-gap-x-4">
           {isMemesWave && (
             <div className="tw-mb-4 tw-flex tw-items-center tw-gap-x-2">
-              <div className="tw-flex tw-items-center tw-whitespace-nowrap tw-h-9 tw-px-1 tw-text-xs tw-border tw-border-iron-800 tw-border-solid tw-rounded-lg tw-overflow-hidden">
+              <div className="tw-flex tw-items-center tw-whitespace-nowrap tw-h-9 tw-px-1 tw-text-xs tw-border tw-border-iron-700 tw-border-solid tw-rounded-lg tw-overflow-hidden">
                 <Tippy
                   content="List view"
                   touch={["hold", 500]}
@@ -43,7 +43,7 @@ export const WaveLeaderboardHeader: React.FC<WaveLeaderboardHeaderProps> = ({
                       viewMode === "list"
                         ? "tw-bg-iron-800 tw-text-iron-300 tw-font-medium"
                         : "tw-text-iron-400 desktop-hover:hover:tw-text-iron-300 tw-bg-transparent"
-                    } tw-rounded-md tw-border-0 tw-transition tw-duration-300 tw-ease-out`}
+                    } tw-rounded-md tw-border-0 tw-transition tw-duration-300 tw-ease-out tw-flex tw-items-center tw-justify-center`}
                     onClick={() => onViewModeChange("list")}
                   >
                     <svg
@@ -73,7 +73,7 @@ export const WaveLeaderboardHeader: React.FC<WaveLeaderboardHeaderProps> = ({
                       viewMode === "grid"
                         ? "tw-bg-iron-800 tw-text-iron-300 tw-font-medium"
                         : "tw-text-iron-400 desktop-hover:hover:tw-text-iron-300 tw-bg-transparent"
-                    } tw-rounded-md tw-border-0 tw-transition tw-duration-300 tw-ease-out`}
+                    } tw-rounded-md tw-border-0 tw-transition tw-duration-300 tw-ease-out tw-flex tw-items-center tw-justify-center`}
                     onClick={() => onViewModeChange("grid")}
                   >
                     <svg

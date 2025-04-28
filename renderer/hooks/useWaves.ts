@@ -8,7 +8,7 @@ import { commonApiFetch } from "../services/api/common-api";
 import { ApiWave } from "../generated/models/ApiWave";
 import { QueryKey } from "../components/react-query-wrapper/ReactQueryWrapper";
 import { getDefaultQueryRetry } from "../components/react-query-wrapper/utils/query-utils";
-export interface SearchWavesParams {
+interface SearchWavesParams {
   readonly author?: string;
   readonly name?: string;
   readonly limit: number;
@@ -32,7 +32,7 @@ export function useWaves({
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
 
   const getUsePublicWaves = () =>
-    !connectedProfile?.profile?.handle || !!activeProfileProxy;
+    !connectedProfile?.handle || !!activeProfileProxy;
   const [usePublicWaves, setUsePublicWaves] = useState(getUsePublicWaves());
   useEffect(
     () => setUsePublicWaves(getUsePublicWaves()),

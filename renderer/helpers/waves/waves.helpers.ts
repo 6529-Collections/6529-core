@@ -1,4 +1,4 @@
-import { IProfileAndConsolidations } from "../../entities/IProfile";
+import { ApiIdentity } from "../../generated/models/ApiIdentity";
 import { ApiProfileProxy } from "../../generated/models/ApiProfileProxy";
 import { ApiUpdateWaveRequest } from "../../generated/models/ApiUpdateWaveRequest";
 import { ApiWave } from "../../generated/models/ApiWave";
@@ -35,6 +35,7 @@ export const convertWaveToUpdateWave = (
     creditor_id: wave.voting.creditor?.id ?? null,
     signature_required: !!wave.voting.signature_required,
     period: wave.voting.period,
+    forbid_negative_votes: wave.voting.forbid_negative_votes,
   },
   visibility: {
     scope: {
@@ -81,17 +82,17 @@ export const canEditWave = ({
   activeProfileProxy,
   wave,
 }: {
-  readonly connectedProfile: IProfileAndConsolidations | null;
+  readonly connectedProfile: ApiIdentity | null;
   readonly activeProfileProxy: ApiProfileProxy | null;
   readonly wave: ApiWave;
 }): boolean => {
-  if (!connectedProfile?.profile?.handle) {
+  if (!connectedProfile?.handle) {
     return false;
   }
   if (!!activeProfileProxy) {
     return false;
   }
-  if (wave.author.handle === connectedProfile.profile.handle) {
+  if (wave.author.handle === connectedProfile.handle) {
     return true;
   }
   if (wave.wave.authenticated_user_eligible_for_admin) {

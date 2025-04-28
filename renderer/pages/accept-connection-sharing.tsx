@@ -1,7 +1,4 @@
-import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../components/header/HeaderPlaceholder";
 import Head from "next/head";
-import Breadcrumb, { Crumb } from "../components/breadcrumb/Breadcrumb";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../components/auth/Auth";
 import { Container, Row, Col, Button } from "react-bootstrap";
@@ -15,11 +12,6 @@ import { useSeizeConnectContext } from "../components/auth/SeizeConnectContext";
 import { ApiRedeemRefreshTokenRequest } from "../generated/models/ApiRedeemRefreshTokenRequest";
 import { ApiRedeemRefreshTokenResponse } from "../generated/models/ApiRedeemRefreshTokenResponse";
 import { SEIZE_URL } from "../../constants";
-
-const Header = dynamic(() => import("../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 interface AcceptConnectionSharingProps {
   token: string;
@@ -38,11 +30,6 @@ export default function AcceptConnectionSharing(
     seizeDisconnectAndLogout,
     seizeAcceptConnection,
   } = useSeizeConnectContext();
-
-  const breadcrumbs: Crumb[] = [
-    { display: "Home", href: "/" },
-    { display: "Accept Connection Sharing" },
-  ];
 
   const router = useRouter();
 
@@ -108,8 +95,7 @@ export default function AcceptConnectionSharing(
       </Head>
 
       <main className="tw-min-h-[100dvh] tw-bg-iron-950">
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
+
         <Container className="pt-4 pb-4">
           <Row>
             <Col>

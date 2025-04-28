@@ -1,16 +1,9 @@
 import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import Breadcrumb from "../../components/breadcrumb/Breadcrumb";
-import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../../components/auth/Auth";
 import { SEIZE_URL } from "../../../constants";
-
-const Header = dynamic(() => import("../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const CommunityDownloads = dynamic(
   () => import("../../components/communityDownloads/CommunityDownloads"),
@@ -21,10 +14,6 @@ const CommunityDownloads = dynamic(
 
 export default function Downloads() {
   const { setTitle, title } = useContext(AuthContext);
-  const breadcrumbs = [
-    { display: "Home", href: "/" },
-    { display: "Open Data" },
-  ];
 
   useEffect(() => {
     setTitle({
@@ -45,8 +34,6 @@ export default function Downloads() {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <CommunityDownloads />
       </main>
     </>

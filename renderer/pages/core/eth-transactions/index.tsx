@@ -1,14 +1,7 @@
 import Head from "next/head";
 import styles from "../../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import Breadcrumb from "../../../components/breadcrumb/Breadcrumb";
-import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import { SEIZE_URL } from "../../../../constants";
-
-const Header = dynamic(() => import("../../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const ETHScanner = dynamic(
   () => import("../../../components/core/eth-scanner/ETHScanner"),
@@ -18,11 +11,6 @@ const ETHScanner = dynamic(
 );
 
 export default function ETHScannerPage() {
-  const breadcrumbs = [
-    { display: "Home", href: "/" },
-    { display: "Core - ETH Transactions" },
-  ];
-
   return (
     <>
       <Head>
@@ -42,8 +30,6 @@ export default function ETHScannerPage() {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <ETHScanner />
       </main>
     </>

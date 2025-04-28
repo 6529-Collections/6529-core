@@ -5,7 +5,9 @@ import { useRouter } from "next/router";
 import UserPageStatsActivityWallet from "./wallet/UserPageStatsActivityWallet";
 import UserPageStatsActivityDistributions from "./distributions/UserPageStatsActivityDistributions";
 import UserPageStatsActivityTDHHistory from "./tdh-history/UserPageStatsActivityTDHHistory";
-import { IProfileAndConsolidations } from "../../../../entities/IProfile";
+import { ApiIdentity } from "../../../../generated/models/ApiIdentity";
+
+
 
 export enum USER_PAGE_ACTIVITY_TAB {
   WALLET_ACTIVITY = "WALLET_ACTIVITY",
@@ -28,13 +30,13 @@ export default function UserPageActivityWrapper({
   profile,
   activeAddress,
 }: {
-  readonly profile: IProfileAndConsolidations;
+  readonly profile: ApiIdentity;
   readonly activeAddress: string | null;
 }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const activity = searchParams.get(SEARCH_PARAM_ACTIVITY);
+  const activity = searchParams?.get(SEARCH_PARAM_ACTIVITY);
 
   const enumToPath = (type: USER_PAGE_ACTIVITY_TAB): string => {
     const found = ENUM_AND_PATH.find((e) => e.type === type);
@@ -56,7 +58,7 @@ export default function UserPageActivityWrapper({
 
   const createQueryString = useCallback(
     (name: string, value: USER_PAGE_ACTIVITY_TAB) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParams?.toString() ?? "");
       params.set(name, enumToPath(value));
       params.delete(WALLET_ACTIVITY_FILTER_PARAM);
       params.delete(WALLET_ACTIVITY_PAGE_PARAM);

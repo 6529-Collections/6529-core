@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IProfileAndConsolidations } from "../../../entities/IProfile";
+import { ApiIdentity } from "../../../generated/models/ApiIdentity";
 import HeaderUserProfile from "./HeaderUserProfile";
 import HeaderUserProxy from "./proxy/HeaderUserProxy";
 import HeaderUserSeedWallet from "./proxy/HeaderUserSeedWallet";
@@ -9,11 +9,11 @@ export default function HeaderUserContext({
   profile,
   isSeedWallet,
 }: {
-  readonly profile: IProfileAndConsolidations;
+  readonly profile: ApiIdentity;
   readonly isSeedWallet: boolean;
 }) {
   const { address } = useSeizeConnectContext();
-  const haveProfile = !!profile.profile?.handle;
+  const haveProfile = !!profile.handle;
   return (
     <div className="tailwind-scope">
       <div className="tw-flex tw-space-x-4 lg:tw-mr-3">

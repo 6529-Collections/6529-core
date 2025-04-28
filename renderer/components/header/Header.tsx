@@ -13,7 +13,6 @@ import HeaderUser from "./user/HeaderUser";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import { useAuth } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
-import TitleBar from "./titlebar/TitleBar";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
 import {
@@ -92,6 +91,15 @@ export default function Header(props: Readonly<Props>) {
   }, []);
 
   useEffect(() => {
+    setShowBurgerMenuCollections(false);
+    setBurgerMenuOpen(false);
+    setShowBurgerMenuAbout(false);
+    setShowBurgerMenuCommunity(false);
+    setShowBurgerMenuTools(false);
+    setShowBurgerMenuBrain(false);
+  }, [router.route]);
+
+  useEffect(() => {
     if (props.onSetWallets) {
       const isConsolidation = consolidations.length > 1;
       if (isConsolidation) {
@@ -108,6 +116,10 @@ export default function Header(props: Readonly<Props>) {
     if (address) {
       fetchUrl(`${SEIZE_API_URL}/api/consolidations/${address}`).then(
         (response: DBResponse) => {
+          if (!response.data) {
+            setConsolidations([]);
+            return;
+          }
           setConsolidations(Array.from(response.data));
         }
       );
@@ -612,7 +624,6 @@ export default function Header(props: Readonly<Props>) {
   return (
     <>
       {printBurgerMenu()}
-      <TitleBar />
       <Container fluid className={styles.mainContainer}>
         <Row>
           <Col>

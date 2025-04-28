@@ -4,9 +4,7 @@ import { Col, Container, Row } from "react-bootstrap";
 
 import { useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import Breadcrumb, { Crumb } from "../../components/breadcrumb/Breadcrumb";
 import { useRouter } from "next/router";
-import HeaderPlaceholder from "../../components/header/HeaderPlaceholder";
 import AboutMemes from "../../components/about/AboutMemes";
 import AboutMemesCalendar from "../../components/about/AboutMemesCalendar";
 import AboutMemeLab from "../../components/about/AboutMemeLab";
@@ -61,10 +59,6 @@ export enum AboutSection {
   COPYRIGHT = "copyright",
 }
 
-const Header = dynamic(() => import("../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 interface Props {
   section: AboutSection;
@@ -79,10 +73,6 @@ export default function About(props: any) {
   const { setTitle, title } = useContext(AuthContext);
   const pageProps: Props = props.pageProps;
   const router = useRouter();
-  const [breadcrumbs, setBreadcrumbs] = useState<Crumb[]>([
-    { display: "Home", href: "/" },
-    { display: "About" },
-  ]);
 
   const [section, setSection] = useState<AboutSection>(pageProps.section);
   const [sectionTitle, setSectionTitle] = useState<string>(
@@ -109,10 +99,6 @@ export default function About(props: any) {
         { shallow: true }
       );
 
-      setBreadcrumbs([
-        { display: "Home", href: "/" },
-        { display: `About - ${sectionTitle}` },
-      ]);
       window.scrollTo(0, 0);
     }
   }, [section]);
@@ -185,8 +171,6 @@ export default function About(props: any) {
         <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <Container fluid>
           <Row>
             <Col>

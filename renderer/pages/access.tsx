@@ -10,6 +10,7 @@ import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
 
 export default function Access() {
   const { setTitle, title } = useContext(AuthContext);
+  
   useEffect(() => {
     setTitle({
       title: "Access Page | 6529 CORE",

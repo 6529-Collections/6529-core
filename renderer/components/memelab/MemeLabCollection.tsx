@@ -92,9 +92,9 @@ export default function LabCollection(props: Readonly<Props>) {
   }, [collectionName]);
 
   useEffect(() => {
-    if (connectedProfile?.consolidation.consolidation_key) {
+    if (connectedProfile?.consolidation_key) {
       fetchAllPages(
-        `${SEIZE_API_URL}/api/nft-owners/consolidation/${connectedProfile?.consolidation.consolidation_key}?contract=${MEMES_CONTRACT}`
+        `${SEIZE_API_URL}/api/nft-owners/consolidation/${connectedProfile?.consolidation_key}?contract=${MEMES_CONTRACT}`
       ).then((owners: NftOwner[]) => {
         setNftBalances(owners);
       });
@@ -134,14 +134,14 @@ export default function LabCollection(props: Readonly<Props>) {
         xs={{ span: 6 }}
         sm={{ span: 4 }}
         md={{ span: 3 }}
-        lg={{ span: 3 }}>
+        lg={{ span: 3 }}
+      >
         <Container fluid className="no-padding">
           <Row>
             <a
               href={`/meme-lab/${nft.id}`}
-              className={
-                props.wallets.length > 0 ? styles.nftImagePadding : ""
-              }>
+              className={props.wallets.length > 0 ? styles.nftImagePadding : ""}
+            >
               <NFTImage
                 nft={nft}
                 animation={false}
@@ -200,7 +200,8 @@ export default function LabCollection(props: Readonly<Props>) {
                         <a
                           href={addProtocol(w)}
                           target="_blank"
-                          rel="noreferrer">
+                          rel="noreferrer"
+                        >
                           {w}
                         </a>
                         &nbsp;&nbsp;

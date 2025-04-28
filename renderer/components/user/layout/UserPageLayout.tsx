@@ -1,7 +1,5 @@
 import Head from "next/head";
 import { ReactNode, useContext, useEffect, useState } from "react";
-import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../../header/HeaderPlaceholder";
 import {
   containsEmojis,
   formatAddress,
@@ -9,21 +7,16 @@ import {
 } from "../../../helpers/Helpers";
 import UserPageHeader from "../user-page-header/UserPageHeader";
 import { useRouter } from "next/router";
-import { IProfileAndConsolidations } from "../../../entities/IProfile";
+import { ApiIdentity } from "../../../generated/models/ApiIdentity";
 import UserPageTabs from "./UserPageTabs";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { commonApiFetch } from "../../../services/api/common-api";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "../../react-query-wrapper/ReactQueryWrapper";
 import { AuthContext } from "../../auth/Auth";
 import { SEIZE_URL } from "../../../../constants";
-
-const Header = dynamic(() => import("../../header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
+import { useIdentity } from "../../../hooks/useIdentity";
 
 const DEFAULT_IMAGE =
   "https://d3lqz0a4bldqgf.cloudfront.net/seize_images/6529io.png";
@@ -32,7 +25,7 @@ export default function UserPageLayout({
   profile: initialProfile,
   children,
 }: {
-  readonly profile: IProfileAndConsolidations;
+  readonly profile: ApiIdentity;
   readonly children: ReactNode;
 }) {
   const { setTitle, title } = useContext(AuthContext);
@@ -41,7 +34,7 @@ export default function UserPageLayout({
   const { setProfile } = useContext(ReactQueryWrapperContext);
   const handleOrWallet = (router.query.user as string).toLowerCase();
 
-  const profileInit = queryClient.getQueryData<IProfileAndConsolidations>([
+  const profileInit = queryClient.getQueryData<ApiIdentity>([
     QueryKey.PROFILE,
     handleOrWallet,
   ]);
@@ -50,25 +43,18 @@ export default function UserPageLayout({
     setProfile(initialProfile);
   }
 
-  const { data: profile } = useQuery<IProfileAndConsolidations>({
-    queryKey: [QueryKey.PROFILE, handleOrWallet],
-    queryFn: async () =>
-      await commonApiFetch<IProfileAndConsolidations>({
-        endpoint: `profiles/${handleOrWallet}`,
-      }),
-    enabled: !!handleOrWallet,
-    initialData: initialProfile,
+  const { profile } = useIdentity({
+    handleOrWallet: handleOrWallet,
+    initialProfile: initialProfile,
   });
 
   const getTitle = (): string => {
-    if (profile.profile?.handle) {
-      return profile.profile.handle;
+    if (profile?.handle) {
+      return profile.handle;
     }
-    if (
-      profile.consolidation.consolidation_display &&
-      !containsEmojis(profile.consolidation.consolidation_display)
-    ) {
-      return profile.consolidation.consolidation_display;
+
+    if (profile?.display && !containsEmojis(profile.display)) {
+      return profile.display;
     }
     return formatAddress(handleOrWallet);
   };
@@ -82,21 +68,17 @@ export default function UserPageLayout({
 
   const descriptionArray = [];
 
-  descriptionArray.push(`Level: ${formatNumberWithCommas(profile.level)}`);
+  descriptionArray.push(
+    `Level: ${formatNumberWithCommas(profile?.level ?? 0)}`
+  );
 
-  descriptionArray.push(
-    `NIC: ${formatNumberWithCommas(profile.cic.cic_rating)}`
-  );
-  descriptionArray.push(`Rep: ${formatNumberWithCommas(profile.rep)}`);
-  descriptionArray.push(
-    `TDH: ${formatNumberWithCommas(profile.consolidation.tdh)}`
-  );
-  descriptionArray.push(`Cards: ${formatNumberWithCommas(profile.balance)}`);
+  descriptionArray.push(`NIC: ${formatNumberWithCommas(profile?.cic ?? 0)}`);
+  descriptionArray.push(`Rep: ${formatNumberWithCommas(profile?.rep ?? 0)}`);
+  descriptionArray.push(`TDH: ${formatNumberWithCommas(profile?.tdh ?? 0)}`);
 
   descriptionArray.push("6529.io");
 
-  const mainAddress =
-    profile.profile?.primary_wallet ?? handleOrWallet.toLowerCase();
+  const mainAddress = profile?.primary_wallet ?? handleOrWallet.toLowerCase();
   const [isLoadingTabData, setIsLoadingTabData] = useState(false);
 
   useEffect(() => {
@@ -131,10 +113,7 @@ export default function UserPageLayout({
         <meta name="description" content={title} />
         <meta property="og:url" content={`${SEIZE_URL}/${handleOrWallet}`} />
         <meta property="og:title" content={title} />
-        <meta
-          property="og:image"
-          content={profile.profile?.pfp_url ?? DEFAULT_IMAGE}
-        />
+        <meta property="og:image" content={profile?.pfp ?? DEFAULT_IMAGE} />
         <meta
           property="og:description"
           content={descriptionArray.join(" \n ")}
@@ -142,10 +121,12 @@ export default function UserPageLayout({
       </Head>
 
       <main className="tw-min-h-[100dvh] tailwind-scope">
-        <Header />
         <div className="tw-bg-iron-950 tw-min-h-screen tw-pb-16 lg:tw-pb-20">
-          <UserPageHeader profile={profile} mainAddress={mainAddress} />
-          <div className="tw-px-6 min-[992px]:tw-px-3 min-[992px]:tw-max-w-[960px] max-[1100px]:tw-max-w-[950px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px] tw-mx-auto">
+          <UserPageHeader
+            profile={profile ?? initialProfile}
+            mainAddress={mainAddress}
+          />
+          <div className="tw-px-4 min-[992px]:tw-px-3 min-[992px]:tw-max-w-[960px] max-[1100px]:tw-max-w-[950px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px] tw-mx-auto">
             <UserPageTabs />
             <div className="tw-mt-6 lg:tw-mt-8">
               {isLoadingTabData ? (

@@ -18,7 +18,7 @@ export enum Resolution {
   "16K" = "16K",
 }
 
-export function getUrl(token: NextGenToken, resolution: Resolution) {
+function getUrl(token: NextGenToken, resolution: Resolution) {
   let u = token.image_url;
   if (
     (resolution == Resolution["1K"] && token.collection_id !== 1) ||
@@ -154,7 +154,7 @@ export default function NextGenTokenDownload(
   );
 }
 
-export function NextGenTokenDownloadButton(
+function NextGenTokenDownloadButton(
   props: Readonly<{
     token: NextGenToken;
     quality: Resolution;

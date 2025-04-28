@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IProfileAndConsolidations } from "../../../../entities/IProfile";
+import { ApiIdentity } from "../../../../generated/models/ApiIdentity";
 import { formatNumberWithCommas } from "../../../../helpers/Helpers";
 import { useRouter } from "next/router";
 import UserPageFollowers from "../followers/UserPageFollowers";
@@ -17,7 +17,7 @@ import { Spinner } from "../../../dotLoader/DotLoader";
 export default function UserPageHeaderStats({
   profile,
 }: {
-  readonly profile: IProfileAndConsolidations;
+  readonly profile: ApiIdentity;
 }) {
   const router = useRouter();
   const user = router.query.user as string;
@@ -28,14 +28,14 @@ export default function UserPageHeaderStats({
   const [concensusColor, setConcensusColor] = useState<string>();
 
   useEffect(() => {
-    if (!profile.consolidation.consolidation_key) {
+    if (!profile.consolidation_key) {
       setTdhConsensusInfo(undefined);
       return;
     }
 
     setFetchingTdhConsensus(true);
     window.localDb
-      .getTdhInfoForKey(profile.consolidation.consolidation_key)
+      .getTdhInfoForKey(profile.consolidation_key)
       .then((tdhInfo: ConsolidatedTDH) => {
         setTdhConsensusInfo(tdhInfo);
       })
@@ -45,13 +45,10 @@ export default function UserPageHeaderStats({
   }, [profile]);
 
   useEffect(() => {
-    if (!tdhConsensusInfo && profile.consolidation.tdh > 0) {
+    if (!tdhConsensusInfo && profile.tdh > 0) {
       setConcensusIcon(faMinusCircle);
       setConcensusColor("orange");
-    } else if (
-      profile.consolidation.tdh &&
-      profile.consolidation.tdh !== tdhConsensusInfo?.boosted_tdh
-    ) {
+    } else if (profile.tdh && profile.tdh !== tdhConsensusInfo?.boosted_tdh) {
       setConcensusIcon(faTimesCircle);
       setConcensusColor("red");
     } else {
@@ -67,7 +64,7 @@ export default function UserPageHeaderStats({
           href={`/${user}/collected`}
           className="tw-no-underline tw-inline-flex tw-items-center tw-gap-x-1">
           <span className="tw-text-base tw-font-medium tw-text-iron-50">
-            {formatNumberWithCommas(profile.consolidation.tdh)}
+            {formatNumberWithCommas(profile.tdh)}
           </span>
           <span className="tw-block tw-text-base tw-font-medium tw-text-iron-400">
             TDH

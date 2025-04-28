@@ -20,7 +20,7 @@ export interface MinimalWaveNewDropsCount {
  * @param refetchWaves - Function to refetch waves data when needed
  * @returns Object containing newDropsCounts and reset function
  */
-export function useNewDropCounter(
+function useNewDropCounter(
   activeWaveId: string | null,
   waves: ApiWave[],
   refetchWaves: () => void
@@ -49,6 +49,19 @@ export function useNewDropCounter(
     },
     [waves]
   );
+  // Reset counts for all waves
+  const resetAllWavesNewDropsCount = useCallback(() => {
+    setNewDropsCounts(() => {
+      const newCounts: Record<string, MinimalWaveNewDropsCount> = {};
+      waves.forEach((wave) => {
+        newCounts[wave.id] = {
+          count: 0,
+          latestDropTimestamp: wave.metrics.latest_drop_timestamp ?? null,
+        };
+      });
+      return newCounts;
+    });
+  }, [waves]);
 
   // Handle visibility changes for active wave
   useEffect(() => {
@@ -89,7 +102,7 @@ export function useNewDropCounter(
         }
 
         if (
-          connectedProfile?.profile?.handle?.toLowerCase() ===
+          connectedProfile?.handle?.toLowerCase() ===
           message.author.handle?.toLowerCase()
         )
           return setNewDropsCounts((prev) => {
@@ -153,6 +166,8 @@ export function useNewDropCounter(
   return {
     newDropsCounts,
     resetWaveNewDropsCount,
+    // Reset counts for all tracked waves
+    resetAllWavesNewDropsCount,
   };
 }
 

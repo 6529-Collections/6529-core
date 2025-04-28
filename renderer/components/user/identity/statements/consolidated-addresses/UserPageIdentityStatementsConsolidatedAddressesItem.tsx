@@ -1,8 +1,4 @@
 import Tippy from "@tippyjs/react";
-import {
-  IProfileAndConsolidations,
-  IProfileConsolidation,
-} from "../../../../../entities/IProfile";
 import EtherscanIcon from "../../../utils/icons/EtherscanIcon";
 import OpenseaIcon from "../../../utils/icons/OpenseaIcon";
 import CopyIcon from "../../../../utils/icons/CopyIcon";
@@ -21,17 +17,16 @@ import { DELEGATION_ABI } from "../../../../../abis";
 import { AuthContext } from "../../../../auth/Auth";
 import { getTransactionLink } from "../../../../../helpers/Helpers";
 import { openInExternalBrowser } from "../../../../../helpers";
+import { ApiWallet } from "../../../../../generated/models/ApiWallet";
 
 export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   address,
   primaryAddress,
   canEdit,
-  profile,
 }: {
-  readonly address: IProfileConsolidation;
-  readonly primaryAddress: string;
+  readonly address: ApiWallet;
+  readonly primaryAddress: string | null;
   readonly canEdit: boolean;
-  readonly profile: IProfileAndConsolidations;
 }) {
   const router = useRouter();
   const { setToast } = useContext(AuthContext);
@@ -39,28 +34,28 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   const goToOpensea = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
     openInExternalBrowser(
-      `https://opensea.io/${address.wallet.address}`,
+      `https://opensea.io/${address.wallet}`,
       "_blank"
     );
   };
 
   const goToEtherscan = () => {
     openInExternalBrowser(
-      `https://etherscan.io/address/${address.wallet.address}`,
+      `https://etherscan.io/address/${address.wallet}`,
       "_blank"
     );
   };
 
-  const isPrimary = address.wallet.address.toLowerCase() === primaryAddress;
+  const isPrimary = address.wallet.toLowerCase() === primaryAddress?.toLowerCase();
 
-  const [title, setTitle] = useState(address.wallet.address.slice(0, 6));
+  const [title, setTitle] = useState(address.wallet.slice(0, 6));
   const [_, copyToClipboard] = useCopyToClipboard();
 
   const handleCopy = () => {
-    copyToClipboard(address.wallet.address);
+    copyToClipboard(address.wallet);
     setTitle("Copied!");
     setTimeout(() => {
-      setTitle(address.wallet.address.slice(0, 6));
+      setTitle(address.wallet.slice(0, 6));
     }, 1000);
   };
   const [isTouchScreen, setIsTouchScreen] = useState(false);
@@ -96,7 +91,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               )}
               target="_blank"
               rel="noreferrer"
-              className="tw-text-primary-400 tw-underline">
+              className="tw-text-primary-400 tw-underline"
+            >
               View Transaction
             </a>
           )}
@@ -141,7 +137,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
       functionName: "registerDelegationAddress",
       args: [
         DELEGATION_ALL_ADDRESS,
-        address.wallet.address,
+        address.wallet,
         NEVER_DATE,
         PRIMARY_ADDRESS_USE_CASE.use_case,
         true,
@@ -157,11 +153,13 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
           content="Opensea"
           theme="dark"
           placement="top"
-          disabled={isTouchScreen}>
+          disabled={isTouchScreen}
+        >
           <button
             onClick={goToOpensea}
             aria-label="Go to Opensea"
-            className="tw-bg-transparent tw-border-none tw-p-0">
+            className="tw-bg-transparent tw-border-none tw-p-0"
+          >
             <div className="tw-flex-shrink-0 tw-w-6 tw-h-6 sm:tw-w-5 sm:tw-h-5 hover:tw-scale-110 tw-transition tw-duration-300 tw-ease-out">
               <OpenseaIcon />
             </div>
@@ -171,11 +169,13 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
           content="Etherscan"
           theme="dark"
           placement="top"
-          disabled={isTouchScreen}>
+          disabled={isTouchScreen}
+        >
           <button
             onClick={goToEtherscan}
             aria-label="Go to Etherscan"
-            className="tw-bg-transparent tw-border-none tw-p-0">
+            className="tw-bg-transparent tw-border-none tw-p-0"
+          >
             <div className="tw-flex-shrink-0 tw-w-6 tw-h-6 sm:tw-w-5 sm:tw-h-5 hover:tw-scale-110 tw-transition tw-duration-300 tw-ease-out">
               <EtherscanIcon />
             </div>
@@ -184,8 +184,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
         <div className="tw-space-x-3 tw-inline-flex tw-items-center">
           <div className="tw-truncate md:tw-max-w-[8rem] lg:tw-max-w-[11rem] tw-text-iron-200">
             <span>{title}</span>
-            {address.wallet.ens && (
-              <span className="tw-ml-3">{address.wallet.ens}</span>
+            {address.display && (
+              <span className="tw-ml-3">{address.display}</span>
             )}
           </div>
           <div className="tw-inline-flex tw-items-center">
@@ -194,7 +194,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg">
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
                 d="M20 6L9 17L4 12"
                 stroke="#3CCB7F"
@@ -214,13 +215,15 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               content="Copy"
               theme="dark"
               placement="top"
-              disabled={isTouchScreen}>
+              disabled={isTouchScreen}
+            >
               <button
                 aria-label="Copy address"
                 className={`${
                   isTouchScreen ? "tw-block" : "tw-hidden group-hover:tw-block"
                 } tw-ml-2 tw-bg-transparent tw-cursor-pointer tw-text-sm sm:tw-text-base tw-font-semibold tw-text-iron-200 tw-border-0 focus:tw-outline-none tw-transition tw-duration-300 tw-ease-out`}
-                onClick={handleCopy}>
+                onClick={handleCopy}
+              >
                 <CopyIcon />
               </button>
             </Tippy>

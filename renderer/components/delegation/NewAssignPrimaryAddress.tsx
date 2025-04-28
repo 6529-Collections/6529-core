@@ -118,13 +118,13 @@ export default function NewAssignPrimaryAddress(props: Readonly<Props>) {
   const { isFetching: isFetchingTdhAddress, data: tdhAddress } = useQuery({
     queryKey: [
       "primary-address",
-      connectedProfile?.profile?.primary_wallet,
+      connectedProfile?.primary_wallet,
       props.subdelegation?.originalDelegator,
     ],
     queryFn: async () => {
       const addressPath =
         props.subdelegation?.originalDelegator ??
-        connectedProfile?.profile?.primary_wallet;
+        connectedProfile?.primary_wallet;
       return await commonApiFetch<{
         consolidation_key: string;
         address: string;
@@ -133,7 +133,7 @@ export default function NewAssignPrimaryAddress(props: Readonly<Props>) {
         endpoint: `profiles/${addressPath}/primary-address/tdh-address`,
       });
     },
-    enabled: !!connectedProfile?.profile?.primary_wallet,
+    enabled: !!connectedProfile?.primary_wallet,
   });
 
   useEffect(() => {
@@ -251,7 +251,7 @@ export default function NewAssignPrimaryAddress(props: Readonly<Props>) {
   );
 }
 
-export function getAssignPrimartAddressConfig(toAddress: string) {
+function getAssignPrimartAddressConfig(toAddress: string) {
   return {
     address: DELEGATION_CONTRACT.contract,
     abi: DELEGATION_ABI,

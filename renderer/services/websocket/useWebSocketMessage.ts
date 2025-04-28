@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from "react";
 import { useWebSocket } from "./useWebSocket";
 import { WebSocketStatus } from "./WebSocketTypes";
+import { WsMessageType } from "../../helpers/Types";
 
 /**
  * Hook to subscribe to a specific WebSocket message type using a callback pattern
@@ -12,7 +13,7 @@ import { WebSocketStatus } from "./WebSocketTypes";
  *   - isConnected: Whether the WebSocket is connected
  */
 export function useWebSocketMessage<T = any>(
-  messageType: string,
+  messageType: WsMessageType,
   callback: (messageData: T) => void
 ) {
   // Get WebSocket context
@@ -51,8 +52,8 @@ export function useWebSocketMessage<T = any>(
  * @returns
  *   - isConnected: Whether the WebSocket is connected
  */
-export function useWebSocketMessages<
-  T extends Record<string, any>
+function useWebSocketMessages<
+  T extends Record<WsMessageType, any>
 >(subscriptions: {
   [K in keyof T]?: (data: T[K]) => void;
 }) {
@@ -77,7 +78,7 @@ export function useWebSocketMessages<
       if (!callback) return;
 
       // Subscribe and store unsubscribe function
-      const unsubscribe = subscribe(type, callback);
+      const unsubscribe = subscribe(type as WsMessageType, callback);
       unsubscribers.push(unsubscribe);
     });
 
@@ -90,4 +91,9 @@ export function useWebSocketMessages<
   return {
     isConnected,
   };
+}
+
+export function useWebsocketStatus() {
+  const { status } = useWebSocket();
+  return status;
 }

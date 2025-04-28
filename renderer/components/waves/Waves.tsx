@@ -29,19 +29,17 @@ export default function Waves() {
   const { connectedProfile, requestAuth, activeProfileProxy, showWaves } =
     useContext(AuthContext);
 
-  const isCreateNewWave = searchParams.get(NEW_WAVE_SEARCH_PARAM);
-  const isCreateNewDirectMessage = searchParams.get(
+  const isCreateNewWave = searchParams?.get(NEW_WAVE_SEARCH_PARAM);
+  const isCreateNewDirectMessage = searchParams?.get(
     NEW_DIRECT_MESSAGE_SEARCH_PARAM
   );
 
   const getShouldSetCreateNewWave = () =>
-    isCreateNewWave &&
-    !!connectedProfile?.profile?.handle &&
-    !activeProfileProxy;
+    isCreateNewWave && !!connectedProfile?.handle && !activeProfileProxy;
 
   const getShouldSetCreateNewDirectMessage = () =>
     isCreateNewDirectMessage &&
-    !!connectedProfile?.profile?.handle &&
+    !!connectedProfile?.handle &&
     !activeProfileProxy;
 
   const [viewMode, setViewMode] = useState(
@@ -49,7 +47,7 @@ export default function Waves() {
   );
 
   const getShowCreateNewButton = () =>
-    !!connectedProfile?.profile?.handle && !activeProfileProxy;
+    !!connectedProfile?.handle && !activeProfileProxy;
 
   const [showCreateNewButton, setShowCreateNewButton] = useState(
     getShowCreateNewButton()
@@ -76,7 +74,7 @@ export default function Waves() {
   }, [isCreateNewDirectMessage]);
 
   useEffect(() => {
-    if (!connectedProfile?.profile?.handle || activeProfileProxy) {
+    if (!connectedProfile?.handle || activeProfileProxy) {
       onViewModeChange(WavesViewMode.VIEW);
     }
     setShowCreateNewButton(getShowCreateNewButton());
