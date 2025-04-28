@@ -193,9 +193,7 @@ export default function MemePage() {
   useEffect(() => {
     if (connectedWallets.length && nftId) {
       fetchUrl(
-        `${
-          process.env.API_ENDPOINT
-        }/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
+        `${SEIZE_API_URL}/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
           ","
         )}&id=${nftId}`
       ).then((response: DBResponse) => {
@@ -246,8 +244,7 @@ export default function MemePage() {
                     sm={{ span: 12 }}
                     md={{ span: 6 }}
                     lg={{ span: 6 }}
-                    className={`${styles.nftImageWrapper} pt-2 pb-5`}
-                  >
+                    className={`${styles.nftImageWrapper} pt-2 pb-5`}>
                     <NFTImage
                       nft={nft}
                       animation={true}
@@ -425,8 +422,7 @@ function TabButton(
       }`}
       onClick={() => {
         props.setActiveTab(props.tab.focus);
-      }}
-    >
+      }}>
       {props.tab.title}
     </button>
   );

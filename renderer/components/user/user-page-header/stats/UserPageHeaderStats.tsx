@@ -28,14 +28,14 @@ export default function UserPageHeaderStats({
   const [concensusColor, setConcensusColor] = useState<string>();
 
   useEffect(() => {
-    if (!profile.consolidation.consolidation_key) {
+    if (!profile.consolidation_key) {
       setTdhConsensusInfo(undefined);
       return;
     }
 
     setFetchingTdhConsensus(true);
     window.localDb
-      .getTdhInfoForKey(profile.consolidation.consolidation_key)
+      .getTdhInfoForKey(profile.consolidation_key)
       .then((tdhInfo: ConsolidatedTDH) => {
         setTdhConsensusInfo(tdhInfo);
       })
@@ -45,13 +45,10 @@ export default function UserPageHeaderStats({
   }, [profile]);
 
   useEffect(() => {
-    if (!tdhConsensusInfo && profile.consolidation.tdh > 0) {
+    if (!tdhConsensusInfo && profile.tdh > 0) {
       setConcensusIcon(faMinusCircle);
       setConcensusColor("orange");
-    } else if (
-      profile.consolidation.tdh &&
-      profile.consolidation.tdh !== tdhConsensusInfo?.boosted_tdh
-    ) {
+    } else if (profile.tdh && profile.tdh !== tdhConsensusInfo?.boosted_tdh) {
       setConcensusIcon(faTimesCircle);
       setConcensusColor("red");
     } else {
