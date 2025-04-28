@@ -1,14 +1,7 @@
 import Head from "next/head";
 import styles from "../../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import Breadcrumb from "../../../components/breadcrumb/Breadcrumb";
-import HeaderPlaceholder from "../../../components/header/HeaderPlaceholder";
 import { SEIZE_URL } from "../../../../constants";
-
-const Header = dynamic(() => import("../../../components/header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
 
 const SeedWallet = dynamic(
   () => import("../../../components/core/core-wallet/SeedWallet"),
@@ -20,11 +13,6 @@ const SeedWallet = dynamic(
 export default function SeedWalletPage(props: any) {
   const pageProps = props.pageProps;
   const address: string = pageProps.address;
-  const breadcrumbs = [
-    { display: "Home", href: "/" },
-    { display: "Core - Core Wallets", href: "/core/core-wallets" },
-    { display: `${address}` },
-  ];
 
   return (
     <>
@@ -48,8 +36,6 @@ export default function SeedWalletPage(props: any) {
       </Head>
 
       <main className={styles.main}>
-        <Header />
-        <Breadcrumb breadcrumbs={breadcrumbs} />
         <SeedWallet address={address} />
       </main>
     </>
