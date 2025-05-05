@@ -86,7 +86,11 @@ To trigger the workflow:
   - `MacOS` – Only build macOS binaries.
   - `Windows` – Only build the Windows binary.
   - `Linux` – Only build the Linux binary.
-  - `Publish` – Runs custom logic to **publish versioned HTML download links**, **uploads metadata to Arweave**, and prepares the app for public distribution.
+  - `Publish` – Runs custom logic to prepare the app for public distribution. It performs the following steps:
+    - Fetches the latest build artifacts for each platform.
+    - Creates and publishes **custom HTML download pages per platform** (e.g. macOS, Windows, Linux).
+    - Uploads the artifacts to **Arweave** for permanent storage.
+    - Updates the distribution pages to also include **Arweave download links**, allowing users to fetch the app from both your CDN and the decentralized web.
 
 ### Build Manually
 
