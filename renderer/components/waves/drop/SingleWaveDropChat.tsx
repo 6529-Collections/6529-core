@@ -33,7 +33,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
 
     // Use similar calculation to SingleWaveDropInfoContainer
     return {
-      height: `calc(100vh - ${spaces.headerSpace}px - var(--tab-height, 64px))`,
+      height: `calc(100vh - ${spaces.headerSpace}px - var(--tab-height, 47px))`,
     };
   }, [spaces.measurementsComplete, spaces.headerSpace]);
 
@@ -107,7 +107,12 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                 initialDrop={null}
                 dropId={drop.id}
               />
-              <div className="tw-mt-auto">
+              <div
+                style={{
+                  paddingBottom: "calc(env(safe-area-inset-bottom))",
+                }}
+                className="tw-mt-auto"
+              >
                 <CreateDropWaveWrapper
                   context={CreateDropWaveWrapperContext.SINGLE_DROP}>
                   <PrivilegedDropCreator

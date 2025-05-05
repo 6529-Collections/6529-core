@@ -15,17 +15,17 @@ import { useAuth } from "../auth/Auth";
 import { SEIZE_API_URL } from "../../../constants";
 import HeaderNotifications from "./notifications/HeaderNotifications";
 import useCapacitor from "../../hooks/useCapacitor";
+import { useAppWallets } from "../app-wallets/AppWalletsContext";
 import {
   faBars,
   faChevronRight,
   faExternalLinkAlt,
 } from "@fortawesome/free-solid-svg-icons";
-import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderShare from "./share/HeaderShare";
-import { useAppWallets } from "../app-wallets/AppWalletsContext";
 import HeaderQRScanner from "./share/HeaderQRScanner";
 import HeaderOpenMobile from "./open-mobile/HeaderOpenMobile";
+import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
 
 interface Props {
   onLoad?: () => void;
@@ -60,6 +60,8 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuCommunity, setShowBurgerMenuCommunity] = useState(false);
   const [showBurgerMenuTools, setShowBurgerMenuTools] = useState(false);
   const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
+
+  const containerClassName = styles.mainContainer;
 
   const [ipfsUrl, setIpfsUrl] = useState("");
 
@@ -624,7 +626,7 @@ export default function Header(props: Readonly<Props>) {
   return (
     <>
       {printBurgerMenu()}
-      <Container fluid className={styles.mainContainer}>
+      <Container fluid className={`${containerClassName} ${props.extraClass}`}>
         <Row>
           <Col>
             <Container className={styles.capacitorHeaderRowContainerLandscape}>

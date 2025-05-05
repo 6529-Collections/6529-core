@@ -1,7 +1,6 @@
 import React, { ReactNode, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import BrainMobileTabs from "./mobile/BrainMobileTabs";
-import BrainMobileWaves from "./mobile/BrainMobileWaves";
 import { useRouter } from "next/router";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { commonApiFetch } from "../../services/api/common-api";
@@ -11,7 +10,6 @@ import { ExtendedDrop } from "../../helpers/waves/drop.helpers";
 import { useWaveData } from "../../hooks/useWaveData";
 import MyStreamWaveLeaderboard from "./my-stream/MyStreamWaveLeaderboard";
 import MyStreamWaveOutcome from "./my-stream/MyStreamWaveOutcome";
-import Notifications from "./notifications/Notifications";
 import { WaveWinners } from "../waves/winners/WaveWinners";
 import { useWaveTimers } from "../../hooks/useWaveTimers";
 import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
@@ -20,17 +18,18 @@ import MyStreamWaveFAQ from "./my-stream/MyStreamWaveFAQ";
 import { useWave } from "../../hooks/useWave";
 import { ApiDrop } from "../../generated/models/ApiDrop";
 import { ApiWaveType } from "../../generated/models/ApiWaveType";
+import BrainMobileWaves from "./mobile/BrainMobileWaves";
+import useDeviceInfo from "../../hooks/useDeviceInfo";
 
 export enum BrainView {
   DEFAULT = "DEFAULT",
-  WAVES = "WAVES",
   ABOUT = "ABOUT",
   LEADERBOARD = "LEADERBOARD",
   WINNERS = "WINNERS",
   OUTCOME = "OUTCOME",
   MY_VOTES = "MY_VOTES",
   FAQ = "FAQ",
-  NOTIFICATIONS = "NOTIFICATIONS",
+  WAVES = "WAVES",
 }
 
 interface Props {
@@ -39,6 +38,14 @@ interface Props {
 
 const BrainMobile: React.FC<Props> = ({ children }) => {
   const router = useRouter();
+  const { isMobileDevice, hasTouchScreen, isApp } = useDeviceInfo();
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const isMobile = hydrated ? (isMobileDevice || (hasTouchScreen && isApp)) : true;
   const [activeView, setActiveView] = useState<BrainView>(BrainView.DEFAULT);
   const { data: drop } = useQuery<ApiDrop>({
     queryKey: [QueryKey.DROP, { drop_id: router.query.drop as string }],
@@ -97,8 +104,19 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
 
   const isRankWave = wave?.wave.type === ApiWaveType.Rank;
 
-  // Handle tab visibility changes
+  const hasWave = Boolean(router.query.wave);
+
+  // Handle tab visibility and reset on wave changes
   useEffect(() => {
+    if (!hasWave) {
+      if (
+        activeView !== BrainView.DEFAULT &&
+        activeView !== BrainView.WAVES
+      )
+        setActiveView(BrainView.DEFAULT);
+      return;
+    }
+
     if (!wave) return;
 
     const isInLeaderboardAndVotingHasEnded =
@@ -110,7 +128,6 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
     const isInFAQAndIsNotMemeWave =
       activeView === BrainView.FAQ && !isMemesWave;
 
-    // If on Leaderboard tab and voting has ended, switch to Default
     if (
       isInLeaderboardAndVotingHasEnded ||
       isInWinnersAndFirstDecisionHasntPassed ||
@@ -119,10 +136,9 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
     ) {
       setActiveView(BrainView.DEFAULT);
     }
-  }, [wave, isCompleted, firstDecisionDone, activeView, isMemesWave]);
+  }, [hasWave, wave, isCompleted, firstDecisionDone, activeView, isMemesWave]);
 
   const viewComponents: Record<BrainView, ReactNode> = {
-    [BrainView.WAVES]: <BrainMobileWaves />,
     [BrainView.ABOUT]: (
       <BrainMobileAbout activeWaveId={router.query.wave as string} />
     ),
@@ -147,7 +163,7 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
       isRankWave && isMemesWave && !!wave ? (
         <MyStreamWaveFAQ wave={wave} />
       ) : null,
-    [BrainView.NOTIFICATIONS]: <Notifications />,
+    [BrainView.WAVES]: <BrainMobileWaves />,
   };
 
   return (
@@ -164,11 +180,16 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
           />
         </div>
       )}
-      <BrainMobileTabs
-        activeView={activeView}
-        onViewChange={setActiveView}
-        wave={wave}
-      />
+      {(hasWave || !isMobile) && (
+        <BrainMobileTabs
+          activeView={activeView}
+          onViewChange={setActiveView}
+          wave={wave}
+          waveActive={hasWave}
+          showWavesTab={hydrated && !isMobile}
+          showStreamBack={hydrated && !isMobile}
+        />
+      )}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeView}

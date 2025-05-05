@@ -35,3 +35,8 @@ dev.sqlite
 certificate.pfx
 
 .vscode
+
+
+# Task files
+renderer/tasks.json
+renderer/tasks/

@@ -48,7 +48,7 @@ npm run dev-win
 
 ### Rebuilding SQL
 
-This project used `better-sqlite3`
+This project uses `better-sqlite3`
 When changing between building different platform versions, you need to rebuild this package first by running:
 
 ```
@@ -57,7 +57,38 @@ npm run rebuild-sql
 
 ## Building and Publishing
 
-IMPORTANT: In order to build and publish a new version of tha app, first you have to update the version of package.json, otherwise the previous version will be overriden and the electron-updater will not work properly!
+> ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.  
+> If you skip this step, the previous version may be overwritten and the `electron-updater` will not function correctly.
+
+### Build via GitHub Workflow
+
+Instead of building locally, you can now use the [**Build All Platforms** GitHub workflow](https://github.com/6529-Collections/6529-core/actions/workflows/build-all-platforms.yml) to compile and optionally publish the app for multiple platforms.
+
+To trigger the workflow:
+
+1. Visit the [Build All Platforms workflow](https://github.com/6529-Collections/6529-core/actions/workflows/build-all-platforms.yml).
+2. Click **"Run workflow"** (you must be logged in and have the necessary permissions).
+3. Fill in the required inputs:
+
+#### Workflow Inputs
+
+- **env** (required): Choose the target environment.
+
+  - `Staging` – Build for internal testing.
+  - `Production` – Build for public release.
+
+- **version** (required): The version number to build, e.g. `1.3.0`.  
+  This **must exactly match** the `version` field in the `package.json` of the checked-out branch.  
+  This ensures consistency and avoids accidental mismatches in published versions.
+
+- **os** (required): Select which platforms to build or trigger publish logic for.
+  - `All` – Build for macOS (x64 + arm64), Windows, and Linux.
+  - `MacOS` – Only build macOS binaries.
+  - `Windows` – Only build the Windows binary.
+  - `Linux` – Only build the Linux binary.
+  - `Publish` – Runs custom logic to **publish versioned HTML download links**, **uploads metadata to Arweave**, and prepares the app for public distribution.
+
+### Build Manually
 
 Use the following commands to build for each platform:
 

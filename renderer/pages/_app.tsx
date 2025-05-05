@@ -101,13 +101,13 @@ import ReactQueryWrapper from "../components/react-query-wrapper/ReactQueryWrapp
 import "../components/drops/create/lexical/lexical.styles.scss";
 import { CookieConsentProvider } from "../components/cookies/CookieConsentContext";
 import { ToastProvider } from "../contexts/ToastContext";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/router";
 import { ConfirmProvider } from "../contexts/ConfirmContext";
 import { SeedWalletProvider } from "../contexts/SeedWalletContext";
 import { useAnchorInterceptor } from "../hooks/useAnchorInterceptor";
 import { ModalStateProvider } from "../contexts/ModalStateContext";
 import { SeizeConnectModalProvider } from "../contexts/SeizeConnectModalContext";
-import Footer from "../components/footer/Footer";
 import { SeizeConnectProvider } from "../components/auth/SeizeConnectContext";
 import { IpfsProvider, resolveIpfsUrl } from "../components/ipfs/IPFSContext";
 import { EULAConsentProvider } from "../components/eula/EULAConsentContext";
@@ -223,9 +223,9 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   const router = useRouter();
   useAnchorInterceptor();
 
-  const hideFooter = ["/waves", "/my-stream", "/open-mobile"].some((path) =>
-    router.pathname.startsWith(path)
-  );
+  const FooterDynamic = dynamic(() => import("../FooterWrapper"), {
+    ssr: false,
+  });
 
   const { store, props } = wrapper.useWrappedStore(rest);
 
@@ -311,7 +311,10 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                           <MainLayout>
                                             <TitleBar />
                                             {getLayout(
-                                              <Component {...props} />
+                                              <Component
+                                                {...props}
+                                                key={router.asPath}
+                                              />
                                             )}
                                           </MainLayout>
                                         </HeaderProvider>
@@ -320,7 +323,7 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                   </CookieConsentProvider>
                                 </Auth>
                               </ReactQueryWrapper>
-                              {!hideFooter && <Footer />}
+                              <FooterDynamic />
                             </Provider>
                           </SeedWalletProvider>
                         </ToastProvider>
