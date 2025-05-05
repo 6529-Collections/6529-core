@@ -105,6 +105,13 @@ jobs:
             npm run dist-mac-production-arm64
           fi
 
+      - name: Upload arm64 artifact
+        if: ${{ inputs.should_run && inputs.env == 'Production' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64
+          path: dist/
+
   build-mac-x64:
     name: ${{ inputs.should_run && 'Build & Sign (x64)' || 'Skipped' }}
     if: ${{ inputs.env == 'Production' }}
@@ -189,3 +196,55 @@ jobs:
       - name: Build for MacOS
         if: ${{ inputs.should_run }}
         run: npm run dist-mac-production-x64
+
+      - name: Upload x64 artifact
+        if: ${{ inputs.should_run && inputs.env == 'Production' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-x64
+          path: dist/
+
+  merge-and-publish:
+    name: Merge & Publish latest-mac.yml
+    needs: [build-mac-arm64, build-mac-x64]
+    if: ${{ inputs.should_run && inputs.env == 'Production' }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-arm64
+          path: dist/
+
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-x64
+          path: dist/
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Publish using electron-builder
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm run dist-mac-production-publish-only
