@@ -20,6 +20,13 @@ This is a subtree of `6529seize-frontend` repository (https://github.com/6529-Co
 
 #### Get Updates
 
+Checkout branch 'pull-web' and merge main into it (make sure your local main is up to date)
+
+```
+git checkout pull-web
+git merge main
+```
+
 Run the following script to fetch new changes from branch 'main' of 6529seize-frontend repository
 
 ```
@@ -44,15 +51,6 @@ or if running on a windows machine:
 
 ```
 npm run dev-win
-```
-
-### Rebuilding SQL
-
-This project uses `better-sqlite3`
-When changing between building different platform versions, you need to rebuild this package first by running:
-
-```
-npm run rebuild-sql
 ```
 
 ## Building and Publishing
@@ -93,6 +91,15 @@ To trigger the workflow:
     - Updates the distribution pages to also include **Arweave download links**, allowing users to fetch the app from both your CDN and the decentralized web.
 
 ### Build Manually
+
+### Rebuilding SQL
+
+This project uses `better-sqlite3`
+When changing between building different platform versions, you need to rebuild this package first by running:
+
+```
+npm run rebuild-sql
+```
 
 Use the following commands to build for each platform:
 
