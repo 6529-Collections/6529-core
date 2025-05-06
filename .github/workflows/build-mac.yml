@@ -228,35 +228,72 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: mac-arm64
-          path: dist/
+          path: dist/mac-arm64
 
       - name: Download x64 artifact
         uses: actions/download-artifact@v4
         with:
           name: mac-x64
-          path: dist/
+          path: dist/mac-x64
+
+      - name: Extract S3 config from electron-builder config
+        id: s3_config
+        run: |
+          CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production-publish.json').publish[0]))")
+          BUCKET=$(echo "$CONFIG" | jq -r '.bucket')
+          REGION=$(echo "$CONFIG" | jq -r '.region')
+          PATH_PREFIX=$(echo "$CONFIG" | jq -r '.path' | sed 's|\${os}|mac|')
+
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "path_prefix=$PATH_PREFIX" >> $GITHUB_OUTPUT
+
+      - name: Compute hashes and sizes, generate latest-mac.yml
+        run: |
+          VERSION="${{ inputs.version }}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          YAML_FILE=latest-mac.yml
+
+          echo "version: $VERSION" > $YAML_FILE
+          echo "files:" >> $YAML_FILE
+
+          generate_entry() {
+            local file="$1"
+            local filename=$(basename "$file")
+            local size=$(stat -f%z "$file")
+            local sha512=$(openssl dgst -sha512 -binary "$file" | openssl base64 -A)
+
+            echo "  - url: $filename" >> $YAML_FILE
+            echo "    sha512: $sha512" >> $YAML_FILE
+            echo "    size: $size" >> $YAML_FILE
+          }
+
+          # Add arm64 and x64 files
+          for file in dist/mac-arm64/*.{zip,dmg}; do generate_entry "$file"; done
+          for file in dist/mac-x64/*.{zip,dmg}; do generate_entry "$file"; done
+
+          # Set default zip (used by Electron updater)
+          DEFAULT_FILE=$(ls dist/mac-x64/*.zip | head -n 1)
+          DEFAULT_NAME=$(basename "$DEFAULT_FILE")
+          DEFAULT_SHA=$(openssl dgst -sha512 -binary "$DEFAULT_FILE" | openssl base64 -A)
+
+          echo "path: $DEFAULT_NAME" >> $YAML_FILE
+          echo "sha512: $DEFAULT_SHA" >> $YAML_FILE
+          echo "releaseDate: '$DATE'" >> $YAML_FILE
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region: ${{ steps.s3_config.outputs.region }}
 
-      - name: Publish arm64 (Apple Silicon)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload artifacts and latest-mac.yml to S3
         run: |
-          npx electron-builder \
-            --config electron-builder.production-publish.json \
-            --publish always \
-            --prepackaged dist/mac-arm64/6529\ CORE.app
+          # Upload latest-mac.yml
+          aws s3 cp latest-mac.yml s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}latest-mac.yml --acl public-read
 
-      - name: Publish x64 (Intel)
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          npx electron-builder \
-            --config electron-builder.production-publish.json \
-            --publish always \
-            --prepackaged dist/mac-x64/6529\ CORE.app
+          # Upload files from both arch builds
+          for file in dist/mac-arm64/* dist/mac-x64/*; do
+            aws s3 cp "$file" s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}$(basename "$file") --acl public-read
+          done
