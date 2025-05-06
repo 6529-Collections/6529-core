@@ -14,8 +14,8 @@ on:
         type: boolean
 
 jobs:
-  build-mac:
-    name: ${{ inputs.should_run && 'Build & Sign' || 'Skipped' }}
+  build-mac-arm64:
+    name: ${{ inputs.should_run && 'Build & Sign (arm64)' || 'Skipped' }}
     runs-on: macos-latest
 
     env:
@@ -102,5 +102,198 @@ jobs:
             npm run dist-mac-staging
           else
             echo "Building for Production..."
-            npm run dist-mac-production
+            npm run dist-mac-production-arm64
           fi
+
+      - name: Upload arm64 artifact
+        if: ${{ inputs.should_run && inputs.env == 'Production' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-arm64
+          path: dist/
+
+  build-mac-x64:
+    name: ${{ inputs.should_run && 'Build & Sign (x64)' || 'Skipped' }}
+    if: ${{ inputs.env == 'Production' }}
+    runs-on: macos-latest
+
+    env:
+      APPLE_ID: ${{ secrets.APPLE_ID }}
+      APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+
+    steps:
+      - name: Check if should run
+        if: ${{ !inputs.should_run }}
+        run: echo "Skipping because should_run=false"
+
+      - name: Decode signing certificate
+        if: ${{ inputs.should_run }}
+        run: |
+          mkdir -p certs
+          echo "${{ secrets.CERTIFICATE_P12 }}" | base64 --decode > certs/signing_certificate.p12
+
+      - name: Import signing certificate
+        if: ${{ inputs.should_run }}
+        run: |
+          security create-keychain -p "" build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p "" build.keychain
+          security import certs/signing_certificate.p12 -k build.keychain -P ${{ secrets.CERT_PASSWORD }} -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" build.keychain
+
+      - name: List code signing identities
+        if: ${{ inputs.should_run }}
+        run: security find-identity -v -p codesigning
+
+      - name: Check out
+        if: ${{ inputs.should_run }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+          lfs: true
+
+      - name: Get version from package.json
+        if: ${{ inputs.should_run }}
+        id: get_version
+        run: echo "version=$(node -p "require('./package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Verify input version matches package.json version
+        if: ${{ inputs.should_run }}
+        run: |
+          echo "Input version: ${{ inputs.version }}"
+          echo "Package.json version: ${{ steps.get_version.outputs.version }}"
+          if [ "${{ inputs.version }}" != "${{ steps.get_version.outputs.version }}" ]; then
+            echo "❌ Version mismatch!"
+            exit 1
+          fi
+
+      - name: Set up Node
+        if: ${{ inputs.should_run }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        if: ${{ inputs.should_run }}
+        run: npm ci
+
+      - name: Configure AWS Credentials
+        if: ${{ inputs.should_run }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Inject secrets into .env file
+        if: ${{ inputs.should_run }}
+        run: |
+          echo "APPLE_ID=$APPLE_ID" >> .env
+          echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
+          echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
+
+      - name: Build for MacOS
+        if: ${{ inputs.should_run }}
+        run: npm run dist-mac-production-x64
+
+      - name: Upload x64 artifact
+        if: ${{ inputs.should_run && inputs.env == 'Production' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-x64
+          path: dist/
+
+  merge-and-publish:
+    name: Merge & Publish latest-mac.yml
+    needs: [build-mac-arm64, build-mac-x64]
+    if: ${{ inputs.should_run && inputs.env == 'Production' }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Download arm64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-arm64
+          path: dist/mac-arm64
+
+      - name: Download x64 artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: mac-x64
+          path: dist/mac-x64
+
+      - name: Extract S3 config from electron-builder config
+        id: s3_config
+        run: |
+          CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production-publish.json').publish[0]))")
+          BUCKET=$(echo "$CONFIG" | jq -r '.bucket')
+          REGION=$(echo "$CONFIG" | jq -r '.region')
+          PATH_PREFIX=$(echo "$CONFIG" | jq -r '.path' | sed 's|\${os}|mac|')
+
+          echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
+          echo "path_prefix=$PATH_PREFIX" >> $GITHUB_OUTPUT
+
+      - name: Compute hashes and sizes, generate latest-mac.yml
+        run: |
+          VERSION="${{ inputs.version }}"
+          DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          YAML_FILE=latest-mac.yml
+
+          echo "version: $VERSION" > $YAML_FILE
+          echo "files:" >> $YAML_FILE
+
+          generate_entry() {
+            local file="$1"
+            local filename=$(basename "$file")
+            local size=$(stat -f%z "$file")
+            local sha512=$(openssl dgst -sha512 -binary "$file" | openssl base64 -A)
+
+            echo "  - url: $filename" >> $YAML_FILE
+            echo "    sha512: $sha512" >> $YAML_FILE
+            echo "    size: $size" >> $YAML_FILE
+          }
+
+          # Add arm64 and x64 files
+          for file in dist/mac-arm64/*.{zip,dmg}; do generate_entry "$file"; done
+          for file in dist/mac-x64/*.{zip,dmg}; do generate_entry "$file"; done
+
+          # Set default zip (used by Electron updater)
+          DEFAULT_FILE=$(ls dist/mac-arm64/*.zip | head -n 1)
+          DEFAULT_NAME=$(basename "$DEFAULT_FILE")
+          DEFAULT_SHA=$(openssl dgst -sha512 -binary "$DEFAULT_FILE" | openssl base64 -A)
+
+          echo "path: $DEFAULT_NAME" >> $YAML_FILE
+          echo "sha512: $DEFAULT_SHA" >> $YAML_FILE
+          echo "releaseDate: '$DATE'" >> $YAML_FILE
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ steps.s3_config.outputs.region }}
+
+      - name: Upload artifacts and latest-mac.yml to S3
+        run: |
+          # Upload latest-mac.yml
+          aws s3 cp latest-mac.yml s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}latest-mac.yml --acl public-read
+
+          # Upload files from both arch builds
+          for file in dist/mac-arm64/* dist/mac-x64/*; do
+            aws s3 cp "$file" s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}$(basename "$file") --acl public-read
+          done

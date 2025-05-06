@@ -41,6 +41,8 @@
     "dist-mac-local": "npm run build && electron-builder --config electron-builder.local.json --mac --publish never",
     "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --publish always",
     "dist-mac-production": "npm run build && electron-builder --config electron-builder.production.json --mac --publish always",
+    "dist-mac-production-x64": "npm run build && electron-builder --config electron-builder.production-x64.json --mac --publish never",
+    "dist-mac-production-arm64": "npm run build && electron-builder --config electron-builder.production-arm64.json --mac --publish never",
     "dist-linux-staging": "npm run build && electron-builder --config electron-builder.staging.json --linux --publish always",
     "dist-linux-production": "npm run build && electron-builder --config electron-builder.production.json --linux --publish always",
     "type-check": "tsc -p ./renderer/tsconfig.json && tsc -p ./electron-src/tsconfig.json",
