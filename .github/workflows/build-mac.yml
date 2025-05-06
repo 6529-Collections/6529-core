@@ -243,8 +243,20 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - name: Publish using electron-builder
+      - name: Publish arm64 (Apple Silicon)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run dist-mac-production-publish-only
+          npx electron-builder \
+            --config electron-builder.production-publish.json \
+            --publish always \
+            --prepackaged dist/mac-arm64/6529\ CORE.app
+
+      - name: Publish x64 (Intel)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npx electron-builder \
+            --config electron-builder.production-publish.json \
+            --publish always \
+            --prepackaged dist/mac-x64/6529\ CORE.app
