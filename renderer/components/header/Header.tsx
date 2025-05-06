@@ -26,6 +26,7 @@ import HeaderShare from "./share/HeaderShare";
 import HeaderQRScanner from "./share/HeaderQRScanner";
 import HeaderOpenMobile from "./open-mobile/HeaderOpenMobile";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
+import { isElectron } from "../../helpers";
 
 interface Props {
   onLoad?: () => void;
@@ -66,7 +67,7 @@ export default function Header(props: Readonly<Props>) {
   const [ipfsUrl, setIpfsUrl] = useState("");
 
   useEffect(() => {
-    window.api.getIpfsInfo().then((info) => {
+    window.api?.getIpfsInfo().then((info) => {
       setIpfsUrl(info.apiEndpoint);
     });
   }, []);
@@ -622,6 +623,8 @@ export default function Header(props: Readonly<Props>) {
       </div>
     );
   }
+
+  if (!isElectron()) return null;
 
   return (
     <>

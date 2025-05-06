@@ -38,7 +38,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   }, [spaces.measurementsComplete, spaces.headerSpace]);
 
   const containerClassName = useMemo(() => {
-    return `tw-w-full tw-flex tw-flex-col lg:[--tab-height:0px]`;
+    return `tw-w-full tw-flex tw-flex-col lg:[--tab-height:30px]`;
   }, []);
 
   const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>({
@@ -111,8 +111,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                 style={{
                   paddingBottom: "calc(env(safe-area-inset-bottom))",
                 }}
-                className="tw-mt-auto"
-              >
+                className="tw-mt-auto">
                 <CreateDropWaveWrapper
                   context={CreateDropWaveWrapperContext.SINGLE_DROP}>
                   <PrivilegedDropCreator

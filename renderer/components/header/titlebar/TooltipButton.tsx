@@ -12,6 +12,7 @@ type TooltipButtonProps = {
   iconStyles?: string;
   content?: string;
   buttonContent?: string;
+  hideOnClick?: boolean;
 };
 
 const TooltipButton: React.FC<TooltipButtonProps> = ({
@@ -22,6 +23,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
   iconStyles,
   content,
   buttonContent,
+  hideOnClick = true,
 }) => {
   const delay = 300;
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -29,7 +31,9 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
 
   const handleButtonClick = () => {
     onClick();
-    setTooltipVisible(false);
+    if (hideOnClick) {
+      setTooltipVisible(false);
+    }
   };
 
   const handleMouseEnter = () => {

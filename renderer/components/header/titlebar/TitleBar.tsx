@@ -3,15 +3,15 @@ import {
   faAnglesUp,
   faArrowLeft,
   faArrowRight,
+  faCheck,
   faInfo,
+  faLink,
   faRefresh,
-  faShare,
 } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
 import { useRouter } from "next/router";
 import TooltipButton from "./TooltipButton";
-import { AboutSection } from "../../../pages/about/[section]";
 import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
@@ -34,19 +34,20 @@ export default function TitleBar() {
 
   const [showScrollTop, setShowScrollTop] = useState(false);
 
-  const [isShareOpen, setIsShareOpen] = useState(false);
-
-  const [scheme, setScheme] = useState("");
-
   const [updateAvailable, setUpdateAvailable] = useState<{
     version: string;
   }>();
 
   const [showUpdateModal, setShowUpdateModal] = useState(false);
 
+  const [version, setVersion] = useState("");
+  const [isCopied, setIsCopied] = useState(false);
+
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
-      setScheme(newInfo.scheme);
+      if (newInfo.app_version) {
+        setVersion(`v${newInfo.app_version}`);
+      }
       window.updater.checkUpdates();
     });
   }, []);
@@ -172,8 +173,28 @@ export default function TitleBar() {
     setShowConfirm(false);
   };
 
-  const toggleShare = () => {
-    setIsShareOpen(!isShareOpen);
+  const getLinkPath = () => {
+    let path = window.location.pathname;
+    if (path.startsWith("/")) {
+      path = path.slice(1);
+    }
+    return path;
+  };
+
+  const getQueryParams = () => {
+    const queryParams = new URLSearchParams(window.location.search);
+    const queryString = queryParams.toString();
+    return queryString ? `?${queryString}` : "";
+  };
+
+  const copyCurrentUrl = () => {
+    const link = `${SEIZE_URL}/${getLinkPath()}${getQueryParams()}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setIsCopied(true);
+      setTimeout(() => {
+        setIsCopied(false);
+      }, 1000);
+    });
   };
 
   return (
@@ -196,21 +217,25 @@ export default function TitleBar() {
           icon={faArrowRight}
           content="Go Forward"
         />
-        <div className="position-relative">
+        {isCopied ? (
+          <TooltipButton
+            buttonStyles={`${styles.button} ${styles.buttonCopied}`}
+            icon={faCheck}
+            content="Copied"
+            onClick={() => setIsCopied(false)}
+            hideOnClick={false}
+          />
+        ) : (
           <TooltipButton
             buttonStyles={`${styles.button} ${
               navigationLoading ? styles.disabled : styles.enabled
             }`}
-            onClick={toggleShare}
-            icon={faShare}
-            content="Share"
+            onClick={copyCurrentUrl}
+            icon={faLink}
+            content="Copy Current URL"
+            hideOnClick={false}
           />
-          <SharePopup
-            scheme={scheme}
-            show={isShareOpen}
-            onHide={() => setIsShareOpen(false)}
-          />
-        </div>
+        )}
         <TooltipButton
           buttonStyles={`${styles.button} ${
             navigationLoading ? styles.disabled : styles.enabled
@@ -228,6 +253,18 @@ export default function TitleBar() {
             content="Scroll to top"
           />
         )}
+      </span>
+      <span
+        className={`${styles.version} ${
+          isMac()
+            ? updateAvailable
+              ? styles.versionMacUpdate
+              : styles.versionMac
+            : updateAvailable
+            ? styles.versionWinUpdate
+            : styles.versionWin
+        }`}>
+        {version}
       </span>
       <TooltipButton
         buttonStyles={`${styles.info} ${
@@ -272,88 +309,6 @@ export default function TitleBar() {
           </Button>
         </Modal.Footer>
       </Modal>
-    </>
-  );
-}
-
-function SharePopup(props: {
-  scheme: string;
-  show: boolean;
-  onHide: () => void;
-}) {
-  const [animationClass, setAnimationClass] = useState("");
-
-  const [isDesktopLinkCopied, setIsDesktopLinkCopied] = useState(false);
-  const [isWebLinkCopied, setIsWebLinkCopied] = useState(false);
-
-  useEffect(() => {
-    if (props.show) {
-      setAnimationClass(styles.show);
-    } else {
-      setAnimationClass(styles.hide);
-    }
-  }, [props.show]);
-
-  const getLinkPath = () => {
-    let path = window.location.pathname;
-    if (path.startsWith("/")) {
-      path = path.slice(1);
-    }
-    return path;
-  };
-
-  const getQueryParams = () => {
-    const queryParams = new URLSearchParams(window.location.search);
-    const queryString = queryParams.toString();
-    return queryString ? `?${queryString}` : "";
-  };
-
-  const copyAppLink = () => {
-    const link = `${
-      props.scheme
-    }://navigate/${getLinkPath()}${getQueryParams()}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setIsWebLinkCopied(false);
-      setIsDesktopLinkCopied(true);
-      setTimeout(() => {
-        setIsDesktopLinkCopied(false);
-      }, 1500);
-    });
-  };
-
-  const copyWebLink = () => {
-    const link = `${SEIZE_URL}/${getLinkPath()}${getQueryParams()}`;
-    navigator.clipboard.writeText(link).then(() => {
-      setIsDesktopLinkCopied(false);
-      setIsWebLinkCopied(true);
-      setTimeout(() => {
-        setIsWebLinkCopied(false);
-      }, 1500);
-    });
-  };
-
-  return (
-    <>
-      <div
-        className={`${styles.sharePopup} ${animationClass}`}
-        onAnimationEnd={() => {
-          if (!props.show) {
-            setAnimationClass("");
-          }
-        }}>
-        <button className={styles.sharePopupBtn} onClick={copyAppLink}>
-          {isDesktopLinkCopied ? "Copied!" : "Core URL"}
-        </button>
-        <button className={styles.sharePopupBtn} onClick={copyWebLink}>
-          {isWebLinkCopied ? "Copied!" : "Browser URL"}
-        </button>
-      </div>
-      <div
-        onClick={props.onHide}
-        className={styles.sharePopupOverlay}
-        style={{
-          display: props.show ? "block" : "none",
-        }}></div>
     </>
   );
 }

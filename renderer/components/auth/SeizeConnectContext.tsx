@@ -70,6 +70,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         });
       }
       removeAuthJwt();
+      if (connections.length === 0) {
+        setConnectedAddress(undefined);
+      }
 
       if (reconnect) {
         setShowConnectModal(true);

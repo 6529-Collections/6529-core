@@ -35,6 +35,11 @@
   }
 }
 
+.buttonCopied {
+  background-color: green;
+  color: white;
+}
+
 .info {
   -webkit-app-region: no-drag;
   background-color: white;
@@ -45,7 +50,7 @@
   min-width: 16px;
   border: none;
   border-radius: 10px;
-  top: 8px;
+  top: 7px;
 
   svg {
     width: 10px;
@@ -69,6 +74,34 @@
 
 .infoWin {
   left: 10px;
+}
+
+.version {
+  color: $font-color-h;
+  font-size: 10px;
+  font-family: monospace;
+  position: fixed;
+  z-index: 1000;
+  height: 30px;
+  top: 0px;
+  display: flex;
+  align-items: center;
+}
+
+.versionMac {
+  right: 30px;
+}
+
+.versionMacUpdate {
+  right: 118px;
+}
+
+.versionWin {
+  left: 30px;
+}
+
+.versionWinUpdate {
+  left: 118px;
 }
 
 .buttonContent {
@@ -179,16 +212,6 @@
   border-width: 10px 10px 10px 0;
   border-style: solid;
   border-color: transparent black transparent transparent;
-}
-
-.sharePopupOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 1000;
-  background-color: rgba(0, 0, 0, 0.2);
 }
 
 .sharePopupBtn {

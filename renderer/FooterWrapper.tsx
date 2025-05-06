@@ -7,8 +7,8 @@ export default function FooterWrapper() {
   const router = useRouter();
   const hideFooter =
     isApp ||
-    ["/waves", "/my-stream", "/open-mobile"].some((path) =>
+    ["/waves", "/my-stream", "/open-mobile", "/app-wallet"].some((path) =>
       router.pathname.startsWith(path)
     );
   return hideFooter ? null : <Footer />;
-} 
+}

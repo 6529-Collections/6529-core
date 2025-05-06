@@ -117,7 +117,6 @@ import { EmojiProvider } from "../contexts/EmojiContext";
 import { AppWebSocketProvider } from "../services/websocket/AppWebSocketProvider";
 import MainLayout from "../components/layout/MainLayout";
 import { HeaderProvider } from "../contexts/HeaderContext";
-import TitleBar from "../components/header/titlebar/TitleBar";
 
 library.add(
   faArrowUp,
@@ -223,6 +222,10 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   const router = useRouter();
   useAnchorInterceptor();
 
+  const TitleBarDynamic = dynamic(() => import("../TitleBarWrapper"), {
+    ssr: false,
+  });
+
   const FooterDynamic = dynamic(() => import("../FooterWrapper"), {
     ssr: false,
   });
@@ -309,7 +312,7 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                       <AppWebSocketProvider>
                                         <HeaderProvider>
                                           <MainLayout>
-                                            <TitleBar />
+                                            <TitleBarDynamic />
                                             {getLayout(
                                               <Component
                                                 {...props}
