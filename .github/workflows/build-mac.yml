@@ -94,7 +94,7 @@ jobs:
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
 
-      - name: Build for MacOS
+      - name: Build for arm64
         if: ${{ inputs.should_run }}
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
@@ -193,7 +193,7 @@ jobs:
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
 
-      - name: Build for MacOS
+      - name: Build for x64
         if: ${{ inputs.should_run }}
         run: npm run dist-mac-production-x64
 
