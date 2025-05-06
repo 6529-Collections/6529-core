@@ -115,7 +115,7 @@ jobs:
   build-mac-x64:
     name: ${{ inputs.should_run && 'Build & Sign (x64)' || 'Skipped' }}
     if: ${{ inputs.env == 'Production' }}
-    runs-on: macos-13
+    runs-on: macos-latest
 
     env:
       APPLE_ID: ${{ secrets.APPLE_ID }}
