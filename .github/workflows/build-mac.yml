@@ -239,7 +239,7 @@ jobs:
       - name: Extract S3 config from electron-builder config
         id: s3_config
         run: |
-          CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production-publish.json').publish[0]))")
+          CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production.json').publish[0]))")
           BUCKET=$(echo "$CONFIG" | jq -r '.bucket')
           REGION=$(echo "$CONFIG" | jq -r '.region')
           PATH_PREFIX=$(echo "$CONFIG" | jq -r '.path' | sed 's|\${os}|mac|')
