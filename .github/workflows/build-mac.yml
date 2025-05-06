@@ -172,7 +172,7 @@ jobs:
         if: ${{ inputs.should_run }}
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 18
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
