@@ -140,7 +140,6 @@
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
-    "@electron/rebuild": "^3.6.0",
     "@playwright/test": "^1.48.0",
     "@tanstack/eslint-plugin-query": "^5.43.1",
     "@types/better-sqlite3": "^7.6.10",
