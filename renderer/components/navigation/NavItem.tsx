@@ -6,6 +6,7 @@ import type { NavItem as NavItemData } from "./navTypes";
 import { motion } from "framer-motion";
 import { TitleType, useAuth } from "../auth/Auth";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
+import { isNavItemActive } from "./isNavItemActive";
 
 interface Props {
   readonly item: NavItemData;
@@ -68,7 +69,8 @@ const NavItem = ({ item }: Props) => {
 
   const iconSizeClass = item.iconSizeClass ?? "tw-size-7";
 
-  let isActive = false;
+  const isActive = isNavItemActive(item, router, activeView);
+
   const handleClick = () => {
     if (
       item.name === "Notifications" &&
@@ -78,16 +80,10 @@ const NavItem = ({ item }: Props) => {
       router.push("/my-stream/notifications?reload=true", undefined, {
         shallow: true,
       });
-    } else {
-      handleNavClick(item);
+      return;
     }
+    handleNavClick(item);
   };
-
-  if (item.kind === "route") {
-    isActive = router.pathname === item.href && activeView === null;
-  } else {
-    isActive = activeView === item.viewKey;
-  }
 
   return (
     <button

@@ -379,6 +379,7 @@ function MemeNavigationBtn(
   const isMobile = useIsMobileScreen();
 
   const width = isMobile ? 25 : 35;
+  const height = isMobile ? 25 : 35;
 
   const isDisabled =
     props.icon === "previous"
@@ -393,6 +394,7 @@ function MemeNavigationBtn(
           : "chevron-circle-right"
       }
       width={width}
+      height={height}
       color={isDisabled ? "#9a9a9a" : "#fff"}
       cursor={isDisabled ? "default" : "pointer"}
     />
