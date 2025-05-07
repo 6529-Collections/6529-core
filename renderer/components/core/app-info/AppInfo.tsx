@@ -40,7 +40,6 @@ export default function AppInfo() {
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
       setInfo(newInfo);
-      window.updater.checkUpdates();
     });
   }, []);
 
