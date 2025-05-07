@@ -52,7 +52,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
-          lfs: true
 
       - name: Get version from package.json
         if: ${{ inputs.should_run }}
@@ -93,6 +92,11 @@ jobs:
           echo "APPLE_ID=$APPLE_ID" >> .env
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
+
+      - name: Download ipfs-binaries
+        if: ${{ inputs.should_run }}
+        run: |
+          aws s3 cp s3://6529bucket/ipfs-binaries/mac ./ipfs-binaries/mac --recursive
 
       - name: Build for arm64
         if: ${{ inputs.should_run }}
@@ -151,7 +155,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           ref: ${{ github.ref_name }}
-          lfs: true
 
       - name: Get version from package.json
         if: ${{ inputs.should_run }}
@@ -192,6 +195,11 @@ jobs:
           echo "APPLE_ID=$APPLE_ID" >> .env
           echo "APPLE_ID_PASSWORD=$APPLE_ID_PASSWORD" >> .env
           echo "APPLE_TEAM_ID=$APPLE_TEAM_ID" >> .env
+
+      - name: Download ipfs-binaries
+        if: ${{ inputs.should_run }}
+        run: |
+          aws s3 cp s3://6529bucket/ipfs-binaries/mac ./ipfs-binaries/mac --recursive
 
       - name: Build for x64
         if: ${{ inputs.should_run }}
@@ -239,7 +247,7 @@ jobs:
       - name: Extract S3 config from electron-builder config
         id: s3_config
         run: |
-          CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production-publish.json').publish[0]))")
+          CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production.json').publish[0]))")
           BUCKET=$(echo "$CONFIG" | jq -r '.bucket')
           REGION=$(echo "$CONFIG" | jq -r '.region')
           PATH_PREFIX=$(echo "$CONFIG" | jq -r '.path' | sed 's|\${os}|mac|')
@@ -288,7 +296,19 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ steps.s3_config.outputs.region }}
 
+      - name: Upload artifacts to S3
+        run: |
+          for file in dist/mac-arm64/*.{zip,dmg,blockmap}; do
+            echo "Uploading $file"
+            aws s3 cp "$file" "s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}$(basename "$file")"
+          done
+
+          for file in dist/mac-x64/*.{zip,dmg,blockmap}; do
+            echo "Uploading $file"
+            aws s3 cp "$file" "s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}$(basename "$file")"
+          done
+
       - name: Upload latest-mac.yml to S3
         run: |
           # Upload latest-mac.yml
-          aws s3 cp latest-mac.yml s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}latest-mac.yml --acl public-read
+          aws s3 cp latest-mac.yml s3://${{ steps.s3_config.outputs.bucket }}/${{ steps.s3_config.outputs.path_prefix }}latest-mac.yml
