@@ -62,6 +62,11 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Download ipfs-binaries
+        if: ${{ inputs.should_run }}
+        run: |
+          aws s3 cp s3://6529bucket/ipfs-binaries/linux ./ipfs-binaries/linux --recursive
+
       - name: Build for Linux
         if: ${{ inputs.should_run }}
         run: |
