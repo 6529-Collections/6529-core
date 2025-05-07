@@ -77,6 +77,11 @@ jobs:
         run: |
           aws s3 cp s3://6529bucket/ipfs-binaries/win ./ipfs-binaries/win --recursive
 
+      - name: Make all ipfs binaries executable
+        if: ${{ inputs.should_run }}
+        run: |
+          find ./ipfs-binaries/win -type f -name ipfs -exec chmod +x {} \;
+
       - name: Build for Windows
         if: ${{ inputs.should_run }}
         run: |

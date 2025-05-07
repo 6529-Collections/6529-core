@@ -98,6 +98,11 @@ jobs:
         run: |
           aws s3 cp s3://6529bucket/ipfs-binaries/mac ./ipfs-binaries/mac --recursive
 
+      - name: Make all ipfs binaries executable
+        if: ${{ inputs.should_run }}
+        run: |
+          find ./ipfs-binaries/mac -type f -name ipfs -exec chmod +x {} \;
+
       - name: Build for arm64
         if: ${{ inputs.should_run }}
         run: |
@@ -200,6 +205,11 @@ jobs:
         if: ${{ inputs.should_run }}
         run: |
           aws s3 cp s3://6529bucket/ipfs-binaries/mac ./ipfs-binaries/mac --recursive
+
+      - name: Make all ipfs binaries executable
+        if: ${{ inputs.should_run }}
+        run: |
+          find ./ipfs-binaries/mac -type f -name ipfs -exec chmod +x {} \;
 
       - name: Build for x64
         if: ${{ inputs.should_run }}
