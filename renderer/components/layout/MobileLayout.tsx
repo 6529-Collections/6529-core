@@ -1,46 +1,28 @@
-import React, { ReactNode, useCallback } from "react";
-import dynamic from "next/dynamic";
-import { useHeaderContext } from "../../contexts/HeaderContext";
-
-// Simple placeholder for the header while it loads client-side
-const HeaderPlaceholder = () => {
-  // Style to roughly match header height
-  return (
-    <div style={{ height: "56px" /* Adjust height as needed for mobile */ }}>
-      Loading Header...
-    </div>
-  );
-};
-
-// Dynamically import Header, disable SSR, and use the placeholder
-const Header = dynamic(() => import("../header/Header"), {
-  ssr: false,
-  loading: () => <HeaderPlaceholder />,
-});
+import React, { ReactNode } from "react";
+import useDeviceInfo from "../../hooks/useDeviceInfo";
+import useIsMobileScreen from "../../hooks/isMobileScreen";
+import AppLayout from "./AppLayout";
+import SmallScreenLayout from "./SmallScreenLayout";
 
 interface MobileLayoutProps {
   readonly children: ReactNode;
 }
 
 const MobileLayout = ({ children }: MobileLayoutProps) => {
-  const { setHeaderRef } = useHeaderContext();
+  const { isApp } = useDeviceInfo();
+  const isSmallScreen = useIsMobileScreen();
 
-  // Use a callback ref to get the DOM node
-  const headerWrapperRef = useCallback(
-    (node: HTMLDivElement | null) => {
-      setHeaderRef(node);
-    },
-    [setHeaderRef]
-  );
+  if (isApp) {
+    return <AppLayout>{children}</AppLayout>;
+  }
 
-  return (
-    <div>
-      <div ref={headerWrapperRef}>
-        <Header />
-      </div>
-      <main>{children}</main>
-    </div>
-  );
+  // Fallback to small-screen layout when not a mobile device but screen is narrow
+  if (isSmallScreen) {
+    return <SmallScreenLayout>{children}</SmallScreenLayout>;
+  }
+
+  // Edge case: render children directly
+  return <>{children}</>;
 };
 
 export default MobileLayout;

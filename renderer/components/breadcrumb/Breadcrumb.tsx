@@ -3,6 +3,7 @@ import { getRandomObjectId } from "../../helpers/AllowlistToolHelpers";
 import styles from "./Breadcrumb.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
 import useCapacitor from "../../hooks/useCapacitor";
+import { isElectron } from "../../helpers";
 
 export interface Crumb {
   display: string;
@@ -15,6 +16,8 @@ interface Props {
 
 export default function Breadcrumb(props: Readonly<Props>) {
   const capacitor = useCapacitor();
+
+  if (!isElectron()) return null;
 
   return (
     <>

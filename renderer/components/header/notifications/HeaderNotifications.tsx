@@ -42,12 +42,6 @@ export default function HeaderNotifications() {
     }
   }, [router.pathname]);
 
-  useEffect(() => {
-    if (router.pathname === "/my-stream/notifications") {
-      setLinkHref("/my-stream/notifications?reload=true");
-    }
-  }, [router.pathname]);
-
   return (
     <div className="tailwind-scope tw-relative min-[1200px]:tw-mr-3 tw-self-center">
       <Link

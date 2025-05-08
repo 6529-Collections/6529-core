@@ -20,6 +20,7 @@ import DotLoader from "../dotLoader/DotLoader";
 import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
 import { SEIZE_API_URL } from "../../../constants";
+import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
 
 const PAGE_SIZE = 40;
 
@@ -202,16 +203,25 @@ export default function Rememes() {
       <Row>
         <Col>
           <Container className="pt-4">
-            <Row className="d-flex justify-content-between">
-              <Col
-                className={`d-flex flex-wrap align-items-center gap-2 justify-content-between`}>
-                <span className="d-flex align-items-center gap-3 pt-3 pb-2">
+            <Row className="mb-3">
+              <Col xs={12} sm={8} md={9} className="pb-3 pb-sm-0">
+                <span className="d-flex align-items-center gap-3">
                   <span className="d-flex align-items-center gap-2">
                     <Image
                       loading={"eager"}
                       width="0"
                       height="0"
                       style={{ width: "250px", height: "auto" }}
+                      className="d-none d-md-block"
+                      src="/re-memes.png"
+                      alt="re-memes"
+                    />
+                    <Image
+                      loading={"eager"}
+                      width="0"
+                      height="0"
+                      style={{ width: "150px", height: "auto" }}
+                      className="d-md-none"
                       src="/re-memes.png"
                       alt="re-memes"
                     />
@@ -223,22 +233,29 @@ export default function Rememes() {
                   </span>
                   <LFGButton contract={"rememes"} />
                 </span>
-                <span className="pt-2 pb-2">
-                  <Button
-                    className="seize-btn btn-white d-flex align-items-center gap-2"
-                    onClick={() => {
-                      window.location.href = "/rememes/add";
-                    }}>
-                    Add ReMeme{" "}
-                    <FontAwesomeIcon
-                      icon="plus-circle"
-                      className={styles.buttonIcon}
-                      onClick={() => {
-                        window.location.href = "/rememes/add";
-                      }}
-                    />
-                  </Button>
-                </span>
+              </Col>
+              <Col
+                xs={12}
+                sm={4}
+                md={3}
+                className="d-flex justify-content-sm-end align-items-center">
+                <Button
+                  className="seize-btn btn-white d-flex align-items-center justify-content-center gap-2 w-100 w-sm-auto"
+                  onClick={() => {
+                    window.location.href = "/rememes/add";
+                  }}>
+                  Add ReMeme{" "}
+                  <FontAwesomeIcon
+                    icon="plus-circle"
+                    className={styles.buttonIcon}
+                  />
+                </Button>
+              </Col>
+            </Row>
+
+            <Row className="d-xl-none mb-3">
+              <Col xs={12} sm="auto">
+                <CollectionsDropdown activePage="rememes" />
               </Col>
             </Row>
             {rememesLoaded && (

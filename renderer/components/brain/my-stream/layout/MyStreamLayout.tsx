@@ -1,32 +1,21 @@
-import { ReactNode, useContext, useEffect, useMemo } from "react";
+import { ReactNode, useContext, useMemo } from "react";
 import Head from "next/head";
 import Brain from "../../Brain";
 import { AuthContext } from "../../../auth/Auth";
-import { LayoutProvider, useLayout } from "./LayoutContext";
-import { SEIZE_URL } from "../../../../../constants";
-import { MyStreamProvider } from "../../../../contexts/wave/MyStreamContext";
+import { useLayout } from "./LayoutContext";
 import HeaderUserConnect from "../../../header/user/HeaderUserConnect";
 import Image from "next/image";
 import { useSeizeConnectContext } from "../../../auth/SeizeConnectContext";
 import ClientOnly from "../../../client-only/ClientOnly";
 import UserSetUpProfileCta from "../../../user/utils/set-up-profile/UserSetUpProfileCta";
-import { useHeaderContext } from "../../../../contexts/HeaderContext";
+import { SEIZE_URL } from "../../../../../constants";
 
 // Main layout content that uses the Layout context
 function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
   const { title, showWaves, connectedProfile, fetchingProfile } =
     useContext(AuthContext);
-  const { registerRef, spaces } = useLayout();
+  const { spaces } = useLayout();
   const { isAuthenticated } = useSeizeConnectContext();
-  const { headerRef } = useHeaderContext();
-
-  // Effect to register the header ref from context with the layout context
-  useEffect(() => {
-    if (headerRef.current) {
-      registerRef("header", headerRef.current);
-    }
-    // Cleanup is likely handled internally by LayoutContext's ResizeObserver unobserve
-  }, [headerRef, registerRef]);
 
   const containerClassName =
     "tw-relative tw-flex tw-flex-col tw-flex-1 tailwind-scope";
@@ -76,8 +65,7 @@ function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
   ) : (
     <div
       id="my-stream-connect"
-      className="tw-flex-1 tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-center tw-gap-8 tw-p-6"
-    >
+      className="tw-flex-1 tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-justify-center tw-gap-8 tw-min-h-[80dvh] tw-p-6">
       <Image
         priority
         loading="eager"
@@ -103,9 +91,9 @@ function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
         <meta property="og:title" content="My Stream" />
         <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
         <meta property="og:description" content="6529.io" />
-        {/*  <style>{`body { overflow: hidden !important; }`}</style> */}
+        <style>{`body { overflow: hidden !important; }`}</style>
       </Head>
-      <div className="tailwind-scope tw-flex tw-flex-col tw-bg-black tw-overflow-hidden tw-min-h-[80dvh]">
+      <div className="tailwind-scope tw-flex tw-flex-col tw-bg-black tw-overflow-hidden">
         <ClientOnly>{content}</ClientOnly>
       </div>
     </>
@@ -117,11 +105,5 @@ export default function MyStreamLayout({
 }: {
   readonly children: ReactNode;
 }) {
-  return (
-    <MyStreamProvider>
-      <LayoutProvider>
-        <MyStreamLayoutContent>{children}</MyStreamLayoutContent>
-      </LayoutProvider>
-    </MyStreamProvider>
-  );
+  return <MyStreamLayoutContent>{children}</MyStreamLayoutContent>;
 }
