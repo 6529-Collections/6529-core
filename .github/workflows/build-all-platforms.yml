@@ -135,18 +135,13 @@ jobs:
           color: 0x00bfff
 
       - name: Publish Arweave Links
-        if: env.SHOULD_FAIL != 'true'
+        if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         env:
           ARWEAVE_KEY: ${{ secrets.ARWEAVE_KEY }}
-        run: |
-          if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
-            npm run publish-links-staging-arweave
-          else
-            npm run publish-links-production-arweave
-          fi
+        run: npm run publish-links-production-arweave
 
       - name: Final Success - After Arweave
-        if: success() && env.SHOULD_FAIL != 'true'
+        if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         uses: sarisia/actions-status-discord@v1
         continue-on-error: true
         env:
