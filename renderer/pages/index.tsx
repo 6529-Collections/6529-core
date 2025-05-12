@@ -1,9 +1,7 @@
 import Head from "next/head";
 import styles from "../styles/Home.module.scss";
-import Image from "next/image";
 import { Col, Container, Row, Table } from "react-bootstrap";
 import { useContext, useEffect, useState } from "react";
-import { MEMES_CONTRACT } from "../constants";
 import { DBResponse } from "../entities/IDBResponse";
 import { NFTWithMemesExtendedData } from "../entities/INFT";
 import dynamic from "next/dynamic";
@@ -45,6 +43,7 @@ import { ManifoldClaim } from "../hooks/useManifoldClaim";
 import { NftPageStats } from "../components/nftAttributes/NftStats";
 import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
 import useCapacitor from "../hooks/useCapacitor";
+import NFTMarketplaceLinks from "../components/nft-marketplace-links/NFTMarketplaceLinks";
 
 export interface IndexPageProps {
   readonly nft: NFTWithMemesExtendedData;
@@ -362,30 +361,10 @@ export default function Home({
                   {capacitor.platform !== "ios" && (
                     <Row className="pt-3">
                       <Col>
-                        <a
-                          href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${pageProps.nft.id}`}
-                          target="_blank"
-                          rel="noreferrer">
-                          <Image
-                            className={styles.marketplace}
-                            src="/opensea.png"
-                            alt="opensea"
-                            width={40}
-                            height={40}
-                          />
-                        </a>
-                        <a
-                          href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${pageProps.nft.id}`}
-                          target="_blank"
-                          rel="noreferrer">
-                          <Image
-                            className={styles.marketplace}
-                            src="/x2y2.png"
-                            alt="x2y2"
-                            width={40}
-                            height={40}
-                          />
-                        </a>
+                        <NFTMarketplaceLinks
+                          contract={pageProps.nft.contract}
+                          id={pageProps.nft.id}
+                        />
                       </Col>
                     </Row>
                   )}

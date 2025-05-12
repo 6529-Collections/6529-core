@@ -27,6 +27,8 @@ import DotLoader from "../dotLoader/DotLoader";
 import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
 import { SEIZE_API_URL } from "../../../constants";
 import useCapacitor from "../../hooks/useCapacitor";
+import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+import { faExternalLink, faGlobe } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   contract: string;
@@ -57,7 +59,7 @@ export function printMemeReferences(
       {memesLoaded ? (
         <>
           {memes.length > 0 ? (
-            <Row className="pt-2 pb-2">
+            <>
               {memes.map((nft) => {
                 return (
                   <Col
@@ -105,7 +107,7 @@ export function printMemeReferences(
                   </Col>
                 );
               })}
-            </Row>
+            </>
           ) : (
             <Col>
               <NothingHereYetSummer />
@@ -268,7 +270,7 @@ export default function RememePage(props: Readonly<Props>) {
                         className={styles.userLink}
                         href={rememe.contract_opensea_data.externalUrl}>
                         <FontAwesomeIcon
-                          icon="globe"
+                          icon={faGlobe}
                           className={styles.globeIcon}
                         />
                         {rememe.contract_opensea_data.externalUrl}
@@ -300,30 +302,10 @@ export default function RememePage(props: Readonly<Props>) {
                 {capacitor.platform !== "ios" && (
                   <Row className="pt-5">
                     <Col>
-                      <a
-                        href={`https://opensea.io/assets/ethereum/${props.contract}/${props.id}`}
-                        target="_blank"
-                        rel="noreferrer">
-                        <Image
-                          className={styles.marketplaceRememe}
-                          src="/opensea.png"
-                          alt="opensea"
-                          width={40}
-                          height={40}
-                        />
-                      </a>
-                      <a
-                        href={`https://x2y2.io/eth/${props.contract}/${props.id}`}
-                        target="_blank"
-                        rel="noreferrer">
-                        <Image
-                          className={styles.marketplaceRememe}
-                          src="/x2y2.png"
-                          alt="x2y2"
-                          width={40}
-                          height={40}
-                        />
-                      </a>
+                      <NFTMarketplaceLinks
+                        contract={rememe.contract}
+                        id={rememe.id}
+                      />
                     </Col>
                   </Row>
                 )}
@@ -391,7 +373,7 @@ export default function RememePage(props: Readonly<Props>) {
           rel="noreferrer"
           className={`d-inline-flex align-items-center justify-content-start ${styles.userLink}`}>
           {s}
-          <FontAwesomeIcon icon="external-link" className={styles.linkIcon} />
+          <FontAwesomeIcon icon={faExternalLink} className={styles.linkIcon} />
         </a>
       );
     }
@@ -416,7 +398,7 @@ export default function RememePage(props: Readonly<Props>) {
                         className={`d-inline-flex align-items-center justify-content-start ${styles.userLink}`}>
                         {rememe.token_uri}
                         <FontAwesomeIcon
-                          icon="external-link"
+                          icon={faExternalLink}
                           className={styles.linkIcon}
                         />
                       </a>

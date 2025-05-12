@@ -17,6 +17,10 @@ import { SEIZE_API_URL } from "../../../constants";
 import Link from "next/link";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import { useSeizeSettings } from "../../contexts/SeizeSettingsContext";
+import {
+  faCheckCircle,
+  faTimesCircle,
+} from "@fortawesome/free-solid-svg-icons";
 
 interface CheckList {
   status: boolean;
@@ -227,12 +231,12 @@ export default function RememeAddPage() {
                           className={`d-flex align-items-center gap-2`}>
                           {note.status ? (
                             <FontAwesomeIcon
-                              icon="check-circle"
+                              icon={faCheckCircle}
                               className={styles.verifiedIcon}
                             />
                           ) : (
                             <FontAwesomeIcon
-                              icon="times-circle"
+                              icon={faTimesCircle}
                               className={styles.unverifiedIcon}
                             />
                           )}
@@ -248,7 +252,7 @@ export default function RememeAddPage() {
                           key={`se-${index}`}
                           className={`d-flex align-items-center gap-2`}>
                           <FontAwesomeIcon
-                            icon="times-circle"
+                            icon={faTimesCircle}
                             className={styles.unverifiedIcon}
                           />
                           {se}
@@ -312,7 +316,7 @@ export default function RememeAddPage() {
                       <span className="d-flex align-items-center gap-2">
                         Status: Success
                         <FontAwesomeIcon
-                          icon="check-circle"
+                          icon={faCheckCircle}
                           className={styles.verifiedIcon}
                         />
                       </span>
@@ -320,7 +324,7 @@ export default function RememeAddPage() {
                       <span className="d-flex align-items-center gap-2">
                         Status: Fail
                         <FontAwesomeIcon
-                          icon="times-circle"
+                          icon={faTimesCircle}
                           className={styles.unverifiedIcon}
                         />
                       </span>

@@ -19,6 +19,8 @@ import {
   getDimensionsFromMetadata,
 } from "../../helpers/nft.helpers";
 import NFTAttributes from "../nftAttributes/NFTAttributes";
+import { faExpandAlt } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
 
 export function MemePageArt(props: {
   show: boolean;
@@ -32,6 +34,15 @@ export function MemePageArt(props: {
   const [fullscreenElementId, setFullscreenElementId] = useState<string>(
     "the-art-fullscreen-img"
   );
+
+  const distributionPlanLink = (() => {
+    const id = props.nft?.id;
+    if (!id) return "";
+    if (props.nft?.has_distribution) return `/the-memes/${id}/distribution`;
+    if (id > 3)
+      return `https://github.com/6529-Collections/thememecards/tree/main/card${id}`;
+    return `https://github.com/6529-Collections/thememecards/tree/main/card1-3`;
+  })();
 
   useEffect(() => {
     if (router.isReady) {
@@ -54,7 +65,7 @@ export function MemePageArt(props: {
           <Row className="position-relative">
             {isFullScreenSupported && (
               <FontAwesomeIcon
-                icon="expand-alt"
+                icon={faExpandAlt}
                 className={styles.fullScreen}
                 onClick={() =>
                   fullscreenElementId && enterArtFullScreen(fullscreenElementId)
@@ -132,13 +143,13 @@ export function MemePageArt(props: {
                     <Row>
                       <Col>
                         {props.nft.metadata.image_details.format}{" "}
-                        <a
+                        <Link
                           className={styles.arweaveLink}
                           href={props.nft.metadata.image}
                           target="_blank"
                           rel="noreferrer">
                           {props.nft.metadata.image}
-                        </a>
+                        </Link>
                         <Download
                           href={props.nft.metadata.image}
                           name={props.nft.name}
@@ -151,7 +162,7 @@ export function MemePageArt(props: {
                       <Row className="pt-3">
                         <Col>
                           {props.nft.metadata.animation_details.format}{" "}
-                          <a
+                          <Link
                             className={styles.arweaveLink}
                             href={
                               props.nft.metadata.animation
@@ -163,7 +174,7 @@ export function MemePageArt(props: {
                             {props.nft.metadata.animation
                               ? props.nft.metadata.animation
                               : props.nft.metadata.animation_url}
-                          </a>
+                          </Link>
                           <Download
                             href={
                               props.nft.metadata.animation
@@ -258,31 +269,19 @@ export function MemePageArt(props: {
                     <h3>Minting Approach</h3>
                   </Col>
                 </Row>
-                <Row>
-                  <Col>
-                    <a
-                      onClick={() => {
-                        if (props.nft && props.nft.has_distribution) {
-                          router.push(
-                            `/the-memes/${props.nft.id}/distribution`
-                          );
-                        } else {
-                          let link;
-                          if (props.nft && props.nft.id > 3) {
-                            link = `https://github.com/6529-Collections/thememecards/tree/main/card${props.nft.id}`;
-                          } else {
-                            link = `https://github.com/6529-Collections/thememecards/tree/main/card1-3`;
-                          }
-                          window.open(link, "_blank");
-                        }
-                      }}
-                      target={props.nft.has_distribution ? "_self" : "_blank"}
-                      rel="noreferrer"
-                      className={styles.distributionPlanLink}>
-                      Distribution Plan
-                    </a>
-                  </Col>
-                </Row>
+                {distributionPlanLink && (
+                  <Row>
+                    <Col>
+                      <Link
+                        href={distributionPlanLink}
+                        target={props.nft.has_distribution ? "_self" : "_blank"}
+                        rel="noreferrer"
+                        className={styles.distributionPlanLink}>
+                        Distribution Plan
+                      </Link>
+                    </Col>
+                  </Row>
+                )}
                 <Row>
                   <Col>
                     Mint price:{" "}

@@ -28,6 +28,15 @@ import {
   getNextGenImageUrl,
 } from "../nextGen/collections/nextgenToken/NextGenTokenImage";
 import Link from "next/link";
+import {
+  faCartPlus,
+  faExchange,
+  faExternalLinkSquare,
+  faFire,
+  faGasPump,
+  faParachuteBox,
+  faShoppingCart,
+} from "@fortawesome/free-solid-svg-icons";
 
 function calculateRoyaltiesPercentage(value: number, royalties: number) {
   return Math.round((royalties / value) * 10000) / 10000;
@@ -104,7 +113,7 @@ export function printGas(
       hideOnClick={false}>
       <FontAwesomeIcon
         className={styles.gasIcon}
-        icon="gas-pump"></FontAwesomeIcon>
+        icon={faGasPump}></FontAwesomeIcon>
     </Tippy>
   );
 }
@@ -363,7 +372,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
           rel="noreferrer">
           <FontAwesomeIcon
             className={styles.gasIcon}
-            icon="external-link-square"></FontAwesomeIcon>
+            icon={faExternalLinkSquare}></FontAwesomeIcon>
         </a>
       </span>
     );
@@ -399,18 +408,18 @@ export default function LatestActivityRow(props: Readonly<Props>) {
 
   function getIcon() {
     if (isBurn()) {
-      return "fire";
+      return faFire;
     }
 
     if (props.tr.value > 0) {
-      return isMint() ? "cart-plus" : "shopping-cart";
+      return isMint() ? faCartPlus : faShoppingCart;
     }
 
     if (isAirdrop()) {
-      return "parachute-box";
+      return faParachuteBox;
     }
 
-    return "exchange";
+    return faExchange;
   }
 
   if (!props.tr.token_count) {

@@ -13,6 +13,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import DatePickerModal from "../datePickerModal/DatePickerModal";
 import { ApiArtistNameItem } from "../../generated/models/ApiArtistNameItem";
 import { SEIZE_API_URL } from "../../../constants";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 export enum GasRoyaltiesCollectionFocus {
   MEMES = "the-memes",
@@ -344,7 +345,7 @@ export function GasRoyaltiesTokenImage(props: Readonly<TokenImageProps>) {
             <span>
               <FontAwesomeIcon
                 className={styles.infoIcon}
-                icon="info-circle"></FontAwesomeIcon>
+                icon={faInfoCircle}></FontAwesomeIcon>
             </span>
           </Tippy>
         )}

@@ -20,6 +20,7 @@ import {
   faBars,
   faChevronRight,
   faExternalLinkAlt,
+  faTimesCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderShare from "./share/HeaderShare";
@@ -186,7 +187,7 @@ export default function Header(props: Readonly<Props>) {
             <Col className="d-flex justify-content-end">
               <FontAwesomeIcon
                 className={styles.burgerMenuClose}
-                icon="times-circle"
+                icon={faTimesCircle}
                 onClick={() => {
                   setBurgerMenuOpen(false);
                   setShowBurgerMenuCollections(false);

@@ -3,7 +3,7 @@ import styles from "../../../../styles/Home.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
 import { LeaderboardFocus } from "../../../../components/leaderboard/Leaderboard";
-import { useContext, useEffect, useState } from "react";
+import { useContext, useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/router";
 import { AuthContext } from "../../../../components/auth/Auth";
 import { SEIZE_URL } from "../../../../../constants";
@@ -18,26 +18,32 @@ export default function CommunityNerdPage(props: any) {
   const router = useRouter();
   const [focus, setFocus] = useState<LeaderboardFocus>(props.pageProps.focus);
 
-  useEffect(() => {
-    let path = "/network/nerd";
-    if (focus === LeaderboardFocus.INTERACTIONS) {
-      path += "/interactions";
-    } else {
-      path += "/cards-collected";
-    }
-    router.replace(
-      {
-        pathname: path,
-      },
-      undefined,
-      { shallow: true }
-    );
-  }, [focus, router]);
+  const syncPath = useCallback(
+    (newFocus: LeaderboardFocus) => {
+      let path = "/network/nerd";
+      path +=
+        newFocus === LeaderboardFocus.INTERACTIONS
+          ? "/interactions"
+          : "/cards-collected";
+
+      if (router.asPath !== path) {
+        router.replace(path, undefined, { shallow: true });
+      }
+    },
+    [router]
+  );
+
+  const handleSetFocus = (newFocus: LeaderboardFocus) => {
+    setFocus(newFocus);
+    syncPath(newFocus);
+  };
 
   useEffect(() => {
     const pageTitle = focus ? `Network | Nerd - ${focus}` : "Network | Nerd";
-    setTitle({ title: pageTitle });
-  }, [focus, setTitle]);
+    if (title !== pageTitle) {
+      setTitle({ title: pageTitle });
+    }
+  }, [focus, title, setTitle]);
 
   return (
     <>
@@ -51,6 +57,10 @@ export default function CommunityNerdPage(props: any) {
           property="og:description"
           content="6529.io Network Nerd Leaderboard"
         />
+        <meta
+          property="og:description"
+          content="6529.io Network Nerd Leaderboard"
+        />
         <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
       </Head>
 
@@ -58,7 +68,7 @@ export default function CommunityNerdPage(props: any) {
         <Container fluid>
           <Row>
             <Col>
-              <Leaderboard focus={focus} setFocus={setFocus} />
+              <Leaderboard focus={focus} setFocus={handleSetFocus} />
             </Col>
           </Row>
         </Container>

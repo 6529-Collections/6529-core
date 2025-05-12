@@ -14,6 +14,10 @@ import { GRADIENT_CONTRACT } from "../../constants";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
 import { SEIZE_API_URL } from "../../../constants";
 import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
+import {
+  faChevronCircleDown,
+  faChevronCircleUp,
+} from "@fortawesome/free-solid-svg-icons";
 
 enum Sort {
   ID = "id",
@@ -173,14 +177,14 @@ export default function GradientsComponent(props: Readonly<Props>) {
                 <Col>
                   Sort&nbsp;&nbsp;
                   <FontAwesomeIcon
-                    icon="chevron-circle-up"
+                    icon={faChevronCircleUp}
                     onClick={() => setSortDir(SortDirection.ASC)}
                     className={`${styles.sortDirection} ${
                       sortDir != SortDirection.ASC ? styles.disabled : ""
                     }`}
                   />{" "}
                   <FontAwesomeIcon
-                    icon="chevron-circle-down"
+                    icon={faChevronCircleDown}
                     onClick={() => setSortDir(SortDirection.DESC)}
                     className={`${styles.sortDirection} ${
                       sortDir != SortDirection.DESC ? styles.disabled : ""

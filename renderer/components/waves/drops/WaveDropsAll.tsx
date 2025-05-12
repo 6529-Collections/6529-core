@@ -9,7 +9,7 @@ import CircleLoader, {
 } from "../../distribution-plan-tool/common/CircleLoader";
 import { useRouter } from "next/router";
 import { ActiveDropState } from "../../../types/dropInteractionTypes";
-import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
+import { DropSize, ExtendedDrop } from "../../../helpers/waves/drop.helpers";
 import WaveDropsEmptyPlaceholder from "./WaveDropsEmptyPlaceholder";
 import WaveDropsScrollingOverlay from "./WaveDropsScrollingOverlay";
 import { commonApiPostWithoutBodyAndResponse } from "../../../services/api/common-api";
@@ -18,6 +18,9 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircle } from "@fortawesome/free-solid-svg-icons";
 import { useWaveIsTyping } from "../../../hooks/useWaveIsTyping";
 import { useAuth } from "../../auth/Auth";
+
+// Add this utility function if not already present in a shared util file
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 interface WaveDropsAllProps {
   readonly waveId: string;
@@ -53,15 +56,12 @@ export default function WaveDropsAll({
   const router = useRouter();
   const { connectedProfile } = useAuth();
 
-  const { waveMessages, fetchNextPage } = useVirtualizedWaveDrops(
-    waveId,
-    dropId
-  );
+  const { waveMessages, fetchNextPage, waitAndRevealDrop } =
+    useVirtualizedWaveDrops(waveId, dropId);
 
   const [serialNo, setSerialNo] = useState<number | null>(initialDrop);
 
-  const { scrollContainerRef, scrollToVisualTop, scrollToVisualBottom } =
-    useScrollBehavior();
+  const { scrollContainerRef, scrollToVisualBottom } = useScrollBehavior();
 
   const [isAtBottom, setIsAtBottom] = useState(true);
 
@@ -72,16 +72,65 @@ export default function WaveDropsAll({
 
   const scrollToSerialNo = useCallback(
     (behavior: ScrollBehavior) => {
-      if (serialNo && targetDropRef.current && scrollContainerRef.current) {
+      // Check if the target ref exists and is associated with the targetSerial
+      if (targetDropRef.current && scrollContainerRef.current) {
         targetDropRef.current.scrollIntoView({
           behavior: behavior,
-          block: "center", // Tries to vertically center the element
+          block: "center",
         });
+
+        // Check twice after small delays if element is still in viewport
+        // This protects against layout shifts that might move the element
+        setTimeout(() => {
+          const rect = targetDropRef.current?.getBoundingClientRect();
+          const isInViewport =
+            rect && rect.top >= 0 && rect.bottom <= window.innerHeight;
+
+          if (!isInViewport && targetDropRef.current) {
+            targetDropRef.current.scrollIntoView({
+              behavior: behavior,
+              block: "center",
+            });
+
+            // Second check after another small delay
+            setTimeout(() => {
+              const rect = targetDropRef.current?.getBoundingClientRect();
+              const isInViewport =
+                rect && rect.top >= 0 && rect.bottom <= window.innerHeight;
+
+              if (!isInViewport && targetDropRef.current) {
+                targetDropRef.current.scrollIntoView({
+                  behavior: behavior,
+                  block: "center",
+                });
+              }
+            }, 300);
+          }
+        }, 150);
         return true;
       }
       return false;
     },
-    [serialNo] // Keep scrollContainerRef.current out of deps as ref.current changes don't trigger re-renders/re-creation of callback
+    [] // No state dependencies needed here
+  );
+
+  const smoothScrollWithRetries = useCallback(
+    async (maxWaitTimeMs: number = 3000, pollIntervalMs: number = 100): Promise<boolean> => {
+      const startTime = Date.now();
+      while (Date.now() - startTime < maxWaitTimeMs) {
+        if (targetDropRef.current) {
+          // targetDropRef.current is available, attempt to scroll
+          return scrollToSerialNo("smooth");
+        }
+        await delay(pollIntervalMs);
+      }
+      // Timeout reached, targetDropRef.current was not found
+      console.warn(
+        `smoothScrollWithRetries: Timed out after ${maxWaitTimeMs}ms waiting for targetDropRef to be set.`
+      );
+      return false; // Return false if the ref was not found in time
+    },
+    [scrollToSerialNo] // scrollToSerialNo is stable
   );
 
   // Ref to hold the latest waveMessages state to avoid stale closures
@@ -95,7 +144,7 @@ export default function WaveDropsAll({
     connectedProfile?.handle ?? null
   );
 
-  // Effect to update the ref whenever waveMessages changes
+  // // Effect to update the ref whenever waveMessages changes
   useEffect(() => {
     latestWaveMessagesRef.current = waveMessages;
     // Recalculate smallestSerialNo based on the potentially updated data
@@ -141,71 +190,36 @@ export default function WaveDropsAll({
   }, [waveId]);
 
   const fetchAndScrollToDrop = useCallback(async () => {
-    if (!serialNo) return;
+    if (!serialNo || isScrolling) return;
     setIsScrolling(true); // Set scrolling true for the entire process
-
-    const checkAndFetchNext = async () => {
-      // Always get the latest state from the ref
-      const currentMessages = latestWaveMessagesRef.current;
-      const currentSmallestSerial = smallestSerialNo.current;
-
-      // Check if target is now loaded
-      if (currentSmallestSerial && currentSmallestSerial <= serialNo) {
-        await new Promise((resolve) => setTimeout(resolve, 1000)); // Short delay for render
-        scrollToSerialNo("smooth");
+    await fetchNextPage(
+      {
+        waveId,
+        type: DropSize.LIGHT,
+        targetSerialNo: serialNo,
+      },
+      dropId
+    );
+    await waitAndRevealDrop(serialNo);
+    const success = await smoothScrollWithRetries();
+    setTimeout(() => {
+      if (success) {
         setSerialNo(null);
-        setIsScrolling(false); // **** Stop scrolling only AFTER successful scroll ****
-        return; // Exit the loop
+        setIsScrolling(false);
       }
-
-      // Check if we should stop fetching (no more pages or already fetching)
-      if (
-        !currentMessages?.hasNextPage ||
-        currentMessages?.isLoading ||
-        currentMessages?.isLoadingNextPage
-      ) {
-        if (!currentMessages?.hasNextPage) {
-          setSerialNo(null); // Clear the target
-        } else {
-          // Don't set isScrolling false here, just wait and retry check
-          setTimeout(checkAndFetchNext, 1000); // Retry check later
-          return;
-        }
-        setIsScrolling(false); // **** Stop scrolling if no more pages or error ****
-        return; // Exit the loop
-      }
-
-      // --- If target not found and we can fetch more ---
-      await fetchNextPage(waveId, dropId);
-
-      // ** Crucial:** After await, state *might* have updated.
-      // The ref is updated by useEffect, so the *next* call to checkAndFetchNext will see it.
-
-      // Scroll to top after fetch completes to show newly loaded older messages
-      scrollToVisualTop(); // <--- SCROLL TO TOP HERE
-
-      // Schedule the next check without altering isScrolling state
-      setTimeout(checkAndFetchNext, 1000);
-    };
-
-    // Start the first check
-    checkAndFetchNext();
+    }, 500);
   }, [
     waveId,
     fetchNextPage,
-    scrollToSerialNo,
     serialNo,
-    setSerialNo,
     setIsScrolling,
-    scrollToVisualTop, // <-- Add scrollToVisualTop dependency
-    init,
+    isScrolling,
+    waitAndRevealDrop,
   ]);
 
-  // Effect to trigger the fetch loop when serialNo is set and we are initialized
   useEffect(() => {
-    if (init && serialNo) {
+    if (init && serialNo && !isScrolling) {
       const currentSmallestSerial = smallestSerialNo.current;
-
       // Check if already loaded before attempting scroll or fetch
       if (currentSmallestSerial && currentSmallestSerial <= serialNo) {
         const success = scrollToSerialNo("smooth");
@@ -221,15 +235,28 @@ export default function WaveDropsAll({
     return () => {
       // Cleanup logic if needed
     };
-  }, [init, serialNo, fetchAndScrollToDrop, scrollToSerialNo, setSerialNo]);
+  }, [
+    init,
+    serialNo,
+    fetchAndScrollToDrop,
+    scrollToSerialNo,
+    setSerialNo,
+    isScrolling,
+  ]);
 
-  const handleTopIntersection = useCallback(() => {
+  const handleTopIntersection = useCallback(async () => {
     if (
       waveMessages?.hasNextPage &&
       !waveMessages?.isLoading &&
       !waveMessages?.isLoadingNextPage
     ) {
-      fetchNextPage(waveId, dropId);
+      await fetchNextPage(
+        {
+          waveId,
+          type: DropSize.FULL,
+        },
+        dropId
+      );
     }
   }, [
     waveMessages?.hasNextPage,

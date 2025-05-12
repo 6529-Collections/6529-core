@@ -1,6 +1,8 @@
 import { useCallback } from "react";
 import { useVirtualizedWaveMessages } from "./useVirtualizedWaveMessages";
 import { useMyStream } from "../contexts/wave/MyStreamContext";
+import { NextPageProps } from "../contexts/wave/hooks/useWavePagination";
+import { DropSize } from "../helpers/waves/drop.helpers";
 
 /**
  * Hook that adapts the useVirtualizedWaveMessages hook to match the
@@ -27,8 +29,12 @@ export function useVirtualizedWaveDrops(
 
   // Create a wrapper for fetchNextPageForWave that first tries to get data locally
   const fetchNextPageForWave = useCallback(
-    async (id: string) => {
-      if (waveId === id && virtualizedWaveMessages) {
+    async (props: NextPageProps) => {
+      if (
+        waveId === props.waveId &&
+        virtualizedWaveMessages &&
+        props.type === DropSize.FULL
+      ) {
         // First try to load more from cache if available
         if (virtualizedWaveMessages.hasMoreLocal) {
           virtualizedWaveMessages.loadMoreLocally();
@@ -37,7 +43,7 @@ export function useVirtualizedWaveDrops(
       }
 
       // If no more local data or different waveId, use the original function
-      return await originalFetchNextPage(id);
+      return await originalFetchNextPage(props);
     },
     [waveId, virtualizedWaveMessages, originalFetchNextPage]
   );
@@ -49,17 +55,36 @@ export function useVirtualizedWaveDrops(
   }, [virtualizedWaveMessages]);
 
   const fetchNextPage = useCallback(
-    async (waveId: string, dropId: string | null) => {
+    async (props: NextPageProps, dropId: string | null) => {
       if (dropId) {
         return await fetchNextpageForDrop();
       } else {
-        return await fetchNextPageForWave(waveId);
+        return await fetchNextPageForWave(props);
       }
     },
     [fetchNextPageForWave, fetchNextpageForDrop]
   );
+
+  const waitAndRevealDrop = useCallback(
+    async (
+      serialNo: number,
+      maxWaitTimeMs?: number,
+      pollIntervalMs?: number
+    ) => {
+      if (virtualizedWaveMessages) {
+        return await virtualizedWaveMessages.waitAndRevealDrop(
+          serialNo,
+          maxWaitTimeMs,
+          pollIntervalMs
+        );
+      }
+    },
+    [virtualizedWaveMessages]
+  );
+
   return {
     waveMessages: virtualizedWaveMessages,
     fetchNextPage,
+    waitAndRevealDrop,
   };
 }

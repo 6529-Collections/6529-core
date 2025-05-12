@@ -21,6 +21,7 @@ import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
 import { SEIZE_API_URL } from "../../../constants";
 import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
+import { faPlusCircle, faRefresh } from "@fortawesome/free-solid-svg-icons";
 
 const PAGE_SIZE = 40;
 
@@ -246,7 +247,7 @@ export default function Rememes() {
                   }}>
                   Add ReMeme{" "}
                   <FontAwesomeIcon
-                    icon="plus-circle"
+                    icon={faPlusCircle}
                     className={styles.buttonIcon}
                   />
                 </Button>
@@ -286,7 +287,7 @@ export default function Rememes() {
                         theme="light"
                         delay={250}>
                         <FontAwesomeIcon
-                          icon="refresh"
+                          icon={faRefresh}
                           className={styles.buttonIcon}
                           onClick={() => {
                             fetchResults(page);

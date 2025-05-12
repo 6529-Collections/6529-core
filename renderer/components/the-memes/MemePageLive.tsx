@@ -1,6 +1,6 @@
 import styles from "./TheMemes.module.scss";
 import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
-import { MEMES_CONTRACT, OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
+import { OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
 import { NFT, MemesExtendedData, Rememe } from "../../entities/INFT";
 import {
   areEqualAddresses,
@@ -22,6 +22,9 @@ import { NftPageStats } from "../nftAttributes/NftStats";
 import { printMemeReferences } from "../rememes/RememePage";
 import { SEIZE_API_URL } from "../../../constants";
 import useCapacitor from "../../hooks/useCapacitor";
+import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+import { faFire, faRefresh } from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
 
 const REMEMES_PAGE_SIZE = 20;
 
@@ -32,6 +35,16 @@ export function MemePageLiveRightMenu(props: {
   nftBalance: number;
 }) {
   const capacitor = useCapacitor();
+
+  const distributionPlanLink = (() => {
+    const id = props.nft?.id;
+    if (!id) return "";
+    if (props.nft?.has_distribution) return `/the-memes/${id}/distribution`;
+    if (id > 3)
+      return `https://github.com/6529-Collections/thememecards/tree/main/card${id}`;
+    return `https://github.com/6529-Collections/thememecards/tree/main/card1-3`;
+  })();
+
   if (props.show && props.nft && props.nftMeta) {
     return (
       <Col
@@ -67,7 +80,7 @@ export function MemePageLiveRightMenu(props: {
                           <span className="d-flex align-items-center gap-2">
                             <span>Burnt</span>
                             <FontAwesomeIcon
-                              icon="fire"
+                              icon={faFire}
                               style={{ height: "22px", color: "#c51d34" }}
                             />
                           </span>
@@ -197,20 +210,18 @@ export function MemePageLiveRightMenu(props: {
               </Table>
             </Col>
           </Row>
-          <Row>
-            <Col>
-              <a
-                href={
-                  props.nft.has_distribution
-                    ? `/the-memes/${props.nft.id}/distribution`
-                    : `https://github.com/6529-Collections/thememecards/tree/main/card${props.nft.id}`
-                }
-                target={props.nft.has_distribution ? "_self" : "_blank"}
-                rel="noreferrer">
-                Distribution Plan
-              </a>
-            </Col>
-          </Row>
+          {distributionPlanLink && (
+            <Row>
+              <Col>
+                <Link
+                  href={distributionPlanLink}
+                  target={props.nft.has_distribution ? "_self" : "_blank"}
+                  rel="noreferrer">
+                  Distribution Plan
+                </Link>
+              </Col>
+            </Row>
+          )}
           {props.nftBalance > 0 && (
             <Row className="pt-3">
               <Col>
@@ -224,42 +235,10 @@ export function MemePageLiveRightMenu(props: {
           {capacitor.platform !== "ios" && (
             <Row className="pt-4">
               <Col>
-                <a
-                  href={`https://opensea.io/assets/ethereum/${MEMES_CONTRACT}/${props.nft.id}`}
-                  target="_blank"
-                  rel="noreferrer">
-                  <Image
-                    className={styles.marketplace}
-                    src="/opensea.png"
-                    alt="opensea"
-                    width={40}
-                    height={40}
-                  />
-                </a>
-                {/* <a
-                      href={`https://looksrare.org/collections/${MEMES_CONTRACT}/${props.nft.id}`}
-                      target="_blank"
-                      rel="noreferrer">
-                      <Image
-                        className={styles.marketplace}
-                        src="/looksrare.png"
-                        alt="looksrare"
-                        width={40}
-                        height={40}
-                      />
-                    </a> */}
-                <a
-                  href={`https://x2y2.io/eth/${MEMES_CONTRACT}/${props.nft.id}`}
-                  target="_blank"
-                  rel="noreferrer">
-                  <Image
-                    className={styles.marketplace}
-                    src="/x2y2.png"
-                    alt="x2y2"
-                    width={40}
-                    height={40}
-                  />
-                </a>
+                <NFTMarketplaceLinks
+                  contract={props.nft.contract}
+                  id={props.nft.id}
+                />
               </Col>
             </Row>
           )}
@@ -383,7 +362,7 @@ export function MemePageLiveSubMenu(props: {
                     theme="light"
                     delay={250}>
                     <FontAwesomeIcon
-                      icon="refresh"
+                      icon={faRefresh}
                       className={styles.buttonIcon}
                       onClick={() => {
                         if (props.nft) {
@@ -421,7 +400,7 @@ export function MemePageLiveSubMenu(props: {
                     sm={{ span: 4 }}
                     md={{ span: 3 }}
                     lg={{ span: 3 }}>
-                    <a
+                    <Link
                       href={`/rememes/${rememe.contract}/${rememe.id}`}
                       className="decoration-none scale-hover">
                       <Container fluid className="no-padding">
@@ -483,7 +462,7 @@ export function MemePageLiveSubMenu(props: {
                           </Col>
                         </Row>
                       </Container>
-                    </a>
+                    </Link>
                   </Col>
                 );
               })}
