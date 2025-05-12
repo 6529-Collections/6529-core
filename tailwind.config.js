@@ -86,14 +86,40 @@ module.exports = {
             "background-position": "0% 50%",
           },
         },
+        "gradient-x": {
+          "0%, 100%": {
+            "background-position": "0% 50%",
+          },
+          "50%": {
+            "background-position": "100% 50%",
+          },
+        },
+        fadeIn: {
+          "0%": {
+            opacity: "0",
+          },
+          "100%": {
+            opacity: "1",
+          },
+        },
+        shake: {
+          "0%, 100%": { transform: "translateX(0)" },
+          "20%, 60%": { transform: "translateX(-4px)" },
+          "40%, 80%": { transform: "translateX(4px)" },
+        },
       },
       animation: {
         "loading-bar": "loading-bar 1.5s infinite",
         "trophy-appear": "trophy-appear 0.3s ease-out forwards",
         "gradient-shift": "gradient-shift 8s ease infinite",
+        "gradient-x": "gradient-x 3s ease infinite",
+        "spin-slow": "spin 15s linear infinite",
+        fadeIn: "fadeIn 0.3s ease-out forwards",
+        shake: "shake 0.3s ease-in-out",
       },
       backgroundSize: {
         "gradient-pos": "200% 200%",
+        200: "200% 200%",
       },
     },
   },
