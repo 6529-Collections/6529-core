@@ -1,9 +1,8 @@
-import Head from "next/head";
 import styles from "../../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import { fetchUrl } from "../../../services/6529api";
-import { formatAddress, parseIpfsUrl } from "../../../helpers/Helpers";
-import { useContext, useEffect} from "react";
+import { formatAddress } from "../../../helpers/Helpers";
+import { useContext, useEffect } from "react";
 import { AuthContext } from "../../../components/auth/Auth";
 import { SEIZE_URL, SEIZE_API_URL } from "../../../../constants";
 
@@ -13,43 +12,19 @@ const RememePageComponent = dynamic(
 );
 
 export default function ReMeme(props: any) {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
   const pageProps = props.pageProps;
 
   useEffect(() => {
     setTitle({
-      title: `${pageProps.name} | ReMemes | 6529 CORE`,
+      title: `${pageProps.name} | ReMemes`,
     });
   }, []);
 
   return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta
-          name="description"
-          content={`${pageProps.name} | ReMemes | 6529 CORE`}
-        />
-        <meta
-          property="og:url"
-          content={`${SEIZE_URL}/rememes/${pageProps.contract}/${pageProps.id}`}
-        />
-        <meta
-          property="og:title"
-          content={`${pageProps.name} | ReMemes | 6529 CORE`}
-        />
-        <meta
-          property="og:description"
-          content={`${pageProps.name} | ReMemes | 6529 CORE`}
-        />
-        <meta property="og:image" content={parseIpfsUrl(pageProps.image)} />
-      </Head>
-
-      <main className={styles.main}>
-        <RememePageComponent contract={pageProps.contract} id={pageProps.id} />
-      </main>
-    </>
+    <main className={styles.main}>
+      <RememePageComponent contract={pageProps.contract} id={pageProps.id} />
+    </main>
   );
 }
 
@@ -78,6 +53,12 @@ export async function getServerSideProps(req: any, res: any, resolvedUrl: any) {
       id: id,
       name: name,
       image: image,
+      metadata: {
+        title: name,
+        ogImage: image ?? `${SEIZE_URL}/re-memes-b.jpeg`,
+        description: `ReMemes`,
+        twitterCard: "summary_large_image",
+      },
     },
   };
 }

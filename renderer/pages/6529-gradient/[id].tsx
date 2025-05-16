@@ -1,4 +1,3 @@
-import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import { GRADIENT_CONTRACT } from "../../constants";
@@ -15,7 +14,7 @@ const GradientPageComponent = dynamic(
 );
 
 export default function GradientPageIndex(props: any) {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
 
   const pageProps = props.pageProps;
   const pagenameFull = `${pageProps.name} | 6529 CORE`;
@@ -27,24 +26,9 @@ export default function GradientPageIndex(props: any) {
   }, [pagenameFull]);
 
   return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content={pagenameFull} />
-        <meta
-          property="og:url"
-          content={`${SEIZE_URL}/the-memes/${pageProps.id}`}
-        />
-        <meta property="og:title" content={pageProps.name} />
-        <meta property="og:image" content={pageProps.image} />
-        <meta property="og:description" content="6529 CORE" />
-      </Head>
-
-      <main className={styles.main}>
-        <GradientPageComponent />
-      </main>
-    </>
+    <main className={styles.main}>
+      <GradientPageComponent />
+    </main>
   );
 }
 
@@ -68,6 +52,11 @@ export async function getServerSideProps(req: any, res: any, resolvedUrl: any) {
       id: id,
       name: name,
       image: image,
+      metadata: {
+        title: name,
+        ogImage: image,
+        description: "6529 Gradient",
+      },
     },
   };
 }

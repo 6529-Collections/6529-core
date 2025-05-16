@@ -1,5 +1,4 @@
 import { FullPageRequest } from "../../helpers/Types";
-import Head from "next/head";
 import SidebarLayout from "../../components/utils/sidebar/SidebarLayout";
 import CommunityMembers from "../../components/community/CommunityMembers";
 import { useSelector } from "react-redux";
@@ -11,7 +10,6 @@ import { commonApiFetch } from "../../services/api/common-api";
 import { useContext, useEffect } from "react";
 import { AuthContext } from "../../components/auth/Auth";
 import { CommunityMembersSortOption } from "../../enums";
-import { SEIZE_URL } from "../../../constants";
 
 export interface CommunityMembersQuery
   extends FullPageRequest<CommunityMembersSortOption> {
@@ -19,10 +17,10 @@ export interface CommunityMembersQuery
 }
 
 export default function CommunityPage() {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
   useEffect(() => {
     setTitle({
-      title: "Network | 6529 CORE",
+      title: "Network",
     });
   }, []);
 
@@ -38,20 +36,14 @@ export default function CommunityPage() {
   });
 
   return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Network | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/network`} />
-        <meta property="og:title" content="Network" />
-        <meta property="og:description" content="6529 CORE" />
-        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
-      </Head>
-
-      <SidebarLayout>
-        <CommunityMembers />
-      </SidebarLayout>
-    </>
+    <SidebarLayout>
+      <CommunityMembers />
+    </SidebarLayout>
   );
 }
+
+CommunityPage.metadata = {
+  title: "Network",
+  description: "Network",
+  twitterCard: "summary_large_image",
+};

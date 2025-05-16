@@ -1,5 +1,15 @@
-import DistributionPlanToolWrapper from "../../components/distribution-plan-tool/wrapper/DistributionPlanToolWrapper";
 import DistributionPlanToolConnect from "../../components/distribution-plan-tool/connect/distributipn-plan-tool-connect";
+import dynamic from "next/dynamic";
+
+const DistributionPlanToolWrapper = dynamic(
+  () =>
+    import(
+      "../../components/distribution-plan-tool/wrapper/DistributionPlanToolWrapper"
+    ),
+  {
+    ssr: false,
+  }
+);
 
 export default function DistributionPlanTool() {
   return (
@@ -64,3 +74,8 @@ export default function DistributionPlanTool() {
     </DistributionPlanToolWrapper>
   );
 }
+
+DistributionPlanTool.metadata = {
+  title: "EMMA",
+  description: "Tools",
+};

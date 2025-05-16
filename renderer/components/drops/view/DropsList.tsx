@@ -1,6 +1,10 @@
 import { useMemo, RefObject, useCallback, memo } from "react";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
-import { DropSize, ExtendedDrop, Drop as DropType } from "../../../helpers/waves/drop.helpers";
+import {
+  DropSize,
+  ExtendedDrop,
+  Drop as DropType,
+} from "../../../helpers/waves/drop.helpers";
 import { ActiveDropState } from "../../../types/dropInteractionTypes";
 import Drop, { DropLocation } from "../../waves/drops/Drop";
 import VirtualScrollWrapper from "../../waves/drops/VirtualScrollWrapper";
@@ -14,7 +18,7 @@ type DropActionHandler = ({
 }) => void;
 
 interface DropsListProps {
-  readonly scrollContainerRef: React.RefObject<HTMLDivElement>;
+  readonly scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   readonly drops: DropType[];
   readonly showWaveInfo: boolean;
   readonly activeDrop: ActiveDropState | null;
@@ -25,9 +29,9 @@ interface DropsListProps {
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: (drop: ExtendedDrop) => void;
   readonly serialNo: number | null;
-  readonly targetDropRef: RefObject<HTMLDivElement> | null;
+  readonly targetDropRef: RefObject<HTMLDivElement> | undefined;
   readonly dropViewDropId: string | null;
-  readonly parentContainerRef?: React.RefObject<HTMLElement>;
+  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 const MemoizedDrop = memo(Drop);
@@ -111,18 +115,16 @@ const DropsList = memo(function DropsList({
             ref={
               getItemData.serialNo === drop.serial_no
                 ? getItemData.targetDropRef
-                : null
+                : undefined
             }
             className={
               getItemData.serialNo === drop.serial_no ? "tw-scroll-mt-20" : ""
-            }
-          >
+            }>
             <VirtualScrollWrapper
               scrollContainerRef={getItemData.scrollContainerRef}
               dropSerialNo={drop.serial_no}
               waveId={drop.type === DropSize.FULL ? drop.wave.id : drop.waveId}
-              type={drop.type}
-            >
+              type={drop.type}>
               {drop.type === DropSize.FULL ? (
                 <MemoizedDrop
                   dropViewDropId={getItemData.dropViewDropId}

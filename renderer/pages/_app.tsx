@@ -36,6 +36,8 @@ import { EmojiProvider } from "../contexts/EmojiContext";
 import { AppWebSocketProvider } from "../services/websocket/AppWebSocketProvider";
 import MainLayout from "../components/layout/MainLayout";
 import { HeaderProvider } from "../contexts/HeaderContext";
+import { PageSSRMetadata } from "../helpers/Types";
+import { SEIZE_URL } from "../../constants";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,7 +50,7 @@ const queryClient = new QueryClient({
 });
 
 export type NextPageWithLayout<Props> = NextPage<Props> & {
-  getLayout?: (page: ReactElement) => ReactNode;
+  getLayout?: (page: ReactElement<any>) => ReactNode;
 };
 
 type AppPropsWithLayout = AppProps & {
@@ -122,6 +124,27 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
     return <></>;
   }
 
+  const pageMetadata = rest.pageProps.metadata;
+  const componentMetadata = (Component as any).metadata;
+  const isStaging = SEIZE_URL.includes("staging");
+  const metadata: PageSSRMetadata = {
+    title:
+      componentMetadata?.title ??
+      pageMetadata?.title ??
+      (isStaging ? "6529 Staging" : "6529"),
+    description:
+      componentMetadata?.description ?? pageMetadata?.description ?? "",
+    ogImage:
+      componentMetadata?.ogImage ??
+      pageMetadata?.ogImage ??
+      `${SEIZE_URL}/6529io.png`,
+    twitterCard:
+      componentMetadata?.twitterCard ?? pageMetadata?.twitterCard ?? "summary",
+  };
+  metadata.description = `${
+    metadata.description ? `${metadata.description} | ` : ""
+  }${isStaging ? "6529 Staging Core" : "6529 Core"}`;
+
   return (
     <QueryClientProvider client={queryClient}>
       <WagmiProvider config={wagmiConfig}>
@@ -148,7 +171,7 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                     <EULAConsentProvider>
                                       <AppWebSocketProvider>
                                         <HeaderProvider>
-                                          <MainLayout>
+                                          <MainLayout metadata={metadata}>
                                             <TitleBarDynamic />
                                             {getLayout(
                                               <Component

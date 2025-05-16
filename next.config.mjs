@@ -31,6 +31,15 @@ const nextConfig = {
   reactStrictMode: true,
   basePath: "",
   distDir: "out",
+  compress: true,
+  productionBrowserSourceMaps: false,
+  sassOptions: {
+    quietDeps: true,
+  },
+  experimental: {
+    webpackMemoryOptimizations: true,
+    webpackBuildWorker: true,
+  },
   images: {
     domains: ["6529.io", "arweave.net"],
     unoptimized: true,
@@ -44,6 +53,18 @@ const nextConfig = {
         headers: securityHeaders,
       },
     ];
+  },
+
+  webpack: (config) => {
+    config.resolve.alias.canvas = false;
+    config.resolve.alias.encoding = false;
+    return config;
+  },
+  turbopack: {
+    resolveAlias: {
+      canvas: "./stubs/empty.js",
+      encoding: "./stubs/empty.js",
+    },
   },
 };
 

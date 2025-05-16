@@ -570,8 +570,7 @@ export default function Auth({
         setActiveProfileProxy: onActiveProfileProxy,
         setTitle,
         title: pageTitle,
-      }}
-    >
+      }}>
       {children}
       <Modal
         show={showSignModal}
@@ -605,15 +604,13 @@ export default function Auth({
             onClick={() => {
               setShowSignModal(false);
               seizeDisconnectAndLogout();
-            }}
-          >
+            }}>
             Cancel
           </Button>
           <Button
             variant="primary"
             onClick={() => requestAuth()}
-            disabled={signMessage.isPending}
-          >
+            disabled={signMessage.isPending}>
             {signMessage.isPending ? (
               <>
                 Confirm in your wallet <DotLoader />

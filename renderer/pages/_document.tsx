@@ -23,7 +23,6 @@ class MyDocument extends Document<MyDocumentProps> {
     return (
       <Html lang="en">
         <Head>
-          <meta name="description" content="6529 CORE" />
           <link rel="icon" href="/favicon.ico" />
           <link rel="preconnect" href={SEIZE_API_URL} />
           <link rel="preconnect" href="https://d3lqz0a4bldqgf.cloudfront.net" />

@@ -1,4 +1,3 @@
-import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
 import { useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -11,7 +10,6 @@ import {
   GRADIENT_CONTRACT,
 } from "../../constants";
 import { AuthContext } from "../../components/auth/Auth";
-import { SEIZE_URL } from "../../../constants";
 
 const DelegationCenterMenu = dynamic(
   () => import("../../components/delegation/DelegationCenterMenu"),
@@ -170,7 +168,7 @@ export const ALL_USE_CASES = [
 ];
 
 export default function DelegationsDocumentation(props: any) {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
   const pageProps = props.pageProps;
   const router = useRouter();
   const section = pageProps.section;
@@ -229,6 +227,9 @@ export default function DelegationsDocumentation(props: any) {
   };
 
   const updateQueryParams = (s: DelegationCenterSection) => {
+    if (s === DelegationCenterSection.HTML) {
+      return;
+    }
     const queryParams = getQueryParams(s);
     router.push(
       {
@@ -251,34 +252,19 @@ export default function DelegationsDocumentation(props: any) {
   }, [addressQuery, collectionQuery, useCaseQuery]);
 
   return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Delegation | 6529 CORE" />
-        <meta
-          property="og:url"
-          content={`${SEIZE_URL}/delegation/delegation-center`}
-        />
-        <meta property="og:title" content="Delegation" />
-        <meta property="og:description" content="6529 CORE" />
-        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
-      </Head>
-
-      <main className={styles.main}>
-        <DelegationCenterMenu
-          section={section}
-          path={pageProps.path}
-          setActiveSection={(s) => updatePath(s)}
-          address_query={addressQuery}
-          setAddressQuery={setAddressQuery}
-          collection_query={collectionQuery}
-          setCollectionQuery={setCollectionQuery}
-          use_case_query={useCaseQuery}
-          setUseCaseQuery={setUseCaseQuery}
-        />
-      </main>
-    </>
+    <main className={styles.main}>
+      <DelegationCenterMenu
+        section={section}
+        path={pageProps.path}
+        setActiveSection={(s) => updatePath(s)}
+        address_query={addressQuery}
+        setAddressQuery={setAddressQuery}
+        collection_query={collectionQuery}
+        setCollectionQuery={setCollectionQuery}
+        use_case_query={useCaseQuery}
+        setUseCaseQuery={setUseCaseQuery}
+      />
+    </main>
   );
 }
 
@@ -307,6 +293,13 @@ export async function getServerSideProps(req: any, res: any, resolvedUrl: any) {
         addressQuery: addressQuery ?? null,
         collectionQuery: collectionQuery ?? null,
         useCaseQuery: useCaseQueryInt,
+        metadata: {
+          title: section
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase()),
+          description: "NFT Delegation",
+          twitterCard: "summary_large_image",
+        },
       },
     };
   } else {

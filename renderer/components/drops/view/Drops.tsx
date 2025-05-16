@@ -74,12 +74,24 @@ export default function Drops() {
       return;
     }
 
-    if (status === "pending" || isFetching || isFetchingNextPage || !hasNextPage) {
+    if (
+      status === "pending" ||
+      isFetching ||
+      isFetchingNextPage ||
+      !hasNextPage
+    ) {
       return;
     }
 
     fetchNextPage();
-  }, [drops.length, status, isFetching, isFetchingNextPage, hasNextPage, fetchNextPage]);
+  }, [
+    drops.length,
+    status,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+  ]);
 
   useEffect(() => {
     const options = {
@@ -139,7 +151,7 @@ export default function Drops() {
         onQuote={() => {}}
         onReplyClick={() => {}}
         serialNo={null}
-        targetDropRef={null}
+        targetDropRef={undefined}
         showReplyAndQuote={false}
         activeDrop={null}
         onQuoteClick={onQuoteClick}
