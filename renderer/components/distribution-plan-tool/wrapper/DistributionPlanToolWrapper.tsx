@@ -2,9 +2,7 @@ import { Poppins } from "next/font/google";
 import { useContext, useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import "react-toastify/dist/ReactToastify.css";
-import Head from "next/head";
 import { AuthContext } from "../../auth/Auth";
-import { SEIZE_URL } from "../../../../constants";
 import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 const poppins = Poppins({
@@ -18,7 +16,7 @@ export default function DistributionPlanToolWrapper({
 }: {
   children: React.ReactNode;
 }) {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
   const { address } = useSeizeConnectContext();
   const router = useRouter();
   const [initialized, setInitialized] = useState(false);
@@ -33,28 +31,17 @@ export default function DistributionPlanToolWrapper({
 
   useEffect(() => {
     setTitle({
-      title: "EMMA | 6529 CORE",
+      title: "EMMA | Tools",
     });
   }, []);
 
   return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="EMMA | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/emma`} />
-        <meta property="og:title" content="EMMA" />
-        <meta property="og:description" content="6529.io" />
-        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
-      </Head>
-      <div className={`tw-bg-neutral-900 ${poppins.className}`}>
-        <div
-          id="allowlist-tool"
-          className="tailwind-scope tw-overflow-y-auto tw-min-h-screen tw-relative">
-          {children}
-        </div>
+    <div className={`tw-bg-neutral-900 ${poppins.className}`}>
+      <div
+        id="allowlist-tool"
+        className="tailwind-scope tw-overflow-y-auto tw-min-h-screen tw-relative">
+        {children}
       </div>
-    </>
+    </div>
   );
 }

@@ -11,87 +11,6 @@ import { wrapper } from "../store/store";
 import { Config, WagmiProvider } from "wagmi";
 import { getWagmiConfig } from "../wagmiConfig";
 
-import { library } from "@fortawesome/fontawesome-svg-core";
-
-import {
-  faArrowUp,
-  faArrowDown,
-  faCopy,
-  faCaretRight,
-  faCaretLeft,
-  faExchange,
-  faShoppingCart,
-  faCircleChevronUp,
-  faCircleChevronDown,
-  faSquareCaretUp,
-  faSquareCaretDown,
-  faParachuteBox,
-  faDownload,
-  faChevronCircleUp,
-  faChevronCircleDown,
-  faChevronCircleLeft,
-  faChevronCircleRight,
-  faExpandAlt,
-  faBars,
-  faEye,
-  faEyeSlash,
-  faCheck,
-  faXmark,
-  faCartPlus,
-  faTimesCircle,
-  faLink,
-  faSearch,
-  faX,
-  faSquareXmark,
-  faChevronUp,
-  faLock,
-  faLockOpen,
-  faPlus,
-  faMinus,
-  faCaretDown,
-  faCircleArrowLeft,
-  faInfoCircle,
-  faArrowsTurnRight,
-  faCheckCircle,
-  faFileUpload,
-  faUser,
-  faArrowCircleDown,
-  faExternalLinkSquare,
-  faPlusCircle,
-  faXmarkCircle,
-  faFire,
-  faGlobe,
-  faExternalLink,
-  faFileCsv,
-  faRefresh,
-  faImage,
-  faWallet,
-  faGear,
-  faArrowCircleLeft,
-  faArrowRightFromBracket,
-  faGasPump,
-  faFaceGrinWide,
-  faFaceSmile,
-  faFrown,
-  faArrowCircleRight,
-  faTowerBroadcast,
-  faLightbulb,
-  faMaximize,
-  faPlayCircle,
-  faPauseCircle,
-  faSpinner,
-  faFilter,
-  faFilterCircleXmark,
-  faMagnifyingGlass,
-  faMagnifyingGlassMinus,
-  faMagnifyingGlassPlus,
-  faPlusSquare,
-  faMinusSquare,
-  faChevronDown,
-  faEdit,
-  faAnglesDown,
-  faAnglesUp,
-} from "@fortawesome/free-solid-svg-icons";
 import Head from "next/head";
 import Auth from "../components/auth/Auth";
 import { NextPage, NextPageContext } from "next";
@@ -117,88 +36,8 @@ import { EmojiProvider } from "../contexts/EmojiContext";
 import { AppWebSocketProvider } from "../services/websocket/AppWebSocketProvider";
 import MainLayout from "../components/layout/MainLayout";
 import { HeaderProvider } from "../contexts/HeaderContext";
-
-library.add(
-  faArrowUp,
-  faArrowDown,
-  faCircleArrowLeft,
-  faCopy,
-  faCaretRight,
-  faCaretLeft,
-  faExchange,
-  faShoppingCart,
-  faSquareCaretUp,
-  faSquareCaretDown,
-  faCircleChevronUp,
-  faCircleChevronDown,
-  faChevronCircleUp,
-  faChevronCircleDown,
-  faChevronCircleLeft,
-  faChevronCircleRight,
-  faParachuteBox,
-  faDownload,
-  faExpandAlt,
-  faBars,
-  faEye,
-  faEyeSlash,
-  faCheck,
-  faXmark,
-  faCartPlus,
-  faTimesCircle,
-  faLink,
-  faSearch,
-  faX,
-  faSquareXmark,
-  faChevronUp,
-  faLock,
-  faLockOpen,
-  faMinus,
-  faPlus,
-  faCaretDown,
-  faMinus,
-  faInfoCircle,
-  faArrowsTurnRight,
-  faCheckCircle,
-  faFileUpload,
-  faUser,
-  faArrowCircleDown,
-  faExternalLinkSquare,
-  faPlusCircle,
-  faXmarkCircle,
-  faFire,
-  faGlobe,
-  faExternalLink,
-  faFileCsv,
-  faRefresh,
-  faImage,
-  faWallet,
-  faGear,
-  faArrowCircleLeft,
-  faArrowCircleRight,
-  faArrowRightFromBracket,
-  faGasPump,
-  faFaceGrinWide,
-  faFaceSmile,
-  faFrown,
-  faTowerBroadcast,
-  faLightbulb,
-  faMaximize,
-  faPlayCircle,
-  faPauseCircle,
-  faSpinner,
-  faFilter,
-  faFilterCircleXmark,
-  faCheckCircle,
-  faMagnifyingGlass,
-  faMagnifyingGlassMinus,
-  faMagnifyingGlassPlus,
-  faPlusSquare,
-  faMinusSquare,
-  faChevronDown,
-  faEdit,
-  faAnglesDown,
-  faAnglesUp
-);
+import { PageSSRMetadata } from "../helpers/Types";
+import { SEIZE_URL } from "../../constants";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -211,7 +50,7 @@ const queryClient = new QueryClient({
 });
 
 export type NextPageWithLayout<Props> = NextPage<Props> & {
-  getLayout?: (page: ReactElement) => ReactNode;
+  getLayout?: (page: ReactElement<any>) => ReactNode;
 };
 
 type AppPropsWithLayout = AppProps & {
@@ -265,12 +104,16 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   }, []);
 
   useEffect(() => {
-    getWagmiConfig().then((c) => setWagmiConfig(c));
+    import("../wagmiConfig").then(({ getWagmiConfig }) => {
+      getWagmiConfig().then((c) => setWagmiConfig(c));
+    });
   }, []);
 
   useEffect(() => {
     const updateWagmiConfig = () => {
-      getWagmiConfig().then((c) => setWagmiConfig(c));
+      import("../wagmiConfig").then(({ getWagmiConfig }) => {
+        getWagmiConfig().then((c) => setWagmiConfig(c));
+      });
     };
 
     window.api?.onSeedWalletsChange(updateWagmiConfig);
@@ -284,6 +127,27 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   if (!wagmiConfig) {
     return <></>;
   }
+
+  const pageMetadata = rest.pageProps.metadata;
+  const componentMetadata = (Component as any).metadata;
+  const isStaging = SEIZE_URL.includes("staging");
+  const metadata: PageSSRMetadata = {
+    title:
+      componentMetadata?.title ??
+      pageMetadata?.title ??
+      (isStaging ? "6529 Staging" : "6529"),
+    description:
+      componentMetadata?.description ?? pageMetadata?.description ?? "",
+    ogImage:
+      componentMetadata?.ogImage ??
+      pageMetadata?.ogImage ??
+      `${SEIZE_URL}/6529io.png`,
+    twitterCard:
+      componentMetadata?.twitterCard ?? pageMetadata?.twitterCard ?? "summary",
+  };
+  metadata.description = `${
+    metadata.description ? `${metadata.description} | ` : ""
+  }${isStaging ? "6529 Staging Core" : "6529 Core"}`;
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -311,12 +175,14 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                     <EULAConsentProvider>
                                       <AppWebSocketProvider>
                                         <HeaderProvider>
-                                          <MainLayout>
+                                          <MainLayout metadata={metadata}>
                                             <TitleBarDynamic />
                                             {getLayout(
                                               <Component
                                                 {...props}
-                                                key={router.asPath}
+                                                key={
+                                                  router.asPath.split("?")[0]
+                                                }
                                               />
                                             )}
                                           </MainLayout>

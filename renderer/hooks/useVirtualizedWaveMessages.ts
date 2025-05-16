@@ -1,17 +1,24 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useMyStreamWaveMessages } from "../contexts/wave/MyStreamContext";
 
-import { ExtendedDrop } from "../helpers/waves/drop.helpers";
+import { Drop } from "../helpers/waves/drop.helpers";
 import { WaveMessages } from "../contexts/wave/hooks/types";
 import { useDropMessages } from "./useDropMessages";
 
 interface VirtualizedWaveMessages extends Omit<WaveMessages, "drops"> {
-  readonly drops: ExtendedDrop[];
+  readonly drops: Drop[];
   readonly allDropsCount: number; // Total number of available drops in cache
   readonly loadMoreLocally: () => void; // Function to load more from cache
   readonly hasMoreLocal: boolean; // Whether there are more items to load locally
   readonly fetchNextPageForDrop: () => void;
+  readonly waitAndRevealDrop: (
+    serialNo: number,
+    maxWaitTimeMs?: number,
+    pollIntervalMs?: number
+  ) => Promise<boolean>;
 }
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
  * Hook that provides virtualized pagination for wave messages
@@ -29,6 +36,12 @@ export function useVirtualizedWaveMessages(
 ): VirtualizedWaveMessages | undefined {
   // Get the original data from the real hooks
   const fullWaveMessages = useMyStreamWaveMessages(waveId);
+
+  const fullWaveMessagesRef = useRef<WaveMessages | null>(null);
+
+  useEffect(() => {
+    fullWaveMessagesRef.current = fullWaveMessages ?? null;
+  }, [fullWaveMessages]);
 
   const fullWaveMessagesForDrop = useDropMessages(waveId, dropId);
 
@@ -58,8 +71,8 @@ export function useVirtualizedWaveMessages(
       }
     }
 
-    if (fullWaveMessages) {
-      const totalDrops = fullWaveMessages.drops.length;
+    if (fullWaveMessagesRef.current) {
+      const totalDrops = fullWaveMessagesRef.current.drops.length;
       setHasMoreLocal(totalDrops > virtualLimit);
 
       // If we haven't initialized yet and we have drops, set the flag
@@ -70,7 +83,12 @@ export function useVirtualizedWaveMessages(
       setHasMoreLocal(false);
       hasInitialized.current = false;
     }
-  }, [dropId, fullWaveMessages, virtualLimit, fullWaveMessagesForDrop]);
+  }, [
+    dropId,
+    fullWaveMessagesRef.current,
+    virtualLimit,
+    fullWaveMessagesForDrop,
+  ]);
 
   // Reset virtualLimit when the waveId changes
   useEffect(() => {
@@ -87,52 +105,97 @@ export function useVirtualizedWaveMessages(
       ) {
         setVirtualLimit((prevLimit) => prevLimit + pageSize);
       }
-    } else {
-      if (fullWaveMessages && fullWaveMessages.drops.length > virtualLimit) {
-        setVirtualLimit((prevLimit) => prevLimit + pageSize);
-      }
+    } else if (
+      fullWaveMessagesRef.current &&
+      fullWaveMessagesRef.current.drops.length > virtualLimit
+    ) {
+      setVirtualLimit((prevLimit) => prevLimit + pageSize);
     }
   }, [
-    fullWaveMessages,
+    fullWaveMessagesRef.current,
     virtualLimit,
     pageSize,
     fullWaveMessagesForDrop,
     dropId,
   ]);
 
+  const revealDrop = useCallback(
+    (serialNo: number) => {
+      if (fullWaveMessagesRef.current) {
+        const index = fullWaveMessagesRef.current.drops.findIndex(
+          (drop) => drop.serial_no === serialNo
+        );
+
+        if (index !== -1) {
+          const maxIndex = fullWaveMessagesRef.current.drops.length - 1;
+          const targetIndex = Math.min(index + 30, maxIndex);
+          setVirtualLimit(targetIndex + 1);
+        }
+      }
+    },
+    [fullWaveMessagesRef.current]
+  );
+
+  const waitAndRevealDrop = useCallback(
+    async (
+      serialNo: number,
+      maxWaitTimeMs: number = 3000,
+      pollIntervalMs: number = 100
+    ) => {
+      const startTime = Date.now();
+      while (Date.now() - startTime < maxWaitTimeMs) {
+        // Check if the specific drop is present in the *currently loaded full list*
+        if (
+          fullWaveMessagesRef?.current?.drops?.some(
+            (drop) => drop.serial_no === serialNo
+          )
+        ) {
+          revealDrop(serialNo); // Call the hook's revealDrop to update virtualLimit
+          return true;
+        }
+        await delay(pollIntervalMs);
+      }
+      console.warn(
+        `useVirtualizedWaveMessages: Timed out after ${maxWaitTimeMs}ms waiting for serialNo ${serialNo} in wave ${waveId}`
+      );
+      return false;
+    },
+    [revealDrop, fullWaveMessagesRef.current]
+  );
+
   if (dropId && !fullWaveMessagesForDrop) {
     return undefined;
   }
 
   // If no full wave messages, return undefined
-  if (!fullWaveMessages) {
+  if (!fullWaveMessagesRef.current) {
     return undefined;
   }
 
   // Get the virtualized subset of drops
   const virtualizedDrops = dropId
     ? fullWaveMessagesForDrop.drops.slice(0, virtualLimit)
-    : fullWaveMessages.drops.slice(0, virtualLimit);
+    : fullWaveMessagesRef.current.drops.slice(0, virtualLimit);
 
   const hasNextPage = dropId
     ? fullWaveMessagesForDrop.hasNextPage
-    : fullWaveMessages.hasNextPage;
+    : fullWaveMessagesRef.current.hasNextPage;
 
   const isLoading = dropId
     ? fullWaveMessagesForDrop.isFetching
-    : fullWaveMessages.isLoading;
+    : fullWaveMessagesRef.current.isLoading;
 
   const isLoadingNextPage = dropId
     ? fullWaveMessagesForDrop.isFetchingNextPage
-    : fullWaveMessages.isLoadingNextPage;
+    : fullWaveMessagesRef.current.isLoadingNextPage;
 
   const latestFetchedSerialNo = dropId
     ? fullWaveMessagesForDrop.drops.at(-1)?.serial_no ?? null
-    : fullWaveMessages.latestFetchedSerialNo;
+    : fullWaveMessagesRef.current.latestFetchedSerialNo;
 
   const allDropsCount = dropId
     ? fullWaveMessagesForDrop.drops.length
-    : fullWaveMessages.drops.length;
+    : fullWaveMessagesRef.current.drops.length;
 
   // Return the virtualized data with the same shape as the original
   return {
@@ -146,5 +209,6 @@ export function useVirtualizedWaveMessages(
     loadMoreLocally,
     hasMoreLocal,
     fetchNextPageForDrop: fullWaveMessagesForDrop.fetchNextPage,
+    waitAndRevealDrop,
   };
 }

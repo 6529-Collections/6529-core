@@ -34,6 +34,7 @@ import { Spinner } from "./NextGenMint";
 import DotLoader from "../../../../dotLoader/DotLoader";
 import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
 import { SEIZE_API_URL } from "../../../../../../constants";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 export function getJsonData(keccak: string, data: string) {
   const parsed = JSON.parse(data);
@@ -439,7 +440,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   theme={"light"}>
                   <FontAwesomeIcon
                     className={styles.infoIcon}
-                    icon="info-circle"></FontAwesomeIcon>
+                    icon={faInfoCircle}></FontAwesomeIcon>
                 </Tippy>
               </Form.Label>
               <Col sm={12}>
@@ -514,7 +515,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   theme={"light"}>
                   <FontAwesomeIcon
                     className={styles.infoIcon}
-                    icon="info-circle"></FontAwesomeIcon>
+                    icon={faInfoCircle}></FontAwesomeIcon>
                 </Tippy>
               </Form.Label>
               <Col xs={3}>

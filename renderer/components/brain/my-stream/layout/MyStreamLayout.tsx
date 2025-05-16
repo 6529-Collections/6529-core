@@ -8,11 +8,10 @@ import Image from "next/image";
 import { useSeizeConnectContext } from "../../../auth/SeizeConnectContext";
 import ClientOnly from "../../../client-only/ClientOnly";
 import UserSetUpProfileCta from "../../../user/utils/set-up-profile/UserSetUpProfileCta";
-import { SEIZE_URL } from "../../../../../constants";
 
 // Main layout content that uses the Layout context
 function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
-  const { title, showWaves, connectedProfile, fetchingProfile } =
+  const { showWaves, connectedProfile, fetchingProfile } =
     useContext(AuthContext);
   const { spaces } = useLayout();
   const { isAuthenticated } = useSeizeConnectContext();
@@ -84,13 +83,6 @@ function MyStreamLayoutContent({ children }: { readonly children: ReactNode }) {
   return (
     <>
       <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="My Stream | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/my-stream`} />
-        <meta property="og:title" content="My Stream" />
-        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
-        <meta property="og:description" content="6529.io" />
         <style>{`body { overflow: hidden !important; }`}</style>
       </Head>
       <div className="tailwind-scope tw-flex tw-flex-col tw-bg-black tw-overflow-hidden">

@@ -19,11 +19,11 @@ import {
   NEXTGEN_CHAIN_ID,
   NEXTGEN_CORE,
 } from "../components/nextGen/nextgen_contracts";
-import { Period } from "./Types";
 import { SEIZE_URL } from "../../constants";
+import { PageSSRMetadata, Period } from "./Types";
 import { ApiIdentity } from "../generated/models/ApiIdentity";
 
-export const MAX_DROP_UPLOAD_FILES = 8; 
+export const MAX_DROP_UPLOAD_FILES = 8;
 
 export function formatAddress(address: string) {
   if (
@@ -286,7 +286,14 @@ export function parseEmojis(s: string) {
   });
 }
 
-export function printMintDate(date: Date) {
+function isValidDate(date?: any): date is Date {
+  return date && !isNaN(new Date(date).getTime());
+}
+
+export function printMintDate(date?: Date) {
+  if (!isValidDate(date)) {
+    return "-";
+  }
   const mintDate = new Date(date);
   return `
       ${mintDate.toLocaleString("default", {
@@ -759,4 +766,18 @@ export const wait = async (ms: number): Promise<void> => {
 
 export const removeBaseEndpoint = (link: string) => {
   return link.replace(SEIZE_URL ?? "", "");
+};
+
+export const getMetadataForUserPage = (
+  profile: ApiIdentity,
+  path?: string
+): PageSSRMetadata => {
+  return {
+    title: profile.handle + (path ? ` | ${path}` : ""),
+    ogImage: profile.pfp ?? "",
+    description: `Level ${
+      profile.level
+    } / TDH: ${profile.tdh.toLocaleString()} / Rep: ${profile.rep.toLocaleString()}`,
+    twitterCard: "summary_large_image",
+  };
 };

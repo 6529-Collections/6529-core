@@ -1,4 +1,3 @@
-import Head from "next/head";
 import styles from "../../styles/Home.module.scss";
 import { useContext, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -11,7 +10,6 @@ import {
   GRADIENT_CONTRACT,
 } from "../../constants";
 import { AuthContext } from "../../components/auth/Auth";
-import { SEIZE_URL } from "../../../constants";
 
 const DelegationCenterMenu = dynamic(
   () => import("../../components/delegation/DelegationCenterMenu"),
@@ -170,17 +168,15 @@ export const ALL_USE_CASES = [
 ];
 
 export default function DelegationsDocumentation(props: any) {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
   const pageProps = props.pageProps;
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState<DelegationCenterSection>(
-    pageProps.section
-  );
+  const section = pageProps.section;
   const [addressQuery, setAddressQuery] = useState<string>(
-    pageProps.addressQuery
+    pageProps.addressQuery ?? ""
   );
   const [collectionQuery, setCollectionQuery] = useState<string>(
-    pageProps.collectionQuery
+    pageProps.collectionQuery ?? ""
   );
   const [useCaseQuery, setUseCaseQuery] = useState<number>(
     pageProps.useCaseQuery
@@ -216,31 +212,34 @@ export default function DelegationsDocumentation(props: any) {
   const updatePath = (s: DelegationCenterSection) => {
     if (s) {
       if (s === DelegationCenterSection.HTML && pageProps.path) {
-        router.push(
-          {
-            pathname: `/delegation/${pageProps.path.join("/")}`,
-          },
-          undefined,
-          { shallow: true }
-        );
+        router.push({
+          pathname: `/delegation/${pageProps.path.join("/")}`,
+        });
       } else {
         const queryParams = getQueryParams(s);
-        router.push(
-          {
-            pathname: `/delegation/${s}`,
-            query: queryParams,
-          },
-          undefined,
-          { shallow: true }
-        );
+        router.push({
+          pathname: `/delegation/${s}`,
+          query: queryParams,
+        });
       }
     }
     window.scrollTo(0, 0);
   };
 
-  useEffect(() => {
-    updatePath(activeSection);
-  }, [addressQuery, collectionQuery, useCaseQuery, pageProps.path]);
+  const updateQueryParams = (s: DelegationCenterSection) => {
+    if (s === DelegationCenterSection.HTML) {
+      return;
+    }
+    const queryParams = getQueryParams(s);
+    router.push(
+      {
+        pathname: `/delegation/${s}`,
+        query: queryParams,
+      },
+      undefined,
+      { shallow: true }
+    );
+  };
 
   useEffect(() => {
     setTitle({
@@ -248,38 +247,24 @@ export default function DelegationsDocumentation(props: any) {
     });
   }, []);
 
-  return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Delegation | 6529 CORE" />
-        <meta
-          property="og:url"
-          content={`${SEIZE_URL}/delegation/delegation-center`}
-        />
-        <meta property="og:title" content="Delegation" />
-        <meta property="og:description" content="6529 CORE" />
-        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
-      </Head>
+  useEffect(() => {
+    updateQueryParams(section);
+  }, [addressQuery, collectionQuery, useCaseQuery]);
 
-      <main className={styles.main}>
-        <DelegationCenterMenu
-          section={activeSection}
-          path={pageProps.path}
-          setActiveSection={(s) => {
-            setActiveSection(s);
-            updatePath(s);
-          }}
-          address_query={addressQuery}
-          setAddressQuery={setAddressQuery}
-          collection_query={collectionQuery}
-          setCollectionQuery={setCollectionQuery}
-          use_case_query={useCaseQuery}
-          setUseCaseQuery={setUseCaseQuery}
-        />
-      </main>
-    </>
+  return (
+    <main className={styles.main}>
+      <DelegationCenterMenu
+        section={section}
+        path={pageProps.path}
+        setActiveSection={(s) => updatePath(s)}
+        address_query={addressQuery}
+        setAddressQuery={setAddressQuery}
+        collection_query={collectionQuery}
+        setCollectionQuery={setCollectionQuery}
+        use_case_query={useCaseQuery}
+        setUseCaseQuery={setUseCaseQuery}
+      />
+    </main>
   );
 }
 
@@ -308,6 +293,13 @@ export async function getServerSideProps(req: any, res: any, resolvedUrl: any) {
         addressQuery: addressQuery ?? null,
         collectionQuery: collectionQuery ?? null,
         useCaseQuery: useCaseQueryInt,
+        metadata: {
+          title: section
+            .replace(/-/g, " ")
+            .replace(/\b\w/g, (char) => char.toUpperCase()),
+          description: "NFT Delegation",
+          twitterCard: "summary_large_image",
+        },
       },
     };
   } else {

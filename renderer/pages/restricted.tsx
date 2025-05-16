@@ -3,16 +3,15 @@ import styles from "../styles/Home.module.scss";
 import Cookies from "js-cookie";
 import { API_AUTH_COOKIE } from "../constants";
 import { useRouter } from "next/router";
-import Head from "next/head";
 import { LoginImage } from "./access";
 import { AuthContext } from "../components/auth/Auth";
 import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
 
 export default function Access() {
-  const { setTitle, title } = useContext(AuthContext);
+  const { setTitle } = useContext(AuthContext);
   useEffect(() => {
     setTitle({
-      title: "Restricted | 6529 CORE",
+      title: "Restricted",
     });
   }, []);
   const router = useRouter();
@@ -42,27 +41,20 @@ export default function Access() {
   }, [router.isReady]);
 
   return (
-    <>
-      <Head>
-        <title>{title}</title>
-        <link rel="icon" href="/favicon.ico" />
-        <meta name="description" content="Restricted | 6529 CORE" />
-        <meta property="og:url" content={`${SEIZE_URL}/restricted`} />
-        <meta property="og:title" content={`Restricted`} />
-        <meta property="og:description" content="6529 CORE" />
-        <meta property="og:image" content={`${SEIZE_URL}/6529io.png`} />
-      </Head>
-      <main className={styles.login}>
-        {image && <LoginImage image={image} alt="access" />}
-        <div className={styles.loginPrompt}>
-          <input
-            disabled={true}
-            type="text"
-            className="text-center"
-            value={message}
-          />
-        </div>
-      </main>
-    </>
+    <main className={styles.login}>
+      {image && <LoginImage image={image} alt="access" />}
+      <div className={styles.loginPrompt}>
+        <input
+          disabled={true}
+          type="text"
+          className="text-center"
+          value={message}
+        />
+      </div>
+    </main>
   );
 }
+
+Access.metadata = {
+  title: "Restricted",
+};

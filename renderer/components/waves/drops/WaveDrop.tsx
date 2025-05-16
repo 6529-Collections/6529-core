@@ -115,7 +115,7 @@ interface WaveDropProps {
   readonly onReplyClick: (serialNo: number) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: (drop: ExtendedDrop) => void;
-  readonly parentContainerRef?: React.RefObject<HTMLElement>;
+  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 const WaveDrop = ({
@@ -259,7 +259,8 @@ const WaveDrop = ({
               maxWidth: !shouldGroupWithPreviousDrop
                 ? "calc(100% - 3.25rem)"
                 : "100%",
-            }}>
+            }}
+          >
             {!shouldGroupWithPreviousDrop && (
               <WaveDropHeader
                 drop={drop}

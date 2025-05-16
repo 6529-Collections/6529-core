@@ -1,10 +1,14 @@
 import { useMemo, RefObject, useCallback, memo } from "react";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
-import { ExtendedDrop } from "../../../helpers/waves/drop.helpers";
+import {
+  DropSize,
+  ExtendedDrop,
+  Drop as DropType,
+} from "../../../helpers/waves/drop.helpers";
 import { ActiveDropState } from "../../../types/dropInteractionTypes";
 import Drop, { DropLocation } from "../../waves/drops/Drop";
 import VirtualScrollWrapper from "../../waves/drops/VirtualScrollWrapper";
-
+import LightDrop from "../../waves/drops/LightDrop";
 type DropActionHandler = ({
   drop,
   partId,
@@ -14,8 +18,8 @@ type DropActionHandler = ({
 }) => void;
 
 interface DropsListProps {
-  readonly scrollContainerRef: React.RefObject<HTMLDivElement>;
-  readonly drops: ExtendedDrop[];
+  readonly scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  readonly drops: DropType[];
   readonly showWaveInfo: boolean;
   readonly activeDrop: ActiveDropState | null;
   readonly showReplyAndQuote: boolean;
@@ -25,13 +29,13 @@ interface DropsListProps {
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: (drop: ExtendedDrop) => void;
   readonly serialNo: number | null;
-  readonly targetDropRef: RefObject<HTMLDivElement> | null;
+  readonly targetDropRef: RefObject<HTMLDivElement> | undefined;
   readonly dropViewDropId: string | null;
-  readonly parentContainerRef?: React.RefObject<HTMLElement>;
+  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
 }
 
 const MemoizedDrop = memo(Drop);
-
+const MemoizedLightDrop = memo(LightDrop);
 const DropsList = memo(function DropsList({
   scrollContainerRef,
   drops,
@@ -79,7 +83,7 @@ const DropsList = memo(function DropsList({
       parentContainerRef,
       dropViewDropId,
       onDropContentClick,
-      scrollContainerRef
+      scrollContainerRef,
     };
   }, [
     drops,
@@ -95,7 +99,7 @@ const DropsList = memo(function DropsList({
     parentContainerRef,
     dropViewDropId,
     onDropContentClick,
-    scrollContainerRef
+    scrollContainerRef,
   ]);
 
   const memoizedDrops = useMemo(
@@ -108,28 +112,39 @@ const DropsList = memo(function DropsList({
           <div
             key={drop.stableKey}
             id={`drop-${drop.serial_no}`}
-            ref={getItemData.serialNo === drop.serial_no ? getItemData.targetDropRef : null}
-            className={getItemData.serialNo === drop.serial_no ? "tw-scroll-mt-20" : ""}
-          >
+            ref={
+              getItemData.serialNo === drop.serial_no
+                ? getItemData.targetDropRef
+                : undefined
+            }
+            className={
+              getItemData.serialNo === drop.serial_no ? "tw-scroll-mt-20" : ""
+            }>
             <VirtualScrollWrapper
               scrollContainerRef={getItemData.scrollContainerRef}
-            >
-              <MemoizedDrop
-                dropViewDropId={getItemData.dropViewDropId}
-                onReplyClick={getItemData.handleReplyClick}
-                drop={drop}
-                previousDrop={previousDrop}
-                nextDrop={nextDrop}
-                showWaveInfo={getItemData.showWaveInfo}
-                activeDrop={getItemData.activeDrop}
-                onReply={getItemData.handleReply}
-                onQuote={getItemData.handleQuote}
-                location={DropLocation.WAVE}
-                showReplyAndQuote={getItemData.showReplyAndQuote}
-                onQuoteClick={getItemData.onQuoteClick}
-                parentContainerRef={getItemData.parentContainerRef}
-                onDropContentClick={getItemData.onDropContentClick}
-              />
+              dropSerialNo={drop.serial_no}
+              waveId={drop.type === DropSize.FULL ? drop.wave.id : drop.waveId}
+              type={drop.type}>
+              {drop.type === DropSize.FULL ? (
+                <MemoizedDrop
+                  dropViewDropId={getItemData.dropViewDropId}
+                  onReplyClick={getItemData.handleReplyClick}
+                  drop={drop}
+                  previousDrop={previousDrop}
+                  nextDrop={nextDrop}
+                  showWaveInfo={getItemData.showWaveInfo}
+                  activeDrop={getItemData.activeDrop}
+                  onReply={getItemData.handleReply}
+                  onQuote={getItemData.handleQuote}
+                  location={DropLocation.WAVE}
+                  showReplyAndQuote={getItemData.showReplyAndQuote}
+                  onQuoteClick={getItemData.onQuoteClick}
+                  parentContainerRef={getItemData.parentContainerRef}
+                  onDropContentClick={getItemData.onDropContentClick}
+                />
+              ) : (
+                <MemoizedLightDrop drop={drop} />
+              )}
             </VirtualScrollWrapper>
           </div>
         );
@@ -137,7 +152,7 @@ const DropsList = memo(function DropsList({
     [drops, getItemData] // Only depends on drops array and the memoized item data
   );
 
-  return ( memoizedDrops);
+  return memoizedDrops;
 });
 
 export default DropsList;

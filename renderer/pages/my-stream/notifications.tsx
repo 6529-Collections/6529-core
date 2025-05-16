@@ -26,8 +26,10 @@ const Notifications = dynamic(
   }
 );
 
+import { PageSSRMetadata } from "../../helpers/Types";
 interface Props {
   dehydratedState: DehydratedState;
+  metadata: Partial<PageSSRMetadata>;
 }
 
 const Page: NextPageWithLayout<{ pageProps: Props }> = ({ pageProps }) => (
@@ -37,7 +39,7 @@ const Page: NextPageWithLayout<{ pageProps: Props }> = ({ pageProps }) => (
     </div>
   </HydrationBoundary>
 );
-Page.getLayout = (page: ReactElement) => (
+Page.getLayout = (page: ReactElement<any>) => (
   <MyStreamLayout>{page}</MyStreamLayout>
 );
 
@@ -60,5 +62,10 @@ export async function getServerSideProps(
     await prefetchAuthenticatedNotifications({ queryClient, headers, context });
   }
 
-  return { props: { dehydratedState: dehydrate(queryClient) } };
+  return {
+    props: {
+      dehydratedState: dehydrate(queryClient),
+      metadata: { title: "Notifications | My Stream", description: "Brain" },
+    },
+  };
 }

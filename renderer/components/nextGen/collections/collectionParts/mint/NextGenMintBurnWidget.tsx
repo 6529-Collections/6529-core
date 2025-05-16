@@ -32,6 +32,7 @@ import { NextGenCollection } from "../../../../../entities/INextgen";
 import { Spinner } from "./NextGenMint";
 import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
 import { SEIZE_API_URL } from "../../../../../../constants";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   collection: NextGenCollection;
@@ -308,7 +309,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
                   theme={"light"}>
                   <FontAwesomeIcon
                     className={styles.infoIcon}
-                    icon="info-circle"></FontAwesomeIcon>
+                    icon={faInfoCircle}></FontAwesomeIcon>
                 </Tippy>
               </Form.Label>
               <Col sm={12}>{mintForAddress}</Col>

@@ -1,7 +1,6 @@
 import styles from "./MemeLab.module.scss";
 
 import { Fragment, useEffect, useState } from "react";
-import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   Container,
@@ -49,20 +48,20 @@ import { NftPageStats } from "../nftAttributes/NftStats";
 import { printMemeReferences } from "../rememes/RememePage";
 import useCapacitor from "../../hooks/useCapacitor";
 import { SEIZE_API_URL } from "../../../constants";
-
-interface MemeTab {
-  focus: MEME_FOCUS;
-  title: string;
-}
-
-enum MEME_FOCUS {
-  LIVE = "live",
-  YOUR_CARDS = "your-cards",
-  THE_ART = "the-art",
-  HODLERS = "collectors",
-  ACTIVITY = "activity",
-  TIMELINE = "timeline",
-}
+import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+import {
+  faChevronCircleLeft,
+  faChevronCircleRight,
+  faExpandAlt,
+  faFire,
+} from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
+import {
+  getMemeTabTitle,
+  MEME_FOCUS,
+  MEME_TABS,
+} from "../the-memes/MemeShared";
+import { useAuth } from "../auth/Auth";
 
 const ACTIVITY_PAGE_SIZE = 25;
 
@@ -73,6 +72,7 @@ interface Props {
 export default function LabPage(props: Readonly<Props>) {
   const router = useRouter();
   const capacitor = useCapacitor();
+  const { setTitle } = useAuth();
 
   const [isFullScreenSupported, setIsFullScreenSupported] = useState(false);
 
@@ -104,39 +104,11 @@ export default function LabPage(props: Readonly<Props>) {
     TypeFilter.ALL
   );
 
-  const liveTab = {
-    focus: MEME_FOCUS.LIVE,
-    title: "Live",
-  };
-  const cardsTab = {
-    focus: MEME_FOCUS.YOUR_CARDS,
-    title: "Your Cards",
-  };
-  const artTab = {
-    focus: MEME_FOCUS.THE_ART,
-    title: "The Art",
-  };
-  const hodlersTab = {
-    focus: MEME_FOCUS.HODLERS,
-    title: "Collectors",
-  };
-  const activityTab = {
-    focus: MEME_FOCUS.ACTIVITY,
-    title: "Activity",
-  };
-  const timelineTab = {
-    focus: MEME_FOCUS.TIMELINE,
-    title: "Timeline",
-  };
-
-  const MEME_TABS: MemeTab[] = [
-    liveTab,
-    cardsTab,
-    artTab,
-    hodlersTab,
-    activityTab,
-    timelineTab,
-  ];
+  useEffect(() => {
+    setTitle({
+      title: getMemeTabTitle(`Meme Lab`, nftId, nft, activeTab),
+    });
+  }, [nft, nftId, activeTab]);
 
   useEffect(() => {
     if (router.isReady) {
@@ -285,7 +257,7 @@ export default function LabPage(props: Readonly<Props>) {
       return printTheArt();
     }
 
-    if (activeTab === MEME_FOCUS.HODLERS) {
+    if (activeTab === MEME_FOCUS.COLLECTORS) {
       return printHodlers();
     }
 
@@ -366,12 +338,12 @@ export default function LabPage(props: Readonly<Props>) {
                     <tr>
                       <td>Collection</td>
                       <td>
-                        <a
+                        <Link
                           href={`/meme-lab/collection/${encodeURIComponent(
                             nftMeta.metadata_collection.replace(" ", "-")
                           )}`}>
                           {nftMeta.metadata_collection}
-                        </a>
+                        </Link>
                       </td>
                     </tr>
                     {nftMeta.website && (
@@ -380,12 +352,12 @@ export default function LabPage(props: Readonly<Props>) {
                         <td>
                           {nftMeta.website.split(" ").map((w) => (
                             <Fragment key={`meta-website-${w}`}>
-                              <a
+                              <Link
                                 href={addProtocol(w)}
                                 target="_blank"
                                 rel="noreferrer">
                                 {w}
-                              </a>
+                              </Link>
                               &nbsp;&nbsp;
                             </Fragment>
                           ))}
@@ -426,7 +398,7 @@ export default function LabPage(props: Readonly<Props>) {
                             <span className="d-flex align-items-center gap-2">
                               <span>Burnt</span>
                               <FontAwesomeIcon
-                                icon="fire"
+                                icon={faFire}
                                 style={{ height: "22px", color: "#c51d34" }}
                               />
                             </span>
@@ -524,9 +496,9 @@ export default function LabPage(props: Readonly<Props>) {
             {nft.has_distribution ? (
               <Row className="pt-3 pb-3">
                 <Col>
-                  <a href={`/meme-lab/${nft.id}/distribution`}>
+                  <Link href={`/meme-lab/${nft.id}/distribution`}>
                     Distribution Plan
-                  </a>
+                  </Link>
                 </Col>
               </Row>
             ) : (
@@ -544,42 +516,7 @@ export default function LabPage(props: Readonly<Props>) {
             {capacitor.platform !== "ios" && (
               <Row className="pt-4">
                 <Col>
-                  <a
-                    href={`https://opensea.io/assets/ethereum/${MEMELAB_CONTRACT}/${nft.id}`}
-                    target="_blank"
-                    rel="noreferrer">
-                    <Image
-                      className={styles.marketplace}
-                      src="/opensea.png"
-                      alt="opensea"
-                      width={40}
-                      height={40}
-                    />
-                  </a>
-                  {/* <a
-                      href={`https://looksrare.org/collections/${MEMELAB_CONTRACT}/${nft.id}`}
-                      target="_blank"
-                      rel="noreferrer">
-                      <Image
-                        className={styles.marketplace}
-                        src="/looksrare.png"
-                        alt="looksrare"
-                        width={40}
-                        height={40}
-                      />
-                    </a> */}
-                  <a
-                    href={`https://x2y2.io/eth/${MEMELAB_CONTRACT}/${nft.id}`}
-                    target="_blank"
-                    rel="noreferrer">
-                    <Image
-                      className={styles.marketplace}
-                      src="/x2y2.png"
-                      alt="x2y2"
-                      width={40}
-                      height={40}
-                    />
-                  </a>
+                  <NFTMarketplaceLinks contract={nft.contract} id={nft.id} />
                 </Col>
               </Row>
             )}
@@ -815,7 +752,7 @@ export default function LabPage(props: Readonly<Props>) {
             <Row className="position-relative">
               {isFullScreenSupported && (
                 <FontAwesomeIcon
-                  icon="expand-alt"
+                  icon={faExpandAlt}
                   className={styles.fullScreen}
                   onClick={() =>
                     fullscreenElementId &&
@@ -894,13 +831,13 @@ export default function LabPage(props: Readonly<Props>) {
                       <Row>
                         <Col>
                           {nft.metadata.image_details.format}{" "}
-                          <a
+                          <Link
                             className={styles.arweaveLink}
                             href={nft.metadata.image}
                             target="_blank"
                             rel="noreferrer">
                             {nft.metadata.image}
-                          </a>
+                          </Link>
                           <Download
                             href={nft.metadata.image}
                             name={nft.name}
@@ -913,7 +850,7 @@ export default function LabPage(props: Readonly<Props>) {
                         <Row className="pt-3">
                           <Col>
                             {nft.metadata.animation_details.format}{" "}
-                            <a
+                            <Link
                               className={styles.arweaveLink}
                               href={
                                 nft.metadata.animation
@@ -925,7 +862,7 @@ export default function LabPage(props: Readonly<Props>) {
                               {nft.metadata.animation
                                 ? nft.metadata.animation
                                 : nft.metadata.animation_url}
-                            </a>
+                            </Link>
                             <Download
                               href={
                                 nft.metadata.animation
@@ -1280,7 +1217,7 @@ export default function LabPage(props: Readonly<Props>) {
                     {nftId && (
                       <>
                         <h2 className="float-left">
-                          <a
+                          <Link
                             href={`/meme-lab/${
                               parseInt(nftId) - 1
                             }?focus=${activeTab}`}
@@ -1289,12 +1226,12 @@ export default function LabPage(props: Readonly<Props>) {
                                 ? styles.nftPreviousdisabled
                                 : ""
                             }`}>
-                            <FontAwesomeIcon icon="chevron-circle-left" />
-                          </a>
+                            <FontAwesomeIcon icon={faChevronCircleLeft} />
+                          </Link>
                         </h2>
                         <h2 className="float-left">
                           &nbsp;
-                          <a
+                          <Link
                             href={`/meme-lab/${
                               parseInt(nftId) + 1
                             }?focus=${activeTab}`}
@@ -1303,8 +1240,8 @@ export default function LabPage(props: Readonly<Props>) {
                                 ? styles.nftNextdisabled
                                 : ""
                             }`}>
-                            <FontAwesomeIcon icon="chevron-circle-right" />
-                          </a>
+                            <FontAwesomeIcon icon={faChevronCircleRight} />
+                          </Link>
                         </h2>
                       </>
                     )}

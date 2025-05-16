@@ -25,30 +25,23 @@ import {
   MemePageYourCardsRightMenu,
   MemePageYourCardsSubMenu,
 } from "./MemePageYourCards";
-import { AuthContext } from "../auth/Auth";
+import { AuthContext, useAuth } from "../auth/Auth";
 import { commonApiFetch } from "../../services/api/common-api";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
 import MemePageMintCountdown from "./MemePageMintCountdown";
 import { SEIZE_API_URL } from "../../../constants";
-
-interface MemeTab {
-  focus: MEME_FOCUS;
-  title: string;
-}
-
-enum MEME_FOCUS {
-  LIVE = "live",
-  YOUR_CARDS = "your-cards",
-  THE_ART = "the-art",
-  COLLECTORS = "collectors",
-  ACTIVITY = "activity",
-  TIMELINE = "timeline",
-}
+import {
+  faChevronCircleLeft,
+  faChevronCircleRight,
+} from "@fortawesome/free-solid-svg-icons";
+import Link from "next/link";
+import { getMemeTabTitle, MemeTab, MEME_TABS, MEME_FOCUS } from "./MemeShared";
 
 const ACTIVITY_PAGE_SIZE = 25;
 
 export default function MemePage() {
   const router = useRouter();
+  const { setTitle } = useAuth();
   const { connectedProfile } = useContext(AuthContext);
   const [connectedWallets, setConnectedWallets] = useState<string[]>([]);
 
@@ -71,39 +64,11 @@ export default function MemePage() {
 
   const [userLoaded, setUserLoaded] = useState(false);
 
-  const liveTab = {
-    focus: MEME_FOCUS.LIVE,
-    title: "Live",
-  };
-  const cardsTab = {
-    focus: MEME_FOCUS.YOUR_CARDS,
-    title: "Your Cards",
-  };
-  const artTab = {
-    focus: MEME_FOCUS.THE_ART,
-    title: "The Art",
-  };
-  const hodlersTab = {
-    focus: MEME_FOCUS.COLLECTORS,
-    title: "Collectors",
-  };
-  const activityTab = {
-    focus: MEME_FOCUS.ACTIVITY,
-    title: "Activity",
-  };
-  const timelineTab = {
-    focus: MEME_FOCUS.TIMELINE,
-    title: "Timeline",
-  };
-
-  const MEME_TABS: MemeTab[] = [
-    liveTab,
-    cardsTab,
-    artTab,
-    hodlersTab,
-    activityTab,
-    timelineTab,
-  ];
+  useEffect(() => {
+    setTitle({
+      title: getMemeTabTitle(`The Memes`, nftId, nft, activeTab),
+    });
+  }, [nft, nftId, activeTab]);
 
   useEffect(() => {
     if (router.isReady) {
@@ -278,22 +243,17 @@ export default function MemePage() {
                 </>
               )}
           </Row>
-          <Row>
-            <MemePageLiveSubMenu
-              show={activeTab === MEME_FOCUS.LIVE}
-              nft={nft}
+          <MemePageLiveSubMenu show={activeTab === MEME_FOCUS.LIVE} nft={nft} />
+          {userLoaded && (
+            <MemePageYourCardsSubMenu
+              show={activeTab === MEME_FOCUS.YOUR_CARDS}
+              transactions={transactions}
             />
-            {userLoaded && (
-              <MemePageYourCardsSubMenu
-                show={activeTab === MEME_FOCUS.YOUR_CARDS}
-                transactions={transactions}
-              />
-            )}
-            <MemePageCollectorsSubMenu
-              show={activeTab === MEME_FOCUS.COLLECTORS}
-              nft={nft}
-            />
-          </Row>
+          )}
+          <MemePageCollectorsSubMenu
+            show={activeTab === MEME_FOCUS.COLLECTORS}
+            nft={nft}
+          />
         </Container>
         <MemePageArt
           show={activeTab === MEME_FOCUS.THE_ART}
@@ -337,10 +297,10 @@ export default function MemePage() {
                 <Row className="pt-2">
                   <Col>
                     <h2 className="float-left">
-                      <a
+                      <Link
                         href={`/the-memes?szn=${nftMeta.season}&sort=age&sort_dir=ASC`}>
                         SZN{nftMeta.season}
-                      </a>
+                      </Link>
                     </h2>
                     <h2 className="float-left">
                       &nbsp;| Card {nft.id} -&nbsp;
@@ -389,9 +349,7 @@ function MemeNavigationBtn(
   const icon = (
     <FontAwesomeIcon
       icon={
-        props.icon === "previous"
-          ? "chevron-circle-left"
-          : "chevron-circle-right"
+        props.icon === "previous" ? faChevronCircleLeft : faChevronCircleRight
       }
       width={width}
       height={height}
@@ -406,7 +364,7 @@ function MemeNavigationBtn(
     const href = `/the-memes/${
       props.icon === "previous" ? props.nft.id - 1 : props.nft.id + 1
     }`;
-    return <a href={href}>{icon}</a>;
+    return <Link href={href}>{icon}</Link>;
   }
 }
 

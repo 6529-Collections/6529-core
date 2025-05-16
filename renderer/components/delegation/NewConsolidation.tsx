@@ -21,6 +21,7 @@ import {
   DelegationSubmitGroups,
 } from "./DelegationFormParts";
 import Link from "next/link";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {
   address: string;
@@ -167,7 +168,7 @@ export default function NewConsolidationComponent(props: Readonly<Props>) {
                   href={`/delegation/delegation-faq/register-consolidation`}>
                   <FontAwesomeIcon
                     className={styles.infoIconLink}
-                    icon="info-circle"></FontAwesomeIcon>
+                    icon={faInfoCircle}></FontAwesomeIcon>
                 </Link>
               </Form.Label>
             </Form.Group>

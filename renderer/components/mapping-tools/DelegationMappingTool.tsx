@@ -13,6 +13,7 @@ import { areEqualAddresses } from "../../helpers/Helpers";
 import { DELEGATION_ALL_ADDRESS, MEMES_CONTRACT } from "../../constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { SEIZE_API_URL } from "../../../constants";
+import { faFileUpload } from "@fortawesome/free-solid-svg-icons";
 
 const csvParser = require("csv-parser");
 
@@ -172,7 +173,7 @@ export default function DelegationMappingTool() {
             onDragOver={handleDrag}>
             <div>
               <FontAwesomeIcon
-                icon="file-upload"
+                icon={faFileUpload}
                 className={styles.uploadIcon}
               />
             </div>
