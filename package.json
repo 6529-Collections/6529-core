@@ -59,7 +59,7 @@
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
     "@google/model-viewer": "^3.5.0",
-    "@headlessui/react": "^2.0.4",
+    "@headlessui/react": "^2.2.2",
     "@heroicons/react": "^2.2.0",
     "@lexical/react": "^0.16.1",
     "@mojs/core": "^1.7.1",
@@ -108,10 +108,10 @@
     "node-cron": "^3.0.3",
     "p-retry": "^6.2.1",
     "pdfjs-dist": "^4.4.168",
-    "react": "^19.1.0",
+    "react": "19.1.0",
     "react-bootstrap": "^2.10.4",
     "react-chartjs-2": "^5.2.0",
-    "react-dom": "^19.1.0",
+    "react-dom": "19.1.0",
     "react-markdown": "^9.0.1",
     "react-pdf": "^9.1.0",
     "react-redux": "^9.1.2",
@@ -171,7 +171,13 @@
     "typescript": "^5.4.5"
   },
   "overrides": {
-    "elliptic": "^6.6.0",
-    "secp256k1": "^5.0.1"
+    "@emoji-mart/react": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "react-toggle": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }

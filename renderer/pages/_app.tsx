@@ -104,12 +104,16 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
   }, []);
 
   useEffect(() => {
-    getWagmiConfig().then((c) => setWagmiConfig(c));
+    import("../wagmiConfig").then(({ getWagmiConfig }) => {
+      getWagmiConfig().then((c) => setWagmiConfig(c));
+    });
   }, []);
 
   useEffect(() => {
     const updateWagmiConfig = () => {
-      getWagmiConfig().then((c) => setWagmiConfig(c));
+      import("../wagmiConfig").then(({ getWagmiConfig }) => {
+        getWagmiConfig().then((c) => setWagmiConfig(c));
+      });
     };
 
     window.api?.onSeedWalletsChange(updateWagmiConfig);
