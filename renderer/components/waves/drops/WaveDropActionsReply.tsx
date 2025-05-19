@@ -35,7 +35,8 @@ const WaveDropActionsReply: React.FC<WaveDropActionsReplyProps> = ({
             !canReply ? "tw-opacity-50 tw-cursor-default" : "tw-cursor-pointer"
           }`}
           onClick={canReply ? onReply : undefined}
-          disabled={!canReply}>
+          disabled={!canReply}
+          aria-label="Reply to drop">
           <svg
             className={`tw-flex-shrink-0 tw-w-5 tw-h-5 tw-transition tw-ease-out tw-duration-300 ${
               !canReply ? "tw-opacity-50" : ""
