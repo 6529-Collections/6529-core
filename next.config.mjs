@@ -37,8 +37,8 @@ const nextConfig = {
     quietDeps: true,
   },
   experimental: {
-    webpackMemoryOptimizations: false, // false in Core
-    webpackBuildWorker: false, // false in Core
+    webpackMemoryOptimizations: false,
+    webpackBuildWorker: false,
   },
   images: {
     domains: ["6529.io", "arweave.net"],
