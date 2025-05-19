@@ -49,12 +49,7 @@ import { printMemeReferences } from "../rememes/RememePage";
 import useCapacitor from "../../hooks/useCapacitor";
 import { SEIZE_API_URL } from "../../../constants";
 import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
-import {
-  faChevronCircleLeft,
-  faChevronCircleRight,
-  faExpandAlt,
-  faFire,
-} from "@fortawesome/free-solid-svg-icons";
+import { faExpandAlt, faFire } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import {
   getMemeTabTitle,
@@ -62,6 +57,7 @@ import {
   MEME_TABS,
 } from "../the-memes/MemeShared";
 import { useAuth } from "../auth/Auth";
+import NftNavigation from "../nft-navigation/NftNavigation";
 
 const ACTIVITY_PAGE_SIZE = 25;
 
@@ -1214,37 +1210,12 @@ export default function LabPage(props: Readonly<Props>) {
               <>
                 <Row className="pt-2">
                   <Col>
-                    {nftId && (
-                      <>
-                        <h2 className="float-left">
-                          <Link
-                            href={`/meme-lab/${
-                              parseInt(nftId) - 1
-                            }?focus=${activeTab}`}
-                            className={`${styles.nextPreviousNft} ${
-                              parseInt(nftId) === 1
-                                ? styles.nftPreviousdisabled
-                                : ""
-                            }`}>
-                            <FontAwesomeIcon icon={faChevronCircleLeft} />
-                          </Link>
-                        </h2>
-                        <h2 className="float-left">
-                          &nbsp;
-                          <Link
-                            href={`/meme-lab/${
-                              parseInt(nftId) + 1
-                            }?focus=${activeTab}`}
-                            className={`${styles.nextPreviousNft} ${
-                              parseInt(nftId) === nftMeta.collection_size
-                                ? styles.nftNextdisabled
-                                : ""
-                            }`}>
-                            <FontAwesomeIcon icon={faChevronCircleRight} />
-                          </Link>
-                        </h2>
-                      </>
-                    )}
+                    <NftNavigation
+                      nftId={nft.id}
+                      path="/meme-lab"
+                      startIndex={1}
+                      endIndex={nftMeta.collection_size}
+                    />
                   </Col>
                 </Row>
                 <Row className="pt-2">
