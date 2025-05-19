@@ -2,7 +2,6 @@
   "appId": "com.6529.6529stagingcore",
   "productName": "6529 STAGING CORE",
   "asar": true,
-  "compression": "store",
   "afterSign": "scripts/notarize.js",
   "extraMetadata": {
     "env": {
