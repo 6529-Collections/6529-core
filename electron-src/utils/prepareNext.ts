@@ -8,6 +8,11 @@ import { parse } from "url";
 import { isDev } from "./env";
 import { app } from "electron";
 
+if (!isDev) {
+  // @ts-ignore
+  process.env.NODE_ENV = "production";
+}
+
 const nextDir = path.join(app.getAppPath(), "renderer");
 Logger.info("NEXT DIR:", nextDir);
 
