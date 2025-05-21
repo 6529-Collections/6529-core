@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.1.26",
+  "version": "0.1.27",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -106,6 +106,7 @@
     "next": "15.3.2",
     "next-redux-wrapper": "^8.1.0",
     "node-cron": "^3.0.3",
+    "p-limit": "^6.2.0",
     "p-retry": "^6.2.1",
     "pdfjs-dist": "^4.4.168",
     "react": "19.1.0",
