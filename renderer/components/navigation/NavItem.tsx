@@ -7,6 +7,8 @@ import { motion } from "framer-motion";
 import { TitleType, useAuth } from "../auth/Auth";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
 import { isNavItemActive } from "./isNavItemActive";
+import { useWaveData } from "../../hooks/useWaveData";
+import { useWave } from "../../hooks/useWave";
 
 interface Props {
   readonly item: NavItemData;
@@ -20,6 +22,16 @@ const NavItem = ({ item }: Props) => {
   const { icon } = item;
 
   const isStream = name === "Stream";
+
+  // Determine if the current wave (if any) is a DM
+  const waveIdFromQuery =
+    typeof router.query.wave === "string" ? router.query.wave : null;
+  const { data: waveData } = useWaveData({
+    waveId: waveIdFromQuery,
+    // Minimal onWaveNotFound, actual handling of not found is likely elsewhere
+    onWaveNotFound: () => {},
+  });
+  const { isDm: isCurrentWaveDmValue } = useWave(waveData);
 
   // Add unread notifications logic
   const { connectedProfile, setTitle } = useAuth();
@@ -69,28 +81,19 @@ const NavItem = ({ item }: Props) => {
 
   const iconSizeClass = item.iconSizeClass ?? "tw-size-7";
 
-  const isActive = isNavItemActive(item, router, activeView);
-
-  const handleClick = () => {
-    if (
-      item.name === "Notifications" &&
-      item.kind === "route" &&
-      router.pathname === "/my-stream/notifications"
-    ) {
-      router.push("/my-stream/notifications?reload=true", undefined, {
-        shallow: true,
-      });
-      return;
-    }
-    handleNavClick(item);
-  };
+  const isActive = isNavItemActive(
+    item,
+    router,
+    activeView,
+    isCurrentWaveDmValue
+  );
 
   return (
     <button
       type="button"
       aria-label={name}
       aria-current={isActive ? "page" : undefined}
-      onClick={handleClick}
+      onClick={() => handleNavClick(item)}
       className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors 
       tw-w-14 tw-h-16">
       {isActive && (

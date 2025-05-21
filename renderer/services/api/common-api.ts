@@ -1,13 +1,11 @@
-import Cookies from "js-cookie";
-import { API_AUTH_COOKIE } from "../../constants";
-import { getAuthJwt } from "../auth/auth.utils";
 import { SEIZE_API_URL } from "../../../constants";
+import { getAuthJwt, getStagingAuth } from "../auth/auth.utils";
 
 const getHeaders = (
   headers?: Record<string, string>,
   contentType: boolean = true
 ) => {
-  const apiAuth = Cookies.get(API_AUTH_COOKIE);
+  const apiAuth = getStagingAuth();
   const walletAuth = getAuthJwt();
   return {
     ...(contentType ? { "Content-Type": "application/json" } : {}),
@@ -131,19 +129,25 @@ export const commonApiFetchWithRetry = async <
             new Promise((_, reject) => {
               // Check if already aborted before adding listener
               if (fetchParams.signal?.aborted) {
-                reject(new DOMException("Request aborted during delay", "AbortError"));
+                reject(
+                  new DOMException("Request aborted during delay", "AbortError")
+                );
                 return;
               }
               let timeoutId: NodeJS.Timeout | undefined = undefined;
               const abortListener = () => {
                 if (timeoutId) clearTimeout(timeoutId); // Clear the timeout if aborted
-                reject(new DOMException("Request aborted during delay", "AbortError"));
+                reject(
+                  new DOMException("Request aborted during delay", "AbortError")
+                );
               };
               // Ensure the delayPromise resolves and cleans up listener if not aborted
               timeoutId = setTimeout(() => {
                 fetchParams.signal?.removeEventListener("abort", abortListener);
               }, delayWithJitter);
-              fetchParams.signal?.addEventListener("abort", abortListener, { once: true });
+              fetchParams.signal?.addEventListener("abort", abortListener, {
+                once: true,
+              });
             }),
           ]);
         } else {
