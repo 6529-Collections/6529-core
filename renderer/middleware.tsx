@@ -109,7 +109,9 @@ export async function middleware(req: NextRequest) {
   }
 
   if (pathname != "/access" && pathname != "/restricted") {
-    const apiAuth = req.cookies.get(API_AUTH_COOKIE);
+    const apiAuth = req.cookies.get(API_AUTH_COOKIE) ?? {
+      value: process.env.STAGING_API_KEY ?? "",
+    };
     const r = await fetch(`${SEIZE_API_URL}/api/`, {
       headers: apiAuth ? { "x-6529-auth": apiAuth.value } : {},
     });
