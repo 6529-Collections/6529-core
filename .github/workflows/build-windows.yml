@@ -17,7 +17,6 @@ jobs:
   sign-windows:
     name: ${{ inputs.should_run && 'Sign' || 'Sign Skipped' }}
     runs-on: windows-latest
-    needs: build-windows
 
     env:
       AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
