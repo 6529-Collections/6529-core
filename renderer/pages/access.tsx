@@ -5,7 +5,8 @@ import { API_AUTH_COOKIE } from "../constants";
 import { useRouter } from "next/router";
 import Image from "next/image";
 import { AuthContext } from "../components/auth/Auth";
-import { SEIZE_API_URL, SEIZE_URL } from "../../constants";
+import { SEIZE_API_URL } from "../../constants";
+import { getStagingAuth } from "../services/auth/auth.utils";
 
 export default function Access() {
   const { setTitle } = useContext(AuthContext);
@@ -21,7 +22,7 @@ export default function Access() {
 
   useEffect(() => {
     if (!image && router.isReady) {
-      const apiAuth = Cookies.get(API_AUTH_COOKIE);
+      const apiAuth = getStagingAuth();
       fetch(`${SEIZE_API_URL}/api/`, {
         headers: apiAuth ? { "x-6529-auth": apiAuth } : {},
       }).then((r: any) => {
