@@ -1,6 +1,7 @@
 @use "sass:color";
 @use "variables.scss";
 @use "fonts.scss";
+@use "core.scss";
 @import "react-toggle/style.css";
 
 @tailwind base;
@@ -664,11 +665,4 @@ pre code {
   font-size: 3em;
   line-height: 1.2em;
   vertical-align: middle;
-}
-
-mark {
-  padding: 0;
-  &.tw-bg-yellow-400 {
-    background-color: #facc15 !important;
-  }
 }
