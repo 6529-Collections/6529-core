@@ -21,7 +21,7 @@ interface DesktopLayoutProps {
 const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
-  const { containerRef } = useSearch();
+  const { containerRef: searchContainerRef } = useSearch();
 
   const breadcrumbs = useBreadcrumbs();
   const router = useRouter();
@@ -46,7 +46,7 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
         <Header isSmall={isSmall} />
         {!isHomePage && <Breadcrumb breadcrumbs={breadcrumbs} />}
       </div>
-      <main ref={containerRef}>{children}</main>
+      <main ref={searchContainerRef}>{children}</main>
     </>
   );
 };
