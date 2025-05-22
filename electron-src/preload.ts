@@ -125,6 +125,10 @@ export const api = {
     numLines: number
   ): Promise<{ lines: LogLine[] }> =>
     ipcRenderer.invoke("get-previous-lines", filePath, startLine, numLines),
+
+  onOpenSearch: (callback: any) => ipcRenderer.on("open-search", callback),
+  offOpenSearch: (callback: any) =>
+    ipcRenderer.removeListener("open-search", callback),
 };
 
 contextBridge.exposeInMainWorld("api", api);

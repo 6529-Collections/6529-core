@@ -359,6 +359,10 @@ async function createWindow() {
     mainWindow?.webContents.openDevTools();
   });
 
+  localShortcut.register("CommandOrControl+F", () => {
+    mainWindow?.webContents.send("open-search");
+  });
+
   mainWindow.once("ready-to-show", async () => {
     Logger.info("Main window ready to show");
     await createScheduledTasks();

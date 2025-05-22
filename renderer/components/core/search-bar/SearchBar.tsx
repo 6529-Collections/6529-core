@@ -1,5 +1,11 @@
 import { useEffect, useRef } from "react";
 import { useSearch } from "../../../contexts/SearchContext";
+import {
+  faArrowUp,
+  faArrowDown,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function SearchBar() {
   const { isOpen, open, close, query, setQuery, total, current, next, prev } =
@@ -9,25 +15,17 @@ export default function SearchBar() {
 
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      const isMac = navigator.platform.toLowerCase().includes("mac");
-      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
-
-      console.log("cmdOrCtrl", cmdOrCtrl);
-
-      if (cmdOrCtrl && e.key.toLowerCase() === "f") {
-        e.preventDefault();
-        open();
-      } else if (e.key === "Escape") {
+      if (e.key === "Escape") {
         close();
-      } else if (e.key === "Enter") {
-        if (e.shiftKey) prev();
-        else next();
       }
     };
-
     window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [open, close, next, prev]);
+    window.api.onOpenSearch(open);
+    return () => {
+      window.removeEventListener("keydown", handleKey);
+      window.api.offOpenSearch(open);
+    };
+  }, []);
 
   useEffect(() => {
     if (isOpen) {
@@ -37,25 +35,48 @@ export default function SearchBar() {
 
   if (!isOpen) return null;
 
-  console.log("isOpen", isOpen);
-
   return (
     <div className="tw-fixed tw-top-[30px] tw-right-4 tw-z-[1001] tw-bg-neutral-900 tw-text-white tw-rounded-bl-lg tw-px-3 tw-py-2 tw-flex tw-items-center tw-gap-2 tw-shadow-xl">
       <input
         ref={inputRef}
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        className="tw-bg-neutral-800 tw-text-white tw-border tw-border-neutral-600 tw-rounded-md tw-px-2 tw-py-1 tw-text-sm tw-w-[180px] focus:tw-outline-none focus:tw-border-white"
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            if (e.shiftKey) prev();
+            else next();
+          } else if (e.key === "Escape") {
+            e.preventDefault();
+            close();
+          }
+        }}
         placeholder="Find..."
+        className="tw-bg-neutral-800 tw-text-white tw-border tw-border-neutral-600 tw-rounded-md tw-px-2 tw-py-1 tw-text-sm tw-w-[180px] focus:tw-outline-none focus:tw-border-white tw-placeholder-gray-400"
       />
       <span className="tw-text-xs tw-tabular-nums tw-min-w-[48px] tw-text-center">
         <span className={total > 0 ? "" : "tw-invisible"}>
-          {total > 0 ? `${current + 1} / ${total}` : "0 / 0"}
+          {`${current + 1} / ${total}`}
         </span>
       </span>
-      <button onClick={prev}>↑</button>
-      <button onClick={next}>↓</button>
-      <button onClick={close}>✕</button>
+      <FontAwesomeIcon
+        icon={faArrowUp}
+        className="tw-cursor-pointer tw-text-white hover:tw-text-gray-300"
+        title="Previous"
+        onClick={prev}
+      />
+      <FontAwesomeIcon
+        icon={faArrowDown}
+        className="tw-cursor-pointer tw-text-white hover:tw-text-gray-300"
+        title="Next"
+        onClick={next}
+      />
+      <FontAwesomeIcon
+        icon={faXmark}
+        className="tw-cursor-pointer tw-text-red-400 hover:tw-text-red-200 tw-ml-1"
+        title="Close"
+        onClick={close}
+      />
     </div>
   );
 }

@@ -39,6 +39,10 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
     setIsOpen(false);
     setQuery("");
     setTotal(0);
+    setCurrent(0);
+    if (markInstance.current && containerRef.current) {
+      markInstance.current.unmark();
+    }
   };
 
   const performSearch = useCallback((q: string) => {
@@ -59,6 +63,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
           done: (count: number) => {
             setTotal(count);
             setCurrent(count > 0 ? 0 : -1);
+            scrollToMatch(0);
           },
         });
       },
@@ -67,8 +72,12 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
   const scrollToMatch = (index: number) => {
     const matches = document.querySelectorAll("mark");
+    matches.forEach((el) => el.classList.remove("tw-bg-yellow-400"));
     const el = matches[index] as HTMLElement;
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.add("tw-bg-yellow-400");
+    }
   };
 
   const next = () => {
