@@ -6,6 +6,7 @@ import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import Breadcrumb from "../breadcrumb/Breadcrumb";
 import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 import { useHeaderContext } from "../../contexts/HeaderContext";
+import { useSearch } from "../../contexts/SearchContext";
 
 const Header = dynamic(() => import("../header/Header"), {
   ssr: false,
@@ -20,6 +21,7 @@ interface DesktopLayoutProps {
 const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
+  const { containerRef } = useSearch();
 
   const breadcrumbs = useBreadcrumbs();
   const router = useRouter();
@@ -40,12 +42,11 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
         ref={headerWrapperRef}
         className={`${
           isStreamView ? "tw-sticky tw-top-0 tw-z-50 tw-bg-black" : ""
-        }`}
-      >
+        }`}>
         <Header isSmall={isSmall} />
         {!isHomePage && <Breadcrumb breadcrumbs={breadcrumbs} />}
       </div>
-      <main>{children}</main>
+      <main ref={containerRef}>{children}</main>
     </>
   );
 };
