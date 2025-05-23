@@ -7,6 +7,7 @@ import {
   faInfo,
   faLink,
   faRefresh,
+  faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
 import ConfirmClose from "../../confirm/ConfirmClose";
@@ -16,6 +17,7 @@ import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
 import { SEIZE_URL } from "../../../../constants";
+import { useSearch } from "../../../contexts/SearchContext";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -25,6 +27,7 @@ const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 
 export default function TitleBar() {
   const router = useRouter();
+  const { isOpen, open, close } = useSearch();
 
   const [showConfirm, setShowConfirm] = useState(false);
 
@@ -108,6 +111,14 @@ export default function TitleBar() {
       window.updater.offUpdateAvailable(handleUpdateAvailable);
     };
   }, []);
+
+  const handleOpenSearch = () => {
+    if (isOpen) {
+      close();
+    } else {
+      open();
+    }
+  };
 
   const handleBack = () => {
     if (canGoBack) {
@@ -201,6 +212,14 @@ export default function TitleBar() {
     <>
       <div className={styles.spacer}></div>
       <span className={styles.buttonWrapper}>
+        <TooltipButton
+          buttonStyles={`${styles.button} ${
+            navigationLoading ? styles.disabled : styles.enabled
+          }`}
+          onClick={handleOpenSearch}
+          icon={faSearch}
+          content="Search"
+        />
         <TooltipButton
           buttonStyles={`${styles.button} ${
             canGoBack ? styles.enabled : styles.disabled

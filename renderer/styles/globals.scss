@@ -1,6 +1,7 @@
 @use "sass:color";
 @use "variables.scss";
 @use "fonts.scss";
+@use "core.scss";
 @import "react-toggle/style.css";
 
 @tailwind base;

@@ -15,19 +15,20 @@ on:
         description: "Version to build"
         required: true
         type: string
-      os:
-        description: "Which OS to build"
+      flow:
+        description: "Flow to run"
         required: true
-        default: "All"
+        default: "Build All"
         type: choice
         options:
-          - All
+          - Build All
           - MacOS
           - Windows
+          - Sign Windows
           - Linux
           - Publish
 
-run-name: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+run-name: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
 
 jobs:
   build-mac:
@@ -36,7 +37,7 @@ jobs:
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
-      should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'MacOS' }}
+      should_run: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'MacOS' }}
     secrets: inherit
 
   build-windows:
@@ -45,7 +46,16 @@ jobs:
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
-      should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Windows' }}
+      should_run: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'Windows' }}
+    secrets: inherit
+
+  sign-windows:
+    name: Sign Windows
+    uses: ./.github/workflows/sign-windows.yml
+    with:
+      env: ${{ github.event.inputs.env }}
+      version: ${{ github.event.inputs.version }}
+      should_run: ${{ github.event.inputs.flow == 'Sign Windows' }}
     secrets: inherit
 
   build-linux:
@@ -54,11 +64,11 @@ jobs:
     with:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
-      should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Linux' }}
+      should_run: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'Linux' }}
     secrets: inherit
 
   publish:
-    if: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Publish' }}
+    if: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'Publish' }}
     name: Publish
     runs-on: ubuntu-latest
     needs: [build-mac, build-windows, build-linux]
@@ -67,13 +77,13 @@ jobs:
         run: |
           SHOULD_FAIL=false
 
-          if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "MacOS" ]]; then
+          if [[ "${{ github.event.inputs.flow }}" == "Build All" || "${{ github.event.inputs.flow }}" == "MacOS" ]]; then
             [[ "${{ needs.build-mac.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
-          if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "Windows" ]]; then
+          if [[ "${{ github.event.inputs.flow }}" == "Build All" || "${{ github.event.inputs.flow }}" == "Windows" ]]; then
             [[ "${{ needs.build-windows.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
-          if [[ "${{ github.event.inputs.os }}" == "All" || "${{ github.event.inputs.os }}" == "Linux" ]]; then
+          if [[ "${{ github.event.inputs.flow }}" == "Build All" || "${{ github.event.inputs.flow }}" == "Linux" ]]; then
             [[ "${{ needs.build-linux.result }}" != "success" ]] && SHOULD_FAIL=true
           fi
 
@@ -87,7 +97,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           title: "6529 Core - Build failed ❌"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
@@ -132,7 +142,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           title: "6529 Core - S3 links published ✅"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
       - name: Publish Arweave Links
@@ -149,7 +159,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           title: "6529 Core - Build complete 🚀"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
       - name: Notify Publish Failure
@@ -160,7 +170,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           title: "6529 Core - Publish job failed ❌"
-          description: "OS: ${{ github.event.inputs.os }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
@@ -172,7 +182,7 @@ jobs:
             core.summary
               .addHeading("6529 Core Build Complete 🚀")
               .addTable([
-                ["OS", "${{ github.event.inputs.os }}"],
+                ["FLOW", "${{ github.event.inputs.flow }}"],
                 ["Env", "${{ github.event.inputs.env }}"],
                 ["Version", "${{ github.event.inputs.version }}"]
               ])
