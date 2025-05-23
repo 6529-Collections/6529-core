@@ -6,6 +6,7 @@ import type { NavItem as NavItemData } from "./navTypes";
 import { motion } from "framer-motion";
 import { TitleType, useAuth } from "../auth/Auth";
 import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
+import { useUnreadIndicator } from "../../hooks/useUnreadIndicator";
 import { isNavItemActive } from "./isNavItemActive";
 import { useWaveData } from "../../hooks/useWaveData";
 import { useWave } from "../../hooks/useWave";
@@ -39,6 +40,12 @@ const NavItem = ({ item }: Props) => {
     item.name === "Notifications" ? connectedProfile?.handle ?? null : null
   );
 
+  // Add unread messages logic
+  const { hasUnread: hasUnreadMessages } = useUnreadIndicator({
+    type: "messages",
+    handle: item.name === "Messages" ? connectedProfile?.handle ?? null : null,
+  });
+
   useEffect(() => {
     if (item.name !== "Notifications") return;
     setTitle({
@@ -56,7 +63,7 @@ const NavItem = ({ item }: Props) => {
         aria-label={name}
         aria-disabled="true"
         disabled
-        className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors tw-w-14 tw-h-16 tw-opacity-40 tw-pointer-events-none">
+        className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors tw-w-full tw-h-16 tw-opacity-40 tw-pointer-events-none tw-min-w-0">
         <div className="tw-flex tw-items-center tw-justify-center">
           {item.iconComponent ? (
             <item.iconComponent
@@ -95,7 +102,7 @@ const NavItem = ({ item }: Props) => {
       aria-current={isActive ? "page" : undefined}
       onClick={() => handleNavClick(item)}
       className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors 
-      tw-w-14 tw-h-16">
+      tw-w-full tw-h-16 tw-min-w-0">
       {isActive && (
         <motion.div
           layoutId="nav-indicator"
@@ -122,6 +129,9 @@ const NavItem = ({ item }: Props) => {
           />
         )}
         {item.name === "Notifications" && haveUnreadNotifications && (
+          <div className="tw-absolute -tw-right-1 -tw-top-1 tw-rounded-full tw-bg-red tw-h-2.5 tw-w-2.5"></div>
+        )}
+        {item.name === "Messages" && hasUnreadMessages && (
           <div className="tw-absolute -tw-right-1 -tw-top-1 tw-rounded-full tw-bg-red tw-h-2.5 tw-w-2.5"></div>
         )}
       </div>
