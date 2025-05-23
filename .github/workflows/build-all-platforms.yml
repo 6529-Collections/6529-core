@@ -24,6 +24,7 @@ on:
           - All
           - MacOS
           - Windows
+          - Sign Windows
           - Linux
           - Publish
 
@@ -46,6 +47,15 @@ jobs:
       env: ${{ github.event.inputs.env }}
       version: ${{ github.event.inputs.version }}
       should_run: ${{ github.event.inputs.os == 'All' || github.event.inputs.os == 'Windows' }}
+    secrets: inherit
+
+  sign-windows:
+    name: Sign Windows
+    uses: ./.github/workflows/sign-windows.yml
+    with:
+      env: ${{ github.event.inputs.env }}
+      version: ${{ github.event.inputs.version }}
+      should_run: ${{ github.event.inputs.os == 'Sign Windows' }}
     secrets: inherit
 
   build-linux:

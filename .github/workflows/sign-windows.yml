@@ -1,0 +1,76 @@
+name: Build Windows
+
+on:
+  workflow_call:
+    inputs:
+      env:
+        required: true
+        type: string
+      version:
+        required: true
+        type: string
+      should_run:
+        required: true
+        type: boolean
+
+jobs:
+  sign-windows:
+    name: ${{ inputs.should_run && 'Sign' || 'Sign Skipped' }}
+    runs-on: windows-latest
+
+    env:
+      AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CERT_NAME: ${{ secrets.CERT_NAME }}
+
+    steps:
+      - name: Check if should run
+        if: ${{ !inputs.should_run }}
+        run: echo "Skipping because should_run=false"
+
+      - name: Check out
+        if: ${{ inputs.should_run }}
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        if: ${{ inputs.should_run }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install signing dependencies
+        if: ${{ inputs.should_run }}
+        working-directory: ./sign-win
+        run: npm ci
+
+      - name: Install AzureSignTool
+        if: ${{ inputs.should_run }}
+        run: dotnet tool install --global AzureSignTool
+
+      - name: Add dotnet tools to PATH
+        if: ${{ inputs.should_run }}
+        run: echo "$env:USERPROFILE\\.dotnet\\tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+        shell: pwsh
+
+      - name: Configure AWS Credentials
+        if: ${{ inputs.should_run }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Sign executables & upload to S3
+        if: ${{ inputs.should_run }}
+        working-directory: ./sign-win
+        shell: pwsh
+        run: |
+          if ("${{ inputs.env }}" -eq "Staging") {
+            npm run sign-publish-staging-win
+          } else {
+            npm run sign-publish-production-win
+          }
