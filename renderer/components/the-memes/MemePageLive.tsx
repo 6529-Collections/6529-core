@@ -25,6 +25,7 @@ import useCapacitor from "../../hooks/useCapacitor";
 import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
 import { faFire, faRefresh } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
+import { useCookieConsent } from "../cookies/CookieConsentContext";
 
 const REMEMES_PAGE_SIZE = 20;
 
@@ -35,6 +36,7 @@ export function MemePageLiveRightMenu(props: {
   nftBalance: number;
 }) {
   const capacitor = useCapacitor();
+  const { country } = useCookieConsent();
 
   const distributionPlanLink = (() => {
     const id = props.nft?.id;
@@ -232,7 +234,7 @@ export function MemePageLiveRightMenu(props: {
               </Col>
             </Row>
           )}
-          {capacitor.platform !== "ios" && (
+          {(!capacitor.isIos || country === "US") && (
             <Row className="pt-4">
               <Col>
                 <NFTMarketplaceLinks
