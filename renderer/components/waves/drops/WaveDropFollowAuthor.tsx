@@ -5,7 +5,7 @@ import { AuthContext } from "../../auth/Auth";
 import { ReactQueryWrapperContext } from "../../react-query-wrapper/ReactQueryWrapper";
 import { useMutation } from "@tanstack/react-query";
 import {
-  commonApiDeleWithBody,
+  commonApiDeleteWithBody,
   commonApiPost,
 } from "../../../services/api/common-api";
 import CircleLoader, {
@@ -109,7 +109,7 @@ export default function WaveDropFollowAuthor({
 
   const unFollowMutation = useMutation({
     mutationFn: async () => {
-      await commonApiDeleWithBody<
+      await commonApiDeleteWithBody<
         ApiIdentitySubscriptionActions,
         ApiIdentitySubscriptionActions
       >({

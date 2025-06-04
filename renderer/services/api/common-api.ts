@@ -210,13 +210,19 @@ export const commonApiDelete = async (param: {
   endpoint: string;
   headers?: Record<string, string>;
 }): Promise<void> => {
-  await fetch(`${SEIZE_API_URL}/api/${param.endpoint}`, {
+  const res = await fetch(`${SEIZE_API_URL}/api/${param.endpoint}`, {
     method: "DELETE",
     headers: getHeaders(param.headers),
   });
+  if (!res.ok) {
+    const body: any = await res.json();
+    return Promise.reject(
+      new Error(body?.error ?? res.statusText ?? "Something went wrong")
+    );
+  }
 };
 
-export const commonApiDeleWithBody = async <
+export const commonApiDeleteWithBody = async <
   T,
   U,
   Z = Record<string, string>

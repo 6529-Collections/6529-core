@@ -21,8 +21,7 @@ interface MainLayoutProps {
 
 const MainLayout = ({ children, metadata }: MainLayoutProps) => {
   const router = useRouter();
-  const { isMobileDevice, hasTouchScreen, isApp } = useDeviceInfo();
-  const isMobile = isMobileDevice || (hasTouchScreen && isApp);
+  const { isApp } = useDeviceInfo();
   // Pages that should use the small header
   const isSmall = router.pathname.startsWith("/my-stream");
   const isAccess = router.pathname.startsWith("/access");
@@ -53,7 +52,7 @@ const MainLayout = ({ children, metadata }: MainLayoutProps) => {
             </Head>
             <ClientOnly>
               <MyStreamProvider>
-                {isMobile ? (
+                {isApp ? (
                   <MobileLayout>{children}</MobileLayout>
                 ) : (
                   <DesktopLayout isSmall={isSmall}>{children}</DesktopLayout>
