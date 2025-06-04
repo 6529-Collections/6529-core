@@ -6,6 +6,7 @@ import React, {
   useState,
 } from "react";
 import IpfsService from "./IPFSService";
+import { isElectron } from "../../helpers";
 
 interface IpfsContextType {
   ipfsService: IpfsService | null;
@@ -34,6 +35,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (ipfsService) return;
+    if (!isElectron()) return;
 
     getEnv()
       .then((info) => {

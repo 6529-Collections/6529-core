@@ -39,7 +39,6 @@ import { HeaderProvider } from "../contexts/HeaderContext";
 import { PageSSRMetadata } from "../helpers/Types";
 import { SEIZE_URL } from "../../constants";
 import { SearchProvider } from "../contexts/SearchContext";
-import SearchBar from "../components/core/search-bar/SearchBar";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -180,7 +179,6 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                           <SearchProvider>
                                             <MainLayout metadata={metadata}>
                                               <TitleBarDynamic />
-                                              <SearchBar />
                                               {getLayout(
                                                 <Component
                                                   {...props}
