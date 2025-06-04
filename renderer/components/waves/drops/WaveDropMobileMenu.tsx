@@ -2,15 +2,15 @@ import { FC, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import CommonDropdownItemsMobileWrapper from "../../utils/select/dropdown/CommonDropdownItemsMobileWrapper";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
-import { ApiDropType } from "../../../generated/models/ApiDropType";
 import { AuthContext } from "../../auth/Auth";
 import WaveDropMobileMenuDelete from "./WaveDropMobileMenuDelete";
 import WaveDropMobileMenuFollow from "./WaveDropMobileMenuFollow";
 import WaveDropMobileMenuOpen from "./WaveDropMobileMenuOpen";
 import WaveDropActionsRate from "./WaveDropActionsRate";
-import { SEIZE_URL } from "../../../../constants";
-import { useSeizeSettings } from "../../../contexts/SeizeSettingsContext";
 import { DropSize } from "../../../helpers/waves/drop.helpers";
+import WaveDropActionsAddReaction from "./WaveDropActionsAddReaction";
+import { SEIZE_URL } from "../../../../constants";
+
 interface WaveDropMobileMenuProps {
   readonly drop: ApiDrop;
   readonly isOpen: boolean;
@@ -19,6 +19,7 @@ interface WaveDropMobileMenuProps {
   readonly setOpen: (open: boolean) => void;
   readonly onReply: () => void;
   readonly onQuote: () => void;
+  readonly onAddReaction: () => void;
   readonly showOpenOption?: boolean;
   readonly showCopyOption?: boolean;
   readonly showFollowOption?: boolean;
@@ -32,18 +33,13 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
   setOpen,
   onReply,
   onQuote,
+  onAddReaction,
   showOpenOption = true,
   showCopyOption = true,
   showFollowOption = true,
 }) => {
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
-  const { isMemesWave } = useSeizeSettings();
   const isTemporaryDrop = drop.id.startsWith("temp-");
-
-  // Check if we should hide the clap icon
-  // Hide only for memes participation drops
-  const shouldHideClap =
-    drop.drop_type === ApiDropType.Participatory && isMemesWave(drop.wave?.id); // Only hide for memes participation drops
 
   const [copied, setCopied] = useState(false);
 
@@ -106,6 +102,11 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
         className={`tw-grid tw-grid-cols-1 tw-gap-y-2 ${
           longPressTriggered && "tw-select-none"
         }`}>
+        <WaveDropActionsAddReaction
+          drop={drop}
+          isMobile={true}
+          onAddReaction={onAddReaction}
+        />
         {showReplyAndQuote && (
           <>
             <button
@@ -210,13 +211,7 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
         {showFollowOption && !isAuthor && (
           <WaveDropMobileMenuFollow drop={drop} onFollowChange={closeMenu} />
         )}
-        {!shouldHideClap && (
-          <WaveDropActionsRate
-            drop={drop}
-            isMobile={true}
-            onRated={closeMenu}
-          />
-        )}
+        <WaveDropActionsRate drop={drop} isMobile={true} onRated={closeMenu} />
         {showOptions && (
           <WaveDropMobileMenuDelete drop={drop} onDropDeleted={closeMenu} />
         )}

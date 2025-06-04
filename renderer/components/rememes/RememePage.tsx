@@ -29,6 +29,7 @@ import { SEIZE_API_URL } from "../../../constants";
 import useCapacitor from "../../hooks/useCapacitor";
 import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
 import { faExternalLink, faGlobe } from "@fortawesome/free-solid-svg-icons";
+import { useCookieConsent } from "../cookies/CookieConsentContext";
 
 interface Props {
   contract: string;
@@ -125,6 +126,7 @@ export function printMemeReferences(
 
 export default function RememePage(props: Readonly<Props>) {
   const capacitor = useCapacitor();
+  const { country } = useCookieConsent();
   const [rememe, setRememe] = useState<Rememe>();
 
   const [activeTab, setActiveTab] = useState<Tabs>(Tabs.LIVE);
@@ -299,7 +301,7 @@ export default function RememePage(props: Readonly<Props>) {
                     </Col>
                   </Row>
                 )}
-                {capacitor.platform !== "ios" && (
+                {(!capacitor.isIos || country === "US") && (
                   <Row className="pt-5">
                     <Col>
                       <NFTMarketplaceLinks
