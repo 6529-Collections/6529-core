@@ -1,34 +1,135 @@
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import useDownloader from "react-use-downloader";
 import styles from "./Download.module.scss";
-import { faDownload } from "@fortawesome/free-solid-svg-icons";
+import {
+  faDownload,
+  faXmarkCircle,
+  faCheckCircle,
+} from "@fortawesome/free-solid-svg-icons";
+import { useEffect, useRef, useState } from "react";
 
 interface Props {
   href: string;
   name: string;
   extension: string;
+  showProgress?: boolean;
+  className?: string;
 }
 
+export const getFileInfoFromUrl = (
+  url: string | undefined
+): { name: string; extension: string } | null => {
+  try {
+    if (!url) {
+      return null;
+    }
+    const { pathname } = new URL(url);
+    const decodedPath = decodeURIComponent(pathname);
+    const filename = decodedPath.split("/").pop() ?? "file";
+
+    const lastDot = filename.lastIndexOf(".");
+    if (lastDot > 0 && lastDot < filename.length - 1) {
+      return {
+        name: filename.slice(0, lastDot),
+        extension: filename.slice(lastDot + 1),
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
+};
+
 export default function Download(props: Readonly<Props>) {
-  const { size, elapsed, percentage, download, cancel, error, isInProgress } =
-    useDownloader();
+  const { percentage, download, cancel, isInProgress } = useDownloader();
+  const showProgress = props.showProgress ?? true;
+
+  const [isCompleted, setIsCompleted] = useState(false);
+  const completionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   async function startDownload() {
-    download(props.href, `${props.name}.${props.extension}`);
+    const filename = props.extension
+      ? `${props.name}.${props.extension}`
+      : props.name;
+    download(props.href, filename);
   }
 
-  return (
-    <span className={styles.download}>
-      {!isInProgress ? (
-        <FontAwesomeIcon icon={faDownload} onClick={startDownload} />
-      ) : (
-        <>
-          Downloading {percentage} %{" "}
-          <span className={styles.cancelDownload} onClick={() => cancel()}>
-            Cancel
+  useEffect(() => {
+    if (percentage === 100 && showProgress) {
+      setIsCompleted(true);
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+      completionTimeoutRef.current = setTimeout(() => {
+        setIsCompleted(false);
+        completionTimeoutRef.current = null;
+      }, 1500);
+    }
+  }, [percentage, showProgress]);
+
+  useEffect(() => {
+    return () => {
+      if (completionTimeoutRef.current) {
+        clearTimeout(completionTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const renderContent = () => {
+    if (isCompleted) {
+      return (
+        <div
+          className="tw-bg-iron-900 tw-rounded-full tw-h-9 tw-flex-shrink-0 tw-inline-flex tw-items-center tw-justify-center tw-transition tw-duration-300 tw-ease-out tw-border-0 tw-text-white tw-gap-2 tw-px-3"
+          aria-label="Download complete">
+          <span className="tw-leading-[2.25rem] tw-text-sm tw-font-medium">
+            Complete
           </span>
-        </>
-      )}
-    </span>
+          <FontAwesomeIcon
+            icon={faCheckCircle}
+            className="tw-text-white tw-w-5 tw-h-5 tw-flex-shrink-0 tw-cursor-pointer"
+            onClick={() => setIsCompleted(false)}
+          />
+        </div>
+      );
+    }
+
+    if (!isInProgress || !showProgress) {
+      return (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            startDownload();
+          }}
+          className="tw-bg-iron-900 desktop-hover:hover:tw-bg-iron-800 tw-rounded-full tw-size-9 tw-flex-shrink-0 tw-inline-flex tw-items-center tw-justify-center tw-cursor-pointer tw-transition tw-duration-300 tw-ease-out tw-border-0"
+          aria-label="Download file"
+          type="button">
+          <FontAwesomeIcon
+            icon={faDownload}
+            className="tw-text-white tw-w-4 tw-h-4 tw-flex-shrink-0"
+          />
+        </button>
+      );
+    }
+
+    return (
+      <div
+        className="tw-bg-iron-900 tw-rounded-full tw-h-9 tw-flex-shrink-0 tw-inline-flex tw-items-center tw-justify-center tw-transition tw-duration-300 tw-ease-out tw-border-0 tw-text-white tw-gap-2 tw-px-3"
+        aria-label="Downloading file">
+        <span className="tw-leading-[2.25rem] tw-text-sm tw-font-medium">
+          Downloading {percentage}%
+        </span>
+        <FontAwesomeIcon
+          icon={faXmarkCircle}
+          className="tw-text-white tw-w-5 tw-h-5 tw-flex-shrink-0 tw-cursor-pointer"
+          onClick={() => cancel()}
+        />
+      </div>
+    );
+  };
+
+  return (
+    <div className={`${styles.download} ${props.className ?? ""}`}>
+      {renderContent()}
+    </div>
   );
 }
