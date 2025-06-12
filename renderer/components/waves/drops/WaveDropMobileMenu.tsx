@@ -211,7 +211,9 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
         {showFollowOption && !isAuthor && (
           <WaveDropMobileMenuFollow drop={drop} onFollowChange={closeMenu} />
         )}
-        <WaveDropActionsRate drop={drop} isMobile={true} onRated={closeMenu} />
+        {!isAuthor && (
+          <WaveDropActionsRate drop={drop} isMobile={true} onRated={closeMenu} />
+        )}
         {showOptions && (
           <WaveDropMobileMenuDelete drop={drop} onDropDeleted={closeMenu} />
         )}
