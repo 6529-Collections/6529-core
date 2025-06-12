@@ -233,6 +233,7 @@ export default function RememeAddPage() {
                             <FontAwesomeIcon
                               icon={faCheckCircle}
                               className={styles.verifiedIcon}
+                              data-testid="check-circle"
                             />
                           ) : (
                             <FontAwesomeIcon
