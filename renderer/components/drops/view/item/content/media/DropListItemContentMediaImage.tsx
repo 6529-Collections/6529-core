@@ -151,12 +151,29 @@ function DropListItemContentMediaImage({
                   <img
                     src={src}
                     alt="Full size drop media"
-                    className="tw-max-h-[75vh] lg:tw-max-h-[90vh] tw-max-w-full tw-object-contain tw-pointer-events-auto"
+                    style={{ pointerEvents: "auto" }}
+                    className="tw-max-h-[75vh] lg:tw-max-h-[90vh] tw-max-w-full tw-object-contain"
                   />
                 </TransformComponent>
               </div>
 
               <div className="tw-fixed tw-top-2 tw-right-4 tw-flex tw-flex-row tw-gap-x-4 tw-z-[1001] tw-pt-[env(safe-area-inset-top,0px)] lg:tw-relative lg:tw-top-0 lg:tw-right-auto lg:tw-flex-col-reverse lg:tw-gap-x-0 lg:tw-gap-y-2 lg:tw-ml-4 lg:tw-pt-0 lg:tw-self-start">
+                {isZoomed && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetTransform();
+                      setIsZoomed(false);
+                    }}
+                    data-tooltip-id="reset-zoom"
+                    className="tw-flex tw-items-center tw-justify-center tw-border-0 tw-text-iron-50 tw-bg-iron-800 desktop-hover:hover:tw-bg-iron-700 tw-rounded-full tw-size-10 tw-flex-shrink-0 tw-backdrop-blur-sm tw-transition-all tw-duration-300 tw-ease-out"
+                    aria-label="Reset">
+                    <FontAwesomeIcon
+                      icon={faRotateLeft}
+                      className="tw-size-4"
+                    />
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -187,22 +204,6 @@ function DropListItemContentMediaImage({
                     className="tw-flex tw-items-center tw-justify-center tw-border-0 tw-text-iron-50 tw-bg-iron-800 desktop-hover:hover:tw-bg-iron-700 tw-rounded-full tw-size-10 tw-flex-shrink-0 tw-backdrop-blur-sm tw-transition-all tw-duration-300 tw-ease-out"
                     aria-label="View drop details">
                     <InformationCircleIcon className="tw-h-5 tw-w-5 tw-flex-shrink-0" />
-                  </button>
-                )}
-                {isZoomed && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      resetTransform();
-                      setIsZoomed(false);
-                    }}
-                    data-tooltip-id="reset-zoom"
-                    className="tw-flex tw-items-center tw-justify-center tw-border-0 tw-text-iron-50 tw-bg-iron-800 desktop-hover:hover:tw-bg-iron-700 tw-rounded-full tw-size-10 tw-flex-shrink-0 tw-backdrop-blur-sm tw-transition-all tw-duration-300 tw-ease-out"
-                    aria-label="Reset">
-                    <FontAwesomeIcon
-                      icon={faRotateLeft}
-                      className="tw-size-4"
-                    />
                   </button>
                 )}
                 <button

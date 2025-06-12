@@ -123,12 +123,29 @@ const DropPartMarkdownImage: React.FC<DropPartMarkdownImageProps> = ({
                   <img
                     src={src}
                     alt={alt}
-                    className="tw-max-h-[75vh] lg:tw-max-h-[90vh] tw-max-w-full tw-object-contain tw-pointer-events-auto"
+                    style={{ pointerEvents: "auto" }}
+                    className="tw-max-h-[75vh] lg:tw-max-h-[90vh] tw-max-w-full tw-object-contain"
                   />
                 </TransformComponent>
               </div>
 
               <div className="tw-fixed tw-top-2 tw-right-4 tw-flex tw-flex-row tw-gap-x-4 tw-z-[1001] tw-pt-[env(safe-area-inset-top,0px)] lg:tw-relative lg:tw-top-0 lg:tw-right-auto lg:tw-flex-col-reverse lg:tw-gap-x-0 lg:tw-gap-y-2 lg:tw-ml-4 lg:tw-pt-0 lg:tw-self-start">
+                {isZoomed && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      resetTransform();
+                      setIsZoomed(false);
+                    }}
+                    data-tooltip-id="reset-zoom-markdown"
+                    className={modalButtonClasses}
+                    aria-label="Reset">
+                    <FontAwesomeIcon
+                      icon={faRotateLeft}
+                      className="tw-size-4"
+                    />
+                  </button>
+                )}
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
@@ -146,22 +163,6 @@ const DropPartMarkdownImage: React.FC<DropPartMarkdownImageProps> = ({
                     className={modalButtonClasses}
                     aria-label="Full screen">
                     <FontAwesomeIcon icon={faExpand} className="tw-size-4" />
-                  </button>
-                )}
-                {isZoomed && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      resetTransform();
-                      setIsZoomed(false);
-                    }}
-                    data-tooltip-id="reset-zoom-markdown"
-                    className={modalButtonClasses}
-                    aria-label="Reset">
-                    <FontAwesomeIcon
-                      icon={faRotateLeft}
-                      className="tw-size-4"
-                    />
                   </button>
                 )}
                 <button
