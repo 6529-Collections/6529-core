@@ -1,7 +1,7 @@
 import styles from "../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import { useContext, useEffect } from "react";
-import { AuthContext } from "../../components/auth/Auth";
+import React from "react";
+import { useSetTitle } from "../../contexts/TitleContext";
 import { SEIZE_URL } from "../../../constants";
 
 interface Props {
@@ -14,13 +14,7 @@ const RememesComponent = dynamic(
 );
 
 export default function ReMemes(props: Readonly<Props>) {
-  const { setTitle } = useContext(AuthContext);
-
-  useEffect(() => {
-    setTitle({
-      title: "ReMemes | Collections",
-    });
-  }, []);
+  useSetTitle("ReMemes | Collections");
 
   return (
     <main className={styles.main}>

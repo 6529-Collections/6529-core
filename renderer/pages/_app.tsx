@@ -39,6 +39,7 @@ import { HeaderProvider } from "../contexts/HeaderContext";
 import { PageSSRMetadata } from "../helpers/Types";
 import { SEIZE_URL } from "../../constants";
 import { SearchProvider } from "../contexts/SearchContext";
+import { TitleProvider } from "../contexts/TitleContext";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -175,21 +176,25 @@ export default function App({ Component, ...rest }: AppPropsWithLayout) {
                                   <CookieConsentProvider>
                                     <EULAConsentProvider>
                                       <AppWebSocketProvider>
-                                        <HeaderProvider>
-                                          <SearchProvider>
-                                            <MainLayout metadata={metadata}>
-                                              <TitleBarDynamic />
-                                              {getLayout(
-                                                <Component
-                                                  {...props}
-                                                  key={
-                                                    router.asPath.split("?")[0]
-                                                  }
-                                                />
-                                              )}
-                                            </MainLayout>
-                                          </SearchProvider>
-                                        </HeaderProvider>
+                                        <TitleProvider>
+                                          <HeaderProvider>
+                                            <SearchProvider>
+                                              <MainLayout metadata={metadata}>
+                                                <TitleBarDynamic />
+                                                {getLayout(
+                                                  <Component
+                                                    {...props}
+                                                    key={
+                                                      router.asPath.split(
+                                                        "?"
+                                                      )[0]
+                                                    }
+                                                  />
+                                                )}
+                                              </MainLayout>
+                                            </SearchProvider>
+                                          </HeaderProvider>
+                                        </TitleProvider>
                                       </AppWebSocketProvider>
                                     </EULAConsentProvider>
                                   </CookieConsentProvider>
