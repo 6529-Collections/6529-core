@@ -1,19 +1,14 @@
-import { useEffect, useState, useContext } from "react";
+import { useEffect, useState } from "react";
 import styles from "../styles/Home.module.scss";
 
 import { useRouter } from "next/router";
 import { LoginImage } from "./access";
-import { AuthContext } from "../components/auth/Auth";
-import { SEIZE_API_URL } from "../../constants";
+import { useSetTitle } from "../contexts/TitleContext";
 import { getStagingAuth } from "../services/auth/auth.utils";
+import { SEIZE_API_URL } from "../../constants";
 
 export default function Access() {
-  const { setTitle } = useContext(AuthContext);
-  useEffect(() => {
-    setTitle({
-      title: "Restricted",
-    });
-  }, []);
+  useSetTitle("Restricted");
   const router = useRouter();
   const [image, setImage] = useState();
   const [message, setMessage] = useState("");

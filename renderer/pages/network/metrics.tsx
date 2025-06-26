@@ -1,15 +1,9 @@
 import styles from "../../styles/Home.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
-import { useContext, useEffect } from "react";
-import { AuthContext } from "../../components/auth/Auth";
+import { useSetTitle } from "../../contexts/TitleContext";
 
 export default function CommunityMetrics() {
-  const { setTitle } = useContext(AuthContext);
-  useEffect(() => {
-    setTitle({
-      title: "Metrics | Network",
-    });
-  }, []);
+  useSetTitle("Metrics | Network");
 
   return (
     <main className={`${styles.main} ${styles.tdhMain}`}>
@@ -165,7 +159,7 @@ export default function CommunityMetrics() {
                     <u>Category A</u>
                   </p>
                   <ol>
-                    <li>A complete set of all Meme Cards: 1.50x</li>
+                    <li>A complete set of all Meme Cards: 1.55x</li>
                     <li>
                       Additional complete set of Meme Cards: 1.02x (up to a
                       maximum of 2 additional sets)
@@ -194,6 +188,7 @@ export default function CommunityMetrics() {
                     <li>SZN8: Complete Set: 1.05x</li>
                     <li>SZN9: Complete Set: 1.05x</li>
                     <li>SZN10: Complete Set: 1.05x</li>
+                    <li>SZN11: Complete Set: 1.05x</li>
                   </ol>
                   <p>
                     <u>Category C</u>

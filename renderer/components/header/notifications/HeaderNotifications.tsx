@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
-import { TitleType, useAuth } from "../../auth/Auth";
+import { useAuth } from "../../auth/Auth";
+import { useTitle } from "../../../contexts/TitleContext";
 
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useUnreadNotifications } from "../../../hooks/useUnreadNotifications";
 
 export default function HeaderNotifications() {
-  const { connectedProfile, setTitle } = useAuth();
+  const { connectedProfile } = useAuth();
+  const { setNotificationCount } = useTitle();
   const router = useRouter();
 
   const [linkHref, setLinkHref] = useState("/my-stream/notifications");
@@ -16,12 +18,7 @@ export default function HeaderNotifications() {
   );
 
   useEffect(() => {
-    setTitle({
-      title: haveUnreadNotifications
-        ? `(${notifications?.unread_count}) Notifications | 6529 CORE`
-        : null,
-      type: TitleType.NOTIFICATION,
-    });
+    setNotificationCount(notifications?.unread_count ?? 0);
 
     if (haveUnreadNotifications && notifications?.notifications?.length) {
       window.notifications.showNotification(
@@ -34,7 +31,11 @@ export default function HeaderNotifications() {
     }
 
     window.notifications.setBadge(notifications?.unread_count ?? 0);
-  }, [haveUnreadNotifications]);
+  }, [
+    notifications?.unread_count,
+    haveUnreadNotifications,
+    setNotificationCount,
+  ]);
 
   useEffect(() => {
     if (router.pathname === "/my-stream/notifications") {

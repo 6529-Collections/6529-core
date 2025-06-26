@@ -2,8 +2,8 @@ import styles from "../../../styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import { fetchUrl } from "../../../services/6529api";
 import { formatAddress } from "../../../helpers/Helpers";
-import { useContext, useEffect } from "react";
-import { AuthContext } from "../../../components/auth/Auth";
+import { useEffect } from "react";
+import { useTitle } from "../../../contexts/TitleContext";
 import { SEIZE_URL, SEIZE_API_URL } from "../../../../constants";
 
 const RememePageComponent = dynamic(
@@ -12,14 +12,12 @@ const RememePageComponent = dynamic(
 );
 
 export default function ReMeme(props: any) {
-  const { setTitle } = useContext(AuthContext);
+  const { setTitle } = useTitle();
   const pageProps = props.pageProps;
 
   useEffect(() => {
-    setTitle({
-      title: `${pageProps.name} | ReMemes`,
-    });
-  }, []);
+    setTitle(`${pageProps.name} | ReMemes | 6529.io`);
+  }, [pageProps.name, setTitle]);
 
   return (
     <main className={styles.main}>
