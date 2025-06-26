@@ -4,6 +4,8 @@ import { TitleType, useAuth } from "../../auth/Auth";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useUnreadNotifications } from "../../../hooks/useUnreadNotifications";
+import { resolveIpfsUrl } from "../../ipfs/IPFSContext";
+import { ApiNotification } from "../../../generated/models/ApiNotification";
 
 export default function HeaderNotifications() {
   const { connectedProfile, setTitle } = useAuth();
@@ -15,6 +17,19 @@ export default function HeaderNotifications() {
     connectedProfile?.handle ?? null
   );
 
+  async function showNotification(
+    notification: ApiNotification,
+    unreadCount: number
+  ) {
+    const relatedPfp = notification.related_identity?.pfp;
+    const newSrc = relatedPfp ? await resolveIpfsUrl(relatedPfp) : "";
+    window.notifications.showNotification(
+      notification.id,
+      newSrc,
+      `(${unreadCount}) unread notification${unreadCount === 1 ? "" : "s"}`
+    );
+  }
+
   useEffect(() => {
     setTitle({
       title: haveUnreadNotifications
@@ -24,12 +39,9 @@ export default function HeaderNotifications() {
     });
 
     if (haveUnreadNotifications && notifications?.notifications?.length) {
-      window.notifications.showNotification(
-        notifications.notifications[0].id,
-        notifications.notifications[0].related_identity?.pfp ?? "",
-        `(${notifications?.unread_count}) unread notification${
-          notifications?.unread_count === 1 ? "" : "s"
-        }`
+      showNotification(
+        notifications.notifications[0],
+        notifications?.unread_count
       );
     }
 
