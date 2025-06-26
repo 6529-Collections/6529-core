@@ -9,7 +9,7 @@ import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "../../react-query-wrapper/ReactQueryWrapper";
-import { AuthContext } from "../../auth/Auth";
+import { useSetTitle } from "../../../contexts/TitleContext";
 import { useIdentity } from "../../../hooks/useIdentity";
 
 export default function UserPageLayout({
@@ -19,7 +19,6 @@ export default function UserPageLayout({
   readonly profile: ApiIdentity;
   readonly children: ReactNode;
 }) {
-  const { setTitle } = useContext(AuthContext);
   const queryClient = useQueryClient();
   const router = useRouter();
   const { setProfile } = useContext(ReactQueryWrapperContext);
@@ -50,12 +49,8 @@ export default function UserPageLayout({
     return formatAddress(handleOrWallet);
   };
 
-  const pagenameFull = `${getTitle()} | 6529 CORE`;
-  useEffect(() => {
-    setTitle({
-      title: pagenameFull,
-    });
-  }, []);
+  const pagenameFull = `${getTitle()} | 6529.io`;
+  useSetTitle(pagenameFull);
 
   const mainAddress = profile?.primary_wallet ?? handleOrWallet.toLowerCase();
   const [isLoadingTabData, setIsLoadingTabData] = useState(false);
