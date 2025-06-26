@@ -3,7 +3,7 @@ import dynamic from "next/dynamic";
 import { GRADIENT_CONTRACT } from "../../constants";
 import { fetchUrl } from "../../services/6529api";
 import { useSetTitle } from "../../contexts/TitleContext";
-import { SEIZE_URL } from "../../../constants";
+import { SEIZE_API_URL, SEIZE_URL } from "../../../constants";
 
 const GradientPageComponent = dynamic(
   () => import("../../components/6529Gradient/GradientPage"),

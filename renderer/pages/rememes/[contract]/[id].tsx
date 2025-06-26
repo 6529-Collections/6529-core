@@ -4,6 +4,7 @@ import { fetchUrl } from "../../../services/6529api";
 import { formatAddress } from "../../../helpers/Helpers";
 import { useEffect } from "react";
 import { useTitle } from "../../../contexts/TitleContext";
+import { SEIZE_URL, SEIZE_API_URL } from "../../../../constants";
 
 const RememePageComponent = dynamic(
   () => import("../../../components/rememes/RememePage"),
