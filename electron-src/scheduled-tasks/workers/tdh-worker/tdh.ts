@@ -64,9 +64,9 @@ export function consolidateTransactions(
 export function getDefaultBoost(): DefaultBoost {
   return {
     memes_card_sets: {
-      available: 0.54,
+      available: 0.59,
       available_info: [
-        "0.50 for Full Collection Set",
+        "0.55 for Full Collection Set",
         "0.02 for each additional set up to 2",
       ],
       acquired: 0,
@@ -129,6 +129,12 @@ export function getDefaultBoost(): DefaultBoost {
     memes_szn10: {
       available: 0.05,
       available_info: ["0.05 for Season 10 Set"],
+      acquired: 0,
+      acquired_info: [],
+    },
+    memes_szn11: {
+      available: 0.05,
+      available_info: ["0.05 for Season 11 Set"],
       acquired: 0,
       acquired_info: [],
     },
@@ -565,14 +571,14 @@ function calculateMemesBoostsCardSets(cardSets: number) {
   let boost = 1;
   const breakdown = getDefaultBoost();
 
-  let cardSetBreakdown = 0.5;
+  let cardSetBreakdown = 0.55;
   const additionalCardSets = cardSets - 1;
   // additional full sets up to 2
   cardSetBreakdown += Math.min(additionalCardSets * 0.02, 0.04);
   boost += cardSetBreakdown;
   breakdown.memes_card_sets.acquired = cardSetBreakdown;
 
-  const acquiredInfo = ["0.50 for Full Collection Set"];
+  const acquiredInfo = ["0.55 for Full Collection Set"];
   if (additionalCardSets === 1) {
     acquiredInfo.push(`0.02 for 1 additional set`);
   } else if (additionalCardSets > 1) {
@@ -607,6 +613,7 @@ function calculateMemesBoostsSeasons(
   const cardSetS8 = hasSeasonSet(8, seasons, memes);
   const cardSetS9 = hasSeasonSet(9, seasons, memes);
   const cardSetS10 = hasSeasonSet(10, seasons, memes);
+  const cardSetS11 = hasSeasonSet(11, seasons, memes);
 
   if (cardSetS1) {
     boost += 0.05;
@@ -672,6 +679,11 @@ function calculateMemesBoostsSeasons(
     boost += 0.05;
     breakdown.memes_szn10.acquired = 0.05;
     breakdown.memes_szn10.acquired_info = ["0.05 for holding Season 10 Set"];
+  }
+  if (cardSetS11) {
+    boost += 0.05;
+    breakdown.memes_szn11.acquired = 0.05;
+    breakdown.memes_szn11.acquired_info = ["0.05 for holding Season 11 Set"];
   }
 
   return {

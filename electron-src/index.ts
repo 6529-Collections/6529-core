@@ -99,7 +99,6 @@ let scheduledWorkers: ScheduledWorker[] = [];
 let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
 let splash: BrowserWindow | null = null;
-let iconPath: string;
 
 let PORT: number;
 
@@ -237,16 +236,8 @@ if (!gotTheLock) {
       app.setAsDefaultProtocolClient(scheme);
     }
 
-    if (isWindows()) {
-      iconPath = path.join(__dirname, "assets", "icon.ico");
-    } else if (isMac()) {
-      iconPath = path.join(__dirname, "assets", "icon.icns");
-    } else {
-      iconPath = path.join(__dirname, "assets", "icon.png");
-    }
-
-    if (isMac()) {
-      app.dock.setIcon(iconPath);
+    if (isMac() && isDev) {
+      app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
     await resolvePorts();
@@ -299,7 +290,7 @@ async function createWindow() {
     return;
   }
 
-  let iconPath;
+  let iconPath: string;
   if (isWindows()) {
     iconPath = path.join(__dirname, "assets", "icon.ico");
   } else if (isMac()) {
