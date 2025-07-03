@@ -5,7 +5,11 @@ import {
   TDH_BLOCKS_TABLE,
   WALLETS_TDH_TABLE,
 } from "../../../../constants";
-import { areEqualAddresses, isNullAddress } from "../../../../shared/helpers";
+import {
+  areEqualAddresses,
+  buildConsolidationKey,
+  isNullAddress,
+} from "../../../../shared/helpers";
 import { Transaction } from "../../../db/entities/ITransaction";
 import {
   ConsolidatedTDH,
@@ -17,6 +21,7 @@ import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { batchSave } from "../../worker-helpers";
 import { getMerkleRoot } from "./tdh-worker.merkle";
+import { Consolidation } from "../../../db/entities/IDelegation";
 
 export async function fetchAllConsolidationAddresses(db: DataSource) {
   const sql = `SELECT wallet FROM (
@@ -30,23 +35,56 @@ export async function fetchAllConsolidationAddresses(db: DataSource) {
 }
 
 export function getConsolidationsSql(wallet: string) {
-  const sql = `SELECT * FROM ${CONSOLIDATIONS_TABLE} 
-    WHERE 
-      (wallet1 = ? OR wallet2 = ?
-      OR wallet1 IN (SELECT wallet2 FROM consolidations WHERE wallet1 = ? AND confirmed = true)
-      OR wallet2 IN (SELECT wallet1 FROM consolidations WHERE wallet2 = ? AND confirmed = true)
-      OR wallet2 IN (SELECT wallet2 FROM consolidations WHERE wallet1 = ? AND confirmed = true)
-      OR wallet1 IN (SELECT wallet1 FROM consolidations WHERE wallet2 = ? AND confirmed = true)
+  const sql = `
+    WITH RECURSIVE wallet_cluster(wallet1, wallet2) AS (
+      -- Seed rows: any row where wallet matches either side
+      SELECT 
+        LOWER(wallet1) AS wallet1, 
+        LOWER(wallet2) AS wallet2
+      FROM ${CONSOLIDATIONS_TABLE}
+      WHERE confirmed = true
+        AND LOWER(?) IN (LOWER(wallet1), LOWER(wallet2))
+
+      UNION
+
+      -- Recursively walk connected edges
+      SELECT 
+        LOWER(c.wallet1) AS wallet1, 
+        LOWER(c.wallet2) AS wallet2
+      FROM ${CONSOLIDATIONS_TABLE} c
+      INNER JOIN wallet_cluster wc
+        ON LOWER(c.wallet1) = wc.wallet2
+        OR LOWER(c.wallet2) = wc.wallet1
+        OR LOWER(c.wallet1) = wc.wallet1
+        OR LOWER(c.wallet2) = wc.wallet2
+      WHERE c.confirmed = true
+    )
+    SELECT DISTINCT
+      LOWER(wallet1) AS wallet1,
+      LOWER(wallet2) AS wallet2,
+      block,
+      created_at
+    FROM ${CONSOLIDATIONS_TABLE}
+    WHERE confirmed = true
+      AND (
+        LOWER(wallet1) IN (
+          SELECT wallet1 FROM wallet_cluster
+          UNION
+          SELECT wallet2 FROM wallet_cluster
+        )
+        OR
+        LOWER(wallet2) IN (
+          SELECT wallet1 FROM wallet_cluster
+          UNION
+          SELECT wallet2 FROM wallet_cluster
+        )
       )
-      AND confirmed = true
-    ORDER BY block DESC`;
+    ORDER BY block DESC
+  `;
 
-  const params = [wallet, wallet, wallet, wallet, wallet, wallet];
+  const params = [wallet.toLowerCase()];
 
-  return {
-    sql,
-    params,
-  };
+  return { sql, params };
 }
 
 export async function retrieveWalletConsolidations(
@@ -61,64 +99,106 @@ export async function retrieveWalletConsolidations(
 export function extractConsolidationWallets(
   consolidations: any[],
   wallet: string
-) {
-  const uniqueWallets: string[] = [];
-  const seenWallets = new Set();
-
-  consolidations.forEach((consolidation) => {
-    if (!seenWallets.has(consolidation.wallet1)) {
-      seenWallets.add(consolidation.wallet1);
-      const shouldAdd = shouldAddConsolidation(
-        uniqueWallets,
-        consolidations,
-        consolidation.wallet1
-      );
-      if (shouldAdd) {
-        uniqueWallets.push(consolidation.wallet1);
-        if (uniqueWallets.length === CONSOLIDATIONS_LIMIT) return;
-      }
-    }
-    if (!seenWallets.has(consolidation.wallet2)) {
-      seenWallets.add(consolidation.wallet2);
-      const shouldAdd = shouldAddConsolidation(
-        uniqueWallets,
-        consolidations,
-        consolidation.wallet2
-      );
-      if (shouldAdd) {
-        uniqueWallets.push(consolidation.wallet2);
-        if (uniqueWallets.length === CONSOLIDATIONS_LIMIT) return;
-      }
-    }
-  });
-
-  if (uniqueWallets.some((w) => areEqualAddresses(w, wallet))) {
-    return uniqueWallets.sort((a, b) => a.localeCompare(b));
+): string[] {
+  const clusters = extractConsolidations(consolidations);
+  const walletCluster = clusters.find((c) =>
+    c.some((w) => areEqualAddresses(w, wallet))
+  );
+  if (walletCluster) {
+    return walletCluster;
   }
-
   return [wallet];
 }
 
-function shouldAddConsolidation(
-  uniqueWallets: any[],
-  consolidations: any[],
-  wallet: string
-) {
-  let hasConsolidationsWithAll = true;
-  uniqueWallets.forEach((w) => {
-    if (
-      !consolidations.some(
-        (c) =>
-          (areEqualAddresses(c.wallet1, w) &&
-            areEqualAddresses(c.wallet2, wallet)) ||
-          (areEqualAddresses(c.wallet2, w) &&
-            areEqualAddresses(c.wallet1, wallet))
-      )
-    ) {
-      hasConsolidationsWithAll = false;
+function extractConsolidations(consolidations: Consolidation[]): string[][] {
+  // Sort by block descending
+  consolidations.sort((a, b) => b.block - a.block);
+
+  const usedWallets = new Set<string>();
+  const clusters: string[][] = [];
+
+  // Create a quick lookup of all direct consolidations
+  const consolidationSet = new Set<string>();
+  for (const c of consolidations) {
+    consolidationSet.add(buildConsolidationKey([c.wallet1, c.wallet2]));
+  }
+
+  // Convert consolidations into a queue
+  const queue = [...consolidations];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+    const { wallet1, wallet2 } = current;
+
+    if (usedWallets.has(wallet1) || usedWallets.has(wallet2)) {
+      continue;
     }
-  });
-  return hasConsolidationsWithAll;
+
+    const cluster = new Set<string>();
+    cluster.add(wallet1);
+    cluster.add(wallet2);
+
+    let changed = true;
+
+    // Keep trying to expand this cluster
+    while (changed && cluster.size < CONSOLIDATIONS_LIMIT) {
+      changed = false;
+
+      for (let i = 0; i < queue.length; i++) {
+        const candidate = queue[i];
+        const { wallet1: w1, wallet2: w2 } = candidate;
+
+        let newWallet: string | null = null;
+
+        if (cluster.has(w1) && !cluster.has(w2) && !usedWallets.has(w2)) {
+          newWallet = w2;
+        } else if (
+          cluster.has(w2) &&
+          !cluster.has(w1) &&
+          !usedWallets.has(w1)
+        ) {
+          newWallet = w1;
+        }
+
+        if (newWallet) {
+          const safeWallet = newWallet.toLowerCase();
+          const allConnectionsExist = Array.from(cluster).every((existing) =>
+            consolidationSet.has(buildConsolidationKey([existing, safeWallet]))
+          );
+
+          if (allConnectionsExist) {
+            cluster.add(safeWallet);
+            queue.splice(i, 1);
+            changed = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // finalize cluster
+    const clusterArray = Array.from(cluster);
+    for (const w of clusterArray) {
+      usedWallets.add(w);
+    }
+    clusters.push(clusterArray);
+  }
+
+  // Any wallets left out entirely? Add them as singletons.
+  const allWallets = new Set<string>();
+  for (const c of consolidations) {
+    allWallets.add(c.wallet1);
+    allWallets.add(c.wallet2);
+  }
+
+  for (const w of Array.from(allWallets)) {
+    if (!usedWallets.has(w)) {
+      clusters.push([w]);
+      usedWallets.add(w);
+    }
+  }
+
+  return clusters;
 }
 
 export async function fetchWalletTransactions(
