@@ -1,10 +1,12 @@
+"use client";
+
 import { Col, Container, Row } from "react-bootstrap";
-import { MEMES_CONTRACT } from "../../constants";
-import { NFT, NFTHistory } from "../../entities/INFT";
+import { MEMES_CONTRACT } from "@/constants";
+import { NFT, NFTHistory } from "@/entities/INFT";
 import { useEffect, useState } from "react";
-import { fetchAllPages } from "../../services/6529api";
-import Timeline from "../timeline/Timeline";
-import { SEIZE_API_URL } from "../../../constants";
+import { fetchAllPages } from "@/services/6529api";
+import Timeline from "@/components/timeline/Timeline";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 export function MemePageTimeline(props: {
   show: boolean;

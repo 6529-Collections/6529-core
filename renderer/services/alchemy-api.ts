@@ -1,6 +1,6 @@
 import { goerli, sepolia } from "wagmi/chains";
 import { NEXTGEN_CHAIN_ID } from "../components/nextGen/nextgen_contracts";
-import { ALCHEMY_API_KEY } from "../../constants";
+import { ALCHEMY_API_KEY } from "../../electron-constants";
 
 const options = { method: "GET", headers: { accept: "application/json" } };
 

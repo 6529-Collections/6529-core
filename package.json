@@ -105,7 +105,7 @@
     "mark.js": "^8.11.1",
     "minidump": "^0.26.0",
     "moment-timezone": "^0.5.46",
-    "next": "15.3.2",
+    "next": "15.3.5",
     "next-redux-wrapper": "^8.1.0",
     "node-cron": "^3.0.3",
     "p-limit": "^6.2.0",
@@ -115,6 +115,7 @@
     "react-bootstrap": "^2.10.4",
     "react-chartjs-2": "^5.2.0",
     "react-dom": "19.1.0",
+    "react-error-boundary": "^6.0.0",
     "react-markdown": "^9.0.1",
     "react-redux": "^9.1.2",
     "react-scroll": "^1.9.0",
@@ -139,8 +140,8 @@
     "typeorm": "^0.3.20",
     "use-debounce": "^10.0.3",
     "uuid": "^10.0.0",
-    "viem": "^2.23.10",
-    "wagmi": "^2.14.13"
+    "viem": "^2.31.3",
+    "wagmi": "^2.15.6"
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3.637.0",
@@ -169,6 +170,7 @@
     "electron-builder": "^24.13.3",
     "eslint": "^8.57.0",
     "eslint-config-next": "^14.2.4",
+    "pino-pretty": "^13.0.0",
     "postcss": "^8.4.38",
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",

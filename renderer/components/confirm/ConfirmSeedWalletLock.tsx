@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";
 import { ethers } from "ethers";

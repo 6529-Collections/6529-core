@@ -1,10 +1,10 @@
 import Head from "next/head";
-import styles from "../../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import { SEIZE_URL } from "../../../../constants";
+import { SEIZE_URL } from "@/electron-constants";
 
 const TDHCalculation = dynamic(
-  () => import("../../../components/core/tdh-calculation/TDHCalculation"),
+  () => import("@/components/core/tdh-calculation/TDHCalculation"),
   {
     ssr: false,
   }

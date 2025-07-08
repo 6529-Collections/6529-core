@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./ETHScanner.module.scss";
 import {
   Container,

@@ -1,10 +1,12 @@
+"use client";
+
 import Tippy from "@tippyjs/react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import React, { memo, useEffect, useState } from "react";
 import StormButton from "./StormButton";
 import CreateDropGifPicker from "./CreateDropGifPicker";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
-import { TENOR_API_KEY } from "../../../constants";
+import { TENOR_API_KEY } from "../../../electron-constants";
 
 interface CreateDropActionsProps {
   readonly isStormMode: boolean;

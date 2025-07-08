@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./AppWallet.module.scss";
 import { useEffect, useState } from "react";
 import { useChainId, useSendTransaction, useSignMessage } from "wagmi";

@@ -1,17 +1,17 @@
-import styles from "../../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
-import { getCommonHeaders } from "../../../helpers/server.helpers";
-import { commonApiFetch } from "../../../services/api/common-api";
-import { NextGenCollection } from "../../../entities/INextgen";
+import { getCommonHeaders } from "@/helpers/server.helpers";
+import { commonApiFetch } from "@/services/api/common-api";
+import { NextGenCollection } from "@/entities/INextgen";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import NextGenNavigationHeader, {
   NextGenView,
-} from "../../../components/nextGen/collections/NextGenNavigationHeader";
+} from "@/components/nextGen/collections/NextGenNavigationHeader";
 import Image from "next/image";
-import { useTitle } from "../../../contexts/TitleContext";
-import { SEIZE_URL } from "../../../../constants";
+import { useTitle } from "@/contexts/TitleContext";
+import { SEIZE_URL } from "@/electron-constants";
 
 const NextGenComponent = dynamic(
   () => import("../../../components/nextGen/collections/NextGen"),
@@ -33,13 +33,14 @@ const NextgenAboutComponent = dynamic(
   { ssr: false }
 );
 
-export default function NextGen(props: any) {
+export default function NextGen(props: {
+  readonly collection: NextGenCollection;
+  readonly view: NextGenView;
+}) {
   const router = useRouter();
-  const collection: NextGenCollection = props.pageProps.collection;
+  const collection = props.collection;
 
-  const [view, setView] = useState<NextGenView | undefined>(
-    props.pageProps.view
-  );
+  const [view, setView] = useState<NextGenView | undefined>(props.view);
 
   const { setTitle } = useTitle();
 

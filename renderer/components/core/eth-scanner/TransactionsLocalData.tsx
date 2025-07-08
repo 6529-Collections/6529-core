@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./ETHScanner.module.scss";
 import { useEffect, useState } from "react";
 import { PaginatedResponseLocal } from "../../../../shared/types";

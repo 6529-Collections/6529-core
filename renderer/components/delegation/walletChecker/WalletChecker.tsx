@@ -1,3 +1,5 @@
+"use client";
+
 import { Fragment, useEffect, useState } from "react";
 import styles from "./WalletChecker.module.scss";
 import { Container, Row, Col, Form, Button, Table } from "react-bootstrap";
@@ -16,10 +18,10 @@ import {
   ALL_USE_CASES,
   SUPPORTED_COLLECTIONS,
   MINTING_USE_CASE,
-} from "../../../pages/delegation/[...section]";
-import { fetchUrl } from "../../../services/6529api";
+} from "@/pages/delegation/[...section]";
+import { fetchUrl } from "@/services/6529api";
 import Address from "../../address/Address";
-import { SEIZE_API_URL } from "../../../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 import {
   faCheck,
   faPlusCircle,

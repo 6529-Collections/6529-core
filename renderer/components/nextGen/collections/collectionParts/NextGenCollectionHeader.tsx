@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "../NextGen.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -5,30 +7,30 @@ import {
   AllowlistType,
   CollectionWithMerkle,
   Status,
-} from "../../nextgen_entities";
+} from "@/components/nextGen/nextgen_entities";
 import Image from "next/image";
 import { NEXTGEN_CHAIN_ID } from "../../nextgen_contracts";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import DateCountdown from "../../../date-countdown/DateCountdown";
-import { fetchUrl } from "../../../../services/6529api";
-import DotLoader from "../../../dotLoader/DotLoader";
-import { NextGenCollection } from "../../../../entities/INextgen";
+import DateCountdown from "@/components/date-countdown/DateCountdown";
+import { fetchUrl } from "@/services/6529api";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { NextGenCollection } from "@/entities/INextgen";
 import {
   formatNameForUrl,
   getOpenseaLink,
   getStatusFromDates,
   useCollectionMintCount,
 } from "../../nextgen_helpers";
-import { isEmptyObject, numberWithCommas } from "../../../../helpers/Helpers";
+import { isEmptyObject, numberWithCommas } from "@/helpers/Helpers";
 import { DistributionLink } from "../NextGen";
-import { getCommonHeaders } from "../../../../helpers/server.helpers";
-import { commonApiFetch } from "../../../../services/api/common-api";
-import { useSetTitle } from "../../../../contexts/TitleContext";
-import useCapacitor from "../../../../hooks/useCapacitor";
+import { getCommonHeaders } from "@/helpers/server.helpers";
+import { commonApiFetch } from "@/services/api/common-api";
+import { useSetTitle } from "@/contexts/TitleContext";
+import useCapacitor from "@/hooks/useCapacitor";
 import { faArrowCircleLeft } from "@fortawesome/free-solid-svg-icons";
-import { useCookieConsent } from "../../../cookies/CookieConsentContext";
-import { SEIZE_API_URL } from "../../../../../constants";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 interface Props {
   collection: NextGenCollection;

@@ -1,11 +1,11 @@
-import styles from "../../styles/Home.module.scss";
-import { useSetTitle } from "../../contexts/TitleContext";
+import styles from "@/styles/Home.module.scss";
+import { useSetTitle } from "@/contexts/TitleContext";
 import dynamic from "next/dynamic";
-import { useAuth } from "../../components/auth/Auth";
-import { SEIZE_URL } from "../../../constants";
+import { useAuth } from "@/components/auth/Auth";
+import { SEIZE_URL } from "@/electron-constants";
 
 const GradientsComponent = dynamic(
-  () => import("../../components/6529Gradient/6529Gradient"),
+  () => import("@/components/6529Gradient/6529Gradient"),
   { ssr: false }
 );
 

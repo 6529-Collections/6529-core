@@ -1,20 +1,22 @@
-import { NFT } from "../../entities/INFT";
+"use client";
+
+import { NFT } from "@/entities/INFT";
 import styles from "./Rememes.module.scss";
 import { Row, Col, Form, Container, Button, Dropdown } from "react-bootstrap";
 import { Nft, NftContract } from "./alchemy-sdk-types";
-import { OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
+import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
 import { useEffect, useState } from "react";
 import {
   areEqualAddresses,
   formatAddress,
   isValidEthAddress,
-} from "../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import { useEnsName } from "wagmi";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import Image from "next/image";
-import { postData } from "../../services/6529api";
-import { SEIZE_API_URL } from "../../../constants";
+import { postData } from "@/services/6529api";
+import { SEIZE_API_URL } from "@/electron-constants";
 import {
   faCheckCircle,
   faPlusCircle,

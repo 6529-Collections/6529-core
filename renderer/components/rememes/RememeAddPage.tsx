@@ -1,22 +1,24 @@
+"use client";
+
 import styles from "./Rememes.module.scss";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { NFT } from "../../entities/INFT";
-import { fetchUrl, postData } from "../../services/6529api";
+import { NFT } from "@/entities/INFT";
+import { fetchUrl, postData } from "@/services/6529api";
 import RememeAddComponent, { ProcessedRememe } from "./RememeAddComponent";
 import { useSignMessage } from "wagmi";
-import { DBResponse } from "../../entities/IDBResponse";
-import { ConsolidatedTDH } from "../../entities/ITDH";
-import { areEqualAddresses, numberWithCommas } from "../../helpers/Helpers";
+import { DBResponse } from "@/entities/IDBResponse";
+import { ConsolidatedTDH } from "@/entities/ITDH";
+import { areEqualAddresses, numberWithCommas } from "@/helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useAuth } from "../auth/Auth";
-import { commonApiFetch } from "../../services/api/common-api";
-import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
-import { SEIZE_API_URL } from "../../../constants";
+import { commonApiFetch } from "@/services/api/common-api";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 import Link from "next/link";
-import HeaderUserConnect from "../header/user/HeaderUserConnect";
-import { useSeizeSettings } from "../../contexts/SeizeSettingsContext";
+import HeaderUserConnect from "@/components/header/user/HeaderUserConnect";
+import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
 import {
   faCheckCircle,
   faTimesCircle,

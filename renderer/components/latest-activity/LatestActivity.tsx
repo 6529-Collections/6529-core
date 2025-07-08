@@ -1,22 +1,27 @@
+"use client";
+
 import styles from "./LatestActivity.module.scss";
-import homeStyles from "../../styles/Home.module.scss";
+import homeStyles from "@/styles/Home.module.scss";
 import { useState, useEffect } from "react";
 import { Container, Row, Col, Table, Dropdown } from "react-bootstrap";
-import { DBResponse } from "../../entities/IDBResponse";
-import { Transaction } from "../../entities/ITransaction";
-import Pagination from "../pagination/Pagination";
+import { DBResponse } from "@/entities/IDBResponse";
+import { Transaction } from "@/entities/ITransaction";
+import Pagination from "@/components/pagination/Pagination";
 import LatestActivityRow from "./LatestActivityRow";
-import { NFT } from "../../entities/INFT";
-import { areEqualAddresses, isNextgenContract } from "../../helpers/Helpers";
-import { fetchAllPages, fetchUrl } from "../../services/6529api";
-import DotLoader from "../dotLoader/DotLoader";
-import { commonApiFetch } from "../../services/api/common-api";
-import { NextGenCollection } from "../../entities/INextgen";
-import { normalizeNextgenTokenID } from "../nextGen/nextgen_helpers";
-import { GRADIENT_CONTRACT, MEMES_CONTRACT } from "../../constants";
-import { NEXTGEN_CORE, NEXTGEN_CHAIN_ID } from "../nextGen/nextgen_contracts";
-import useIsMobileScreen from "../../hooks/isMobileScreen";
-import { SEIZE_API_URL } from "../../../constants";
+import { NFT } from "@/entities/INFT";
+import { areEqualAddresses, isNextgenContract } from "@/helpers/Helpers";
+import { fetchAllPages, fetchUrl } from "@/services/6529api";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { commonApiFetch } from "@/services/api/common-api";
+import { NextGenCollection } from "@/entities/INextgen";
+import { normalizeNextgenTokenID } from "@/components/nextGen/nextgen_helpers";
+import { GRADIENT_CONTRACT, MEMES_CONTRACT } from "@/constants";
+import {
+  NEXTGEN_CORE,
+  NEXTGEN_CHAIN_ID,
+} from "@/components/nextGen/nextgen_contracts";
+import useIsMobileScreen from "@/hooks/isMobileScreen";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 interface Props {
   page: number;

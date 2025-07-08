@@ -1,3 +1,5 @@
+"use client";
+
 import { RateChangeType } from "./DropListItemRateGive";
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../../../../auth/Auth";

@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./ETHScanner.module.scss";
 import { useCallback, useRef, useState } from "react";
 import { Modal, Button } from "react-bootstrap";

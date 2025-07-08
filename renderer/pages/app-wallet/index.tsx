@@ -1,7 +1,7 @@
 import Head from "next/head";
-import { SEIZE_URL } from "../../../constants";
-import { getCommonHeaders } from "../../helpers/server.helpers";
-import { commonApiFetch } from "../../services/api/common-api";
+import { SEIZE_URL } from "@/electron-constants";
+import { getCommonHeaders } from "@/helpers/server.helpers";
+import { commonApiFetch } from "@/services/api/common-api";
 import dynamic from "next/dynamic";
 
 const AppWalletComponent = dynamic(

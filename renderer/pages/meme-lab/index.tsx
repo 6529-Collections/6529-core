@@ -1,13 +1,12 @@
-import styles from "../../styles/Home.module.scss";
-import { useSetTitle } from "../../contexts/TitleContext";
+import styles from "@/styles/Home.module.scss";
+import { useSetTitle } from "@/contexts/TitleContext";
 import dynamic from "next/dynamic";
-import { useAuth } from "../../components/auth/Auth";
-import { SEIZE_URL } from "../../../constants";
+import { useAuth } from "@/components/auth/Auth";
+import { SEIZE_URL } from "@/electron-constants";
 
-const MemeLabComponent = dynamic(
-  () => import("../../components/memelab/MemeLab"),
-  { ssr: false }
-);
+const MemeLabComponent = dynamic(() => import("@/components/memelab/MemeLab"), {
+  ssr: false,
+});
 
 export default function MemeLab() {
   useSetTitle("Meme Lab | Collections");

@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";

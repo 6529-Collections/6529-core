@@ -36,19 +36,6 @@
   opacity: 0.75;
 }
 
-.pageNotFound {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  padding-top: 100px;
-
-  img {
-    width: 100px;
-    fill: white;
-  }
-}
-
 .hideWidget {
   border: 1px solid white;
   background-color: transparent;

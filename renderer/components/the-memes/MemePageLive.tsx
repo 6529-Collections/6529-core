@@ -1,31 +1,33 @@
+"use client";
+
 import styles from "./TheMemes.module.scss";
 import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
-import { OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
-import { NFT, MemesExtendedData, Rememe } from "../../entities/INFT";
+import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
+import { NFT, MemesExtendedData, Rememe } from "@/entities/INFT";
 import {
   areEqualAddresses,
   formatAddress,
   numberWithCommas,
   printMintDate,
-} from "../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
-import { DBResponse } from "../../entities/IDBResponse";
-import { fetchUrl } from "../../services/6529api";
-import RememeImage from "../nft-image/RememeImage";
-import Pagination from "../pagination/Pagination";
-import { RememeSort } from "../rememes/Rememes";
+import { DBResponse } from "@/entities/IDBResponse";
+import { fetchUrl } from "@/services/6529api";
+import RememeImage from "@/components/nft-image/RememeImage";
+import Pagination from "@/components/pagination/Pagination";
+import { RememeSort } from "@/components/rememes/Rememes";
 import Tippy from "@tippyjs/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import ArtistProfileHandle from "./ArtistProfileHandle";
-import { NftPageStats } from "../nftAttributes/NftStats";
-import { printMemeReferences } from "../rememes/RememePage";
-import { SEIZE_API_URL } from "../../../constants";
-import useCapacitor from "../../hooks/useCapacitor";
-import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+import { NftPageStats } from "@/components/nftAttributes/NftStats";
+import { printMemeReferences } from "@/components/rememes/RememePage";
+import { SEIZE_API_URL } from "@/electron-constants";
+import useCapacitor from "@/hooks/useCapacitor";
+import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import { faFire, faRefresh } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
-import { useCookieConsent } from "../cookies/CookieConsentContext";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 
 const REMEMES_PAGE_SIZE = 20;
 

@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./AppWallet.module.scss";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useState } from "react";

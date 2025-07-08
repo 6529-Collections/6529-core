@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useRef, useState, useEffect } from "react";
 import { ApiWave } from "../../../generated/models/ApiWave";
 import { AnimatePresence, motion } from "framer-motion";

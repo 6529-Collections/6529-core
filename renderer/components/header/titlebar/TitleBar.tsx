@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./TitleBar.module.scss";
 import {
   faAnglesUp,
@@ -10,14 +12,14 @@ import {
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
-import ConfirmClose from "../../confirm/ConfirmClose";
+import ConfirmClose from "@/components/confirm/ConfirmClose";
 import { useRouter } from "next/router";
 import TooltipButton from "./TooltipButton";
 import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
-import { SEIZE_URL } from "../../../../constants";
-import { useSearch } from "../../../contexts/SearchContext";
+import { SEIZE_URL } from "@/electron-constants";
+import { useSearch } from "@/contexts/SearchContext";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);

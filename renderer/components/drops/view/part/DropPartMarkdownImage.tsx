@@ -1,3 +1,5 @@
+"use client";
+
 import { faExpand, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";

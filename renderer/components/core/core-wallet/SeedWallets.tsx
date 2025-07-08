@@ -1,3 +1,5 @@
+"use client"
+
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";

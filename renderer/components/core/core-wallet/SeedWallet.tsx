@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./SeedWallet.module.scss";
 import {
   faCircleArrowLeft,
@@ -19,7 +21,7 @@ import { useToast } from "../../../contexts/ToastContext";
 import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
 import { useRouter } from "next/router";
 import Link from "next/link";
-import { MNEMONIC_NA } from "../../../../constants";
+import { MNEMONIC_NA } from "../../../../electron-constants";
 import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import {

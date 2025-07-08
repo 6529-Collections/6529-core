@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ApiIdentity } from "../../../../generated/models/ApiIdentity";
 import { formatNumberWithCommas } from "../../../../helpers/Helpers";

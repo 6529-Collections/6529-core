@@ -1,3 +1,5 @@
+"use client"
+
 import { Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
 import DotLoader from "../../dotLoader/DotLoader";

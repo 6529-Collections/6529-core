@@ -1,14 +1,11 @@
 import Head from "next/head";
-import styles from "../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import { SEIZE_URL } from "../../../constants";
+import { SEIZE_URL } from "@/electron-constants";
 
-const AppInfo = dynamic(
-  () => import("../../components/core/app-info/AppInfo"),
-  {
-    ssr: false,
-  }
-);
+const AppInfo = dynamic(() => import("@/components/core/app-info/AppInfo"), {
+  ssr: false,
+});
 
 export default function AppInfoPage() {
   return (

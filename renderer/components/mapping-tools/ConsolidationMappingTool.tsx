@@ -1,11 +1,13 @@
+"use client";
+
 import styles from "./MappingTool.module.scss";
 import { Form, Row, Col, Button, Container } from "react-bootstrap";
 import { useEffect, useRef, useState } from "react";
-import { fetchAllPages } from "../../services/6529api";
-import { Consolidation } from "../../entities/IDelegation";
-import { areEqualAddresses } from "../../helpers/Helpers";
+import { fetchAllPages } from "@/services/6529api";
+import { Consolidation } from "@/entities/IDelegation";
+import { areEqualAddresses } from "@/helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SEIZE_API_URL } from "../../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { faFileUpload } from "@fortawesome/free-solid-svg-icons";
 
 const csvParser = require("csv-parser");

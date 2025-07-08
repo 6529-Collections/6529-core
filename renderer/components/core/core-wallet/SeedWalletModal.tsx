@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./SeedWallet.module.scss";
 import { useCallback, useRef, useState } from "react";
 import { Modal, Button } from "react-bootstrap";

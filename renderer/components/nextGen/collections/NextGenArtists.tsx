@@ -1,11 +1,13 @@
+"use client";
+
 import { Container, Row, Col } from "react-bootstrap";
 import { useEffect, useState } from "react";
-import { DBResponse } from "../../../entities/IDBResponse";
-import { fetchUrl } from "../../../services/6529api";
-import { NextGenCollection } from "../../../entities/INextgen";
+import { DBResponse } from "@/entities/IDBResponse";
+import { fetchUrl } from "@/services/6529api";
+import { NextGenCollection } from "@/entities/INextgen";
 import NextGenCollectionArtist from "./collectionParts/NextGenCollectionArtist";
-import { areEqualAddresses } from "../../../helpers/Helpers";
-import { SEIZE_API_URL } from "../../../../constants";
+import { areEqualAddresses } from "@/helpers/Helpers";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 export default function NextGenArtists() {
   const [artistCollections, setArtistCollections] = useState<

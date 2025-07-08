@@ -1,6 +1,6 @@
 import GifPicker, { Theme } from "gif-picker-react";
 import MobileWrapperDialog from "../mobile-wrapper-dialog/MobileWrapperDialog";
-import { TENOR_API_KEY } from "../../../constants";
+import { TENOR_API_KEY } from "../../../electron-constants";
 
 export default function CreateDropGifPicker({
   show,

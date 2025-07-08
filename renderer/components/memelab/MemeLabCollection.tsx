@@ -1,26 +1,28 @@
+"use client";
+
 import styles from "./MemeLab.module.scss";
 
 import { useContext, useEffect, useState } from "react";
 import { Container, Row, Col } from "react-bootstrap";
-import { LabNFT, LabExtendedData, VolumeType } from "../../entities/INFT";
-import { addProtocol } from "../../helpers/Helpers";
+import { LabNFT, LabExtendedData, VolumeType } from "@/entities/INFT";
+import { addProtocol } from "@/helpers/Helpers";
 import { useRouter } from "next/router";
-import { fetchAllPages } from "../../services/6529api";
-import { NftOwner } from "../../entities/IOwner";
-import { SortDirection } from "../../entities/ISort";
+import { fetchAllPages } from "@/services/6529api";
+import { NftOwner } from "@/entities/IOwner";
+import { SortDirection } from "@/entities/ISort";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import NFTImage from "../nft-image/NFTImage";
-import { MEMES_CONTRACT } from "../../constants";
-import { AuthContext } from "../auth/Auth";
-import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
+import NFTImage from "@/components/nft-image/NFTImage";
+import { MEMES_CONTRACT } from "@/constants";
+import { AuthContext } from "@/components/auth/Auth";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
 import {
   getInitialRouterValues,
   printNftContent,
   printSortButtons,
   sortChanged,
 } from "./MemeLab";
-import { MemeLabSort } from "../../enums";
-import { SEIZE_API_URL } from "../../../constants";
+import { MemeLabSort } from "@/enums";
+import { SEIZE_API_URL } from "@/electron-constants";
 import {
   faChevronCircleDown,
   faChevronCircleUp,

@@ -1,16 +1,18 @@
+"use client";
+
 import styles from "./TheMemes.module.scss";
 import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
-import { NFT } from "../../entities/INFT";
-import { numberWithCommas } from "../../helpers/Helpers";
+import { NFT } from "@/entities/INFT";
+import { numberWithCommas } from "@/helpers/Helpers";
 import { useEffect, useState } from "react";
-import { TypeFilter } from "../latest-activity/LatestActivity";
-import LatestActivityRow from "../latest-activity/LatestActivityRow";
-import { MEMES_CONTRACT } from "../../constants";
-import { DBResponse } from "../../entities/IDBResponse";
-import { fetchUrl } from "../../services/6529api";
-import { Transaction } from "../../entities/ITransaction";
-import Pagination from "../pagination/Pagination";
-import { SEIZE_API_URL } from "../../../constants";
+import { TypeFilter } from "@/components/latest-activity/LatestActivity";
+import LatestActivityRow from "@/components/latest-activity/LatestActivityRow";
+import { MEMES_CONTRACT } from "@/constants";
+import { DBResponse } from "@/entities/IDBResponse";
+import { fetchUrl } from "@/services/6529api";
+import { Transaction } from "@/entities/ITransaction";
+import Pagination from "@/components/pagination/Pagination";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 export function MemePageActivity(props: {
   show: boolean;

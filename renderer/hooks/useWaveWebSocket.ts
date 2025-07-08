@@ -1,6 +1,8 @@
+"use client";
+
 import { useEffect, useRef, useState } from "react";
-import { WsMessageType } from "../helpers/Types";
-import { SEIZE_API_URL, SEIZE_WS_ENDPOINT } from "../../constants";
+import { WsMessageType } from "@/helpers/Types";
+import { SEIZE_API_URL, SEIZE_WS_ENDPOINT } from "@/electron-constants";
 
 interface UseWaveWebSocketResult {
   socket: WebSocket | null;

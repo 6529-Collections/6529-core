@@ -1,16 +1,18 @@
+"use client";
+
 import styles from "./Rememes.module.scss";
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Container, Row, Col, Table } from "react-bootstrap";
-import { DBResponse } from "../../entities/IDBResponse";
-import { NFT, Rememe } from "../../entities/INFT";
-import { fetchAllPages, fetchUrl } from "../../services/6529api";
-import RememeImage from "../nft-image/RememeImage";
+import { DBResponse } from "@/entities/IDBResponse";
+import { NFT, Rememe } from "@/entities/INFT";
+import { fetchAllPages, fetchUrl } from "@/services/6529api";
+import RememeImage from "@/components/nft-image/RememeImage";
 import { useEnsName } from "wagmi";
-import Address from "../address/Address";
-import { MEMES_CONTRACT, OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
-import NFTImage from "../nft-image/NFTImage";
+import Address from "@/components/address/Address";
+import { MEMES_CONTRACT, OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
+import NFTImage from "@/components/nft-image/NFTImage";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   areEqualAddresses,
@@ -20,16 +22,16 @@ import {
   numberWithCommas,
   parseIpfsUrl,
   parseNftDescriptionToHtml,
-} from "../../helpers/Helpers";
-import NFTAttributes from "../nftAttributes/NFTAttributes";
-import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import DotLoader from "../dotLoader/DotLoader";
-import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
-import { SEIZE_API_URL } from "../../../constants";
-import useCapacitor from "../../hooks/useCapacitor";
-import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+} from "@/helpers/Helpers";
+import NFTAttributes from "@/components/nftAttributes/NFTAttributes";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import ArtistProfileHandle from "@/components/the-memes/ArtistProfileHandle";
+import { SEIZE_API_URL } from "@/electron-constants";
+import useCapacitor from "@/hooks/useCapacitor";
+import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import { faExternalLink, faGlobe } from "@fortawesome/free-solid-svg-icons";
-import { useCookieConsent } from "../cookies/CookieConsentContext";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 
 interface Props {
   contract: string;

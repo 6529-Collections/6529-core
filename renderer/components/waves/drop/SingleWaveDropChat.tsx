@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useMemo, useRef, useState } from "react";
 import { ApiDrop, ApiWave } from "../../../generated/models/ObjectSerializer";
 import useDeviceInfo from "../../../hooks/useDeviceInfo";

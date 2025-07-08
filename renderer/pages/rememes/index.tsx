@@ -1,17 +1,16 @@
-import styles from "../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import React from "react";
-import { useSetTitle } from "../../contexts/TitleContext";
-import { SEIZE_URL } from "../../../constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { SEIZE_URL } from "@/electron-constants";
 
 interface Props {
   meme_id?: number;
 }
 
-const RememesComponent = dynamic(
-  () => import("../../components/rememes/Rememes"),
-  { ssr: false }
-);
+const RememesComponent = dynamic(() => import("@/components/rememes/Rememes"), {
+  ssr: false,
+});
 
 export default function ReMemes(props: Readonly<Props>) {
   useSetTitle("ReMemes | Collections");

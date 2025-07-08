@@ -1,7 +1,9 @@
+"use client";
+
 import React, { useState } from "react";
-import { ApiDrop } from "../../../generated/models/ApiDrop";
+import { ApiDrop } from "@/generated/models/ApiDrop";
 import { Tooltip } from "react-tooltip";
-import { SEIZE_URL } from "../../../../constants";
+import { SEIZE_URL } from "@/electron-constants";
 
 interface WaveDropActionsCopyLinkProps {
   readonly drop: ApiDrop;

@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./TitleBar.module.scss";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

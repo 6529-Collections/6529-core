@@ -1,8 +1,10 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Table } from "react-bootstrap";
-import { DBResponse } from "../../entities/IDBResponse";
-import { fetchUrl } from "../../services/6529api";
-import { GlobalTDHHistory } from "../../entities/ITDH";
+import { DBResponse } from "@/entities/IDBResponse";
+import { fetchUrl } from "@/services/6529api";
+import { GlobalTDHHistory } from "@/entities/ITDH";
 import { Bar } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -14,8 +16,8 @@ import {
   Legend,
   BarElement,
 } from "chart.js";
-import { numberWithCommas } from "../../helpers/Helpers";
-import { SEIZE_API_URL } from "../../../constants";
+import { numberWithCommas } from "@/helpers/Helpers";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 ChartJS.register(
   CategoryScale,

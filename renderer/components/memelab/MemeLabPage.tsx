@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "./MemeLab.module.scss";
 
 import { Fragment, useEffect, useState } from "react";
@@ -10,13 +12,9 @@ import {
   Carousel,
   Dropdown,
 } from "react-bootstrap";
-import {
-  MEMELAB_CONTRACT,
-  MEMES_CONTRACT,
-  NULL_ADDRESS,
-} from "../../constants";
-import { DBResponse } from "../../entities/IDBResponse";
-import { LabNFT, LabExtendedData, NFT, NFTHistory } from "../../entities/INFT";
+import { MEMELAB_CONTRACT, MEMES_CONTRACT, NULL_ADDRESS } from "@/constants";
+import { DBResponse } from "@/entities/IDBResponse";
+import { LabNFT, LabExtendedData, NFT, NFTHistory } from "@/entities/INFT";
 import {
   areEqualAddresses,
   enterArtFullScreen,
@@ -25,40 +23,40 @@ import {
   addProtocol,
   printMintDate,
   parseNftDescriptionToHtml,
-} from "../../helpers/Helpers";
-import Download from "../download/Download";
-import LatestActivityRow from "../latest-activity/LatestActivityRow";
-import { Transaction } from "../../entities/ITransaction";
+} from "@/helpers/Helpers";
+import Download from "@/components/download/Download";
+import LatestActivityRow from "@/components/latest-activity/LatestActivityRow";
+import { Transaction } from "@/entities/ITransaction";
 import { useRouter } from "next/router";
-import { TDHMetrics } from "../../entities/ITDH";
-import { fetchAllPages, fetchUrl } from "../../services/6529api";
-import Pagination from "../pagination/Pagination";
-import { TypeFilter } from "../latest-activity/LatestActivity";
-import NFTImage from "../nft-image/NFTImage";
-import MemeLabLeaderboard from "../leaderboard/MemeLabLeaderboard";
-import Timeline from "../timeline/Timeline";
-import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
+import { TDHMetrics } from "@/entities/ITDH";
+import { fetchAllPages, fetchUrl } from "@/services/6529api";
+import Pagination from "@/components/pagination/Pagination";
+import { TypeFilter } from "@/components/latest-activity/LatestActivity";
+import NFTImage from "@/components/nft-image/NFTImage";
+import MemeLabLeaderboard from "@/components/leaderboard/MemeLabLeaderboard";
+import Timeline from "@/components/timeline/Timeline";
+import ArtistProfileHandle from "@/components/the-memes/ArtistProfileHandle";
 import {
   getFileTypeFromMetadata,
   getDimensionsFromMetadata,
-} from "../../helpers/nft.helpers";
-import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import NFTAttributes from "../nftAttributes/NFTAttributes";
-import { NftPageStats } from "../nftAttributes/NftStats";
-import { printMemeReferences } from "../rememes/RememePage";
-import useCapacitor from "../../hooks/useCapacitor";
-import { SEIZE_API_URL } from "../../../constants";
-import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+} from "@/helpers/nft.helpers";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
+import NFTAttributes from "@/components/nftAttributes/NFTAttributes";
+import { NftPageStats } from "@/components/nftAttributes/NftStats";
+import { printMemeReferences } from "@/components/rememes/RememePage";
+import useCapacitor from "@/hooks/useCapacitor";
+import { SEIZE_API_URL } from "@/electron-constants";
+import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import { faExpandAlt, faFire } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import {
   getMemeTabTitle,
   MEME_FOCUS,
   MEME_TABS,
-} from "../the-memes/MemeShared";
-import { useSetTitle } from "../../contexts/TitleContext";
-import NftNavigation from "../nft-navigation/NftNavigation";
-import { useCookieConsent } from "../cookies/CookieConsentContext";
+} from "@/components/the-memes/MemeShared";
+import { useSetTitle } from "@/contexts/TitleContext";
+import NftNavigation from "@/components/nft-navigation/NftNavigation";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 
 const ACTIVITY_PAGE_SIZE = 25;
 
@@ -1205,7 +1203,7 @@ export default function LabPage(props: Readonly<Props>) {
             {nftMeta && nft && (
               <>
                 <Row className="pt-2">
-                  <Col>
+                  <Col className="d-flex">
                     <NftNavigation
                       nftId={nft.id}
                       path="/meme-lab"

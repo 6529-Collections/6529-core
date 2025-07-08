@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./HeaderUser.module.scss";
 import React, { useEffect, useState } from "react";
 import { Modal, Button, Accordion } from "react-bootstrap";

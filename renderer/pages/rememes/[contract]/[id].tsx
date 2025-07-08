@@ -1,27 +1,30 @@
-import styles from "../../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import { fetchUrl } from "../../../services/6529api";
-import { formatAddress } from "../../../helpers/Helpers";
+import { fetchUrl } from "@/services/6529api";
+import { formatAddress } from "@/helpers/Helpers";
 import { useEffect } from "react";
-import { useTitle } from "../../../contexts/TitleContext";
-import { SEIZE_URL, SEIZE_API_URL } from "../../../../constants";
+import { useTitle } from "@/contexts/TitleContext";
+import { SEIZE_URL, SEIZE_API_URL } from "@/electron-constants";
 
 const RememePageComponent = dynamic(
   () => import("../../../components/rememes/RememePage"),
   { ssr: false }
 );
 
-export default function ReMeme(props: any) {
+export default function ReMeme(props: {
+  readonly name: string;
+  readonly contract: string;
+  readonly id: string;
+}) {
   const { setTitle } = useTitle();
-  const pageProps = props.pageProps;
 
   useEffect(() => {
-    setTitle(`${pageProps.name} | ReMemes | 6529.io`);
-  }, [pageProps.name, setTitle]);
+    setTitle(`${props.name} | ReMemes | 6529.io`);
+  }, [props.name, setTitle]);
 
   return (
     <main className={styles.main}>
-      <RememePageComponent contract={pageProps.contract} id={pageProps.id} />
+      <RememePageComponent contract={props.contract} id={props.id} />
     </main>
   );
 }

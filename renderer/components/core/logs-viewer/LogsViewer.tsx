@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./LogsViewer.module.scss";
 import React, { useEffect, useState, useRef, UIEvent } from "react";
 import { LogLine } from "../../../../shared/types";

@@ -1,11 +1,10 @@
+"use client";
+
 import styles from "../../NextGen.module.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import { Container, Row, Col, Form, Button, Table } from "react-bootstrap";
-import {
-  areEqualAddresses,
-  getNetworkName,
-} from "../../../../../helpers/Helpers";
+import { areEqualAddresses, getNetworkName } from "@/helpers/Helpers";
 import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
 import {
   NEXTGEN_CHAIN,
@@ -18,20 +17,20 @@ import {
   ProofResponse,
   Status,
   TokensPerAddress,
-} from "../../../nextgen_entities";
+} from "@/components/nextGen/nextgen_entities";
 import { useChainId, useWriteContract } from "wagmi";
 import { useState, useEffect } from "react";
-import { fetchUrl } from "../../../../../services/6529api";
-import { getNftsForContractAndOwner } from "../../../../../services/alchemy-api";
+import { fetchUrl } from "@/services/6529api";
+import { getNftsForContractAndOwner } from "@/services/alchemy-api";
 import {
   getStatusFromDates,
   useMintSharedState,
 } from "../../../nextgen_helpers";
 import { NextGenMintingFor } from "./NextGenMintShared";
-import { NextGenCollection } from "../../../../../entities/INextgen";
+import { NextGenCollection } from "@/entities/INextgen";
 import { Spinner } from "./NextGenMint";
-import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
-import { SEIZE_API_URL } from "../../../../../../constants";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 interface Props {

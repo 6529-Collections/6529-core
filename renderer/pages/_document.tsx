@@ -6,7 +6,7 @@ import Document, {
   DocumentContext,
   DocumentProps,
 } from "next/document";
-import { SEIZE_API_URL } from "../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 interface MyDocumentProps extends DocumentProps {
   pathname: string;
