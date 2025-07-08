@@ -29,6 +29,7 @@ import { SeedWalletProvider } from "@/contexts/SeedWalletContext";
 import { ToastProvider } from "@/contexts/ToastContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import TitleBarWrapper from "@/TitleBarWrapper";
+import AnchorInterceptorSetup from "./AnchorInterceptorSetup";
 
 export default function Providers({
   children,
@@ -39,6 +40,7 @@ export default function Providers({
     <QueryClientSetup>
       <WagmiSetup>
         <CapacitorSetup />
+        <AnchorInterceptorSetup />
         <IpfsImageSetup />
         <ReactQueryWrapper>
           <ModalStateProvider>

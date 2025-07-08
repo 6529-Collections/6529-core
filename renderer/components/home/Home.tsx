@@ -30,6 +30,7 @@ import { NftPageStats } from "@/components/nftAttributes/NftStats";
 import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import { formatNameForUrl } from "@/components/nextGen/nextgen_helpers";
 import NextGenCollectionSlideshow from "@/components/nextGen/collections/collectionParts/NextGenCollectionSlideshow";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 const NFTImage = dynamic(() => import("@/components/nft-image/NFTImage"), {
   ssr: false,
@@ -93,7 +94,7 @@ export default function Home({
   useEffect(() => {
     if (connectedProfile?.consolidation_key && featuredNft) {
       fetchUrl(
-        `${process.env.API_ENDPOINT}/api/nft-owners/consolidation/${connectedProfile?.consolidation_key}?contract=${featuredNft.contract}&token_id=${featuredNft.id}`
+        `${SEIZE_API_URL}/api/nft-owners/consolidation/${connectedProfile?.consolidation_key}?contract=${featuredNft.contract}&token_id=${featuredNft.id}`
       ).then((response: DBResponse) => {
         const balanceObject: NftOwner = response.data[0];
         setNftBalance(balanceObject?.balance ?? 0);

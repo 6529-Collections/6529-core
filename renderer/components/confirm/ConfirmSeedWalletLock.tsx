@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";
@@ -13,11 +13,9 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
-import { SeedWalletRequest } from "../../../shared/types";
-import { useToast } from "../../contexts/ToastContext";
-import { on } from "events";
-import { useModalState } from "../../contexts/ModalStateContext";
-import { formatAddress } from "../../helpers/Helpers";
+import { SeedWalletRequest } from "@/shared/types";
+import { useToast } from "@/contexts/ToastContext";
+import { useModalState } from "@/contexts/ModalStateContext";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
 

@@ -1,5 +1,5 @@
 import { Entity, PrimaryColumn, Column, CreateDateColumn } from "typeorm";
-import { SEED_WALLET_TABLE } from "../../../constants";
+import { SEED_WALLET_TABLE } from "../../../electron-constants";
 
 @Entity({ name: SEED_WALLET_TABLE })
 export class SeedWallet {

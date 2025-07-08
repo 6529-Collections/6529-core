@@ -9,7 +9,7 @@ import {
 import {
   TRANSACTIONS_BLOCKS_TABLE,
   TRANSACTIONS_TABLE,
-} from "../../../constants";
+} from "../../../electron-constants";
 import { SingletonBlockEntity } from "./IBlock";
 
 export class BaseTransaction {

@@ -9,6 +9,7 @@ import React, {
   useMemo,
 } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
+import { SEIZE_URL } from "@/electron-constants";
 
 type TitleContextType = {
   title: string;
@@ -21,7 +22,7 @@ type TitleContextType = {
 
 const TitleContext = createContext<TitleContextType | undefined>(undefined);
 
-export const DEFAULT_TITLE = process.env.BASE_ENDPOINT?.includes("staging")
+export const DEFAULT_TITLE = SEIZE_URL?.includes("staging")
   ? "6529 Staging"
   : "6529.io";
 

@@ -27,7 +27,7 @@ import {
   MEME_8_BURN_TRANSACTION,
   MEME_8_EDITION_BURN_ADJUSTMENT,
   NULL_ADDRESS,
-} from "../../../../constants";
+} from "../../../../electron-constants";
 import { consolidateTDH } from "./tdh-worker.consolidation";
 import { processNftTdh } from "./tdh-worker.nfts";
 import { ethers } from "ethers";

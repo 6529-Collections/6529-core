@@ -6,6 +6,7 @@ import DesktopLayout from "@/components/layout/DesktopLayout";
 import MobileLayout from "@/components/layout/MobileLayout";
 import { useMemo } from "react";
 import FooterWrapper from "@/FooterWrapper";
+import { useSearch } from "@/contexts/SearchContext";
 
 export default function LayoutWrapper({
   children,

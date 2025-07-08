@@ -15,7 +15,6 @@ import { getPageMetadata } from "@/components/providers/metadata";
 import { wrapper } from "@/store/store";
 import { Provider } from "react-redux";
 import BaseLayout from "@/components/layout/BaseLayout";
-import { useAnchorInterceptor } from "@/hooks/useAnchorInterceptor";
 
 export type NextPageWithLayout<Props> = NextPage<Props> & {
   getLayout?: (page: ReactElement<any>) => ReactNode;
@@ -26,7 +25,6 @@ type AppPropsWithLayout = AppProps & {
 };
 
 export default function App({ Component, ...rest }: AppPropsWithLayout) {
-  useAnchorInterceptor();
   const { store, props } = wrapper.useWrappedStore(rest);
 
   const pageMetadata = rest.pageProps.metadata;

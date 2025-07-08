@@ -16,7 +16,7 @@ import {
   MEME_8_EDITION_BURN_ADJUSTMENT,
   NULL_ADDRESS,
   NULL_ADDRESS_DEAD,
-} from "../../../../constants";
+} from "../../../../electron-constants";
 
 export enum ContractType {
   ERC721,

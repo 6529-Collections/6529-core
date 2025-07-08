@@ -4,7 +4,7 @@ import {
   CONSOLIDATIONS_TABLE,
   TDH_BLOCKS_TABLE,
   WALLETS_TDH_TABLE,
-} from "../../../../constants";
+} from "../../../../electron-constants";
 import {
   areEqualAddresses,
   buildConsolidationKey,

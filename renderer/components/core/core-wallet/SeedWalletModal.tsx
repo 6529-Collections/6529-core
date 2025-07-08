@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import styles from "./SeedWallet.module.scss";
 import { useCallback, useRef, useState } from "react";
@@ -7,8 +7,8 @@ import { createSeedWallet, importSeedWallet } from "../../../electron";
 import { useToast } from "../../../contexts/ToastContext";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import { decryptData } from "../../../../shared/encrypt";
-import { areEqualAddresses } from "../../../helpers/Helpers";
+import { decryptData } from "@/shared/encrypt";
+import { areEqualAddresses } from "@/helpers/Helpers";
 
 export const SEED_MIN_PASS_LENGTH = 6;
 

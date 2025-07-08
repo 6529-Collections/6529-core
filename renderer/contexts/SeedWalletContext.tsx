@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, {
   createContext,
@@ -11,10 +11,10 @@ import { ethers } from "ethers";
 import { useConnections } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";
-import { ISeedWallet, SeedWalletRequest } from "../../shared/types";
-import { getSeedWallet } from "../electron";
-import { decryptData, encryptData } from "../../shared/encrypt";
-import { areEqualAddresses } from "../helpers/Helpers";
+import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
+import { getSeedWallet } from "@/electron";
+import { decryptData, encryptData } from "@/shared/encrypt";
+import { areEqualAddresses } from "@/helpers/Helpers";
 
 export const SEED_WALLET_KEY = "seed-wallet-pass";
 

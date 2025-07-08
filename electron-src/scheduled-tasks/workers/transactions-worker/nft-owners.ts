@@ -1,4 +1,4 @@
-import { NULL_ADDRESS } from "../../../../constants";
+import { NULL_ADDRESS } from "../../../../electron-constants";
 import { areEqualAddresses } from "../../../../shared/helpers";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { Transaction } from "../../../db/entities/ITransaction";

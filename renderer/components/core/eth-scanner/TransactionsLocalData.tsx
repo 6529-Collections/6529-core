@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
 import styles from "./ETHScanner.module.scss";
 import { useEffect, useState } from "react";
-import { PaginatedResponseLocal } from "../../../../shared/types";
-import { Transaction } from "../../../entities/ITransaction";
+import { PaginatedResponseLocal } from "@/shared/types";
+import { Transaction } from "@/entities/ITransaction";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import { Button, Table } from "react-bootstrap";
 import Pagination from "../../pagination/Pagination";

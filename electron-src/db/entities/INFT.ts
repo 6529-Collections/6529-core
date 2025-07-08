@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryColumn } from "typeorm";
-import { NFTS_TABLE } from "../../../constants";
+import { NFTS_TABLE } from "../../../electron-constants";
 
 interface NFTAttribute {
   trait_type: string;

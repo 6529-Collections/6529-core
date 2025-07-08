@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
 import styles from "./TitleBar.module.scss";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
 import { useRef, useState } from "react";
+import { Tooltip } from "react-tooltip";
 
 type TooltipButtonProps = {
   buttonStyles: string;
@@ -57,17 +57,12 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
     setTooltipVisible(false);
   };
 
+  const tooltipId = `tooltip-${Math.random().toString(36).substring(2, 9)}`;
+
   return (
-    <Tippy
-      className={styles.tippy}
-      content={content}
-      placement={placement}
-      theme="light"
-      visible={tooltipVisible}
-      onClickOutside={() => setTooltipVisible(false)}
-      onShow={(instance) => handleMouseEnter()}
-      onHide={(instance) => handleMouseLeave()}>
+    <>
       <button
+        data-tooltip-id={tooltipId}
         className={`${buttonStyles} d-flex`}
         onClick={handleButtonClick}
         onMouseEnter={handleMouseEnter}
@@ -77,7 +72,16 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
         )}
         <FontAwesomeIcon icon={icon} className={iconStyles} />
       </button>
-    </Tippy>
+      <Tooltip
+        id={tooltipId}
+        delayShow={150}
+        opacity={1}
+        place={placement}
+        variant="light"
+        className={styles.tooltip}>
+        {content}
+      </Tooltip>
+    </>
   );
 };
 

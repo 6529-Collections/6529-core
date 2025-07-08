@@ -1,12 +1,9 @@
-"use client"
+"use client";
 
 import { Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
-import DotLoader from "../../dotLoader/DotLoader";
-import {
-  ScheduledWorkerNames,
-  ScheduledWorkerStatus,
-} from "../../../../shared/types";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { ScheduledWorkerNames, ScheduledWorkerStatus } from "@/shared/types";
 import { Task, WorkerCards } from "./Workers";
 import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
 import { AddRpcProviderModal } from "./RpcProviderModal";

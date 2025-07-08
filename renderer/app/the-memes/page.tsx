@@ -4,6 +4,7 @@ import React from "react";
 import { Metadata } from "next";
 import { getAppMetadata } from "@/components/providers/metadata";
 import TheMemesComponent from "@/components/the-memes/TheMemes";
+import { SEIZE_URL } from "@/electron-constants";
 
 export default function TheMemesPage() {
   return (
@@ -16,7 +17,7 @@ export default function TheMemesPage() {
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata({
     title: "The Memes",
-    ogImage: `${process.env.BASE_ENDPOINT}/memes-preview.png`,
+    ogImage: `${SEIZE_URL}/memes-preview.png`,
     description: "Collections",
     twitterCard: "summary_large_image",
   });

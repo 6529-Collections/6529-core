@@ -1,4 +1,4 @@
-import { NULL_ADDRESS, NULL_ADDRESS_DEAD } from "../constants";
+import { NULL_ADDRESS, NULL_ADDRESS_DEAD } from "../electron-constants";
 
 export function areEqualAddresses(w1: string, w2: string) {
   if (!w1 || !w2) {

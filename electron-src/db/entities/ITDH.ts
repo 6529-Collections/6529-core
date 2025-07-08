@@ -4,7 +4,7 @@ import {
   TDH_BLOCKS_TABLE,
   TDH_MERKLE_ROOT_TABLE,
   WALLETS_TDH_TABLE,
-} from "../../../constants";
+} from "../../../electron-constants";
 import { BlockEntity, SingletonBlockEntity } from "./IBlock";
 
 @Entity(TDH_BLOCKS_TABLE)

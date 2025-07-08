@@ -2,7 +2,7 @@ import { DataSource, MoreThan, Not } from "typeorm";
 import { CoreMigration } from "./entities/ICoreMigration";
 import Logger from "electron-log";
 import { Transaction } from "./entities/ITransaction";
-import { NULL_ADDRESS } from "../../constants";
+import { NULL_ADDRESS } from "../../electron-constants";
 import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
 import { findTransactionValues } from "../scheduled-tasks/workers/transactions-worker/transaction-values";
 import { JsonRpcProvider } from "ethers";

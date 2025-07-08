@@ -5,7 +5,7 @@ import {
   DELEGATIONS_TABLE,
   NFTDELEGATION_BLOCKS_TABLE,
   NEVER_DATE,
-} from "../../../constants";
+} from "../../../electron-constants";
 
 @Entity(CONSOLIDATIONS_TABLE)
 export class Consolidation {

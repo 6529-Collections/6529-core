@@ -8,6 +8,7 @@ import Breadcrumb from "../breadcrumb/Breadcrumb";
 import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 import { useHeaderContext } from "../../contexts/HeaderContext";
 import { usePathname } from "next/navigation";
+import { useSearch } from "@/contexts/SearchContext";
 
 const Header = dynamic(() => import("../header/Header"), {
   ssr: false,
@@ -27,6 +28,7 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
   const pathname = usePathname();
   const isHomePage = pathname === "/";
   const isStreamView = pathname?.startsWith("/my-stream");
+  const { containerRef: searchContainerRef } = useSearch();
 
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -46,7 +48,7 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
         <Header isSmall={isSmall} />
         {!isHomePage && <Breadcrumb breadcrumbs={breadcrumbs} />}
       </div>
-      <main>{children}</main>
+      <main ref={searchContainerRef}>{children}</main>
     </>
   );
 };

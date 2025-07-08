@@ -8,7 +8,6 @@ import HeaderPlaceholder from "../header/HeaderPlaceholder";
 import Breadcrumb from "../breadcrumb/Breadcrumb";
 import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 import { useHeaderContext } from "../../contexts/HeaderContext";
-import { useSearch } from "../../contexts/SearchContext";
 
 const Header = dynamic(() => import("../header/Header"), {
   ssr: false,
@@ -25,7 +24,6 @@ export default function SmallScreenLayout({ children }: Props) {
   const breadcrumbs = useBreadcrumbs();
   const router = useRouter();
   const isHomePage = router.pathname === "/";
-  const { containerRef: searchContainerRef } = useSearch();
 
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -41,7 +39,7 @@ export default function SmallScreenLayout({ children }: Props) {
         <Header />
         {!isHomePage && <Breadcrumb breadcrumbs={breadcrumbs} />}
       </div>
-      <main ref={searchContainerRef}>{children}</main>
+      <main>{children}</main>
     </div>
   );
 }
