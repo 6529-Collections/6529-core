@@ -1,28 +1,30 @@
+"use client";
+
 import styles from "../../NextGen.module.scss";
 import { useReadContract, useReadContracts } from "wagmi";
-import { DELEGATION_ABI } from "../../../../../abis";
-import {
-  DELEGATION_ALL_ADDRESS,
-  DELEGATION_CONTRACT,
-} from "../../../../../constants";
+import { DELEGATION_ABI } from "@/abis";
+import { DELEGATION_ALL_ADDRESS, DELEGATION_CONTRACT } from "@/constants";
 import { Col, Container, Row } from "react-bootstrap";
 import { useEffect, useState } from "react";
 import {
   CollectionWithMerkle,
   AllowlistType,
   Status,
-} from "../../../nextgen_entities";
-import { fromGWEI } from "../../../../../helpers/Helpers";
+} from "@/components/nextGen/nextgen_entities";
+import { fromGWEI } from "@/helpers/Helpers";
 
-import { NEXTGEN_CHAIN_ID, NEXTGEN_CORE } from "../../../nextgen_contracts";
-import { fetchUrl } from "../../../../../services/6529api";
+import {
+  NEXTGEN_CHAIN_ID,
+  NEXTGEN_CORE,
+} from "@/components/nextGen/nextgen_contracts";
+import { fetchUrl } from "@/services/6529api";
 import {
   formatNameForUrl,
   getStatusFromDates,
   useCollectionCostsHook,
   useMintSharedState,
   useSharedState,
-} from "../../../nextgen_helpers";
+} from "@/components/nextGen/nextgen_helpers";
 import NextGenMintWidget from "./NextGenMintWidget";
 import NextGenMintBurnWidget from "./NextGenMintBurnWidget";
 import Image from "next/image";
@@ -31,14 +33,14 @@ import {
   NextGenMintCounts,
   NextGenPhases,
 } from "../NextGenCollectionHeader";
-import DotLoader from "../../../../dotLoader/DotLoader";
-import { NextGenCollection } from "../../../../../entities/INextgen";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { NextGenCollection } from "@/entities/INextgen";
 import {
   ALL_USE_CASE,
   MINTING_USE_CASE,
-} from "../../../../../pages/delegation/[...section]";
-import { SEIZE_API_URL } from "../../../../../../constants";
-import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
+} from "@/pages/delegation/[...section]";
+import { SEIZE_API_URL } from "@/electron-constants";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 
 interface Props {
   collection: NextGenCollection;

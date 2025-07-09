@@ -1,5 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, Index } from "typeorm";
-import { RPC_PROVIDERS_TABLE } from "../../../constants";
+import { RPC_PROVIDERS_TABLE } from "../../../electron-constants";
 
 @Entity({ name: RPC_PROVIDERS_TABLE })
 export class RPCProvider {

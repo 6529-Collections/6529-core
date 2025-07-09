@@ -1,28 +1,30 @@
+"use client";
+
 import styles from "./6529Gradient.module.scss";
 
 import { useContext, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Container, Row, Col, Table } from "react-bootstrap";
-import { GRADIENT_CONTRACT } from "../../constants";
-import { DBResponse } from "../../entities/IDBResponse";
-import { NFT } from "../../entities/INFT";
+import { GRADIENT_CONTRACT } from "@/constants";
+import { DBResponse } from "@/entities/IDBResponse";
+import { NFT } from "@/entities/INFT";
 import {
   areEqualAddresses,
   enterArtFullScreen,
   numberWithCommas,
   printMintDate,
-} from "../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import LatestActivityRow from "../latest-activity/LatestActivityRow";
-import { Transaction } from "../../entities/ITransaction";
+import { Transaction } from "@/entities/ITransaction";
 import { useRouter } from "next/router";
-import { fetchUrl } from "../../services/6529api";
+import { fetchUrl } from "@/services/6529api";
 import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
 import { AuthContext } from "../auth/Auth";
 import { NftPageStats } from "../nftAttributes/NftStats";
-import { SEIZE_API_URL } from "../../../constants";
-import useCapacitor from "../../hooks/useCapacitor";
+import { SEIZE_API_URL } from "@/electron-constants";
+import useCapacitor from "@/hooks/useCapacitor";
 import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
 import { faExpandAlt } from "@fortawesome/free-solid-svg-icons";
 import NftNavigation from "../nft-navigation/NftNavigation";

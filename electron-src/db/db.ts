@@ -1,5 +1,5 @@
 import databasePath from "../utils/databasePath";
-import { MNEMONIC_NA } from "../../constants";
+import { MNEMONIC_NA } from "../../electron-constants";
 import { encryptData } from "../../shared/encrypt";
 
 import { ethers } from "ethers";

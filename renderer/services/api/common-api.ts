@@ -1,5 +1,5 @@
-import { SEIZE_API_URL } from "../../../constants";
-import { getAuthJwt, getStagingAuth } from "../auth/auth.utils";
+import { SEIZE_API_URL } from "@/electron-constants";
+import { getAuthJwt, getStagingAuth } from "@/services/auth/auth.utils";
 
 const getHeaders = (
   headers?: Record<string, string>,

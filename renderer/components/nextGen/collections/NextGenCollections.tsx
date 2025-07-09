@@ -1,12 +1,14 @@
+"use client";
+
 import styles from "./NextGen.module.scss";
 import { Container, Row, Col, Dropdown } from "react-bootstrap";
 import NextGenCollectionPreview from "./NextGenCollectionPreview";
 import { useState, useEffect } from "react";
-import { DBResponse } from "../../../entities/IDBResponse";
-import { fetchUrl } from "../../../services/6529api";
-import { NextGenCollection } from "../../../entities/INextgen";
-import Pagination from "../../pagination/Pagination";
-import { SEIZE_API_URL } from "../../../../constants";
+import { DBResponse } from "@/entities/IDBResponse";
+import { fetchUrl } from "@/services/6529api";
+import { NextGenCollection } from "@/entities/INextgen";
+import Pagination from "@/components/pagination/Pagination";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 const PAGE_SIZE = 25;
 

@@ -1,3 +1,5 @@
+"use client";
+
 import {
   useEffect,
   useRef,
@@ -216,11 +218,7 @@ export default function CreateDrop({
     }
 
     setIsProcessing(false);
-  }, [
-    isProcessing,
-    removeFromQueue,
-    addDropMutation,
-  ]);
+  }, [isProcessing, removeFromQueue, addDropMutation]);
 
   useEffect(() => {
     processQueue();

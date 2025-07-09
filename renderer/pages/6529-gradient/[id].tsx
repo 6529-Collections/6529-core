@@ -1,21 +1,19 @@
-import styles from "../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
-import { GRADIENT_CONTRACT } from "../../constants";
-import { fetchUrl } from "../../services/6529api";
-import { useSetTitle } from "../../contexts/TitleContext";
-import { SEIZE_API_URL, SEIZE_URL } from "../../../constants";
+import { GRADIENT_CONTRACT } from "@/constants";
+import { fetchUrl } from "@/services/6529api";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { SEIZE_API_URL, SEIZE_URL } from "@/electron-constants";
 
 const GradientPageComponent = dynamic(
-  () => import("../../components/6529Gradient/GradientPage"),
+  () => import("@/components/6529Gradient/GradientPage"),
   {
     ssr: false,
   }
 );
 
-export default function GradientPageIndex(props: any) {
-  const pageProps = props.pageProps;
-  const pagenameFull = `${pageProps.name} | 6529.io`;
-
+export default function GradientPageIndex(props: { readonly name: string }) {
+  const pagenameFull = `${props.name} | 6529.io`;
   useSetTitle(pagenameFull);
 
   return (

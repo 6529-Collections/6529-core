@@ -1,3 +1,5 @@
+"use client";
+
 import { CicStatement } from "../../../../entities/IProfile";
 import { useEffect, useState } from "react";
 import PencilIcon from "../../../utils/icons/PencilIcon";

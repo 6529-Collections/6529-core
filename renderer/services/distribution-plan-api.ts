@@ -1,6 +1,6 @@
 import { AllowlistToolResponse } from "../components/allowlist-tool/allowlist-tool.types";
 import { makeErrorToast } from "./distribution-plan.utils";
-import { ALLOWLIST_API_ENDPOINT } from "../../constants";
+import { ALLOWLIST_API_ENDPOINT } from "../../electron-constants";
 import { getAuthJwt, removeAuthJwt } from "./auth/auth.utils";
 
 const handleResponse = async <T>(

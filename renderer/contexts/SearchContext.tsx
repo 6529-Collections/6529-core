@@ -1,3 +1,5 @@
+"use client";
+
 import {
   createContext,
   useContext,
@@ -46,6 +48,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   };
 
   const performSearch = useCallback((q: string) => {
+    console.log("performSearch", q, containerRef.current, "end");
     if (!containerRef.current) return;
 
     const context = containerRef.current;

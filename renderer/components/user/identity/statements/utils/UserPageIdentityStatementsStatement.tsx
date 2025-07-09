@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { CicStatement } from "../../../../../entities/IProfile";
 import CopyIcon from "../../../../utils/icons/CopyIcon";

@@ -1,4 +1,6 @@
-import { useState, FC, useRef, useEffect, useCallback } from "react";
+"use client";
+
+import { useState, FC, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
@@ -8,7 +10,13 @@ import MobileWrapperDialog from "../mobile-wrapper-dialog/MobileWrapperDialog";
 import useIsMobileScreen from "../../hooks/isMobileScreen";
 import { useEmoji } from "../../contexts/EmojiContext";
 
-const CreateDropEmojiPicker: FC = () => {
+interface CreateDropEmojiPickerProps {
+  top?: string;
+}
+
+const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
+  top = "tw-top-2",
+}) => {
   const isMobile = useIsMobileScreen();
 
   const { emojiMap, categories, categoryIcons } = useEmoji();
@@ -32,12 +40,21 @@ const CreateDropEmojiPicker: FC = () => {
         const emojiNode = $createTextNode(emojiText);
         $insertNodes([emojiNode]);
       });
+
+      // Ensure editor is focused and state is updated
+      requestAnimationFrame(() => {
+        editor.focus();
+        // Force OnChangePlugin to fire with empty update
+        editor.update(() => {
+          // Empty update to trigger onChange
+        });
+      });
     }
     setShowPicker(false);
   };
 
-  const updatePickerPosition = useCallback(() => {
-    if (buttonRef.current) {
+  useEffect(() => {
+    if (showPicker && buttonRef.current) {
       const rect = buttonRef.current.getBoundingClientRect();
 
       setPickerPosition({
@@ -45,11 +62,7 @@ const CreateDropEmojiPicker: FC = () => {
         left: rect.left + window.scrollX - 250,
       });
     }
-  }, [buttonRef]);
-
-  useEffect(() => {
-    updatePickerPosition();
-  }, []);
+  }, [showPicker]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -74,7 +87,8 @@ const CreateDropEmojiPicker: FC = () => {
 
   return (
     <>
-      <div className="tw-absolute tw-py-2 tw-right-2 tw-top-0 tw-h-full tw-flex tw-items-start tw-justify-center tw-flex tw-items-center tw-justify-center">
+      <div
+        className={`tw-absolute tw-right-2 ${top} tw-flex tw-justify-center tw-items-start`}>
         <button
           ref={buttonRef}
           className="tw-p-[0.35rem] tw-border-none tw-rounded tw-bg-transparent hover:tw-bg-[rgb(40,40,40)] tw-opacity-50 hover:tw-opacity-100 tw-transition tw-duration-150 tw-flex tw-items-center tw-justify-center hover:tw-text-[#FFCC22]"
@@ -83,6 +97,7 @@ const CreateDropEmojiPicker: FC = () => {
             className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-transition tw-ease-out tw-duration-300"
             xmlns="http://www.w3.org/2000/svg"
             fill="currentColor"
+            aria-hidden="true"
             viewBox="0 0 24 24"
             strokeWidth="1.5"
             stroke="currentColor">

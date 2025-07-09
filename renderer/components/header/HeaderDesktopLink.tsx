@@ -1,3 +1,5 @@
+"use client"
+
 import { NavDropdown } from "react-bootstrap";
 import { useRouter } from "next/router";
 import styles from "./Header.module.scss";

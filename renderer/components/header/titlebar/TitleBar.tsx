@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "./TitleBar.module.scss";
 import {
   faAnglesUp,
@@ -10,14 +12,14 @@ import {
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import { useEffect, useState } from "react";
-import ConfirmClose from "../../confirm/ConfirmClose";
-import { useRouter } from "next/router";
+import ConfirmClose from "@/components/confirm/ConfirmClose";
+import { useRouter, usePathname } from "next/navigation";
 import TooltipButton from "./TooltipButton";
 import Cookies from "js-cookie";
 import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
-import { SEIZE_URL } from "../../../../constants";
-import { useSearch } from "../../../contexts/SearchContext";
+import { SEIZE_URL } from "@/electron-constants";
+import { useSearch } from "@/contexts/SearchContext";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -27,22 +29,18 @@ const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 
 export default function TitleBar() {
   const router = useRouter();
+  const pathname = usePathname();
   const { isOpen, open, close } = useSearch();
 
   const [showConfirm, setShowConfirm] = useState(false);
-
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
-
   const [showScrollTop, setShowScrollTop] = useState(false);
-
   const [updateAvailable, setUpdateAvailable] = useState<{
     version: string;
   }>();
-
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-
   const [version, setVersion] = useState("");
   const [isCopied, setIsCopied] = useState(false);
 
@@ -54,21 +52,6 @@ export default function TitleBar() {
       window.updater.checkUpdates();
     });
   }, []);
-
-  useEffect(() => {
-    const handleStart = () => setNavigationLoading(true);
-    const handleComplete = () => setNavigationLoading(false);
-
-    router.events.on("routeChangeStart", handleStart);
-    router.events.on("routeChangeComplete", handleComplete);
-    router.events.on("routeChangeError", handleComplete);
-
-    return () => {
-      router.events.off("routeChangeStart", handleStart);
-      router.events.off("routeChangeComplete", handleComplete);
-      router.events.off("routeChangeError", handleComplete);
-    };
-  }, [router]);
 
   useEffect(() => {
     const updateNavState = () => {
@@ -92,7 +75,7 @@ export default function TitleBar() {
 
     const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
-      if (router.pathname !== url) {
+      if (pathname !== url) {
         router.push(url);
       } else {
         const reloadUrl = url.includes("?")
@@ -110,7 +93,7 @@ export default function TitleBar() {
       window.api.offNavigate(handleNavigate);
       window.updater.offUpdateAvailable(handleUpdateAvailable);
     };
-  }, []);
+  }, [pathname, router]);
 
   const handleOpenSearch = () => {
     if (isOpen) {

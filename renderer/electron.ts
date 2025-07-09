@@ -13,7 +13,7 @@ import {
   RECALCULATE_TRANSACTIONS_OWNERS,
   RESET_WORKER,
   STOP_WORKER,
-} from "../constants";
+} from "../electron-constants";
 
 export async function getSeedWallets() {
   if (typeof window === "undefined") return;

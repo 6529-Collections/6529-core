@@ -1,10 +1,10 @@
-import { goerli, mainnet, sepolia } from "wagmi/chains";
+import { goerli, mainnet, sepolia } from "viem/chains";
 import {
   NEXTGEN_ADMIN_ABI,
   NEXTGEN_CORE_ABI,
   NEXTGEN_MINTER_ABI,
 } from "../../abis";
-import { NEXTGEN_CHAIN_ID_ENV } from "../../../constants";
+import { NEXTGEN_CHAIN_ID_ENV } from "../../../electron-constants";
 
 export interface NextGenContract {
   [goerli.id]: string;

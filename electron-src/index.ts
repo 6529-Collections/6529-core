@@ -52,7 +52,7 @@ import {
   RECALCULATE_TRANSACTIONS_OWNERS,
   RESET_WORKER,
   STOP_WORKER,
-} from "../constants";
+} from "../electron-constants";
 import Logger from "electron-log";
 import localShortcut from "electron-localshortcut";
 import { prepareNext } from "./utils/prepareNext";

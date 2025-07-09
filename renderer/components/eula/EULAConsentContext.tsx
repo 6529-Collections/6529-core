@@ -1,3 +1,5 @@
+"use client"
+
 import React, { createContext, useContext, useMemo, ReactNode } from "react";
 
 type EULAConsentContextType = {

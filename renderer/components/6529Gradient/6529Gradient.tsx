@@ -1,18 +1,20 @@
+"use client";
+
 import styles from "./6529Gradient.module.scss";
 import { useEffect, useState } from "react";
 import { Container, Row, Col } from "react-bootstrap";
-import { NFT } from "../../entities/INFT";
-import { SortDirection } from "../../entities/ISort";
+import { NFT } from "@/entities/INFT";
+import { SortDirection } from "@/entities/ISort";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { areEqualAddresses, numberWithCommas } from "../../helpers/Helpers";
+import { areEqualAddresses, numberWithCommas } from "@/helpers/Helpers";
 import { useRouter } from "next/router";
-import { fetchAllPages } from "../../services/6529api";
+import { fetchAllPages } from "@/services/6529api";
 import NFTImage from "../nft-image/NFTImage";
 import Address from "../address/Address";
 import DotLoader from "../dotLoader/DotLoader";
-import { GRADIENT_CONTRACT } from "../../constants";
+import { GRADIENT_CONTRACT } from "@/constants";
 import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
-import { SEIZE_API_URL } from "../../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
 import {
   faChevronCircleDown,
@@ -158,7 +160,7 @@ export default function GradientsComponent(props: Readonly<Props>) {
               {/* Page header - visible on all devices */}
               <Row>
                 <Col className="d-flex align-items-center justify-content-between mb-3">
-                  <span className="d-flex align-items-center gap-3">
+                  <span className="d-flex align-items-center gap-3 flex-wrap">
                     <h1 className="mb-0">
                       <span className="font-lightest">6529</span> Gradient
                     </h1>

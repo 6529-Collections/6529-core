@@ -6,7 +6,7 @@ import {
   PrimaryColumn,
   UpdateDateColumn,
 } from "typeorm";
-import { NFT_OWNERS_TABLE } from "../../../constants";
+import { NFT_OWNERS_TABLE } from "../../../electron-constants";
 
 @Entity(NFT_OWNERS_TABLE)
 export class NFTOwner {

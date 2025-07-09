@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "./SeedWallet.module.scss";
 import {
   faCircleArrowLeft,
@@ -10,27 +12,27 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import { Container, Row, Col, Button } from "react-bootstrap";
-import { ISeedWallet } from "../../../../shared/types";
-import { getRandomKey, openInExternalBrowser } from "../../../helpers";
+import { ISeedWallet } from "@/shared/types";
+import { getRandomKey, openInExternalBrowser } from "@/helpers";
 import { useCallback, useEffect, useState } from "react";
-import { deleteSeedWallet, getSeedWallet } from "../../../electron";
-import { useConfirm } from "../../../contexts/ConfirmContext";
-import { useToast } from "../../../contexts/ToastContext";
+import { deleteSeedWallet, getSeedWallet } from "@/electron";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { useToast } from "@/contexts/ToastContext";
 import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { MNEMONIC_NA } from "../../../../constants";
+import { MNEMONIC_NA } from "@/electron-constants";
 import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
 import {
   areEqualAddresses,
   fromGWEI,
   getAddressEtherscanLink,
-} from "../../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import Image from "next/image";
 import { UnlockSeedWalletModal } from "./SeedWalletModal";
-import { decryptData } from "../../../../shared/encrypt";
-import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import { decryptData } from "@/shared/encrypt";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 
 export default function SeedWallet(
   props: Readonly<{

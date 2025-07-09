@@ -1,3 +1,5 @@
+"use client";
+
 import React, {
   createContext,
   useContext,
@@ -6,9 +8,9 @@ import React, {
   ReactNode,
   useMemo,
 } from "react";
-import { ApiSeizeSettings } from "../generated/models/ApiSeizeSettings";
-import { fetchUrl } from "../services/6529api";
-import { SEIZE_API_URL } from "../../constants";
+import { ApiSeizeSettings } from "@/generated/models/ApiSeizeSettings";
+import { fetchUrl } from "@/services/6529api";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 type SeizeSettingsContextType = {
   seizeSettings: ApiSeizeSettings;

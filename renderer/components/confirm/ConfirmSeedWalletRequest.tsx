@@ -1,15 +1,17 @@
+"use client";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import styles from "./Confirm.module.scss";
 import { Modal, Button } from "react-bootstrap";
-import { SeedWalletRequest } from "../../../shared/types";
-import { hexToString } from "../../helpers";
-import { fromGWEI, isValidEthAddress } from "../../helpers/Helpers";
-import { useToast } from "../../contexts/ToastContext";
+import { SeedWalletRequest } from "@/shared/types";
+import { hexToString } from "@/helpers";
+import { fromGWEI, isValidEthAddress } from "@/helpers/Helpers";
+import { useToast } from "@/contexts/ToastContext";
 import { useBalance, useChainId } from "wagmi";
 import { sepolia } from "viem/chains";
-import { useSeedWallet } from "../../contexts/SeedWalletContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { ethers, formatUnits } from "ethers";
-import { useModalState } from "../../contexts/ModalStateContext";
+import { useModalState } from "@/contexts/ModalStateContext";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";

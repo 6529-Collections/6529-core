@@ -1,7 +1,7 @@
 import { Transaction } from "../../../db/entities/ITransaction";
 import { areEqualAddresses, sleep } from "../../../../shared/helpers";
 import { ethers, formatEther } from "ethers";
-import { MANIFOLD_ADDRESS, NULL_ADDRESS } from "../../../../constants";
+import { MANIFOLD_ADDRESS, NULL_ADDRESS } from "../../../../electron-constants";
 import { SEAPORT_IFACE } from "../../../../shared/abis/opensea";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";

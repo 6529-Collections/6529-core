@@ -1,18 +1,20 @@
+"use client";
+
 import styles from "./GasRoyalties.module.scss";
 import { Row, Col, Dropdown, Container } from "react-bootstrap";
-import { DateIntervalsSelection } from "../../enums";
+import { DateIntervalsSelection } from "@/enums";
 import DotLoader from "../dotLoader/DotLoader";
 import DownloadUrlWidget from "../downloadUrlWidget/DownloadUrlWidget";
 import Image from "next/image";
 import Tippy from "@tippyjs/react";
 import { useState, useEffect } from "react";
-import { fetchUrl } from "../../services/6529api";
-import { getDateFilters } from "../../helpers/Helpers";
+import { fetchUrl } from "@/services/6529api";
+import { getDateFilters } from "@/helpers/Helpers";
 import router from "next/router";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import DatePickerModal from "../datePickerModal/DatePickerModal";
-import { ApiArtistNameItem } from "../../generated/models/ApiArtistNameItem";
-import { SEIZE_API_URL } from "../../../constants";
+import { ApiArtistNameItem } from "@/generated/models/ApiArtistNameItem";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 export enum GasRoyaltiesCollectionFocus {

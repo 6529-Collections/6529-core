@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "./MemeLab.module.scss";
 import { useContext, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -9,19 +11,19 @@ import {
   getValuesForVolumeType,
   numberWithCommas,
   printMintDate,
-} from "../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import { NextRouter, useRouter } from "next/router";
-import { fetchAllPages } from "../../services/6529api";
-import NFTImage from "../nft-image/NFTImage";
-import DotLoader from "../dotLoader/DotLoader";
+import { fetchAllPages } from "@/services/6529api";
+import NFTImage from "@/components/nft-image/NFTImage";
+import DotLoader from "@/components/dotLoader/DotLoader";
 import { AuthContext } from "../auth/Auth";
-import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import { MEMELAB_CONTRACT } from "../../constants";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
+import { MEMELAB_CONTRACT } from "@/constants";
 import { printVolumeTypeDropdown, SortButton } from "../the-memes/TheMemes";
-import { MemeLabSort } from "../../enums";
-import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
-import { SEIZE_API_URL } from "../../../constants";
-import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
+import { MemeLabSort } from "@/enums";
+import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
+import { SEIZE_API_URL } from "@/electron-constants";
+import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
 import {
   faChevronCircleDown,
   faChevronCircleUp,
@@ -664,7 +666,7 @@ export default function MemeLabComponent(props: Readonly<Props>) {
               {/* Page header - visible on all devices */}
               <Row>
                 <Col className="d-flex align-items-center justify-content-between mb-3">
-                  <span className="d-flex align-items-center gap-3">
+                  <span className="d-flex align-items-center gap-3 flex-wrap">
                     <h1 className="mb-0">
                       <span className="font-lightest">Meme</span> Lab
                     </h1>

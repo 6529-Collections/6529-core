@@ -1,8 +1,10 @@
+"use client";
+
 import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import { v4 as uuidv4 } from "uuid";
 import { useSignMessage } from "wagmi";
 import { useEffect, useRef, useState } from "react";
-import { postFormData } from "../../../services/6529api";
+import { postFormData } from "@/services/6529api";
 import { FunctionSelectors } from "../nextgen_contracts";
 import {
   useGlobalAdmin,
@@ -17,8 +19,8 @@ import {
   NextGenCollectionIdFormGroup,
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
-import { SEIZE_API_URL } from "../../../../constants";
-import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import { SEIZE_API_URL } from "@/electron-constants";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 
 interface Props {
   close: () => void;

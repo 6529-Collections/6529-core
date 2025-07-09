@@ -1,3 +1,5 @@
+"use client";
+
 import { motion, useAnimate } from "framer-motion";
 import { useEffect, useRef, useState } from "react";
 import { useClickAway, useKeyPressEvent } from "react-use";

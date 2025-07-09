@@ -1,6 +1,8 @@
+"use client";
+
 import React, { useEffect } from "react";
 import Image from "next/image";
-import { useRouter } from "next/router";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useViewContext } from "./ViewContext";
 import type { NavItem as NavItemData } from "./navTypes";
 import { motion } from "framer-motion";
@@ -17,7 +19,8 @@ interface Props {
 }
 
 const NavItem = ({ item }: Props) => {
-  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { activeView, handleNavClick } = useViewContext();
 
   const { name } = item;
@@ -27,7 +30,9 @@ const NavItem = ({ item }: Props) => {
 
   // Determine if the current wave (if any) is a DM
   const waveIdFromQuery =
-    typeof router.query.wave === "string" ? router.query.wave : null;
+    typeof searchParams?.get("wave") === "string"
+      ? searchParams?.get("wave")
+      : null;
   const { data: waveData } = useWaveData({
     waveId: waveIdFromQuery,
     // Minimal onWaveNotFound, actual handling of not found is likely elsewhere
@@ -91,7 +96,8 @@ const NavItem = ({ item }: Props) => {
 
   const isActive = isNavItemActive(
     item,
-    router,
+    pathname ?? "",
+    searchParams ?? new URLSearchParams(),
     activeView,
     isCurrentWaveDmValue
   );

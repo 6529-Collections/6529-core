@@ -1,17 +1,20 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { useAuth } from "../../auth/Auth";
 import { useTitle } from "../../../contexts/TitleContext";
 
 import Link from "next/link";
-import { useRouter } from "next/router";
+import { usePathname } from "next/navigation";
 import { useUnreadNotifications } from "../../../hooks/useUnreadNotifications";
 import { resolveIpfsUrl } from "../../ipfs/IPFSContext";
 import { ApiNotification } from "../../../generated/models/ApiNotification";
+import { isElectron } from "@/helpers";
 
 export default function HeaderNotifications() {
   const { connectedProfile } = useAuth();
+  const pathname = usePathname();
   const { setNotificationCount } = useTitle();
-  const router = useRouter();
 
   const [linkHref, setLinkHref] = useState("/my-stream/notifications");
 
@@ -23,6 +26,7 @@ export default function HeaderNotifications() {
     notification: ApiNotification,
     unreadCount: number
   ) {
+    if (!isElectron() || !unreadCount) return;
     const relatedPfp = notification.related_identity?.pfp;
     const newSrc = relatedPfp ? await resolveIpfsUrl(relatedPfp) : "";
     window.notifications.showNotification(
@@ -41,8 +45,6 @@ export default function HeaderNotifications() {
         notifications?.unread_count
       );
     }
-
-    window.notifications.setBadge(notifications?.unread_count ?? 0);
   }, [
     notifications?.unread_count,
     haveUnreadNotifications,
@@ -50,10 +52,10 @@ export default function HeaderNotifications() {
   ]);
 
   useEffect(() => {
-    if (router.pathname === "/my-stream/notifications") {
+    if (pathname === "/my-stream/notifications") {
       setLinkHref("/my-stream/notifications?reload=true");
     }
-  }, [router.pathname]);
+  }, [pathname]);
 
   return (
     <div className="tailwind-scope tw-relative min-[1200px]:tw-mr-3 tw-self-center">

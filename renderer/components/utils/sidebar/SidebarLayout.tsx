@@ -1,3 +1,5 @@
+"use client";
+
 import { ReactNode, useEffect, useRef, useState } from "react";
 import GroupsSidebarToggle from "../../groups/sidebar/GroupsSidebarToggle";
 import GroupsSidebar from "../../groups/sidebar/GroupsSidebar";

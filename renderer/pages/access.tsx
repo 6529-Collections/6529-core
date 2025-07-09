@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import styles from "../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import Cookies from "js-cookie";
-import { API_AUTH_COOKIE } from "../constants";
+import { API_AUTH_COOKIE } from "@/constants";
 import { useRouter } from "next/router";
 import Image from "next/image";
-import { useSetTitle } from "../contexts/TitleContext";
-import { getStagingAuth } from "../services/auth/auth.utils";
-import { SEIZE_API_URL } from "../../constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { getStagingAuth } from "@/services/auth/auth.utils";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 export default function Access() {
   useSetTitle("Access Page");

@@ -1,18 +1,18 @@
+"use client";
+
 import styles from "./MappingTool.module.scss";
 import { Form, Row, Col, Button, Container } from "react-bootstrap";
 import { useEffect, useRef, useState } from "react";
 import {
-  ALL_USE_CASE,
-  ALL_USE_CASES,
   DELEGATION_USE_CASES,
   SUPPORTED_COLLECTIONS,
-} from "../../pages/delegation/[...section]";
-import { fetchAllPages } from "../../services/6529api";
-import { Delegation } from "../../entities/IDelegation";
-import { areEqualAddresses } from "../../helpers/Helpers";
-import { DELEGATION_ALL_ADDRESS, MEMES_CONTRACT } from "../../constants";
+} from "@/pages/delegation/[...section]";
+import { fetchAllPages } from "@/services/6529api";
+import { Delegation } from "@/entities/IDelegation";
+import { areEqualAddresses } from "@/helpers/Helpers";
+import { DELEGATION_ALL_ADDRESS, MEMES_CONTRACT } from "@/constants";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { SEIZE_API_URL } from "../../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { faFileUpload } from "@fortawesome/free-solid-svg-icons";
 
 const csvParser = require("csv-parser");

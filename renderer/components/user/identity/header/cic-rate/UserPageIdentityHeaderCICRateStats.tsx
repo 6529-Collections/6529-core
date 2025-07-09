@@ -1,3 +1,5 @@
+"use client";
+
 import { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../../../../auth/Auth";
 import Link from "next/link";

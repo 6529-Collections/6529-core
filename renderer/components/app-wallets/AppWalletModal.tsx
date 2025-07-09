@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "./AppWallet.module.scss";
 import { MutableRefObject, useCallback, useRef, useState } from "react";
 import { Modal, Button } from "react-bootstrap";

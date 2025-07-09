@@ -1,6 +1,6 @@
 import Image from "next/image";
 import styles from "./LatestActivity.module.scss";
-import { Transaction } from "../../entities/ITransaction";
+import { Transaction } from "@/entities/ITransaction";
 import {
   areEqualAddresses,
   areEqualURLS,
@@ -13,16 +13,17 @@ import {
   isNullAddress,
   numberWithCommas,
   getRoyaltyImage,
-} from "../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { MANIFOLD } from "../../constants";
-import { NFTLite } from "../../entities/INFT";
-import Address from "../address/Address";
-import Tippy from "@tippyjs/react";
-import { Container, Row, Col } from "react-bootstrap";
-import { NEXTGEN_CHAIN_ID, NEXTGEN_CORE } from "../nextGen/nextgen_contracts";
-import { NextGenCollection } from "../../entities/INextgen";
-import { normalizeNextgenTokenID } from "../nextGen/nextgen_helpers";
+import { MANIFOLD } from "@/constants";
+import { NFTLite } from "@/entities/INFT";
+import Address from "@/components/address/Address";
+import {
+  NEXTGEN_CHAIN_ID,
+  NEXTGEN_CORE,
+} from "@/components/nextGen/nextgen_contracts";
+import { NextGenCollection } from "@/entities/INextgen";
+import { normalizeNextgenTokenID } from "@/components/nextGen/nextgen_helpers";
 import {
   getNextGenIconUrl,
   getNextGenImageUrl,
@@ -37,6 +38,8 @@ import {
   faParachuteBox,
   faShoppingCart,
 } from "@fortawesome/free-solid-svg-icons";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
+import { Tooltip } from "react-tooltip";
 
 function calculateRoyaltiesPercentage(value: number, royalties: number) {
   return Math.round((royalties / value) * 10000) / 10000;
@@ -50,28 +53,12 @@ export function printRoyalties(value: number, royalties: number, from: string) {
   if (royalties <= 0) return <></>;
 
   const imgSrc = getRoyaltyImage(royaltiesPercentage);
+  const id = getRandomObjectId();
 
   return (
-    <Tippy
-      content={
-        <Container>
-          <Row>
-            <Col className="no-wrap">Royalties</Col>
-            <Col className="text-right no-wrap">
-              {royalties > 0
-                ? `${displayDecimal(royalties, 5)} (${displayDecimal(
-                    royaltiesPercentage * 100,
-                    2
-                  )}%)`
-                : "-"}
-            </Col>
-          </Row>
-        </Container>
-      }
-      placement={"top-end"}
-      theme={"light"}
-      hideOnClick={false}>
+    <>
       <Image
+        data-tooltip-id={id}
         width={0}
         height={0}
         style={{ height: "25px", width: "auto" }}
@@ -79,7 +66,26 @@ export function printRoyalties(value: number, royalties: number, from: string) {
         alt={imgSrc}
         className="cursor-pointer"
       />
-    </Tippy>
+      <Tooltip
+        id={id}
+        delayShow={150}
+        place="top-end"
+        opacity={1}
+        variant="light"
+        className="tw-leading-tight">
+        <div className="tw-flex tw-gap-3">
+          <span>Royalties</span>
+          <span>
+            {royalties > 0
+              ? `${displayDecimal(royalties, 5)} (${displayDecimal(
+                  royaltiesPercentage * 100,
+                  2
+                )}%)`
+              : "-"}
+          </span>
+        </div>
+      </Tooltip>
+    </>
   );
 }
 
@@ -88,33 +94,36 @@ export function printGas(
   gas_gwei: number,
   gas_price_gwei: number
 ) {
+  const id = getRandomObjectId();
   return (
-    <Tippy
-      content={
-        <Container>
-          <Row>
-            <Col className="no-wrap">Gas</Col>
-            <Col className="text-right">{displayDecimal(gas, 5)}</Col>
-          </Row>
-          <Row>
-            <Col className="no-wrap">GWEI</Col>
-            <Col className="text-right">{numberWithCommas(gas_gwei)}</Col>
-          </Row>
-          <Row>
-            <Col className="no-wrap">Gas Price</Col>
-            <Col className="text-right">
-              {displayDecimal(gas_price_gwei, 2)}
-            </Col>
-          </Row>
-        </Container>
-      }
-      placement={"top-end"}
-      theme={"light"}
-      hideOnClick={false}>
+    <>
       <FontAwesomeIcon
+        data-tooltip-id={id}
         className={styles.gasIcon}
         icon={faGasPump}></FontAwesomeIcon>
-    </Tippy>
+      <Tooltip
+        id={id}
+        delayShow={150}
+        place="top-end"
+        opacity={1}
+        variant="light"
+        className="tw-leading-tight">
+        <div className="tw-flex tw-flex-col tw-gap-1">
+          {[
+            ["Gas", `${displayDecimal(gas, 5)}`],
+            ["GWEI", numberWithCommas(gas_gwei)],
+            ["Gas Price", `${displayDecimal(gas_price_gwei, 2)}`],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="tw-flex tw-justify-between tw-w-full tw-gap-4">
+              <span className="tw-text-left tw-w-1/2">{label}</span>
+              <span className="tw-text-right tw-w-1/2">{value}</span>
+            </div>
+          ))}
+        </div>
+      </Tooltip>
+    </>
   );
 }
 
@@ -365,15 +374,15 @@ export default function LatestActivityRow(props: Readonly<Props>) {
           props.tr.from_address
         )}
         {printGas(props.tr.gas, props.tr.gas_gwei, props.tr.gas_price_gwei)}
-        <a
+        <Link
           href={`https://etherscan.io/tx/${props.tr.transaction}`}
-          className={styles.transactionLink}
           target="_blank"
-          rel="noreferrer">
+          rel="noreferrer"
+          className="tw-flex">
           <FontAwesomeIcon
             className={styles.gasIcon}
             icon={faExternalLinkSquare}></FontAwesomeIcon>
-        </a>
+        </Link>
       </span>
     );
   }

@@ -1,12 +1,14 @@
+"use client";
+
 import React, { ReactNode, useCallback } from "react";
 import dynamic from "next/dynamic";
-import { useRouter } from "next/router";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import Breadcrumb from "../breadcrumb/Breadcrumb";
 import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 import { useHeaderContext } from "../../contexts/HeaderContext";
-import { useSearch } from "../../contexts/SearchContext";
+import { usePathname } from "next/navigation";
+import { useSearch } from "@/contexts/SearchContext";
 
 const Header = dynamic(() => import("../header/Header"), {
   ssr: false,
@@ -21,12 +23,12 @@ interface DesktopLayoutProps {
 const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
-  const { containerRef: searchContainerRef } = useSearch();
 
   const breadcrumbs = useBreadcrumbs();
-  const router = useRouter();
-  const isHomePage = router.pathname === "/";
-  const isStreamView = router.pathname.startsWith("/my-stream");
+  const pathname = usePathname();
+  const isHomePage = pathname === "/";
+  const isStreamView = pathname?.startsWith("/my-stream");
+  const { containerRef: searchContainerRef } = useSearch();
 
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {

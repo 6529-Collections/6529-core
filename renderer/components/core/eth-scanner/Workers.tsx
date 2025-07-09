@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "./ETHScanner.module.scss";
 import {
   Container,
@@ -14,23 +16,23 @@ import {
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
   TRANSACTIONS_START_BLOCK,
-} from "../../../../shared/types";
-import useIsMobileScreen from "../../../hooks/isMobileScreen";
-import CircleLoader from "../../distribution-plan-tool/common/CircleLoader";
+} from "@/shared/types";
+import useIsMobileScreen from "@/hooks/isMobileScreen";
+import CircleLoader from "@/components/distribution-plan-tool/common/CircleLoader";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
 import { useState } from "react";
-import Confirm from "../../confirm/Confirm";
+import Confirm from "@/components/confirm/Confirm";
 import {
   manualStartWorker,
   recalculateTransactionsOwners,
   resetTransactionsToBlock,
   resetWorker,
   stopWorker,
-} from "../../../electron";
-import { useToast } from "../../../contexts/ToastContext";
-import LogsViewer from "../logs-viewer/LogsViewer";
+} from "@/electron";
+import { useToast } from "@/contexts/ToastContext";
+import LogsViewer from "@/components/core/logs-viewer/LogsViewer";
 import TransactionsLocalData from "./TransactionsLocalData";
 
 export interface Task {

@@ -1,3 +1,5 @@
+"use client"
+
 import styles from "./TDHCalculation.module.scss";
 import { useEffect, useState } from "react";
 import { TDHInfo } from "../eth-scanner/Workers";
@@ -9,7 +11,7 @@ import {
   faMinusCircle,
   faXmarkCircle,
 } from "@fortawesome/free-solid-svg-icons";
-import { SEIZE_API_URL } from "../../../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { Table } from "react-bootstrap";
 
 export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {

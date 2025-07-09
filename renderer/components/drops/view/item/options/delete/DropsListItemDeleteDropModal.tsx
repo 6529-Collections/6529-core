@@ -1,3 +1,5 @@
+"use client";
+
 import { useContext, useRef, useState } from "react";
 import { ApiDrop } from "../../../../../../generated/models/ApiDrop";
 import { AuthContext } from "../../../../../auth/Auth";

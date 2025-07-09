@@ -1,10 +1,12 @@
+"use client";
+
 import { useState, useCallback, useEffect } from "react";
-import { SortDirection } from "../../entities/ISort";
-import { cicToType } from "../../helpers/Helpers";
-import { commonApiFetch } from "../../services/api/common-api";
+import { SortDirection } from "@/entities/ISort";
+import { cicToType } from "@/helpers/Helpers";
+import { commonApiFetch } from "@/services/api/common-api";
 import { Content, Collector } from "./Leaderboard";
-import { CICType } from "../../entities/IProfile";
-import { SEIZE_API_URL } from "../../../constants";
+import { CICType } from "@/entities/IProfile";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 export const LEADERBOARD_PAGE_SIZE = 50;
 

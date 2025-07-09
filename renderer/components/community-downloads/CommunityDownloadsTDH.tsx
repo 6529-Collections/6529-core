@@ -1,4 +1,4 @@
-import { SEIZE_API_URL } from "../../../constants";
+import { SEIZE_API_URL } from "@/electron-constants";
 import CommunityDownloadsComponent from "./CommunityDownloadsComponent";
 
 export enum VIEW {

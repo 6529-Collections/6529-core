@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import styles from "../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 
 import { useRouter } from "next/router";
 import { LoginImage } from "./access";
-import { useSetTitle } from "../contexts/TitleContext";
-import { getStagingAuth } from "../services/auth/auth.utils";
-import { SEIZE_API_URL } from "../../constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { getStagingAuth } from "@/services/auth/auth.utils";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 export default function Access() {
   useSetTitle("Restricted");

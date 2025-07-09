@@ -1,3 +1,5 @@
+"use client";
+
 import styles from "../../NextGen.module.scss";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
@@ -8,32 +10,32 @@ import {
   createArray,
   getNetworkName,
   isValidEthAddress,
-} from "../../../../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
 import {
   NEXTGEN_CHAIN,
   NEXTGEN_CHAIN_ID,
   NEXTGEN_MINTER,
-} from "../../../nextgen_contracts";
+} from "@/components/nextGen/nextgen_contracts";
 import {
   ProofResponse,
   Status,
   TokensPerAddress,
-} from "../../../nextgen_entities";
+} from "@/components/nextGen/nextgen_entities";
 import { useChainId, useEnsAddress, useEnsName, useWriteContract } from "wagmi";
 import { useEffect, useState } from "react";
-import { NULL_ADDRESS } from "../../../../../constants";
-import { fetchUrl } from "../../../../../services/6529api";
+import { NULL_ADDRESS } from "@/constants";
+import { fetchUrl } from "@/services/6529api";
 import {
   getStatusFromDates,
   useMintSharedState,
 } from "../../../nextgen_helpers";
 import { NextGenMintingFor } from "./NextGenMintShared";
-import { NextGenCollection } from "../../../../../entities/INextgen";
+import { NextGenCollection } from "@/entities/INextgen";
 import { Spinner } from "./NextGenMint";
-import DotLoader from "../../../../dotLoader/DotLoader";
-import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
-import { SEIZE_API_URL } from "../../../../../../constants";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 
 export function getJsonData(keccak: string, data: string) {

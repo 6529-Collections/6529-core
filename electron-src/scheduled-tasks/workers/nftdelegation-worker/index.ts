@@ -25,7 +25,7 @@ import {
   USE_CASE_CONSOLIDATION,
   USE_CASE_PRIMARY_ADDRESS,
   USE_CASE_SUB_DELEGATION,
-} from "../../../../constants";
+} from "../../../../electron-constants";
 import { DELEGATIONS_IFACE } from "../../../../shared/abis/delegations";
 import { Time } from "../../../../shared/time";
 import {

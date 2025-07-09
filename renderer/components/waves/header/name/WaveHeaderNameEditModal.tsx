@@ -1,3 +1,5 @@
+"use client";
+
 import { useContext, useEffect, useRef, useState } from "react";
 import { ApiWave } from "../../../../generated/models/ApiWave";
 import { useClickAway, useKeyPressEvent } from "react-use";

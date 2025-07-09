@@ -1,11 +1,13 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Button } from "react-bootstrap";
 import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { getSeedWallets } from "../../../electron";
-import { ISeedWallet } from "../../../../shared/types";
+import { getSeedWallets } from "@/electron";
+import { ISeedWallet } from "@/shared/types";
 import SeedWalletCard from "./SeedWalletCard";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import { mainnet } from "viem/chains";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 

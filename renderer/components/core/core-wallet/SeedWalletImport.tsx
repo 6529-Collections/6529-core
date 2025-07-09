@@ -1,7 +1,9 @@
+"use client";
+
 import styles from "./SeedWallet.module.scss";
 import { Container, Row, Col, Button } from "react-bootstrap";
-import { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/router";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   faCheckCircle,
@@ -11,7 +13,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useToast } from "../../../contexts/ToastContext";
 import { getRandomKey } from "../../../helpers";
-import { MNEMONIC_NA } from "../../../../constants";
+import { MNEMONIC_NA } from "../../../../electron-constants";
 import { ethers } from "ethers";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 

@@ -1,4 +1,4 @@
-import { SEIZE_URL } from "../../constants";
+import { SEIZE_URL } from "@/electron-constants";
 
 export interface SeizeQuoteLinkInfo {
   waveId: string;

@@ -1,26 +1,28 @@
+"use client";
+
 import { Container, Row, Col, Dropdown, Button } from "react-bootstrap";
 import styles from "./Rememes.module.scss";
-import { fetchUrl } from "../../services/6529api";
-import { OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
+import { fetchUrl } from "@/services/6529api";
+import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
 import { useEffect, useState } from "react";
-import { NFTLite, Rememe } from "../../entities/INFT";
-import { DBResponse } from "../../entities/IDBResponse";
+import { NFTLite, Rememe } from "@/entities/INFT";
+import { DBResponse } from "@/entities/IDBResponse";
 import { useRouter } from "next/router";
-import RememeImage from "../nft-image/RememeImage";
+import RememeImage from "@/components/nft-image/RememeImage";
 import Image from "next/image";
-import Pagination from "../pagination/Pagination";
+import Pagination from "@/components/pagination/Pagination";
 import {
   areEqualAddresses,
   formatAddress,
   numberWithCommas,
-} from "../../helpers/Helpers";
+} from "@/helpers/Helpers";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Tippy from "@tippyjs/react";
-import DotLoader from "../dotLoader/DotLoader";
-import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
-import { SEIZE_API_URL } from "../../../constants";
-import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
+import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
+import { SEIZE_API_URL } from "@/electron-constants";
+import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
 import { faPlusCircle, faRefresh } from "@fortawesome/free-solid-svg-icons";
 
 const PAGE_SIZE = 40;
@@ -206,7 +208,7 @@ export default function Rememes() {
           <Container className="pt-4">
             <Row className="mb-3">
               <Col xs={12} sm={8} md={9} className="pb-3 pb-sm-0">
-                <span className="d-flex align-items-center gap-3">
+                <span className="d-flex align-items-center gap-3 flex-wrap">
                   <span className="d-flex align-items-center gap-2">
                     <Image
                       loading={"eager"}

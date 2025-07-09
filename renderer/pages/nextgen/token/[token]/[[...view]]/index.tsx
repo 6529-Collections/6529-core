@@ -1,53 +1,56 @@
-import styles from "../../../../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import {
   NextGenCollection,
   NextGenToken,
   NextGenTrait,
-} from "../../../../../entities/INextgen";
-import { isEmptyObject } from "../../../../../helpers/Helpers";
-import { getCommonHeaders } from "../../../../../helpers/server.helpers";
-import { commonApiFetch } from "../../../../../services/api/common-api";
-import { ContentView } from "../../../../../components/nextGen/collections/collectionParts/NextGenCollection";
-import NextGenNavigationHeader from "../../../../../components/nextGen/collections/NextGenNavigationHeader";
-import { useSetTitle, useTitle } from "../../../../../contexts/TitleContext";
+} from "@/entities/INextgen";
+import { isEmptyObject } from "@/helpers/Helpers";
+import { getCommonHeaders } from "@/helpers/server.helpers";
+import { commonApiFetch } from "@/services/api/common-api";
+import { ContentView } from "@/components/nextGen/collections/collectionParts/NextGenCollection";
+import NextGenNavigationHeader from "@/components/nextGen/collections/NextGenNavigationHeader";
+import { useSetTitle, useTitle } from "@/contexts/TitleContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
-import { SEIZE_URL } from "../../../../../../constants";
+import { SEIZE_URL } from "@/electron-constants";
 
 const NextGenTokenComponent = dynamic(
-  () =>
-    import(
-      "../../../../../components/nextGen/collections/nextgenToken/NextGenToken"
-    ),
+  () => import("@/components/nextGen/collections/nextgenToken/NextGenToken"),
   {
     ssr: false,
   }
 );
 
 const NextGenTokenOnChainComponent = dynamic(
-  () =>
-    import("../../../../../components/nextGen/collections/NextGenTokenOnChain"),
+  () => import("@/components/nextGen/collections/NextGenTokenOnChain"),
   {
     ssr: false,
   }
 );
 
-export default function NextGenCollectionToken(props: any) {
+export default function NextGenCollectionToken(props: {
+  readonly token_id: number;
+  readonly token: NextGenToken;
+  readonly traits: NextGenTrait[];
+  readonly tokenCount: number;
+  readonly collection: NextGenCollection;
+  readonly view: ContentView;
+}) {
   const router = useRouter();
 
   const { setTitle } = useTitle();
-  const tokenId: number = props.pageProps.token_id;
-  const token: NextGenToken | null = props.pageProps.token;
-  const traits: NextGenTrait[] = props.pageProps.traits;
-  const tokenCount: number = props.pageProps.tokenCount;
-  const collection: NextGenCollection = props.pageProps.collection;
+  const tokenId: number = props.token_id;
+  const token: NextGenToken | null = props.token;
+  const traits: NextGenTrait[] = props.traits;
+  const tokenCount: number = props.tokenCount;
+  const collection: NextGenCollection = props.collection;
 
   // Set initial title
   const initialTitle = token?.name ?? `${collection.name} - #${tokenId}`;
   useSetTitle(initialTitle);
 
-  const [tokenView, setTokenView] = useState<ContentView>(props.pageProps.view);
+  const [tokenView, setTokenView] = useState<ContentView>(props.view);
 
   useEffect(() => {
     const viewFromUrl = getContentView(

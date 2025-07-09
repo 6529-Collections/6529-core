@@ -1,6 +1,6 @@
 import styles from "./SeedWallet.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
-import { ISeedWallet } from "../../../../shared/types";
+import { ISeedWallet } from "@/shared/types";
 import Link from "next/link";
 import Image from "next/image";
 

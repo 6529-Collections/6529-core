@@ -1,3 +1,5 @@
+"use client";
+
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { commonApiFetch } from "../../../services/api/common-api";
 import { useRouter } from "next/router";

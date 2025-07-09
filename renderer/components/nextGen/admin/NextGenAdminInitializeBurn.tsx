@@ -1,3 +1,5 @@
+"use client";
+
 import { Container, Row, Col, Button, Form } from "react-bootstrap";
 import styles from "./NextGenAdmin.module.scss";
 import { useReadContract, useSignMessage } from "wagmi";
@@ -19,15 +21,15 @@ import {
 } from "../nextgen_helpers";
 import NextGenContractWriteStatus from "../NextGenContractWriteStatus";
 import { v4 as uuidv4 } from "uuid";
-import { NULL_ADDRESS } from "../../../constants";
-import { postData } from "../../../services/6529api";
+import { NULL_ADDRESS } from "@/constants";
+import { postData } from "@/services/6529api";
 import { printAdminErrors } from "./NextGenAdmin";
 import {
   NextGenAdminHeadingRow,
   NextGenAdminStatusFormGroup,
 } from "./NextGenAdminShared";
-import { SEIZE_API_URL } from "../../../../constants";
-import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import { SEIZE_API_URL } from "@/electron-constants";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 
 interface Props {
   close: () => void;

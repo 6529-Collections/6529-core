@@ -1,6 +1,8 @@
+"use client"
+
 import { useEffect } from "react";
-import { openInExternalBrowser } from "../helpers";
-import { SEIZE_URL } from "../../constants";
+import { openInExternalBrowser } from "@/helpers";
+import { SEIZE_URL } from "@/electron-constants";
 
 export const handleAnchorClick = (event: any) => {
   const target = event.target.closest("a");

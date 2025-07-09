@@ -1,6 +1,6 @@
 {
-  "appId": "com.6529.6529stagingcore",
-  "productName": "6529 STAGING CORE",
+  "appId": "com.6529.6529localcore",
+  "productName": "6529 LOCAL CORE",
   "asar": true,
   "extraMetadata": {
     "env": {
@@ -9,8 +9,8 @@
   },
   "protocols": [
     {
-      "name": "6529stagingcore",
-      "schemes": ["stagingcore6529"]
+      "name": "6529localcore",
+      "schemes": ["localcore6529"]
     }
   ],
   "files": [
@@ -25,19 +25,6 @@
       "from": "ipfs-binaries/${os}/${arch}",
       "to": "ipfs-binaries",
       "filter": ["**/*"]
-    }
-  ],
-  "publish": [
-    {
-      "provider": "s3",
-      "bucket": "6529bucket",
-      "region": "eu-west-1",
-      "path": "6529-staging-core-app/${os}/",
-      "acl": null
-    },
-    {
-      "provider": "generic",
-      "url": "https://d3lqz0a4bldqgf.cloudfront.net/6529-staging-core-app/${os}/"
     }
   ],
   "mac": {
@@ -55,12 +42,12 @@
         "arch": ["arm64"]
       }
     ],
-    "artifactName": "6529-STAGING-CORE-mac-${arch}-${version}.${ext}",
+    "artifactName": "6529-LOCAL-CORE-mac-${arch}-${version}.${ext}",
     "extendInfo": {
       "CFBundleURLTypes": [
         {
-          "CFBundleURLName": "com.6529.6529stagingcore",
-          "CFBundleURLSchemes": ["stagingcore6529"]
+          "CFBundleURLName": "com.6529.6529localcore",
+          "CFBundleURLSchemes": ["localcore6529"]
         }
       ]
     }
@@ -74,7 +61,7 @@
         "arch": ["x64"]
       }
     ],
-    "artifactName": "6529-STAGING-CORE-win-${arch}-${version}.${ext}",
+    "artifactName": "6529-LOCAL-CORE-win-${arch}-${version}.${ext}",
     "signingHashAlgorithms": ["sha256"]
   },
   "nsis": {
@@ -83,11 +70,11 @@
     "allowToChangeInstallationDirectory": true,
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true,
-    "shortcutName": "6529 STAGING CORE"
+    "shortcutName": "6529 LOCAL CORE"
   },
   "linux": {
     "icon": "assets",
-    "executableName": "6529-staging-core",
+    "executableName": "6529-local-core",
     "category": "Utility",
     "executableArgs": ["--no-sandbox"],
     "target": [
@@ -100,19 +87,19 @@
         "arch": ["x64"]
       }
     ],
-    "artifactName": "6529-STAGING-CORE-linux-${arch}-${version}.${ext}",
+    "artifactName": "6529-LOCAL-CORE-linux-${arch}-${version}.${ext}",
     "desktop": {
-      "Name": "6529 STAGING Core",
+      "Name": "6529 LOCAL Core",
       "Type": "Application",
       "Terminal": false,
-      "MimeType": "x-scheme-handler/stagingcore6529;",
+      "MimeType": "x-scheme-handler/localcore6529;",
       "Categories": "Utility;Network;",
-      "Comment": "6529 Staging Core Application"
+      "Comment": "6529 Local Core Application"
     },
     "protocols": [
       {
-        "name": "6529 Staging Core Protocol",
-        "schemes": ["stagingcore6529"]
+        "name": "6529 Local Core Protocol",
+        "schemes": ["localcore6529"]
       }
     ]
   }

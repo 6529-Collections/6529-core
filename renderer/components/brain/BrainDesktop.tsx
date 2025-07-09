@@ -1,3 +1,5 @@
+"use client";
+
 import React, { ReactNode, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import BrainLeftSidebar from "./left-sidebar/BrainLeftSidebar";
@@ -77,7 +79,7 @@ const BrainDesktop: React.FC<Props> = ({ children }) => {
       { shallow: true }
     );
   };
-  
+
   const isDropOpen =
     drop &&
     drop?.id?.toLowerCase() === (router.query.drop as string)?.toLowerCase();

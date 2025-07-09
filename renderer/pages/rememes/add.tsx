@@ -1,11 +1,11 @@
-import styles from "../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import dynamic from "next/dynamic";
 import React from "react";
-import { useSetTitle } from "../../contexts/TitleContext";
-import { SEIZE_URL } from "../../../constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { SEIZE_URL } from "@/electron-constants";
 
 const AddRememeComponent = dynamic(
-  () => import("../../components/rememes/RememeAddPage"),
+  () => import("@/components/rememes/RememeAddPage"),
   { ssr: false }
 );
 

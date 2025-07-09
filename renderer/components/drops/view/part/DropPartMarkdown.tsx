@@ -15,34 +15,34 @@ import rehypeExternalLinks from "rehype-external-links";
 import rehypeSanitize from "rehype-sanitize";
 import remarkGfm from "remark-gfm";
 
-import { getRandomObjectId } from "../../../../helpers/AllowlistToolHelpers";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
 
 // Component definitions moved outside for better performance
 const BreakComponent = () => <br />;
 import DropListItemContentPart, {
   DropListItemContentPartProps,
 } from "../item/content/DropListItemContentPart";
-import { ApiDropMentionedUser } from "../../../../generated/models/ApiDropMentionedUser";
-import { ApiDropReferencedNFT } from "../../../../generated/models/ApiDropReferencedNFT";
+import { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import { ApiDropReferencedNFT } from "@/generated/models/ApiDropReferencedNFT";
 import { Tweet } from "react-tweet";
 
 import DropPartMarkdownImage from "./DropPartMarkdownImage";
-import WaveDropQuoteWithDropId from "../../../waves/drops/WaveDropQuoteWithDropId";
-import WaveDropQuoteWithSerialNo from "../../../waves/drops/WaveDropQuoteWithSerialNo";
-import { ApiDrop } from "../../../../generated/models/ApiDrop";
+import WaveDropQuoteWithDropId from "@/components/waves/drops/WaveDropQuoteWithDropId";
+import WaveDropQuoteWithSerialNo from "@/components/waves/drops/WaveDropQuoteWithSerialNo";
+import { ApiDrop } from "@/generated/models/ApiDrop";
 import {
   parseSeizeQueryLink,
   parseSeizeQuoteLink,
   SeizeQuoteLinkInfo,
-} from "../../../../helpers/SeizeLinkParser";
-import { SEIZE_URL } from "../../../../../constants";
-import { handleAnchorClick } from "../../../../hooks/useAnchorInterceptor";
-import useIsMobileScreen from "../../../../hooks/isMobileScreen";
-import { useEmoji } from "../../../../contexts/EmojiContext";
-import GroupCardChat from "../../../groups/page/list/card/GroupCardChat";
-import WaveItemChat from "../../../waves/list/WaveItemChat";
-import DropItemChat from "../../../waves/drops/DropItemChat";
-import ChatItemHrefButtons from "../../../waves/ChatItemHrefButtons";
+} from "@/helpers/SeizeLinkParser";
+import { SEIZE_URL } from "@/electron-constants";
+import { handleAnchorClick } from "@/hooks/useAnchorInterceptor";
+import useIsMobileScreen from "@/hooks/isMobileScreen";
+import { useEmoji } from "@/contexts/EmojiContext";
+import GroupCardChat from "@/components/groups/page/list/card/GroupCardChat";
+import WaveItemChat from "@/components/waves/list/WaveItemChat";
+import DropItemChat from "@/components/waves/drops/DropItemChat";
+import ChatItemHrefButtons from "@/components/waves/ChatItemHrefButtons";
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
@@ -160,8 +160,7 @@ function DropPartMarkdown({
                 key={getRandomObjectId()}
                 className={`${
                   areAllPartsEmojis ? "emoji-text-node" : "tw-align-middle"
-                }`}
-              >
+                }`}>
                 {part}
               </span>
             )
@@ -217,8 +216,7 @@ function DropPartMarkdown({
       if (nativeEmoji) {
         return (
           <span
-            className={`${bigEmoji ? "emoji-text-node" : "tw-align-middle"}`}
-          >
+            className={`${bigEmoji ? "emoji-text-node" : "tw-align-middle"}`}>
             {nativeEmoji.skins[0].native}
           </span>
         );
@@ -426,8 +424,7 @@ function DropPartMarkdown({
     ) => (
       <p
         key={getRandomObjectId()}
-        className={`tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}
-      >
+        className={`tw-mb-0 tw-leading-6 tw-text-iron-200 tw-font-normal tw-whitespace-pre-wrap tw-break-words word-break tw-transition tw-duration-300 tw-ease-out ${textSizeClass}`}>
         {customRenderer({
           content: params.children,
           mentionedUsers,
@@ -581,8 +578,7 @@ function DropPartMarkdown({
         code: (params) => (
           <code
             style={{ textOverflow: "unset" }}
-            className="tw-text-iron-200 tw-whitespace-pre-wrap tw-break-words"
-          >
+            className="tw-text-iron-200 tw-whitespace-pre-wrap tw-break-words">
             {customRenderer({
               content: params.children,
               mentionedUsers,
@@ -602,8 +598,7 @@ function DropPartMarkdown({
             })}
           </blockquote>
         ),
-      }}
-    >
+      }}>
       {processedContent}
     </Markdown>
   );

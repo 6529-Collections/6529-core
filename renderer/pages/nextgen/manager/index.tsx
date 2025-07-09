@@ -1,11 +1,11 @@
-import styles from "../../../styles/Home.module.scss";
+import styles from "@/styles/Home.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
 import dynamic from "next/dynamic";
-import { useTitle } from "../../../contexts/TitleContext";
-import { SEIZE_URL } from "../../../../constants";
+import { useTitle } from "@/contexts/TitleContext";
+import { SEIZE_URL } from "@/electron-constants";
 
 const NextGenAdminComponent = dynamic(
-  () => import("../../../components/nextGen/admin/NextGenAdmin"),
+  () => import("@/components/nextGen/admin/NextGenAdmin"),
   {
     ssr: false,
   }
