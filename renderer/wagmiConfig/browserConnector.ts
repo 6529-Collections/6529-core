@@ -29,7 +29,7 @@ export function browserConnector(parameters: {
     new Map();
 
   let initialized = false;
-  let scheme = "";
+  let scheme = "core6529";
   let port = 6529;
 
   let connectionObject: ConnectionObject = {
@@ -110,7 +110,7 @@ export function browserConnector(parameters: {
         const requestId = generateRequestId();
         const t = Date.now();
         const chainId = params.chainId || connectionObject.chainId;
-        const url = `http://localhost:${port}/app-wallet?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
+        const url = `http://localhost:${port}/browser-connector?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
 
         parameters.openUrlFn(url);
 
@@ -167,7 +167,7 @@ export function browserConnector(parameters: {
             const requestId = generateRequestId();
             const encodedParams = encodeURIComponent(JSON.stringify(params));
             const t = Date.now();
-            const url = `http://localhost:${port}/app-wallet?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
+            const url = `http://localhost:${port}/browser-connector?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
 
             parameters.openUrlFn(url);
 

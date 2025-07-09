@@ -20,6 +20,8 @@ export function getScheme() {
     scheme = "stagingcore6529";
   } else if (environment === "production") {
     scheme = "core6529";
+  } else if (environment === "local") {
+    scheme = "localcore6529";
   }
   return scheme;
 }

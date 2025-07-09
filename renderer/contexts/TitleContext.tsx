@@ -10,6 +10,7 @@ import React, {
 } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { SEIZE_URL } from "@/electron-constants";
+import { isElectron } from "@/helpers";
 
 type TitleContextType = {
   title: string;
@@ -22,9 +23,7 @@ type TitleContextType = {
 
 const TitleContext = createContext<TitleContextType | undefined>(undefined);
 
-export const DEFAULT_TITLE = SEIZE_URL?.includes("staging")
-  ? "6529 Staging"
-  : "6529.io";
+export const DEFAULT_TITLE = "6529 Core";
 
 // Default titles for routes
 const getDefaultTitleForRoute = (pathname: string | null): string => {
@@ -175,6 +174,12 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
       setStreamHasNewItems,
     };
   }, [computedTitle, notificationCount]);
+
+  useEffect(() => {
+    if (isElectron()) {
+      window.notifications.setBadge(notificationCount);
+    }
+  }, [notificationCount]);
 
   return (
     <TitleContext.Provider value={contextValue}>

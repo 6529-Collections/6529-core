@@ -1,26 +1,27 @@
-"use client"
+"use client";
 
-import styles from "./AppWallet.module.scss";
-import { useRouter } from "next/router";
+import { useSearchParams } from "next/navigation";
 import { LoginImage } from "../../pages/access";
 import { Col, Container, Row } from "react-bootstrap";
-import AppWalletConnect from "./AppWalletConnect";
+import BrowserConnectorConnect from "./BrowserConnectorConnect";
 import Image from "next/image";
-import AppWalletProvider from "./AppWalletProvider";
+import BrowserConnectorProvider from "./BrowserConnectorProvider";
 import { useEffect, useState } from "react";
 
-export default function AppWallet({ image }: { readonly image: string }) {
-  const router = useRouter();
+export default function BrowserConnector({
+  image,
+}: {
+  readonly image: string;
+}) {
+  const searchParams = useSearchParams();
 
   const [isCompleted, setIsCompleted] = useState(false);
   const [isExpired, setExpired] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
-  const { task, scheme, t } = router.query as {
-    task?: string;
-    scheme?: string;
-    t?: string;
-  };
+  const task = searchParams?.get("task");
+  const scheme = searchParams?.get("scheme");
+  const t = searchParams?.get("t");
 
   useEffect(() => {
     if (!t) {
@@ -91,13 +92,13 @@ export default function AppWallet({ image }: { readonly image: string }) {
             ) : (
               <>
                 {task === "connect" && (
-                  <AppWalletConnect
+                  <BrowserConnectorConnect
                     scheme={scheme}
                     setCompleted={setIsCompleted}
                   />
                 )}
                 {task === "provider" && (
-                  <AppWalletProvider
+                  <BrowserConnectorProvider
                     scheme={scheme}
                     setCompleted={setIsCompleted}
                   />

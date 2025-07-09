@@ -19,7 +19,7 @@ import { deleteSeedWallet, getSeedWallet } from "@/electron";
 import { useConfirm } from "@/contexts/ConfirmContext";
 import { useToast } from "@/contexts/ToastContext";
 import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
-import { useRouter } from "next/router";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { MNEMONIC_NA } from "@/electron-constants";
 import { useBalance, useChainId } from "wagmi";

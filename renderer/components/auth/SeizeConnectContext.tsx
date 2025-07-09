@@ -15,6 +15,7 @@ import {
   removeAuthJwt,
 } from "../../services/auth/auth.utils";
 import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
+import { isElectron } from "@/helpers";
 
 interface SeizeConnectContextType {
   address: string | undefined;
@@ -46,6 +47,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     migrateCookiesToLocalStorage();
   }, []);
+
+  useEffect(() => {
+    if (isElectron() && !connectedAddress) {
+      window.notifications.setBadge(0);
+    }
+  }, [connectedAddress]);
 
   useEffect(() => {
     const address = connections?.[0]?.accounts?.[0];

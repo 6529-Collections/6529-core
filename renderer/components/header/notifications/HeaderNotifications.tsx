@@ -9,6 +9,7 @@ import { usePathname } from "next/navigation";
 import { useUnreadNotifications } from "../../../hooks/useUnreadNotifications";
 import { resolveIpfsUrl } from "../../ipfs/IPFSContext";
 import { ApiNotification } from "../../../generated/models/ApiNotification";
+import { isElectron } from "@/helpers";
 
 export default function HeaderNotifications() {
   const { connectedProfile } = useAuth();
@@ -25,6 +26,7 @@ export default function HeaderNotifications() {
     notification: ApiNotification,
     unreadCount: number
   ) {
+    if (!isElectron() || !unreadCount) return;
     const relatedPfp = notification.related_identity?.pfp;
     const newSrc = relatedPfp ? await resolveIpfsUrl(relatedPfp) : "";
     window.notifications.showNotification(
@@ -43,8 +45,6 @@ export default function HeaderNotifications() {
         notifications?.unread_count
       );
     }
-
-    window.notifications.setBadge(notifications?.unread_count ?? 0);
   }, [
     notifications?.unread_count,
     haveUnreadNotifications,

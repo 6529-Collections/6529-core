@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import styles from "./AppWallet.module.scss";
-import { useRouter } from "next/router";
+import styles from "./BrowserConnector.module.scss";
+import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { useChains, useConnections, useSwitchChain } from "wagmi";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
@@ -14,19 +14,20 @@ import {
 } from "../../services/auth/auth.utils";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
-export default function AppWalletConnect(
+export default function BrowserConnectorConnect(
   props: Readonly<{
-    scheme?: string;
+    scheme?: string | null;
     setCompleted: (value: boolean) => void;
   }>
 ) {
-  const router = useRouter();
+  const searchParams = useSearchParams();
   const account = useSeizeConnectContext();
   const connections = useConnections();
   const chains = useChains();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
 
-  const { requestId, chainId } = router.query;
+  const requestId = searchParams?.get("requestId");
+  const chainId = searchParams?.get("chainId");
 
   const requestedChain =
     chains.find((c) => c.id === parseInt(chainId as string)) ?? chains[0];

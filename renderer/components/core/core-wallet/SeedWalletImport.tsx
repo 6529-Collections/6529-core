@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
 import styles from "./SeedWallet.module.scss";
 import { Container, Row, Col, Button } from "react-bootstrap";
-import { useCallback, useRef, useState } from "react";
-import { useRouter } from "next/router";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   faCheckCircle,

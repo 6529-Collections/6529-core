@@ -9,8 +9,8 @@ export default function FooterWrapper() {
   const pathname = usePathname();
   const hideFooter =
     isApp ||
-    ["/waves", "/my-stream", "/open-mobile", "/app-wallet"].some((path) =>
-      pathname?.startsWith(path)
+    ["/waves", "/my-stream", "/open-mobile", "/browser-connector"].some(
+      (path) => pathname?.startsWith(path)
     );
   return hideFooter ? null : <Footer />;
 }

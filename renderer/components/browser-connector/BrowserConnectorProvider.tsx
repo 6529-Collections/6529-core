@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import styles from "./AppWallet.module.scss";
+import styles from "./BrowserConnector.module.scss";
 import { useEffect, useState } from "react";
 import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
 import { Container, Row, Col } from "react-bootstrap";
@@ -8,9 +8,9 @@ import { hexToString } from "viem";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 
-export default function AppWalletProvider(
+export default function BrowserConnectorProvider(
   props: Readonly<{
-    scheme?: string;
+    scheme?: string | null;
     setCompleted: (value: boolean) => void;
   }>
 ) {
