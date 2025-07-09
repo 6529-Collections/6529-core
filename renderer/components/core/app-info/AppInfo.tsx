@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { useState, useEffect } from "react";
@@ -53,6 +53,7 @@ export default function AppInfo() {
 
   useEffect(() => {
     fetchMainWorker();
+    window.updater.checkUpdates();
   }, []);
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import styles from "./ETHScanner.module.scss";
 import { useCallback, useRef, useState } from "react";
