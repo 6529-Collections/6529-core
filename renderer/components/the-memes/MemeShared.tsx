@@ -6,7 +6,7 @@ import { getAppMetadata } from "../providers/metadata";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Menu, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
-import { SEIZE_API_URL } from "@/electron-constants";
+import { SEIZE_API_URL, SEIZE_URL } from "@/electron-constants";
 
 export enum MEME_FOCUS {
   LIVE = "live",
