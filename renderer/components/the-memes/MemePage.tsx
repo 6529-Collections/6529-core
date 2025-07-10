@@ -31,7 +31,12 @@ import { commonApiFetch } from "@/services/api/common-api";
 import MemePageMintCountdown from "./MemePageMintCountdown";
 import { SEIZE_API_URL } from "@/electron-constants";
 import Link from "next/link";
-import { getMemeTabTitle, MemeTab, MEME_TABS, MEME_FOCUS } from "./MemeShared";
+import {
+  getMemeTabTitle,
+  MEME_TABS,
+  MEME_FOCUS,
+  TabButton,
+} from "./MemeShared";
 import NftNavigation from "../nft-navigation/NftNavigation";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -274,7 +279,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
                   </Col>
                 </Row>
                 <Row className="pt-3 pb-3">
-                  <Col>
+                  <Col className="tw-flex tw-gap-3 tw-items-center tw-flex-wrap">
                     {MEME_TABS.map((tab) => (
                       <TabButton
                         key={`${nft.id}-${nft.contract}-${tab.focus}-tab`}
@@ -292,25 +297,5 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
         </Col>
       </Row>
     </Container>
-  );
-}
-
-function TabButton(
-  props: Readonly<{
-    tab: MemeTab;
-    activeTab: MEME_FOCUS | undefined;
-    setActiveTab: (focus: MEME_FOCUS) => void;
-  }>
-) {
-  return (
-    <button
-      className={`btn-link ${styles.tabFocus} ${
-        props.activeTab === props.tab.focus ? styles.tabFocusActive : ""
-      }`}
-      onClick={() => {
-        props.setActiveTab(props.tab.focus);
-      }}>
-      {props.tab.title}
-    </button>
   );
 }

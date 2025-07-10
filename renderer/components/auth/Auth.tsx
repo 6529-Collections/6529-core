@@ -524,9 +524,9 @@ export default function Auth({
         keyboard={false}
         centered
         dialogClassName={!isTopModal(AUTH_MODAL) ? "modal-blurred" : ""}>
-        <Modal.Header className={styles.signModalHeader}>
+        <div className={styles.signModalHeader}>
           <Modal.Title>Sign Authentication Request</Modal.Title>
-        </Modal.Header>
+        </div>
         <Modal.Body className={styles.signModalContent}>
           <p className="mt-2 mb-2">
             To connect your wallet, you will need to sign a message to confirm
