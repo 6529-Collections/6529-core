@@ -17,17 +17,18 @@ import { fetchAllPages } from "@/services/6529api";
 import NFTImage from "@/components/nft-image/NFTImage";
 import DotLoader from "@/components/dotLoader/DotLoader";
 import { AuthContext } from "../auth/Auth";
-import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
-import { MEMELAB_CONTRACT } from "@/constants";
-import { printVolumeTypeDropdown, SortButton } from "../the-memes/TheMemes";
-import { MemeLabSort } from "@/enums";
-import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
-import { SEIZE_API_URL } from "@/electron-constants";
-import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
+import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
+import { MEMELAB_CONTRACT } from "../../constants";
+import { SortButton } from "../the-memes/TheMemes";
+import { MemeLabSort } from "../../enums";
+import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
+import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
 import {
   faChevronCircleDown,
   faChevronCircleUp,
 } from "@fortawesome/free-solid-svg-icons";
+import { VolumeTypeDropdown } from "../the-memes/MemeShared";
+import { SEIZE_API_URL } from "@/electron-constants";
 
 interface Props {
   wallets: string[];
@@ -62,6 +63,7 @@ export function getInitialRouterValues(router: NextRouter) {
 
 export function printSortButtons(
   sort: MemeLabSort,
+  volumeType: VolumeType,
   setSort: (sort: MemeLabSort) => void,
   setVolumeType: (volumeType: VolumeType) => void,
   isCollection?: boolean
@@ -86,13 +88,12 @@ export function printSortButtons(
           select={() => setSort(v)}
         />
       ))}
-      {printVolumeTypeDropdown(
-        sort === MemeLabSort.VOLUME,
-        setVolumeType,
-        () => {
-          setSort(MemeLabSort.VOLUME);
-        }
-      )}
+      <VolumeTypeDropdown
+        isVolumeSort={sort === MemeLabSort.VOLUME}
+        selectedVolumeSort={volumeType}
+        setVolumeType={setVolumeType}
+        setVolumeSort={() => setSort(MemeLabSort.VOLUME)}
+      />
     </>
   );
 }
@@ -705,7 +706,9 @@ export default function MemeLabComponent(props: Readonly<Props>) {
                 </Col>
               </Row>
               <Row className="pt-2">
-                <Col>{printSortButtons(sort, setSort, setVolumeType)}</Col>
+                <Col className="tw-flex tw-gap-3 tw-items-center tw-flex-wrap">
+                  {printSortButtons(sort, volumeType, setSort, setVolumeType)}
+                </Col>
               </Row>
               {printNftsContent()}
             </>
