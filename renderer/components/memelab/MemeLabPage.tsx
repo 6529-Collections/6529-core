@@ -53,10 +53,11 @@ import {
   getMemeTabTitle,
   MEME_FOCUS,
   MEME_TABS,
-} from "@/components/the-memes/MemeShared";
-import { useSetTitle } from "@/contexts/TitleContext";
-import NftNavigation from "@/components/nft-navigation/NftNavigation";
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+  TabButton,
+} from "../the-memes/MemeShared";
+import { useSetTitle } from "../../contexts/TitleContext";
+import NftNavigation from "../nft-navigation/NftNavigation";
+import { useCookieConsent } from "../cookies/CookieConsentContext";
 
 const ACTIVITY_PAGE_SIZE = 25;
 
@@ -1219,18 +1220,14 @@ export default function LabPage(props: Readonly<Props>) {
                   </Col>
                 </Row>
                 <Row className="pt-3 pb-3">
-                  <Col>
+                  <Col className="tw-flex tw-gap-3 tw-items-center tw-flex-wrap">
                     {MEME_TABS.map((tab) => (
-                      <span
+                      <TabButton
                         key={`${nft.id}-${nft.contract}-${tab.focus}-tab`}
-                        className={`${styles.tabFocus} ${
-                          activeTab === tab.focus ? styles.tabFocusActive : ""
-                        }`}
-                        onClick={() => {
-                          setActiveTab(tab.focus);
-                        }}>
-                        {tab.title}
-                      </span>
+                        tab={tab}
+                        activeTab={activeTab}
+                        setActiveTab={setActiveTab}
+                      />
                     ))}
                   </Col>
                 </Row>
