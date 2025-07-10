@@ -688,7 +688,7 @@ export default function MemeLabComponent(props: Readonly<Props>) {
               </Row>
               <Row className="pt-2">
                 <Col>
-                  Sort by&nbsp;&nbsp;
+                  Sort&nbsp;&nbsp;
                   <FontAwesomeIcon
                     icon={faChevronCircleUp}
                     onClick={() => setSortDir(SortDirection.ASC)}

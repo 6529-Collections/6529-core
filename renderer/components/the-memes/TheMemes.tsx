@@ -418,7 +418,7 @@ export default function TheMemesComponent() {
               </Row>
               <Row className="pt-2">
                 <Col>
-                  MemesSort by&nbsp;&nbsp;
+                  Sort&nbsp;&nbsp;
                   <FontAwesomeIcon
                     icon={faChevronCircleUp}
                     onClick={() => setSortDir(SortDirection.ASC)}
