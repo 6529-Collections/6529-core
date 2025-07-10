@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import { NavDropdown } from "react-bootstrap";
 import { useRouter } from "next/router";

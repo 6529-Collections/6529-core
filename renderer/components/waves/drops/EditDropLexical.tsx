@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -401,15 +401,13 @@ const EditDropLexical: React.FC<EditDropLexicalProps> = ({
           escape to{" "}
           <button
             onClick={onCancel}
-            className="tw-bg-transparent tw-px-[3px] tw-border-0 tw-cursor-pointer tw-text-primary-400 desktop-hover:hover:tw-underline tw-transition tw-font-medium focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 tw-rounded-md"
-          >
+            className="tw-bg-transparent tw-px-[3px] tw-border-0 tw-cursor-pointer tw-text-primary-400 desktop-hover:hover:tw-underline tw-transition tw-font-medium focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 tw-rounded-md">
             cancel
           </button>{" "}
           • enter to{" "}
           <button
             onClick={handleSave}
-            className="tw-bg-transparent tw-px-[3px] tw-border-0 tw-cursor-pointer tw-text-primary-400 desktop-hover:hover:tw-underline tw-transition tw-font-medium focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 tw-rounded-md"
-          >
+            className="tw-bg-transparent tw-px-[3px] tw-border-0 tw-cursor-pointer tw-text-primary-400 desktop-hover:hover:tw-underline tw-transition tw-font-medium focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 tw-rounded-md">
             save
           </button>
         </div>
@@ -421,15 +419,13 @@ const EditDropLexical: React.FC<EditDropLexicalProps> = ({
             <button
               onClick={onCancel}
               disabled={isSaving}
-              className="tw-bg-iron-800 tw-text-iron-300 tw-border-0 tw-rounded-lg tw-py-1.5 tw-px-3 tw-font-medium tw-text-sm active:tw-bg-iron-700 tw-transition-colors tw-duration-150 disabled:tw-opacity-50"
-            >
+              className="tw-bg-iron-800 tw-text-iron-300 tw-border-0 tw-rounded-lg tw-py-1.5 tw-px-3 tw-font-medium tw-text-sm active:tw-bg-iron-700 tw-transition-colors tw-duration-150 disabled:tw-opacity-50">
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="tw-bg-primary-500 tw-text-white tw-border-0 tw-rounded-lg tw-py-1.5 tw-px-3 tw-font-medium tw-text-sm active:tw-bg-primary-600 tw-transition-colors tw-duration-150 disabled:tw-opacity-50"
-            >
+              className="tw-bg-primary-500 tw-text-white tw-border-0 tw-rounded-lg tw-py-1.5 tw-px-3 tw-font-medium tw-text-sm active:tw-bg-primary-600 tw-transition-colors tw-duration-150 disabled:tw-opacity-50">
               {isSaving ? "Saving..." : "Save"}
             </button>
           </div>

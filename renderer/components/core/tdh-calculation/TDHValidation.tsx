@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import styles from "./TDHCalculation.module.scss";
 import { useEffect, useState } from "react";

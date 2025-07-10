@@ -6,7 +6,7 @@ grep -rl 'useEffect\|useState\|useRouter\|useRef\|useReducer\|useContext' compon
     if ! grep -q '^["'\'']use client["'\'']' "$file"; then
       echo "📌 Patching: $file"
       tmpfile=$(mktemp)
-      echo '"use client"' > "$tmpfile"
+      echo '"use client";' > "$tmpfile"
       echo >> "$tmpfile"
       cat "$file" >> "$tmpfile"
       mv "$tmpfile" "$file"

@@ -1,4 +1,4 @@
-"use client"
+"use client";
 
 import React, { useContext } from "react";
 import { PencilIcon } from "@heroicons/react/24/outline";
@@ -31,8 +31,7 @@ const WaveDropMobileMenuEdit: React.FC<WaveDropMobileMenuEditProps> = ({
   return (
     <button
       className="tw-border-0 tw-flex tw-items-center tw-gap-x-4 tw-p-4 tw-bg-iron-950 tw-rounded-xl active:tw-bg-iron-800 tw-transition-colors tw-duration-200"
-      onClick={handleEdit}
-    >
+      onClick={handleEdit}>
       <PencilIcon className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-iron-300" />
       <span className="tw-text-iron-300 tw-font-semibold tw-text-base">
         Edit Message
