@@ -69,7 +69,7 @@ const getColorClasses = ({
   location: DropLocation;
 }): string => {
   if (isActiveDrop) {
-    return "tw-bg-[#3CCB7F]/10 tw-border-l tw-border-l-[#3CCB7F] tw-border-solid tw-border-y-0 tw-border-r-0 tw-mt-1";
+    return "tw-bg-[#3CCB7F]/10 tw-border-l tw-border-l-[#3CCB7F] tw-border-solid tw-border-y-0 tw-border-r-0";
   }
 
   if (!isDrop) {
@@ -359,7 +359,7 @@ const WaveDrop = ({
             <div
               className={
                 shouldGroupWithPreviousDrop && !isProfileView
-                  ? "tw-ml-[3.25rem] tw-py-[0.15625rem]"
+                  ? "tw-ml-[3.25rem]"
                   : ""
               }>
               <WaveDropContent

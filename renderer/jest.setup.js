@@ -63,5 +63,43 @@ Object.defineProperty(window, "matchMedia", {
   })),
 });
 
+// Provide ResizeObserver for components relying on it
+if (typeof global.ResizeObserver === "undefined") {
+  global.ResizeObserver = class {
+    // no-op for test environment
+    observe() {
+      /* noop */
+    }
+    unobserve() {
+      /* noop */
+    }
+    disconnect() {
+      /* noop */
+    }
+  };
+}
+
 // Default API endpoint needed for service tests
 process.env.API_ENDPOINT = process.env.API_ENDPOINT || "https://example.com";
+
+// Mock ResizeObserver for react-tooltip
+global.ResizeObserver = class ResizeObserver {
+  constructor(callback) {
+    this.callback = callback;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  observe() {} // Intentionally empty - no actual observation needed in tests
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  unobserve() {} // Intentionally empty - no actual observation needed in tests
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  disconnect() {} // Intentionally empty - no actual observation needed in tests
+};
+
+if (typeof global.fetch === "undefined") {
+  global.fetch = jest.fn(() =>
+    Promise.resolve({
+      ok: true,
+      json: () => Promise.resolve([]),
+    })
+  );
+}

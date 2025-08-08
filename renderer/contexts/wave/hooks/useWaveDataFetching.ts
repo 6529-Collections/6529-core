@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback } from "react";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
 import { useWaveLoadingState } from "./useWaveLoadingState";
@@ -205,10 +207,7 @@ export function useWaveDataFetching({
             keepFetching = false; // No more drops found
           } else {
             // fetchNewestWaveMessages utility returned null drops (error occurred)
-            console.error(
-              `[WaveDataFetching] Loop for ${waveId} encountered an error from utility.`
-            );
-            // Error logged in utility, return failure for the whole operation
+            // Error details already logged in utility function
             return { drops: null, highestSerialNo: null };
           }
         } catch (error) {

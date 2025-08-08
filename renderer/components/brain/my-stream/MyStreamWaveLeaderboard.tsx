@@ -14,11 +14,14 @@ import { useLayout } from "./layout/LayoutContext";
 import { WaveDropsLeaderboardSort } from "../../../hooks/useWaveDropsLeaderboard";
 import useLocalPreference from "../../../hooks/useLocalPreference";
 import MemesArtSubmissionModal from "../../waves/memes/MemesArtSubmissionModal";
+import { createBreakpoint } from "react-use";
 
 interface MyStreamWaveLeaderboardProps {
   readonly wave: ApiWave;
   readonly onDropClick: (drop: ExtendedDrop) => void;
 }
+
+const useBreakpoint = createBreakpoint({ MD: 768, S: 0 });
 
 const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
   wave,
@@ -26,6 +29,7 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
 }) => {
   const { isMemesWave } = useWave(wave);
   const { leaderboardViewStyle } = useLayout(); // Get pre-calculated style from context
+  const breakpoint = useBreakpoint();
 
   // Track mount status
   const mountedRef = useRef(true);
@@ -36,7 +40,7 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
   }, []);
 
   const containerClassName = useMemo(() => {
-    return `lg:tw-pt-2 tw-w-full tw-flex tw-flex-col tw-rounded-t-xl tw-overflow-y-auto tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 tw-overflow-x-hidden tw-flex-grow lg:tw-pr-2`;
+    return `tw-w-full tw-flex tw-flex-col tw-rounded-t-xl tw-overflow-y-auto tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 tw-overflow-x-hidden tw-flex-grow lg:tw-pr-2`;
   }, []);
 
   const [isCreatingDrop, setIsCreatingDrop] = useState(false);
@@ -62,16 +66,31 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
     (value) => Object.values(WaveDropsLeaderboardSort).includes(value)
   );
 
+  // MOBILE OPTIMIZATION: Force list view on small screens while preserving user preference
+  // On mobile (S breakpoint): always show list view regardless of user choice
+  // On desktop (MD breakpoint): respect user's chosen view mode
+  const effectiveViewMode: "list" | "grid" = useMemo(() => {
+    if (breakpoint === "S") {
+      // Mobile: always list view (but don't overwrite user preference)
+      return "list";
+    }
+    // Desktop: use user's preference
+    return viewMode;
+  }, [breakpoint, viewMode]);
+
   return (
     <div className={containerClassName} style={leaderboardViewStyle}>
       {/* Main content container */}
-      <div className="tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0">
+      <div className="tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0 lg:tw-pt-2">
         {/* Time section */}
         <WaveLeaderboardTime wave={wave} />
+      </div>
 
+      {/* Sticky tabs/filters section */}
+      <div className="tw-sticky tw-top-0 tw-z-10 tw-bg-iron-950 tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0">
         <WaveLeaderboardHeader
           wave={wave}
-          viewMode={viewMode}
+          viewMode={effectiveViewMode}
           sort={sort}
           onViewModeChange={(mode) => setViewMode(mode)}
           onCreateDrop={() => {
@@ -84,7 +103,7 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
       </div>
 
       {/* Content section */}
-      <div className="tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0">
+      <div className="tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0 tw-mt-2">
         <AnimatePresence>
           {isCreatingDrop && !isMemesWave && (
             <motion.div
@@ -117,7 +136,7 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
           />
         )}
 
-        {viewMode === "list" ? (
+        {effectiveViewMode === "list" ? (
           <WaveLeaderboardDrops
             wave={wave}
             sort={sort}
@@ -128,13 +147,11 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
             }}
           />
         ) : (
-          <div className="tw-mb-6">
-            <WaveLeaderboardGallery
-              wave={wave}
-              sort={sort}
-              onDropClick={onDropClick}
-            />
-          </div>
+          <WaveLeaderboardGallery
+            wave={wave}
+            sort={sort}
+            onDropClick={onDropClick}
+          />
         )}
       </div>
     </div>

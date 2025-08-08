@@ -1,12 +1,9 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { WaveSmallLeaderboardItemOutcomes } from '../../../../components/waves/small-leaderboard/WaveSmallLeaderboardItemOutcomes';
 import { ApiWaveOutcomeCredit } from '../../../../generated/models/ApiWaveOutcomeCredit';
 import { ApiWaveOutcomeType } from '../../../../generated/models/ApiWaveOutcomeType';
 
-jest.mock('@tippyjs/react', () => ({ children, content }: any) => (
-  <div data-testid="tippy">{children}<div data-testid="content">{content}</div></div>
-));
 
 describe('WaveSmallLeaderboardItemOutcomes', () => {
   const drop: any = { rank: 1 };

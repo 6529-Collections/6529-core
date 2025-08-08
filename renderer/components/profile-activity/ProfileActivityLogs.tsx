@@ -1,5 +1,6 @@
 "use client";
 
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import {
   ProfileActivityLog,
@@ -7,19 +8,19 @@ import {
   RateMatter,
 } from "../../entities/IProfile";
 import { CountlessPage } from "../../helpers/Types";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { commonApiFetch } from "../../services/api/common-api";
-import ProfileActivityLogsFilter from "./filter/ProfileActivityLogsFilter";
-import ProfileActivityLogsList from "./list/ProfileActivityLogsList";
 import CommonFilterTargetSelect, {
   FilterTargetType,
 } from "../utils/CommonFilterTargetSelect";
+import ProfileActivityLogsFilter from "./filter/ProfileActivityLogsFilter";
+import ProfileActivityLogsList from "./list/ProfileActivityLogsList";
 
-import CommonCardSkeleton from "../utils/animation/CommonCardSkeleton";
+import { convertActivityLogParams } from "@/helpers/profile-logs.helpers";
 import { useSelector } from "react-redux";
 import { selectActiveGroupId } from "../../store/groupSlice";
-import CommonTablePagination from "../utils/table/paginator/CommonTablePagination";
 import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
+import CommonCardSkeleton from "../utils/animation/CommonCardSkeleton";
+import CommonTablePagination from "../utils/table/paginator/CommonTablePagination";
 
 export interface ActivityLogParams {
   readonly page: number;
@@ -31,61 +32,16 @@ export interface ActivityLogParams {
   readonly groupId: string | null;
 }
 
-export interface ActivityLogParamsConverted extends Record<string, string> {
+export interface ActivityLogParamsConverted {
   readonly page: string;
   readonly page_size: string;
   readonly log_type: string;
-  include_incoming: string;
-  rating_matter: string;
-  profile: string;
-  target: string;
-  group_id: string;
+  include_incoming?: string;
+  rating_matter?: string;
+  profile?: string;
+  target?: string;
+  group_id?: string;
 }
-
-export const convertActivityLogParams = ({
-  params,
-  disableActiveGroup,
-}: {
-  readonly params: ActivityLogParams;
-  readonly disableActiveGroup: boolean;
-}): ActivityLogParamsConverted => {
-  const converted: any = {
-    page: `${params.page}`,
-    page_size: `${params.pageSize}`,
-    log_type: params.logTypes.length
-      ? [...params.logTypes].sort((a, b) => a.localeCompare(b)).join(",")
-      : "",
-  };
-
-  if (params.matter) {
-    converted.rating_matter = params.matter;
-  }
-  if (params.groupId && !params.handleOrWallet && !disableActiveGroup) {
-    converted.group_id = params.groupId;
-  }
-
-  if (!params.handleOrWallet) {
-    return converted;
-  }
-
-  if (params.targetType === FilterTargetType.ALL) {
-    converted.include_incoming = "true";
-    converted.profile = params.handleOrWallet;
-    return converted;
-  }
-
-  if (params.targetType === FilterTargetType.INCOMING) {
-    converted.target = params.handleOrWallet;
-    return converted;
-  }
-
-  if (params.targetType === FilterTargetType.OUTGOING) {
-    converted.profile = params.handleOrWallet;
-    return converted;
-  }
-
-  return converted;
-};
 
 export default function ProfileActivityLogs({
   initialParams,

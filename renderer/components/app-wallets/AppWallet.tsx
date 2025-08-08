@@ -1,6 +1,5 @@
 "use client";
 
-import styles from "./AppWallet.module.scss";
 import {
   faCircleArrowLeft,
   faCopy,
@@ -10,29 +9,31 @@ import {
   faFileDownload,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { ReactNode, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/router";
 import Link from "next/link";
-import { useBalance, useChainId } from "wagmi";
+import { useRouter } from "next/navigation";
+import { ReactNode, useCallback, useEffect, useState } from "react";
+import { Button, Col, Container, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
 import { sepolia } from "viem/chains";
+import { useBalance, useChainId } from "wagmi";
+import styles from "./AppWallet.module.scss";
 
-import { useAppWallets, AppWallet } from "./AppWalletsContext";
+import { AppWallet, useAppWallets } from "./AppWalletsContext";
 
+import { openInExternalBrowser } from "@/helpers";
+import { getRandomObjectId } from "../../helpers/AllowlistToolHelpers";
 import {
   areEqualAddresses,
   fromGWEI,
   getAddressEtherscanLink,
 } from "../../helpers/Helpers";
 import { useAuth } from "../auth/Auth";
-import DotLoader, { Spinner } from "../dotLoader/DotLoader";
-import { UnlockAppWalletModal } from "./AppWalletModal";
-import { decryptData } from "./app-wallet-helpers";
-import { getRandomObjectId } from "../../helpers/AllowlistToolHelpers";
-import AppWalletAvatar from "./AppWalletAvatar";
-import AppWalletsUnsupported from "./AppWalletsUnsupported";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import DotLoader, { Spinner } from "../dotLoader/DotLoader";
+import AppWalletAvatar from "./AppWalletAvatar";
+import { UnlockAppWalletModal } from "./AppWalletModal";
+import AppWalletsUnsupported from "./AppWalletsUnsupported";
+import { decryptData } from "./app-wallet-helpers";
 
 const MNEMONIC_NA = "N/A";
 
@@ -220,30 +221,48 @@ export default function AppWalletComponent(
             </span>
           </span>
           <span className="d-flex align-items-center gap-2">
-            <Tippy content={"View on Etherscan"} placement="top" theme="light">
+            <>
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={faExternalLink}
                 height={22}
+                data-tooltip-id={`etherscan-${appWallet.address}`}
                 onClick={() =>
-                  window.open(
-                    getAddressEtherscanLink(chainId, appWallet.address),
-                    "_blank"
+                  openInExternalBrowser(
+                    getAddressEtherscanLink(chainId, appWallet.address)
                   )
                 }
               />
-            </Tippy>
-            <Tippy
-              content={"Download Recovery File"}
-              placement="top"
-              theme="light">
+              <Tooltip
+                id={`etherscan-${appWallet.address}`}
+                place="top"
+                style={{
+                  backgroundColor: "#1F2937",
+                  color: "white",
+                  padding: "4px 8px",
+                }}>
+                View on Etherscan
+              </Tooltip>
+            </>
+            <>
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={faFileDownload}
                 height={22}
+                data-tooltip-id={`download-${appWallet.address}`}
                 onClick={() => setIsDownloading(true)}
               />
-            </Tippy>
+              <Tooltip
+                id={`download-${appWallet.address}`}
+                place="top"
+                style={{
+                  backgroundColor: "#1F2937",
+                  color: "white",
+                  padding: "4px 8px",
+                }}>
+                Download Recovery File
+              </Tooltip>
+            </>
             <UnlockAppWalletModal
               address={appWallet.address}
               address_hashed={appWallet.address_hashed}
@@ -267,15 +286,12 @@ export default function AppWalletComponent(
                 });
               }}
             />
-            <Tippy
-              content={addressCopied ? "Copied!" : "Copy address to clipboard"}
-              hideOnClick={false}
-              placement="top"
-              theme="light">
+            <>
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={faCopy}
                 height={22}
+                data-tooltip-id={`copy-address-${appWallet.address}`}
                 onClick={() => {
                   navigator.clipboard.writeText(appWallet.address);
                   setAddressCopied(true);
@@ -284,7 +300,17 @@ export default function AppWalletComponent(
                   }, 1500);
                 }}
               />
-            </Tippy>
+              <Tooltip
+                id={`copy-address-${appWallet.address}`}
+                place="top"
+                style={{
+                  backgroundColor: "#1F2937",
+                  color: "white",
+                  padding: "4px 8px",
+                }}>
+                {addressCopied ? "Copied!" : "Copy address to clipboard"}
+              </Tooltip>
+            </>
           </span>
         </Col>
       </Row>
@@ -293,15 +319,12 @@ export default function AppWalletComponent(
           <span>Mnemonic Phrase</span>
           {mnemonicAvailable && (
             <span className="d-flex gap-3 align-items-center">
-              <Tippy
-                hideOnClick={true}
-                content={revealPhrase ? "Hide" : "Reveal"}
-                placement="top"
-                theme="light">
+              <>
                 <FontAwesomeIcon
                   className="cursor-pointer unselectable"
                   icon={revealPhrase ? faEye : faEyeSlash}
                   height={22}
+                  data-tooltip-id={`reveal-phrase-${appWallet.address}`}
                   onClick={() => {
                     if (revealPhrase) {
                       setRevealPhrase(false);
@@ -311,7 +334,17 @@ export default function AppWalletComponent(
                     }
                   }}
                 />
-              </Tippy>
+                <Tooltip
+                  id={`reveal-phrase-${appWallet.address}`}
+                  place="top"
+                  style={{
+                    backgroundColor: "#1F2937",
+                    color: "white",
+                    padding: "4px 8px",
+                  }}>
+                  {revealPhrase ? "Hide" : "Reveal"}
+                </Tooltip>
+              </>
               <UnlockAppWalletModal
                 address={appWallet.address}
                 address_hashed={appWallet.address_hashed}
@@ -327,15 +360,12 @@ export default function AppWalletComponent(
                 }}
               />
               {revealPhrase && (
-                <Tippy
-                  content={mnemonicCopied ? "Copied!" : "Copy to clipboard"}
-                  hideOnClick={false}
-                  placement="top"
-                  theme="light">
+                <>
                   <FontAwesomeIcon
                     className="cursor-pointer unselectable"
                     icon={faCopy}
                     height={22}
+                    data-tooltip-id={`copy-mnemonic-${appWallet.address}`}
                     onClick={() => {
                       navigator.clipboard.writeText(phrase.join(" "));
                       setMnemonicCopied(true);
@@ -344,7 +374,17 @@ export default function AppWalletComponent(
                       }, 1500);
                     }}
                   />
-                </Tippy>
+                  <Tooltip
+                    id={`copy-mnemonic-${appWallet.address}`}
+                    place="top"
+                    style={{
+                      backgroundColor: "#1F2937",
+                      color: "white",
+                      padding: "4px 8px",
+                    }}>
+                    {mnemonicCopied ? "Copied!" : "Copy to clipboard"}
+                  </Tooltip>
+                </>
               )}
             </span>
           )}
@@ -370,14 +410,12 @@ export default function AppWalletComponent(
         <Col className="d-flex align-items-center justify-content-between">
           <span>Private Key</span>
           <span className="d-flex gap-3 align-items-center">
-            <Tippy
-              content={revealPrivateKey ? "Hide" : "Reveal"}
-              placement="top"
-              theme="light">
+            <>
               <FontAwesomeIcon
                 className="cursor-pointer unselectable"
                 icon={revealPrivateKey ? faEye : faEyeSlash}
                 height={22}
+                data-tooltip-id={`reveal-private-key-${appWallet.address}`}
                 onClick={() => {
                   if (revealPrivateKey) {
                     setRevealPrivateKey(false);
@@ -387,7 +425,17 @@ export default function AppWalletComponent(
                   }
                 }}
               />
-            </Tippy>
+              <Tooltip
+                id={`reveal-private-key-${appWallet.address}`}
+                place="top"
+                style={{
+                  backgroundColor: "#1F2937",
+                  color: "white",
+                  padding: "4px 8px",
+                }}>
+                {revealPrivateKey ? "Hide" : "Reveal"}
+              </Tooltip>
+            </>
             <UnlockAppWalletModal
               address={appWallet.address}
               address_hashed={appWallet.address_hashed}
@@ -405,15 +453,12 @@ export default function AppWalletComponent(
               }}
             />
             {revealPrivateKey && (
-              <Tippy
-                content={privateKeyCopied ? "Copied!" : "Copy to clipboard"}
-                hideOnClick={false}
-                placement="top"
-                theme="light">
+              <>
                 <FontAwesomeIcon
                   className="cursor-pointer unselectable"
                   icon={faCopy}
                   height={22}
+                  data-tooltip-id={`copy-private-key-${appWallet.address}`}
                   onClick={() => {
                     navigator.clipboard.writeText(privateKey);
                     setPrivateKeyCopied(true);
@@ -422,7 +467,17 @@ export default function AppWalletComponent(
                     }, 1500);
                   }}
                 />
-              </Tippy>
+                <Tooltip
+                  id={`copy-private-key-${appWallet.address}`}
+                  place="top"
+                  style={{
+                    backgroundColor: "#1F2937",
+                    color: "white",
+                    padding: "4px 8px",
+                  }}>
+                  {privateKeyCopied ? "Copied!" : "Copy to clipboard"}
+                </Tooltip>
+              </>
             )}
           </span>
         </Col>

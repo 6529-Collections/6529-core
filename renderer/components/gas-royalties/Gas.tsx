@@ -3,33 +3,39 @@
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Table } from "react-bootstrap";
 import styles from "./GasRoyalties.module.scss";
-import { Gas } from "../../entities/IGas";
-import { fetchUrl } from "../../services/6529api";
-import { displayDecimal } from "../../helpers/Helpers";
+import { Gas } from "@/entities/IGas";
+import { fetchUrl } from "@/services/6529api";
+import { capitalizeEveryWord, displayDecimal } from "@/helpers/Helpers";
 import {
-  GasRoyaltiesCollectionFocus,
   GasRoyaltiesHeader,
   GasRoyaltiesTokenImage,
   useSharedState,
 } from "./GasRoyalties";
-import { useRouter } from "next/router";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTitle } from "@/contexts/TitleContext";
+import { GasRoyaltiesCollectionFocus } from "@/enums";
 
 export default function GasComponent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { setTitle } = useTitle();
 
   useEffect(() => {
-    if (router.isReady) {
-      const routerFocus = router.query.focus as string;
-      const resolvedFocus = Object.values(GasRoyaltiesCollectionFocus).find(
-        (sd) => sd === routerFocus
-      );
-      if (resolvedFocus) {
-        setCollectionFocus(resolvedFocus);
-      } else {
-        setCollectionFocus(GasRoyaltiesCollectionFocus.MEMES);
-      }
+    const routerFocus = searchParams?.get("focus") as string;
+    const resolvedFocus = Object.values(GasRoyaltiesCollectionFocus).find(
+      (sd) => sd === routerFocus
+    );
+    if (resolvedFocus) {
+      setCollectionFocus(resolvedFocus);
+      const title = `Meme Gas - ${capitalizeEveryWord(
+        resolvedFocus.replace("-", " ")
+      )}`;
+      setTitle(title);
+    } else {
+      router.push(`${pathname}?focus=${GasRoyaltiesCollectionFocus.MEMES}`);
     }
-  }, [router.isReady]);
+  }, [searchParams]);
 
   const [gas, setGas] = useState<Gas[]>([]);
   const [sumGas, setSumGas] = useState(0);

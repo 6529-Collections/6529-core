@@ -1,28 +1,29 @@
 "use client";
 
-import styles from "./Rememes.module.scss";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import Image from "next/image";
-import { useState, useEffect } from "react";
-import { NFT } from "@/entities/INFT";
-import { fetchUrl, postData } from "@/services/6529api";
-import RememeAddComponent, { ProcessedRememe } from "./RememeAddComponent";
-import { useSignMessage } from "wagmi";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
+import { NFT } from "@/entities/INFT";
 import { ConsolidatedTDH } from "@/entities/ITDH";
 import { areEqualAddresses, numberWithCommas } from "@/helpers/Helpers";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useAuth } from "../auth/Auth";
-import { commonApiFetch } from "@/services/api/common-api";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
-import { SEIZE_API_URL } from "@/electron-constants";
-import Link from "next/link";
-import HeaderUserConnect from "@/components/header/user/HeaderUserConnect";
-import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
+import { fetchUrl, postData } from "@/services/6529api";
 import {
   faCheckCircle,
   faTimesCircle,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Button, Col, Container, Row } from "react-bootstrap";
+import { useSignMessage } from "wagmi";
+import { useSeizeSettings } from "../../contexts/SeizeSettingsContext";
+import { useSetTitle } from "../../contexts/TitleContext";
+import { commonApiFetch } from "../../services/api/common-api";
+import { useAuth } from "../auth/Auth";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import HeaderUserConnect from "../header/user/HeaderUserConnect";
+import RememeAddComponent, { ProcessedRememe } from "./RememeAddComponent";
+import styles from "./Rememes.module.scss";
 
 interface CheckList {
   status: boolean;
@@ -30,6 +31,7 @@ interface CheckList {
 }
 
 export default function RememeAddPage() {
+  useSetTitle("Add ReMemes | Collections");
   const { connectedProfile } = useAuth();
   const { address, isConnected, seizeConnect, seizeConnectOpen } =
     useSeizeConnectContext();

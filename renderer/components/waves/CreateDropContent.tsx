@@ -1,8 +1,9 @@
 "use client";
 
+import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { AnimatePresence, motion } from "framer-motion";
+import { EditorState } from "lexical";
 import dynamic from "next/dynamic";
-import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
-import CreateDropInput, { CreateDropInputHandles } from "./CreateDropInput";
 import React, {
   memo,
   useContext,
@@ -11,10 +12,8 @@ import React, {
   useRef,
   useState,
 } from "react";
-import useDeviceInfo from "../../hooks/useDeviceInfo";
 import { useSelector } from "react-redux";
-import { selectEditingDropId } from "../../store/editSlice";
-import { EditorState } from "lexical";
+import { createBreakpoint } from "react-use";
 import {
   CreateDropConfig,
   CreateDropPart,
@@ -23,54 +22,54 @@ import {
   MentionedUser,
   ReferencedNft,
 } from "../../entities/IDrop";
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
-import { MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/MentionTransformer";
-import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
-import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
-import { AuthContext } from "../auth/Auth";
 import { ApiCreateDropRequest } from "../../generated/models/ApiCreateDropRequest";
-import { ApiDropMentionedUser } from "../../generated/models/ApiDropMentionedUser";
 import { ApiDrop } from "../../generated/models/ApiDrop";
-import { getOptimisticDropId } from "../../helpers/waves/drop.helpers";
-import { ReactQueryWrapperContext } from "../react-query-wrapper/ReactQueryWrapper";
-import { AnimatePresence, motion } from "framer-motion";
-import CreateDropMetadata from "./CreateDropMetadata";
+import { ApiDropMentionedUser } from "../../generated/models/ApiDropMentionedUser";
+import { ApiDropType } from "../../generated/models/ApiDropType";
+import { ApiReplyToDropResponse } from "../../generated/models/ApiReplyToDropResponse";
 import { ApiWave } from "../../generated/models/ApiWave";
 import { ApiWaveMetadataType } from "../../generated/models/ApiWaveMetadataType";
-import CreateDropContentRequirements from "./CreateDropContentRequirements";
-import { CreateDropContentFiles } from "./CreateDropContentFiles";
-import CreateDropActions from "./CreateDropActions";
-import { createBreakpoint } from "react-use";
-import "tippy.js/dist/tippy.css";
-import { ApiDropType } from "../../generated/models/ApiDropType";
 import { ApiWaveType } from "../../generated/models/ApiWaveType";
+import { getOptimisticDropId } from "../../helpers/waves/drop.helpers";
+import useDeviceInfo from "../../hooks/useDeviceInfo";
+import { DropPrivileges } from "../../hooks/useDropPriviledges";
+import { selectEditingDropId } from "../../store/editSlice";
 import {
   ActiveDropAction,
   ActiveDropState,
 } from "../../types/dropInteractionTypes";
-import { ApiReplyToDropResponse } from "../../generated/models/ApiReplyToDropResponse";
+import { AuthContext } from "../auth/Auth";
+import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
+import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
+import { MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/MentionTransformer";
+import { ReactQueryWrapperContext } from "../react-query-wrapper/ReactQueryWrapper";
+import CreateDropActions from "./CreateDropActions";
+import { CreateDropContentFiles } from "./CreateDropContentFiles";
+import CreateDropContentRequirements from "./CreateDropContentRequirements";
 import { CreateDropDropModeToggle } from "./CreateDropDropModeToggle";
+import CreateDropInput, { CreateDropInputHandles } from "./CreateDropInput";
+import CreateDropMetadata from "./CreateDropMetadata";
+import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
-import { DropPrivileges } from "../../hooks/useDropPriviledges";
 
+import throttle from "lodash/throttle";
+import { ProcessIncomingDropType } from "../../contexts/wave/hooks/useWaveRealtimeUpdater";
+import { useMyStream } from "../../contexts/wave/MyStreamContext";
 import { ApiWaveCreditType } from "../../generated/models/ApiWaveCreditType";
+import { ApiIdentity } from "../../generated/models/ObjectSerializer";
+import { MAX_DROP_UPLOAD_FILES } from "../../helpers/Helpers";
+import { WsMessageType } from "../../helpers/Types";
+import { useDropSignature } from "../../hooks/drops/useDropSignature";
+import { useWave } from "../../hooks/useWave";
+import { useWebSocket } from "../../services/websocket";
+import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
+import { multiPartUpload } from "./create-wave/services/multiPartUpload";
+import { DropMutationBody } from "./CreateDrop";
 import { useDropMetadata } from "./hooks/useDropMetadata";
 import {
   getMissingRequirements,
   MissingRequirements,
 } from "./utils/getMissingRequirements";
-import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
-import { useDropSignature } from "../../hooks/drops/useDropSignature";
-import { useWave } from "../../hooks/useWave";
-import { multiPartUpload } from "./create-wave/services/multiPartUpload";
-import { useMyStream } from "../../contexts/wave/MyStreamContext";
-import { DropMutationBody } from "./CreateDrop";
-import { ProcessIncomingDropType } from "../../contexts/wave/hooks/useWaveRealtimeUpdater";
-import throttle from "lodash/throttle";
-import { useWebSocket } from "../../services/websocket";
-import { WsMessageType } from "../../helpers/Types";
-import { ApiIdentity } from "../../generated/models/ObjectSerializer";
-import { MAX_DROP_UPLOAD_FILES } from "../../helpers/Helpers";
 
 // Use next/dynamic for lazy loading with SSR support
 const TermsSignatureFlow = dynamic(() => import("../terms/TermsSignatureFlow"));
@@ -267,6 +266,7 @@ const getOptimisticDrop = (
   wave: {
     id: string;
     name: string;
+    pinned: boolean;
     picture: string | null;
     description_drop: { id: string };
     participation: { authenticated_user_eligible: boolean };
@@ -304,6 +304,7 @@ const getOptimisticDrop = (
     wave: {
       id: wave.id,
       name: wave.name,
+      pinned: wave.pinned,
       picture: wave.picture ?? "",
       description_drop_id: wave.description_drop.id,
       authenticated_user_eligible_to_participate:
@@ -327,6 +328,8 @@ const getOptimisticDrop = (
     author: {
       id: connectedProfile.id,
       handle: connectedProfile.handle,
+      active_main_stage_submission_ids:
+        connectedProfile.active_main_stage_submission_ids,
       pfp: connectedProfile.pfp ?? null,
       banner1_color: connectedProfile.banner1 ?? null,
       banner2_color: connectedProfile.banner2 ?? null,
@@ -739,6 +742,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         );
       }
       !!getMarkdown?.length && createDropInputRef.current?.clearEditorState();
+      (document.activeElement as HTMLElement)?.blur();
       setFiles([]);
       refreshState();
       submitDrop({
@@ -1021,8 +1025,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}
-          >
+            transition={{ duration: 0.3 }}>
             <CreateDropMetadata
               disabled={submitting}
               onRemoveMetadata={onRemoveMetadata}
@@ -1055,4 +1058,4 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 export default memo(CreateDropContent);
 
 // Export internal helpers for testing
-export { handleDropPart, convertMetadataToDropMetadata };
+export { convertMetadataToDropMetadata, handleDropPart };

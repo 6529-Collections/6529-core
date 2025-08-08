@@ -1,29 +1,29 @@
 "use client";
 
-import styles from "./HeaderShare.module.scss";
 import {
   faCopy,
   faExternalLink,
   faShareNodes,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import yaml from "js-yaml";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import useIsMobileDevice from "../../../hooks/isMobileDevice";
 import useCapacitor from "../../../hooks/useCapacitor";
+import { DeepLinkScope } from "../../../hooks/useDeepLinkNavigation";
+import { useElectron } from "../../../hooks/useElectron";
 import {
   getRefreshToken,
   getWalletAddress,
   getWalletRole,
 } from "../../../services/auth/auth.utils";
-import useIsMobileDevice from "../../../hooks/isMobileDevice";
-import Tippy from "@tippyjs/react";
-import { useElectron } from "../../../hooks/useElectron";
 import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
-import yaml from "js-yaml";
+import styles from "./HeaderShare.module.scss";
 import { ShareMobileApp } from "./HeaderShareMobileApps";
-import { DeepLinkScope } from "../../../hooks/useDeepLinkNavigation";
 
 const QRCode = require("qrcode");
 
@@ -80,6 +80,7 @@ function HeaderQRModal({
   readonly onClose: () => void;
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const isMobile = useIsMobileDevice();
 
@@ -114,8 +115,13 @@ function HeaderQRModal({
       routerPath = routerPath.slice(0, -1);
     }
 
-    const appScheme = "mobile6529";
-    const coreScheme = "core6529";
+    const searchParamsString = searchParams?.toString() ?? "";
+    if (searchParamsString) {
+      routerPath += `?${searchParamsString}`;
+    }
+
+    const appScheme = process.env.MOBILE_APP_SCHEME ?? "mobile6529";
+    const coreScheme = process.env.CORE_SCHEME ?? "core6529";
 
     const browserUrl = `${window.location.origin}${routerPath}`;
     const appUrl = `${appScheme}://${DeepLinkScope.NAVIGATE}${routerPath}`;
@@ -297,22 +303,28 @@ function HeaderQRModal({
         {url && (
           <div className="d-flex align-items-center gap-2 mt-2">
             <div className={styles.url}>{url}</div>
-            <Tippy
-              placement="top"
+            <FontAwesomeIcon
+              icon={faCopy}
+              className={`${styles.urlCopy} ${urlCopied ? styles.copied : ""}`}
+              data-tooltip-id="copy-url-tooltip"
+              onClick={() => {
+                navigator.clipboard.writeText(url);
+                setUrlCopied(true);
+                setTimeout(() => setUrlCopied(false), 500);
+              }}
+            />
+            <Tooltip
+              id="copy-url-tooltip"
+              place="top"
               content={urlCopied ? "Copied!" : "Copy URL"}
-              hideOnClick={isMobile}>
-              <FontAwesomeIcon
-                icon={faCopy}
-                className={`${styles.urlCopy} ${
-                  urlCopied ? styles.copied : ""
-                }`}
-                onClick={() => {
-                  navigator.clipboard.writeText(url);
-                  setUrlCopied(true);
-                  setTimeout(() => setUrlCopied(false), 500);
-                }}
-              />
-            </Tippy>
+              openEvents={isMobile ? { click: true } : { mouseenter: true }}
+              closeEvents={isMobile ? { click: true } : { mouseleave: true }}
+              style={{
+                backgroundColor: "#1F2937",
+                color: "white",
+                padding: "4px 8px",
+              }}
+            />
           </div>
         )}
       </>
@@ -320,7 +332,12 @@ function HeaderQRModal({
   }
 
   return (
-    <Modal show={show} onHide={onClose} keyboard centered>
+    <Modal
+      show={show}
+      onHide={onClose}
+      keyboard
+      centered
+      data-testid="header-share-modal">
       <Modal.Body className={styles.modalBody}>
         <ModalMenu
           isShareConnection={!!getRefreshToken()}

@@ -1,38 +1,100 @@
 "use client";
 
-import styles from "./TheMemes.module.scss";
-import { useContext, useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Container, Row, Col } from "react-bootstrap";
-import { MEMES_CONTRACT } from "../../constants";
-import { VolumeType, NFTWithMemesExtendedData } from "../../entities/INFT";
-import { NftOwner } from "../../entities/IOwner";
-import { SortDirection } from "../../entities/ISort";
-import { numberWithCommas, printMintDate } from "../../helpers/Helpers";
-import { useRouter, useSearchParams } from "next/navigation";
-import { fetchAllPages, fetchUrl } from "@/services/6529api";
-import NFTImage from "@/components/nft-image/NFTImage";
-import SeasonsDropdown from "@/components/seasons-dropdown/SeasonsDropdown";
-import DotLoader from "@/components/dotLoader/DotLoader";
-import { DBResponse } from "@/entities/IDBResponse";
-import { MemeSeason } from "@/entities/ISeason";
-import { commonApiFetch } from "@/services/api/common-api";
-import { AuthContext } from "@/components/auth/Auth";
-import { MemeLabSort, MemesSort } from "@/enums";
+import { useSetTitle } from "@/contexts/TitleContext";
 import { SEIZE_API_URL } from "@/electron-constants";
-import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
-import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
 import {
   faChevronCircleDown,
   faChevronCircleUp,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
-import { useSetTitle } from "@/contexts/TitleContext";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useContext, useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
+import { MEMES_CONTRACT } from "../../constants";
+import { DBResponse } from "../../entities/IDBResponse";
+import { NFTWithMemesExtendedData, VolumeType } from "../../entities/INFT";
+import { NftOwner } from "../../entities/IOwner";
+import { MemeSeason } from "../../entities/ISeason";
+import { SortDirection } from "../../entities/ISort";
+import { MemeLabSort, MEMES_EXTENDED_SORT, MemesSort } from "../../enums";
+import { numberWithCommas, printMintDate } from "../../helpers/Helpers";
+import { fetchAllPages, fetchUrl } from "../../services/6529api";
+import { commonApiFetch } from "../../services/api/common-api";
+import { AuthContext } from "../auth/Auth";
+import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
+import DotLoader from "../dotLoader/DotLoader";
+import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
+import NFTImage from "../nft-image/NFTImage";
+import SeasonsDropdown from "../seasons-dropdown/SeasonsDropdown";
 import { VolumeTypeDropdown } from "./MemeShared";
+import styles from "./TheMemes.module.scss";
 
 interface Meme {
   meme: number;
   meme_name: string;
+}
+
+const MEMES_SORT_TO_API: Record<MemesSort, string> = {
+  [MemesSort.AGE]: MEMES_EXTENDED_SORT[0],
+  [MemesSort.EDITION_SIZE]: MEMES_EXTENDED_SORT[1],
+  [MemesSort.MEME]: MEMES_EXTENDED_SORT[2],
+  [MemesSort.HODLERS]: MEMES_EXTENDED_SORT[3],
+  [MemesSort.TDH]: MEMES_EXTENDED_SORT[4],
+  [MemesSort.UNIQUE_PERCENT]: MEMES_EXTENDED_SORT[5],
+  [MemesSort.UNIQUE_PERCENT_EX_MUSEUM]: MEMES_EXTENDED_SORT[6],
+  [MemesSort.FLOOR_PRICE]: MEMES_EXTENDED_SORT[7],
+  [MemesSort.MARKET_CAP]: MEMES_EXTENDED_SORT[8],
+  [MemesSort.VOLUME]: MEMES_EXTENDED_SORT[12],
+  [MemesSort.HIGHEST_OFFER]: MEMES_EXTENDED_SORT[13],
+};
+
+const API_SORT_TO_MEMES: Record<
+  string,
+  { sort: MemesSort; volume?: VolumeType }
+> = {
+  [MEMES_EXTENDED_SORT[0]]: { sort: MemesSort.AGE },
+  [MEMES_EXTENDED_SORT[1]]: { sort: MemesSort.EDITION_SIZE },
+  [MEMES_EXTENDED_SORT[2]]: { sort: MemesSort.MEME },
+  [MEMES_EXTENDED_SORT[3]]: { sort: MemesSort.HODLERS },
+  [MEMES_EXTENDED_SORT[4]]: { sort: MemesSort.TDH },
+  [MEMES_EXTENDED_SORT[5]]: { sort: MemesSort.UNIQUE_PERCENT },
+  [MEMES_EXTENDED_SORT[6]]: { sort: MemesSort.UNIQUE_PERCENT_EX_MUSEUM },
+  [MEMES_EXTENDED_SORT[7]]: { sort: MemesSort.FLOOR_PRICE },
+  [MEMES_EXTENDED_SORT[8]]: { sort: MemesSort.MARKET_CAP },
+  [MEMES_EXTENDED_SORT[9]]: {
+    sort: MemesSort.VOLUME,
+    volume: VolumeType.HOURS_24,
+  },
+  [MEMES_EXTENDED_SORT[10]]: {
+    sort: MemesSort.VOLUME,
+    volume: VolumeType.DAYS_7,
+  },
+  [MEMES_EXTENDED_SORT[11]]: {
+    sort: MemesSort.VOLUME,
+    volume: VolumeType.DAYS_30,
+  },
+  [MEMES_EXTENDED_SORT[12]]: {
+    sort: MemesSort.VOLUME,
+    volume: VolumeType.ALL_TIME,
+  },
+  [MEMES_EXTENDED_SORT[13]]: { sort: MemesSort.HIGHEST_OFFER },
+};
+
+function getApiSort(sort: MemesSort, volumeType: VolumeType): string {
+  if (sort === MemesSort.VOLUME) {
+    switch (volumeType) {
+      case VolumeType.HOURS_24:
+        return MEMES_EXTENDED_SORT[9];
+      case VolumeType.DAYS_7:
+        return MEMES_EXTENDED_SORT[10];
+      case VolumeType.DAYS_30:
+        return MEMES_EXTENDED_SORT[11];
+      default:
+        return MEMES_EXTENDED_SORT[12];
+    }
+  }
+  return MEMES_SORT_TO_API[sort];
 }
 
 export default function TheMemesComponent() {
@@ -53,12 +115,13 @@ export default function TheMemesComponent() {
   useEffect(() => {
     let initialSortDir = SortDirection.ASC;
     let initialSort = MemesSort.AGE;
+    let initialVolume = VolumeType.ALL_TIME;
     let initialSzn = 0;
 
     const routerSortDir = searchParams?.get("sort_dir");
     if (routerSortDir) {
       const resolvedRouterSortDir = Object.values(SortDirection).find(
-        (sd) => sd === routerSortDir
+        (sd) => sd.toLowerCase() === routerSortDir.toLowerCase()
       );
       if (resolvedRouterSortDir) {
         initialSortDir = resolvedRouterSortDir;
@@ -67,11 +130,24 @@ export default function TheMemesComponent() {
 
     const routerSort = searchParams?.get("sort");
     if (routerSort) {
-      const resolvedRouterSort = Object.values(MemesSort).find(
-        (sd) => sd === routerSort
-      );
-      if (resolvedRouterSort) {
-        initialSort = resolvedRouterSort;
+      const sortLower = routerSort.toLowerCase();
+
+      if (sortLower.startsWith("volume_")) {
+        initialSort = MemesSort.VOLUME;
+        const volKey = sortLower.replace("volume_", "").toUpperCase();
+        const volMatch = Object.keys(VolumeType).find(
+          (k) => k.toLowerCase() === volKey.toLowerCase()
+        );
+        if (volMatch) {
+          initialVolume = VolumeType[volMatch as keyof typeof VolumeType];
+        }
+      } else {
+        const resolvedKey = Object.keys(MemesSort).find(
+          (k) => k.toLowerCase() === sortLower
+        );
+        if (resolvedKey) {
+          initialSort = MemesSort[resolvedKey as keyof typeof MemesSort];
+        }
       }
     }
 
@@ -87,27 +163,12 @@ export default function TheMemesComponent() {
     setSort(initialSort);
     setSortDir(initialSortDir);
     setSelectedSeason(initialSzn);
+    setVolumeType(initialVolume);
     setRouterLoaded(true);
   }, [searchParams]);
 
   const getNftsNextPage = () => {
-    let mySort: string = sort;
-    if (sort === MemesSort.VOLUME) {
-      switch (volumeType) {
-        case VolumeType.HOURS_24:
-          mySort = "total_volume_last_24_hours";
-          break;
-        case VolumeType.DAYS_7:
-          mySort = "total_volume_last_7_days";
-          break;
-        case VolumeType.DAYS_30:
-          mySort = "total_volume_last_1_month";
-          break;
-        case VolumeType.ALL_TIME:
-          mySort = "total_volume";
-          break;
-      }
-    }
+    const mySort = getApiSort(sort, volumeType);
     let seasonFilter = "";
     if (selectedSeason > 0) {
       seasonFilter = `&season=${selectedSeason}`;
@@ -151,12 +212,31 @@ export default function TheMemesComponent() {
   }, []);
 
   useEffect(() => {
-    let queryString = `sort=${sort}&sort_dir=${sortDir}`;
+    let sortParam: string;
+
+    if (sort === MemesSort.VOLUME) {
+      const volKey = Object.entries(VolumeType).find(
+        ([key, value]) => value === volumeType
+      )?.[0];
+
+      if (volKey) {
+        sortParam = `volume_${volKey.toLowerCase()}`;
+      } else {
+        sortParam = "volume_all_time"; // fallback
+      }
+    } else {
+      const found = Object.entries(MemesSort).find(
+        ([key, value]) => value === sort
+      );
+      sortParam = found ? found[0].toLowerCase() : sort.toLowerCase();
+    }
+
+    let queryString = `sort=${sortParam}&sort_dir=${sortDir.toLowerCase()}`;
     if (selectedSeason > 0) {
       queryString += `&szn=${selectedSeason}`;
     }
     router.push(`the-memes?${queryString}`);
-  }, [sort, sortDir, selectedSeason]);
+  }, [sort, sortDir, selectedSeason, volumeType]);
 
   useEffect(() => {
     const myMemesMap = new Map<number, Meme>();
@@ -449,12 +529,12 @@ export default function TheMemesComponent() {
                         select={() => setSort(v)}
                       />
                     ))}
-                  <VolumeTypeDropdown
-                    isVolumeSort={sort === MemesSort.VOLUME}
-                    selectedVolumeSort={volumeType}
-                    setVolumeType={setVolumeType}
-                    setVolumeSort={() => setSort(MemesSort.VOLUME)}
-                  />
+                  {printVolumeTypeDropdown(
+                    sort === MemesSort.VOLUME,
+                    setVolumeType,
+                    () => setSort(MemesSort.VOLUME),
+                    volumeType
+                  )}
                 </Col>
               </Row>
               {nfts.length > 0 && sort === MemesSort.MEME
@@ -495,5 +575,21 @@ export function SortButton(
       }`}>
       {props.sort}
     </button>
+  );
+}
+
+export function printVolumeTypeDropdown(
+  isVolumeSort: boolean,
+  setVolumeType: (volumeType: VolumeType) => void,
+  setVolumeSort: () => void,
+  selectedVolumeSort: VolumeType = VolumeType.ALL_TIME
+) {
+  return (
+    <VolumeTypeDropdown
+      isVolumeSort={isVolumeSort}
+      selectedVolumeSort={selectedVolumeSort}
+      setVolumeType={setVolumeType}
+      setVolumeSort={setVolumeSort}
+    />
   );
 }

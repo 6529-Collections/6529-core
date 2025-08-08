@@ -1,5 +1,5 @@
+import { PredictBlockNumbersResponseApiModel } from "@/app/meme-blocks/page.client";
 import BlockPickerAdvancedItemBlock from "../advanced/BlockPickerAdvancedItemBlock";
-import { PredictBlockNumbersResponseApiModel } from "./BlockPickerResult";
 
 export default function BlockPickerResultTableRowModal({
   predictedBlock,
@@ -20,7 +20,7 @@ export default function BlockPickerResultTableRowModal({
           </p>
         </div>
         <div className="tw-mt-4 tw-space-y-0.5">
-          {predictedBlock.blockNumbers.map((block) => (
+          {predictedBlock.blockNumbers.map((block: number) => (
             <div key={block} className="tw-text-base tw-font-normal">
               <BlockPickerAdvancedItemBlock
                 key={block}

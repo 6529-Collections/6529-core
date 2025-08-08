@@ -1,15 +1,15 @@
+import Link from "next/link";
 import React from "react";
+import { cicToType } from "../../../../helpers/Helpers";
 import { ExtendedDrop } from "../../../../helpers/waves/drop.helpers";
 import DropListItemContentMedia from "../../../drops/view/item/content/media/DropListItemContentMedia";
-import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
-import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
 import UserCICAndLevel, {
   UserCICAndLevelSize,
 } from "../../../user/utils/UserCICAndLevel";
-import { SingleWaveDropPosition } from "../../../waves/drop/SingleWaveDropPosition";
-import { cicToType } from "../../../../helpers/Helpers";
-import Link from "next/link";
 import UserProfileTooltipWrapper from "../../../utils/tooltip/UserProfileTooltipWrapper";
+import { SingleWaveDropPosition } from "../../../waves/drop/SingleWaveDropPosition";
+import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
+import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
 
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;
@@ -51,28 +51,24 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
           ? "tw-border-primary-400"
           : "tw-border-iron-800 desktop-hover:hover:tw-border-iron-700"
       }`}
-      onClick={handleClick}
-    >
+      onClick={handleClick}>
       <div className="tw-flex @md:tw-flex-row @sm:tw-flex-col @xs:tw-flex-col tw-gap-4">
         <div
           className="tw-flex-shrink-0 tw-self-start tw-mr-1"
-          onClick={handleCheckboxClick}
-        >
+          onClick={handleCheckboxClick}>
           <div
             className={`tw-size-5 tw-flex tw-items-center tw-justify-center tw-rounded-md tw-border tw-border-solid ${
               isChecked
                 ? "tw-border-primary-400 tw-bg-primary-400/20"
                 : "tw-border-iron-600 tw-bg-iron-800"
-            } tw-cursor-pointer tw-shadow-sm hover:tw-shadow-md tw-transition-all tw-duration-200`}
-          >
+            } tw-cursor-pointer tw-shadow-sm hover:tw-shadow-md tw-transition-all tw-duration-200`}>
             {isChecked && (
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 aria-hidden="true"
-                className="tw-size-4 tw-text-primary-400"
-              >
+                className="tw-size-4 tw-text-primary-400">
                 <path
                   fillRule="evenodd"
                   d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z"
@@ -122,16 +118,15 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
               cicType={cicType}
               size={UserCICAndLevelSize.SMALL}
             />
-            <UserProfileTooltipWrapper user={drop.author.handle ?? drop.author.id}>
+            <UserProfileTooltipWrapper
+              user={drop.author.handle ?? drop.author.id}>
               <Link
                 href={`/${drop.author.handle}`}
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
-                  window.open(`/${drop.author.handle}`, "_blank");
                 }}
-                className="tw-text-md tw-text-iron-200 desktop-hover:hover:tw-text-opacity-80 tw-transition-colors tw-duration-200 tw-no-underline desktop-hover:hover:tw-underline tw-font-medium tw-truncate"
-              >
+                className="tw-text-md tw-text-iron-200 desktop-hover:hover:tw-text-opacity-80 tw-transition-colors tw-duration-200 tw-no-underline desktop-hover:hover:tw-underline tw-font-medium tw-truncate">
                 {drop.author.handle}
               </Link>
             </UserProfileTooltipWrapper>
@@ -149,8 +144,7 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
                   viewBox="0 0 24 24"
                   strokeWidth="2"
                   stroke="currentColor"
-                  className="tw-size-4 tw-text-iron-400 tw-flex-shrink-0"
-                >
+                  className="tw-size-4 tw-text-iron-400 tw-flex-shrink-0">
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -163,10 +157,7 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
               </div>
             </div>
             <div onClick={(e) => e.stopPropagation()}>
-              <MyStreamWaveMyVoteInput
-                drop={drop}
-                isResetting={isResetting}
-              />
+              <MyStreamWaveMyVoteInput drop={drop} isResetting={isResetting} />
             </div>
           </div>
         </div>

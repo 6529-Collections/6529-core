@@ -1,29 +1,30 @@
 "use client";
 
-import { Container, Row, Col, Dropdown, Button } from "react-bootstrap";
-import styles from "./Rememes.module.scss";
-import { fetchUrl } from "@/services/6529api";
-import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
-import { useEffect, useState } from "react";
-import { NFTLite, Rememe } from "@/entities/INFT";
-import { DBResponse } from "@/entities/IDBResponse";
-import { useRouter } from "next/router";
+import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
 import RememeImage from "@/components/nft-image/RememeImage";
-import Image from "next/image";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
 import Pagination from "@/components/pagination/Pagination";
+import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { SEIZE_API_URL } from "@/electron-constants";
+import { DBResponse } from "@/entities/IDBResponse";
+import { NFTLite, Rememe } from "@/entities/INFT";
 import {
   areEqualAddresses,
   formatAddress,
   numberWithCommas,
 } from "@/helpers/Helpers";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import DotLoader from "@/components/dotLoader/DotLoader";
-import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
-import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
-import { SEIZE_API_URL } from "@/electron-constants";
-import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
+import { fetchUrl } from "@/services/6529api";
 import { faPlusCircle, faRefresh } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button, Col, Container, Dropdown, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import styles from "./Rememes.module.scss";
 
 const PAGE_SIZE = 40;
 
@@ -39,7 +40,10 @@ export enum RememeSort {
 }
 
 export default function Rememes() {
+  useSetTitle("ReMemes | Collections");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const [memes, setMemes] = useState<NFTLite[]>([]);
   const [memesLoaded, setMemesLoaded] = useState(false);
@@ -53,8 +57,10 @@ export default function Rememes() {
   const [selectedTokenType, setSelectedTokenType] = useState<TokenType>(
     TokenType.ALL
   );
+
+  const queryMemeId = searchParams?.get("meme_id");
   const [selectedMeme, setSelectedMeme] = useState<number>(
-    router.query.meme_id ? parseInt(router.query.meme_id.toString()) : 0
+    queryMemeId ? parseInt(queryMemeId) : 0
   );
 
   const sorting = [RememeSort.RANDOM, RememeSort.CREATED_ASC];
@@ -63,10 +69,16 @@ export default function Rememes() {
   );
 
   useEffect(() => {
-    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`).then((response: DBResponse) => {
-      setMemes(response.data);
-      setMemesLoaded(true);
-    });
+    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`)
+      .then((response: DBResponse) => {
+        setMemes(response.data);
+      })
+      .catch((error) => {
+        console.error("Error fetching memes", error);
+      })
+      .finally(() => {
+        setMemesLoaded(true);
+      });
   }, []);
 
   function fetchResults(mypage: number) {
@@ -84,32 +96,28 @@ export default function Rememes() {
       sort = "&sort=created_at&sort_direction=desc";
     }
     let url = `${SEIZE_API_URL}/api/rememes?page_size=${PAGE_SIZE}&page=${mypage}${memeFilter}${tokenTypeFilter}${sort}`;
-    fetchUrl(url).then((response: DBResponse) => {
-      setTotalResults(response.count);
-      setRememes(response.data);
-      setRememesLoaded(true);
-    });
+    fetchUrl(url)
+      .then((response: DBResponse) => {
+        setTotalResults(response.count);
+        setRememes(response.data);
+      })
+      .catch((err) => {
+        console.error("Error fetching rememes", err);
+      })
+      .finally(() => {
+        setRememesLoaded(true);
+      });
   }
 
   useEffect(() => {
-    const currentId = router.query.meme_id
-      ? parseInt(router.query.meme_id.toString())
+    const currentId = searchParams?.get("meme_id")
+      ? parseInt(searchParams.get("meme_id")!)
       : 0;
     if (!currentId || currentId != selectedMeme) {
-      const currentQuery = { ...router.query };
-      if (selectedMeme) {
-        currentQuery.meme_id = selectedMeme.toString();
-      } else {
-        delete currentQuery.meme_id;
-      }
-      router.push(
-        {
-          pathname: router.pathname,
-          query: currentQuery,
-        },
-        undefined,
-        { shallow: true }
-      );
+      const newPath = `${pathname}${
+        selectedMeme ? `?meme_id=${selectedMeme}` : ""
+      }`;
+      router.push(newPath);
     }
   }, [selectedMeme]);
 
@@ -283,19 +291,27 @@ export default function Rememes() {
                       </Dropdown.Menu>
                     </Dropdown>
                     {selectedSorting === RememeSort.RANDOM && (
-                      <Tippy
-                        content="Refresh results"
-                        placement="top"
-                        theme="light"
-                        delay={250}>
+                      <>
                         <FontAwesomeIcon
                           icon={faRefresh}
                           className={styles.buttonIcon}
                           onClick={() => {
                             fetchResults(page);
                           }}
+                          data-tooltip-id="refresh-rememes-results"
                         />
-                      </Tippy>
+                        <Tooltip
+                          id="refresh-rememes-results"
+                          place="top"
+                          delayShow={250}
+                          style={{
+                            backgroundColor: "#f8f9fa",
+                            color: "#212529",
+                            padding: "4px 8px",
+                          }}>
+                          Refresh results
+                        </Tooltip>
+                      </>
                     )}
                   </span>
                   <span className="d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -322,17 +338,14 @@ export default function Rememes() {
                       drop={"down-centered"}>
                       <Dropdown.Toggle>
                         Meme Reference:{" "}
-                        {router.query.meme_id
-                          ? memes.find(
-                              (m) => m.id.toString() === router.query.meme_id
-                            )
-                            ? `${router.query.meme_id} - ${
+                        {queryMemeId
+                          ? memes.find((m) => m.id.toString() === queryMemeId)
+                            ? `${queryMemeId} - ${
                                 memes.find(
-                                  (m) =>
-                                    m.id.toString() === router.query.meme_id
+                                  (m) => m.id.toString() === queryMemeId
                                 )?.name
                               }`
-                            : `${router.query.meme_id}`
+                            : `${queryMemeId}`
                           : `All`}
                       </Dropdown.Toggle>
                       <Dropdown.Menu>

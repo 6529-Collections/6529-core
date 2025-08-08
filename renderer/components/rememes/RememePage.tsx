@@ -2,18 +2,19 @@
 
 import styles from "./Rememes.module.scss";
 
-import { useEffect, useState } from "react";
-import Image from "next/image";
-import { Container, Row, Col, Table } from "react-bootstrap";
+import Address from "@/components/address/Address";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import NFTImage from "@/components/nft-image/NFTImage";
+import RememeImage from "@/components/nft-image/RememeImage";
+import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
+import NFTAttributes from "@/components/nftAttributes/NFTAttributes";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
+import ArtistProfileHandle from "@/components/the-memes/ArtistProfileHandle";
+import { MEMES_CONTRACT, OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
+import { useTitle } from "@/contexts/TitleContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
 import { NFT, Rememe } from "@/entities/INFT";
-import { fetchAllPages, fetchUrl } from "@/services/6529api";
-import RememeImage from "@/components/nft-image/RememeImage";
-import { useEnsName } from "wagmi";
-import Address from "@/components/address/Address";
-import { MEMES_CONTRACT, OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
-import NFTImage from "@/components/nft-image/NFTImage";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   areEqualAddresses,
   formatAddress,
@@ -23,15 +24,15 @@ import {
   parseIpfsUrl,
   parseNftDescriptionToHtml,
 } from "@/helpers/Helpers";
-import NFTAttributes from "@/components/nftAttributes/NFTAttributes";
-import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
-import DotLoader from "@/components/dotLoader/DotLoader";
-import ArtistProfileHandle from "@/components/the-memes/ArtistProfileHandle";
-import { SEIZE_API_URL } from "@/electron-constants";
 import useCapacitor from "@/hooks/useCapacitor";
-import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
+import { fetchAllPages, fetchUrl } from "@/services/6529api";
 import { faExternalLink, faGlobe } from "@fortawesome/free-solid-svg-icons";
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import { useEffect, useState } from "react";
+import { Col, Container, Row, Table } from "react-bootstrap";
+import { useEnsName } from "wagmi";
+import { useCookieConsent } from "../cookies/CookieConsentContext";
 
 interface Props {
   contract: string;
@@ -127,6 +128,7 @@ export function printMemeReferences(
 }
 
 export default function RememePage(props: Readonly<Props>) {
+  const { setTitle } = useTitle();
   const capacitor = useCapacitor();
   const { country } = useCookieConsent();
   const [rememe, setRememe] = useState<Rememe>();
@@ -134,7 +136,6 @@ export default function RememePage(props: Readonly<Props>) {
   const [activeTab, setActiveTab] = useState<Tabs>(Tabs.LIVE);
 
   const [memes, setMemes] = useState<NFT[]>([]);
-  const [memesLoaded, setMemesLoaded] = useState(false);
 
   useEffect(() => {
     if (props.contract && props.id) {
@@ -143,6 +144,10 @@ export default function RememePage(props: Readonly<Props>) {
       ).then((response: DBResponse) => {
         if (response.data.length === 1) {
           setRememe(response.data[0]);
+          if (response.data[0].metadata?.name) {
+            const title = `${response.data[0].metadata.name} | ReMemes | 6529.io`;
+            setTitle(title);
+          }
         }
       });
     }
@@ -156,7 +161,6 @@ export default function RememePage(props: Readonly<Props>) {
         )}`
       ).then((responseNfts: NFT[]) => {
         setMemes(responseNfts.sort((a, b) => a.id - b.id));
-        setMemesLoaded(true);
       });
     }
   }, [rememe]);

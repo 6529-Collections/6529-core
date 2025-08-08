@@ -1,12 +1,12 @@
 "use client";
 
+import { LoginImage } from "@/app/access/page.client";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
-import { LoginImage } from "../../pages/access";
+import { useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import BrowserConnectorConnect from "./BrowserConnectorConnect";
-import Image from "next/image";
 import BrowserConnectorProvider from "./BrowserConnectorProvider";
-import { useEffect, useState } from "react";
 
 export default function BrowserConnector({
   image,

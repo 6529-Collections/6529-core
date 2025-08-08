@@ -1,3 +1,5 @@
+"use client"
+
 import { useCallback, useMemo } from "react";
 import useWavesList from "../../../hooks/useWavesList";
 import useNewDropCounter, {
@@ -26,7 +28,7 @@ function useEnhancedWavesList(activeWaveId: string | null) {
   );
 
   const mapWave = useCallback(
-    (wave: ApiWave): MinimalWave => {
+    (wave: ApiWave & { isPinned?: boolean }): MinimalWave => {
       const newDrops = {
         count: newDropsCounts[wave.id]?.count ?? 0,
         latestDropTimestamp:
@@ -41,10 +43,11 @@ function useEnhancedWavesList(activeWaveId: string | null) {
         picture: wave.picture,
         contributors: wave.contributors_overview.map((c) => ({ pfp: c.contributor_pfp })),
         newDropsCount: newDrops,
-        isPinned: wavesData.pinnedWaves.some((w) => w.id === wave.id),
+        // Use server-provided isPinned status instead of local comparison
+        isPinned: wave.isPinned ?? false,
       };
     },
-    [newDropsCounts, wavesData.pinnedWaves]
+    [newDropsCounts]
   );
 
   const minimal = useMemo(() => wavesData.waves.map(mapWave), [wavesData.waves, mapWave]);

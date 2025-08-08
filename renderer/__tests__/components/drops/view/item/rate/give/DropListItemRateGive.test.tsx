@@ -1,10 +1,9 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import React from 'react';
-import DropListItemRateGive, { RateChangeType } from '../../../../../../../components/drops/view/item/rate/give/DropListItemRateGive';
+import DropListItemRateGive from '../../../../../../../components/drops/view/item/rate/give/DropListItemRateGive';
 import { AuthContext } from '../../../../../../../components/auth/Auth';
 import { ProfileConnectedStatus } from '../../../../../../../entities/IProfile';
 
-jest.mock('@tippyjs/react', () => ({ __esModule: true, default: ({ children }: any) => <>{children}</> }));
 
 const submitMock = jest.fn((props: any) => <div data-testid="submit" data-rate={props.rate} />);
 jest.mock('../../../../../../../components/drops/view/item/rate/give/DropListItemRateGiveSubmit', () => (props: any) => submitMock(props));

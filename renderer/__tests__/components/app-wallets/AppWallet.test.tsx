@@ -1,27 +1,33 @@
-import { render, screen, act } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AppWallet from '../../../components/app-wallets/AppWallet';
 import { useAppWallets } from '../../../components/app-wallets/AppWalletsContext';
 import { useAuth } from '../../../components/auth/Auth';
 import { useSeizeConnectContext } from '../../../components/auth/SeizeConnectContext';
-import { useRouter } from 'next/router';
+import { useRouter } from 'next/navigation';
 import { useBalance, useChainId } from 'wagmi';
 import { sepolia } from 'viem/chains';
 
 jest.mock('next/image', () => ({ __esModule: true, default: (p:any)=> <img {...p}/> }));
 jest.mock('next/link', () => ({ __esModule: true, default: ({href, children}:any)=> <a href={href}>{children}</a> }));
-jest.mock('next/router', () => ({ useRouter: jest.fn() }));
+jest.mock('next/navigation', () => ({ useRouter: jest.fn() }));
 jest.mock('../../../components/app-wallets/AppWalletsContext');
 jest.mock('../../../components/auth/Auth');
 jest.mock('../../../components/auth/SeizeConnectContext');
-jest.mock('@fortawesome/react-fontawesome', () => ({ FontAwesomeIcon: (props:any)=> <svg data-testid="icon" onClick={props.onClick}/> }));
+jest.mock('@fortawesome/react-fontawesome', () => ({ FontAwesomeIcon: (props:any)=> <svg data-testid="icon" onClick={props.onClick} data-tooltip-id={props['data-tooltip-id']}/> }));
 jest.mock('../../../components/app-wallets/AppWalletAvatar', () => ({__esModule:true,default: ({address}:any)=><div data-testid="avatar">{address}</div>}));
 jest.mock('../../../components/app-wallets/AppWalletsUnsupported', () => () => <div data-testid="unsupported"/>);
 jest.mock('../../../components/dotLoader/DotLoader', () => ({__esModule:true,default: ()=> <span data-testid="dotloader"/>, Spinner: ()=> <span data-testid="spinner"/> }));
 jest.mock('../../../components/app-wallets/AppWalletModal', () => ({ UnlockAppWalletModal: () => null }));
 jest.mock('../../../components/app-wallets/app-wallet-helpers', () => ({ decryptData: jest.fn(()=>Promise.resolve('decrypted')) }));
 jest.mock('wagmi', () => ({ useBalance: jest.fn(), useChainId: jest.fn() }));
-jest.mock('@tippyjs/react', () => ({ __esModule: true, default: ({ children, content }: any) => <span data-testid={content}>{children}</span> }));
+jest.mock('react-tooltip', () => ({
+  Tooltip: ({ children, id }: any) => (
+    <div data-testid={`tooltip-${id}`}>
+      {children}
+    </div>
+  ),
+}));
 
 const mockedUseAppWallets = useAppWallets as jest.Mock;
 const mockedUseAuth = useAuth as jest.Mock;
@@ -107,9 +113,11 @@ describe('AppWallet', () => {
   });
 
   it('copies wallet address to clipboard', async () => {
-    renderComponent({fetchingAppWallets:false, appWalletsSupported:true, appWallets:[wallet], deleteAppWallet:jest.fn()});
-    const icon = screen.getByTestId('Copy address to clipboard').querySelector('svg') as SVGElement;
-    await userEvent.click(icon);
+    const { container } = renderComponent({fetchingAppWallets:false, appWalletsSupported:true, appWallets:[wallet], deleteAppWallet:jest.fn()});
+    // Find the icon that has the copy address tooltip
+    const copyIcon = container.querySelector('[data-tooltip-id="copy-address-0xABC"]');
+    expect(copyIcon).toBeTruthy();
+    await userEvent.click(copyIcon as HTMLElement);
     expect((navigator.clipboard.writeText as jest.Mock)).toHaveBeenCalledWith('0xABC');
   });
 });
