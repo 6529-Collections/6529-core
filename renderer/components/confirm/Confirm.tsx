@@ -1,6 +1,6 @@
-import styles from "./Confirm.module.scss";
 import React from "react";
-import { Modal, Button } from "react-bootstrap";
+import { Button, Modal } from "react-bootstrap";
+import styles from "./Confirm.module.scss";
 
 interface ConfirmProps {
   show: boolean;
@@ -19,9 +19,9 @@ const Confirm: React.FC<ConfirmProps> = ({
 }) => {
   return (
     <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>{title}</Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <p className="mt-2 mb-2">{message}</p>
       </Modal.Body>
