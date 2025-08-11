@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ExtendedDrop } from "../../helpers/waves/drop.helpers";
+import SecondaryButton from "../utils/button/SecondaryButton";
 import { SingleWaveDropVote } from "../waves/drop/SingleWaveDropVote";
 import ModalLayout from "../waves/memes/submission/layout/ModalLayout";
-import SecondaryButton from "../utils/button/SecondaryButton";
 
 interface VotingModalProps {
   readonly drop: ExtendedDrop;
@@ -10,41 +11,41 @@ interface VotingModalProps {
   readonly onClose: () => void;
 }
 
-const VotingModal: React.FC<VotingModalProps> = ({
-  drop,
-  isOpen,
-  onClose,
-}) => {
-  if (!isOpen) {
-    return null;
-  }
+const VotingModal: React.FC<VotingModalProps> = ({ drop, isOpen, onClose }) => {
+  const [ready, setReady] = useState(false);
 
-  return (
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = "hidden";
+    setReady(true);
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isOpen]);
+
+  if (!isOpen || !ready) return null;
+
+  return createPortal(
+    // One single fixed layer pinned to the viewport
     <div
-      className="tw-fixed tw-inset-0 tw-bg-gray-500 tw-bg-opacity-75 tw-backdrop-blur-[1px] tw-z-50 tw-flex tw-items-center tw-justify-center"
-      onClick={(e) => e.stopPropagation()}
-    >
+      className="tw-fixed tw-top-0 tw-left-0 tw-w-screen tw-h-screen tw-z-50 tw-bg-gray-500/75 tw-backdrop-blur-[1px] tw-flex tw-items-center tw-justify-center"
+      onClick={onClose} // click outside closes
+      aria-hidden="true">
+      {/* modal card (stop click from bubbling to backdrop) */}
       <div
-        className="tw-fixed tw-inset-0"
-        onClick={onClose}
-        aria-hidden="true"
-      ></div>
-
-      <div
-        className="tw-w-full tw-max-w-2xl tw-z-10"
+        className="tw-w-full tw-max-w-2xl"
         onClick={(e) => e.stopPropagation()}
-      >
+        aria-hidden="false">
         <ModalLayout title="Vote for this artwork" onCancel={onClose}>
           <div className="tw-pb-6 tw-pt-1">
             <SingleWaveDropVote drop={drop} onVoteSuccess={onClose} />
-
             <div className="tw-mt-4 tw-flex tw-justify-end">
               <SecondaryButton onClicked={onClose}>Cancel</SecondaryButton>
             </div>
           </div>
         </ModalLayout>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

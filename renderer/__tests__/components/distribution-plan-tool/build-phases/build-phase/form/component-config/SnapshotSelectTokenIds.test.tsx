@@ -2,7 +2,6 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import React from 'react';
 
-jest.mock('@tippyjs/react', () => (props: any) => <span>{props.children}</span>);
 jest.mock('../../../../../../../components/distribution-plan-tool/build-phases/build-phase/form/component-config/BuildPhaseFormConfigModalTitle', () => (props: any) => <div data-testid="title">{props.title}</div>);
 jest.mock('../../../../../../../components/distribution-plan-tool/build-phases/build-phase/form/component-config/ComponentConfigMeta', () => () => <div />);
 jest.mock('../../../../../../../components/distribution-plan-tool/build-phases/build-phase/form/component-config/ComponentConfigNextBtn', () => (props: any) => (
@@ -10,7 +9,6 @@ jest.mock('../../../../../../../components/distribution-plan-tool/build-phases/b
 ));
 
 import SnapshotSelectTokenIds from '../../../../../../../components/distribution-plan-tool/build-phases/build-phase/form/component-config/SnapshotSelectTokenIds';
-import { PhaseConfigStep } from '../../../../../../../components/distribution-plan-tool/build-phases/build-phase/form/BuildPhaseFormConfigModal';
 
 describe('SnapshotSelectTokenIds', () => {
   it('calls onSelectTokenIds on next', async () => {

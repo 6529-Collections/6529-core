@@ -23,11 +23,13 @@ const DropListItemContentMediaGLB = dynamic(
 export default function DropListItemContentMedia({
   media_mime_type,
   media_url,
-  onContainerClick
+  onContainerClick,
+  isCompetitionDrop = false
 }: {
   readonly media_mime_type: string;
   readonly media_url: string;
   readonly onContainerClick?: () => void;
+  readonly isCompetitionDrop?: boolean;
 }) {
   const getMediaType = (): MediaType => {
     if (media_mime_type.includes("image")) {
@@ -39,7 +41,10 @@ export default function DropListItemContentMedia({
     if (media_mime_type.includes("audio")) {
       return MediaType.AUDIO;
     }
-    if (media_url.endsWith(".glb")) {
+    if (media_mime_type === "model/gltf-binary" || 
+        media_mime_type === "model/gltf+json" ||
+        media_url.endsWith(".glb") || 
+        media_url.endsWith(".gltf")) {
       return MediaType.GLB;
     }
     return MediaType.UNKNOWN;
@@ -54,6 +59,7 @@ export default function DropListItemContentMedia({
         <DropListItemContentMediaImage
           src={media_url}
           onContainerClick={onContainerClick}
+          isCompetitionDrop={isCompetitionDrop}
         />
       );
     case MediaType.VIDEO:

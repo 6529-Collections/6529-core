@@ -3,44 +3,39 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import Rememes, { RememeSort } from "@/components/rememes/Rememes";
 import { fetchUrl } from "@/services/6529api";
-import { useRouter } from "next/router";
+import { TitleProvider } from "@/contexts/TitleContext";
 
-jest.mock("next/router", () => ({ useRouter: jest.fn() }));
-jest.mock("@/services/6529api");
+jest.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: jest.fn(),
+  }),
+  useSearchParams: jest.fn().mockReturnValue({
+    get: jest.fn().mockReturnValue(undefined),
+  }),
+  usePathname: jest.fn().mockReturnValue("/rememes"),
+}));
+jest.mock("@/services/6529api", () => ({
+  fetchUrl: jest.fn(),
+}));
 jest.mock("@/components/nft-image/RememeImage", () => () => (
   <div data-testid="img" />
 ));
 jest.mock("@/components/pagination/Pagination", () => (props: any) => (
   <div data-testid="pagination" onClick={() => props.setPage(2)} />
 ));
-jest.mock("@fortawesome/react-fontawesome", () => ({
-  FontAwesomeIcon: (props: any) => (
-    <svg data-testid="icon" onClick={props.onClick} />
-  ),
-}));
-jest.mock("next/image", () => ({
-  __esModule: true,
-  default: (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img alt={props.alt ?? ""} {...props} />
-  ),
-}));
-jest.mock("@tippyjs/react", () => (props: any) => (
-  <span>{props.children}</span>
-));
 jest.mock("@/components/lfg-slideshow/LFGSlideshow", () => ({
-  LFGButton: () => <div />,
+  LFGButton: () => <div data-testid="lfg-button" />,
 }));
-jest.mock("@/components/collections-dropdown/CollectionsDropdown", () => ({
-  __esModule: true,
-  default: (props: any) => <div />,
+jest.mock("@/components/collections-dropdown/CollectionsDropdown", () => () => (
+  <div data-testid="collections-dropdown" />
+));
+jest.mock("react-tooltip", () => ({
+  Tooltip: ({ children, id }: any) => (
+    <div data-testid="react-tooltip" data-tooltip-id={id}>
+      {children}
+    </div>
+  ),
 }));
-
-const routerPush = jest.fn();
-(useRouter as jest.Mock).mockReturnValue({
-  query: {},
-  pathname: "/rememes",
-  push: routerPush,
-});
 
 (fetchUrl as jest.Mock).mockImplementation((url: string) => {
   if (url.includes("memes_lite")) return Promise.resolve({ data: [] });
@@ -67,7 +62,11 @@ describe("Rememes component", () => {
   });
 
   it("fetches rememes and changes sorting", async () => {
-    render(<Rememes />);
+    render(
+      <TitleProvider>
+        <Rememes />
+      </TitleProvider>
+    );
     await waitFor(() => expect(fetchUrl).toHaveBeenCalled());
     expect(fetchUrl).toHaveBeenCalledWith(
       "https://test.6529.io/api/rememes?page_size=40&page=1"

@@ -2,47 +2,46 @@
 
 import styles from "./6529Gradient.module.scss";
 
-import { useContext, useEffect, useState } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { Container, Row, Col, Table } from "react-bootstrap";
+import Address from "@/components/address/Address";
+import { AuthContext } from "@/components/auth/Auth";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import LatestActivityRow from "@/components/latest-activity/LatestActivityRow";
+import NFTImage from "@/components/nft-image/NFTImage";
+import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
+import NftNavigation from "@/components/nft-navigation/NftNavigation";
+import { NftPageStats } from "@/components/nftAttributes/NftStats";
+import ArtistProfileHandle from "@/components/the-memes/ArtistProfileHandle";
 import { GRADIENT_CONTRACT } from "@/constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
 import { NFT } from "@/entities/INFT";
+import { Transaction } from "@/entities/ITransaction";
 import {
   areEqualAddresses,
   enterArtFullScreen,
   numberWithCommas,
   printMintDate,
 } from "@/helpers/Helpers";
-import LatestActivityRow from "../latest-activity/LatestActivityRow";
-import { Transaction } from "@/entities/ITransaction";
-import { useRouter } from "next/router";
-import { fetchUrl } from "@/services/6529api";
-import NFTImage from "../nft-image/NFTImage";
-import Address from "../address/Address";
-import ArtistProfileHandle from "../the-memes/ArtistProfileHandle";
-import { AuthContext } from "../auth/Auth";
-import { NftPageStats } from "../nftAttributes/NftStats";
-import { SEIZE_API_URL } from "@/electron-constants";
 import useCapacitor from "@/hooks/useCapacitor";
-import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+import { fetchUrl } from "@/services/6529api";
 import { faExpandAlt } from "@fortawesome/free-solid-svg-icons";
-import NftNavigation from "../nft-navigation/NftNavigation";
-import { useCookieConsent } from "../cookies/CookieConsentContext";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useContext, useEffect, useState } from "react";
+import { Col, Container, Row, Table } from "react-bootstrap";
 
 interface NftWithOwner extends NFT {
   owner: string;
   owner_display: string;
 }
 
-export default function GradientPage() {
-  const router = useRouter();
+export default function GradientPageComponent({ id }: { readonly id: string }) {
   const capacitor = useCapacitor();
   const { country } = useCookieConsent();
   const { connectedProfile } = useContext(AuthContext);
   const fullscreenElementId = "the-art-fullscreen-img";
 
-  const [nftId, setNftId] = useState<string>();
+  useSetTitle(`6529 Gradient #${id}`);
 
   const [nft, setNft] = useState<NftWithOwner>();
   const [isOwner, setIsOwner] = useState(false);
@@ -51,14 +50,6 @@ export default function GradientPage() {
   const [allNfts, setAllNfts] = useState<NftWithOwner[]>([]);
   const [collectionCount, setCollectionCount] = useState(-1);
   const [collectionRank, setCollectionRank] = useState(-1);
-
-  useEffect(() => {
-    if (router.isReady) {
-      if (router.query.id) {
-        setNftId(router.query.id as string);
-      }
-    }
-  }, [router.isReady, router.query.id]);
 
   useEffect(() => {
     setIsOwner(
@@ -83,34 +74,28 @@ export default function GradientPage() {
         }
       });
     }
-    if (router.isReady && nftId) {
-      const initialUrlNfts = `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`;
-      fetchNfts(initialUrlNfts, []);
-    }
-  }, [router.isReady, nftId]);
+    const initialUrlNfts = `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`;
+    fetchNfts(initialUrlNfts, []);
+  }, []);
 
   useEffect(() => {
     const rankedNFTs = allNfts.sort((a, b) =>
       a.tdh_rank > b.tdh_rank ? 1 : -1
     );
     setCollectionCount(allNfts.length);
-    if (nftId) {
-      setNft(rankedNFTs.find((n) => n.id === parseInt(nftId)));
-      setCollectionRank(
-        rankedNFTs.map((r) => r.id).indexOf(parseInt(nftId)) + 1
-      );
-    }
-  }, [allNfts, nftId]);
+    setNft(rankedNFTs.find((n) => n.id === parseInt(id)));
+    setCollectionRank(rankedNFTs.map((r) => r.id).indexOf(parseInt(id)) + 1);
+  }, [allNfts, id]);
 
   useEffect(() => {
-    if (nftId) {
+    if (id) {
       fetchUrl(
-        `${SEIZE_API_URL}/api/transactions?contract=${GRADIENT_CONTRACT}&id=${nftId}`
+        `${SEIZE_API_URL}/api/transactions?contract=${GRADIENT_CONTRACT}&id=${id}`
       ).then((response: DBResponse) => {
         setTransactions(response.data);
       });
     }
-  }, [nftId]);
+  }, [id]);
 
   function printLive() {
     return (

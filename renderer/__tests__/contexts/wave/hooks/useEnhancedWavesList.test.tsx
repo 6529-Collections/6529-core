@@ -1,5 +1,4 @@
 import { renderHook } from '@testing-library/react';
-import React from 'react';
 import useEnhancedWavesList from '../../../../contexts/wave/hooks/useEnhancedWavesList';
 import useWavesList from '../../../../hooks/useWavesList';
 import useNewDropCounter from '../../../../contexts/wave/hooks/useNewDropCounter';
@@ -28,6 +27,7 @@ describe('useEnhancedWavesList', () => {
       contributors_overview: [{ contributor_pfp: '2.png' }],
       metrics: { latest_drop_timestamp: 200 },
       wave: { type: ApiWaveType.Rank },
+      isPinned: true,
     };
     wavesListMock.mockReturnValue({
       waves: [waveA, waveB],

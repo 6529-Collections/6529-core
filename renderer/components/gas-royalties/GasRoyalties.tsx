@@ -1,26 +1,21 @@
 "use client";
 
-import styles from "./GasRoyalties.module.scss";
-import { Row, Col, Dropdown, Container } from "react-bootstrap";
-import { DateIntervalsSelection } from "@/enums";
-import DotLoader from "../dotLoader/DotLoader";
-import DownloadUrlWidget from "../downloadUrlWidget/DownloadUrlWidget";
-import Image from "next/image";
-import Tippy from "@tippyjs/react";
-import { useState, useEffect } from "react";
-import { fetchUrl } from "@/services/6529api";
-import { getDateFilters } from "@/helpers/Helpers";
-import router from "next/router";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import DatePickerModal from "../datePickerModal/DatePickerModal";
-import { ApiArtistNameItem } from "@/generated/models/ApiArtistNameItem";
+import DatePickerModal from "@/components/datePickerModal/DatePickerModal";
+import DownloadUrlWidget from "@/components/downloadUrlWidget/DownloadUrlWidget";
 import { SEIZE_API_URL } from "@/electron-constants";
+import { DateIntervalsSelection, GasRoyaltiesCollectionFocus } from "@/enums";
+import { ApiArtistNameItem } from "@/generated/models/ApiArtistNameItem";
+import { getDateFilters } from "@/helpers/Helpers";
+import { fetchUrl } from "@/services/6529api";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
-
-export enum GasRoyaltiesCollectionFocus {
-  MEMES = "the-memes",
-  MEMELAB = "meme-lab",
-}
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Col, Container, Dropdown, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import DotLoader from "../dotLoader/DotLoader";
+import styles from "./GasRoyalties.module.scss";
 
 interface HeaderProps {
   title: string;
@@ -32,7 +27,6 @@ interface HeaderProps {
   is_primary: boolean;
   is_custom_blocks: boolean;
   focus: GasRoyaltiesCollectionFocus;
-  setFocus: (focus: GasRoyaltiesCollectionFocus) => void;
   getUrl: () => string;
   setSelectedArtist: (artist: string) => void;
   setIsPrimary: (isPrimary: boolean) => void;
@@ -80,6 +74,8 @@ function getUrlParams(
 }
 
 export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [artists, setArtists] = useState<ApiArtistNameItem[]>([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showBlockPicker, setShowBlockPicker] = useState(false);
@@ -87,21 +83,6 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
   const [toDate, setToDate] = useState<Date>();
   const [fromBlock, setFromBlock] = useState<number>();
   const [toBlock, setToBlock] = useState<number>();
-
-  useEffect(() => {
-    if (props.focus) {
-      router.push(
-        {
-          pathname: router.pathname,
-          query: {
-            focus: props.focus,
-          },
-        },
-        undefined,
-        { shallow: true }
-      );
-    }
-  }, [props.focus]);
 
   useEffect(() => {
     const path =
@@ -173,12 +154,16 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
                     ? styles.collectionFocusActive
                     : styles.collectionFocus
                 }`}
-                onClick={() =>
-                  props.setFocus(GasRoyaltiesCollectionFocus.MEMES)
-                }
+                onClick={() => {
+                  router.push(
+                    `${pathname}?focus=${GasRoyaltiesCollectionFocus.MEMES}`
+                  );
+                }}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    props.setFocus(GasRoyaltiesCollectionFocus.MEMES);
+                    router.push(
+                      `${pathname}?focus=${GasRoyaltiesCollectionFocus.MEMES}`
+                    );
                   }
                 }}
                 aria-label="The Memes">
@@ -191,11 +176,15 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
                     : styles.collectionFocus
                 }`}
                 onClick={() =>
-                  props.setFocus(GasRoyaltiesCollectionFocus.MEMELAB)
+                  router.push(
+                    `${pathname}?focus=${GasRoyaltiesCollectionFocus.MEMELAB}`
+                  )
                 }
                 onKeyDown={(e) => {
                   if (e.key === "Enter" || e.key === " ") {
-                    props.setFocus(GasRoyaltiesCollectionFocus.MEMELAB);
+                    router.push(
+                      `${pathname}?focus=${GasRoyaltiesCollectionFocus.MEMELAB}`
+                    );
                   }
                 }}
                 aria-label="Meme Lab">
@@ -327,31 +316,46 @@ export function GasRoyaltiesTokenImage(props: Readonly<TokenImageProps>) {
       rel="noreferrer">
       <span className="d-flex justify-content-center aling-items-center gap-3">
         <span>{props.token_id} -</span>
-        <Tippy
-          content={`${props.name}`}
-          delay={0}
-          placement={"auto"}
-          theme={"light"}>
-          <Image
-            loading={"lazy"}
-            width={0}
-            height={0}
-            style={{ width: "auto", height: "40px" }}
-            src={props.thumbnail}
-            alt={props.name}
-            className={styles.nftImage}
-          />
-        </Tippy>
+        <Image
+          loading={"lazy"}
+          width={0}
+          height={0}
+          style={{ width: "auto", height: "40px" }}
+          src={props.thumbnail}
+          alt={props.name}
+          className={styles.nftImage}
+          data-tooltip-id={`token-image-${props.token_id}`}
+        />
         {props.note && (
-          <Tippy content={props.note} placement={"auto"} theme={"light"}>
-            <span>
-              <FontAwesomeIcon
-                className={styles.infoIcon}
-                icon={faInfoCircle}></FontAwesomeIcon>
-            </span>
-          </Tippy>
+          <span>
+            <FontAwesomeIcon
+              className={styles.infoIcon}
+              icon={faInfoCircle}
+              data-tooltip-id={`token-info-${props.token_id}`}
+            />
+          </span>
         )}
       </span>
+      <Tooltip
+        id={`token-image-${props.token_id}`}
+        content={props.name}
+        style={{
+          backgroundColor: "#1F2937",
+          color: "white",
+          padding: "4px 8px",
+        }}
+      />
+      {props.note && (
+        <Tooltip
+          id={`token-info-${props.token_id}`}
+          content={props.note}
+          style={{
+            backgroundColor: "#1F2937",
+            color: "white",
+            padding: "4px 8px",
+          }}
+        />
+      )}
     </a>
   );
 }
@@ -395,7 +399,6 @@ export function useSharedState() {
       selected_artist: selectedArtist,
       is_primary: isPrimary,
       is_custom_blocks: isCustomBlocks,
-      setFocus: setCollectionFocus,
       setSelectedArtist,
       setIsPrimary,
       setIsCustomBlocks,

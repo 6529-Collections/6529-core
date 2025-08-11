@@ -1,4 +1,4 @@
-import { PredictBlockNumbersResponseApiModel } from "./BlockPickerResult";
+import { PredictBlockNumbersResponseApiModel } from "@/app/meme-blocks/page.client";
 import BlockPickerResultTableHeader from "./BlockPickerResultTableHeader";
 import BlockPickerResultTableRow from "./BlockPickerResultTableRow";
 

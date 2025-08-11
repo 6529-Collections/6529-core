@@ -1,24 +1,6 @@
 "use client";
 
-import styles from "./NextGenToken.module.scss";
-import { useEffect, useRef, useState } from "react";
-import { NextGenCollection, NextGenToken } from "../../../../entities/INextgen";
-import { Container, Row, Col, Dropdown } from "react-bootstrap";
-import { NextGenTokenImage, get16KUrl, get8KUrl } from "./NextGenTokenImage";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import Lightbulb from "./Lightbulb";
-import {
-  NextGenTokenDownloadDropdownItem,
-  Resolution,
-} from "./NextGenTokenDownload";
-import useIsMobileDevice from "../../../../hooks/isMobileDevice";
-import NextGenZoomableImage, {
-  MAX_ZOOM_SCALE,
-  MIN_ZOOM_SCALE,
-} from "./NextGenZoomableImage";
-import useIsMobileScreen from "../../../../hooks/isMobileScreen";
-import { openInExternalBrowser } from "../../../../helpers";
+import { openInExternalBrowser } from "@/helpers";
 import {
   faDownload,
   faExternalLink,
@@ -28,6 +10,24 @@ import {
   faPlusSquare,
   faRefresh,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useRef, useState } from "react";
+import { Col, Container, Dropdown, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import { NextGenCollection, NextGenToken } from "../../../../entities/INextgen";
+import useIsMobileDevice from "../../../../hooks/isMobileDevice";
+import useIsMobileScreen from "../../../../hooks/isMobileScreen";
+import Lightbulb from "./Lightbulb";
+import styles from "./NextGenToken.module.scss";
+import {
+  NextGenTokenDownloadDropdownItem,
+  Resolution,
+} from "./NextGenTokenDownload";
+import { NextGenTokenImage, get16KUrl, get8KUrl } from "./NextGenTokenImage";
+import NextGenZoomableImage, {
+  MAX_ZOOM_SCALE,
+  MIN_ZOOM_SCALE,
+} from "./NextGenZoomableImage";
 
 interface Props {
   collection: NextGenCollection;
@@ -172,18 +172,22 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
             onClick={() => setMode(Mode.HIGH_RES)}>
             {isMobileDevice ? "8K" : "16K"}
           </button>
-          <Tippy
-            content="Live"
-            hideOnClick={true}
-            placement="bottom"
-            theme="light"
-            delay={100}>
-            <FontAwesomeIcon
-              className={getModeStyle(Mode.LIVE)}
-              onClick={() => setMode(Mode.LIVE)}
-              icon={faPlayCircle}
-            />
-          </Tippy>
+          <FontAwesomeIcon
+            className={getModeStyle(Mode.LIVE)}
+            onClick={() => setMode(Mode.LIVE)}
+            icon={faPlayCircle}
+            data-tooltip-id={`live-tooltip-${props.token.id}`}
+          />
+          <Tooltip
+            id={`live-tooltip-${props.token.id}`}
+            place="bottom"
+            style={{
+              backgroundColor: "#1F2937",
+              color: "white",
+              padding: "4px 8px",
+            }}>
+            Live
+          </Tooltip>
         </Col>
         {mode === Mode.HIGH_RES && (
           <Col
@@ -240,17 +244,21 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
           />
           <Dropdown drop={"down-centered"} className="d-flex">
             <Dropdown.Toggle className={styles.downloadBtn}>
-              <Tippy
-                content="Download"
-                hideOnClick={true}
-                placement="bottom"
-                theme="light"
-                delay={100}>
-                <FontAwesomeIcon
-                  className={styles.modeIcon}
-                  icon={faDownload}
-                />
-              </Tippy>
+              <FontAwesomeIcon
+                className={styles.modeIcon}
+                icon={faDownload}
+                data-tooltip-id={`download-tooltip-${props.token.id}`}
+              />
+              <Tooltip
+                id={`download-tooltip-${props.token.id}`}
+                place="bottom"
+                style={{
+                  backgroundColor: "#1F2937",
+                  color: "white",
+                  padding: "4px 8px",
+                }}>
+                Download
+              </Tooltip>
             </Dropdown.Toggle>
             <Dropdown.Menu>
               {Object.values(Resolution)
@@ -266,33 +274,41 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
                 ))}
             </Dropdown.Menu>
           </Dropdown>
-          <Tippy
-            content="Open in new tab"
-            hideOnClick={true}
-            placement="bottom"
-            theme="light"
-            delay={100}>
-            <FontAwesomeIcon
-              className={styles.modeIcon}
-              onClick={() => {
-                const href = getCurrentHref();
-                openInExternalBrowser(href);
-              }}
-              icon={faExternalLink}
-            />
-          </Tippy>
-          <Tippy
-            content="Fullscreen"
-            hideOnClick={true}
-            placement="bottom"
-            theme="light"
-            delay={100}>
-            <FontAwesomeIcon
-              className={styles.modeIcon}
-              icon={faMaximize}
-              onClick={toggleFullScreen}
-            />
-          </Tippy>
+          <FontAwesomeIcon
+            className={styles.modeIcon}
+            onClick={() => {
+              const href = getCurrentHref();
+              openInExternalBrowser(href);
+            }}
+            icon={faExternalLink}
+            data-tooltip-id={`external-tooltip-${props.token.id}`}
+          />
+          <Tooltip
+            id={`external-tooltip-${props.token.id}`}
+            place="bottom"
+            style={{
+              backgroundColor: "#1F2937",
+              color: "white",
+              padding: "4px 8px",
+            }}>
+            Open in new tab
+          </Tooltip>
+          <FontAwesomeIcon
+            className={styles.modeIcon}
+            icon={faMaximize}
+            onClick={toggleFullScreen}
+            data-tooltip-id={`fullscreen-tooltip-${props.token.id}`}
+          />
+          <Tooltip
+            id={`fullscreen-tooltip-${props.token.id}`}
+            place="bottom"
+            style={{
+              backgroundColor: "#1F2937",
+              color: "white",
+              padding: "4px 8px",
+            }}>
+            Fullscreen
+          </Tooltip>
         </Col>
       </>
     );

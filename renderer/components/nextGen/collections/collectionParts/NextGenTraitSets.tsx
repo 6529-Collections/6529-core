@@ -1,45 +1,45 @@
 "use client";
 
-import styles from "../NextGen.module.scss";
-import { useState, useEffect, Fragment } from "react";
-import { Container, Row, Col, Accordion } from "react-bootstrap";
+import {
+  faArrowCircleRight,
+  faCheckCircle,
+} from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import Link from "next/link";
+import { Fragment, useEffect, useState } from "react";
+import { Accordion, Col, Container, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
 import { DBResponse } from "../../../../entities/IDBResponse";
 import {
   NextGenCollection,
   NextgenTraitSet,
   TraitValues,
 } from "../../../../entities/INextgen";
-import { commonApiFetch } from "../../../../services/api/common-api";
+import { getRandomObjectId } from "../../../../helpers/AllowlistToolHelpers";
 import {
   capitalizeEveryWord,
   cicToType,
   formatAddress,
 } from "../../../../helpers/Helpers";
-import Pagination from "../../../pagination/Pagination";
+import { commonApiFetch } from "../../../../services/api/common-api";
 import DotLoader from "../../../dotLoader/DotLoader";
-import Image from "next/image";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import {
-  formatNameForUrl,
-  normalizeNextgenTokenID,
-} from "../../nextgen_helpers";
-import { getRandomObjectId } from "../../../../helpers/AllowlistToolHelpers";
-import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
-import NextGenCollectionHeader from "./NextGenCollectionHeader";
+import Pagination from "../../../pagination/Pagination";
 import {
   SearchModalDisplay,
   SearchWalletsDisplay,
 } from "../../../searchModal/SearchModal";
+import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
+import {
+  formatNameForUrl,
+  normalizeNextgenTokenID,
+} from "../../nextgen_helpers";
+import styles from "../NextGen.module.scss";
 import {
   getNextGenIconUrl,
   getNextGenImageUrl,
 } from "../nextgenToken/NextGenTokenImage";
-import Link from "next/link";
-import {
-  faArrowCircleRight,
-  faCheckCircle,
-} from "@fortawesome/free-solid-svg-icons";
+import NextGenCollectionHeader from "./NextGenCollectionHeader";
 
 const TRAITS: Record<number, string[]> = {
   1: ["Palette", "Size", "Traced"],
@@ -450,18 +450,21 @@ function TraitSetAccordion(
                   <Owner set={set} />
                 </span>
                 {props.values.length > 0 && missingValues.length === 0 && (
-                  <Tippy
-                    theme="light"
-                    delay={250}
-                    content={
-                      <>
-                        Complete <b>{props.trait}</b> trait set!
-                      </>
-                    }>
+                  <>
                     <FontAwesomeIcon
                       style={{ height: "1.5em", color: "#00aa00" }}
-                      icon={faCheckCircle}></FontAwesomeIcon>
-                  </Tippy>
+                      icon={faCheckCircle}
+                      data-tooltip-id={`complete-trait-${props.collection.id}-${props.trait}-${set.owner}`}></FontAwesomeIcon>
+                    <Tooltip
+                      id={`complete-trait-${props.collection.id}-${props.trait}-${set.owner}`}
+                      style={{
+                        backgroundColor: "#1F2937",
+                        color: "white",
+                        padding: "4px 8px",
+                      }}>
+                      Complete <b>{props.trait}</b> trait set!
+                    </Tooltip>
+                  </>
                 )}
               </Col>
             </Row>
@@ -493,13 +496,9 @@ function TraitSetAccordion(
                       {tv.tokens.map((t) => (
                         <Link
                           key={`accordion-${props.trait}-${tv.value}-${t}`}
-                          href={`/nextgen/token/${t}`}>
-                          <Tippy
-                            theme="light"
-                            delay={250}
-                            content={`${props.collection.name} #${
-                              normalizeNextgenTokenID(t).token_id
-                            }`}>
+                          href={`/nextgen/token/${t}`}
+                          rel="noreferrer">
+                          <>
                             <Image
                               priority
                               loading="eager"
@@ -513,6 +512,7 @@ function TraitSetAccordion(
                               }}
                               src={getNextGenIconUrl(t)}
                               alt={`#${t.toString()}`}
+                              data-tooltip-id={`token-${t}`}
                               onError={({ currentTarget }) => {
                                 if (
                                   currentTarget.src === getNextGenIconUrl(t)
@@ -521,7 +521,17 @@ function TraitSetAccordion(
                                 }
                               }}
                             />
-                          </Tippy>
+                            <Tooltip
+                              id={`token-${t}`}
+                              style={{
+                                backgroundColor: "#1F2937",
+                                color: "white",
+                                padding: "4px 8px",
+                              }}>
+                              {props.collection.name} #
+                              {normalizeNextgenTokenID(t).token_id}
+                            </Tooltip>
+                          </>
                         </Link>
                       ))}
                     </span>

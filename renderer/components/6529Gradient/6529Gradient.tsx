@@ -1,33 +1,31 @@
 "use client";
 
-import styles from "./6529Gradient.module.scss";
-import { useEffect, useState } from "react";
-import { Container, Row, Col } from "react-bootstrap";
+import Address from "@/components/address/Address";
+import { useAuth } from "@/components/auth/Auth";
+import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
+import NFTImage from "@/components/nft-image/NFTImage";
+import { GRADIENT_CONTRACT } from "@/constants";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { NFT } from "@/entities/INFT";
 import { SortDirection } from "@/entities/ISort";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { areEqualAddresses, numberWithCommas } from "@/helpers/Helpers";
-import { useRouter } from "next/router";
-import { fetchAllPages } from "@/services/6529api";
-import NFTImage from "../nft-image/NFTImage";
-import Address from "../address/Address";
-import DotLoader from "../dotLoader/DotLoader";
-import { GRADIENT_CONTRACT } from "@/constants";
-import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
-import { SEIZE_API_URL } from "@/electron-constants";
-import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
 import {
   faChevronCircleDown,
   faChevronCircleUp,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
+import { fetchAllPages } from "../../services/6529api";
+import styles from "./6529Gradient.module.scss";
 
 enum Sort {
   ID = "id",
   TDH = "tdh",
-}
-
-interface Props {
-  wallets: string[];
 }
 
 interface GradientNFT extends NFT {
@@ -36,58 +34,65 @@ interface GradientNFT extends NFT {
   tdh_rank: number;
 }
 
-export default function GradientsComponent(props: Readonly<Props>) {
-  const router = useRouter();
+export default function GradientsComponent() {
+  useSetTitle("6529 Gradient | Collections");
 
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { connectedProfile } = useAuth();
+  const wallets = connectedProfile?.wallets?.map((w) => w.wallet) ?? [];
+
+  const [nftsRaw, setNftsRaw] = useState<GradientNFT[]>([]);
   const [nfts, setNfts] = useState<GradientNFT[]>([]);
   const [nftsLoaded, setNftsLoaded] = useState(false);
   const [sortDir, setSortDir] = useState<SortDirection>(SortDirection.ASC);
   const [sort, setSort] = useState<Sort>(Sort.ID);
 
-  function fetchResults() {
-    const url = `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101&sort=${sort}&sort_direction=${sortDir}`;
-    fetchAllPages(url).then((newNfts: GradientNFT[]) => {
-      setNfts(newNfts);
+  useEffect(() => {
+    const sortParam = (searchParams?.get("sort") as Sort) || Sort.ID;
+    const dirParam =
+      (searchParams?.get("sort_dir")?.toUpperCase() as SortDirection) ||
+      SortDirection.ASC;
+
+    setSort(sortParam);
+    setSortDir(dirParam);
+
+    const url = `${SEIZE_API_URL}/api/nfts/gradients?page_size=101`;
+    fetchAllPages(url).then((raw: GradientNFT[]) => {
+      setNftsRaw(raw);
       setNftsLoaded(true);
     });
-  }
+  }, []);
 
   useEffect(() => {
-    if (sort && sortDir) {
-      fetchResults();
-    }
-  }, [router.isReady]);
+    const params = new URLSearchParams();
+    params.set("sort", sort.toLowerCase());
+    params.set("sort_dir", sortDir.toLowerCase());
+
+    router.replace(`/6529-gradient?${params.toString()}`, {
+      scroll: false,
+    });
+  }, [sort, sortDir]);
 
   useEffect(() => {
-    if (sort && sortDir) {
-      router.replace(
-        {
-          query: { sort: sort, sort_dir: sortDir },
-        },
-        undefined,
-        { shallow: true }
+    if (!nftsLoaded) return;
+
+    const sorted = [...nftsRaw];
+
+    if (sort === Sort.ID) {
+      sorted.sort((a, b) =>
+        sortDir === SortDirection.ASC ? a.id - b.id : b.id - a.id
       );
-
-      if (sort === Sort.ID) {
-        if (sortDir === SortDirection.ASC) {
-          setNfts([...nfts].sort((a, b) => (a.id > b.id ? 1 : -1)));
-        } else {
-          setNfts([...nfts].sort((a, b) => (a.id > b.id ? -1 : 1)));
-        }
-      }
-      if (sort === Sort.TDH) {
-        if (sortDir === SortDirection.ASC) {
-          setNfts(
-            [...nfts].sort((a, b) => (a.boosted_tdh > b.boosted_tdh ? -1 : 1))
-          );
-        } else {
-          setNfts(
-            [...nfts].sort((a, b) => (a.boosted_tdh > b.boosted_tdh ? 1 : -1))
-          );
-        }
-      }
+    } else if (sort === Sort.TDH) {
+      sorted.sort((a, b) =>
+        sortDir === SortDirection.ASC
+          ? b.boosted_tdh - a.boosted_tdh
+          : a.boosted_tdh - b.boosted_tdh
+      );
     }
-  }, [sortDir, sort]);
+
+    setNfts(sorted);
+  }, [sort, sortDir, nftsLoaded]);
 
   function printNft(nft: GradientNFT) {
     return (
@@ -120,7 +125,7 @@ export default function GradientsComponent(props: Readonly<Props>) {
             </Row>
             <Row>
               <Col className="text-center">
-                {props.wallets.some((w) => areEqualAddresses(w, nft.owner))
+                {wallets.some((w) => areEqualAddresses(w, nft.owner))
                   ? "*"
                   : ""}
                 {nft.owner && (

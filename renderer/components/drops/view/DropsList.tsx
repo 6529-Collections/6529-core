@@ -1,3 +1,5 @@
+"use client"
+
 import { useMemo, RefObject, useCallback, memo } from "react";
 import { ApiDrop } from "../../../generated/models/ApiDrop";
 import {

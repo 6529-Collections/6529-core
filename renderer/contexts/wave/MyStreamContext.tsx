@@ -1,33 +1,34 @@
 "use client";
 
+import { useNotificationsContext } from "@/components/notifications/NotificationsContext";
 import React, {
   createContext,
-  useContext,
-  useMemo,
   ReactNode,
+  useContext,
   useEffect,
-  useState,
+  useMemo,
   useRef,
+  useState,
 } from "react";
+import { ApiDrop } from "../../generated/models/ApiDrop";
+import { ApiLightDrop } from "../../generated/models/ApiLightDrop";
+import useCapacitor from "../../hooks/useCapacitor";
+import { useWebsocketStatus } from "../../services/websocket/useWebSocketMessage";
+import { WaveMessages } from "./hooks/types";
 import { useActiveWaveManager } from "./hooks/useActiveWaveManager";
 import useEnhancedDmWavesList from "./hooks/useEnhancedDmWavesList";
+import useEnhancedWavesList, {
+  MinimalWave,
+} from "./hooks/useEnhancedWavesList";
+import { useWaveDataManager } from "./hooks/useWaveDataManager";
 import useWaveMessagesStore, {
   Listener as WaveMessagesListener,
 } from "./hooks/useWaveMessagesStore";
-import { useWaveDataManager } from "./hooks/useWaveDataManager";
-import { ApiDrop } from "../../generated/models/ApiDrop";
+import { NextPageProps } from "./hooks/useWavePagination";
 import {
   ProcessIncomingDropType,
   useWaveRealtimeUpdater,
 } from "./hooks/useWaveRealtimeUpdater";
-import { WaveMessages } from "./hooks/types";
-import { useWebsocketStatus } from "../../services/websocket/useWebSocketMessage";
-import useCapacitor from "../../hooks/useCapacitor";
-import { ApiLightDrop } from "../../generated/models/ApiLightDrop";
-import { NextPageProps } from "./hooks/useWavePagination";
-import useEnhancedWavesList, {
-  MinimalWave,
-} from "./hooks/useEnhancedWavesList";
 
 // Define nested structures for context data
 interface WavesContextData {
@@ -88,6 +89,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
   const waveMessagesStore = useWaveMessagesStore();
   const websocketStatus = useWebsocketStatus();
   const prevIsActiveRef = useRef(isActive);
+  const { removeWaveDeliveredNotifications } = useNotificationsContext();
 
   // Instantiate the data manager, passing the updater function from the store
   const waveDataManager = useWaveDataManager({
@@ -103,6 +105,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
     registerWave: waveDataManager.registerWave,
     syncNewestMessages: waveDataManager.syncNewestMessages,
     removeDrop: waveMessagesStore.removeDrop,
+    removeWaveDeliveredNotifications,
   });
 
   useEffect(() => {
@@ -129,7 +132,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
     if (!isCapacitor) {
       return;
     }
-    
+
     // Check if app transitioned from background to foreground
     if (!prevIsActiveRef.current && isActive) {
       // App just became active, do exactly what WebSocket connect does
@@ -139,7 +142,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
       wavesHookData.refetchAllWaves();
       wavesHookData.resetAllWavesNewDropsCount();
     }
-    
+
     // Update the ref for next comparison
     prevIsActiveRef.current = isActive;
   }, [isActive, isCapacitor, activeWaveId, waveDataManager, wavesHookData]);

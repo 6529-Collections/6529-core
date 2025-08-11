@@ -1,23 +1,24 @@
 "use client";
 
-import styles from "./Leaderboard.module.scss";
-import { useState, useEffect } from "react";
-import { Container, Row, Col, Dropdown } from "react-bootstrap";
+import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
-import { TDHCalc, GlobalTDHHistory } from "@/entities/ITDH";
+import { MemeSeason } from "@/entities/ISeason";
+import { GlobalTDHHistory, TDHCalc } from "@/entities/ITDH";
+import { LeaderboardFocus } from "@/enums";
 import { numberWithCommas } from "@/helpers/Helpers";
 import { fetchUrl } from "@/services/6529api";
+import { commonApiFetch } from "@/services/api/common-api";
+import { useEffect, useState } from "react";
+import { Col, Container, Dropdown, Row } from "react-bootstrap";
+import { ApiBlocksPage } from "../../generated/models/ApiBlocksPage";
+import DotLoader, { Spinner } from "../dotLoader/DotLoader";
 import {
   SearchModalDisplay,
   SearchWalletsDisplay,
 } from "../searchModal/SearchModal";
-import DotLoader, { Spinner } from "../dotLoader/DotLoader";
-import { commonApiFetch } from "@/services/api/common-api";
-import { MemeSeason } from "@/entities/ISeason";
+import styles from "./Leaderboard.module.scss";
 import LeaderboardCardsCollectedComponent from "./LeaderboardCardsCollected";
 import LeaderboardInteractionsComponent from "./LeaderboardInteractions";
-import { ApiBlocksPage } from "@/generated/models/ApiBlocksPage";
-import { SEIZE_API_URL } from "@/electron-constants";
 
 export enum Content {
   ALL = "All",
@@ -35,11 +36,6 @@ export enum Collector {
   GRADIENTS = "Gradient",
   MEMELAB = "MemeLab",
   NEXTGEN = "NextGen",
-}
-
-export enum LeaderboardFocus {
-  TDH = "Cards Collected",
-  INTERACTIONS = "Interactions",
 }
 
 export default function Leaderboard(

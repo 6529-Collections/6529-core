@@ -1,5 +1,3 @@
-import { ReactElement } from "react";
-import { NextPageWithLayout } from "../_app";
 import {
   dehydrate,
   DehydratedState,
@@ -7,26 +5,16 @@ import {
   QueryClient,
 } from "@tanstack/react-query";
 import { GetServerSidePropsContext } from "next";
+import { ReactElement } from "react";
+import MyStreamLayout from "../../components/brain/my-stream/layout/MyStreamLayout";
+import Notifications from "../../components/brain/notifications/NotificationsContainer";
+import { QueryKey } from "../../components/react-query-wrapper/ReactQueryWrapper";
 import { getCommonHeaders } from "../../helpers/server.helpers";
 import { prefetchAuthenticatedNotifications } from "../../helpers/stream.helpers";
 import { Time } from "../../helpers/time";
-import { QueryKey } from "../../components/react-query-wrapper/ReactQueryWrapper";
-import dynamic from "next/dynamic";
-
-const MyStreamLayout = dynamic(
-  () => import("../../components/brain/my-stream/layout/MyStreamLayout"),
-  {
-    ssr: false,
-  }
-);
-const Notifications = dynamic(
-  () => import("../../components/brain/notifications/Notifications"),
-  {
-    ssr: false,
-  }
-);
-
 import { PageSSRMetadata } from "../../helpers/Types";
+import { NextPageWithLayout } from "../_app";
+
 interface Props {
   dehydratedState: DehydratedState;
   metadata: Partial<PageSSRMetadata>;

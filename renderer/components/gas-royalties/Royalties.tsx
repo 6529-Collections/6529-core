@@ -3,24 +3,44 @@
 import { useEffect, useState } from "react";
 import { Container, Row, Col, Table } from "react-bootstrap";
 import styles from "./GasRoyalties.module.scss";
-import { Royalty } from "../../entities/IRoyalty";
-import { fetchUrl } from "../../services/6529api";
-import { displayDecimal } from "../../helpers/Helpers";
+import { Royalty } from "@/entities/IRoyalty";
+import { fetchUrl } from "@/services/6529api";
+import { capitalizeEveryWord, displayDecimal } from "@/helpers/Helpers";
 import {
-  GasRoyaltiesCollectionFocus,
   GasRoyaltiesHeader,
   GasRoyaltiesTokenImage,
   useSharedState,
 } from "./GasRoyalties";
-import { useRouter } from "next/router";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
+import { Tooltip } from "react-tooltip";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { useTitle } from "@/contexts/TitleContext";
+import { GasRoyaltiesCollectionFocus } from "@/enums";
 
 const MEMES_SOLD_MANUALLY = [1, 2, 3, 4];
 
 export default function RoyaltiesComponent() {
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const { setTitle } = useTitle();
+
+  useEffect(() => {
+    const routerFocus = searchParams?.get("focus") as string;
+    const resolvedFocus = Object.values(GasRoyaltiesCollectionFocus).find(
+      (sd) => sd === routerFocus
+    );
+    if (resolvedFocus) {
+      setCollectionFocus(resolvedFocus);
+      const title = `Meme Accounting - ${capitalizeEveryWord(
+        resolvedFocus.replace("-", " ")
+      )}`;
+      setTitle(title);
+    } else {
+      router.push(`${pathname}?focus=${GasRoyaltiesCollectionFocus.MEMES}`);
+    }
+  }, [searchParams]);
 
   const [royalties, setRoyalties] = useState<Royalty[]>([]);
   const [sumVolume, setSumVolume] = useState(0);
@@ -46,20 +66,6 @@ export default function RoyaltiesComponent() {
     fromBlock,
     toBlock,
   } = useSharedState();
-
-  useEffect(() => {
-    if (router.isReady) {
-      const routerFocus = router.query.focus as string;
-      const resolvedFocus = Object.values(GasRoyaltiesCollectionFocus).find(
-        (sd) => sd === routerFocus
-      );
-      if (resolvedFocus) {
-        setCollectionFocus(resolvedFocus);
-      } else {
-        setCollectionFocus(GasRoyaltiesCollectionFocus.MEMES);
-      }
-    }
-  }, [router.isReady]);
 
   function getUrlWithParams() {
     return getUrl("royalties");
@@ -166,14 +172,21 @@ export default function RoyaltiesComponent() {
                       <div className="d-flex align-items-center justify-content-center gap-2">
                         {isPrimary ? "Primary Proceeds" : "Royalties"}
                         {isPrimary && (
-                          <Tippy
-                            content="Total Minter payments less the Manifold fee"
-                            placement={"auto"}
-                            theme={"light"}>
+                          <>
                             <FontAwesomeIcon
                               className={styles.infoIcon}
-                              icon={faInfoCircle}></FontAwesomeIcon>
-                          </Tippy>
+                              icon={faInfoCircle}
+                              data-tooltip-id="primary-proceeds-tooltip"></FontAwesomeIcon>
+                            <Tooltip
+                              id="primary-proceeds-tooltip"
+                              style={{
+                                backgroundColor: "#1F2937",
+                                color: "white",
+                                padding: "4px 8px",
+                              }}>
+                              Total Minter payments less the Manifold fee
+                            </Tooltip>
+                          </>
                         )}
                       </div>
                     </th>
@@ -183,14 +196,21 @@ export default function RoyaltiesComponent() {
                     <th className="text-center">
                       <div className="d-flex align-items-center justify-content-center gap-2">
                         Artist Split{" "}
-                        <Tippy
-                          content={getTippyArtistsContent()}
-                          placement={"auto"}
-                          theme={"light"}>
+                        <>
                           <FontAwesomeIcon
                             className={styles.infoIcon}
-                            icon={faInfoCircle}></FontAwesomeIcon>
-                        </Tippy>
+                            icon={faInfoCircle}
+                            data-tooltip-id="artist-split-tooltip"></FontAwesomeIcon>
+                          <Tooltip
+                            id="artist-split-tooltip"
+                            style={{
+                              backgroundColor: "#1F2937",
+                              color: "white",
+                              padding: "4px 8px",
+                            }}>
+                            {getTippyArtistsContent()}
+                          </Tooltip>
+                        </>
                       </div>
                     </th>
                   </tr>

@@ -14,6 +14,7 @@ import {
 } from "../../../types/dropInteractionTypes";
 import PrivilegedDropCreator, { DropMode } from "../PrivilegedDropCreator";
 import { useLayout } from "../../../components/brain/my-stream/layout/LayoutContext";
+import { useAndroidKeyboard } from "../../../hooks/useAndroidKeyboard";
 
 interface SingleWaveDropChatProps {
   readonly wave: ApiWave;
@@ -27,6 +28,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   const contentWrapperRef = useRef<HTMLDivElement | null>(null);
   const { isApp } = useDeviceInfo();
   const { spaces } = useLayout();
+  const { getContainerStyle, isVisible: isKeyboardVisible } = useAndroidKeyboard();
 
   const containerStyle = useMemo(() => {
     if (!spaces.measurementsComplete) {
@@ -41,17 +43,18 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
     return `tw-w-full tw-flex tw-flex-col lg:[--tab-height:30px]`;
   }, []);
 
-  // On mobile app, start with null to match native app behavior
-  // On desktop/web, pre-set reply for convenience
-  const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>(
-    isApp
-      ? null
-      : {
-          action: ActiveDropAction.REPLY,
-          drop: drop,
-          partId: 1,
-        }
-  );
+  // Apply Android keyboard adjustments to the fixed input area
+  const inputContainerStyle = useMemo(() => {
+    return getContainerStyle({
+      paddingBottom: isKeyboardVisible ? "0px" : "calc(env(safe-area-inset-bottom))",
+    }, 0);
+  }, [getContainerStyle, isKeyboardVisible]);
+  
+  const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>({
+    action: ActiveDropAction.REPLY,
+    drop: drop,
+    partId: 1,
+  });
 
   const handleDropAction = ({
     drop,
@@ -66,17 +69,11 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   };
 
   const resetActiveDrop = () => {
-    if (isApp) {
-      // Mobile app: Set to null to prevent keyboard issues
-      setActiveDrop(null);
-    } else {
-      // Desktop/web: Reset to replying to main drop for convenience
-      setActiveDrop({
-        action: ActiveDropAction.REPLY,
-        drop: drop,
-        partId: 1,
-      });
-    }
+    setActiveDrop({
+      action: ActiveDropAction.REPLY,
+      drop: drop,
+      partId: 1,
+    });
   };
 
   return (
@@ -123,7 +120,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                 />
               </div>
               <div
-                style={{
+                style={isApp ? inputContainerStyle : {
                   paddingBottom: "calc(env(safe-area-inset-bottom))",
                 }}
                 className={`${

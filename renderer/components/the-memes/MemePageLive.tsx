@@ -1,33 +1,33 @@
 "use client";
 
-import styles from "./TheMemes.module.scss";
-import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
+import { NftPageStats } from "@/components/nftAttributes/NftStats";
+import { printMemeReferences } from "@/components/rememes/RememePage";
 import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
-import { NFT, MemesExtendedData, Rememe } from "@/entities/INFT";
+import { SEIZE_API_URL } from "@/electron-constants";
+import { MemesExtendedData, NFT, Rememe } from "@/entities/INFT";
 import {
   areEqualAddresses,
   formatAddress,
   numberWithCommas,
   printMintDate,
 } from "@/helpers/Helpers";
-import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
-import { DBResponse } from "@/entities/IDBResponse";
-import { fetchUrl } from "@/services/6529api";
-import RememeImage from "@/components/nft-image/RememeImage";
-import Pagination from "@/components/pagination/Pagination";
-import { RememeSort } from "@/components/rememes/Rememes";
-import Tippy from "@tippyjs/react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import ArtistProfileHandle from "./ArtistProfileHandle";
-import { NftPageStats } from "@/components/nftAttributes/NftStats";
-import { printMemeReferences } from "@/components/rememes/RememePage";
-import { SEIZE_API_URL } from "@/electron-constants";
 import useCapacitor from "@/hooks/useCapacitor";
-import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import { faFire, faRefresh } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
 import Link from "next/link";
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { useEffect, useRef, useState } from "react";
+import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import { DBResponse } from "../../entities/IDBResponse";
+import { fetchUrl } from "../../services/6529api";
+import RememeImage from "../nft-image/RememeImage";
+import Pagination from "../pagination/Pagination";
+import { RememeSort } from "../rememes/Rememes";
+import ArtistProfileHandle from "./ArtistProfileHandle";
+import styles from "./TheMemes.module.scss";
 
 const REMEMES_PAGE_SIZE = 20;
 
@@ -360,11 +360,7 @@ export function MemePageLiveSubMenu(props: {
                   </Dropdown.Menu>
                 </Dropdown>
                 {selectedRememeSorting === RememeSort.RANDOM && (
-                  <Tippy
-                    content="Refresh results"
-                    placement="top"
-                    theme="light"
-                    delay={250}>
+                  <>
                     <FontAwesomeIcon
                       icon={faRefresh}
                       className={styles.buttonIcon}
@@ -373,8 +369,20 @@ export function MemePageLiveSubMenu(props: {
                           fetchRememes(props.nft.id);
                         }
                       }}
+                      data-tooltip-id="refresh-rememes"
                     />
-                  </Tippy>
+                    <Tooltip
+                      id="refresh-rememes"
+                      place="top"
+                      delayShow={250}
+                      style={{
+                        backgroundColor: "#f8f9fa",
+                        color: "#212529",
+                        padding: "4px 8px",
+                      }}>
+                      Refresh results
+                    </Tooltip>
+                  </>
                 )}
               </span>
             )}

@@ -5,12 +5,17 @@ import styles from "./CookiesBanner.module.scss";
 import { useCookieConsent } from "./CookieConsentContext";
 import Link from "next/link";
 import Image from "next/image";
+import useDeviceInfo from "../../hooks/useDeviceInfo";
 import useIsMobileDevice from "../../hooks/isMobileDevice";
 
 export default function CookiesBanner() {
+  const { isApp } = useDeviceInfo();
   const isMobile = useIsMobileDevice();
   const pathname = usePathname() ?? "";
   const { consent, reject } = useCookieConsent();
+  
+  const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+
 
   if (["/restricted", "/access"].includes(pathname)) {
     return <></>;
@@ -18,11 +23,12 @@ export default function CookiesBanner() {
 
   return (
     <div
-      className={`${
-        styles.banner
-      } d-flex align-items-center justify-content-between gap-2 ${
-        isMobile ? `flex-column` : ""
-      }`}>
+      className={`${styles.banner} ${
+        isApp ? styles.bannerMobile : ""
+      } ${isApp && isIOS ? styles.bannerIOS : ""} d-flex align-items-center justify-content-between gap-2 ${
+        isApp ? `flex-column` : ""
+      }`}
+    >
       <span className="d-flex align-items-center gap-2">
         <Image
           src="/intern.png"

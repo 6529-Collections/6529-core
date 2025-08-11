@@ -1,15 +1,15 @@
 "use client";
 
-import { Container, Row, Col, Dropdown } from "react-bootstrap";
-import { NextGenToken } from "../../../../entities/INextgen";
-import useDownloader from "react-use-downloader";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import DotLoader, { Spinner } from "../../../dotLoader/DotLoader";
-import Tippy from "@tippyjs/react";
-import { useEffect, useState } from "react";
-import { numberWithCommas } from "../../../../helpers/Helpers";
-import { openInExternalBrowser } from "../../../../helpers";
 import { faDownload, faExternalLink } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
+import { Col, Container, Dropdown, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import useDownloader from "react-use-downloader";
+import { NextGenToken } from "../../../../entities/INextgen";
+import { openInExternalBrowser } from "../../../../helpers";
+import { numberWithCommas } from "../../../../helpers/Helpers";
+import DotLoader, { Spinner } from "../../../dotLoader/DotLoader";
 
 export enum Resolution {
   "Thumbnail" = "Thumbnail",
@@ -110,21 +110,26 @@ export default function NextGenTokenDownload(
   function printResolution(quality: Resolution) {
     return (
       <span className="d-flex gap-3 align-items-center no-wrap">
-        <Tippy
-          content={"Open in new tab"}
-          placement={"top"}
-          theme={"light"}
-          delay={100}
-          hideOnClick={true}>
-          <FontAwesomeIcon
-            style={{ cursor: "pointer", height: "24px", width: "24px" }}
-            onClick={() => {
-              const h = getUrl(props.token, quality);
-              openInExternalBrowser(h);
-            }}
-            icon={faExternalLink}
-          />
-        </Tippy>
+        <FontAwesomeIcon
+          data-tooltip-id={`external-link-${props.token.id}-${quality}`}
+          style={{ cursor: "pointer", height: "24px", width: "24px" }}
+          onClick={() => {
+            const h = getUrl(props.token, quality);
+            openInExternalBrowser(h);
+          }}
+          icon={faExternalLink}
+        />
+        <Tooltip
+          id={`external-link-${props.token.id}-${quality}`}
+          place="top"
+          delayShow={100}
+          style={{
+            backgroundColor: "#1F2937",
+            color: "white",
+            padding: "4px 8px",
+          }}>
+          Open in new tab
+        </Tooltip>
         <NextGenTokenDownloadButton token={props.token} quality={quality} />
       </span>
     );
@@ -171,13 +176,9 @@ function NextGenTokenDownloadButton(
   }
 
   return (
-    <Tippy
-      content={"Download"}
-      placement={"top"}
-      theme={"light"}
-      delay={100}
-      hideOnClick={true}>
+    <>
       <FontAwesomeIcon
+        data-tooltip-id={`download-${props.token.id}-${props.quality}`}
         icon={faDownload}
         className={props.class}
         style={{ cursor: "pointer", height: "24px", width: "24px" }}
@@ -188,6 +189,17 @@ function NextGenTokenDownloadButton(
           );
         }}
       />
-    </Tippy>
+      <Tooltip
+        id={`download-${props.token.id}-${props.quality}`}
+        place="top"
+        delayShow={100}
+        style={{
+          backgroundColor: "#1F2937",
+          color: "white",
+          padding: "4px 8px",
+        }}>
+        Download
+      </Tooltip>
+    </>
   );
 }
