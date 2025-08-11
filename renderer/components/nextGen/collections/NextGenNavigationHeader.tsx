@@ -2,11 +2,11 @@
 
 import styles from "./NextGen.module.scss";
 
-import { useState, useEffect } from "react";
-import { Container, Row, Col } from "react-bootstrap";
 import Image from "next/image";
-import { LFGButton } from "../../lfg-slideshow/LFGSlideshow";
+import { useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
 import CollectionsDropdown from "../../collections-dropdown/CollectionsDropdown";
+import { LFGButton } from "../../lfg-slideshow/LFGSlideshow";
 
 export enum NextGenView {
   COLLECTIONS = "Collections",
@@ -56,7 +56,7 @@ export default function NextGenNavigationHeader(
     }
     return (
       <button
-        className="btn-link"
+        className="btn-link decoration-none"
         onClick={() => {
           if (props.setView) {
             props.setView(v);
