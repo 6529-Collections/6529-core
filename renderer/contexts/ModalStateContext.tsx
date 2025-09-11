@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useMemo, useState } from "react";
 
 interface ModalStateContextType {
   addModal: (modalName: string) => void;
@@ -8,13 +8,9 @@ interface ModalStateContextType {
   isTopModal: (modalName: string) => boolean;
 }
 
-const ModalStateContext = createContext<ModalStateContextType>({
-  addModal: () => {},
-  removeModal: () => {},
-  isTopModal: () => false,
-});
-
-export const useModalState = () => useContext(ModalStateContext);
+const ModalStateContext = createContext<ModalStateContextType | undefined>(
+  undefined
+);
 
 export const ModalStateProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -33,9 +29,22 @@ export const ModalStateProvider: React.FC<{ children: React.ReactNode }> = ({
     return openModals[openModals.length - 1] === modalName;
   };
 
+  const value = useMemo(
+    () => ({ isTopModal, addModal, removeModal }),
+    [openModals]
+  );
+
   return (
-    <ModalStateContext.Provider value={{ isTopModal, addModal, removeModal }}>
+    <ModalStateContext.Provider value={value}>
       {children}
     </ModalStateContext.Provider>
   );
+};
+
+export const useModalState = (): ModalStateContextType => {
+  const context = useContext(ModalStateContext);
+  if (context === undefined) {
+    throw new Error("useModalState must be used within a ModalStateProvider");
+  }
+  return context;
 };

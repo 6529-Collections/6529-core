@@ -357,19 +357,21 @@ export default function TheMemesComponent() {
         xs={{ span: 6 }}
         sm={{ span: 4 }}
         md={{ span: 3 }}
-        lg={{ span: 3 }}>
+        lg={{ span: 3 }}
+      >
         <Link
           href={`/the-memes/${nft.id}`}
-          className="decoration-none scale-hover">
+          className="decoration-none scale-hover"
+        >
           <Container fluid>
             <Row className={connectedProfile ? styles.nftImagePadding : ""}>
               <NFTImage
                 nft={nft}
                 animation={false}
                 height={300}
-                balance={getBalance(nft.id)}
                 showThumbnail={true}
-                showUnseized={!!connectedProfile}
+                showUnseizedIfLoggedIn={false}
+                showOwnedIfLoggedIn={false}
               />
             </Row>
             <Row>
@@ -572,7 +574,8 @@ export function SortButton(
         isActive
           ? "tw-text-white tw-font-semibold"
           : "tw-text-gray-400 hover:tw-text-white"
-      }`}>
+      }`}
+    >
       {props.sort}
     </button>
   );

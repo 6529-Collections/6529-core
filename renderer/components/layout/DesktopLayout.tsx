@@ -1,14 +1,14 @@
 "use client";
 
-import React, { ReactNode, useCallback } from "react";
+import { useSearch } from "@/contexts/SearchContext";
 import dynamic from "next/dynamic";
-import HeaderPlaceholder from "../header/HeaderPlaceholder";
+import { usePathname } from "next/navigation";
+import { ReactNode, useCallback } from "react";
+import { useHeaderContext } from "../../contexts/HeaderContext";
+import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import Breadcrumb from "../breadcrumb/Breadcrumb";
-import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
-import { useHeaderContext } from "../../contexts/HeaderContext";
-import { usePathname } from "next/navigation";
-import { useSearch } from "@/contexts/SearchContext";
+import HeaderPlaceholder from "../header/HeaderPlaceholder";
 
 const Header = dynamic(() => import("../header/Header"), {
   ssr: false,

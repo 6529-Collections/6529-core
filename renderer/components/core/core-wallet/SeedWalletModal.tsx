@@ -1,14 +1,14 @@
 "use client";
 
-import styles from "./SeedWallet.module.scss";
-import { useCallback, useRef, useState } from "react";
-import { Modal, Button } from "react-bootstrap";
-import { createSeedWallet, importSeedWallet } from "../../../electron";
-import { useToast } from "../../../contexts/ToastContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import { decryptData } from "@/shared/encrypt";
 import { areEqualAddresses } from "@/helpers/Helpers";
+import { decryptData } from "@/shared/encrypt";
+import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useCallback, useRef, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
+import { useToast } from "../../../contexts/ToastContext";
+import { createSeedWallet, importSeedWallet } from "../../../electron";
+import styles from "./SeedWallet.module.scss";
 
 export const SEED_MIN_PASS_LENGTH = 6;
 
@@ -108,11 +108,11 @@ export function CreateSeedWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>
           {props.import ? `Import` : `Create New`} Wallet
         </Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <label className="pb-1">Wallet Name</label>
         <input
@@ -272,9 +272,9 @@ export function UnlockSeedWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>Unlock Wallet</Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <label className="pt-3 pb-1 d-flex align-items-center justify-content-between">
           <span className="unselectable">Wallet Password</span>

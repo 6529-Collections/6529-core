@@ -1,16 +1,36 @@
-import { render, screen } from "@testing-library/react";
-import React from "react";
 import {
   getInitialRouterValues,
-  printSortButtons,
   printNftContent,
+  printSortButtons,
   sortChanged,
-} from "../../../components/memelab/MemeLab";
-import { MemeLabSort } from "../../../enums";
-import { SortDirection } from "../../../entities/ISort";
-import { VolumeType, LabNFT, LabExtendedData } from "../../../entities/INFT";
+} from "@/components/memelab/MemeLab";
+import { LabExtendedData, LabNFT, VolumeType } from "@/entities/INFT";
+import { SortDirection } from "@/entities/ISort";
+import { MemeLabSort } from "@/enums";
+import { render, screen } from "@testing-library/react";
 
-jest.mock("../../../components/the-memes/TheMemes", () => ({
+// Mock helper functions
+jest.mock("@/helpers/Helpers", () => ({
+  printMintDate: jest.fn((date: Date | string) => {
+    if (!date) return "-";
+    return "Jan 1, 2023 (1 year ago)";
+  }),
+  numberWithCommas: jest.fn((num: number) => num.toLocaleString()),
+  getValuesForVolumeType: jest.fn((volumeType: VolumeType, nft: any) => {
+    switch (volumeType) {
+      case VolumeType.HOURS_24:
+        return nft.total_volume_last_24_hours || 0;
+      case VolumeType.DAYS_7:
+        return nft.total_volume_last_7_days || 0;
+      case VolumeType.DAYS_30:
+        return nft.total_volume_last_1_month || 0;
+      default:
+        return nft.total_volume || 0;
+    }
+  }),
+}));
+
+jest.mock("@/components/the-memes/TheMemes", () => ({
   SortButton: ({ sort, select }: any) => (
     <button data-testid={`sort-${sort}`} onClick={select} />
   ),
@@ -22,10 +42,8 @@ const routerMock = (query: any) => ({ query, replace: jest.fn() } as any);
 describe("MemeLab helpers", () => {
   test("getInitialRouterValues resolves from router", () => {
     const { initialSort, initialSortDir } = getInitialRouterValues(
-      routerMock({
-        sort: MemeLabSort.EDITION_SIZE,
-        sort_dir: SortDirection.DESC,
-      })
+      "DESC",
+      "edition_size"
     );
     expect(initialSort).toBe(MemeLabSort.EDITION_SIZE);
     expect(initialSortDir).toBe(SortDirection.DESC);
@@ -121,7 +139,6 @@ describe("MemeLab helpers", () => {
       VolumeType.ALL_TIME,
       nfts,
       metas,
-      undefined,
       setNfts
     );
     expect(router.replace).toHaveBeenCalled();

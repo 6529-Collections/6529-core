@@ -1,16 +1,36 @@
-import React from "react";
-import { render, screen } from "@testing-library/react";
 import {
   getInitialRouterValues,
-  printSortButtons,
   printNftContent,
+  printSortButtons,
   sortChanged,
-} from "../../../components/memelab/MemeLab";
-import { MemeLabSort } from "../../../enums";
-import { SortDirection } from "../../../entities/ISort";
-import { VolumeType, LabNFT, LabExtendedData } from "../../../entities/INFT";
+} from "@/components/memelab/MemeLab";
+import { LabExtendedData, LabNFT, VolumeType } from "@/entities/INFT";
+import { SortDirection } from "@/entities/ISort";
+import { MemeLabSort } from "@/enums";
+import { render, screen } from "@testing-library/react";
 
-jest.mock("../../../components/the-memes/TheMemes", () => ({
+// Mock helper functions
+jest.mock("@/helpers/Helpers", () => ({
+  printMintDate: jest.fn((date: Date | string) => {
+    if (!date) return "-";
+    return "Jan 1, 2023 (1 year ago)";
+  }),
+  numberWithCommas: jest.fn((num: number) => num.toLocaleString()),
+  getValuesForVolumeType: jest.fn((volumeType: VolumeType, nft: any) => {
+    switch (volumeType) {
+      case VolumeType.HOURS_24:
+        return nft.total_volume_last_24_hours || 0;
+      case VolumeType.DAYS_7:
+        return nft.total_volume_last_7_days || 0;
+      case VolumeType.DAYS_30:
+        return nft.total_volume_last_1_month || 0;
+      default:
+        return nft.total_volume || 0;
+    }
+  }),
+}));
+
+jest.mock("@/components/the-memes/TheMemes", () => ({
   SortButton: (p: any) => (
     <button data-testid="sort" onClick={() => p.select()}>
       {p.sort}
@@ -19,12 +39,14 @@ jest.mock("../../../components/the-memes/TheMemes", () => ({
   printVolumeTypeDropdown: () => <div data-testid="volume" />,
 }));
 
-jest.mock("../../components/memelab/MemeLab.module.scss", () => ({}));
+jest.mock("@/components/memelab/MemeLab.module.scss", () => ({}));
 
 describe("MemeLab utilities", () => {
   it("getInitialRouterValues parses router", () => {
-    const router: any = { query: { sort_dir: "DESC", sort: "edition_size" } };
-    const { initialSortDir, initialSort } = getInitialRouterValues(router);
+    const { initialSortDir, initialSort } = getInitialRouterValues(
+      "DESC",
+      "edition_size"
+    );
     expect(initialSortDir).toBe(SortDirection.DESC);
     expect(initialSort).toBe(MemeLabSort.EDITION_SIZE);
   });
@@ -103,14 +125,9 @@ describe("MemeLab utilities", () => {
       VolumeType.ALL_TIME,
       nfts,
       metas,
-      undefined,
       setNfts
     );
-    expect(router.replace).toHaveBeenCalledWith(
-      { query: { sort: 'age', sort_dir: 'asc' } },
-      undefined,
-      { shallow: true }
-    );
+    expect(router.replace).toHaveBeenCalledWith("?sort=age&sort_dir=asc");
     expect(setNfts).toHaveBeenCalledWith([
       { id: 2, supply: 3 },
       { id: 1, supply: 5 },

@@ -1,15 +1,15 @@
 "use client";
 
-import styles from "./ETHScanner.module.scss";
-import { useCallback, useRef, useState } from "react";
-import { Modal, Button } from "react-bootstrap";
-import { addRpcProvider } from "../../../electron";
-import { useToast } from "../../../contexts/ToastContext";
-import Link from "next/link";
-import { ethers } from "ethers";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ethers } from "ethers";
+import Link from "next/link";
+import { useCallback, useRef, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
+import { useToast } from "../../../contexts/ToastContext";
+import { addRpcProvider } from "../../../electron";
 import { Spinner } from "../../dotLoader/DotLoader";
+import styles from "./ETHScanner.module.scss";
 
 export function AddRpcProviderModal(
   props: Readonly<{
@@ -105,9 +105,9 @@ export function AddRpcProviderModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>Add RPC Provider</Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <div className="font-smaller">
           RPC URLs Directory:{" "}

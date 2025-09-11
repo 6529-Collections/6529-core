@@ -1,7 +1,7 @@
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
+import { useIdentity } from "@/hooks/useIdentity";
 import HeaderUserConnecting from "./HeaderUserConnecting";
 import HeaderUserContext from "./HeaderUserContext";
-import { useSeedWallet } from "../../../contexts/SeedWalletContext";
-import { useIdentity } from "../../../hooks/useIdentity";
 export default function HeaderUserConnected({
   connectedAddress,
 }: {
@@ -12,7 +12,7 @@ export default function HeaderUserConnected({
     handleOrWallet: connectedAddress,
     initialProfile: null,
   });
-  
+
   return (
     <div>
       {isLoading || !profile || !isFetched ? (

@@ -1,21 +1,14 @@
-import styles from "./ETHScanner.module.scss";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  Col,
-  Container,
-  Row,
-  Button,
-  Accordion,
-  AccordionBody,
-} from "react-bootstrap";
+import { Accordion, Button, Col, Container, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import { useToast } from "../../../contexts/ToastContext";
 import {
   deactivateRpcProvider,
   deleteRpcProvider,
   setRpcProviderActive,
 } from "../../../electron";
-import { useToast } from "../../../contexts/ToastContext";
-import Tippy from "@tippyjs/react";
+import styles from "./ETHScanner.module.scss";
 
 export interface RPCProvider {
   readonly id: number;
@@ -125,9 +118,22 @@ function RPCProviderCard({
             <span className="d-flex align-items-center gap-1">
               <span>{rpcProvider.name}</span>
               {!rpcProvider.deletable && (
-                <Tippy content="Default RPC provider - cannot be deleted">
-                  <span className="cursor-help">*</span>
-                </Tippy>
+                <>
+                  <span
+                    className="cursor-help"
+                    data-tooltip-id="default-rpc-provider-tooltip">
+                    *
+                  </span>
+                  <Tooltip
+                    id="default-rpc-provider-tooltip"
+                    style={{
+                      backgroundColor: "#1F2937",
+                      color: "white",
+                      padding: "4px 8px",
+                    }}>
+                    Default RPC provider - cannot be deleted
+                  </Tooltip>
+                </>
               )}
             </span>
             {rpcProvider.active && (

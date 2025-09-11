@@ -1,12 +1,11 @@
 "use client";
 
-import { NavDropdown } from "react-bootstrap";
-import { useRouter } from "next/router";
-import styles from "./Header.module.scss";
-import { HeaderLink } from "./Header";
-import Link from "next/link";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Link from "next/link";
+import { NavDropdown } from "react-bootstrap";
+import { HeaderLink } from "./Header";
+import styles from "./Header.module.scss";
 
 export default function HeaderDesktopLink({
   link,

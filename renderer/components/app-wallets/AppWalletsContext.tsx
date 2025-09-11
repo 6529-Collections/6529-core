@@ -1,4 +1,5 @@
 "use client";
+import EventEmitter from "events";
 import React, {
   createContext,
   useContext,
@@ -6,11 +7,6 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { ethers } from "ethers";
-import { encryptData } from "./app-wallet-helpers";
-import { Time } from "../../helpers/time";
-import useCapacitor from "../../hooks/useCapacitor";
-import EventEmitter from "events";
 
 export interface AppWallet {
   name: string;
@@ -43,36 +39,20 @@ const AppWalletsContext = createContext<AppWalletsContextProps | undefined>(
 
 export const appWalletsEventEmitter = new EventEmitter();
 
-const WALLET_KEY_PREFIX = "app-wallet_";
-
 export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [fetchingAppWallets, setFetchingAppWallets] = useState(true);
+  const [fetchingAppWallets, setFetchingAppWallets] = useState(false);
   const [appWallets, setAppWallets] = useState<AppWallet[]>([]);
   const [appWalletsSupported, setAppWalletsSupported] = useState(false);
 
-  const capacitor = useCapacitor();
-
-  const checkUnsupported = async () => {
-    setAppWalletsSupported(false);
-  };
-
-  const fetchAppWallets = async () => {
-    setFetchingAppWallets(false);
-    setAppWallets([]);
-  };
-
   useEffect(() => {
     const initialize = async () => {
-      await checkUnsupported();
-      if (appWalletsSupported) {
-        await fetchAppWallets();
-      }
+      return false;
     };
 
     initialize();
-  }, [appWalletsSupported]);
+  }, []); // Run only once on mount
 
   const createAppWallet = async (
     name: string,

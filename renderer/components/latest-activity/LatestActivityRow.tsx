@@ -1,34 +1,27 @@
-import Image from "next/image";
-import styles from "./LatestActivity.module.scss";
-import { Transaction } from "@/entities/ITransaction";
-import {
-  areEqualAddresses,
-  areEqualURLS,
-  displayDecimal,
-  getDateDisplay,
-  isNextgenContract,
-  isGradientsContract,
-  isMemeLabContract,
-  isMemesContract,
-  isNullAddress,
-  numberWithCommas,
-  getRoyaltyImage,
-} from "@/helpers/Helpers";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { MANIFOLD } from "@/constants";
-import { NFTLite } from "@/entities/INFT";
 import Address from "@/components/address/Address";
 import {
   NEXTGEN_CHAIN_ID,
   NEXTGEN_CORE,
 } from "@/components/nextGen/nextgen_contracts";
-import { NextGenCollection } from "@/entities/INextgen";
 import { normalizeNextgenTokenID } from "@/components/nextGen/nextgen_helpers";
+import { MANIFOLD } from "@/constants";
+import { NextGenCollection } from "@/entities/INextgen";
+import { NFTLite } from "@/entities/INFT";
+import { Transaction } from "@/entities/ITransaction";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
 import {
-  getNextGenIconUrl,
-  getNextGenImageUrl,
-} from "../nextGen/collections/nextgenToken/NextGenTokenImage";
-import Link from "next/link";
+  areEqualAddresses,
+  areEqualURLS,
+  displayDecimal,
+  getDateDisplay,
+  getRoyaltyImage,
+  isGradientsContract,
+  isMemeLabContract,
+  isMemesContract,
+  isNextgenContract,
+  isNullAddress,
+  numberWithCommas,
+} from "@/helpers/Helpers";
 import {
   faCartPlus,
   faExchange,
@@ -38,8 +31,15 @@ import {
   faParachuteBox,
   faShoppingCart,
 } from "@fortawesome/free-solid-svg-icons";
-import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import Link from "next/link";
 import { Tooltip } from "react-tooltip";
+import {
+  getNextGenIconUrl,
+  getNextGenImageUrl,
+} from "../nextGen/collections/nextgenToken/NextGenTokenImage";
+import styles from "./LatestActivity.module.scss";
 
 function calculateRoyaltiesPercentage(value: number, royalties: number) {
   return Math.round((royalties / value) * 10000) / 10000;
@@ -58,6 +58,7 @@ export function printRoyalties(value: number, royalties: number, from: string) {
   return (
     <>
       <Image
+        unoptimized
         data-tooltip-id={id}
         width={0}
         height={0}
@@ -172,6 +173,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
       return (
         <a href={getHref()} target="_blank" rel="noreferrer">
           <Image
+            unoptimized
             width={0}
             height={0}
             style={{ height: "40px", width: "auto" }}
@@ -277,6 +279,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
       <Link href={`/nextgen/token/${props.tr.token_id}/provenance`}>
         {collectionName} #{normalized.token_id}
         <Image
+          unoptimized
           width={0}
           height={0}
           style={{

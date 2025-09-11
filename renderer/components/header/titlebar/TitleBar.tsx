@@ -1,6 +1,8 @@
 "use client";
 
-import styles from "./TitleBar.module.scss";
+import ConfirmClose from "@/components/confirm/ConfirmClose";
+import { useSearch } from "@/contexts/SearchContext";
+import { SEIZE_URL } from "@/electron-constants";
 import {
   faAnglesUp,
   faArrowLeft,
@@ -11,15 +13,13 @@ import {
   faRefresh,
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useState } from "react";
-import ConfirmClose from "@/components/confirm/ConfirmClose";
-import { useRouter, usePathname } from "next/navigation";
-import TooltipButton from "./TooltipButton";
 import Cookies from "js-cookie";
-import { Modal, Button } from "react-bootstrap";
 import Link from "next/link";
-import { SEIZE_URL } from "@/electron-constants";
-import { useSearch } from "@/contexts/SearchContext";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
+import styles from "./TitleBar.module.scss";
+import TooltipButton from "./TooltipButton";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
@@ -58,6 +58,7 @@ export default function TitleBar() {
       window.api.getNavigationState().then(({ canGoBack, canGoForward }) => {
         setCanGoBack(canGoBack);
         setCanGoForward(canGoForward);
+        setNavigationLoading(false);
       });
     };
 
@@ -120,7 +121,7 @@ export default function TitleBar() {
   const handleRefresh = () => {
     if (!navigationLoading) {
       setNavigationLoading(true);
-      window.location.reload();
+      router.refresh();
     }
   };
 
@@ -290,9 +291,9 @@ export default function TitleBar() {
         backdrop
         keyboard={false}
         centered>
-        <Modal.Header className={styles.updateModalHeader}>
+        <div className={styles.updateModalHeader}>
           <Modal.Title>Update Available</Modal.Title>
-        </Modal.Header>
+        </div>
         <Modal.Body className={styles.updateModalContent}>
           <p>Version {updateAvailable?.version} is available.</p>
           <span>

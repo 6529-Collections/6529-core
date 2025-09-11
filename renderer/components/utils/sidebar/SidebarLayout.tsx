@@ -1,17 +1,14 @@
 "use client";
 
+import { useHeaderContext } from "@/contexts/HeaderContext";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { selectActiveGroupId, setActiveGroupId } from "@/store/groupSlice";
+import { useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
-import GroupsSidebarToggle from "../../groups/sidebar/GroupsSidebarToggle";
-import GroupsSidebar from "../../groups/sidebar/GroupsSidebar";
-import { createBreakpoint } from "react-use";
-import { useRouter, useSearchParams } from "next/navigation";
 import { useDispatch, useSelector } from "react-redux";
-import {
-  selectActiveGroupId,
-  setActiveGroupId,
-} from "../../../store/groupSlice";
-import { useHeaderContext } from "../../../contexts/HeaderContext";
-import useDeviceInfo from "../../../hooks/useDeviceInfo";
+import { createBreakpoint } from "react-use";
+import GroupsSidebar from "../../groups/sidebar/GroupsSidebar";
+import GroupsSidebarToggle from "../../groups/sidebar/GroupsSidebarToggle";
 import SidebarLayoutApp from "./SidebarLayoutApp";
 
 export default function SidebarLayout({
@@ -21,7 +18,6 @@ export default function SidebarLayout({
 }) {
   const useBreakpoint = createBreakpoint({ XXL: 2048, MD: 768, S: 0 });
   const breakpoint = useBreakpoint();
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const activeGroupId = useSelector(selectActiveGroupId);

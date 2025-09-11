@@ -63,14 +63,21 @@ export default function WaveDropsAll({
 
   const [serialNo, setSerialNo] = useState<number | null>(initialDrop);
 
-  const { scrollContainerRef, scrollToVisualBottom } = useScrollBehavior();
-
-  const [isAtBottom, setIsAtBottom] = useState(true);
+  const {
+    scrollContainerRef,
+    bottomAnchorRef,
+    isAtBottom,
+    shouldPinToBottom,
+    scrollIntent,
+    scrollToVisualBottom
+  } = useScrollBehavior();
 
   const targetDropRef = useRef<HTMLDivElement | null>(null);
 
   const [isScrolling, setIsScrolling] = useState(false);
-  const [userHasManuallyScrolled, setUserHasManuallyScrolled] = useState(false);
+  const scrollOperationAbortController = useRef<AbortController | null>(null);
+  const scrollOperationLockRef = useRef(false);
+  const SCROLL_OPERATION_TIMEOUT = 10000; // 10 seconds max for any scroll operation
 
   const scrollToSerialNo = useCallback(
     (behavior: ScrollBehavior) => {
@@ -149,6 +156,37 @@ export default function WaveDropsAll({
     connectedProfile?.handle ?? null
   );
 
+  // Automatic timeout safety net - prevents isScrolling from staying true indefinitely
+  useEffect(() => {
+    if (!isScrolling) return;
+
+    const timeoutId = setTimeout(() => {
+      console.warn('Scroll operation timed out after', SCROLL_OPERATION_TIMEOUT, 'ms, clearing isScrolling state');
+      scrollOperationLockRef.current = false;
+      setIsScrolling(false);
+      // Also abort any ongoing operation
+      if (scrollOperationAbortController.current) {
+        scrollOperationAbortController.current.abort();
+        scrollOperationAbortController.current = null;
+      }
+    }, SCROLL_OPERATION_TIMEOUT);
+
+    return () => clearTimeout(timeoutId);
+  }, [isScrolling, SCROLL_OPERATION_TIMEOUT]);
+
+  // Cleanup on component unmount - prevent state leaks and cancel ongoing operations
+  useEffect(() => {
+    return () => {
+      // Force cleanup if component unmounts while scrolling
+      if (scrollOperationAbortController.current) {
+        scrollOperationAbortController.current.abort();
+        scrollOperationAbortController.current = null;
+      }
+      scrollOperationLockRef.current = false;
+      setIsScrolling(false);
+    };
+  }, []);
+
   // // Effect to update the ref whenever waveMessages changes
   useEffect(() => {
     latestWaveMessagesRef.current = waveMessages;
@@ -171,19 +209,20 @@ export default function WaveDropsAll({
 
       const lastDrop = currentMessages.drops[0];
       if (lastDrop.id.startsWith("temp-")) {
-        if (isAtBottom && !userHasManuallyScrolled) {
+        if (shouldPinToBottom) {
           setTimeout(() => {
             scrollToVisualBottom();
           }, 100);
-        } else if (!userHasManuallyScrolled) {
+        } else if (scrollIntent === 'reading') {
+          // User is reading older messages, just set the serial for later navigation
           setSerialNo(lastDrop.serial_no);
         }
       }
     }
   }, [
     waveMessages,
-    isAtBottom,
-    userHasManuallyScrolled,
+    shouldPinToBottom,
+    scrollIntent,
     scrollToVisualBottom,
     init,
   ]); // Keep dependencies, logic uses ref
@@ -195,31 +234,83 @@ export default function WaveDropsAll({
   }, [waveId]);
 
   const fetchAndScrollToDrop = useCallback(async () => {
-    if (!serialNo || isScrolling) return;
-    setIsScrolling(true); // Set scrolling true for the entire process
-    await fetchNextPage(
-      {
-        waveId,
-        type: DropSize.LIGHT,
-        targetSerialNo: serialNo,
-      },
-      dropId
-    );
-    await waitAndRevealDrop(serialNo);
-    const success = await smoothScrollWithRetries();
-    setTimeout(() => {
-      if (success) {
-        setSerialNo(null);
+    // Early guards using both state and ref for race condition protection
+    if (!serialNo || isScrolling || scrollOperationLockRef.current) return;
+
+    // Set both locks immediately (ref is synchronous, prevents double execution)
+    scrollOperationLockRef.current = true;
+    setIsScrolling(true);
+
+    // Cancel any existing operation
+    if (scrollOperationAbortController.current) {
+      scrollOperationAbortController.current.abort();
+    }
+
+    // Create new abort controller for this operation
+    scrollOperationAbortController.current = new AbortController();
+    const signal = scrollOperationAbortController.current.signal;
+
+    try {
+      // Check if operation was cancelled before starting
+      if (signal.aborted) {
+        scrollOperationLockRef.current = false;
         setIsScrolling(false);
+        return;
       }
-    }, 500);
+
+      await fetchNextPage(
+        {
+          waveId,
+          type: DropSize.LIGHT,
+          targetSerialNo: serialNo,
+        },
+        dropId
+      );
+
+      // Check if operation was cancelled after fetch
+      if (signal.aborted) {
+        scrollOperationLockRef.current = false;
+        setIsScrolling(false);
+        return;
+      }
+
+      await waitAndRevealDrop(serialNo);
+
+      // Check if operation was cancelled after reveal
+      if (signal.aborted) {
+        scrollOperationLockRef.current = false;
+        setIsScrolling(false);
+        return;
+      }
+
+      const success = await smoothScrollWithRetries();
+
+      // Only proceed with cleanup if operation wasn't cancelled
+      if (!signal.aborted) {
+        setTimeout(() => {
+          if (success && !signal.aborted) {
+            setSerialNo(null);
+          }
+        }, 500);
+      }
+    } catch (error) {
+      // Log error but don't throw - we want to clean up gracefully
+      if (!signal.aborted) {
+        console.warn('Scroll operation failed:', error);
+      }
+    } finally {
+      // Always reset both locks, regardless of success/failure/cancellation
+      scrollOperationLockRef.current = false;
+      setIsScrolling(false);
+    }
   }, [
     waveId,
     fetchNextPage,
     serialNo,
-    setIsScrolling,
     isScrolling,
     waitAndRevealDrop,
+    smoothScrollWithRetries,
+    dropId
   ]);
 
   useEffect(() => {
@@ -278,7 +369,6 @@ export default function WaveDropsAll({
         );
       } else {
         setSerialNo(drop.serial_no);
-        setUserHasManuallyScrolled(false); // Reset when navigating to specific content
       }
     },
     [router, waveId] // removed setSerialNo from deps as it's a setState function that never changes
@@ -308,11 +398,9 @@ export default function WaveDropsAll({
           isFetchingNextPage={!!waveMessages?.isLoadingNextPage}
           hasNextPage={!!waveMessages?.hasNextPage && (waveMessages?.drops?.length ?? 0) >= 25}
           onTopIntersection={handleTopIntersection}
-          onUserScroll={(direction, isAtBottom) => {
-            setIsAtBottom(isAtBottom);
-            if (direction === "up") {
-              setUserHasManuallyScrolled(true);
-            }
+          onUserScroll={() => {
+            // The useScrollBehavior hook now handles all scroll intent logic
+            // This callback can be used for additional scroll-based features if needed
           }}>
           <DropsList
             scrollContainerRef={scrollContainerRef}
@@ -331,21 +419,19 @@ export default function WaveDropsAll({
             onDropContentClick={onDropContentClick}
             key="drops-list" // Add a stable key to help React with reconciliation
           />
+          {/* Bottom anchor for robust scroll detection */}
+          <div ref={bottomAnchorRef} style={{ height: '1px' }} />
         </WaveDropsReverseContainer>
         <WaveDropsScrollBottomButton
           isAtBottom={isAtBottom}
-          scrollToBottom={() => {
-            scrollToVisualBottom();
-            setUserHasManuallyScrolled(false); // Reset manual scroll flag when user clicks to bottom
-          }}
+          scrollToBottom={scrollToVisualBottom}
         />
 
         <div
-          className={`tw-absolute tw-bottom-0 tw-left-0 tw-z-10 tw-inset-x-0 tw-mr-2 tw-px-4 tw-py-1 tw-flex tw-items-center tw-gap-x-2 tw-bg-iron-950 tw-transition-opacity tw-duration-300 tw-ease-in-out ${
-            typingMessage
-              ? "tw-opacity-100 tw-visible"
-              : "tw-opacity-0 tw-invisible tw-hidden"
-          }`}>
+          className={`tw-absolute tw-bottom-0 tw-left-0 tw-z-10 tw-inset-x-0 tw-mr-2 tw-px-4 tw-py-1 tw-flex tw-items-center tw-gap-x-2 tw-bg-iron-950 tw-transition-opacity tw-duration-300 tw-ease-in-out ${typingMessage
+            ? "tw-opacity-100 tw-visible"
+            : "tw-opacity-0 tw-invisible tw-hidden"
+            }`}>
           <div className="tw-flex tw-items-center tw-gap-x-0.5">
             <FontAwesomeIcon
               icon={faCircle}

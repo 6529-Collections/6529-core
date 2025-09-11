@@ -1,37 +1,34 @@
 "use client";
 
-import styles from "./Delegation.module.scss";
-import { Container, Row, Col } from "react-bootstrap";
 import Image from "next/image";
+import { Col, Container, Row } from "react-bootstrap";
+import styles from "./Delegation.module.scss";
 
-import { SUPPORTED_COLLECTIONS } from "../../pages/delegation/[...section]";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
-import { DelegationCenterSection } from "./DelegationCenterMenu";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import {
   DELEGATION_ALL_ADDRESS,
-  MEMES_CONTRACT,
-  MEMELAB_CONTRACT,
   GRADIENT_CONTRACT,
-} from "../../constants";
-import { areEqualAddresses } from "../../helpers/Helpers";
-import { useSeizeConnectModal } from "../../contexts/SeizeConnectModalContext";
-import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+  MEMELAB_CONTRACT,
+  MEMES_CONTRACT,
+} from "@/constants";
+import { DelegationCenterSection } from "@/enums";
+import { areEqualAddresses } from "@/helpers/Helpers";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
+import { SUPPORTED_COLLECTIONS } from "./delegation-constants";
 interface Props {
   setSection(section: DelegationCenterSection): any;
 }
 
 export default function DelegationCenterComponent(props: Readonly<Props>) {
   const [redirect, setRedirect] = useState<DelegationCenterSection>();
-  const accountResolution = useSeizeConnectContext();
-
-  const { setShowConnectModal } = useSeizeConnectModal();
+  const { seizeConnect, isConnected } = useSeizeConnectContext();
 
   useEffect(() => {
     if (redirect) {
-      if (!accountResolution.isConnected) {
-        setShowConnectModal(true);
+      if (!isConnected) {
+        seizeConnect();
       } else {
         props.setSection(redirect);
       }
@@ -39,11 +36,11 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
   }, [redirect]);
 
   useEffect(() => {
-    if (accountResolution.isConnected && redirect) {
+    if (isConnected && redirect) {
       props.setSection(redirect);
     }
     setRedirect(undefined);
-  }, [accountResolution.isConnected]);
+  }, [isConnected]);
 
   function printCollectionSelection() {
     return (
@@ -83,6 +80,7 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
                 }}>
                 <span className="d-flex align-items-center gap-3">
                   <Image
+                    unoptimized
                     className={styles.collectionSelectionImage}
                     loading="eager"
                     priority
@@ -122,6 +120,7 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
                   <h3 className="pb-4">Delegations</h3>
                   <span className="d-flex align-items-center gap-3">
                     <Image
+                      unoptimized
                       loading="eager"
                       priority
                       src="/delegation-icon.png"
@@ -170,6 +169,7 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
                   <h3 className="pb-4">Consolidations</h3>
                   <span className="d-flex align-items-center gap-3">
                     <Image
+                      unoptimized
                       loading="eager"
                       priority
                       src="/consolidation-icon.png"
@@ -218,6 +218,7 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
                   <h3 className="pb-4">Delegation Management</h3>
                   <span className="d-flex align-items-center gap-3">
                     <Image
+                      unoptimized
                       loading="eager"
                       priority
                       src="/manager-icon.png"

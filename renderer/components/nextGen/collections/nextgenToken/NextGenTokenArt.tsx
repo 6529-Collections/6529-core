@@ -155,7 +155,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
         <Col
           xs={12}
           sm={mode === Mode.HIGH_RES ? 4 : 6}
-          className={`pt-2 pb-2 d-flex gap-3 ${
+          className={`pt-2 pb-2 d-flex gap-3 align-items-center ${
             isMobileScreen ? "justify-content-center" : "justify-content-start"
           }`}>
           <button
@@ -229,7 +229,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
         <Col
           xs={mode === Mode.HIGH_RES ? 6 : 12}
           sm={mode === Mode.HIGH_RES ? 4 : 6}
-          className={`pt-2 pb-2 d-flex gap-3 ${
+          className={`pt-2 pb-2 d-flex gap-3 align-items-center ${
             isMobileScreen ? "justify-content-center" : "justify-content-end"
           }`}>
           <Lightbulb

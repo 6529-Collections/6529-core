@@ -1,16 +1,16 @@
 export const dynamic = "force-dynamic";
 
-import "@/styles/seize-bootstrap.scss";
-import "@/styles/globals.scss";
-import "@/styles/swiper.scss";
-import "@/styles/Home.module.scss";
 import "@/components/drops/create/lexical/lexical.styles.scss";
+import "@/styles/Home.module.scss";
+import "@/styles/globals.scss";
+import "@/styles/seize-bootstrap.scss";
+import "@/styles/swiper.scss";
 
-import Providers from "@/components/providers/Providers";
-import { getAppMetadata } from "@/components/providers/metadata";
-import LayoutWrapper from "@/components/providers/LayoutWrapper";
-import StoreSetup from "@/components/providers/StoreSetup";
 import DynamicHeadTitle from "@/components/dynamic-head/DynamicHeadTitle";
+import LayoutWrapper from "@/components/providers/LayoutWrapper";
+import Providers from "@/components/providers/Providers";
+import StoreSetup from "@/components/providers/StoreSetup";
+import { getAppMetadata } from "@/components/providers/metadata";
 import { Viewport } from "next";
 import { ErrorBoundary } from "react-error-boundary";
 import ErrorPage from "./error-page";
@@ -32,6 +32,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
+        {/* <AwsRumProvider>  */} {/* NOT IMPLEMENTED in 6529 CORE */}
         <StoreSetup>
           <Providers>
             <DynamicHeadTitle />
@@ -40,6 +41,7 @@ export default function RootLayout({
             </ErrorBoundary>
           </Providers>
         </StoreSetup>
+        {/* </AwsRumProvider> */} {/* NOT IMPLEMENTED in 6529 CORE */}
       </body>
     </html>
   );

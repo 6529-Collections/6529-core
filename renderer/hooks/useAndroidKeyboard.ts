@@ -1,3 +1,5 @@
+"use client";
+
 import { useCallback, useEffect, useRef, useState } from "react";
 
 // Debounce utility (simple implementation to avoid lodash dependency)

@@ -1,25 +1,24 @@
 "use client";
 
-import { Tooltip } from "react-tooltip";
-import EtherscanIcon from "../../../utils/icons/EtherscanIcon";
-import OpenseaIcon from "../../../utils/icons/OpenseaIcon";
-import CopyIcon from "../../../../utils/icons/CopyIcon";
-import { useEffect, useState } from "react";
-import { useCopyToClipboard } from "react-use";
-import { useRouter } from "next/router";
-import UserPageIdentityStatementsConsolidatedAddressesItemPrimary from "./UserPageIdentityStatementsConsolidatedAddressesItemPrimary";
+import { DELEGATION_ABI } from "@/abis";
+import { useAuth } from "@/components/auth/Auth";
+import { PRIMARY_ADDRESS_USE_CASE } from "@/components/delegation/delegation-constants";
+import EtherscanIcon from "@/components/user/utils/icons/EtherscanIcon";
+import OpenseaIcon from "@/components/user/utils/icons/OpenseaIcon";
+import CopyIcon from "@/components/utils/icons/CopyIcon";
 import {
   DELEGATION_ALL_ADDRESS,
   DELEGATION_CONTRACT,
   NEVER_DATE,
-} from "../../../../../constants";
-import { PRIMARY_ADDRESS_USE_CASE } from "../../../../../pages/delegation/[...section]";
-import { useWriteContract, useWaitForTransactionReceipt } from "wagmi";
-import { DELEGATION_ABI } from "../../../../../abis";
-import { useAuth } from "../../../../../components/auth/Auth";
-import { getTransactionLink } from "../../../../../helpers/Helpers";
-import { openInExternalBrowser } from "../../../../../helpers";
-import { ApiWallet } from "../../../../../generated/models/ApiWallet";
+} from "@/constants";
+import { ApiWallet } from "@/generated/models/ApiWallet";
+import { openInExternalBrowser } from "@/helpers";
+import { getTransactionLink } from "@/helpers/Helpers";
+import { useEffect, useState } from "react";
+import { Tooltip } from "react-tooltip";
+import { useCopyToClipboard } from "react-use";
+import { useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import UserPageIdentityStatementsConsolidatedAddressesItemPrimary from "./UserPageIdentityStatementsConsolidatedAddressesItemPrimary";
 
 export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   address,
@@ -30,15 +29,11 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   readonly primaryAddress: string | null;
   readonly canEdit: boolean;
 }) {
-  const router = useRouter();
   const { setToast } = useAuth();
 
   const goToOpensea = (e: React.MouseEvent<HTMLButtonElement, MouseEvent>) => {
     e.stopPropagation();
-    openInExternalBrowser(
-      `https://opensea.io/${address.wallet}`,
-      "_blank"
-    );
+    openInExternalBrowser(`https://opensea.io/${address.wallet}`, "_blank");
   };
 
   const goToEtherscan = () => {
@@ -64,7 +59,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
   const [isTouchScreen, setIsTouchScreen] = useState(false);
   useEffect(() => {
     setIsTouchScreen(window.matchMedia("(pointer: coarse)").matches);
-  }, [router.isReady]);
+  }, []);
 
   const [assigningPrimary, setAssigningPrimary] = useState(false);
   const [statusMessage, setStatusMessage] = useState<any>();
@@ -165,6 +160,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
           <Tooltip
             id={`opensea-tooltip-${address.wallet}`}
             place="top"
+            positionStrategy="fixed"
             style={{
               backgroundColor: "#1F2937",
               color: "white",
@@ -186,6 +182,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
           <Tooltip
             id={`etherscan-tooltip-${address.wallet}`}
             place="top"
+            positionStrategy="fixed"
             style={{
               backgroundColor: "#1F2937",
               color: "white",
@@ -195,7 +192,13 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
         )}
         <div className="tw-space-x-3 tw-inline-flex tw-items-center">
           <div className="tw-truncate md:tw-max-w-[8rem] lg:tw-max-w-[11rem] tw-text-iron-200">
-            <span>{title}</span>
+            <span>
+              {title === "Copied!" ? (
+                <span className="tw-text-primary-400">{title}</span>
+              ) : (
+                title
+              )}
+            </span>
             {address.display && (
               <span className="tw-ml-3">{address.display}</span>
             )}
@@ -225,8 +228,10 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
             <button
               aria-label="Copy address"
               className={`${
-                isTouchScreen ? "tw-block" : "tw-hidden group-hover:tw-block"
-              } tw-ml-2 tw-bg-transparent tw-cursor-pointer tw-text-sm sm:tw-text-base tw-font-semibold tw-text-iron-200 tw-border-0 focus:tw-outline-none tw-transition tw-duration-300 tw-ease-out`}
+                isTouchScreen
+                  ? "tw-opacity-100"
+                  : "tw-opacity-0 group-hover:tw-opacity-100"
+              } tw-ml-2 tw-p-1.5 tw-bg-transparent tw-cursor-pointer tw-text-xs tw-font-semibold tw-text-iron-400 hover:tw-text-iron-200 tw-border-0 focus:tw-outline-none tw-transition tw-duration-300 tw-ease-out`}
               onClick={handleCopy}
               data-tooltip-id={`copy-tooltip-${address.wallet}`}
               data-tooltip-content={isTouchScreen ? undefined : "Copy"}>
@@ -236,6 +241,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               <Tooltip
                 id={`copy-tooltip-${address.wallet}`}
                 place="top"
+                positionStrategy="fixed"
                 style={{
                   backgroundColor: "#1F2937",
                   color: "white",

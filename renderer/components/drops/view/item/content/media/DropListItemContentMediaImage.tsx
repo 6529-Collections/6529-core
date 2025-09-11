@@ -6,19 +6,20 @@ import {
   ArrowTopRightOnSquareIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Tooltip } from "react-tooltip";
 import useKeyPressEvent from "react-use/lib/useKeyPressEvent";
+import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
+import { openInExternalBrowser } from "../../../../../../helpers";
 import { fullScreenSupported } from "../../../../../../helpers/Helpers";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import useCapacitor from "../../../../../../hooks/useCapacitor";
 import {
   getScaledImageUri,
   ImageScale,
 } from "../../../../../../helpers/image.helpers";
-import { openInExternalBrowser } from "../../../../../../helpers";
+import useCapacitor from "../../../../../../hooks/useCapacitor";
 import { useInView } from "../../../../../../hooks/useInView";
-import { Tooltip } from "react-tooltip";
+import { FallbackImage } from "../../../../../common/FallbackImage";
 
 const tooltipProps = {
   delayShow: 250,
@@ -278,15 +279,15 @@ function DropListItemContentMediaImage({
         )}
 
         {inView && errorCount <= maxRetries && (
-          <img
-            key={retryTick} // bust cache on each retry
+          <FallbackImage
+            key={retryTick}
             ref={imgRef}
-            src={getScaledImageUri(src, ImageScale.AUTOx450)}
+            primarySrc={getScaledImageUri(src, ImageScale.AUTOx450)}
+            fallbackSrc={src}
             alt="Drop media"
             className={`tw-object-contain tw-max-w-full tw-max-h-full ${
               !loaded ? "tw-opacity-0" : "tw-opacity-100"
             } tw-cursor-pointer`}
-            loading="lazy"
             decoding="async"
             onLoad={handleImageLoad}
             onClick={handleImageClick}

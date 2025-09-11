@@ -1,22 +1,23 @@
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
+import Link from "next/link";
+import { Col, Container, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import {
+  ETHEREUM_ICON_TEXT,
+  NEXTGEN_MEDIA_BASE_URL,
+} from "../../../../constants";
 import { NextGenToken } from "../../../../entities/INextgen";
-import { TraitScore } from "./NextGenTokenAbout";
-import { NextGenTokenRarityType } from "../../nextgen_helpers";
 import {
   cicToType,
   formatAddress,
   getRoyaltyImage,
 } from "../../../../helpers/Helpers";
-import {
-  ETHEREUM_ICON_TEXT,
-  NEXTGEN_MEDIA_BASE_URL,
-} from "../../../../constants";
-import { Tooltip } from "react-tooltip";
-import { Container, Row, Col } from "react-bootstrap";
 import useIsMobileScreen from "../../../../hooks/isMobileScreen";
 import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { NextGenTokenRarityType } from "../../nextgen_helpers";
+import { TraitScore } from "./NextGenTokenAbout";
 
 export function NextGenTokenImage(
   props: Readonly<{
@@ -73,9 +74,10 @@ export function NextGenTokenImage(
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-          }}>
-          <FontAwesomeIcon 
-            height={18} 
+          }}
+        >
+          <FontAwesomeIcon
+            height={18}
             icon={faInfoCircle}
             data-tooltip-id={`owner-info-${props.token.id}`}
           />
@@ -87,7 +89,8 @@ export function NextGenTokenImage(
               backgroundColor: "#1F2937",
               color: "white",
               padding: "4px 8px",
-            }}>
+            }}
+          >
             <Container>
               <Row className="pt-2 pb-2">
                 <Col>{ownerInfo}</Col>
@@ -158,6 +161,7 @@ export function NextGenTokenImage(
           {props.token.opensea_price == props.token.price &&
             props.token.opensea_royalty > 0 && (
               <Image
+                unoptimized
                 width={0}
                 height={0}
                 style={{ height: "20px", width: "auto" }}
@@ -169,6 +173,7 @@ export function NextGenTokenImage(
           {props.token.me_price == props.token.price &&
             props.token.me_price > 0 && (
               <Image
+                unoptimized
                 width={0}
                 height={0}
                 style={{ height: "20px", width: "auto" }}
@@ -235,15 +240,15 @@ export function NextGenTokenImage(
           style={{
             overflow: "hidden",
             height: height,
-          }}>
+          }}
+        >
           <Image
+            quality={100}
             priority
             loading={"eager"}
-            width="0"
-            height="0"
+            width="290"
+            height="380"
             style={{
-              height: "auto",
-              width: "auto",
               maxHeight: "100%",
               maxWidth: "100%",
             }}
@@ -264,7 +269,8 @@ export function NextGenTokenImage(
               props.show_owner_info
                 ? "justify-content-between"
                 : "justify-content-center"
-            }`}>
+            }`}
+          >
             <span className={props.info_class ?? ""}>
               #{props.token.normalised_id}
             </span>
@@ -304,11 +310,12 @@ export function NextGenTokenImage(
     return getContent();
   } else {
     return (
-      <a
+      <Link
         href={`/nextgen/token/${props.token.id}`}
-        className="decoration-none scale-hover unselectable">
+        className="decoration-none scale-hover unselectable"
+      >
         {getContent()}
-      </a>
+      </Link>
     );
   }
 }

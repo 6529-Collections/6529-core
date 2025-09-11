@@ -1,22 +1,23 @@
 "use client";
 
+import { AuthContext } from "@/components/auth/Auth";
+import SpinnerLoader from "@/components/common/SpinnerLoader";
+import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import { DropLocation } from "@/components/waves/drops/Drop";
+import { ApiDrop } from "@/generated/models/ApiDrop";
+import { DropSize, ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { commonApiFetch } from "@/services/api/common-api";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
-import { commonApiFetch } from "../../../services/api/common-api";
-import { useRouter } from "next/router";
-import { useContext, useEffect, useState, useRef, useCallback } from "react";
-import { AuthContext } from "../../auth/Auth";
-import { ApiDrop } from "../../../generated/models/ApiDrop";
+import { useParams, useRouter } from "next/navigation";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import DropsList from "./DropsList";
-import { DropSize, ExtendedDrop } from "../../../helpers/waves/drop.helpers";
-import { QueryKey } from "../../react-query-wrapper/ReactQueryWrapper";
-import { DropLocation } from "../../waves/drops/Drop";
-import SpinnerLoader from "../../common/SpinnerLoader";
 
 const REQUEST_SIZE = 10;
 
 export default function Drops() {
   const router = useRouter();
-  const handleOrWallet = (router.query.user as string).toLowerCase();
+  const params = useParams();
+  const handleOrWallet = (params?.user as string)?.toLowerCase();
   const { connectedProfile } = useContext(AuthContext);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);

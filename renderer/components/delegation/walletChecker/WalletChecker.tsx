@@ -1,32 +1,32 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
-import styles from "./WalletChecker.module.scss";
-import { Container, Row, Col, Form, Button, Table } from "react-bootstrap";
-import { useEnsName, useEnsAddress } from "wagmi";
-import { areEqualAddresses, isValidEthAddress } from "../../../helpers/Helpers";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Address from "@/components/address/Address";
 import {
   DELEGATION_ALL_ADDRESS,
   MEMES_CONTRACT,
   NEVER_DATE,
-} from "../../../constants";
-import { DBResponse } from "../../../entities/IDBResponse";
-import { Delegation, WalletConsolidation } from "../../../entities/IDelegation";
-import {
-  SUB_DELEGATION_USE_CASE,
-  ALL_USE_CASES,
-  SUPPORTED_COLLECTIONS,
-  MINTING_USE_CASE,
-} from "@/pages/delegation/[...section]";
-import { fetchUrl } from "@/services/6529api";
-import Address from "../../address/Address";
+} from "@/constants";
 import { SEIZE_API_URL } from "@/electron-constants";
+import { DBResponse } from "@/entities/IDBResponse";
+import { Delegation, WalletConsolidation } from "@/entities/IDelegation";
+import { areEqualAddresses, isValidEthAddress } from "@/helpers/Helpers";
+import { fetchUrl } from "@/services/6529api";
 import {
   faCheck,
   faPlusCircle,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { Fragment, useEffect, useState } from "react";
+import { Button, Col, Container, Form, Row, Table } from "react-bootstrap";
+import { useEnsAddress, useEnsName } from "wagmi";
+import {
+  ALL_USE_CASES,
+  MINTING_USE_CASE,
+  SUB_DELEGATION_USE_CASE,
+  SUPPORTED_COLLECTIONS,
+} from "../delegation-constants";
+import styles from "./WalletChecker.module.scss";
 
 interface Props {
   path?: string;

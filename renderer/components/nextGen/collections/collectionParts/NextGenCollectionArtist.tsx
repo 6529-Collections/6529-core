@@ -1,14 +1,15 @@
 "use client";
 
-import { Col, Container, Row } from "react-bootstrap";
-import { NextGenCollection } from "../../../../entities/INextgen";
-import { useEffect, useState } from "react";
-import { CicStatement } from "../../../../entities/IProfile";
-import { commonApiFetch } from "../../../../services/api/common-api";
-import { STATEMENT_TYPE } from "../../../../helpers/Types";
+import { NextGenCollection } from "@/entities/INextgen";
+import { CicStatement } from "@/entities/IProfile";
+import { STATEMENT_TYPE } from "@/helpers/Types";
+import { useIdentity } from "@/hooks/useIdentity";
+import { commonApiFetch } from "@/services/api/common-api";
 import Image from "next/image";
+import Link from "next/link";
+import { Fragment, useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
 import { formatNameForUrl } from "../../nextgen_helpers";
-import { useIdentity } from "../../../../hooks/useIdentity";
 
 interface Props {
   collection: NextGenCollection;
@@ -40,9 +41,11 @@ export default function NextGenCollectionArtist(props: Readonly<Props>) {
         <Col
           sm={12}
           md={3}
-          className="pt-4 d-flex align-items-center justify-content-center">
+          className="pt-4 d-flex align-items-center justify-content-center"
+        >
           {profile?.pfp && (
             <Image
+              unoptimized
               priority
               loading="eager"
               width={0}
@@ -67,7 +70,7 @@ export default function NextGenCollectionArtist(props: Readonly<Props>) {
             {profile?.handle && (
               <Row className="pt-3">
                 <Col>
-                  <a href={`/${profile?.handle}`}>@{profile?.handle}</a>
+                  <Link href={`/${profile?.handle}`}>@{profile?.handle}</Link>
                 </Col>
               </Row>
             )}
@@ -76,16 +79,15 @@ export default function NextGenCollectionArtist(props: Readonly<Props>) {
                 <Col>
                   Collection{props.link_collections.length > 1 ? "s" : ""}:{" "}
                   {props.link_collections.map((c, index) => (
-                    <>
+                    <Fragment key={`link-collection-${c.id}`}>
                       {index > 0 && ", "}
-                      <a
+                      <Link
                         key={`link-collection-${c.id}`}
-                        href={`/nextgen/collection/${formatNameForUrl(
-                          c.name
-                        )}`}>
+                        href={`/nextgen/collection/${formatNameForUrl(c.name)}`}
+                      >
                         {c.name}
-                      </a>
-                    </>
+                      </Link>
+                    </Fragment>
                   ))}
                 </Col>
               </Row>

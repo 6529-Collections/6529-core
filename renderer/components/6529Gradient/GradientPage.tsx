@@ -106,16 +106,16 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
             sm={{ span: 12 }}
             md={{ span: 6 }}
             lg={{ span: 6 }}
-            className="pt-2 position-relative">
+            className="pt-2 position-relative"
+          >
             {nft && (
               <NFTImage
                 id={fullscreenElementId}
                 nft={nft}
                 animation={false}
                 height={650}
-                balance={0}
-                showOwned={isOwner}
-                showUnseized={false}
+                showOwnedIfLoggedIn={isOwner}
+                showUnseizedIfLoggedIn={false}
               />
             )}
           </Col>
@@ -125,7 +125,8 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
               sm={{ span: 12 }}
               md={{ span: 6 }}
               lg={{ span: 6 }}
-              className="pt-2">
+              className="pt-2"
+            >
               <Container>
                 <Row>
                   <Col>

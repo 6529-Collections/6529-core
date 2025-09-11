@@ -52,6 +52,7 @@ import CreateDropMetadata from "./CreateDropMetadata";
 import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
 
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import throttle from "lodash/throttle";
 import { ProcessIncomingDropType } from "../../contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useMyStream } from "../../contexts/wave/MyStreamContext";
@@ -330,12 +331,15 @@ const getOptimisticDrop = (
       handle: connectedProfile.handle,
       active_main_stage_submission_ids:
         connectedProfile.active_main_stage_submission_ids,
+      winner_main_stage_drop_ids:
+        connectedProfile.winner_main_stage_drop_ids ?? [],
       pfp: connectedProfile.pfp ?? null,
       banner1_color: connectedProfile.banner1 ?? null,
       banner2_color: connectedProfile.banner2 ?? null,
       cic: connectedProfile.cic,
       rep: connectedProfile.rep,
       tdh: connectedProfile.tdh,
+      tdh_rate: connectedProfile.tdh_rate,
       level: connectedProfile.level,
       subscribed_actions: [],
       archived: false,
@@ -392,6 +396,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   submitDrop,
   privileges,
 }) => {
+  const { isSafeWallet, address } = useSeizeConnectContext();
   const { send } = useWebSocket();
   const breakpoint = useBreakpoint();
   const { isApp } = useDeviceInfo();
@@ -511,6 +516,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         metadata: convertMetadataToDropMetadata(metadata),
         signature: null,
         drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
+        is_safe_signature: isSafeWallet,
+        signer_address: address ?? "",
       };
     }
     return null;
@@ -539,6 +546,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       referenced_nfts: [],
       metadata: [],
       signature: null,
+      is_safe_signature: isSafeWallet,
+      signer_address: address ?? "",
     };
   };
 
@@ -569,6 +578,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       referenced_nfts: allNfts,
       metadata: convertMetadataToDropMetadata(metadata),
       signature: null,
+      is_safe_signature: isSafeWallet,
+      signer_address: address ?? "",
     };
   };
 
@@ -730,7 +741,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         activeDrop,
         isDropMode ? ApiDropType.Participatory : ApiDropType.Chat
       );
-      
+
       if (optimisticDrop) {
         addOptimisticDrop({ drop: optimisticDrop });
         setTimeout(
@@ -746,7 +757,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       (document.activeElement as HTMLElement)?.blur();
       setFiles([]);
       refreshState();
-      
+
       submitDrop({
         drop: updatedDropRequest,
         dropId: optimisticDrop?.id ?? null,

@@ -1,22 +1,22 @@
 "use client";
 
-import styles from "./ETHScanner.module.scss";
-import { useEffect, useState } from "react";
-import { PaginatedResponseLocal } from "@/shared/types";
 import { Transaction } from "@/entities/ITransaction";
-import LatestActivityRow from "../../latest-activity/LatestActivityRow";
+import { PaginatedResponseLocal } from "@/shared/types";
+import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
 import { Button, Table } from "react-bootstrap";
-import Pagination from "../../pagination/Pagination";
-import DotLoader from "../../dotLoader/DotLoader";
+import { Tooltip } from "react-tooltip";
 import {
   GRADIENT_CONTRACT,
   MEMELAB_CONTRACT,
   MEMES_CONTRACT,
   NEXTGEN_CONTRACT,
 } from "../../../constants";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
-import Tippy from "@tippyjs/react";
+import DotLoader from "../../dotLoader/DotLoader";
+import LatestActivityRow from "../../latest-activity/LatestActivityRow";
+import Pagination from "../../pagination/Pagination";
+import styles from "./ETHScanner.module.scss";
 
 const initialQueryParams = {
   contractAddress: "",
@@ -153,23 +153,43 @@ export default function TransactionsLocalData() {
             </select>
           </div>
           {clearFiltersEnabled && (
-            <Tippy content="Clear Filters" theme="light" delay={250}>
+            <>
               <Button
                 variant="light"
+                data-tooltip-id="clear-filters-tooltip"
                 onClick={() => {
                   setQueryParams(initialQueryParams);
                 }}>
                 <FontAwesomeIcon icon={faXmark} className="tw-w-4 tw-h-4" />
               </Button>
-            </Tippy>
+              <Tooltip
+                id="clear-filters-tooltip"
+                style={{
+                  backgroundColor: "#1F2937",
+                  color: "white",
+                  padding: "4px 8px",
+                }}>
+                Clear Filters
+              </Tooltip>
+            </>
           )}
         </div>
         <div className="tw-flex tw-items-center tw-gap-2">
-          <Tippy content="Refresh Results" theme="light" delay={250}>
-            <Button variant="light" onClick={fetchTransactions}>
-              <FontAwesomeIcon icon={faRefresh} className="tw-w-4 tw-h-4" />
-            </Button>
-          </Tippy>
+          <Button
+            variant="light"
+            data-tooltip-id="refresh-results-tooltip"
+            onClick={fetchTransactions}>
+            <FontAwesomeIcon icon={faRefresh} className="tw-w-4 tw-h-4" />
+          </Button>
+          <Tooltip
+            id="refresh-results-tooltip"
+            style={{
+              backgroundColor: "#1F2937",
+              color: "white",
+              padding: "4px 8px",
+            }}>
+            Refresh Results
+          </Tooltip>
         </div>
       </div>
 

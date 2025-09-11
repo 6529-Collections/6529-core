@@ -1,9 +1,11 @@
+import { hexToString } from "@/helpers";
+import { SeedWalletRequest } from "@/shared/types";
 import { createConnector } from "@wagmi/core";
 import { ethers } from "ethers";
-import { mainnet, sepolia } from "viem/chains";
-import { SeedWalletRequest } from "@/shared/types";
-import { hexToString } from "@/helpers";
 import { UserRejectedRequestError } from "viem";
+import { mainnet, sepolia } from "viem/chains";
+
+export const SEED_WALLET_CONNECTOR_TYPE = "seed-wallet";
 
 interface ProviderRequest {
   method: string;
@@ -137,7 +139,7 @@ export function seedWalletConnector(parameters: {
     get supportsSimulation() {
       return false;
     },
-    type: "seed-wallet",
+    type: SEED_WALLET_CONNECTOR_TYPE,
     async setup() {
       //do nothing
     },

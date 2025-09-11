@@ -1,12 +1,9 @@
 openapi: 3.0.3
 info:
-  title: Seize API
+  title: 6529.io API
   description: >-
-    This is the API interface description for the most commonly used operations
-    in Seize API.  Some modifying endpoints require an authentication token.  
-    We are in the process of documenting all Seize APIs.   If there is an API
-    that you need, please ping us in Discord and we will aim to prioritize its
-    documentation.
+    This is the API interface description. Brief terminology overview and an authentication example
+    can be found at <a href="https://6529.io/about/api">https://6529.io/about/api</a>.
   version: 1.0.0
 servers:
   - url: /api
@@ -4777,6 +4774,7 @@ components:
         - rep
         - level
         - tdh
+        - tdh_rate
         - display
         - consolidation_key
         - classification
@@ -4785,6 +4783,7 @@ components:
         - banner1
         - banner2
         - active_main_stage_submission_ids
+        - winner_main_stage_drop_ids
       properties:
         id:
           type: string
@@ -4810,6 +4809,9 @@ components:
         tdh:
           type: integer
           format: int65
+        tdh_rate:
+          type: number
+          format: int64
         consolidation_key:
           type: string
         display:
@@ -4835,6 +4837,10 @@ components:
           items:
             $ref: "#/components/schemas/ApiWallet"
         active_main_stage_submission_ids:
+          type: array
+          items:
+            type: string
+        winner_main_stage_drop_ids:
           type: array
           items:
             type: string
@@ -5469,12 +5475,14 @@ components:
         - rep
         - tdh
         - level
+        - tdh_rate
         - primary_address
         - banner1_color
         - banner2_color
         - subscribed_actions
         - archived
         - active_main_stage_submission_ids
+        - winner_main_stage_drop_ids
       properties:
         id:
           type: string
@@ -5500,6 +5508,9 @@ components:
         tdh:
           type: number
           format: int64
+        tdh_rate:
+          type: number
+          format: int64
         level:
           type: number
           format: int64
@@ -5512,6 +5523,10 @@ components:
         archived:
           type: boolean
         active_main_stage_submission_ids:
+          type: array
+          items:
+            type: string
+        winner_main_stage_drop_ids:
           type: array
           items:
             type: string

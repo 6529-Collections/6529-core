@@ -1,19 +1,39 @@
+import { exec } from "child_process";
+import {
+  crashReporter,
+  ipcMain,
+  IpcMainEvent,
+  IpcMainInvokeEvent,
+  protocol,
+  screen,
+  shell,
+} from "electron";
+import contextMenu from "electron-context-menu";
+import localShortcut from "electron-localshortcut";
+import Logger from "electron-log";
 import { app, BrowserWindow, Menu, Notification } from "electron/main";
+import fs from "fs";
+import { getPort } from "get-port-please";
 import path from "node:path";
+import { platform } from "os";
+import { Tail } from "tail";
 import {
-  closeLogs,
-  extractCrashReport,
-  getCrashReportsList,
-  initLogs,
-  openLogs,
-} from "./utils/app-logs";
-import {
-  getHomeDir,
-  getInfo,
-  getLogDirectory,
-  getMainLogsPath,
-  getScheme,
-} from "./utils/info";
+  ADD_RPC_PROVIDER,
+  ADD_SEED_WALLET,
+  DEACTIVATE_RPC_PROVIDER,
+  DELETE_RPC_PROVIDER,
+  DELETE_SEED_WALLET,
+  GET_SEED_WALLET,
+  GET_SEED_WALLETS,
+  IMPORT_SEED_WALLET,
+  MANUAL_START_WORKER,
+  RECALCULATE_TRANSACTIONS_OWNERS,
+  RESET_TRANSACTIONS_TO_BLOCK,
+  RESET_WORKER,
+  SET_RPC_PROVIDER_ACTIVE,
+  STOP_WORKER,
+} from "../electron-constants";
+import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
 import {
   addRpcProvider,
   addSeedWallet,
@@ -28,59 +48,39 @@ import {
   initDb,
   setRpcProviderActive,
 } from "./db/db";
-import {
-  ipcMain,
-  protocol,
-  shell,
-  screen,
-  crashReporter,
-  IpcMainEvent,
-  IpcMainInvokeEvent,
-} from "electron";
-import {
-  GET_SEED_WALLETS,
-  ADD_SEED_WALLET,
-  DELETE_SEED_WALLET,
-  GET_SEED_WALLET,
-  IMPORT_SEED_WALLET,
-  ADD_RPC_PROVIDER,
-  SET_RPC_PROVIDER_ACTIVE,
-  DEACTIVATE_RPC_PROVIDER,
-  DELETE_RPC_PROVIDER,
-  MANUAL_START_WORKER,
-  RESET_TRANSACTIONS_TO_BLOCK,
-  RECALCULATE_TRANSACTIONS_OWNERS,
-  RESET_WORKER,
-  STOP_WORKER,
-} from "../electron-constants";
-import Logger from "electron-log";
-import localShortcut from "electron-localshortcut";
-import { prepareNext } from "./utils/prepareNext";
-import { getPort } from "get-port-please";
-import { exec } from "child_process";
-import { getValue, initStore, removeValue, setValue } from "./store";
-import { platform } from "os";
+import { runCoreMigrations } from "./db/db.migrations";
+import { RPCProvider } from "./db/entities/IRpcProvider";
+import IPFSServer from "./ipfs/ipfs.server";
 import { menuTemplate } from "./menu";
+import {
+  ResettableScheduledWorker,
+  ScheduledWorker,
+  TransactionsScheduledWorker,
+} from "./scheduled-tasks/scheduled-worker";
+import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
+import { getValue, initStore, removeValue, setValue } from "./store";
 import {
   checkForUpdates,
   downloadUpdate,
   installUpdate,
   isUpdateInitiatedQuit,
 } from "./update";
-import contextMenu from "electron-context-menu";
-import { isDev } from "./utils/env";
-import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
-import { startSchedulers, stopSchedulers } from "./scheduled-tasks/scheduler";
-import fs from "fs";
 import {
-  ResettableScheduledWorker,
-  ScheduledWorker,
-  TransactionsScheduledWorker,
-} from "./scheduled-tasks/scheduled-worker";
-import { RPCProvider } from "./db/entities/IRpcProvider";
-import { Tail } from "tail";
-import IPFSServer from "./ipfs/ipfs.server";
-import { runCoreMigrations } from "./db/db.migrations";
+  closeLogs,
+  extractCrashReport,
+  getCrashReportsList,
+  initLogs,
+  openLogs,
+} from "./utils/app-logs";
+import { isDev } from "./utils/env";
+import {
+  getHomeDir,
+  getInfo,
+  getLogDirectory,
+  getMainLogsPath,
+  getScheme,
+} from "./utils/info";
+import { prepareNext } from "./utils/prepareNext";
 
 contextMenu({
   showInspectElement: false,
@@ -209,8 +209,7 @@ if (!gotTheLock) {
     handleUrl(url);
   });
 
-  app.on("window-all-closed", (event: any) => {
-    event.preventDefault();
+  app.on("window-all-closed", () => {
     Logger.info("All windows closed");
   });
 
@@ -237,7 +236,7 @@ if (!gotTheLock) {
     }
 
     if (isMac() && isDev) {
-      app.dock.setIcon(path.join(__dirname, "assets", "icon.icns"));
+      app.dock?.setIcon(path.join(__dirname, "assets", "icon.icns"));
     }
 
     await resolvePorts();
@@ -698,8 +697,8 @@ ipcMain.on("quit", async () => {
 
 function updateNavigationState() {
   const navState = {
-    canGoBack: mainWindow?.webContents.canGoBack(),
-    canGoForward: mainWindow?.webContents.canGoForward(),
+    canGoBack: mainWindow?.webContents.navigationHistory.canGoBack(),
+    canGoForward: mainWindow?.webContents.navigationHistory.canGoForward(),
   };
   mainWindow?.webContents.send("nav-state-change", navState);
 }
@@ -724,21 +723,21 @@ function postWorkerUpdate(
 }
 
 ipcMain.on("nav-back", () => {
-  if (mainWindow?.webContents.canGoBack()) {
-    mainWindow.webContents.goBack();
+  if (mainWindow?.webContents.navigationHistory.canGoBack()) {
+    mainWindow.webContents.navigationHistory.goBack();
   }
 });
 
 ipcMain.on("nav-forward", () => {
-  if (mainWindow?.webContents.canGoForward()) {
-    mainWindow.webContents.goForward();
+  if (mainWindow?.webContents.navigationHistory.canGoForward()) {
+    mainWindow.webContents.navigationHistory.goForward();
   }
 });
 
 ipcMain.handle("get-nav-state", () => {
   return {
-    canGoBack: mainWindow?.webContents.canGoBack(),
-    canGoForward: mainWindow?.webContents.canGoForward(),
+    canGoBack: mainWindow?.webContents.navigationHistory.canGoBack(),
+    canGoForward: mainWindow?.webContents.navigationHistory.canGoForward(),
   };
 });
 
