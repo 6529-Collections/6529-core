@@ -28,10 +28,19 @@
         color: white;
         animation: pulse 2s infinite;
       }
-      span {
+      #message {
         font-size: 12px;
         color: white;
         opacity: 0.75;
+      }
+      #version {
+        font-size: 10px;
+        color: gray;
+        opacity: 0.75;
+        position: fixed;
+        top: 8px;
+        right: 8px;
+        font-family: monospace;
       }
       @keyframes spin {
         0% {
@@ -55,6 +64,7 @@
     </style>
   </head>
   <body>
+    <span id="version"></span>
     <img src="./icon.png" alt="6529" />
     <p>LOADING 6529 CORE</p>
     <span id="message">Initializing</span>
@@ -70,6 +80,10 @@
             console.log("Received message update:", newMessage);
             updateMessage(newMessage);
           });
+          document.getElementById("version").textContent = window.splashAPI
+            .version
+            ? "v" + window.splashAPI.version
+            : "";
         } else {
           console.error("splashAPI is not available");
         }
