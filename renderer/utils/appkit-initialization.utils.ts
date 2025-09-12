@@ -42,7 +42,9 @@ function createAdapter(
   isCapacitor: boolean
 ): WagmiAdapter {
   debugLog(
-    `Initializing AppKit adapter (${isCapacitor ? "mobile" : "web"}) with`,
+    `Initializing AppKit adapter (${isCapacitor ? "mobile" : "web"} - ${
+      isElectron() ? "Core Desktop" : "Core Web"
+    }) with`,
     wallets.length,
     "AppWallets"
   );
@@ -82,7 +84,6 @@ export function initializeAppKit(
     adapterManager,
     isCapacitor
   );
-  // const baseAdapter = createAdapter([], [], adapterManager, isCapacitor);
   const appKitConfig = buildAppKitConfig(newAdapter);
   const appKit = createAppKit(appKitConfig);
   appKit.setEIP6963Enabled(false);

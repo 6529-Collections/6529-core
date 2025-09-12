@@ -330,6 +330,8 @@ export function WorkerCard({
             color: "white",
             padding: "4px 8px",
           }}
+          delayShow={150}
+          place={"bottom"}
           openEvents={{ mouseenter: true }}
           closeEvents={{ mouseleave: true, blur: true, click: true }}>
           Click for more info
