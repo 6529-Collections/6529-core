@@ -1,3 +1,5 @@
+"use client";
+
 import Image from "next/image";
 import { Col } from "react-bootstrap";
 import styles from "../NFTImage.module.scss";
