@@ -1,31 +1,46 @@
-import styles from "@/styles/Home.module.scss";
+import Home from "@/components/home/Home";
+import { fetchInitialActivityData } from "@/components/latest-activity/fetchInitialActivityData";
+import { fetchInitialTokens } from "@/components/nextGen/collections/collectionParts/hooks/fetchInitialTokens";
+import { getAppMetadata } from "@/components/providers/metadata";
+import { SEIZE_URL } from "@/electron-constants";
 import { NFTWithMemesExtendedData } from "@/entities/INFT";
 import { NextGenCollection } from "@/entities/INextgen";
-import { commonApiFetch } from "@/services/api/common-api";
-import { getAppMetadata } from "@/components/providers/metadata";
-import { Metadata } from "next";
-import Home from "@/components/home/Home";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
-import { SEIZE_URL } from "@/electron-constants";
+import { commonApiFetch } from "@/services/api/common-api";
+import styles from "@/styles/Home.module.scss";
+import { Metadata } from "next";
 
 export default async function HomePage() {
   const headers = await getAppCommonHeaders();
-  const [featuredNft, featuredNextgen] = await Promise.all([
-    commonApiFetch<NFTWithMemesExtendedData>({
-      endpoint: `memes_latest`,
-      headers,
-    }),
-    commonApiFetch<NextGenCollection>({
-      endpoint: `nextgen/featured`,
-      headers,
-    }),
-  ]);
 
+  // First, fetch featured data and activity data in parallel
+  const [featuredNft, featuredNextgen, initialActivityData] = await Promise.all(
+    [
+      commonApiFetch<NFTWithMemesExtendedData>({
+        endpoint: `memes_latest`,
+        headers,
+      }),
+      commonApiFetch<NextGenCollection>({
+        endpoint: `nextgen/featured`,
+        headers,
+      }),
+      fetchInitialActivityData(1, 12),
+    ]
+  );
 
+  // Then fetch initial tokens for the featured NextGen collection
+  const initialTokens = featuredNextgen?.id
+    ? await fetchInitialTokens(featuredNextgen.id)
+    : [];
 
   return (
     <main className={styles.main}>
-      <Home featuredNft={featuredNft} featuredNextgen={featuredNextgen} />
+      <Home
+        featuredNft={featuredNft}
+        featuredNextgen={featuredNextgen}
+        initialActivityData={initialActivityData}
+        initialTokens={initialTokens}
+      />
     </main>
   );
 }

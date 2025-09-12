@@ -1,5 +1,19 @@
 "use client";
 
+import { useModalState } from "@/contexts/ModalStateContext";
+import { ProfileConnectedStatus } from "@/entities/IProfile";
+import {
+  InvalidRoleStateError,
+  MissingActiveProfileError,
+} from "@/errors/authentication";
+import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import { ApiLoginRequest } from "@/generated/models/ApiLoginRequest";
+import { ApiLoginResponse } from "@/generated/models/ApiLoginResponse";
+import { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
+import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
+import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
+import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
@@ -14,26 +28,13 @@ import { Button, Modal } from "react-bootstrap";
 import { Slide, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { isAddress } from "viem";
-import { useModalState } from "../../contexts/ModalStateContext";
-import { ProfileConnectedStatus } from "../../entities/IProfile";
-import {
-  InvalidRoleStateError,
-  MissingActiveProfileError,
-} from "../../errors/authentication";
-import { ApiIdentity } from "../../generated/models/ApiIdentity";
-import { ApiLoginRequest } from "../../generated/models/ApiLoginRequest";
-import { ApiLoginResponse } from "../../generated/models/ApiLoginResponse";
-import { ApiNonceResponse } from "../../generated/models/ApiNonceResponse";
-import { ApiProfileProxy } from "../../generated/models/ApiProfileProxy";
-import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
-import { getProfileConnectedStatus } from "../../helpers/ProfileHelpers";
+import { useIdentity } from "../../hooks/useIdentity";
 import {
   ConnectionMismatchError,
   MobileSigningError,
   SigningProviderError,
   useSecureSign,
 } from "../../hooks/useSecureSign";
-import { commonApiFetch, commonApiPost } from "../../services/api/common-api";
 import {
   getAuthJwt,
   removeAuthJwt,
@@ -143,8 +144,12 @@ export default function Auth({
   } = useSecureSign();
   const [showSignModal, setShowSignModal] = useState(false);
 
-  const [connectedProfile, setConnectedProfile] = useState<ApiIdentity>();
-  const [fetchingProfile, setFetchingProfile] = useState(false);
+  const { profile: connectedProfile, isLoading: fetchingProfile } = useIdentity(
+    {
+      handleOrWallet: address,
+      initialProfile: null,
+    }
+  );
 
   // Race condition prevention: AbortController and operation tracking
   const abortControllerRef = useRef<AbortController | null>(null);
@@ -160,23 +165,6 @@ export default function Auth({
     }
     setAuthLoadingState("idle");
   }, []);
-
-  useEffect(() => {
-    if (address) {
-      setFetchingProfile(true);
-      commonApiFetch<ApiIdentity>({
-        endpoint: `identities/${address}`,
-      })
-        .then((profile) => {
-          setConnectedProfile(profile);
-        })
-        .finally(() => {
-          setFetchingProfile(false);
-        });
-    } else {
-      setConnectedProfile(undefined);
-    }
-  }, [address]);
 
   const { data: profileProxies } = useQuery<ApiProfileProxy[]>({
     queryKey: [
@@ -635,26 +623,9 @@ export default function Auth({
     }
   };
 
-  const getShowWaves = (): boolean => {
-    if (!connectedProfile?.handle) {
-      return false;
-    }
-
-    if (activeProfileProxy) {
-      return false;
-    }
-
-    if (!address) {
-      return false;
-    }
-    return true;
-  };
-
-  const [showWaves, setShowWaves] = useState(getShowWaves());
-
-  useEffect(() => {
-    setShowWaves(getShowWaves());
-  }, [connectedProfile, activeProfileProxy, address]);
+  const showWaves = useMemo(() => {
+    return !!connectedProfile?.handle && !activeProfileProxy && !!address;
+  }, [connectedProfile?.handle, activeProfileProxy, address]);
 
   const { isTopModal, addModal, removeModal } = useModalState();
 

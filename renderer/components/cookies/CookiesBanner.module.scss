@@ -37,7 +37,7 @@
 .reject {
   border: none;
   background-color: transparent;
-  color: variables.$very-dark-grey;
+  color: variables.$very-dark-grey !important;
   text-decoration: none;
 
   &:hover {
