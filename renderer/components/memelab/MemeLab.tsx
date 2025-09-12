@@ -1,8 +1,22 @@
 "use client";
 
+import { AuthContext } from "@/components/auth/Auth";
+import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
 import DotLoader from "@/components/dotLoader/DotLoader";
+import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
+import styles from "@/components/memelab/MemeLab.module.scss";
 import NFTImage from "@/components/nft-image/NFTImage";
+import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
+import {
+  SortButton,
+  printVolumeTypeDropdown,
+} from "@/components/the-memes/TheMemes";
+import { MEMELAB_CONTRACT } from "@/constants";
+import { useSetTitle } from "@/contexts/TitleContext";
 import { SEIZE_API_URL } from "@/electron-constants";
+import { LabExtendedData, LabNFT, VolumeType } from "@/entities/INFT";
+import { SortDirection } from "@/entities/ISort";
+import { MemeLabSort } from "@/enums";
 import {
   getValuesForVolumeType,
   numberWithCommas,
@@ -14,30 +28,18 @@ import {
   faChevronCircleUp,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { NextRouter, useRouter } from "next/router";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useContext, useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
-import { MEMELAB_CONTRACT } from "../../constants";
-import { LabExtendedData, LabNFT, VolumeType } from "../../entities/INFT";
-import { NftOwner } from "../../entities/IOwner";
-import { SortDirection } from "../../entities/ISort";
-import { MemeLabSort } from "../../enums";
-import { AuthContext } from "../auth/Auth";
-import CollectionsDropdown from "../collections-dropdown/CollectionsDropdown";
-import { LFGButton } from "../lfg-slideshow/LFGSlideshow";
-import NothingHereYetSummer from "../nothingHereYet/NothingHereYetSummer";
-import { SortButton, printVolumeTypeDropdown } from "../the-memes/TheMemes";
-import styles from "./MemeLab.module.scss";
 
-interface Props {
-  wallets: string[];
-}
-
-export function getInitialRouterValues(router: NextRouter) {
+export function getInitialRouterValues(
+  sortDir: string | null,
+  sort: string | null
+) {
   let initialSortDir = SortDirection.ASC;
   let initialSort = MemeLabSort.AGE;
 
-  const routerSortDir = router.query.sort_dir;
+  const routerSortDir = sortDir;
   if (routerSortDir) {
     const routerSortDirStr = Array.isArray(routerSortDir)
       ? routerSortDir[0]
@@ -50,7 +52,7 @@ export function getInitialRouterValues(router: NextRouter) {
     }
   }
 
-  const routerSort = router.query.sort;
+  const routerSort = sort;
   if (routerSort) {
     const routerSortStr = Array.isArray(routerSort)
       ? routerSort[0]
@@ -180,13 +182,12 @@ export function printNftContent(
 }
 
 export function sortChanged(
-  router: NextRouter,
+  router: ReturnType<typeof useRouter>,
   sort: MemeLabSort,
   sortDir: SortDirection,
   volumeType: VolumeType,
   nfts: LabNFT[],
   nftMetas: LabExtendedData[],
-  collectionName: string | undefined,
   setNfts: (nfts: LabNFT[]) => void,
   labArtists?: string[],
   labCollections?: string[],
@@ -201,17 +202,8 @@ export function sortChanged(
     sort: sortKey,
     sort_dir: sortDir.toLowerCase(),
   };
-  if (collectionName) {
-    newQuery.collection = collectionName?.replaceAll(" ", "-");
-  }
 
-  router.replace(
-    {
-      query: newQuery,
-    },
-    undefined,
-    { shallow: true }
-  );
+  router.replace(`?${new URLSearchParams(newQuery).toString()}`);
 
   if (sort === MemeLabSort.AGE) {
     if (sortDir === SortDirection.ASC) {
@@ -446,38 +438,34 @@ export function sortChanged(
   }
 }
 
-export default function MemeLabComponent(props: Readonly<Props>) {
+export default function MemeLabComponent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { connectedProfile } = useContext(AuthContext);
+  const isConnected = !!connectedProfile;
+
+  useSetTitle("Meme Lab | Collections");
 
   useEffect(() => {
-    if (router.isReady) {
-      const { initialSortDir, initialSort } = getInitialRouterValues(router);
-      setSort(initialSort);
-      setSortDir(initialSortDir);
-    }
-  }, [router.isReady]);
+    const { initialSortDir, initialSort } = getInitialRouterValues(
+      searchParams?.get("sort_dir") ?? null,
+      searchParams?.get("sort") ?? null
+    );
+    setSortDir(initialSortDir);
+    setSort(initialSort);
+  }, []);
 
   const [sortDir, setSortDir] = useState<SortDirection>();
   const [sort, setSort] = useState<MemeLabSort>(MemeLabSort.AGE);
 
   const [nfts, setNfts] = useState<LabNFT[]>([]);
   const [nftMetas, setNftMetas] = useState<LabExtendedData[]>([]);
-  const [nftBalances, setNftBalances] = useState<NftOwner[]>([]);
-  const [balancesLoaded, setBalancesLoaded] = useState(false);
+
   const [nftsLoaded, setNftsLoaded] = useState(false);
   const [labArtists, setLabArtists] = useState<string[]>([]);
   const [labCollections, setLabCollections] = useState<string[]>([]);
 
   const [volumeType, setVolumeType] = useState<VolumeType>(VolumeType.HOURS_24);
-
-  function getBalance(id: number) {
-    const balance = nftBalances.find((b) => b.token_id === id);
-    if (balance) {
-      return balance.balance;
-    }
-    return 0;
-  }
 
   useEffect(() => {
     const nftsUrl = `${SEIZE_API_URL}/api/lab_extended_data`;
@@ -505,22 +493,6 @@ export default function MemeLabComponent(props: Readonly<Props>) {
   }, []);
 
   useEffect(() => {
-    const consolidationKey =
-      connectedProfile?.consolidation_key ??
-      connectedProfile?.wallets?.[0]?.wallet;
-    if (consolidationKey) {
-      fetchAllPages(
-        `${SEIZE_API_URL}/api/nft-owners/consolidation/${consolidationKey}?contract=${MEMELAB_CONTRACT}`
-      ).then((owners: NftOwner[]) => {
-        setNftBalances(owners);
-        setBalancesLoaded(true);
-      });
-    } else {
-      setNftBalances([]);
-    }
-  }, [connectedProfile]);
-
-  useEffect(() => {
     if (nfts && nfts.length > 0) {
       const myArtists: string[] = [];
       [...nfts].map((nft) => {
@@ -542,7 +514,6 @@ export default function MemeLabComponent(props: Readonly<Props>) {
         volumeType,
         nfts,
         nftMetas,
-        undefined,
         setNfts,
         labArtists,
         labCollections,
@@ -563,17 +534,14 @@ export default function MemeLabComponent(props: Readonly<Props>) {
         lg={{ span: 3 }}>
         <a href={`/meme-lab/${nft.id}`} className="decoration-none scale-hover">
           <Container fluid>
-            <Row
-              className={
-                props.wallets.length > 0 ? styles.nftImagePadding : ""
-              }>
+            <Row className={isConnected ? styles.nftImagePadding : ""}>
               <NFTImage
                 nft={nft}
                 animation={false}
                 height={300}
-                balance={balancesLoaded ? getBalance(nft.id) : -1}
+                showOwnedIfLoggedIn={true}
+                showUnseizedIfLoggedIn={true}
                 showThumbnail={true}
-                showUnseized={props.wallets.length > 0}
               />
             </Row>
             <Row>

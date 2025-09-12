@@ -1,9 +1,8 @@
 "use client";
 
-import styles from "./Confirm.module.scss";
-import { Modal, Button } from "react-bootstrap";
-import { ethers } from "ethers";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useModalState } from "@/contexts/ModalStateContext";
+import { useToast } from "@/contexts/ToastContext";
+import { SeedWalletRequest } from "@/shared/types";
 import {
   faCheckCircle,
   faEye,
@@ -11,11 +10,12 @@ import {
   faLock,
   faLockOpen,
 } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ethers } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
-import { SeedWalletRequest } from "@/shared/types";
-import { useToast } from "@/contexts/ToastContext";
-import { useModalState } from "@/contexts/ModalStateContext";
+import styles from "./Confirm.module.scss";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
 
@@ -149,7 +149,7 @@ export default function ConfirmSeedWalletLock(
       dialogClassName={
         !isTopModal(SEED_WALLET_LOCK_MODAL) ? "modal-blurred" : ""
       }>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title className="d-flex align-items-center gap-3">
           <FontAwesomeIcon
             icon={props.unlockedWallet ? faLockOpen : faLock}
@@ -157,7 +157,7 @@ export default function ConfirmSeedWalletLock(
           />
           <span>{props.name}</span>
         </Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <div className="font-smaller pb-3">Address: {props.address}</div>
         {props.unlockedWallet ? printUnlocked() : printLocked()}

@@ -1,22 +1,26 @@
+import { ISeedWallet } from "@/shared/types";
 import {
-  ADD_SEED_WALLET,
-  DELETE_SEED_WALLET,
-  GET_SEED_WALLETS,
-  GET_SEED_WALLET,
-  IMPORT_SEED_WALLET,
   ADD_RPC_PROVIDER,
-  SET_RPC_PROVIDER_ACTIVE,
+  ADD_SEED_WALLET,
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
+  DELETE_SEED_WALLET,
+  GET_SEED_WALLET,
+  GET_SEED_WALLETS,
+  IMPORT_SEED_WALLET,
   MANUAL_START_WORKER,
-  RESET_TRANSACTIONS_TO_BLOCK,
   RECALCULATE_TRANSACTIONS_OWNERS,
+  RESET_TRANSACTIONS_TO_BLOCK,
   RESET_WORKER,
+  SET_RPC_PROVIDER_ACTIVE,
   STOP_WORKER,
 } from "../electron-constants";
 
-export async function getSeedWallets() {
-  if (typeof window === "undefined") return;
+export async function getSeedWallets(): Promise<{
+  error: boolean;
+  data: ISeedWallet[];
+}> {
+  if (typeof window === "undefined") return { error: true, data: [] };
   const data = await window.api.sendSync(GET_SEED_WALLETS);
   return data;
 }

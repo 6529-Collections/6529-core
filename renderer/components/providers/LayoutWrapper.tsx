@@ -1,12 +1,11 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import useDeviceInfo from "@/hooks/useDeviceInfo";
+import FooterWrapper from "@/FooterWrapper";
 import DesktopLayout from "@/components/layout/DesktopLayout";
 import MobileLayout from "@/components/layout/MobileLayout";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { usePathname } from "next/navigation";
 import { useMemo } from "react";
-import FooterWrapper from "@/FooterWrapper";
-import { useSearch } from "@/contexts/SearchContext";
 
 export default function LayoutWrapper({
   children,

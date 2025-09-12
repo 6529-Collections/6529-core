@@ -1,3 +1,5 @@
+"use client";
+
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import "@google/model-viewer";
 import React, { useEffect, useRef, useState } from "react";

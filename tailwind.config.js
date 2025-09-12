@@ -29,6 +29,7 @@ module.exports = {
         md: ["0.9375rem", "24px"],
       },
       colors: {
+        "primary-200": "#84ADFF",
         "primary-300": "#84ADFF",
         "primary-400": "#528BFF",
         "primary-500": "#406AFE",
@@ -38,7 +39,6 @@ module.exports = {
         "iron-350": "#B0B0B0",
         green: "#3CCB7F",
         red: "#F97066",
-        yellow: "#FEDF89",
         iron: {
           50: "#F5F5F5",
           100: "#EFEFF1",
@@ -107,6 +107,16 @@ module.exports = {
           "20%, 60%": { transform: "translateX(-4px)" },
           "40%, 80%": { transform: "translateX(4px)" },
         },
+        "gallery-reveal": {
+          "0%": {
+            opacity: "0.7",
+            transform: "translateY(4px) perspective(1000px) rotateX(2deg)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateY(0) perspective(1000px) rotateX(0)",
+          },
+        },
       },
       animation: {
         "loading-bar": "loading-bar 1.5s infinite",
@@ -116,6 +126,8 @@ module.exports = {
         "spin-slow": "spin 15s linear infinite",
         fadeIn: "fadeIn 0.3s ease-out forwards",
         shake: "shake 0.3s ease-in-out",
+        "gallery-reveal":
+          "gallery-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
       },
       backgroundSize: {
         "gradient-pos": "200% 200%",

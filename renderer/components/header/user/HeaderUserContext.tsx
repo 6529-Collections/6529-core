@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { ApiIdentity } from "../../../generated/models/ApiIdentity";
+import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import { WalletErrorBoundary } from "../../auth/error-boundary";
 import HeaderUserProfile from "./HeaderUserProfile";
 import HeaderUserProxy from "./proxy/HeaderUserProxy";
 import HeaderUserSeedWallet from "./proxy/HeaderUserSeedWallet";
-import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
 
 export default function HeaderUserContext({
   profile,
@@ -20,8 +21,10 @@ export default function HeaderUserContext({
         <div
           className="tw-relative tw-inline-flex tw-rounded-lg tw-shadow-sm"
           role="group">
-          <HeaderUserProfile profile={profile} />
-          {isSeedWallet && <HeaderUserSeedWallet />}
+          <WalletErrorBoundary>
+            <HeaderUserProfile profile={profile} />
+            {isSeedWallet && <HeaderUserSeedWallet />}
+          </WalletErrorBoundary>
           <HeaderUserProxy profile={profile} />
         </div>
         {!haveProfile && (

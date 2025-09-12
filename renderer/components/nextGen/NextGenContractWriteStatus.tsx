@@ -1,12 +1,13 @@
 "use client";
 
-import { useWaitForTransactionReceipt } from "wagmi";
-import { areEqualAddresses, getTransactionLink } from "../../helpers/Helpers";
-import { NEXTGEN_CHAIN_ID } from "./nextgen_contracts";
-import DotLoader from "../dotLoader/DotLoader";
-import { useEffect, useState } from "react";
-import { NULL_MERKLE } from "../../constants";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { useWaitForTransactionReceipt } from "wagmi";
+import { NULL_MERKLE } from "../../constants";
+import { areEqualAddresses, getTransactionLink } from "../../helpers/Helpers";
+import { sanitizeErrorForUser } from "../../utils/error-sanitizer";
+import DotLoader from "../dotLoader/DotLoader";
+import { NEXTGEN_CHAIN_ID } from "./nextgen_contracts";
 
 const TRANSFER_EVENT =
   "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef";
@@ -67,7 +68,7 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
     if (error.message) {
       return error.message;
     }
-    return JSON.stringify(props.error);
+    return sanitizeErrorForUser(props.error);
   }
 
   function getStatusMessage() {
@@ -93,12 +94,12 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
       {!props.isLoading && props.hash && (
         <span>
           Transaction {getStatusMessage()}{" "}
-          <a
+          <Link
             href={getTransactionLink(NEXTGEN_CHAIN_ID, props.hash)}
             target="_blank"
             rel="noreferrer">
             view
-          </a>
+          </Link>
           {waitContractWrite.isLoading && (
             <>
               <br />

@@ -2,9 +2,16 @@
 
 import styles from "../NextGen.module.scss";
 
-import { Col, Container, Row } from "react-bootstrap";
-import { NextGenCollection, NextGenToken } from "../../../../entities/INextgen";
+import { faFire } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Image from "next/image";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import { ETHEREUM_ICON_TEXT } from "../../../../constants";
+import { DBResponse } from "../../../../entities/IDBResponse";
+import { NextGenCollection, NextGenToken } from "../../../../entities/INextgen";
 import {
   areEqualAddresses,
   cicToType,
@@ -14,27 +21,21 @@ import {
   numberWithCommas,
   printMintDate,
 } from "../../../../helpers/Helpers";
-import { useState, useEffect } from "react";
+import useCapacitor from "../../../../hooks/useCapacitor";
+import { useIdentity } from "../../../../hooks/useIdentity";
 import { commonApiFetch } from "../../../../services/api/common-api";
+import { useSeizeConnectContext } from "../../../auth/SeizeConnectContext";
+import { useCookieConsent } from "../../../cookies/CookieConsentContext";
+import EthereumIcon from "../../../user/utils/icons/EthereumIcon";
+import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
 import { NEXTGEN_CHAIN_ID } from "../../nextgen_contracts";
-import Image from "next/image";
-import { Tooltip } from "react-tooltip";
 import {
   formatNameForUrl,
   getBlurLink,
   getMagicEdenLink,
   getOpenseaLink,
 } from "../../nextgen_helpers";
-import { DBResponse } from "../../../../entities/IDBResponse";
-import EthereumIcon from "../../../user/utils/icons/EthereumIcon";
 import { displayScore } from "./NextGenTokenProperties";
-import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
-import { ETHEREUM_ICON_TEXT } from "../../../../constants";
-import useCapacitor from "../../../../hooks/useCapacitor";
-import { useSeizeConnectContext } from "../../../auth/SeizeConnectContext";
-import { useIdentity } from "../../../../hooks/useIdentity";
-import { faFire } from "@fortawesome/free-solid-svg-icons";
-import { useCookieConsent } from "../../../cookies/CookieConsentContext";
 
 interface Props {
   collection: NextGenCollection;
@@ -127,9 +128,10 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
               </>
             )}
             {profile?.level && profile?.cic ? (
-              <a
+              <Link
                 href={`/${profile?.handle ?? props.token.owner}`}
-                className="d-flex gap-2 decoration-hover-underline align-items-center">
+                className="d-flex gap-2 decoration-hover-underline align-items-center"
+              >
                 <UserCICAndLevel
                   level={profile.level}
                   cicType={cicToType(profile.cic)}
@@ -139,15 +141,15 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                     profile?.display ??
                     formatAddress(props.token.owner)}
                 </span>
-              </a>
+              </Link>
             ) : (
-              <a href={`/${profile?.handle ?? props.token.owner}`}>
+              <Link href={`/${profile?.handle ?? props.token.owner}`}>
                 <span>
                   {profile?.handle ??
                     profile?.display ??
                     formatAddress(props.token.owner)}
                 </span>
-              </a>
+              </Link>
             )}
             {areEqualAddresses(props.token.owner, account.address) && (
               <span>(you)</span>
@@ -169,7 +171,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
             <span className="font-color-h">Listed:</span>
             <span className="d-flex flex-column align-items-start gap-2 pt-1">
               <span>
-                <a
+                <Link
                   href={getOpenseaLink(NEXTGEN_CHAIN_ID, props.token.id)}
                   target="_blank"
                   rel="noreferrer"
@@ -177,6 +179,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   data-tooltip-id={`opensea-${props.token.id}`}
                 >
                   <Image
+                    unoptimized
                     className={styles.marketplace}
                     src="/opensea.png"
                     alt="opensea"
@@ -193,6 +196,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                       </span>
                       {props.token.opensea_royalty > 0 && (
                         <Image
+                          unoptimized
                           width={0}
                           height={0}
                           style={{ height: "25px", width: "auto" }}
@@ -207,7 +211,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   ) : (
                     "No"
                   )}
-                </a>
+                </Link>
                 <Tooltip
                   id={`opensea-${props.token.id}`}
                   place="right"
@@ -235,7 +239,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                 </Tooltip>
               </span>
               <span>
-                <a
+                <Link
                   href={getBlurLink(props.token.id)}
                   target="_blank"
                   rel="noreferrer"
@@ -243,6 +247,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   data-tooltip-id={`blur-${props.token.id}`}
                 >
                   <Image
+                    unoptimized
                     className={styles.marketplace}
                     src="/blur.png"
                     alt="blur"
@@ -261,7 +266,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   ) : (
                     "No"
                   )}
-                </a>
+                </Link>
                 <Tooltip
                   id={`blur-${props.token.id}`}
                   place="right"
@@ -284,7 +289,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                 </Tooltip>
               </span>
               <span>
-                <a
+                <Link
                   href={getMagicEdenLink(props.token.id)}
                   target="_blank"
                   rel="noreferrer"
@@ -292,6 +297,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   data-tooltip-id={`magic-eden-${props.token.id}`}
                 >
                   <Image
+                    unoptimized
                     className={styles.marketplace}
                     src="/magiceden.png"
                     alt="magiceden"
@@ -308,6 +314,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                       </span>
                       {props.token.me_royalty > 0 && (
                         <Image
+                          unoptimized
                           width={0}
                           height={0}
                           style={{ height: "25px", width: "auto" }}
@@ -322,7 +329,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   ) : (
                     "No"
                   )}
-                </a>
+                </Link>
                 <Tooltip
                   id={`magic-eden-${props.token.id}`}
                   place="right"
@@ -357,12 +364,13 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
         <Col className="pb-3 d-flex gap-1">
           <span className="font-color-h">Collection:</span>
           <span>
-            <a
+            <Link
               href={`/nextgen/collection/${formatNameForUrl(
                 props.collection.name
-              )}`}>
+              )}`}
+            >
               {props.collection.name}
-            </a>
+            </Link>
           </span>
         </Col>
       </Row>
@@ -370,9 +378,9 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
         <Col className="pb-3 d-flex gap-1">
           <span className="font-color-h">Artist:</span>
           <span>
-            <a href={`/${props.collection.artist_address}`}>
+            <Link href={`/${props.collection.artist_address}`}>
               {props.collection.artist}
-            </a>
+            </Link>
           </span>
         </Col>
       </Row>

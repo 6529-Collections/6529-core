@@ -56,8 +56,8 @@
   transition: box-shadow 0.1s ease, transform 0.1s ease;
 
   &:hover {
-    transform: scale(1.02); /* Optional: Adds a slight zoom effect */
-    box-shadow: 0 0 10px 8px rgba(200, 200, 200, 0.2);
+    transform: scale(1.02);
+    box-shadow: 0 0 10px 5px rgba(215, 215, 215, 0.3);
   }
 }
 

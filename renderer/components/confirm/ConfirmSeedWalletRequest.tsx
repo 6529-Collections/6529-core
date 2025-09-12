@@ -1,20 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import styles from "./Confirm.module.scss";
-import { Modal, Button } from "react-bootstrap";
-import { SeedWalletRequest } from "@/shared/types";
+import { useModalState } from "@/contexts/ModalStateContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
+import { useToast } from "@/contexts/ToastContext";
 import { hexToString } from "@/helpers";
 import { fromGWEI, isValidEthAddress } from "@/helpers/Helpers";
-import { useToast } from "@/contexts/ToastContext";
-import { useBalance, useChainId } from "wagmi";
-import { sepolia } from "viem/chains";
-import { useSeedWallet } from "@/contexts/SeedWalletContext";
-import { ethers, formatUnits } from "ethers";
-import { useModalState } from "@/contexts/ModalStateContext";
-import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import { SeedWalletRequest } from "@/shared/types";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ethers, formatUnits } from "ethers";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
+import { sepolia } from "viem/chains";
+import { useBalance, useChainId } from "wagmi";
+import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import styles from "./Confirm.module.scss";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
 
@@ -241,9 +241,9 @@ export default function ConfirmSeedWalletRequest() {
       dialogClassName={
         !isTopModal(SEED_WALLET_REQUEST_MODAL) ? "modal-blurred" : ""
       }>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>Confirm Seed Wallet Request</Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body
         className={`${styles.modalContent} ${styles.modalContentSeedRequest}`}>
         <div className="mt-2 mb-2">

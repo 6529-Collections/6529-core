@@ -131,7 +131,10 @@ export default function NextGenTraitSets(
 
   function printTraitPill(t: string) {
     return (
-      <Col xs={12 / (availableTraits.length + 1)} className="no-padding">
+      <Col
+        key={t}
+        xs={12 / (availableTraits.length + 1)}
+        className="no-padding">
         <button
           key={getRandomObjectId()}
           className={`${styles.collectorSetPill} ${
@@ -171,6 +174,7 @@ export default function NextGenTraitSets(
           <span>None!</span>
           <span>
             <Image
+              unoptimized
               priority
               loading="eager"
               width={0}
@@ -218,7 +222,7 @@ export default function NextGenTraitSets(
             <span className="font-lightest">Trait</span> Sets
           </h1>
           {props.preview && (
-            <a
+            <Link
               href={`/nextgen/collection/${formatNameForUrl(
                 props.collection.name
               )}/trait-sets`}
@@ -230,7 +234,7 @@ export default function NextGenTraitSets(
                   className={styles.viewAllIcon}
                 />
               </h5>
-            </a>
+            </Link>
           )}
           {!props.preview && (
             <SearchWalletsDisplay
@@ -334,7 +338,7 @@ export default function NextGenTraitSets(
         setsLoaded && (
           <Row className="pt-3">
             <Col>
-              <a
+              <Link
                 href={`/nextgen/collection/${formatNameForUrl(
                   props.collection.name
                 )}/trait-sets`}
@@ -346,7 +350,7 @@ export default function NextGenTraitSets(
                     className={styles.viewAllIcon}
                   />
                 </h5>
-              </a>
+              </Link>
             </Col>
           </Row>
         )
@@ -409,7 +413,7 @@ function Owner(props: Readonly<{ set: NextgenTraitSet }>) {
   }
 
   return (
-    <a
+    <Link
       className="d-flex gap-2 decoration-hover-underline"
       onClick={(e) => e.stopPropagation()}
       href={`/${props.set.handle ?? props.set.owner}`}>
@@ -418,7 +422,7 @@ function Owner(props: Readonly<{ set: NextgenTraitSet }>) {
         cicType={cicToType(props.set.tdh + props.set.rep_score)}
       />{" "}
       {getOwnerDisplay()}
-    </a>
+    </Link>
   );
 }
 function TraitSetAccordion(
@@ -500,6 +504,7 @@ function TraitSetAccordion(
                           rel="noreferrer">
                           <>
                             <Image
+                              unoptimized
                               priority
                               loading="eager"
                               width={0}

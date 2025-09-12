@@ -1,13 +1,13 @@
 "use client";
 
-import styles from "./AppWallet.module.scss";
-import { MutableRefObject, useCallback, useRef, useState } from "react";
-import { Modal, Button } from "react-bootstrap";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
-import { decryptData } from "./app-wallet-helpers";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { MutableRefObject, useCallback, useRef, useState } from "react";
+import { Button, Modal } from "react-bootstrap";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import { useAuth } from "../auth/Auth";
+import { decryptData } from "./app-wallet-helpers";
+import styles from "./AppWallet.module.scss";
 import { useAppWallets } from "./AppWalletsContext";
 
 const SEED_MIN_PASS_LENGTH = 6;
@@ -130,11 +130,11 @@ export function CreateAppWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>
           {props.import ? `Import` : `Create New`} Wallet
         </Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <label className="pb-1" htmlFor="walletName">
           Wallet Name
@@ -291,9 +291,9 @@ export function UnlockAppWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>Unlock Wallet</Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <label className="pb-1 d-flex align-items-center justify-content-between">
           <span className="unselectable">Wallet Password</span>

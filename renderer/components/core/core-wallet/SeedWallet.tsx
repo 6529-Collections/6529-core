@@ -1,6 +1,18 @@
 "use client";
 
-import styles from "./SeedWallet.module.scss";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { useConfirm } from "@/contexts/ConfirmContext";
+import { useToast } from "@/contexts/ToastContext";
+import { deleteSeedWallet, getSeedWallet } from "@/electron";
+import { MNEMONIC_NA } from "@/electron-constants";
+import { getRandomKey, openInExternalBrowser } from "@/helpers";
+import {
+  areEqualAddresses,
+  fromGWEI,
+  getAddressEtherscanLink,
+} from "@/helpers/Helpers";
+import { decryptData } from "@/shared/encrypt";
+import { ISeedWallet } from "@/shared/types";
 import {
   faCircleArrowLeft,
   faCopy,
@@ -10,29 +22,17 @@ import {
   faFileDownload,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { ISeedWallet } from "@/shared/types";
-import { getRandomKey, openInExternalBrowser } from "@/helpers";
-import { useCallback, useEffect, useState } from "react";
-import { deleteSeedWallet, getSeedWallet } from "@/electron";
-import { useConfirm } from "@/contexts/ConfirmContext";
-import { useToast } from "@/contexts/ToastContext";
-import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { MNEMONIC_NA } from "@/electron-constants";
-import { useBalance, useChainId } from "wagmi";
-import { sepolia } from "viem/chains";
-import {
-  areEqualAddresses,
-  fromGWEI,
-  getAddressEtherscanLink,
-} from "@/helpers/Helpers";
 import Image from "next/image";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+import { Button, Col, Container, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import { sepolia } from "viem/chains";
+import { useBalance, useChainId } from "wagmi";
+import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
+import styles from "./SeedWallet.module.scss";
 import { UnlockSeedWalletModal } from "./SeedWalletModal";
-import { decryptData } from "@/shared/encrypt";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 
 export default function SeedWallet(
   props: Readonly<{
@@ -142,6 +142,23 @@ export default function SeedWallet(
     );
   };
 
+  const printTooltip = (id: string, content: string) => {
+    return (
+      <Tooltip
+        id={id}
+        place="top"
+        style={{
+          backgroundColor: "#1F2937",
+          color: "white",
+          padding: "4px 8px",
+        }}
+        openEvents={{ mouseenter: true }}
+        closeEvents={{ mouseleave: true, blur: true, click: true }}>
+        {content}
+      </Tooltip>
+    );
+  };
+
   if (fetching) {
     return (
       <Container className="pt-5 pb-5">
@@ -224,29 +241,30 @@ export default function SeedWallet(
             </span>
           </span>
           <span className="d-flex align-items-center gap-2">
-            <Tippy content={"View on Etherscan"} placement="top" theme="light">
-              <FontAwesomeIcon
-                className="cursor-pointer unselectable"
-                icon={faExternalLink}
-                height={22}
-                onClick={() =>
-                  openInExternalBrowser(
-                    getAddressEtherscanLink(chainId, seedWallet.address)
-                  )
-                }
-              />
-            </Tippy>
-            <Tippy
-              content={"Download Recovery File"}
-              placement="top"
-              theme="light">
-              <FontAwesomeIcon
-                className="cursor-pointer unselectable"
-                icon={faFileDownload}
-                height={22}
-                onClick={() => setIsDownloading(true)}
-              />
-            </Tippy>
+            <FontAwesomeIcon
+              className="cursor-pointer unselectable"
+              data-tooltip-id="view-on-etherscan-tooltip"
+              icon={faExternalLink}
+              height={22}
+              onClick={() =>
+                openInExternalBrowser(
+                  getAddressEtherscanLink(chainId, seedWallet.address)
+                )
+              }
+            />
+            {printTooltip("view-on-etherscan-tooltip", "View on Etherscan")}
+
+            <FontAwesomeIcon
+              className="cursor-pointer unselectable"
+              data-tooltip-id="download-recovery-file-tooltip"
+              icon={faFileDownload}
+              height={22}
+              onClick={() => setIsDownloading(true)}
+            />
+            {printTooltip(
+              "download-recovery-file-tooltip",
+              "Download Recovery File"
+            )}
             <UnlockSeedWalletModal
               address={seedWallet.address}
               address_hashed={seedWallet.address_hashed}
@@ -274,24 +292,24 @@ export default function SeedWallet(
                 });
               }}
             />
-            <Tippy
-              content={addressCopied ? "Copied!" : "Copy address to clipboard"}
-              hideOnClick={false}
-              placement="top"
-              theme="light">
-              <FontAwesomeIcon
-                className="cursor-pointer unselectable"
-                icon={faCopy}
-                height={22}
-                onClick={() => {
-                  navigator.clipboard.writeText(seedWallet.address);
-                  setAddressCopied(true);
-                  setTimeout(() => {
-                    setAddressCopied(false);
-                  }, 1500);
-                }}
-              />
-            </Tippy>
+
+            <FontAwesomeIcon
+              className="cursor-pointer unselectable"
+              data-tooltip-id="copy-address-tooltip"
+              icon={faCopy}
+              height={22}
+              onClick={() => {
+                navigator.clipboard.writeText(seedWallet.address);
+                setAddressCopied(true);
+                setTimeout(() => {
+                  setAddressCopied(false);
+                }, 1500);
+              }}
+            />
+            {printTooltip(
+              "copy-address-tooltip",
+              addressCopied ? "Copied!" : "Copy address to clipboard"
+            )}
           </span>
         </Col>
       </Row>
@@ -300,25 +318,24 @@ export default function SeedWallet(
           <span>Mnemonic Phrase</span>
           {mnemonicAvailable && (
             <span className="d-flex gap-3 align-items-center">
-              <Tippy
-                hideOnClick={true}
-                content={revealPhrase ? "Hide" : "Reveal"}
-                placement="top"
-                theme="light">
-                <FontAwesomeIcon
-                  className="cursor-pointer unselectable"
-                  icon={revealPhrase ? faEye : faEyeSlash}
-                  height={22}
-                  onClick={() => {
-                    if (revealPhrase) {
-                      setRevealPhrase(false);
-                      setEncryptedPhrase();
-                    } else {
-                      setIsRevealingPhrase(true);
-                    }
-                  }}
-                />
-              </Tippy>
+              <FontAwesomeIcon
+                className="cursor-pointer unselectable"
+                data-tooltip-id="reveal-phrase-tooltip"
+                icon={revealPhrase ? faEye : faEyeSlash}
+                height={22}
+                onClick={() => {
+                  if (revealPhrase) {
+                    setRevealPhrase(false);
+                    setEncryptedPhrase();
+                  } else {
+                    setIsRevealingPhrase(true);
+                  }
+                }}
+              />
+              {printTooltip(
+                "reveal-phrase-tooltip",
+                revealPhrase ? "Hide" : "Reveal"
+              )}
               <UnlockSeedWalletModal
                 address={seedWallet.address}
                 address_hashed={seedWallet.address_hashed}
@@ -336,13 +353,10 @@ export default function SeedWallet(
                 }}
               />
               {revealPhrase && (
-                <Tippy
-                  content={mnemonicCopied ? "Copied!" : "Copy to clipboard"}
-                  hideOnClick={false}
-                  placement="top"
-                  theme="light">
+                <>
                   <FontAwesomeIcon
                     className="cursor-pointer unselectable"
+                    data-tooltip-id="copy-mnemonic-tooltip"
                     icon={faCopy}
                     height={22}
                     onClick={() => {
@@ -353,7 +367,11 @@ export default function SeedWallet(
                       }, 1500);
                     }}
                   />
-                </Tippy>
+                  {printTooltip(
+                    "copy-mnemonic-tooltip",
+                    mnemonicCopied ? "Copied!" : "Copy to clipboard"
+                  )}
+                </>
               )}
             </span>
           )}
@@ -379,24 +397,24 @@ export default function SeedWallet(
         <Col className="d-flex align-items-center justify-content-between">
           <span>Private Key</span>
           <span className="d-flex gap-3 align-items-center">
-            <Tippy
-              content={revealPrivateKey ? "Hide" : "Reveal"}
-              placement="top"
-              theme="light">
-              <FontAwesomeIcon
-                className="cursor-pointer unselectable"
-                icon={revealPrivateKey ? faEye : faEyeSlash}
-                height={22}
-                onClick={() => {
-                  if (revealPrivateKey) {
-                    setRevealPrivateKey(false);
-                    setEncryptedPrivateKey();
-                  } else {
-                    setIsRevealingPrivateKey(true);
-                  }
-                }}
-              />
-            </Tippy>
+            <FontAwesomeIcon
+              className="cursor-pointer unselectable"
+              data-tooltip-id="reveal-private-key-tooltip"
+              icon={revealPrivateKey ? faEye : faEyeSlash}
+              height={22}
+              onClick={() => {
+                if (revealPrivateKey) {
+                  setRevealPrivateKey(false);
+                  setEncryptedPrivateKey();
+                } else {
+                  setIsRevealingPrivateKey(true);
+                }
+              }}
+            />
+            {printTooltip(
+              "reveal-private-key-tooltip",
+              revealPrivateKey ? "Hide" : "Reveal"
+            )}
             <UnlockSeedWalletModal
               address={seedWallet.address}
               address_hashed={seedWallet.address_hashed}
@@ -414,13 +432,10 @@ export default function SeedWallet(
               }}
             />
             {revealPrivateKey && (
-              <Tippy
-                content={privateKeyCopied ? "Copied!" : "Copy to clipboard"}
-                hideOnClick={false}
-                placement="top"
-                theme="light">
+              <>
                 <FontAwesomeIcon
                   className="cursor-pointer unselectable"
+                  data-tooltip-id="copy-private-key-tooltip"
                   icon={faCopy}
                   height={22}
                   onClick={() => {
@@ -431,7 +446,11 @@ export default function SeedWallet(
                     }, 1500);
                   }}
                 />
-              </Tippy>
+                {printTooltip(
+                  "copy-private-key-tooltip",
+                  privateKeyCopied ? "Copied!" : "Copy to clipboard"
+                )}
+              </>
             )}
           </span>
         </Col>

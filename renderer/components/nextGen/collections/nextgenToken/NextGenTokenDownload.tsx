@@ -112,7 +112,7 @@ export default function NextGenTokenDownload(
       <span className="d-flex gap-3 align-items-center no-wrap">
         <FontAwesomeIcon
           data-tooltip-id={`external-link-${props.token.id}-${quality}`}
-          style={{ cursor: "pointer", height: "24px", width: "24px" }}
+          style={{ cursor: "pointer", height: "20px", width: "20px" }}
           onClick={() => {
             const h = getUrl(props.token, quality);
             openInExternalBrowser(h);
@@ -181,7 +181,7 @@ function NextGenTokenDownloadButton(
         data-tooltip-id={`download-${props.token.id}-${props.quality}`}
         icon={faDownload}
         className={props.class}
-        style={{ cursor: "pointer", height: "24px", width: "24px" }}
+        style={{ cursor: "pointer", height: "20px", width: "20px" }}
         onClick={() => {
           downloader.download(
             getUrl(props.token, props.quality),

@@ -2,22 +2,17 @@
 
 import styles from "./NextGen.module.scss";
 
+import { NextgenView } from "@/enums";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import CollectionsDropdown from "../../collections-dropdown/CollectionsDropdown";
 import { LFGButton } from "../../lfg-slideshow/LFGSlideshow";
 
-export enum NextGenView {
-  COLLECTIONS = "Collections",
-  ARTISTS = "Artists",
-  ABOUT = "About",
-}
-
 export default function NextGenNavigationHeader(
   props: Readonly<{
-    view?: NextGenView | undefined;
-    setView?: (view: NextGenView | undefined) => void;
+    view?: NextgenView | undefined;
+    setView?: (view: NextgenView | undefined) => void;
   }>
 ) {
   const [isMobile, setIsMobile] = useState(false);
@@ -41,7 +36,7 @@ export default function NextGenNavigationHeader(
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  function printView(v: NextGenView | undefined) {
+  function printView(v: NextgenView | undefined) {
     let styles: any = { borderBottom: "1px solid white", cursor: "default" };
     if (!props.setView || (!v && props.view) || (v && v !== props.view)) {
       styles = {};
@@ -85,6 +80,7 @@ export default function NextGenNavigationHeader(
         }}>
         <div className="d-flex align-items-center gap-3 flex-wrap">
           <Image
+            unoptimized
             priority
             width="0"
             height="0"
@@ -114,9 +110,9 @@ export default function NextGenNavigationHeader(
           }`}>
           <span className="d-flex gap-4">
             {printView(undefined)}
-            {printView(NextGenView.COLLECTIONS)}
-            {printView(NextGenView.ARTISTS)}
-            {printView(NextGenView.ABOUT)}
+            {printView(NextgenView.COLLECTIONS)}
+            {printView(NextgenView.ARTISTS)}
+            {printView(NextgenView.ABOUT)}
           </span>
         </div>
       </Container>

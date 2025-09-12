@@ -1,41 +1,81 @@
 "use client";
 
-import styles from "./Auth.module.scss";
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
+import { useModalState } from "@/contexts/ModalStateContext";
+import { ProfileConnectedStatus } from "@/entities/IProfile";
+import {
+  InvalidRoleStateError,
+  MissingActiveProfileError,
+} from "@/errors/authentication";
+import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import { ApiLoginRequest } from "@/generated/models/ApiLoginRequest";
+import { ApiLoginResponse } from "@/generated/models/ApiLoginResponse";
+import { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
+import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
+import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
+import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
+import { useQuery } from "@tanstack/react-query";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Button, Modal } from "react-bootstrap";
 import { Slide, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useSignMessage } from "wagmi";
+import { isAddress } from "viem";
+import { useIdentity } from "../../hooks/useIdentity";
+import {
+  ConnectionMismatchError,
+  MobileSigningError,
+  SigningProviderError,
+  useSecureSign,
+} from "../../hooks/useSecureSign";
 import {
   getAuthJwt,
-  getRefreshToken,
-  getWalletAddress,
-  getWalletRole,
   removeAuthJwt,
   setAuthJwt,
 } from "../../services/auth/auth.utils";
-import { commonApiFetch, commonApiPost } from "../../services/api/common-api";
-import { jwtDecode } from "jwt-decode";
-import { UserRejectedRequestError } from "viem";
-import { ProfileConnectedStatus } from "../../entities/IProfile";
-import { useQuery } from "@tanstack/react-query";
+import { validateAuthImmediate } from "../../services/auth/immediate-validation.utils";
+import { getRole, validateJwt } from "../../services/auth/jwt-validation.utils";
+import {
+  logErrorSecurely,
+  sanitizeErrorForUser,
+} from "../../utils/error-sanitizer";
+import { validateRoleForAuthentication } from "../../utils/role-validation";
+import DotLoader from "../dotLoader/DotLoader";
 import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "../react-query-wrapper/ReactQueryWrapper";
-import { getProfileConnectedStatus } from "../../helpers/ProfileHelpers";
-import { ApiNonceResponse } from "../../generated/models/ApiNonceResponse";
-import { ApiLoginRequest } from "../../generated/models/ApiLoginRequest";
-import { ApiLoginResponse } from "../../generated/models/ApiLoginResponse";
-import { ApiProfileProxy } from "../../generated/models/ApiProfileProxy";
-import { groupProfileProxies } from "../../helpers/profile-proxy.helpers";
-import { Modal, Button } from "react-bootstrap";
-import DotLoader from "../dotLoader/DotLoader";
-import { useModalState } from "../../contexts/ModalStateContext";
+import styles from "./Auth.module.scss";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
-import { ApiRedeemRefreshTokenRequest } from "../../generated/models/ApiRedeemRefreshTokenRequest";
-import { ApiRedeemRefreshTokenResponse } from "../../generated/models/ApiRedeemRefreshTokenResponse";
-import { areEqualAddresses } from "../../helpers/Helpers";
-import { ApiIdentity } from "../../generated/models/ApiIdentity";
+
+// Custom error classes for authentication failures
+class AuthenticationNonceError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = "AuthenticationNonceError";
+  }
+}
+
+class InvalidSignerAddressError extends Error {
+  constructor(signerAddress: string) {
+    super(`Invalid signer address: ${signerAddress}`);
+    this.name = "InvalidSignerAddressError";
+  }
+}
+
+class NonceResponseValidationError extends Error {
+  constructor(message: string, public readonly response?: unknown) {
+    super(message);
+    this.name = "NonceResponseValidationError";
+  }
+}
 
 const AUTH_MODAL = "AuthModal";
 
@@ -89,31 +129,42 @@ export default function Auth({
 }) {
   const { invalidateAll } = useContext(ReactQueryWrapperContext);
 
-  const { address, isConnected, seizeDisconnectAndLogout } =
-    useSeizeConnectContext();
+  const {
+    address,
+    isConnected,
+    seizeDisconnectAndLogout,
+    isSafeWallet,
+    connectionState,
+  } = useSeizeConnectContext();
 
-  const signMessage = useSignMessage();
+  const {
+    signMessage,
+    isSigningPending,
+    reset: resetSigning,
+  } = useSecureSign();
   const [showSignModal, setShowSignModal] = useState(false);
 
-  const [connectedProfile, setConnectedProfile] = useState<ApiIdentity>();
-  const [fetchingProfile, setFetchingProfile] = useState(false);
-
-  useEffect(() => {
-    if (address) {
-      setFetchingProfile(true);
-      commonApiFetch<ApiIdentity>({
-        endpoint: `identities/${address}`,
-      })
-        .then((profile) => {
-          setConnectedProfile(profile);
-        })
-        .finally(() => {
-          setFetchingProfile(false);
-        });
-    } else {
-      setConnectedProfile(undefined);
+  const { profile: connectedProfile, isLoading: fetchingProfile } = useIdentity(
+    {
+      handleOrWallet: address,
+      initialProfile: null,
     }
-  }, [address]);
+  );
+
+  // Race condition prevention: AbortController and operation tracking
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [authLoadingState, setAuthLoadingState] = useState<
+    "idle" | "validating" | "signing"
+  >("idle");
+
+  // Centralized abort mechanism for cancelling in-flight operations
+  const abortCurrentAuthOperation = useCallback(() => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    setAuthLoadingState("idle");
+  }, []);
 
   const { data: profileProxies } = useQuery<ApiProfileProxy[]>({
     queryKey: [
@@ -139,7 +190,7 @@ export default function Auth({
     useState<ApiProfileProxy | null>(null);
 
   useEffect(() => {
-    const role = getRole({ jwt: getAuthJwt() });
+    const role = getRole(getAuthJwt());
 
     if (role) {
       const activeProxy = receivedProfileProxies?.find(
@@ -150,46 +201,179 @@ export default function Auth({
     }
   }, [receivedProfileProxies]);
 
-  function reset() {
+  const reset = useCallback(() => {
     invalidateAll();
     setActiveProfileProxy(null);
     seizeDisconnectAndLogout();
-  }
+  }, [invalidateAll, seizeDisconnectAndLogout]);
 
+  // Comprehensive cleanup effect for unmount and address changes
   useEffect(() => {
-    if (address) {
-      validateJwt({
-        jwt: getAuthJwt(),
-        wallet: address,
-        role: activeProfileProxy?.created_by.id ?? null,
-      }).then((isAuth) => {
-        if (!isAuth) {
-          if (!isConnected) {
-            reset();
-          } else {
-            removeAuthJwt();
-            invalidateAll();
-            setShowSignModal(true);
-          }
-        }
-      });
+    return () => {
+      // Cancel any pending auth operations
+      abortCurrentAuthOperation();
+      // Reset signing state
+      resetSigning();
+    };
+  }, [resetSigning, abortCurrentAuthOperation]);
+
+  // Cleanup when address changes to prevent stale responses
+  useEffect(() => {
+    return () => {
+      abortCurrentAuthOperation();
+    };
+  }, [address, abortCurrentAuthOperation]);
+
+  // Immediate authentication effect with race condition prevention
+  useEffect(() => {
+    // Clear previous operations when dependencies change
+    abortCurrentAuthOperation();
+
+    // Don't start validation during transitional states
+    if (connectionState === "connecting") {
+      return;
     }
-  }, [address, activeProfileProxy]);
+
+    if (!address || connectionState !== "connected") {
+      setShowSignModal(false);
+      return;
+    }
+
+    // Capture current address at validation time to prevent race conditions
+    const currentAddress = address;
+
+    // Generate unique operation ID for this validation attempt
+    const operationId = `auth-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2)}`;
+
+    // IMMEDIATE validation - no setTimeout to prevent timing window vulnerability
+    const validateImmediately = async () => {
+      // Address consistency check - ensure address hasn't changed since effect start
+      if (currentAddress !== address) {
+        // Address changed during setup - abort this operation
+        return;
+      }
+
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      setAuthLoadingState("validating");
+
+      try {
+        const result = await validateAuthImmediate({
+          params: {
+            currentAddress,
+            connectionAddress: address,
+            jwt: getAuthJwt(),
+            activeProfileProxy,
+            isConnected,
+            operationId,
+            abortSignal: abortController.signal,
+          },
+          callbacks: {
+            onShowSignModal: setShowSignModal,
+            onInvalidateCache: invalidateAll,
+            onReset: reset,
+            onRemoveJwt: removeAuthJwt,
+            onLogError: logErrorSecurely,
+          },
+        });
+
+        // If operation was cancelled or address changed, no further action needed
+        if (result.wasCancelled || currentAddress !== address) {
+          return;
+        }
+      } finally {
+        // Clean up only if this is still the current operation
+        if (!abortController.signal.aborted && currentAddress === address) {
+          abortControllerRef.current = null;
+          setAuthLoadingState("idle");
+        }
+      }
+    };
+
+    validateImmediately();
+
+    // No cleanup needed - immediate execution prevents stale timeouts
+  }, [
+    address,
+    activeProfileProxy,
+    connectionState,
+    isConnected,
+    abortCurrentAuthOperation,
+    invalidateAll,
+    reset,
+  ]);
 
   const getNonce = async ({
     signerAddress,
   }: {
     signerAddress: string;
-  }): Promise<ApiNonceResponse | null> => {
+  }): Promise<ApiNonceResponse> => {
+    // Input validation - fail fast on invalid input
+    if (!signerAddress || typeof signerAddress !== "string") {
+      throw new InvalidSignerAddressError(signerAddress);
+    }
+
+    // Use viem's comprehensive address validation
+    // This includes EIP-55 checksum validation and format checking
+    if (!isAddress(signerAddress)) {
+      throw new InvalidSignerAddressError(signerAddress);
+    }
+
     try {
-      return await commonApiFetch<ApiNonceResponse>({
+      const response = await commonApiFetch<ApiNonceResponse>({
         endpoint: "auth/nonce",
         params: {
           signer_address: signerAddress,
         },
       });
-    } catch {
-      return null;
+
+      // Response validation - fail fast on invalid response
+      if (!response) {
+        throw new NonceResponseValidationError(
+          "Nonce API returned null or undefined response"
+        );
+      }
+
+      if (
+        !response.nonce ||
+        typeof response.nonce !== "string" ||
+        response.nonce.trim().length === 0
+      ) {
+        throw new NonceResponseValidationError(
+          "Invalid nonce in API response",
+          response
+        );
+      }
+
+      if (
+        !response.server_signature ||
+        typeof response.server_signature !== "string" ||
+        response.server_signature.trim().length === 0
+      ) {
+        throw new NonceResponseValidationError(
+          "Invalid server_signature in API response",
+          response
+        );
+      }
+
+      // Return valid response - FAIL-FAST: Only returns valid data or throws
+      return response;
+    } catch (error) {
+      // Re-throw our custom errors without modification
+      if (
+        error instanceof NonceResponseValidationError ||
+        error instanceof InvalidSignerAddressError
+      ) {
+        throw error;
+      }
+
+      // Wrap API/network errors in our custom error type
+      throw new AuthenticationNonceError(
+        "Failed to obtain authentication nonce from server",
+        error
+      );
     }
   };
 
@@ -221,17 +405,45 @@ export default function Auth({
     userRejected: boolean;
   }> => {
     try {
-      const signedMessage = await signMessage.signMessageAsync({
-        message,
+      const result = await signMessage(message);
+
+      // Handle specific mobile signing errors
+      if (result.error) {
+        if (result.error instanceof ConnectionMismatchError) {
+          setToast({
+            message:
+              "Wallet address mismatch. Please disconnect and reconnect your wallet.",
+            type: "error",
+          });
+        } else if (result.error instanceof SigningProviderError) {
+          setToast({
+            message:
+              "Wallet provider error. Please reconnect your wallet and try again.",
+            type: "error",
+          });
+        } else if (result.error instanceof MobileSigningError) {
+          // Show mobile-specific error messages
+          setToast({
+            message: result.error.message,
+            type: "error",
+          });
+        }
+      }
+
+      return {
+        signature: result.signature,
+        userRejected: result.userRejected,
+      };
+    } catch (error) {
+      // Fallback error handling with secure logging
+      logErrorSecurely("getSignature", error);
+      setToast({
+        message: sanitizeErrorForUser(error),
+        type: "error",
       });
       return {
-        signature: signedMessage,
-        userRejected: false,
-      };
-    } catch (e) {
-      return {
         signature: null,
-        userRejected: e instanceof UserRejectedRequestError,
+        userRejected: false,
       };
     }
   };
@@ -243,39 +455,27 @@ export default function Auth({
     readonly signerAddress: string;
     readonly role: string | null;
   }): Promise<{ success: boolean }> => {
-    const nonceResponse = await getNonce({ signerAddress });
-    if (!nonceResponse) {
-      setToast({
-        message: "Error requesting authentication, please try again",
-        type: "error",
-      });
-      return { success: false };
-    }
-    const { nonce, server_signature } = nonceResponse;
-    if (!nonce || !server_signature) {
-      setToast({
-        message: "Error requesting authentication, please try again",
-        type: "error",
-      });
-      return { success: false };
-    }
-    const clientSignature = await getSignature({ message: nonce });
-    if (clientSignature.userRejected) {
-      setToast({
-        message: "Authentication rejected",
-        type: "error",
-      });
-      return { success: false };
-    }
-
-    if (!clientSignature.signature) {
-      setToast({
-        message: "Error requesting authentication, please try again",
-        type: "error",
-      });
-      return { success: false };
-    }
     try {
+      const nonceResponse = await getNonce({ signerAddress });
+      const { nonce, server_signature } = nonceResponse;
+
+      const clientSignature = await getSignature({ message: nonce });
+      if (clientSignature.userRejected) {
+        setToast({
+          message: "Authentication rejected",
+          type: "error",
+        });
+        return { success: false };
+      }
+
+      if (!clientSignature.signature) {
+        setToast({
+          message: "Error requesting authentication, please try again",
+          type: "error",
+        });
+        return { success: false };
+      }
+
       const tokenResponse = await commonApiPost<
         ApiLoginRequest,
         ApiLoginResponse
@@ -285,9 +485,9 @@ export default function Auth({
           server_signature,
           client_signature: clientSignature.signature,
           role: role ?? undefined,
-          // is_safe_wallet: false,
-          // client_address: signerAddress,
-        } as ApiLoginRequest,
+          is_safe_wallet: isSafeWallet,
+          client_address: signerAddress,
+        },
       });
       setAuthJwt(
         signerAddress,
@@ -296,130 +496,36 @@ export default function Auth({
         role ?? undefined
       );
       return { success: true };
-    } catch {
-      setToast({
-        message: "Error requesting authentication, please try again",
-        type: "error",
-      });
+    } catch (error) {
+      // Handle specific authentication nonce errors with detailed messages
+      if (error instanceof InvalidSignerAddressError) {
+        setToast({
+          message: "Invalid wallet address format",
+          type: "error",
+        });
+      } else if (error instanceof NonceResponseValidationError) {
+        setToast({
+          message: "Authentication server error, please try again",
+          type: "error",
+        });
+      } else if (error instanceof AuthenticationNonceError) {
+        setToast({
+          message: "Failed to connect to authentication server",
+          type: "error",
+        });
+      } else {
+        // Handle other errors (login API errors, etc.)
+        logErrorSecurely("requestSignIn", error);
+        setToast({
+          message: sanitizeErrorForUser(error),
+          type: "error",
+        });
+      }
       return { success: false };
     }
   };
 
-  const getRole = ({ jwt }: { jwt: string | null }): string | null => {
-    if (!jwt) return null;
-    const decodedJwt = jwtDecode<{
-      id: string;
-      sub: string;
-      iat: number;
-      exp: number;
-      role: string;
-    }>(jwt);
-
-    return decodedJwt.role;
-  };
-
-  const validateJwt = async ({
-    jwt,
-    wallet,
-    role,
-  }: {
-    jwt: string | null;
-    wallet: string;
-    role: string | null;
-  }): Promise<boolean> => {
-    const isValid = doJWTValidation({ jwt, wallet, role });
-
-    if (!isValid) {
-      const refreshToken = getRefreshToken();
-      const walletAddress = getWalletAddress();
-      if (!refreshToken || !walletAddress) {
-        return false;
-      }
-      const redeemResponse = await redeemRefreshTokenWithRetries(
-        walletAddress,
-        refreshToken,
-        role
-      );
-      if (redeemResponse && areEqualAddresses(redeemResponse.address, wallet)) {
-        const walletRole = getWalletRole();
-        const tokenRole = getRole({ jwt });
-        if (
-          (walletRole && tokenRole && tokenRole === walletRole) ||
-          (!walletRole && !tokenRole)
-        ) {
-          setAuthJwt(
-            redeemResponse.address,
-            redeemResponse.token,
-            refreshToken,
-            walletRole ?? undefined
-          );
-          return true;
-        }
-      }
-    }
-
-    return isValid;
-  };
-
-  const doJWTValidation = ({
-    jwt,
-    wallet,
-    role,
-  }: {
-    jwt: string | null;
-    wallet: string;
-    role: string | null;
-  }): boolean => {
-    if (!jwt) return false;
-    const decodedJwt = jwtDecode<{
-      id: string;
-      sub: string;
-      iat: number;
-      exp: number;
-      role: string;
-    }>(jwt);
-    if (role && decodedJwt.role !== role) return false;
-    return (
-      decodedJwt.sub.toLowerCase() === wallet.toLowerCase() &&
-      decodedJwt.exp > Date.now() / 1000
-    );
-  };
-
-  async function redeemRefreshTokenWithRetries(
-    walletAddress: string,
-    refreshToken: string,
-    role: string | null,
-    retryCount = 3
-  ): Promise<ApiRedeemRefreshTokenResponse | null> {
-    let attempt = 0;
-    let lastError: unknown = null;
-
-    while (attempt < retryCount) {
-      attempt++;
-      try {
-        const redeemResponse = await commonApiPost<
-          ApiRedeemRefreshTokenRequest,
-          ApiRedeemRefreshTokenResponse
-        >({
-          endpoint: "auth/redeem-refresh-token",
-          body: {
-            address: walletAddress,
-            token: refreshToken,
-            role: role ?? undefined,
-          },
-        });
-        return redeemResponse;
-      } catch (err) {
-        lastError = err;
-      }
-    }
-
-    console.error(
-      `Refresh token failed after ${retryCount} attempts`,
-      lastError
-    );
-    return null;
-  }
+  // These functions have been moved above to fix initialization order
 
   const requestAuth = async (): Promise<{ success: boolean }> => {
     if (!address) {
@@ -430,24 +536,45 @@ export default function Auth({
       invalidateAll();
       return { success: false };
     }
-    const isAuth = await validateJwt({
-      jwt: getAuthJwt(),
-      wallet: address,
-      role: activeProfileProxy?.created_by.id ?? null,
-    });
-    if (!isAuth) {
-      removeAuthJwt();
-      await requestSignIn({
-        signerAddress: address,
-        role: activeProfileProxy?.created_by.id ?? null,
+
+    // Set loading state for signing
+    setAuthLoadingState("signing");
+
+    try {
+      // Create a new abort controller for this auth request
+      const abortController = new AbortController();
+      const operationId = `manual-auth-${Date.now()}`;
+
+      const { isValid } = await validateJwt({
+        jwt: getAuthJwt(),
+        wallet: address,
+        role: activeProfileProxy
+          ? validateRoleForAuthentication(activeProfileProxy)
+          : null,
+        operationId,
+        abortSignal: abortController.signal,
+        activeProfileProxy,
       });
-      invalidateAll();
+
+      if (!isValid) {
+        removeAuthJwt();
+        await requestSignIn({
+          signerAddress: address,
+          role: activeProfileProxy
+            ? validateRoleForAuthentication(activeProfileProxy)
+            : null,
+        });
+        invalidateAll();
+      }
+
+      const isSuccess = !!getAuthJwt();
+      if (isSuccess) {
+        setShowSignModal(false);
+      }
+      return { success: isSuccess };
+    } finally {
+      setAuthLoadingState("idle");
     }
-    const isSuccess = !!getAuthJwt();
-    if (isSuccess) {
-      setShowSignModal(false);
-    }
-    return { success: isSuccess };
   };
 
   const onActiveProfileProxy = async (
@@ -459,35 +586,46 @@ export default function Auth({
       return;
     }
 
-    const { success } = await requestSignIn({
-      signerAddress: address,
-      role: profileProxy?.created_by.id ?? null,
-    });
-    if (success) {
-      setActiveProfileProxy(profileProxy);
+    try {
+      const { success } = await requestSignIn({
+        signerAddress: address,
+        role: profileProxy ? validateRoleForAuthentication(profileProxy) : null,
+      });
+      if (success) {
+        setActiveProfileProxy(profileProxy);
+      }
+    } catch (error) {
+      // Handle InvalidRoleStateError specifically
+      if (error instanceof InvalidRoleStateError) {
+        logErrorSecurely("onActiveProfileProxy_invalid_role_state", error);
+        setToast({
+          message: "Invalid profile role state. Please select a valid profile.",
+          type: "error",
+        });
+        // Reset to null state to force user to select valid profile
+        setActiveProfileProxy(null);
+        return;
+      }
+
+      // Handle MissingActiveProfileError
+      if (error instanceof MissingActiveProfileError) {
+        logErrorSecurely("onActiveProfileProxy_missing_profile", error);
+        setToast({
+          message: "Profile authentication failed. Please select a profile.",
+          type: "error",
+        });
+        setActiveProfileProxy(null);
+        return;
+      }
+
+      // Re-throw other errors to be handled by calling code
+      throw error;
     }
   };
 
-  const getShowWaves = (): boolean => {
-    if (!connectedProfile?.handle) {
-      return false;
-    }
-
-    if (activeProfileProxy) {
-      return false;
-    }
-
-    if (!address) {
-      return false;
-    }
-    return true;
-  };
-
-  const [showWaves, setShowWaves] = useState(getShowWaves());
-
-  useEffect(() => {
-    setShowWaves(getShowWaves());
-  }, [connectedProfile, activeProfileProxy, address]);
+  const showWaves = useMemo(() => {
+    return !!connectedProfile?.handle && !activeProfileProxy && !!address;
+  }, [connectedProfile?.handle, activeProfileProxy, address]);
 
   const { isTopModal, addModal, removeModal } = useModalState();
 
@@ -501,6 +639,15 @@ export default function Auth({
       removeModal(AUTH_MODAL);
     };
   }, [showSignModal]);
+
+  // Computed modal visibility to prevent flickering during rapid state changes
+  const shouldShowSignModal = useMemo(() => {
+    return (
+      showSignModal &&
+      authLoadingState !== "validating" &&
+      connectionState === "connected"
+    );
+  }, [showSignModal, authLoadingState, connectionState]);
 
   return (
     <AuthContext.Provider
@@ -520,8 +667,13 @@ export default function Auth({
       }}>
       {children}
       <Modal
-        show={showSignModal}
-        onHide={() => setShowSignModal(false)}
+        show={shouldShowSignModal}
+        onHide={() => {
+          // Only allow modal dismissal when not actively validating
+          if (authLoadingState !== "validating") {
+            setShowSignModal(false);
+          }
+        }}
         backdrop="static"
         keyboard={false}
         centered
@@ -534,6 +686,7 @@ export default function Auth({
             To connect your wallet, you will need to sign a message to confirm
             your identity.
           </p>
+
           <ul className="font-lighter">
             <li className="mt-1 mb-1">
               This signature will be used to generate a secure token (JWT) to
@@ -557,8 +710,8 @@ export default function Auth({
           <Button
             variant="primary"
             onClick={() => requestAuth()}
-            disabled={signMessage.isPending}>
-            {signMessage.isPending ? (
+            disabled={isSigningPending}>
+            {isSigningPending ? (
               <>
                 Confirm in your wallet <DotLoader />
               </>

@@ -1,14 +1,34 @@
-import React from "react";
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import {
   getInitialRouterValues,
-  printSortButtons,
   printNftContent,
-} from "../../../components/memelab/MemeLab";
-import { MemeLabSort } from "../../../enums";
-import { VolumeType, LabNFT, LabExtendedData } from "../../../entities/INFT";
-import { NextRouter } from "next/router";
+  printSortButtons,
+} from "@/components/memelab/MemeLab";
+import { LabExtendedData, LabNFT, VolumeType } from "@/entities/INFT";
+import { SortDirection } from "@/entities/ISort";
+import { MemeLabSort } from "@/enums";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+
+// Mock helper functions
+jest.mock("@/helpers/Helpers", () => ({
+  printMintDate: jest.fn((date: Date | string) => {
+    if (!date) return "-";
+    return "Jan 1, 2023 (1 year ago)";
+  }),
+  numberWithCommas: jest.fn((num: number) => num.toLocaleString()),
+  getValuesForVolumeType: jest.fn((volumeType: VolumeType, nft: any) => {
+    switch (volumeType) {
+      case VolumeType.HOURS_24:
+        return nft.total_volume_last_24_hours || 0;
+      case VolumeType.DAYS_7:
+        return nft.total_volume_last_7_days || 0;
+      case VolumeType.DAYS_30:
+        return nft.total_volume_last_1_month || 0;
+      default:
+        return nft.total_volume || 0;
+    }
+  }),
+}));
 
 jest.mock("next/link", () => ({
   __esModule: true,
@@ -74,21 +94,21 @@ const nftMeta: LabExtendedData = {
 
 describe("MemeLab utilities", () => {
   it("parses router query for initial values", () => {
-    const router = {
-      query: { sort: 'hodlers', sort_dir: "DESC" },
-    } as unknown as NextRouter;
-    const { initialSortDir, initialSort } = getInitialRouterValues(router);
+    const { initialSortDir, initialSort } = getInitialRouterValues(
+      "desc",
+      "collectors"
+    );
     expect(initialSort).toBe(MemeLabSort.HODLERS);
-    expect(initialSortDir).toBe("DESC");
+    expect(initialSortDir).toBe(SortDirection.DESC);
   });
 
   it("falls back to defaults for invalid router values", () => {
-    const router = {
-      query: { sort: "bad", sort_dir: "bad" },
-    } as unknown as NextRouter;
-    const { initialSortDir, initialSort } = getInitialRouterValues(router);
+    const { initialSortDir, initialSort } = getInitialRouterValues(
+      "bad",
+      "bad"
+    );
     expect(initialSort).toBe(MemeLabSort.AGE);
-    expect(initialSortDir).toBe("ASC");
+    expect(initialSortDir).toBe(SortDirection.ASC);
   });
 
   it("renders sort buttons and triggers callbacks", async () => {

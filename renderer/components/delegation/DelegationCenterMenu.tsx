@@ -1,45 +1,29 @@
 "use client";
 
-import styles from "./Delegation.module.scss";
-import { Container, Row, Col, Toast, ToastContainer } from "react-bootstrap";
-import { useState, useEffect, useRef } from "react";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { DELEGATION_CONTRACT } from "@/constants";
+import { DelegationCenterSection } from "@/enums";
 import Image from "next/image";
-import { DELEGATION_CONTRACT } from "../../constants";
-import { sepolia } from "wagmi/chains";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { Col, Container, Row, Toast, ToastContainer } from "react-bootstrap";
 import { useEnsName } from "wagmi";
+import { sepolia } from "wagmi/chains";
+import CollectionDelegationComponent from "./CollectionDelegation";
+import styles from "./Delegation.module.scss";
+import DelegationCenterComponent from "./DelegationCenter";
+import NewAssignPrimaryAddress from "./NewAssignPrimaryAddress";
+import NewConsolidationComponent from "./NewConsolidation";
+import NewDelegationComponent from "./NewDelegation";
+import NewSubDelegationComponent from "./NewSubDelegation";
 import {
   ANY_COLLECTION,
   GRADIENTS_COLLECTION,
   MEMES_COLLECTION,
   MEME_LAB_COLLECTION,
-} from "../../pages/delegation/[...section]";
-import DelegationCenterComponent from "./DelegationCenter";
-import CollectionDelegationComponent from "./CollectionDelegation";
-import NewConsolidationComponent from "./NewConsolidation";
-import NewDelegationComponent from "./NewDelegation";
-import NewSubDelegationComponent from "./NewSubDelegation";
+} from "./delegation-constants";
 import DelegationHTML from "./html/DelegationHTML";
 import WalletCheckerComponent from "./walletChecker/WalletChecker";
-import { useRouter } from "next/router";
-import NewAssignPrimaryAddress from "./NewAssignPrimaryAddress";
-import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
-
-export enum DelegationCenterSection {
-  CENTER = "delegation-center",
-  REGISTER_DELEGATION = "register-delegation",
-  REGISTER_SUB_DELEGATION = "register-sub-delegation",
-  REGISTER_CONSOLIDATION = "register-consolidation",
-  ASSIGN_PRIMARY_ADDRESS = "assign-primary-address",
-  ANY_COLLECTION = "any-collection",
-  MEMES_COLLECTION = "the-memes",
-  MEME_LAB_COLLECTION = "meme-lab",
-  GRADIENTS_COLLECTION = "6529-gradient",
-  WALLET_ARCHITECTURE = "wallet-architecture",
-  FAQ = "delegation-faq",
-  CONSOLIDATION_USE_CASES = "consolidation-use-cases",
-  CHECKER = "wallet-checker",
-  HTML = "html",
-}
 
 interface Props {
   section: DelegationCenterSection;
@@ -54,7 +38,7 @@ interface Props {
 }
 
 export default function DelegationCenterMenu(props: Readonly<Props>) {
-  const router = useRouter();
+  const pathname = usePathname();
   const accountResolution = useSeizeConnectContext();
   const ensResolution = useEnsName({
     address: accountResolution.address as `0x${string}`,
@@ -231,7 +215,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                   props.section === DelegationCenterSection.CENTER
                     ? styles.menuLeftItemActive
                     : ""
-                }`}>
+                }`}
+              >
                 Delegation Center
               </Col>
             </Row>
@@ -246,7 +231,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                   props.section === DelegationCenterSection.WALLET_ARCHITECTURE
                     ? styles.menuLeftItemActive
                     : ""
-                }`}>
+                }`}
+              >
                 Wallet Architecture
               </Col>
             </Row>
@@ -258,10 +244,11 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                 className={`${styles.menuLeftItem} ${
                   props.section === DelegationCenterSection.FAQ ||
                   (props.section === DelegationCenterSection.HTML &&
-                    router.asPath.startsWith("/delegation/delegation-faq/"))
+                    pathname?.startsWith("/delegation/delegation-faq/"))
                     ? styles.menuLeftItemActive
                     : ""
-                }`}>
+                }`}
+              >
                 Delegation FAQs
               </Col>
             </Row>
@@ -277,7 +264,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                   DelegationCenterSection.CONSOLIDATION_USE_CASES
                     ? styles.menuLeftItemActive
                     : ""
-                }`}>
+                }`}
+              >
                 Consolidation Use Cases
               </Col>
             </Row>
@@ -290,13 +278,9 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                   props.section === DelegationCenterSection.CHECKER
                     ? styles.menuLeftItemActive
                     : ""
-                }`}>
+                }`}
+              >
                 Wallet Checker
-              </Col>
-            </Row>
-            <Row className="pt-4 pb-2">
-              <Col>
-                <NFTDelegationLink />
               </Col>
             </Row>
             <Row className="pt-2 pb-2">
@@ -328,7 +312,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                         props.section === DelegationCenterSection.CENTER
                           ? styles.menuLeftItemActive
                           : ""
-                      }`}>
+                      }`}
+                    >
                       Delegation Center
                     </Col>
                   </Row>
@@ -344,7 +329,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                         DelegationCenterSection.WALLET_ARCHITECTURE
                           ? styles.menuLeftItemActive
                           : ""
-                      }`}>
+                      }`}
+                    >
                       Wallet Architecture
                     </Col>
                   </Row>
@@ -357,7 +343,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                         props.section === DelegationCenterSection.FAQ
                           ? styles.menuLeftItemActive
                           : ""
-                      }`}>
+                      }`}
+                    >
                       Delegation FAQs
                     </Col>
                   </Row>
@@ -373,7 +360,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                         DelegationCenterSection.CONSOLIDATION_USE_CASES
                           ? styles.menuLeftItemActive
                           : ""
-                      }`}>
+                      }`}
+                    >
                       Consolidation Use Cases
                     </Col>
                   </Row>
@@ -386,7 +374,8 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
                         props.section === DelegationCenterSection.CHECKER
                           ? styles.menuLeftItemActive
                           : ""
-                      }`}>
+                      }`}
+                    >
                       Wallet Checker
                     </Col>
                   </Row>
@@ -394,11 +383,6 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
               </Col>
               <Col>
                 <Container className="no-padding">
-                  <Row className="pt-2 pb-2">
-                    <Col>
-                      <NFTDelegationLink />
-                    </Col>
-                  </Row>
                   <Row className="pt-2 pb-2">
                     <Col>
                       <EtherscanLink />
@@ -427,24 +411,6 @@ export default function DelegationCenterMenu(props: Readonly<Props>) {
   );
 }
 
-function NFTDelegationLink() {
-  return (
-    <a
-      href="https://nftdelegation.com/"
-      target="_blank"
-      rel="noreferrer"
-      className={styles.delegationLink}>
-      <Image
-        src="/nftdelegation.jpg"
-        alt="nftdelegation"
-        width={30}
-        height={30}
-      />
-      <span>NFTDelegation.com</span>
-    </a>
-  );
-}
-
 function EtherscanLink() {
   return (
     <a
@@ -455,8 +421,15 @@ function EtherscanLink() {
       }
       target="_blank"
       rel="noreferrer"
-      className={styles.delegationLink}>
-      <Image src="/etherscan_w.png" alt="etherscan" width={30} height={30} />
+      className={styles.delegationLink}
+    >
+      <Image
+        unoptimized
+        src="/etherscan_w.png"
+        alt="etherscan"
+        width={30}
+        height={30}
+      />
       <span>Etherscan</span>
     </a>
   );
@@ -468,8 +441,15 @@ function GithubLink() {
       href={`https://github.com/6529-Collections/nftdelegation`}
       target="_blank"
       rel="noreferrer"
-      className={styles.delegationLink}>
-      <Image src="/github_w.png" alt="github" width={30} height={30} />
+      className={styles.delegationLink}
+    >
+      <Image
+        unoptimized
+        src="/github_w.png"
+        alt="github"
+        width={30}
+        height={30}
+      />
       <span>Github</span>
     </a>
   );
@@ -490,11 +470,13 @@ export function DelegationToast(
         if (!props.toastRef.current?.contains(e.target as Node)) {
           props.setShowToast(false);
         }
-      }}>
+      }}
+    >
       <ToastContainer
         position={"top-center"}
         className={styles.toast}
-        ref={props.toastRef}>
+        ref={props.toastRef}
+      >
         <Toast onClose={() => props.setShowToast(false)} show={props.showToast}>
           <Toast.Header>
             <span className="me-auto">{props.toast.title}</span>
@@ -503,7 +485,8 @@ export function DelegationToast(
             <Toast.Body
               dangerouslySetInnerHTML={{
                 __html: props.toast.message,
-              }}></Toast.Body>
+              }}
+            ></Toast.Body>
           )}
         </Toast>
       </ToastContainer>

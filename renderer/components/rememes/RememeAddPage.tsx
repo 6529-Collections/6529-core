@@ -189,6 +189,7 @@ export default function RememeAddPage() {
             <Row className="pt-2 pb-2">
               <Col sm={12} md={4} className="d-flex align-items-center gap-2">
                 <Image
+                  unoptimized
                   loading={"eager"}
                   width="0"
                   height="0"

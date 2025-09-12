@@ -112,3 +112,76 @@ export enum LeaderboardFocus {
   TDH = "Cards Collected",
   INTERACTIONS = "Interactions",
 }
+
+export enum NextgenView {
+  COLLECTIONS = "Collections",
+  ARTISTS = "Artists",
+  ABOUT = "About",
+}
+
+export enum NextgenCollectionView {
+  ABOUT = "About",
+  PROVENANCE = "Provenance",
+  DISPLAY_CENTER = "Display Center",
+  RARITY = "Rarity",
+  OVERVIEW = "Overview",
+  TOP_TRAIT_SETS = "Trait Sets",
+}
+
+export enum DelegationCenterSection {
+  CENTER = "delegation-center",
+  REGISTER_DELEGATION = "register-delegation",
+  REGISTER_SUB_DELEGATION = "register-sub-delegation",
+  REGISTER_CONSOLIDATION = "register-consolidation",
+  ASSIGN_PRIMARY_ADDRESS = "assign-primary-address",
+  ANY_COLLECTION = "any-collection",
+  MEMES_COLLECTION = "the-memes",
+  MEME_LAB_COLLECTION = "meme-lab",
+  GRADIENTS_COLLECTION = "6529-gradient",
+  WALLET_ARCHITECTURE = "wallet-architecture",
+  FAQ = "delegation-faq",
+  CONSOLIDATION_USE_CASES = "consolidation-use-cases",
+  CHECKER = "wallet-checker",
+  HTML = "html",
+}
+
+export enum ProfileActivityLogType {
+  RATING_EDIT = "RATING_EDIT",
+  HANDLE_EDIT = "HANDLE_EDIT",
+  CLASSIFICATION_EDIT = "CLASSIFICATION_EDIT",
+  SOCIALS_EDIT = "SOCIALS_EDIT",
+  CONTACTS_EDIT = "CONTACTS_EDIT",
+  SOCIAL_VERIFICATION_POST_EDIT = "SOCIAL_VERIFICATION_POST_EDIT",
+  NFT_ACCOUNTS_EDIT = "NFT_ACCOUNTS_EDIT",
+  GENERAL_CIC_STATEMENT_EDIT = "GENERAL_CIC_STATEMENT_EDIT",
+  BANNER_1_EDIT = "BANNER_1_EDIT",
+  BANNER_2_EDIT = "BANNER_2_EDIT",
+  PFP_EDIT = "PFP_EDIT",
+  PROFILE_ARCHIVED = "PROFILE_ARCHIVED",
+  PROXY_CREATED = "PROXY_CREATED",
+  PROXY_ACTION_CREATED = "PROXY_ACTION_CREATED",
+  PROXY_ACTION_STATE_CHANGED = "PROXY_ACTION_STATE_CHANGED",
+  PROXY_ACTION_CHANGED = "PROXY_ACTION_CHANGED",
+  DROP_COMMENT = "DROP_COMMENT",
+  DROP_RATING_EDIT = "DROP_RATING_EDIT",
+  DROP_CREATED = "DROP_CREATED",
+  PROXY_DROP_RATING_EDIT = "PROXY_DROP_RATING_EDIT",
+}
+
+export enum RateMatter {
+  NIC = "NIC",
+  REP = "REP",
+  DROP_REP = "DROP_REP",
+}
+
+export enum ProfileRatersTableType {
+  CIC_RECEIVED = "CIC_RECEIVED",
+  CIC_GIVEN = "CIC_GIVEN",
+  REP_RECEIVED = "REP_RECEIVED",
+  REP_GIVEN = "REP_GIVEN",
+}
+
+export enum ProfileRatersParamsOrderBy {
+  RATING = "RATING",
+  LAST_MODIFIED = "LAST_MODIFIED",
+}

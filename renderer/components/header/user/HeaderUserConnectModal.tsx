@@ -1,15 +1,14 @@
 "use client";
 
-import styles from "./HeaderUser.module.scss";
-import React, { useEffect, useState } from "react";
-import { Modal, Button, Accordion } from "react-bootstrap";
-import { Connector, CreateConnectorFn, useConnect, useConnectors } from "wagmi";
+import { useAppKit } from "@reown/appkit/react";
 import Image from "next/image";
-import { walletConnect } from "wagmi/connectors";
-import { CW_PROJECT_ID } from "../../../constants";
-import { isElectron } from "../../../helpers";
 import Link from "next/link";
+import { useEffect, useState } from "react";
+import { Accordion, Button, Modal } from "react-bootstrap";
+import { Connector, useConnect, useConnectors } from "wagmi";
+import { isElectron } from "../../../helpers";
 import { formatAddress } from "../../../helpers/Helpers";
+import styles from "./HeaderUser.module.scss";
 
 interface HeaderUserConnectModalProps {
   show: boolean;
@@ -20,7 +19,9 @@ export default function HeaderUserConnectModal({
   show,
   onHide,
 }: Readonly<HeaderUserConnectModalProps>) {
-  const connectors = useConnectors().filter((c) => c.id !== "w3mAuth");
+  const connectors = useConnectors()
+    .filter((c) => c.id !== "w3mAuth" && c.id != "injected")
+    .filter((c) => c.id !== "injected");
 
   const isBrowser = !isElectron();
 
@@ -112,7 +113,7 @@ export default function HeaderUserConnectModal({
                     {seedConnectors().length === 0 && (
                       <div className="text-center">
                         <p>
-                          Create or import a seed wallet in Seed Wallets Page
+                          Create or import a seed wallet in Core Wallets Page
                           under Network tab
                           <br />
                           <Link
@@ -189,25 +190,25 @@ function ConnectorSelector(
     selected(): void;
   }>
 ) {
-  const { connect, error } = useConnect();
+  const { connectAsync, error } = useConnect();
+  const { open } = useAppKit();
 
   useEffect(() => {
     if (error) {
-      alert("something went wrong");
+      alert("Something went wrong");
       console.log("error", error);
     }
   }, [error]);
 
   const onConnect = () => {
-    let c: Connector | CreateConnectorFn = props.connector;
-    if (c.type === "walletConnect") {
-      c = walletConnect({
-        projectId: CW_PROJECT_ID,
+    const connector = props.connector;
+    if (connector.type === "walletConnect") {
+      open({ view: "ConnectingWalletConnectBasic" });
+    } else {
+      connectAsync({
+        connector: props.connector,
       });
     }
-    connect({
-      connector: c,
-    });
     props.selected();
   };
 

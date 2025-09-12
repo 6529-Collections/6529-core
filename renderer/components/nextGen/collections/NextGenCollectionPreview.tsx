@@ -1,9 +1,10 @@
-import styles from "./NextGen.module.scss";
-import { Container, Row, Col } from "react-bootstrap";
-import { NextGenCollection } from "../../../entities/INextgen";
 import Image from "next/image";
-import { NextGenMintCounts } from "./collectionParts/NextGenCollectionHeader";
+import Link from "next/link";
+import { Col, Container, Row } from "react-bootstrap";
+import { NextGenCollection } from "../../../entities/INextgen";
 import { formatNameForUrl } from "../nextgen_helpers";
+import { NextGenMintCounts } from "./collectionParts/NextGenCollectionHeader";
+import styles from "./NextGen.module.scss";
 
 interface Props {
   collection: NextGenCollection;
@@ -11,13 +12,15 @@ interface Props {
 
 export default function NextGenCollectionPreview(props: Readonly<Props>) {
   return (
-    <a
+    <Link
       href={`/nextgen/collection/${formatNameForUrl(props.collection.name)}`}
-      className="decoration-none">
+      className="decoration-none"
+    >
       <Container className={styles.collectionPreview}>
         <Row>
           <Col className="pb-4">
             <Image
+              unoptimized
               priority
               loading={"eager"}
               width="0"
@@ -59,6 +62,6 @@ export default function NextGenCollectionPreview(props: Readonly<Props>) {
           </Col>
         </Row>
       </Container>
-    </a>
+    </Link>
   );
 }

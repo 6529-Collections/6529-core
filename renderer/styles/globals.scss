@@ -44,7 +44,7 @@
       touch-action: manipulation;
       -khtml-user-select: none;
       -o-user-select: none;
-      
+
       /* Additional Android-specific properties */
       -webkit-user-drag: none;
       -webkit-user-modify: read-only;
@@ -66,18 +66,36 @@
   .drops-custom-selection {
     /* Default cursor for the container */
     cursor: default;
-    
+
     /* Text cursor only on actual text content elements */
-    p, h1, h2, h3, h4, h5, h6, li, code, 
-    span.tw-align-middle, span.emoji-text-node,
+    p,
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    li,
+    code,
+    span.tw-align-middle,
+    span.emoji-text-node,
     span:not(.emoji-node):not(.emoji-node-big) {
       cursor: text;
     }
-    
+
     /* Override text cursor for excluded elements */
     [data-text-selection-exclude="true"] {
-      p, h1, h2, h3, h4, h5, h6, li, code, 
-      span.tw-align-middle, span.emoji-text-node,
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      li,
+      code,
+      span.tw-align-middle,
+      span.emoji-text-node,
       span:not(.emoji-node):not(.emoji-node-big) {
         cursor: pointer !important;
         user-select: none !important;
@@ -86,9 +104,13 @@
         -ms-user-select: none !important;
       }
     }
-    
+
     /* Ensure links and buttons remain clickable and allow selection in them */
-    a, button, input, textarea, select {
+    a,
+    button,
+    input,
+    textarea,
+    select {
       cursor: pointer !important;
       user-select: auto;
       -webkit-user-select: auto;
@@ -157,7 +179,7 @@ code {
 a {
   outline: 0 !important;
   text-decoration: underline;
-  color: variables.$font-color;
+  color: variables.$font-color !important;
 }
 
 a:hover {
@@ -266,7 +288,7 @@ h5:not(.tailwind-scope h5) {
 }
 
 .no-padding {
-  padding: 0;
+  padding: 0 !important;
 }
 
 #walletconnect-wrapper {
@@ -744,4 +766,23 @@ pre code {
   font-size: 3em;
   line-height: 1.2em;
   vertical-align: middle;
+}
+
+/* Drop Content Wrapper Utilities */
+.drop-content-container {
+  position: relative;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.drop-content-container.should-truncate:not(.expanded) {
+  max-height: 1000px;
+}
+
+.drop-expand-button {
+  display: none;
+}
+
+.drop-content-container.should-truncate .drop-expand-button {
+  display: flex;
 }

@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { useSearch } from "../../../contexts/SearchContext";
+import { useSearch } from "@/contexts/SearchContext";
 import {
-  faArrowUp,
   faArrowDown,
+  faArrowUp,
   faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useRef } from "react";
 
 export default function SearchBar() {
   const { isOpen, open, close, query, setQuery, total, current, next, prev } =

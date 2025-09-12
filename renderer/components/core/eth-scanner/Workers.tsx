@@ -1,29 +1,9 @@
 "use client";
 
-import styles from "./ETHScanner.module.scss";
-import {
-  Container,
-  Row,
-  Col,
-  Button,
-  Form,
-  InputGroup,
-  ProgressBar,
-  Modal,
-} from "react-bootstrap";
-import { RPCProvider } from "./RpcProviders";
-import {
-  ScheduledWorkerNames,
-  ScheduledWorkerStatus,
-  TRANSACTIONS_START_BLOCK,
-} from "@/shared/types";
-import useIsMobileScreen from "@/hooks/isMobileScreen";
-import CircleLoader from "@/components/distribution-plan-tool/common/CircleLoader";
-import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Tippy from "@tippyjs/react";
-import { useState } from "react";
 import Confirm from "@/components/confirm/Confirm";
+import LogsViewer from "@/components/core/logs-viewer/LogsViewer";
+import CircleLoader from "@/components/distribution-plan-tool/common/CircleLoader";
+import { useToast } from "@/contexts/ToastContext";
 import {
   manualStartWorker,
   recalculateTransactionsOwners,
@@ -31,8 +11,26 @@ import {
   resetWorker,
   stopWorker,
 } from "@/electron";
-import { useToast } from "@/contexts/ToastContext";
-import LogsViewer from "@/components/core/logs-viewer/LogsViewer";
+import useIsMobileScreen from "@/hooks/isMobileScreen";
+import {
+  ScheduledWorkerNames,
+  ScheduledWorkerStatus,
+  TRANSACTIONS_START_BLOCK,
+} from "@/shared/types";
+import { useState } from "react";
+import {
+  Button,
+  Col,
+  Container,
+  Form,
+  InputGroup,
+  Modal,
+  ProgressBar,
+  Row,
+} from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import styles from "./ETHScanner.module.scss";
+import { RPCProvider } from "./RpcProviders";
 import TransactionsLocalData from "./TransactionsLocalData";
 
 export interface Task {
@@ -322,20 +320,23 @@ export function WorkerCard({
   };
 
   function advancedOptionsContent() {
-    const infoButton = (content: any) => (
-      <Tippy
-        delay={500}
-        placement="bottom"
-        theme="light"
-        trigger="mouseenter"
-        content={
-          <span className="d-flex align-items-center gap-1">
-            <FontAwesomeIcon icon={faInfoCircle} height={15} />
-            Click for more info
-          </span>
-        }>
+    const infoButton = (id: string, content: any) => (
+      <>
         {content}
-      </Tippy>
+        <Tooltip
+          id={id}
+          style={{
+            backgroundColor: "#1F2937",
+            color: "white",
+            padding: "4px 8px",
+          }}
+          delayShow={150}
+          place={"bottom"}
+          openEvents={{ mouseenter: true }}
+          closeEvents={{ mouseleave: true, blur: true, click: true }}>
+          Click for more info
+        </Tooltip>
+      </>
     );
 
     if (task.namespace === ScheduledWorkerNames.TDH_WORKER) {
@@ -344,8 +345,10 @@ export function WorkerCard({
           <Row>
             <Col className="d-flex gap-3 align-items-center">
               {infoButton(
+                "recalculate-tdh-now-tooltip",
                 <Button
                   variant="light"
+                  data-tooltip-id="recalculate-tdh-now-tooltip"
                   onClick={() => setShowRunNowConfirm(true)}
                   disabled={
                     task.status?.status === ScheduledWorkerStatus.RUNNING
@@ -365,23 +368,29 @@ export function WorkerCard({
           <Col className="d-flex gap-3 align-items-center">
             {task.status?.status === ScheduledWorkerStatus.RUNNING
               ? infoButton(
+                  "stop-worker-tooltip",
                   <Button
                     variant="light"
+                    data-tooltip-id="stop-worker-tooltip"
                     onClick={() => setShowStopWorkerConfirm(true)}>
                     Stop
                   </Button>
                 )
               : infoButton(
+                  "run-now-tooltip",
                   <Button
                     variant="light"
+                    data-tooltip-id="run-now-tooltip"
                     onClick={() => setShowRunNowConfirm(true)}>
                     Run Now
                   </Button>
                 )}
             {task.resetable &&
               infoButton(
+                "reset-worker-tooltip",
                 <Button
                   variant="light"
+                  data-tooltip-id="reset-worker-tooltip"
                   disabled={
                     task.status?.status === ScheduledWorkerStatus.RUNNING
                   }
@@ -397,22 +406,26 @@ export function WorkerCard({
               )}
             {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
               infoButton(
+                "recalculate-owners-tooltip",
                 <Button
                   disabled={
                     task.status?.status === ScheduledWorkerStatus.RUNNING
                   }
                   variant="light"
+                  data-tooltip-id="recalculate-owners-tooltip"
                   onClick={() => setShowRecalculateOwnersConfirm(true)}>
                   Recalculate Owners
                 </Button>
               )}
             {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
               infoButton(
+                "reset-to-block-tooltip",
                 <Button
                   disabled={
                     task.status?.status === ScheduledWorkerStatus.RUNNING
                   }
                   variant="light"
+                  data-tooltip-id="reset-to-block-tooltip"
                   style={{ borderLeft: "2px solid #ced4da" }}
                   onClick={() => setShowResetToBlockConfirm(true)}>
                   Reset
@@ -567,9 +580,9 @@ function ResetToBlockConfirm({
   const [block, setBlock] = useState("");
   return (
     <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <Modal.Header className={styles.modalHeader}>
+      <div className={styles.modalHeader}>
         <Modal.Title>Reset to block</Modal.Title>
-      </Modal.Header>
+      </div>
       <Modal.Body className={styles.modalContent}>
         <p className="mt-2 mb-2">
           Roll back to a specific block number. All transactions after this

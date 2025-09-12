@@ -1,7 +1,7 @@
-import { Col, Container, Row } from "react-bootstrap";
-import Image from "next/image";
 import { AboutSection } from "@/enums";
+import Image from "next/image";
 import Link from "next/link";
+import { Col, Container, Row } from "react-bootstrap";
 
 export default function AboutMemes() {
   return (
@@ -17,6 +17,7 @@ export default function AboutMemes() {
       <Row className="pt-2 pb-2">
         <Col className="pt-3 pb-3 text-center">
           <Image
+            unoptimized
             loading="eager"
             priority
             width="0"
