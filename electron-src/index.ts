@@ -269,6 +269,7 @@ function createSplash() {
     transparent: true,
     webPreferences: {
       preload: path.join(__dirname, "preload-splash.js"),
+      additionalArguments: [`--app-version=${app.getVersion()}`],
     },
   });
   const splashPath = path.join(__dirname, "assets", "splash.html");

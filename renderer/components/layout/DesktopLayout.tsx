@@ -1,6 +1,7 @@
 "use client";
 
 import { useSearch } from "@/contexts/SearchContext";
+import { isElectron } from "@/helpers";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ReactNode, useCallback } from "react";
@@ -30,6 +31,8 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
   const isStreamView = pathname?.startsWith("/my-stream");
   const { containerRef: searchContainerRef } = useSearch();
 
+  const hideHeader = !isElectron();
+
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
       registerRef("header", node);
@@ -45,7 +48,7 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
         className={`${
           isStreamView ? "tw-sticky tw-top-0 tw-z-50 tw-bg-black" : ""
         }`}>
-        <Header isSmall={isSmall} />
+        {!hideHeader && <Header isSmall={isSmall} />}
         {!isHomePage && <Breadcrumb breadcrumbs={breadcrumbs} />}
       </div>
       <main ref={searchContainerRef}>{children}</main>
