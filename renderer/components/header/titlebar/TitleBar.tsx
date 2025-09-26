@@ -1,6 +1,7 @@
 "use client";
 
 import ConfirmClose from "@/components/confirm/ConfirmClose";
+import { useGlobalRefresh } from "@/contexts/RefreshContext";
 import { useSearch } from "@/contexts/SearchContext";
 import { SEIZE_URL } from "@/electron-constants";
 import {
@@ -31,6 +32,7 @@ export default function TitleBar() {
   const router = useRouter();
   const pathname = usePathname();
   const { isOpen, open, close } = useSearch();
+  const { globalRefresh } = useGlobalRefresh();
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -121,7 +123,7 @@ export default function TitleBar() {
   const handleRefresh = () => {
     if (!navigationLoading) {
       setNavigationLoading(true);
-      router.refresh();
+      globalRefresh();
     }
   };
 

@@ -179,7 +179,7 @@ code {
 a {
   outline: 0 !important;
   text-decoration: underline;
-  color: variables.$font-color !important;
+  color: variables.$font-color;
 }
 
 a:hover {

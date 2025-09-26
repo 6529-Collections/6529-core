@@ -1,7 +1,9 @@
 "use client";
 
+import { RefreshProvider } from "@/contexts/RefreshContext";
 import { useSearch } from "@/contexts/SearchContext";
 import { isElectron } from "@/helpers";
+import TitleBarWrapper from "@/TitleBarWrapper";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ReactNode, useCallback } from "react";
@@ -51,7 +53,10 @@ const DesktopLayout = ({ children, isSmall }: DesktopLayoutProps) => {
         {!hideHeader && <Header isSmall={isSmall} />}
         {!isHomePage && <Breadcrumb breadcrumbs={breadcrumbs} />}
       </div>
-      <main ref={searchContainerRef}>{children}</main>
+      <RefreshProvider>
+        <TitleBarWrapper />
+        <main ref={searchContainerRef}>{children}</main>
+      </RefreshProvider>
     </>
   );
 };

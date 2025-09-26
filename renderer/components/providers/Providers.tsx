@@ -22,7 +22,6 @@ import { ToastProvider } from "@/contexts/ToastContext";
 import { MyStreamProvider } from "@/contexts/wave/MyStreamContext";
 import { WaveEligibilityProvider } from "@/contexts/wave/WaveEligibilityContext";
 import { AppWebSocketProvider } from "@/services/websocket/AppWebSocketProvider";
-import TitleBarWrapper from "@/TitleBarWrapper";
 import { LayoutProvider } from "../brain/my-stream/layout/LayoutContext";
 import { ViewProvider } from "../navigation/ViewContext";
 import AnchorInterceptorSetup from "./AnchorInterceptorSetup";
@@ -66,7 +65,6 @@ export default function Providers({
                                                   <ViewProvider>
                                                     <NavigationHistoryProvider>
                                                       <LayoutProvider>
-                                                        <TitleBarWrapper />
                                                         <MyStreamProvider>
                                                           {children}
                                                         </MyStreamProvider>
