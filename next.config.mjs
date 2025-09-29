@@ -161,6 +161,8 @@ function sharedConfig(publicEnv, assetPrefix) {
       resolveAlias: {
         canvas: "./stubs/empty.js",
         encoding: "./stubs/empty.js",
+        "@react-native-async-storage/async-storage": "./stubs/empty.js",
+        "react-native": "./stubs/empty.js",
       },
     },
     assetPrefix,
