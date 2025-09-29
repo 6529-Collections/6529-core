@@ -180,12 +180,9 @@ const nextConfigFactory = (phase) => {
     try {
       const bakedMainPath = path.join(
         __dirname,
-        "main/electron-src/__PUBLIC_RUNTIME.json"
+        "main/config/__PUBLIC_RUNTIME.json"
       );
-      const sourceJsonPath = path.join(
-        __dirname,
-        "electron-src/public-runtime.json"
-      );
+      const sourceJsonPath = path.join(__dirname, "config/public-runtime.json");
       let bakedSource = null;
       if (fs.existsSync(bakedMainPath)) {
         bakedSource = fs.readFileSync(bakedMainPath, "utf8");
