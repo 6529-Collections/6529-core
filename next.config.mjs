@@ -4,7 +4,6 @@ import {
   PHASE_PRODUCTION_BUILD,
   PHASE_PRODUCTION_SERVER,
 } from "next/constants.js";
-import { execSync } from "node:child_process";
 import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
@@ -15,68 +14,70 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 function logOnce(label, message) {
-  if (!process.env[`__LOG_${label}_ONCE__`]) {
-    process.env[`__LOG_${label}_ONCE__`] = "1";
-    process.env.__LOG_ENV_ONCE__ = "1";
+  const k = `__LOG_${label}_ONCE__`;
+  if (!process.env[k]) {
+    process.env[k] = "1";
     console.log(`${label}: ${message}`);
   }
 }
 
-function createSecurityHeaders(apiEndpoint = "") {
-  return [
-    {
-      key: "Strict-Transport-Security",
-      value: "max-age=31536000; includeSubDomains; preload",
-    },
-    {
-      key: "Content-Security-Policy",
-      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ https://arweave.net/* https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src 'self' blob: https://*.cloudfront.net https://videos.files.wordpress.com https://arweave.net https://*.arweave.net https://ipfs.io/ipfs/* https://cf-ipfs.com/ipfs/* https://*.twimg.com https://artblocks.io https://*.artblocks.io; frame-src 'self' https://media.generator.seize.io https://media.generator.6529.io https://generator.seize.io https://arweave.net https://*.arweave.net https://ipfs.io/ipfs/* https://cf-ipfs.com/ipfs/* https://nftstorage.link https://*.ipfs.nftstorage.link https://verify.walletconnect.com https://verify.walletconnect.org https://secure.walletconnect.com https://d3lqz0a4bldqgf.cloudfront.net https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://artblocks.io https://*.artblocks.io https://docs.google.com https://drive.google.com https://*.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
-    },
-    { key: "X-Frame-Options", value: "SAMEORIGIN" },
-    { key: "X-Content-Type-Options", value: "nosniff" },
-    { key: "Referrer-Policy", value: "same-origin" },
-    { key: "Permissions-Policy", value: "geolocation=()" },
-  ];
+// Resolve where Next lives (root vs /renderer when used inside Electron repo)
+const RENDERER_ROOT = fs.existsSync(path.join(__dirname, "renderer"))
+  ? path.join(__dirname, "renderer")
+  : __dirname;
+const NEXT_DIR = path.join(RENDERER_ROOT, ".next");
+logOnce("NEXT_DIR", NEXT_DIR);
+
+// ─────────────────────────────────────────────────────────────
+// Load runtime schema (permissive fallback if missing in packaged app)
+// ─────────────────────────────────────────────────────────────
+let publicEnvSchema;
+try {
+  ({ publicEnvSchema } = require("./renderer/config/env.schema.runtime.cjs"));
+} catch {
+  try {
+    ({ publicEnvSchema } = require("./config/env.schema.runtime.cjs"));
+  } catch {
+    logOnce(
+      "SCHEMA",
+      "env.schema.runtime.cjs not found; using permissive schema"
+    );
+    publicEnvSchema = {
+      safeParse: (obj) => ({ success: true, data: obj }),
+      _def: { shape: () => ({}) },
+    };
+  }
 }
 
-// ─────────────────────────────────────────────────────────────
-// Helpers to remove duplication
-// ─────────────────────────────────────────────────────────────
-const schemaMod = require("./renderer/config/env.schema.runtime.cjs");
-const { publicEnvSchema } = schemaMod;
-
-function computeVersionFromEnvOrGit() {
-  let VERSION = process.env.VERSION;
-  if (VERSION) {
-    logOnce("VERSION (explicit)", VERSION);
-    return VERSION;
-  }
+function computeVersionFromPkg() {
   try {
-    VERSION = execSync("git rev-parse HEAD").toString().trim();
-    logOnce("VERSION (from git HEAD)", VERSION);
+    const pkg = require("./package.json");
+    const VERSION = pkg.version || "0.0.0";
+    logOnce("VERSION (from package.json)", VERSION);
+    return VERSION;
   } catch {
-    VERSION = "6529seize";
-    logOnce("VERSION (default)", VERSION);
+    const fallback = "6529Core";
+    logOnce("VERSION (default)", fallback);
+    return fallback;
   }
-  return VERSION;
 }
 
 function resolveAssetsFlagFromEnv() {
   return (
-    (process.env.ASSETS_FROM_S3 ?? "false").toString().toLowerCase() === "true"
+    ((process.env.ASSETS_FROM_S3 ?? "false") + "").toLowerCase() === "true"
   );
 }
 
 function persistBakedArtifacts(publicEnv, ASSETS_FROM_S3) {
   try {
-    fs.mkdirSync(".next", { recursive: true });
+    fs.mkdirSync(NEXT_DIR, { recursive: true });
     fs.writeFileSync(
-      ".next/PUBLIC_RUNTIME.json",
+      path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
       JSON.stringify(publicEnv),
       "utf8"
     );
     fs.writeFileSync(
-      ".next/ASSETS_FROM_S3",
+      path.join(NEXT_DIR, "ASSETS_FROM_S3"),
       ASSETS_FROM_S3 ? "true" : "false",
       "utf8"
     );
@@ -87,28 +88,48 @@ function loadBakedRuntimeConfig(VERSION) {
   let baked = {};
   if (process.env.PUBLIC_RUNTIME) {
     baked = JSON.parse(process.env.PUBLIC_RUNTIME);
-  } else if (fs.existsSync(".next/PUBLIC_RUNTIME.json")) {
-    baked = JSON.parse(fs.readFileSync(".next/PUBLIC_RUNTIME.json", "utf8"));
+  } else {
+    const p = path.join(NEXT_DIR, "PUBLIC_RUNTIME.json");
+    if (fs.existsSync(p)) baked = JSON.parse(fs.readFileSync(p, "utf8"));
   }
   const parsed = publicEnvSchema.safeParse({ ...baked, VERSION });
-  if (!parsed.success) throw parsed.error; // FAIL-FAST
+  if (!parsed.success) throw parsed.error;
   return parsed.data;
 }
 
 function loadAssetsFlagAtRuntime() {
   let flag = (process.env.ASSETS_FROM_S3 ?? "").toString().toLowerCase();
-  if (!flag && fs.existsSync(".next/ASSETS_FROM_S3")) {
-    flag = fs.readFileSync(".next/ASSETS_FROM_S3", "utf8").trim().toLowerCase();
+  if (!flag) {
+    const p = path.join(NEXT_DIR, "ASSETS_FROM_S3");
+    if (fs.existsSync(p))
+      flag = fs.readFileSync(p, "utf8").trim().toLowerCase();
   }
   return flag === "true";
 }
 
+const securityHeaders = [
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=31536000; includeSubDomains; preload",
+  },
+  {
+    key: "Content-Security-Policy",
+    value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: https://api.6529.io https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ https://arweave.net/* https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com https://fonts.reown.com; img-src 'self' data: blob: *; media-src 'self' blob: https://*.cloudfront.net https://videos.files.wordpress.com https://arweave.net https://*.arweave.net https://ipfs.io/ipfs/* https://cf-ipfs.com/ipfs/* https://*.twimg.com; frame-src 'self' https://media.generator.seize.io https://media.generator.6529.io https://generator.seize.io https://arweave.net https://*.arweave.net https://ipfs.io/ipfs/* https://cf-ipfs.com/ipfs/* https://nftstorage.link https://*.ipfs.nftstorage.link https://verify.walletconnect.com https://verify.walletconnect.org https://secure.walletconnect.com https://d3lqz0a4bldqgf.cloudfront.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
+  },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "same-origin" },
+  { key: "Permissions-Policy", value: "geolocation=()" },
+];
+
 function sharedConfig(publicEnv, assetPrefix) {
   return {
-    assetPrefix,
     reactStrictMode: false,
+    basePath: "",
+    distDir: "out", // keep your static export target
     compress: true,
     productionBrowserSourceMaps: true,
+    eslint: { ignoreDuringBuilds: true },
     sassOptions: { quietDeps: true },
     experimental: {
       webpackMemoryOptimizations: true,
@@ -122,35 +143,27 @@ function sharedConfig(publicEnv, assetPrefix) {
         "localhost",
         "media.generator.seize.io",
         "d3lqz0a4bldqgf.cloudfront.net",
+        "robohash.org",
       ],
       minimumCacheTTL: 86400,
     },
     transpilePackages: ["react-tweet"],
     poweredByHeader: false,
     async headers() {
-      return [
-        {
-          source: "/:path*",
-          headers: createSecurityHeaders(publicEnv.API_ENDPOINT),
-        },
-      ];
+      return [{ source: "/:path*", headers: securityHeaders }];
     },
-    webpack: (config, { dev, isServer }) => {
+    webpack: (config) => {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
-      config.resolve.alias["@react-native-async-storage/async-storage"] = false;
-      config.resolve.alias["react-native"] = false;
-      if (!dev && !isServer) config.devtool = "source-map";
       return config;
     },
     turbopack: {
       resolveAlias: {
         canvas: "./stubs/empty.js",
         encoding: "./stubs/empty.js",
-        "@react-native-async-storage/async-storage": "./stubs/empty.js",
-        "react-native": "./stubs/empty.js",
       },
     },
+    assetPrefix,
   };
 }
 
@@ -163,11 +176,7 @@ const nextConfigFactory = (phase) => {
     if (mode) dotenv.config({ path: `.env.${mode}` });
     dotenv.config({ path: `.env` });
 
-    // ─────────────────────────────────────────────────────────────
-    // Fallback: hydrate process.env from baked Electron runtime JSON
-    // This allows running Electron dev without separate .env files.
-    // It looks for the baked file in main/, else falls back to the source JSON.
-    // ─────────────────────────────────────────────────────────────
+    // Optional fallback: hydrate envs from baked/static JSON so Electron builds don't need .env
     try {
       const bakedMainPath = path.join(
         __dirname,
@@ -178,7 +187,6 @@ const nextConfigFactory = (phase) => {
         "electron-src/public-runtime.json"
       );
       let bakedSource = null;
-
       if (fs.existsSync(bakedMainPath)) {
         bakedSource = fs.readFileSync(bakedMainPath, "utf8");
         logOnce("ENV fallback", `Loaded from ${bakedMainPath}`);
@@ -186,7 +194,6 @@ const nextConfigFactory = (phase) => {
         bakedSource = fs.readFileSync(sourceJsonPath, "utf8");
         logOnce("ENV fallback", `Loaded from ${sourceJsonPath}`);
       }
-
       if (bakedSource) {
         const bakedObj = JSON.parse(bakedSource);
         const shape = publicEnvSchema._def.shape();
@@ -196,15 +203,13 @@ const nextConfigFactory = (phase) => {
           }
         }
       }
-    } catch {
-      // noop
-    }
+    } catch {}
 
-    const VERSION = computeVersionFromEnvOrGit();
+    const VERSION = computeVersionFromPkg();
     const ASSETS_FROM_S3 = resolveAssetsFlagFromEnv();
     logOnce("ASSETS_FROM_S3", ASSETS_FROM_S3);
 
-    // Prepare and validate public runtime from process.env
+    // Validate with your Zod schema
     const shape = publicEnvSchema._def.shape();
     const publicRuntime = {};
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
@@ -212,13 +217,13 @@ const nextConfigFactory = (phase) => {
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
 
     const parsed = publicEnvSchema.safeParse(publicRuntime);
-    if (!parsed.success) throw parsed.error; // FAIL-FAST at build
+    if (!parsed.success) throw parsed.error;
     const publicEnv = parsed.data;
 
-    // Persist baked artifacts for runtime
+    // Bake for runtime (even though you ship /out, this is useful for parity/logging)
     persistBakedArtifacts(publicEnv, ASSETS_FROM_S3);
 
-    // Compose config
+    // No CDN asset prefix for static export by default
     const assetPrefix = ASSETS_FROM_S3
       ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
       : "";
@@ -239,10 +244,7 @@ const nextConfigFactory = (phase) => {
             : String(publicEnv.NEXTGEN_CHAIN_ID),
         MOBILE_APP_SCHEME: publicEnv.MOBILE_APP_SCHEME,
         CORE_SCHEME: publicEnv.CORE_SCHEME,
-        // Core has its own IPFS_API_ENDPOINT, IPFS_GATEWAY_ENDPOINT, and IPFS_MFS_PATH
-        // IPFS_API_ENDPOINT: publicEnv.IPFS_API_ENDPOINT,
-        // IPFS_GATEWAY_ENDPOINT: publicEnv.IPFS_GATEWAY_ENDPOINT,
-        // IPFS_MFS_PATH: publicEnv.IPFS_MFS_PATH,
+        // IPFS_* intentionally omitted (Electron provides them)
         TENOR_API_KEY: publicEnv.TENOR_API_KEY,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
@@ -267,24 +269,23 @@ const nextConfigFactory = (phase) => {
     };
   }
 
-  // Production server phase
+  // You don’t run a Next server in prod (static export), but keep this harmless.
   if (phase === PHASE_PRODUCTION_SERVER) {
-    const VERSION = fs.readFileSync(".next/BUILD_ID", "utf8").trim();
-    logOnce("VERSION (from BUILD_ID)", VERSION);
-
-    const publicEnv = loadBakedRuntimeConfig(VERSION); // FAIL-FAST inside
+    const VERSION = computeVersionFromPkg();
+    const publicEnv = loadBakedRuntimeConfig(VERSION);
     const ASSETS_FROM_S3 = loadAssetsFlagAtRuntime();
-    logOnce("ASSETS_FROM_S3", ASSETS_FROM_S3);
-
     const assetPrefix = ASSETS_FROM_S3
       ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
       : "";
-
     return sharedConfig(publicEnv, assetPrefix);
   }
 
-  // Fallback (shouldn’t happen)
-  return { reactStrictMode: false, compress: true, poweredByHeader: false };
+  return {
+    reactStrictMode: false,
+    compress: true,
+    poweredByHeader: false,
+    distDir: "out",
+  };
 };
 
 export default nextConfigFactory;
