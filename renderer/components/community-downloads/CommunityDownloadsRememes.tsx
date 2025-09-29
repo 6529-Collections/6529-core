@@ -1,7 +1,7 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import CommunityDownloadsComponent from "./CommunityDownloadsComponent";
 
 export default function CommunityDownloadsRememes() {
@@ -9,7 +9,7 @@ export default function CommunityDownloadsRememes() {
   return (
     <CommunityDownloadsComponent
       title="Rememes"
-      url={`${SEIZE_API_URL}/api/rememes_uploads`}
+      url={`${publicEnv.API_ENDPOINT}/api/rememes_uploads`}
     />
   );
 }

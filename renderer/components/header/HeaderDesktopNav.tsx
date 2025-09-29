@@ -57,15 +57,17 @@ export default function HeaderDesktopNav({
   };
 
   const renderSection = (section: any) => (
-    <div key={section.name} className={styles.submenuContainer}>
+    <div key={section.name}>
       {section.hasDivider && <NavDropdown.Divider />}
-      <div className="d-flex justify-content-between align-items-center gap-3 submenu-trigger">
-        {section.name}
-        <FontAwesomeIcon icon={faChevronRight} height={16} width={16} />
-      </div>
-      <div className={styles.nestedMenu}>
-        {section.items.map(renderNavLink)}
-        {section.hasDivider && <NavDropdown.Divider />}
+      <div className={styles.submenuContainer}>
+        <div className="d-flex justify-content-between align-items-center gap-3 submenu-trigger">
+          {section.name}
+          <FontAwesomeIcon icon={faChevronRight} height={16} width={16} />
+        </div>
+        <div className={styles.nestedMenu}>
+          {section.items.map(renderNavLink)}
+          {section.hasDivider && <NavDropdown.Divider />}
+        </div>
       </div>
     </div>
   );

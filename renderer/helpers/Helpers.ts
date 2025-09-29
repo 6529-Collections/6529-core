@@ -1,4 +1,12 @@
-import { mainnet, sepolia, goerli } from "wagmi/chains";
+import {
+  NEXTGEN_CHAIN_ID,
+  NEXTGEN_CORE,
+} from "@/components/nextGen/nextgen_contracts";
+import {
+  USER_PAGE_TAB_META,
+  UserPageTabType,
+} from "@/components/user/layout/UserPageTabs";
+import { publicEnv } from "@/config/env";
 import {
   GRADIENT_CONTRACT,
   MEMELAB_CONTRACT,
@@ -8,19 +16,11 @@ import {
   ROYALTIES_PERCENTAGE,
 } from "@/constants";
 import { BaseNFT, VolumeType } from "@/entities/INFT";
-import { DateIntervalsSelection } from "@/enums";
 import { CICType } from "@/entities/IProfile";
-import {
-  USER_PAGE_TAB_META,
-  UserPageTabType,
-} from "@/components/user/layout/UserPageTabs";
-import {
-  NEXTGEN_CHAIN_ID,
-  NEXTGEN_CORE,
-} from "@/components/nextGen/nextgen_contracts";
-import { SEIZE_URL } from "@/electron-constants";
-import { PageSSRMetadata, Period } from "./Types";
+import { DateIntervalsSelection } from "@/enums";
 import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import { goerli, mainnet, sepolia } from "wagmi/chains";
+import { PageSSRMetadata, Period } from "./Types";
 
 export const MAX_DROP_UPLOAD_FILES = 8;
 
@@ -776,15 +776,16 @@ export const wait = async (ms: number): Promise<void> => {
 };
 
 export const removeBaseEndpoint = (link: string) => {
-  return link.replace(SEIZE_URL ?? "", "");
+  return link.replace(publicEnv.BASE_ENDPOINT ?? "", "");
 };
 
 export const getMetadataForUserPage = (
   profile: ApiIdentity,
   path?: string
 ): PageSSRMetadata => {
+  const display = profile.handle ?? formatAddress(profile.display);
   return {
-    title: profile.handle + (path ? ` | ${path}` : ""),
+    title: display + (path ? ` | ${path}` : ""),
     ogImage: profile.pfp ?? "",
     description: `Level ${
       profile.level
@@ -802,3 +803,12 @@ export async function fetchFileContent(filePath: string): Promise<string> {
     return "";
   }
 }
+
+export const idStringToDisplay = (id: string) => {
+  if (!id) return id;
+  const num = Number(id);
+  if (!Number.isNaN(num) && Number.isInteger(num)) {
+    return num.toLocaleString();
+  }
+  return id;
+};

@@ -1,7 +1,7 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import CommunityDownloadsComponent from "./CommunityDownloadsComponent";
 
 export enum VIEW {
@@ -20,7 +20,7 @@ export default function CommunityDownloadsTDH(props: Readonly<Props>) {
   }
   useSetTitle(`${title} | Open Data`);
 
-  const url = `${SEIZE_API_URL}/api/${
+  const url = `${publicEnv.API_ENDPOINT}/api/${
     props.view === VIEW.WALLET ? "uploads" : "consolidated_uploads"
   }`;
   return <CommunityDownloadsComponent title={title} url={url} />;

@@ -27,13 +27,6 @@ export const RECALCULATE_TRANSACTIONS_OWNERS = "recalculateTransactionsOwners";
 export const RESET_WORKER = "resetWorker";
 export const STOP_WORKER = "stopWorker";
 
-export const SEIZE_URL = "https://6529.io";
-export const SEIZE_API_URL = "https://api.6529.io";
-export const SEIZE_WS_ENDPOINT = "wss://ws.6529.io";
-export const ALLOWLIST_API_ENDPOINT = "https://allowlist-api.6529.io";
-export const NEXTGEN_CHAIN_ID_ENV = "1";
-export const ALCHEMY_API_KEY = "";
-
 export const MNEMONIC_NA = "N/A";
 
 export const NULL_ADDRESS = "0x0000000000000000000000000000000000000000";
@@ -65,5 +58,3 @@ export const NEVER_DATE = 64060588800;
 export const MEME_8_EDITION_BURN_ADJUSTMENT = -2588;
 export const MEME_8_BURN_TRANSACTION =
   "0xa6c27335d3c4f87064a938e987e36525885cc3d136ebb726f4c5d374c0d2d854";
-
-export const TENOR_API_KEY = "AIzaSyAbU3KZuMmbnACzxfExwriO4hrxI5Nau1I";

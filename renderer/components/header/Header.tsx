@@ -1,7 +1,7 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -126,7 +126,7 @@ export default function Header(props: Readonly<Props>) {
 
   useEffect(() => {
     if (address) {
-      fetchUrl(`${SEIZE_API_URL}/api/consolidations/${address}`).then(
+      fetchUrl(`${publicEnv.API_ENDPOINT}/api/consolidations/${address}`).then(
         (response: DBResponse) => {
           if (!response.data) {
             setConsolidations([]);

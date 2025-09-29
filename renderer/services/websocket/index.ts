@@ -8,7 +8,7 @@
  * - Typed message subscriptions
  */
 
-import { SEIZE_API_URL, SEIZE_WS_ENDPOINT } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 
 // Types
 export * from "./WebSocketTypes";
@@ -19,8 +19,8 @@ export { useWebSocket } from "./useWebSocket";
 // Default configuration
 export const DEFAULT_WEBSOCKET_CONFIG = {
   url:
-    SEIZE_WS_ENDPOINT ??
-    SEIZE_API_URL?.replace("https://api", "wss://ws") ??
+    publicEnv.WS_ENDPOINT ??
+    publicEnv.API_ENDPOINT?.replace("https://api", "wss://ws") ??
     "wss://default-fallback-url",
   reconnectDelay: 2000,
   maxReconnectAttempts: 20,

@@ -1,19 +1,19 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { FC, useContext, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import CommonDropdownItemsMobileWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsMobileWrapper";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { AuthContext } from "@/components/auth/Auth";
+import { ApiDrop } from "../../../generated/models/ApiDrop";
+import { ApiDropType } from "../../../generated/models/ApiDropType";
+import { DropSize } from "../../../helpers/waves/drop.helpers";
+import { AuthContext } from "../../auth/Auth";
+import CommonDropdownItemsMobileWrapper from "../../utils/select/dropdown/CommonDropdownItemsMobileWrapper";
+import WaveDropActionsAddReaction from "./WaveDropActionsAddReaction";
+import WaveDropActionsRate from "./WaveDropActionsRate";
 import WaveDropMobileMenuDelete from "./WaveDropMobileMenuDelete";
 import WaveDropMobileMenuEdit from "./WaveDropMobileMenuEdit";
 import WaveDropMobileMenuFollow from "./WaveDropMobileMenuFollow";
 import WaveDropMobileMenuOpen from "./WaveDropMobileMenuOpen";
-import WaveDropActionsRate from "./WaveDropActionsRate";
-import { DropSize } from "@/helpers/waves/drop.helpers";
-import WaveDropActionsAddReaction from "./WaveDropActionsAddReaction";
-import { SEIZE_URL } from "@/electron-constants";
-import { ApiDropType } from "@/generated/models/ApiDropType";
 
 interface WaveDropMobileMenuProps {
   readonly drop: ApiDrop;
@@ -53,7 +53,7 @@ const WaveDropMobileMenu: FC<WaveDropMobileMenuProps> = ({
     if (longPressTriggered) return;
     if (isTemporaryDrop) return;
 
-    const dropLink = `${SEIZE_URL}/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`;
+    const dropLink = `${publicEnv.BASE_ENDPOINT}/my-stream?wave=${drop.wave.id}&serialNo=${drop.serial_no}`;
 
     if (navigator?.clipboard?.writeText) {
       navigator.clipboard.writeText(dropLink).then(() => {

@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { publicEnv } from "@/config/env";
 import { WsMessageType } from "@/helpers/Types";
-import { SEIZE_API_URL, SEIZE_WS_ENDPOINT } from "@/electron-constants";
+import { useEffect, useRef, useState } from "react";
 
 interface UseWaveWebSocketResult {
   socket: WebSocket | null;
@@ -35,8 +35,8 @@ export function useWaveWebSocket(waveId: string): UseWaveWebSocketResult {
     shouldReconnectRef.current = true;
     // determine base URL from environment
     const url =
-      SEIZE_WS_ENDPOINT ??
-      SEIZE_API_URL?.replace("https://api", "wss://ws") ??
+      publicEnv.WS_ENDPOINT ??
+      publicEnv.API_ENDPOINT?.replace("https://api", "wss://ws") ??
       "wss://default-fallback-url";
 
     function connect() {

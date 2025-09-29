@@ -1,7 +1,7 @@
+import { publicEnv } from "@/config/env";
 import { AllowlistToolResponse } from "../components/allowlist-tool/allowlist-tool.types";
-import { makeErrorToast } from "./distribution-plan.utils";
-import { ALLOWLIST_API_ENDPOINT } from "../../electron-constants";
 import { getAuthJwt, removeAuthJwt } from "./auth/auth.utils";
+import { makeErrorToast } from "./distribution-plan.utils";
 
 const handleResponse = async <T>(
   res: Response
@@ -47,7 +47,7 @@ export async function distributionPlanApiFetch<T>(endpoint: string): Promise<{
     headers["Authorization"] = `Bearer ${auth}`;
   }
   try {
-    const res = await fetch(`${ALLOWLIST_API_ENDPOINT}${endpoint}`, {
+    const res = await fetch(`${publicEnv.ALLOWLIST_API_ENDPOINT}${endpoint}`, {
       headers,
     });
 
@@ -79,7 +79,7 @@ export const distributionPlanApiPost = async <T>({
     headers["Authorization"] = `Bearer ${auth}`;
   }
   try {
-    const res = await fetch(`${ALLOWLIST_API_ENDPOINT}${endpoint}`, {
+    const res = await fetch(`${publicEnv.ALLOWLIST_API_ENDPOINT}${endpoint}`, {
       method: "POST",
       headers,
       body: JSON.stringify(body),
@@ -111,7 +111,7 @@ export const distributionPlanApiDelete = async <T>({
     headers["Authorization"] = `Bearer ${auth}`;
   }
   try {
-    const res = await fetch(`${ALLOWLIST_API_ENDPOINT}${endpoint}`, {
+    const res = await fetch(`${publicEnv.ALLOWLIST_API_ENDPOINT}${endpoint}`, {
       method: "DELETE",
       headers,
     });

@@ -1,8 +1,8 @@
 "use client";
 
 import ConfirmClose from "@/components/confirm/ConfirmClose";
+import { publicEnv } from "@/config/env";
 import { useSearch } from "@/contexts/SearchContext";
-import { SEIZE_URL } from "@/electron-constants";
 import {
   faAnglesUp,
   faArrowLeft,
@@ -183,7 +183,9 @@ export default function TitleBar() {
   };
 
   const copyCurrentUrl = () => {
-    const link = `${SEIZE_URL}/${getLinkPath()}${getQueryParams()}`;
+    const link = `${
+      publicEnv.BASE_ENDPOINT
+    }/${getLinkPath()}${getQueryParams()}`;
     navigator.clipboard.writeText(link).then(() => {
       setIsCopied(true);
       setTimeout(() => {

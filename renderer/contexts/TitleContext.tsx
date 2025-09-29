@@ -1,5 +1,6 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { isElectron } from "@/helpers";
 import { usePathname, useSearchParams } from "next/navigation";
 import React, {
@@ -22,7 +23,9 @@ type TitleContextType = {
 
 const TitleContext = createContext<TitleContextType | undefined>(undefined);
 
-export const DEFAULT_TITLE = "6529 Core";
+export const DEFAULT_TITLE = publicEnv.BASE_ENDPOINT?.includes("staging")
+  ? "6529 Staging"
+  : "6529.io";
 
 // Default titles for routes
 const getDefaultTitleForRoute = (pathname: string | null): string => {
@@ -58,6 +61,7 @@ const getDefaultTitleForRoute = (pathname: string | null): string => {
       "tools",
       "about",
       "delegation",
+      "meme-calendar",
     ];
     if (!knownRoutes.includes(firstSegment)) {
       return `Profile | 6529.io`;

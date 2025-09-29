@@ -1,13 +1,13 @@
 "use client";
 
-import { Container, Row, Col } from "react-bootstrap";
+import { publicEnv } from "@/config/env";
 import { useEffect, useState } from "react";
-import { DBResponse } from "@/entities/IDBResponse";
-import { fetchUrl } from "@/services/6529api";
-import { NextGenCollection } from "@/entities/INextgen";
+import { Col, Container, Row } from "react-bootstrap";
+import { DBResponse } from "../../../entities/IDBResponse";
+import { NextGenCollection } from "../../../entities/INextgen";
+import { areEqualAddresses } from "../../../helpers/Helpers";
+import { fetchUrl } from "../../../services/6529api";
 import NextGenCollectionArtist from "./collectionParts/NextGenCollectionArtist";
-import { areEqualAddresses } from "@/helpers/Helpers";
-import { SEIZE_API_URL } from "@/electron-constants";
 
 export default function NextGenArtists() {
   const [artistCollections, setArtistCollections] = useState<
@@ -15,7 +15,7 @@ export default function NextGenArtists() {
   >([]);
 
   function fetchResults() {
-    let url = `${SEIZE_API_URL}/api/nextgen/collections`;
+    let url = `${publicEnv.API_ENDPOINT}/api/nextgen/collections`;
     fetchUrl(url).then((response: DBResponse) => {
       setArtistCollections(
         response.data.reduce((acc, collection) => {

@@ -1,8 +1,8 @@
-import React, { ReactNode } from "react";
-import { usePathname } from "next/navigation";
+import { publicEnv } from "@/config/env";
 import Head from "next/head";
+import { usePathname } from "next/navigation";
+import { ReactNode } from "react";
 import { PageSSRMetadata } from "../../helpers/Types";
-import { SEIZE_URL } from "@/electron-constants";
 
 interface BaseLayoutProps {
   children: ReactNode;
@@ -14,7 +14,7 @@ const BaseLayout = ({ children, metadata }: BaseLayoutProps) => {
 
   const { title: metadataTitle, description, ogImage, twitterCard } = metadata;
 
-  const ogUrl = `${SEIZE_URL}${pathname}`;
+  const ogUrl = `${publicEnv.BASE_ENDPOINT}${pathname}`;
 
   return (
     <>

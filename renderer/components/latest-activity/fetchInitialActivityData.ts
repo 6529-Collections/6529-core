@@ -1,4 +1,4 @@
-import { SEIZE_API_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { DBResponse } from "../../entities/IDBResponse";
 import { NFT } from "../../entities/INFT";
 import { NextGenCollection } from "../../entities/INextgen";
@@ -19,7 +19,7 @@ export async function fetchInitialActivityData(
 ): Promise<InitialActivityData> {
   try {
     // Build activity API URL with default filters (All/All)
-    const activityUrl = `${SEIZE_API_URL}/api/transactions?page_size=${pageSize}&page=${page}`;
+    const activityUrl = `${publicEnv.API_ENDPOINT}/api/transactions?page_size=${pageSize}&page=${page}`;
 
     // Fetch all data in parallel
     const [activityResponse, memesResponse, gradientsData, nextgenResponse] =
@@ -28,11 +28,13 @@ export async function fetchInitialActivityData(
         fetchUrl(activityUrl) as Promise<DBResponse>,
 
         // Memes data
-        fetchUrl(`${SEIZE_API_URL}/api/memes_lite`) as Promise<DBResponse>,
+        fetchUrl(
+          `${publicEnv.API_ENDPOINT}/api/memes_lite`
+        ) as Promise<DBResponse>,
 
         // Gradients data
         fetchAllPages(
-          `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`
+          `${publicEnv.API_ENDPOINT}/api/nfts/gradients?&page_size=101`
         ) as Promise<NFT[]>,
 
         // NextGen collections

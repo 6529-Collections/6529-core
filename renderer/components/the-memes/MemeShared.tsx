@@ -1,11 +1,11 @@
-import { MEMELAB_CONTRACT } from "@/constants";
-import { SEIZE_API_URL, SEIZE_URL } from "@/electron-constants";
-import { BaseNFT, VolumeType } from "@/entities/INFT";
-import { areEqualAddresses } from "@/helpers/Helpers";
-import { fetchUrl } from "@/services/6529api";
+import { publicEnv } from "@/config/env";
 import { faChevronDown } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Menu, MenuButton, MenuItem, MenuItems } from "@headlessui/react";
+import { MEMELAB_CONTRACT } from "../../constants";
+import { BaseNFT, VolumeType } from "../../entities/INFT";
+import { areEqualAddresses, idStringToDisplay } from "../../helpers/Helpers";
+import { fetchUrl } from "../../services/6529api";
 import { getAppMetadata } from "../providers/metadata";
 
 export enum MEME_FOCUS {
@@ -38,16 +38,17 @@ async function getMetadataProps(
   isDistribution: boolean = false
 ) {
   let urlPath = "nfts";
-  let name = `The Memes #${id}`;
+  const idDisplay = idStringToDisplay(id);
+  let name = `The Memes #${idDisplay}`;
   let description = "Collections";
   if (areEqualAddresses(contract, MEMELAB_CONTRACT)) {
     urlPath = "nfts_memelab";
-    name = `Meme Lab #${id}`;
+    name = `Meme Lab #${idDisplay}`;
   }
   const response = await fetchUrl(
-    `${SEIZE_API_URL}/api/${urlPath}?contract=${contract}&id=${id}`
+    `${publicEnv.API_ENDPOINT}/api/${urlPath}?contract=${contract}&id=${id}`
   );
-  let image = `${SEIZE_URL}/6529io.png`;
+  let image = `${publicEnv.BASE_ENDPOINT}/6529io.png`;
   if (response?.data?.length > 0) {
     description = `${name} | ${description}`;
     name = `${response.data[0].name}`;

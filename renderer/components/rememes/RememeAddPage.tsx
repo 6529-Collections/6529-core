@@ -1,11 +1,15 @@
 "use client";
 
-import { SEIZE_API_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
+import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
+import { useSetTitle } from "@/contexts/TitleContext";
 import { DBResponse } from "@/entities/IDBResponse";
 import { NFT } from "@/entities/INFT";
 import { ConsolidatedTDH } from "@/entities/ITDH";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
 import { areEqualAddresses, numberWithCommas } from "@/helpers/Helpers";
 import { fetchUrl, postData } from "@/services/6529api";
+import { commonApiFetch } from "@/services/api/common-api";
 import {
   faCheckCircle,
   faTimesCircle,
@@ -16,9 +20,6 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { useSignMessage } from "wagmi";
-import { useSeizeSettings } from "../../contexts/SeizeSettingsContext";
-import { useSetTitle } from "../../contexts/TitleContext";
-import { commonApiFetch } from "../../services/api/common-api";
 import { useAuth } from "../auth/Auth";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
@@ -113,10 +114,12 @@ export default function RememeAddPage() {
   }, [signMessage.isError]);
 
   useEffect(() => {
-    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`).then((response: DBResponse) => {
-      setMemes(response.data);
-      setMemesLoaded(true);
-    });
+    fetchUrl(`${publicEnv.API_ENDPOINT}/api/memes_lite`).then(
+      (response: DBResponse) => {
+        setMemes(response.data);
+        setMemesLoaded(true);
+      }
+    );
   }, []);
 
   useEffect(() => {
@@ -137,7 +140,7 @@ export default function RememeAddPage() {
   useEffect(() => {
     if (signMessage.isSuccess && signMessage.data) {
       setSubmitting(true);
-      postData(`${SEIZE_API_URL}/api/rememes/add`, {
+      postData(`${publicEnv.API_ENDPOINT}/api/rememes/add`, {
         address: address,
         signature: signMessage.data,
         rememe: buildRememeObject(),
@@ -339,10 +342,7 @@ export default function RememeAddPage() {
                 </Col>
                 {submissionResult.errors &&
                   submissionResult.errors.map((e, index) => (
-                    <Col
-                      xs={12}
-                      className="pt-2"
-                      key={`submission-result-error-${index}`}>
+                    <Col xs={12} className="pt-2" key={getRandomObjectId()}>
                       {e}
                     </Col>
                   ))}

@@ -2,17 +2,24 @@
 
 import styles from "./TheMemes.module.scss";
 
-import { useContext, useEffect, useState } from "react";
-import { Container, Row, Col } from "react-bootstrap";
 import { MEMES_CONTRACT } from "@/constants";
 import { DBResponse } from "@/entities/IDBResponse";
+import { useContext, useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
 
-import { Transaction } from "@/entities/ITransaction";
-import { ConsolidatedTDH } from "@/entities/ITDH";
-import { fetchUrl } from "@/services/6529api";
+import { AuthContext } from "@/components/auth/Auth";
 import NFTImage from "@/components/nft-image/NFTImage";
-import { NFT, MemesExtendedData, NftTDH, NftRank } from "@/entities/INFT";
+import NftNavigation from "@/components/nft-navigation/NftNavigation";
+import { publicEnv } from "@/config/env";
+import { useTitle } from "@/contexts/TitleContext";
+import { MemesExtendedData, NFT, NftRank, NftTDH } from "@/entities/INFT";
+import { ConsolidatedTDH } from "@/entities/ITDH";
+import { Transaction } from "@/entities/ITransaction";
 import { areEqualAddresses } from "@/helpers/Helpers";
+import { fetchUrl } from "@/services/6529api";
+import { commonApiFetch } from "@/services/api/common-api";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MemePageActivity } from "./MemePageActivity";
 import { MemePageArt } from "./MemePageArt";
 import {
@@ -20,25 +27,19 @@ import {
   MemePageCollectorsSubMenu,
 } from "./MemePageCollectors";
 import { MemePageLiveRightMenu, MemePageLiveSubMenu } from "./MemePageLive";
+import MemePageMintCountdown from "./MemePageMintCountdown";
 import { MemePageTimeline } from "./MemePageTimeline";
 import {
   MemePageYourCardsRightMenu,
   MemePageYourCardsSubMenu,
 } from "./MemePageYourCards";
-import { AuthContext } from "@/components/auth/Auth";
-import { useTitle } from "@/contexts/TitleContext";
-import { commonApiFetch } from "@/services/api/common-api";
-import MemePageMintCountdown from "./MemePageMintCountdown";
-import { SEIZE_API_URL } from "@/electron-constants";
-import Link from "next/link";
 import {
   getMemeTabTitle,
-  MEME_TABS,
   MEME_FOCUS,
+  MEME_TABS,
   TabButton,
 } from "./MemeShared";
-import NftNavigation from "../nft-navigation/NftNavigation";
-import { useRouter, useSearchParams } from "next/navigation";
+import UpcomingMemePage from "./UpcomingMemePage";
 
 const ACTIVITY_PAGE_SIZE = 25;
 
@@ -56,6 +57,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
   const [activeTab, setActiveTab] = useState<MEME_FOCUS>();
 
   const [nft, setNft] = useState<NFT>();
+  const [nftNotFound, setNftNotFound] = useState(false);
   const [nftMeta, setNftMeta] = useState<MemesExtendedData>();
   const [nftBalance, setNftBalance] = useState<number>(0);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -85,29 +87,30 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
   }, [searchParams]);
 
   useEffect(() => {
-    if (activeTab) {
+    if (activeTab && nftId && nftMeta) {
       router.push(`/the-memes/${nftId}?focus=${activeTab}`);
     }
-  }, [activeTab]);
+  }, [activeTab, nftId, nftMeta]);
 
   useEffect(() => {
     if (nftId) {
-      fetchUrl(`${SEIZE_API_URL}/api/memes_extended_data?id=${nftId}`).then(
-        (response: DBResponse) => {
-          const nftMetas = response.data;
-          if (nftMetas.length === 1) {
-            setNftMeta(nftMetas[0]);
-            fetchUrl(
-              `${SEIZE_API_URL}/api/nfts?id=${nftId}&contract=${MEMES_CONTRACT}`
-            ).then((response: DBResponse) => {
-              const mynft = response.data[0];
-              setNft(mynft);
-            });
-          } else {
-            setNftMeta(undefined);
-          }
+      fetchUrl(
+        `${publicEnv.API_ENDPOINT}/api/memes_extended_data?id=${nftId}`
+      ).then((response: DBResponse) => {
+        const nftMetas = response.data;
+        if (nftMetas.length === 1) {
+          setNftMeta(nftMetas[0]);
+          fetchUrl(
+            `${publicEnv.API_ENDPOINT}/api/nfts?id=${nftId}&contract=${MEMES_CONTRACT}`
+          ).then((response: DBResponse) => {
+            const mynft = response.data[0];
+            setNft(mynft);
+          });
+        } else {
+          setNftMeta(undefined);
+          setNftNotFound(true);
         }
-      );
+      });
     }
   }, [nftId]);
 
@@ -128,7 +131,9 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
   useEffect(() => {
     if (connectedWallets.length && nftId) {
       fetchUrl(
-        `${SEIZE_API_URL}/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
+        `${
+          publicEnv.API_ENDPOINT
+        }/api/transactions?contract=${MEMES_CONTRACT}&wallet=${connectedWallets.join(
           ","
         )}&id=${nftId}`
       ).then((response: DBResponse) => {
@@ -165,8 +170,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
                 xs={{ span: 12 }}
                 sm={{ span: 12 }}
                 md={{ span: 12 }}
-                lg={{ span: 6 }}
-              >
+                lg={{ span: 6 }}>
                 <MemePageMintCountdown
                   nft_id={nft.id}
                   hide_mint_btn={false}
@@ -176,7 +180,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
               </Col>
             </Row>
           )}
-          <Row>
+          <Row className={connectedProfile ? styles.nftImagePadding : ""}>
             {[
               MEME_FOCUS.LIVE,
               MEME_FOCUS.YOUR_CARDS,
@@ -189,14 +193,12 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
                     sm={{ span: 12 }}
                     md={{ span: 6 }}
                     lg={{ span: 6 }}
-                    className={`${styles.nftImageWrapper} pt-2 pb-5`}
-                  >
+                    className={`${styles.nftImageWrapper} pt-2 pb-5`}>
                     <NFTImage
                       nft={nft}
                       animation={true}
                       height={650}
-                      showOwnedIfLoggedIn={false}
-                      showUnseizedIfLoggedIn={true}
+                      showBalance={true}
                     />
                   </Col>
                   <MemePageLiveRightMenu
@@ -279,8 +281,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
                   <Col>
                     <h2 className="float-left">
                       <Link
-                        href={`/the-memes?szn=${nftMeta.season}&sort=age&sort_dir=ASC`}
-                      >
+                        href={`/the-memes?szn=${nftMeta.season}&sort=age&sort_dir=ASC`}>
                         SZN{nftMeta.season}
                       </Link>
                     </h2>
@@ -305,6 +306,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
                 {printContent()}
               </>
             )}
+            {nftNotFound && <UpcomingMemePage id={nftId} />}
           </Container>
         </Col>
       </Row>

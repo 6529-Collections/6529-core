@@ -17,8 +17,8 @@ import {
   getStatusFromDates,
   useCollectionMintCount,
 } from "@/components/nextGen/nextgen_helpers";
+import { publicEnv } from "@/config/env";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { NextGenCollection } from "@/entities/INextgen";
 import { numberWithCommas } from "@/helpers/Helpers";
 import useCapacitor from "@/hooks/useCapacitor";
@@ -90,7 +90,7 @@ export function NextGenCountdown(props: Readonly<CountdownProps>) {
   const [collectionLoaded, setCollectionLoaded] = useState(false);
 
   useEffect(() => {
-    const url = `${SEIZE_API_URL}/api/nextgen/merkle_roots/${props.collection.merkle_root}`;
+    const url = `${publicEnv.API_ENDPOINT}/api/nextgen/merkle_roots/${props.collection.merkle_root}`;
     fetchUrl(url).then((response: CollectionWithMerkle) => {
       if (response) {
         setCollection(response);

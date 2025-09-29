@@ -1,18 +1,18 @@
 "use client";
 
-import styles from "./TDHCalculation.module.scss";
-import { useEffect, useState } from "react";
-import { TDHInfo } from "../eth-scanner/Workers";
+import { publicEnv } from "@/config/env";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCheckCircle,
   faCopy,
   faMinusCircle,
   faXmarkCircle,
 } from "@fortawesome/free-solid-svg-icons";
-import { SEIZE_API_URL } from "@/electron-constants";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
 import { Table } from "react-bootstrap";
+import { TDHInfo } from "../eth-scanner/Workers";
+import styles from "./TDHCalculation.module.scss";
 
 export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   const [isFetchingRemote, setIsFetchingRemote] = useState(true);
@@ -23,7 +23,7 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
   }>();
 
   const fetchRemote = () => {
-    fetch(`${SEIZE_API_URL}/oracle/tdh/total`)
+    fetch(`${publicEnv.API_ENDPOINT}/oracle/tdh/total`)
       .then((res) => res.json())
       .then((data) => {
         setRemoteInfo(data);

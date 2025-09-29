@@ -279,6 +279,7 @@ export default function HeaderMobileMenu({
               {printMobileRow("Activity", "/network/activity")}
               {printMobileRow("Groups", "/network/groups")}
               {printMobileRow("NFT Activity", "/nft-activity")}
+              {printMobileRow("Memes Calendar", "/meme-calendar")}
               {printMobileHr()}
               {printMobileSubheader("Metrics")}
               {printMobileRow("Definitions", "/network/metrics")}
@@ -353,7 +354,7 @@ export default function HeaderMobileMenu({
               {printMobileHr()}
               {printMobileRow("API", "/tools/api")}
               {printMobileRow("EMMA", "/emma")}
-              {printMobileRow("Block Finder", "/meme-blocks")}
+              {printMobileRow("Block Finder", "/tools/block-finder")}
               {printMobileRow("Open Data", "/open-data")}
               {printMobileHr()}
             </Container>
@@ -389,10 +390,6 @@ export default function HeaderMobileMenu({
                     `/about/${AboutSection.SUBSCRIPTIONS}`
                   )}
                 </>
-              )}
-              {printMobileRow(
-                "Memes Calendar",
-                `/about/${AboutSection.MEMES_CALENDAR}`
               )}
               {printMobileRow("Minting", `/about/${AboutSection.MINTING}`)}
               {printMobileRow(

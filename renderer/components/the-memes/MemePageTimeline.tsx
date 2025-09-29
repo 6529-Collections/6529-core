@@ -1,12 +1,12 @@
 "use client";
 
-import { Col, Container, Row } from "react-bootstrap";
-import { MEMES_CONTRACT } from "@/constants";
-import { NFT, NFTHistory } from "@/entities/INFT";
+import { publicEnv } from "@/config/env";
 import { useEffect, useState } from "react";
-import { fetchAllPages } from "@/services/6529api";
-import Timeline from "@/components/timeline/Timeline";
-import { SEIZE_API_URL } from "@/electron-constants";
+import { Col, Container, Row } from "react-bootstrap";
+import { MEMES_CONTRACT } from "../../constants";
+import { NFT, NFTHistory } from "../../entities/INFT";
+import { fetchAllPages } from "../../services/6529api";
+import Timeline from "../timeline/Timeline";
 
 export function MemePageTimeline(props: {
   show: boolean;
@@ -21,7 +21,7 @@ export function MemePageTimeline(props: {
       });
     }
     if (props.nft) {
-      const initialUrlHistory = `${SEIZE_API_URL}/api/nft_history/${MEMES_CONTRACT}/${props.nft.id}`;
+      const initialUrlHistory = `${publicEnv.API_ENDPOINT}/api/nft_history/${MEMES_CONTRACT}/${props.nft.id}`;
       fetchHistory(initialUrlHistory);
     }
   }, [props.nft]);

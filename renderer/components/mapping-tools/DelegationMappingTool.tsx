@@ -4,7 +4,7 @@ import {
   DELEGATION_USE_CASES,
   SUPPORTED_COLLECTIONS,
 } from "@/components/delegation/delegation-constants";
-import { SEIZE_API_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { faFileUpload } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
@@ -113,7 +113,7 @@ export default function DelegationMappingTool() {
       const useCaseFilter = `&use_case=1,${useCase}`;
 
       const collectionFilter = `&collection=${DELEGATION_ALL_ADDRESS},${collection}`;
-      const initialUrl = `${SEIZE_API_URL}/api/delegations?${useCaseFilter}${collectionFilter}`;
+      const initialUrl = `${publicEnv.API_ENDPOINT}/api/delegations?${useCaseFilter}${collectionFilter}`;
       fetchDelegations(initialUrl);
     }
   }, [processing]);

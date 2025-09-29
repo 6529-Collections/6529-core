@@ -1,4 +1,4 @@
-import { SEIZE_API_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { useEffect, useState } from "react";
 import { DBResponse } from "../entities/IDBResponse";
 import { NFT } from "../entities/INFT";
@@ -32,11 +32,11 @@ export function useNFTCollections(initialCollections?: {
       return;
     }
 
-    fetchUrl(`${SEIZE_API_URL}/api/memes_lite`).then(
+    fetchUrl(`${publicEnv.API_ENDPOINT}/api/memes_lite`).then(
       (memeResponse: DBResponse) => {
         setNfts(memeResponse.data);
         fetchAllPages(
-          `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`
+          `${publicEnv.API_ENDPOINT}/api/nfts/gradients?&page_size=101`
         ).then((gradients: NFT[]) => {
           setNfts([...memeResponse.data, ...gradients]);
           setLoading(false);
