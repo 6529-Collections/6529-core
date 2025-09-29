@@ -152,9 +152,12 @@ function sharedConfig(publicEnv, assetPrefix) {
     async headers() {
       return [{ source: "/:path*", headers: securityHeaders }];
     },
-    webpack: (config) => {
+    webpack: (config, { dev, isServer }) => {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
+      config.resolve.alias["@react-native-async-storage/async-storage"] = false;
+      config.resolve.alias["react-native"] = false;
+      if (!dev && !isServer) config.devtool = "source-map";
       return config;
     },
     turbopack: {
