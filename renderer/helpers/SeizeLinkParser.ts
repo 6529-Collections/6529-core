@@ -1,4 +1,4 @@
-import { SEIZE_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 
 export interface SeizeQuoteLinkInfo {
   waveId: string;
@@ -25,7 +25,10 @@ export function parseSeizeQueryLink(
 ): Record<string, string> | null {
   try {
     const url = new URL(href);
-    if (url.origin !== SEIZE_URL) return null;
+
+    const allowedOrigins = new Set([publicEnv.BASE_ENDPOINT].filter(Boolean));
+
+    if (!allowedOrigins.has(url.origin)) return null;
     if (url.pathname !== path) return null;
 
     if (exact) {

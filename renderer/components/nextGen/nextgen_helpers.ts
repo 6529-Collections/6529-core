@@ -1,16 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { formatNameForUrl, normalizeNextgenTokenID } from "../../helpers/nextgen-utils";
 import { goerli, mainnet, sepolia } from "viem/chains";
 import { useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import { NextGenCollection } from "../../entities/INextgen";
 import { areEqualAddresses } from "../../helpers/Helpers";
+import {
+  formatNameForUrl,
+  normalizeNextgenTokenID,
+} from "../../helpers/nextgen-utils";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { Crumb } from "../breadcrumb/Breadcrumb";
 import {
   NEXTGEN_ADMIN,
-  NEXTGEN_CHAIN,
   NEXTGEN_CHAIN_ID,
   NEXTGEN_CORE,
   NEXTGEN_MINTER,
@@ -390,7 +392,6 @@ function useWriteContractForFunction(
     address: contract[NEXTGEN_CHAIN_ID] as `0x${string}`,
     abi: contract.abi,
     chainId: NEXTGEN_CHAIN_ID,
-    chain: NEXTGEN_CHAIN,
     functionName: functionName,
   };
 

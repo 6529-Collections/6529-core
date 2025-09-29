@@ -12,6 +12,7 @@ import React, {
 } from "react";
 import { ApiDrop } from "../../generated/models/ApiDrop";
 import { ApiLightDrop } from "../../generated/models/ApiLightDrop";
+import { Drop } from "../../helpers/waves/drop.helpers";
 import useCapacitor from "../../hooks/useCapacitor";
 import { useWebsocketStatus } from "../../services/websocket/useWebSocketMessage";
 import { WaveMessages } from "./hooks/types";
@@ -69,6 +70,15 @@ interface MyStreamContextType {
     type: ProcessIncomingDropType
   ) => void;
   readonly processDropRemoved: (waveId: string, dropId: string) => void;
+  readonly applyOptimisticDropUpdate: ({
+    waveId,
+    dropId,
+    update,
+  }: {
+    waveId: string;
+    dropId: string;
+    update: (draft: Drop) => Drop | void;
+  }) => { rollback: () => void } | null;
 }
 
 interface MyStreamProviderProps {
@@ -191,6 +201,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
       fetchAroundSerialNo: waveDataManager.fetchAroundSerialNo,
       processIncomingDrop,
       processDropRemoved,
+      applyOptimisticDropUpdate: waveMessagesStore.optimisticUpdateDrop,
     };
   }, [
     wavesHookData.waves,
@@ -217,6 +228,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
     waveDataManager.fetchAroundSerialNo,
     processIncomingDrop,
     processDropRemoved,
+    waveMessagesStore.optimisticUpdateDrop,
   ]);
 
   return (

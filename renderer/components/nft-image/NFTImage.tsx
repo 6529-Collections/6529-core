@@ -13,8 +13,7 @@ interface Props {
   showOriginal?: boolean;
   height: 300 | 650 | "full";
   targetProfile?: string;
-  showOwnedIfLoggedIn: boolean;
-  showUnseizedIfLoggedIn: boolean;
+  showBalance: boolean;
   transparentBG?: boolean;
   id?: string;
 }

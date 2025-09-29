@@ -7,8 +7,8 @@ import {
   MINTING_USE_CASE,
 } from "@/components/delegation/delegation-constants";
 import DotLoader from "@/components/dotLoader/DotLoader";
+import { publicEnv } from "@/config/env";
 import { DELEGATION_ALL_ADDRESS, DELEGATION_CONTRACT } from "@/constants";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { NextGenCollection } from "@/entities/INextgen";
 import { fromGWEI } from "@/helpers/Helpers";
 import { fetchUrl } from "@/services/6529api";
@@ -226,7 +226,7 @@ export default function NextGenMint(props: Readonly<Props>) {
   useEffect(() => {
     if (props.collection.merkle_root) {
       const merkleRoot = props.collection.merkle_root;
-      const url = `${SEIZE_API_URL}/api/nextgen/merkle_roots/${merkleRoot}`;
+      const url = `${publicEnv.API_ENDPOINT}/api/nextgen/merkle_roots/${merkleRoot}`;
       fetchUrl(url).then((response: CollectionWithMerkle) => {
         if (response) {
           setCollection(response);

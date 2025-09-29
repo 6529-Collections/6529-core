@@ -11,9 +11,9 @@ import {
   SortButton,
   printVolumeTypeDropdown,
 } from "@/components/the-memes/TheMemes";
+import { publicEnv } from "@/config/env";
 import { MEMELAB_CONTRACT } from "@/constants";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { LabExtendedData, LabNFT, VolumeType } from "@/entities/INFT";
 import { SortDirection } from "@/entities/ISort";
 import { MemeLabSort } from "@/enums";
@@ -468,7 +468,7 @@ export default function MemeLabComponent() {
   const [volumeType, setVolumeType] = useState<VolumeType>(VolumeType.HOURS_24);
 
   useEffect(() => {
-    const nftsUrl = `${SEIZE_API_URL}/api/lab_extended_data`;
+    const nftsUrl = `${publicEnv.API_ENDPOINT}/api/lab_extended_data`;
     fetchAllPages(nftsUrl).then((responseNftMetas: LabExtendedData[]) => {
       setNftMetas(responseNftMetas);
       const myCollections: string[] = [];
@@ -481,7 +481,7 @@ export default function MemeLabComponent() {
       if (responseNftMetas.length > 0) {
         const tokenIds = responseNftMetas.map((n: LabExtendedData) => n.id);
         fetchAllPages(
-          `${SEIZE_API_URL}/api/nfts_memelab?id=${tokenIds.join(",")}`
+          `${publicEnv.API_ENDPOINT}/api/nfts_memelab?id=${tokenIds.join(",")}`
         ).then((responseNfts: any[]) => {
           setNfts(responseNfts);
         });
@@ -539,8 +539,7 @@ export default function MemeLabComponent() {
                 nft={nft}
                 animation={false}
                 height={300}
-                showOwnedIfLoggedIn={true}
-                showUnseizedIfLoggedIn={true}
+                showBalance={true}
                 showThumbnail={true}
               />
             </Row>

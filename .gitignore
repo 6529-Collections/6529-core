@@ -40,3 +40,6 @@ certificate.pfx
 # Task files
 renderer/tasks.json
 renderer/tasks/
+
+# config
+/electron-src/config/public-runtime.json

@@ -5,7 +5,6 @@ import styles from "./MemeLab.module.scss";
 import { useAuth } from "@/components/auth/Auth";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import Download from "@/components/download/Download";
-import { TypeFilter } from "@/hooks/useActivityData";
 import LatestActivityRow from "@/components/latest-activity/LatestActivityRow";
 import MemeLabLeaderboard from "@/components/leaderboard/MemeLabLeaderboard";
 import NFTImage from "@/components/nft-image/NFTImage";
@@ -24,9 +23,9 @@ import {
   TabButton,
 } from "@/components/the-memes/MemeShared";
 import Timeline from "@/components/timeline/Timeline";
+import { publicEnv } from "@/config/env";
 import { MEMELAB_CONTRACT, MEMES_CONTRACT, NULL_ADDRESS } from "@/constants";
 import { useTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
 import { LabExtendedData, LabNFT, NFT, NFTHistory } from "@/entities/INFT";
 import { Transaction } from "@/entities/ITransaction";
@@ -43,6 +42,7 @@ import {
   getDimensionsFromMetadata,
   getFileTypeFromMetadata,
 } from "@/helpers/nft.helpers";
+import { TypeFilter } from "@/hooks/useActivityData";
 import useCapacitor from "@/hooks/useCapacitor";
 import { fetchAllPages, fetchUrl } from "@/services/6529api";
 import { faExpandAlt, faFire } from "@fortawesome/free-solid-svg-icons";
@@ -130,35 +130,37 @@ export default function MemeLabPageComponent({
 
   useEffect(() => {
     if (nftId) {
-      fetchUrl(`${SEIZE_API_URL}/api/lab_extended_data?id=${nftId}`).then(
-        (response: DBResponse) => {
-          const nftMetas = response.data;
-          if (nftMetas.length === 1) {
-            setNftMeta(nftMetas[0]);
-            fetchUrl(`${SEIZE_API_URL}/api/nfts_memelab?id=${nftId}`).then(
-              (response: DBResponse) => {
-                const nft: LabNFT = response.data[0];
-                setNft(nft);
+      fetchUrl(
+        `${publicEnv.API_ENDPOINT}/api/lab_extended_data?id=${nftId}`
+      ).then((response: DBResponse) => {
+        const nftMetas = response.data;
+        if (nftMetas.length === 1) {
+          setNftMeta(nftMetas[0]);
+          fetchUrl(
+            `${publicEnv.API_ENDPOINT}/api/nfts_memelab?id=${nftId}`
+          ).then((response: DBResponse) => {
+            const nft: LabNFT = response.data[0];
+            setNft(nft);
 
-                if (nft.meme_references.length > 0) {
-                  fetchUrl(
-                    `${SEIZE_API_URL}/api/nfts?sort_direction=asc&contract=${MEMES_CONTRACT}&id=${nft.meme_references.join(
-                      ","
-                    )}`
-                  ).then((response: DBResponse) => {
-                    setOriginalMemes(response.data);
-                    setOriginalMemesLoaded(true);
-                  });
-                } else {
-                  setOriginalMemesLoaded(true);
-                }
-              }
-            );
-          } else {
-            setNftMeta(undefined);
-          }
+            if (nft.meme_references.length > 0) {
+              fetchUrl(
+                `${
+                  publicEnv.API_ENDPOINT
+                }/api/nfts?sort_direction=asc&contract=${MEMES_CONTRACT}&id=${nft.meme_references.join(
+                  ","
+                )}`
+              ).then((response: DBResponse) => {
+                setOriginalMemes(response.data);
+                setOriginalMemesLoaded(true);
+              });
+            } else {
+              setOriginalMemesLoaded(true);
+            }
+          });
+        } else {
+          setNftMeta(undefined);
         }
-      );
+      });
     }
   }, [nftId]);
 
@@ -166,9 +168,9 @@ export default function MemeLabPageComponent({
     const wallets = connectedProfile?.wallets ?? [];
     if (wallets.length > 0 && nftId) {
       fetchUrl(
-        `${SEIZE_API_URL}/api/transactions_memelab?wallet=${wallets.join(
-          ","
-        )}&id=${nftId}`
+        `${
+          publicEnv.API_ENDPOINT
+        }/api/transactions_memelab?wallet=${wallets.join(",")}&id=${nftId}`
       ).then((response: DBResponse) => {
         setTransactions(response.data);
         let countIn = 0;
@@ -191,7 +193,7 @@ export default function MemeLabPageComponent({
 
   useEffect(() => {
     if (nftId) {
-      let url = `${SEIZE_API_URL}/api/transactions_memelab?id=${nftId}&page_size=${ACTIVITY_PAGE_SIZE}&page=${activityPage}`;
+      let url = `${publicEnv.API_ENDPOINT}/api/transactions_memelab?id=${nftId}&page_size=${ACTIVITY_PAGE_SIZE}&page=${activityPage}`;
       switch (activityTypeFilter) {
         case TypeFilter.SALES:
           url += `&filter=sales`;
@@ -223,7 +225,7 @@ export default function MemeLabPageComponent({
       });
     }
     if (nftId) {
-      const initialUrlHistory = `${SEIZE_API_URL}/api/nft_history/${MEMELAB_CONTRACT}/${nftId}`;
+      const initialUrlHistory = `${publicEnv.API_ENDPOINT}/api/nft_history/${MEMELAB_CONTRACT}/${nftId}`;
       fetchHistory(initialUrlHistory);
     }
   }, [nftId]);
@@ -247,7 +249,7 @@ export default function MemeLabPageComponent({
 
     return (
       <Container className="p-0">
-        <Row>
+        <Row className={connectedProfile ? styles.nftImagePadding : ""}>
           {[MEME_FOCUS.LIVE, MEME_FOCUS.YOUR_CARDS].includes(activeTab!) &&
             nft && (
               <>
@@ -261,8 +263,7 @@ export default function MemeLabPageComponent({
                     nft={nft}
                     animation={true}
                     height={650}
-                    showOwnedIfLoggedIn={true}
-                    showUnseizedIfLoggedIn={true}
+                    showBalance={true}
                   />
                 </Col>
                 {activeTab === MEME_FOCUS.LIVE && <>{printLive()}</>}
@@ -727,8 +728,7 @@ export default function MemeLabPageComponent({
                       height={650}
                       transparentBG={true}
                       showOriginal={true}
-                      showUnseizedIfLoggedIn={false}
-                      showOwnedIfLoggedIn={false}
+                      showBalance={false}
                       id="the-art-fullscreen-animation"
                     />
                   </Carousel.Item>
@@ -742,8 +742,7 @@ export default function MemeLabPageComponent({
                       height={650}
                       transparentBG={true}
                       showOriginal={true}
-                      showUnseizedIfLoggedIn={false}
-                      showOwnedIfLoggedIn={false}
+                      showBalance={false}
                       id="the-art-fullscreen-img"
                     />
                   </Carousel.Item>
@@ -757,8 +756,7 @@ export default function MemeLabPageComponent({
                     nft={nft}
                     animation={false}
                     height={650}
-                    showOwnedIfLoggedIn={false}
-                    showUnseizedIfLoggedIn={false}
+                    showBalance={false}
                     transparentBG={true}
                     showOriginal={true}
                     id="the-art-fullscreen-img"

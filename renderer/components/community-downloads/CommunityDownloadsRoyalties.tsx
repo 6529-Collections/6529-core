@@ -1,7 +1,7 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import CommunityDownloadsComponent from "./CommunityDownloadsComponent";
 
 export default function CommunityDownloadsRoyalties() {
@@ -10,7 +10,7 @@ export default function CommunityDownloadsRoyalties() {
   return (
     <CommunityDownloadsComponent
       title="Royalties"
-      url={`${SEIZE_API_URL}/api/royalties/uploads`}
+      url={`${publicEnv.API_ENDPOINT}/api/royalties/uploads`}
     />
   );
 }

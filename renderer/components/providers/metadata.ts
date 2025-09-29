@@ -1,4 +1,4 @@
-import { SEIZE_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { PageSSRMetadata } from "@/helpers/Types";
 import { Metadata } from "next";
 
@@ -9,7 +9,7 @@ export function getPageMetadata({
   componentMetadata?: Partial<PageSSRMetadata>;
   pageMetadata?: Partial<PageSSRMetadata>;
 }): PageSSRMetadata {
-  const baseEndpoint = SEIZE_URL!;
+  const baseEndpoint = publicEnv.BASE_ENDPOINT;
   const isStaging = baseEndpoint.includes("staging");
 
   const title =
@@ -41,7 +41,7 @@ export function getPageMetadata({
 export function getAppMetadata(
   customMetadata?: Partial<PageSSRMetadata>
 ): Metadata {
-  const baseEndpoint = SEIZE_URL!;
+  const baseEndpoint = publicEnv.BASE_ENDPOINT;
   const isStaging = baseEndpoint.includes("staging");
 
   const title = customMetadata?.title ?? (isStaging ? "6529 Staging" : "6529");
@@ -64,6 +64,9 @@ export function getAppMetadata(
     },
     twitter: {
       card: twitterCard,
+    },
+    other: {
+      version: publicEnv.VERSION ?? "",
     },
   };
 }

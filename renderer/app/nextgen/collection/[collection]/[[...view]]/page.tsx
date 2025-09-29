@@ -1,6 +1,6 @@
 import NextGenCollectionComponent from "@/components/nextGen/collections/collectionParts/NextGenCollection";
 import { getAppMetadata } from "@/components/providers/metadata";
-import { SEIZE_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { NextgenCollectionView } from "@/enums";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import styles from "@/styles/Home.module.scss";
@@ -29,7 +29,7 @@ export async function generateMetadata({
     ogImage:
       resolvedCollection.banner ||
       resolvedCollection.image ||
-      `${SEIZE_URL}/nextgen.png`,
+      `${publicEnv.BASE_ENDPOINT}/nextgen.png`,
     description: "NextGen",
     twitterCard: "summary_large_image",
   });

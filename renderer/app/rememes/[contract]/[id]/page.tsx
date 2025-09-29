@@ -1,6 +1,6 @@
 import { getAppMetadata } from "@/components/providers/metadata";
 import RememePage from "@/components/rememes/RememePage";
-import { SEIZE_API_URL, SEIZE_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { formatAddress } from "@/helpers/Helpers";
 import { fetchUrl } from "@/services/6529api";
 import styles from "@/styles/Home.module.scss";
@@ -27,9 +27,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { contract, id } = await params;
   let name = `${formatAddress(contract)} #${id}`;
-  let image = `${SEIZE_URL}/6529io.png`;
+  let image = `${publicEnv.BASE_ENDPOINT}/6529io.png`;
   const response = await fetchUrl(
-    `${SEIZE_API_URL}/api/rememes?contract=${contract}&id=${id}`
+    `${publicEnv.API_ENDPOINT}/api/rememes?contract=${contract}&id=${id}`
   );
 
   if (response?.data?.length > 0) {
@@ -43,7 +43,7 @@ export async function generateMetadata({
 
   return getAppMetadata({
     title: name,
-    ogImage: image ?? `${SEIZE_URL}/re-memes-b.jpeg`,
+    ogImage: image ?? `${publicEnv.BASE_ENDPOINT}/re-memes-b.jpeg`,
     description: `ReMemes`,
     twitterCard: "summary",
   });

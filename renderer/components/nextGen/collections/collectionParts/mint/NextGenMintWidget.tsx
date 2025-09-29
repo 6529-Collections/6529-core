@@ -1,42 +1,41 @@
 "use client";
 
-import styles from "../../NextGen.module.scss";
+import {
+  NEXTGEN_CHAIN_ID,
+  NEXTGEN_MINTER,
+} from "@/components/nextGen/nextgen_contracts";
+import { publicEnv } from "@/config/env";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
+import { Button, Col, Container, Form, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import { Container, Row, Col, Form, Button } from "react-bootstrap";
+import { useChainId, useEnsAddress, useEnsName, useWriteContract } from "wagmi";
+import { NULL_ADDRESS } from "../../../../../constants";
+import { NextGenCollection } from "../../../../../entities/INextgen";
 import {
   areEqualAddresses,
   capitalizeFirstChar,
   createArray,
   getNetworkName,
   isValidEthAddress,
-} from "@/helpers/Helpers";
-import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
-import {
-  NEXTGEN_CHAIN,
-  NEXTGEN_CHAIN_ID,
-  NEXTGEN_MINTER,
-} from "@/components/nextGen/nextgen_contracts";
+} from "../../../../../helpers/Helpers";
+import { fetchUrl } from "../../../../../services/6529api";
+import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
+import DotLoader from "../../../../dotLoader/DotLoader";
 import {
   ProofResponse,
   Status,
   TokensPerAddress,
-} from "@/components/nextGen/nextgen_entities";
-import { useChainId, useEnsAddress, useEnsName, useWriteContract } from "wagmi";
-import { useEffect, useState } from "react";
-import { NULL_ADDRESS } from "@/constants";
-import { fetchUrl } from "@/services/6529api";
+} from "../../../nextgen_entities";
 import {
   getStatusFromDates,
   useMintSharedState,
 } from "../../../nextgen_helpers";
-import { NextGenMintingFor } from "./NextGenMintShared";
-import { NextGenCollection } from "@/entities/INextgen";
+import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
+import styles from "../../NextGen.module.scss";
 import { Spinner } from "./NextGenMint";
-import DotLoader from "@/components/dotLoader/DotLoader";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
-import { SEIZE_API_URL } from "@/electron-constants";
-import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { NextGenMintingFor } from "./NextGenMintShared";
 
 export function getJsonData(keccak: string, data: string) {
   const parsed = JSON.parse(data);
@@ -150,7 +149,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
       if (mintForAddress) {
         setFetchingProofs(true);
         const merkleRoot = props.collection.merkle_root;
-        const url = `${SEIZE_API_URL}/api/nextgen/proofs/${merkleRoot}/${mintForAddress}`;
+        const url = `${publicEnv.API_ENDPOINT}/api/nextgen/proofs/${merkleRoot}/${mintForAddress}`;
         fetchUrl(url).then((response: ProofResponse[]) => {
           const proofResponses: ProofResponse[] = [];
           if (response.length > 0) {
@@ -267,7 +266,6 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
             : mintForAddress,
           salt,
         ],
-        chain: NEXTGEN_CHAIN,
       });
     }
   }, [isMinting]);

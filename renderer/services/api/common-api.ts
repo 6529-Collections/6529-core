@@ -1,5 +1,5 @@
-import { SEIZE_API_URL } from "@/electron-constants";
-import { getAuthJwt, getStagingAuth } from "@/services/auth/auth.utils";
+import { publicEnv } from "@/config/env";
+import { getAuthJwt, getStagingAuth } from "../auth/auth.utils";
 
 const getHeaders = (
   headers?: Record<string, string>,
@@ -21,7 +21,7 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
   params?: U;
   signal?: AbortSignal;
 }): Promise<T> => {
-  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  let url = `${publicEnv.API_ENDPOINT}/api/${param.endpoint}`;
   if (param.params) {
     const queryParams = new URLSearchParams();
     // Override NIC with CIC
@@ -170,7 +170,7 @@ export const commonApiPost = async <T, U, Z = Record<string, string>>(param: {
   params?: Z;
   signal?: AbortSignal;
 }): Promise<U> => {
-  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  let url = `${publicEnv.API_ENDPOINT}/api/${param.endpoint}`;
   if (param.params) {
     const queryParams = new URLSearchParams(param.params);
     url += `?${queryParams.toString()}`;
@@ -194,7 +194,7 @@ export const commonApiPostWithoutBodyAndResponse = async (param: {
   endpoint: string;
   headers?: Record<string, string>;
 }): Promise<void> => {
-  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  let url = `${publicEnv.API_ENDPOINT}/api/${param.endpoint}`;
   const res = await fetch(url, {
     method: "POST",
     headers: getHeaders(param.headers),
@@ -212,7 +212,7 @@ export const commonApiDelete = async (param: {
   endpoint: string;
   headers?: Record<string, string>;
 }): Promise<void> => {
-  const res = await fetch(`${SEIZE_API_URL}/api/${param.endpoint}`, {
+  const res = await fetch(`${publicEnv.API_ENDPOINT}/api/${param.endpoint}`, {
     method: "DELETE",
     headers: getHeaders(param.headers),
   });
@@ -234,7 +234,7 @@ export const commonApiDeleteWithBody = async <
   headers?: Record<string, string>;
   params?: Z;
 }): Promise<U> => {
-  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  let url = `${publicEnv.API_ENDPOINT}/api/${param.endpoint}`;
   if (param.params) {
     const queryParams = new URLSearchParams(param.params);
     url += `?${queryParams.toString()}`;
@@ -259,7 +259,7 @@ export const commonApiPut = async <T, U, Z = Record<string, string>>(param: {
   headers?: Record<string, string>;
   params?: Z;
 }): Promise<U> => {
-  let url = `${SEIZE_API_URL}/api/${param.endpoint}`;
+  let url = `${publicEnv.API_ENDPOINT}/api/${param.endpoint}`;
   if (param.params) {
     const queryParams = new URLSearchParams(param.params);
     url += `?${queryParams.toString()}`;
@@ -283,7 +283,7 @@ export const commonApiPostForm = async <U>(param: {
   body: FormData;
   headers?: Record<string, string>;
 }): Promise<U> => {
-  const res = await fetch(`${SEIZE_API_URL}/api/${param.endpoint}`, {
+  const res = await fetch(`${publicEnv.API_ENDPOINT}/api/${param.endpoint}`, {
     method: "POST",
     headers: getHeaders(param.headers, false),
     body: param.body,

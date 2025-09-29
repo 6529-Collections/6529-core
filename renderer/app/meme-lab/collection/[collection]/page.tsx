@@ -2,7 +2,7 @@ import styles from "@/styles/Home.module.scss";
 
 import MemeLabCollection from "@/components/memelab/MemeLabCollection";
 import { getAppMetadata } from "@/components/providers/metadata";
-import { SEIZE_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { Metadata } from "next";
 
 export default async function MemeLabCollectionPage({
@@ -28,7 +28,7 @@ export async function generateMetadata({
   return getAppMetadata({
     title: `${collectionName} | Meme Lab Collections`,
     description: "Collections",
-    ogImage: `${SEIZE_URL}/meme-lab.jpg`,
+    ogImage: `${publicEnv.BASE_ENDPOINT}/meme-lab.jpg`,
     twitterCard: "summary",
   });
 }

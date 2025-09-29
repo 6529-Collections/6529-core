@@ -1,0 +1,1567 @@
+
+> 6529-core@0.1.36 dist-mac-local
+> npm run build && electron-builder --config electron-builder.local.json --mac --arm64 --publish never
+
+
+> 6529-core@0.1.36 build
+> npm run clean && npm run build-env-schema && npm run build-renderer && npm run build-electron
+
+
+> 6529-core@0.1.36 clean
+> rm -rf dist main renderer/out renderer/.next
+
+
+> 6529-core@0.1.36 build-env-schema
+> node renderer/scripts/build-env-schema.cjs && tsx scripts/bake-public-runtime.ts
+
+
+  renderer/config/env.schema.runtime.cjs  113.1kb
+
+⚡ Done in 21ms
+[bake-public-runtime] wrote main/electron-src/__PUBLIC_RUNTIME.json
+
+> 6529-core@0.1.36 build-renderer
+> next build renderer
+
+NODE_ENV: production
+ENV fallback: Loaded from /Users/ppan/Desktop/6529git/6529-core/main/electron-src/__PUBLIC_RUNTIME.json
+VERSION (explicit): 399af856bfe3b52d59cd0792943afbed5b80b024
+ASSETS_FROM_S3: false
+   ▲ Next.js 15.5.2
+   - Experiments (use with caution):
+     ✓ webpackBuildWorker
+     ✓ webpackMemoryOptimizations
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 78s
+   Linting and checking validity of types ...
+
+./app/api/farcaster/route.ts
+244:6  Warning: 'WarpcastFrameResponse' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./app/api/open-graph/compound/service.ts
+801:15  Warning: 'hasPosition' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./app/api/open-graph/utils.ts
+680:3  Warning: 'finalUrl' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./app/api/wikimedia-card/route.ts
+622:3  Warning: 'languages' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./app/nextgen/[[...view]]/NextGenPageClient.tsx
+31:6  Warning: React Hook useEffect has a missing dependency: 'setTitle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/tools/app-wallets/[app-wallet-address]/page.client.tsx
+16:6  Warning: React Hook useEffect has a missing dependency: 'address'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/tools/app-wallets/import-wallet/page.client.tsx
+7:45  Warning: 'props' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/6529Gradient/6529Gradient.tsx
+66:6  Warning: React Hook useEffect has a missing dependency: 'searchParams'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+76:6  Warning: React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+96:6  Warning: React Hook useEffect has a missing dependency: 'nftsRaw'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/about/AboutPrimaryAddress.tsx
+31:6  Warning: React Hook useEffect has a missing dependency: 'populateData'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/allowlist-tool/allowlist-tool.types.ts
+49:11  Warning: 'AllowlistWalletPool' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+164:11  Warning: 'AllowlistOperationDescription' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+176:6  Warning: 'AllowlistToolEntity' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+200:11  Warning: 'AllowlistToolOperationsGrouped' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/app-wallets/AppWallet.tsx
+95:5  Warning: 'wallet' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+96:5  Warning: 'decryptedMnemonic' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+97:5  Warning: 'decryptedPrivateKey' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+132:5  Warning: React Hook useCallback has missing dependencies: 'deleteAppWallet', 'router', and 'setToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/app-wallets/AppWalletModal.tsx
+89:6  Warning: React Hook useCallback has missing dependencies: 'createAppWallet', 'handleHide', and 'setToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+124:6  Warning: React Hook useCallback has missing dependencies: 'handleHide', 'importAppWallet', 'props.import', and 'setToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+285:6  Warning: React Hook useCallback has missing dependencies: 'handleHide' and 'props'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback.  react-hooks/exhaustive-deps
+
+./components/app-wallets/AppWalletsContext.tsx
+45:30  Warning: 'setFetchingAppWallets' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+46:22  Warning: 'setAppWallets' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+47:31  Warning: 'setAppWalletsSupported' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+58:5  Warning: 'name' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+59:5  Warning: 'pass' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+65:5  Warning: 'walletName' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+66:5  Warning: 'walletPass' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+67:5  Warning: 'address' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+68:5  Warning: 'mnemonic' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+69:5  Warning: 'privateKey' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+74:34  Warning: 'address' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/auth/Auth.tsx
+641:6  Warning: React Hook useEffect has missing dependencies: 'addModal' and 'removeModal'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/block-picker/advanced/BlockPickerAdvancedItemBlock.tsx
+38:10  Warning: 'copyState' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/brain/direct-messages/DirectMessagesList.tsx
+69:6  Warning: React Hook useEffect has a missing dependency: 'directMessages'. Either include it or remove the dependency array. Mutable values like 'listRef.current.sentinelRef.current' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+
+./components/brain/feed/FeedScrollContainer.tsx
+75:8  Warning: React Hook useEffect has a missing dependency: 'ref'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/brain/left-sidebar/BrainLeftSidebar.tsx
+98:9  Warning: The 'tabLabels' object makes the dependencies of useMemo Hook (at line 114) change on every render. Move it inside the useMemo callback. Alternatively, wrap the initialization of 'tabLabels' in its own useMemo() Hook.  react-hooks/exhaustive-deps
+
+./components/brain/left-sidebar/search-wave/BrainLeftSidebarSearchWaveDropdownContent.tsx
+14:33  Warning: 'listType' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/brain/left-sidebar/waves/UnifiedWavesList.tsx
+28:3  Warning: 'activeWaveId' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+74:6  Warning: React Hook useEffect has a missing dependency: 'fetchNextPage'. Either include it or remove the dependency array. Mutable values like 'listRef.current.sentinelRef.current' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+
+./components/brain/my-stream/MyStreamWaveDesktopTabs.tsx
+132:6  Warning: React Hook useEffect has missing dependencies: 'isChatWave' and 'isMemesWave'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+178:6  Warning: React Hook useEffect has a missing dependency: 'setActiveTab'. Either include it or remove the dependency array. If 'setActiveTab' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/brain/my-stream/MyStreamWaveFAQ.tsx
+24:60  Warning: 'wave' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/brain/my-stream/votes/MyStreamWaveMyVoteInput.tsx
+32:6  Warning: React Hook useEffect has a missing dependency: 'currentVoteValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+56:17  Warning: 'response' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+94:14  Warning: 'error' is defined but never used.  unused-imports/no-unused-vars
+
+./components/brain/notifications/Notifications.tsx
+57:6  Warning: React Hook useEffect has missing dependencies: 'markAllAsReadMutation', 'pathname', 'refetch', 'router', and 'searchParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+79:6  Warning: React Hook useEffect has a missing dependency: 'markAllAsReadMutation'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/brain/notifications/NotificationsFollowBtn.tsx
+43:6  Warning: React Hook useEffect has missing dependencies: 'getFollowing' and 'getLabel'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/browser-connector/BrowserConnectorConnect.tsx
+53:6  Warning: React Hook useCallback has missing dependencies: 'props' and 'requestId'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback.  react-hooks/exhaustive-deps
+58:6  Warning: React Hook useEffect has a missing dependency: 'requestedChain.id'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/browser-connector/BrowserConnectorProvider.tsx
+84:6  Warning: React Hook useEffect has a missing dependency: 'startRedirectCountdown'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/community/CommunityMembers.tsx
+108:50  Warning: React Hook useEffect has a missing dependency: 'getParamsFromUrl'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+208:6  Warning: React Hook useEffect has missing dependencies: 'params.group_id' and 'updateFields'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+232:6  Warning: React Hook useEffect has missing dependencies: 'debouncedParams.page', 'debouncedParams.page_size', and 'setPage'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/community/members-table/CommunityMembersTableHeaderSortableContent.tsx
+38:5  Warning: React Hook useEffect has missing dependencies: 'isActive' and 'sort'. Either include them or remove the dependency array. If 'setRotate' needs the current value of 'sort', you can also switch to useReducer instead of useState and read 'sort' in the reducer.  react-hooks/exhaustive-deps
+
+./components/community-downloads/CommunityDownloadsComponent.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/confirm/ConfirmSeedWalletLock.tsx
+88:5  Warning: React Hook useCallback has missing dependencies: 'props' and 'showToast'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback.  react-hooks/exhaustive-deps
+140:6  Warning: React Hook useEffect has missing dependencies: 'addModal' and 'removeModal'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/confirm/ConfirmSeedWalletRequest.tsx
+95:6  Warning: React Hook useEffect has missing dependencies: 'addModal' and 'removeModal'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+145:6  Warning: React Hook useEffect has missing dependencies: 'requestHandler', 'seedWalletContext', and 'showToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/cookies/CookieConsentContext.tsx
+113:9  Warning: The 'consent' function makes the dependencies of useMemo Hook (at line 167) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'consent' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+128:9  Warning: The 'reject' function makes the dependencies of useMemo Hook (at line 167) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'reject' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+172:6  Warning: React Hook useEffect has a missing dependency: 'getCookieConsent'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/core/app-info/AppInfo.tsx
+49:40  Warning: 'homeDir' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+220:29  Warning: 'props' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+238:27  Warning: 'props' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/core/core-wallet/SeedWallet.tsx
+94:6  Warning: React Hook useEffect has a missing dependency: 'fetchWallet'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+134:5  Warning: React Hook useCallback has missing dependencies: 'router' and 'showToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/core/core-wallet/SeedWalletModal.tsx
+75:6  Warning: React Hook useCallback has missing dependencies: 'handleHide' and 'showToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+102:6  Warning: React Hook useCallback has missing dependencies: 'handleHide', 'props.import', and 'showToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+260:16  Warning: 'e' is defined but never used.  unused-imports/no-unused-vars
+266:6  Warning: React Hook useCallback has missing dependencies: 'handleHide', 'props', and 'showUnlockError'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useCallback call and refer to those specific props inside useCallback.  react-hooks/exhaustive-deps
+
+./components/core/eth-scanner/RpcProviderModal.tsx
+75:6  Warning: React Hook useCallback has missing dependencies: 'handleHide' and 'showToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/core/eth-scanner/TransactionsLocalData.tsx
+63:6  Warning: React Hook useEffect has a missing dependency: 'fetchTransactions'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/core/eth-scanner/Workers.tsx
+146:3  Warning: 'homeDir' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/core/logs-viewer/LogsViewer.tsx
+79:6  Warning: React Hook useEffect has a missing dependency: 'extraActions?.length'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+230:31  Warning: 'event' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/core/search-bar/SearchBar.tsx
+30:6  Warning: React Hook useEffect has missing dependencies: 'close' and 'open'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/date-countdown/DateCountdown.tsx
+55:6  Warning: React Hook useEffect has a missing dependency: 'calculateTimeLeft'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/delegation/CollectionDelegation.tsx
+278:6  Warning: React Hook useEffect has a missing dependency: 'reset'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+337:6  Warning: React Hook useEffect has a missing dependency: 'outgoingDelegations'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+388:6  Warning: React Hook useEffect has a missing dependency: 'incomingDelegations'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+504:6  Warning: React Hook useEffect has missing dependencies: 'accountResolution.isConnected' and 'useCaseLockStatuses'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+651:6  Warning: React Hook useEffect has a missing dependency: 'collectionLockRead.data'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+704:6  Warning: React Hook useEffect has missing dependencies: 'lockUseCaseIndex' and 'useCaseLockStatuses.data'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+714:6  Warning: React Hook useEffect has missing dependencies: 'incomingDelegationsLoaded' and 'outgoingDelegationsLoaded'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+741:6  Warning: React Hook useEffect has a missing dependency: 'contractWriteRevoke'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+849:6  Warning: React Hook useEffect has missing dependencies: 'consolidationKeysChanged', 'delegationKeysChanged', 'getActiveKeys', and 'subDelegationKeysChanged'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+1271:48  Warning: 'addressIndex' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+1322:70  Warning: 'br' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/delegation/DelegationCenter.tsx
+36:6  Warning: React Hook useEffect has missing dependencies: 'isConnected', 'props', and 'seizeConnect'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+43:6  Warning: React Hook useEffect has missing dependencies: 'props' and 'redirect'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/delegation/DelegationFormParts.tsx
+44:6  Warning: React Hook useEffect has a missing dependency: 'newDelegationInput'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setNewDelegationAddress' needs the current value of 'newDelegationInput'.  react-hooks/exhaustive-deps
+58:6  Warning: React Hook useEffect has a missing dependency: 'newDelegationInput'. Either include it or remove the dependency array. You can also do a functional update 'setNewDelegationInput(n => ...)' if you only need 'newDelegationInput' in the 'setNewDelegationInput' call.  react-hooks/exhaustive-deps
+62:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+266:10  Warning: 'DelegationButtons' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+369:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+424:31  Warning: 'index' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/delegation/NewAssignPrimaryAddress.tsx
+158:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+256:10  Warning: 'getAssignPrimartAddressConfig' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/delegation/NewSubDelegation.tsx
+94:12  Warning: 'clearErrors' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/delegation/UpdateDelegation.tsx
+78:6  Warning: React Hook useEffect has a missing dependency: 'delegationToInput'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setDelegationToAddress' needs the current value of 'delegationToInput'.  react-hooks/exhaustive-deps
+95:6  Warning: React Hook useEffect has a missing dependency: 'delegationToInput'. Either include it or remove the dependency array. You can also do a functional update 'setDelegationToInput(d => ...)' if you only need 'delegationToInput' in the 'setDelegationToInput' call.  react-hooks/exhaustive-deps
+
+./components/delegation/walletChecker/WalletChecker.tsx
+80:6  Warning: React Hook useEffect has a missing dependency: 'walletInput'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setWalletAddress' needs the current value of 'walletInput'.  react-hooks/exhaustive-deps
+92:6  Warning: React Hook useEffect has a missing dependency: 'walletInput'. Either include it or remove the dependency array. You can also do a functional update 'setWalletInput(w => ...)' if you only need 'walletInput' in the 'setWalletInput' call.  react-hooks/exhaustive-deps
+195:6  Warning: React Hook useEffect has missing dependencies: 'getForAddress' and 'walletAddress'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+215:6  Warning: React Hook useEffect has missing dependencies: 'consolidations', 'fetchConsolidatedWallets', and 'fetchedAddress'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+308:6  Warning: React Hook useEffect has missing dependencies: 'fetchConsolidations', 'props', and 'walletAddress'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/distribution/Distribution.tsx
+98:6  Warning: React Hook useEffect has missing dependencies: 'fetchDistribution' and 'props.contract'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+104:6  Warning: React Hook useEffect has missing dependencies: 'nftId' and 'pageProps'. Either include them or remove the dependency array. You can also do a functional update 'setPageProps(p => ...)' if you only need 'pageProps' in the 'setPageProps' call.  react-hooks/exhaustive-deps
+110:6  Warning: React Hook useEffect has missing dependencies: 'fetchDistribution' and 'nftId'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/distribution-plan-tool/build-phases/build-phase/form/BuildPhaseFormConfigModal.tsx
+444:22  Warning: 'data' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+713:42  Warning: 'setUniqueWalletsCountByOperations' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+719:40  Warning: 'setLoadingUniqueWalletsCountIds' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+782:10  Warning: 'debouncedUniqueCountOps' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/build-phases/build-phase/form/component-config/ComponentConfigMeta.tsx
+16:3  Warning: 'tags' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+17:3  Warning: 'walletsCount' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+18:3  Warning: 'isLoading' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/build-phases/build-phase/form/component-config/SnapshotExcludeComponentWinners.tsx
+133:35  Warning: 'setLocalUniqueWalletsCount' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/build-phases/build-phase/form/component-config/SnapshotExcludeOtherSnapshots.tsx
+41:23  Warning: 'distributionPlan' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+75:35  Warning: 'setLocalUniqueWalletsCount' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+136:19  Warning: 'setLoading' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/build-phases/build-phase/form/component-config/snapshots-table/FinalizeSnapshotsTableSnapshotTooltip.tsx
+9:7  Warning: 'PoolToCodeMap' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/common/DistributionPlanWarnings.tsx
+12:10  Warning: 'haveUnRunOperations' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/create-phases/form/CreatePhasesForm.tsx
+13:11  Warning: 'setToasts' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+35:22  Warning: 'data' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/create-plan/CreatePlan.tsx
+38:6  Warning: React Hook useEffect has missing dependencies: 'id', 'router', and 'setState'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/distribution-plan-tool/create-snapshots/CreateSnapshots.tsx
+131:6  Warning: React Hook useEffect has a missing dependency: 'fetchTokenPoolStatuses'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/distribution-plan-tool/create-snapshots/form/CreateSnapshotFormSearchCollectionDropdownItem.tsx
+34:11  Warning: 'setToasts' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+50:10  Warning: 'isLoading' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/create-snapshots/table/CreateSnapshotTableRow.tsx
+17:10  Warning: 'copyState' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/create-snapshots/table/CreateSnapshotTableRowDownload.tsx
+19:29  Warning: 'setToasts' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/map-delegations/MapDelegationsForm.tsx
+13:11  Warning: 'setToasts' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableHeader.tsx
+25:29  Warning: 'setToasts' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableSubscription.tsx
+186:7  Warning: 'resetSubscriptions' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableSubscriptionFooter.tsx
+114:24  Warning: 'error' is defined but never used.  unused-imports/no-unused-vars
+
+./components/downloadUrlWidget/DownloadUrlWidget.tsx
+47:10  Warning: 'DownloadUrlWidgetConfirm' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/create/compact/CreateDropCompact.tsx
+66:7  Warning: 'profile' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+67:7  Warning: 'showProfile' is assigned a value but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+71:7  Warning: 'title' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+72:7  Warning: 'metadata' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+84:7  Warning: 'onMetadataRemove' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/create/full/CreateDropFull.tsx
+27:11  Warning: 'CreateDropFullWaveProps' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/create/full/desktop/CreateDropFullDesktop.tsx
+71:7  Warning: 'profile' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/create/full/mobile/CreateDropFullMobile.tsx
+71:7  Warning: 'profile' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/create/lexical/nodes/ImageNode.tsx
+90:13  Warning: 'node' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/create/lexical/plugins/enter/EnterKeyPlugin.tsx
+112:6  Warning: React Hook useEffect has missing dependencies: 'canSubmitWithEnter', 'disabled', and 'handleSubmit'. Either include them or remove the dependency array. If 'canSubmitWithEnter' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/drops/create/lexical/plugins/hashtags/HashtagsPlugin.tsx
+236:5  Warning: React Hook useCallback has a missing dependency: 'onSelect'. Either include it or remove the dependency array. If 'onSelect' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/drops/create/lexical/plugins/mentions/MentionsPlugin.tsx
+208:5  Warning: React Hook useCallback has a missing dependency: 'onSelect'. Either include it or remove the dependency array. If 'onSelect' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/drops/create/utils/CreateDropWrapper.tsx
+119:7  Warning: 'setMentionedUsers' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+288:8  Warning: React Hook useEffect has a missing dependency: 'getMissingRequiredMetadata'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+292:8  Warning: React Hook useEffect has a missing dependency: 'getMissingRequiredMedia'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+331:8  Warning: React Hook useEffect has missing dependencies: 'getCanAddPart' and 'getCanSubmit'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+338:8  Warning: React Hook useEffect has a missing dependency: 'onCanSubmitChange'. Either include it or remove the dependency array. If 'onCanSubmitChange' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/drops/create/utils/storm/CreateDropStormViewPartQuote.tsx
+74:51  Warning: React Hook useEffect has a missing dependency: 'getPartConfig'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/drops/view/Drops.tsx
+130:49  Warning: The ref value 'bottomRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'bottomRef.current' to a variable inside the effect, and use that variable in the cleanup function.  react-hooks/exhaustive-deps
+
+./components/drops/view/DropsList.tsx
+156:5  Warning: React Hook useMemo has a missing dependency: 'location'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/drops/view/item/content/media/ClientThumbnailGenerator.tsx
+31:6  Warning: React Hook useCallback has missing dependencies: 'handleError', 'handleMetadataLoaded', and 'handleSeeked'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/drops/view/item/content/nft-tag/DropListItemContentNftDetails.tsx
+9:20  Warning: 'contract' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+9:30  Warning: 'token' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/view/item/rate/give/DropListItemRateGive.tsx
+45:6  Warning: React Hook useEffect has missing dependencies: 'maxRating', 'minRating', and 'onProgressRate'. Either include them or remove the dependency array. You can also do a functional update 'setOnProgressRate(o => ...)' if you only need 'onProgressRate' in the 'setOnProgressRate' call.  react-hooks/exhaustive-deps
+
+./components/drops/view/item/rate/give/DropListItemRateGiveSubmit.tsx
+65:17  Warning: 'response' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/drops/view/item/rate/give/clap/DropListItemRateGiveClap.tsx
+106:6  Warning: React Hook useEffect has a missing dependency: 'randomID'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+118:6  Warning: React Hook useEffect has missing dependencies: 'circleBurst', 'countAnimation', 'scaleButton', and 'triangleBurst'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+222:6  Warning: React Hook useEffect has missing dependencies: 'circleBurst', 'getClapClasses', 'getClapCountClasses', 'getCountShort', 'getTextClasses', and 'triangleBurst'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/drops/view/part/dropPartMarkdown/handlers/artBlocks.tsx
+18:6  Warning: 'ArtBlocksFlagKey' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/error/Error.tsx
+12:6  Warning: React Hook useEffect has a missing dependency: 'setTitle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/eula/EULAConsentContext.tsx
+27:9  Warning: The 'consent' function makes the dependencies of useMemo Hook (at line 31) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'consent' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+
+./components/gas-royalties/Gas.tsx
+38:6  Warning: React Hook useEffect has missing dependencies: 'pathname', 'router', 'setCollectionFocus', and 'setTitle'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+83:6  Warning: React Hook useEffect has missing dependencies: 'collectionFocus' and 'fetchGas'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+99:6  Warning: React Hook useEffect has a missing dependency: 'fetchGas'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/gas-royalties/Royalties.tsx
+43:6  Warning: React Hook useEffect has missing dependencies: 'pathname', 'router', 'setCollectionFocus', and 'setTitle'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+97:6  Warning: React Hook useEffect has missing dependencies: 'collectionFocus' and 'fetchRoyalties'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+113:6  Warning: React Hook useEffect has a missing dependency: 'fetchRoyalties'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/header/GroupHeaderSelect.tsx
+11:53  Warning: React Hook useEffect has a missing dependency: 'getHaveProfile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/Groups.tsx
+46:6  Warning: React Hook useEffect has missing dependencies: 'activeProfileProxy', 'connectedProfile?.handle', and 'onViewModeChange'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+52:6  Warning: React Hook useEffect has a missing dependency: 'onViewModeChange'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/GroupsPageListWrapper.tsx
+36:6  Warning: React Hook useEffect has missing dependencies: 'getShowCreateNewGroupButton' and 'getShowMyGroupsButton'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/create/GroupCreate.tsx
+145:6  Warning: React Hook useEffect has a missing dependency: 'getMyAddresses'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/create/actions/GroupCreateActions.tsx
+86:65  Warning: React Hook useEffect has a missing dependency: 'getIsActionsDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+102:17  Warning: 'response' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/groups/page/create/config/wallets/CreateGroupWalletsEmma.tsx
+44:5  Warning: React Hook useEffect has a missing dependency: 'setWallets'. Either include it or remove the dependency array. If 'setWallets' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/groups/page/create/config/wallets/GroupCreateWallets.tsx
+52:5  Warning: React Hook useEffect has a missing dependency: 'getSelectedWallets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+64:6  Warning: React Hook useEffect has a missing dependency: 'type'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+94:6  Warning: React Hook useEffect has missing dependencies: 'connectedProfile.primary_wallet', 'iAmIncluded', 'setWallets', and 'type'. Either include them or remove the dependency array. If 'setWallets' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/groups/page/list/card/GroupCard.tsx
+63:3  Warning: React Hook useEffect contains a call to 'setState'. Without a list of dependencies, this can lead to an infinite chain of updates. To fix this, pass [isActiveGroupVoteAll] as a second argument to the useEffect Hook.  react-hooks/exhaustive-deps
+75:6  Warning: React Hook useEffect has a missing dependency: 'onGroupStateChange'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/list/card/GroupCardActionWrapper.tsx
+47:6  Warning: React Hook useEffect has a missing dependency: 'getProgress'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/list/card/GroupCardConfigs.tsx
+227:33  Warning: 'i' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/groups/page/list/card/actions/GroupCardEditActions.tsx
+34:5  Warning: React Hook useEffect has a missing dependency: 'group.created_by?.handle'. Either include it or remove the dependency array. If 'setIsMyFilter' needs the current value of 'group.created_by.handle', you can also switch to useReducer instead of useState and read 'group.created_by.handle' in the reducer.  react-hooks/exhaustive-deps
+40:49  Warning: React Hook useEffect has a missing dependency: 'getEditTitle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/list/card/utils/GroupCardActionStats.tsx
+112:6  Warning: React Hook useEffect has a missing dependency: 'getCreditLeft'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/page/list/card/vote-all/GroupCardVoteAll.tsx
+130:5  Warning: React Hook useEffect has a missing dependency: 'getIsDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/groups/select/item/GroupItem.tsx
+29:6  Warning: React Hook useEffect has a missing dependency: 'getIsActive'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/header/AppHeader.tsx
+23:35  Warning: 'props' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/header/Header.tsx
+103:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+125:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/header/header-search/HeaderSearchModalItem.tsx
+117:6  Warning: React Hook useEffect has a missing dependency: 'onHover'. Either include it or remove the dependency array. If 'onHover' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/header/notifications/HeaderNotifications.tsx
+48:6  Warning: React Hook useEffect has a missing dependency: 'notifications.notifications'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/header/share/HeaderShare.tsx
+177:6  Warning: React Hook useEffect has a missing dependency: 'generateSources'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+191:6  Warning: React Hook useEffect has a missing dependency: 'isAuthenticated'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+505:6  Warning: React Hook useEffect has a missing dependency: 'osConfigs'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/header/titlebar/TooltipButton.tsx
+31:10  Warning: 'tooltipVisible' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/header/user/HeaderUserProfile.tsx
+11:11  Warning: 'UserContent' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/header/user/proxy/HeaderUserProxyDropdown.tsx
+62:41  Warning: React Hook useEffect has a missing dependency: 'getLabel'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/ipfs/IPFSContext.tsx
+54:6  Warning: React Hook useEffect has a missing dependency: 'ipfsService'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/ipfs/IPFSService.ts
+50:14  Warning: 'error' is defined but never used.  unused-imports/no-unused-vars
+
+./components/leaderboard/MemeLabLeaderboard.tsx
+67:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults' and 'page'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+71:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/leaderboard/NFTLeaderboard.tsx
+145:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults' and 'page'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+149:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/leaderboard/leaderboard_helpers.ts
+35:6  Warning: 'LeaderboardSortType' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+184:6  Warning: React Hook useCallback has missing dependencies: 'endpoint', 'query', 'setIsLoading', and 'sort'. Either include them or remove the dependency array. If 'setIsLoading' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/levels/TableOfLevels.tsx
+29:50  Warning: 'idx' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/lfg-slideshow/LFGSlideshow.tsx
+81:6  Warning: React Hook useEffect has a missing dependency: 'setIsOpen'. Either include it or remove the dependency array. If 'setIsOpen' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+94:6  Warning: React Hook useEffect has a missing dependency: 'bodyOverflow'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+104:6  Warning: React Hook useEffect has missing dependencies: 'contract' and 'preloadMedia'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+132:20  Warning: Assignments to the 'slideTimer' variable from inside React Hook useEffect will be lost after each render. To preserve the value over time, store it in a useRef Hook and keep the mutable value in the '.current' property. Otherwise, you can move this variable directly inside useEffect.  react-hooks/exhaustive-deps
+
+./components/manifoldMinting/ManifoldMinting.tsx
+124:6  Warning: React Hook useEffect has a missing dependency: 'props.contract'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+514:6  Warning: React Hook useEffect has missing dependencies: 'props.contract' and 'props.token_id'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/manifoldMinting/ManifoldMintingConnect.tsx
+64:6  Warning: React Hook useEffect has missing dependencies: 'addressToEns.data', 'mintForFren', 'mintForInput', and 'mintForLock'. Either include them or remove the dependency array. You can also do a functional update 'setMintForInput(m => ...)' if you only need 'mintForInput' in the 'setMintForInput' call.  react-hooks/exhaustive-deps
+75:6  Warning: React Hook useEffect has missing dependencies: 'ensToAddress.data', 'mintForFren', 'mintForInput', and 'mintForLock'. Either include them or remove the dependency array. You can also do a functional update 'setMintForInput(m => ...)' if you only need 'mintForInput' in the 'setMintForInput' call.  react-hooks/exhaustive-deps
+88:6  Warning: React Hook useEffect has missing dependencies: 'account.address' and 'props'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/manifoldMinting/ManifoldMintingWidget.tsx
+72:17  Warning: 'error' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+79:6  Warning: React Hook useEffect has missing dependencies: 'mintWrite' and 'props.claim.phase'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+83:27  Warning: 'i' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+123:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+133:6  Warning: React Hook useEffect has a missing dependency: 'props.claim.phase'. Either include it or remove the dependency array. If 'setMintCount' needs the current value of 'props.claim.phase', you can also switch to useReducer instead of useState and read 'props.claim.phase' in the reducer.  react-hooks/exhaustive-deps
+499:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/mapping-tools/ConsolidationMappingTool.tsx
+143:6  Warning: React Hook useEffect has a missing dependency: 'file'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+176:6  Warning: React Hook useEffect has missing dependencies: 'consolidations.length', 'getForAddress', and 'sumForAddresses'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/mapping-tools/DelegationMappingTool.tsx
+119:6  Warning: React Hook useEffect has missing dependencies: 'collection', 'file', and 'useCase'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+154:6  Warning: React Hook useEffect has missing dependencies: 'delegations.length', 'getForAddress', and 'useCase'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/memelab/MemeLab.tsx
+456:6  Warning: React Hook useEffect has a missing dependency: 'searchParams'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+524:6  Warning: React Hook useEffect has missing dependencies: 'labArtists', 'labCollections', 'nftMetas', 'nfts', and 'router'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/memelab/MemeLabCollection.tsx
+61:6  Warning: React Hook useEffect has a missing dependency: 'searchParams'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+114:6  Warning: React Hook useEffect has missing dependencies: 'nftMetas', 'nfts', 'router', and 'volumeType'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+116:12  Warning: 'getBalance' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/memelab/MemeLabPage.tsx
+106:6  Warning: React Hook useEffect has a missing dependency: 'setTitle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+122:6  Warning: React Hook useEffect has a missing dependency: 'searchParams'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+129:6  Warning: React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/navigation/BackButton.tsx
+39:17  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/navigation/NavItem.tsx
+63:6  Warning: React Hook useEffect has missing dependencies: 'item.name' and 'setTitle'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/NextGenContractWriteStatus.tsx
+58:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdmin.tsx
+216:6  Warning: React Hook useEffect has missing dependencies: 'router' and 'searchParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminAcceptAddressesAndPercentages.tsx
+169:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', 'primaryStatus', and 'secondaryStatus'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+176:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+176:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminAddRandomizer.tsx
+96:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', and 'randomizerContract'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+103:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+103:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminAirdropTokens.tsx
+117:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', 'recipients', 'salts', 'tokenCounts', and 'tokenData'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+124:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+124:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminArtistSignCollection.tsx
+93:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', and 'signature'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+100:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+100:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminChangeMetadataView.tsx
+109:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', and 'status'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+116:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+116:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminCreateCollection.tsx
+97:6  Warning: React Hook useEffect has missing dependencies: 'artist', 'baseURI', 'collectionName', 'contractWrite', 'dependencyScript', 'description', 'library', 'license', 'scripts', and 'website'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+104:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+104:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminInitializeBurn.tsx
+92:6  Warning: React Hook useEffect has a missing dependency: 'signMessage.error?.message'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+127:6  Warning: React Hook useEffect has missing dependencies: 'account.address', 'burnCollectionID', 'mintCollectionID', 'signMessage.isSuccess', 'status', and 'uuid'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+178:6  Warning: React Hook useEffect has missing dependencies: 'burnCollectionID', 'contractWrite', 'mintCollectionID', and 'status'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+185:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+185:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminInitializeExternalBurnSwap.tsx
+101:6  Warning: React Hook useEffect has a missing dependency: 'signMessage.error?.message'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+136:6  Warning: React Hook useEffect has missing dependencies: 'account.address', 'burnCollectionID', 'burnSwapAddress', 'erc721Collection', 'mintCollectionID', 'signMessage.isSuccess', 'status', 'tokenMax', 'tokenMin', and 'uuid'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+187:6  Warning: React Hook useEffect has missing dependencies: 'burnCollectionID', 'burnSwapAddress', 'contractWrite', 'erc721Collection', 'mintCollectionID', 'status', 'tokenMax', and 'tokenMin'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+194:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+194:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminMintAndAuction.tsx
+102:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', 'endTime', 'recipient', 'salt', and 'tokenData'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+109:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+109:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminPayArtist.tsx
+101:6  Warning: React Hook useEffect has missing dependencies: 'address1', 'address2', 'collectionID', 'contractWrite', 'percentage1', and 'percentage2'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+108:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+108:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminProposeAddressesAndPercentages.tsx
+141:6  Warning: React Hook useEffect has missing dependencies: 'address1', 'address2', 'address3', 'collectionID', 'contractWrite', 'percentage1', 'percentage2', and 'percentage3'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+148:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+148:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminRegisterAdmin.tsx
+121:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite' and 'getParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+128:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+128:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminSetCosts.tsx
+133:6  Warning: React Hook useEffect has missing dependencies: 'collectionEndCost', 'collectionID', 'collectionStartCost', 'contractWrite', 'delegationAddress', 'rate', 'salesOption', and 'timePeriod'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+140:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+140:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminSetData.tsx
+120:6  Warning: React Hook useEffect has missing dependencies: 'artistAddress', 'collectionID', 'contractWrite', 'finalSupplyTime', 'maxPurchases', and 'totalSupply'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+127:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+127:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminSetFinalSupply.tsx
+84:6  Warning: React Hook useEffect has missing dependencies: 'collectionID' and 'contractWrite'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+91:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+91:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminSetPhases.tsx
+102:6  Warning: React Hook useEffect has a missing dependency: 'availableAllowlistCollections'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+154:6  Warning: React Hook useEffect has missing dependencies: 'collectionID', 'contractWrite', 'publicEndTime', 'publicStartTime', 'selectedAllowlist?.end_time', 'selectedAllowlist?.merkle_root', and 'selectedAllowlist?.start_time'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+161:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+161:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminSetSplits.tsx
+151:6  Warning: React Hook useEffect has missing dependencies: 'artistPrimary', 'artistSecondary', 'collectionID', 'contractWrite', 'teamPrimary', and 'teamSecondary'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+158:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+158:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminUpdateCollection.tsx
+216:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite' and 'getParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+223:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+223:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminUpdateImagesAttributes.tsx
+72:6  Warning: React Hook useEffect has missing dependencies: 'attributes', 'contractWrite', 'images', and 'tokenIds'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+79:6  Warning: React Hook useEffect has missing dependencies: 'contractWrite.isError' and 'contractWrite.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+79:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/nextGen/admin/NextGenAdminUploadAL.tsx
+28:7  Warning: 'MARKLE_ZERO_PATTERN' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+97:6  Warning: React Hook useEffect has a missing dependency: 'signMessage.error?.message'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+136:6  Warning: React Hook useEffect has missing dependencies: 'account.address', 'allowlistEndTime', 'allowlistFile', 'allowlistStartTime', 'collectionID', 'mintPrice', 'phaseName', 'signMessage.isSuccess', 'type', and 'uuid'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/NextGenArtists.tsx
+59:11  Warning: 'index' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/nextGen/collections/NextGenCollections.tsx
+53:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults' and 'page'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+57:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/NextGenTokenList.tsx
+95:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults' and 'page'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+106:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+150:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/NextGenCollectionArt.tsx
+159:6  Warning: React Hook useEffect has a missing dependency: 'setTraitsQuery'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+202:6  Warning: React Hook useEffect has missing dependencies: 'props.collection.name', 'props.show_view_all', and 'router'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+216:6  Warning: React Hook useEffect has a missing dependency: 'totalResultsSet'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/NextGenCollectionArtist.tsx
+36:6  Warning: React Hook useEffect has a missing dependency: 'props.collection.artist_address'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/NextGenCollectionDetails.tsx
+117:40  Warning: 'props' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/nextGen/collections/collectionParts/NextGenCollectionHeader.tsx
+351:6  Warning: React Hook useEffect has missing dependencies: 'collectionMintCount' and 'props'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+366:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/NextGenCollectionProvenance.tsx
+62:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+99:11  Warning: 'NextGenCollectionProvenanceRowProps' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/nextGen/collections/collectionParts/NextGenTraitSets.tsx
+124:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults', 'page', and 'traits'. Either include them or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setSelectedTraitValues' needs the current value of 'traits'.  react-hooks/exhaustive-deps
+130:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults' and 'selectedTrait'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/mint/NextGenMint.tsx
+162:6  Warning: React Hook useEffect has a missing dependency: 'setDelegators'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+190:6  Warning: React Hook useEffect has a missing dependency: 'setAddressMintCounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+207:6  Warning: React Hook useEffect has a missing dependency: 'setAddressMintCounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+224:6  Warning: React Hook useEffect has a missing dependency: 'setAddressMintCounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+270:6  Warning: React Hook useEffect has missing dependencies: 'addressMintCountAirdropRead', 'addressMintCountMintedALRead', 'addressMintCountMintedPublicRead', and 'setAddressMintCounts'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+278:6  Warning: React Hook useEffect has a missing dependency: 'setFetchingMintCounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/mint/NextGenMintBurnWidget.tsx
+125:6  Warning: React Hook useEffect has a missing dependency: 'filterTokensOwnedForBurnAddress'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+131:6  Warning: React Hook useEffect has a missing dependency: 'setTokenId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+135:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+147:6  Warning: React Hook useEffect has missing dependencies: 'mintWrite', 'props.collection_merkle.merkle_root', 'setBurnProofResponse', and 'setFetchingProofs'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+153:6  Warning: React Hook useEffect has a missing dependency: 'setIsMinting'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+153:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+223:6  Warning: React Hook useEffect has missing dependencies: 'alStatus', 'burnProofResponse', 'mintWrite', 'props.collection_merkle.burn_collection', 'props.collection_merkle.burn_collection_id', 'props.collection_merkle.collection_id', 'props.mint_price', 'salt', and 'tokenId'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+227:6  Warning: React Hook useEffect has a missing dependency: 'setBurnProofResponse'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/mint/NextGenMintWidget.tsx
+122:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+179:6  Warning: React Hook useEffect has missing dependencies: 'findActiveProof' and 'setProofResponse'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+185:6  Warning: React Hook useEffect has a missing dependency: 'setIsMinting'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+185:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+271:6  Warning: React Hook useEffect has missing dependencies: 'address', 'alStatus', 'currentProof', 'mintCount', 'mintForAddress', 'mintToAddress', 'mintWrite', 'props.collection.id', 'props.mint_price', and 'salt'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+286:6  Warning: React Hook useEffect has missing dependencies: 'mintWrite', 'props', 'setMintCount', 'setMintToAddress', 'setMintToInput', and 'setProofResponse'. Either include them or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+309:6  Warning: React Hook useEffect has missing dependencies: 'mintToInput', 'setMintToAddress', and 'setMintToInput'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+321:6  Warning: React Hook useEffect has missing dependencies: 'mintToInput', 'setMintToAddress', and 'setMintToInput'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+327:6  Warning: React Hook useEffect has a missing dependency: 'setMintCount'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+331:6  Warning: React Hook useEffect has missing dependencies: 'findActiveProof' and 'originalProofs'. Either include them or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setCurrentProof' needs the current value of 'originalProofs'.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/collectionParts/mint/NextgenCollectionMintingPlan.tsx
+71:6  Warning: React Hook useEffect has a missing dependency: 'props.collection.id'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+97:6  Warning: React Hook useEffect has a missing dependency: 'fetchAllowlist'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+105:6  Warning: React Hook useEffect has missing dependencies: 'fetchAllowlist' and 'page'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/nextgenToken/NextGenTokenAbout.tsx
+63:6  Warning: React Hook useEffect has a missing dependency: 'props.token.id'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/nextgenToken/NextGenTokenImage.tsx
+324:10  Warning: 'getNextGenThumbnailUrl' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/nextGen/collections/nextgenToken/NextGenTokenProvenance.tsx
+52:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+72:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+76:6  Warning: React Hook useEffect has a missing dependency: 'fetchLogsResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/nextGen/collections/nextgenToken/NextGenZoomableImage.tsx
+86:6  Warning: React Hook useEffect has a missing dependency: 'props'. Either include it or remove the dependency array. However, 'props' will change when *any* prop changes, so the preferred fix is to destructure the 'props' object outside of the useEffect call and refer to those specific props inside useEffect.  react-hooks/exhaustive-deps
+125:5  Warning: 'e' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/not-found/NotFound.tsx
+13:6  Warning: React Hook useEffect has missing dependencies: 'label' and 'setTitle'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/notifications/NotificationsContext.tsx
+17:51  Warning: 'waveId' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/notifications/stable-device-id.ts
+1:7  Warning: 'DEVICE_ID_KEY' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/prenodes/PrenodesStatus.tsx
+57:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/profile-activity/ProfileActivityLogs.tsx
+113:6  Warning: React Hook useEffect has missing dependencies: 'disableActiveGroup', 'initialParams.matter', and 'initialParams.pageSize'. Either include them or remove the dependency array. If 'setParams' needs the current value of 'initialParams.pageSize', you can also switch to useReducer instead of useState and read 'initialParams.pageSize' in the reducer.  react-hooks/exhaustive-deps
+146:6  Warning: React Hook useEffect has a missing dependency: 'logs.data.length'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/profile-activity/ProfileName.tsx
+43:6  Warning: React Hook useEffect has a missing dependency: 'createName'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/profile-activity/filter/ProfileActivityLogsFilter.tsx
+30:6  Warning: React Hook useEffect has missing dependencies: 'animateIcon' and 'iconScope'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/profile-activity/filter/ProfileActivityLogsFilterListItem.tsx
+12:3  Warning: 'user' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+25:6  Warning: React Hook useEffect has a missing dependency: 'itemType'. Either include it or remove the dependency array. If 'setIsSelected' needs the current value of 'itemType', you can also switch to useReducer instead of useState and read 'itemType' in the reducer.  react-hooks/exhaustive-deps
+
+./components/profile-activity/list/items/ProfileActivityLogRate.tsx
+48:9  Warning: 'router' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/providers/WagmiSetup.tsx
+211:6  Warning: React Hook useEffect has an unnecessary dependency: 'isElectron'. Either exclude it or remove the dependency array. Outer scope values like 'isElectron' aren't valid dependencies because mutating them doesn't re-render the component.  react-hooks/exhaustive-deps
+
+./components/react-query-wrapper/ReactQueryWrapper.tsx
+262:9  Warning: The 'setProfile' function makes the dependencies of useMemo Hook (at line 1233) change on every render. To fix this, wrap the definition of 'setProfile' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+272:9  Warning: The 'setWave' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'setWave' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+279:9  Warning: The 'setWavesOverviewPage' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'setWavesOverviewPage' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+303:9  Warning: The 'setWaveDrops' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'setWaveDrops' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+332:9  Warning: The 'setProfileProxy' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'setProfileProxy' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+339:9  Warning: The 'onProfileProxyModify' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onProfileProxyModify' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+341:5  Warning: 'createdByHandle' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+342:5  Warning: 'grantedToHandle' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+399:9  Warning: The 'onGroupRemoved' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onGroupRemoved' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+402:9  Warning: The 'onGroupChanged' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onGroupChanged' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+405:9  Warning: The 'onGroupCreate' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onGroupCreate' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+527:9  Warning: The 'onProfileCICModify' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onProfileCICModify' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+608:9  Warning: The 'onProfileRepModify' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onProfileRepModify' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+706:9  Warning: The 'onProfileEdit' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onProfileEdit' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+721:9  Warning: The 'onProfileStatementAdd' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onProfileStatementAdd' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+726:9  Warning: The 'onProfileStatementRemove' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onProfileStatementRemove' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+749:9  Warning: The 'initProfileRepPage' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'initProfileRepPage' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+768:9  Warning: The 'initProfileIdentityPage' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'initProfileIdentityPage' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+784:9  Warning: The 'initCommunityActivityPage' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'initCommunityActivityPage' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+824:25  Warning: 'isQuoted' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+843:25  Warning: 'isQuoted' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+913:23  Warning: 'isQuoted' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+1012:25  Warning: 'isReplied' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+1028:25  Warning: 'isReplied' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+1062:9  Warning: The 'addOptimisticDrop' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'addOptimisticDrop' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1077:9  Warning: The 'waitAndInvalidateDrops' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'waitAndInvalidateDrops' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1082:9  Warning: The 'onIdentityBulkRate' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onIdentityBulkRate' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1136:9  Warning: The 'invalidateDrops' function makes the dependencies of useMemo Hook (at line 1233) change on every render. To fix this, wrap the definition of 'invalidateDrops' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1157:9  Warning: The 'onWaveCreated' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onWaveCreated' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1159:9  Warning: The 'onWaveFollowChange' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onWaveFollowChange' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1171:9  Warning: The 'onIdentityFollowChange' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'onIdentityFollowChange' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1183:9  Warning: The 'invalidateAll' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'invalidateAll' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+1187:9  Warning: The 'invalidateNotifications' function makes the dependencies of useMemo Hook (at line 1233) change on every render. Move it inside the useMemo callback. Alternatively, wrap the definition of 'invalidateNotifications' in its own useCallback() Hook.  react-hooks/exhaustive-deps
+
+./components/rememes/RememeAddComponent.tsx
+26:11  Warning: 'AddRememe' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+105:14  Warning: 'e' is defined but never used.  unused-imports/no-unused-vars
+
+./components/rememes/RememeAddPage.tsx
+37:33  Warning: 'seizeConnect' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+37:47  Warning: 'seizeConnectOpen' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+44:10  Warning: 'memesLoaded' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+108:6  Warning: React Hook useEffect has missing dependencies: 'address' and 'seizeSettings.rememes_submission_tdh_threshold'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+114:6  Warning: React Hook useEffect has a missing dependency: 'signMessage.error?.message'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+177:6  Warning: React Hook useEffect has missing dependencies: 'address', 'buildRememeObject', and 'signMessage.isSuccess'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+344:51  Warning: 'index' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/rememes/RememePage.tsx
+153:6  Warning: React Hook useEffect has a missing dependency: 'setTitle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/rememes/Rememes.tsx
+49:10  Warning: 'memesLoaded' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+122:6  Warning: React Hook useEffect has missing dependencies: 'pathname', 'router', and 'searchParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+130:6  Warning: React Hook useEffect has missing dependencies: 'fetchResults' and 'page'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+134:6  Warning: React Hook useEffect has a missing dependency: 'fetchResults'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/scrollTo/ScrollToButton.tsx
+35:6  Warning: React Hook useEffect has missing dependencies: 'props.threshold' and 'props.to'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/subscriptions-report/SubscriptionsReport.tsx
+138:6  Warning: React Hook useEffect has a missing dependency: 'redeemedLoading'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/the-memes/MemePage.tsx
+73:6  Warning: React Hook useEffect has a missing dependency: 'setTitle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+93:6  Warning: React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+149:6  Warning: React Hook useEffect has a missing dependency: 'updateNftBalances'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+161:6  Warning: React Hook useEffect has a missing dependency: 'connectedProfile?.consolidation_key'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/the-memes/MemePageActivity.tsx
+54:6  Warning: React Hook useEffect has a missing dependency: 'props.pageSize'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/the-memes/MemePageLive.tsx
+297:6  Warning: React Hook useEffect has a missing dependency: 'fetchRememes'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/the-memes/TheMemes.tsx
+51:7  Warning: 'API_SORT_TO_MEMES' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+200:11  Warning: 'key' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+210:11  Warning: 'key' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+220:6  Warning: React Hook useEffect has a missing dependency: 'router'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+237:6  Warning: React Hook useEffect has a missing dependency: 'sortDir'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+257:6  Warning: React Hook useEffect has a missing dependency: 'getNftsNextPage'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+263:6  Warning: React Hook useEffect has a missing dependency: 'fetchNfts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/brain/UserPageBrainWrapper.tsx
+31:6  Warning: React Hook useEffect has missing dependencies: 'router' and 'user'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/collected/UserPageCollected.tsx
+117:9  Warning: 'k' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+341:45  Warning: React Hook useEffect has a missing dependency: 'getFilters'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+395:6  Warning: React Hook useEffect has missing dependencies: 'filters.page', 'filters.pageSize', and 'setPage'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+406:6  Warning: React Hook useEffect has a missing dependency: 'getShowDataRow'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/collected/cards/UserPageCollectedCardsNoCards.tsx
+61:6  Warning: React Hook useEffect has a missing dependency: 'getMsg'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/collected/filters/UserPageCollectedFilters.tsx
+106:6  Warning: React Hook useEffect has missing dependencies: 'containerRef' and 'setVisibility'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/collected/filters/UserPageCollectedFiltersSortBy.tsx
+54:6  Warning: React Hook useEffect has a missing dependency: 'getItems'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/groups/UserPageGroups.tsx
+30:6  Warning: React Hook useEffect has a missing dependency: 'getShowCreateNewGroupButton'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/header/cic-rate/UserPageIdentityHeaderCICRate.tsx
+108:5  Warning: React Hook useEffect has a missing dependency: 'getProxyAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+154:5  Warning: React Hook useEffect has a missing dependency: 'getMinMaxValues'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+214:55  Warning: React Hook useEffect has a missing dependency: 'getIsValidValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+250:6  Warning: React Hook useEffect has a missing dependency: 'getIsSaveDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/header/cic-rate/UserPageIdentityHeaderCICRateStats.tsx
+40:5  Warning: React Hook useEffect has a missing dependency: 'getProxyAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+55:5  Warning: React Hook useEffect has a missing dependency: 'getAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/statements/consolidated-addresses/UserPageIdentityStatementsConsolidatedAddresses.tsx
+34:45  Warning: React Hook useEffect has a missing dependency: 'getCanEdit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+83:6  Warning: React Hook useEffect has a missing dependency: 'sortByPrimary'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/statements/consolidated-addresses/UserPageIdentityStatementsConsolidatedAddressesItem.tsx
+126:6  Warning: React Hook useEffect has missing dependencies: 'setToast', 'waitWriteDelegation.data', 'waitWriteDelegation.error', 'waitWriteDelegation.isLoading', 'writeDelegation.data', and 'writeDelegation.isPending'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/statements/consolidated-addresses/UserPageIdentityStatementsConsolidatedAddressesItemPrimary.tsx
+7:3  Warning: 'address' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/user/identity/statements/header/UserPageIdentityAddStatementsHeader.tsx
+22:45  Warning: React Hook useEffect has a missing dependency: 'getCanEdit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/statements/utils/UserPageIdentityAddStatementsTypeButton.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'getDynamicClasses'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/identity/statements/utils/UserPageIdentityStatementsStatementsList.tsx
+33:45  Warning: React Hook useEffect has a missing dependency: 'getCanEdit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/layout/UserPageTab.tsx
+26:6  Warning: React Hook useEffect has a missing dependency: 'tab'. Either include it or remove the dependency array. If 'setIsActive' needs the current value of 'tab', you can also switch to useReducer instead of useState and read 'tab' in the reducer.  react-hooks/exhaustive-deps
+61:6  Warning: React Hook useEffect has a missing dependency: 'isVisibleInViewportSide'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/layout/UserPageTabs.tsx
+116:51  Warning: React Hook useEffect has a missing dependency: 'getTabsToShow'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/UserPageProxy.tsx
+21:6  Warning: 'ProxyAction' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+56:5  Warning: React Hook useEffect has a missing dependency: 'getIsSelf'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/create/target/ProxyCreateTargetSearch.tsx
+75:5  Warning: React Hook useEffect has a missing dependency: 'getFilteredProfiles'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/list/ProxyListItem.tsx
+51:6  Warning: React Hook useEffect has a missing dependency: 'getIsGrantor'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+55:6  Warning: React Hook useEffect has a missing dependency: 'getCanAddNewAction'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/proxy/action/ProxyActionAcceptanceButton.tsx
+24:7  Warning: 'ACTION_LABEL' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+31:7  Warning: 'ACTION_CLASSES' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/user/proxy/proxy/action/utils/credit/ProfileProxyCredit.tsx
+30:45  Warning: React Hook useEffect has a missing dependency: 'getIsOwner'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/proxy/action/utils/credit/ProfileProxyCreditEdit.tsx
+46:65  Warning: React Hook useEffect has a missing dependency: 'getIsChangedAndValid'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/proxy/action/utils/time/ProfileProxyEndTime.tsx
+30:45  Warning: React Hook useEffect has a missing dependency: 'getIsOwner'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/proxy/proxy/action/utils/time/ProfileProxyEndTimeEdit.tsx
+52:5  Warning: React Hook useEffect has a missing dependency: 'getIsChangedAndValid'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/rep/modify-rep/UserPageRepModifyModal.tsx
+99:5  Warning: React Hook useEffect has a missing dependency: 'getProxyAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+156:5  Warning: React Hook useEffect has a missing dependency: 'getHeroAvailableRep'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+200:6  Warning: React Hook useEffect has a missing dependency: 'getRepState'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+209:5  Warning: React Hook useEffect has a missing dependency: 'getMinMaxValues'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+268:55  Warning: React Hook useEffect has a missing dependency: 'getIsValidValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+307:6  Warning: React Hook useEffect has a missing dependency: 'getIsSaveDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/rep/modify-rep/UserPageRepModifyModalRaterStats.tsx
+41:5  Warning: React Hook useEffect has a missing dependency: 'getProxyAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+56:5  Warning: React Hook useEffect has a missing dependency: 'getAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/rep/new-rep/UserPageRepNewRepSearchHeader.tsx
+85:5  Warning: React Hook useEffect has a missing dependency: 'getActiveRepRates'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+101:5  Warning: React Hook useEffect has a missing dependency: 'getAvailableCredit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/rep/reps/UserPageRepReps.tsx
+86:6  Warning: React Hook useEffect has a missing dependency: 'getCanEditRep'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/rep/reps/table/UserPageRepRepsTable.tsx
+97:6  Warning: React Hook useEffect has a missing dependency: 'sortReps'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/rep/reps/table/UserPageRepRepsTableHeaderSortableCell.tsx
+28:6  Warning: React Hook useEffect has a missing dependency: 'type'. Either include it or remove the dependency array. If 'setIsActive' needs the current value of 'type', you can also switch to useReducer instead of useState and read 'type' in the reducer.  react-hooks/exhaustive-deps
+
+./components/user/settings/UserSettingsPrimaryWallet.tsx
+38:6  Warning: React Hook useEffect has a missing dependency: 'wallets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/settings/UserSettingsUsername.tsx
+37:42  Warning: React Hook useEffect has a missing dependency: 'setIsLoading'. Either include it or remove the dependency array. If 'setIsLoading' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+75:6  Warning: React Hook useEffect has a missing dependency: 'setIsAvailable'. Either include it or remove the dependency array. If 'setIsAvailable' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/user/stats/UserPageStats.tsx
+67:15  Warning: 'error' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/user/stats/UserPageStatsActivityOverview.tsx
+46:15  Warning: 'error' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/user/stats/activity/distributions/UserPageStatsActivityDistributions.tsx
+68:6  Warning: React Hook useEffect has a missing dependency: 'getWalletsParam'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+107:6  Warning: React Hook useEffect has missing dependencies: 'onPageFilter' and 'pageFilter'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/stats/activity/distributions/UserPageStatsActivityDistributionsTable.tsx
+114:6  Warning: React Hook useEffect has missing dependencies: 'getAvailablePhases' and 'profile.wallets'. Either include them or remove the dependency array. If 'setResults' needs the current value of 'profile.wallets', you can also switch to useReducer instead of useState and read 'profile.wallets' in the reducer.  react-hooks/exhaustive-deps
+
+./components/user/stats/activity/distributions/UserPageStatsActivityDistributionsTableItem.tsx
+35:6  Warning: React Hook useEffect has a missing dependency: 'item.date'. Either include it or remove the dependency array. If 'setTimeAgo' needs the current value of 'item.date', you can also switch to useReducer instead of useState and read 'item.date' in the reducer.  react-hooks/exhaustive-deps
+
+./components/user/stats/activity/tdh-history/UserPageStatsActivityTDHHistoryCharts.tsx
+20:6  Warning: 'TDHHistoryChartType' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+139:6  Warning: React Hook useEffect has a missing dependency: 'getDataSets'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+143:31  Warning: 'i' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/user/stats/activity/wallet/UserPageStatsActivityWallet.tsx
+140:6  Warning: React Hook useEffect has a missing dependency: 'getWalletsParam'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+188:6  Warning: React Hook useEffect has missing dependencies: 'onPageFilter' and 'pageFilter'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/stats/tags/UserPageStatsTags.tsx
+21:3  Warning: 'seasons' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/user/subscriptions/UserPageSubscriptions.tsx
+117:6  Warning: React Hook useEffect has a missing dependency: 'fetchingAirdropAddress'. Either include it or remove the dependency array. You can also replace multiple useState variables with useReducer if 'setIsFetching' needs the current value of 'fetchingAirdropAddress'.  react-hooks/exhaustive-deps
+255:6  Warning: React Hook useEffect has a missing dependency: 'refresh'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/user-page-header/UserPageHeader.tsx
+81:6  Warning: React Hook useEffect has a missing dependency: 'getCanEdit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/user-page-header/name/UserPageHeaderEditName.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'profile.handle'. Either include it or remove the dependency array. If 'setHaveChanges' needs the current value of 'profile.handle', you can also switch to useReducer instead of useState and read 'profile.handle' in the reducer.  react-hooks/exhaustive-deps
+
+./components/user/user-page-header/name/classification/UserPageHeaderEditClassification.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'profile.classification'. Either include it or remove the dependency array. If 'setHaveChanges' needs the current value of 'profile.classification', you can also switch to useReducer instead of useState and read 'profile.classification' in the reducer.  react-hooks/exhaustive-deps
+
+./components/user/utils/UserFollowBtn.tsx
+79:6  Warning: React Hook useEffect has missing dependencies: 'getFollowing' and 'getLabel'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/utils/icons/CommonTableSortIcon.tsx
+62:6  Warning: React Hook useEffect has a missing dependency: 'getClasses'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/utils/rate/UserPageRateWrapper.tsx
+112:6  Warning: React Hook useEffect has missing dependencies: 'getRaterContext' and 'getRaterContextMessage'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/utils/raters-table/wrapper/ProfileRatersTableWrapper.tsx
+112:6  Warning: React Hook useEffect has a missing dependency: 'pageSize'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/utils/set-up-profile/UserPageSetUpProfileWrapper.tsx
+35:5  Warning: React Hook useEffect has a missing dependency: 'getShowSetUpProfile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/utils/set-up-profile/UserSetUpProfileCta.tsx
+16:45  Warning: React Hook useEffect has a missing dependency: 'getShouldShow'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/waves/UserPageWaves.tsx
+46:6  Warning: React Hook useEffect has a missing dependency: 'getShowCreateNewWaveButton'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+53:5  Warning: React Hook useEffect has a missing dependency: 'getUsePublicWaves'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+149:5  Warning: React Hook useEffect has a missing dependency: 'getWaves'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/user/waves/UserPageWavesWrapper.tsx
+30:6  Warning: React Hook useEffect has missing dependencies: 'router' and 'user'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/utils/CommonIntersectionElement.tsx
+23:5  Warning: React Hook useEffect has a missing dependency: 'onIntersection'. Either include it or remove the dependency array. If 'onIntersection' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/utils/infinite-scroll/InfiniteScrollTrigger.tsx
+23:5  Warning: React Hook useEffect has a missing dependency: 'onIntersection'. Either include it or remove the dependency array. If 'onIntersection' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/utils/input/rep-category/RepCategorySearch.tsx
+117:6  Warning: React Hook useEffect has a missing dependency: 'disableInputCategoryAsValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/utils/select/dropdown/CommonDropdown.tsx
+36:6  Warning: React Hook useEffect has missing dependencies: 'animateIcon' and 'iconScope'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+52:6  Warning: React Hook useEffect has a missing dependency: 'getLabel'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+63:6  Warning: React Hook useEffect has a missing dependency: 'getSortDirection'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+77:16  Warning: 'error' is defined but never used.  unused-imports/no-unused-vars
+109:6  Warning: React Hook useEffect has missing dependencies: 'containerRef' and 'onButtonPositionChange'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/utils/select/dropdown/CommonDropdownItem.tsx
+18:6  Warning: React Hook useEffect has a missing dependency: 'item.value'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/utils/select/dropdown/CommonDropdownItemsDefaultWrapper.tsx
+7:59  Warning: 'T' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/utils/select/dropdown/CommonDropdownItemsWrapper.tsx
+38:6  Warning: React Hook useEffect has a missing dependency: 'getIsMobile'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+42:6  Warning: React Hook useEffect has a missing dependency: 'onIsMobile'. Either include it or remove the dependency array. If 'onIsMobile' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/utils/select/tabs/CommonTabsTab.tsx
+18:6  Warning: React Hook useEffect has a missing dependency: 'getIsActive'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+36:6  Warning: React Hook useEffect has a missing dependency: 'getDynamicClasses'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/utils/sidebar/SidebarLayout.tsx
+52:5  Warning: React Hook useEffect has a missing dependency: 'getAnimateContentMarginLeft'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+63:6  Warning: React Hook useEffect has missing dependencies: 'activeGroupId', 'dispatch', 'init', and 'searchParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+107:6  Warning: React Hook useEffect has a missing dependency: 'headerRef'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/utils/time/CommonTimeSelect.tsx
+83:6  Warning: React Hook useEffect has missing dependencies: 'getExpiresAt', 'getMillis', and 'onMillis'. Either include them or remove the dependency array. If 'onMillis' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/waves/CreateDrop.tsx
+77:51  Warning: React Hook useEffect has a missing dependency: 'getIsDropMode'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+91:5  Warning: React Hook useEffect has a missing dependency: 'getIsDropModeDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+117:5  Warning: React Hook useCallback has missing dependencies: 'fixedDropMode' and 'setToast'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/CreateDropContent.tsx
+505:6  Warning: React Hook useMemo has missing dependencies: 'send' and 'wave.id'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+511:6  Warning: React Hook useEffect has a missing dependency: 'throttleHandle'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+545:5  Warning: React Hook useMemo has a missing dependency: 'getCanSubmit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+547:53  Warning: React Hook useMemo has a missing dependency: 'getCanAddPart'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+983:6  Warning: React Hook useEffect has missing dependencies: 'drop' and 'setIsStormMode'. Either include them or remove the dependency array. If 'setIsStormMode' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/waves/CreateDropWaveWrapper.tsx
+91:6  Warning: React Hook useMemo has a missing dependency: 'capacitor.isCapacitor'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/approval/CreateWaveApprovalThresholdTime.tsx
+10:3  Warning: 'thresholdTimeMs' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+78:6  Warning: React Hook useEffect has missing dependencies: 'getPeriodError' and 'getTimeError'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+82:6  Warning: React Hook useEffect has missing dependencies: 'getMillis' and 'setThresholdTimeMs'. Either include them or remove the dependency array. If 'setThresholdTimeMs' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/dates/CreateWaveDates.tsx
+47:6  Warning: React Hook useEffect has a missing dependency: 'expandedSections.rolling'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+68:6  Warning: React Hook useEffect has missing dependencies: 'dates' and 'setDates'. Either include them or remove the dependency array. If 'setDates' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/dates/DecisionPointDropdown.tsx
+38:6  Warning: React Hook useEffect has a missing dependency: 'iconScope'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/dates/RollingEndDate.tsx
+31:3  Warning: 'setIsRollingMode' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/create-wave/drops/metadata/CreateWaveDropsMetadata.tsx
+78:5  Warning: React Hook useEffect has a missing dependency: 'getNonUniqueMetadataIdxs'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/hooks/useWaveConfig.ts
+124:16  Warning: 'prev' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/create-wave/outcomes/winners/CreateWaveOutcomesWinners.tsx
+58:6  Warning: React Hook useEffect has missing dependencies: 'getTotal', 'setWinnersConfig', and 'winnersConfig'. Either include them or remove the dependency array. If 'setWinnersConfig' changes too often, find the parent component that defines it and wrap that definition in useCallback.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/outcomes/winners/rows/cic/CreateWaveOutcomesRowCICApprove.tsx
+6:3  Warning: 'removeOutcome' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/create-wave/outcomes/winners/rows/cic/CreateWaveOutcomesRowCICRank.tsx
+6:3  Warning: 'removeOutcome' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/create-wave/services/waveDecisionService.ts
+113:7  Warning: 'generateDecisionPointText' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+124:7  Warning: 'msToTimePeriod' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/create-wave/utils/CreateWaveNextStep.tsx
+32:47  Warning: React Hook useEffect has a missing dependency: 'getStepType'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/create-wave/voting/components/TimeUnitSelector.tsx
+32:26  Warning: 'e' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/drop/SingleWaveDropVoteContent.tsx
+32:6  Warning: React Hook useEffect has a missing dependency: 'currentVoteValue'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drop/SingleWaveDropVoteSlider.tsx
+90:7  Warning: 'calculatePresetMarks' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+179:6  Warning: React Hook useEffect has a missing dependency: 'x'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drop/SingleWaveDropVoteSubmit.tsx
+178:6  Warning: React Hook useEffect has missing dependencies: 'randomID', 'theme.primary', and 'theme.secondary'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+190:6  Warning: React Hook useEffect has missing dependencies: 'circleBurst', 'scaleButton', 'smallBurst', and 'triangleBurst'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+221:14  Warning: 'error' is defined but never used.  unused-imports/no-unused-vars
+
+./components/waves/drops/DropContext.tsx
+20:10  Warning: 'DropProvider' is defined but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/drops/LightDrop.tsx
+8:42  Warning: 'drop' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/drops/ProfileWinnerBadge.tsx
+28:3  Warning: 'title' is assigned a value but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/drops/VirtualScrollWrapper.tsx
+106:6  Warning: React Hook useEffect has a missing dependency: 'type'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+149:41  Warning: The ref value 'containerRef.current' will likely have changed by the time this effect cleanup function runs. If this ref points to a node rendered by React, copy 'containerRef.current' to a variable inside the effect, and use that variable in the cleanup function.  react-hooks/exhaustive-deps
+152:6  Warning: React Hook useEffect has missing dependencies: 'dropSerialNo', 'fetchAroundSerialNo', 'scrollContainerRef', 'type', and 'waveId'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/WaveDrop.tsx
+205:39  Warning: 'e' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+308:6  Warning: React Hook useEffect has a missing dependency: 'isSlideUp'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/WaveDropContent.tsx
+30:3  Warning: 'parentContainerRef' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/drops/WaveDropMobileMenu.tsx
+80:47  Warning: React Hook useEffect has a missing dependency: 'getIsAuthor'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+100:5  Warning: React Hook useEffect has a missing dependency: 'getShowOptions'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/WaveDropQuote.tsx
+35:6  Warning: React Hook useEffect has a missing dependency: 'partId'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/WaveDropQuoteWithSerialNo.tsx
+55:6  Warning: React Hook useEffect has a missing dependency: 'serialNo'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/WaveDropsAll.tsx
+71:5  Warning: 'scrollIntent' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+123:5  Warning: React Hook useCallback has a missing dependency: 'scrollContainerRef'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+355:6  Warning: React Hook useCallback has missing dependencies: 'dropId' and 'waveId'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/useDropContent.ts
+100:6  Warning: React Hook useEffect has a missing dependency: 'getContent'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/drops/winner/DefaultWinnerDrop.tsx
+90:3  Warning: 'previousDrop' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+91:3  Warning: 'nextDrop' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/drops/winner/WinnerDropBadge.tsx
+15:3  Warning: 'round' is assigned a value but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/header/name/WaveHeaderName.tsx
+16:47  Warning: React Hook useEffect has a missing dependency: 'getShowEdit'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/header/name/WaveHeaderNameEditInput.tsx
+4:3  Warning: 'wave' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/header/name/WaveHeaderNameEditModal.tsx
+33:51  Warning: React Hook useEffect has a missing dependency: 'getIsDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/leaderboard/time/TimelineToggleHeader.tsx
+123:6  Warning: React Hook React.useEffect has a missing dependency: 'getTimeLeft'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/list/WaveItemFollow.tsx
+33:5  Warning: React Hook useEffect has a missing dependency: 'getCanSubscribe'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+39:51  Warning: React Hook useEffect has a missing dependency: 'getIsDisabled'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+52:41  Warning: React Hook useEffect has a missing dependency: 'getState'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/list/WavesList.tsx
+43:5  Warning: React Hook useEffect has a missing dependency: 'getWaveOverviewTypes'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+74:6  Warning: React Hook useEffect has missing dependencies: 'getShowSearchResults' and 'searchParams'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+74:7  Warning: React Hook useEffect has a complex expression in the dependency array. Extract it to a separate variable so it can be statically checked.  react-hooks/exhaustive-deps
+
+./components/waves/list/WavesListWrapper.tsx
+50:5  Warning: React Hook useEffect has a missing dependency: 'getUsePublicWaves'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+63:43  Warning: React Hook useEffect has a missing dependency: 'getParams'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+125:5  Warning: React Hook useEffect has a missing dependency: 'getWaves'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/list/header/WavesListHeader.tsx
+35:5  Warning: React Hook useEffect has a missing dependency: 'getShowMyWavesButton'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/memes/file-upload/utils/constants.ts
+10:7  Warning: 'ACCEPTED_FORMATS' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/memes/submission/validation/validationHooks.ts
+104:16  Warning: 'error' is defined but never used.  unused-imports/no-unused-vars
+126:18  Warning: 'scrollError' is defined but never used.  unused-imports/no-unused-vars
+136:16  Warning: 'focusError' is defined but never used.  unused-imports/no-unused-vars
+
+./components/waves/memes/traits/DropdownTrait.tsx
+35:8  Warning: 'e' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/memes/traits/NumberTrait.tsx
+47:8  Warning: 'e' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/outcome/WaveManualOutcome.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'getAmounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/outcome/WaveNICOutcome.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'getAmounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/outcome/WaveRepOutcome.tsx
+37:6  Warning: React Hook useEffect has a missing dependency: 'getAmounts'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/small-leaderboard/WaveSmallLeaderboardTopThreeDrop.tsx
+23:9  Warning: 'getPFPColor' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+23:24  Warning: 'rank' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/specs/WaveNotificationSettings.tsx
+18:7  Warning: 'CREDIT_TYPE_LABELS' is assigned a value but never used. Allowed unused vars must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/specs/groups/group/WaveGroup.tsx
+24:3  Warning: 'isEligible' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+39:48  Warning: React Hook useEffect has a missing dependency: 'canEditGroup'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./components/waves/winners/WaveWinnersSmall.tsx
+50:15  Warning: 'index' is defined but never used. Allowed unused args must match /^_/u.  unused-imports/no-unused-vars
+
+./components/waves/winners/WaveWinnersSmallDecisionSelector.tsx
+32:6  Warning: React Hook useEffect has missing dependencies: 'animateIcon' and 'iconScope'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/3) ...
+ ✓ Generating static pages (3/3)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                                       Size  First Load JS
+┌ ƒ /                                                          8.94 kB        1.01 MB
+├ ƒ /_not-found                                                  561 B         106 kB
+├ ƒ /[user]                                                    1.77 kB        1.16 MB
+├ ƒ /[user]/collected                                          12.8 kB         737 kB
+├ ƒ /[user]/followers                                          3.61 kB         709 kB
+├ ƒ /[user]/groups                                               838 B         753 kB
+├ ƒ /[user]/identity                                           22.7 kB         823 kB
+├ ƒ /[user]/proxy                                              32.7 kB         763 kB
+├ ƒ /[user]/rep                                                15.3 kB         777 kB
+├ ƒ /[user]/stats                                              26.4 kB         867 kB
+├ ƒ /[user]/subscriptions                                      15.4 kB         762 kB
+├ ƒ /[user]/waves                                              2.55 kB        1.14 MB
+├ ƒ /6529-gradient                                             8.94 kB         891 kB
+├ ƒ /6529-gradient/[id]                                        6.68 kB         944 kB
+├ ƒ /about/[section]                                           42.4 kB         664 kB
+├ ƒ /about/100m-project                                          561 B         106 kB
+├ ƒ /about/media                                                 561 B         106 kB
+├ ƒ /about/mission                                               561 B         106 kB
+├ ƒ /about/open-metaverse                                        561 B         106 kB
+├ ƒ /about/press                                                 561 B         106 kB
+├ ƒ /about/rules                                                 561 B         106 kB
+├ ƒ /accept-connection-sharing                                 3.19 kB         603 kB
+├ ƒ /access                                                    6.35 kB         130 kB
+├ ƒ /api/farcaster                                               561 B         106 kB
+├ ƒ /api/open-graph                                              561 B         106 kB
+├ ƒ /api/open-graph/proxy-image                                  561 B         106 kB
+├ ƒ /api/pepe/resolve                                            561 B         106 kB
+├ ƒ /api/tiktok                                                  561 B         106 kB
+├ ƒ /api/version                                                 561 B         106 kB
+├ ƒ /api/wikimedia-card                                          561 B         106 kB
+├ ƒ /author/6529er6529-io                                        561 B         106 kB
+├ ƒ /author/ladysabrina                                          561 B         106 kB
+├ ƒ /author/nft6529                                              561 B         106 kB
+├ ƒ /author/teexels                                              561 B         106 kB
+├ ƒ /blog/a-tale-of-two-artists                                  561 B         106 kB
+├ ƒ /blog/disney-deekay-their-secret-to-animation                561 B         106 kB
+├ ƒ /blog/from-fibonacci-to-fidenza                              561 B         106 kB
+├ ƒ /browser-connector                                         6.96 kB         621 kB
+├ ƒ /buidl                                                     4.39 kB         128 kB
+├ ƒ /capital                                                     561 B         106 kB
+├ ƒ /capital/company-portfolio                                   561 B         106 kB
+├ ƒ /capital/fund                                                561 B         106 kB
+├ ƒ /casabatllo                                                  561 B         106 kB
+├ ƒ /category/blog                                               561 B         106 kB
+├ ƒ /category/news                                               561 B         106 kB
+├ ƒ /cdn-cgi/l/email-protection                                  561 B         106 kB
+├ ƒ /city/6529-museum-district                                   561 B         106 kB
+├ ƒ /consolidation-mapping-tool                                2.23 kB         630 kB
+├ ƒ /core/core-info                                            3.92 kB         154 kB
+├ ƒ /core/core-wallets                                         4.27 kB         728 kB
+├ ƒ /core/core-wallets/[address]                                6.8 kB         774 kB
+├ ƒ /core/core-wallets/import-wallet                           2.14 kB         792 kB
+├ ƒ /core/eth-transactions                                      2.8 kB         790 kB
+├ ƒ /core/tdh-calculation                                      2.24 kB         696 kB
+├ ƒ /delegation-mapping-tool                                   3.08 kB         631 kB
+├ ƒ /delegation/[...section]                                     22 kB         697 kB
+├ ƒ /dispute-resolution                                        6.92 kB         125 kB
+├ ƒ /education                                                   561 B         106 kB
+├ ƒ /education/education-collaboration-form                      561 B         106 kB
+├ ƒ /education/podcasts                                          561 B         106 kB
+├ ƒ /education/tweetstorms                                       561 B         106 kB
+├ ƒ /element_category/columns                                    561 B         106 kB
+├ ƒ /element_category/sections                                   561 B         106 kB
+├ ƒ /email-signatures                                            561 B         106 kB
+├ ƒ /emma                                                      3.92 kB         604 kB
+├ ƒ /emma/plans                                                6.43 kB         178 kB
+├ ƒ /emma/plans/[id]                                             41 kB         704 kB
+├ ƒ /error                                                     3.28 kB         130 kB
+├ ƒ /feed                                                        561 B         106 kB
+├ ƒ /gm-or-die-small-mp4                                         561 B         106 kB
+├ ƒ /meme-accounting                                            2.2 kB         640 kB
+├ ƒ /meme-calendar                                              6.2 kB         174 kB
+├ ƒ /meme-gas                                                  1.45 kB         640 kB
+├ ƒ /meme-lab                                                    280 B         917 kB
+├ ƒ /meme-lab/[id]                                             5.88 kB         996 kB
+├ ƒ /meme-lab/[id]/distribution                                  198 B         727 kB
+├ ƒ /meme-lab/collection/[collection]                          1.67 kB         919 kB
+├ ƒ /museum                                                      561 B         106 kB
+├ ƒ /museum/1-of-1-art                                           561 B         106 kB
+├ ƒ /museum/6529-fam                                             561 B         106 kB
+├ ƒ /museum/6529-fam-2021                                        561 B         106 kB
+├ ƒ /museum/6529-fund-szn1                                       561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/act-of-kindness                       561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/an-incomparable-love                  561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/archeology-of-the-future              561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/azuki                                 561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/ballad-of-ghosts                      561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/bored-ape-yacht-club                  561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/capsule-house                         561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/chromie-squiggle                      561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/clonex                                561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/cod                                   561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/conflicting-metaphysics               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/construction-token                    561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/cryptoad-punks                        561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/cryptoadz                             561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/cryptocubes                           561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/cryptopunks                           561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/dead-ringers                          561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/entretiempos                          561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/fakerares                             561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/faraway                               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/fidenza                               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/gazers                                561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/genesis                               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/grifters                              561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/image-with-arrow                      561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/incomplete-control                    561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/intensify-modeling                    561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/invisible-friends                     561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/jiometory-no-compute                  561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/madhouse                              561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/meridian                              561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/mfers                                 561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/non-either                            561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/nouns                                 561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/nuclear-nerds                         561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/primary-colors-of-neural-bricolage    561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/proof-grails-protoglyph               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/proof-grails-wall                     561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/queens-kings                          561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/rarepepe                              561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/ringers                               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/screens                               561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/subscapes                             561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/the-key-the-trial                     561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/twin-flames                           561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/videodrome                            561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/where-my-vans-go                      561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/wild-child-2022                       561 B         106 kB
+├ ƒ /museum/6529-fund-szn1/xcopy                                 561 B         106 kB
+├ ƒ /museum/6529-fund-szn2                                       561 B         106 kB
+├ ƒ /museum/6529-general-assembly                                561 B         106 kB
+├ ƒ /museum/6529-gradient-collector-curated                      561 B         106 kB
+├ ƒ /museum/6529-photo-a                                         561 B         106 kB
+├ ƒ /museum/6529-photo-b                                         561 B         106 kB
+├ ƒ /museum/6529-public-domain                                   561 B         106 kB
+├ ƒ /museum/ac-museum                                            561 B         106 kB
+├ ƒ /museum/ack-bar                                              561 B         106 kB
+├ ƒ /museum/batsoupyum-museum-1                                  561 B         106 kB
+├ ƒ /museum/batsoupyum-museum-2                                  561 B         106 kB
+├ ƒ /museum/bharat-krymo-museum-1                                561 B         106 kB
+├ ƒ /museum/bharat-krymo-museum-2                                561 B         106 kB
+├ ƒ /museum/bharat-krymo-museum-3                                561 B         106 kB
+├ ƒ /museum/bonafidehan-museum                                   561 B         106 kB
+├ ƒ /museum/early-nft-art                                        561 B         106 kB
+├ ƒ /museum/general-assembly                                     561 B         106 kB
+├ ƒ /museum/generative-art                                       561 B         106 kB
+├ ƒ /museum/genesis                                              561 B         106 kB
+├ ƒ /museum/genesis/27-bit-digital                               561 B         106 kB
+├ ƒ /museum/genesis/720-minutes                                  561 B         106 kB
+├ ƒ /museum/genesis/aerial-view                                  561 B         106 kB
+├ ƒ /museum/genesis/algobots                                     561 B         106 kB
+├ ƒ /museum/genesis/algorhythms                                  561 B         106 kB
+├ ƒ /museum/genesis/apparitions                                  561 B         106 kB
+├ ƒ /museum/genesis/archetype                                    561 B         106 kB
+├ ƒ /museum/genesis/asemica                                      561 B         106 kB
+├ ƒ /museum/genesis/autoglyphs                                   561 B         106 kB
+├ ƒ /museum/genesis/autology                                     561 B         106 kB
+├ ƒ /museum/genesis/bent                                         561 B         106 kB
+├ ƒ /museum/genesis/bubble-bobbly                                561 B         106 kB
+├ ƒ /museum/genesis/century                                      561 B         106 kB
+├ ƒ /museum/genesis/chimera                                      561 B         106 kB
+├ ƒ /museum/genesis/chromie-squiggle                             561 B         106 kB
+├ ƒ /museum/genesis/construction-token                           561 B         106 kB
+├ ƒ /museum/genesis/cosmic-reef                                  561 B         106 kB
+├ ƒ /museum/genesis/cryptoarte                                   561 B         106 kB
+├ ƒ /museum/genesis/cryptoblots                                  561 B         106 kB
+├ ƒ /museum/genesis/cryptocube                                   561 B         106 kB
+├ ƒ /museum/genesis/dreams                                       561 B         106 kB
+├ ƒ /museum/genesis/dynamic-slices                               561 B         106 kB
+├ ƒ /museum/genesis/edifice                                      561 B         106 kB
+├ ƒ /museum/genesis/elementals                                   561 B         106 kB
+├ ƒ /museum/genesis/elevated-deconstructions                     561 B         106 kB
+├ ƒ /museum/genesis/endless-nameless                             561 B         106 kB
+├ ƒ /museum/genesis/entretiempos                                 561 B         106 kB
+├ ƒ /museum/genesis/fidenza                                      561 B         106 kB
+├ ƒ /museum/genesis/fragments-of-an-infinite-field               561 B         106 kB
+├ ƒ /museum/genesis/frammenti                                    561 B         106 kB
+├ ƒ /museum/genesis/gazers                                       561 B         106 kB
+├ ƒ /museum/genesis/genesis-dca                                  561 B         106 kB
+├ ƒ /museum/genesis/geometry-runners                             561 B         106 kB
+├ ƒ /museum/genesis/glitch-crystal-monsters                      561 B         106 kB
+├ ƒ /museum/genesis/great-hall-of-generative-art                 561 B         106 kB
+├ ƒ /museum/genesis/hyperhash                                    561 B         106 kB
+├ ƒ /museum/genesis/ignition                                     561 B         106 kB
+├ ƒ /museum/genesis/incomplete-control                           561 B         106 kB
+├ ƒ /museum/genesis/inspirals                                    561 B         106 kB
+├ ƒ /museum/genesis/jiometory-no-compute                         561 B         106 kB
+├ ƒ /museum/genesis/kai-gen                                      561 B         106 kB
+├ ƒ /museum/genesis/labios                                       561 B         106 kB
+├ ƒ /museum/genesis/lost-robbies                                 561 B         106 kB
+├ ƒ /museum/genesis/meridian                                     561 B         106 kB
+├ ƒ /museum/genesis/nimbuds                                      561 B         106 kB
+├ ƒ /museum/genesis/para-bellum                                  561 B         106 kB
+├ ƒ /museum/genesis/phase                                        561 B         106 kB
+├ ƒ /museum/genesis/pigments                                     561 B         106 kB
+├ ƒ /museum/genesis/ringers                                      561 B         106 kB
+├ ƒ /museum/genesis/screens                                      561 B         106 kB
+├ ƒ /museum/genesis/scribbled-boundaries                         561 B         106 kB
+├ ƒ /museum/genesis/secret-surprise                              561 B         106 kB
+├ ƒ /museum/genesis/singularity                                  561 B         106 kB
+├ ƒ /museum/genesis/skulptuur                                    561 B         106 kB
+├ ƒ /museum/genesis/spectron                                     561 B         106 kB
+├ ƒ /museum/genesis/squiggly-wtf                                 561 B         106 kB
+├ ƒ /museum/genesis/subscapes                                    561 B         106 kB
+├ ƒ /museum/genesis/synapses                                     561 B         106 kB
+├ ƒ /museum/genesis/the-blocks-of-art                            561 B         106 kB
+├ ƒ /museum/genesis/trossets                                     561 B         106 kB
+├ ƒ /museum/genesis/unigrids                                     561 B         106 kB
+├ ƒ /museum/genesis/vortex                                       561 B         106 kB
+├ ƒ /museum/genesis/watercolor-dreams                            561 B         106 kB
+├ ƒ /museum/genesis/willow-shield                                561 B         106 kB
+├ ƒ /museum/imagined-worlds                                      561 B         106 kB
+├ ƒ /museum/nft-photography                                      561 B         106 kB
+├ ƒ /museum/sozet-lounge                                         561 B         106 kB
+├ ƒ /museum/sunshine-square                                      561 B         106 kB
+├ ƒ /museum/temple-of-gm                                         561 B         106 kB
+├ ƒ /museum/the-institutions                                     561 B         106 kB
+├ ƒ /museum/yongoh-kim                                           561 B         106 kB
+├ ƒ /my-stream                                                  7.8 kB        1.37 MB
+├ ƒ /my-stream/notifications                                     524 B        1.36 MB
+├ ƒ /network                                                   5.15 kB         732 kB
+├ ƒ /network/activity                                          3.25 kB         745 kB
+├ ƒ /network/groups                                            17.1 kB         706 kB
+├ ƒ /network/levels                                            4.82 kB         191 kB
+├ ƒ /network/metrics                                           6.66 kB         124 kB
+├ ƒ /network/nerd/[[...focus]]                                 8.73 kB         644 kB
+├ ƒ /network/prenodes                                          4.21 kB         604 kB
+├ ƒ /network/stats                                             3.96 kB         672 kB
+├ ƒ /news/introducing-om                                         561 B         106 kB
+├ ƒ /nextgen/[[...view]]                                       6.91 kB         721 kB
+├ ƒ /nextgen/collection/[collection]/[[...view]]                 949 B         733 kB
+├ ƒ /nextgen/collection/[collection]/art                       4.65 kB         721 kB
+├ ƒ /nextgen/collection/[collection]/distribution-plan         4.95 kB         736 kB
+├ ƒ /nextgen/collection/[collection]/mint                        740 B         732 kB
+├ ƒ /nextgen/collection/[collection]/trait-sets                5.53 kB         722 kB
+├ ƒ /nextgen/manager                                           17.9 kB         662 kB
+├ ƒ /nextgen/token/[token]/[[...view]]                           13 kB         745 kB
+├ ƒ /nft-activity                                              11.2 kB         687 kB
+├ ƒ /om                                                          561 B         106 kB
+├ ƒ /om/6529-museum-district                                     561 B         106 kB
+├ ƒ /om/community-galleries                                      561 B         106 kB
+├ ƒ /om/discord                                                  561 B         106 kB
+├ ƒ /om/instruction-manual                                       561 B         106 kB
+├ ƒ /om/join-om                                                  561 B         106 kB
+├ ƒ /om/OM                                                       561 B         106 kB
+├ ƒ /om/om-groups                                                561 B         106 kB
+├ ƒ /om/partnership-request                                      561 B         106 kB
+├ ƒ /open-data                                                 2.71 kB         603 kB
+├ ƒ /open-data/consolidated-network-metrics                      515 B         166 kB
+├ ƒ /open-data/meme-subscriptions                              5.11 kB         166 kB
+├ ƒ /open-data/network-metrics                                   514 B         166 kB
+├ ƒ /open-data/rememes                                           400 B         166 kB
+├ ƒ /open-data/royalties                                         402 B         166 kB
+├ ƒ /open-data/team                                            1.16 kB         129 kB
+├ ƒ /open-mobile                                               3.71 kB         130 kB
+├ ƒ /rememes                                                   7.43 kB         635 kB
+├ ƒ /rememes/[contract]/[id]                                   7.86 kB         922 kB
+├ ƒ /rememes/add                                                8.5 kB         665 kB
+├ ƒ /restricted                                                6.55 kB         130 kB
+├ ƒ /slide-page/6529-initiatives                                 561 B         106 kB
+├ ƒ /slide-page/homepage-slider                                  561 B         106 kB
+├ ƒ /the-memes                                                   276 B         914 kB
+├ ƒ /the-memes/[id]                                            17.6 kB        1.04 MB
+├ ƒ /the-memes/[id]/distribution                                 197 B         727 kB
+├ ƒ /the-memes/mint                                            2.99 kB         129 kB
+├ ƒ /tools/api                                                 11.9 kB         131 kB
+├ ƒ /tools/app-wallets                                         4.43 kB         729 kB
+├ ƒ /tools/app-wallets/[app-wallet-address]                    6.31 kB         774 kB
+├ ƒ /tools/app-wallets/import-wallet                           2.25 kB         793 kB
+├ ƒ /tools/block-finder                                        9.07 kB         654 kB
+├ ƒ /tools/subscriptions-report                                10.1 kB         610 kB
+├ ƒ /waves                                                     1.62 kB        1.12 MB
+└ ƒ /waves/[wave]                                                561 B         106 kB
++ First Load JS shared by all                                   105 kB
+  ├ chunks/3131-f64e5e9280e9d4f6.js                            46.1 kB
+  ├ chunks/c7879cf7-18706f15017fe57e.js                        54.3 kB
+  └ other shared chunks (total)                                 4.7 kB
+
+
+ƒ Middleware                                                   48.3 kB
+
+ƒ  (Dynamic)  server-rendered on demand
+
+
+> 6529-core@0.1.36 build-electron
+> tsc -p electron-src && cp -r assets main/electron-src/
+
+  • electron-builder  version=24.13.3 os=25.1.0
+  • loaded configuration  file=/Users/ppan/Desktop/6529git/6529-core/electron-builder.local.json
+  • @electron/rebuild not required if you use electron-builder, please consider to remove excess dependency from devDependencies
+
+To ensure your native dependencies are always matched electron version, simply add script `"postinstall": "electron-builder install-app-deps" to your `package.json`
+  • rebuilding native dependencies  dependencies=@parcel/watcher@2.5.1, better-sqlite3@12.0.0, bufferutil@4.0.9, keccak@3.0.4, utf-8-validate@5.0.10 platform=darwin arch=arm64
+  • install prebuilt binary  name=better-sqlite3 version=12.0.0 platform=darwin arch=arm64 napi=
+  • packaging       platform=darwin arch=arm64 electron=36.9.0 appOutDir=dist/mac-arm64
+  • signing         file=dist/mac-arm64/6529 LOCAL CORE.app platform=darwin type=distribution identity=3D9D928BC84CFC2AF475A28FF5D08B798A4A5DDE provisioningProfile=none
+  • skipped macOS notarization  reason=`notarize` options were set explicitly `false`
+  • building        target=DMG arch=arm64 file=dist/6529-LOCAL-CORE-mac-arm64-0.1.36.dmg
+  • building        target=macOS zip arch=arm64 file=dist/6529-LOCAL-CORE-mac-arm64-0.1.36.zip
+  • Detected arm64 process, HFS+ is unavailable. Creating dmg with APFS - supports Mac OSX 10.12+
+  • building block map  blockMapFile=dist/6529-LOCAL-CORE-mac-arm64-0.1.36.dmg.blockmap
+  • building block map  blockMapFile=dist/6529-LOCAL-CORE-mac-arm64-0.1.36.zip.blockmap

@@ -11,24 +11,22 @@ import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketpla
 import NftNavigation from "@/components/nft-navigation/NftNavigation";
 import { NftPageStats } from "@/components/nftAttributes/NftStats";
 import ArtistProfileHandle from "@/components/the-memes/ArtistProfileHandle";
+import { publicEnv } from "@/config/env";
 import { GRADIENT_CONTRACT } from "@/constants";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
 import { NFT } from "@/entities/INFT";
 import { Transaction } from "@/entities/ITransaction";
 import {
   areEqualAddresses,
-  enterArtFullScreen,
   numberWithCommas,
   printMintDate,
 } from "@/helpers/Helpers";
 import useCapacitor from "@/hooks/useCapacitor";
 import { fetchUrl } from "@/services/6529api";
-import { faExpandAlt } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useContext, useEffect, useState } from "react";
 import { Col, Container, Row, Table } from "react-bootstrap";
+import YouOwnNftBadge from "../you-own-nft-badge/YouOwnNftBadge";
 
 interface NftWithOwner extends NFT {
   owner: string;
@@ -74,7 +72,7 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
         }
       });
     }
-    const initialUrlNfts = `${SEIZE_API_URL}/api/nfts/gradients?&page_size=101`;
+    const initialUrlNfts = `${publicEnv.API_ENDPOINT}/api/nfts/gradients?&page_size=101`;
     fetchNfts(initialUrlNfts, []);
   }, []);
 
@@ -83,14 +81,16 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
       a.tdh_rank > b.tdh_rank ? 1 : -1
     );
     setCollectionCount(allNfts.length);
-    setNft(rankedNFTs.find((n) => n.id === parseInt(id)));
-    setCollectionRank(rankedNFTs.map((r) => r.id).indexOf(parseInt(id)) + 1);
+    setNft(rankedNFTs.find((n) => n.id === Number.parseInt(id)));
+    setCollectionRank(
+      rankedNFTs.map((r) => r.id).indexOf(Number.parseInt(id)) + 1
+    );
   }, [allNfts, id]);
 
   useEffect(() => {
     if (id) {
       fetchUrl(
-        `${SEIZE_API_URL}/api/transactions?contract=${GRADIENT_CONTRACT}&id=${id}`
+        `${publicEnv.API_ENDPOINT}/api/transactions?contract=${GRADIENT_CONTRACT}&id=${id}`
       ).then((response: DBResponse) => {
         setTransactions(response.data);
       });
@@ -106,16 +106,14 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
             sm={{ span: 12 }}
             md={{ span: 6 }}
             lg={{ span: 6 }}
-            className="pt-2 position-relative"
-          >
+            className="pt-2 position-relative">
             {nft && (
               <NFTImage
                 id={fullscreenElementId}
                 nft={nft}
                 animation={false}
                 height={650}
-                showOwnedIfLoggedIn={isOwner}
-                showUnseizedIfLoggedIn={false}
+                showBalance={false}
               />
             )}
           </Col>
@@ -125,8 +123,7 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
               sm={{ span: 12 }}
               md={{ span: 6 }}
               lg={{ span: 6 }}
-              className="pt-2"
-            >
+              className="pt-2">
               <Container>
                 <Row>
                   <Col>
@@ -134,14 +131,14 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
                   </Col>
                 </Row>
                 <Row>
-                  <Col>
-                    <h4 className={styles.subheading}>
-                      {isOwner ? "*" : ""}
+                  <Col className="d-flex align-items-center gap-1">
+                    <h4 className="tw-mb-0">
                       <Address
                         wallets={[nft.owner as `0x${string}`]}
                         display={nft.owner_display}
                       />
                     </h4>
+                    {isOwner && <YouOwnNftBadge />}
                   </Col>
                 </Row>
                 <Row className="pt-4">
@@ -243,18 +240,6 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
     );
   }
 
-  function printFullScreen() {
-    return (
-      <FontAwesomeIcon
-        icon={faExpandAlt}
-        className={styles.fullScreen}
-        onClick={() =>
-          fullscreenElementId && enterArtFullScreen(fullscreenElementId)
-        }
-      />
-    );
-  }
-
   return (
     <Container fluid className={styles.mainContainer}>
       <Row>
@@ -280,9 +265,9 @@ export default function GradientPageComponent({ id }: { readonly id: string }) {
                     />
                   </Col>
                 </Row>
-                <Row className="pt-2">
+                <Row className="pt-4">
                   <Col>
-                    <h2 className={styles.subheading}>{nft?.name}</h2>
+                    <h2>{nft?.name}</h2>
                   </Col>
                 </Row>
                 <Row className="pt-2">

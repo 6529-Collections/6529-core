@@ -1,4 +1,4 @@
-import { SEIZE_API_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { useEffect, useState } from "react";
 import {
   NEXTGEN_CHAIN_ID,
@@ -69,7 +69,7 @@ export function useActivityData(
     }
 
     setFetching(true);
-    let url = `${SEIZE_API_URL}/api/transactions?page_size=${pageSize}&page=${page}`;
+    let url = `${publicEnv.API_ENDPOINT}/api/transactions?page_size=${pageSize}&page=${page}`;
 
     switch (typeFilter) {
       case TypeFilter.SALES:

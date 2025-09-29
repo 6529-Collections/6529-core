@@ -7,8 +7,8 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import IpfsService from "./IPFSService";
 import { isElectron } from "../../helpers";
+import IpfsService from "./IPFSService";
 
 interface IpfsContextType {
   ipfsService: IpfsService | null;
