@@ -1,10 +1,10 @@
-import { goerli, mainnet, sepolia } from "viem/chains";
 import {
   NEXTGEN_ADMIN_ABI,
   NEXTGEN_CORE_ABI,
   NEXTGEN_MINTER_ABI,
-} from "../../abis";
-import { NEXTGEN_CHAIN_ID_ENV } from "../../../electron-constants";
+} from "@/abis";
+import { publicEnv } from "@/config/env";
+import { goerli, mainnet, sepolia } from "viem/chains";
 
 export interface NextGenContract {
   [goerli.id]: string;
@@ -14,8 +14,8 @@ export interface NextGenContract {
 }
 
 function getNextGenChainId() {
-  if (NEXTGEN_CHAIN_ID_ENV) {
-    const chainId: number = parseInt(NEXTGEN_CHAIN_ID_ENV);
+  if (publicEnv.NEXTGEN_CHAIN_ID) {
+    const chainId = publicEnv.NEXTGEN_CHAIN_ID;
     if (chainId == sepolia.id) {
       return sepolia.id;
     }
@@ -27,21 +27,6 @@ function getNextGenChainId() {
 }
 
 export const NEXTGEN_CHAIN_ID = getNextGenChainId();
-
-export function getNextGenChain() {
-  if (NEXTGEN_CHAIN_ID_ENV) {
-    const chainId: number = parseInt(NEXTGEN_CHAIN_ID_ENV);
-    if (chainId == sepolia.id) {
-      return sepolia;
-    }
-    if (chainId == goerli.id) {
-      return goerli;
-    }
-  }
-  return mainnet;
-}
-
-export const NEXTGEN_CHAIN = getNextGenChain();
 
 export enum FunctionSelectors {
   CREATE_COLLECTION = "0xe1fa8089",

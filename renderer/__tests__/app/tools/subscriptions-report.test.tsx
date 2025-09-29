@@ -1,13 +1,18 @@
-import React from "react";
-import { render, waitFor } from "@testing-library/react";
 import Page, { generateMetadata } from "@/app/tools/subscriptions-report/page";
 import { AuthContext } from "@/components/auth/Auth";
 import { CookieConsentProvider } from "@/components/cookies/CookieConsentContext";
+import { render, waitFor } from "@testing-library/react";
+import React from "react";
 
-jest.mock("@/helpers/meme_calendar.helpers", () => ({
-  getMintingDates: jest.fn(() => []),
+jest.mock("@/components/meme-calendar/meme-calendar.helpers", () => ({
+  __esModule: true,
+  displayedSeasonNumberFromIndex: jest.fn(() => 1),
+  formatFullDate: jest.fn((date: Date) => date.toISOString()),
+  getCardsRemainingUntilEndOf: jest.fn(() => 2),
+  getSeasonIndexForDate: jest.fn(() => 0),
+  getUpcomingMintsForCurrentOrNextSeason: jest.fn(() => ({ rows: [] })),
   isMintingToday: jest.fn(() => false),
-  numberOfCardsForSeasonEnd: jest.fn(() => ({ count: 2, szn: 1 })),
+  nextMintDateOnOrAfter: jest.fn(() => new Date("2024-01-01T00:00:00Z")),
 }));
 
 jest.mock("@/services/api/common-api", () => ({
@@ -26,8 +31,8 @@ jest.mock("@/services/api/common-api", () => ({
 
 const { commonApiFetch } = require("@/services/api/common-api");
 const {
-  numberOfCardsForSeasonEnd,
-} = require("@/helpers/meme_calendar.helpers");
+  getCardsRemainingUntilEndOf,
+} = require("@/components/meme-calendar/meme-calendar.helpers");
 
 // Mock TitleContext
 jest.mock("@/contexts/TitleContext", () => ({
@@ -58,7 +63,7 @@ describe("Subscriptions report page", () => {
     );
     expect(container.querySelector("main")).toBeInTheDocument();
     await waitFor(() => {
-      expect(numberOfCardsForSeasonEnd).toHaveBeenCalled();
+      expect(getCardsRemainingUntilEndOf).toHaveBeenCalledWith("szn");
       expect(commonApiFetch).toHaveBeenCalledTimes(3);
       expect(commonApiFetch).toHaveBeenCalledWith({
         endpoint: "policies/country-check",
@@ -77,7 +82,6 @@ describe("Subscriptions report page", () => {
   });
 
   it("exposes metadata", async () => {
-    process.env.BASE_ENDPOINT = "https://base.test";
     const metadata = await generateMetadata();
     expect(metadata.title).toEqual("Subscriptions Report");
     expect(metadata.description).toEqual("Tools | 6529.io");

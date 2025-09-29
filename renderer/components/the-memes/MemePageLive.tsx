@@ -1,19 +1,6 @@
 "use client";
 
-import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
-import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
-import { NftPageStats } from "@/components/nftAttributes/NftStats";
-import { printMemeReferences } from "@/components/rememes/RememePage";
-import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
-import { SEIZE_API_URL } from "@/electron-constants";
-import { MemesExtendedData, NFT, Rememe } from "@/entities/INFT";
-import {
-  areEqualAddresses,
-  formatAddress,
-  numberWithCommas,
-  printMintDate,
-} from "@/helpers/Helpers";
-import useCapacitor from "@/hooks/useCapacitor";
+import { publicEnv } from "@/config/env";
 import { faFire, faRefresh } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
@@ -21,12 +8,26 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
+import { OPENSEA_STORE_FRONT_CONTRACT } from "../../constants";
 import { DBResponse } from "../../entities/IDBResponse";
+import { MemesExtendedData, NFT, Rememe } from "../../entities/INFT";
+import {
+  areEqualAddresses,
+  formatAddress,
+  numberWithCommas,
+  printMintDate,
+} from "../../helpers/Helpers";
+import useCapacitor from "../../hooks/useCapacitor";
 import { fetchUrl } from "../../services/6529api";
+import { useCookieConsent } from "../cookies/CookieConsentContext";
 import RememeImage from "../nft-image/RememeImage";
+import NFTMarketplaceLinks from "../nft-marketplace-links/NFTMarketplaceLinks";
+import { NftPageStats } from "../nftAttributes/NftStats";
 import Pagination from "../pagination/Pagination";
+import { printMemeReferences } from "../rememes/RememePage";
 import { RememeSort } from "../rememes/Rememes";
 import ArtistProfileHandle from "./ArtistProfileHandle";
+import MemeCalendarPeriods from "./MemeCalendarPeriods";
 import styles from "./TheMemes.module.scss";
 
 const REMEMES_PAGE_SIZE = 20;
@@ -56,10 +57,14 @@ export function MemePageLiveRightMenu(props: {
         sm={{ span: 12 }}
         md={{ span: 6 }}
         lg={{ span: 6 }}
-        className="pt-2"
-      >
+        className="pt-2">
         <Container className="p-0">
           <Row>
+            <Col>
+              <MemeCalendarPeriods id={props.nft.id} />
+            </Col>
+          </Row>
+          <Row className="pt-2">
             <Col>
               <h3>Meme Collectors</h3>
             </Col>
@@ -221,8 +226,7 @@ export function MemePageLiveRightMenu(props: {
                 <Link
                   href={distributionPlanLink}
                   target={props.nft.has_distribution ? "_self" : "_blank"}
-                  rel="noreferrer"
-                >
+                  rel="noreferrer">
                   Distribution Plan
                 </Link>
               </Col>
@@ -278,7 +282,7 @@ export function MemePageLiveSubMenu(props: {
   useEffect(() => {
     if (props.nft) {
       fetchUrl(
-        `${SEIZE_API_URL}/api/nfts_memelab?sort_direction=asc&meme_id=${props.nft.id}`
+        `${publicEnv.API_ENDPOINT}/api/nfts_memelab?sort_direction=asc&meme_id=${props.nft.id}`
       ).then((response: DBResponse) => {
         setMemeLabNfts(response.data);
         setMemeLabNftsLoaded(true);
@@ -298,7 +302,7 @@ export function MemePageLiveSubMenu(props: {
       sort = "&sort=created_at&sort_direction=desc";
     }
     fetchUrl(
-      `${SEIZE_API_URL}/api/rememes?meme_id=${meme_id}&page_size=${REMEMES_PAGE_SIZE}&page=${rememesPage}${sort}`
+      `${publicEnv.API_ENDPOINT}/api/rememes?meme_id=${meme_id}&page_size=${REMEMES_PAGE_SIZE}&page=${rememesPage}${sort}`
     ).then((response: DBResponse) => {
       setRememesTotalResults(response.count);
       setRememes(response.data);
@@ -345,8 +349,7 @@ export function MemePageLiveSubMenu(props: {
               <span className="d-flex align-items-center gap-2 pt-2">
                 <Dropdown
                   className={styles.rememesSortDropdown}
-                  drop={"down-centered"}
-                >
+                  drop={"down-centered"}>
                   <Dropdown.Toggle>
                     Sort: {selectedRememeSorting}
                   </Dropdown.Toggle>
@@ -358,8 +361,7 @@ export function MemePageLiveSubMenu(props: {
                           setRememesPage(1);
                           setRememesTotalResults(0);
                           setSelectedRememeSorting(s);
-                        }}
-                      >
+                        }}>
                         {s}
                       </Dropdown.Item>
                     ))}
@@ -417,12 +419,10 @@ export function MemePageLiveSubMenu(props: {
                     xs={{ span: 6 }}
                     sm={{ span: 4 }}
                     md={{ span: 3 }}
-                    lg={{ span: 3 }}
-                  >
+                    lg={{ span: 3 }}>
                     <Link
                       href={`/rememes/${rememe.contract}/${rememe.id}`}
-                      className="decoration-none scale-hover"
-                    >
+                      className="decoration-none scale-hover">
                       <Container fluid className="no-padding">
                         <Row>
                           <Col>

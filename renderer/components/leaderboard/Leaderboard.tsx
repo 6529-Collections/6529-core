@@ -1,16 +1,16 @@
 "use client";
 
-import { SEIZE_API_URL } from "@/electron-constants";
-import { DBResponse } from "@/entities/IDBResponse";
-import { MemeSeason } from "@/entities/ISeason";
-import { GlobalTDHHistory, TDHCalc } from "@/entities/ITDH";
+import { publicEnv } from "@/config/env";
 import { LeaderboardFocus } from "@/enums";
-import { numberWithCommas } from "@/helpers/Helpers";
-import { fetchUrl } from "@/services/6529api";
-import { commonApiFetch } from "@/services/api/common-api";
 import { useEffect, useState } from "react";
 import { Col, Container, Dropdown, Row } from "react-bootstrap";
+import { DBResponse } from "../../entities/IDBResponse";
+import { MemeSeason } from "../../entities/ISeason";
+import { GlobalTDHHistory, TDHCalc } from "../../entities/ITDH";
 import { ApiBlocksPage } from "../../generated/models/ApiBlocksPage";
+import { numberWithCommas } from "../../helpers/Helpers";
+import { fetchUrl } from "../../services/6529api";
+import { commonApiFetch } from "../../services/api/common-api";
 import DotLoader, { Spinner } from "../dotLoader/DotLoader";
 import {
   SearchModalDisplay,
@@ -72,7 +72,7 @@ export default function Leaderboard(
   }, [content, collector]);
 
   useEffect(() => {
-    fetchUrl(`${SEIZE_API_URL}/api/blocks?page_size=${1}`).then(
+    fetchUrl(`${publicEnv.API_ENDPOINT}/api/blocks?page_size=${1}`).then(
       (response: ApiBlocksPage) => {
         if (response.data.length > 0) {
           setLastTDH({
@@ -91,7 +91,7 @@ export default function Leaderboard(
   }, []);
 
   useEffect(() => {
-    let url = `${SEIZE_API_URL}/api/tdh_global_history?page_size=${1}`;
+    let url = `${publicEnv.API_ENDPOINT}/api/tdh_global_history?page_size=${1}`;
     fetchUrl(url).then((response: DBResponse) => {
       const tdhH = response.data[0];
       setGlobalTdhHistory(tdhH);
@@ -247,7 +247,9 @@ export default function Leaderboard(
                   <span
                     onClick={() => props.setFocus(LeaderboardFocus.TDH)}
                     className={`${styles.focus} ${
-                      props.focus != LeaderboardFocus.TDH ? styles.disabled : ""
+                      props.focus === LeaderboardFocus.TDH
+                        ? ""
+                        : styles.disabled
                     }`}>
                     {LeaderboardFocus.TDH}
                   </span>
@@ -259,9 +261,9 @@ export default function Leaderboard(
                       props.setFocus(LeaderboardFocus.INTERACTIONS)
                     }
                     className={`${styles.focus} ${
-                      props.focus != LeaderboardFocus.INTERACTIONS
-                        ? styles.disabled
-                        : ""
+                      props.focus === LeaderboardFocus.INTERACTIONS
+                        ? ""
+                        : styles.disabled
                     }`}>
                     {LeaderboardFocus.INTERACTIONS}
                   </span>

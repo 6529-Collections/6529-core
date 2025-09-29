@@ -1,7 +1,7 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { getStagingAuth } from "@/services/auth/auth.utils";
 import styles from "@/styles/Home.module.scss";
 import { useEffect, useState } from "react";
@@ -15,7 +15,7 @@ export default function RestrictedPage() {
   useEffect(() => {
     if (!image) {
       const apiAuth = getStagingAuth();
-      fetch(`${SEIZE_API_URL}/api/`, {
+      fetch(`${publicEnv.API_ENDPOINT}/api/`, {
         headers: apiAuth ? { "x-6529-auth": apiAuth } : {},
       }).then((r: any) => {
         r.json().then((response: any) => {

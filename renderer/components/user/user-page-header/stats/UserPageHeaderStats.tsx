@@ -61,7 +61,7 @@ export default function UserPageHeaderStats({
   }, [profile, tdhConsensusInfo]);
 
   return (
-    <div className="tw-mt-3">
+    <div className="tw-mt-3 tw-flex tw-items-center tw-justify-between tw-gap-x-4">
       <div className="tw-flex tw-gap-x-4 sm:tw-gap-x-6 tw-flex-wrap tw-gap-y-2">
         <Link
           href={`/${user}/collected`}

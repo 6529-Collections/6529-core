@@ -1,7 +1,7 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { DBResponse } from "@/entities/IDBResponse";
 import { GlobalTDHHistory } from "@/entities/ITDH";
 import { fetchUrl } from "@/services/6529api";
@@ -103,7 +103,7 @@ export default function CommunityStats() {
   }
 
   useEffect(() => {
-    let url = `${SEIZE_API_URL}/api/tdh_global_history?page_size=${pageSize}&page=${page}`;
+    let url = `${publicEnv.API_ENDPOINT}/api/tdh_global_history?page_size=${pageSize}&page=${page}`;
     fetchUrl(url).then((response: DBResponse) => {
       const tdhH = response.data.reverse();
       setTdhHistory(tdhH);

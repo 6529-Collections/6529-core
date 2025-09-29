@@ -1,8 +1,8 @@
 "use client";
 
+import { publicEnv } from "@/config/env";
 import { API_AUTH_COOKIE } from "@/constants";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { getStagingAuth } from "@/services/auth/auth.utils";
 import styles from "@/styles/Home.module.scss";
 import Cookies from "js-cookie";
@@ -19,7 +19,7 @@ export default function AccessPage() {
   useEffect(() => {
     if (!image) {
       const apiAuth = getStagingAuth();
-      fetch(`${SEIZE_API_URL}/api/`, {
+      fetch(`${publicEnv.API_ENDPOINT}/api/`, {
         headers: apiAuth ? { "x-6529-auth": apiAuth } : {},
       }).then((r: any) => {
         r.json().then((response: any) => {
@@ -36,7 +36,7 @@ export default function AccessPage() {
   function doLogin(target: HTMLInputElement) {
     target.select();
     const pass = target.value;
-    fetch(`${SEIZE_API_URL}/api/`, {
+    fetch(`${publicEnv.API_ENDPOINT}/api/`, {
       headers: { "x-6529-auth": pass },
     }).then((r: any) => {
       if (r.status === 401) {

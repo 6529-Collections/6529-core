@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { publicEnv } from "@/config/env";
 import { openInExternalBrowser } from "@/helpers";
-import { SEIZE_URL } from "@/electron-constants";
+import { useEffect } from "react";
 
 export const handleAnchorClick = (event: any) => {
   const target = event.target.closest("a");
@@ -13,11 +13,11 @@ export const handleAnchorClick = (event: any) => {
     if (isExternalLink) {
       event.preventDefault();
       if (
-        href.startsWith(SEIZE_URL) ||
+        href.startsWith(publicEnv.BASE_ENDPOINT) ||
         href.startsWith("/") ||
         href.includes("localhost")
       ) {
-        window.location.href = href.replace(SEIZE_URL, "");
+        window.location.href = href.replace(publicEnv.BASE_ENDPOINT, "");
       } else {
         openInExternalBrowser(href);
       }

@@ -1,13 +1,13 @@
 "use client";
 
-import { SEIZE_API_URL } from "@/electron-constants";
-import { NFT } from "@/entities/INFT";
-import { numberWithCommas } from "@/helpers/Helpers";
+import { publicEnv } from "@/config/env";
 import { useEffect, useState } from "react";
 import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
 import { MEMES_CONTRACT } from "../../constants";
 import { DBResponse } from "../../entities/IDBResponse";
+import { NFT } from "../../entities/INFT";
 import { Transaction } from "../../entities/ITransaction";
+import { numberWithCommas } from "../../helpers/Helpers";
 import { TypeFilter } from "../../hooks/useActivityData";
 import { fetchUrl } from "../../services/6529api";
 import LatestActivityRow from "../latest-activity/LatestActivityRow";
@@ -28,7 +28,7 @@ export function MemePageActivity(props: {
 
   useEffect(() => {
     if (props.nft) {
-      let url = `${SEIZE_API_URL}/api/transactions?contract=${MEMES_CONTRACT}&id=${props.nft.id}&page_size=${props.pageSize}&page=${activityPage}`;
+      let url = `${publicEnv.API_ENDPOINT}/api/transactions?contract=${MEMES_CONTRACT}&id=${props.nft.id}&page_size=${props.pageSize}&page=${activityPage}`;
       switch (activityTypeFilter) {
         case TypeFilter.SALES:
           url += `&filter=sales`;

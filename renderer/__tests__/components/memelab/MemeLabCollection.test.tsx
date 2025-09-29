@@ -29,7 +29,6 @@ beforeEach(() => {
   (useRouter as jest.Mock).mockReturnValue({
     replace: routerReplace,
   });
-  process.env.API_ENDPOINT = "https://api.test";
 });
 
 const collectionName = "Cool Collection";
@@ -62,7 +61,7 @@ describe("MemeLabCollection", () => {
   it("shows placeholder when no nfts", async () => {
     (fetchAllPages as jest.Mock).mockResolvedValueOnce([]);
     renderComponent();
-    await waitFor(() => expect(fetchAllPages).toHaveBeenCalledTimes(1));
-    expect(screen.getByTestId("nothing")).toBeInTheDocument();
+    expect(fetchAllPages).toHaveBeenCalledTimes(1);
+    expect(await screen.findByTestId("nothing")).toBeInTheDocument();
   });
 });

@@ -6,9 +6,9 @@ import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDr
 import DotLoader from "@/components/dotLoader/DotLoader";
 import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
 import NFTImage from "@/components/nft-image/NFTImage";
+import { publicEnv } from "@/config/env";
 import { GRADIENT_CONTRACT } from "@/constants";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { SEIZE_API_URL } from "@/electron-constants";
 import { NFT } from "@/entities/INFT";
 import { SortDirection } from "@/entities/ISort";
 import { areEqualAddresses, numberWithCommas } from "@/helpers/Helpers";
@@ -21,6 +21,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import { fetchAllPages } from "../../services/6529api";
+import YouOwnNftBadge from "../you-own-nft-badge/YouOwnNftBadge";
 import styles from "./6529Gradient.module.scss";
 
 enum Sort {
@@ -57,7 +58,7 @@ export default function GradientsComponent() {
     setSort(sortParam);
     setSortDir(dirParam);
 
-    const url = `${SEIZE_API_URL}/api/nfts/gradients?page_size=101`;
+    const url = `${publicEnv.API_ENDPOINT}/api/nfts/gradients?page_size=101`;
     fetchAllPages(url).then((raw: GradientNFT[]) => {
       setNftsRaw(raw);
       setNftsLoaded(true);
@@ -102,12 +103,10 @@ export default function GradientsComponent() {
         xs={{ span: 6 }}
         sm={{ span: 4 }}
         md={{ span: 3 }}
-        lg={{ span: 3 }}
-      >
+        lg={{ span: 3 }}>
         <a
           href={`/6529-gradient/${nft.id}`}
-          className="decoration-none scale-hover"
-        >
+          className="decoration-none scale-hover">
           <Container fluid className="no-padding">
             <Row>
               <Col>
@@ -115,8 +114,7 @@ export default function GradientsComponent() {
                   nft={nft}
                   animation={false}
                   height={300}
-                  showOwnedIfLoggedIn={false}
-                  showUnseizedIfLoggedIn={false}
+                  showBalance={false}
                   showThumbnail={true}
                 />
               </Col>
@@ -125,16 +123,16 @@ export default function GradientsComponent() {
               <Col className="text-center pt-2">{nft.name}</Col>
             </Row>
             <Row>
-              <Col className="text-center">
-                {wallets.some((w) => areEqualAddresses(w, nft.owner))
-                  ? "*"
-                  : ""}
+              <Col className="tw-flex tw-items-center tw-justify-center tw-gap-1">
                 {nft.owner && (
                   <Address
                     wallets={[nft.owner]}
                     display={nft.owner_display}
                     hideCopy={true}
                   />
+                )}
+                {wallets.some((w) => areEqualAddresses(w, nft.owner)) && (
+                  <YouOwnNftBadge />
                 )}
               </Col>
             </Row>
@@ -206,16 +204,14 @@ export default function GradientsComponent() {
                     onClick={() => setSort(Sort.ID)}
                     className={`${styles.sort} ${
                       sort != Sort.ID ? styles.disabled : ""
-                    }`}
-                  >
+                    }`}>
                     ID
                   </span>
                   <span
                     onClick={() => setSort(Sort.TDH)}
                     className={`${styles.sort} ${
                       sort != Sort.TDH ? styles.disabled : ""
-                    }`}
-                  >
+                    }`}>
                     TDH
                   </span>
                 </Col>

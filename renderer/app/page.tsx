@@ -1,8 +1,9 @@
 import Home from "@/components/home/Home";
 import { fetchInitialActivityData } from "@/components/latest-activity/fetchInitialActivityData";
+import { isMintingActive } from "@/components/meme-calendar/meme-calendar.helpers";
 import { fetchInitialTokens } from "@/components/nextGen/collections/collectionParts/hooks/fetchInitialTokens";
 import { getAppMetadata } from "@/components/providers/metadata";
-import { SEIZE_URL } from "@/electron-constants";
+import { publicEnv } from "@/config/env";
 import { NFTWithMemesExtendedData } from "@/entities/INFT";
 import { NextGenCollection } from "@/entities/INextgen";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
@@ -37,6 +38,7 @@ export default async function HomePage() {
     <main className={styles.main}>
       <Home
         featuredNft={featuredNft}
+        isMemeMintingActive={isMintingActive()}
         featuredNextgen={featuredNextgen}
         initialActivityData={initialActivityData}
         initialTokens={initialTokens}
@@ -47,7 +49,7 @@ export default async function HomePage() {
 
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata({
-    ogImage: `${SEIZE_URL}/6529io-banner.png`,
+    ogImage: `${publicEnv.BASE_ENDPOINT}/6529io-banner.png`,
     twitterCard: "summary_large_image",
   });
 }

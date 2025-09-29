@@ -1,16 +1,16 @@
 "use client";
 
-import React, {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  ReactNode,
-  useMemo,
-} from "react";
+import { publicEnv } from "@/config/env";
 import { ApiSeizeSettings } from "@/generated/models/ApiSeizeSettings";
 import { fetchUrl } from "@/services/6529api";
-import { SEIZE_API_URL } from "@/electron-constants";
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 type SeizeSettingsContextType = {
   seizeSettings: ApiSeizeSettings;
@@ -33,11 +33,12 @@ export const SeizeSettingsProvider = ({
   });
 
   useEffect(() => {
-    fetchUrl(`${SEIZE_API_URL}/api/settings`).then(
+    fetchUrl(`${publicEnv.API_ENDPOINT}/api/settings`).then(
       (settings: ApiSeizeSettings) => {
         setSeizeSettings({
           ...settings,
-          memes_wave_id: settings.memes_wave_id,
+          memes_wave_id:
+            publicEnv.DEV_MODE_MEMES_WAVE_ID ?? settings.memes_wave_id,
         });
       }
     );

@@ -1,7 +1,7 @@
 import GradientPageComponent from "@/components/6529Gradient/GradientPage";
 import { getAppMetadata } from "@/components/providers/metadata";
+import { publicEnv } from "@/config/env";
 import { GRADIENT_CONTRACT } from "@/constants";
-import { SEIZE_API_URL, SEIZE_URL } from "@/electron-constants";
 import { fetchUrl } from "@/services/6529api";
 import styles from "@/styles/Home.module.scss";
 import { Metadata } from "next";
@@ -27,9 +27,9 @@ export async function generateMetadata({
   const { id } = await params;
 
   let title = `6529 Gradient #${id}`;
-  let ogImage = `${SEIZE_URL}/6529io.png`;
+  let ogImage = `${publicEnv.BASE_ENDPOINT}/6529io.png`;
   const response = await fetchUrl(
-    `${SEIZE_API_URL}/api/nfts?contract=${GRADIENT_CONTRACT}&id=${id}`
+    `${publicEnv.API_ENDPOINT}/api/nfts?contract=${GRADIENT_CONTRACT}&id=${id}`
   );
   if (response?.data?.length > 0) {
     if (response.data[0].thumbnail) {
