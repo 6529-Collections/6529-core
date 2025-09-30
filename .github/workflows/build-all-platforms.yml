@@ -109,7 +109,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - Build passed ✅"
+          title: "6529 Core - Build Success ✅"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
