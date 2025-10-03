@@ -13,6 +13,13 @@ import { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
 import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
+import { useIdentity } from "@/hooks/useIdentity";
+import {
+  ConnectionMismatchError,
+  MobileSigningError,
+  SigningProviderError,
+  useSecureSign,
+} from "@/hooks/useSecureSign";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import {
   getAuthJwt,
@@ -40,13 +47,6 @@ import { Button, Modal } from "react-bootstrap";
 import { Slide, TypeOptions, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { isAddress } from "viem";
-import { useIdentity } from "../../hooks/useIdentity";
-import {
-  ConnectionMismatchError,
-  MobileSigningError,
-  SigningProviderError,
-  useSecureSign,
-} from "../../hooks/useSecureSign";
 import DotLoader from "../dotLoader/DotLoader";
 import {
   QueryKey,
