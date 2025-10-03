@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Col, Container, Row, Image } from "react-bootstrap";
+import { Col, Container, Image, Row } from "react-bootstrap";
 
 export default function AboutNakamotoThreshold() {
   return (
@@ -20,12 +20,8 @@ export default function AboutNakamotoThreshold() {
             This is a bit of Memes inside-baseball but I am{" "}
             <Link
               href={"https://x.com/punk6529/status/1779105411443949809"}
-<<<<<<< HEAD
-              target="_blank">
-=======
-              target="_blank" rel="noopener noreferrer"
-            >
->>>>>>> 230272bfd7d4f6b8cc6e8c57622d123389f1280e
+              target="_blank"
+              rel="noopener noreferrer">
               tweeting
             </Link>{" "}
             it out so we have it available for reference.
@@ -37,9 +33,7 @@ export default function AboutNakamotoThreshold() {
           <p>So Meme Card #4 had an edition count of 300.</p>
           <p>
             <Image
-            
               loading="eager"
-              
               width="0"
               height="0"
               style={{
