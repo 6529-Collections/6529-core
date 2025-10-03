@@ -140,7 +140,7 @@ export default function AboutPrivacyPolicy() {
               information, see our{" "}
               <Link href={`/about/${AboutSection.COOKIE_POLICY}`}>
                 Cookie Policy
-              </a>
+              </Link>
               . We may also store a record of your preferences in respect of the
               use of these technologies in connection with the Service.
             </p>
@@ -296,7 +296,7 @@ export default function AboutPrivacyPolicy() {
               Service and how to control them, see our{" "}
               <Link href={`/about/${AboutSection.COOKIE_POLICY}`}>
                 Cookie Policy
-              </a>
+              </Link>
               .
             </p>
             <p>
