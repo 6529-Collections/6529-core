@@ -1,11 +1,10 @@
-import { ApiIdentity } from "../../../generated/models/ApiIdentity";
-import UserPageIdentityStatements from "./statements/UserPageIdentityStatements";
-import UserPageIdentityHeader from "./header/UserPageIdentityHeader";
-import UserPageIdentityActivityLog from "./activity/UserPageIdentityActivityLog";
-import { ActivityLogParams } from "../../profile-activity/ProfileActivityLogs";
+import { ActivityLogParams } from "@/components/profile-activity/ProfileActivityLogs";
+import { ApiIdentity } from "@/generated/models/ApiIdentity";
 import ProfileRatersTableWrapper, {
   ProfileRatersParams,
 } from "../utils/raters-table/wrapper/ProfileRatersTableWrapper";
+import UserPageIdentityHeader from "./header/UserPageIdentityHeader";
+import UserPageIdentityStatements from "./statements/UserPageIdentityStatements";
 
 export default function UserPageIdentity({
   profile,

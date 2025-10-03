@@ -20,7 +20,12 @@ export default function AboutNakamotoThreshold() {
             This is a bit of Memes inside-baseball but I am{" "}
             <Link
               href={"https://x.com/punk6529/status/1779105411443949809"}
+<<<<<<< HEAD
               target="_blank">
+=======
+              target="_blank" rel="noopener noreferrer"
+            >
+>>>>>>> 230272bfd7d4f6b8cc6e8c57622d123389f1280e
               tweeting
             </Link>{" "}
             it out so we have it available for reference.

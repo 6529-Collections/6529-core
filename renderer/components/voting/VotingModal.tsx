@@ -1,6 +1,6 @@
+import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ExtendedDrop } from "../../helpers/waves/drop.helpers";
 import SecondaryButton from "../utils/button/SecondaryButton";
 import { SingleWaveDropVote } from "../waves/drop/SingleWaveDropVote";
 import ModalLayout from "../waves/memes/submission/layout/ModalLayout";

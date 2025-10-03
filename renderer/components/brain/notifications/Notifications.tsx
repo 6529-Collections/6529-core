@@ -1,29 +1,32 @@
 "use client";
 
-import { useContext, useEffect, useRef, useState } from "react";
-import { useSetTitle } from "../../../contexts/TitleContext";
-import { AuthContext } from "../../auth/Auth";
-import { ReactQueryWrapperContext } from "../../react-query-wrapper/ReactQueryWrapper";
-import { commonApiPostWithoutBodyAndResponse } from "../../../services/api/common-api";
-import NotificationsWrapper from "./NotificationsWrapper";
+import { AuthContext } from "@/components/auth/Auth";
+import SpinnerLoader from "@/components/common/SpinnerLoader";
+import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import { useSetTitle } from "@/contexts/TitleContext";
+import { useNotificationsQuery } from "@/hooks/useNotificationsQuery";
+import { commonApiPostWithoutBodyAndResponse } from "@/services/api/common-api";
+import { ActiveDropState } from "@/types/dropInteractionTypes";
 import { useMutation } from "@tanstack/react-query";
-import MyStreamNoItems from "../my-stream/layout/MyStreamNoItems";
-import { useRouter, useSearchParams, usePathname } from "next/navigation";
-import { ActiveDropState } from "../../../types/dropInteractionTypes";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useContext, useEffect, useRef, useState } from "react";
 import { FeedScrollContainer } from "../feed/FeedScrollContainer";
-import { useNotificationsQuery } from "../../../hooks/useNotificationsQuery";
 import { useLayout } from "../my-stream/layout/LayoutContext";
+import MyStreamNoItems from "../my-stream/layout/MyStreamNoItems";
 import NotificationsCauseFilter, {
   NotificationFilter,
 } from "./NotificationsCauseFilter";
-import SpinnerLoader from "../../common/SpinnerLoader";
+import NotificationsWrapper from "./NotificationsWrapper";
 
 interface NotificationsProps {
   readonly activeDrop: ActiveDropState | null;
   readonly setActiveDrop: (activeDrop: ActiveDropState | null) => void;
 }
 
-export default function Notifications({ activeDrop, setActiveDrop }: NotificationsProps) {
+export default function Notifications({
+  activeDrop,
+  setActiveDrop,
+}: NotificationsProps) {
   const { connectedProfile, activeProfileProxy, setToast } =
     useContext(AuthContext);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -36,7 +39,7 @@ export default function Notifications({ activeDrop, setActiveDrop }: Notificatio
 
   const router = useRouter();
   const pathname = usePathname();
-  const reload = searchParams?.get('reload') ?? undefined;
+  const reload = searchParams?.get("reload") ?? undefined;
 
   useSetTitle("Notifications | My Stream | Brain");
 
@@ -49,9 +52,11 @@ export default function Notifications({ activeDrop, setActiveDrop }: Notificatio
         .catch((error) => {
           console.error("Error during refetch:", error);
         });
-      const params = new URLSearchParams(searchParams?.toString() || '');
-      params.delete('reload');
-      const newUrl = params.toString() ? `${pathname}?${params.toString()}` : (pathname || '/my-stream/notifications');
+      const params = new URLSearchParams(searchParams?.toString() || "");
+      params.delete("reload");
+      const newUrl = params.toString()
+        ? `${pathname}?${params.toString()}`
+        : pathname || "/my-stream/notifications";
       router.replace(newUrl, { scroll: false });
     }
   }, [reload]);

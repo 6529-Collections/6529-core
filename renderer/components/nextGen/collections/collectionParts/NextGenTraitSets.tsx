@@ -1,5 +1,29 @@
 "use client";
 
+import DotLoader from "@/components/dotLoader/DotLoader";
+import {
+  formatNameForUrl,
+  normalizeNextgenTokenID,
+} from "@/components/nextGen/nextgen_helpers";
+import Pagination from "@/components/pagination/Pagination";
+import {
+  SearchModalDisplay,
+  SearchWalletsDisplay,
+} from "@/components/searchModal/SearchModal";
+import UserCICAndLevel from "@/components/user/utils/UserCICAndLevel";
+import { DBResponse } from "@/entities/IDBResponse";
+import {
+  NextGenCollection,
+  NextgenTraitSet,
+  TraitValues,
+} from "@/entities/INextgen";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
+import {
+  capitalizeEveryWord,
+  cicToType,
+  formatAddress,
+} from "@/helpers/Helpers";
+import { commonApiFetch } from "@/services/api/common-api";
 import {
   faArrowCircleRight,
   faCheckCircle,
@@ -10,30 +34,6 @@ import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { Accordion, Col, Container, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import { DBResponse } from "../../../../entities/IDBResponse";
-import {
-  NextGenCollection,
-  NextgenTraitSet,
-  TraitValues,
-} from "../../../../entities/INextgen";
-import { getRandomObjectId } from "../../../../helpers/AllowlistToolHelpers";
-import {
-  capitalizeEveryWord,
-  cicToType,
-  formatAddress,
-} from "../../../../helpers/Helpers";
-import { commonApiFetch } from "../../../../services/api/common-api";
-import DotLoader from "../../../dotLoader/DotLoader";
-import Pagination from "../../../pagination/Pagination";
-import {
-  SearchModalDisplay,
-  SearchWalletsDisplay,
-} from "../../../searchModal/SearchModal";
-import UserCICAndLevel from "../../../user/utils/UserCICAndLevel";
-import {
-  formatNameForUrl,
-  normalizeNextgenTokenID,
-} from "../../nextgen_helpers";
 import styles from "../NextGen.module.scss";
 import {
   getNextGenIconUrl,
@@ -491,7 +491,9 @@ function TraitSetAccordion(
                           href={`/nextgen/collection/${formatNameForUrl(
                             props.collection.name
                           )}/art?traits=${props.trait}:${tv.value}`}
-                          className="decoration-hover-underline">
+                          className="decoration-hover-underline"
+                          target="_blank"
+                          rel="noopener noreferrer">
                           {tv.value}
                         </Link>
                       </b>
@@ -501,7 +503,8 @@ function TraitSetAccordion(
                         <Link
                           key={`accordion-${props.trait}-${tv.value}-${t}`}
                           href={`/nextgen/token/${t}`}
-                          rel="noreferrer">
+                          target="_blank"
+                          rel="noopener noreferrer">
                           <>
                             <Image
                               unoptimized
@@ -554,7 +557,9 @@ function TraitSetAccordion(
                           href={`/nextgen/collection/${formatNameForUrl(
                             props.collection.name
                           )}/art?traits=${props.trait}:${mv}`}
-                          className="decoration-hover-underline">
+                          className="decoration-hover-underline"
+                          target="_blank"
+                          rel="noopener noreferrer">
                           {mv}
                         </Link>
                         {index < missingValues.length - 1 ? ", " : ""}

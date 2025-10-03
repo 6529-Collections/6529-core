@@ -2,15 +2,15 @@
 
 import { publicEnv } from "@/config/env";
 import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
+import { DBResponse } from "@/entities/IDBResponse";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
+import useCapacitor from "@/hooks/useCapacitor";
+import { fetchUrl } from "@/services/6529api";
 import { faBars } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Col, Container, Nav, Navbar, Row } from "react-bootstrap";
-import { DBResponse } from "../../entities/IDBResponse";
-import useCapacitor from "../../hooks/useCapacitor";
-import { fetchUrl } from "../../services/6529api";
 import { useAppWallets } from "../app-wallets/AppWalletsContext";
 import { useAuth } from "../auth/Auth";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";

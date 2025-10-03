@@ -1,39 +1,39 @@
 "use client";
 
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import NextGenContractWriteStatus from "@/components/nextGen/NextGenContractWriteStatus";
+import styles from "@/components/nextGen/collections/NextGen.module.scss";
 import {
   NEXTGEN_CHAIN_ID,
   NEXTGEN_MINTER,
 } from "@/components/nextGen/nextgen_contracts";
+import {
+  ProofResponse,
+  Status,
+  TokensPerAddress,
+} from "@/components/nextGen/nextgen_entities";
+import {
+  getStatusFromDates,
+  useMintSharedState,
+} from "@/components/nextGen/nextgen_helpers";
 import { publicEnv } from "@/config/env";
-import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
-import { Button, Col, Container, Form, Row } from "react-bootstrap";
-import { Tooltip } from "react-tooltip";
-import { useChainId, useEnsAddress, useEnsName, useWriteContract } from "wagmi";
-import { NULL_ADDRESS } from "../../../../../constants";
-import { NextGenCollection } from "../../../../../entities/INextgen";
+import { NULL_ADDRESS } from "@/constants";
+import { NextGenCollection } from "@/entities/INextgen";
 import {
   areEqualAddresses,
   capitalizeFirstChar,
   createArray,
   getNetworkName,
   isValidEthAddress,
-} from "../../../../../helpers/Helpers";
-import { fetchUrl } from "../../../../../services/6529api";
-import { useSeizeConnectContext } from "../../../../auth/SeizeConnectContext";
-import DotLoader from "../../../../dotLoader/DotLoader";
-import {
-  ProofResponse,
-  Status,
-  TokensPerAddress,
-} from "../../../nextgen_entities";
-import {
-  getStatusFromDates,
-  useMintSharedState,
-} from "../../../nextgen_helpers";
-import NextGenContractWriteStatus from "../../../NextGenContractWriteStatus";
-import styles from "../../NextGen.module.scss";
+} from "@/helpers/Helpers";
+import { fetchUrl } from "@/services/6529api";
+import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useEffect, useState } from "react";
+import { Button, Col, Container, Form, Row } from "react-bootstrap";
+import { Tooltip } from "react-tooltip";
+import { useChainId, useEnsAddress, useEnsName, useWriteContract } from "wagmi";
 import { Spinner } from "./NextGenMint";
 import { NextGenMintingFor } from "./NextGenMintShared";
 

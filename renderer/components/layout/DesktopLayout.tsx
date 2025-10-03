@@ -1,14 +1,14 @@
 "use client";
 
+import { useHeaderContext } from "@/contexts/HeaderContext";
 import { RefreshProvider } from "@/contexts/RefreshContext";
 import { useSearch } from "@/contexts/SearchContext";
 import { isElectron } from "@/helpers";
+import { useBreadcrumbs } from "@/hooks/useBreadcrumbs";
 import TitleBarWrapper from "@/TitleBarWrapper";
 import dynamic from "next/dynamic";
 import { usePathname } from "next/navigation";
 import { ReactNode, useCallback } from "react";
-import { useHeaderContext } from "../../contexts/HeaderContext";
-import { useBreadcrumbs } from "../../hooks/useBreadcrumbs";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import Breadcrumb from "../breadcrumb/Breadcrumb";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";

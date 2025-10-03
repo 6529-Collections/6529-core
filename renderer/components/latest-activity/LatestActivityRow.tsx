@@ -1,9 +1,3 @@
-import Address from "@/components/address/Address";
-import {
-  NEXTGEN_CHAIN_ID,
-  NEXTGEN_CORE,
-} from "@/components/nextGen/nextgen_contracts";
-import { normalizeNextgenTokenID } from "@/components/nextGen/nextgen_helpers";
 import { MANIFOLD } from "@/constants";
 import { NextGenCollection } from "@/entities/INextgen";
 import { NFTLite } from "@/entities/INFT";
@@ -35,10 +29,13 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
 import Link from "next/link";
 import { Tooltip } from "react-tooltip";
+import Address from "../address/Address";
 import {
   getNextGenIconUrl,
   getNextGenImageUrl,
 } from "../nextGen/collections/nextgenToken/NextGenTokenImage";
+import { NEXTGEN_CHAIN_ID, NEXTGEN_CORE } from "../nextGen/nextgen_contracts";
+import { normalizeNextgenTokenID } from "../nextGen/nextgen_helpers";
 import styles from "./LatestActivity.module.scss";
 
 function calculateRoyaltiesPercentage(value: number, royalties: number) {
@@ -171,7 +168,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
   function printNft() {
     if (props.nft) {
       return (
-        <a href={getHref()} target="_blank" rel="noreferrer">
+        <a href={getHref()} target="_blank" rel="noopener noreferrer">
           <Image
             unoptimized
             width={0}
@@ -276,7 +273,10 @@ export default function LatestActivityRow(props: Readonly<Props>) {
       <>NextGen #{normalized.collection_id}</>
     );
     const tokenInfo = (
-      <Link href={`/nextgen/token/${props.tr.token_id}/provenance`}>
+      <a
+        href={`/nextgen/token/${props.tr.token_id}/provenance`}
+        target="_blank"
+        rel="noopener noreferrer">
         {collectionName} #{normalized.token_id}
         <Image
           unoptimized
@@ -297,7 +297,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
             }
           }}
         />
-      </Link>
+      </a>
     );
 
     if (isNullAddress(props.tr.from_address)) {
@@ -380,7 +380,7 @@ export default function LatestActivityRow(props: Readonly<Props>) {
         <Link
           href={`https://etherscan.io/tx/${props.tr.transaction}`}
           target="_blank"
-          rel="noreferrer"
+          rel="noopener noreferrer"
           className="tw-flex">
           <FontAwesomeIcon
             className={styles.gasIcon}

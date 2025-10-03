@@ -14,6 +14,18 @@ import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
+import {
+  getAuthJwt,
+  removeAuthJwt,
+  setAuthJwt,
+} from "@/services/auth/auth.utils";
+import { validateAuthImmediate } from "@/services/auth/immediate-validation.utils";
+import { getRole, validateJwt } from "@/services/auth/jwt-validation.utils";
+import {
+  logErrorSecurely,
+  sanitizeErrorForUser,
+} from "@/utils/error-sanitizer";
+import { validateRoleForAuthentication } from "@/utils/role-validation";
 import { useQuery } from "@tanstack/react-query";
 import {
   createContext,
@@ -35,18 +47,6 @@ import {
   SigningProviderError,
   useSecureSign,
 } from "../../hooks/useSecureSign";
-import {
-  getAuthJwt,
-  removeAuthJwt,
-  setAuthJwt,
-} from "../../services/auth/auth.utils";
-import { validateAuthImmediate } from "../../services/auth/immediate-validation.utils";
-import { getRole, validateJwt } from "../../services/auth/jwt-validation.utils";
-import {
-  logErrorSecurely,
-  sanitizeErrorForUser,
-} from "../../utils/error-sanitizer";
-import { validateRoleForAuthentication } from "../../utils/role-validation";
 import DotLoader from "../dotLoader/DotLoader";
 import {
   QueryKey,

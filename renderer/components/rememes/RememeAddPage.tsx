@@ -205,7 +205,7 @@ export default function RememeAddPage() {
             <Row className="pt-2">
               <Col>
                 Please use this page to only add ReMemes{" "}
-                <a href="#requirements">view requirements</a>
+                <Link href="#requirements">view requirements</Link>
               </Col>
             </Row>
             <Row className="pt-4">
@@ -361,7 +361,9 @@ export default function RememeAddPage() {
                           &nbsp;&nbsp;
                           <Link
                             className="font-color"
-                            href={`/rememes/${submissionResult.contract}/${t.id}`}>
+                            href={`${publicEnv.BASE_ENDPOINT}/rememes/${submissionResult.contract}/${t.id}`}
+                            target="_blank"
+                            rel="noopener noreferrer">
                             view
                           </Link>
                         </Col>

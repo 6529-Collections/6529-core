@@ -1,17 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
-import { TabToggle } from "../../common/TabToggle";
-import { ApiWave } from "../../../generated/models/ApiWave";
-import { MyStreamWaveTab } from "../../../types/waves.types";
+import { TabToggle } from "@/components/common/TabToggle";
+import { ApiWave } from "@/generated/models/ApiWave";
+import { MyStreamWaveTab } from "@/types/waves.types";
 import { useContentTab, WaveVotingState } from "../ContentTabContext";
-import { useWave } from "../../../hooks/useWave";
-import { useWaveTimers } from "../../../hooks/useWaveTimers";
-import { ApiWaveType } from "../../../generated/models/ApiWaveType";
-import { useDecisionPoints } from "../../../hooks/waves/useDecisionPoints";
-import { Time } from "../../../helpers/time";
-import { calculateTimeLeft, TimeLeft } from "../../../helpers/waves/time.utils";
-import { CompactTimeCountdown } from "../../waves/leaderboard/time/CompactTimeCountdown";
+import { useWave } from "@/hooks/useWave";
+import { useWaveTimers } from "@/hooks/useWaveTimers";
+import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import { useDecisionPoints } from "@/hooks/waves/useDecisionPoints";
+import { Time } from "@/helpers/time";
+import { calculateTimeLeft, TimeLeft } from "@/helpers/waves/time.utils";
+import { CompactTimeCountdown } from "@/components/waves/leaderboard/time/CompactTimeCountdown";
 
 interface MyStreamWaveDesktopTabsProps {
   readonly activeTab: MyStreamWaveTab;
@@ -27,6 +27,8 @@ interface TabOption {
 
 const getContentTabPanelId = (tab: MyStreamWaveTab): string =>
   `my-stream-wave-tabpanel-${tab.toLowerCase()}`;
+
+const AUTO_EXPAND_LIMIT = 5;
 
 const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
   activeTab,
@@ -49,7 +51,13 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
   } = useWaveTimers(wave);
 
   // For next decision countdown
-  const { allDecisions } = useDecisionPoints(wave);
+  const { allDecisions, hasMoreFuture, loadMoreFuture } = useDecisionPoints(
+    wave,
+    {
+      initialPastWindow: 3,
+      initialFutureWindow: 10,
+    }
+  );
 
   // Filter out decisions that occur during pause periods using the helper from useWave
   const filteredDecisions = React.useMemo(() => {
@@ -75,6 +83,45 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
     filteredDecisions.find(
       (decision) => decision.timestamp > Time.currentMillis()
     )?.timestamp ?? null;
+
+  const [autoExpandFutureAttempts, setAutoExpandFutureAttempts] =
+    useState(0);
+
+  useEffect(() => {
+    const hasUpcoming = !!nextDecisionTime;
+
+    if (hasUpcoming) {
+      if (autoExpandFutureAttempts !== 0) {
+        setAutoExpandFutureAttempts(0);
+      }
+      return;
+    }
+
+    if (!hasMoreFuture) {
+      if (autoExpandFutureAttempts !== 0) {
+        setAutoExpandFutureAttempts(0);
+      }
+      return;
+    }
+
+    if (autoExpandFutureAttempts >= AUTO_EXPAND_LIMIT) {
+      return;
+    }
+
+    const timeoutId = globalThis.setTimeout(() => {
+      setAutoExpandFutureAttempts((prev) => prev + 1);
+      loadMoreFuture();
+    }, 50);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [
+    nextDecisionTime,
+    hasMoreFuture,
+    loadMoreFuture,
+    autoExpandFutureAttempts,
+  ]);
 
   // Calculate time left for next decision
   const [timeLeft, setTimeLeft] = useState<TimeLeft>({

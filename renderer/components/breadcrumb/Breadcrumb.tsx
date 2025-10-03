@@ -1,10 +1,9 @@
+import { isElectron } from "@/helpers";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
+import useCapacitor from "@/hooks/useCapacitor";
 import Link from "next/link";
-import { getRandomObjectId } from "../../helpers/AllowlistToolHelpers";
+import { Col, Container, Row } from "react-bootstrap";
 import styles from "./Breadcrumb.module.scss";
-import { Container, Row, Col } from "react-bootstrap";
-import useCapacitor from "../../hooks/useCapacitor";
-import { isElectron } from "../../helpers";
-
 export interface Crumb {
   display: string;
   href?: string;

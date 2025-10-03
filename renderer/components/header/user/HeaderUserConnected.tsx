@@ -2,6 +2,7 @@ import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { useIdentity } from "@/hooks/useIdentity";
 import HeaderUserConnecting from "./HeaderUserConnecting";
 import HeaderUserContext from "./HeaderUserContext";
+
 export default function HeaderUserConnected({
   connectedAddress,
 }: {

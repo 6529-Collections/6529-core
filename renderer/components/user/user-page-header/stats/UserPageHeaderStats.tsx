@@ -2,6 +2,8 @@
 
 import { Spinner } from "@/components/dotLoader/DotLoader";
 import { ConsolidatedTDH } from "@/entities/ITDH";
+import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import { formatNumberWithCommas } from "@/helpers/Helpers";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faCheckCircle,
@@ -13,8 +15,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import { ApiIdentity } from "../../../../generated/models/ApiIdentity";
-import { formatNumberWithCommas } from "../../../../helpers/Helpers";
 import UserPageFollowers from "../followers/UserPageFollowers";
 
 export default function UserPageHeaderStats({
