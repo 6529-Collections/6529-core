@@ -67,8 +67,8 @@
     "@lexical/react": "^0.16.1",
     "@mojs/core": "^1.7.1",
     "@reduxjs/toolkit": "^2.2.5",
-    "@reown/appkit": "^1.8.2",
-    "@reown/appkit-adapter-wagmi": "^1.8.2",
+    "@reown/appkit": "^1.8.8",
+    "@reown/appkit-adapter-wagmi": "^1.8.8",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.7",
     "@tanstack/query-core": "^5.45.0",
@@ -169,7 +169,6 @@
     "@types/react-toggle": "^4.0.5",
     "@types/tail": "^2.2.3",
     "@types/uuid": "^10.0.0",
-    "@walletconnect/types": "^2.14.0",
     "arweave": "^1.15.1",
     "autoprefixer": "^10.4.19",
     "electron": "^36.0.0",
@@ -182,7 +181,8 @@
     "postcss": "^8.4.38",
     "rimraf": "^6.0.1",
     "tailwindcss": "^3.4.4",
-    "tsx": "^4.19.3",
+    "ts-morph": "^27.0.0",
+    "tsx": "^4.20.6",
     "typescript": "^5.4.5"
   },
   "overrides": {
