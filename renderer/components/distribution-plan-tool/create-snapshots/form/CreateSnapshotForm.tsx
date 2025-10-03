@@ -1,23 +1,22 @@
 "use client";
 
-import { openInExternalBrowser } from "@/helpers";
-import { useContext, useEffect, useState } from "react";
-import { Tooltip } from "react-tooltip";
-import {
-  getRandomObjectId,
-  isEthereumAddress,
-} from "../../../../helpers/AllowlistToolHelpers";
-import {
-  distributionPlanApiFetch,
-  distributionPlanApiPost,
-} from "../../../../services/distribution-plan-api";
 import {
   AllowlistOperationCode,
   DistributionPlanSearchContractMetadataResult,
-} from "../../../allowlist-tool/allowlist-tool.types";
-import styles from "../../DistributionPlan.module.scss";
-import { DistributionPlanToolContext } from "../../DistributionPlanToolContext";
-import DistributionPlanAddOperationBtn from "../../common/DistributionPlanAddOperationBtn";
+} from "@/components/allowlist-tool/allowlist-tool.types";
+import styles from "@/components/distribution-plan-tool/DistributionPlan.module.scss";
+import { DistributionPlanToolContext } from "@/components/distribution-plan-tool/DistributionPlanToolContext";
+import DistributionPlanAddOperationBtn from "@/components/distribution-plan-tool/common/DistributionPlanAddOperationBtn";
+import {
+  getRandomObjectId,
+  isEthereumAddress,
+} from "@/helpers/AllowlistToolHelpers";
+import {
+  distributionPlanApiFetch,
+  distributionPlanApiPost,
+} from "@/services/distribution-plan-api";
+import { useContext, useEffect, useState } from "react";
+import { Tooltip } from "react-tooltip";
 import CreateSnapshotFormSearchCollection from "./CreateSnapshotFormSearchCollection";
 interface CreateSnapshotFormValues {
   name: string;
@@ -165,7 +164,7 @@ export default function CreateSnapshotForm() {
   };
 
   const goToEtherScan = () => {
-    openInExternalBrowser("https://etherscan.io/", "_blank");
+    window.open("https://etherscan.io/", "_blank");
   };
 
   return (

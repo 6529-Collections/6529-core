@@ -19,10 +19,11 @@ import {
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 
-import { $createMentionNode } from "../../nodes/MentionNode";
+import { $createMentionNode } from "@/components/drops/create/lexical/nodes/MentionNode";
 import MentionsTypeaheadMenu from "./MentionsTypeaheadMenu";
-import { MentionedUser } from "../../../../../../entities/IDrop";
-import { useIdentitiesSearch } from "../../../../../../hooks/useIdentitiesSearch";
+import { MentionedUser } from "@/entities/IDrop";
+import { useIdentitiesSearch } from "@/hooks/useIdentitiesSearch";
+import { isInCodeContext } from "@/components/drops/create/lexical/utils/codeContextDetection";
 
 const PUNCTUATION =
   "\\.,\\+\\*\\?\\$\\@\\|#{}\\(\\)\\^\\-\\[\\]\\\\/!%'\"~=<>_:;";
@@ -210,6 +211,10 @@ const NewMentionsPlugin = forwardRef<
 
   const checkForMentionMatch = useCallback(
     (text: string) => {
+      if (isInCodeContext(editor)) {
+        return null;
+      }
+
       const slashMatch = checkForSlashTriggerMatch(text, editor);
       if (slashMatch !== null) {
         return null;

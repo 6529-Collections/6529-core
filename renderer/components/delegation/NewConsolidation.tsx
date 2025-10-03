@@ -9,7 +9,6 @@ import { DELEGATION_CONTRACT, NEVER_DATE } from "@/constants";
 import { isValidEthAddress } from "@/helpers/Helpers";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Link from "next/link";
 import {
   CONSOLIDATION_USE_CASE,
   DelegationCollection,
@@ -167,12 +166,14 @@ export default function NewConsolidationComponent(props: Readonly<Props>) {
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Note: For TDH Consolidation use either &apos;Any
                 Collection&apos; or &apos;The Memes&apos;
-                <Link
-                  href={`/delegation/delegation-faq/register-consolidation`}>
+                <a
+                  href={`/delegation/delegation-faq/register-consolidation`}
+                  target="_blank"
+                  rel="noopener noreferrer">
                   <FontAwesomeIcon
                     className={styles.infoIconLink}
                     icon={faInfoCircle}></FontAwesomeIcon>
-                </Link>
+                </a>
               </Form.Label>
             </Form.Group>
             <DelegationSubmitGroups

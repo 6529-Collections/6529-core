@@ -1,15 +1,15 @@
 "use client";
 
+import DotLoader, { Spinner } from "@/components/dotLoader/DotLoader";
+import { NextGenToken } from "@/entities/INextgen";
+import { openInExternalBrowser } from "@/helpers";
+import { numberWithCommas } from "@/helpers/Helpers";
 import { faDownload, faExternalLink } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import { Col, Container, Dropdown, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
 import useDownloader from "react-use-downloader";
-import { NextGenToken } from "../../../../entities/INextgen";
-import { openInExternalBrowser } from "../../../../helpers";
-import { numberWithCommas } from "../../../../helpers/Helpers";
-import DotLoader, { Spinner } from "../../../dotLoader/DotLoader";
 
 export enum Resolution {
   "Thumbnail" = "Thumbnail",

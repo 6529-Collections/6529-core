@@ -192,7 +192,7 @@ export default function LabCollection({
                         <a
                           href={addProtocol(w)}
                           target="_blank"
-                          rel="noreferrer">
+                          rel="noopener noreferrer">
                           {w}
                         </a>
                         &nbsp;&nbsp;

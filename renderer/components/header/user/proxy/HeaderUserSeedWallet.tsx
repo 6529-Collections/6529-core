@@ -1,6 +1,6 @@
-import { useSeedWallet } from "../../../../contexts/SeedWalletContext";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { faLock, faLockOpen } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function HeaderUserSeedWallet() {
   const { isUnlocked, setShowPasswordModal } = useSeedWallet();

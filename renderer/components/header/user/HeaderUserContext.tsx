@@ -1,7 +1,7 @@
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { WalletErrorBoundary } from "@/components/auth/error-boundary";
+import { ApiIdentity } from "@/generated/models/ApiIdentity";
 import Link from "next/link";
-import { ApiIdentity } from "../../../generated/models/ApiIdentity";
-import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
-import { WalletErrorBoundary } from "../../auth/error-boundary";
 import HeaderUserProfile from "./HeaderUserProfile";
 import HeaderUserProxy from "./proxy/HeaderUserProxy";
 import HeaderUserSeedWallet from "./proxy/HeaderUserSeedWallet";

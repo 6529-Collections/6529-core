@@ -9,7 +9,6 @@ import { DELEGATION_CONTRACT, NEVER_DATE } from "@/constants";
 import { isValidEthAddress } from "@/helpers/Helpers";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Link from "next/link";
 import {
   DELEGATION_USE_CASES,
   DelegationCollection,
@@ -297,11 +296,14 @@ export default function NewDelegationComponent(props: Readonly<Props>) {
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Note: The currently supported use cases on 6529.io are: #1 -
                 All, #2 - Minting/Allowlist, #3 - Airdrops{" "}
-                <Link href={`/delegation/delegation-faq/use-cases-overview`}>
+                <a
+                  href={`/delegation/delegation-faq/use-cases-overview`}
+                  target="_blank"
+                  rel="noopener noreferrer">
                   <FontAwesomeIcon
                     className={styles.infoIconLink}
                     icon={faInfoCircle}></FontAwesomeIcon>
-                </Link>
+                </a>
               </Form.Label>
             </Form.Group>
             <DelegationSubmitGroups

@@ -1,7 +1,8 @@
 "use client";
 
+import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
+import { Time } from "@/helpers/time";
 import { useEffect, useState } from "react";
-import { Time } from "../../../helpers/time";
 import CommonInput from "../input/CommonInput";
 import { CommonSelectItem } from "../select/CommonSelect";
 import CommonDropdown from "../select/dropdown/CommonDropdown";
@@ -67,6 +68,8 @@ export default function CommonTimeSelect({
       case TimeMode.MONTHS:
         now.setMonth(now.getMonth() + value);
         break;
+      default:
+        assertUnreachable(timeMode);
     }
     return now.getTime();
   };

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Col, Container, Row } from "react-bootstrap";
 
 export default function AboutDataDecentral() {
@@ -53,7 +54,7 @@ export default function AboutDataDecentral() {
               <a
                 href={`https://arweave.net/fy83ffOGqR9cR2zooI7u9JxsG0oEWVJxH3B-bNxXKJg`}
                 target="_blank"
-                rel="noreferrer">
+                rel="noopener noreferrer">
                 here
               </a>
               . We will move this list 100% on-chain in the coming weeks.
@@ -81,9 +82,9 @@ export default function AboutDataDecentral() {
               Every day, we post our complete set of on-chain and calculated
               values shown on the site to Arweave as a CSV. The specific links
               can be found{" "}
-              <a href={`/open-data`} target="_blank" rel="noreferrer">
+              <Link href="/open-data" target="_blank" rel="noopener noreferrer">
                 here
-              </a>
+              </Link>
               .
             </li>
           </ul>

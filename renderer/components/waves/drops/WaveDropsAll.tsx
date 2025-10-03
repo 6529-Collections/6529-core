@@ -1,25 +1,25 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ApiDrop } from "../../../generated/models/ApiDrop";
-import DropsList from "../../drops/view/DropsList";
-import { WaveDropsScrollBottomButton } from "./WaveDropsScrollBottomButton";
-import { WaveDropsReverseContainer } from "./WaveDropsReverseContainer";
-import { useScrollBehavior } from "../../../hooks/useScrollBehavior";
+import { useAuth } from "@/components/auth/Auth";
 import CircleLoader, {
   CircleLoaderSize,
-} from "../../distribution-plan-tool/common/CircleLoader";
-import { useRouter } from "next/navigation";
-import { ActiveDropState } from "../../../types/dropInteractionTypes";
-import { DropSize, ExtendedDrop } from "../../../helpers/waves/drop.helpers";
-import WaveDropsEmptyPlaceholder from "./WaveDropsEmptyPlaceholder";
-import WaveDropsScrollingOverlay from "./WaveDropsScrollingOverlay";
-import { commonApiPostWithoutBodyAndResponse } from "../../../services/api/common-api";
-import { useVirtualizedWaveDrops } from "../../../hooks/useVirtualizedWaveDrops";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+} from "@/components/distribution-plan-tool/common/CircleLoader";
+import DropsList from "@/components/drops/view/DropsList";
+import { ApiDrop } from "@/generated/models/ApiDrop";
+import { DropSize, ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { useScrollBehavior } from "@/hooks/useScrollBehavior";
+import { useVirtualizedWaveDrops } from "@/hooks/useVirtualizedWaveDrops";
+import { useWaveIsTyping } from "@/hooks/useWaveIsTyping";
+import { commonApiPostWithoutBodyAndResponse } from "@/services/api/common-api";
+import { ActiveDropState } from "@/types/dropInteractionTypes";
 import { faCircle } from "@fortawesome/free-solid-svg-icons";
-import { useWaveIsTyping } from "../../../hooks/useWaveIsTyping";
-import { useAuth } from "../../auth/Auth";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import WaveDropsEmptyPlaceholder from "./WaveDropsEmptyPlaceholder";
+import { WaveDropsReverseContainer } from "./WaveDropsReverseContainer";
+import { WaveDropsScrollBottomButton } from "./WaveDropsScrollBottomButton";
+import WaveDropsScrollingOverlay from "./WaveDropsScrollingOverlay";
 
 // Add this utility function if not already present in a shared util file
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -218,12 +218,7 @@ export default function WaveDropsAll({
         }, 100);
       }
     }
-  }, [
-    waveMessages,
-    shouldPinToBottom,
-    scrollToVisualBottom,
-    init,
-  ]); // Keep dependencies, logic uses ref
+  }, [waveMessages, shouldPinToBottom, scrollToVisualBottom, init]); // Keep dependencies, logic uses ref
 
   useEffect(() => {
     void commonApiPostWithoutBodyAndResponse({
@@ -402,8 +397,7 @@ export default function WaveDropsAll({
           onUserScroll={() => {
             // The useScrollBehavior hook now handles all scroll intent logic
             // This callback can be used for additional scroll-based features if needed
-          }}
-        >
+          }}>
           <DropsList
             scrollContainerRef={scrollContainerRef}
             onReplyClick={setSerialNo}
@@ -434,8 +428,7 @@ export default function WaveDropsAll({
             typingMessage
               ? "tw-opacity-100 tw-visible"
               : "tw-opacity-0 tw-invisible tw-hidden"
-          }`}
-        >
+          }`}>
           <div className="tw-flex tw-items-center tw-gap-x-0.5">
             <FontAwesomeIcon
               icon={faCircle}

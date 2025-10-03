@@ -1,13 +1,13 @@
-import Link from "next/link";
-import React from "react";
-import { cicToType } from "../../../../helpers/Helpers";
-import { ExtendedDrop } from "../../../../helpers/waves/drop.helpers";
-import DropListItemContentMedia from "../../../drops/view/item/content/media/DropListItemContentMedia";
+import DropListItemContentMedia from "@/components/drops/view/item/content/media/DropListItemContentMedia";
 import UserCICAndLevel, {
   UserCICAndLevelSize,
-} from "../../../user/utils/UserCICAndLevel";
-import UserProfileTooltipWrapper from "../../../utils/tooltip/UserProfileTooltipWrapper";
-import { SingleWaveDropPosition } from "../../../waves/drop/SingleWaveDropPosition";
+} from "@/components/user/utils/UserCICAndLevel";
+import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
+import { SingleWaveDropPosition } from "@/components/waves/drop/SingleWaveDropPosition";
+import { cicToType } from "@/helpers/Helpers";
+import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import Link from "next/link";
+import React from "react";
 import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
 import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
 

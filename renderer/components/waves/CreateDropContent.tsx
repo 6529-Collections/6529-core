@@ -1,6 +1,31 @@
 "use client";
 
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
+import {
+  CreateDropConfig,
+  CreateDropPart,
+  CreateDropRequestPart,
+  DropMetadata,
+  MentionedUser,
+  ReferencedNft,
+} from "@/entities/IDrop";
+import { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
+import { ApiDrop } from "@/generated/models/ApiDrop";
+import { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import { ApiDropType } from "@/generated/models/ApiDropType";
+import { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
+import { ApiWave } from "@/generated/models/ApiWave";
+import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
+import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import { getOptimisticDropId } from "@/helpers/waves/drop.helpers";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { DropPrivileges } from "@/hooks/useDropPriviledges";
+import { selectEditingDropId } from "@/store/editSlice";
+import {
+  ActiveDropAction,
+  ActiveDropState,
+} from "@/types/dropInteractionTypes";
+import { $convertToMarkdownString } from "@lexical/markdown";
 import { AnimatePresence, motion } from "framer-motion";
 import { EditorState } from "lexical";
 import dynamic from "next/dynamic";
@@ -14,30 +39,6 @@ import React, {
 } from "react";
 import { useSelector } from "react-redux";
 import { createBreakpoint } from "react-use";
-import {
-  CreateDropConfig,
-  CreateDropPart,
-  CreateDropRequestPart,
-  DropMetadata,
-  MentionedUser,
-  ReferencedNft,
-} from "../../entities/IDrop";
-import { ApiCreateDropRequest } from "../../generated/models/ApiCreateDropRequest";
-import { ApiDrop } from "../../generated/models/ApiDrop";
-import { ApiDropMentionedUser } from "../../generated/models/ApiDropMentionedUser";
-import { ApiDropType } from "../../generated/models/ApiDropType";
-import { ApiReplyToDropResponse } from "../../generated/models/ApiReplyToDropResponse";
-import { ApiWave } from "../../generated/models/ApiWave";
-import { ApiWaveMetadataType } from "../../generated/models/ApiWaveMetadataType";
-import { ApiWaveType } from "../../generated/models/ApiWaveType";
-import { getOptimisticDropId } from "../../helpers/waves/drop.helpers";
-import useDeviceInfo from "../../hooks/useDeviceInfo";
-import { DropPrivileges } from "../../hooks/useDropPriviledges";
-import { selectEditingDropId } from "../../store/editSlice";
-import {
-  ActiveDropAction,
-  ActiveDropState,
-} from "../../types/dropInteractionTypes";
 import { AuthContext } from "../auth/Auth";
 import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
 import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
@@ -52,16 +53,16 @@ import CreateDropMetadata from "./CreateDropMetadata";
 import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
 
+import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
+import { useMyStream } from "@/contexts/wave/MyStreamContext";
+import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
+import { WsMessageType } from "@/helpers/Types";
+import { useDropSignature } from "@/hooks/drops/useDropSignature";
+import { useWave } from "@/hooks/useWave";
+import { useWebSocket } from "@/services/websocket";
 import throttle from "lodash/throttle";
-import { ProcessIncomingDropType } from "../../contexts/wave/hooks/useWaveRealtimeUpdater";
-import { useMyStream } from "../../contexts/wave/MyStreamContext";
-import { ApiWaveCreditType } from "../../generated/models/ApiWaveCreditType";
-import { ApiIdentity } from "../../generated/models/ObjectSerializer";
-import { MAX_DROP_UPLOAD_FILES } from "../../helpers/Helpers";
-import { WsMessageType } from "../../helpers/Types";
-import { useDropSignature } from "../../hooks/drops/useDropSignature";
-import { useWave } from "../../hooks/useWave";
-import { useWebSocket } from "../../services/websocket";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
 import { multiPartUpload } from "./create-wave/services/multiPartUpload";
@@ -488,7 +489,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     () =>
       editorState?.read(() =>
         $convertToMarkdownString([
-          ...TRANSFORMERS,
+          ...SAFE_MARKDOWN_TRANSFORMERS,
           MENTION_TRANSFORMER,
           HASHTAG_TRANSFORMER,
           IMAGE_TRANSFORMER,

@@ -1,20 +1,17 @@
 "use client";
 
+import { openInExternalBrowser } from "@/helpers";
+import { fullScreenSupported } from "@/helpers/Helpers";
+import { ImageScale, getScaledImageUri } from "@/helpers/image.helpers";
+import useCapacitor from "@/hooks/useCapacitor";
 import { faExpand, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline";
-import React, { useState, useRef, useCallback } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import useKeyPressEvent from "react-use/lib/useKeyPressEvent";
-import { fullScreenSupported } from "../../../../helpers/Helpers";
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
-import useCapacitor from "../../../../hooks/useCapacitor";
-import { openInExternalBrowser } from "../../../../helpers";
-import {
-  ImageScale,
-  getScaledImageUri,
-} from "../../../../helpers/image.helpers";
 import { Tooltip } from "react-tooltip";
+import useKeyPressEvent from "react-use/lib/useKeyPressEvent";
+import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 
 const tooltipProps = {
   delayShow: 250,
@@ -212,7 +209,7 @@ const DropPartMarkdownImage: React.FC<DropPartMarkdownImageProps> = ({
   return (
     <>
       <div className="tw-flex tw-mt-2">
-        {isLoading && ( 
+        {isLoading && (
           <div className="tw-absolute tw-inset-0 tw-bg-iron-800 tw-animate-pulse tw-rounded-xl tw-h-64"></div>
         )}
         <img

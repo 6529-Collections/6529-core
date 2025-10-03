@@ -1,24 +1,24 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
+import styles from "@/components/nextGen/collections/NextGen.module.scss";
+import Pagination from "@/components/pagination/Pagination";
+import {
+  SearchModalDisplay,
+  SearchWalletsDisplay,
+} from "@/components/searchModal/SearchModal";
 import {
   NextGenCollection,
   NextgenAllowlist,
   NextgenAllowlistCollection,
-} from "../../../../../entities/INextgen";
-import { getRandomObjectId } from "../../../../../helpers/AllowlistToolHelpers";
-import { areEqualAddresses } from "../../../../../helpers/Helpers";
-import { Time } from "../../../../../helpers/time";
-import { commonApiFetch } from "../../../../../services/api/common-api";
-import Pagination from "../../../../pagination/Pagination";
-import {
-  SearchModalDisplay,
-  SearchWalletsDisplay,
-} from "../../../../searchModal/SearchModal";
-import styles from "../../NextGen.module.scss";
+} from "@/entities/INextgen";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
+import { areEqualAddresses } from "@/helpers/Helpers";
+import { Time } from "@/helpers/time";
+import { commonApiFetch } from "@/services/api/common-api";
+import dynamic from "next/dynamic";
+import Link from "next/link";
+import { useEffect, useRef, useState } from "react";
+import { Col, Container, Dropdown, Row, Table } from "react-bootstrap";
 import NextGenCollectionHeader from "../NextGenCollectionHeader";
 import { getJsonData } from "./NextGenMintWidget";
 
@@ -241,6 +241,8 @@ export default function NextgenCollectionMintingPlan(props: Readonly<Props>) {
                   <td>
                     <Link
                       href={`/${al.address}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="decoration-hover-underline">
                       {al.wallet_display && `${al.wallet_display} - `}
                       {al.address}
