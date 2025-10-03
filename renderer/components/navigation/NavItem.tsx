@@ -10,9 +10,7 @@ import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "../auth/Auth";
-import { useViewContext } from "./ViewContext";
 import { isNavItemActive } from "./isNavItemActive";
-import type { NavItem as NavItemData } from "./navTypes";
 
 interface Props {
   readonly item: NavItemData;

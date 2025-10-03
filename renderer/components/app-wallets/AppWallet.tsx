@@ -21,12 +21,12 @@ import styles from "./AppWallet.module.scss";
 import { AppWallet, useAppWallets } from "./AppWalletsContext";
 
 import { openInExternalBrowser } from "@/helpers";
+import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
 import {
   areEqualAddresses,
   fromGWEI,
   getAddressEtherscanLink,
 } from "@/helpers/Helpers";
-import { getRandomObjectId } from "../../helpers/AllowlistToolHelpers";
 import { useAuth } from "../auth/Auth";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import DotLoader, { Spinner } from "../dotLoader/DotLoader";

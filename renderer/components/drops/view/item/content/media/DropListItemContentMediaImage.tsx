@@ -1,6 +1,7 @@
 "use client";
 
 import { FallbackImage } from "@/components/common/FallbackImage";
+import { openInExternalBrowser } from "@/helpers";
 import { fullScreenSupported } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import useCapacitor from "@/hooks/useCapacitor";
