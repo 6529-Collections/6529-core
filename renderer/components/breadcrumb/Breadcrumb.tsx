@@ -4,6 +4,7 @@ import useCapacitor from "@/hooks/useCapacitor";
 import Link from "next/link";
 import { Col, Container, Row } from "react-bootstrap";
 import styles from "./Breadcrumb.module.scss";
+
 export interface Crumb {
   display: string;
   href?: string;

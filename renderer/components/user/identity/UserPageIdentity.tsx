@@ -3,6 +3,7 @@ import { ApiIdentity } from "@/generated/models/ApiIdentity";
 import ProfileRatersTableWrapper, {
   ProfileRatersParams,
 } from "../utils/raters-table/wrapper/ProfileRatersTableWrapper";
+import UserPageIdentityActivityLog from "./activity/UserPageIdentityActivityLog";
 import UserPageIdentityHeader from "./header/UserPageIdentityHeader";
 import UserPageIdentityStatements from "./statements/UserPageIdentityStatements";
 
