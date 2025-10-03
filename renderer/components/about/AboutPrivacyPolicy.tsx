@@ -138,7 +138,14 @@ export default function AboutPrivacyPolicy() {
               <b>Cookies.</b> Some of our automatic data collection is
               facilitated by cookies and similar technologies. For more
               information, see our{" "}
+<<<<<<< HEAD
               <Link href={`/about/${AboutSection.COOKIE_POLICY}`}>
+=======
+              <a
+                href={`/about/${AboutSection.COOKIE_POLICY}`}
+                target="_blank"
+                rel="noopener noreferrer">
+>>>>>>> 230272bfd7d4f6b8cc6e8c57622d123389f1280e
                 Cookie Policy
               </Link>
               . We may also store a record of your preferences in respect of the
@@ -294,7 +301,14 @@ export default function AboutPrivacyPolicy() {
             <p>
               <b>Cookies.</b> For information about cookies employed by the
               Service and how to control them, see our{" "}
+<<<<<<< HEAD
               <Link href={`/about/${AboutSection.COOKIE_POLICY}`}>
+=======
+              <a
+                href={`/about/${AboutSection.COOKIE_POLICY}`}
+                target="_blank"
+                rel="noopener noreferrer">
+>>>>>>> 230272bfd7d4f6b8cc6e8c57622d123389f1280e
                 Cookie Policy
               </Link>
               .
@@ -314,7 +328,7 @@ export default function AboutPrivacyPolicy() {
               <a
                 href={`http://www.allaboutdnt.com`}
                 target="_blank"
-                rel="noreferrer">
+                rel="noopener noreferrer">
                 http://www.allaboutdnt.com
               </a>
               .
@@ -382,7 +396,16 @@ export default function AboutPrivacyPolicy() {
               age. If you are a parent or guardian of a child from whom you
               believe we have collected personal information in a manner
               prohibited by law, please{" "}
+<<<<<<< HEAD
               <Link href={`/about/${AboutSection.CONTACT_US}`}>contact us</Link>
+=======
+              <a
+                href={`/about/${AboutSection.CONTACT_US}`}
+                target="_blank"
+                rel="noopener noreferrer">
+                contact us
+              </a>
+>>>>>>> 230272bfd7d4f6b8cc6e8c57622d123389f1280e
               . If we learn that we have collected personal information through
               the Service from a child without the consent of the child&apos;s
               parent or guardian as required by law, we will comply with
@@ -531,7 +554,7 @@ export default function AboutPrivacyPolicy() {
                 <a
                   href="mailto:privacy@6529.io"
                   target="_blank"
-                  rel="noreferrer">
+                  rel="noopener noreferrer">
                   privacy&#64;6529.io
                 </a>
               </li>

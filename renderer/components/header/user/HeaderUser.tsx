@@ -1,8 +1,8 @@
 "use client";
 
-import HeaderUserConnected from "./HeaderUserConnected";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import HeaderUserConnect from "./HeaderUserConnect";
-import { useSeizeConnectContext } from "../../auth/SeizeConnectContext";
+import HeaderUserConnected from "./HeaderUserConnected";
 
 export default function HeaderUser() {
   const { address } = useSeizeConnectContext();

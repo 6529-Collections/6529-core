@@ -1,10 +1,10 @@
 "use client";
 
+import { areEqualAddresses } from "@/helpers/Helpers";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { MutableRefObject, useCallback, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
-import { areEqualAddresses } from "../../helpers/Helpers";
 import { useAuth } from "../auth/Auth";
 import { decryptData } from "./app-wallet-helpers";
 import styles from "./AppWallet.module.scss";
@@ -130,11 +130,11 @@ export function CreateAppWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <div className={styles.modalHeader}>
+      <Modal.Header className={styles.modalHeader}>
         <Modal.Title>
           {props.import ? `Import` : `Create New`} Wallet
         </Modal.Title>
-      </div>
+      </Modal.Header>
       <Modal.Body className={styles.modalContent}>
         <label className="pb-1" htmlFor="walletName">
           Wallet Name
@@ -291,9 +291,9 @@ export function UnlockAppWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <div className={styles.modalHeader}>
+      <Modal.Header className={styles.modalHeader}>
         <Modal.Title>Unlock Wallet</Modal.Title>
-      </div>
+      </Modal.Header>
       <Modal.Body className={styles.modalContent}>
         <label className="pb-1 d-flex align-items-center justify-content-between">
           <span className="unselectable">Wallet Password</span>

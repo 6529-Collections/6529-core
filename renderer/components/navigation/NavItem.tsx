@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect } from "react";
+import { useTitle } from "@/contexts/TitleContext";
+import { useUnreadIndicator } from "@/hooks/useUnreadIndicator";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
+import { useWave } from "@/hooks/useWave";
+import { useWaveData } from "@/hooks/useWaveData";
+import { motion } from "framer-motion";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useViewContext } from "./ViewContext";
-import type { NavItem as NavItemData } from "./navTypes";
-import { motion } from "framer-motion";
+import { useEffect } from "react";
 import { useAuth } from "../auth/Auth";
-import { useTitle } from "../../contexts/TitleContext";
-import { useUnreadNotifications } from "../../hooks/useUnreadNotifications";
-import { useUnreadIndicator } from "../../hooks/useUnreadIndicator";
+import { useViewContext } from "./ViewContext";
 import { isNavItemActive } from "./isNavItemActive";
-import { useWaveData } from "../../hooks/useWaveData";
-import { useWave } from "../../hooks/useWave";
+import type { NavItem as NavItemData } from "./navTypes";
 
 interface Props {
   readonly item: NavItemData;
@@ -69,8 +69,7 @@ const NavItem = ({ item }: Props) => {
         aria-label={name}
         aria-disabled="true"
         disabled
-        className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors tw-w-full tw-h-16 tw-opacity-40 tw-pointer-events-none tw-min-w-0"
-      >
+        className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors tw-w-full tw-h-16 tw-opacity-40 tw-pointer-events-none tw-min-w-0">
         <div className="tw-flex tw-items-center tw-justify-center">
           {item.iconComponent ? (
             <item.iconComponent
@@ -110,8 +109,7 @@ const NavItem = ({ item }: Props) => {
       aria-current={isActive ? "page" : undefined}
       onClick={() => handleNavClick(item)}
       className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors 
-      tw-w-full tw-h-16 tw-min-w-0"
-    >
+      tw-w-full tw-h-16 tw-min-w-0">
       {isActive && (
         <motion.div
           layoutId="nav-indicator"

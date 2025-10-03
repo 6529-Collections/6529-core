@@ -1,11 +1,11 @@
 "use client";
 
+import { NULL_MERKLE } from "@/constants";
+import { areEqualAddresses, getTransactionLink } from "@/helpers/Helpers";
+import { sanitizeErrorForUser } from "@/utils/error-sanitizer";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWaitForTransactionReceipt } from "wagmi";
-import { NULL_MERKLE } from "../../constants";
-import { areEqualAddresses, getTransactionLink } from "../../helpers/Helpers";
-import { sanitizeErrorForUser } from "../../utils/error-sanitizer";
 import DotLoader from "../dotLoader/DotLoader";
 import { NEXTGEN_CHAIN_ID } from "./nextgen_contracts";
 
@@ -97,7 +97,7 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
           <Link
             href={getTransactionLink(NEXTGEN_CHAIN_ID, props.hash)}
             target="_blank"
-            rel="noreferrer">
+            rel="noopener noreferrer">
             view
           </Link>
           {waitContractWrite.isLoading && (
@@ -114,7 +114,12 @@ export default function NextGenContractWriteStatus(props: Readonly<Props>) {
           <ul>
             {mintedTokens.map((t) => (
               <li key={`minted-token-${t}`}>
-                <Link href={`/nextgen/token/${t}`}>#{t}</Link>
+                <Link
+                  href={`/nextgen/token/${t}`}
+                  target="_blank"
+                  rel="noopener noreferrer">
+                  #{t}
+                </Link>
               </li>
             ))}
           </ul>

@@ -1,7 +1,7 @@
 "use client";
 
+import { useLayout } from "@/components/brain/my-stream/layout/LayoutContext";
 import React from "react";
-import { useLayout } from "../../../components/brain/my-stream/layout/LayoutContext";
 import { SingleWaveDropTab } from "./SingleWaveDrop";
 
 interface SingleWaveDropInfoContainerProps {

@@ -19,24 +19,25 @@ import {
   DropMetadata,
   MentionedUser,
   ReferencedNft,
-} from "../../../../entities/IDrop";
+} from "@/entities/IDrop";
 import { createBreakpoint } from "react-use";
-import { $convertToMarkdownString, TRANSFORMERS } from "@lexical/markdown";
+import { $convertToMarkdownString } from "@lexical/markdown";
 import { CreateDropType, CreateDropViewType } from "../types";
 import { MENTION_TRANSFORMER } from "../lexical/transformers/MentionTransformer";
 import { HASHTAG_TRANSFORMER } from "../lexical/transformers/HastagTransformer";
-import CommonAnimationHeight from "../../../utils/animation/CommonAnimationHeight";
+import CommonAnimationHeight from "@/components/utils/animation/CommonAnimationHeight";
 import { useQuery } from "@tanstack/react-query";
-import { ApiWave } from "../../../../generated/models/ApiWave";
-import { commonApiFetch } from "../../../../services/api/common-api";
-import { ApiWaveRequiredMetadata } from "../../../../generated/models/ApiWaveRequiredMetadata";
-import { ApiWaveMetadataType } from "../../../../generated/models/ApiWaveMetadataType";
-import { ApiWaveParticipationRequirement } from "../../../../generated/models/ApiWaveParticipationRequirement";
-import { ProfileMinWithoutSubs } from "../../../../helpers/ProfileTypes";
+import { ApiWave } from "@/generated/models/ApiWave";
+import { commonApiFetch } from "@/services/api/common-api";
+import { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
+import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
+import { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
+import { ProfileMinWithoutSubs } from "@/helpers/ProfileTypes";
 import { IMAGE_TRANSFORMER } from "../lexical/transformers/ImageTransformer";
-import { QueryKey } from "../../../react-query-wrapper/ReactQueryWrapper";
+import { SAFE_MARKDOWN_TRANSFORMERS } from "../lexical/transformers/markdownTransformers";
+import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
-import { WalletValidationError } from "../../../../src/errors/wallet";
+import { WalletValidationError } from "@/src/errors/wallet";
 
 export enum CreateDropScreenType {
   DESKTOP = "DESKTOP",
@@ -195,7 +196,7 @@ const CreateDropWrapper = forwardRef<
     const getMarkdown = () =>
       editorState?.read(() =>
         $convertToMarkdownString([
-          ...TRANSFORMERS,
+          ...SAFE_MARKDOWN_TRANSFORMERS,
           MENTION_TRANSFORMER,
           HASHTAG_TRANSFORMER,
           IMAGE_TRANSFORMER,

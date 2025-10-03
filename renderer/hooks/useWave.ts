@@ -1,12 +1,12 @@
 "use client"
 
 import { useMemo } from "react";
-import { ApiWave } from "../generated/models/ApiWave";
-import { Time } from "../helpers/time";
-import { calculateLastDecisionTime } from "../helpers/waves/time.utils";
-import { useSeizeSettings } from "../contexts/SeizeSettingsContext";
-import { ApiWaveDecisionPause } from "../generated/models/ApiWaveDecisionPause";
-import { ApiWaveDecision } from "../generated/models/ApiWaveDecision";
+import { ApiWave } from "@/generated/models/ApiWave";
+import { Time } from "@/helpers/time";
+import { calculateLastDecisionTime } from "@/helpers/waves/time.utils";
+import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
+import { ApiWaveDecisionPause } from "@/generated/models/ApiWaveDecisionPause";
+import { ApiWaveDecision } from "@/generated/models/ApiWaveDecision";
 
 /**
  * Possible states of a wave's submission period
@@ -53,7 +53,9 @@ interface WaveInfo {
     nextPause: ApiWaveDecisionPause | null;
     showPause: (nextDecisionTime: number | null) => ApiWaveDecisionPause | null;
     hasDecisionsBeforePause: (nextDecisionTime: number | null) => boolean;
-    filterDecisionsDuringPauses: (decisions: ApiWaveDecision[]) => ApiWaveDecision[];
+    filterDecisionsDuringPauses: <T extends { decision_time: number }>(
+      decisions: T[]
+    ) => T[];
     getNextValidDecision: (decisions: ApiWaveDecision[]) => ApiWaveDecision | null;
     calculateMintingDate: (checkpointTime: number | null) => number | null;
   };
@@ -160,10 +162,10 @@ export function useWave(wave: ApiWave | null | undefined): WaveInfo {
 
   // Helper function to filter out decisions that occur during pause periods
   const filterDecisionsDuringPauses = useMemo(() => {
-    return (decisions: ApiWaveDecision[]): ApiWaveDecision[] => {
+    return <T extends { decision_time: number }>(decisions: T[]): T[] => {
       if (!wave?.pauses || wave.pauses.length === 0) return decisions;
-      
-      return decisions.filter(decision => 
+
+      return decisions.filter((decision) =>
         !isDecisionDuringPause(decision.decision_time, wave.pauses)
       );
     };

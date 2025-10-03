@@ -24,7 +24,6 @@ import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
-import { TRANSFORMERS } from "@lexical/markdown";
 
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { ListNode, ListItemNode } from "@lexical/list";
@@ -35,13 +34,13 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import { MentionedUser, ReferencedNft } from "../../entities/IDrop";
-import { ActiveDropAction } from "../../types/dropInteractionTypes";
+import { MentionedUser, ReferencedNft } from "@/entities/IDrop";
+import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import { MentionNode } from "../drops/create/lexical/nodes/MentionNode";
 import { HashtagNode } from "../drops/create/lexical/nodes/HashtagNode";
 import { ImageNode } from "../drops/create/lexical/nodes/ImageNode";
 import ExampleTheme from "../drops/create/lexical/ExampleTheme";
-import { assertUnreachable } from "../../helpers/AllowlistToolHelpers";
+import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import ClearEditorPlugin, {
   ClearEditorPluginHandles,
 } from "../drops/create/lexical/plugins/ClearEditorPlugin";
@@ -56,9 +55,11 @@ import DragDropPastePlugin from "../drops/create/lexical/plugins/DragDropPastePl
 import EnterKeyPlugin from "../drops/create/lexical/plugins/enter/EnterKeyPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import CreateDropEmojiPicker from "./CreateDropEmojiPicker";
-import useCapacitor from "../../hooks/useCapacitor";
+import useCapacitor from "@/hooks/useCapacitor";
 import EmojiPlugin from "../drops/create/lexical/plugins/emoji/EmojiPlugin";
 import { EmojiNode } from "../drops/create/lexical/nodes/EmojiNode";
+import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
+import PlainTextPastePlugin from "@/components/drops/create/lexical/plugins/PlainTextPastePlugin";
 
 export interface CreateDropInputHandles {
   clearEditorState: () => void;
@@ -287,7 +288,8 @@ const CreateDropInput = forwardRef<
               <MaxLengthPlugin maxLength={25000} />
               <DragDropPastePlugin />
               <ListPlugin />
-              <MarkdownShortcutPlugin transformers={TRANSFORMERS} />
+              <PlainTextPastePlugin />
+              <MarkdownShortcutPlugin transformers={SAFE_MARKDOWN_TRANSFORMERS} />
               <TabIndentationPlugin />
               <LinkPlugin validateUrl={validateUrl} />
               <ClearEditorPlugin ref={clearEditorRef} />

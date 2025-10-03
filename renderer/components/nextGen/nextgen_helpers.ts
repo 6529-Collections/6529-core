@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { goerli, mainnet, sepolia } from "viem/chains";
-import { useReadContract, useReadContracts, useWriteContract } from "wagmi";
-import { NextGenCollection } from "../../entities/INextgen";
-import { areEqualAddresses } from "../../helpers/Helpers";
+import { NextGenCollection } from "@/entities/INextgen";
+import { areEqualAddresses } from "@/helpers/Helpers";
 import {
   formatNameForUrl,
   normalizeNextgenTokenID,
-} from "../../helpers/nextgen-utils";
+} from "@/helpers/nextgen-utils";
+import { useEffect, useState } from "react";
+import { goerli, mainnet, sepolia } from "viem/chains";
+import { useReadContract, useReadContracts, useWriteContract } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { Crumb } from "../breadcrumb/Breadcrumb";
 import {

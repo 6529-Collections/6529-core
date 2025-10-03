@@ -1,15 +1,15 @@
 "use client";
 
+import { useAuth } from "@/components/auth/Auth";
+import { useTitle } from "@/contexts/TitleContext";
 import { useEffect, useState } from "react";
-import { useAuth } from "../../auth/Auth";
-import { useTitle } from "../../../contexts/TitleContext";
 
+import { resolveIpfsUrl } from "@/components/ipfs/IPFSContext";
+import { ApiNotification } from "@/generated/models/ApiNotification";
+import { isElectron } from "@/helpers";
+import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useUnreadNotifications } from "../../../hooks/useUnreadNotifications";
-import { resolveIpfsUrl } from "../../ipfs/IPFSContext";
-import { ApiNotification } from "../../../generated/models/ApiNotification";
-import { isElectron } from "@/helpers";
 
 export default function HeaderNotifications() {
   const { connectedProfile } = useAuth();

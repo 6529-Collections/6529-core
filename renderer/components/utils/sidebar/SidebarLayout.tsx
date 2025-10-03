@@ -1,5 +1,7 @@
 "use client";
 
+import GroupsSidebar from "@/components/groups/sidebar/GroupsSidebar";
+import GroupsSidebarToggle from "@/components/groups/sidebar/GroupsSidebarToggle";
 import { useHeaderContext } from "@/contexts/HeaderContext";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { selectActiveGroupId, setActiveGroupId } from "@/store/groupSlice";
@@ -7,8 +9,6 @@ import { useSearchParams } from "next/navigation";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createBreakpoint } from "react-use";
-import GroupsSidebar from "../../groups/sidebar/GroupsSidebar";
-import GroupsSidebarToggle from "../../groups/sidebar/GroupsSidebarToggle";
 import SidebarLayoutApp from "./SidebarLayoutApp";
 
 export default function SidebarLayout({
