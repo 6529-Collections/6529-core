@@ -4,18 +4,8 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ROOT = process.cwd();
-const SRC_JSON = path.join(
-  ROOT,
-  "electron-src",
-  "config",
-  "public-runtime.json"
-);
-const DEST_JSON = path.join(
-  ROOT,
-  "main",
-  "electron-src",
-  "__PUBLIC_RUNTIME.json"
-);
+const SRC_JSON = path.join(ROOT, "config", "public-runtime.json");
+const DEST_JSON = path.join(ROOT, "main", "config", "__PUBLIC_RUNTIME.json");
 
 function computeVersion() {
   try {

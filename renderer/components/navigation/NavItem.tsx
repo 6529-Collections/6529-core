@@ -11,6 +11,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "../auth/Auth";
 import { isNavItemActive } from "./isNavItemActive";
+import type { NavItem as NavItemData } from "./navTypes";
+import { useViewContext } from "./ViewContext";
 
 interface Props {
   readonly item: NavItemData;

@@ -143,30 +143,89 @@ export function seedWalletConnector(parameters: {
     async setup() {
       //do nothing
     },
-    async connect(params: {
+    async connect<withCapabilities extends boolean = false>(opts?: {
+      chainId?: number;
       isReconnecting?: boolean;
-    }): Promise<ConnectionObject> {
-      console.log(`[${this.name}] Seed Wallet Connect method called`, params);
+      withCapabilities?: boolean | withCapabilities;
+    }): Promise<{
+      accounts: withCapabilities extends true
+        ? readonly {
+            address: `0x${string}`;
+            capabilities: Record<string, unknown>;
+          }[]
+        : readonly `0x${string}`[];
+      chainId: number;
+    }> {
+      console.log(`[${this.name}] Seed Wallet Connect method called`, opts);
       await init(this.name);
+
+      // If we already have a connection, honor the requested chainId (if any) and return
       if (connectionObject.accounts.length > 0) {
-        return connectionObject;
+        if (opts?.chainId && opts.chainId !== connectionObject.chainId) {
+          connectionObject.chainId = opts.chainId;
+          await window.store.set(
+            CONNECTION_STORE,
+            JSON.stringify(connectionObject)
+          );
+          updateProvider();
+        }
+
+        if (opts?.withCapabilities) {
+          const accountsWithCaps = connectionObject.accounts.map((address) => ({
+            address,
+            capabilities: {} as Record<string, unknown>,
+          })) as unknown as readonly {
+            address: `0x${string}`;
+            capabilities: Record<string, unknown>;
+          }[];
+          return {
+            accounts: accountsWithCaps as any,
+            chainId: connectionObject.chainId,
+          } as any;
+        }
+
+        return {
+          accounts: connectionObject.accounts as readonly `0x${string}`[],
+          chainId: connectionObject.chainId,
+        } as any;
       }
 
-      if (params.isReconnecting) {
+      if (opts?.isReconnecting) {
         throw new Error(
           "Reconnection attempted, but no existing connection. Aborting."
         );
       }
 
+      // Establish new connection
       connectionObject = {
         accounts: [parameters.address as `0x${string}`],
-        chainId: 1,
+        chainId: opts?.chainId ?? 1,
       };
+
       await window.store.set(
         CONNECTION_STORE,
         JSON.stringify(connectionObject)
       );
-      return connectionObject;
+      updateProvider();
+
+      if (opts?.withCapabilities) {
+        const accountsWithCaps = connectionObject.accounts.map((address) => ({
+          address,
+          capabilities: {} as Record<string, unknown>,
+        })) as unknown as readonly {
+          address: `0x${string}`;
+          capabilities: Record<string, unknown>;
+        }[];
+        return {
+          accounts: accountsWithCaps as any,
+          chainId: connectionObject.chainId,
+        } as any;
+      }
+
+      return {
+        accounts: connectionObject.accounts as readonly `0x${string}`[],
+        chainId: connectionObject.chainId,
+      } as any;
     },
     async disconnect() {
       connectionObject = {

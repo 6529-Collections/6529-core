@@ -1,6 +1,6 @@
+import { setAuthJwt } from "@/services/auth/auth.utils";
 import { createConnector } from "@wagmi/core";
 import { mainnet, sepolia } from "viem/chains";
-import { setAuthJwt } from "@/services/auth/auth.utils";
 
 interface ProviderRequest {
   method: string;
@@ -87,20 +87,49 @@ export function browserConnector(parameters: {
     async setup() {
       //donthing
     },
-    async connect(params: {
+    async connect<withCapabilities extends boolean = false>(opts?: {
       isReconnecting?: boolean;
       chainId?: number;
-    }): Promise<ConnectionObject> {
-      console.log(`[${this.name}] Browser Connect method called`, params);
+      withCapabilities?: boolean | withCapabilities;
+    }): Promise<{
+      accounts: withCapabilities extends true
+        ? readonly {
+            address: `0x${string}`;
+            capabilities: Record<string, unknown>;
+          }[]
+        : readonly `0x${string}`[];
+      chainId: number;
+    }> {
+      console.log(`[${this.name}] Browser Connect method called`, opts);
       await init(this.name);
+
+      // Return existing connection if chain matches (or none requested)
       if (
         connectionObject.accounts.length > 0 &&
-        (!params.chainId || connectionObject.chainId === params.chainId)
+        (!opts?.chainId || connectionObject.chainId === opts.chainId)
       ) {
-        return connectionObject;
+        if (opts?.withCapabilities) {
+          const accountsWithCaps = connectionObject.accounts.map((address) => ({
+            address,
+            capabilities: {} as Record<string, unknown>,
+          })) as unknown as readonly {
+            address: `0x${string}`;
+            capabilities: Record<string, unknown>;
+          }[];
+
+          return {
+            accounts: accountsWithCaps as any,
+            chainId: connectionObject.chainId,
+          } as any;
+        }
+
+        return {
+          accounts: connectionObject.accounts as readonly `0x${string}`[],
+          chainId: connectionObject.chainId,
+        } as any;
       }
 
-      if (params.isReconnecting) {
+      if (opts?.isReconnecting) {
         throw new Error(
           "Reconnection attempted, but no existing connection. Aborting."
         );
@@ -109,7 +138,7 @@ export function browserConnector(parameters: {
       return new Promise((resolve, reject) => {
         const requestId = generateRequestId();
         const t = Date.now();
-        const chainId = params.chainId || connectionObject.chainId;
+        const chainId = opts?.chainId || connectionObject.chainId;
         const url = `http://localhost:${port}/browser-connector?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
 
         parameters.openUrlFn(url);
@@ -128,7 +157,29 @@ export function browserConnector(parameters: {
               CONNECTION_STORE,
               JSON.stringify(connectionObject)
             );
-            resolve(connectionObject);
+
+            if (opts?.withCapabilities) {
+              const accountsWithCaps = (
+                response.accounts as `0x${string}`[]
+              ).map((address) => ({
+                address,
+                capabilities: {} as Record<string, unknown>,
+              })) as unknown as readonly {
+                address: `0x${string}`;
+                capabilities: Record<string, unknown>;
+              }[];
+
+              resolve({
+                accounts: accountsWithCaps as any,
+                chainId: response.chainId,
+              } as any);
+              return;
+            }
+
+            resolve({
+              accounts: response.accounts as readonly `0x${string}`[],
+              chainId: response.chainId,
+            } as any);
           }
         });
 

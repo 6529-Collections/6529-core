@@ -152,15 +152,20 @@ function sharedConfig(publicEnv, assetPrefix) {
     async headers() {
       return [{ source: "/:path*", headers: securityHeaders }];
     },
-    webpack: (config) => {
+    webpack: (config, { dev, isServer }) => {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
+      config.resolve.alias["@react-native-async-storage/async-storage"] = false;
+      config.resolve.alias["react-native"] = false;
+      if (!dev && !isServer) config.devtool = "source-map";
       return config;
     },
     turbopack: {
       resolveAlias: {
         canvas: "./stubs/empty.js",
         encoding: "./stubs/empty.js",
+        "@react-native-async-storage/async-storage": "./stubs/empty.js",
+        "react-native": "./stubs/empty.js",
       },
     },
     assetPrefix,
@@ -180,12 +185,9 @@ const nextConfigFactory = (phase) => {
     try {
       const bakedMainPath = path.join(
         __dirname,
-        "main/electron-src/__PUBLIC_RUNTIME.json"
+        "main/config/__PUBLIC_RUNTIME.json"
       );
-      const sourceJsonPath = path.join(
-        __dirname,
-        "electron-src/public-runtime.json"
-      );
+      const sourceJsonPath = path.join(__dirname, "config/public-runtime.json");
       let bakedSource = null;
       if (fs.existsSync(bakedMainPath)) {
         bakedSource = fs.readFileSync(bakedMainPath, "utf8");
