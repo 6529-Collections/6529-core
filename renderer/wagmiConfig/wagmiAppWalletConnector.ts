@@ -83,7 +83,6 @@ export function createAppWalletConnector(
     type: APP_WALLET_CONNECTOR_TYPE,
 
     async setPassword(password: string): Promise<void> {
-      // VOID RETURN - NO SILENT FAILURES
       // Input validation - fail fast
       if (!password || typeof password !== "string") {
         throw new InvalidPasswordError(
@@ -94,8 +93,7 @@ export function createAppWalletConnector(
       try {
         // Check if we're in Capacitor for more lenient validation
         const isCapacitor =
-          typeof window !== "undefined" &&
-          window.Capacitor?.isNativePlatform?.();
+          !!globalThis?.window?.Capacitor?.isNativePlatform?.();
 
         // Validate password by decrypting address hash
         const decryptedAddress = await decryptData(
@@ -195,7 +193,8 @@ export function createAppWalletConnector(
             "Password is required for wallet connection"
           );
         }
-        await this.setPassword(password); // throws on failure
+        // Throws on failure
+        await this.setPassword(password);
       }
 
       if (!decryptedPrivateKey) {
@@ -218,10 +217,10 @@ export function createAppWalletConnector(
         );
       }
 
-      // keep internal state
+      // Keep internal state up to date
       currentChainId = chainId;
 
-      // Emit connect event using plain addresses (Wagmi accommodates this in events)
+      // Emit connect event (addresses only)
       emitter.emit("connect", {
         accounts: [client.account.address],
         chainId,

@@ -12,11 +12,7 @@ import React, {
 
 import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
 import { isElectron } from "@/helpers";
-import {
-  getWalletAddress,
-  migrateCookiesToLocalStorage,
-  removeAuthJwt,
-} from "@/services/auth/auth.utils";
+import { getWalletAddress, removeAuthJwt } from "@/services/auth/auth.utils";
 import { WalletInitializationError } from "@/src/errors/wallet";
 import { SecurityEventType } from "@/src/types/security";
 import {
@@ -161,10 +157,7 @@ interface AddressValidationResult {
 }
 
 const isCapacitorPlatform = (): boolean => {
-  return (
-    typeof window !== "undefined" &&
-    Boolean(window.Capacitor?.isNativePlatform?.())
-  );
+  return !!globalThis.window?.Capacitor?.isNativePlatform?.();
 };
 
 const validateStoredAddress = (
@@ -369,10 +362,6 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    migrateCookiesToLocalStorage();
-  }, []);
-
-  useEffect(() => {
     // Wait for initialization to complete before processing account changes
     if (!isInitialized) {
       return;
@@ -536,9 +525,13 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
                 open({ view: "Connect" });
               }
             } catch (openError) {
-              console.error(
-                "Failed to reopen wallet connection after logout:",
-                openError
+              logError(
+                "seizeDisconnectAndLogout_reconnect",
+                openError instanceof Error
+                  ? openError
+                  : new Error(
+                      `Failed to reopen wallet connection: ${openError}`
+                    )
               );
             }
           }, 100);
