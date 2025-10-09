@@ -12,6 +12,7 @@ import {
   ArrowTopRightOnSquareIcon,
   InformationCircleIcon,
 } from "@heroicons/react/24/outline";
+import Link from "next/link";
 import React, { useCallback, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Tooltip } from "react-tooltip";
@@ -176,16 +177,15 @@ function DropListItemContentMediaImage({
                     />
                   </button>
                 )}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleOpenInNewTab();
-                  }}
-                  data-tooltip-id={`open-browser-${src}`}
-                  className={modalButtonClasses}
-                  aria-label="Open image in new tab">
-                  <ArrowTopRightOnSquareIcon className="tw-h-5 tw-w-5 tw-flex-shrink-0" />
-                </button>
+                <Link href={src} target="_blank" rel="noopener noreferrer">
+                  <button
+                    onClick={(e) => e.stopPropagation()}
+                    data-tooltip-id={`open-browser-${src}`}
+                    className={modalButtonClasses}
+                    aria-label="Open image in new tab">
+                    <ArrowTopRightOnSquareIcon className="tw-h-5 tw-w-5 tw-flex-shrink-0" />
+                  </button>
+                </Link>
                 {fullScreenSupported() && !isCapacitor && (
                   <button
                     onClick={handleFullScreen}
