@@ -32,7 +32,6 @@ interface HeaderMobileMenuProps {
   readonly setShowBurgerMenuBrain: (show: boolean) => void;
   readonly showBurgerMenuCore: boolean;
   readonly setShowBurgerMenuCore: (show: boolean) => void;
-  readonly isSmall?: boolean;
   readonly isCapacitor: boolean;
   readonly isMobile: boolean;
   readonly showWaves: boolean;
@@ -57,7 +56,6 @@ export default function HeaderMobileMenu({
   setShowBurgerMenuBrain,
   showBurgerMenuCore,
   setShowBurgerMenuCore,
-  isSmall,
   isCapacitor,
   isMobile,
   showWaves,
@@ -91,11 +89,7 @@ export default function HeaderMobileMenu({
       <Container className="text-center">
         <Row className="pt-3 pb-3">
           <Col>
-            <HeaderLogo
-              isSmall={isSmall}
-              isCapacitor={isCapacitor}
-              isMobile={isMobile}
-            />
+            <HeaderLogo isCapacitor={isCapacitor} isMobile={isMobile} />
           </Col>
         </Row>
         <Row className="pt-4 pb-3">
@@ -144,7 +138,7 @@ export default function HeaderMobileMenu({
             {showBurgerMenuBrain && (
               <Container>
                 {printMobileHr()}
-                {printMobileRow("My Stream", "/my-stream")}
+                {printMobileRow("My Stream", "/?tab=feed")}
                 {printMobileRow("Waves", "/waves")}
                 {printMobileHr()}
               </Container>

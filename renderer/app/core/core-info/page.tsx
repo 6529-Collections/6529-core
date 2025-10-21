@@ -6,7 +6,9 @@ import { Metadata } from "next";
 export default function AppInfoPage() {
   return (
     <main className={styles.main}>
-      <AppInfo />
+      <div className="tw-relative tw-px-2 lg:tw-px-6 xl:tw-px-8 tw-mx-auto">
+        <AppInfo />
+      </div>
     </main>
   );
 }

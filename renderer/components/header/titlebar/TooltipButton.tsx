@@ -1,10 +1,10 @@
 "use client";
 
-import styles from "./TitleBar.module.scss";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
+import styles from "./TitleBar.module.scss";
 
 type TooltipButtonProps = {
   buttonStyles: string;
@@ -77,6 +77,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
         delayShow={150}
         opacity={1}
         place={placement}
+        hidden={!tooltipVisible}
         variant="light"
         className={styles.tooltip}>
         {content}

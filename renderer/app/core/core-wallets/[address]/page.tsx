@@ -12,7 +12,9 @@ export default async function SeedWalletPage({
 
   return (
     <main className={styles.main}>
-      <SeedWallet address={address} />
+      <div className="tw-relative tw-px-2 lg:tw-px-6 xl:tw-px-8 tw-mx-auto">
+        <SeedWallet address={address} />
+      </div>
     </main>
   );
 }
