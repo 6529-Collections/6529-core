@@ -26,7 +26,7 @@ export default function CommonDropdownItemsMobileWrapper({
           leave="tw-ease-in-out tw-duration-300"
           leaveFrom="tw-opacity-100"
           leaveTo="tw-opacity-0">
-          <div className="tw-fixed tw-inset-0 tw-bg-gray-500 tw-bg-opacity-75 tw-backdrop-blur-[1px] tw-transition-opacity" />
+          <div className="tw-fixed tw-inset-0 tw-bg-gray-600 tw-bg-opacity-50 tw-backdrop-blur-[1px] tw-transition-opacity" />
         </Transition.Child>
 
         <div className="tw-fixed tw-inset-0 tw-overflow-hidden">

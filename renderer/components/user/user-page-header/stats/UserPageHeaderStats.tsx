@@ -12,18 +12,37 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
-import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import UserPageFollowers from "../followers/UserPageFollowers";
 
+const SAFE_ROUTE_SEGMENT_PATTERN = /^[a-zA-Z0-9._-]+$/;
+
+function sanitizeRouteSegment(value: string): string | null {
+  if (!value) {
+    return null;
+  }
+  const trimmedValue = value.trim();
+  if (!trimmedValue) {
+    return null;
+  }
+  const normalizedValue = trimmedValue.toLowerCase();
+  if (!SAFE_ROUTE_SEGMENT_PATTERN.test(normalizedValue)) {
+    return null;
+  }
+  return encodeURIComponent(normalizedValue);
+}
+
 export default function UserPageHeaderStats({
   profile,
+  handleOrWallet,
+  followersCount,
 }: {
   readonly profile: ApiIdentity;
+  readonly handleOrWallet: string;
+  readonly followersCount: number | null;
 }) {
-  const params = useParams();
-  const user = params?.user?.toString();
+  const routeHandle = sanitizeRouteSegment(handleOrWallet);
 
   const [fetchingTdhConsensus, setFetchingTdhConsensus] = useState(false);
   const [tdhConsensusInfo, setTdhConsensusInfo] = useState<ConsolidatedTDH>();
@@ -60,11 +79,15 @@ export default function UserPageHeaderStats({
     }
   }, [profile, tdhConsensusInfo]);
 
+  if (!routeHandle) {
+    return null;
+  }
+
   return (
     <div className="tw-mt-3 tw-flex tw-items-center tw-justify-between tw-gap-x-4">
       <div className="tw-flex tw-gap-x-4 sm:tw-gap-x-6 tw-flex-wrap tw-gap-y-2">
         <Link
-          href={`/${user}/collected`}
+          href={`/${routeHandle}/collected`}
           className="tw-no-underline tw-inline-flex tw-items-center tw-gap-x-1 desktop-hover:hover:tw-underline tw-transition tw-duration-300 tw-ease-out">
           <span className="tw-text-base tw-font-medium tw-text-iron-50">
             {formatNumberWithCommas(profile.tdh)}
@@ -74,7 +97,7 @@ export default function UserPageHeaderStats({
           </span>
         </Link>
         <Link
-          href={`/${user}/stats?activity=tdh-history`}
+          href={`/${routeHandle}/stats?activity=tdh-history`}
           className="tw-no-underline tw-inline-flex tw-items-center tw-gap-x-1 desktop-hover:hover:tw-underline tw-transition tw-duration-300 tw-ease-out"
           data-tooltip-id="tdh-rate-tooltip">
           <span className="tw-text-base tw-font-medium tw-text-iron-50">
@@ -85,7 +108,7 @@ export default function UserPageHeaderStats({
           </span>
         </Link>
         <Link
-          href={`/${user}/rep`}
+          href={`/${routeHandle}/rep`}
           className="tw-no-underline tw-inline-flex tw-items-center tw-gap-x-1 desktop-hover:hover:tw-underline tw-transition tw-duration-300 tw-ease-out">
           <span className="tw-text-base tw-font-medium tw-text-iron-50">
             {formatNumberWithCommas(profile.rep)}
@@ -94,7 +117,10 @@ export default function UserPageHeaderStats({
             Rep
           </span>
         </Link>
-        <UserPageFollowers profile={profile} />
+        <UserPageFollowers
+          handleOrWallet={routeHandle}
+          followersCount={followersCount}
+        />
       </div>
       <Tooltip
         id="tdh-rate-tooltip"
