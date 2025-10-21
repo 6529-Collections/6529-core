@@ -11,6 +11,8 @@ import {
 } from "@/helpers/waves/drop.helpers";
 import { ActiveDropState } from "@/types/dropInteractionTypes";
 import { memo, RefObject, useCallback, useMemo } from "react";
+import HighlightDropWrapper from "./HighlightDropWrapper";
+
 type DropActionHandler = ({
   drop,
   partId,
@@ -119,7 +121,7 @@ const DropsList = memo(function DropsList({
         const nextDrop = orderedDrops[i + 1] ?? null;
 
         return (
-          <div
+          <HighlightDropWrapper
             key={drop.stableKey}
             id={`drop-${drop.serial_no}`}
             ref={
@@ -127,6 +129,8 @@ const DropsList = memo(function DropsList({
                 ? getItemData.targetDropRef
                 : undefined
             }
+            active={getItemData.serialNo === drop.serial_no}
+            scrollContainer={getItemData.scrollContainerRef?.current ?? null}
             className={
               getItemData.serialNo === drop.serial_no ? "tw-scroll-mt-20" : ""
             }>
@@ -156,7 +160,7 @@ const DropsList = memo(function DropsList({
                 <MemoizedLightDrop drop={drop} />
               )}
             </VirtualScrollWrapper>
-          </div>
+          </HighlightDropWrapper>
         );
       }),
     [orderedDrops, getItemData] // Only depends on orderedDrops array and the memoized item data
