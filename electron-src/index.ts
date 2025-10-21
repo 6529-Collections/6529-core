@@ -221,7 +221,7 @@ if (!gotTheLock) {
   Menu.setApplicationMenu(menu);
 
   app.whenReady().then(async () => {
-    app.setName("6529 CORE");
+    app.setName("6529 Desktop");
     const scheme = getScheme();
     protocol.handle(scheme, (_request) => {
       if (mainWindow) {
@@ -759,8 +759,8 @@ ipcMain.handle("get-ipfs-info", () => {
 
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {
-    namespace: "6529 Core",
-    display: "6529 Core",
+    namespace: "6529 Desktop",
+    display: "6529 Desktop",
     logFile: getMainLogsPath(),
     cronExpression: null,
   };

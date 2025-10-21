@@ -85,7 +85,7 @@ export default function TDHCalculation() {
             <h4>TDH Consensus</h4>
           </Col>
           <Col xs={12}>
-            6529 Core nodes calculate TDH independently. This is the core
+            6529 Desktop nodes calculate TDH independently. This is the core
             decentralized consensus algorithm of the protocol.
           </Col>
         </Row>
@@ -94,9 +94,9 @@ export default function TDHCalculation() {
             <h4>TDH (TestNet Mode Phase 1)</h4>
           </Col>
           <Col xs={12}>
-            6529 Core is currently running in testnet mode phase 1. During this
-            phase, you can compare your node's TDH calculation with the
-            reference 6529.io calculation. Once 6529 Core enters phase 2, TDH
+            6529 Desktop is currently running in testnet mode phase 1. During
+            this phase, you can compare your node's TDH calculation with the
+            reference 6529.io calculation. Once 6529 Desktop enters phase 2, TDH
             will reach consensus solely among the nodes.
           </Col>
         </Row>

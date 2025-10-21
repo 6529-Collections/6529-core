@@ -43,10 +43,10 @@ export function getDesktopNavigation(_context: NavContext): NavDropdown[] {
       ],
     },
     {
-      title: "Core",
+      title: "6529 Desktop",
       items: [
         {
-          name: "Core Wallets",
+          name: "Wallets",
           path: "/core/core-wallets",
           hasDividerAfter: true,
         },
@@ -62,7 +62,7 @@ export function getDesktopNavigation(_context: NavContext): NavDropdown[] {
           isExternal: true,
           hasDividerAfter: true,
         },
-        { name: "Core Info", path: "/core/core-info" },
+        { name: "About", path: "/core/core-info" },
       ],
     },
     {

@@ -1,9 +1,9 @@
-import { spawn, ChildProcess } from "child_process";
-import * as path from "path";
-import * as fs from "fs";
 import axios from "axios";
+import { ChildProcess, spawn } from "child_process";
 import { app } from "electron";
 import Logger from "electron-log";
+import * as fs from "fs";
+import * as path from "path";
 
 const bootstrapNodes = [
   "/ip4/147.75.69.23/tcp/4001/p2p/QmbLHAnMoJPWSCR5Zhtx6BHJX9KiKNN6tpvbUcqanj75Nb",
@@ -29,7 +29,7 @@ export default class IPFSServer {
   private ipfsPort: number;
   private rpcPort: number;
   private swarmPort: number;
-  private mfsPath: string = "/6529-Core";
+  private mfsPath: string = "/6529-Desktop";
 
   constructor(ipfsPort: number, rpcPort: number, swarmPort: number) {
     this.ipfsRepoPath = path.join(app.getPath("userData"), "ipfs-repo");

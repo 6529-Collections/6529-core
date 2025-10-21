@@ -113,8 +113,8 @@ export default function HeaderUserConnectModal({
                     {seedConnectors().length === 0 && (
                       <div className="text-center">
                         <p>
-                          Create or import a seed wallet in Core Wallets Page
-                          under Network tab
+                          Create or import a seed wallet in 6529 Desktop Wallets
+                          Page
                           <br />
                           <Link
                             href="/core/core-wallets"

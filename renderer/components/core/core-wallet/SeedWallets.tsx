@@ -1,14 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getSeedWallets } from "@/electron";
 import { ISeedWallet } from "@/shared/types";
-import SeedWalletCard from "./SeedWalletCard";
+import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import { mainnet } from "viem/chains";
+import SeedWalletCard from "./SeedWalletCard";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export const SEED_WALLETS_NETWORK = mainnet;
@@ -67,7 +67,7 @@ export default function SeedWallets() {
         <Row className="pt-2 pb-4">
           <Col className="d-flex align-items-center justify-content-between gap-2">
             <h1>
-              <span className="font-lightest">Core</span> Wallets
+              <span className="font-lightest">6529 Desktop</span> Wallets
             </h1>
           </Col>
         </Row>

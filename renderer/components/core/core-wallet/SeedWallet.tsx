@@ -192,7 +192,7 @@ export default function SeedWallet(
             className="font-smaller d-flex align-items-center gap-2 decoration-none"
             href="/core/core-wallets">
             <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-            Back to Core Wallets
+            Back to 6529 Desktop Wallets
           </Link>
         </Col>
       </Row>

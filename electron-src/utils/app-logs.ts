@@ -1,9 +1,9 @@
-import Logger from "electron-log";
-import { getInfo } from "./info";
 import { app, BrowserWindow, dialog } from "electron";
+import Logger from "electron-log";
 import fs from "fs";
-import path from "path";
 import minidump from "minidump";
+import path from "path";
+import { getInfo } from "./info";
 
 export async function initLogs(): Promise<void> {
   const info = getInfo();
@@ -19,7 +19,7 @@ export function openLogs(
 ): void {
   Logger.info("Opening logs at:", logFile);
   logsWindow.loadFile(path.join(__dirname, "..", "assets/logs.html"));
-  logsWindow.setTitle(`${name} | Logs | 6529 Core`);
+  logsWindow.setTitle(`${name} | Logs | 6529 Desktop`);
 
   const loadLogs = () => {
     fs.readFile(logFile, "utf8", (err, logs) => {

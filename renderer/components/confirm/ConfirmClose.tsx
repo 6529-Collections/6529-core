@@ -1,6 +1,6 @@
-import styles from "./Confirm.module.scss";
 import React from "react";
-import { Modal, Button } from "react-bootstrap";
+import { Button, Modal } from "react-bootstrap";
+import styles from "./Confirm.module.scss";
 
 interface ConfirmProps {
   show: boolean;
@@ -18,7 +18,7 @@ const ConfirmClose: React.FC<ConfirmProps> = ({
   return (
     <Modal show={show} onHide={onCancel} backdrop keyboard={false} centered>
       <div className={styles.modalHeader}>
-        <Modal.Title>Close 6529 Core</Modal.Title>
+        <Modal.Title>Close 6529 Desktop</Modal.Title>
       </div>
       <Modal.Footer className={styles.modalContent}>
         <Button variant="secondary" onClick={onCancel}>

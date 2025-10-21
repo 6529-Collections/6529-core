@@ -12,5 +12,5 @@ export default function SeedWalletPage() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return getAppMetadata({ title: "Core Wallets Import" });
+  return getAppMetadata({ title: "6529 Desktop Wallets Import" });
 }

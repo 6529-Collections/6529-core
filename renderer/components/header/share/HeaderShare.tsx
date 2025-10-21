@@ -1,6 +1,16 @@
 "use client";
 
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { publicEnv } from "@/config/env";
+import useIsMobileDevice from "@/hooks/isMobileDevice";
+import useCapacitor from "@/hooks/useCapacitor";
+import { DeepLinkScope } from "@/hooks/useDeepLinkNavigation";
+import { useElectron } from "@/hooks/useElectron";
+import {
+  getRefreshToken,
+  getWalletAddress,
+  getWalletRole,
+} from "@/services/auth/auth.utils";
 import {
   faCopy,
   faExternalLink,
@@ -13,16 +23,6 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import useIsMobileDevice from "@/hooks/isMobileDevice";
-import useCapacitor from "@/hooks/useCapacitor";
-import { DeepLinkScope } from "@/hooks/useDeepLinkNavigation";
-import { useElectron } from "@/hooks/useElectron";
-import {
-  getRefreshToken,
-  getWalletAddress,
-  getWalletRole,
-} from "@/services/auth/auth.utils";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import styles from "./HeaderShare.module.scss";
 import { ShareMobileApp } from "./HeaderShareMobileApps";
 
@@ -223,7 +223,7 @@ function HeaderQRModal({
               priority
               loading="eager"
               src="/6529Core.png"
-              alt="6529 Core"
+              alt="6529 Desktop"
               width={150}
               height={150}
               className="unselectable"
@@ -232,7 +232,7 @@ function HeaderQRModal({
               variant="primary"
               className="tw-flex tw-items-center tw-gap-2 tw-w-full">
               <FontAwesomeIcon icon={faExternalLink} />
-              <div className="no-wrap">Open in 6529 Core</div>
+              <div className="no-wrap">Open in 6529 Desktop</div>
             </Button>
           </a>
         </div>
@@ -414,7 +414,7 @@ function ModalMenu({
           <Button
             variant={activeSubTab === SubMode.CORE ? "light" : "outline-light"}
             onClick={() => onTabChange(activeTab, SubMode.CORE)}>
-            <span className="font-smaller">6529 Core</span>
+            <span className="font-smaller">6529 Desktop</span>
           </Button>
         )}
       </div>

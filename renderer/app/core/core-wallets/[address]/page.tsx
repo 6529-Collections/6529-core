@@ -1,6 +1,6 @@
-import styles from "@/styles/Home.module.scss";
 import SeedWallet from "@/components/core/core-wallet/SeedWallet";
 import { getAppMetadata } from "@/components/providers/metadata";
+import styles from "@/styles/Home.module.scss";
 import { Metadata } from "next";
 
 export default async function SeedWalletPage({
@@ -23,5 +23,5 @@ export async function generateMetadata({
   readonly params: Promise<{ address: string }>;
 }): Promise<Metadata> {
   const { address } = await params;
-  return getAppMetadata({ title: `Core Wallet ${address}` });
+  return getAppMetadata({ title: `6529 Desktop Wallet ${address}` });
 }

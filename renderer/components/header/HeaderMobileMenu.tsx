@@ -107,7 +107,7 @@ export default function HeaderMobileMenu({
                 onScanSuccess={() => {
                   setBurgerMenuOpen(false);
                 }}
-                DISABLED in 6529 Core
+                DISABLED in 6529 Desktop
               /> */}
             </h3>
           </Col>
@@ -178,13 +178,13 @@ export default function HeaderMobileMenu({
                       ? styles.burgerMenuCaretClose
                       : styles.burgerMenuCaretOpen
                   }`}>
-              Core
+              6529 Desktop
             </h3>
           </Col>
           {showBurgerMenuCore && (
             <Container>
               {printMobileHr()}
-              {printMobileRow("Core Wallets", "/core/core-wallets")}
+              {printMobileRow("Wallets", "/core/core-wallets")}
               {printMobileRow("ETH Transactions", "/core/eth-transactions")}
               {printMobileRow("TDH Calculation", "/core/tdh-calculation")}
               <Row className="pt-3">
@@ -201,7 +201,7 @@ export default function HeaderMobileMenu({
                 </Col>
               </Row>
               {printMobileHr()}
-              {printMobileRow("Core Info", "/core/core-info")}
+              {printMobileRow("About", "/core/core-info")}
               {printMobileHr()}
             </Container>
           )}

@@ -1,4 +1,4 @@
-import { test, expect } from "../testHelpers";
+import { expect, test } from "../testHelpers";
 
 test.describe("BUIDL Page", () => {
   test.beforeEach(async ({ page }, testInfo) => {
@@ -6,7 +6,7 @@ test.describe("BUIDL Page", () => {
   });
 
   test("should load with correct title and heading", async ({ page }) => {
-    await expect(page).toHaveTitle("BUIDL | 6529 CORE");
+    await expect(page).toHaveTitle("BUIDL | 6529 Desktop");
 
     const heading = page.locator("h4");
     await expect(heading).toContainText("We are going to BUIDL together");

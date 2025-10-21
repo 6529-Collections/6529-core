@@ -1,7 +1,7 @@
-import styles from "@/styles/Home.module.scss";
 import CoreWallets from "@/components/core/core-wallet/SeedWallets";
-import { Metadata } from "next";
 import { getAppMetadata } from "@/components/providers/metadata";
+import styles from "@/styles/Home.module.scss";
+import { Metadata } from "next";
 
 export default function SeedWalletPage() {
   return (
@@ -12,5 +12,5 @@ export default function SeedWalletPage() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return getAppMetadata({ title: "Core Wallets" });
+  return getAppMetadata({ title: "6529 Desktop Wallets" });
 }

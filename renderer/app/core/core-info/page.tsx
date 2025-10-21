@@ -1,6 +1,6 @@
-import styles from "@/styles/Home.module.scss";
 import AppInfo from "@/components/core/app-info/AppInfo";
 import { getAppMetadata } from "@/components/providers/metadata";
+import styles from "@/styles/Home.module.scss";
 import { Metadata } from "next";
 
 export default function AppInfoPage() {
@@ -12,5 +12,5 @@ export default function AppInfoPage() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return getAppMetadata({ title: "Core Info" });
+  return getAppMetadata({ title: "6529 Desktop Info" });
 }

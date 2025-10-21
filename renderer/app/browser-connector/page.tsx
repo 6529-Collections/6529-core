@@ -1,8 +1,8 @@
-import { commonApiFetch } from "@/services/api/common-api";
 import BrowserConnectorComponent from "@/components/browser-connector/BrowserConnector";
 import { getAppMetadata } from "@/components/providers/metadata";
-import { Metadata } from "next";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
+import { commonApiFetch } from "@/services/api/common-api";
+import { Metadata } from "next";
 
 export default async function BrowserConnectorPage() {
   const headers = await getAppCommonHeaders();
@@ -24,5 +24,5 @@ export default async function BrowserConnectorPage() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  return getAppMetadata({ title: "Browser Connector | 6529 Core" });
+  return getAppMetadata({ title: "Browser Connector | 6529 Desktop" });
 }

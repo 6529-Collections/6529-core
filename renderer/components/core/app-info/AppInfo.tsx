@@ -1,8 +1,8 @@
 "use client";
 
-import { Button, Col, Container, Row } from "react-bootstrap";
-import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useEffect, useState } from "react";
+import { Button, Col, Container, Row } from "react-bootstrap";
 import DotLoader from "../../dotLoader/DotLoader";
 import { Task } from "../eth-scanner/Workers";
 import LogsViewer from "../logs-viewer/LogsViewer";
@@ -171,7 +171,7 @@ export default function AppInfo() {
       <Row className="mt-3">
         <Col>
           <h1 className="float-none">
-            <span className="font-lightest">Core</span> Info
+            <span className="font-lightest">6529 Desktop</span> About
           </h1>
         </Col>
       </Row>
