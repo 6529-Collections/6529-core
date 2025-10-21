@@ -10,10 +10,6 @@ import useCapacitor from "./useCapacitor";
 export function useUnreadNotifications(handle: string | null) {
   const { isCapacitor } = useCapacitor();
 
-  if (!handle) {
-    return { notifications: null, haveUnreadNotifications: false };
-  }
-
   const { data: notifications } = useQuery<ApiNotificationsResponse>({
     queryKey: [
       QueryKey.IDENTITY_NOTIFICATIONS,

@@ -25,7 +25,6 @@ import {
   ActiveDropAction,
   ActiveDropState,
 } from "@/types/dropInteractionTypes";
-import { $convertToMarkdownString } from "@lexical/markdown";
 import { AnimatePresence, motion } from "framer-motion";
 import { EditorState } from "lexical";
 import dynamic from "next/dynamic";
@@ -53,6 +52,7 @@ import CreateDropMetadata from "./CreateDropMetadata";
 import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
 
+import { exportDropMarkdown } from "@/components/waves/drops/normalizeDropMarkdown";
 import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
@@ -487,15 +487,15 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 
   const getMarkdown = useMemo(
     () =>
-      editorState?.read(() =>
-        $convertToMarkdownString([
-          ...SAFE_MARKDOWN_TRANSFORMERS,
-          MENTION_TRANSFORMER,
-          HASHTAG_TRANSFORMER,
-          IMAGE_TRANSFORMER,
-          EMOJI_TRANSFORMER,
-        ])
-      ) ?? null,
+      editorState
+        ? exportDropMarkdown(editorState, [
+            ...SAFE_MARKDOWN_TRANSFORMERS,
+            MENTION_TRANSFORMER,
+            HASHTAG_TRANSFORMER,
+            IMAGE_TRANSFORMER,
+            EMOJI_TRANSFORMER,
+          ])
+        : null,
     [editorState]
   );
 

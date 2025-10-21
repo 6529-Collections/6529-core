@@ -10,13 +10,16 @@ import { isElectron } from "@/helpers";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { getNotificationsRoute } from "../../../helpers/navigation.helpers";
+import useDeviceInfo from "../../../hooks/useDeviceInfo";
 
 export default function HeaderNotifications() {
   const { connectedProfile } = useAuth();
   const pathname = usePathname();
   const { setNotificationCount } = useTitle();
-
-  const [linkHref, setLinkHref] = useState("/my-stream/notifications");
+  const { isApp } = useDeviceInfo();
+  const notificationsPath = getNotificationsRoute(isApp);
+  const [linkHref, setLinkHref] = useState(notificationsPath);
 
   const { notifications, haveUnreadNotifications } = useUnreadNotifications(
     connectedProfile?.handle ?? null
@@ -52,10 +55,14 @@ export default function HeaderNotifications() {
   ]);
 
   useEffect(() => {
-    if (pathname === "/my-stream/notifications") {
-      setLinkHref("/my-stream/notifications?reload=true");
+    const isNotificationsRoute = pathname === "/notifications";
+
+    if (isNotificationsRoute) {
+      setLinkHref(`${pathname}?reload=true`);
+    } else {
+      setLinkHref(notificationsPath);
     }
-  }, [pathname]);
+  }, [pathname, notificationsPath]);
 
   return (
     <div className="tailwind-scope tw-relative min-[1200px]:tw-mr-3 tw-self-center">
