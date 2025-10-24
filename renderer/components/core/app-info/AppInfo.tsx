@@ -129,6 +129,18 @@ export default function AppInfo() {
                   <span className="font-smaller font-color-h">
                     {info.os}:{info.arch} / {info.scheme}
                   </span>
+                  <span className="mt-3 font-smaller">
+                    App Port: <b>{info.port}</b>
+                  </span>
+                  <span className="font-smaller">
+                    IPFS Port: <b>{info.ipfsPort}</b>
+                  </span>
+                  <span className="font-smaller">
+                    IPFS RPC Port: <b>{info.ipfsRpcPort}</b>
+                  </span>
+                  <span className="font-smaller">
+                    IPFS Swarm Port: <b>{info.ipfsSwarmPort}</b>
+                  </span>
                 </span>
               </div>
               <span>
