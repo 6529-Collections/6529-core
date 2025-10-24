@@ -1,5 +1,17 @@
 "use client";
 
+import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
+import { useAuth } from "@/components/auth/Auth";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import HeaderDesktopNav from "@/components/header/HeaderDesktopNav";
+import HeaderLogo from "@/components/header/HeaderLogo";
+import HeaderMobileMenu from "@/components/header/HeaderMobileMenu";
+import HeaderNotifications from "@/components/header/notifications/HeaderNotifications";
+import HeaderOpenMobile from "@/components/header/open-mobile/HeaderOpenMobile";
+import HeaderShare from "@/components/header/share/HeaderShare";
+import HeaderUser from "@/components/header/user/HeaderUser";
+import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import { publicEnv } from "@/config/env";
 import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
 import { DBResponse } from "@/entities/IDBResponse";
@@ -11,19 +23,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Col, Container, Nav, Navbar, Row } from "react-bootstrap";
-import { useAppWallets } from "../app-wallets/AppWalletsContext";
-import { useAuth } from "../auth/Auth";
-import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
-import { useCookieConsent } from "../cookies/CookieConsentContext";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import styles from "./Header.module.scss";
-import HeaderDesktopNav from "./HeaderDesktopNav";
-import HeaderLogo from "./HeaderLogo";
-import HeaderMobileMenu from "./HeaderMobileMenu";
-import HeaderNotifications from "./notifications/HeaderNotifications";
-import HeaderOpenMobile from "./open-mobile/HeaderOpenMobile";
-import HeaderShare from "./share/HeaderShare";
-import HeaderUser from "./user/HeaderUser";
 
 interface Props {
   onLoad?: () => void;
@@ -47,6 +48,9 @@ export default function Header(props: Readonly<Props>) {
   const { showWaves } = useAuth();
 
   const pathname = usePathname();
+
+  const { ipfsUrls } = useIpfsContext();
+
   const { address, seizeConnectOpen } = useSeizeConnectContext();
   const { showConnectModal } = useSeizeConnectModal();
   const [consolidations, setConsolidations] = useState<string[]>([]);
@@ -61,14 +65,6 @@ export default function Header(props: Readonly<Props>) {
   const [showBurgerMenuBrain, setShowBurgerMenuBrain] = useState(false);
 
   const isMobile = useIsMobileScreen();
-
-  const [ipfsUrl, setIpfsUrl] = useState("");
-
-  useEffect(() => {
-    window.api?.getIpfsInfo().then((info) => {
-      setIpfsUrl(info.apiEndpoint);
-    });
-  }, []);
 
   let containerClassName = styles.mainContainer;
   let rowClassName = styles.headerRow;
@@ -174,7 +170,7 @@ export default function Header(props: Readonly<Props>) {
         appWalletsSupported={appWalletsSupported}
         capacitorIsIos={capacitor.isIos}
         country={country}
-        ipfsUrl={ipfsUrl}
+        ipfsUrl={ipfsUrls?.webui ?? ""}
       />
       <Container fluid className={`${containerClassName} ${props.extraClass}`}>
         <Row>
@@ -234,7 +230,7 @@ export default function Header(props: Readonly<Props>) {
                               capacitorIsIos={capacitor.isIos}
                               country={country}
                               pathname={pathname ?? undefined}
-                              ipfsUrl={ipfsUrl}
+                              ipfsUrl={ipfsUrls?.webui ?? ""}
                             />
                             <HeaderUser />
                             {showWaves && <HeaderNotifications />}

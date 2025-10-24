@@ -13,7 +13,7 @@ export function useSidebarSections(
   appWalletsSupported: boolean,
   isIos: boolean,
   country: string | null,
-  ipfsUrl: string
+  ipfsWebuiUrl: string
 ): SidebarSection[] {
   return useMemo<SidebarSection[]>(
     () => [
@@ -25,7 +25,9 @@ export function useSidebarSections(
           { name: "Wallets", href: "/core/core-wallets" },
           { name: "ETH Transactions", href: "/core/eth-transactions" },
           { name: "TDH Calculation", href: "/core/tdh-calculation" },
-          { name: "My IPFS", href: `${ipfsUrl}/webui`, isExternal: true },
+          ...(ipfsWebuiUrl
+            ? [{ name: "My IPFS", href: ipfsWebuiUrl, isExternal: true }]
+            : []),
           { name: "About", href: "/core/core-info" },
         ],
       },

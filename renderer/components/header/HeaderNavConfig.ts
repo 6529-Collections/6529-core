@@ -58,7 +58,7 @@ export function getDesktopNavigation(_context: NavContext): NavDropdown[] {
         },
         {
           name: "My IPFS",
-          path: `${_context.ipfsUrl}/webui`,
+          path: _context.ipfsUrl,
           isExternal: true,
           hasDividerAfter: true,
         },

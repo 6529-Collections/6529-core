@@ -1,7 +1,10 @@
 "use client";
 
+import { classNames } from "@/helpers/Helpers";
+import { useIntersectionObserver } from "@/hooks/scroll/useIntersectionObserver";
 import {
   forwardRef,
+  MutableRefObject,
   ReactNode,
   useCallback,
   useEffect,
@@ -9,8 +12,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useIntersectionObserver } from "@/hooks/scroll/useIntersectionObserver";
-import { classNames } from "@/helpers/Helpers";
 
 interface HighlightDropWrapperProps {
   readonly active: boolean;
@@ -42,13 +43,14 @@ const HighlightDropWrapper = forwardRef<
     },
     forwardedRef
   ) => {
-    const innerRef = useRef<HTMLDivElement>(null);
-    const [phase, setPhase] = useState<"idle" | "highlight" | "fading">(
-      "idle"
-    );
+    const innerRef = useRef<HTMLDivElement | null>(
+      null
+    ) as MutableRefObject<HTMLDivElement | null>;
+    const [phase, setPhase] = useState<"idle" | "highlight" | "fading">("idle");
     const phaseRef = useRef(phase);
-    const highlightTimeoutRef =
-      useRef<ReturnType<typeof setTimeout> | null>(null);
+    const highlightTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
+      null
+    );
     const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const rafRef = useRef<number | null>(null);
     const visibilityStartTimeRef = useRef<number | null>(null);
@@ -105,7 +107,8 @@ const HighlightDropWrapper = forwardRef<
       stopRAF();
 
       const getNow =
-        typeof performance !== "undefined" && typeof performance.now === "function"
+        typeof performance !== "undefined" &&
+        typeof performance.now === "function"
           ? () => performance.now()
           : () => Date.now();
 
@@ -143,8 +146,7 @@ const HighlightDropWrapper = forwardRef<
           const interWidth = Math.max(0, interRight - interLeft);
           const interHeight = Math.max(0, interBottom - interTop);
           const interArea = interWidth * interHeight;
-          const ratio =
-            interArea / Math.max(1, elRect.width * elRect.height);
+          const ratio = interArea / Math.max(1, elRect.width * elRect.height);
 
           if (ratio >= visibilityThreshold && !lastExtendedRef.current) {
             lastExtendedRef.current = true;

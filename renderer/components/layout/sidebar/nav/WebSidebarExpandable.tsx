@@ -1,6 +1,8 @@
 "use client";
 
 import { SidebarSection } from "@/components/navigation/navTypes";
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
@@ -105,13 +107,20 @@ function WebSidebarExpandable({
                     <li key={item.href} className="tw-m-0 tw-p-0">
                       <Link
                         href={item.href}
-                        className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 motion-reduce:tw-transition-none tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-ml-[2.75rem] tw-pl-3 tw-pr-3 tw-h-11 tw-text-base tw-touch-action-manipulation ${
+                        target={item.isExternal ? "_blank" : undefined}
+                        rel={
+                          item.isExternal ? "noopener noreferrer" : undefined
+                        }
+                        className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 motion-reduce:tw-transition-none tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-ml-[2.75rem] tw-pl-3 tw-pr-3 tw-h-11 tw-text-base tw-touch-action-manipulation ${
                           active
                             ? "tw-text-white tw-bg-iron-900 desktop-hover:hover:tw-text-white desktop-hover:hover:tw-bg-iron-900 active:tw-text-white"
                             : "tw-text-iron-400 tw-bg-transparent desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white active:tw-text-white"
                         }`}
                         aria-current={active ? "page" : undefined}>
                         {item.name}
+                        {item.isExternal && (
+                          <FontAwesomeIcon icon={faExternalLinkAlt} />
+                        )}
                       </Link>
                     </li>
                   );

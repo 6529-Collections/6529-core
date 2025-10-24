@@ -1,12 +1,15 @@
 "use client";
 
+import { SidebarNavItem } from "@/components/navigation/navTypes";
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import React, { useCallback, useMemo } from "react";
 
 interface WebSidebarExpandableGroupProps {
   readonly name: string;
-  readonly items: ReadonlyArray<{ name: string; href: string }>;
+  readonly items: ReadonlyArray<SidebarNavItem>;
   readonly pathname: string | null;
   readonly expanded: boolean;
   readonly onToggle: (isExpanded: boolean) => void;
@@ -65,13 +68,18 @@ function WebSidebarExpandableGroup({
               <Link
                 key={item.name}
                 href={item.href}
-                className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-pl-3 tw-pr-3 tw-ml-[2.75rem] tw-h-11 tw-text-base tw-touch-action-manipulation ${
+                target={item.isExternal ? "_blank" : undefined}
+                rel={item.isExternal ? "noopener noreferrer" : undefined}
+                className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-pl-3 tw-pr-3 tw-ml-[2.75rem] tw-h-11 tw-text-base tw-touch-action-manipulation ${
                   isActive(item.href)
                     ? "tw-text-white tw-bg-iron-900 desktop-hover:hover:tw-text-white desktop-hover:hover:tw-bg-iron-900 active:tw-text-white"
                     : "tw-text-iron-400 tw-bg-transparent desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white active:tw-text-white"
                 }`}
                 aria-current={isActive(item.href) ? "page" : undefined}>
                 {item.name}
+                {item.isExternal && (
+                  <FontAwesomeIcon icon={faExternalLinkAlt} />
+                )}
               </Link>
             ))}
           </div>

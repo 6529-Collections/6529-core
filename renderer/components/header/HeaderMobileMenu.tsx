@@ -181,19 +181,21 @@ export default function HeaderMobileMenu({
               {printMobileRow("Wallets", "/core/core-wallets")}
               {printMobileRow("ETH Transactions", "/core/eth-transactions")}
               {printMobileRow("TDH Calculation", "/core/tdh-calculation")}
-              <Row className="pt-3">
-                <Col>
-                  <Link
-                    href={`${ipfsUrl}/webui`}
-                    target="_blank"
-                    rel="noopener noreferrer">
-                    <h3>
-                      My IPFS
-                      <FontAwesomeIcon icon={faExternalLinkAlt} />
-                    </h3>
-                  </Link>
-                </Col>
-              </Row>
+              {ipfsUrl && (
+                <Row className="pt-3">
+                  <Col>
+                    <Link
+                      href={ipfsUrl}
+                      target={ipfsUrl ? "_blank" : undefined}
+                      rel={ipfsUrl ? "noopener noreferrer" : undefined}>
+                      <h3>
+                        My IPFS
+                        <FontAwesomeIcon icon={faExternalLinkAlt} />
+                      </h3>
+                    </Link>
+                  </Col>
+                </Row>
+              )}
               {printMobileHr()}
               {printMobileRow("About", "/core/core-info")}
               {printMobileHr()}

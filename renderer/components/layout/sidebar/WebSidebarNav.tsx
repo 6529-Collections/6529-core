@@ -10,6 +10,7 @@ import HomeIcon from "@/components/common/icons/HomeIcon";
 import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import HeaderSearchModal from "@/components/header/header-search/HeaderSearchModal";
+import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import CommonAnimationOpacity from "@/components/utils/animation/CommonAnimationOpacity";
 import CommonAnimationWrapper from "@/components/utils/animation/CommonAnimationWrapper";
 import useCapacitor from "@/hooks/useCapacitor";
@@ -63,7 +64,7 @@ const WebSidebarNav = React.forwardRef<
   const [submenuTrigger, setSubmenuTrigger] = useState<HTMLElement | null>(
     null
   );
-  const [ipfsUrl, setIpfsUrl] = useState("");
+  const { ipfsUrls } = useIpfsContext();
 
   useKey(
     (event) => event.metaKey && event.key === "k",
@@ -77,17 +78,11 @@ const WebSidebarNav = React.forwardRef<
     return null;
   }, [connectedProfile?.handle, address]);
 
-  useEffect(() => {
-    window.api?.getIpfsInfo().then((info) => {
-      setIpfsUrl(info.apiEndpoint);
-    });
-  }, []);
-
   const sections = useSidebarSections(
     appWalletsSupported,
     capacitor.isIos,
     country,
-    ipfsUrl
+    ipfsUrls?.webui ?? ""
   );
   const sectionMap = useSectionMap(sections);
   const desktopSection = sectionMap.get("6529-desktop");
