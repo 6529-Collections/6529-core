@@ -72,9 +72,7 @@ export default function AboutPrimaryAddress() {
     <Container>
       <Row>
         <Col>
-          <h1 className="float-none">
-            <span className="font-lightest">On-Chain</span> Primary Address
-          </h1>
+          <h1>On-Chain Primary Address</h1>
         </Col>
       </Row>
       <Row className="pt-4">
