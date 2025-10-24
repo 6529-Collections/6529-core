@@ -215,6 +215,7 @@ const WebSidebarNav = React.forwardRef<
             leftOffset={submenuAnchor.left}
             anchorTop={submenuAnchor.top}
             anchorHeight={submenuAnchor.height}
+            triggerElement={submenuTrigger}
           />
         );
       }
