@@ -1,13 +1,13 @@
 "use client";
 
+import Mark from "mark.js";
 import {
   createContext,
+  useCallback,
   useContext,
   useRef,
   useState,
-  useCallback,
 } from "react";
-import Mark from "mark.js";
 
 interface SearchContextType {
   isOpen: boolean;
@@ -49,6 +49,7 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
 
   const performSearch = useCallback((q: string) => {
     console.log("performSearch", q, containerRef.current, "end");
+    console.log("containerRef.current", containerRef.current);
     if (!containerRef.current) return;
 
     const context = containerRef.current;

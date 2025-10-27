@@ -145,6 +145,7 @@ function sharedConfig(publicEnv, assetPrefix) {
         "d3lqz0a4bldqgf.cloudfront.net",
         "robohash.org",
         "ipfs.6529.io",
+        "127.0.0.1",
       ],
       minimumCacheTTL: 86400,
     },

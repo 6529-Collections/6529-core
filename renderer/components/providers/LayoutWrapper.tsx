@@ -4,8 +4,8 @@ import MobileLayout from "@/components/layout/MobileLayout";
 import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
 import WebLayout from "@/components/layout/WebLayout";
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/constants/sidebar";
-import FooterWrapper from "@/FooterWrapper";
 import { RefreshProvider } from "@/contexts/RefreshContext";
+import FooterWrapper from "@/FooterWrapper";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import TitleBarWrapper from "@/TitleBarWrapper";
@@ -85,13 +85,14 @@ export default function LayoutWrapper({
 
   return (
     <RefreshProvider>
-      <TitleBarWrapper />
-      <LayoutComponent>
-        <>
-          {children}
-          <FooterWrapper />
-        </>
-      </LayoutComponent>
+      <TitleBarWrapper>
+        <LayoutComponent>
+          <>
+            {children}
+            <FooterWrapper />
+          </>
+        </LayoutComponent>
+      </TitleBarWrapper>
     </RefreshProvider>
   );
 }
