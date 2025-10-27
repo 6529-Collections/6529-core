@@ -7,7 +7,7 @@ import {
   UsersIcon,
   WrenchIcon,
 } from "@heroicons/react/24/outline";
-import { useMemo } from "react";
+import { useMemo, type ComponentType } from "react";
 
 export function useSidebarSections(
   appWalletsSupported: boolean,
@@ -204,4 +204,39 @@ export function useSectionMap(sections: SidebarSection[]) {
     () => new Map(sections.map((section) => [section.key, section])),
     [sections]
   );
+}
+
+export interface SidebarPageEntry {
+  name: string;
+  href: string;
+  section: string;
+  subsection?: string;
+  icon?: ComponentType<{ className?: string }>;
+}
+
+export function mapSidebarSectionsToPages(
+  sections: SidebarSection[]
+): SidebarPageEntry[] {
+  return sections.flatMap((section) => {
+    const sectionIcon = section.icon;
+    const sectionItems: SidebarPageEntry[] = section.items.map((item) => ({
+      name: item.name,
+      href: item.href,
+      section: section.name,
+      icon: sectionIcon,
+    }));
+
+    const subsectionItems =
+      section.subsections?.flatMap((subsection) =>
+        subsection.items.map((item) => ({
+          name: item.name,
+          href: item.href,
+          section: section.name,
+          subsection: subsection.name,
+          icon: sectionIcon,
+        }))
+      ) ?? [];
+
+    return [...sectionItems, ...subsectionItems];
+  });
 }

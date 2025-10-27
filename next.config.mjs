@@ -144,6 +144,7 @@ function sharedConfig(publicEnv, assetPrefix) {
         "media.generator.seize.io",
         "d3lqz0a4bldqgf.cloudfront.net",
         "robohash.org",
+        "ipfs.6529.io",
       ],
       minimumCacheTTL: 86400,
     },
