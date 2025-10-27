@@ -745,7 +745,6 @@ function getTokenTdh(
   const balance = tokenDatesForWallet.length;
 
   hodlRate = Math.round(hodlRate * 100) / 100;
-  // const tdh = Math.round(tdh__raw * hodlRate);
   const tdh = Math.round(Math.round(hodlRate * tdh__raw * 1000) / 1000);
 
   if (tdh > 0 || balance > 0) {
