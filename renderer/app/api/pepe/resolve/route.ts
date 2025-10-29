@@ -11,7 +11,7 @@ import {
 
 const TOKENSCAN_BASE = "https://tokenscan.io/api";
 
-export type PepeKind = "asset" | "collection" | "artist" | "set";
+type PepeKind = "asset" | "collection" | "artist" | "set";
 
 type Market = {
   bestAskSats?: number;
@@ -817,6 +817,7 @@ async function resolveAsset(slug: string): Promise<AssetPreview> {
   };
 }
 
+// ts-prune-ignore-next: Next.js uses exported HTTP verb handlers via convention.
 export async function GET(request: NextRequest) {
   const kind =
     (request.nextUrl.searchParams.get("kind") as PepeKind | null) ?? null;
@@ -867,4 +868,3 @@ export async function GET(request: NextRequest) {
 }
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
