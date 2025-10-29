@@ -1,5 +1,5 @@
 "use client";
-import EventEmitter from "events";
+
 import React, {
   createContext,
   useContext,
@@ -37,7 +37,7 @@ const AppWalletsContext = createContext<AppWalletsContextProps | undefined>(
   undefined
 );
 
-export const appWalletsEventEmitter = new EventEmitter();
+const WALLET_KEY_PREFIX = "app-wallet_";
 
 export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,

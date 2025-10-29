@@ -1,6 +1,7 @@
 "use client";
 
 import { MEMES_MANIFOLD_PROXY_ABI } from "@/abis";
+import { wallTimeToUtcInstantInZone } from "@/components/meme-calendar/meme-calendar.helpers";
 import {
   MANIFOLD_NETWORK,
   MEMES_CONTRACT,
@@ -9,8 +10,8 @@ import {
 } from "@/constants";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { Time } from "@/helpers/time";
-import { DateTime } from "luxon";
 import { useCallback, useEffect, useState } from "react";
+import type { Abi } from "viem";
 import { useReadContract } from "wagmi";
 
 export enum ManifoldClaimStatus {
@@ -24,6 +25,20 @@ export enum ManifoldPhase {
   PUBLIC = "Public Phase",
 }
 
+interface PhaseBoundary {
+  hour: number;
+  minute: number;
+  dayOffset?: number;
+}
+
+interface PhaseDefinition {
+  id: string;
+  name: string;
+  type: ManifoldPhase;
+  start: PhaseBoundary;
+  end: PhaseBoundary;
+}
+
 export interface MemePhase {
   id: string;
   name: string;
@@ -32,56 +47,58 @@ export interface MemePhase {
   end: Time;
 }
 
-export function buildMemesPhases(mintDate: Time): MemePhase[] {
-  const zone = "America/New_York";
+const PHASE_DEFINITIONS: PhaseDefinition[] = [
+  {
+    id: "0",
+    name: "Phase 0 (Allowlist)",
+    type: ManifoldPhase.ALLOWLIST,
+    start: { hour: 17, minute: 40 },
+    end: { hour: 18, minute: 20 },
+  },
+  {
+    id: "1",
+    name: "Phase 1 (Allowlist)",
+    type: ManifoldPhase.ALLOWLIST,
+    start: { hour: 18, minute: 30 },
+    end: { hour: 18, minute: 50 },
+  },
+  {
+    id: "2",
+    name: "Phase 2 (Allowlist)",
+    type: ManifoldPhase.ALLOWLIST,
+    start: { hour: 19, minute: 0 },
+    end: { hour: 19, minute: 20 },
+  },
+  {
+    id: "public",
+    name: "Public Phase",
+    type: ManifoldPhase.PUBLIC,
+    start: { hour: 19, minute: 20 },
+    end: { hour: 17, minute: 0, dayOffset: 1 },
+  },
+];
 
-  const base = DateTime.fromJSDate(mintDate.toDate()).setZone(zone);
-
-  const toUtc = (hour: number, minute: number): Time =>
-    Time.seconds(base.set({ hour, minute, second: 0 }).toUTC().toSeconds());
-
-  const toUtcNextDay = (hour: number, minute: number): Time =>
-    Time.seconds(
-      base
-        .plus({ days: 1 })
-        .set({ hour, minute, second: 0 })
-        .toUTC()
-        .toSeconds()
+export function buildMemesPhases(mintDate: Time = Time.now()): MemePhase[] {
+  const resolveTime = ({
+    hour,
+    minute,
+    dayOffset = 0,
+  }: PhaseBoundary): Time => {
+    const reference = dayOffset === 0 ? mintDate : mintDate.plusDays(dayOffset);
+    const instant = wallTimeToUtcInstantInZone(
+      reference.toDate(),
+      hour,
+      minute
     );
+    return Time.millis(instant.getTime());
+  };
 
-  return [
-    {
-      id: "0",
-      name: "Phase 0 (Allowlist)",
-      type: ManifoldPhase.ALLOWLIST,
-      start: toUtc(10, 40),
-      end: toUtc(11, 20),
-    },
-    {
-      id: "1",
-      name: "Phase 1 (Allowlist)",
-      type: ManifoldPhase.ALLOWLIST,
-      start: toUtc(11, 30),
-      end: toUtc(11, 50),
-    },
-    {
-      id: "2",
-      name: "Phase 2 (Allowlist)",
-      type: ManifoldPhase.ALLOWLIST,
-      start: toUtc(12, 0),
-      end: toUtc(12, 20),
-    },
-    {
-      id: "public",
-      name: "Public Phase",
-      type: ManifoldPhase.PUBLIC,
-      start: toUtc(12, 20),
-      end: toUtcNextDay(10, 0),
-    },
-  ];
+  return PHASE_DEFINITIONS.map(({ start, end, ...phase }) => ({
+    ...phase,
+    start: resolveTime(start),
+    end: resolveTime(end),
+  }));
 }
-
-const MEME_PHASES = buildMemesPhases(Time.now());
 
 export interface ManifoldClaim {
   instanceId: number;
@@ -102,7 +119,7 @@ export interface ManifoldClaim {
 export function useManifoldClaim(
   contract: string,
   proxy: string,
-  abi: any,
+  abi: Abi,
   tokenId: number,
   onError?: () => void
 ) {
@@ -110,10 +127,10 @@ export function useManifoldClaim(
   const [refetchInterval, setRefetchInterval] = useState<number>(5000);
 
   const getStatus = useCallback((start: number, end: number) => {
-    const now = Date.now() / 1000;
+    const now = Time.now().toSeconds();
     if (now < start) {
       return ManifoldClaimStatus.UPCOMING;
-    } else if (now > start && now < end) {
+    } else if (now >= start && now < end) {
       return ManifoldClaimStatus.ACTIVE;
     }
     return ManifoldClaimStatus.ENDED;
@@ -125,13 +142,16 @@ export function useManifoldClaim(
         return undefined;
       }
 
+      const memePhases = buildMemesPhases(Time.seconds(start));
+
       if (phase === ManifoldPhase.PUBLIC) {
-        return MEME_PHASES.find((mp) => mp.id === "public");
+        return memePhases.find((mp) => mp.id === "public");
       }
 
-      return MEME_PHASES.filter((mp) => mp.end >= Time.seconds(end))[0];
+      const endTime = Time.seconds(end);
+      return memePhases.find((mp) => mp.end.gte(endTime));
     },
-    []
+    [contract]
   );
 
   const readContract = useReadContract({

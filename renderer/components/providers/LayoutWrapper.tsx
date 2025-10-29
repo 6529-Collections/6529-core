@@ -64,8 +64,10 @@ export default function LayoutWrapper({
     };
   }, [hasTouchScreen]);
 
-  const isAccessOrRestricted =
-    pathname?.startsWith("/access") || pathname?.startsWith("/restricted");
+  const isStandaloneRoute =
+    pathname?.startsWith("/access") ||
+    pathname?.startsWith("/restricted") ||
+    pathname?.startsWith("/browser-connector");
 
   let LayoutComponent: ComponentType<{ readonly children: ReactNode }> =
     WebLayout;
@@ -79,7 +81,7 @@ export default function LayoutWrapper({
     LayoutComponent = SmallScreenLayout;
   }
 
-  if (isAccessOrRestricted) {
+  if (isStandaloneRoute) {
     return <RefreshProvider>{children}</RefreshProvider>;
   }
 

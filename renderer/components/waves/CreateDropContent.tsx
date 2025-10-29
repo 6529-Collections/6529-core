@@ -5,7 +5,6 @@ import {
   CreateDropConfig,
   CreateDropPart,
   CreateDropRequestPart,
-  DropMetadata,
   MentionedUser,
   ReferencedNft,
 } from "@/entities/IDrop";
@@ -68,6 +67,7 @@ import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTra
 import { multiPartUpload } from "./create-wave/services/multiPartUpload";
 import { DropMutationBody } from "./CreateDrop";
 import { generateMetadataId, useDropMetadata } from "./hooks/useDropMetadata";
+import { convertMetadataToDropMetadata } from "./utils/convertMetadataToDropMetadata";
 import {
   getMissingRequirements,
   MissingRequirements,
@@ -218,28 +218,6 @@ const getUpdatedNfts = (
       )
   );
   return [...existingNfts, ...notAddedNfts];
-};
-
-const convertMetadataToDropMetadata = (
-  metadata: CreateDropMetadataType[]
-): DropMetadata[] => {
-  return metadata
-    .filter(
-      (
-        md
-      ): md is CreateDropMetadataType & {
-        key: NonNullable<CreateDropMetadataType["key"]>;
-        value: NonNullable<CreateDropMetadataType["value"]>;
-      } =>
-        md.key !== null &&
-        md.key !== undefined &&
-        md.value !== null &&
-        md.value !== undefined
-    )
-    .map((md) => ({
-      data_key: md.key,
-      data_value: `${md.value}`,
-    }));
 };
 
 type HandleDropPartResult = {
@@ -1152,12 +1130,3 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 };
 
 export default memo(CreateDropContent);
-
-// Export internal helpers for testing
-export {
-  convertMetadataToDropMetadata,
-  ensurePartsWithFallback,
-  handleDropPart,
-  hasMetadataContent,
-  hasSubmissionContent,
-};

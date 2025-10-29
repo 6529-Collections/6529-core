@@ -41,13 +41,14 @@
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next/dev/types/**/*.ts",
     ".next/types/**/*.ts",
-    "next-env.d.ts",
     "out/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
     "tests",
-    "e2e"
+    "e2e",
+    "**/__mocks__/**"
   ]
 }

@@ -1,13 +1,13 @@
 "use client";
 
+import { isElectron } from "@/helpers";
+import { formatAddress } from "@/helpers/Helpers";
 import { useAppKit } from "@reown/appkit/react";
 import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Accordion, Button, Modal } from "react-bootstrap";
 import { Connector, useConnect, useConnectors } from "wagmi";
-import { isElectron } from "../../../helpers";
-import { formatAddress } from "../../../helpers/Helpers";
 import styles from "./HeaderUser.module.scss";
 
 interface HeaderUserConnectModalProps {
