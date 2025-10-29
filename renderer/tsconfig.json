@@ -1,7 +1,11 @@
 {
   "compilerOptions": {
     "target": "es5",
-    "lib": ["dom", "dom.iterable", "esnext"],
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -12,25 +16,39 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
+    "jsx": "preserve",
     "incremental": true,
-    "types": ["@testing-library/jest-dom"],
+    "types": [
+      "@testing-library/jest-dom"
+    ],
     "plugins": [
       {
         "name": "next"
       }
     ],
     "paths": {
-      "@/*": ["./*"],
-      "@/electron-constants": ["../electron-constants.ts"],
-      "@/shared/*": ["../shared/*"]
+      "@/*": [
+        "./*"
+      ],
+      "@/electron-constants": [
+        "../electron-constants.ts"
+      ],
+      "@/shared/*": [
+        "../shared/*"
+      ]
     }
   },
   "include": [
     "**/*.ts",
     "**/*.tsx",
+    ".next/dev/types/**/*.ts",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    "out/types/**/*.ts"
   ],
-  "exclude": ["node_modules", "tests", "e2e", "**/__mocks__/**"]
+  "exclude": [
+    "node_modules",
+    "tests",
+    "e2e",
+    "**/__mocks__/**"
+  ]
 }
