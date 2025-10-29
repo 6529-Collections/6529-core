@@ -221,7 +221,7 @@ if (!gotTheLock) {
   Menu.setApplicationMenu(menu);
 
   app.whenReady().then(async () => {
-    app.setName("6529 CORE");
+    app.setName("6529 Desktop");
     const scheme = getScheme();
     protocol.handle(scheme, (_request) => {
       if (mainWindow) {
@@ -581,7 +581,43 @@ function openInBrave(url: string): Promise<void> {
 ipcMain.on("open-external", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL:", url);
-  shell.openExternal(url);
+  if (url.startsWith(IPFS_SERVER.getApiEndpoint())) {
+    // Open IPFS endpoint in an Electron BrowserWindow that mirrors the main window's size/state
+    const bounds = mainWindow?.getBounds();
+    const isFullScreen = mainWindow?.isFullScreen() ?? false;
+    const isMaximized = mainWindow?.isMaximized() ?? false;
+
+    const ipfsWindow = new BrowserWindow({
+      x: bounds?.x ?? undefined,
+      y: bounds?.y ?? undefined,
+      width: bounds?.width ?? 1200,
+      height: bounds?.height ?? 800,
+      backgroundColor: "#222",
+      titleBarStyle: "hidden",
+      titleBarOverlay: { color: "#000", symbolColor: "#fff", height: 30 },
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true,
+        preload: path.join(__dirname, "preload.js"),
+        spellcheck: true,
+      },
+      show: false,
+    });
+
+    if (isFullScreen) {
+      ipfsWindow.setFullScreen(true);
+    } else if (isMaximized) {
+      ipfsWindow.maximize();
+    }
+
+    ipfsWindow.once("ready-to-show", () => {
+      ipfsWindow.show();
+    });
+
+    ipfsWindow.loadURL(url);
+  } else {
+    shell.openExternal(url);
+  }
 });
 
 ipcMain.on("open-external-chrome", (event, url) => {
@@ -746,6 +782,9 @@ ipcMain.handle("get-info", () => {
   return {
     ...getInfo(),
     port: PORT,
+    ipfsPort: IPFS_PORT,
+    ipfsRpcPort: IPFS_RPC_PORT,
+    ipfsSwarmPort: IPFS_SWARM_PORT,
   };
 });
 
@@ -759,8 +798,8 @@ ipcMain.handle("get-ipfs-info", () => {
 
 ipcMain.handle("get-main-worker", () => {
   const mainTask = {
-    namespace: "6529 Core",
-    display: "6529 Core",
+    namespace: "6529 Desktop",
+    display: "6529 Desktop",
     logFile: getMainLogsPath(),
     cronExpression: null,
   };

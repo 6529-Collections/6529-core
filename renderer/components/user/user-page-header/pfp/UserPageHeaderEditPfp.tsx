@@ -1,14 +1,14 @@
 "use client";
 
 import { AuthContext } from "@/components/auth/Auth";
-import { useIpfsService } from "@/components/ipfs/IPFSContext";
+import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import {
-    QueryKey,
-    ReactQueryWrapperContext,
+  QueryKey,
+  ReactQueryWrapperContext,
 } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import UserSettingsImgSelectFile from "@/components/user/settings/UserSettingsImgSelectFile";
 import UserSettingsImgSelectMeme, {
-    MemeLite,
+  MemeLite,
 } from "@/components/user/settings/UserSettingsImgSelectMeme";
 import UserSettingsSave from "@/components/user/settings/UserSettingsSave";
 import SecondaryButton from "@/components/utils/button/SecondaryButton";
@@ -16,9 +16,9 @@ import { ApiCreateOrUpdateProfileRequest } from "@/entities/IProfile";
 import { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import {
-    commonApiFetch,
-    commonApiPost,
-    commonApiPostForm,
+  commonApiFetch,
+  commonApiPost,
+  commonApiPostForm,
 } from "@/services/api/common-api";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { FormEvent, useContext, useEffect, useRef, useState } from "react";
@@ -34,7 +34,7 @@ export default function UserPageHeaderEditPfp({
   useClickAway(modalRef, onClose);
   useKeyPressEvent("Escape", onClose);
 
-  const ipfsService = useIpfsService();
+  const { ipfsService } = useIpfsContext();
 
   const { setToast, requestAuth } = useContext(AuthContext);
   const { onProfileEdit } = useContext(ReactQueryWrapperContext);
@@ -88,6 +88,9 @@ export default function UserPageHeaderEditPfp({
     mutationFn: async (body: FormData) => {
       setSaving(true);
       const pfp = body.get("pfp");
+      if (!ipfsService) {
+        throw new Error("IPFS service is not initialized");
+      }
       if (!profile.handle) {
         throw new Error("Profile handle is required");
       }

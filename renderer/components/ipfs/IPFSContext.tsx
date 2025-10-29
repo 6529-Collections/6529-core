@@ -10,8 +10,14 @@ import React, {
 import { isElectron } from "../../helpers";
 import IpfsService from "./IPFSService";
 
+interface IpfsUrls {
+  webui: string;
+  api: string;
+  gateway: string;
+}
 interface IpfsContextType {
   ipfsService: IpfsService | null;
+  ipfsUrls?: IpfsUrls;
 }
 
 const IpfsContext = createContext<IpfsContextType | undefined>(undefined);
@@ -34,6 +40,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const [ipfsService, setIpfsService] = useState<IpfsService | null>(null);
+  const [ipfsUrls, setIpfsUrls] = useState<IpfsUrls | undefined>(undefined);
 
   useEffect(() => {
     if (ipfsService) return;
@@ -45,6 +52,11 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
           apiEndpoint: info.apiEndpoint,
           mfsPath: info.mfsPath,
         });
+        setIpfsUrls({
+          webui: `${info.apiEndpoint}/webui`,
+          api: info.apiEndpoint,
+          gateway: info.gatewayEndpoint,
+        });
         service.init();
         setIpfsService(service);
       })
@@ -53,17 +65,20 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
       });
   }, []);
 
-  const value = useMemo(() => ({ ipfsService }), [ipfsService]);
+  const value = useMemo(
+    () => ({ ipfsService, ipfsUrls }),
+    [ipfsService, ipfsUrls]
+  );
 
   return <IpfsContext.Provider value={value}>{children}</IpfsContext.Provider>;
 };
 
-export const useIpfsService = (): IpfsService => {
+export const useIpfsContext = (): IpfsContextType => {
   const context = useContext(IpfsContext);
-  if (!context?.ipfsService) {
-    throw new Error("useIpfsService must be used within an IpfsProvider");
+  if (!context) {
+    throw new Error("useIpfsContext must be used within an IpfsProvider");
   }
-  return context.ipfsService;
+  return context;
 };
 
 export const resolveIpfsUrl = async (url: string) => {

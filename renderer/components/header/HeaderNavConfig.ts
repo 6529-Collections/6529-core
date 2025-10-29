@@ -43,10 +43,10 @@ export function getDesktopNavigation(_context: NavContext): NavDropdown[] {
       ],
     },
     {
-      title: "Core",
+      title: "6529 Desktop",
       items: [
         {
-          name: "Core Wallets",
+          name: "Wallets",
           path: "/core/core-wallets",
           hasDividerAfter: true,
         },
@@ -58,11 +58,11 @@ export function getDesktopNavigation(_context: NavContext): NavDropdown[] {
         },
         {
           name: "My IPFS",
-          path: `${_context.ipfsUrl}/webui`,
+          path: _context.ipfsUrl,
           isExternal: true,
           hasDividerAfter: true,
         },
-        { name: "Core Info", path: "/core/core-info" },
+        { name: "About", path: "/core/core-info" },
       ],
     },
     {

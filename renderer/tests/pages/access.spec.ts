@@ -1,4 +1,4 @@
-import { test, expect } from "../testHelpers";
+import { expect, test } from "../testHelpers";
 
 test.describe("Access Page", () => {
   test.beforeEach(async ({ page }) => {
@@ -6,7 +6,7 @@ test.describe("Access Page", () => {
   });
 
   test("should load with correct title and input state", async ({ page }) => {
-    await expect(page).toHaveTitle("Access Page | 6529 CORE");
+    await expect(page).toHaveTitle("Access Page | 6529 Desktop");
   });
 
   test("should show input as disabled when logged in", async ({ page }) => {

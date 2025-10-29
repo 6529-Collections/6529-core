@@ -1,12 +1,12 @@
 "use client";
 
-import styles from "./BrowserConnector.module.scss";
 import { useEffect, useState } from "react";
-import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
-import { Container, Row, Col } from "react-bootstrap";
+import { Col, Container, Row } from "react-bootstrap";
 import { hexToString } from "viem";
+import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
 import { areEqualAddresses } from "../../helpers/Helpers";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import styles from "./BrowserConnector.module.scss";
 
 export default function BrowserConnectorProvider(
   props: Readonly<{
@@ -140,7 +140,7 @@ export default function BrowserConnectorProvider(
         <Row>
           <Col>
             <p>Error: {errorMessage}</p>
-            <p>Close this window, return to 6529 CORE and retry.</p>
+            <p>Close this window, return to 6529 Desktop and retry.</p>
           </Col>
         </Row>
       </Container>
@@ -208,7 +208,7 @@ export default function BrowserConnectorProvider(
       <Row className={`pt-3 ${!isSuccess ? styles.disabled : ""}`}>
         <Col xs={12}>
           <span className={styles.circledNumber}>2</span>
-          <span>Return to 6529 CORE</span>
+          <span>Return to 6529 Desktop</span>
         </Col>
         <Col xs={12} className="pt-3">
           {isSuccess &&
@@ -221,7 +221,7 @@ export default function BrowserConnectorProvider(
             ) : (
               <Container>
                 <Row>
-                  <Col>Redirected to 6529 CORE</Col>
+                  <Col>Redirected to 6529 Desktop</Col>
                 </Row>
               </Container>
             ))}

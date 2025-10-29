@@ -4,6 +4,7 @@ import MobileLayout from "@/components/layout/MobileLayout";
 import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
 import WebLayout from "@/components/layout/WebLayout";
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/constants/sidebar";
+import { RefreshProvider } from "@/contexts/RefreshContext";
 import FooterWrapper from "@/FooterWrapper";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
@@ -79,18 +80,19 @@ export default function LayoutWrapper({
   }
 
   if (isAccessOrRestricted) {
-    return <>{children}</>;
+    return <RefreshProvider>{children}</RefreshProvider>;
   }
 
   return (
-    <>
-      <TitleBarWrapper />
-      <LayoutComponent>
-        <>
-          {children}
-          <FooterWrapper />
-        </>
-      </LayoutComponent>
-    </>
+    <RefreshProvider>
+      <TitleBarWrapper>
+        <LayoutComponent>
+          <>
+            {children}
+            <FooterWrapper />
+          </>
+        </LayoutComponent>
+      </TitleBarWrapper>
+    </RefreshProvider>
   );
 }

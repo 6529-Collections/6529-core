@@ -43,6 +43,9 @@ export default function HeaderDesktopNav({
     if (link.condition && !link.condition(context)) {
       return null;
     }
+    if (!link.path) {
+      return null;
+    }
     return (
       <HeaderDesktopLink
         key={link.name}

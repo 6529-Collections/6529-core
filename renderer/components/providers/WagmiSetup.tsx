@@ -45,7 +45,7 @@ export default function WagmiSetup({
   // Track processed wallets by address for efficient comparison
   const processedWallets = useRef<Set<string>>(new Set());
 
-  // No Capacitor in 6529 CORE
+  // No Capacitor in 6529 Desktop
   const isCapacitor = false;
 
   // Use the same adapter manager for both mobile and web

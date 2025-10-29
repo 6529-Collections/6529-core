@@ -10,6 +10,7 @@ import HomeIcon from "@/components/common/icons/HomeIcon";
 import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import HeaderSearchModal from "@/components/header/header-search/HeaderSearchModal";
+import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import CommonAnimationOpacity from "@/components/utils/animation/CommonAnimationOpacity";
 import CommonAnimationWrapper from "@/components/utils/animation/CommonAnimationWrapper";
 import useCapacitor from "@/hooks/useCapacitor";
@@ -60,7 +61,10 @@ const WebSidebarNav = React.forwardRef<
     top: number;
     height: number;
   } | null>(null);
-  const [submenuTrigger, setSubmenuTrigger] = useState<HTMLElement | null>(null);
+  const [submenuTrigger, setSubmenuTrigger] = useState<HTMLElement | null>(
+    null
+  );
+  const { ipfsUrls } = useIpfsContext();
 
   useKey(
     (event) => event.metaKey && event.key === "k",
@@ -77,9 +81,11 @@ const WebSidebarNav = React.forwardRef<
   const sections = useSidebarSections(
     appWalletsSupported,
     capacitor.isIos,
-    country
+    country,
+    ipfsUrls?.webui ?? ""
   );
   const sectionMap = useSectionMap(sections);
+  const desktopSection = sectionMap.get("6529-desktop");
   const networkSection = sectionMap.get("network");
   const collectionsSection = sectionMap.get("collections");
 
@@ -216,15 +222,21 @@ const WebSidebarNav = React.forwardRef<
 
       return null;
     },
-    [isCollapsed, openSubmenuKey, sections, pathname, closeSubmenu, submenuAnchor]
+    [
+      isCollapsed,
+      openSubmenuKey,
+      sections,
+      pathname,
+      closeSubmenu,
+      submenuAnchor,
+    ]
   );
 
   return (
     <>
       <nav
         className="tw-flex tw-flex-col tw-mt-4 tw-h-full tw-overflow-y-auto tw-overflow-x-hidden tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 tw-px-3"
-        aria-label="Desktop navigation"
-      >
+        aria-label="Desktop navigation">
         <ul className="tw-list-none tw-m-0 tw-p-0">
           <li>
             <WebSidebarNavItem
@@ -257,6 +269,20 @@ const WebSidebarNav = React.forwardRef<
             />
           </li>
 
+          {desktopSection && (
+            <li className={isCollapsed ? "tw-relative" : undefined}>
+              <WebSidebarExpandable
+                section={desktopSection}
+                expanded={expandedKeys.includes("6529-desktop")}
+                onToggle={(event) => handleSectionToggle("6529-desktop", event)}
+                collapsed={isCollapsed}
+                pathname={pathname}
+                data-section="6529-desktop"
+              />
+              {renderCollapsedSubmenu("6529-desktop")}
+            </li>
+          )}
+
           <li>
             <WebSidebarNavItem
               href="/discover"
@@ -286,9 +312,7 @@ const WebSidebarNav = React.forwardRef<
               <WebSidebarExpandable
                 section={collectionsSection}
                 expanded={expandedKeys.includes("collections")}
-                onToggle={(event) =>
-                  handleSectionToggle("collections", event)
-                }
+                onToggle={(event) => handleSectionToggle("collections", event)}
                 collapsed={isCollapsed}
                 pathname={pathname}
                 data-section="collections"
@@ -337,19 +361,18 @@ const WebSidebarNav = React.forwardRef<
           {sections
             .filter(
               (section) =>
-                section.key !== "network" && section.key !== "collections"
+                section.key !== "network" &&
+                section.key !== "collections" &&
+                section.key !== "6529-desktop"
             )
             .map((section) => (
               <li
                 key={section.key}
-                className={isCollapsed ? "tw-relative" : undefined}
-              >
+                className={isCollapsed ? "tw-relative" : undefined}>
                 <WebSidebarExpandable
                   section={section}
                   expanded={expandedKeys.includes(section.key)}
-                  onToggle={(event) =>
-                    handleSectionToggle(section.key, event)
-                  }
+                  onToggle={(event) => handleSectionToggle(section.key, event)}
                   collapsed={isCollapsed}
                   pathname={pathname}
                   data-section={section.key}
@@ -366,13 +389,11 @@ const WebSidebarNav = React.forwardRef<
             key="search-modal"
             elementClasses="tw-fixed tw-inset-0 tw-z-50"
             elementRole="dialog"
-            onClicked={(event) => event.stopPropagation()}
-          >
+            onClicked={(event) => event.stopPropagation()}>
             <HeaderSearchModal onClose={() => setIsSearchOpen(false)} />
           </CommonAnimationOpacity>
         )}
       </CommonAnimationWrapper>
-
     </>
   );
 });

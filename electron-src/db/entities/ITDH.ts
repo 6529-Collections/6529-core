@@ -140,6 +140,7 @@ export interface TokenTDH {
   hodl_rate: number;
   tdh: number;
   tdh__raw: number;
+  days_held_per_edition: number[];
 }
 
 export interface TokenTDHRank {

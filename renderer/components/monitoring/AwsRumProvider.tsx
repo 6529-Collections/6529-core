@@ -7,6 +7,6 @@ interface AwsRumProviderProps {
 export default function AwsRumProvider({
   children,
 }: Readonly<AwsRumProviderProps>) {
-  // NOT IMPLEMENTED in 6529 CORE
+  // NOT IMPLEMENTED in 6529 Desktop
   return <>{children}</>;
 }

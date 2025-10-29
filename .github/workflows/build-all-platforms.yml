@@ -1,4 +1,4 @@
-name: Build 6529 Core
+name: Build 6529 Desktop
 
 on:
   workflow_dispatch:
@@ -97,7 +97,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - Build failed ❌"
+          title: "6529 Desktop - Build failed ❌"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -109,7 +109,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - Build Success ✅"
+          title: "6529 Desktop - Build Success ✅"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
@@ -142,7 +142,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - Build failed ❌"
+          title: "6529 Desktop - Build failed ❌"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -187,7 +187,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - S3 links published ✅"
+          title: "6529 Desktop - S3 links published ✅"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
@@ -204,7 +204,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - Build complete 🚀"
+          title: "6529 Desktop - Build complete 🚀"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
@@ -215,7 +215,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
-          title: "6529 Core - Publish job failed ❌"
+          title: "6529 Desktop - Publish job failed ❌"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -226,7 +226,7 @@ jobs:
         with:
           script: |
             core.summary
-              .addHeading("6529 Core Build Complete 🚀")
+              .addHeading("6529 Desktop Build Complete 🚀")
               .addTable([
                 ["FLOW", "${{ github.event.inputs.flow }}"],
                 ["Env", "${{ github.event.inputs.env }}"],

@@ -44,7 +44,7 @@ function createAdapter(
 ): WagmiAdapter {
   debugLog(
     `Initializing AppKit adapter (${isCapacitor ? "mobile" : "web"} - ${
-      isElectron() ? "Core Desktop" : "Core Web"
+      isElectron() ? "6529 Desktop" : "6529 Desktop Web"
     }) with`,
     wallets.length,
     "AppWallets"

@@ -7,6 +7,7 @@ import DiscoverIcon from "@/components/common/icons/DiscoverIcon";
 import HomeIcon from "@/components/common/icons/HomeIcon";
 import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
+import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { UserPageTabType } from "@/components/user/layout/UserPageTabs";
 import { CommunityMemberMinimal } from "@/entities/IProfile";
@@ -191,10 +192,12 @@ export default function HeaderSearchModal({
   const { appWalletsSupported } = useAppWallets();
   const { country } = useCookieConsent();
   const capacitor = useCapacitor();
+  const { ipfsUrls } = useIpfsContext();
   const sections = useSidebarSections(
     appWalletsSupported,
     capacitor.isIos,
-    country
+    country,
+    ipfsUrls?.webui ?? ""
   );
   const sidebarPages = useMemo(
     () => mapSidebarSectionsToPages(sections),

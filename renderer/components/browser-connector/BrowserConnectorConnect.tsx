@@ -1,18 +1,18 @@
 "use client";
 
-import styles from "./BrowserConnector.module.scss";
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
 import { useChains, useConnections, useSwitchChain } from "wagmi";
-import HeaderUserConnect from "../header/user/HeaderUserConnect";
-import { Container, Row, Col } from "react-bootstrap";
 import {
-  getWalletAddress,
   getAuthJwt,
   getRefreshToken,
+  getWalletAddress,
   getWalletRole,
 } from "../../services/auth/auth.utils";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import HeaderUserConnect from "../header/user/HeaderUserConnect";
+import styles from "./BrowserConnector.module.scss";
 
 export default function BrowserConnectorConnect(
   props: Readonly<{
@@ -136,7 +136,7 @@ export default function BrowserConnectorConnect(
         }`}>
         <Col xs={12}>
           <span className={styles.circledNumber}>3</span>
-          <span>Transfer Connection to 6529 CORE</span>
+          <span>Transfer Connection to 6529 Desktop</span>
         </Col>
         <Col xs={12} className="pt-4">
           <Container>
@@ -145,7 +145,7 @@ export default function BrowserConnectorConnect(
                 <button
                   onClick={openApp}
                   className="tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
-                  Open 6529 CORE
+                  Open 6529 Desktop
                 </button>
               </Col>
             </Row>

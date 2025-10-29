@@ -1,8 +1,8 @@
-# 6529-CORE
+# 6529-Desktop
 
 ## Overview
 
-6529 Core Desktop App supporting Windows, MacOS and Linux
+6529 Desktop App supporting Windows, MacOS and Linux
 
 ## Structure
 
@@ -173,7 +173,7 @@ The above command will:
 
 ### Sign
 
-The following must be run on the dedicated 6529 Core Windows EC2 instance `i-06a5dc2fe0d6a9f00` (Use Microsoft Remote Desktop)
+The following must be run on the dedicated 6529 Desktop Windows EC2 instance `i-06a5dc2fe0d6a9f00` (Use Microsoft Remote Desktop)
 
 In Command prompt cd to project directory and run the sign command:
 

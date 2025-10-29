@@ -1,5 +1,8 @@
 "use client";
 
+import type { SidebarSection } from "@/components/navigation/navTypes";
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import {
   useCallback,
@@ -10,7 +13,6 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
-import type { SidebarSection } from "@/components/navigation/navTypes";
 
 interface WebSidebarSubmenuProps {
   readonly section: SidebarSection;
@@ -114,12 +116,15 @@ function WebSidebarSubmenu({
 
       setComputedTop((previous) => (previous === top ? previous : top));
     }
-  }, [browserWindow, anchorTop, anchorHeight, section.key, combinedItems.length]);
+  }, [
+    browserWindow,
+    anchorTop,
+    anchorHeight,
+    section.key,
+    combinedItems.length,
+  ]);
 
-  const isActive = useCallback(
-    (href: string) => pathname === href,
-    [pathname]
-  );
+  const isActive = useCallback((href: string) => pathname === href, [pathname]);
 
   if (browserDocument === undefined) {
     return null;
@@ -146,8 +151,7 @@ function WebSidebarSubmenu({
         top: topStyle,
       }}
       role="menu"
-      aria-label={`${section.name} sub-navigation`}
-    >
+      aria-label={`${section.name} sub-navigation`}>
       <div className="tw-px-6 tw-pt-4 tw-pb-2 tw-border-b tw-border-iron-700 tw-border-solid tw-border-x-0 tw-border-t-0">
         <h3 className="tw-text-base tw-font-semibold tw-text-iron-50">
           {section.name}
@@ -161,16 +165,18 @@ function WebSidebarSubmenu({
             <Link
               key={item.href}
               href={item.href}
-              className={`tw-group tw-flex tw-items-center tw-no-underline tw-rounded-lg tw-px-3 tw-py-2 tw-mb-1 tw-text-md tw-transition-all tw-duration-300 tw-touch-action-manipulation focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-600 focus-visible:tw-ring-offset-1 tw-ring-offset-iron-950 ${
+              target={item.isExternal ? "_blank" : undefined}
+              rel={item.isExternal ? "noopener noreferrer" : undefined}
+              className={`tw-group tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-lg tw-px-3 tw-py-2 tw-mb-1 tw-text-md tw-transition-all tw-duration-300 tw-touch-action-manipulation focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-600 focus-visible:tw-ring-offset-1 tw-ring-offset-iron-950 ${
                 active
                   ? "tw-text-white tw-bg-iron-700 tw-font-semibold desktop-hover:hover:tw-text-white"
                   : "tw-text-iron-300 desktop-hover:hover:tw-bg-iron-700/50 desktop-hover:hover:tw-text-iron-50 tw-font-medium"
               }`}
               aria-current={active ? "page" : undefined}
               role="menuitem"
-              onClick={onClose}
-            >
+              onClick={onClose}>
               <span className="tw-truncate">{item.name}</span>
+              {item.isExternal && <FontAwesomeIcon icon={faExternalLinkAlt} />}
             </Link>
           );
         })}

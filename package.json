@@ -1,11 +1,11 @@
 {
   "name": "6529-core",
-  "version": "0.1.38",
+  "version": "0.2.0",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
   },
-  "description": "6529 CORE APP",
+  "description": "6529 Desktop Application",
   "private": false,
   "license": "MIT",
   "main": "main/electron-src/index.js",

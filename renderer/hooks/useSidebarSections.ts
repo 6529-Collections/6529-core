@@ -1,16 +1,36 @@
-import { useMemo, type ComponentType } from "react";
-import { UsersIcon, WrenchIcon, DocumentTextIcon } from "@heroicons/react/24/outline";
+import DesktopIcon from "@/components/common/icons/DesktopIcon";
 import Squares2X2Icon from "@/components/common/icons/Squares2X2Icon";
 import { SidebarSection } from "@/components/navigation/navTypes";
 import { AboutSection } from "@/enums";
+import {
+  DocumentTextIcon,
+  UsersIcon,
+  WrenchIcon,
+} from "@heroicons/react/24/outline";
+import { useMemo, type ComponentType } from "react";
 
 export function useSidebarSections(
   appWalletsSupported: boolean,
   isIos: boolean,
-  country: string | null
+  country: string | null,
+  ipfsWebuiUrl: string
 ): SidebarSection[] {
   return useMemo<SidebarSection[]>(
     () => [
+      {
+        key: "6529-desktop",
+        name: "6529 Desktop",
+        icon: DesktopIcon,
+        items: [
+          { name: "Wallets", href: "/core/core-wallets" },
+          { name: "ETH Transactions", href: "/core/eth-transactions" },
+          { name: "TDH Calculation", href: "/core/tdh-calculation" },
+          ...(ipfsWebuiUrl
+            ? [{ name: "My IPFS", href: ipfsWebuiUrl, isExternal: true }]
+            : []),
+          { name: "About", href: "/core/core-info" },
+        ],
+      },
       {
         key: "network",
         name: "Network",
@@ -181,7 +201,7 @@ export function useSidebarSections(
 
 export function useSectionMap(sections: SidebarSection[]) {
   return useMemo(
-    () => new Map(sections.map(section => [section.key, section])),
+    () => new Map(sections.map((section) => [section.key, section])),
     [sections]
   );
 }

@@ -2,14 +2,18 @@
 
 import SearchBar from "@/components/core/search-bar/SearchBar";
 import TitleBar from "@/components/header/titlebar/TitleBar";
-import { RefreshProvider } from "@/contexts/RefreshContext";
 import { isElectron } from "@/helpers";
 
-export default function TitleBarWrapper() {
+export default function TitleBarWrapper({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return isElectron() ? (
-    <RefreshProvider>
+    <>
       <TitleBar />
       <SearchBar />
-    </RefreshProvider>
+      {children}
+    </>
   ) : null;
 }

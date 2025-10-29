@@ -1,20 +1,20 @@
 "use client";
 
-import styles from "./SeedWallet.module.scss";
-import { Container, Row, Col, Button } from "react-bootstrap";
-import { useRef, useState } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
 import {
   faCheckCircle,
   faCircleArrowLeft,
   faPlusCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ethers } from "ethers";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useRef, useState } from "react";
+import { Button, Col, Container, Row } from "react-bootstrap";
+import { MNEMONIC_NA } from "../../../../electron-constants";
 import { useToast } from "../../../contexts/ToastContext";
 import { getRandomKey } from "../../../helpers";
-import { MNEMONIC_NA } from "../../../../electron-constants";
-import { ethers } from "ethers";
+import styles from "./SeedWallet.module.scss";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export default function SeedWalletImport() {
@@ -29,7 +29,7 @@ export default function SeedWalletImport() {
               className="font-smaller d-flex align-items-center gap-2 decoration-none"
               href="/core/core-wallets">
               <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-              Back to Core Wallets
+              Back to 6529 Desktop Wallets
             </Link>
           </Col>
         </Row>

@@ -733,17 +733,19 @@ function getTokenTdh(
   );
 
   let tdh__raw = 0;
+  const daysHeldPerEdition: number[] = [];
   tokenDatesForWallet.forEach((e) => {
     const daysDiff = getDaysDiff(lastTDHCalc, e);
     if (daysDiff > 0) {
       tdh__raw += daysDiff;
+      daysHeldPerEdition.push(daysDiff);
     }
   });
 
   const balance = tokenDatesForWallet.length;
 
   hodlRate = Math.round(hodlRate * 100) / 100;
-  const tdh = Math.round(tdh__raw * hodlRate);
+  const tdh = Math.round(Math.round(hodlRate * tdh__raw * 1000) / 1000);
 
   if (tdh > 0 || balance > 0) {
     const tokenTDH: TokenTDH = {
@@ -752,6 +754,7 @@ function getTokenTdh(
       hodl_rate: hodlRate,
       tdh: tdh,
       tdh__raw: tdh__raw,
+      days_held_per_edition: daysHeldPerEdition,
     };
     return tokenTDH;
   }
