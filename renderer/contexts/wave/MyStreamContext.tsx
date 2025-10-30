@@ -1,6 +1,11 @@
 "use client";
 
 import { useNotificationsContext } from "@/components/notifications/NotificationsContext";
+import { ApiDrop } from "@/generated/models/ApiDrop";
+import { ApiLightDrop } from "@/generated/models/ApiLightDrop";
+import { Drop } from "@/helpers/waves/drop.helpers";
+import useCapacitor from "@/hooks/useCapacitor";
+import { useWebsocketStatus } from "@/services/websocket/useWebSocketMessage";
 import React, {
   createContext,
   ReactNode,
@@ -10,11 +15,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ApiDrop } from "../../generated/models/ApiDrop";
-import { ApiLightDrop } from "../../generated/models/ApiLightDrop";
-import { Drop } from "../../helpers/waves/drop.helpers";
-import useCapacitor from "../../hooks/useCapacitor";
-import { useWebsocketStatus } from "../../services/websocket/useWebSocketMessage";
 import { WaveMessages } from "./hooks/types";
 import { useActiveWaveManager } from "./hooks/useActiveWaveManager";
 import useEnhancedDmWavesList from "./hooks/useEnhancedDmWavesList";
@@ -110,6 +110,7 @@ export const MyStreamProvider: React.FC<MyStreamProviderProps> = ({
 
   // Instantiate the real-time updater hook
   const { processIncomingDrop, processDropRemoved } = useWaveRealtimeUpdater({
+    activeWaveId,
     getData: waveMessagesStore.getData,
     updateData: waveMessagesStore.updateData,
     registerWave: waveDataManager.registerWave,
