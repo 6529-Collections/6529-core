@@ -1,18 +1,18 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import DropPartMarkdownWithPropLogger from "@/components/drops/view/part/DropPartMarkdownWithPropLogger";
+import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import UserCICAndLevel, {
   UserCICAndLevelSize,
 } from "@/components/user/utils/UserCICAndLevel";
-import { cicToType } from "@/helpers/Helpers";
-import Link from "next/link";
 import { ApiDrop } from "@/generated/models/ApiDrop";
 import { ApiDropPart } from "@/generated/models/ApiDropPart";
-import DropPartMarkdownWithPropLogger from "@/components/drops/view/part/DropPartMarkdownWithPropLogger";
-import WaveDropTime from "./time/WaveDropTime";
+import { cicToType } from "@/helpers/Helpers";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 import Image from "next/image";
-import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
+import Link from "next/link";
+import React, { useEffect, useMemo, useState } from "react";
+import WaveDropTime from "./time/WaveDropTime";
 
 interface WaveDropQuoteProps {
   readonly drop: ApiDrop | null;
@@ -57,6 +57,7 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
             fill
             sizes="24px"
             className="tw-rounded-md tw-object-cover tw-bg-transparent"
+            unoptimized
           />
         </div>
       );
@@ -76,9 +77,10 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
   const waveHref = useMemo(() => {
     if (!drop) return "";
 
-    const waveDetails = (drop.wave as unknown as {
-      chat?: { scope?: { group?: { is_direct_message?: boolean } } };
-    }) ?? undefined;
+    const waveDetails =
+      (drop.wave as unknown as {
+        chat?: { scope?: { group?: { is_direct_message?: boolean } } };
+      }) ?? undefined;
 
     const isDirectMessage =
       waveDetails?.chat?.scope?.group?.is_direct_message ?? false;

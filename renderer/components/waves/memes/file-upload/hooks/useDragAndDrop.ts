@@ -19,7 +19,7 @@ interface UseDragAndDropProps {
  */
 interface DragAndDropHandlers {
   /** Reference to the drop area element */
-  dropAreaRef: React.RefObject<HTMLDivElement>;
+  dropAreaRef: React.RefObject<HTMLDivElement | null>;
   /** Handler for drag enter events */
   handleDragEnter: (e: React.DragEvent<HTMLDivElement>) => void;
   /** Handler for drag over events */

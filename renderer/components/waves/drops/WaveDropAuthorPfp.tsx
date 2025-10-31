@@ -1,9 +1,9 @@
- "use client";
+"use client";
 
-import React from "react";
-import Image from "next/image";
-import { ApiDrop } from "@/generated/models/ApiDrop";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
+import { ApiDrop } from "@/generated/models/ApiDrop";
+import Image from "next/image";
+import React from "react";
 
 interface WaveDropAuthorPfpProps {
   readonly drop: ApiDrop;
@@ -11,9 +11,12 @@ interface WaveDropAuthorPfpProps {
 
 const WaveDropAuthorPfp: React.FC<WaveDropAuthorPfpProps> = ({ drop }) => {
   // Check if this drop author has any main stage winner drop IDs
-  const isFirstPlace = drop.author.winner_main_stage_drop_ids && 
-                       drop.author.winner_main_stage_drop_ids.length > 0;
-  const shadowClass = isFirstPlace ? "tw-shadow-[0_1px_4px_rgba(251,191,36,0.15)]" : "";
+  const isFirstPlace =
+    drop.author.winner_main_stage_drop_ids &&
+    drop.author.winner_main_stage_drop_ids.length > 0;
+  const shadowClass = isFirstPlace
+    ? "tw-shadow-[0_1px_4px_rgba(251,191,36,0.15)]"
+    : "";
   const resolvedPfp = drop.author.pfp
     ? resolveIpfsUrlSync(drop.author.pfp)
     : null;
@@ -28,6 +31,7 @@ const WaveDropAuthorPfp: React.FC<WaveDropAuthorPfpProps> = ({ drop }) => {
           fill
           sizes="40px"
           className="tw-object-contain tw-rounded-lg tw-bg-transparent"
+          unoptimized
         />
       ) : (
         <div className="tw-h-full tw-w-full tw-bg-iron-900 tw-ring-1 tw-ring-inset tw-ring-white/10 tw-rounded-lg" />

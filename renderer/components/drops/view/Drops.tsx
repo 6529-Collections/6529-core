@@ -5,13 +5,13 @@ import SpinnerLoader from "@/components/common/SpinnerLoader";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { DropLocation } from "@/components/waves/drops/Drop";
 import { ApiDrop } from "@/generated/models/ApiDrop";
+import { getWaveRoute } from "@/helpers/navigation.helpers";
 import { DropSize, ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { commonApiFetch } from "@/services/api/common-api";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useContext, useEffect, useRef, useState } from "react";
-import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { getWaveRoute } from "@/helpers/navigation.helpers";
 import DropsList from "./DropsList";
 
 const REQUEST_SIZE = 10;
@@ -181,7 +181,7 @@ export default function Drops() {
         onQuote={() => {}}
         onReplyClick={() => {}}
         serialNo={null}
-        targetDropRef={undefined}
+        targetDropRef={null}
         showReplyAndQuote={false}
         activeDrop={null}
         onQuoteClick={onQuoteClick}

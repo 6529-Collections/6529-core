@@ -1,7 +1,7 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { Fragment, useEffect, useRef, useState } from "react";
 import {
   Accordion,
   Col,
@@ -21,7 +21,14 @@ import {
 } from "wagmi";
 import styles from "./Delegation.module.scss";
 
+import { DELEGATION_ABI } from "@/abis";
+import {
+  DELEGATION_ALL_ADDRESS,
+  DELEGATION_CONTRACT,
+  NULL_ADDRESS,
+} from "@/constants";
 import { DelegationCenterSection } from "@/enums";
+import { areEqualAddresses, getTransactionLink } from "@/helpers/Helpers";
 import {
   faCircleArrowLeft,
   faEdit,
@@ -34,15 +41,15 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { Tooltip } from "react-tooltip";
-import { DELEGATION_ABI } from "@/abis";
-import {
-  DELEGATION_ALL_ADDRESS,
-  DELEGATION_CONTRACT,
-  NULL_ADDRESS,
-} from "@/constants";
-import { areEqualAddresses, getTransactionLink } from "@/helpers/Helpers";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { Spinner } from "../dotLoader/DotLoader";
+import {
+  getDelegationsFromData,
+  getParams,
+  getReadParams,
+  type ContractDelegation,
+  type ContractWalletDelegation,
+} from "./CollectionDelegation.utils";
 import {
   ALL_USE_CASES,
   ANY_COLLECTION_PATH,
@@ -54,13 +61,6 @@ import {
   PRIMARY_ADDRESS_USE_CASE,
   SUB_DELEGATION_USE_CASE,
 } from "./delegation-constants";
-import {
-  getDelegationsFromData,
-  getParams,
-  getReadParams,
-  type ContractDelegation,
-  type ContractWalletDelegation,
-} from "./CollectionDelegation.utils";
 import { DelegationToast } from "./DelegationCenterMenu";
 import DelegationWallet from "./DelegationWallet";
 import NewAssignPrimaryAddress from "./NewAssignPrimaryAddress";
@@ -1648,7 +1648,8 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
                 </button>
               ) : (
                 <div>
-                  <span className={styles.hint}>* Note:</span> Unlock use case in{" "}
+                  <span className={styles.hint}>* Note:</span> Unlock use case
+                  in{" "}
                   <Link href={`/delegation/${ANY_COLLECTION_PATH}`}>
                     All Collections
                   </Link>
