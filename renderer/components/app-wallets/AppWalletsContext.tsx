@@ -47,12 +47,18 @@ export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
   const [appWalletsSupported, setAppWalletsSupported] = useState(false);
 
   useEffect(() => {
+    let cancelled = false;
+
     const initialize = async () => {
       return false;
     };
 
     initialize();
-  }, []); // Run only once on mount
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const createAppWallet = async (
     name: string,
@@ -84,7 +90,14 @@ export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
       importAppWallet,
       deleteAppWallet,
     }),
-    [fetchingAppWallets, appWallets, appWalletsSupported]
+    [
+      fetchingAppWallets,
+      appWallets,
+      appWalletsSupported,
+      createAppWallet,
+      importAppWallet,
+      deleteAppWallet,
+    ]
   );
 
   return (

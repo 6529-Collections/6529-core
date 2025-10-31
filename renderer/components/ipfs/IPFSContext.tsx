@@ -22,7 +22,9 @@ interface IpfsContextType {
 
 const IpfsContext = createContext<IpfsContextType | undefined>(undefined);
 
-const getEnv = async () => {
+let cachedGatewayBase: string | null = null;
+
+const readIpfsConfig = async () => {
   const ipfsInfo = await window.api.getIpfsInfo();
   const apiEndpoint = ipfsInfo.apiEndpoint;
   const gatewayEndpoint = ipfsInfo.gatewayEndpoint;
@@ -31,10 +33,26 @@ const getEnv = async () => {
     throw new Error("Missing IPFS_API_ENDPOINT or IPFS_GATEWAY_ENDPOINT");
   }
 
+  let trimmed = gatewayEndpoint;
+  while (trimmed.endsWith("/")) {
+    trimmed = trimmed.slice(0, -1);
+  }
+
+  const gatewayBase = trimmed.endsWith("/ipfs")
+    ? trimmed.slice(0, -5)
+    : trimmed;
+
   const mfsPath = ipfsInfo.mfsPath;
 
-  return { apiEndpoint, gatewayEndpoint, mfsPath };
+  return {
+    apiEndpoint,
+    gatewayEndpoint: trimmed,
+    gatewayBase,
+    mfsPath,
+  } as const;
 };
+
+const getEnv = async () => readIpfsConfig();
 
 export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -48,6 +66,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
 
     getEnv()
       .then((info) => {
+        cachedGatewayBase = info.gatewayBase;
         const service = new IpfsService({
           apiEndpoint: info.apiEndpoint,
           mfsPath: info.mfsPath,
@@ -81,14 +100,32 @@ export const useIpfsContext = (): IpfsContextType => {
   return context;
 };
 
+export const resolveIpfsUrlSync = (url: string) => {
+  if (!url.startsWith("ipfs://")) {
+    return url;
+  }
+
+  if (!cachedGatewayBase) {
+    console.warn("IPFS gateway not yet initialized, returning original URL");
+    return url;
+  }
+
+  return `${cachedGatewayBase}/ipfs/${url.slice(7)}`;
+};
+
 export const resolveIpfsUrl = async (url: string) => {
+  if (!url.startsWith("ipfs://")) {
+    return url;
+  }
+
   try {
-    if (url.startsWith("ipfs://")) {
-      const { gatewayEndpoint } = await getEnv();
-      return `${gatewayEndpoint}/ipfs/${url.slice(7)}`;
+    const info = await readIpfsConfig();
+    if (!cachedGatewayBase) {
+      cachedGatewayBase = info.gatewayBase;
     }
+    return `${info.gatewayBase}/ipfs/${url.slice(7)}`;
   } catch (error) {
     console.error("Error resolving IPFS URL", error);
+    return url;
   }
-  return url;
 };
