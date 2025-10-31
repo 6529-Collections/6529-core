@@ -78,13 +78,16 @@ export default function TitleBar() {
 
     const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
-      if (pathname !== url) {
+      const normalizedUrl = url.split("?")[0];
+      const normalizedPathname = pathname.split("?")[0];
+
+      if (normalizedPathname !== normalizedUrl) {
         router.push(url);
       } else {
-        const reloadUrl = url.includes("?")
-          ? `${url}&reload=true`
-          : `${url}?reload=true`;
-        router.push(reloadUrl);
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.set("reload", "true");
+        const reloadUrl = `${normalizedUrl}?${currentParams.toString()}`;
+        router.replace(reloadUrl, { scroll: false });
       }
     };
     window.api.onNavigate(handleNavigate);

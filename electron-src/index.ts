@@ -864,7 +864,7 @@ ipcMain.on(
       icon: pfp,
     });
     notification.on("click", () => {
-      mainWindow?.webContents.send("navigate", "/my-stream/notifications");
+      mainWindow?.webContents.send("navigate", "/notifications");
     });
     notification.show();
   }
