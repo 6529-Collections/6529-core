@@ -129,7 +129,7 @@ export default function AppWalletComponent(
         });
       }
     },
-    [account.address]
+    [account.address, deleteAppWallet, router, setToast]
   );
 
   if (fetchingAppWallets) {
