@@ -142,8 +142,13 @@ export const store = {
 contextBridge.exposeInMainWorld("store", store);
 
 export const notifications = {
-  showNotification: (id: number, pfp: string, message: string) =>
-    ipcRenderer.send("notifications:show", id, pfp, message),
+  showNotification: (
+    id: number,
+    pfp: string,
+    title: string,
+    body: string,
+    redirectPath: string
+  ) => ipcRenderer.send("notifications:show", id, pfp, title, body, redirectPath),
   setBadge: (count: number) =>
     ipcRenderer.send("notifications:set-badge", count),
 };

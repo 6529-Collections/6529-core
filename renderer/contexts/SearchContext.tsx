@@ -19,7 +19,7 @@ interface SearchContextType {
   current: number;
   next: () => void;
   prev: () => void;
-  containerRef: React.RefObject<HTMLDivElement>;
+  containerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const SearchContext = createContext<SearchContextType | null>(null);

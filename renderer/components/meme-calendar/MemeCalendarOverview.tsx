@@ -44,9 +44,7 @@ export default function MemeCalendarOverview({
   return (
     <div className="tw-flex tw-flex-col tw-gap-3">
       <div className="tw-h-full tw-flex tw-items-center tw-gap-3">
-        <h1>
-          The Memes Minting Calendar
-        </h1>
+        <h1>The Memes Minting Calendar</h1>
         {showViewAll && (
           <Link href={`/meme-calendar`} className="tw-no-underline">
             <span className="tw-whitespace-nowrap tw-text-sm tw-font-bold tw-border-b-[3px] tw-border-current hover:tw-text-[#bbb] max-[800px]:tw-text-[12px]">
@@ -80,7 +78,7 @@ const TopControls = memo(function TopControls(props: {
   canonicalNextMintNumber: number;
   selectedMintNumber: number;
   onSelect: (n: number) => void;
-  mintInputRef: React.RefObject<HTMLInputElement>;
+  mintInputRef: React.RefObject<HTMLInputElement | null>;
   onMintInputChange: (v: string) => void;
   onMintInputSubmit: (event: FormEvent<HTMLFormElement>) => void;
   onScreenshot: () => void;
