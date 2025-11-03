@@ -5,10 +5,9 @@ import UserCICAndLevel, {
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { SingleWaveDropPosition } from "@/components/waves/drop/SingleWaveDropPosition";
 import { cicToType } from "@/helpers/Helpers";
+import { ImageScale } from "@/helpers/image.helpers";
 import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import Link from "next/link";
-import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
-import { ImageScale } from "@/helpers/image.helpers";
 
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;

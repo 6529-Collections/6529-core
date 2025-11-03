@@ -141,6 +141,7 @@ function sharedConfig(publicEnv, assetPrefix) {
       loader: "default",
       domains: [
         "6529.io",
+        "staging.6529.io",
         "arweave.net",
         "localhost",
         "media.generator.seize.io",
