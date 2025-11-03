@@ -7,9 +7,8 @@ import { SingleWaveDropPosition } from "@/components/waves/drop/SingleWaveDropPo
 import { cicToType } from "@/helpers/Helpers";
 import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import Link from "next/link";
-import React from "react";
-import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
-import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
+import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
+import { ImageScale } from "@/helpers/image.helpers";
 
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;
@@ -86,6 +85,8 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
                 <DropListItemContentMedia
                   media_mime_type={artWork.mime_type}
                   media_url={artWork.url}
+                  imageScale={ImageScale.AUTOx450}
+                  isCompetitionDrop={true}
                 />
               )}
             </div>

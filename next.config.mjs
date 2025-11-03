@@ -150,6 +150,7 @@ function sharedConfig(publicEnv, assetPrefix) {
         "127.0.0.1",
       ],
       minimumCacheTTL: 86400,
+      formats: ["image/avif", "image/webp"],
       qualities: [100, 75],
     },
     transpilePackages: ["react-tweet"],
