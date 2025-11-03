@@ -7,6 +7,7 @@ import {
 import styles from "@/components/distribution-plan-tool/DistributionPlan.module.scss";
 import { DistributionPlanToolContext } from "@/components/distribution-plan-tool/DistributionPlanToolContext";
 import DistributionPlanAddOperationBtn from "@/components/distribution-plan-tool/common/DistributionPlanAddOperationBtn";
+import { openInExternalBrowser } from "@/helpers";
 import {
   getRandomObjectId,
   isEthereumAddress,
@@ -164,7 +165,7 @@ export default function CreateSnapshotForm() {
   };
 
   const goToEtherScan = () => {
-    window.open("https://etherscan.io/", "_blank");
+    openInExternalBrowser("https://etherscan.io/");
   };
 
   return (

@@ -8,6 +8,9 @@ import { cicToType } from "@/helpers/Helpers";
 import { ImageScale } from "@/helpers/image.helpers";
 import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
+import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
 
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;
@@ -26,6 +29,7 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
 }) => {
   const artWork = drop.parts.at(0)?.media.at(0);
   const cicType = cicToType(drop.author.cic || 0);
+  const router = useRouter();
 
   const handleClick = () => {
     if (window.getSelection()?.toString()) {
@@ -125,6 +129,7 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
+                  router.push(`/${drop.author.handle}`);
                 }}
                 className="tw-text-md tw-text-iron-200 desktop-hover:hover:tw-text-opacity-80 tw-transition-colors tw-duration-200 tw-no-underline desktop-hover:hover:tw-underline tw-font-medium tw-truncate">
                 {drop.author.handle}

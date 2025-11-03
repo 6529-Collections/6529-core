@@ -8,7 +8,9 @@ interface NotificationData {
   redirectPath: string;
 }
 
-type FindNativeEmoji = (emojiId: string) => { skins: { native: string }[] } | null;
+type FindNativeEmoji = (
+  emojiId: string
+) => { skins: { native: string }[] } | null;
 
 export function generateNotificationData(
   notification: ApiNotification,
@@ -43,8 +45,9 @@ export function generateNotificationData(
     if (!notification.related_drops?.length) return "/notifications";
     const drop = notification.related_drops[0];
     const waveId = drop.wave?.id;
+    const isDm = drop.wave?.admin_group_id?.startsWith("dm-");
     if (!waveId) return "/notifications";
-    const base = `/waves?wave=${waveId}`;
+    const base = isDm ? `/messages?wave=${waveId}` : `/waves?wave=${waveId}`;
     const serialNo = drop.serial_no;
     return serialNo ? `${base}&serialNo=${serialNo}` : base;
   };
@@ -138,9 +141,7 @@ export function generateNotificationData(
       const waveName = (wave as any)?.name ?? "a wave";
       const waveId =
         (notification.additional_context as any)?.wave_id ?? wave?.id;
-      const redirectPath = waveId
-        ? `/waves?wave=${waveId}`
-        : "/notifications";
+      const redirectPath = waveId ? `/waves?wave=${waveId}` : "/notifications";
       notificationData = {
         title: `${handle} invited you to a wave: ${waveName}`,
         body: "View wave",
@@ -182,9 +183,7 @@ export function generateNotificationData(
     return null;
   }
 
-  let title = emojify(
-    notificationData.title.replace(/@\[(.+?)\]/g, "@$1")
-  );
+  let title = emojify(notificationData.title.replace(/@\[(.+?)\]/g, "@$1"));
   let body = emojify(notificationData.body.replace(/@\[(.+?)\]/g, "@$1"));
 
   return {

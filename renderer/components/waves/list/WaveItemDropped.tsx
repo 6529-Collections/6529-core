@@ -1,41 +1,40 @@
 "use client";
 
-import { MouseEvent, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { ApiWave } from "@/generated/models/ApiWave";
+import { openInExternalBrowser } from "@/helpers";
 import { numberWithCommas } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import { useRouter } from "next/navigation";
+import { MouseEvent, useCallback } from "react";
 
 export default function WaveItemDropped({ wave }: { readonly wave: ApiWave }) {
   const contributors = wave.contributors_overview ?? [];
   const router = useRouter();
 
   const handleContributorClick = useCallback(
-    (href: string) =>
-      (event: MouseEvent<HTMLButtonElement>) => {
-        if (event.metaKey || event.ctrlKey) {
-          event.preventDefault();
-          event.stopPropagation();
-          window.open(href, "_blank", "noopener,noreferrer");
-          return;
-        }
+    (href: string) => (event: MouseEvent<HTMLButtonElement>) => {
+      if (event.metaKey || event.ctrlKey) {
         event.preventDefault();
         event.stopPropagation();
         router.push(href);
-      },
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      router.push(href);
+    },
     [router]
   );
 
   const handleContributorAuxClick = useCallback(
-    (href: string) =>
-      (event: MouseEvent<HTMLButtonElement>) => {
-        if (event.button !== 1) {
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        window.open(href, "_blank", "noopener,noreferrer");
-      },
+    (href: string) => (event: MouseEvent<HTMLButtonElement>) => {
+      if (event.button !== 1) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      openInExternalBrowser(href);
+    },
     []
   );
 
@@ -43,7 +42,9 @@ export default function WaveItemDropped({ wave }: { readonly wave: ApiWave }) {
     <div className="tw-flex tw-items-center tw-gap-x-2 tw-min-w-0">
       <div className="tw-hidden @[320px]/wave:tw-flex tw-items-center -tw-space-x-1 tw-flex-shrink">
         {contributors.map((c, index) => {
-          const baseKey = `${c.contributor_identity ?? "anon"}-${c.contributor_pfp ?? "no-pfp"}-${index}`;
+          const baseKey = `${c.contributor_identity ?? "anon"}-${
+            c.contributor_pfp ?? "no-pfp"
+          }-${index}`;
           const contributorHref = c.contributor_identity
             ? `/${c.contributor_identity}`
             : undefined;
@@ -88,8 +89,7 @@ export default function WaveItemDropped({ wave }: { readonly wave: ApiWave }) {
                     c.contributor_identity
                       ? `View @${c.contributor_identity}`
                       : "View contributor profile"
-                  }
-                >
+                  }>
                   {avatar}
                 </button>
               ) : (
