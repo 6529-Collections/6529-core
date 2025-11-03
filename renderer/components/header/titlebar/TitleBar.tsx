@@ -115,7 +115,6 @@ export default function TitleBar() {
 
       const href = link.getAttribute("href");
       if (!href || href === "#") return;
-
       if (link.target === "_blank" || link.hasAttribute("download")) return;
 
       try {
@@ -123,85 +122,22 @@ export default function TitleBar() {
           href.startsWith("/") || href.startsWith("?")
             ? new URL(href, window.location.origin)
             : new URL(href);
-
         const currentUrl = new URL(window.location.href);
 
-        const isExternal = url.origin !== currentUrl.origin;
-        if (isExternal) return;
-
-        const willNavigate =
-          url.pathname !== currentUrl.pathname ||
-          url.search !== currentUrl.search;
-
-        if (willNavigate) {
+        if (
+          url.origin === currentUrl.origin &&
+          (url.pathname !== currentUrl.pathname ||
+            url.search !== currentUrl.search)
+        ) {
           setNavigationLoading(true);
         }
       } catch {
-        const willNavigate = href.startsWith("/") && href !== pathname;
-
-        if (willNavigate) {
+        if (href.startsWith("/") && href !== pathname) {
           setNavigationLoading(true);
         }
       }
     };
 
-    document.addEventListener("click", handleLinkClick, true);
-
-    return () => {
-      document.removeEventListener("click", handleLinkClick, true);
-    };
-  }, [pathname]);
-
-  useEffect(() => {
-    const currentUrl = window.location.pathname + window.location.search;
-    const currentPathname = pathname;
-    const currentSearchParams = searchParams?.toString() || "";
-    const expectedUrl =
-      currentPathname + (currentSearchParams ? `?${currentSearchParams}` : "");
-
-    const prevPathname = prevPathnameRef.current;
-    const prevSearchParams = prevSearchParamsRef.current;
-    const pathnameChanged = currentPathname !== prevPathname;
-    const searchParamsChanged = currentSearchParams !== prevSearchParams;
-
-    if (currentUrl !== expectedUrl) {
-      setNavigationLoading(true);
-      const timeoutId = setTimeout(() => {
-        setNavigationLoading(false);
-      }, 5000);
-      return () => clearTimeout(timeoutId);
-    } else if (pathnameChanged || searchParamsChanged) {
-      if (pathnameChanged) {
-        prevPathnameRef.current = currentPathname;
-      }
-      if (searchParamsChanged) {
-        prevSearchParamsRef.current = currentSearchParams;
-      }
-
-      let frame1Id: number;
-      let frame2Id: number;
-      
-      frame1Id = requestAnimationFrame(() => {
-        frame2Id = requestAnimationFrame(() => {
-          setNavigationLoading(false);
-        });
-      });
-
-      const timeoutId = setTimeout(() => {
-        if (frame1Id) cancelAnimationFrame(frame1Id);
-        if (frame2Id) cancelAnimationFrame(frame2Id);
-        setNavigationLoading(false);
-      }, 2000);
-
-      return () => {
-        if (frame1Id) cancelAnimationFrame(frame1Id);
-        if (frame2Id) cancelAnimationFrame(frame2Id);
-        clearTimeout(timeoutId);
-      };
-    }
-  }, [pathname, searchParams]);
-
-  useEffect(() => {
     const handlePopState = () => {
       setNavigationLoading(true);
     };
@@ -219,14 +155,37 @@ export default function TitleBar() {
       return originalReplaceState.apply(history, args);
     };
 
+    document.addEventListener("click", handleLinkClick, true);
     window.addEventListener("popstate", handlePopState);
 
     return () => {
+      document.removeEventListener("click", handleLinkClick, true);
+      window.removeEventListener("popstate", handlePopState);
       history.pushState = originalPushState;
       history.replaceState = originalReplaceState;
-      window.removeEventListener("popstate", handlePopState);
     };
-  }, []);
+  }, [pathname]);
+
+  useEffect(() => {
+    const currentPathname = pathname;
+    const currentSearchParams = searchParams?.toString() || "";
+    const prevPathname = prevPathnameRef.current;
+    const prevSearchParams = prevSearchParamsRef.current;
+
+    const pathnameChanged = currentPathname !== prevPathname;
+    const searchParamsChanged = currentSearchParams !== prevSearchParams;
+
+    if (pathnameChanged || searchParamsChanged) {
+      prevPathnameRef.current = currentPathname;
+      prevSearchParamsRef.current = currentSearchParams;
+
+      const timeoutId = setTimeout(() => {
+        setNavigationLoading(false);
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [pathname, searchParams]);
 
   const handleOpenSearch = () => {
     if (navigationLoading) return;
