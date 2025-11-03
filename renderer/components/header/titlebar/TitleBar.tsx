@@ -16,8 +16,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Cookies from "js-cookie";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import styles from "./TitleBar.module.scss";
 import TooltipButton from "./TooltipButton";
@@ -31,8 +31,12 @@ const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 export default function TitleBar() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isOpen, open, close } = useSearch();
   const { globalRefresh } = useGlobalRefresh();
+
+  const prevPathnameRef = useRef(pathname);
+  const prevSearchParamsRef = useRef(searchParams?.toString() || "");
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -78,6 +82,7 @@ export default function TitleBar() {
 
     const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
+      setNavigationLoading(true);
       const normalizedUrl = url.split("?")[0];
       const normalizedPathname = pathname.split("?")[0];
 
@@ -101,7 +106,130 @@ export default function TitleBar() {
     };
   }, [pathname, router]);
 
+  useEffect(() => {
+    const handleLinkClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const link = target.closest("a");
+
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href || href === "#") return;
+
+      if (link.target === "_blank" || link.hasAttribute("download")) return;
+
+      try {
+        const url =
+          href.startsWith("/") || href.startsWith("?")
+            ? new URL(href, window.location.origin)
+            : new URL(href);
+
+        const currentUrl = new URL(window.location.href);
+
+        const isExternal = url.origin !== currentUrl.origin;
+        if (isExternal) return;
+
+        const willNavigate =
+          url.pathname !== currentUrl.pathname ||
+          url.search !== currentUrl.search;
+
+        if (willNavigate) {
+          setNavigationLoading(true);
+        }
+      } catch {
+        const willNavigate = href.startsWith("/") && href !== pathname;
+
+        if (willNavigate) {
+          setNavigationLoading(true);
+        }
+      }
+    };
+
+    document.addEventListener("click", handleLinkClick, true);
+
+    return () => {
+      document.removeEventListener("click", handleLinkClick, true);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const currentUrl = window.location.pathname + window.location.search;
+    const currentPathname = pathname;
+    const currentSearchParams = searchParams?.toString() || "";
+    const expectedUrl =
+      currentPathname + (currentSearchParams ? `?${currentSearchParams}` : "");
+
+    const prevPathname = prevPathnameRef.current;
+    const prevSearchParams = prevSearchParamsRef.current;
+    const pathnameChanged = currentPathname !== prevPathname;
+    const searchParamsChanged = currentSearchParams !== prevSearchParams;
+
+    if (currentUrl !== expectedUrl) {
+      setNavigationLoading(true);
+      const timeoutId = setTimeout(() => {
+        setNavigationLoading(false);
+      }, 5000);
+      return () => clearTimeout(timeoutId);
+    } else if (pathnameChanged || searchParamsChanged) {
+      if (pathnameChanged) {
+        prevPathnameRef.current = currentPathname;
+      }
+      if (searchParamsChanged) {
+        prevSearchParamsRef.current = currentSearchParams;
+      }
+
+      let frame1Id: number;
+      let frame2Id: number;
+      
+      frame1Id = requestAnimationFrame(() => {
+        frame2Id = requestAnimationFrame(() => {
+          setNavigationLoading(false);
+        });
+      });
+
+      const timeoutId = setTimeout(() => {
+        if (frame1Id) cancelAnimationFrame(frame1Id);
+        if (frame2Id) cancelAnimationFrame(frame2Id);
+        setNavigationLoading(false);
+      }, 2000);
+
+      return () => {
+        if (frame1Id) cancelAnimationFrame(frame1Id);
+        if (frame2Id) cancelAnimationFrame(frame2Id);
+        clearTimeout(timeoutId);
+      };
+    }
+  }, [pathname, searchParams]);
+
+  useEffect(() => {
+    const handlePopState = () => {
+      setNavigationLoading(true);
+    };
+
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function (...args) {
+      setNavigationLoading(true);
+      return originalPushState.apply(history, args);
+    };
+
+    history.replaceState = function (...args) {
+      setNavigationLoading(true);
+      return originalReplaceState.apply(history, args);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
+
   const handleOpenSearch = () => {
+    if (navigationLoading) return;
     if (isOpen) {
       close();
     } else {
@@ -110,24 +238,21 @@ export default function TitleBar() {
   };
 
   const handleBack = () => {
-    if (canGoBack) {
-      setNavigationLoading(true);
-      window.api.goBack();
-    }
+    if (navigationLoading || !canGoBack) return;
+    setNavigationLoading(true);
+    window.api.goBack();
   };
 
   const handleForward = () => {
-    if (canGoForward) {
-      setNavigationLoading(true);
-      window.api.goForward();
-    }
+    if (navigationLoading || !canGoForward) return;
+    setNavigationLoading(true);
+    window.api.goForward();
   };
 
   const handleRefresh = () => {
-    if (!navigationLoading) {
-      setNavigationLoading(true);
-      globalRefresh();
-    }
+    if (navigationLoading) return;
+    setNavigationLoading(true);
+    globalRefresh();
   };
 
   useEffect(() => {
@@ -147,6 +272,7 @@ export default function TitleBar() {
   }, []);
 
   const handleScrollTop = () => {
+    if (navigationLoading) return;
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -213,7 +339,7 @@ export default function TitleBar() {
         />
         <TooltipButton
           buttonStyles={`${styles.button} ${
-            canGoBack ? styles.enabled : styles.disabled
+            canGoBack && !navigationLoading ? styles.enabled : styles.disabled
           }`}
           onClick={handleBack}
           icon={faArrowLeft}
@@ -221,7 +347,9 @@ export default function TitleBar() {
         />
         <TooltipButton
           buttonStyles={`${styles.button} ${
-            canGoForward ? styles.enabled : styles.disabled
+            canGoForward && !navigationLoading
+              ? styles.enabled
+              : styles.disabled
           }`}
           onClick={handleForward}
           icon={faArrowRight}
@@ -257,7 +385,9 @@ export default function TitleBar() {
         />
         {showScrollTop && (
           <TooltipButton
-            buttonStyles={`${styles.button} ${styles.enabled}`}
+            buttonStyles={`${styles.button} ${
+              navigationLoading ? styles.disabled : styles.enabled
+            }`}
             onClick={handleScrollTop}
             icon={faAnglesUp}
             content="Scroll to top"
@@ -279,9 +409,9 @@ export default function TitleBar() {
       <TooltipButton
         buttonStyles={`${styles.info} ${
           isMac() ? styles.infoMac : styles.infoWin
-        }`}
+        } ${navigationLoading ? styles.disabled : ""}`}
         placement="left"
-        onClick={() => router.push("/core/core-info")}
+        onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}

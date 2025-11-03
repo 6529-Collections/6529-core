@@ -1,6 +1,8 @@
 "use client";
 
-import { Spinner } from "@/components/dotLoader/DotLoader";
+import CircleLoader, {
+  CircleLoaderSize,
+} from "@/components/distribution-plan-tool/common/CircleLoader";
 import { ConsolidatedTDH } from "@/entities/ITDH";
 import { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
@@ -138,7 +140,7 @@ export default function UserPageHeaderStats({
           <span className="font-bolder tw-flex tw-items-center tw-gap-x-3">
             {fetchingTdhConsensus ? (
               <>
-                <Spinner dimension={30} /> Fetching
+                <CircleLoader size={CircleLoaderSize.SMALL} /> Fetching
               </>
             ) : (
               <>
