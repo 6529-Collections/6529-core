@@ -266,6 +266,8 @@ function DropListItemContentMediaImage({
     </div>
   );
 
+  const imageObjectPosition = isCompetitionDrop ? "center" : "left top";
+
   return (
     <>
       <div
@@ -287,10 +289,15 @@ function DropListItemContentMediaImage({
             primarySrc={getScaledImageUri(src, imageScale)}
             fallbackSrc={src}
             alt="Drop media"
-            className={`tw-object-contain tw-max-w-full tw-max-h-full ${
+            fill
+            sizes="(max-width: 768px) 100vw, 768px"
+            className={`tw-max-w-full tw-max-h-full ${
               !loaded ? "tw-opacity-0" : "tw-opacity-100"
             } tw-cursor-pointer`}
-            decoding="async"
+            style={{
+              objectFit: "contain",
+              objectPosition: imageObjectPosition,
+            }}
             onLoad={handleImageLoad}
             onClick={handleImageClick}
             onError={handleError}
