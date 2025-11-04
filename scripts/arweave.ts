@@ -1,11 +1,9 @@
 import Arweave from "arweave";
-
 require("dotenv").config();
 
 let arweaveAndKey: { arweave: Arweave; key: any } | null = null;
 
 function ensureKeyIntegrity(key: any) {
-  // Fail fast if the JWK is malformed/rotated without private parts
   for (const part of ["n", "e", "d", "p", "q", "dp", "dq", "qi"]) {
     if (!key || !key[part]) {
       throw new Error(`ARWEAVE_KEY missing "${part}"`);
@@ -61,47 +59,37 @@ export class ArweaveFileUploader {
     contentType: string
   ): Promise<{ url: string }> {
     const { arweave, key } = this.arweaveAndKeySupplier();
+    const addr = await arweave.wallets.jwkToAddress(key);
+    console.log("Uploader address:", addr);
     console.log("Arweave Uploading", name, fileBuffer.length);
 
-    // Create tx with the exact bytes you intend to upload
-    const tx = await arweave.createTransaction({ data: fileBuffer });
+    // 1) Create tx with data (SDK sets reward internally)
+    const tx = await withRetries(() =>
+      arweave.createTransaction({ data: fileBuffer })
+    );
 
-    // Tags BEFORE signing
+    // 2) Add tags BEFORE signing
     tx.addTag("Content-Type", contentType);
 
-    // Get anchor and price explicitly (avoid implicit mutations inside SDK)
-    const lastTx = await withRetries(() =>
-      arweave.transactions.getTransactionAnchor()
-    );
-    const reward = await withRetries(() =>
-      arweave.transactions.getPrice(fileBuffer.length).then((n) => n.toString())
-    );
+    // 3) Sign ONCE; no mutations after this
+    await withRetries(() => arweave.transactions.sign(tx, key));
 
-    // Override readonly TS fields via Object.assign (runtime is writable)
-    Object.assign(tx, { last_tx: lastTx, reward });
-
-    // Sign ONCE; do not mutate tx after this
-    await arweave.transactions.sign(tx, key);
-
-    // Upload chunks based on the signed tx
+    // 4) Upload via chunked uploader (SDK manages last_tx / anchors)
     const uploader = await arweave.transactions.getUploader(tx);
+    let lastLogged = -1;
 
-    let lastLoggedPercent = -1;
     while (!uploader.isComplete) {
-      await uploader.uploadChunk();
-
+      await withRetries(() => uploader.uploadChunk());
       const pct = Math.floor(uploader.pctComplete);
-      if (pct > lastLoggedPercent) {
-        lastLoggedPercent = pct;
+      if (pct > lastLogged) {
+        lastLogged = pct;
         console.info(
-          `Arweave upload ${tx.id} ${uploader.pctComplete}% ` +
-            `(${uploader.uploadedChunks}/${uploader.totalChunks})`
+          `Arweave upload ${tx.id} ${uploader.pctComplete}% (${uploader.uploadedChunks}/${uploader.totalChunks})`
         );
       }
     }
 
-    const url = `https://arweave.net/${tx.id}`;
-    return { url };
+    return { url: `https://arweave.net/${tx.id}` };
   }
 }
 
