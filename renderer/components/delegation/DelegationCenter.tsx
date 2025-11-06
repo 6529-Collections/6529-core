@@ -15,7 +15,7 @@ import { DelegationCenterSection } from "@/enums";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { useEffect, useEffectEvent, useState } from "react";
 import { SUPPORTED_COLLECTIONS } from "./delegation-constants";
 interface Props {
   setSection(section: DelegationCenterSection): any;
@@ -23,24 +23,43 @@ interface Props {
 
 export default function DelegationCenterComponent(props: Readonly<Props>) {
   const [redirect, setRedirect] = useState<DelegationCenterSection>();
-  const { seizeConnect, isConnected } = useSeizeConnectContext();
+  const { isConnected, seizeConnect, seizeConnectOpen } =
+    useSeizeConnectContext();
+  const [openConnect, setOpenConnect] = useState(false);
+  const { setSection } = props;
+
+  const handleRedirect = useEffectEvent((target: DelegationCenterSection) => {
+    if (!isConnected) {
+      setOpenConnect(true);
+      seizeConnect();
+      return;
+    }
+
+    setSection(target);
+  });
+
+  const handleSeizeConnectClosed = useEffectEvent(() => {
+    if (openConnect && redirect && isConnected) {
+      setSection(redirect);
+    }
+
+    setRedirect(undefined);
+  });
 
   useEffect(() => {
-    if (redirect) {
-      if (!isConnected) {
-        seizeConnect();
-      } else {
-        props.setSection(redirect);
-      }
+    if (!redirect) {
+      return;
     }
+
+    handleRedirect(redirect);
   }, [redirect]);
 
   useEffect(() => {
-    if (isConnected && redirect) {
-      props.setSection(redirect);
+    if (!seizeConnectOpen) {
+      handleSeizeConnectClosed();
     }
     setRedirect(undefined);
-  }, [isConnected]);
+  }, [seizeConnectOpen]);
 
   function printCollectionSelection() {
     return (
@@ -103,9 +122,7 @@ export default function DelegationCenterComponent(props: Readonly<Props>) {
     <Container>
       <Row className="pb-2">
         <Col>
-          <h1>
-            Delegation Center
-          </h1>
+          <h1>Delegation Center</h1>
         </Col>
       </Row>
       <Row>

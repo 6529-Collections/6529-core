@@ -5,8 +5,10 @@ import { openInExternalBrowser } from "@/helpers";
 import { getRandomColorWithSeed, numberWithCommas } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
-import { faComments, faUsers } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  ChatBubbleLeftRightIcon,
+  UserGroupIcon,
+} from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -16,7 +18,6 @@ import {
   useCallback,
   useId,
 } from "react";
-import { Tooltip } from "react-tooltip";
 import WaveItemDropped from "./WaveItemDropped";
 import WaveItemFollow from "./WaveItemFollow";
 
@@ -167,8 +168,7 @@ export default function WaveItem({
 
   const followersContent = (
     <>
-      <FontAwesomeIcon
-        icon={faUsers}
+      <UserGroupIcon
         aria-hidden="true"
         className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-text-iron-400"
       />
@@ -358,8 +358,7 @@ export default function WaveItem({
       <div className="tw-mt-2 tw-flex tw-items-center tw-justify-between tw-px-3 tw-pt-3">
         <div className="tw-flex tw-items-center tw-gap-4">
           <div className="tw-text-sm tw-flex tw-items-center tw-gap-x-2 tw-text-iron-200">
-            <FontAwesomeIcon
-              icon={faComments}
+            <ChatBubbleLeftRightIcon
               aria-hidden="true"
               className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-text-iron-400"
             />
