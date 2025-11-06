@@ -18,6 +18,7 @@ import {
   useCallback,
   useId,
 } from "react";
+import { Tooltip } from "react-tooltip";
 import WaveItemDropped from "./WaveItemDropped";
 import WaveItemFollow from "./WaveItemFollow";
 
