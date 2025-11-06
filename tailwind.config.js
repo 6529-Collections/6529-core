@@ -116,6 +116,10 @@ module.exports = {
             transform: "translateY(0) perspective(1000px) rotateX(0)",
           },
         },
+        "fade-in-out": {
+          "0%": { opacity: "0.8" },
+          "100%": { opacity: "0.4" },
+        },
       },
       animation: {
         "loading-bar": "loading-bar 1.5s infinite",
@@ -127,6 +131,7 @@ module.exports = {
         shake: "shake 0.3s ease-in-out",
         "gallery-reveal":
           "gallery-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
+        "fade-in-out": "fade-in-out 2s ease-in-out infinite alternate",
       },
       backgroundSize: {
         "gradient-pos": "200% 200%",

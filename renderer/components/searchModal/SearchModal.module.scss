@@ -68,24 +68,24 @@
 }
 
 .modalButton {
-  background-color: variables.$very-dark-grey;
+  background-color: variables.$very-dark-grey !important;
   border: none !important;
   border-radius: 0;
 
   &:hover,
   &:active {
-    background-color: black !important;
+    background-color: variables.$dark-grey !important;
   }
 }
 
 .modalButtonClear {
-  background-color: transparent;
+  background-color: transparent !important;
   border-color: variables.$dark-grey;
   color: variables.$dark-grey !important;
   border-radius: 0;
 
   &:hover {
-    background-color: transparent !important;
+    background-color: variables.$off-white !important;
     color: black !important;
     border-color: black !important;
   }
@@ -103,13 +103,13 @@
 
 .modalButtonDone {
   float: right;
-  border-color: variables.$very-dark-grey;
-  background-color: variables.$very-dark-grey;
+  border-color: variables.$very-dark-grey !important;
+  background-color: variables.$very-dark-grey !important;
   color: variables.$font-color;
   border-radius: 0;
 
   &:hover {
-    background-color: variables.$dark-grey;
+    background-color: variables.$dark-grey !important;
     border-color: variables.$dark-grey;
   }
 }

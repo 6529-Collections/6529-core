@@ -1,5 +1,14 @@
 "use client";
 
+import { ApiWave } from "@/generated/models/ApiWave";
+import { openInExternalBrowser } from "@/helpers";
+import { getRandomColorWithSeed, numberWithCommas } from "@/helpers/Helpers";
+import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import { getWaveRoute } from "@/helpers/navigation.helpers";
+import { faComments, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   KeyboardEvent,
   MouseEvent,
@@ -7,17 +16,9 @@ import {
   useCallback,
   useId,
 } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faComments, faUsers } from "@fortawesome/free-solid-svg-icons";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { ApiWave } from "@/generated/models/ApiWave";
-import { getRandomColorWithSeed, numberWithCommas } from "@/helpers/Helpers";
-import { getWaveRoute } from "@/helpers/navigation.helpers";
+import { Tooltip } from "react-tooltip";
 import WaveItemDropped from "./WaveItemDropped";
 import WaveItemFollow from "./WaveItemFollow";
-import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
-import { Tooltip } from "react-tooltip";
 
 const LEVEL_CLASSES: ReadonlyArray<{
   readonly minLevel: number;
@@ -99,8 +100,7 @@ function CardContainer({
         className={className}
         aria-label={ariaLabel}
         onClick={onClick}
-        onKeyDown={onKeyDown}
-      >
+        onKeyDown={onKeyDown}>
         {children}
       </Link>
     );
@@ -122,9 +122,8 @@ function getCardLabel(href?: string, label?: string | null) {
 
 function resolveLevelClasses(level?: number | null) {
   return (
-    LEVEL_CLASSES.find(
-      (levelClass) => levelClass.minLevel <= (level ?? 0)
-    )?.classes ?? DEFAULT_LEVEL_CLASS
+    LEVEL_CLASSES.find((levelClass) => levelClass.minLevel <= (level ?? 0))
+      ?.classes ?? DEFAULT_LEVEL_CLASS
   );
 }
 
@@ -184,9 +183,7 @@ export default function WaveItem({
     <img
       className="tw-h-full tw-w-full tw-rounded-md tw-object-cover tw-bg-iron-800 tw-ring-1 tw-ring-white/10 desktop-hover:group-hover/author:tw-ring-white/30 desktop-hover:group-hover/author:tw-ring-offset-1 desktop-hover:group-hover/author:tw-ring-offset-iron-950 tw-transition tw-duration-300 tw-ease-out"
       src={getScaledImageUri(author.pfp, ImageScale.W_AUTO_H_50)}
-      alt={
-        author?.handle ? `${author.handle} avatar` : "Author avatar"
-      }
+      alt={author?.handle ? `${author.handle} avatar` : "Author avatar"}
       loading="lazy"
       decoding="async"
     />
@@ -198,8 +195,7 @@ export default function WaveItem({
     <div
       className={`${resolveLevelClasses(
         author?.level
-      )} tw-border-none tw-inline-flex tw-items-center tw-rounded-xl tw-bg-transparent tw-px-2 tw-py-1 tw-font-semibold tw-ring-2 tw-ring-inset tw-text-[0.625rem] tw-leading-3`}
-    >
+      )} tw-border-none tw-inline-flex tw-items-center tw-rounded-xl tw-bg-transparent tw-px-2 tw-py-1 tw-font-semibold tw-ring-2 tw-ring-inset tw-text-[0.625rem] tw-leading-3`}>
       Level {authorLevel}
     </div>
   );
@@ -218,7 +214,7 @@ export default function WaveItem({
       if (event.metaKey || event.ctrlKey) {
         event.preventDefault();
         event.stopPropagation();
-        window.open(authorHref, "_blank", "noopener,noreferrer");
+        router.push(authorHref);
         return;
       }
       event.preventDefault();
@@ -235,7 +231,7 @@ export default function WaveItem({
       }
       event.preventDefault();
       event.stopPropagation();
-      window.open(authorHref, "_blank", "noopener,noreferrer");
+      openInExternalBrowser(authorHref);
     },
     [authorHref]
   );
@@ -259,11 +255,8 @@ export default function WaveItem({
         onAuxClick={handleAuthorAuxClick}
         className={`${authorWrapperClass} tw-cursor-pointer tw-no-underline tw-bg-transparent tw-border-none tw-p-0 tw-text-left`}
         aria-label={
-          author?.handle
-            ? `View @${author.handle}`
-            : "View author profile"
-        }
-      >
+          author?.handle ? `View @${author.handle}` : "View author profile"
+        }>
         <div className="tw-h-6 tw-w-6 tw-flex-shrink-0">{authorAvatar}</div>
         <span className={linkedAuthorNameClass}>
           {author?.handle ?? userPlaceholder}
@@ -323,8 +316,7 @@ export default function WaveItem({
       href={waveHref}
       ariaLabel={cardLabel}
       onClick={handleCardClick}
-      onKeyDown={handleCardKeyDown}
-    >
+      onKeyDown={handleCardKeyDown}>
       <div className="tw-relative tw-overflow-hidden tw-rounded-xl tw-aspect-[16/8.5] sm:tw-aspect-[16/9]">
         <div
           className="tw-absolute tw-inset-0 tw-rounded-xl"
@@ -361,9 +353,7 @@ export default function WaveItem({
         </div>
       </div>
 
-      <div className="tw-px-3 tw-pt-3">
-        {authorSection}
-      </div>
+      <div className="tw-px-3 tw-pt-3">{authorSection}</div>
 
       <div className="tw-mt-2 tw-flex tw-items-center tw-justify-between tw-px-3 tw-pt-3">
         <div className="tw-flex tw-items-center tw-gap-4">
@@ -379,8 +369,7 @@ export default function WaveItem({
           {waveHref && followersTooltipId ? (
             <span
               className="tw-text-sm tw-flex tw-items-center tw-gap-x-2 tw-text-iron-200 tw-no-underline tw-relative tw-z-20 tw-pointer-events-auto"
-              data-tooltip-id={followersTooltipId}
-            >
+              data-tooltip-id={followersTooltipId}>
               {followersContent}
             </span>
           ) : (
@@ -399,8 +388,7 @@ export default function WaveItem({
               backgroundColor: "#1F2937",
               color: "white",
               padding: "4px 8px",
-            }}
-          >
+            }}>
             <span className="tw-text-xs">Joined</span>
           </Tooltip>
         )}
@@ -419,8 +407,7 @@ export default function WaveItem({
           {wave && (
             <div
               data-wave-item-interactive="true"
-              className="tw-relative tw-z-20 tw-pointer-events-auto"
-            >
+              className="tw-relative tw-z-20 tw-pointer-events-auto">
               <WaveItemFollow wave={wave} />
             </div>
           )}

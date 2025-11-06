@@ -1,3 +1,5 @@
+import { useRouter } from "next/navigation";
+
 const LEVEL_CLASSES: { minLevel: number; classes: string }[] = [
   { minLevel: 0, classes: "tw-text-[#DA8C60] tw-ring-[#DA8C60]" },
   { minLevel: 20, classes: "tw-text-[#DAAC60] tw-ring-[#DAAC60]" },
@@ -15,6 +17,7 @@ export default function UserLevel({
   readonly size?: "xxs" | "xs" | "sm" | "base";
   readonly asSpan?: boolean;
 }) {
+  const router = useRouter();
   const getColorClasses = () =>
     LEVEL_CLASSES.find((levelClass) => levelClass.minLevel <= level)?.classes ??
     LEVEL_CLASSES[0].classes;
@@ -34,7 +37,7 @@ export default function UserLevel({
 
   const classes = `${getColorClasses()} ${getSizeClasses()}`;
   const openLevelsPage = () => {
-    window.open("/network/levels");
+    router.push("/network/levels");
   };
 
   const content = `Level ${level}`;

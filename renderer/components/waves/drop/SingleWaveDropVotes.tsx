@@ -1,14 +1,14 @@
- "use client";
+"use client";
 
-import React from "react";
+import DropVoteProgressing from "@/components/drops/view/utils/DropVoteProgressing";
+import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { ApiDrop } from "@/generated/models/ObjectSerializer";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
-import { Tooltip } from "react-tooltip";
-import Link from "next/link";
-import DropVoteProgressing from "@/components/drops/view/utils/DropVoteProgressing";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import Image from "next/image";
-import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
+import Link from "next/link";
+import React from "react";
+import { Tooltip } from "react-tooltip";
 
 interface SingleWaveDropVotesProps {
   readonly drop: ApiDrop;
@@ -37,8 +37,7 @@ export const SingleWaveDropVotes: React.FC<SingleWaveDropVotesProps> = ({
         <span
           className={`tw-text-sm tw-font-semibold ${
             isPositive ? "tw-text-emerald-500" : "tw-text-rose-500"
-          } `}
-        >
+          } `}>
           {formatNumberWithCommas(drop.rating)}
         </span>
         <DropVoteProgressing
@@ -63,11 +62,12 @@ export const SingleWaveDropVotes: React.FC<SingleWaveDropVotesProps> = ({
                       fill
                       sizes="24px"
                       data-tooltip-id={`wave-voter-${voter.profile.handle}`}
+                      unoptimized
                     />
                   </div>
                 ) : (
-                  <div 
-                    className="tw-size-6 tw-rounded-md tw-ring-2 tw-ring-iron-950 tw-bg-iron-800" 
+                  <div
+                    className="tw-size-6 tw-rounded-md tw-ring-2 tw-ring-iron-950 tw-bg-iron-800"
                     data-tooltip-id={`wave-voter-${voter.profile.handle}`}
                   />
                 )}
@@ -78,8 +78,7 @@ export const SingleWaveDropVotes: React.FC<SingleWaveDropVotesProps> = ({
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
-                }}
-              >
+                }}>
                 {voter.profile.handle} - {formatNumberWithCommas(voter.rating)}
               </Tooltip>
             </div>
@@ -105,8 +104,7 @@ export const SingleWaveDropVotes: React.FC<SingleWaveDropVotesProps> = ({
             <span
               className={`tw-text-sm tw-font-semibold ${
                 isUserVoteNegative ? "tw-text-rose-500" : "tw-text-emerald-500"
-              }`}
-            >
+              }`}>
               {isUserVoteNegative && "-"}
               {formatNumberWithCommas(Math.abs(userVote))}{" "}
               <span className="tw-text-iron-400 tw-font-normal">

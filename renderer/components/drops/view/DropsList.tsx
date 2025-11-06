@@ -33,7 +33,7 @@ interface DropsListProps {
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: (drop: ExtendedDrop) => void;
   readonly serialNo: number | null;
-  readonly targetDropRef: RefObject<HTMLDivElement> | undefined;
+  readonly targetDropRef: RefObject<HTMLDivElement | null> | null;
   readonly dropViewDropId: string | null;
   readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
   readonly location?: DropLocation;

@@ -1,6 +1,12 @@
 "use client";
 
-import { createContext, useContext, ReactNode, useMemo } from "react";
+import {
+  ReactElement,
+  ReactNode,
+  createContext,
+  useContext,
+  useMemo,
+} from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -28,7 +34,7 @@ interface ToastProviderProps {
 
 export const ToastProvider = ({
   children,
-}: ToastProviderProps): JSX.Element => {
+}: ToastProviderProps): ReactElement => {
   const showToast = (
     message: string,
     type: "info" | "success" | "warning" | "error" = "info",

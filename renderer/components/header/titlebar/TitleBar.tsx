@@ -16,8 +16,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Cookies from "js-cookie";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import styles from "./TitleBar.module.scss";
 import TooltipButton from "./TooltipButton";
@@ -31,8 +31,12 @@ const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 export default function TitleBar() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { isOpen, open, close } = useSearch();
   const { globalRefresh } = useGlobalRefresh();
+
+  const prevPathnameRef = useRef(pathname);
+  const prevSearchParamsRef = useRef(searchParams?.toString() || "");
 
   const [showConfirm, setShowConfirm] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
@@ -78,13 +82,17 @@ export default function TitleBar() {
 
     const handleNavigate = (_event: any, url: string) => {
       console.log("Navigating to:", url);
-      if (pathname !== url) {
+      setNavigationLoading(true);
+      const normalizedUrl = url.split("?")[0];
+      const normalizedPathname = pathname.split("?")[0];
+
+      if (normalizedPathname !== normalizedUrl) {
         router.push(url);
       } else {
-        const reloadUrl = url.includes("?")
-          ? `${url}&reload=true`
-          : `${url}?reload=true`;
-        router.push(reloadUrl);
+        const currentParams = new URLSearchParams(window.location.search);
+        currentParams.set("reload", "true");
+        const reloadUrl = `${normalizedUrl}?${currentParams.toString()}`;
+        router.replace(reloadUrl, { scroll: false });
       }
     };
     window.api.onNavigate(handleNavigate);
@@ -98,7 +106,89 @@ export default function TitleBar() {
     };
   }, [pathname, router]);
 
+  useEffect(() => {
+    const handleLinkClick = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      const link = target.closest("a");
+
+      if (!link) return;
+
+      const href = link.getAttribute("href");
+      if (!href || href === "#") return;
+      if (link.target === "_blank" || link.hasAttribute("download")) return;
+
+      try {
+        const url =
+          href.startsWith("/") || href.startsWith("?")
+            ? new URL(href, window.location.origin)
+            : new URL(href);
+        const currentUrl = new URL(window.location.href);
+
+        if (
+          url.origin === currentUrl.origin &&
+          (url.pathname !== currentUrl.pathname ||
+            url.search !== currentUrl.search)
+        ) {
+          setNavigationLoading(true);
+        }
+      } catch {
+        if (href.startsWith("/") && href !== pathname) {
+          setNavigationLoading(true);
+        }
+      }
+    };
+
+    const handlePopState = () => {
+      setNavigationLoading(true);
+    };
+
+    const originalPushState = history.pushState;
+    const originalReplaceState = history.replaceState;
+
+    history.pushState = function (...args) {
+      setNavigationLoading(true);
+      return originalPushState.apply(history, args);
+    };
+
+    history.replaceState = function (...args) {
+      setNavigationLoading(true);
+      return originalReplaceState.apply(history, args);
+    };
+
+    document.addEventListener("click", handleLinkClick, true);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      document.removeEventListener("click", handleLinkClick, true);
+      window.removeEventListener("popstate", handlePopState);
+      history.pushState = originalPushState;
+      history.replaceState = originalReplaceState;
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const currentPathname = pathname;
+    const currentSearchParams = searchParams?.toString() || "";
+    const prevPathname = prevPathnameRef.current;
+    const prevSearchParams = prevSearchParamsRef.current;
+
+    const pathnameChanged = currentPathname !== prevPathname;
+    const searchParamsChanged = currentSearchParams !== prevSearchParams;
+
+    if (pathnameChanged || searchParamsChanged) {
+      prevPathnameRef.current = currentPathname;
+      prevSearchParamsRef.current = currentSearchParams;
+
+      const timeoutId = setTimeout(() => {
+        setNavigationLoading(false);
+      }, 100);
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [pathname, searchParams]);
+
   const handleOpenSearch = () => {
+    if (navigationLoading) return;
     if (isOpen) {
       close();
     } else {
@@ -107,24 +197,21 @@ export default function TitleBar() {
   };
 
   const handleBack = () => {
-    if (canGoBack) {
-      setNavigationLoading(true);
-      window.api.goBack();
-    }
+    if (navigationLoading || !canGoBack) return;
+    setNavigationLoading(true);
+    window.api.goBack();
   };
 
   const handleForward = () => {
-    if (canGoForward) {
-      setNavigationLoading(true);
-      window.api.goForward();
-    }
+    if (navigationLoading || !canGoForward) return;
+    setNavigationLoading(true);
+    window.api.goForward();
   };
 
   const handleRefresh = () => {
-    if (!navigationLoading) {
-      setNavigationLoading(true);
-      globalRefresh();
-    }
+    if (navigationLoading) return;
+    setNavigationLoading(true);
+    globalRefresh();
   };
 
   useEffect(() => {
@@ -144,6 +231,7 @@ export default function TitleBar() {
   }, []);
 
   const handleScrollTop = () => {
+    if (navigationLoading) return;
     window.scrollTo({
       top: 0,
       behavior: "smooth",
@@ -210,7 +298,7 @@ export default function TitleBar() {
         />
         <TooltipButton
           buttonStyles={`${styles.button} ${
-            canGoBack ? styles.enabled : styles.disabled
+            canGoBack && !navigationLoading ? styles.enabled : styles.disabled
           }`}
           onClick={handleBack}
           icon={faArrowLeft}
@@ -218,7 +306,9 @@ export default function TitleBar() {
         />
         <TooltipButton
           buttonStyles={`${styles.button} ${
-            canGoForward ? styles.enabled : styles.disabled
+            canGoForward && !navigationLoading
+              ? styles.enabled
+              : styles.disabled
           }`}
           onClick={handleForward}
           icon={faArrowRight}
@@ -254,7 +344,9 @@ export default function TitleBar() {
         />
         {showScrollTop && (
           <TooltipButton
-            buttonStyles={`${styles.button} ${styles.enabled}`}
+            buttonStyles={`${styles.button} ${
+              navigationLoading ? styles.disabled : styles.enabled
+            }`}
             onClick={handleScrollTop}
             icon={faAnglesUp}
             content="Scroll to top"
@@ -276,9 +368,9 @@ export default function TitleBar() {
       <TooltipButton
         buttonStyles={`${styles.info} ${
           isMac() ? styles.infoMac : styles.infoWin
-        }`}
+        } ${navigationLoading ? styles.disabled : ""}`}
         placement="left"
-        onClick={() => router.push("/core/core-info")}
+        onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}

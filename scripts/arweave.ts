@@ -1,23 +1,51 @@
 import Arweave from "arweave";
-
 require("dotenv").config();
 
 let arweaveAndKey: { arweave: Arweave; key: any } | null = null;
+
+function ensureKeyIntegrity(key: any) {
+  for (const part of ["n", "e", "d", "p", "q", "dp", "dq", "qi"]) {
+    if (!key || !key[part]) {
+      throw new Error(`ARWEAVE_KEY missing "${part}"`);
+    }
+  }
+}
 
 export function getArweaveInstance(): { arweave: Arweave; key: any } {
   if (!arweaveAndKey) {
     if (!process.env.ARWEAVE_KEY) {
       throw new Error("ARWEAVE_KEY not set");
     }
-    const arweaveKey = JSON.parse(process.env.ARWEAVE_KEY);
+    const key = JSON.parse(process.env.ARWEAVE_KEY);
+    ensureKeyIntegrity(key);
+
     const arweave = Arweave.init({
       host: "arweave.net",
       port: 443,
       protocol: "https",
+      timeout: 60_000,
     });
-    arweaveAndKey = { arweave, key: arweaveKey };
+
+    arweaveAndKey = { arweave, key };
   }
   return arweaveAndKey;
+}
+
+async function withRetries<T>(
+  fn: () => Promise<T>,
+  tries = 5,
+  baseMs = 300
+): Promise<T> {
+  let lastErr: any;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      lastErr = e;
+      await new Promise((r) => setTimeout(r, baseMs * (i + 1)));
+    }
+  }
+  throw lastErr;
 }
 
 export class ArweaveFileUploader {
@@ -30,36 +58,38 @@ export class ArweaveFileUploader {
     fileBuffer: Buffer,
     contentType: string
   ): Promise<{ url: string }> {
+    const { arweave, key } = this.arweaveAndKeySupplier();
+    const addr = await arweave.wallets.jwkToAddress(key);
+    console.log("Uploader address:", addr);
     console.log("Arweave Uploading", name, fileBuffer.length);
-    const { arweave, key: arweaveKey } = this.arweaveAndKeySupplier();
-    const areweaveTransaction = await arweave.createTransaction(
-      { data: fileBuffer },
-      arweaveKey
-    );
-    areweaveTransaction.addTag("Content-Type", contentType);
 
-    await arweave.transactions.sign(areweaveTransaction, arweaveKey);
-
-    const uploader = await arweave.transactions.getUploader(
-      areweaveTransaction
+    // 1) Create tx with data (SDK sets reward internally)
+    const tx = await withRetries(() =>
+      arweave.createTransaction({ data: fileBuffer })
     );
 
-    let lastLoggedPercent = 0;
+    // 2) Add tags BEFORE signing
+    tx.addTag("Content-Type", contentType);
+
+    // 3) Sign ONCE; no mutations after this
+    await withRetries(() => arweave.transactions.sign(tx, key));
+
+    // 4) Upload via chunked uploader (SDK manages last_tx / anchors)
+    const uploader = await arweave.transactions.getUploader(tx);
+    let lastLogged = -1;
 
     while (!uploader.isComplete) {
-      await uploader.uploadChunk();
-      const currentPercent = Math.floor(uploader.pctComplete);
-
-      if (currentPercent >= lastLoggedPercent + 1) {
-        // Log every 1% completion
-        lastLoggedPercent = currentPercent;
+      await withRetries(() => uploader.uploadChunk());
+      const pct = Math.floor(uploader.pctComplete);
+      if (pct > lastLogged) {
+        lastLogged = pct;
         console.info(
-          `Arweave upload ${areweaveTransaction.id} ${uploader.pctComplete}% complete, ${uploader.uploadedChunks}/${uploader.totalChunks}`
+          `Arweave upload ${tx.id} ${uploader.pctComplete}% (${uploader.uploadedChunks}/${uploader.totalChunks})`
         );
       }
     }
-    const url = `https://arweave.net/${areweaveTransaction.id}`;
-    return { url };
+
+    return { url: `https://arweave.net/${tx.id}` };
   }
 }
 

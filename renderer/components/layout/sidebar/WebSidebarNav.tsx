@@ -10,9 +10,14 @@ import HomeIcon from "@/components/common/icons/HomeIcon";
 import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import HeaderSearchModal from "@/components/header/header-search/HeaderSearchModal";
-import { useIpfsContext } from "@/components/ipfs/IPFSContext";
+import { resolveIpfsUrl, useIpfsContext } from "@/components/ipfs/IPFSContext";
 import CommonAnimationOpacity from "@/components/utils/animation/CommonAnimationOpacity";
 import CommonAnimationWrapper from "@/components/utils/animation/CommonAnimationWrapper";
+import { useEmoji } from "@/contexts/EmojiContext";
+import { useTitle } from "@/contexts/TitleContext";
+import { ApiNotification } from "@/generated/models/ApiNotification";
+import { isElectron } from "@/helpers";
+import { generateNotificationData } from "@/helpers/notification.helpers";
 import useCapacitor from "@/hooks/useCapacitor";
 import { useSectionMap, useSidebarSections } from "@/hooks/useSidebarSections";
 import { useUnreadIndicator } from "@/hooks/useUnreadIndicator";
@@ -45,13 +50,15 @@ const WebSidebarNav = React.forwardRef<
   const { address } = useSeizeConnectContext();
   const { connectedProfile } = useAuth();
   const { appWalletsSupported } = useAppWallets();
-  const { haveUnreadNotifications } = useUnreadNotifications(
+  const { haveUnreadNotifications, notifications } = useUnreadNotifications(
     connectedProfile?.handle ?? null
   );
   const { hasUnread: hasUnreadMessages } = useUnreadIndicator({
     type: "messages",
     handle: connectedProfile?.handle ?? null,
   });
+  const { setNotificationCount } = useTitle();
+  const { findNativeEmoji } = useEmoji();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -195,6 +202,37 @@ const WebSidebarNav = React.forwardRef<
 
     return undefined;
   }, [isCollapsed, submenuTrigger]);
+
+  async function showNotification(
+    notification: ApiNotification,
+    unreadCount: number
+  ) {
+    if (!isElectron() || !unreadCount) return;
+    const relatedPfp = notification.related_identity?.pfp;
+    const newSrc = relatedPfp ? await resolveIpfsUrl(relatedPfp) : "";
+    const notificationData = generateNotificationData(
+      notification,
+      findNativeEmoji
+    );
+    if (!notificationData) return;
+    window.notifications.showNotification(
+      notification.id,
+      newSrc,
+      notificationData.title,
+      notificationData.body,
+      notificationData.redirectPath
+    );
+  }
+
+  useEffect(() => {
+    setNotificationCount(notifications?.unread_count ?? 0);
+    if (haveUnreadNotifications && notifications?.notifications?.length) {
+      showNotification(
+        notifications.notifications[0],
+        notifications?.unread_count
+      );
+    }
+  }, [notifications?.unread_count, haveUnreadNotifications]);
 
   const renderCollapsedSubmenu = useCallback(
     (sectionKey: string) => {

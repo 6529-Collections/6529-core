@@ -848,8 +848,15 @@ ipcMain.handle("store:remove", (_event, key) => {
 
 ipcMain.on(
   "notifications:show",
-  (_event, id: number, pfp: string, message: string) => {
-    Logger.info(`Showing notification: [${id}] ${message}, ${pfp}`);
+  (
+    _event,
+    id: number,
+    pfp: string,
+    title: string,
+    body: string,
+    redirectPath: string
+  ) => {
+    Logger.info(`Showing notification: [${id}] ${title} - ${body}, ${pfp}`);
 
     if (shownNotifications.has(id)) {
       Logger.info(`Notification [${id}] already shown`);
@@ -859,12 +866,15 @@ ipcMain.on(
     shownNotifications.add(id);
 
     const notification = new Notification({
-      title: "You have unread notifications!",
-      body: message,
+      title,
+      body,
       icon: pfp,
     });
     notification.on("click", () => {
-      mainWindow?.webContents.send("navigate", "/my-stream/notifications");
+      mainWindow?.webContents.send(
+        "navigate",
+        redirectPath || "/notifications"
+      );
     });
     notification.show();
   }
