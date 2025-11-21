@@ -17,7 +17,7 @@ import {
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import styles from "./TitleBar.module.scss";
 import TooltipButton from "./TooltipButton";
@@ -146,16 +146,12 @@ export default function TitleBar() {
     const originalReplaceState = history.replaceState;
 
     history.pushState = function (...args) {
-      startTransition(() => {
-        setNavigationLoading(true);
-      });
+      setNavigationLoading(true);
       return originalPushState.apply(history, args);
     };
 
     history.replaceState = function (...args) {
-      startTransition(() => {
-        setNavigationLoading(true);
-      });
+      setNavigationLoading(true);
       return originalReplaceState.apply(history, args);
     };
 
