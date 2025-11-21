@@ -33,7 +33,7 @@ export default function TransferToggle() {
   const scrollToButton = () => {
     if (!buttonRef.current) return;
     const rect = buttonRef.current.getBoundingClientRect();
-    const absoluteY = window.scrollY + rect.top - 10;
+    const absoluteY = window.scrollY + rect.top - 40;
 
     window.scrollTo({ top: absoluteY, behavior: "smooth" });
   };

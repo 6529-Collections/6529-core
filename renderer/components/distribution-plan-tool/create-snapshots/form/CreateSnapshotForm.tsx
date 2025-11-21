@@ -7,6 +7,7 @@ import {
 import styles from "@/components/distribution-plan-tool/DistributionPlan.module.scss";
 import { DistributionPlanToolContext } from "@/components/distribution-plan-tool/DistributionPlanToolContext";
 import DistributionPlanAddOperationBtn from "@/components/distribution-plan-tool/common/DistributionPlanAddOperationBtn";
+import { openInExternalBrowser } from "@/helpers";
 import {
   getRandomObjectId,
   isEthereumAddress,

@@ -26,7 +26,6 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
     sidebarWidth,
   } = useSidebarController();
   const { isRightSidebarOpen } = useSidebarState();
-  const { containerRef: searchContainerRef } = useSearch();
 
   const cssVars = useMemo(
     () =>
