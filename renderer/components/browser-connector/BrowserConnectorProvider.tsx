@@ -37,6 +37,7 @@ export default function BrowserConnectorProvider(
 
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isCancelled, setIsCancelled] = useState(false);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -119,6 +120,14 @@ export default function BrowserConnectorProvider(
     }
   }
 
+  async function onCancel() {
+    setIsCancelled(true);
+    const d = {
+      error: "Cancelled",
+    };
+    startRedirectCountdown(d);
+  }
+
   async function openApp(d: any) {
     const serializedInfo = JSON.stringify({
       requestId,
@@ -149,7 +158,8 @@ export default function BrowserConnectorProvider(
 
   return (
     <Container>
-      <Row className={`pb-3 ${isSuccess ? styles.disabled : ""}`}>
+      <Row
+        className={`pb-3 ${isSuccess || isCancelled ? styles.disabled : ""}`}>
         <Col xs={12}>
           <span className={styles.circledNumber}>1</span>
           <span>Sign Transaction</span>
@@ -172,11 +182,23 @@ export default function BrowserConnectorProvider(
               {methodParams && (
                 <Col>
                   {areEqualAddresses(account.address, requesterAddress) ? (
-                    <button
-                      onClick={onSign}
-                      className="mt-3 tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
-                      {isSuccess ? "Signed" : "Sign"}
-                    </button>
+                    <div className="tw-flex tw-gap-3">
+                      {!isCancelled && (
+                        <button
+                          onClick={onSign}
+                          className="tw-w-32 mt-3 tw-inline-flex tw-items-center tw-justify-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
+                          {isSuccess ? "Signed" : "Sign"}
+                        </button>
+                      )}
+
+                      {!isSuccess && (
+                        <button
+                          onClick={onCancel}
+                          className="tw-w-32 mt-3 tw-inline-flex tw-items-center tw-justify-center tw-cursor-pointer bg-danger tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
+                          {isCancelled ? "Cancelled" : "Cancel"}
+                        </button>
+                      )}
+                    </div>
                   ) : (
                     <div className="pt-3 text-danger">
                       Something is wrong...{" "}
@@ -205,13 +227,14 @@ export default function BrowserConnectorProvider(
         </Col>
       </Row>
       <hr />
-      <Row className={`pt-3 ${!isSuccess ? styles.disabled : ""}`}>
+      <Row
+        className={`pt-3 ${!isSuccess && !isCancelled ? styles.disabled : ""}`}>
         <Col xs={12}>
           <span className={styles.circledNumber}>2</span>
           <span>Return to 6529 Desktop</span>
         </Col>
         <Col xs={12} className="pt-3">
-          {isSuccess &&
+          {(isSuccess || isCancelled) &&
             (redirectCountdown > 0 ? (
               <Container>
                 <Row>
