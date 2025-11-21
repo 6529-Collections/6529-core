@@ -42,6 +42,7 @@ export default function TransferModalPfp({
         width={size}
         height={size}
         className="tw-rounded-full tw-object-cover"
+        unoptimized
       />
       <div
         className={`tw-absolute tw-top-[-5px] tw-right-[-5px] tw-h-[18px] tw-w-[18px] tw-rounded-full tw-flex tw-items-center tw-justify-center tw-text-[8px] tw-font-semibold ${levelColor}`}>
