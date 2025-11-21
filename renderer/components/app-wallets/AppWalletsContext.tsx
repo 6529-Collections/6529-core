@@ -2,6 +2,7 @@
 
 import React, {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -60,26 +61,32 @@ export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, []);
 
-  const createAppWallet = async (
-    name: string,
-    pass: string
-  ): Promise<boolean> => {
-    return false;
-  };
+  const createAppWallet = useCallback(
+    async (name: string, pass: string): Promise<boolean> => {
+      return false;
+    },
+    []
+  );
 
-  const importAppWallet = async (
-    walletName: string,
-    walletPass: string,
-    address: string,
-    mnemonic: string,
-    privateKey: string
-  ): Promise<boolean> => {
-    return false;
-  };
+  const importAppWallet = useCallback(
+    async (
+      walletName: string,
+      walletPass: string,
+      address: string,
+      mnemonic: string,
+      privateKey: string
+    ): Promise<boolean> => {
+      return false;
+    },
+    []
+  );
 
-  const deleteAppWallet = async (address: string): Promise<boolean> => {
-    return false;
-  };
+  const deleteAppWallet = useCallback(
+    async (address: string): Promise<boolean> => {
+      return false;
+    },
+    []
+  );
 
   const value = useMemo(
     () => ({

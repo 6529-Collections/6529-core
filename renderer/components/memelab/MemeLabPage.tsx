@@ -12,6 +12,7 @@ import { NftPageStats } from "@/components/nft-attributes/NftStats";
 import NFTImage from "@/components/nft-image/NFTImage";
 import NFTMarketplaceLinks from "@/components/nft-marketplace-links/NFTMarketplaceLinks";
 import NftNavigation from "@/components/nft-navigation/NftNavigation";
+import TransferSingle from "@/components/nft-transfer/TransferSingle";
 import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
 import Pagination from "@/components/pagination/Pagination";
 import { printMemeReferences } from "@/components/rememes/RememePage";
@@ -28,7 +29,9 @@ import { MEMELAB_CONTRACT, MEMES_CONTRACT, NULL_ADDRESS } from "@/constants";
 import { useTitle } from "@/contexts/TitleContext";
 import { DBResponse } from "@/entities/IDBResponse";
 import { LabExtendedData, LabNFT, NFT, NFTHistory } from "@/entities/INFT";
+import { CollectedCollectionType } from "@/entities/IProfile";
 import { Transaction } from "@/entities/ITransaction";
+import { ContractType } from "@/enums";
 import {
   addProtocol,
   areEqualAddresses,
@@ -76,13 +79,17 @@ export default function MemeLabPageComponent({
 
   const [isFullScreenSupported, setIsFullScreenSupported] = useState(false);
 
-  const [fullscreenElementId, setFullscreenElementId] = useState<string>(
-    "the-art-fullscreen-img"
-  );
+  const [currentSlide, setCurrentSlide] = useState(0);
 
   const [activeTab, setActiveTab] = useState<MEME_FOCUS>();
 
   const [nft, setNft] = useState<LabNFT>();
+
+  const hasAnimation = nft?.animation || nft?.metadata?.animation;
+  const fullscreenElementId =
+    hasAnimation && currentSlide === 0
+      ? "the-art-fullscreen-animation"
+      : "the-art-fullscreen-img";
   const [originalMemes, setOriginalMemes] = useState<NFT[]>([]);
   const [nftMeta, setNftMeta] = useState<LabExtendedData>();
   const [nftBalance, setNftBalance] = useState<number>(0);
@@ -104,6 +111,10 @@ export default function MemeLabPageComponent({
   useEffect(() => {
     setTitle(getMemeTabTitle(`Meme Lab`, nftId, nft, activeTab));
   }, [nft, nftId, activeTab]);
+
+  useEffect(() => {
+    setCurrentSlide(0);
+  }, [nft]);
 
   useEffect(() => {
     setIsFullScreenSupported(fullScreenSupported());
@@ -165,7 +176,8 @@ export default function MemeLabPageComponent({
   }, [nftId]);
 
   useEffect(() => {
-    const wallets = connectedProfile?.wallets ?? [];
+    const walletObjects = connectedProfile?.wallets ?? [];
+    const wallets = walletObjects.map((w) => w.wallet);
     if (wallets.length > 0 && nftId) {
       fetchUrl(
         `${
@@ -220,7 +232,7 @@ export default function MemeLabPageComponent({
 
   useEffect(() => {
     async function fetchHistory(url: string) {
-      return fetchAllPages(url).then((response: NFTHistory[]) => {
+      return fetchAllPages<NFTHistory>(url).then((response) => {
         setNftHistory(response);
       });
     }
@@ -554,7 +566,8 @@ export default function MemeLabPageComponent({
       (t) => t.value === 0 && areEqualAddresses(t.from_address, NULL_ADDRESS)
     );
 
-    const wallets = connectedProfile?.wallets ?? [];
+    const walletObjects = connectedProfile?.wallets ?? [];
+    const wallets = walletObjects.map((w) => w.wallet);
     const transferredIn =
       wallets.length === 0
         ? []
@@ -624,7 +637,43 @@ export default function MemeLabPageComponent({
                 </Col>
               </Row>
             )}
-            {transactions.length > 0 && wallets && (
+            {transactions.length > 0 &&
+              wallets.length > 0 &&
+              nftBalance > 0 &&
+              nft && (
+                <>
+                  <Row className="pt-2">
+                    <Col
+                      xs={{ span: 12 }}
+                      sm={{ span: 12 }}
+                      md={{ span: 12 }}
+                      lg={{ span: 8 }}>
+                      <Table bordered={false}>
+                        <tbody>
+                          <tr className={`${styles.overviewColumn}`}>
+                            <td>Cards</td>
+                            <td className="text-right">{`x${nftBalance}`}</td>
+                          </tr>
+                        </tbody>
+                      </Table>
+                    </Col>
+                  </Row>
+                  <Row className="mb-2">
+                    <Col>
+                      <TransferSingle
+                        collectionType={CollectedCollectionType.MEMELAB}
+                        contractType={ContractType.ERC1155}
+                        contract={MEMELAB_CONTRACT}
+                        tokenId={nft.id}
+                        max={nftBalance}
+                        title={nft?.name ?? `Meme Lab #${nft?.id}`}
+                        thumbUrl={nft?.thumbnail}
+                      />
+                    </Col>
+                  </Row>
+                </>
+              )}
+            {transactions.length > 0 && (
               <>
                 <Row className="pt-2 pb-2">
                   <Col>
@@ -666,7 +715,7 @@ export default function MemeLabPageComponent({
                   <Row className={`pt-1 ${styles.overviewColumn}`}>
                     <Col>
                       {getTokenCount(sold)} card
-                      {getTokenCount(sold) > 1 && "s"} sold for {soldSum} eth
+                      {getTokenCount(sold) > 1 && "s"} sold for {soldSum} ETH
                     </Col>
                   </Row>
                 )}
@@ -687,78 +736,101 @@ export default function MemeLabPageComponent({
   }
 
   function carouselHandlerSlide(event: any) {
-    if (event === 0) {
-      setFullscreenElementId("the-art-fullscreen-animation");
+    setCurrentSlide(event);
+  }
+
+  let currentFormat: string | undefined;
+  if (nft?.animation) {
+    if (currentSlide === 0) {
+      currentFormat = nft.metadata.animation_details.format;
     } else {
-      setFullscreenElementId("the-art-fullscreen-img");
+      currentFormat = nft.metadata.image_details.format;
     }
+  } else {
+    currentFormat = nft?.metadata.image_details.format;
   }
 
   function printTheArt() {
-    // carouselHandlerSlid();
     if (nft && nftMeta) {
       return (
         <>
           <Container className="p-0">
             <Row className="position-relative">
-              {isFullScreenSupported && (
-                <FontAwesomeIcon
-                  icon={faExpandAlt}
-                  className={styles.fullScreen}
-                  onClick={() =>
-                    fullscreenElementId &&
-                    enterArtFullScreen(fullscreenElementId)
-                  }
-                />
-              )}
               {nft.animation ? (
-                <Carousel
-                  className={styles.memesCarousel}
-                  interval={null}
-                  indicators={false}
-                  wrap={false}
-                  onSlide={carouselHandlerSlide}>
-                  <Carousel.Item className="text-center">
-                    <div className="pt-4 pb-3">
-                      {nft.metadata.animation_details.format}
+                <>
+                  <Col xs={12} className={styles.artHeader}>
+                    <div className={styles.artHeaderContent}>
+                      <div className={styles.artFormatLabel}>
+                        {currentFormat}
+                      </div>
+                      {isFullScreenSupported && (
+                        <FontAwesomeIcon
+                          icon={faExpandAlt}
+                          className={styles.fullScreen}
+                          onClick={() =>
+                            fullscreenElementId &&
+                            enterArtFullScreen(fullscreenElementId)
+                          }
+                        />
+                      )}
                     </div>
-                    <NFTImage
-                      nft={nft}
-                      animation={true}
-                      height={650}
-                      transparentBG={true}
-                      showOriginal={true}
-                      showBalance={false}
-                      id="the-art-fullscreen-animation"
-                    />
-                  </Carousel.Item>
-                  <Carousel.Item className="text-center">
-                    <div className="pt-4 pb-3">
-                      {nft.metadata.image_details.format}
-                    </div>
-                    <NFTImage
-                      nft={nft}
-                      animation={false}
-                      height={650}
-                      transparentBG={true}
-                      showOriginal={true}
-                      showBalance={false}
-                      id="the-art-fullscreen-img"
-                    />
-                  </Carousel.Item>
-                </Carousel>
+                  </Col>
+                  <Carousel
+                    className={styles.memesCarousel}
+                    interval={null}
+                    indicators={false}
+                    wrap={false}
+                    onSlide={carouselHandlerSlide}>
+                    <Carousel.Item className="text-center">
+                      <NFTImage
+                        nft={nft}
+                        animation={true}
+                        height={650}
+                        transparentBG={true}
+                        showOriginal={true}
+                        showBalance={false}
+                        id="the-art-fullscreen-animation"
+                      />
+                    </Carousel.Item>
+                    <Carousel.Item className="text-center">
+                      <NFTImage
+                        nft={nft}
+                        animation={false}
+                        height={650}
+                        transparentBG={true}
+                        showOriginal={true}
+                        showBalance={false}
+                        id="the-art-fullscreen-img"
+                      />
+                    </Carousel.Item>
+                  </Carousel>
+                </>
               ) : (
                 <>
-                  <Col xs={12} className="text-center pb-5">
-                    {nft.metadata.image_details.format}
+                  <Col xs={12} className={styles.artHeader}>
+                    <div className={styles.artHeaderContent}>
+                      <div className={styles.artFormatLabel}>
+                        {currentFormat}
+                      </div>
+                      {isFullScreenSupported && (
+                        <FontAwesomeIcon
+                          icon={faExpandAlt}
+                          className={styles.fullScreen}
+                          onClick={() =>
+                            fullscreenElementId &&
+                            enterArtFullScreen(fullscreenElementId)
+                          }
+                        />
+                      )}
+                    </div>
                   </Col>
                   <NFTImage
                     nft={nft}
                     animation={false}
                     height={650}
-                    showBalance={false}
                     transparentBG={true}
                     showOriginal={true}
+                    showBalance={false}
                     id="the-art-fullscreen-img"
                   />
                 </>
@@ -1137,9 +1209,7 @@ export default function MemeLabPageComponent({
           <Container className="pt-4 pb-4">
             <Row>
               <Col>
-                <h1>
-                  Meme Lab
-                </h1>
+                <h1>Meme Lab</h1>
               </Col>
               {/* {nft && (
                   <Col className="d-flex align-items-center justify-content-end">
@@ -1167,6 +1237,7 @@ export default function MemeLabPageComponent({
                       path="/meme-lab"
                       startIndex={1}
                       endIndex={nftMeta.collection_size}
+                      params={searchParams}
                     />
                   </Col>
                 </Row>

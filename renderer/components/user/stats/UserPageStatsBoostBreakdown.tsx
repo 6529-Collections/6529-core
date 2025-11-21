@@ -125,8 +125,8 @@ export default function UserPageStatsBoostBreakdown({
 
   return (
     <div className="tw-mt-6 lg:tw-mt-8">
-      <div className="d-flex align-items-center justify-content-between">
-        <h3 className="tw-mb-0 tw-text-lg tw-font-semibold tw-text-iron-50">
+      <div className="tw-flex tw-items-center tw-justify-between">
+        <h3 className="tw-mb-0 tw-text-lg tw-font-semibold tw-text-iron-100">
           Boost Breakdown
         </h3>
         <span>

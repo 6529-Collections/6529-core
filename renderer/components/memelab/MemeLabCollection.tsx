@@ -65,15 +65,15 @@ export default function LabCollection({
       const nftsUrl = `${
         publicEnv.API_ENDPOINT
       }/api/lab_extended_data?collection=${encodeURIComponent(collectionName)}`;
-      fetchAllPages(nftsUrl).then((responseNftMetas: LabExtendedData[]) => {
+      fetchAllPages<LabExtendedData>(nftsUrl).then((responseNftMetas) => {
         setNftMetas(responseNftMetas);
         if (responseNftMetas.length > 0) {
           const tokenIds = responseNftMetas.map((n: LabExtendedData) => n.id);
-          fetchAllPages(
+          fetchAllPages<LabNFT>(
             `${publicEnv.API_ENDPOINT}/api/nfts_memelab?id=${tokenIds.join(
               ","
             )}`
-          ).then((responseNfts: any[]) => {
+          ).then((responseNfts) => {
             setNfts(responseNfts);
             setNftsLoaded(true);
           });
@@ -97,9 +97,9 @@ export default function LabCollection({
 
   useEffect(() => {
     if (connectedProfile?.consolidation_key) {
-      fetchAllPages(
+      fetchAllPages<NftOwner>(
         `${publicEnv.API_ENDPOINT}/api/nft-owners/consolidation/${connectedProfile?.consolidation_key}?contract=${MEMES_CONTRACT}`
-      ).then((owners: NftOwner[]) => {
+      ).then((owners) => {
         setNftBalances(owners);
       });
     } else {
@@ -174,9 +174,7 @@ export default function LabCollection({
             <Container className="pt-4 pb-4">
               <Row>
                 <Col>
-                  <h1>
-                    Meme Lab Collections
-                  </h1>
+                  <h1>Meme Lab Collections</h1>
                 </Col>
               </Row>
               <Row className="pt-3">

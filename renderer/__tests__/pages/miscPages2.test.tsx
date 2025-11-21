@@ -1,7 +1,7 @@
 import WillowShield from "@/app/museum/genesis/willow-shield/page";
 import JoinOm from "@/app/om/join-om/page";
 import PartnershipRequest from "@/app/om/partnership-request/page";
-import ConsolidatedMetrics from "@/app/open-data/consolidated-network-metrics/page";
+import ConsolidatedMetrics from "@/app/open-data/network-metrics/page";
 import MemeSubscriptions from "@/app/open-data/meme-subscriptions/page";
 import AddRememes from "@/app/rememes/add/page";
 import SlideInitiatives from "@/app/slide-page/6529-initiatives/page";
@@ -134,10 +134,19 @@ describe("misc pages render", () => {
   });
 
   it("renders consolidated metrics page", () => {
+    const queryClient = new QueryClient({
+      defaultOptions: {
+        queries: {
+          retry: false,
+        },
+      },
+    });
     render(
-      <TestProvider>
-        <ConsolidatedMetrics />
-      </TestProvider>
+      <QueryClientProvider client={queryClient}>
+        <TestProvider>
+          <ConsolidatedMetrics />
+        </TestProvider>
+      </QueryClientProvider>
     );
     expect(
       screen.getByText(/Consolidated Network Metrics/i)

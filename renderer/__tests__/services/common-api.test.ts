@@ -35,7 +35,7 @@ describe("commonApiFetch", () => {
           Authorization: "Bearer jwt",
         }),
         signal: undefined,
-      }),
+      })
     );
     expect(result).toEqual({ result: 1 });
   });
@@ -45,6 +45,7 @@ describe("commonApiFetch", () => {
     (getAuthJwt as jest.Mock).mockReturnValue(null);
     fetchMock.mockResolvedValue({
       ok: false,
+      status: 400,
       statusText: "Bad",
       json: async () => ({ error: "err" }),
     });
@@ -55,7 +56,7 @@ describe("commonApiFetch", () => {
       expect.objectContaining({
         headers: {},
         signal: undefined,
-      }),
+      })
     );
   });
 });
@@ -87,7 +88,7 @@ describe("commonApiPost", () => {
           "x-6529-auth": "a",
         }),
         body: JSON.stringify({ v: 1 }),
-      }),
+      })
     );
     expect(result).toEqual({ res: 1 });
   });
@@ -97,12 +98,13 @@ describe("commonApiPost", () => {
     (getAuthJwt as jest.Mock).mockReturnValue(null);
     fetchMock.mockResolvedValue({
       ok: false,
+      status: 400,
       statusText: "B",
       json: async () => ({ error: "err" }),
     });
 
     await expect(commonApiPost({ endpoint: "e", body: {} })).rejects.toBe(
-      "err",
+      "err"
     );
     expect(fetchMock).toHaveBeenCalledWith(
       "https://api.test.6529.io/api/e",
@@ -112,7 +114,7 @@ describe("commonApiPost", () => {
           "Content-Type": "application/json",
         }),
         body: JSON.stringify({}),
-      }),
+      })
     );
   });
 });

@@ -3,6 +3,7 @@
 import MobileLayout from "@/components/layout/MobileLayout";
 import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
 import WebLayout from "@/components/layout/WebLayout";
+import LayoutErrorFallback from "@/components/providers/LayoutErrorFallback";
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/constants/sidebar";
 import { RefreshProvider } from "@/contexts/RefreshContext";
 import FooterWrapper from "@/FooterWrapper";
@@ -11,6 +12,7 @@ import useDeviceInfo from "@/hooks/useDeviceInfo";
 import TitleBarWrapper from "@/TitleBarWrapper";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 
 export default function LayoutWrapper({
   children,
@@ -89,10 +91,12 @@ export default function LayoutWrapper({
     <RefreshProvider>
       <TitleBarWrapper>
         <LayoutComponent>
-          <>
+          <ErrorBoundary
+            FallbackComponent={LayoutErrorFallback}
+            resetKeys={[pathname]}>
             {children}
             <FooterWrapper />
-          </>
+          </ErrorBoundary>
         </LayoutComponent>
       </TitleBarWrapper>
     </RefreshProvider>

@@ -1,12 +1,9 @@
 "use client";
 
-import { useSearch } from "@/contexts/SearchContext";
-import Image from "next/image";
 import React, { type ReactNode, useMemo } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
 import { useSidebarController } from "../../hooks/useSidebarController";
 import { SidebarProvider, useSidebarState } from "../../hooks/useSidebarState";
-import ClientOnly from "../client-only/ClientOnly";
 import WebSidebar from "./sidebar/WebSidebar";
 
 const DESKTOP_MAX_WIDTH = 1324;
@@ -27,7 +24,6 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
     sidebarWidth,
   } = useSidebarController();
   const { isRightSidebarOpen } = useSidebarState();
-  const { containerRef: searchContainerRef } = useSearch();
 
   const cssVars = useMemo(
     () =>
@@ -42,8 +38,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
 
   return (
     <div
-      ref={searchContainerRef}
-      className="layout-root tw-flex tw-justify-between tw-relative tw-overflow-x-hidden tw-w-full"
+      className="layout-root tw-flex tw-justify-between tw-relative tw-w-full"
       style={cssVars}
       data-mobile={isMobile}
       data-narrow={isNarrow}
@@ -75,28 +70,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
 
 const WebLayout = ({ children, isSmall = false }: WebLayoutProps) => (
   <SidebarProvider>
-    <ClientOnly
-      fallback={
-        <div className="tailwind-scope tw-min-h-[100dvh] tw-bg-black tw-flex tw-items-center tw-justify-center tw-px-6">
-          <div className="tw-flex tw-flex-col md:tw-flex-row tw-items-center tw-gap-8 tw-text-center md:tw-text-left">
-            <Image
-              unoptimized
-              priority
-              loading="eager"
-              src="https://d3lqz0a4bldqgf.cloudfront.net/images/scaled_x450/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/279.WEBP"
-              alt="Brain"
-              width={220}
-              height={326}
-              className="tw-rounded-md tw-shadow-lg tw-max-w-[40vw] md:tw-max-w-[180px] tw-h-auto"
-            />
-            <h1 className="tw-text-xl tw-font-bold tw-text-white">
-              Loading...
-            </h1>
-          </div>
-        </div>
-      }>
-      <WebLayoutContent isSmall={isSmall}>{children}</WebLayoutContent>
-    </ClientOnly>
+    <WebLayoutContent isSmall={isSmall}>{children}</WebLayoutContent>
   </SidebarProvider>
 );
 
