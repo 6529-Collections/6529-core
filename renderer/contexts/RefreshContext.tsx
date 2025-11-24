@@ -1,19 +1,32 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useMemo } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 type RefreshCtx = {
   globalRefresh: () => void;
+  refreshKey: number;
 };
 
 const Ctx = createContext<RefreshCtx | null>(null);
 
 export function RefreshProvider({ children }: { children: React.ReactNode }) {
+  const [refreshKey, setRefreshKey] = useState(0);
+
   const globalRefresh = useCallback(() => {
-    window.location.reload();
+    // Just nuke client state under this provider
+    setRefreshKey((prev) => prev + 1);
   }, []);
 
-  const value = useMemo(() => ({ globalRefresh }), [globalRefresh]);
+  const value = useMemo(
+    () => ({ globalRefresh, refreshKey }),
+    [globalRefresh, refreshKey]
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
