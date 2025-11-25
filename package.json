@@ -50,7 +50,9 @@
     "publish-links-staging": "tsx scripts/publish-links.ts --staging --skip-arweave",
     "publish-links-staging-arweave": "tsx scripts/publish-links.ts --staging",
     "publish-links-production": "tsx scripts/publish-links.ts --skip-arweave",
-    "publish-links-production-arweave": "tsx scripts/publish-links.ts"
+    "publish-links-production-arweave": "tsx scripts/publish-links.ts",
+    "invalidate-cf-paths-staging": "tsx scripts/invalidate-cf-paths.ts --staging",
+    "invalidate-cf-paths-production": "tsx scripts/invalidate-cf-paths.ts"
   },
   "dependencies": {
     "@electron/notarize": "^1.2.3",
@@ -154,6 +156,7 @@
     "wagmi": "^2.17.5"
   },
   "devDependencies": {
+    "@aws-sdk/client-cloudfront": "^3.637.0",
     "@aws-sdk/client-s3": "^3.637.0",
     "@electron/rebuild": "^3.7.0",
     "@playwright/test": "^1.52.0",

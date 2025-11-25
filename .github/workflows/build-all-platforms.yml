@@ -27,6 +27,7 @@ on:
           - Sign Windows
           - Linux
           - Publish
+          - Invalidate CloudFront
 
 run-name: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
 
@@ -200,6 +201,11 @@ jobs:
           ARWEAVE_KEY: ${{ secrets.ARWEAVE_KEY }}
         run: npm run publish-links-production-arweave
 
+      - name: Invalidate CloudFront
+        if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
+        run: |
+          npm run invalidate-cf-paths-production -- --version=${{ github.event.inputs.version }}
+
       - name: Final Success - After Arweave
         if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         uses: sarisia/actions-status-discord@v1
@@ -236,3 +242,59 @@ jobs:
                 ["Version", "${{ github.event.inputs.version }}"]
               ])
               .write()
+
+  invalidate-cloudfront:
+    if: ${{ github.event.inputs.flow == 'Invalidate CloudFront' }}
+    name: Invalidate CloudFront
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Invalidate CloudFront
+        run: |
+          if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
+            npm run invalidate-cf-paths-staging -- --version=${{ github.event.inputs.version }}
+          else
+            npm run invalidate-cf-paths-production -- --version=${{ github.event.inputs.version }}
+          fi
+
+      - name: Notify Success
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Desktop - CloudFront invalidated ✅"
+          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          color: 0x00bfff
+
+      - name: Notify Failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Desktop - CloudFront invalidation failed ❌"
+          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          content: "<@&1162355330798325861>"
+          color: 0xff0000

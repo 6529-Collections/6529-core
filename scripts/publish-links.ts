@@ -2,14 +2,16 @@ import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import * as yaml from "js-yaml";
 import { arweaveFileUploader } from "./arweave";
 
+const AWS_REGION = "eu-west-1";
 const BUCKET = "6529bucket";
-const BASE_PATH = `https://${BUCKET}.s3.eu-west-1.amazonaws.com`;
+const BASE_PATH = `https://${BUCKET}.s3.${AWS_REGION}.amazonaws.com`;
 
 const BUCKET_PATH_PRODUCTION = "6529-core-app";
 const BUCKET_PATH_STAGING = "6529-staging-core-app";
 
-const CF_PATH = "https://d3lqz0a4bldqgf.cloudfront.net";
-const s3 = new S3Client({ region: "eu-west-1" });
+const CF_DOMAIN = "d3lqz0a4bldqgf.cloudfront.net";
+const CF_PATH = `https://${CF_DOMAIN}`;
+const s3 = new S3Client({ region: AWS_REGION });
 
 async function fetchWithProgress(url: string) {
   const response = await fetch(url);
@@ -125,7 +127,7 @@ async function processNewVersion(
   platform: string,
   filePath: string,
   skipArweave: boolean
-) {
+): Promise<void> {
   console.log("Fetching latest version", platform, filePath);
   console.time(`${platform} Processing`);
 
@@ -159,12 +161,12 @@ async function processNewVersion(
   `;
   for (const file of files) {
     const fileName = getFileName(file);
-    const cloudfront = `${CF_PATH}/${BUCKET_PATH}/${platform}/${file
+    const cloudfrontUrl = `${CF_PATH}/${BUCKET_PATH}/${platform}/${file
       .split("/")
       .pop()}`;
     htmlContent += `<div style="padding-bottom: 15px;">`;
     htmlContent += `<h3>${fileName}</h3>`;
-    htmlContent += `<div class="link-row">CloudFront: <a href="${cloudfront}" target="_blank">${cloudfront}</a></div>`;
+    htmlContent += `<div class="link-row">CloudFront: <a href="${cloudfrontUrl}" target="_blank">${cloudfrontUrl}</a></div>`;
     if (skipArweave) {
       htmlContent += `<div class="link-row">Arweave: Coming Soon...</div>`;
     } else {
