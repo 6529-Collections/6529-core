@@ -33,7 +33,8 @@ export default function TitleBar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isOpen, open, close } = useSearch();
-  const { globalRefresh } = useGlobalRefresh();
+  const { globalRefresh, refreshKey } = useGlobalRefresh();
+  const isContentRefreshingRef = useRef(false);
 
   const prevPathnameRef = useRef(pathname);
   const prevSearchParamsRef = useRef(searchParams?.toString() || "");
@@ -49,6 +50,12 @@ export default function TitleBar() {
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [version, setVersion] = useState("");
   const [isCopied, setIsCopied] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+  } | null>(null);
+  const refreshButtonRef = useRef<HTMLButtonElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
@@ -64,7 +71,9 @@ export default function TitleBar() {
       window.api.getNavigationState().then(({ canGoBack, canGoForward }) => {
         setCanGoBack(canGoBack);
         setCanGoForward(canGoForward);
-        setNavigationLoading(false);
+        if (!isContentRefreshingRef.current) {
+          setNavigationLoading(false);
+        }
       });
     };
 
@@ -142,27 +151,12 @@ export default function TitleBar() {
       setNavigationLoading(true);
     };
 
-    const originalPushState = history.pushState;
-    const originalReplaceState = history.replaceState;
-
-    history.pushState = function (...args) {
-      setNavigationLoading(true);
-      return originalPushState.apply(history, args);
-    };
-
-    history.replaceState = function (...args) {
-      setNavigationLoading(true);
-      return originalReplaceState.apply(history, args);
-    };
-
     document.addEventListener("click", handleLinkClick, true);
     window.addEventListener("popstate", handlePopState);
 
     return () => {
       document.removeEventListener("click", handleLinkClick, true);
       window.removeEventListener("popstate", handlePopState);
-      history.pushState = originalPushState;
-      history.replaceState = originalReplaceState;
     };
   }, [pathname]);
 
@@ -179,11 +173,7 @@ export default function TitleBar() {
       prevPathnameRef.current = currentPathname;
       prevSearchParamsRef.current = currentSearchParams;
 
-      const timeoutId = setTimeout(() => {
-        setNavigationLoading(false);
-      }, 100);
-
-      return () => clearTimeout(timeoutId);
+      setNavigationLoading(false);
     }
   }, [pathname, searchParams]);
 
@@ -208,11 +198,50 @@ export default function TitleBar() {
     window.api.goForward();
   };
 
-  const handleRefresh = () => {
+  const handleRefreshContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (refreshButtonRef.current) {
+      const rect = refreshButtonRef.current.getBoundingClientRect();
+      setContextMenu({ x: rect.left - 150, y: rect.top });
+    }
+  };
+
+  const handleContentRefresh = () => {
+    setContextMenu(null);
     if (navigationLoading) return;
+
+    isContentRefreshingRef.current = true;
     setNavigationLoading(true);
     globalRefresh();
   };
+
+  const handleHardRefresh = () => {
+    if (navigationLoading) return;
+    setNavigationLoading(true);
+    setContextMenu(null);
+    window.location.reload();
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(event.target as Node) &&
+        refreshButtonRef.current &&
+        !refreshButtonRef.current.contains(event.target as Node)
+      ) {
+        setContextMenu(null);
+      }
+    };
+
+    if (contextMenu) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
+  }, [contextMenu]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -243,6 +272,19 @@ export default function TitleBar() {
       setShowConfirm(true);
     });
   }, []);
+
+  useEffect(() => {
+    if (!isContentRefreshingRef.current) {
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      setNavigationLoading(false);
+      isContentRefreshingRef.current = false;
+    }, 200);
+
+    return () => clearTimeout(timeoutId);
+  }, [refreshKey]);
 
   const handleRunBackground = () => {
     window.api.runBackground();
@@ -333,15 +375,41 @@ export default function TitleBar() {
             hideOnClick={false}
           />
         )}
-        <TooltipButton
-          buttonStyles={`${styles.button} ${
-            navigationLoading ? styles.disabled : styles.enabled
-          }`}
-          onClick={handleRefresh}
-          icon={faRefresh}
-          iconStyles={navigationLoading ? styles.refreshSpin : ""}
-          content="Refresh"
-        />
+        <div style={{ position: "relative" }}>
+          <TooltipButton
+            buttonRef={refreshButtonRef}
+            buttonStyles={`${styles.button} ${
+              navigationLoading ? styles.disabled : styles.enabled
+            }`}
+            onClick={handleContentRefresh}
+            onContextMenu={handleRefreshContextMenu}
+            icon={faRefresh}
+            iconStyles={navigationLoading ? styles.refreshSpin : ""}
+            content="Refresh"
+          />
+          {contextMenu && (
+            <div
+              ref={contextMenuRef}
+              className={styles.contextMenu}
+              style={{
+                position: "fixed",
+                left: contextMenu.x,
+                top: contextMenu.y,
+                zIndex: 10000,
+              }}>
+              <button
+                className={styles.contextMenuItem}
+                onClick={handleContentRefresh}>
+                Content refresh
+              </button>
+              <button
+                className={styles.contextMenuItem}
+                onClick={handleHardRefresh}>
+                Hard refresh
+              </button>
+            </div>
+          )}
+        </div>
         {showScrollTop && (
           <TooltipButton
             buttonStyles={`${styles.button} ${

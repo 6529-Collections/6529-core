@@ -1,10 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import React, {
   createContext,
-  Fragment,
-  startTransition,
   useCallback,
   useContext,
   useMemo,
@@ -12,35 +9,32 @@ import React, {
 } from "react";
 
 type RefreshCtx = {
-  rev: number;
   globalRefresh: () => void;
+  refreshKey: number;
 };
 
 const Ctx = createContext<RefreshCtx | null>(null);
 
 export function RefreshProvider({ children }: { children: React.ReactNode }) {
-  const router = useRouter();
-  const [rev, setRev] = useState(0);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const globalRefresh = useCallback(() => {
-    // Remount client subtree:
-    startTransition(() => setRev((v) => v + 1));
-    // Revalidate server data:
-    router.refresh();
-  }, [router]);
+    // Just nuke client state under this provider
+    setRefreshKey((prev) => prev + 1);
+  }, []);
 
-  const value = useMemo(() => ({ rev, globalRefresh }), [rev, globalRefresh]);
-
-  return (
-    <Ctx.Provider value={value}>
-      <Fragment key={rev}>{children}</Fragment>
-    </Ctx.Provider>
+  const value = useMemo(
+    () => ({ globalRefresh, refreshKey }),
+    [globalRefresh, refreshKey]
   );
+
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useGlobalRefresh() {
   const ctx = useContext(Ctx);
-  if (!ctx)
+  if (!ctx) {
     throw new Error("useGlobalRefresh must be used under <RefreshProvider>");
+  }
   return ctx;
 }

@@ -245,3 +245,38 @@
   border-right: 1px solid variables.$lighter-grey !important;
   border-radius: 0 !important;
 }
+
+.contextMenu {
+  background-color: variables.$bg-color-2;
+  border: 1px solid variables.$lighter-grey;
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  padding: 4px 0;
+}
+
+.contextMenuItem {
+  background-color: transparent;
+  border: none;
+  color: variables.$font-color;
+  cursor: pointer;
+  padding: 8px 16px;
+  text-align: left;
+  width: 100%;
+
+  &:hover {
+    background-color: variables.$dark-grey;
+  }
+
+  &:first-child {
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+  }
+
+  &:last-child {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+  }
+}

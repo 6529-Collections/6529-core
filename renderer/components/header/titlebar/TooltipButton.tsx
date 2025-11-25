@@ -2,7 +2,7 @@
 
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useRef, useState } from "react";
+import { useRef, useState, RefObject } from "react";
 import { Tooltip } from "react-tooltip";
 import styles from "./TitleBar.module.scss";
 
@@ -15,6 +15,8 @@ type TooltipButtonProps = {
   content?: string;
   buttonContent?: string;
   hideOnClick?: boolean;
+  onContextMenu?: (e: React.MouseEvent) => void;
+  buttonRef?: RefObject<HTMLButtonElement | null>;
 };
 
 const TooltipButton: React.FC<TooltipButtonProps> = ({
@@ -26,6 +28,8 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
   content,
   buttonContent,
   hideOnClick = true,
+  onContextMenu,
+  buttonRef,
 }) => {
   const delay = 300;
   const [tooltipVisible, setTooltipVisible] = useState(false);
@@ -62,9 +66,11 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
   return (
     <>
       <button
+        ref={buttonRef as RefObject<HTMLButtonElement>}
         data-tooltip-id={tooltipId}
         className={`${buttonStyles} d-flex`}
         onClick={handleButtonClick}
+        onContextMenu={onContextMenu}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}>
         {buttonContent && (

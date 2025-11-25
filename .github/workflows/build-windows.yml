@@ -125,9 +125,18 @@ jobs:
         working-directory: ./sign-win
         run: npm ci
 
+      - name: Set up .NET SDK
+        if: ${{ inputs.should_run }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
       - name: Install AzureSignTool
         if: ${{ inputs.should_run }}
-        run: dotnet tool install --global AzureSignTool
+        shell: pwsh
+        run: |
+          dotnet tool uninstall --global AzureSignTool 2>$null
+          dotnet tool install --global AzureSignTool --version 6.0.1
 
       - name: Add dotnet tools to PATH
         if: ${{ inputs.should_run }}
