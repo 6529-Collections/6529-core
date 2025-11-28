@@ -58,23 +58,23 @@ export default function Providers({
                                     <CookieConsentProvider>
                                       <EULAConsentProvider>
                                         <AppWebSocketProvider>
-                                          <TitleProvider>
-                                            <HeaderProvider>
-                                              <SearchProvider>
-                                                <ScrollPositionProvider>
-                                                  <ViewProvider>
-                                                    <NavigationHistoryProvider>
-                                                      <LayoutProvider>
-                                                        <MyStreamProvider>
+                                          <LayoutProvider>
+                                            <MyStreamProvider>
+                                              <TitleProvider>
+                                                <HeaderProvider>
+                                                  <SearchProvider>
+                                                    <ScrollPositionProvider>
+                                                      <ViewProvider>
+                                                        <NavigationHistoryProvider>
                                                           {children}
-                                                        </MyStreamProvider>
-                                                      </LayoutProvider>
-                                                    </NavigationHistoryProvider>
-                                                  </ViewProvider>
-                                                </ScrollPositionProvider>
-                                              </SearchProvider>
-                                            </HeaderProvider>
-                                          </TitleProvider>
+                                                        </NavigationHistoryProvider>
+                                                      </ViewProvider>
+                                                    </ScrollPositionProvider>
+                                                  </SearchProvider>
+                                                </HeaderProvider>
+                                              </TitleProvider>
+                                            </MyStreamProvider>
+                                          </LayoutProvider>
                                           <NewVersionToast />
                                         </AppWebSocketProvider>
                                       </EULAConsentProvider>
