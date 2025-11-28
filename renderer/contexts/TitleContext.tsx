@@ -3,6 +3,7 @@
 import { publicEnv } from "@/config/env";
 import { isElectron } from "@/helpers";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useMyStreamOptional } from "./wave/MyStreamContext";
 import React, {
   createContext,
   useContext,
@@ -71,6 +72,7 @@ const getDefaultTitleForRoute = (pathname: string | null): string => {
 export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const myStream = useMyStreamOptional();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [title, setTitle] = useState<string>(DEFAULT_TITLE);
@@ -83,7 +85,12 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
   const routeRef = useRef(pathname);
   const queryRef = useRef(searchParams);
   const tabParam = searchParams?.get("tab");
-  const waveParam = searchParams?.get("wave");
+  const waveParam =
+    myStream?.activeWave.id ?? searchParams?.get("wave") ?? null;
+  const isWaveRoute =
+    pathname?.startsWith("/waves") ||
+    pathname?.startsWith("/messages") ||
+    (pathname === "/" && searchParams?.get("view") === "waves");
   const isHomeFeedTab = pathname === "/" && tabParam === "feed";
 
   useEffect(() => {
@@ -128,16 +135,19 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
 
   // Compute the title based on current state
   const computedTitle = useMemo(() => {
-    if (isHomeFeedTab) {
-      if (waveParam && waveData) {
-        let newItemsText = "";
-        if (waveData.newItemsCount > 0 && notificationCount === 0) {
-          const messageText =
-            waveData.newItemsCount === 1 ? "message" : "messages";
-          newItemsText = `(${waveData.newItemsCount} new ${messageText}) `;
-        }
-        return `${newItemsText}${waveData.name} | Brain`;
+    const waveTitle = (() => {
+      if (!waveParam || !waveData) return null;
+      let newItemsText = "";
+      if (waveData.newItemsCount > 0 && notificationCount === 0) {
+        const messageText =
+          waveData.newItemsCount === 1 ? "message" : "messages";
+        newItemsText = `(${waveData.newItemsCount} new ${messageText}) `;
       }
+      return `${newItemsText}${waveData.name} | Brain`;
+    })();
+
+    if (isHomeFeedTab) {
+      if (waveTitle) return waveTitle;
 
       const prefix =
         streamHasNewItems && notificationCount === 0
@@ -146,9 +156,14 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
       return `${prefix} | Brain`;
     }
 
+    if (isWaveRoute && waveTitle) {
+      return waveTitle;
+    }
+
     return title;
   }, [
     isHomeFeedTab,
+    isWaveRoute,
     waveParam,
     waveData,
     streamHasNewItems,
