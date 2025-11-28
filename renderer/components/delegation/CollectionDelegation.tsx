@@ -723,7 +723,7 @@ export default function CollectionDelegationComponent(props: Readonly<Props>) {
 
   useEffect(() => {
     reset();
-  }, [accountResolution.address, reset]);
+  }, [accountResolution.address]);
 
   useEffect(() => {
     const outDelegations = [...outgoingDelegations].filter(
