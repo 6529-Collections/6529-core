@@ -1,6 +1,7 @@
 "use client";
 
 import { useHeaderContext } from "@/contexts/HeaderContext";
+import { useSearch } from "@/contexts/SearchContext";
 import { useSearchParams } from "next/navigation";
 import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
@@ -17,6 +18,7 @@ export default function SmallScreenLayout({ children }: Props) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
+  const { containerRef: searchContainerRef } = useSearch();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const searchParams = useSearchParams();
@@ -79,7 +81,9 @@ export default function SmallScreenLayout({ children }: Props) {
           />
         </div>
 
-        <main className="tw-transition-opacity tw-duration-300">
+        <main
+          ref={searchContainerRef}
+          className="tw-transition-opacity tw-duration-300">
           {children}
         </main>
       </div>

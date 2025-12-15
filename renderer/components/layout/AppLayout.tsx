@@ -9,6 +9,7 @@ import BrainMobileWaves from "../brain/mobile/BrainMobileWaves";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";
 import { useHeaderContext } from "@/contexts/HeaderContext";
+import { useSearch } from "@/contexts/SearchContext";
 import { useDeepLinkNavigation } from "@/hooks/useDeepLinkNavigation";
 import BrainMobileMessages from "../brain/mobile/BrainMobileMessages";
 import { useSelector } from "react-redux";
@@ -28,6 +29,7 @@ export default function AppLayout({ children }: Props) {
   useDeepLinkNavigation();
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
+  const { containerRef: searchContainerRef } = useSearch();
   const { activeView, homeActiveTab } = useViewContext();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -68,7 +70,7 @@ export default function AppLayout({ children }: Props) {
       ) : activeView === "waves" ? (
         <BrainMobileWaves />
       ) : (
-        <main>{children}</main>
+        <main ref={searchContainerRef}>{children}</main>
       )}
       {!isSingleDropOpen && !isStreamRoute && !isHomeFeedView && (
         <div className="tw-h-16 tw-w-full" />
