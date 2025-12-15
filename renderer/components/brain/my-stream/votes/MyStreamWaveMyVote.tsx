@@ -6,8 +6,13 @@ import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileToo
 import { SingleWaveDropPosition } from "@/components/waves/drop/SingleWaveDropPosition";
 import { cicToType, formatNumberWithCommas } from "@/helpers/Helpers";
 import { ImageScale } from "@/helpers/image.helpers";
+import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React from "react";
 import { Tooltip } from "react-tooltip";
+import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
+import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
 
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;
