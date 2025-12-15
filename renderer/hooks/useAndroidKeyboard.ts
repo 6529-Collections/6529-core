@@ -1,18 +1,7 @@
 "use client";
 
+import { debounce } from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
-
-// Debounce utility (simple implementation to avoid lodash dependency)
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
 
 interface AndroidKeyboardHookReturn {
   keyboardHeight: number;
@@ -132,8 +121,9 @@ export function useAndroidKeyboard(
   useEffect(() => {
     if (isSSR || !isAndroid) return;
 
-    let keyboardShowCleanup: (() => void) | undefined;
-    let keyboardHideCleanup: (() => void) | undefined;
+    let mounted = true;
+    let showCleanup: (() => void) | undefined;
+    let hideCleanup: (() => void) | undefined;
 
     // Add event listeners with proper cleanup references
     if (window.visualViewport) {
@@ -153,10 +143,6 @@ export function useAndroidKeyboard(
     detectKeyboard();
 
     return () => {
-      // Cleanup Capacitor listeners
-      keyboardShowCleanup?.();
-      keyboardHideCleanup?.();
-
       // Cleanup DOM listeners (using same function references)
       if (window.visualViewport) {
         window.visualViewport.removeEventListener(
