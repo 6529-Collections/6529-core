@@ -297,7 +297,11 @@ const generateParts = async (
       parts.map((part) => generatePart(part, setUploadingFiles))
     );
   } catch (error) {
-    throw new Error(`Error generating parts: ${(error as Error).message}`);
+    const message = error instanceof Error ? error.message : String(error);
+    if (message?.includes("content_type")) {
+      throw new Error("File type not supported. Please use MP4 for videos.");
+    }
+    throw new Error("Error uploading file. Please try again.");
   }
 };
 
@@ -380,10 +384,12 @@ const getOptimisticDrop = (
       rep: connectedProfile.rep,
       tdh: connectedProfile.tdh,
       tdh_rate: connectedProfile.tdh_rate,
+      xtdh: connectedProfile.xtdh,
+      xtdh_rate: connectedProfile.xtdh_rate,
       level: connectedProfile.level,
       subscribed_actions: [],
       archived: false,
-      primary_address: connectedProfile.primary_wallet ?? null,
+      primary_address: connectedProfile.primary_wallet ?? "",
     },
     created_at: Date.now(),
     updated_at: null,
@@ -477,17 +483,19 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     [editorState]
   );
 
+  const sendTyping = React.useCallback(() => {
+    send(WsMessageType.USER_IS_TYPING, { wave_id: wave.id });
+  }, [send, wave.id]);
+
   const throttleHandle = useMemo(() => {
-    return throttle(() => {
-      send(WsMessageType.USER_IS_TYPING, { wave_id: wave.id });
-    }, 4000);
-  }, []);
+    return throttle(sendTyping, 4000);
+  }, [sendTyping]);
 
   useEffect(() => {
     if (getMarkdown?.length) {
       throttleHandle();
     }
-  }, [getMarkdown]);
+  }, [getMarkdown, throttleHandle]);
 
   const getCanSubmitStorm = () => {
     const markdown = getMarkdown;
@@ -519,11 +527,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     ) ?? 0) >= 24000;
 
   const getCanAddPart = () => getHaveMarkdownOrFile() && !getIsDropLimit();
-  const canSubmit = useMemo(
-    () => getCanSubmit(),
-    [getMarkdown, files, drop, hasMetadata]
-  );
-  const canAddPart = useMemo(() => getCanAddPart(), [getMarkdown, files, drop]);
+  const canSubmit = getCanSubmit();
+  const canAddPart = getCanAddPart();
 
   const [referencedNfts, setReferencedNfts] = useState<ReferencedNft[]>([]);
 
@@ -611,23 +616,28 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     allMentions: ApiDropMentionedUser[],
     allNfts: ReferencedNft[]
   ): CreateDropConfig => {
-    const parts = ensurePartsWithFallback(
-      [
-        ...(drop?.parts ?? []),
-        {
-          content: markdown?.length ? markdown : null,
-          quoted_drop:
-            activeDrop?.action === ActiveDropAction.QUOTE
-              ? {
-                  drop_id: activeDrop.drop.id,
-                  drop_part_id: activeDrop.partId,
-                }
-              : null,
-          media: files,
-        },
-      ],
-      hasMetadata
-    );
+    const hasPartsInDrop = (drop?.parts.length ?? 0) > 0;
+    const hasCurrentContent = !!(markdown?.trim().length || files.length);
+
+    const newParts =
+      hasPartsInDrop && !hasCurrentContent
+        ? drop?.parts ?? []
+        : [
+            ...(drop?.parts ?? []),
+            {
+              content: markdown?.length ? markdown : null,
+              quoted_drop:
+                activeDrop?.action === ActiveDropAction.QUOTE
+                  ? {
+                      drop_id: activeDrop.drop.id,
+                      drop_part_id: activeDrop.partId,
+                    }
+                  : null,
+              media: files,
+            },
+          ];
+
+    const parts = ensurePartsWithFallback(newParts, hasMetadata);
 
     return {
       title: null,
@@ -862,6 +872,15 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     ) {
       return;
     }
+
+    const hasPartsInDrop = (drop?.parts.length ?? 0) > 0;
+    const hasCurrentContent = !!(getMarkdown?.trim().length || files.length);
+
+    if (hasPartsInDrop && hasCurrentContent) {
+      finalizeAndAddDropPart();
+      return;
+    }
+
     await prepareAndSubmitDrop(getUpdatedDrop());
   };
 
@@ -959,7 +978,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     if (!drop.parts.length) {
       setIsStormMode(false);
     }
-  }, [drop?.parts]);
+  }, [drop, setIsStormMode]);
 
   const [isMetadataOpen, setIsMetadataOpen] = useState(false);
 
@@ -1022,6 +1041,17 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       onCancelReplyQuote();
     }
   }, [isApp, editingDropId, activeDrop, onCancelReplyQuote]);
+
+  const isChatClosed =
+    wave.wave.type === ApiWaveType.Chat && !wave.chat.enabled;
+
+  if (isChatClosed) {
+    return (
+      <div className="tw-flex-grow tw-w-full tw-bg-iron-900 tw-text-iron-500 tw-rounded-lg tw-p-4 tw-text-center tw-text-sm tw-font-medium">
+        Wave is closed
+      </div>
+    );
+  }
 
   return (
     <div className="tw-flex-grow">

@@ -50,6 +50,8 @@ jobs:
           AWS_RUM_REGION: ${{ secrets.AWS_RUM_REGION }}
           AWS_RUM_SAMPLE_RATE: ${{ secrets.AWS_RUM_SAMPLE_RATE }}
           ASSETS_FROM_S3: ${{ env.ASSETS_FROM_S3 }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
         run: npm run build
 
       - name: Build Target
@@ -84,6 +86,7 @@ jobs:
         env:
           SSR_CLIENT_ID: ${{ secrets.SSR_CLIENT_ID }}
           SSR_CLIENT_SECRET: ${{ secrets.SSR_CLIENT_SECRET }}
+          ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
         run: |
           aws elasticbeanstalk update-environment \
             --application-name "${{ env.BEANSTALK_APP_NAME }}" \
@@ -91,7 +94,8 @@ jobs:
             --version-label "${{ env.COMMIT_SHA }}" \
             --option-settings \
               "Namespace=aws:elasticbeanstalk:application:environment,OptionName=SSR_CLIENT_ID,Value=${SSR_CLIENT_ID}" \
-              "Namespace=aws:elasticbeanstalk:application:environment,OptionName=SSR_CLIENT_SECRET,Value=${SSR_CLIENT_SECRET}"
+              "Namespace=aws:elasticbeanstalk:application:environment,OptionName=SSR_CLIENT_SECRET,Value=${SSR_CLIENT_SECRET}" \
+              "Namespace=aws:elasticbeanstalk:application:environment,OptionName=ALCHEMY_API_KEY,Value=${ALCHEMY_API_KEY}"
 
       - name: Check Elastic Beanstalk health and readiness (120s warmup then 20 retries with 60s delay)
         run: |

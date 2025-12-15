@@ -14,6 +14,7 @@ export const publicEnvSchema = z.object({
    * ────────────────
    */
   NODE_ENV: z.enum(["development", "production", "test", "local"]).optional(),
+  NEXT_RUNTIME: z.string().optional(),
   VERSION: z.string().optional(),
   ASSETS_FROM_S3: z.enum(["true", "false"]).optional(),
 
@@ -40,16 +41,9 @@ export const publicEnvSchema = z.object({
   /**
    * ────────────────
    * API KEYS / CREDENTIALS
-   *   • REQUIRED
    *   • OPTIONAL
    * ────────────────
    */
-  // REQUIRED
-  // TODO: DO WE NEED ALCHEMY TO BE REQUIRED?
-  // ALCHEMY_API_KEY: z.string().min(1, "ALCHEMY_API_KEY is required"),
-
-  // OPTIONAL
-  ALCHEMY_API_KEY: z.string().optional(),
   STAGING_API_KEY: z.string().optional(),
   TENOR_API_KEY: z.string().optional(),
 
@@ -121,6 +115,7 @@ export const publicEnvSchema = z.object({
   AWS_RUM_APP_ID: z.string().optional(),
   AWS_RUM_REGION: z.string().optional(),
   AWS_RUM_SAMPLE_RATE: z.string().optional(),
+  SENTRY_DSN: z.string().optional(),
 
   /**
    * ────────────────
