@@ -174,11 +174,13 @@ function sharedConfig(publicEnv, assetPrefix) {
         },
       ];
     },
-    webpack: (config, { dev, isServer }) => {
+    webpack: (config, { dev, isServer, webpack }) => {
       config.resolve.alias.canvas = false;
       config.resolve.alias.encoding = false;
       config.resolve.alias["@react-native-async-storage/async-storage"] = false;
       config.resolve.alias["react-native"] = false;
+      config.resolve.alias["pino"] = "./stubs/empty.js";
+      config.resolve.alias["thread-stream"] = "./stubs/empty.js";
       if (!dev && !isServer) config.devtool = "source-map";
       config.optimization.minimize = false;
       return config;
@@ -189,6 +191,8 @@ function sharedConfig(publicEnv, assetPrefix) {
         encoding: "./stubs/empty.js",
         "@react-native-async-storage/async-storage": "./stubs/empty.js",
         "react-native": "./stubs/empty.js",
+        pino: "./stubs/empty.js",
+        "thread-stream": "./stubs/empty.js",
       },
     },
     assetPrefix,
