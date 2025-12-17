@@ -1,15 +1,8 @@
 "use client";
 
-import { ConsolidatedTDH } from "@/entities/ITDH";
 import { ApiIdentity } from "@/generated/models/ApiIdentity";
-import { IconProp } from "@fortawesome/fontawesome-svg-core";
-import {
-  faCheckCircle,
-  faMinusCircle,
-  faTimesCircle,
-} from "@fortawesome/free-solid-svg-icons";
-import { useEffect, useState } from "react";
 import UserStatsRow from "../../utils/stats/UserStatsRow";
+import UserPageHeaderStatsTDHConsensus from "./UserPageHeaderStatsTDHConsensus";
 
 const SAFE_ROUTE_SEGMENT_PATTERN = /^[a-zA-Z0-9._-]+$/;
 
@@ -39,47 +32,12 @@ export default function UserPageHeaderStats({
 }) {
   const routeHandle = sanitizeRouteSegment(handleOrWallet);
 
-  const [fetchingTdhConsensus, setFetchingTdhConsensus] = useState(false);
-  const [tdhConsensusInfo, setTdhConsensusInfo] = useState<ConsolidatedTDH>();
-  const [concensusIcon, setConcensusIcon] = useState<IconProp>();
-  const [concensusColor, setConcensusColor] = useState<string>();
-
-  useEffect(() => {
-    if (!profile.consolidation_key) {
-      setTdhConsensusInfo(undefined);
-      return;
-    }
-
-    setFetchingTdhConsensus(true);
-    window.localDb
-      .getTdhInfoForKey(profile.consolidation_key)
-      .then((tdhInfo: ConsolidatedTDH) => {
-        setTdhConsensusInfo(tdhInfo);
-      })
-      .finally(() => {
-        setFetchingTdhConsensus(false);
-      });
-  }, [profile]);
-
-  useEffect(() => {
-    if (!tdhConsensusInfo && profile.tdh > 0) {
-      setConcensusIcon(faMinusCircle);
-      setConcensusColor("orange");
-    } else if (profile.tdh && profile.tdh !== tdhConsensusInfo?.boosted_tdh) {
-      setConcensusIcon(faTimesCircle);
-      setConcensusColor("red");
-    } else {
-      setConcensusIcon(faCheckCircle);
-      setConcensusColor("green");
-    }
-  }, [profile, tdhConsensusInfo]);
-
   if (!routeHandle) {
     return null;
   }
 
   return (
-    <div className="tw-mt-3">
+    <div className="tw-mt-3 tw-flex tw-align-center tw-justify-between tw-gap-3">
       <UserStatsRow
         handle={routeHandle}
         tdh={profile.tdh}
@@ -89,7 +47,9 @@ export default function UserPageHeaderStats({
         rep={profile.rep}
         cic={profile.cic}
         followersCount={followersCount}
+        className="tw-flex tw-items-center"
       />
+      <UserPageHeaderStatsTDHConsensus profile={profile} />
     </div>
   );
 }
