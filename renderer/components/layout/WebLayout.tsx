@@ -1,5 +1,6 @@
 "use client";
 
+import { useSearch } from "@/contexts/SearchContext";
 import React, { type ReactNode, useMemo } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
 import { useSidebarController } from "../../hooks/useSidebarController";
@@ -24,6 +25,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
     sidebarWidth,
   } = useSidebarController();
   const { isRightSidebarOpen } = useSidebarState();
+  const { containerRef: searchContainerRef } = useSearch();
 
   const cssVars = useMemo(
     () =>
@@ -57,6 +59,7 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
         />
       </div>
       <main
+        ref={searchContainerRef}
         className="layout-main tw-flex-1 tw-min-w-0 tw-pt-[30px]"
         data-mobile={isMobile}
         data-narrow={isNarrow}

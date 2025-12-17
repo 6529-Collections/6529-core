@@ -48,8 +48,6 @@ export function SearchProvider({ children }: { children: React.ReactNode }) {
   };
 
   const performSearch = useCallback((q: string) => {
-    console.log("performSearch", q, containerRef.current, "end");
-    console.log("containerRef.current", containerRef.current);
     if (!containerRef.current) return;
 
     const context = containerRef.current;
