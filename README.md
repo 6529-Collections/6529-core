@@ -88,13 +88,13 @@ Use the following steps to build for each platform:
 Staging
 
 ```
-npm run dist-win-staging
+npm run dist-win-staging-upload
 ```
 
 Production
 
 ```
-npm run dist-win-production
+npm run dist-win-production-upload
 ```
 
 The above commands will:
