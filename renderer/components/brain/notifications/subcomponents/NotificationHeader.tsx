@@ -1,9 +1,9 @@
-import Link from "next/link";
-import Image from "next/image";
-import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
-import { parseIpfsUrl } from "@/helpers/Helpers";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import { parseIpfsUrl } from "@/helpers/Helpers";
+import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import Image from "next/image";
+import Link from "next/link";
 
 interface NotificationHeaderProps {
   readonly author: ApiProfileMin;
@@ -21,7 +21,11 @@ export default function NotificationHeader({
       <div className="tw-h-7 tw-w-7 tw-flex-shrink-0 tw-relative">
         {author.pfp ? (
           <Image
-            src={getScaledImageUri(parseIpfsUrl(author.pfp), ImageScale.W_AUTO_H_50)}
+            unoptimized
+            src={getScaledImageUri(
+              parseIpfsUrl(author.pfp),
+              ImageScale.W_AUTO_H_50
+            )}
             alt={author.handle ?? "User profile"}
             fill
             sizes="28px"
@@ -42,11 +46,7 @@ export default function NotificationHeader({
           </UserProfileTooltipWrapper>
           {children}
         </div>
-        {actions && (
-          <div className="tw-flex-shrink-0">
-            {actions}
-          </div>
-        )}
+        {actions && <div className="tw-flex-shrink-0">{actions}</div>}
       </div>
     </div>
   );
