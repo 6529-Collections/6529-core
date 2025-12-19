@@ -136,7 +136,7 @@ export default function WagmiSetup({
 
   // Create adapter with essential configuration only
   const initializeAppKitWithWallets = useCallback(
-    (wallets: AppWallet[], seedWallets: ISeedWallet[]): WagmiAdapter => {
+    (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
       // Basic validation - let util handle detailed validation
       if (!adapterManager) {
         throw new AppKitValidationError("Internal API failed");
@@ -156,7 +156,7 @@ export default function WagmiSetup({
 
   // Initialize AppKit with fail-fast approach
   const setupAppKitAdapter = useCallback(
-    (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
+    async (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
       if (isInitializing) {
         throw new AppKitValidationError("Internal API failed");
       }
@@ -165,7 +165,7 @@ export default function WagmiSetup({
 
       try {
         const result = initializeAppKitWithWallets(wallets, seedWallets);
-        await(result.ready ?? Promise.resolve());
+        await (result.ready ?? Promise.resolve());
         setCurrentAdapter(result.adapter);
       } catch (error) {
         logErrorSecurely("[WagmiSetup] AppKit initialization failed", error);

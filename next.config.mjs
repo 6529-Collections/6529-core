@@ -181,6 +181,10 @@ function sharedConfig(publicEnv, assetPrefix) {
       config.resolve.alias["react-native"] = false;
       config.resolve.alias["pino"] = "./stubs/empty.js";
       config.resolve.alias["thread-stream"] = "./stubs/empty.js";
+      config.resolve.alias["idb-keyval"] = path.resolve(
+        process.cwd(),
+        "lib/storage/idb-keyval.ts"
+      );
       if (!dev && !isServer) config.devtool = "source-map";
       config.optimization.minimize = false;
       return config;
@@ -195,6 +199,7 @@ function sharedConfig(publicEnv, assetPrefix) {
         "thread-stream": "./stubs/empty.js",
       },
     },
+    serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
     assetPrefix,
   };
 }
