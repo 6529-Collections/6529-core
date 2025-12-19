@@ -23,6 +23,17 @@ const redirectConfig = {
   },
 };
 
+interface NotificationData {
+  redirect?: keyof typeof redirectConfig;
+  profile_id?: string;
+  path?: string;
+  handle?: string;
+  id?: string;
+  wave_id?: string;
+  drop_id?: string;
+  [key: string]: unknown;
+}
+
 export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -39,7 +50,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
       removeWaveDeliveredNotifications,
       removeAllDeliveredNotifications,
     }),
-    []
+    [removeWaveDeliveredNotifications, removeAllDeliveredNotifications]
   );
 
   return (

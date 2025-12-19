@@ -28,6 +28,77 @@ import { AppWallet, useAppWallets } from "../app-wallets/AppWalletsContext";
 import { useAuth } from "../auth/Auth";
 import { AppKitAdapterManager } from "./AppKitAdapterManager";
 
+/**
+ * Installs a defensive wrapper around `window.ethereum` (EIP-1193 provider).
+ *
+ * Why this exists:
+ * - Some injected providers expose methods (e.g. `request`, `on`) that rely on `this`
+ *   being the provider object. If a consumer reads a method and calls it later, the
+ *   binding can be lost (often surfacing as "Illegal invocation" / broken requests).
+ * - Some providers can throw during property access (early initialization, unusual
+ *   getters). The proxy catches these reads to avoid crashing app initialization.
+ *
+ * What the proxy does:
+ * - Binds function properties to the underlying provider so `this` is preserved.
+ * - Returns `undefined` for properties whose access throws.
+ *
+ * This runs once per page load and only touches `window.ethereum`.
+ */
+function installSafeEthereumProxy(): void {
+  if (globalThis.window === undefined) return;
+
+  const w = globalThis as unknown as {
+    ethereum?: unknown;
+    __6529_safeEthereumProxyInstalled?: boolean;
+  };
+
+  if (w.__6529_safeEthereumProxyInstalled) return;
+
+  const ethereum = w.ethereum;
+  if (
+    !ethereum ||
+    (typeof ethereum !== "object" && typeof ethereum !== "function")
+  ) {
+    w.__6529_safeEthereumProxyInstalled = true;
+    return;
+  }
+
+  try {
+    let hasLoggedProxyGetError = false;
+    const proxy = new Proxy(ethereum, {
+      get(target, prop) {
+        try {
+          const value = Reflect.get(target, prop);
+          if (typeof value === "function") {
+            return value.bind(target);
+          }
+          return value;
+        } catch (error) {
+          if (!hasLoggedProxyGetError) {
+            hasLoggedProxyGetError = true;
+            const propLabel =
+              typeof prop === "symbol" ? prop.toString() : String(prop);
+            logErrorSecurely(
+              `[WagmiSetup] ethereum proxy getter failed (prop: ${propLabel})`,
+              error
+            );
+          }
+          return undefined;
+        }
+      },
+    });
+
+    w.ethereum = proxy;
+    w.__6529_safeEthereumProxyInstalled = true;
+  } catch (error) {
+    logErrorSecurely(
+      "[WagmiSetup] Failed to install safe ethereum proxy",
+      error
+    );
+    w.__6529_safeEthereumProxyInstalled = true;
+  }
+}
+
 export default function WagmiSetup({
   children,
 }: {
@@ -64,7 +135,7 @@ export default function WagmiSetup({
   const [isInitializing, setIsInitializing] = useState(false);
 
   // Create adapter with essential configuration only
-  const createAdapterWithWallets = useCallback(
+  const initializeAppKitWithWallets = useCallback(
     (wallets: AppWallet[], seedWallets: ISeedWallet[]): WagmiAdapter => {
       // Basic validation - let util handle detailed validation
       if (!adapterManager) {
@@ -78,8 +149,7 @@ export default function WagmiSetup({
         isCapacitor,
       };
 
-      const result = initializeAppKit(config);
-      return result.adapter;
+      return initializeAppKit(config);
     },
     [adapterManager, isCapacitor]
   );
@@ -94,8 +164,9 @@ export default function WagmiSetup({
       setIsInitializing(true);
 
       try {
-        const adapter = createAdapterWithWallets(wallets, seedWallets);
-        setCurrentAdapter(adapter);
+        const result = initializeAppKitWithWallets(wallets, seedWallets);
+        await(result.ready ?? Promise.resolve());
+        setCurrentAdapter(result.adapter);
       } catch (error) {
         logErrorSecurely("[WagmiSetup] AppKit initialization failed", error);
         const userMessage = sanitizeErrorForUser(error);
@@ -108,15 +179,18 @@ export default function WagmiSetup({
         setIsInitializing(false);
       }
     },
-    [isInitializing, createAdapterWithWallets, setToast]
+    [isInitializing, initializeAppKitWithWallets, setToast]
   );
 
   // Initialize adapter eagerly on mount with empty wallets
   useEffect(() => {
     if (isMounted && !currentAdapter && !isInitializing) {
+      installSafeEthereumProxy();
+      // Prevent unhandled promise rejections during eager initialization.
+      // Fail-fast behavior is preserved by leaving `currentAdapter` unset.
       (async () => {
         const seedWallets = isElectron() ? (await getSeedWallets()).data : [];
-        setupAppKitAdapter([], seedWallets);
+        setupAppKitAdapter([], seedWallets).catch(() => undefined);
       })();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
