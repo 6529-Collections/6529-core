@@ -1,5 +1,6 @@
 "use client";
 
+import { handleAnchorClick } from "@/hooks/useAnchorInterceptor";
 import Link from "next/link";
 import {
   useState,
@@ -16,6 +17,11 @@ type StopEvent =
 const stopPropagation = (event: StopEvent) => {
   event.stopPropagation();
   event.nativeEvent.stopImmediatePropagation?.();
+};
+
+const handleLinkClick = (event: StopEvent) => {
+  handleAnchorClick(event);
+  stopPropagation(event);
 };
 
 export default function ChatItemHrefButtons({
@@ -65,7 +71,7 @@ export default function ChatItemHrefButtons({
           href={relativeHref ?? href}
           target={relativeHref ? undefined : "_blank"}
           className={`tw-border-0 tw-flex tw-items-center tw-gap-x-2 tw-p-2 tw-bg-iron-900 tw-rounded-xl`}
-          onClick={stopPropagation}
+          onClick={handleLinkClick}
           onPointerDown={stopPropagation}
           onMouseDown={stopPropagation}
           onTouchStart={stopPropagation}>
