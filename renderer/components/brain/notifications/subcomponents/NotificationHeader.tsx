@@ -2,6 +2,7 @@ import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileToo
 import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import { parseIpfsUrl } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import { useResolvedIpfsUrl } from "@/hooks/useResolvedIpfsUrl";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -16,6 +17,8 @@ export default function NotificationHeader({
   children,
   actions,
 }: NotificationHeaderProps) {
+  const { data: resolvedPfp } = useResolvedIpfsUrl(author.pfp);
+
   return (
     <div className="tw-flex tw-items-start tw-gap-x-3">
       <div className="tw-h-7 tw-w-7 tw-flex-shrink-0 tw-relative">
@@ -23,7 +26,7 @@ export default function NotificationHeader({
           <Image
             unoptimized
             src={getScaledImageUri(
-              parseIpfsUrl(author.pfp),
+              resolvedPfp ?? parseIpfsUrl(author.pfp),
               ImageScale.W_AUTO_H_50
             )}
             alt={author.handle ?? "User profile"}
