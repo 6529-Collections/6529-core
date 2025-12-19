@@ -37,11 +37,12 @@ export const TDH_CONTRACTS = [
   NEXTGEN_CONTRACT,
 ];
 
-export interface MemesSeason {
+interface MemesSeason {
   id: number;
   start_index: number;
   end_index: number;
   count: number;
+  boost: number;
 }
 
 export function consolidateTransactions(
@@ -61,86 +62,14 @@ export function consolidateTransactions(
   return consolidatedTransactions;
 }
 
-export function getDefaultBoost(): DefaultBoost {
-  return {
+export function getDefaultBoost(seasons: MemesSeason[] = []): DefaultBoost {
+  const boost: DefaultBoost = {
     memes_card_sets: {
       available: 0.744051,
       available_info: [
         "0.60 for Full Collection Set",
         "0.05 * 0.6529^(n-1) for each additional set (unlimited)",
       ],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn1: {
-      available: 0.05,
-      available_info: ["0.05 for Season 1 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn2: {
-      available: 0.05,
-      available_info: ["0.05 for Season 2 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn3: {
-      available: 0.05,
-      available_info: ["0.05 for Season 3 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn4: {
-      available: 0.05,
-      available_info: ["0.05 for Season 4 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn5: {
-      available: 0.05,
-      available_info: ["0.05 for Season 5 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn6: {
-      available: 0.05,
-      available_info: ["0.05 for Season 6 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn7: {
-      available: 0.05,
-      available_info: ["0.05 for Season 7 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn8: {
-      available: 0.05,
-      available_info: ["0.05 for Season 8 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn9: {
-      available: 0.05,
-      available_info: ["0.05 for Season 9 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn10: {
-      available: 0.05,
-      available_info: ["0.05 for Season 10 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn11: {
-      available: 0.05,
-      available_info: ["0.05 for Season 11 Set"],
-      acquired: 0,
-      acquired_info: [],
-    },
-    memes_szn12: {
-      available: 0.05,
-      available_info: ["0.05 for Season 12 Set"],
       acquired: 0,
       acquired_info: [],
     },
@@ -163,6 +92,23 @@ export function getDefaultBoost(): DefaultBoost {
       acquired_info: [],
     },
   };
+
+  const maxSeasonId =
+    seasons.length > 0 ? Math.max(...seasons.map((s) => s.id)) : 0;
+  const seasonsForBoost = seasons.filter(
+    (s) => s.id < maxSeasonId && s.boost > 0
+  );
+
+  seasonsForBoost.forEach((season) => {
+    boost[`memes_szn${season.id}` as keyof DefaultBoost] = {
+      available: season.boost,
+      available_info: [`${season.boost} for Season ${season.id} Set`],
+      acquired: 0,
+      acquired_info: [],
+    };
+  });
+
+  return boost;
 }
 
 export function createMemesData() {
@@ -175,36 +121,22 @@ export function createMemesData() {
   };
 }
 
-export const buildSeasons = (memes: NFT[]) => {
-  const seasons: MemesSeason[] = [];
-  let start = 0;
-  let end = 0;
-  let count = 0;
-  let seasonId = 1;
-  for (const meme of memes) {
-    if (meme.season == seasonId) {
-      count++;
-      end = meme.id;
-    } else {
-      seasons.push({
-        id: seasonId,
-        start_index: start,
-        end_index: end,
-        count: count,
-      });
-      seasonId++;
-      start = meme.id;
-      end = meme.id;
-      count = 1;
-    }
-  }
-  seasons.push({
-    id: seasonId,
-    start_index: start,
-    end_index: end,
-    count: count,
+export const buildSeasons = (memes: NFT[]): MemesSeason[] => {
+  const seasonIds = [
+    ...new Set(
+      memes.map((m) => m.season).filter((s): s is number => s != null)
+    ),
+  ];
+  return seasonIds.map((id) => {
+    const inSeason = memes.filter((m) => m.season === id);
+    return {
+      id,
+      start_index: Math.min(...inSeason.map((m) => m.id)),
+      end_index: Math.max(...inSeason.map((m) => m.id)),
+      count: inSeason.length,
+      boost: id <= 20 ? 0.05 : 0,
+    };
   });
-  return seasons;
 };
 
 export const calculateTDH = async (
@@ -573,16 +505,17 @@ function hasSeasonSet(
   return seasonMemes.length === season.count;
 }
 
-function calculateMemesBoostsCardSets(cardSets: number) {
+function calculateMemesBoostsCardSets(
+  cardSets: number,
+  seasons: MemesSeason[]
+) {
   let boost = 1;
-  const breakdown = getDefaultBoost();
+  const breakdown = getDefaultBoost(seasons);
 
-  // Base for 1 full collection set in TDH 1.4
   let cardSetBreakdown = 0.6;
 
   const additionalCardSets = Math.max(0, cardSets - 1);
   if (additionalCardSets > 0) {
-    // Geometric series: 0.05 * (1 - r^n) / (1 - r), with r = 0.6529
     const r = 0.6529;
     const increment = (0.05 * (1 - Math.pow(r, additionalCardSets))) / (1 - r);
     cardSetBreakdown += increment;
@@ -595,10 +528,8 @@ function calculateMemesBoostsCardSets(cardSets: number) {
   if (additionalCardSets === 1) {
     acquiredInfo.push("0.05 for 1 additional set");
   } else if (additionalCardSets > 1) {
-    // Keep numeric style; show total increment compactly
     const r = 0.6529;
     const increment = (0.05 * (1 - Math.pow(r, additionalCardSets))) / (1 - r);
-    // Limit to 6 decimals
     const incStr = (Math.round(increment * 1e6) / 1e6).toString();
     acquiredInfo.push(
       `${incStr} total for ${additionalCardSets} additional sets (0.05 * (1 - 0.6529^${additionalCardSets}) / (1 - 0.6529))`
@@ -621,20 +552,28 @@ function calculateMemesBoostsSeasons(
   memes: TokenTDH[]
 ) {
   let boost = 1;
-  const breakdown = getDefaultBoost();
+  const maxSeasonId =
+    seasons.length > 0 ? Math.max(...seasons.map((s) => s.id)) : 0;
+  const seasonsForBoost = seasons.filter(
+    (s) => s.id < maxSeasonId && s.boost > 0
+  );
+  const breakdown = getDefaultBoost(seasons);
 
-  const applySeasonBoost = (season: number) => {
-    boost += 0.05;
-    (breakdown as any)[`memes_szn${season}`].acquired = 0.05;
-    (breakdown as any)[`memes_szn${season}`].acquired_info = [
-      `0.05 for holding Season ${season} Set`,
+  const applySeasonBoost = (seasonId: number) => {
+    const seasonObj = seasons.find((s) => s.id === seasonId);
+    if (!seasonObj) return;
+    const seasonBoost = seasonObj.boost;
+    boost += seasonBoost;
+    (breakdown as any)[`memes_szn${seasonId}`].acquired = seasonBoost;
+    (breakdown as any)[`memes_szn${seasonId}`].acquired_info = [
+      `${seasonBoost} for holding Season ${seasonId} Set`,
     ];
   };
 
-  for (let season = 1; season <= 12; season++) {
-    const hasSet = hasSeasonSet(season, seasons, memes);
+  for (const season of seasonsForBoost) {
+    const hasSet = hasSeasonSet(season.id, seasons, memes);
 
-    if (season === 1) {
+    if (season.id === 1) {
       if (hasSet) {
         applySeasonBoost(1);
       } else {
@@ -654,7 +593,7 @@ function calculateMemesBoostsSeasons(
         }
       }
     } else if (hasSet) {
-      applySeasonBoost(season);
+      applySeasonBoost(season.id);
     }
   }
 
@@ -674,10 +613,8 @@ function calculateMemesBoosts(
   memes: TokenTDH[]
 ) {
   if (cardSets > 0) {
-    /* Category A */
-    return calculateMemesBoostsCardSets(cardSets);
+    return calculateMemesBoostsCardSets(cardSets, seasons);
   } else {
-    /* Category B */
     return calculateMemesBoostsSeasons(seasons, s1Extra, memes);
   }
 }
