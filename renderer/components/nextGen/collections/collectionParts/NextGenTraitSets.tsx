@@ -18,11 +18,7 @@ import {
   TraitValues,
 } from "@/entities/INextgen";
 import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
-import {
-  capitalizeEveryWord,
-  cicToType,
-  formatAddress,
-} from "@/helpers/Helpers";
+import { capitalizeEveryWord, formatAddress } from "@/helpers/Helpers";
 import { commonApiFetch } from "@/services/api/common-api";
 import {
   faArrowCircleRight,
@@ -218,9 +214,7 @@ export default function NextGenTraitSets(
       )}
       <Row>
         <Col className="d-flex align-items-center justify-content-between gap-3">
-          <h1 className="no-wrap">
-            Trait Sets
-          </h1>
+          <h1 className="no-wrap">Trait Sets</h1>
           {props.preview && (
             <Link
               href={`/nextgen/collection/${formatNameForUrl(
@@ -417,11 +411,7 @@ function Owner(props: Readonly<{ set: NextgenTraitSet }>) {
       className="d-flex gap-2 decoration-hover-underline"
       onClick={(e) => e.stopPropagation()}
       href={`/${props.set.handle ?? props.set.owner}`}>
-      <UserCICAndLevel
-        level={props.set.level}
-        cicType={cicToType(props.set.tdh + props.set.rep_score)}
-      />{" "}
-      {getOwnerDisplay()}
+      <UserCICAndLevel level={props.set.level} /> {getOwnerDisplay()}
     </Link>
   );
 }
