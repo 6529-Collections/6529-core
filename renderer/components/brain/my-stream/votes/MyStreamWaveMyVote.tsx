@@ -4,7 +4,7 @@ import UserCICAndLevel, {
 } from "@/components/user/utils/UserCICAndLevel";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { SingleWaveDropPosition } from "@/components/waves/drop/SingleWaveDropPosition";
-import { cicToType, formatNumberWithCommas } from "@/helpers/Helpers";
+import { formatNumberWithCommas } from "@/helpers/Helpers";
 import { ImageScale } from "@/helpers/image.helpers";
 import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import Link from "next/link";
@@ -30,7 +30,6 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
   isResetting = false,
 }) => {
   const artWork = drop.parts.at(0)?.media.at(0);
-  const cicType = cicToType(drop.author.cic || 0);
   const router = useRouter();
 
   const handleClick = () => {
@@ -119,7 +118,6 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
             </div>
             <UserCICAndLevel
               level={drop.author.level || 0}
-              cicType={cicType}
               size={UserCICAndLevelSize.SMALL}
             />
             <UserProfileTooltipWrapper
@@ -181,7 +179,7 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
                     </React.Fragment>
                   ))}
                 </div>
-                <span className="tw-text-white tw-font-bold tw-text-sm">
+                <span className="tw-text-iron-200 tw-font-semibold tw-text-sm">
                   {formatNumberWithCommas(drop.raters_count)}{" "}
                   <span className="tw-text-iron-500 tw-font-normal">
                     {drop.raters_count === 1 ? "voter" : "voters"}

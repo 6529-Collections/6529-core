@@ -7,7 +7,6 @@ import UserCICAndLevel, {
 } from "@/components/user/utils/UserCICAndLevel";
 import { ApiDrop } from "@/generated/models/ApiDrop";
 import { ApiDropPart } from "@/generated/models/ApiDropPart";
-import { cicToType } from "@/helpers/Helpers";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 import Image from "next/image";
 import Link from "next/link";
@@ -121,7 +120,6 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
                 {!!drop && (
                   <UserCICAndLevel
                     level={drop.author.level}
-                    cicType={cicToType(drop?.author.cic)}
                     size={UserCICAndLevelSize.SMALL}
                   />
                 )}

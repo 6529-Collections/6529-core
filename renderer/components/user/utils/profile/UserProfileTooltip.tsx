@@ -1,6 +1,5 @@
 import { AuthContext } from "@/components/auth/Auth";
 import DropPfp from "@/components/drops/create/utils/DropPfp";
-import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import UserFollowBtn, {
   UserFollowBtnSize,
 } from "@/components/user/utils/UserFollowBtn";
@@ -10,7 +9,6 @@ import {
   CicStatement,
 } from "@/entities/IProfile";
 import { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
-import { cicToType } from "@/helpers/Helpers";
 import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
 import { useIdentity } from "@/hooks/useIdentity";
 import { commonApiFetch } from "@/services/api/common-api";
@@ -114,7 +112,6 @@ export default function UserProfileTooltip({
               {profile && (
                 <UserCICAndLevel
                   level={profile.level}
-                  cicType={cicToType(profile.cic)}
                   size={UserCICAndLevelSize.SMALL}
                 />
               )}
