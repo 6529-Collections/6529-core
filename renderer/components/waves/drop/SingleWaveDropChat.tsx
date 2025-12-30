@@ -1,20 +1,19 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
 import { ApiDrop, ApiWave } from "@/generated/models/ObjectSerializer";
+import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
-import WaveDropsAll from "../drops/wave-drops-all";
-import {
-  CreateDropWaveWrapper,
-  CreateDropWaveWrapperContext,
-} from "../CreateDropWaveWrapper";
 import {
   ActiveDropAction,
   ActiveDropState,
 } from "@/types/dropInteractionTypes";
+import React, { useMemo, useState } from "react";
+import {
+  CreateDropWaveWrapper,
+  CreateDropWaveWrapperContext,
+} from "../CreateDropWaveWrapper";
+import WaveDropsAll from "../drops/wave-drops-all";
 import PrivilegedDropCreator, { DropMode } from "../PrivilegedDropCreator";
-import { useLayout } from "@/components/brain/my-stream/layout/LayoutContext";
-import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
 
 interface SingleWaveDropChatProps {
   readonly wave: ApiWave;
@@ -25,31 +24,18 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   wave,
   drop,
 }) => {
-  const contentWrapperRef = useRef<HTMLDivElement | null>(null);
   const { isApp } = useDeviceInfo();
-  const { spaces } = useLayout();
-  const { getContainerStyle, isVisible: isKeyboardVisible } = useAndroidKeyboard();
-
-  const containerStyle = useMemo(() => {
-    if (!spaces.measurementsComplete) {
-      return {};
-    }
-    return {
-      height: `calc(100vh - ${spaces.headerSpace}px - var(--tab-height, 47px))`,
-    };
-  }, [spaces.measurementsComplete, spaces.headerSpace]);
-
-  const containerClassName = useMemo(() => {
-    return `tw-w-full tw-flex tw-flex-col lg:[--tab-height:30px]`;
-  }, []);
+  const { isVisible: isKeyboardVisible } = useAndroidKeyboard();
 
   // Apply Android keyboard adjustments to the fixed input area
   const inputContainerStyle = useMemo(() => {
-    return getContainerStyle({
-      paddingBottom: isKeyboardVisible ? "0px" : "calc(env(safe-area-inset-bottom))",
-    }, 0);
-  }, [getContainerStyle, isKeyboardVisible]);
-  
+    return {
+      paddingBottom: isKeyboardVisible
+        ? "0px"
+        : "calc(env(safe-area-inset-bottom))",
+    };
+  }, [isKeyboardVisible]);
+
   const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>({
     action: ActiveDropAction.REPLY,
     drop: drop,
@@ -77,15 +63,12 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   };
 
   return (
-    <div className="tw-flex-1">
-      <div
-        ref={contentWrapperRef}
-        className="tw-h-full tw-overflow-hidden tw-bg-iron-950 tw-relative lg:tw-border lg:tw-border-l-0 lg:tw-border-r lg:tw-border-solid tw-border-iron-900 tw-border-y-0">
-        <div className="tw-relative tw-h-full">
-          <div className="tw-h-full tw-w-full tw-flex tw-items-stretch">
-            <div className={containerClassName} style={containerStyle}>
-              <div
-                className={`tw-flex-1 tw-min-h-0 ${isApp ? "tw-mb-8" : ""}`}>
+    <div className="tw-flex-1 tw-flex tw-flex-col tw-h-full tw-min-h-0">
+      <div className="tw-flex-1 tw-flex tw-flex-col tw-min-h-0 tw-overflow-hidden tw-bg-iron-950 tw-relative lg:tw-border tw-border-l-0 lg:tw-border-r lg:tw-border-solid tw-border-iron-800 tw-border-y-0">
+        <div className="tw-flex-1 tw-flex tw-flex-col tw-min-h-0 tw-relative">
+          <div className="tw-w-full tw-flex tw-flex-col tw-flex-1 tw-min-h-0">
+            <div className="tw-w-full tw-flex tw-flex-col tw-flex-1 tw-min-h-0">
+              <div className="tw-flex-1 tw-min-h-0">
                 <WaveDropsAll
                   waveId={wave.id}
                   onReply={({
@@ -117,17 +100,18 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                   activeDrop={activeDrop}
                   initialDrop={null}
                   dropId={drop.id}
+                  isMuted={wave.metrics?.muted ?? false}
                 />
               </div>
               <div
-                style={isApp ? inputContainerStyle : {
-                  paddingBottom: "calc(env(safe-area-inset-bottom))",
-                }}
-                className={`${
+                style={
                   isApp
-                    ? "tw-fixed tw-bottom-0 tw-left-0 tw-right-0 tw-bg-iron-950 tw-z-10"
-                    : "tw-mt-auto"
-                }`}>
+                    ? inputContainerStyle
+                    : {
+                        paddingBottom: "calc(env(safe-area-inset-bottom))",
+                      }
+                }
+                className="tw-mt-auto">
                 <CreateDropWaveWrapper
                   context={CreateDropWaveWrapperContext.SINGLE_DROP}>
                   <PrivilegedDropCreator

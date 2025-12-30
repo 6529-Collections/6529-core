@@ -2,6 +2,7 @@
 
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
+import { useCompactMode } from "@/contexts/CompactModeContext";
 import { ApiDrop } from "@/generated/models/ApiDrop";
 import Image from "next/image";
 import Link from "next/link";
@@ -12,6 +13,7 @@ interface WaveDropAuthorPfpProps {
 }
 
 const WaveDropAuthorPfp: React.FC<WaveDropAuthorPfpProps> = ({ drop }) => {
+  const compact = useCompactMode();
   const resolvedPfp = drop.author.pfp
     ? resolveIpfsUrlSync(drop.author.pfp)
     : null;
@@ -20,7 +22,8 @@ const WaveDropAuthorPfp: React.FC<WaveDropAuthorPfpProps> = ({ drop }) => {
   const profileHref = authorHandle ? `/${authorHandle}` : null;
   const tooltipUser = authorHandle ?? drop.author.id;
 
-  const containerClasses = "tw-relative tw-flex-shrink-0 tw-h-11 tw-w-11 tw-rounded-lg tw-bg-iron-900 tw-overflow-hidden";
+  const sizeClasses = compact ? "tw-h-8 tw-w-8" : "tw-h-10 tw-w-10";
+  const containerClasses = `tw-relative tw-flex-shrink-0 ${sizeClasses} tw-rounded-lg tw-bg-iron-900 tw-overflow-hidden`;
 
   const avatarContent = resolvedPfp ? (
     <Image
@@ -29,7 +32,7 @@ const WaveDropAuthorPfp: React.FC<WaveDropAuthorPfpProps> = ({ drop }) => {
         authorHandle ? `${authorHandle}'s profile picture` : "Profile picture"
       }
       fill
-      sizes="44px"
+      sizes={compact ? "32px" : "40px"}
       className="tw-object-contain tw-rounded-lg tw-bg-transparent"
     />
   ) : (
