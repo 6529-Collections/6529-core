@@ -74,7 +74,10 @@ import {
 } from "./utils/getMissingRequirements";
 
 // Use next/dynamic for lazy loading with SSR support
-const TermsSignatureFlow = dynamic(() => import("../terms/TermsSignatureFlow"));
+const TermsSignatureFlow = dynamic(
+  () => import("../terms/TermsSignatureFlow"),
+  { loading: () => null }
+);
 
 export type CreateDropMetadataType =
   | {
@@ -973,12 +976,15 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     setFiles(updatedFiles);
   };
 
-  const handleEditorStateChange = useCallback((newEditorState: EditorState) => {
-    setEditorState(newEditorState);
-    if (!isWideContainer) {
-      setShowOptions(false);
-    }
-  }, [isWideContainer]);
+  const handleEditorStateChange = useCallback(
+    (newEditorState: EditorState) => {
+      setEditorState(newEditorState);
+      if (!isWideContainer) {
+        setShowOptions(false);
+      }
+    },
+    [isWideContainer]
+  );
 
   const removeFile = (file: File, partIndex?: number) => {
     if (partIndex !== undefined) {
@@ -1181,10 +1187,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         removeFile={removeFile}
         disabled={submitting}
       />
-
-      <React.Suspense fallback={<div>Loading Terms...</div>}>
-        <TermsSignatureFlow />
-      </React.Suspense>
+      <TermsSignatureFlow />
     </div>
   );
 };
