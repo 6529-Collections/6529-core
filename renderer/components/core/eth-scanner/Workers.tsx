@@ -71,7 +71,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
   }
 
   if (
-    minute.startsWith("*/") &&
+    minute?.startsWith("*/") &&
     hour === "*" &&
     dayOfMonth === "*" &&
     month === "*" &&
@@ -92,7 +92,7 @@ const cronToHumanReadable = (cronExpression: string): string => {
 
   if (
     minute === "0" &&
-    hour.startsWith("*/") &&
+    hour?.startsWith("*/") &&
     dayOfMonth === "*" &&
     month === "*" &&
     dayOfWeek === "*"
@@ -175,7 +175,7 @@ export function WorkerCard({
   customStatus,
 }: {
   readonly task: Task;
-  readonly customStatus?: string;
+  readonly customStatus?: string | undefined;
 }) {
   const printStatus = () => {
     if (!task.cronExpression) {
@@ -460,7 +460,7 @@ export function WorkerCard({
       <Row>
         <Col>
           <Col xs={12}>
-            <Container className={styles.logCard}>
+            <Container className={styles["logCard"]}>
               <Row>
                 <Col
                   xs={12}
@@ -580,10 +580,10 @@ function ResetToBlockConfirm({
   const [block, setBlock] = useState("");
   return (
     <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <div className={styles.modalHeader}>
+      <div className={styles["modalHeader"]}>
         <Modal.Title>Reset to block</Modal.Title>
       </div>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <p className="mt-2 mb-2">
           Roll back to a specific block number. All transactions after this
           block will be deleted, and ownership balances will be recalculated as
@@ -620,7 +620,7 @@ function ResetToBlockConfirm({
           </Button>
         </InputGroup>
       </Modal.Body>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button
           variant="secondary"
           onClick={() => {
