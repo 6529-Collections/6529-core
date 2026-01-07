@@ -68,7 +68,7 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
     : faXmarkCircle;
 
   return (
-    <div className={styles.tableContainer}>
+    <div className={styles["tableContainer"]}>
       <Table striped bordered className="align-middle">
         <thead>
           <tr>
