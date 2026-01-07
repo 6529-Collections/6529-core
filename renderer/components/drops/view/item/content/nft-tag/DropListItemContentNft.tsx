@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { ReferencedNft } from "@/entities/IDrop";
-import {
+import type { ReferencedNft } from "@/entities/IDrop";
+import type {
   ReservoirTokensResponse,
   ReservoirTokensResponseTokenElement,
 } from "@/entities/IReservoir";
@@ -44,7 +44,7 @@ export default function DropListItemContentNft({
   );
   useEffect(() => {
     if (nfts?.length) {
-      setNft(nfts[0]);
+      setNft(nfts[0]!);
     }
   }, [nfts]);
 

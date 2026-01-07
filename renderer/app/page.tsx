@@ -4,12 +4,12 @@ import { isMintingActive } from "@/components/meme-calendar/meme-calendar.helper
 import { fetchInitialTokens } from "@/components/nextGen/collections/collectionParts/hooks/fetchInitialTokens";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
-import { NFTWithMemesExtendedData } from "@/entities/INFT";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NFTWithMemesExtendedData } from "@/entities/INFT";
+import type { NextGenCollection } from "@/entities/INextgen";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import { commonApiFetch } from "@/services/api/common-api";
 import styles from "@/styles/Home.module.scss";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export default async function Page() {
   const headers = await getAppCommonHeaders();
@@ -34,7 +34,7 @@ export default async function Page() {
     : [];
 
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <HomePage
         featuredNft={featuredNft}
         isMemeMintingActive={isMintingActive()}

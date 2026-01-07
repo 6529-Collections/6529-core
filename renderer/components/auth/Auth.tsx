@@ -6,11 +6,11 @@ import {
   InvalidRoleStateError,
   MissingActiveProfileError,
 } from "@/errors/authentication";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
-import { ApiLoginRequest } from "@/generated/models/ApiLoginRequest";
-import { ApiLoginResponse } from "@/generated/models/ApiLoginResponse";
-import { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
-import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiLoginRequest } from "@/generated/models/ApiLoginRequest";
+import type { ApiLoginResponse } from "@/generated/models/ApiLoginResponse";
+import type { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
+import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -44,7 +44,8 @@ import {
   useState,
 } from "react";
 import { Button, Modal } from "react-bootstrap";
-import { Slide, TypeOptions, toast } from "react-toastify";
+import type { TypeOptions } from "react-toastify";
+import { Slide, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { isAddress } from "viem";
 import DotLoader from "../dotLoader/DotLoader";
@@ -57,7 +58,10 @@ import { useSeizeConnectContext } from "./SeizeConnectContext";
 
 // Custom error classes for authentication failures
 class AuthenticationNonceError extends Error {
-  constructor(message: string, public readonly cause?: unknown) {
+  constructor(
+    message: string,
+    public override readonly cause?: unknown
+  ) {
     super(message);
     this.name = "AuthenticationNonceError";
   }
@@ -71,7 +75,10 @@ class InvalidSignerAddressError extends Error {
 }
 
 class NonceResponseValidationError extends Error {
-  constructor(message: string, public readonly response?: unknown) {
+  constructor(
+    message: string,
+    public readonly response?: unknown
+  ) {
     super(message);
     this.name = "NonceResponseValidationError";
   }
@@ -484,9 +491,9 @@ export default function Auth({
         body: {
           server_signature,
           client_signature: clientSignature.signature,
-          role: role ?? undefined,
           is_safe_wallet: isSafeWallet,
           client_address: signerAddress,
+          ...(role != null && { role }),
         },
       });
       setAuthJwt(
@@ -678,10 +685,10 @@ export default function Auth({
         keyboard={false}
         centered
         dialogClassName={!isTopModal(AUTH_MODAL) ? "modal-blurred" : ""}>
-        <div className={styles.signModalHeader}>
+        <div className={styles["signModalHeader"]}>
           <Modal.Title>Sign Authentication Request</Modal.Title>
         </div>
-        <Modal.Body className={styles.signModalContent}>
+        <Modal.Body className={styles["signModalContent"]}>
           <p className="mt-2 mb-2">
             To connect your wallet, you will need to sign a message to confirm
             your identity.
@@ -698,7 +705,7 @@ export default function Auth({
             </li>
           </ul>
         </Modal.Body>
-        <Modal.Footer className={styles.signModalContent}>
+        <Modal.Footer className={styles["signModalContent"]}>
           <Button
             variant="danger"
             onClick={() => {

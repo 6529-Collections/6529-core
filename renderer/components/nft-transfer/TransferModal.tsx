@@ -7,9 +7,9 @@ import { useTransfer } from "./TransferState";
 import CircleLoader, {
   CircleLoaderSize,
 } from "@/components/distribution-plan-tool/common/CircleLoader";
-import { CommunityMemberMinimal } from "@/entities/IProfile";
+import type { CommunityMemberMinimal } from "@/entities/IProfile";
 import { ContractType } from "@/enums";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { getUserProfile } from "@/helpers/server.helpers";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -24,10 +24,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useQuery } from "@tanstack/react-query";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import {
+import type {
   Address,
+  PublicClient} from "viem";
+import {
   isAddress,
-  PublicClient,
   type WriteContractParameters,
 } from "viem";
 import { useAccount, usePublicClient, useWalletClient } from "wagmi";
@@ -101,8 +102,8 @@ type TxEntry = {
   originKey: string;
   label: string;
   state: TxState;
-  hash?: `0x${string}`;
-  error?: string;
+  hash?: `0x${string}` | undefined;
+  error?: string | undefined;
 };
 
 type TxItem = {
@@ -210,8 +211,8 @@ function SelectedSummaryList({
   readonly items: {
     key: string;
     qty: number;
-    title?: string;
-    thumbUrl?: string;
+    title?: string | undefined;
+    thumbUrl?: string | undefined;
   }[];
   readonly leftListRef: React.RefObject<HTMLUListElement | null>;
   readonly leftHasOverflow: boolean;
@@ -683,8 +684,8 @@ function BodyByFlow({
   readonly items: {
     key: string;
     qty: number;
-    title?: string;
-    thumbUrl?: string;
+    title?: string | undefined;
+    thumbUrl?: string | undefined;
   }[];
   readonly leftListRef: React.RefObject<HTMLUListElement | null>;
   readonly leftHasOverflow: boolean;
@@ -794,7 +795,7 @@ export default function TransferModal({
   onClose,
 }: {
   readonly open: boolean;
-  readonly onClose: (opts?: { completed?: boolean }) => void;
+  readonly onClose: (opts?: { completed?: boolean | undefined }) => void;
 }) {
   const t = useTransfer();
   const [query, setQuery] = useState("");
@@ -891,7 +892,7 @@ export default function TransferModal({
         } else {
           by.set(key, {
             contract,
-            collection: it.key.split(":")[0],
+            collection: it.key.split(":")[0]!,
             originKey,
             is1155,
             items: [it],

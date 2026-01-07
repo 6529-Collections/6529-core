@@ -1,10 +1,11 @@
 "use client";
 
-import { ApiWave } from "@/generated/models/ApiWave";
-import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import type {
+  MinimalWaveNewDropsCount} from "./useNewDropCounter";
 import useNewDropCounter, {
-  MinimalWaveNewDropsCount,
   getNewestTimestamp,
 } from "./useNewDropCounter";
 
@@ -108,7 +109,7 @@ function useEnhancedWavesListCore(
   }, [activeWaveId, resetWaveUnreadCount]);
 
   const mapWave = useCallback(
-    (wave: ApiWave & { pinned?: boolean }): MinimalWave => {
+    (wave: ApiWave & { pinned?: boolean | undefined }): MinimalWave => {
       const wsData = newDropsCounts[wave.id];
       const hasNewWsDrops = (wsData?.count ?? 0) > 0;
       const newDrops = {

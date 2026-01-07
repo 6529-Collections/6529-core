@@ -1,6 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useTokenSlideshow } from '@/components/nextGen/collections/collectionParts/hooks/useTokenSlideshow';
-import { NextGenToken } from '@/entities/INextgen';
+import type { NextGenToken } from '@/entities/INextgen';
 import { commonApiFetch } from '@/services/api/common-api';
 
 // Mock the API service
@@ -307,7 +307,7 @@ describe('useTokenSlideshow', () => {
       // But if it's showing less, we need to understand the actual behavior
       const initialDisplayLength = result.current.displayTokens.length;
       expect(initialDisplayLength).toBeGreaterThan(0);
-      expect(result.current.displayTokens[0].id).toBe(1);
+      expect(result.current.displayTokens[0]?.id).toBe(1);
       
       // Simulate sliding close to end to trigger expansion
       // Use a slide position that's close to the current display length

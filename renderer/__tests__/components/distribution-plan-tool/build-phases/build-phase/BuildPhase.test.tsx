@@ -1,7 +1,7 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import BuildPhase from '@/components/distribution-plan-tool/build-phases/build-phase/BuildPhase';
-import { BuildPhasesPhase } from '@/components/distribution-plan-tool/build-phases/BuildPhases';
+import type { BuildPhasesPhase } from '@/components/distribution-plan-tool/build-phases/BuildPhases';
 
 jest.mock('@/components/distribution-plan-tool/common/StepHeader', () => ({ title }: any) => <div data-testid="header">{title}</div>);
 jest.mock('@/components/distribution-plan-tool/build-phases/build-phase/form/BuildPhaseForm', () => ({ selectedPhase }: any) => <div data-testid="form">{selectedPhase.name}</div>);
@@ -53,7 +53,7 @@ describe('BuildPhase', () => {
   });
 
   it('shows run analysis button when any component has not ran', () => {
-    const modified = { ...phases[0], components: [{ ...phases[0].components[0], spotsNotRan: true }] };
+    const modified = { ...phases[0], components: [{ ...phases[0]?.components[0], spotsNotRan: true }] };
     render(<BuildPhase selectedPhase={modified} phases={phases} onNextStep={jest.fn()} />);
 
     expect(screen.getByTestId('next')).toHaveTextContent('run');

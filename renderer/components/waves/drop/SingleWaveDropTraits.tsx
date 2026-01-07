@@ -1,12 +1,12 @@
 "use client";
 
-import { ApiDropMetadata } from "@/generated/models/ApiDropMetadata";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ApiDropMetadata } from "@/generated/models/ApiDropMetadata";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 import { isNumber } from "lodash";
 import React, { useMemo, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import { TraitsData } from "../memes/submission/types/TraitsData";
+import type { TraitsData } from "../memes/submission/types/TraitsData";
 import { TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
 import {
   FIELD_TO_LABEL_MAP,
@@ -254,10 +254,10 @@ const extractTraitsFromMetadata = (
 
       // Safe assignment with type checking
       if (
-        typeof traits[textKey] === "string" ||
-        traits[textKey] === undefined
+        typeof traits[textKey!] === "string" ||
+        traits[textKey!] === undefined
       ) {
-        (traits as Record<keyof TraitsData, any>)[textKey] = value;
+        (traits as Record<keyof TraitsData, any>)[textKey!] = value;
       }
     }
     // Special case: handle any key that starts with "points"
@@ -296,7 +296,7 @@ export const SingleWaveDropTraits: React.FC<SingleWaveDropTraitsProps> = ({
 
     // Extract content from the first part if available
     const description =
-      drop.parts && drop.parts.length > 0 ? drop.parts[0].content || "" : "";
+      drop.parts && drop.parts.length > 0 ? drop.parts[0]?.content || "" : "";
 
     // Return full traits with fallback values for missing traits
     const finalTraits: TraitsData = {

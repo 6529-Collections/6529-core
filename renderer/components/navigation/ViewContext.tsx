@@ -1,17 +1,18 @@
 "use client";
 
+import type {
+  ReactNode} from "react";
 import React, {
   createContext,
   useContext,
   useState,
-  ReactNode,
   useMemo,
   useCallback,
   useEffect,
 } from "react";
 import type { ViewKey, NavItem } from "./navTypes";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { useSearchParams, useRouter } from "next/navigation";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import {
@@ -21,9 +22,10 @@ import {
   getWaveRoute,
   getWavesBaseRoute,
 } from "@/helpers/navigation.helpers";
+import type {
+  HomeTab} from "@/components/home/useHomeTabs";
 import {
   HOME_TAB_EVENT,
-  HomeTab,
   getStoredHomeTab,
   setStoredHomeTab,
 } from "@/components/home/useHomeTabs";
@@ -56,14 +58,14 @@ export const ViewProvider: React.FC<{ readonly children: ReactNode }> = ({
 
   useEffect(() => {
     const { window: browserWindow } = globalThis as typeof globalThis & {
-      window?: Window;
+      window?: Window | undefined;
     };
     if (browserWindow === undefined) {
       return;
     }
 
     const handleTabEvent = (event: Event) => {
-      const detail = (event as CustomEvent<{ tab?: HomeTab }>).detail;
+      const detail = (event as CustomEvent<{ tab?: HomeTab | undefined }>).detail;
       const tab = detail?.tab;
       if (tab !== "feed" && tab !== "latest") return;
       setHomeActiveTab(tab);

@@ -1,5 +1,5 @@
 import CommonSelect from "@/components/utils/select/CommonSelect";
-import { SortDirection } from "@/entities/ISort";
+import type { SortDirection } from "@/entities/ISort";
 import type { XtdhTokensSortField } from "@/hooks/useXtdhTokensQuery";
 
 import { TOKENS_SORT_ITEMS } from "../constants";
@@ -9,7 +9,7 @@ interface XtdhTokensControlsProps {
   readonly activeSortDirection: SortDirection;
   readonly onSortChange: (sort: XtdhTokensSortField) => void;
 
-  readonly isDisabled?: boolean;
+  readonly isDisabled?: boolean | undefined;
 }
 
 export function XtdhTokensControls({

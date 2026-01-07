@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { STATEMENT_META, STATEMENT_TYPE } from "@/helpers/Types";
+import type { STATEMENT_TYPE } from "@/helpers/Types";
+import { STATEMENT_META } from "@/helpers/Types";
 import SocialStatementIcon from "@/components/user/utils/icons/SocialStatementIcon";
 
 export default function UserPageIdentityAddStatementsContactInput({
@@ -23,7 +24,7 @@ export default function UserPageIdentityAddStatementsContactInput({
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { value: raw } = event.target;
-    const nativeEvent = event.nativeEvent as { isComposing?: boolean };
+    const nativeEvent = event.nativeEvent as { isComposing?: boolean | undefined };
     const isComposing = Boolean(nativeEvent?.isComposing);
     onChange(isComposing ? raw : collapseProtocolPrefix(raw));
   };

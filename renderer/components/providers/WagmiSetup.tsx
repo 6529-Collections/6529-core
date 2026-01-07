@@ -5,10 +5,8 @@ import { isElectron } from "@/helpers";
 import { useAppWalletPasswordModal } from "@/hooks/useAppWalletPasswordModal";
 import { ISeedWallet } from "@/shared/types";
 import { AppKitValidationError } from "@/src/errors/appkit-initialization";
-import {
-  AppKitInitializationConfig,
-  initializeAppKit,
-} from "@/utils/appkit-initialization.utils";
+import type { AppKitInitializationConfig } from "@/utils/appkit-initialization.utils";
+import { initializeAppKit } from "@/utils/appkit-initialization.utils";
 import {
   logErrorSecurely,
   sanitizeErrorForUser,
@@ -24,7 +22,8 @@ import {
 import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { WagmiProvider } from "wagmi";
-import { AppWallet, useAppWallets } from "../app-wallets/AppWalletsContext";
+import type { AppWallet } from "../app-wallets/AppWalletsContext";
+import { useAppWallets } from "../app-wallets/AppWalletsContext";
 import { useAuth } from "../auth/Auth";
 import { AppKitAdapterManager } from "./AppKitAdapterManager";
 
@@ -48,8 +47,8 @@ function installSafeEthereumProxy(): void {
   if (globalThis.window === undefined) return;
 
   const w = globalThis as unknown as {
-    ethereum?: unknown;
-    __6529_safeEthereumProxyInstalled?: boolean;
+    ethereum?: unknown | undefined;
+    __6529_safeEthereumProxyInstalled?: boolean | undefined;
   };
 
   if (w.__6529_safeEthereumProxyInstalled) return;
@@ -193,7 +192,6 @@ export default function WagmiSetup({
         setupAppKitAdapter([], seedWallets).catch(() => undefined);
       })();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isMounted, currentAdapter, isInitializing]); // setupAppKitAdapter intentionally excluded to prevent loops
 
   // Inject wallet connectors dynamically using hooks (simplified approach)

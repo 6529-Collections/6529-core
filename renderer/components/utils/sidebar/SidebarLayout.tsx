@@ -6,7 +6,8 @@ import { useHeaderContext } from "@/contexts/HeaderContext";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { selectActiveGroupId, setActiveGroupId } from "@/store/groupSlice";
 import { useSearchParams } from "next/navigation";
-import { ReactNode, useEffect, useRef, useState } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { createBreakpoint } from "react-use";
 import SidebarLayoutApp from "./SidebarLayoutApp";
@@ -115,7 +116,8 @@ export default function SidebarLayout({
       <div
         className={`tw-transition-all tw-duration-300 tw-ease-out ${
           !open ? "tw-ml-0" : "tw-ml-[320px]"
-        }`}>
+        }`}
+      >
         <GroupsSidebarToggle
           ref={openButtonRef}
           open={open}
@@ -130,7 +132,8 @@ export default function SidebarLayout({
                 ? "tw-translate-x-0 tw-opacity-100"
                 : "-tw-translate-x-full tw-opacity-0"
             }`}
-            ref={sidebarRef}>
+            ref={sidebarRef}
+          >
             <div className="tw-bg-iron-950 tw-w-80 tw-border-r tw-border-solid tw-border-t-0 tw-border-l-0 tw-border-b-0 tw-border-iron-700">
               <GroupsSidebar />
             </div>
@@ -139,7 +142,8 @@ export default function SidebarLayout({
             <div
               className={` tw-transform tw-transition-all tw-duration-300 tw-ease-out tw-mt-4 tw-px-2 lg:tw-px-6 xl:tw-px-8 ${
                 animateContentMarginLeft ? "tw-ml-[320px]" : "tw-ml-0"
-              }`}>
+              }`}
+            >
               {init && children}
             </div>
           </div>

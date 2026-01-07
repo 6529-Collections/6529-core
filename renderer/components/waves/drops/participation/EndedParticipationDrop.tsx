@@ -1,9 +1,10 @@
 "use client";
 
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import { DropInteractionParams, DropLocation } from "../Drop";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { DropInteractionParams} from "../Drop";
+import { DropLocation } from "../Drop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,8 +30,7 @@ interface EndedParticipationDropProps {
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
-  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }
 
 export default function EndedParticipationDrop({
@@ -43,7 +43,6 @@ export default function EndedParticipationDrop({
   onQuote,
   onQuoteClick,
   onDropContentClick,
-  parentContainerRef,
 }: EndedParticipationDropProps) {
   const isActiveDrop = activeDrop?.drop.id === drop.id;
   const router = useRouter();
@@ -67,12 +66,12 @@ export default function EndedParticipationDrop({
 
   const handleOnReply = useCallback(() => {
     setIsSlideUp(false);
-    onReply({ drop, partId: drop.parts[activePartIndex].part_id });
+    onReply({ drop, partId: drop.parts[activePartIndex]?.part_id! });
   }, [onReply, drop, activePartIndex]);
 
   const handleOnQuote = useCallback(() => {
     setIsSlideUp(false);
-    onQuote({ drop, partId: drop.parts[activePartIndex].part_id });
+    onQuote({ drop, partId: drop.parts[activePartIndex]?.part_id! });
   }, [onQuote, drop, activePartIndex]);
 
   const handleOnAddReaction = useCallback(() => {
@@ -83,7 +82,8 @@ export default function EndedParticipationDrop({
     <div
       className={`${
         location === DropLocation.WAVE ? "tw-px-4 tw-py-1" : ""
-      } tw-w-full`}>
+      } tw-w-full`}
+    >
       <div
         className={`tw-relative tw-w-full tw-flex tw-flex-col tw-px-4 tw-py-3 tw-rounded-lg tw-overflow-hidden tw-group tw-transition-colors tw-duration-200 tw-ease-linear
           ${
@@ -92,7 +92,8 @@ export default function EndedParticipationDrop({
               : location === DropLocation.WAVE
               ? "tw-bg-iron-900/60 tw-ring-1 tw-ring-inset tw-ring-iron-800"
               : "tw-bg-iron-950 tw-ring-1 tw-ring-inset tw-ring-iron-800"
-          }`}>
+          }`}
+      >
         {!isMobile && showReplyAndQuote && (
           <WaveDropActions
             drop={drop}
@@ -120,7 +121,8 @@ export default function EndedParticipationDrop({
                       handleNavigation(e, `/${drop.author.handle}`)
                     }
                     href={`/${drop.author.handle}`}
-                    className="tw-no-underline tw-text-iron-200 hover:tw-text-iron-500 tw-transition tw-duration-300 tw-ease-out">
+                    className="tw-no-underline tw-text-iron-200 hover:tw-text-iron-500 tw-transition tw-duration-300 tw-ease-out"
+                  >
                     {drop.author.handle}
                   </Link>
                 </p>
@@ -136,25 +138,40 @@ export default function EndedParticipationDrop({
               </div>
             </div>
 
-            {showWaveInfo && (() => {
-              const waveMeta = (drop.wave as unknown as {
-                chat?: { scope?: { group?: { is_direct_message?: boolean } } };
-              })?.chat;
-              const isDirectMessage = waveMeta?.scope?.group?.is_direct_message ?? false;
-              const waveHref = getWaveRoute({
-                waveId: drop.wave.id,
-                isDirectMessage,
-                isApp: false,
-              });
-              return (
-                <Link
-                  href={waveHref}
-                  onClick={(e) => handleNavigation(e, waveHref)}
-                  className="tw-text-[11px] tw-leading-0 tw-text-iron-500 hover:tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out tw-no-underline">
-                  {drop.wave.name}
-                </Link>
-              );
-            })()}
+            {showWaveInfo &&
+              (() => {
+                const waveMeta = (
+                  drop.wave as unknown as {
+                    chat?:
+                      | {
+                          scope?:
+                            | {
+                                group?:
+                                  | { is_direct_message?: boolean | undefined }
+                                  | undefined;
+                              }
+                            | undefined;
+                        }
+                      | undefined;
+                  }
+                )?.chat;
+                const isDirectMessage =
+                  waveMeta?.scope?.group?.is_direct_message ?? false;
+                const waveHref = getWaveRoute({
+                  waveId: drop.wave.id,
+                  isDirectMessage,
+                  isApp: false,
+                });
+                return (
+                  <Link
+                    href={waveHref}
+                    onClick={(e) => handleNavigation(e, waveHref)}
+                    className="tw-text-[11px] tw-leading-0 tw-text-iron-500 hover:tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out tw-no-underline"
+                  >
+                    {drop.wave.name}
+                  </Link>
+                );
+              })()}
 
             <WaveDropContent
               drop={drop}
@@ -164,7 +181,6 @@ export default function EndedParticipationDrop({
               onDropContentClick={onDropContentClick}
               onQuoteClick={onQuoteClick}
               setLongPressTriggered={setLongPressTriggered}
-              parentContainerRef={parentContainerRef}
               isCompetitionDrop={true}
             />
           </div>

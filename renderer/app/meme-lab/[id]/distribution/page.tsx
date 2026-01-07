@@ -6,11 +6,11 @@ import {
   MEME_FOCUS,
 } from "@/components/the-memes/MemeShared";
 import { MEMELAB_CONTRACT } from "@/constants";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export default function MemeDistributionPage() {
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <DistributionComponent
         header="Meme Lab"
         contract={MEMELAB_CONTRACT}

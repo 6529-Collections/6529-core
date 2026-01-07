@@ -1,5 +1,6 @@
 import { Dialog, Transition } from "@headlessui/react";
-import { Fragment, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Fragment } from "react";
 
 export default function SeasonsGridDropdownMobileWrapper({
   isOpen,
@@ -9,7 +10,7 @@ export default function SeasonsGridDropdownMobileWrapper({
 }: {
   readonly isOpen: boolean;
   readonly setOpen: (isOpen: boolean) => void;
-  readonly label?: string;
+  readonly label?: string | undefined;
   readonly children: ReactNode;
 }) {
   return (

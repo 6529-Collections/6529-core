@@ -1,5 +1,4 @@
-import React from "react";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import WaveDropActions from "@/components/waves/drops/WaveDropActions";
 
 interface MemeDropActionsProps {
@@ -23,12 +22,12 @@ export default function MemeDropActions({
 
   return (
     <WaveDropActions
-        drop={drop}
-        activePartIndex={0}
-        onReply={onReply}
-        onQuote={onQuote}
-        // No need to set showVoting=false here as WaveDropActions already has logic
-        // to hide voting for memes participation drops
-      />
+      drop={drop}
+      activePartIndex={0}
+      onReply={onReply}
+      onQuote={onQuote}
+      // No need to set showVoting=false here as WaveDropActions already has logic
+      // to hide voting for memes participation drops
+    />
   );
 }

@@ -2,14 +2,15 @@
 
 import { useCallback, useEffect, useMemo } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import type {
+  LexicalEditor} from "lexical";
 import {
   $getRoot,
   $getSelection,
   $isRangeSelection,
   $createRangeSelection,
   $setSelection,
-  TextNode,
-  LexicalEditor,
+  TextNode
 } from "lexical";
 import { EmojiNode } from "@/components/drops/create/lexical/nodes/EmojiNode";
 import { useEmoji } from "@/contexts/EmojiContext";
@@ -55,7 +56,7 @@ function transformEmojiTextToNode(
       }
 
       const hasValidEmoji = matches.some(({ emojiId }) =>
-        isEmojiIdValid(emojiId)
+        isEmojiIdValid(emojiId!)
       );
 
       if (!hasValidEmoji) {
@@ -74,13 +75,13 @@ function transformEmojiTextToNode(
           }
         }
 
-        if (!isEmojiIdValid(emojiId)) {
+        if (!isEmojiIdValid(emojiId!)) {
           newNodes.push(new TextNode(matchText));
           lastIndex = endIndex;
           return;
         }
 
-        const emojiNode = new EmojiNode(emojiId);
+        const emojiNode = new EmojiNode(emojiId!);
         newNodes.push(emojiNode);
 
         const trailingTextNode = new TextNode(" ");

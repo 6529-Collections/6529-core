@@ -3,8 +3,8 @@
 import { AuthContext } from "@/components/auth/Auth";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import CommonChangeAnimation from "@/components/utils/animation/CommonChangeAnimation";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
-import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { useIdentity } from "@/hooks/useIdentity";
 import { commonApiFetch } from "@/services/api/common-api";
@@ -18,19 +18,13 @@ export enum ProxyMode {
   CREATE = "CREATE",
 }
 
-enum ProxyAction {
-  ALLOCATE_REP = "ALLOCATE_REP",
-  ALLOCATE_CATEGORY_REP = "ALLOCATE_CATEGORY_REP",
-  ALLOCATE_CIC = "ALLOCATE_CIC",
-}
-
 export default function UserPageProxy({
   profile: initialProfile,
 }: {
   readonly profile: ApiIdentity;
 }) {
   const params = useParams();
-  const user = (params?.user as string)?.toLowerCase();
+  const user = (params?.["user"] as string)?.toLowerCase();
   const [mode, setMode] = useState<ProxyMode>(ProxyMode.LIST);
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
 

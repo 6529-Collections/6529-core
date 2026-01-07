@@ -1,6 +1,6 @@
 import React from "react";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiDropPart } from "@/generated/models/ApiDropPart";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import WaveDropPartTitle from "./WaveDropPartTitle";
 import WaveDropPartContent from "./WaveDropPartContent";
 import { ImageScale } from "@/helpers/image.helpers";
@@ -14,12 +14,12 @@ interface WaveDropPartDropProps {
   activePartIndex: number;
   setActivePartIndex: (index: number) => void;
   onQuoteClick: (drop: ApiDrop) => void;
-  isEditing?: boolean;
-  isSaving?: boolean;
-  onSave?: (newContent: string) => void;
-  onCancel?: () => void;
-  isCompetitionDrop?: boolean;
-  mediaImageScale?: ImageScale;
+  isEditing?: boolean | undefined;
+  isSaving?: boolean | undefined;
+  readonly onSave?: ((newContent: string) => void) | undefined;
+  readonly onCancel?: (() => void) | undefined;
+  isCompetitionDrop?: boolean | undefined;
+  mediaImageScale?: ImageScale | undefined;
 }
 
 const WaveDropPartDrop: React.FC<WaveDropPartDropProps> = ({

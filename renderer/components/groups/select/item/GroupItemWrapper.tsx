@@ -1,4 +1,4 @@
-import { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import { getRandomColorWithSeed } from "@/helpers/Helpers";
 
 export default function GroupItemWrapper({
@@ -12,7 +12,10 @@ export default function GroupItemWrapper({
   readonly isActive: boolean;
   readonly deactivateHover: boolean;
   readonly children: React.ReactNode;
-  readonly onActiveGroupId?: (groupId: string | null) => void;
+  readonly onActiveGroupId?:
+    | ((groupId: string | null) => void)
+    | undefined
+    | undefined;
 }) {
   const banner1 =
     group.created_by?.banner1_color ??

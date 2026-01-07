@@ -1,4 +1,4 @@
-import { WsMessageType } from "@/helpers/Types";
+import type { WsMessageType } from "@/helpers/Types";
 
 /**
  * WebSocket message structure for type-safe message handling
@@ -31,6 +31,6 @@ export type SubscriberMap = Map<string, Set<MessageCallback>>;
  */
 export interface WebSocketConfig {
   url: string;
-  reconnectDelay?: number;
-  maxReconnectAttempts?: number;
+  reconnectDelay?: number | undefined;
+  maxReconnectAttempts?: number | undefined;
 }

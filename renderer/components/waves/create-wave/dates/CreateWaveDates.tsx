@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CreateWaveDatesConfig } from "@/types/waves.types";
-import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import type { CreateWaveDatesConfig } from "@/types/waves.types";
+import type { ApiWaveType } from "@/generated/models/ApiWaveType";
 import StartDates from "./StartDates";
 import Decisions from "./Decisions";
 import RollingEndDate from "./RollingEndDate";
@@ -96,21 +96,6 @@ export default function CreateWaveDates({
     }
   };
 
-  // Handler for when user interacts with Rolling End Date section
-  const handleRollingInteraction = () => {
-    // Only auto-collapse Decisions section if it hasn't been auto-collapsed before
-    if (!autoCollapsedSections.decisions) {
-      setExpandedSections((prev) => ({
-        ...prev,
-        decisions: false,
-      }));
-      setAutoCollapsedSections((prev) => ({
-        ...prev,
-        decisions: true,
-      }));
-    }
-  };
-
   // Handle date changes with proper adjustments
   const handleDateUpdate = (newDates: CreateWaveDatesConfig) => {
     // Ensure valid date sequence
@@ -163,10 +148,6 @@ export default function CreateWaveDates({
             dates={dates}
             setDates={setDates}
             isRollingMode={isRollingMode}
-            setIsRollingMode={(isRolling) => {
-              setIsRollingMode(isRolling);
-              handleRollingInteraction();
-            }}
             isExpanded={expandedSections.rolling}
             setIsExpanded={() => toggleSection("rolling")}
           />

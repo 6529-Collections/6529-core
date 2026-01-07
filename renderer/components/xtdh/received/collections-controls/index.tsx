@@ -1,6 +1,6 @@
 import CommonSelect from "@/components/utils/select/CommonSelect";
 import type { XtdhCollectionsSortField } from "@/hooks/useXtdhCollectionsQuery";
-import { SortDirection } from "@/entities/ISort";
+import type { SortDirection } from "@/entities/ISort";
 
 import {
   COLLECTION_SORT_ITEMS,
@@ -15,7 +15,7 @@ interface XtdhCollectionsControlsProps {
   readonly searchTerm: string;
   readonly onSearchChange: (term: string) => void;
 
-  readonly isDisabled?: boolean;
+  readonly isDisabled?: boolean | undefined;
 }
 
 export function XtdhCollectionsControls({

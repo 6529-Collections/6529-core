@@ -16,7 +16,7 @@ import {
   MissingActiveProfileError,
   InvalidRoleStateError,
 } from "@/errors/authentication";
-import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 
 interface JwtPayload {
   id: string;
@@ -32,7 +32,7 @@ interface ValidateJwtParams {
   role: string | null;
   operationId: string;
   abortSignal: AbortSignal;
-  activeProfileProxy?: ApiProfileProxy | null;
+  activeProfileProxy?: ApiProfileProxy | null | undefined;
 }
 
 interface ValidateJwtResult {
@@ -154,7 +154,7 @@ const handleTokenRefresh = async ({
   wallet: string;
   role: string | null;
   abortSignal: AbortSignal;
-  activeProfileProxy?: ApiProfileProxy | null;
+  activeProfileProxy?: ApiProfileProxy | null | undefined;
 }): Promise<ValidateJwtResult> => {
   const refreshToken = getRefreshToken();
   const walletAddress = getWalletAddress();

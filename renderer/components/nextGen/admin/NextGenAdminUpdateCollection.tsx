@@ -15,7 +15,7 @@ import {
   useGlobalAdmin,
   useParsedCollectionIndex,
 } from "../nextgen_helpers";
-import { Info, LibraryScript } from "../nextgen_entities";
+import type { Info, LibraryScript } from "../nextgen_entities";
 import { printAdminErrors } from "./NextGenAdmin";
 import {
   NextGenCollectionIdFormGroup,
@@ -303,7 +303,7 @@ export default function NextGenAdminUpdateCollection(props: Readonly<Props>) {
                     const i = e.target.value;
                     setScriptIndex(i);
                     if (existingScripts.length > i) {
-                      setScripts([existingScripts[i]]);
+                      setScripts([existingScripts[i]!]);
                     } else {
                       setScripts([]);
                     }

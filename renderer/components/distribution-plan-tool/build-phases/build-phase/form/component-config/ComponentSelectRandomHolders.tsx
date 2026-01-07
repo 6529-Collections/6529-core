@@ -8,9 +8,10 @@ import {
     PhaseConfigStep,
     RandomHoldersType,
 } from "../BuildPhaseFormConfigModal";
-import BuildPhaseFormConfigModalSidebar, {
+import type {
     BuildPhaseFormConfigModalSidebarOption,
 } from "./BuildPhaseFormConfigModalSidebar";
+import BuildPhaseFormConfigModalSidebar from "./BuildPhaseFormConfigModalSidebar";
 import BuildPhaseFormConfigModalTitle from "./BuildPhaseFormConfigModalTitle";
 import ComponentConfigMeta from "./ComponentConfigMeta";
 import ComponentConfigNextBtn from "./ComponentConfigNextBtn";
@@ -34,8 +35,8 @@ export default function ComponentSelectRandomHolders({
     seed: string;
   }) => void;
   title: string;
-  uniqueWalletsCount?: number | null;
-  isLoadingUniqueWalletsCount?: boolean;
+  uniqueWalletsCount?: number | null | undefined;
+  isLoadingUniqueWalletsCount?: boolean | undefined;
   onClose: () => void;
 }>) {
   const { setToasts, distributionPlan } = useContext(

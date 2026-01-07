@@ -1,6 +1,7 @@
 "use client";
 
-import { ReactElement, RefObject, useEffect, useState } from "react";
+import type { ReactElement, RefObject} from "react";
+import { useEffect, useState } from "react";
 import CommonDropdownItemsMobileWrapper from "./CommonDropdownItemsMobileWrapper";
 import { createBreakpoint } from "react-use";
 import CommonDropdownItemsDefaultWrapper from "./CommonDropdownItemsDefaultWrapper";
@@ -10,7 +11,6 @@ export default function CommonDropdownItemsWrapper({
   isOpen,
   filterLabel,
   buttonRef,
-  buttonPosition,
   dynamicPosition = true,
   setOpen,
   onIsMobile,
@@ -19,8 +19,7 @@ export default function CommonDropdownItemsWrapper({
   readonly isOpen: boolean;
   readonly filterLabel: string;
   readonly buttonRef: RefObject<HTMLButtonElement | HTMLDivElement | null>;
-  readonly buttonPosition?: { readonly right: number };
-  readonly dynamicPosition?: boolean;
+  readonly dynamicPosition?: boolean | undefined;
   readonly setOpen: (isOpen: boolean) => void;
   readonly onIsMobile: (isMobile: boolean) => void;
   readonly children: ReactElement | ReactElement[];
@@ -44,7 +43,8 @@ export default function CommonDropdownItemsWrapper({
         <CommonDropdownItemsMobileWrapper
           isOpen={isOpen}
           label={filterLabel}
-          setOpen={setOpen}>
+          setOpen={setOpen}
+        >
           {children}
         </CommonDropdownItemsMobileWrapper>
       ) : (
@@ -53,7 +53,7 @@ export default function CommonDropdownItemsWrapper({
           setOpen={setOpen}
           dynamicPosition={dynamicPosition}
           buttonRef={buttonRef}
-          buttonPosition={buttonPosition}>
+        >
           {children}
         </CommonDropdownItemsDefaultWrapper>
       )}

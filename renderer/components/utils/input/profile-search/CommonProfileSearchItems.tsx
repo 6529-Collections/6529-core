@@ -1,6 +1,6 @@
 import { useEffect, useId } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { CommunityMemberMinimal } from "@/entities/IProfile";
+import type { CommunityMemberMinimal } from "@/entities/IProfile";
 import CommonProfileSearchItem from "./CommonProfileSearchItem";
 import { getSelectableIdentity } from "./getSelectableIdentity";
 
@@ -19,9 +19,12 @@ export default function CommonProfileSearchItems({
   readonly selected: string | null;
   readonly searchCriteria: string | null;
   readonly onProfileSelect: (newV: CommunityMemberMinimal | null) => void;
-  readonly highlightedIndex?: number | null;
-  readonly onHighlightedOptionIdChange?: (optionId: string | undefined) => void;
-  readonly listboxId?: string;
+  readonly highlightedIndex?: number | null | undefined;
+  readonly onHighlightedOptionIdChange?:
+    | ((optionId: string | undefined) => void)
+    | undefined
+    | undefined;
+  readonly listboxId?: string | undefined;
 }) {
   const generatedListboxId = useId();
   const resolvedListboxId = listboxId ?? generatedListboxId;
@@ -65,7 +68,7 @@ export default function CommonProfileSearchItems({
     highlightedIndex !== null &&
     highlightedIndex >= 0 &&
     highlightedIndex < optionMetadata.length
-      ? optionMetadata[highlightedIndex].optionId
+      ? optionMetadata[highlightedIndex]?.optionId
       : undefined;
 
   useEffect(() => {

@@ -14,8 +14,9 @@ import {
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
+import type {
+  DelegationCollection} from "./delegation-constants";
 import {
-  DelegationCollection,
   SUPPORTED_COLLECTIONS,
 } from "./delegation-constants";
 import { useOrignalDelegatorEnsResolution } from "./delegation-shared";
@@ -36,7 +37,7 @@ function DelegationAddressInput(
   return (
     <Form.Control
       placeholder={"0x... or ENS"}
-      className={`${styles.formInput}`}
+      className={`${styles["formInput"]}`}
       type="text"
       value={inputValue}
       onChange={(e) => {
@@ -47,7 +48,7 @@ function DelegationAddressInput(
 }
 
 export function DelegationFormLabel(
-  props: Readonly<{ title: string; tooltip: string; span?: number }>
+  props: Readonly<{ title: string; tooltip: string; span?: number | undefined }>
 ) {
   const tooltipId = `delegation-form-label-${props.title
     .toLowerCase()
@@ -60,7 +61,7 @@ export function DelegationFormLabel(
       className="d-flex align-items-center">
       {props.title}
       <FontAwesomeIcon
-        className={styles.infoIcon}
+        className={styles["infoIcon"]}
         icon={faInfoCircle}
         data-tooltip-id={tooltipId}></FontAwesomeIcon>
       <Tooltip
@@ -94,7 +95,7 @@ export function DelegationFormOriginalDelegatorFormGroup(
       />
       <Col sm={9}>
         <Form.Control
-          className={`${styles.formInput} ${styles.formInputDisabled}`}
+          className={`${styles["formInput"]} ${styles["formInputDisabled"]}`}
           type="text"
           value={
             orignalDelegatorEnsResolution.data
@@ -113,7 +114,7 @@ export function DelegationAddressDisabledInput(
 ) {
   return (
     <Form.Control
-      className={`${styles.formInput} ${styles.formInputDisabled}`}
+      className={`${styles["formInput"]} ${styles["formInputDisabled"]}`}
       type="text"
       value={props.ens ? `${props.ens} - ${props.address}` : `${props.address}`}
       disabled
@@ -149,7 +150,7 @@ export function DelegationFormOptionsFormGroup(
       <DelegationFormLabel title={props.title} tooltip={props.tooltip} />
       <Col sm={9}>
         <Form.Select
-          className={`${styles.formInput}`}
+          className={`${styles["formInput"]}`}
           value={props.selected}
           onChange={(e) => props.setSelected(e.target.value)}>
           <option value="" disabled>
@@ -173,8 +174,8 @@ export function DelegationFormCollectionFormGroup(
     subdelegation?: {
       originalDelegator: string;
       collection: DelegationCollection;
-    };
-    consolidation?: boolean;
+    } | undefined;
+    consolidation?: boolean | undefined;
   }>
 ) {
   const collections =
@@ -196,7 +197,7 @@ export function DelegationFormCollectionFormGroup(
       />
       <Col sm={9}>
         <Form.Select
-          className={`${styles.formInput}`}
+          className={`${styles["formInput"]}`}
           value={props.collection}
           onChange={(e) => props.setCollection(e.target.value)}>
           <option value="0" disabled>
@@ -239,11 +240,11 @@ export function DelegationSubmitGroups(
     title: string;
     writeParams: any;
     showCancel: boolean;
-    gasError?: string;
+    gasError?: string | undefined;
     validate: () => string[];
     onHide: () => void;
     onSetToast: (toast: { title: string; message: string }) => void;
-    submitBtnLabel?: string;
+    submitBtnLabel?: string | undefined;
   }>
 ) {
   const {
@@ -286,7 +287,7 @@ export function DelegationSubmitGroups(
     return `<a href=${getTransactionLink(DELEGATION_CONTRACT.chain_id, hash)}
     target="_blank"
     rel="noopener noreferrer"
-    className=${styles.etherscanLink}>
+    className=${styles["etherscanLink"]}>
       view
     </a>`;
   }
@@ -295,7 +296,7 @@ export function DelegationSubmitGroups(
     if (writeDelegation.error) {
       emitToast({
         title,
-        message: writeDelegation.error.message.split("Request Arguments")[0],
+        message: writeDelegation.error.message.split("Request Arguments")[0]!,
       });
     }
     if (writeDelegation.data) {
@@ -337,14 +338,14 @@ export function DelegationSubmitGroups(
           className="d-flex align-items-center justify-content-center">
           {showCancel && (
             <button
-              className={styles.newDelegationCancelBtn}
+              className={styles["newDelegationCancelBtn"]}
               onClick={() => onHide()}>
               Cancel
             </button>
           )}
           <button
-            className={`${styles.newDelegationSubmitBtn} ${
-              isLoading() ? `${styles.newDelegationSubmitBtnDisabled}` : ``
+            className={`${styles["newDelegationSubmitBtn"]} ${
+              isLoading() ? `${styles["newDelegationSubmitBtnDisabled"]}` : ``
             }`}
             onClick={(e) => {
               e.preventDefault();
@@ -353,7 +354,7 @@ export function DelegationSubmitGroups(
             {submitBtnLabel ?? "Submit"}{" "}
             {isLoading() && (
               <div className="d-inline">
-                <output className={`spinner-border ${styles.loader}`}>
+                <output className={`spinner-border ${styles["loader"]}`}>
                   <span className="sr-only"></span>
                 </output>
               </div>
@@ -364,7 +365,7 @@ export function DelegationSubmitGroups(
       {(errors.length > 0 || gasError) && (
         <Form.Group
           as={Row}
-          className={`pt-2 pb-2 ${styles.newDelegationError}`}>
+          className={`pt-2 pb-2 ${styles["newDelegationError"]}`}>
           <Form.Label column sm={4} className="d-flex align-items-center">
             Errors
           </Form.Label>
@@ -393,7 +394,7 @@ export function DelegationExpiryCalendar(
         <Col xs={12} xm={12} md={6} lg={4}>
           <Form.Control
             min={new Date().toISOString().slice(0, 10)}
-            className={`${styles.formInput}`}
+            className={`${styles["formInput"]}`}
             type="date"
             placeholder="Expiry Date"
             onChange={(e) => {
@@ -422,7 +423,7 @@ export function DelegationTokenSelection(
         <Col xs={12} xm={12} md={6} lg={4}>
           <Form.Control
             min={0}
-            className={`${styles.formInput}`}
+            className={`${styles["formInput"]}`}
             type="number"
             placeholder="Token ID"
             onChange={(e) => {
@@ -452,7 +453,7 @@ export function DelegationCloseButton(
     <>
       <FontAwesomeIcon
         aria-label={`Cancel ${props.title}`}
-        className={styles.closeNewDelegationForm}
+        className={styles["closeNewDelegationForm"]}
         icon={faTimesCircle}
         onClick={() => props.onHide()}
         data-tooltip-id={tooltipId}></FontAwesomeIcon>

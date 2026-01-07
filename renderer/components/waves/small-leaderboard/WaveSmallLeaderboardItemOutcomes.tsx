@@ -5,12 +5,12 @@ import { Tooltip } from "react-tooltip";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faAddressCard, faStar } from "@fortawesome/free-regular-svg-icons";
 import { faAward } from "@fortawesome/free-solid-svg-icons";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { useWaveRankReward } from "@/hooks/waves/useWaveRankReward";
 
 interface WaveSmallLeaderboardItemOutcomesProps {
   readonly drop: ApiDrop;
-  readonly isMobile?: boolean;
+  readonly isMobile?: boolean | undefined;
 }
 
 export const WaveSmallLeaderboardItemOutcomes: React.FC<

@@ -4,7 +4,7 @@ import { memo, useRef } from "react";
 import { Col, Row } from "react-bootstrap";
 import { A11y, Autoplay, Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { NextGenToken } from "@/entities/INextgen";
+import type { NextGenToken } from "@/entities/INextgen";
 import { NextGenTokenImage } from "@/components/nextGen/collections/nextgenToken/NextGenTokenImage";
 import SwiperAutoplayButton from "./SwiperAutoplayButton";
 import { useTokenSlideshow } from "./useTokenSlideshow";
@@ -16,7 +16,7 @@ const MemoizedTokenImage = memo(NextGenTokenImage);
 
 interface TokenSlideshowProps {
   readonly collectionId: number;
-  readonly initialTokens?: NextGenToken[];
+  readonly initialTokens?: NextGenToken[] | undefined;
 }
 
 export default function TokenSlideshow({

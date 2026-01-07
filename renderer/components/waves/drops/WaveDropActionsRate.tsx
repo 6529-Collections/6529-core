@@ -1,14 +1,14 @@
 import React from "react";
 import DropListItemRateGive from "@/components/drops/view/item/rate/give/DropListItemRateGive";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import { ApiDropType } from "@/generated/models/ApiDropType";
 import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
 
 interface WaveDropActionsRateProps {
   readonly drop: ApiDrop;
-  readonly onRated?: () => void;
-  readonly isMobile?: boolean;
+  readonly onRated?: (() => void) | undefined;
+  readonly isMobile?: boolean | undefined;
 }
 
 const WaveDropActionsRate: React.FC<WaveDropActionsRateProps> = ({

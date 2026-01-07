@@ -2,7 +2,8 @@
 
 import React, { useEffect } from "react";
 import { WebSocketProvider } from "./WebSocketProvider";
-import { DEFAULT_WEBSOCKET_CONFIG, WebSocketConfig } from "./index";
+import type { WebSocketConfig } from "./index";
+import { DEFAULT_WEBSOCKET_CONFIG } from "./index";
 import { useWebSocket } from "./useWebSocket";
 import { useWebSocketHealth } from "./useWebSocketHealth";
 
@@ -46,7 +47,7 @@ export function AppWebSocketProvider({
   config = DEFAULT_WEBSOCKET_CONFIG,
 }: {
   readonly children: React.ReactNode;
-  readonly config?: WebSocketConfig;
+  readonly config?: WebSocketConfig | undefined;
 }) {
   return (
     <WebSocketProvider config={config}>

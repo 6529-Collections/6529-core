@@ -1,12 +1,12 @@
 "use client";
 
 import { useContext, useState, useCallback, useRef, useEffect } from "react";
-import { DropRateChangeRequest } from "@/entities/IDrop";
+import type { DropRateChangeRequest } from "@/entities/IDrop";
 import { useMutation } from "@tanstack/react-query";
 import { commonApiPost } from "@/services/api/common-api";
 import { AuthContext } from "@/components/auth/Auth";
 import dynamic from "next/dynamic";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import { DropVoteState } from "@/hooks/drops/types";
 import { DropSize } from "@/helpers/waves/drop.helpers";
@@ -43,7 +43,7 @@ export default function DropListItemRateGiveSubmit({
   readonly drop: ApiDrop;
   readonly canVote: boolean;
   readonly onSuccessfulRateChange: () => void;
-  readonly isMobile?: boolean;
+  readonly isMobile?: boolean | undefined;
 }) {
   const { requestAuth, setToast } = useContext(AuthContext);
   const [mutating, setMutating] = useState<boolean>(false);
@@ -62,7 +62,7 @@ export default function DropListItemRateGiveSubmit({
           category: param.category,
         },
       }),
-    onSuccess: (response: ApiDrop) => {
+    onSuccess: () => {
       onSuccessfulRateChange();
       optimisticRollbackRef.current = null;
     },
@@ -114,8 +114,7 @@ export default function DropListItemRateGiveSubmit({
           if (draft.type !== DropSize.FULL) {
             return draft;
           }
-          const baseContext =
-            draft.context_profile_context ??
+          const baseContext = draft.context_profile_context ??
             drop.context_profile_context ?? {
               rating: 0,
               min_rating: 0,

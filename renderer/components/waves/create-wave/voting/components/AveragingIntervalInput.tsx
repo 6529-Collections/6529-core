@@ -1,7 +1,8 @@
 "use client"
 
 import { memo, useCallback } from 'react';
-import { TimeUnit, MIN_MINUTES } from '../types';
+import type { TimeUnit} from '../types';
+import { MIN_MINUTES } from '../types';
 import TimeUnitSelector from './TimeUnitSelector';
 import ValidationFeedback from './ValidationFeedback';
 
@@ -15,7 +16,7 @@ interface AveragingIntervalInputProps {
   /** Handler called when the unit changes */
   readonly onUnitChange: (unit: TimeUnit) => void;
   /** Validation error message, if any */
-  readonly validationError?: string;
+  readonly validationError?: string | undefined;
 }
 
 /**

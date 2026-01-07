@@ -12,7 +12,7 @@ export default function DelegationPageClient(props: {
   readonly addressQuery: string;
   readonly collectionQuery: string;
   readonly useCaseQuery: number;
-  readonly path?: string[];
+  readonly path?: string[] | undefined;
 }) {
   useSetTitle("Delegation | 6529.io");
   const router = useRouter();
@@ -93,11 +93,10 @@ export default function DelegationPageClient(props: {
 
   useEffect(() => {
     updateQueryParams(section);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [addressQuery, collectionQuery, useCaseQuery]);
 
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <DelegationCenterMenu
         section={section}
         path={props.path}

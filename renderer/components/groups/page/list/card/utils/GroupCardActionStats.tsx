@@ -9,7 +9,7 @@ import CircleLoader, {
 import { AuthContext } from "@/components/auth/Auth";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiAvailableRatingCredit } from "@/generated/models/ApiAvailableRatingCredit";
+import type { ApiAvailableRatingCredit } from "@/generated/models/ApiAvailableRatingCredit";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 export default function GroupCardActionStats({
@@ -63,7 +63,7 @@ export default function GroupCardActionStats({
       }
       const params: {
         rater: string;
-        rater_representative?: string;
+        rater_representative?: string | undefined;
       } = {
         rater,
       };
@@ -74,7 +74,7 @@ export default function GroupCardActionStats({
 
       return await commonApiFetch<
         ApiAvailableRatingCredit,
-        { rater: string; rater_representative?: string }
+        { rater: string; rater_representative?: string | undefined }
       >({
         endpoint: `ratings/credit`,
         params,

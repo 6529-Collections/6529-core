@@ -1,11 +1,11 @@
-import { FC } from "react";
-import { ApiLightDrop } from "@/generated/models/ApiLightDrop";
+import type { FC } from "react";
+import type { ApiLightDrop } from "@/generated/models/ApiLightDrop";
 
 interface LightDropProps {
   readonly drop: ApiLightDrop;
 }
 
-const LightDrop: FC<LightDropProps> = ({ drop }) => {
+const LightDrop: FC<LightDropProps> = () => {
   return (
     <div className="tw-flex tw-flex-col tw-w-full tw-p-3 tw-gap-2 tw-border-b tw-border-iron-800">
       <div className="tw-flex tw-items-center tw-gap-2">

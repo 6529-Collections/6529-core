@@ -1,11 +1,11 @@
 import React from "react";
-import { MinimalWave } from "@/contexts/wave/hooks/useEnhancedWavesList";
+import type { MinimalWave } from "@/contexts/wave/hooks/useEnhancedWavesList";
 
 interface UnifiedWavesListEmptyProps {
   readonly sortedWaves: MinimalWave[];
   readonly isFetching: boolean;
   readonly isFetchingNextPage: boolean;
-  readonly emptyMessage?: string;
+  readonly emptyMessage?: string | undefined;
 }
 
 const UnifiedWavesListEmpty: React.FC<UnifiedWavesListEmptyProps> = ({

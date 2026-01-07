@@ -1,13 +1,14 @@
 "use client";
 
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import type {
+  MenuTextMatch} from "@lexical/react/LexicalTypeaheadMenuPlugin";
 import {
   LexicalTypeaheadMenuPlugin,
   MenuOption,
-  MenuTextMatch,
   useBasicTypeaheadTriggerMatch,
 } from "@lexical/react/LexicalTypeaheadMenuPlugin";
-import { TextNode } from "lexical";
+import type { TextNode } from "lexical";
 import {
   forwardRef,
   useCallback,
@@ -16,12 +17,11 @@ import {
   useRef,
   useState,
 } from "react";
-import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 import { $createMentionNode } from "@/components/drops/create/lexical/nodes/MentionNode";
 import MentionsTypeaheadMenu from "./MentionsTypeaheadMenu";
-import { MentionedUser } from "@/entities/IDrop";
+import type { MentionedUser } from "@/entities/IDrop";
 import { useIdentitiesSearch } from "@/hooks/useIdentitiesSearch";
 import { isInCodeContext } from "@/components/drops/create/lexical/utils/codeContextDetection";
 
@@ -100,14 +100,15 @@ function checkForAtSignMentions(
   if (match !== null) {
     // The strategy ignores leading whitespace but we need to know it's
     // length to add it to the leadOffset
-    const maybeLeadingWhitespace = match[1];
+    const maybeLeadingWhitespace = match[1] ?? "";
 
     const matchingString = match[3];
-    if (matchingString.length >= minMatchLength) {
+    const replaceableString = match[2] ?? "";
+    if (matchingString && matchingString.length >= minMatchLength) {
       return {
         leadOffset: match.index + maybeLeadingWhitespace.length,
         matchingString,
-        replaceableString: match[2],
+        replaceableString,
       };
     }
   }

@@ -11,14 +11,16 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ReactNode, useCallback, useEffect, useState } from "react";
+import type { ReactNode } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Col, Container, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
 import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import styles from "./AppWallet.module.scss";
 
-import { AppWallet, useAppWallets } from "./AppWalletsContext";
+import type { AppWallet } from "./AppWalletsContext";
+import { useAppWallets } from "./AppWalletsContext";
 
 import { openInExternalBrowser } from "@/helpers";
 import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
@@ -504,10 +506,10 @@ export default function AppWalletComponent(
 
 function AppWalletPhraseWord(
   props: Readonly<{
-    index?: number;
+    index?: number | undefined;
     word: string;
     hidden: boolean;
-    full_width?: boolean;
+    full_width?: boolean | undefined;
   }>
 ) {
   return (
@@ -516,13 +518,13 @@ function AppWalletPhraseWord(
       sm={props.full_width ? 12 : 4}
       md={props.full_width ? 12 : 3}
       className="pt-2 pb-2">
-      <Container className={styles.phrase}>
+      <Container className={styles["phrase"]}>
         <Row>
           <Col className="d-flex gap-2 unselectable">
             {props.index && (
               <span className="font-color-h font-lighter">{props.index}</span>
             )}
-            <span className={`text-break ${props.hidden ? styles.blurry : ""}`}>
+            <span className={`text-break ${props.hidden ? styles["blurry"] : ""}`}>
               {props.word}
             </span>
           </Col>

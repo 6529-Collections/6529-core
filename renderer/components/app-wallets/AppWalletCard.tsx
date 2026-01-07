@@ -1,7 +1,7 @@
 import styles from "./AppWallet.module.scss";
 import { Container, Row, Col } from "react-bootstrap";
 import Link from "next/link";
-import { AppWallet } from "./AppWalletsContext";
+import type { AppWallet } from "./AppWalletsContext";
 import AppWalletAvatar from "./AppWalletAvatar";
 
 export default function AppWalletCard(
@@ -13,7 +13,7 @@ export default function AppWalletCard(
     <Link
       href={`/tools/app-wallets/${props.wallet.address}`}
       className="decoration-none">
-      <Container className={styles.appWalletCard}>
+      <Container className={styles["appWalletCard"]}>
         <Row>
           <Col className="text-break d-flex align-items-center gap-2">
             <AppWalletAvatar address={props.wallet.address} />

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import WaveDropContent from "@/components/waves/drops/WaveDropContent";
 import WaveDropMetadata from "@/components/waves/drops/WaveDropMetadata";
 import { useRouter } from "next/navigation";
@@ -10,7 +10,7 @@ import { getWaveRoute } from "@/helpers/navigation.helpers";
 
 interface WaveLeaderboardDropContentProps {
   readonly drop: ExtendedDrop;
-  readonly isCompetitionDrop?: boolean;
+  readonly isCompetitionDrop?: boolean | undefined;
 }
 
 export const WaveLeaderboardDropContent: React.FC<

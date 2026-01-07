@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ApiWave } from "@/generated/models/ApiWave";
-import { DecisionPoint } from "@/helpers/waves/time.types";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type { DecisionPoint } from "@/helpers/waves/time.types";
 import {
   calculateLastDecisionTime,
   FALLBACK_END_TIME,
@@ -12,9 +12,9 @@ const DEFAULT_FUTURE_WINDOW = 10;
 const DEFAULT_WINDOW_STEP = 6;
 
 interface UseDecisionPointsOptions {
-  readonly initialPastWindow?: number;
-  readonly initialFutureWindow?: number;
-  readonly windowStep?: number;
+  readonly initialPastWindow?: number | undefined;
+  readonly initialFutureWindow?: number | undefined;
+  readonly windowStep?: number | undefined;
 }
 
 interface DecisionWindowResult {
@@ -458,7 +458,7 @@ const getRollingTimestampForIndex = ({
   const completedCycles = Math.floor(offset / subsequentCount);
 
   return (
-    firstDecisionTime + completedCycles * cycleLength + prefixSums[cycleIndex]
+    firstDecisionTime + completedCycles * cycleLength + prefixSums[cycleIndex]!
   );
 };
 
@@ -550,7 +550,7 @@ const sliceTimestamps = ({
   const hasMoreFuture = remainingFutureCount > 0;
 
   const nextDecisionTimestamp =
-    effectiveNextIndex < sorted.length ? sorted[effectiveNextIndex] : null;
+    effectiveNextIndex < sorted.length ? sorted[effectiveNextIndex] ?? null : null;
 
   return {
     decisions,

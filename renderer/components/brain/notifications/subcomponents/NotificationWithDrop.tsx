@@ -1,10 +1,10 @@
 "use client";
 
 import { UserFollowBtnSize } from "@/components/user/utils/UserFollowBtn";
-import { DropInteractionParams } from "@/components/waves/drops/Drop";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { DropInteractionParams } from "@/components/waves/drops/Drop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import NotificationsFollowBtn from "../NotificationsFollowBtn";
 import NotificationDrop from "./NotificationDrop";
 import NotificationHeader from "./NotificationHeader";
@@ -21,7 +21,7 @@ interface NotificationWithDropProps {
   readonly activeDrop: ActiveDropState | null;
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }
 
 export default function NotificationWithDrop({
@@ -66,4 +66,3 @@ export default function NotificationWithDrop({
     </div>
   );
 }
-

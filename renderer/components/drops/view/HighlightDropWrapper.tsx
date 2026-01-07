@@ -1,11 +1,13 @@
 "use client";
 
 import { classNames } from "@/helpers/Helpers";
-import { useIntersectionObserver } from "@/hooks/scroll/useIntersectionObserver";
+import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import type {
+  MutableRefObject,
+  ReactNode
+} from "react";
 import {
   forwardRef,
-  MutableRefObject,
-  ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -15,14 +17,14 @@ import {
 
 interface HighlightDropWrapperProps {
   readonly active: boolean;
-  readonly scrollContainer?: HTMLElement | null;
+  readonly scrollContainer?: HTMLElement | null | undefined;
   readonly children: ReactNode;
-  readonly className?: string;
-  readonly highlightMs?: number;
-  readonly fadeMs?: number;
-  readonly visibilityThreshold?: number;
-  readonly id?: string;
-  readonly waveDropId?: string;
+  readonly className?: string | undefined;
+  readonly highlightMs?: number | undefined;
+  readonly fadeMs?: number | undefined;
+  readonly visibilityThreshold?: number | undefined;
+  readonly id?: string | undefined;
+  readonly waveDropId?: string | undefined;
 }
 
 const MAX_VISIBILITY_WAIT_MS = 4000;
@@ -189,7 +191,7 @@ const HighlightDropWrapper = forwardRef<
     useIntersectionObserver(
       innerRef,
       {
-        root: scrollContainer ?? undefined,
+        root: scrollContainer ?? null,
         threshold: visibilityThreshold,
         freezeOnceVisible: true,
       },

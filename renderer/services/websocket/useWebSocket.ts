@@ -1,7 +1,8 @@
 "use client";
 
 import { useContext } from "react";
-import { WebSocketContext, WebSocketContextValue } from "./WebSocketContext";
+import type { WebSocketContextValue } from "./WebSocketContext";
+import { WebSocketContext } from "./WebSocketContext";
 
 /**
  * Hook to access WebSocket functionality
@@ -20,13 +21,4 @@ export function useWebSocket(): WebSocketContextValue {
   }
 
   return context;
-}
-
-/**
- * Simplified useWebSocket that doesn't throw for SSR compatibility
- *
- * @returns WebSocket context or undefined if not available
- */
-function useOptionalWebSocket(): WebSocketContextValue | undefined {
-  return useContext(WebSocketContext);
 }

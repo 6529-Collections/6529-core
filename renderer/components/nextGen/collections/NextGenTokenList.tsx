@@ -2,7 +2,7 @@
 
 import { Col, Container, Row } from "react-bootstrap";
 import { NextGenTokenImage } from "./nextgenToken/NextGenTokenImage";
-import {
+import type {
   NextGenCollection,
   NextGenToken,
   TraitValuePair,
@@ -16,20 +16,20 @@ import {
   NextGenTokenListedType,
   NextGenTokenRarityType,
 } from "../nextgen_helpers";
-import { SortDirection } from "@/entities/ISort";
+import type { SortDirection } from "@/entities/ISort";
 import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
 
 interface Props {
   collection: NextGenCollection;
-  limit?: number;
-  sort?: NextGenListFilters;
-  sort_direction?: SortDirection;
-  selected_traits?: TraitValuePair[];
-  show_normalised?: boolean;
-  show_trait_count?: boolean;
-  listed_type?: NextGenTokenListedType;
-  setTotalResults?: (totalResults: number) => void;
-  show_pagination?: boolean;
+  limit?: number | undefined;
+  sort?: NextGenListFilters | undefined;
+  sort_direction?: SortDirection | undefined;
+  selected_traits?: TraitValuePair[] | undefined;
+  show_normalised?: boolean | undefined;
+  show_trait_count?: boolean | undefined;
+  listed_type?: NextGenTokenListedType | undefined;
+  setTotalResults?: ((totalResults: number) => void) | undefined;
+  show_pagination?: boolean | undefined;
 }
 
 export default function NextGenTokenList(props: Readonly<Props>) {
@@ -161,7 +161,8 @@ export default function NextGenTokenList(props: Readonly<Props>) {
                   sm={4}
                   md={4}
                   key={getRandomObjectId()}
-                  className="pt-3 pb-3">
+                  className="pt-3 pb-3"
+                >
                   <NextGenTokenImage
                     token={t}
                     rarity_type={rarityType}

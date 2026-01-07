@@ -3,14 +3,16 @@
 import Drop, { DropLocation } from "@/components/waves/drops/Drop";
 import LightDrop from "@/components/waves/drops/LightDrop";
 import VirtualScrollWrapper from "@/components/waves/drops/VirtualScrollWrapper";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import {
-  DropSize,
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type {
   Drop as DropType,
-  ExtendedDrop,
+  ExtendedDrop} from "@/helpers/waves/drop.helpers";
+import {
+  DropSize
 } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import { memo, RefObject, useCallback, useMemo } from "react";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { RefObject} from "react";
+import { memo, useCallback, useMemo } from "react";
 import HighlightDropWrapper from "./HighlightDropWrapper";
 import UnreadDivider from "./UnreadDivider";
 
@@ -32,13 +34,13 @@ interface DropsListProps {
   readonly onQuote: DropActionHandler;
   readonly onReplyClick: (serialNo: number) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
   readonly serialNo: number | null;
   readonly targetDropRef: RefObject<HTMLDivElement | null> | null;
   readonly dropViewDropId: string | null;
-  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
-  readonly location?: DropLocation;
-  readonly unreadDividerSerialNo?: number | null;
+  readonly parentContainerRef?: React.RefObject<HTMLElement | null> | undefined;
+  readonly location?: DropLocation | undefined;
+  readonly unreadDividerSerialNo?: number | null | undefined;
 }
 
 const MemoizedDrop = memo(Drop);
@@ -125,6 +127,10 @@ const DropsList = memo(function DropsList({
       const previousDrop = orderedDrops[i - 1] ?? null;
       const nextDrop = orderedDrops[i + 1] ?? null;
 
+      if (!drop) {
+        continue;
+      }
+
       if (
         unreadDividerSerialNo !== null &&
         unreadDividerSerialNo !== undefined &&
@@ -153,12 +159,14 @@ const DropsList = memo(function DropsList({
           scrollContainer={getItemData.scrollContainerRef?.current ?? null}
           className={
             getItemData.serialNo === drop.serial_no ? "tw-scroll-mt-20" : ""
-          }>
+          }
+        >
           <VirtualScrollWrapper
             scrollContainerRef={getItemData.scrollContainerRef}
             dropSerialNo={drop.serial_no}
             waveId={drop.type === DropSize.FULL ? drop.wave.id : drop.waveId}
-            type={drop.type}>
+            type={drop.type}
+          >
             {drop.type === DropSize.FULL ? (
               <MemoizedDrop
                 dropViewDropId={getItemData.dropViewDropId}

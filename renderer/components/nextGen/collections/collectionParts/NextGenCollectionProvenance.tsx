@@ -7,7 +7,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Accordion, Col, Container, Row } from "react-bootstrap";
 import { NULL_ADDRESS } from "@/constants";
-import { NextGenCollection, NextGenLog } from "@/entities/INextgen";
+import type { NextGenCollection, NextGenLog } from "@/entities/INextgen";
 import {
   areEqualAddresses,
   formatAddress,
@@ -96,18 +96,12 @@ export default function NextGenCollectionProvenance(props: Readonly<Props>) {
   );
 }
 
-interface NextGenCollectionProvenanceRowProps {
-  collection: NextGenCollection;
-  log: NextGenLog;
-  disable_link?: boolean;
-}
-
 export function NextGenCollectionProvenanceRow(
   props: Readonly<{
     collection: NextGenCollection;
     log: NextGenLog;
-    disable_link?: boolean;
-    odd?: boolean;
+    disable_link?: boolean | undefined;
+    odd?: boolean | undefined;
   }>
 ) {
   const log = props.log;
@@ -158,7 +152,7 @@ export function NextGenCollectionProvenanceRow(
               }}
               src={getNextGenIconUrl(tokenId)}
               alt={`#${tokenId.toString()}`}
-              className={styles.nftImage}
+              className={styles["nftImage"]}
               onError={({ currentTarget }) => {
                 if (currentTarget.src === getNextGenIconUrl(tokenId)) {
                   currentTarget.src = getNextGenImageUrl(tokenId);
@@ -246,25 +240,26 @@ export function NextGenCollectionProvenanceRow(
       }
       return logSpan;
     }
+    return
   }
 
   return (
     <Accordion
       className={
         props.odd
-          ? styles.collectionProvenanceAccordionOdd
-          : styles.collectionProvenanceAccordion
+          ? styles["collectionProvenanceAccordionOdd"]
+          : styles["collectionProvenanceAccordion"]
       }
     >
       <Accordion.Item defaultChecked={true} eventKey={"0"}>
         <Accordion.Button
           className={`d-flex justify-content-between ${
             isTransaction
-              ? styles.collectionProvenanceAccordionButtonHideCaret
+              ? styles["collectionProvenanceAccordionButtonHideCaret"]
               : ""
           }`}
         >
-          <Container className={styles.collectionProvenanceAccordionButton}>
+          <Container className={styles["collectionProvenanceAccordionButton"]}>
             <Row>
               <Col>
                 <span className="d-flex align-items-center justify-content-between">
@@ -312,8 +307,8 @@ export function NextGenCollectionProvenanceRow(
           <Accordion.Body
             className={
               props.odd
-                ? styles.collectionProvenanceAccordionBodyOdd
-                : styles.collectionProvenanceAccordionBody
+                ? styles["collectionProvenanceAccordionBodyOdd"]
+                : styles["collectionProvenanceAccordionBody"]
             }
           >
             <Container className="no-padding">

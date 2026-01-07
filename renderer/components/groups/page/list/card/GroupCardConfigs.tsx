@@ -2,22 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import { GroupDescriptionType } from "@/entities/IGroup";
-import { ApiGroupDescription } from "@/generated/models/ApiGroupDescription";
+import type { ApiGroupDescription } from "@/generated/models/ApiGroupDescription";
 import { ApiGroupFilterDirection } from "@/generated/models/ApiGroupFilterDirection";
-import { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import { ApiGroupTdhInclusionStrategy } from "@/generated/models/ApiGroupTdhInclusionStrategy";
 import GroupCardConfig from "./GroupCardConfig";
 
 export interface GroupCardConfigProps {
   readonly key: GroupDescriptionType;
   readonly value: string;
-  readonly label?: string;
+  readonly label?: string | undefined;
 }
 
 export default function GroupCardConfigs({
   group,
 }: {
-  readonly group?: ApiGroupFull;
+  readonly group?: ApiGroupFull | undefined;
 }) {
   const directionLabels: Record<ApiGroupFilterDirection, string> = {
     [ApiGroupFilterDirection.Received]: "from",

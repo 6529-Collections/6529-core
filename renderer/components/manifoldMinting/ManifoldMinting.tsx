@@ -5,7 +5,7 @@ import MemePageMintCountdown from "@/components/mint-countdown-box/MemePageMintC
 import NFTAttributes from "@/components/nft-attributes/NFTAttributes";
 import NFTImage from "@/components/nft-image/NFTImage";
 import { ETHEREUM_ICON_TEXT, MEMES_CONTRACT } from "@/constants";
-import { Distribution } from "@/entities/IDistribution";
+import type { Distribution } from "@/entities/IDistribution";
 import {
   areEqualAddresses,
   capitalizeEveryWord,
@@ -16,17 +16,19 @@ import {
   parseNftDescriptionToHtml,
 } from "@/helpers/Helpers";
 import { Time } from "@/helpers/time";
+import type {
+  ManifoldClaim,
+  MemePhase} from "@/hooks/useManifoldClaim";
 import {
   buildMemesPhases,
-  ManifoldClaim,
   ManifoldClaimStatus,
-  MemePhase,
   useManifoldClaim,
 } from "@/hooks/useManifoldClaim";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Col, Container, Row, Table } from "react-bootstrap";
-import { getTraitValue, ManifoldInstance } from "./manifold-types";
+import type { ManifoldInstance } from "./manifold-types";
+import { getTraitValue } from "./manifold-types";
 import styles from "./ManifoldMinting.module.scss";
 import ManifoldMintingWidget from "./ManifoldMintingWidget";
 
@@ -47,7 +49,7 @@ function getDateTimeString(time: Time, local_timezone: boolean) {
   const d = time.toIsoDateString();
   const t = time.toIsoTimeString().split(" ")[0];
 
-  return `${d} ${t.slice(0, 5)}`;
+  return `${d} ${t?.slice(0, 5)}`;
 }
 
 export default function ManifoldMinting(props: Readonly<Props>) {
@@ -144,6 +146,7 @@ export default function ManifoldMinting(props: Readonly<Props>) {
       const frameId = requestAnimationFrame(checkClamping);
       return () => cancelAnimationFrame(frameId);
     }
+    return;
   }, [instance, descriptionClamped]);
 
   function printMint() {
@@ -167,7 +170,7 @@ export default function ManifoldMinting(props: Readonly<Props>) {
   function printTitle() {
     return (
       <Row className="pb-2">
-        <Col className="d-flex align-items-center gap-2 ">
+        <Col className="d-flex align-items-center gap-2">
           <h2 className="mb-0">Mint {props.title}</h2>
         </Col>
       </Row>
@@ -190,7 +193,7 @@ export default function ManifoldMinting(props: Readonly<Props>) {
           <Col>
             <span
               ref={descriptionRef}
-              className={descriptionClamped ? styles.descriptionClamped : ""}
+              className={descriptionClamped ? styles["descriptionClamped"] : ""}
               dangerouslySetInnerHTML={{
                 __html: parseNftDescriptionToHtml(
                   i.publicData.asset.description
@@ -204,7 +207,8 @@ export default function ManifoldMinting(props: Readonly<Props>) {
             <Col>
               <button
                 className="btn btn-link decoration-none"
-                onClick={() => setDescriptionClamped(!descriptionClamped)}>
+                onClick={() => setDescriptionClamped(!descriptionClamped)}
+              >
                 <span className="font-smaller font-color-silver font-color-hover">
                   {descriptionClamped ? "+ SHOW MORE" : "- SHOW LESS"}
                 </span>
@@ -226,11 +230,13 @@ export default function ManifoldMinting(props: Readonly<Props>) {
           <Row className="pt-2 pb-2">
             <Col
               xs={12}
-              className="d-flex align-items-center justify-content-between">
+              className="d-flex align-items-center justify-content-between"
+            >
               <Link
                 href={`/${getPathForContract(props.contract)}/${
                   props.token_id
-                }`}>
+                }`}
+              >
                 <h3 className="mb-0">{instance.publicData.asset.name}</h3>
               </Link>
             </Col>
@@ -241,7 +247,7 @@ export default function ManifoldMinting(props: Readonly<Props>) {
             </Col>
             <Col xs={12}>{printDescription(instance)}</Col>
             <Col xs={12} className="pt-3">
-              <Table className={styles.spotsTable}>
+              <Table className={styles["spotsTable"]}>
                 <tbody>
                   <tr>
                     <td className="pt-2">Edition Size</td>
@@ -352,7 +358,8 @@ export default function ManifoldMinting(props: Readonly<Props>) {
             href="https://x.com/6529collections"
             target="_blank"
             rel="noopener noreferrer"
-            className="font-color-h font-color-hover">
+            className="font-color-h font-color-hover"
+          >
             &#64;6529collections
           </a>{" "}
           for updates.
@@ -364,7 +371,8 @@ export default function ManifoldMinting(props: Readonly<Props>) {
               your local timezone.{" "}
               <button
                 className="btn btn-link"
-                onClick={() => setIsLocalTimezone(false)}>
+                onClick={() => setIsLocalTimezone(false)}
+              >
                 <span className="font-color-hover">Change to UTC</span>
               </button>
             </>
@@ -373,7 +381,8 @@ export default function ManifoldMinting(props: Readonly<Props>) {
               UTC.{" "}
               <button
                 className="btn btn-link font-color-hover"
-                onClick={() => setIsLocalTimezone(true)}>
+                onClick={() => setIsLocalTimezone(true)}
+              >
                 <span className="font-color-hover">
                   Change to your local timezone
                 </span>
@@ -385,7 +394,7 @@ export default function ManifoldMinting(props: Readonly<Props>) {
       <hr />
       <Row className="pb-2">
         <Col sm={12} md={6} className="pt-1 pb-1">
-          <Table className={styles.spotsTable}>
+          <Table className={styles["spotsTable"]}>
             <tbody>
               {artist && (
                 <tr>
@@ -441,7 +450,7 @@ export default function ManifoldMinting(props: Readonly<Props>) {
           </Table>
         </Col>
         <Col sm={12} md={6} className="pt-1 pb-1">
-          <Table className={styles.spotsTable}>
+          <Table className={styles["spotsTable"]}>
             <tbody>
               <tr>
                 <td className="pt-2">Phase</td>
@@ -626,35 +635,40 @@ function ManifoldMemesMintingPhase(
         className={
           props.claim.memePhase?.id === props.phase.id &&
           !props.claim.isFinalized
-            ? styles.phaseBoxActive
-            : styles.phaseBox
-        }>
+            ? styles["phaseBoxActive"]
+            : styles["phaseBox"]
+        }
+      >
         <Row>
           <Col xs={12} className="font-bolder font-larger text-center pb-2">
             {props.phase.name}
           </Col>
           <Col
             xs={12}
-            className="d-flex align-items-center justify-content-between gap-2">
+            className="d-flex align-items-center justify-content-between gap-2"
+          >
             <span className="font-lighter font-smaller">Status</span>
             <span
               className={`${
                 status === PhaseStatus.ACTIVE || status === PhaseStatus.UPCOMING
                   ? "font-color-blue font-bolder text-right"
                   : "font-color-red font-bolder text-right opacity-75"
-              }`}>
+              }`}
+            >
               {status}
             </span>
           </Col>
           <Col
             xs={12}
-            className="d-flex align-items-center justify-content-between gap-2">
+            className="d-flex align-items-center justify-content-between gap-2"
+          >
             <span className="font-lighter font-smaller">{startText}</span>
             <span className="text-right">{startDisplay}</span>
           </Col>
           <Col
             xs={12}
-            className="d-flex align-items-center justify-content-between gap-2">
+            className="d-flex align-items-center justify-content-between gap-2"
+          >
             <span className="font-lighter font-smaller">{endText}</span>
             <span className="text-right">{endDisplay}</span>
           </Col>

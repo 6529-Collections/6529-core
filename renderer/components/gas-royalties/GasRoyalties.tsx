@@ -4,7 +4,7 @@ import DatePickerModal from "@/components/datePickerModal/DatePickerModal";
 import DownloadUrlWidget from "@/components/downloadUrlWidget/DownloadUrlWidget";
 import { publicEnv } from "@/config/env";
 import { DateIntervalsSelection, GasRoyaltiesCollectionFocus } from "@/enums";
-import { ApiArtistNameItem } from "@/generated/models/ApiArtistNameItem";
+import type { ApiArtistNameItem } from "@/generated/models/ApiArtistNameItem";
 import { getDateFilters } from "@/helpers/Helpers";
 import { fetchUrl } from "@/services/6529api";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
@@ -19,7 +19,7 @@ import styles from "./GasRoyalties.module.scss";
 
 interface HeaderProps {
   title: string;
-  description?: string;
+  description?: string | undefined;
   fetching: boolean;
   results_count: number;
   date_selection: DateIntervalsSelection;
@@ -151,8 +151,8 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
               <span
                 className={`font-larger font-bolder font-color-h ${
                   props.focus === GasRoyaltiesCollectionFocus.MEMES
-                    ? styles.collectionFocusActive
-                    : styles.collectionFocus
+                    ? styles["collectionFocusActive"]
+                    : styles["collectionFocus"]
                 }`}
                 onClick={() => {
                   router.push(
@@ -172,8 +172,8 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
               <span
                 className={`font-larger font-bolder font-color-h ${
                   props.focus === GasRoyaltiesCollectionFocus.MEMELAB
-                    ? styles.collectionFocusActive
-                    : styles.collectionFocus
+                    ? styles["collectionFocusActive"]
+                    : styles["collectionFocus"]
                 }`}
                 onClick={() =>
                   router.push(
@@ -210,7 +210,7 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
               )}
             </span>
             <span className="d-flex align-items-center gap-5">
-              <Dropdown className={styles.filterDropdown} drop={"down"}>
+              <Dropdown className={styles["filterDropdown"]} drop={"down"}>
                 <Dropdown.Toggle disabled={props.fetching}>
                   Artist: {props.selected_artist || "All"}
                 </Dropdown.Toggle>
@@ -232,7 +232,7 @@ export function GasRoyaltiesHeader(props: Readonly<HeaderProps>) {
                   ))}
                 </Dropdown.Menu>
               </Dropdown>
-              <Dropdown className={styles.filterDropdown} drop={"down"}>
+              <Dropdown className={styles["filterDropdown"]} drop={"down"}>
                 <Dropdown.Toggle disabled={props.fetching}>
                   {getDateSelectionLabel()}
                 </Dropdown.Toggle>
@@ -305,7 +305,7 @@ interface TokenImageProps {
   token_id: number;
   name: string;
   thumbnail: string;
-  note?: string;
+  note?: string | undefined;
 }
 
 export function GasRoyaltiesTokenImage(props: Readonly<TokenImageProps>) {
@@ -324,13 +324,13 @@ export function GasRoyaltiesTokenImage(props: Readonly<TokenImageProps>) {
           style={{ width: "auto", height: "40px" }}
           src={props.thumbnail}
           alt={props.name}
-          className={styles.nftImage}
+          className={styles["nftImage"]}
           data-tooltip-id={`token-image-${props.token_id}`}
         />
         {props.note && (
           <span>
             <FontAwesomeIcon
-              className={styles.infoIcon}
+              className={styles["infoIcon"]}
               icon={faInfoCircle}
               data-tooltip-id={`token-info-${props.token_id}`}
             />

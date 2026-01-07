@@ -18,7 +18,7 @@ import {
   SingleWaveDropVoteSize,
 } from "../drop/SingleWaveDropVote";
 import { SubmissionPosition } from "./SubmissionPosition";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import DropVoteProgressing from "@/components/drops/view/utils/DropVoteProgressing";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
@@ -27,7 +27,7 @@ interface ArtistActiveSubmissionContentProps {
   readonly user: ApiProfileMin;
   readonly isOpen: boolean;
   readonly onClose: () => void;
-  readonly isApp?: boolean;
+  readonly isApp?: boolean | undefined;
 }
 
 export const ArtistActiveSubmissionContent: React.FC<

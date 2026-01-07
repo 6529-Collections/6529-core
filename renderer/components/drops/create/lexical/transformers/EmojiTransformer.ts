@@ -1,4 +1,4 @@
-import { TextMatchTransformer } from "@lexical/markdown";
+import type { TextMatchTransformer } from "@lexical/markdown";
 import { EmojiNode } from "../nodes/EmojiNode";
 import { $applyNodeReplacement } from "lexical";
 import { EMOJI_MATCH_REGEX } from "../plugins/emoji/EmojiPlugin";
@@ -18,7 +18,7 @@ export const EMOJI_TRANSFORMER: TextMatchTransformer = {
 
   replace: (textNode, match) => {
     const [, emojiId] = match;
-    const emojiNode = $applyNodeReplacement(new EmojiNode(emojiId));
+    const emojiNode = $applyNodeReplacement(new EmojiNode(emojiId!));
     textNode.replace(emojiNode);
   },
 

@@ -6,10 +6,10 @@ import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { CommunityMemberOverview } from "@/entities/IProfile";
+import type { CommunityMemberOverview } from "@/entities/IProfile";
 import { SortDirection } from "@/entities/ISort";
-import { ApiGroupFull } from "@/generated/models/ApiGroupFull";
-import { Page } from "@/helpers/Types";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import type { Page } from "@/helpers/Types";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useContext, useEffect, useRef, useState } from "react";
@@ -29,7 +29,7 @@ export default function GroupCardVoteAll({
   onCancel,
 }: {
   readonly matter: ApiRateMatter;
-  readonly group?: ApiGroupFull;
+  readonly group?: ApiGroupFull | undefined;
   readonly onCancel: () => void;
 }) {
   const SUCCESS_LABEL: Record<ApiRateMatter, string> = {

@@ -125,11 +125,6 @@ const enhancedFetch: typeof fetch = async (
     );
   }
 
-  const headerKeys = Array.from(enhancedHeaders.keys());
-  console.debug(
-    `[SSR Fetch] [PATH: ${path}] Request headers: ${headerKeys.join(", ")}`
-  );
-
   return originalFetch(input, {
     ...init,
     headers: enhancedHeaders,

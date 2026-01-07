@@ -1,8 +1,10 @@
 "use client";
 
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { WsDropUpdateMessage, WsMessageType } from "@/helpers/Types";
-import { DropSize, ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { WsDropUpdateMessage} from "@/helpers/Types";
+import { WsMessageType } from "@/helpers/Types";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { DropSize } from "@/helpers/waves/drop.helpers";
 import {
   commonApiFetch,
   commonApiPostWithoutBodyAndResponse,
@@ -10,7 +12,7 @@ import {
 import { useWebSocketMessage } from "@/services/websocket/useWebSocketMessage";
 import { useCallback, useEffect, useRef } from "react";
 import { useWaveEligibility } from "../WaveEligibilityContext";
-import { WaveDataStoreUpdater } from "./types";
+import type { WaveDataStoreUpdater } from "./types";
 
 interface UseWaveRealtimeUpdaterProps extends WaveDataStoreUpdater {
   readonly activeWaveId: string | null;
@@ -92,9 +94,7 @@ export function useWaveRealtimeUpdater({
               drops: newDrops,
               // Update latestFetchedSerialNo only if the fetch returned drops
               latestFetchedSerialNo:
-                fetchedHighestSerial !== null
-                  ? fetchedHighestSerial
-                  : undefined,
+                fetchedHighestSerial !== null ? fetchedHighestSerial : null,
               // Optionally reset hasNextPage if needed, though fetchNewest shouldn't affect it
             });
           }
@@ -240,7 +240,9 @@ export function useWaveRealtimeUpdater({
       }
 
       if (activeWaveId === waveId) {
-        removeWaveDeliveredNotifications(waveId).catch((error) => console.error("Failed to remove wave delivered notifications:", error));
+        removeWaveDeliveredNotifications(waveId).catch((error) =>
+          console.error("Failed to remove wave delivered notifications:", error)
+        );
         markWaveAsRead(waveId).catch((error) =>
           console.error("Failed to mark wave as read:", error)
         );

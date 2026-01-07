@@ -1,5 +1,5 @@
-import { ApiCreateGroup } from "@/generated/models/ApiCreateGroup";
-import { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import type { ApiCreateGroup } from "@/generated/models/ApiCreateGroup";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import { commonApiPost } from "@/services/api/common-api";
 
 const GROUP_INCLUDE_LIMIT = 10000;
@@ -138,7 +138,7 @@ export const createGroup = async ({
   nameOverride,
 }: {
   readonly payload: ApiCreateGroup;
-  readonly nameOverride?: string;
+  readonly nameOverride?: string | undefined;
 }): Promise<ApiGroupFull> => {
   const effectiveName = (nameOverride ?? payload.name).trim();
   if (!effectiveName) {
@@ -159,7 +159,7 @@ export const publishGroup = async ({
 }: {
   readonly id: string;
   readonly oldVersionId: string | null;
-  readonly signal?: AbortSignal;
+  readonly signal?: AbortSignal | undefined;
 }): Promise<ApiGroupFull> =>
   await commonApiPost<
     { visible: true; old_version_id: string | null },
@@ -175,7 +175,7 @@ export const hideGroup = async ({
   signal,
 }: {
   readonly id: string;
-  readonly signal?: AbortSignal;
+  readonly signal?: AbortSignal | undefined;
 }): Promise<ApiGroupFull> => {
   return await commonApiPost<{ visible: false }, ApiGroupFull>({
     endpoint: `groups/${id}/visible`,

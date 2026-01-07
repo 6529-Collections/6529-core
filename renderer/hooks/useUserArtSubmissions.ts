@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { ApiDropType } from "@/generated/models/ApiDropType";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 
@@ -11,19 +11,19 @@ interface ArtistSubmission {
   id: string;
   imageUrl: string;
   mediaMimeType: string;
-  title?: string;
+  title?: string | undefined;
   createdAt: number;
-  drop?: ApiDrop;
+  drop?: ApiDrop | undefined;
 }
 
 interface User {
   id: string;
-  handle?: string | null;
+  handle?: string | null | undefined;
   level: number;
   cic: number;
   rep: number;
-  pfp?: string | null;
-  active_main_stage_submission_ids?: string[];
+  pfp?: string | null | undefined;
+  active_main_stage_submission_ids?: string[] | undefined;
 }
 
 interface UseUserArtSubmissionsReturn {

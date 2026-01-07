@@ -1,7 +1,7 @@
 "use client";
 
 /* istanbul ignore file */
-import React, { useContext, useRef, useState, type JSX } from "react";
+import { useContext, useRef, useState, type JSX } from "react";
 import CreateWaveDrops from "./drops/CreateWaveDrops";
 import CreateWavesMainSteps from "./main-steps/CreateWavesMainSteps";
 import CreateWaveOverview from "./overview/CreateWaveOverview";
@@ -12,13 +12,14 @@ import { CreateWaveStep } from "@/types/waves.types";
 import CreateWaveVoting from "./voting/CreateWaveVoting";
 import CreateWaveApproval from "./approval/CreateWaveApproval";
 import CreateWaveActions from "./utils/CreateWaveActions";
-import CreateWaveDescription, {
+import type {
   CreateWaveDescriptionHandles,
 } from "./description/CreateWaveDescription";
+import CreateWaveDescription from "./description/CreateWaveDescription";
 import { getCreateNewWaveBody } from "@/helpers/waves/create-wave.helpers";
 import { AuthContext } from "@/components/auth/Auth";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { ApiCreateWaveDropRequest } from "@/generated/models/ApiCreateWaveDropRequest";
+import type { ApiCreateWaveDropRequest } from "@/generated/models/ApiCreateWaveDropRequest";
 import { useRouter } from "next/navigation";
 import { generateDropPart } from "./services/waveMediaService";
 import { getAdminGroupId } from "./services/waveGroupService";
@@ -27,7 +28,7 @@ import { useWaveConfig } from "./hooks/useWaveConfig";
 import useCapacitor from "@/hooks/useCapacitor";
 import CreateWaveFlow from "./CreateWaveFlow";
 import { multiPartUpload } from "./services/multiPartUpload";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 export default function CreateWave({
@@ -37,7 +38,7 @@ export default function CreateWave({
 }: {
   readonly profile: ApiIdentity;
   readonly onBack: () => void;
-  readonly onSuccess?: () => void;
+  readonly onSuccess?: (() => void) | undefined;
 }) {
   const router = useRouter();
   const { isIos, keyboardVisible } = useCapacitor();
@@ -153,7 +154,7 @@ export default function CreateWave({
     );
 
     const dropRequest: ApiCreateWaveDropRequest = {
-      title: drop.title,
+      title: drop.title ?? null,
       parts: dropParts.map((part) => ({
         content: part.content,
         quoted_drop: part.quoted_drop,
@@ -249,7 +250,6 @@ export default function CreateWave({
     [CreateWaveStep.APPROVAL]: (
       <CreateWaveApproval
         threshold={config.approval.threshold}
-        thresholdTimeMs={config.approval.thresholdTimeMs}
         errors={errors}
         setThreshold={onThresholdChange}
         setThresholdTimeMs={onThresholdTimeChange}

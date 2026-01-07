@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState, memo, useEffect } from "react";
-import { ApiWave } from "@/generated/models/ApiWave";
+import { useState, memo, useEffect } from "react";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type {
+  ExtendedDrop} from "@/helpers/waves/drop.helpers";
 import {
-  ExtendedDrop,
   convertApiDropToExtendedDrop,
 } from "@/helpers/waves/drop.helpers";
 import { useWaveDecisions } from "@/hooks/waves/useWaveDecisions";
-import { ApiWaveDecision } from "@/generated/models/ApiWaveDecision";
+import type { ApiWaveDecision } from "@/generated/models/ApiWaveDecision";
 
 // Import extracted components
 import { WaveWinnerItemSmall } from "./WaveWinnerItemSmall";
@@ -47,7 +48,7 @@ export const WaveWinnersSmall = memo<WaveWinnersSmallProps>(
 
     // Process decision points to include UI-friendly fields
     const decisionPoints: EnhancedDecisionPoint[] = rawDecisionPoints.map(
-      (point, index) => {
+      (point) => {
         const decisionTime = point.decision_time;
         // Create a formatted date string
         const dateObj = new Date(decisionTime);
@@ -62,7 +63,7 @@ export const WaveWinnersSmall = memo<WaveWinnersSmallProps>(
     // Set first decision point as active when loaded
     useEffect(() => {
       if (decisionPoints?.length > 0 && !activeDecisionPoint) {
-        setActiveDecisionPoint(decisionPoints[0].id);
+        setActiveDecisionPoint(decisionPoints[0]?.id!);
       }
     }, [decisionPoints, activeDecisionPoint]);
 

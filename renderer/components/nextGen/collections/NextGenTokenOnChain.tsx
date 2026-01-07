@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import { useEnsName, useReadContract } from "wagmi";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NextGenCollection } from "@/entities/INextgen";
 import DotLoader from "@/components/dotLoader/DotLoader";
 import { NEXTGEN_CHAIN_ID, NEXTGEN_CORE } from "../nextgen_contracts";
 import styles from "./NextGen.module.scss";
@@ -108,7 +108,7 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
   function printToken() {
     return (
       <>
-        <Container fluid className={`${styles.tokenContainer} pt-4 pb-4`}>
+        <Container fluid className={`${styles["tokenContainer"]} pt-4 pb-4`}>
           <Row>
             <Col>
               <Container>
@@ -191,7 +191,7 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
                       rel="noopener noreferrer"
                     >
                       <FontAwesomeIcon
-                        className={styles.copyIcon}
+                        className={styles["copyIcon"]}
                         icon={faExternalLinkSquare}
                       ></FontAwesomeIcon>
                     </Link>
@@ -211,7 +211,7 @@ export default function NextGenTokenOnChain(props: Readonly<Props>) {
                       >
                         <Image
                           unoptimized
-                          className={styles.marketplace}
+                          className={styles["marketplace"]}
                           src="/opensea.png"
                           alt="opensea"
                           width={28}

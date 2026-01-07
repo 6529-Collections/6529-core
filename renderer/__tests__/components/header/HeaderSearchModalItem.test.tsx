@@ -1,6 +1,7 @@
-import HeaderSearchModalItem, {
+import type {
   HeaderSearchModalItemType,
 } from "@/components/header/header-search/HeaderSearchModalItem";
+import HeaderSearchModalItem from "@/components/header/header-search/HeaderSearchModalItem";
 import { MEMES_CONTRACT } from "@/constants";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
@@ -160,7 +161,7 @@ describe("HeaderSearchModalItem", () => {
   it("renders page item and shows breadcrumbs", () => {
     useHoverDirty.mockReturnValue(false);
     mockUsePathname.mockReturnValue("/delegation/delegation-faq");
-    const PageIcon = ({ className }: { className?: string }) => (
+    const PageIcon = ({ className }: { className?: string | undefined }) => (
       <div data-testid="page-icon" className={className} />
     );
     const page: any = {

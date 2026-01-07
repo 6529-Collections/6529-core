@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { commonApiFetch } from "@/services/api/common-api";
 import { sanitizeErrorForUser } from "@/utils/error-sanitizer";
+import type {
+  ProcessedContent} from "./media-utils";
 import {
-  ProcessedContent,
   isVideoMimeType,
   processContent,
 } from "./media-utils";
@@ -31,7 +32,7 @@ export const useDropContent = (
     data: drop,
     isFetching,
     error,
-  } = useQuery<ApiDrop>({
+  } = useQuery<ApiDrop | undefined>({
     queryKey: [QueryKey.DROP, { drop_id: dropId }],
     queryFn: async () =>
       await commonApiFetch<ApiDrop>({

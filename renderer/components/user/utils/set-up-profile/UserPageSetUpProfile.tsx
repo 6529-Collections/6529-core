@@ -9,8 +9,8 @@ import UserSettingsClassification from "@/components/user/settings/UserSettingsC
 import UserSettingsPrimaryWallet from "@/components/user/settings/UserSettingsPrimaryWallet";
 import UserSettingsSave from "@/components/user/settings/UserSettingsSave";
 import UserSettingsUsername from "@/components/user/settings/UserSettingsUsername";
-import { ApiCreateOrUpdateProfileRequest } from "@/entities/IProfile";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiCreateOrUpdateProfileRequest } from "@/entities/IProfile";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { ApiProfileClassification } from "@/generated/models/ApiProfileClassification";
 import { commonApiPost } from "@/services/api/common-api";
 import { useMutation } from "@tanstack/react-query";
@@ -35,7 +35,7 @@ export default function UserPageSetUpProfile({
   const getHighestTdhWalletOrNone = () => {
     const tdhWallets =
       profile.wallets?.toSorted((a, b) => (b.tdh ?? 0) - (a.tdh ?? 0)) ?? [];
-    return tdhWallets.length > 0 ? tdhWallets[0].wallet : "";
+    return tdhWallets.length > 0 ? tdhWallets[0]?.wallet : "";
   };
 
   const [primaryWallet, setPrimaryWallet] = useState<string>(

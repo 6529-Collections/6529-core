@@ -9,7 +9,7 @@ import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { CommunityMemberMinimal } from "@/entities/IProfile";
+import type { CommunityMemberMinimal } from "@/entities/IProfile";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getProfileTargetRoute } from "@/helpers/Helpers";
 import { USER_PAGE_TAB_IDS } from "@/components/user/layout/userTabs.config";
@@ -31,11 +31,12 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useClickAway, useDebounce, useKeyPressEvent } from "react-use";
-import HeaderSearchModalItem, {
-  getNftCollectionMap,
+import type {
   HeaderSearchModalItemType,
   NFTSearchResult,
-  PageSearchResult,
+  PageSearchResult} from "./HeaderSearchModalItem";
+import HeaderSearchModalItem, {
+  getNftCollectionMap
 } from "./HeaderSearchModalItem";
 import { HeaderSearchTabToggle } from "./HeaderSearchTabToggle";
 
@@ -656,7 +657,7 @@ export default function HeaderSearchModal({
     if (isNftResult(item)) {
       const collectionMap = getNftCollectionMap();
       const key = item.contract.toLowerCase();
-      router.push(`${collectionMap[key].path}/${item.id}`);
+      router.push(`${collectionMap[key]?.path}/${item.id}`);
       onClose();
       return;
     }

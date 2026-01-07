@@ -5,14 +5,14 @@ import { debounce } from "lodash";
 import { WaveDropsLeaderboardSort } from "@/hooks/useWaveDropsLeaderboard";
 import { useQueryClient } from "@tanstack/react-query";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiDropsLeaderboardPage } from "@/generated/models/ApiDropsLeaderboardPage";
+import type { ApiDropsLeaderboardPage } from "@/generated/models/ApiDropsLeaderboardPage";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { WAVE_DROPS_PARAMS, getDefaultQueryRetry } from "@/components/react-query-wrapper/utils/query-utils";
 
 interface WaveleaderboardSortProps {
   readonly sort: WaveDropsLeaderboardSort;
   readonly onSortChange: (sort: WaveDropsLeaderboardSort) => void;
-  readonly waveId?: string;
+  readonly waveId?: string | undefined;
 }
 
 const SORT_DIRECTION_MAP: Record<WaveDropsLeaderboardSort, string | undefined> = {
@@ -53,11 +53,11 @@ export const WaveleaderboardSort: React.FC<WaveleaderboardSortProps> = ({
           };
 
           if (sortDirection) {
-            params.sort_direction = sortDirection;
+            params["sort_direction"] = sortDirection;
           }
 
           if (pageParam) {
-            params.page = `${pageParam}`;
+            params["page"] = `${pageParam}`;
           }
 
           return await commonApiFetch<ApiDropsLeaderboardPage>({

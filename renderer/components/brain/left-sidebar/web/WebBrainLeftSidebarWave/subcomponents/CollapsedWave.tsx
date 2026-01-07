@@ -1,7 +1,8 @@
 import type { MinimalWave } from "@/contexts/wave/hooks/useEnhancedWavesList";
 import Link from "next/link";
 import { WaveAvatar } from "./WaveAvatar";
-import { WaveTooltip, WaveTooltipPlacement } from "./WaveTooltip";
+import type { WaveTooltipPlacement } from "./WaveTooltip";
+import { WaveTooltip } from "./WaveTooltip";
 
 interface CollapsedWaveProps {
   readonly formattedWaveName: string;
@@ -9,7 +10,7 @@ interface CollapsedWaveProps {
   readonly href: string;
   readonly isActive: boolean;
   readonly isDropWave: boolean;
-  readonly onMouseEnter?: () => void;
+  readonly onMouseEnter?: (() => void) | undefined;
   readonly onClick: (e: React.MouseEvent<HTMLAnchorElement>) => void;
   readonly showTooltip: boolean;
   readonly tooltipId: string;
@@ -38,7 +39,7 @@ export const CollapsedWave = ({
     }`}>
     <Link
       href={href}
-      onMouseEnter={onMouseEnter}
+      {...(onMouseEnter ? { onMouseEnter } : {})}
       onClick={onClick}
       className="tw-flex tw-items-center tw-justify-center tw-no-underline"
       {...(showTooltip ? { "data-tooltip-id": tooltipId } : {})}>

@@ -1,38 +1,32 @@
 "use client";
 
-import { EditorState } from "lexical";
+import type { EditorState } from "lexical";
 import { CreateDropScreenType } from "../utils/CreateDropWrapper";
-import CreateDropFullDesktop, {
+import type {
   CreateDropFullDesktopHandles,
 } from "./desktop/CreateDropFullDesktop";
-import CreateDropFullMobile, {
+import CreateDropFullDesktop from "./desktop/CreateDropFullDesktop";
+import type {
   CreateDropFullMobileHandles,
 } from "./mobile/CreateDropFullMobile";
-import {
+import CreateDropFullMobile from "./mobile/CreateDropFullMobile";
+import type {
   CreateDropConfig,
   DropMetadata,
   MentionedUser,
   ReferencedNft,
 } from "@/entities/IDrop";
-import { CreateDropType, CreateDropViewType } from "../types";
+import type { CreateDropType, CreateDropViewType } from "../types";
 import { forwardRef, useImperativeHandle, useRef, type JSX } from "react";
-import { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
-import { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
-import { ProfileMinWithoutSubs } from "@/helpers/ProfileTypes";
+import type { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
+import type { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
 
 export interface CreateDropFullHandles {
   clearEditorState: () => void;
 }
 
-interface CreateDropFullWaveProps {
-  readonly name: string;
-  readonly image: string | null;
-  readonly id: string | null;
-}
-
 interface CreateDropFullProps {
   readonly screenType: CreateDropScreenType;
-  readonly profile: ProfileMinWithoutSubs;
   readonly title: string | null;
   readonly metadata: DropMetadata[];
   readonly editorState: EditorState | null;
@@ -43,7 +37,7 @@ interface CreateDropFullProps {
   readonly showSubmit: boolean;
   readonly type: CreateDropType;
   readonly drop: CreateDropConfig | null;
-  readonly showDropError?: boolean;
+  readonly showDropError?: boolean | undefined;
   readonly missingMedia: ApiWaveParticipationRequirement[];
   readonly missingMetadata: ApiWaveRequiredMetadata[];
   readonly waveId: string | null;
@@ -67,7 +61,6 @@ const CreateDropFull = forwardRef<CreateDropFullHandles, CreateDropFullProps>(
   (
     {
       screenType,
-      profile,
       title,
       editorState,
       metadata,
@@ -112,7 +105,6 @@ const CreateDropFull = forwardRef<CreateDropFullHandles, CreateDropFullProps>(
       [CreateDropScreenType.DESKTOP]: (
         <CreateDropFullDesktop
           ref={desktopEditorRef}
-          profile={profile}
           title={title}
           editorState={editorState}
           metadata={metadata}
@@ -137,14 +129,14 @@ const CreateDropFull = forwardRef<CreateDropFullHandles, CreateDropFullProps>(
           onFileRemove={onFileRemove}
           onViewChange={onViewChange}
           onDrop={onDrop}
-          onDropPart={onDropPart}>
+          onDropPart={onDropPart}
+        >
           {children}
         </CreateDropFullDesktop>
       ),
       [CreateDropScreenType.MOBILE]: (
         <CreateDropFullMobile
           ref={mobileEditorRef}
-          profile={profile}
           title={title}
           files={files}
           editorState={editorState}
@@ -168,7 +160,8 @@ const CreateDropFull = forwardRef<CreateDropFullHandles, CreateDropFullProps>(
           onFileRemove={onFileRemove}
           onViewChange={onViewChange}
           onDrop={onDrop}
-          onDropPart={onDropPart}>
+          onDropPart={onDropPart}
+        >
           {children}
         </CreateDropFullMobile>
       ),

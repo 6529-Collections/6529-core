@@ -1,11 +1,11 @@
 import React from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 
 interface ArtistPreviewModalHeaderProps {
   readonly user: ApiProfileMin;
   readonly onClose: () => void;
-  readonly isApp?: boolean;
+  readonly isApp?: boolean | undefined;
   readonly currentContentType: "active" | "winners";
   readonly submissionCount: number;
   readonly winnerCount: number;

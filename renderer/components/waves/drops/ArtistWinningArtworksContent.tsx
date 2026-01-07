@@ -1,8 +1,9 @@
 import React from "react";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import { useUserWinningArtworks } from "@/hooks/useUserWinningArtworks";
+import type {
+  ExtendedDrop} from "@/helpers/waves/drop.helpers";
 import {
-  ExtendedDrop,
   convertApiDropToExtendedDrop,
 } from "@/helpers/waves/drop.helpers";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
@@ -61,8 +62,8 @@ export const ArtistWinningArtworksContent: React.FC<
                     {drop.parts?.[0]?.media &&
                     drop.parts[0].media.length > 0 ? (
                       <MediaDisplay
-                        media_url={drop.parts[0].media[0].url}
-                        media_mime_type={drop.parts[0].media[0].mime_type}
+                        media_url={drop.parts[0]!.media[0]!.url}
+                        media_mime_type={drop.parts[0]!.media[0]!.mime_type}
                         disableMediaInteraction={true}
                       />
                     ) : (

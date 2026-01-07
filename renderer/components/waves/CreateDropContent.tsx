@@ -1,31 +1,32 @@
 "use client";
 
 import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
-import {
+import type {
   CreateDropConfig,
   CreateDropPart,
   CreateDropRequestPart,
   MentionedUser,
   ReferencedNft,
 } from "@/entities/IDrop";
-import { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
 import { ApiDropType } from "@/generated/models/ApiDropType";
-import { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { getOptimisticDropId } from "@/helpers/waves/drop.helpers";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { DropPrivileges } from "@/hooks/useDropPriviledges";
+import type { DropPrivileges } from "@/hooks/useDropPriviledges";
 import { selectEditingDropId } from "@/store/editSlice";
+import type {
+  ActiveDropState} from "@/types/dropInteractionTypes";
 import {
-  ActiveDropAction,
-  ActiveDropState,
+  ActiveDropAction
 } from "@/types/dropInteractionTypes";
 import { AnimatePresence, motion } from "framer-motion";
-import { EditorState } from "lexical";
+import type { EditorState } from "lexical";
 import dynamic from "next/dynamic";
 import React, {
   memo,
@@ -46,7 +47,8 @@ import CreateDropActions from "./CreateDropActions";
 import { CreateDropContentFiles } from "./CreateDropContentFiles";
 import CreateDropContentRequirements from "./CreateDropContentRequirements";
 import { CreateDropDropModeToggle } from "./CreateDropDropModeToggle";
-import CreateDropInput, { CreateDropInputHandles } from "./CreateDropInput";
+import type { CreateDropInputHandles } from "./CreateDropInput";
+import CreateDropInput from "./CreateDropInput";
 import CreateDropMetadata from "./CreateDropMetadata";
 import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
@@ -54,8 +56,8 @@ import { CreateDropSubmit } from "./CreateDropSubmit";
 import { exportDropMarkdown } from "@/components/waves/drops/normalizeDropMarkdown";
 import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
-import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
-import { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
 import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
 import { WsMessageType } from "@/helpers/Types";
 import { useDropSignature } from "@/hooks/drops/useDropSignature";
@@ -65,12 +67,13 @@ import throttle from "lodash/throttle";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
 import { multiPartUpload } from "./create-wave/services/multiPartUpload";
-import { DropMutationBody } from "./CreateDrop";
+import type { DropMutationBody } from "./CreateDrop";
 import { generateMetadataId, useDropMetadata } from "./hooks/useDropMetadata";
 import { convertMetadataToDropMetadata } from "./utils/convertMetadataToDropMetadata";
+import type {
+  MissingRequirements} from "./utils/getMissingRequirements";
 import {
-  getMissingRequirements,
-  MissingRequirements,
+  getMissingRequirements
 } from "./utils/getMissingRequirements";
 
 // Use next/dynamic for lazy loading with SSR support
@@ -321,7 +324,7 @@ const getOptimisticDrop = (
     voting: {
       authenticated_user_eligible: boolean;
       credit_type: ApiWaveCreditType;
-      period?: { min: number | null; max: number | null };
+      period?: { min: number | null; max: number | null } | undefined;
       forbid_negative_votes: boolean;
     };
     chat: { authenticated_user_eligible: boolean };
@@ -345,10 +348,13 @@ const getOptimisticDrop = (
     return undefined;
   };
 
+  const replyTo = getReplyTo();
+  const replyToObj = replyTo ? { reply_to: replyTo } : {};
+
   return {
     id: getOptimisticDropId(),
     serial_no: Date.now(),
-    reply_to: getReplyTo(),
+    ...replyToObj,
     wave: {
       id: wave.id,
       name: wave.name,
@@ -593,9 +599,11 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     const markdown = getMarkdown;
     if (!markdown?.length && !files.length) {
       const baseParts = drop?.parts.length ? drop.parts : [];
+      const replyTo = getReplyTo();
+      const replyToObj = replyTo ? { reply_to: replyTo } : {};
       return {
         title: null,
-        reply_to: getReplyTo(),
+        ...replyToObj,
         parts: ensurePartsWithFallback(baseParts, hasMetadata),
         mentioned_users: drop?.mentioned_users ?? [],
         referenced_nfts: drop?.referenced_nfts ?? [],
@@ -609,11 +617,14 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     return null;
   };
 
+  const replyTo = getReplyTo();
+  const replyToObj = replyTo ? { reply_to: replyTo } : {};
+
   const createGifDrop = (gif: string): CreateDropConfig => {
     return {
       title: null,
       drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
-      reply_to: getReplyTo(),
+      ...replyToObj,
       parts: [
         ...(drop?.parts ?? []),
         {
@@ -664,11 +675,12 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
           ];
 
     const parts = ensurePartsWithFallback(newParts, hasMetadata);
-
+    const replyTo = getReplyTo();
+    const replyToObj = replyTo ? { reply_to: replyTo } : {};
     return {
       title: null,
       drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
-      reply_to: getReplyTo(),
+      ...replyToObj,
       parts,
       mentioned_users: allMentions,
       referenced_nfts: allNfts,
@@ -766,7 +778,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       // Define callback for when signing completes
       const handleSigningComplete = (result: {
         success: boolean;
-        signature?: string;
+        signature?: string | undefined;
       }) => {
         if (!result.success || !result.signature) {
           resolve(null);
@@ -991,10 +1003,13 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       // Remove file from a specific part
       setDrop((prevDrop) => {
         if (!prevDrop) return null;
+
         const newParts = [...prevDrop.parts];
+        const part = newParts[partIndex];
+        if (!part) return prevDrop;
         newParts[partIndex] = {
-          ...newParts[partIndex],
-          media: newParts[partIndex].media.filter((f) => f !== file),
+          ...part,
+          media: part.media.filter((f) => f !== file),
         };
         return { ...prevDrop, parts: newParts };
       });
@@ -1026,22 +1041,37 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   };
 
   const onChangeKey = (params: { index: number; newKey: string }) => {
-    setMetadata((prev) => {
-      const newMetadata = [...prev];
-      newMetadata[params.index].key = params.newKey;
-      return newMetadata;
-    });
+    setMetadata((prev) =>
+      prev.map((item, i) =>
+        i === params.index ? { ...item, key: params.newKey } : item
+      )
+    );
   };
 
   const onChangeValue = (params: {
     index: number;
     newValue: string | number | null;
   }) => {
-    setMetadata((prev) => {
-      const newMetadata = [...prev];
-      newMetadata[params.index].value = params.newValue;
-      return newMetadata;
-    });
+    setMetadata((prev) =>
+      prev.map((item, i) => {
+        if (i !== params.index) return item;
+        if (item.type === ApiWaveMetadataType.Number) {
+          if (params.newValue === null || params.newValue === "") {
+            return { ...item, value: null };
+          }
+          const parsedValue = Number(params.newValue);
+          return { ...item, value: isNaN(parsedValue) ? null : parsedValue };
+        } else if (item.type === ApiWaveMetadataType.String) {
+          if (typeof params.newValue === "string") {
+            return { ...item, value: params.newValue };
+          } else {
+            return { ...item, value: String(params.newValue) };
+          }
+        }
+
+        return item;
+      })
+    );
   };
 
   const onAddMetadata = () => {
@@ -1099,7 +1129,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       <div className="tw-flex tw-items-end tw-w-full">
         <div
           ref={actionsContainerRef}
-          className="tw-w-full tw-flex tw-items-center tw-gap-x-2 lg:tw-gap-x-3">
+          className="tw-w-full tw-flex tw-items-center tw-gap-x-2 lg:tw-gap-x-3"
+        >
           <CreateDropActions
             isStormMode={isStormMode}
             canAddPart={canAddPart}
@@ -1166,7 +1197,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}>
+            transition={{ duration: 0.3 }}
+          >
             <CreateDropMetadata
               disabled={submitting}
               onRemoveMetadata={onRemoveMetadata}

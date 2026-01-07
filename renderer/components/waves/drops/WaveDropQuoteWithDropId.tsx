@@ -4,7 +4,7 @@ import React, { useContext } from "react";
 import { commonApiFetch } from "@/services/api/common-api";
 import { AuthContext } from "@/components/auth/Auth";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import WaveDropQuote from "./WaveDropQuote";
 
@@ -22,7 +22,7 @@ const WaveDropQuoteWithDropId: React.FC<WaveDropQuoteWithDropIdProps> = ({
   onQuoteClick,
 }) => {
   const { connectedProfile } = useContext(AuthContext);
-  const { data: drop } = useQuery<ApiDrop>({
+  const { data: drop } = useQuery<ApiDrop | undefined>({
     queryKey: [
       QueryKey.DROP,
       {

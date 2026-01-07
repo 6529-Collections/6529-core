@@ -1,10 +1,10 @@
 "use client";
 
 import { UserFollowBtnSize } from "@/components/user/utils/UserFollowBtn";
-import { DropInteractionParams } from "@/components/waves/drops/Drop";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import { INotificationPriorityAlert } from "@/types/feed.types";
+import type { DropInteractionParams } from "@/components/waves/drops/Drop";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { INotificationPriorityAlert } from "@/types/feed.types";
 import NotificationsFollowBtn from "../NotificationsFollowBtn";
 import NotificationDrop from "../subcomponents/NotificationDrop";
 import NotificationHeader from "../subcomponents/NotificationHeader";
@@ -25,7 +25,7 @@ export default function NotificationPriorityAlert({
   readonly activeDrop: ActiveDropState | null;
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }) {
   const { createReplyClickHandler, createQuoteClickHandler } =
     useWaveNavigation();
@@ -38,7 +38,8 @@ export default function NotificationPriorityAlert({
           profile={notification.related_identity}
           size={UserFollowBtnSize.SMALL}
         />
-      }>
+      }
+    >
       <span className="tw-text-sm tw-font-normal tw-text-iron-50">
         <span className="tw-text-iron-400">sent a priority alert 🚨</span>{" "}
         <NotificationTimestamp createdAt={notification.created_at} />
@@ -57,6 +58,9 @@ export default function NotificationPriorityAlert({
   }
 
   const drop = notification.related_drops[0];
+  if (!drop) {
+    return null;
+  }
   const isDirectMessage = getIsDirectMessage(drop.wave);
 
   return (

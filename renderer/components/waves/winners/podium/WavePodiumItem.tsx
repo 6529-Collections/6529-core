@@ -1,22 +1,22 @@
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
 import { ImageScale, getScaledImageUri } from "@/helpers/image.helpers";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { WavePodiumItemContentOutcomes } from "./WavePodiumItemContentOutcomes";
-import { ApiWaveDecisionWinner } from "@/generated/models/ApiWaveDecisionWinner";
+import type { ApiWaveDecisionWinner } from "@/generated/models/ApiWaveDecisionWinner";
 import { motion } from "framer-motion";
 import { WaveWinnersPodiumPlaceholder } from "./WaveWinnersPodiumPlaceholder";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { WAVE_VOTING_LABELS } from "@/helpers/waves/waves.constants";
 
 interface WavePodiumItemProps {
-  readonly winner?: ApiWaveDecisionWinner;
+  readonly winner?: ApiWaveDecisionWinner | undefined;
   readonly onDropClick: (drop: ExtendedDrop) => void;
   readonly position: "first" | "second" | "third";
-  readonly customAnimationIndex?: number;
+  readonly customAnimationIndex?: number | undefined;
 }
 
 // Configuration for position-specific styling with CSS ready classes for Tailwind

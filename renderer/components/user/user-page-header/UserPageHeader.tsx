@@ -7,7 +7,7 @@ import { SortDirection } from "@/entities/ISort";
 import { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
-import { CountlessPage } from "@/helpers/Types";
+import type { CountlessPage } from "@/helpers/Types";
 import { commonApiFetch } from "@/services/api/common-api";
 
 import { getRandomColor } from "@/helpers/Helpers";

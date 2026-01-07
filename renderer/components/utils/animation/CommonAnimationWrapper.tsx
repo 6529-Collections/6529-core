@@ -1,4 +1,5 @@
-import { AnimatePresence, AnimatePresenceProps } from "framer-motion";
+import type { AnimatePresenceProps } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import React from "react";
 
 export default function CommonAnimationWrapper({
@@ -7,8 +8,8 @@ export default function CommonAnimationWrapper({
   initial = false,
 }: {
   readonly children: React.ReactNode;
-  readonly mode?: AnimatePresenceProps["mode"];
-  readonly initial?: AnimatePresenceProps["initial"];
+  readonly mode?: AnimatePresenceProps["mode"] | undefined;
+  readonly initial?: AnimatePresenceProps["initial"] | undefined;
 }) {
   return (
     <AnimatePresence mode={mode} initial={initial}>

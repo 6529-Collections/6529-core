@@ -8,17 +8,15 @@ import { AuthContext } from "@/components/auth/Auth";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { canEditWave } from "@/helpers/waves/waves.helpers";
 import WaveGroupScope from "./WaveGroupScope";
-import { WaveGroupType } from "./WaveGroup.types";
+import type { WaveGroupType } from "./WaveGroup.types";
 
 export default function WaveGroup({
   scope,
   type,
-  isEligible,
   wave,
 }: {
   readonly scope: ApiWaveScope;
   readonly type: WaveGroupType;
-  readonly isEligible: boolean;
   readonly wave: ApiWave;
 }) {
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);

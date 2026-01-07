@@ -3,7 +3,7 @@ import styles from "@/styles/Home.module.scss";
 import MemeLabCollection from "@/components/memelab/MemeLabCollection";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export default async function MemeLabCollectionPage({
   params,
@@ -12,7 +12,7 @@ export default async function MemeLabCollectionPage({
 }) {
   const { collection } = await params;
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <MemeLabCollection collectionName={collection.replaceAll("-", " ")} />
     </main>
   );

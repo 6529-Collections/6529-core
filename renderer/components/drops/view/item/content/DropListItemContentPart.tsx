@@ -1,4 +1,4 @@
-import { MentionedUser, ReferencedNft } from "@/entities/IDrop";
+import type { MentionedUser, ReferencedNft } from "@/entities/IDrop";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import DropListItemContentNft from "./nft-tag/DropListItemContentNft";
 import DropListItemContentMention from "./DropListItemContentMention";
@@ -33,5 +33,6 @@ export default function DropListItemContentPart({
       return <DropListItemContentNft nft={value} />;
     default:
       assertUnreachable(type);
+      return;
   }
 }

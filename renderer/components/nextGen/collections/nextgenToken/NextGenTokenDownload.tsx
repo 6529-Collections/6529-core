@@ -166,7 +166,7 @@ function NextGenTokenDownloadButton(
   props: Readonly<{
     token: NextGenToken;
     quality: Resolution;
-    class?: string;
+    class?: string | undefined;
   }>
 ) {
   const downloader = useDownloader();

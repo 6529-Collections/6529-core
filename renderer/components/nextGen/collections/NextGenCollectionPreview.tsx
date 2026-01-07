@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Col, Container, Row } from "react-bootstrap";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NextGenCollection } from "@/entities/INextgen";
 import { formatNameForUrl } from "../nextgen_helpers";
 import { NextGenMintCounts } from "./collectionParts/NextGenCollectionHeader";
 import styles from "./NextGen.module.scss";
@@ -16,7 +16,7 @@ export default function NextGenCollectionPreview(props: Readonly<Props>) {
       href={`/nextgen/collection/${formatNameForUrl(props.collection.name)}`}
       className="decoration-none"
     >
-      <Container className={styles.collectionPreview}>
+      <Container className={styles["collectionPreview"]}>
         <Row>
           <Col className="pb-4">
             <Image
@@ -42,7 +42,7 @@ export default function NextGenCollectionPreview(props: Readonly<Props>) {
         </Row>
         <Row>
           <Col>
-            <Container className={styles.collectionPreviewTitle}>
+            <Container className={styles["collectionPreviewTitle"]}>
               <Row>
                 <Col>
                   <h3 className="mb-0">{props.collection.name}</h3>

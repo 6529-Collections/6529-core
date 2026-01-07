@@ -1,6 +1,6 @@
-import { SortDirection } from "@/entities/ISort";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { SortDirection } from "@/entities/ISort";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 
 export interface FullPageRequest<SORT_BY_OPTIONS> {
   readonly sort_direction: SortDirection;
@@ -303,13 +303,6 @@ export const CONTACT_STATEMENT_TYPES = [
 
 export type CONTACT_STATEMENT_TYPE = (typeof CONTACT_STATEMENT_TYPES)[number];
 
-const SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPES = [
-  STATEMENT_TYPE.LINK,
-] as const;
-
-type SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPE =
-  (typeof SOCIAL_MEDIA_VERIFICATION_POSTS_STATEMENT_TYPES)[number];
-
 export enum Period {
   MINUTES = "MINUTES",
   HOURS = "HOURS",
@@ -343,7 +336,7 @@ export interface WsDropUpdateMessage {
 
 export interface PageSSRMetadata {
   title: string;
-  description?: string;
+  description?: string | undefined;
   ogImage: string;
   twitterCard: "summary" | "summary_large_image";
 }

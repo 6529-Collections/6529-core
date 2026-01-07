@@ -6,7 +6,7 @@ import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileToo
 import { SingleWaveDropPosition } from "@/components/waves/drop/SingleWaveDropPosition";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
 import { ImageScale } from "@/helpers/image.helpers";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React from "react";
@@ -17,9 +17,9 @@ import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;
   readonly onDropClick: (drop: ExtendedDrop) => void;
-  readonly isChecked?: boolean;
-  readonly onToggleCheck?: (dropId: string) => void;
-  readonly isResetting?: boolean;
+  readonly isChecked?: boolean | undefined;
+  readonly onToggleCheck?: ((dropId: string) => void) | undefined;
+  readonly isResetting?: boolean | undefined;
 }
 
 const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
@@ -121,7 +121,8 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
               size={UserCICAndLevelSize.SMALL}
             />
             <UserProfileTooltipWrapper
-              user={drop.author.handle ?? drop.author.id}>
+              user={drop.author.handle ?? drop.author.id}
+            >
               <Link
                 href={`/${drop.author.handle}`}
                 onClick={(e) => {
@@ -172,7 +173,8 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
                           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
                           zIndex: 99999,
                           pointerEvents: "none",
-                        }}>
+                        }}
+                      >
                         {voter.profile.handle} -{" "}
                         {formatNumberWithCommas(voter.rating)}
                       </Tooltip>

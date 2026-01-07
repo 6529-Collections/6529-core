@@ -1,12 +1,11 @@
-import React from "react";
-import { ProcessedContent } from "./media-utils";
+import type { ProcessedContent } from "./media-utils";
 import ContentSegmentComponent from "./ContentSegmentComponent";
 import MediaThumbnail from "./MediaThumbnail";
 
 interface ContentDisplayProps {
   readonly content: ProcessedContent;
   readonly onReplyClick: (serialNo: number) => void;
-  readonly serialNo?: number;
+  readonly serialNo?: number | undefined;
 }
 
 /**

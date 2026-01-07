@@ -1,8 +1,9 @@
-import { ActivityLogParams } from "@/components/profile-activity/ProfileActivityLogs";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
-import ProfileRatersTableWrapper, {
+import type { ActivityLogParams } from "@/components/profile-activity/ProfileActivityLogs";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type {
   ProfileRatersParams,
 } from "../utils/raters-table/wrapper/ProfileRatersTableWrapper";
+import ProfileRatersTableWrapper from "../utils/raters-table/wrapper/ProfileRatersTableWrapper";
 import UserPageIdentityActivityLog from "./activity/UserPageIdentityActivityLog";
 import UserPageIdentityHeader from "./header/UserPageIdentityHeader";
 import UserPageIdentityStatements from "./statements/UserPageIdentityStatements";

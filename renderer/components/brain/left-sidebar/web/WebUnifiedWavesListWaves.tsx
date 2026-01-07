@@ -6,13 +6,14 @@ import React, {
   useImperativeHandle,
   useRef,
 } from "react";
-import { MinimalWave } from "../../../../contexts/wave/hooks/useEnhancedWavesList";
+import type { MinimalWave } from "../../../../contexts/wave/hooks/useEnhancedWavesList";
 import WebBrainLeftSidebarWave from "./WebBrainLeftSidebarWave";
 import SectionHeader from "../waves/SectionHeader";
 import WavesFilterToggle from "../waves/WavesFilterToggle";
+import type {
+  VirtualItem} from "../../../../hooks/useVirtualizedWaves";
 import {
-  useVirtualizedWaves,
-  VirtualItem,
+  useVirtualizedWaves
 } from "../../../../hooks/useVirtualizedWaves";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -47,12 +48,12 @@ export interface WebUnifiedWavesListWavesHandle {
 interface WebUnifiedWavesListWavesProps {
   readonly waves: MinimalWave[];
   readonly onHover: (waveId: string) => void;
-  readonly hideHeaders?: boolean;
-  readonly hideToggle?: boolean;
-  readonly hidePin?: boolean;
-  readonly scrollContainerRef?: React.RefObject<HTMLElement | null>;
-  readonly basePath?: string;
-  readonly isCollapsed?: boolean;
+  readonly hideHeaders?: boolean | undefined;
+  readonly hideToggle?: boolean | undefined;
+  readonly hidePin?: boolean | undefined;
+  readonly scrollContainerRef?: React.RefObject<HTMLElement | null> | undefined;
+  readonly basePath?: string | undefined;
+  readonly isCollapsed?: boolean | undefined;
 }
 
 const WebUnifiedWavesListWaves = forwardRef<
@@ -78,8 +79,8 @@ const WebUnifiedWavesListWaves = forwardRef<
     const { openWave, isApp } = useCreateModalState();
 
     const globalScope = globalThis as typeof globalThis & {
-      window?: Window;
-      navigator?: Navigator;
+      window?: Window | undefined;
+      navigator?: Navigator | undefined;
     };
     const browserWindow = globalScope.window;
     const browserNavigator = globalScope.navigator;

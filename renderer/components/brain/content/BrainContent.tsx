@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useRef } from "react";
 import { createBreakpoint } from "react-use";
 import BrainContentPinnedWaves from "./BrainContentPinnedWaves";
 import BrainContentInput from "./input/BrainContentInput";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import { useLayout } from "../my-stream/layout/LayoutContext";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 
@@ -16,7 +16,7 @@ interface BrainContentProps {
   readonly children: React.ReactNode;
   readonly activeDrop: ActiveDropState | null;
   readonly onCancelReplyQuote: () => void;
-  readonly showPinnedWaves?: boolean;
+  readonly showPinnedWaves?: boolean | undefined;
 }
 
 const BrainContent: React.FC<BrainContentProps> = ({

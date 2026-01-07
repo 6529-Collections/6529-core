@@ -1,10 +1,10 @@
 import React from "react";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import ParticipationDropRatingsContainer from "./ratings/ParticipationDropRatingsContainer";
 
 interface ParticipationDropRatingsProps {
   readonly drop: ApiDrop;
-  readonly rank?: number | null;
+  readonly rank?: number | null | undefined;
 }
 
 export const ParticipationDropRatings: React.FC<ParticipationDropRatingsProps> = ({

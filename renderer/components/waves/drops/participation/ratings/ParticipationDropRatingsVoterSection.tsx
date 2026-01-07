@@ -1,12 +1,8 @@
-import React from "react";
 import { Tooltip } from "react-tooltip";
 import Link from "next/link";
 import { formatNumberWithCommas } from "@/helpers/Helpers";
-import {
-  getScaledImageUri,
-  ImageScale,
-} from "@/helpers/image.helpers";
-import { RatingsSectionProps, RatingsData } from "./types";
+import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import type { RatingsSectionProps, RatingsData } from "./types";
 import { WAVE_VOTING_LABELS } from "@/helpers/waves/waves.constants";
 
 interface ParticipationDropRatingsVoterSectionProps
@@ -53,8 +49,7 @@ export default function ParticipationDropRatingsVoterSection({
                   padding: "4px 8px",
                 }}
               >
-                {rater.profile.handle} •{" "}
-                {formatNumberWithCommas(rater.rating)}{" "}
+                {rater.profile.handle} • {formatNumberWithCommas(rater.rating)}{" "}
                 {WAVE_VOTING_LABELS[drop.wave.voting_credit_type]}
               </Tooltip>
             </div>

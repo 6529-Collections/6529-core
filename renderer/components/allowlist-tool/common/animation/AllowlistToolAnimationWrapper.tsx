@@ -1,4 +1,5 @@
-import { AnimatePresence, AnimatePresenceProps } from "framer-motion";
+import type { AnimatePresenceProps } from "framer-motion";
+import { AnimatePresence } from "framer-motion";
 import React from "react";
 
 export default function AllowlistToolAnimationWrapper({
@@ -7,8 +8,8 @@ export default function AllowlistToolAnimationWrapper({
   initial = false,
 }: {
   children: React.ReactNode;
-  mode?: AnimatePresenceProps["mode"];
-  initial?: AnimatePresenceProps["initial"];
+  mode?: AnimatePresenceProps["mode"] | undefined;
+  initial?: AnimatePresenceProps["initial"] | undefined;
 }) {
   return (
     <AnimatePresence mode={mode} initial={initial} >

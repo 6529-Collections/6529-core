@@ -1,24 +1,23 @@
 import React from "react";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import WaveDropPart from "./WaveDropPart";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { ImageScale } from "@/helpers/image.helpers";
 
 interface WaveDropContentProps {
   readonly drop: ExtendedDrop;
   readonly activePartIndex: number;
   readonly setActivePartIndex: (index: number) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onLongPress: () => void;
   readonly setLongPressTriggered: (triggered: boolean) => void;
-  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
-  readonly isEditing?: boolean;
-  readonly isSaving?: boolean;
-  readonly onSave?: (newContent: string) => void;
-  readonly onCancel?: () => void;
-  readonly isCompetitionDrop?: boolean;
-  readonly mediaImageScale?: ImageScale;
+  readonly isEditing?: boolean | undefined;
+  readonly isSaving?: boolean | undefined;
+  readonly onSave?: ((newContent: string) => void) | undefined;
+  readonly onCancel?: (() => void) | undefined;
+  readonly isCompetitionDrop?: boolean | undefined;
+  readonly mediaImageScale?: ImageScale | undefined;
 }
 
 const WaveDropContent: React.FC<WaveDropContentProps> = ({
@@ -29,7 +28,6 @@ const WaveDropContent: React.FC<WaveDropContentProps> = ({
   onQuoteClick,
   onLongPress,
   setLongPressTriggered,
-  parentContainerRef,
   isEditing = false,
   isSaving = false,
   onSave,

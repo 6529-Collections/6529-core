@@ -1,11 +1,11 @@
 import React from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { IconDefinition } from "@fortawesome/fontawesome-svg-core";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 
 interface SectionHeaderProps {
   readonly label: string;
-  readonly icon?: IconDefinition;
-  readonly rightContent?: React.ReactNode;
+  readonly icon?: IconDefinition | undefined;
+  readonly rightContent?: React.ReactNode | undefined;
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({

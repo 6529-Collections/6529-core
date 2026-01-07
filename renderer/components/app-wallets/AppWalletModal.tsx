@@ -3,7 +3,7 @@
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { MutableRefObject, useCallback, useRef, useState } from "react";
+import { RefObject, useCallback, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { useAuth } from "../auth/Auth";
 import { decryptData } from "./app-wallet-helpers";
@@ -13,7 +13,7 @@ import { useAppWallets } from "./AppWalletsContext";
 const SEED_MIN_PASS_LENGTH = 6;
 
 const showAppWalletError = (
-  timeoutRef: MutableRefObject<NodeJS.Timeout | null>,
+  timeoutRef: RefObject<NodeJS.Timeout | null>,
   setError: React.Dispatch<React.SetStateAction<string>>,
   message: string
 ) => {
@@ -36,7 +36,7 @@ export function CreateAppWalletModal(
       address: string;
       mnemonic: string;
       privateKey: string;
-    };
+    } | undefined;
     onHide: (isSuccess?: boolean) => void;
   }>
 ) {
@@ -134,12 +134,12 @@ export function CreateAppWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <Modal.Header className={styles["modalHeader"]}>
         <Modal.Title>
           {importData ? `Import` : `Create New`} Wallet
         </Modal.Title>
       </Modal.Header>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <label className="pb-1" htmlFor="walletName">
           Wallet Name
         </label>
@@ -149,7 +149,7 @@ export function CreateAppWalletModal(
           type="text"
           placeholder="My Wallet..."
           value={walletName}
-          className={styles.newWalletInput}
+          className={styles["newWalletInput"]}
           onChange={(e) => {
             const value = e.target.value;
             if (/^[a-zA-Z0-9 ]*$/.test(value)) {
@@ -178,7 +178,7 @@ export function CreateAppWalletModal(
           type={passHidden ? "password" : "text"}
           placeholder="******"
           value={walletPass}
-          className={styles.newWalletInput}
+          className={styles["newWalletInput"]}
           onChange={(e: any) => {
             const value = e.target.value;
             if (/^\S*$/.test(value)) {
@@ -200,7 +200,7 @@ export function CreateAppWalletModal(
           )}
         </p>
       </Modal.Body>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button variant="secondary" onClick={() => handleHide()}>
           Cancel
         </Button>
@@ -281,7 +281,7 @@ export function UnlockAppWalletModal(
           showUnlockError();
         }
       } catch (e) {
-        console.log("unlock error", e);
+        console.error("unlock error", e);
         showUnlockError();
       }
     };
@@ -296,10 +296,10 @@ export function UnlockAppWalletModal(
       backdrop
       keyboard={false}
       centered>
-      <Modal.Header className={styles.modalHeader}>
+      <Modal.Header className={styles["modalHeader"]}>
         <Modal.Title>Unlock Wallet</Modal.Title>
       </Modal.Header>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <label className="pb-1 d-flex align-items-center justify-content-between">
           <span className="unselectable">Wallet Password</span>
           <FontAwesomeIcon
@@ -317,7 +317,7 @@ export function UnlockAppWalletModal(
           type={passHidden ? "password" : "text"}
           placeholder="******"
           value={walletPass}
-          className={styles.newWalletInput}
+          className={styles["newWalletInput"]}
           onChange={(e) => {
             const value = e.target.value;
             if (/^\S*$/.test(value)) {
@@ -340,7 +340,7 @@ export function UnlockAppWalletModal(
           )}
         </p>
       </Modal.Body>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button variant="secondary" onClick={() => handleHide()}>
           Cancel
         </Button>

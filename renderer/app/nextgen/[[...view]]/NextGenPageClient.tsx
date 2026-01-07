@@ -6,7 +6,7 @@ import NextgenArtistsComponent from "@/components/nextGen/collections/NextGenArt
 import NextgenCollectionsComponent from "@/components/nextGen/collections/NextGenCollections";
 import NextGenNavigationHeader from "@/components/nextGen/collections/NextGenNavigationHeader";
 import { useTitle } from "@/contexts/TitleContext";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NextGenCollection } from "@/entities/INextgen";
 import { NextgenView } from "@/enums";
 import styles from "@/styles/Home.module.scss";
 import Image from "next/image";
@@ -19,7 +19,7 @@ export default function NextGenPageClient({
   initialView,
 }: {
   readonly featuredCollection: NextGenCollection;
-  readonly initialView?: NextgenView;
+  readonly initialView?: NextgenView | undefined;
 }) {
   const { setTitle } = useTitle();
 
@@ -48,7 +48,7 @@ export default function NextGenPageClient({
   }, []);
 
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       {collection?.id ? (
         <>
           <NextGenNavigationHeader view={view} setView={updateView} />
@@ -56,7 +56,7 @@ export default function NextGenPageClient({
             <NextGenComponent collection={collection} setView={updateView} />
           )}
           {view && (
-            <Container fluid className={styles.main}>
+            <Container fluid className={styles["main"]}>
               <Row className="d-flex align-items-center">
                 <Col>
                   <Container className="pb-4">
@@ -80,7 +80,7 @@ export default function NextGenPageClient({
           )}
         </>
       ) : (
-        <div className={styles.nextGenQuestion}>
+        <div className={styles["nextGenQuestion"]}>
           <Image
             unoptimized
             width={0}

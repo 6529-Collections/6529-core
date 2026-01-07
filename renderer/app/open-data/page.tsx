@@ -1,11 +1,11 @@
 import CommunityDownloads from "@/components/community-downloads/CommunityDownloads";
 import { getAppMetadata } from "@/components/providers/metadata";
 import styles from "@/styles/Home.module.scss";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export default function Downloads() {
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <CommunityDownloads />
     </main>
   );

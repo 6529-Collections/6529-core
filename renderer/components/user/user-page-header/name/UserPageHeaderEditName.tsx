@@ -4,8 +4,8 @@ import { AuthContext } from "@/components/auth/Auth";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import UserSettingsSave from "@/components/user/settings/UserSettingsSave";
 import UserSettingsUsername from "@/components/user/settings/UserSettingsUsername";
-import { ApiCreateOrUpdateProfileRequest } from "@/entities/IProfile";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiCreateOrUpdateProfileRequest } from "@/entities/IProfile";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { commonApiPost } from "@/services/api/common-api";
 import { useMutation } from "@tanstack/react-query";
 import { useParams, usePathname, useRouter } from "next/navigation";
@@ -53,7 +53,7 @@ export default function UserPageHeaderEditName({
         type: "success",
       });
       const newPath = pathname.replace(
-        params?.user?.toString() ?? "",
+        params?.["user"]?.toString() ?? "",
         updatedProfile.handle!?.toLowerCase()
       );
       await router.replace(newPath);

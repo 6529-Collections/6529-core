@@ -30,8 +30,8 @@ export default function ChatItemHrefButtons({
   hideLink = false,
 }: {
   href: string;
-  relativeHref?: string;
-  hideLink?: boolean;
+  relativeHref?: string | undefined;
+  hideLink?: boolean | undefined;
 }) {
   const [copied, setCopied] = useState(false);
 

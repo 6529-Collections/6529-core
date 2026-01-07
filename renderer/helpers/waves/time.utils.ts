@@ -1,5 +1,5 @@
 import { Time } from "../time";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 
 // Constants for fallback values
 export const FALLBACK_START_TIME = 0; // Use 0 (Jan 1, 1970) to indicate "started immediately"
@@ -37,21 +37,6 @@ export const calculateTimeLeft = (targetTime: number): TimeLeft => {
     minutes: Math.floor((difference / (1000 * 60)) % 60),
     seconds: Math.floor((difference / 1000) % 60),
   };
-};
-
-/**
- * Determines if all time components are zero
- *
- * @param timeLeft - TimeLeft object
- * @returns boolean - true if all values are zero
- */
-const isTimeZero = (timeLeft: TimeLeft): boolean => {
-  return (
-    timeLeft.days === 0 &&
-    timeLeft.hours === 0 &&
-    timeLeft.minutes === 0 &&
-    timeLeft.seconds === 0
-  );
 };
 
 /**

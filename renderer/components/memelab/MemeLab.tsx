@@ -14,7 +14,8 @@ import {
 import { publicEnv } from "@/config/env";
 import { MEMELAB_CONTRACT } from "@/constants";
 import { useSetTitle } from "@/contexts/TitleContext";
-import { LabExtendedData, LabNFT, VolumeType } from "@/entities/INFT";
+import type { LabExtendedData, LabNFT} from "@/entities/INFT";
+import { VolumeType } from "@/entities/INFT";
 import { SortDirection } from "@/entities/ISort";
 import { MemeLabSort } from "@/enums";
 import {
@@ -547,7 +548,7 @@ export default function MemeLabComponent() {
           href={`/meme-lab/${nft.id}`}
           className="decoration-none scale-hover">
           <Container fluid>
-            <Row className={isConnected ? styles.nftImagePadding : ""}>
+            <Row className={isConnected ? styles["nftImagePadding"] : ""}>
               <NFTImage
                 nft={nft}
                 animation={false}
@@ -606,7 +607,7 @@ export default function MemeLabComponent() {
             <h4>
               {collection}&nbsp;
               <a
-                className={styles.collectionLink}
+                className={styles["collectionLink"]}
                 href={`/meme-lab/collection/${encodeURIComponent(
                   collection.replace(" ", "-")
                 )}`}>
@@ -655,7 +656,7 @@ export default function MemeLabComponent() {
   }
 
   return (
-    <Container fluid className={styles.mainContainer}>
+    <Container fluid className={styles["mainContainer"]}>
       <Row>
         <Col>
           <Container className="pt-4">
@@ -686,15 +687,15 @@ export default function MemeLabComponent() {
                   <FontAwesomeIcon
                     icon={faChevronCircleUp}
                     onClick={() => setSortDir(SortDirection.ASC)}
-                    className={`${styles.sortDirection} ${
-                      sortDir != SortDirection.ASC ? styles.disabled : ""
+                    className={`${styles["sortDirection"]} ${
+                      sortDir != SortDirection.ASC ? styles["disabled"] : ""
                     }`}
                   />{" "}
                   <FontAwesomeIcon
                     icon={faChevronCircleDown}
                     onClick={() => setSortDir(SortDirection.DESC)}
-                    className={`${styles.sortDirection} ${
-                      sortDir != SortDirection.DESC ? styles.disabled : ""
+                    className={`${styles["sortDirection"]} ${
+                      sortDir != SortDirection.DESC ? styles["disabled"] : ""
                     }`}
                   />
                 </Col>

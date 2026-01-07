@@ -1,11 +1,12 @@
 "use client";
 
-import { CommonSelectItem } from "@/components/utils/select/CommonSelect";
+import type { CommonSelectItem } from "@/components/utils/select/CommonSelect";
 import CommonDropdown from "@/components/utils/select/dropdown/CommonDropdown";
-import { ApiWallet } from "@/generated/models/ApiWallet";
+import type { ApiWallet } from "@/generated/models/ApiWallet";
 import { formatAddress } from "@/helpers/Helpers";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { RefObject, useEffect, useMemo, useState } from "react";
+import type { RefObject} from "react";
+import { useEffect, useMemo, useState } from "react";
 import UserAddressesSelectDropdownItem from "./UserAddressesSelectDropdownItem";
 
 type SelectedType = string | null;
@@ -16,7 +17,7 @@ export default function UserAddressesSelectDropdown({
   onActiveAddress,
 }: {
   readonly wallets: ApiWallet[];
-  readonly containerRef?: RefObject<HTMLDivElement | null>;
+  readonly containerRef?: RefObject<HTMLDivElement | null> | undefined;
   readonly onActiveAddress: (address: SelectedType) => void;
 }) {
   const router = useRouter();

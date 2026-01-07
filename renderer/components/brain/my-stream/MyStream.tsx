@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { DropInteractionParams } from "@/components/waves/drops/Drop";
+import type { DropInteractionParams } from "@/components/waves/drops/Drop";
 import { useSetStreamHasNewItems } from "@/contexts/TitleContext";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import { TypedFeedItem } from "@/types/feed.types";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { TypedFeedItem } from "@/types/feed.types";
 import { useMemo } from "react";
 import SpinnerLoader from "../../common/SpinnerLoader";
 import FeedWrapper from "../feed/FeedWrapper";
@@ -17,10 +17,10 @@ interface MyStreamProps {
   readonly items: TypedFeedItem[];
   readonly isFetching: boolean;
   readonly onBottomIntersection: (state: boolean) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
-  readonly haveNewItems?: boolean;
-  readonly status?: string;
-  readonly isInitialQueryDone?: boolean;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
+  readonly haveNewItems?: boolean | undefined;
+  readonly status?: string | undefined;
+  readonly isInitialQueryDone?: boolean | undefined;
 }
 
 export default function MyStream({
@@ -37,11 +37,11 @@ export default function MyStream({
 }: MyStreamProps) {
   const { myStreamFeedStyle } = useLayout();
   // Compute whether stream has new items
-  const hasNewItems = useMemo(() => 
-    status !== "pending" && isInitialQueryDone && haveNewItems,
+  const hasNewItems = useMemo(
+    () => status !== "pending" && isInitialQueryDone && haveNewItems,
     [status, isInitialQueryDone, haveNewItems]
   );
-  
+
   // Update stream new items status in title context
   useSetStreamHasNewItems(hasNewItems);
   const showLoader = (!isInitialQueryDone || isFetching) && items.length === 0;

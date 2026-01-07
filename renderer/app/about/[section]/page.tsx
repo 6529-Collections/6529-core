@@ -2,7 +2,7 @@ import styles from "@/styles/Home.module.scss";
 import { Col, Container, Row } from "react-bootstrap";
 
 import { notFound, redirect } from "next/navigation";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { AboutSection } from "@/enums";
 import About from "@/components/about/About";
 import { capitalizeEveryWord } from "@/helpers/Helpers";
@@ -23,7 +23,7 @@ export default async function AboutPage(props: Readonly<Props>) {
   }
 
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <Container fluid className="pt-4">
         <Row>
           <Col>

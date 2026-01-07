@@ -1,11 +1,12 @@
 "use client";
 
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { openInExternalBrowser } from "@/helpers";
 import { numberWithCommas } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import { useRouter } from "next/navigation";
-import { MouseEvent, useCallback } from "react";
+import type { MouseEvent } from "react";
+import { useCallback } from "react";
 
 export default function WaveItemDropped({ wave }: { readonly wave: ApiWave }) {
   const contributors = wave.contributors_overview ?? [];

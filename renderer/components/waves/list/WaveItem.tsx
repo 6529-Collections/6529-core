@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { openInExternalBrowser } from "@/helpers";
 import { getRandomColorWithSeed, numberWithCommas } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
@@ -11,10 +11,12 @@ import {
 } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
+import type {
   KeyboardEvent,
   MouseEvent,
-  ReactNode,
+  ReactNode
+} from "react";
+import {
   useCallback,
   useId,
 } from "react";
@@ -59,7 +61,7 @@ const shouldSkipNavigation = (
       break;
     }
 
-    if (current.dataset?.waveItemInteractive === "true") {
+    if (current.dataset?.["waveItemInteractive"] === "true") {
       return true;
     }
 
@@ -75,11 +77,15 @@ const shouldSkipNavigation = (
 
 type CardContainerProps = {
   readonly isInteractive: boolean;
-  readonly href?: string;
-  readonly ariaLabel?: string;
+  readonly href?: string | undefined;
+  readonly ariaLabel?: string | undefined;
   readonly children: ReactNode;
-  readonly onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
-  readonly onKeyDown?: (event: KeyboardEvent<HTMLAnchorElement>) => void;
+  readonly onClick?:
+    | ((event: MouseEvent<HTMLAnchorElement>) => void)
+    | undefined;
+  readonly onKeyDown?:
+    | ((event: KeyboardEvent<HTMLAnchorElement>) => void)
+    | undefined;
 };
 
 function CardContainer({
@@ -101,8 +107,9 @@ function CardContainer({
         prefetch={false}
         className={className}
         aria-label={ariaLabel}
-        onClick={onClick}
-        onKeyDown={onKeyDown}>
+        {...(onClick ? { onClick } : {})}
+        onKeyDown={onKeyDown}
+      >
         {children}
       </Link>
     );
@@ -134,9 +141,9 @@ export default function WaveItem({
   userPlaceholder,
   titlePlaceholder,
 }: {
-  readonly wave?: ApiWave;
-  readonly userPlaceholder?: string;
-  readonly titlePlaceholder?: string;
+  readonly wave?: ApiWave | undefined;
+  readonly userPlaceholder?: string | undefined;
+  readonly titlePlaceholder?: string | undefined;
 }) {
   const router = useRouter();
   const author = wave?.author;
@@ -258,7 +265,8 @@ export default function WaveItem({
         className={`${authorWrapperClass} tw-cursor-pointer tw-bg-transparent tw-border-none tw-p-0 tw-text-left tw-relative tw-z-10 tw-min-w-0 tw-w-fit`}
         aria-label={
           author?.handle ? `View @${author.handle}` : "View author profile"
-        }>
+        }
+      >
         <div className="tw-h-8 tw-w-8 tw-relative tw-flex-shrink-0 tw-mr-3">
           {authorAvatar}
         </div>

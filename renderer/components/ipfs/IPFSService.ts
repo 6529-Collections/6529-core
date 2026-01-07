@@ -3,13 +3,13 @@ import FormData from "form-data";
 
 interface IpfsServiceConfig {
   apiEndpoint: string;
-  mfsPath?: string;
+  mfsPath?: string | undefined;
 }
 
 class IpfsService {
   private readonly apiEndpoint: string;
   private readonly mfsEnabled: boolean;
-  private readonly mfsPath?: string;
+  private readonly mfsPath?: string | undefined;
 
   constructor(config: IpfsServiceConfig) {
     this.apiEndpoint = config.apiEndpoint;
@@ -46,12 +46,10 @@ class IpfsService {
       await axios.post(
         `${this.apiEndpoint}/api/v0/files/stat?arg=/${this.mfsPath}/${fileName}`
       );
-      console.log(`File ${fileName} already exists.`);
-    } catch (error: any) {
+    } catch {
       await axios.post(
         `${this.apiEndpoint}/api/v0/files/cp?arg=/ipfs/${cid}&arg=/${this.mfsPath}/${fileName}`
       );
-      console.log(`File added to MFS at ${this.mfsPath}/${fileName}`);
     }
   }
 
@@ -65,7 +63,6 @@ class IpfsService {
       );
 
       const cid = addResponse.data.Hash;
-      console.log("File added to IPFS with CID:", cid);
 
       await this.validateFileName(cid, file);
 

@@ -3,9 +3,11 @@
 import { ApiDrop, ApiWave } from "@/generated/models/ObjectSerializer";
 import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
+import type {
+  ActiveDropState
+} from "@/types/dropInteractionTypes";
 import {
-  ActiveDropAction,
-  ActiveDropState,
+  ActiveDropAction
 } from "@/types/dropInteractionTypes";
 import React, { useMemo, useState } from "react";
 import {

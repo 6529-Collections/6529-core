@@ -1,11 +1,12 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, KeyboardEvent, useId } from "react";
+import type { KeyboardEvent} from "react";
+import { useEffect, useRef, useState, useId } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleExclamation, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { useClickAway, useDebounce, useKeyPressEvent } from "react-use";
-import { CommunityMemberMinimal } from "@/entities/IProfile";
+import type { CommunityMemberMinimal } from "@/entities/IProfile";
 import { commonApiFetch } from "@/services/api/common-api";
 import CommonProfileSearchItems from "../profile-search/CommonProfileSearchItems";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
@@ -28,10 +29,10 @@ export default function IdentitySearch({
   setIdentity,
 }: {
   readonly identity: string | null;
-  readonly size?: IdentitySearchSize;
-  readonly error?: boolean;
-  readonly label?: string;
-  readonly autoFocus?: boolean;
+  readonly size?: IdentitySearchSize | undefined;
+  readonly error?: boolean | undefined;
+  readonly label?: string | undefined;
+  readonly autoFocus?: boolean | undefined;
 
   readonly setIdentity: (identity: string | null) => void;
 }) {

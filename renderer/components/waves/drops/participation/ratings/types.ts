@@ -1,4 +1,4 @@
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 
 export interface RatingsSectionProps {
   readonly drop: ApiDrop;
@@ -9,7 +9,7 @@ export interface RatingsSectionProps {
 export interface ThemeColors {
   text: string;
   ring: string;
-  indicator?: string;
+  indicator?: string | undefined;
 }
 
 export interface RatingsData {
