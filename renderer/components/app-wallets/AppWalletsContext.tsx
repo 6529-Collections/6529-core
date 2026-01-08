@@ -6,7 +6,6 @@ import React, {
   useContext,
   useEffect,
   useMemo,
-  useState,
 } from "react";
 
 export interface AppWallet {
@@ -38,31 +37,23 @@ const AppWalletsContext = createContext<AppWalletsContextProps | undefined>(
   undefined
 );
 
-const WALLET_KEY_PREFIX = "app-wallet_";
-
 export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const [fetchingAppWallets, setFetchingAppWallets] = useState(false);
-  const [appWallets, setAppWallets] = useState<AppWallet[]>([]);
-  const [appWalletsSupported, setAppWalletsSupported] = useState(false);
+  const fetchingAppWallets = false;
+  const appWallets: AppWallet[] = [];
+  const appWalletsSupported = false;
 
   useEffect(() => {
-    let cancelled = false;
-
     const initialize = async () => {
       return false;
     };
 
     initialize();
-
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
   const createAppWallet = useCallback(
-    async (name: string, pass: string): Promise<boolean> => {
+    async (_name: string, _pass: string): Promise<boolean> => {
       return false;
     },
     []
@@ -70,11 +61,11 @@ export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const importAppWallet = useCallback(
     async (
-      walletName: string,
-      walletPass: string,
-      address: string,
-      mnemonic: string,
-      privateKey: string
+      _walletName: string,
+      _walletPass: string,
+      _address: string,
+      _mnemonic: string,
+      _privateKey: string
     ): Promise<boolean> => {
       return false;
     },
@@ -82,7 +73,7 @@ export const AppWalletsProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const deleteAppWallet = useCallback(
-    async (address: string): Promise<boolean> => {
+    async (_address: string): Promise<boolean> => {
       return false;
     },
     []

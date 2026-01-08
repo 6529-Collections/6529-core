@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { commonApiFetch } from "@/services/api/common-api";
 import React, {
   createContext,

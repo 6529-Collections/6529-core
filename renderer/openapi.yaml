@@ -326,6 +326,198 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DistributionPhotosPage"
+  /distribution_photos/{contract}/{nft_id}/prep:
+    post:
+      tags:
+        - Distributions
+      summary: Get presigned S3 URL for distribution photo upload
+      description: Requires the user to be authenticated as a Subscription Admin
+      operationId: createDistributionPhotoUploadUrl
+      parameters:
+        - name: contract
+          in: path
+          description: Contract address
+          required: true
+          schema:
+            type: string
+        - name: nft_id
+          in: path
+          description: NFT ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiCreateMediaUploadUrlRequest"
+      responses:
+        "201":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCreateMediaUrlResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /distribution_photos/{contract}/{nft_id}/multipart-upload:
+    post:
+      tags:
+        - Distributions
+      summary: Start multipart upload for distribution photo
+      description: Requires the user to be authenticated as a Subscription Admin
+      operationId: createDistributionPhotoMultipartUpload
+      parameters:
+        - name: contract
+          in: path
+          description: Contract address
+          required: true
+          schema:
+            type: string
+        - name: nft_id
+          in: path
+          description: NFT ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiCreateMediaUploadUrlRequest"
+      responses:
+        "201":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiStartMultipartMediaUploadResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /distribution_photos/{contract}/{nft_id}/multipart-upload/part:
+    post:
+      tags:
+        - Distributions
+      summary: Get presigned URL for multipart upload part
+      description: Requires the user to be authenticated as a Subscription Admin
+      operationId: uploadPartOfDistributionPhotoMultipartUpload
+      parameters:
+        - name: contract
+          in: path
+          description: Contract address
+          required: true
+          schema:
+            type: string
+        - name: nft_id
+          in: path
+          description: NFT ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiUploadPartOfMultipartUploadRequest"
+      responses:
+        "201":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiUploadPartOfMultipartUploadResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /distribution_photos/{contract}/{nft_id}/multipart-upload/completion:
+    post:
+      tags:
+        - Distributions
+      summary: Complete multipart upload for distribution photo
+      description: Requires the user to be authenticated as a Subscription Admin
+      operationId: completeDistributionPhotoMultipartUpload
+      parameters:
+        - name: contract
+          in: path
+          description: Contract address
+          required: true
+          schema:
+            type: string
+        - name: nft_id
+          in: path
+          description: NFT ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiCompleteMultipartUploadRequest"
+      responses:
+        "201":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCompleteMultipartUploadResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+  /distribution_photos/{contract}/{nft_id}/complete:
+    post:
+      tags:
+        - Distributions
+      summary: Save uploaded distribution photos to database
+      description: >-
+        Requires the user to be authenticated as a Subscription Admin. Replaces
+        all existing photos for the card.
+      operationId: completeDistributionPhotosUpload
+      parameters:
+        - name: contract
+          in: path
+          description: Contract address
+          required: true
+          schema:
+            type: string
+        - name: nft_id
+          in: path
+          description: NFT ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DistributionPhotoCompleteRequest"
+      responses:
+        "201":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DistributionPhotoCompleteResponse"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
   /distributions:
     get:
       tags:
@@ -384,6 +576,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DistributionNormalizedPage"
+  /distributions/{contract}/{id}/overview:
+    get:
+      tags:
+        - Distributions
+      summary: Get distribution overview for a specific contract and card
+      description: Requires the user to be authenticated as a Subscription Admin
+      operationId: getDistributionOverview
+      parameters:
+        - name: contract
+          in: path
+          description: Contract address
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          description: Card ID
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DistributionOverview"
+        "400":
+          description: Invalid request
+        "403":
+          description: Forbidden - not a Subscription Admin
   /light-drops:
     get:
       tags:
@@ -507,6 +731,170 @@ paths:
                 $ref: "#/components/schemas/ApiDrop"
         "400":
           description: Invalid request
+  /boosted-drops/:
+    get:
+      tags:
+        - Drops
+      summary: Get boosted drops.
+      operationId: getBoostedDrops
+      parameters:
+        - name: author
+          in: query
+          description: Drops by author
+          required: false
+          schema:
+            type: string
+        - name: booster
+          in: query
+          description: Drops boosted by given identity
+          required: false
+          schema:
+            type: string
+        - name: wave_id
+          in: query
+          description: Drops by wave
+          required: false
+          schema:
+            type: string
+        - name: min_boosts
+          in: query
+          description: Must be boosted at least so many times
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 200
+        - name: sort_direction
+          in: query
+          description: Default is DESC
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiPageSortDirection"
+        - name: sort
+          in: query
+          description: Default is last_boosted_at
+          required: false
+          schema:
+            type: string
+            enum:
+              - last_boosted_at
+              - first_boosted_at
+              - drop_created_at
+              - boosts
+        - name: count_only_boosts_after
+          in: query
+          description: Timestamp in millis
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDropsPage"
+  /drops/{dropId}/boosts:
+    get:
+      tags:
+        - Drops
+      summary: Get drop boosts by Drop ID.
+      operationId: getDropBoostsById
+      parameters:
+        - name: dropId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: number
+            format: int64
+            minimum: 1
+            maximum: 2000
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: number
+            format: int64
+            minimum: 1
+        - name: sort_direction
+          in: query
+          description: Default is DESC
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiPageSortDirection"
+        - name: sort
+          in: query
+          description: Default is boosted_at
+          required: false
+          schema:
+            type: string
+            enum:
+              - boosted_at
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDropBoostsPage"
+        "404":
+          description: Drop not found
+    post:
+      tags:
+        - Drops
+      summary: Boost drop
+      operationId: boostDrop
+      parameters:
+        - name: dropId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: successful operation
+        "400":
+          description: Invalid request
+        "404":
+          description: Drop not found
+    delete:
+      tags:
+        - Drops
+      summary: Delete drop boost
+      operationId: deleteDropBoost
+      parameters:
+        - name: dropId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "201":
+          description: successful operation
+        "404":
+          description: Drop not found
   /drops/{dropId}:
     get:
       tags:
@@ -701,7 +1089,9 @@ paths:
       tags:
         - Drops
       summary: Mark a drop and all subsequent drops in the wave as unread
-      description: Sets the user's latest_read_timestamp to just before this drop's created_at, making this drop and all newer drops unread.
+      description: >-
+        Sets the user"s latest_read_timestamp to just before this drop"s
+        created_at, making this drop and all newer drops unread.
       operationId: markDropUnread
       parameters:
         - name: dropId
@@ -5656,6 +6046,7 @@ components:
         - rank
         - is_signed
         - reactions
+        - boosts
       properties:
         id:
           type: string
@@ -5744,6 +6135,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropReaction"
+        boosts:
+          type: number
+          format: int64
     ApiDropAndDropVote:
       type: object
       required:
@@ -5754,6 +6148,29 @@ components:
           $ref: "#/components/schemas/ApiDrop"
         vote:
           $ref: "#/components/schemas/ApiDropVote"
+    ApiDropBoost:
+      type: object
+      required:
+        - booster
+        - boosted_at
+      properties:
+        booster:
+          $ref: "#/components/schemas/ApiProfileMin"
+        boosted_at:
+          type: number
+          format: int64
+          nullable: true
+    ApiDropBoostsPage:
+      type: object
+      required:
+        - data
+      allOf:
+        - $ref: "#/components/schemas/ApiPageBase"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropBoost"
     ApiDropContextProfileContext:
       type: object
       required:
@@ -5761,6 +6178,7 @@ components:
         - min_rating
         - max_rating
         - reaction
+        - boosted
       properties:
         rating:
           type: number
@@ -5774,6 +6192,8 @@ components:
         reaction:
           type: string
           nullable: true
+        boosted:
+          type: boolean
     ApiDropMedia:
       type: object
       required:
@@ -5813,7 +6233,7 @@ components:
           maxLength: 500
         data_value:
           type: string
-          maxLength: 500
+          maxLength: 5000
     ApiDropPart:
       type: object
       required:
@@ -5934,16 +6354,6 @@ components:
       enum:
         - DROP_REPLIED
         - DROP_VOTED
-    ApiMarkDropUnreadResponse:
-      type: object
-      required:
-        - your_unread_drops_count
-      properties:
-        your_unread_drops_count:
-          type: integer
-        first_unread_drop_serial_no:
-          type: integer
-          nullable: true
     ApiDropTraceItem:
       type: object
       required:
@@ -6017,6 +6427,7 @@ components:
         - rank
         - is_signed
         - reactions
+        - boosts
       properties:
         id:
           type: string
@@ -6103,6 +6514,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropReaction"
+        boosts:
+          type: number
+          format: int64
     ApiDropWithoutWavesPageWithoutCount:
       type: object
       required:
@@ -6551,6 +6965,16 @@ components:
           type: string
         refresh_token:
           type: string
+    ApiMarkDropUnreadResponse:
+      type: object
+      required:
+        - your_unread_drops_count
+      properties:
+        your_unread_drops_count:
+          type: integer
+        first_unread_drop_serial_no:
+          type: integer
+          nullable: true
     ApiNft:
       type: object
       required:
@@ -7720,7 +8144,6 @@ components:
         - participation
         - chat
         - wave
-        - outcomes
         - created_at
         - contributors_overview
         - subscribed_actions
@@ -7760,10 +8183,6 @@ components:
           $ref: "#/components/schemas/ApiWaveChatConfig"
         wave:
           $ref: "#/components/schemas/ApiWaveConfig"
-        outcomes:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveOutcomeOld"
         contributors_overview:
           type: array
           items:
@@ -8198,33 +8617,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiWaveOutcomeDistributionItem"
-    ApiWaveOutcomeOld:
-      type: object
-      required:
-        - type
-        - description
-        - index
-      properties:
-        type:
-          $ref: "#/components/schemas/ApiWaveOutcomeType"
-        subtype:
-          $ref: "#/components/schemas/ApiWaveOutcomeSubType"
-        description:
-          type: string
-        credit:
-          $ref: "#/components/schemas/ApiWaveOutcomeCredit"
-        rep_category:
-          type: string
-        amount:
-          type: number
-          format: int64
-        distribution:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveOutcomeDistributionItem"
-        index:
-          type: number
-          format: int64
     ApiWaveOutcomesPage:
       type: object
       required:
@@ -8892,6 +9284,29 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/DistributionNormalized"
+    DistributionOverview:
+      type: object
+      required:
+        - photos_count
+        - is_normalized
+        - automatic_airdrops_addresses
+        - automatic_airdrops_count
+      properties:
+        photos_count:
+          type: integer
+          format: int64
+          description: Number of photos for this distribution
+        is_normalized:
+          type: boolean
+          description: Whether the distribution has been normalized
+        automatic_airdrops_addresses:
+          type: integer
+          format: int64
+          description: Count of unique addresses with automatic airdrops
+        automatic_airdrops_count:
+          type: integer
+          format: int64
+          description: Total count of automatic airdrops
     DistributionPhasesPage:
       type: object
       required:
@@ -8927,6 +9342,37 @@ components:
         updated_at:
           type: string
           format: date-time
+    DistributionPhotoCompleteRequest:
+      type: object
+      required:
+        - photos
+      properties:
+        photos:
+          type: array
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/DistributionPhotoCompleteRequestPhoto"
+    DistributionPhotoCompleteRequestPhoto:
+      type: object
+      required:
+        - media_url
+      properties:
+        media_url:
+          type: string
+          description: The CloudFront URL of the uploaded photo
+    DistributionPhotoCompleteResponse:
+      type: object
+      required:
+        - success
+        - photos
+      properties:
+        success:
+          type: boolean
+        photos:
+          type: array
+          items:
+            type: string
+            description: CloudFront URLs of the saved photos
     DistributionPhotosPage:
       type: object
       required:

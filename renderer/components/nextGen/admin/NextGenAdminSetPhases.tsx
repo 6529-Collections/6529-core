@@ -15,16 +15,17 @@ import {
   useParsedCollectionIndex,
 } from "../nextgen_helpers";
 import NextGenContractWriteStatus from "../NextGenContractWriteStatus";
-import { PhaseTimes } from "../nextgen_entities";
+import type { PhaseTimes } from "../nextgen_entities";
 import { NULL_MERKLE } from "@/constants";
 import { printAdminErrors } from "./NextGenAdmin";
 import {
   NextGenCollectionIdFormGroup,
   NextGenAdminHeadingRow,
 } from "./NextGenAdminShared";
+import type {
+  NextgenAllowlistCollection} from "@/entities/INextgen";
 import {
-  NextgenAllowlistCollectionType,
-  NextgenAllowlistCollection,
+  NextgenAllowlistCollectionType
 } from "@/entities/INextgen";
 import { commonApiFetch } from "@/services/api/common-api";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
@@ -180,7 +181,7 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
             <Form.Group className="mb-3">
               <Form.Label>Merkle Roots</Form.Label>
               <Form.Select
-                className={`${styles.formInput}`}
+                className={`${styles["formInput"]}`}
                 value={selectedAllowlist?.merkle_root ?? ""}
                 onChange={(e) => {
                   const merkleRoot = e.target.value;

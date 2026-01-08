@@ -2,7 +2,7 @@ import { QueryClient, dehydrate, HydrationBoundary } from "@tanstack/react-query
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import { prefetchWavesOverview } from "@/helpers/stream.helpers";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { getAppMetadata } from "@/components/providers/metadata";
 import WavesPageClient from "./page.client";
 import { Time } from "@/helpers/time";
@@ -54,7 +54,7 @@ async function fetchWaveContext(
 export default async function WavesPage({
   searchParams,
 }: {
-  readonly searchParams: Promise<{ wave?: string; drop?: string }>;
+  readonly searchParams: Promise<{ wave?: string | undefined; drop?: string | undefined }>;
 }) {
   const resolvedParams = await searchParams;
   const cookieStore = await cookies();
@@ -93,7 +93,7 @@ export default async function WavesPage({
 export async function generateMetadata({
   searchParams,
 }: {
-  readonly searchParams: Promise<{ wave?: string }>;
+  readonly searchParams: Promise<{ wave?: string | undefined }>;
 }): Promise<Metadata> {
   const resolvedParams = await searchParams;
   const waveId = resolvedParams.wave ?? null;

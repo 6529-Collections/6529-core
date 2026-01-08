@@ -7,13 +7,15 @@ import {
 import DistributionPlanSecondaryText from "@/components/distribution-plan-tool/common/DistributionPlanSecondaryText";
 import { DistributionPlanToolContext } from "@/components/distribution-plan-tool/DistributionPlanToolContext";
 import { useContext, useEffect, useState } from "react";
+import type {
+    PhaseGroupSnapshotConfig} from "../BuildPhaseFormConfigModal";
 import {
-    PhaseGroupSnapshotConfig,
     TopHolderType,
 } from "../BuildPhaseFormConfigModal";
-import BuildPhaseFormConfigModalSidebar, {
+import type {
     BuildPhaseFormConfigModalSidebarOption,
 } from "./BuildPhaseFormConfigModalSidebar";
+import BuildPhaseFormConfigModalSidebar from "./BuildPhaseFormConfigModalSidebar";
 import BuildPhaseFormConfigModalTitle from "./BuildPhaseFormConfigModalTitle";
 import ComponentConfigMeta from "./ComponentConfigMeta";
 import ComponentConfigNextBtn from "./ComponentConfigNextBtn";
@@ -56,8 +58,8 @@ export default function SnapshotSelectTopHolders({
     const tokenPool = operations.find(
       (operation) =>
         operation.code === AllowlistOperationCode.CREATE_TOKEN_POOL &&
-        operation.params.id === snapshotId &&
-        operation.params.contract.toLowerCase() ===
+        operation.params["id"] === snapshotId &&
+        operation.params["contract"].toLowerCase() ===
           "0x33fd426905f149f8376e227d0c9d3340aad17af1"
     );
     if (!tokenPool) {
@@ -123,9 +125,9 @@ export default function SnapshotSelectTopHolders({
     const missingTopHolderTypeError = !topHolderType;
 
     const localUniqueWalletsHigherThanTotalError =
-      !!localUniqueWalletsCount &&
-      !!config.uniqueWalletsCount &&
-      !!(localUniqueWalletsCount > config.uniqueWalletsCount);
+      typeof localUniqueWalletsCount === "number" &&
+      typeof config.uniqueWalletsCount === "number" &&
+      localUniqueWalletsCount > config.uniqueWalletsCount;
 
     const fromAndToMissingError =
       typeof from !== "number" && typeof to !== "number";

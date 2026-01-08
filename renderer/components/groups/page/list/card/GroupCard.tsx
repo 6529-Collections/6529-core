@@ -1,7 +1,7 @@
 "use client";
 
 import { AuthContext } from "@/components/auth/Auth";
-import { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import { ApiRateMatter } from "@/generated/models/ApiRateMatter";
 import { getRandomColorWithSeed } from "@/helpers/Helpers";
 import { useRouter } from "next/navigation";
@@ -27,11 +27,14 @@ export default function GroupCard({
   userPlaceholder,
   titlePlaceholder,
 }: {
-  readonly group?: ApiGroupFull;
-  readonly activeGroupIdVoteAll?: string | null;
-  readonly setActiveGroupIdVoteAll?: (value: string | null) => void;
-  readonly userPlaceholder?: string;
-  readonly titlePlaceholder?: string;
+  readonly group?: ApiGroupFull | undefined;
+  readonly activeGroupIdVoteAll?: string | null | undefined;
+  readonly setActiveGroupIdVoteAll?:
+    | ((value: string | null) => void)
+    | undefined
+    | undefined;
+  readonly userPlaceholder?: string | undefined;
+  readonly titlePlaceholder?: string | undefined;
 }) {
   const router = useRouter();
   const { connectedProfile } = useContext(AuthContext);

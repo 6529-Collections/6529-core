@@ -1,10 +1,12 @@
 "use client";
 
+import type {
+  InitialConfigType} from "@lexical/react/LexicalComposer";
 import {
-  InitialConfigType,
   LexicalComposer,
 } from "@lexical/react/LexicalComposer";
-import { EditorState, RootNode } from "lexical";
+import type { EditorState} from "lexical";
+import { RootNode } from "lexical";
 import { MentionNode } from "../lexical/nodes/MentionNode";
 import { HashtagNode } from "../lexical/nodes/HashtagNode";
 import ExampleTheme from "../lexical/ExampleTheme";
@@ -13,13 +15,15 @@ import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
-import NewMentionsPlugin, {
+import type {
   NewMentionsPluginHandles,
 } from "../lexical/plugins/mentions/MentionsPlugin";
-import NewHashtagsPlugin, {
+import NewMentionsPlugin from "../lexical/plugins/mentions/MentionsPlugin";
+import type {
   NewHastagsPluginHandles,
 } from "../lexical/plugins/hashtags/HashtagsPlugin";
-import {
+import NewHashtagsPlugin from "../lexical/plugins/hashtags/HashtagsPlugin";
+import type {
   CreateDropConfig,
   MentionedUser,
   ReferencedNft,
@@ -39,9 +43,10 @@ import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { CreateDropType, CreateDropViewType } from "../types";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import ClearEditorPlugin, {
+import type {
   ClearEditorPluginHandles,
 } from "../lexical/plugins/ClearEditorPlugin";
+import ClearEditorPlugin from "../lexical/plugins/ClearEditorPlugin";
 import {
   forwardRef,
   useCallback,
@@ -52,9 +57,9 @@ import {
 } from "react";
 import { MENTION_TRANSFORMER } from "../lexical/transformers/MentionTransformer";
 import { HASHTAG_TRANSFORMER } from "../lexical/transformers/HastagTransformer";
-import { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
+import type { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
 import CreateDropContentMissingMediaWarning from "./storm/CreateDropContentMissingMediaWarning";
-import { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
+import type { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
 import CreateDropContentMissingMetadataWarning from "./storm/CreateDropContentMissingMetadataWarning";
 import DragDropPastePlugin from "../lexical/plugins/DragDropPastePlugin";
 import { ImageNode } from "../lexical/nodes/ImageNode";
@@ -69,9 +74,7 @@ import { EmojiNode } from "../lexical/nodes/EmojiNode";
 import CreateDropEmojiPicker from "@/components/waves/CreateDropEmojiPicker";
 import EmojiPlugin from "../lexical/plugins/emoji/EmojiPlugin";
 import PlainTextPastePlugin from "../lexical/plugins/PlainTextPastePlugin";
-import {
-  exportDropMarkdown,
-} from "@/components/waves/drops/normalizeDropMarkdown";
+import { exportDropMarkdown } from "@/components/waves/drops/normalizeDropMarkdown";
 
 export interface CreateDropContentHandles {
   clearEditorState: () => void;
@@ -89,7 +92,7 @@ const CreateDropContent = forwardRef<
     readonly canSubmit: boolean;
     readonly missingMedia: ApiWaveParticipationRequirement[];
     readonly missingMetadata: ApiWaveRequiredMetadata[];
-    readonly onDrop?: () => void;
+    readonly onDrop?: (() => void) | undefined;
     readonly onEditorState: (editorState: EditorState) => void;
     readonly onReferencedNft: (referencedNft: ReferencedNft) => void;
     readonly onMentionedUser: (
@@ -98,7 +101,7 @@ const CreateDropContent = forwardRef<
     readonly setFiles: (files: File[]) => void;
     readonly onViewClick: () => void;
     readonly onDropPart: () => void;
-    readonly children?: React.ReactNode;
+    readonly children?: React.ReactNode | undefined;
   }
 >(
   (
@@ -289,7 +292,9 @@ const CreateDropContent = forwardRef<
               <DragDropPastePlugin />
               <ListPlugin />
               <PlainTextPastePlugin />
-              <MarkdownShortcutPlugin transformers={SAFE_MARKDOWN_TRANSFORMERS} />
+              <MarkdownShortcutPlugin
+                transformers={SAFE_MARKDOWN_TRANSFORMERS}
+              />
               <TabIndentationPlugin />
               <LinkPlugin validateUrl={validateUrl} />
               <ClearEditorPlugin ref={clearEditorRef} />

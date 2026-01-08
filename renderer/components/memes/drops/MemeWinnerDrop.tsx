@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useCallback } from "react";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { useCallback } from "react";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type {
+  DropInteractionParams} from "@/components/waves/drops/Drop";
 import {
-  DropInteractionParams,
   DropLocation,
 } from "@/components/waves/drops/Drop";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
@@ -44,11 +45,11 @@ export default function MemeWinnerDrop({
   const artworkMedia = drop.parts.at(0)?.media?.at(0);
 
   const handleOnReply = useCallback(() => {
-    onReply({ drop, partId: drop.parts[0].part_id });
+    onReply({ drop, partId: drop.parts[0]?.part_id! });
   }, [onReply, drop]);
 
   const handleOnQuote = useCallback(() => {
-    onQuote({ drop, partId: drop.parts[0].part_id });
+    onQuote({ drop, partId: drop.parts[0]?.part_id! });
   }, [onQuote, drop]);
 
   // First place shadow class from DefaultWaveWinnerDrop

@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * 6529.io API
  * This is the API interface description. Brief terminology overview and an authentication example can be found at <a href=\"https://6529.io/about/api\">https://6529.io/about/api</a>.
@@ -17,6 +18,7 @@ export class ApiDropContextProfileContext {
     'min_rating': number;
     'max_rating': number;
     'reaction': string | null;
+    'boosted': boolean;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -45,6 +47,12 @@ export class ApiDropContextProfileContext {
             "name": "reaction",
             "baseName": "reaction",
             "type": "string",
+            "format": ""
+        },
+        {
+            "name": "boosted",
+            "baseName": "boosted",
+            "type": "boolean",
             "format": ""
         }    ];
 

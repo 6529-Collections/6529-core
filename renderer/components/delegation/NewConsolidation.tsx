@@ -8,9 +8,10 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useState } from "react";
 import { Col, Container, Form, Row } from "react-bootstrap";
+import type {
+  DelegationCollection} from "./delegation-constants";
 import {
-  CONSOLIDATION_USE_CASE,
-  DelegationCollection,
+  CONSOLIDATION_USE_CASE
 } from "./delegation-constants";
 import { getGasError } from "./delegation-shared";
 import styles from "./Delegation.module.scss";
@@ -29,7 +30,7 @@ interface Props {
   subdelegation?: {
     originalDelegator: string;
     collection: DelegationCollection;
-  };
+  } | undefined;
   ens: string | null | undefined;
   onHide(): any;
   onSetToast(toast: any): any;
@@ -171,7 +172,7 @@ export default function NewConsolidationComponent(props: Readonly<Props>) {
                   target="_blank"
                   rel="noopener noreferrer">
                   <FontAwesomeIcon
-                    className={styles.infoIconLink}
+                    className={styles["infoIconLink"]}
                     icon={faInfoCircle}></FontAwesomeIcon>
                 </Link>
               </Form.Label>

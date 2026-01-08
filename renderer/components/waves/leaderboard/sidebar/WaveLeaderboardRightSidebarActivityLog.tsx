@@ -1,4 +1,4 @@
-import { ApiWaveLog } from "@/generated/models/ApiWaveLog";
+import type { ApiWaveLog } from "@/generated/models/ApiWaveLog";
 import {
   formatNumberWithCommas,
   getTimeAgoShort,
@@ -10,8 +10,8 @@ import { faClock } from "@fortawesome/free-solid-svg-icons";
 import { WAVE_VOTING_LABELS } from "@/helpers/waves/waves.constants";
 import { WaveLeaderboardRightSidebarActivityLogDrop } from "./WaveLeaderboardRightSidebarActivityLogDrop";
 
-import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { SystemAdjustmentPill } from "@/components/common/SystemAdjustmentPill";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
@@ -70,20 +70,20 @@ export const WaveLeaderboardRightSidebarActivityLog: React.FC<
           </Link>
 
           <div className="tw-flex tw-items-center tw-gap-x-1.5 tw-min-w-0 tw-overflow-hidden">
-            {log.contents.oldVote === 0 ? (
+            {log.contents["oldVote"] === 0 ? (
               <span className="tw-text-sm tw-text-iron-400">voted</span>
             ) : (
               <span className="tw-text-sm tw-text-iron-500 tw-whitespace-nowrap">
-                {formatNumberWithCommas(log.contents.oldVote)} →
+                {formatNumberWithCommas(log.contents["oldVote"])} →
               </span>
             )}
             <span
-              className={`tw-text-sm tw-font-semibold tw-whitespace-nowrap ${log.contents.newVote > 0 ? "tw-text-green" : "tw-text-red"
+              className={`tw-text-sm tw-font-semibold tw-whitespace-nowrap ${log.contents["newVote"] > 0 ? "tw-text-green" : "tw-text-red"
                 }`}
             >
-              {formatNumberWithCommas(log.contents.newVote)} {WAVE_VOTING_LABELS[creditType]}
+              {formatNumberWithCommas(log.contents["newVote"])} {WAVE_VOTING_LABELS[creditType]}
             </span>
-            {log.contents?.reason === "CREDIT_OVERSPENT" && <SystemAdjustmentPill />}
+            {log.contents?.["reason"] === "CREDIT_OVERSPENT" && <SystemAdjustmentPill />}
           </div>
 
           <Link

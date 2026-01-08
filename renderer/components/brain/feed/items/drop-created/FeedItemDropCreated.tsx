@@ -3,17 +3,16 @@
 import { useRouter } from "next/navigation";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
-import { IFeedItemDropCreated } from "@/types/feed.types";
+import type { IFeedItemDropCreated } from "@/types/feed.types";
+import type {
+  DropInteractionParams} from "@/components/waves/drops/Drop";
 import Drop, {
-  DropInteractionParams,
   DropLocation,
 } from "@/components/waves/drops/Drop";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import {
-  DropSize,
-  ExtendedDrop,
-} from "@/helpers/waves/drop.helpers";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { DropSize } from "@/helpers/waves/drop.helpers";
 
 export default function FeedItemDropCreated({
   item,
@@ -28,7 +27,7 @@ export default function FeedItemDropCreated({
   readonly activeDrop: ActiveDropState | null;
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }) {
   const router = useRouter();
   const { isApp } = useDeviceInfo();

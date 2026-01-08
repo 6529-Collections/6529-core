@@ -1,10 +1,9 @@
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiDropVote } from "@/generated/models/ApiDropVote";
-import { ApiFeedItemType } from "@/generated/models/ApiFeedItemType";
-import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
-import { ApiNotificationsResponse } from "@/generated/models/ApiNotificationsResponse";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiFeedItemType } from "@/generated/models/ApiFeedItemType";
+import type { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
+import type { ApiNotificationsResponse } from "@/generated/models/ApiNotificationsResponse";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiWave } from "@/generated/models/ApiWave";
 
 export type IFeedItemWaveCreated = {
   readonly serial_no: number;
@@ -27,11 +26,6 @@ export type IFeedItemDropReplied = {
   readonly serial_no: number;
   readonly item: IFeedItemDropRepliedItem;
   readonly type: ApiFeedItemType.DropReplied;
-};
-
-type IFeedItemDropVotedItem = {
-  readonly drop: ApiDrop;
-  readonly vote: ApiDropVote;
 };
 
 export type TypedFeedItem =

@@ -3,8 +3,8 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
-import { ApiIdentityAndSubscriptionActions } from "@/generated/models/ApiIdentityAndSubscriptionActions";
+import type { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
+import type { ApiIdentityAndSubscriptionActions } from "@/generated/models/ApiIdentityAndSubscriptionActions";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 const REQUEST_SIZE = 100;
 
@@ -34,7 +34,7 @@ export function useWaveFollowers(waveId: string) {
         ...query,
       };
       if (pageParam) {
-        params.page = `${pageParam}`;
+        params["page"] = `${pageParam}`;
       }
       return await commonApiFetch<ApiIncomingIdentitySubscriptionsPage>({
         endpoint: `/identity-subscriptions/incoming/WAVE/${waveId}`,

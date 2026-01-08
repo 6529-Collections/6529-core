@@ -1,31 +1,36 @@
 "use client";
 
-import React, { useCallback } from "react";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { TypedNotification } from "@/types/feed.types";
+import { useCallback } from "react";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { TypedNotification } from "@/types/feed.types";
+import type {
+  ActiveDropState} from "@/types/dropInteractionTypes";
 import {
-  ActiveDropAction,
-  ActiveDropState,
+  ActiveDropAction
 } from "@/types/dropInteractionTypes";
-import { DropInteractionParams } from "@/components/waves/drops/Drop";
+import type { DropInteractionParams } from "@/components/waves/drops/Drop";
 import NotificationItems from "./NotificationItems";
 import { useRouter } from "next/navigation";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 
 type WaveWithChatScope = ExtendedDrop["wave"] & {
-  chat?: {
-    scope?: {
-      group?: {
-        is_direct_message?: boolean;
-      };
-    };
-  };
+  chat?:
+    | {
+        scope?:
+          | {
+              group?:
+                | {
+                    is_direct_message?: boolean | undefined;
+                  }
+                | undefined;
+            }
+          | undefined;
+      }
+    | undefined;
 };
 
-const hasChatScope = (
-  wave: ExtendedDrop["wave"]
-): wave is WaveWithChatScope =>
+const hasChatScope = (wave: ExtendedDrop["wave"]): wave is WaveWithChatScope =>
   typeof wave === "object" && wave !== null && "chat" in wave;
 
 interface NotificationsWrapperProps {

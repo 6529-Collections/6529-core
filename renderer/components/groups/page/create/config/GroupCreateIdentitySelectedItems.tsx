@@ -1,6 +1,4 @@
-import { CommunityMemberMinimal } from "@/entities/IProfile";
-
-import React from "react";
+import type { CommunityMemberMinimal } from "@/entities/IProfile";
 
 interface GroupCreateIdentitySelectedItemsProps {
   readonly selectedIdentities: CommunityMemberMinimal[];

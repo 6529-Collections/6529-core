@@ -1,12 +1,13 @@
 "use client";
 
-import { BuildPhasesPhase } from "@/components/distribution-plan-tool/build-phases/BuildPhases";
+import type { BuildPhasesPhase } from "@/components/distribution-plan-tool/build-phases/BuildPhases";
 import DistributionPlanSecondaryText from "@/components/distribution-plan-tool/common/DistributionPlanSecondaryText";
 import { useEffect, useState } from "react";
-import {
+import type {
     DistributionPlanSnapshot,
     PhaseGroupConfig,
-    PhaseGroupSnapshotConfig,
+    PhaseGroupSnapshotConfig} from "../BuildPhaseFormConfigModal";
+import {
     RandomHoldersType,
 } from "../BuildPhaseFormConfigModal";
 import BuildPhaseFormConfigModalTitle from "./BuildPhaseFormConfigModalTitle";
@@ -33,8 +34,8 @@ export default function FinalizeComponent({
   snapshots: DistributionPlanSnapshot[];
   loading: boolean;
   title: string;
-  uniqueWalletsCount?: number | null;
-  isLoadingUniqueWalletsCount?: boolean;
+  uniqueWalletsCount?: number | null | undefined;
+  isLoadingUniqueWalletsCount?: boolean | undefined;
   onClose: () => void;
   phases: BuildPhasesPhase[];
 }>) {

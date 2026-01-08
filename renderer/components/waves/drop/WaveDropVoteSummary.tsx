@@ -7,7 +7,7 @@ import {
   WAVE_VOTE_STATS_LABELS,
 } from "@/helpers/waves/waves.constants";
 import { TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 
 type VoteSummaryVariant = "default" | "memes";
 
@@ -17,7 +17,7 @@ interface WaveDropVoteSummaryProps {
   readonly isVotingEnded: boolean;
   readonly canShowVote: boolean;
   readonly onVoteClick: () => void;
-  readonly variant?: VoteSummaryVariant;
+  readonly variant?: VoteSummaryVariant | undefined;
 }
 
 const VOTE_SUMMARY_STYLES: Record<

@@ -1,9 +1,9 @@
 "use client";
 
-import { BuildPhasesPhase } from "@/components/distribution-plan-tool/build-phases/BuildPhases";
+import type { BuildPhasesPhase } from "@/components/distribution-plan-tool/build-phases/BuildPhases";
 import DistributionPlanSecondaryText from "@/components/distribution-plan-tool/common/DistributionPlanSecondaryText";
 import { useEffect } from "react";
-import {
+import type {
     DistributionPlanSnapshot,
     PhaseGroupSnapshotConfig,
 } from "../BuildPhaseFormConfigModal";
@@ -19,8 +19,8 @@ interface FinalizeSnapshotProps {
   readonly groupSnapshots: PhaseGroupSnapshotConfig[];
   readonly snapshots: DistributionPlanSnapshot[];
   readonly title: string;
-  readonly uniqueWalletsCount?: number | null;
-  readonly isLoadingUniqueWalletsCount?: boolean;
+  readonly uniqueWalletsCount?: number | null | undefined;
+  readonly isLoadingUniqueWalletsCount?: boolean | undefined;
   readonly onClose: () => void;
   readonly phases: BuildPhasesPhase[];
 }

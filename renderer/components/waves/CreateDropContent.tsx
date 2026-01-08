@@ -1,31 +1,29 @@
 "use client";
 
 import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
-import {
+import type {
   CreateDropConfig,
   CreateDropPart,
   CreateDropRequestPart,
   MentionedUser,
   ReferencedNft,
 } from "@/entities/IDrop";
-import { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
 import { ApiDropType } from "@/generated/models/ApiDropType";
-import { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { getOptimisticDropId } from "@/helpers/waves/drop.helpers";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { DropPrivileges } from "@/hooks/useDropPriviledges";
+import type { DropPrivileges } from "@/hooks/useDropPriviledges";
 import { selectEditingDropId } from "@/store/editSlice";
-import {
-  ActiveDropAction,
-  ActiveDropState,
-} from "@/types/dropInteractionTypes";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import { AnimatePresence, motion } from "framer-motion";
-import { EditorState } from "lexical";
+import type { EditorState } from "lexical";
 import dynamic from "next/dynamic";
 import React, {
   memo,
@@ -46,7 +44,8 @@ import CreateDropActions from "./CreateDropActions";
 import { CreateDropContentFiles } from "./CreateDropContentFiles";
 import CreateDropContentRequirements from "./CreateDropContentRequirements";
 import { CreateDropDropModeToggle } from "./CreateDropDropModeToggle";
-import CreateDropInput, { CreateDropInputHandles } from "./CreateDropInput";
+import type { CreateDropInputHandles } from "./CreateDropInput";
+import CreateDropInput from "./CreateDropInput";
 import CreateDropMetadata from "./CreateDropMetadata";
 import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
@@ -54,8 +53,8 @@ import { CreateDropSubmit } from "./CreateDropSubmit";
 import { exportDropMarkdown } from "@/components/waves/drops/normalizeDropMarkdown";
 import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
-import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
-import { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
 import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
 import { WsMessageType } from "@/helpers/Types";
 import { useDropSignature } from "@/hooks/drops/useDropSignature";
@@ -65,13 +64,11 @@ import throttle from "lodash/throttle";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
 import { multiPartUpload } from "./create-wave/services/multiPartUpload";
-import { DropMutationBody } from "./CreateDrop";
+import type { DropMutationBody } from "./CreateDrop";
 import { generateMetadataId, useDropMetadata } from "./hooks/useDropMetadata";
 import { convertMetadataToDropMetadata } from "./utils/convertMetadataToDropMetadata";
-import {
-  getMissingRequirements,
-  MissingRequirements,
-} from "./utils/getMissingRequirements";
+import type { MissingRequirements } from "./utils/getMissingRequirements";
+import { getMissingRequirements } from "./utils/getMissingRequirements";
 
 // Use next/dynamic for lazy loading with SSR support
 const TermsSignatureFlow = dynamic(
@@ -122,7 +119,7 @@ interface CreateDropContentProps {
 const CONTAINER_WIDTH_THRESHOLD = 500;
 
 const isMetadataValuePresent = (value: string | number | null): boolean => {
-  if (value === null || value === undefined) {
+  if (value === null) {
     return false;
   }
 
@@ -265,7 +262,7 @@ const generateMediaForPart = async (
     ...prev,
     { file: media, isUploading: true, progress: 0 },
   ]);
-  const uploadResponse = await multiPartUpload({
+  return await multiPartUpload({
     file: media,
     path: "drop",
     onProgress: (progress) =>
@@ -275,7 +272,6 @@ const generateMediaForPart = async (
   }).finally(() => {
     setUploadingFiles((prev) => prev.filter((uf) => uf.file !== media));
   });
-  return uploadResponse;
 };
 
 const generatePart = async (
@@ -301,7 +297,7 @@ const generateParts = async (
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message?.includes("content_type")) {
+    if (message.includes("content_type")) {
       throw new Error("File type not supported. Please use MP4 for videos.");
     }
     throw new Error("Error uploading file. Please try again.");
@@ -321,7 +317,7 @@ const getOptimisticDrop = (
     voting: {
       authenticated_user_eligible: boolean;
       credit_type: ApiWaveCreditType;
-      period?: { min: number | null; max: number | null };
+      period?: { min: number | null; max: number | null } | undefined;
       forbid_negative_votes: boolean;
     };
     chat: { authenticated_user_eligible: boolean };
@@ -345,10 +341,13 @@ const getOptimisticDrop = (
     return undefined;
   };
 
+  const replyTo = getReplyTo();
+  const replyToObj = replyTo ? { reply_to: replyTo } : {};
+
   return {
     id: getOptimisticDropId(),
     serial_no: Date.now(),
-    reply_to: getReplyTo(),
+    ...replyToObj,
     wave: {
       id: wave.id,
       name: wave.name,
@@ -378,9 +377,8 @@ const getOptimisticDrop = (
       handle: connectedProfile.handle,
       active_main_stage_submission_ids:
         connectedProfile.active_main_stage_submission_ids,
-      winner_main_stage_drop_ids:
-        connectedProfile.winner_main_stage_drop_ids ?? [],
-      pfp: connectedProfile.pfp ?? null,
+      winner_main_stage_drop_ids: connectedProfile.winner_main_stage_drop_ids,
+      pfp: connectedProfile.pfp,
       banner1_color: connectedProfile.banner1 ?? null,
       banner2_color: connectedProfile.banner2 ?? null,
       cic: connectedProfile.cic,
@@ -392,7 +390,7 @@ const getOptimisticDrop = (
       level: connectedProfile.level,
       subscribed_actions: [],
       archived: false,
-      primary_address: connectedProfile.primary_wallet ?? "",
+      primary_address: connectedProfile.primary_wallet,
     },
     created_at: Date.now(),
     updated_at: null,
@@ -428,6 +426,7 @@ const getOptimisticDrop = (
     is_signed: false,
     rating_prediction: 0,
     reactions: [],
+    boosts: 0,
   };
 };
 
@@ -517,9 +516,10 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   }, [sendTyping]);
 
   useEffect(() => {
-    if (getMarkdown?.length) {
-      throttleHandle();
+    if (!getMarkdown?.length) {
+      return;
     }
+    throttleHandle();
   }, [getMarkdown, throttleHandle]);
 
   const getCanSubmitStorm = () => {
@@ -593,9 +593,11 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     const markdown = getMarkdown;
     if (!markdown?.length && !files.length) {
       const baseParts = drop?.parts.length ? drop.parts : [];
+      const replyTo = getReplyTo();
+      const replyToObj = replyTo ? { reply_to: replyTo } : {};
       return {
         title: null,
-        reply_to: getReplyTo(),
+        ...replyToObj,
         parts: ensurePartsWithFallback(baseParts, hasMetadata),
         mentioned_users: drop?.mentioned_users ?? [],
         referenced_nfts: drop?.referenced_nfts ?? [],
@@ -609,11 +611,14 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     return null;
   };
 
+  const replyTo = getReplyTo();
+  const replyToObj = replyTo ? { reply_to: replyTo } : {};
+
   const createGifDrop = (gif: string): CreateDropConfig => {
     return {
       title: null,
       drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
-      reply_to: getReplyTo(),
+      ...replyToObj,
       parts: [
         ...(drop?.parts ?? []),
         {
@@ -647,7 +652,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 
     const newParts =
       hasPartsInDrop && !hasCurrentContent
-        ? drop?.parts ?? []
+        ? (drop?.parts ?? [])
         : [
             ...(drop?.parts ?? []),
             {
@@ -664,11 +669,12 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
           ];
 
     const parts = ensurePartsWithFallback(newParts, hasMetadata);
-
+    const replyTo = getReplyTo();
+    const replyToObj = replyTo ? { reply_to: replyTo } : {};
     return {
       title: null,
       drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
-      reply_to: getReplyTo(),
+      ...replyToObj,
       parts,
       mentioned_users: allMentions,
       referenced_nfts: allNfts,
@@ -766,7 +772,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       // Define callback for when signing completes
       const handleSigningComplete = (result: {
         success: boolean;
-        signature?: string;
+        signature?: string | undefined;
       }) => {
         if (!result.success || !result.signature) {
           resolve(null);
@@ -850,7 +856,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         );
       }
       !!getMarkdown?.length && createDropInputRef.current?.clearEditorState();
-      (document.activeElement as HTMLElement)?.blur();
+      (document.activeElement as HTMLElement).blur();
       setFiles([]);
       refreshState();
 
@@ -900,7 +906,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     }
 
     const hasPartsInDrop = (drop?.parts.length ?? 0) > 0;
-    const hasCurrentContent = !!(getMarkdown?.trim().length || files.length);
+    const hasCurrentContent =
+      (getMarkdown?.trim().length ?? 0) > 0 || files.length > 0;
 
     if (hasPartsInDrop && hasCurrentContent) {
       finalizeAndAddDropPart();
@@ -923,12 +930,12 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     }, delay);
   };
 
-  const focusMobileInput = () => {
+  const focusMobileInput = useCallback(() => {
     if (!createDropInputRef.current) return;
     requestAnimationFrame(() => {
       focusInputWithDelay(300);
     });
-  };
+  }, []);
 
   const focusDesktopInput = () => {
     createDropInputRef.current?.focus();
@@ -949,13 +956,12 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     if (isApp) {
       const timer = setTimeout(focusMobileInput, 200);
       return () => clearTimeout(timer);
-    } else {
-      const timer = setTimeout(() => {
-        focusDesktopInput();
-      }, 100);
-      return () => clearTimeout(timer);
     }
-  }, [activeDrop, isApp]);
+    const timer = setTimeout(() => {
+      focusDesktopInput();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [activeDrop, isApp, focusMobileInput]);
 
   const handleFileChange = (newFiles: File[]) => {
     let updatedFiles = [...files, ...newFiles];
@@ -987,20 +993,23 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   );
 
   const removeFile = (file: File, partIndex?: number) => {
-    if (partIndex !== undefined) {
+    if (partIndex === undefined) {
+      // Remove file from the current files array
+      setFiles((prevFiles) => prevFiles.filter((f) => f !== file));
+    } else {
       // Remove file from a specific part
       setDrop((prevDrop) => {
         if (!prevDrop) return null;
+
         const newParts = [...prevDrop.parts];
+        const part = newParts[partIndex];
+        if (!part) return prevDrop;
         newParts[partIndex] = {
-          ...newParts[partIndex],
-          media: newParts[partIndex].media.filter((f) => f !== file),
+          ...part,
+          media: part.media.filter((f) => f !== file),
         };
         return { ...prevDrop, parts: newParts };
       });
-    } else {
-      // Remove file from the current files array
-      setFiles((prevFiles) => prevFiles.filter((f) => f !== file));
     }
   };
 
@@ -1026,22 +1035,41 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   };
 
   const onChangeKey = (params: { index: number; newKey: string }) => {
-    setMetadata((prev) => {
-      const newMetadata = [...prev];
-      newMetadata[params.index].key = params.newKey;
-      return newMetadata;
-    });
+    setMetadata((prev) =>
+      prev.map((item, i) =>
+        i === params.index ? { ...item, key: params.newKey } : item
+      )
+    );
   };
 
   const onChangeValue = (params: {
     index: number;
     newValue: string | number | null;
   }) => {
-    setMetadata((prev) => {
-      const newMetadata = [...prev];
-      newMetadata[params.index].value = params.newValue;
-      return newMetadata;
-    });
+    setMetadata((prev) =>
+      prev.map((item, i) => {
+        if (i !== params.index) return item;
+        if (item.type === ApiWaveMetadataType.Number) {
+          if (params.newValue === null || params.newValue === "") {
+            return { ...item, value: null };
+          }
+          const parsedValue = Number(params.newValue);
+          return {
+            ...item,
+            value: Number.isNaN(parsedValue) ? null : parsedValue,
+          };
+        }
+
+        if (item.type === ApiWaveMetadataType.String) {
+          if (typeof params.newValue === "string") {
+            return { ...item, value: params.newValue };
+          }
+          return { ...item, value: String(params.newValue) };
+        }
+
+        return item;
+      })
+    );
   };
 
   const onAddMetadata = () => {
@@ -1082,7 +1110,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 
   if (isChatClosed) {
     return (
-      <div className="tw-flex-grow tw-w-full tw-bg-iron-900 tw-text-iron-500 tw-rounded-lg tw-p-4 tw-text-center tw-text-sm tw-font-medium">
+      <div className="tw-w-full tw-flex-grow tw-rounded-lg tw-bg-iron-900 tw-p-4 tw-text-center tw-text-sm tw-font-medium tw-text-iron-500">
         Wave is closed
       </div>
     );
@@ -1096,10 +1124,11 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         onCancelReplyQuote={onCancelReplyQuote}
         dropId={dropId}
       />
-      <div className="tw-flex tw-items-end tw-w-full">
+      <div className="tw-flex tw-w-full tw-items-end">
         <div
           ref={actionsContainerRef}
-          className="tw-w-full tw-flex tw-items-center tw-gap-x-2 lg:tw-gap-x-3">
+          className="tw-flex tw-w-full tw-items-center tw-gap-x-2 lg:tw-gap-x-3"
+        >
           <CreateDropActions
             isStormMode={isStormMode}
             canAddPart={canAddPart}
@@ -1113,7 +1142,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             setShowOptions={setShowOptions}
             onGifDrop={onGifDrop}
           />
-          <div className="tw-flex-grow tw-w-full">
+          <div className="tw-w-full tw-flex-grow">
             <CreateDropInput
               waveId={wave.id}
               key={dropEditorRefreshKey}
@@ -1166,7 +1195,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            transition={{ duration: 0.3 }}>
+            transition={{ duration: 0.3 }}
+          >
             <CreateDropMetadata
               disabled={submitting}
               onRemoveMetadata={onRemoveMetadata}

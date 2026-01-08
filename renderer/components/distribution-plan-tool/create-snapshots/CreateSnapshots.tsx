@@ -1,8 +1,9 @@
 "use client";
 
+import type {
+    DistributionPlanTokenPoolDownload} from "@/components/allowlist-tool/allowlist-tool.types";
 import {
     AllowlistOperationCode,
-    DistributionPlanTokenPoolDownload,
     DistributionPlanTokenPoolDownloadStatus,
 } from "@/components/allowlist-tool/allowlist-tool.types";
 import { distributionPlanApiFetch } from "@/services/distribution-plan-api";
@@ -67,24 +68,24 @@ export default function CreateSnapshots() {
       return createTokenPoolOperations.map((createTokenPoolOperation) => {
         const tokenPool =
           tokenPools.find(
-            (tokenPool) => tokenPool.id === createTokenPoolOperation.params.id
+            (tokenPool) => tokenPool.id === createTokenPoolOperation.params["id"]
           ) ?? null;
 
         const tokenPoolDownload = tokenPoolDownloads.find(
           (tokenPoolDownload) =>
-            tokenPoolDownload.tokenPoolId === createTokenPoolOperation.params.id
+            tokenPoolDownload.tokenPoolId === createTokenPoolOperation.params["id"]
         );
         return {
-          id: createTokenPoolOperation.params.id,
-          name: createTokenPoolOperation.params.name,
-          description: createTokenPoolOperation.params.description,
-          tokenIds: createTokenPoolOperation.params.tokenIds,
+          id: createTokenPoolOperation.params["id"],
+          name: createTokenPoolOperation.params["name"],
+          description: createTokenPoolOperation.params["description"],
+          tokenIds: createTokenPoolOperation.params["tokenIds"],
           walletsCount: tokenPool?.walletsCount ?? null,
           tokensCount: tokenPool?.tokensCount ?? null,
-          contract: createTokenPoolOperation?.params.contract ?? null,
-          blockNo: createTokenPoolOperation?.params.blockNo ?? null,
+          contract: createTokenPoolOperation?.params["contract"] ?? null,
+          blockNo: createTokenPoolOperation?.params["blockNo"] ?? null,
           consolidateBlockNo:
-            createTokenPoolOperation?.params.consolidateBlockNo ?? null,
+            createTokenPoolOperation?.params["consolidateBlockNo"] ?? null,
           downloaderStatus: tokenPoolDownload?.status ?? null,
         };
       });

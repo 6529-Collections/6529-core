@@ -241,6 +241,7 @@ export default function TitleBar() {
         document.removeEventListener("mousedown", handleClickOutside);
       };
     }
+    return undefined;
   }, [contextMenu]);
 
   useEffect(() => {
@@ -328,29 +329,31 @@ export default function TitleBar() {
 
   return (
     <>
-      <div className={styles.spacer}></div>
-      <span className={styles.buttonWrapper}>
+      <div className={styles["spacer"]}></div>
+      <span className={styles["buttonWrapper"]}>
         <TooltipButton
-          buttonStyles={`${styles.button} ${
-            navigationLoading ? styles.disabled : styles.enabled
+          buttonStyles={`${styles["button"]} ${
+            navigationLoading ? styles["disabled"] : styles["enabled"]
           }`}
           onClick={handleOpenSearch}
           icon={faSearch}
           content="Search"
         />
         <TooltipButton
-          buttonStyles={`${styles.button} ${
-            canGoBack && !navigationLoading ? styles.enabled : styles.disabled
+          buttonStyles={`${styles["button"]} ${
+            canGoBack && !navigationLoading
+              ? styles["enabled"]
+              : styles["disabled"]
           }`}
           onClick={handleBack}
           icon={faArrowLeft}
           content="Go Back"
         />
         <TooltipButton
-          buttonStyles={`${styles.button} ${
+          buttonStyles={`${styles["button"]} ${
             canGoForward && !navigationLoading
-              ? styles.enabled
-              : styles.disabled
+              ? styles["enabled"]
+              : styles["disabled"]
           }`}
           onClick={handleForward}
           icon={faArrowRight}
@@ -358,7 +361,7 @@ export default function TitleBar() {
         />
         {isCopied ? (
           <TooltipButton
-            buttonStyles={`${styles.button} ${styles.buttonCopied}`}
+            buttonStyles={`${styles["button"]} ${styles["buttonCopied"]}`}
             icon={faCheck}
             content="Copied"
             onClick={() => setIsCopied(false)}
@@ -366,8 +369,8 @@ export default function TitleBar() {
           />
         ) : (
           <TooltipButton
-            buttonStyles={`${styles.button} ${
-              navigationLoading ? styles.disabled : styles.enabled
+            buttonStyles={`${styles["button"]} ${
+              navigationLoading ? styles["disabled"] : styles["enabled"]
             }`}
             onClick={copyCurrentUrl}
             icon={faLink}
@@ -378,33 +381,36 @@ export default function TitleBar() {
         <div style={{ position: "relative" }}>
           <TooltipButton
             buttonRef={refreshButtonRef}
-            buttonStyles={`${styles.button} ${
-              navigationLoading ? styles.disabled : styles.enabled
+            buttonStyles={`${styles["button"]} ${
+              navigationLoading ? styles["disabled"] : styles["enabled"]
             }`}
             onClick={handleContentRefresh}
             onContextMenu={handleRefreshContextMenu}
             icon={faRefresh}
-            iconStyles={navigationLoading ? styles.refreshSpin : ""}
+            iconStyles={navigationLoading ? (styles["refreshSpin"] ?? "") : ""}
             content="Refresh"
           />
           {contextMenu && (
             <div
               ref={contextMenuRef}
-              className={styles.contextMenu}
+              className={styles["contextMenu"]}
               style={{
                 position: "fixed",
                 left: contextMenu.x,
                 top: contextMenu.y,
                 zIndex: 10000,
-              }}>
+              }}
+            >
               <button
-                className={styles.contextMenuItem}
-                onClick={handleContentRefresh}>
+                className={styles["contextMenuItem"]}
+                onClick={handleContentRefresh}
+              >
                 Content refresh
               </button>
               <button
-                className={styles.contextMenuItem}
-                onClick={handleHardRefresh}>
+                className={styles["contextMenuItem"]}
+                onClick={handleHardRefresh}
+              >
                 Hard refresh
               </button>
             </div>
@@ -412,8 +418,8 @@ export default function TitleBar() {
         </div>
         {showScrollTop && (
           <TooltipButton
-            buttonStyles={`${styles.button} ${
-              navigationLoading ? styles.disabled : styles.enabled
+            buttonStyles={`${styles["button"]} ${
+              navigationLoading ? styles["disabled"] : styles["enabled"]
             }`}
             onClick={handleScrollTop}
             icon={faAnglesUp}
@@ -422,21 +428,22 @@ export default function TitleBar() {
         )}
       </span>
       <span
-        className={`${styles.version} ${
+        className={`${styles["version"]} ${
           isMac()
             ? updateAvailable
-              ? styles.versionMacUpdate
-              : styles.versionMac
+              ? styles["versionMacUpdate"]
+              : styles["versionMac"]
             : updateAvailable
-            ? styles.versionWinUpdate
-            : styles.versionWin
-        }`}>
+              ? styles["versionWinUpdate"]
+              : styles["versionWin"]
+        }`}
+      >
         {version}
       </span>
       <TooltipButton
-        buttonStyles={`${styles.info} ${
-          isMac() ? styles.infoMac : styles.infoWin
-        } ${navigationLoading ? styles.disabled : ""}`}
+        buttonStyles={`${styles["info"]} ${
+          isMac() ? styles["infoMac"] : styles["infoWin"]
+        } ${navigationLoading ? styles["disabled"] : ""}`}
         placement="left"
         onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}
@@ -454,23 +461,25 @@ export default function TitleBar() {
         onHide={() => setShowUpdateModal(false)}
         backdrop
         keyboard={false}
-        centered>
-        <div className={styles.updateModalHeader}>
+        centered
+      >
+        <div className={styles["updateModalHeader"]}>
           <Modal.Title>Update Available</Modal.Title>
         </div>
-        <Modal.Body className={styles.updateModalContent}>
+        <Modal.Body className={styles["updateModalContent"]}>
           <p>Version {updateAvailable?.version} is available.</p>
           <span>
             Visit{" "}
             <Link
               href={"/core/core-info"}
-              onClick={() => setShowUpdateModal(false)}>
+              onClick={() => setShowUpdateModal(false)}
+            >
               App Info
             </Link>{" "}
             page to update.
           </span>
         </Modal.Body>
-        <Modal.Footer className={styles.updateModalContent}>
+        <Modal.Footer className={styles["updateModalContent"]}>
           <Button variant="secondary" onClick={() => setShowUpdateModal(false)}>
             Close
           </Button>

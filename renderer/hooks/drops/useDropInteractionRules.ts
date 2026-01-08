@@ -2,7 +2,7 @@
 
 import { useContext } from "react";
 import { AuthContext } from "@/components/auth/Auth";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { ApiDropType } from "@/generated/models/ApiDropType";
 import { DropVoteState } from "./types";
 import { Time } from "@/helpers/time";
@@ -15,7 +15,7 @@ interface DropInteractionRules {
   isAuthor: boolean; // determines if current user is the author
   isWinner: boolean; // determines if drop is a winner
   isVotingEnded: boolean; // determines if the voting period has ended for this drop's wave
-  winningRank?: number; // rank of the winning drop if applicable
+  winningRank?: number | undefined; // rank of the winning drop if applicable
 }
 
 /**

@@ -1,13 +1,14 @@
 "use client";
 
-import { FC, useEffect, useState } from "react";
+import type { FC} from "react";
+import { useEffect, useState } from "react";
 import TermsOfServiceModal from "./TermsOfServiceModal";
 import { useDropSignature } from "@/hooks/drops/useDropSignature";
-import { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
+import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 
 interface SigningCompleteResult {
   success: boolean;
-  signature?: string;
+  signature?: string | undefined;
 }
 
 /**

@@ -1,6 +1,6 @@
 import NFTLeaderboard from "@/components/leaderboard/NFTLeaderboard";
 import { NftPageStats } from "@/components/nft-attributes/NftStats";
-import { NFT } from "@/entities/INFT";
+import type { NFT } from "@/entities/INFT";
 import { numberWithCommas, printMintDate } from "@/helpers/Helpers";
 import { Col, Container, Row, Table } from "react-bootstrap";
 import styles from "./TheMemes.module.scss";
@@ -25,7 +25,7 @@ export function MemePageCollectorsRightMenu(props: {
           </Row>
           <Row>
             <Col>
-              <Table bordered={false} className={styles.hodlersTable}>
+              <Table bordered={false} className={styles["hodlersTable"]}>
                 <tbody>
                   <tr>
                     <td>Mint Date</td>
@@ -39,7 +39,7 @@ export function MemePageCollectorsRightMenu(props: {
                   <h3>TDH</h3>
                 </Col>
               </Row>
-              <Table bordered={false} className={styles.hodlersTable}>
+              <Table bordered={false} className={styles["hodlersTable"]}>
                 <tbody>
                   <tr>
                     <td>TDH</td>

@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { ApiDropType } from "@/generated/models/ApiDropType";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { SingleWaveDropInfoAuthorSection } from "./SingleWaveDropInfoAuthorSection";
 import WaveDropTime from "../drops/time/WaveDropTime";
 import { SingleWaveDropPosition } from "./SingleWaveDropPosition";
@@ -9,7 +9,7 @@ import { WinnerBadge } from "./WinnerBadge";
 interface WaveDropMetaRowProps {
   readonly drop: ExtendedDrop;
   readonly isWinner: boolean;
-  readonly children?: ReactNode;
+  readonly children?: ReactNode | undefined;
 }
 
 export const WaveDropMetaRow = ({

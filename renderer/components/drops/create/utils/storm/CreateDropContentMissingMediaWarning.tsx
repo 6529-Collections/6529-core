@@ -1,5 +1,5 @@
 import { Tooltip } from "react-tooltip";
-import { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
+import type { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
 
 export default function CreateDropContentMissingMediaWarning({
   missingMedia,
@@ -18,7 +18,7 @@ export default function CreateDropContentMissingMediaWarning({
     IMAGE: "Please upload an image file",
   };
   
-  const tooltipId = `missing-media-warning-${missingMedia[0].toLowerCase()}`;
+  const tooltipId = `missing-media-warning-${missingMedia[0]?.toLowerCase()}`;
   
   return (
     <>
@@ -43,7 +43,7 @@ export default function CreateDropContentMissingMediaWarning({
         </svg>
 
         <span className="tw-text-xs tw-text-[#FEDF89]">
-          {LABELS[missingMedia[0]]}
+          {LABELS[missingMedia[0]!]}
         </span>
       </div>
       <Tooltip 
@@ -54,7 +54,7 @@ export default function CreateDropContentMissingMediaWarning({
           padding: "4px 8px",
         }}
       >
-        {TOOLTIP[missingMedia[0]]}
+        {TOOLTIP[missingMedia[0]!]}
       </Tooltip>
     </>
   );

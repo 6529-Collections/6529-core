@@ -2,7 +2,7 @@
 
 import { useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { MinimalWave } from '@/contexts/wave/hooks/useEnhancedWavesList';
+import type { MinimalWave } from '@/contexts/wave/hooks/useEnhancedWavesList';
 import { usePrefetchWaveData } from '@/hooks/usePrefetchWaveData';
 import useDeviceInfo from '@/hooks/useDeviceInfo';
 import { ApiWaveType } from '@/generated/models/ApiWaveType';
@@ -16,9 +16,9 @@ import { useMyStream } from '@/contexts/wave/MyStreamContext';
 interface WebBrainLeftSidebarWaveProps {
   readonly wave: MinimalWave;
   readonly onHover: (waveId: string) => void;
-  readonly showPin?: boolean;
-  readonly basePath?: string;
-  readonly collapsed?: boolean;
+  readonly showPin?: boolean | undefined;
+  readonly basePath?: string | undefined;
+  readonly collapsed?: boolean | undefined;
 }
 
 const TOOLTIP_PLACEMENT = 'right' as const;

@@ -1,8 +1,6 @@
 "use client";
 
-import {
-    AllowlistResult,
-} from "@/components/allowlist-tool/allowlist-tool.types";
+import type { AllowlistResult } from "@/components/allowlist-tool/allowlist-tool.types";
 import DistributionPlanTableHeaderWrapper from "@/components/distribution-plan-tool/common/DistributionPlanTableHeaderWrapper";
 import RoundedCsvIconButton from "@/components/distribution-plan-tool/common/RoundedCsvIconButton";
 import RoundedJsonIconButton from "@/components/distribution-plan-tool/common/RoundedJsonIconButton";
@@ -11,10 +9,11 @@ import { DistributionPlanToolContext } from "@/components/distribution-plan-tool
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import { distributionPlanApiFetch } from "@/services/distribution-plan-api";
 import { useContext, useEffect, useState } from "react";
+import type {
+  FullResultWallet,
+  ReviewDistributionPlanTablePhase} from "./ReviewDistributionPlanTable";
 import {
-    FetchResultsType,
-    FullResultWallet,
-    ReviewDistributionPlanTablePhase,
+  FetchResultsType
 } from "./ReviewDistributionPlanTable";
 
 export default function ReviewDistributionPlanTableHeader({
@@ -22,9 +21,7 @@ export default function ReviewDistributionPlanTableHeader({
 }: {
   rows: ReviewDistributionPlanTablePhase[];
 }) {
-  const { distributionPlan, setToasts } = useContext(
-    DistributionPlanToolContext
-  );
+  const { distributionPlan } = useContext(DistributionPlanToolContext);
   const [loadingType, setLoadingType] = useState<FetchResultsType | null>(null);
   const [isLoadingJson, setIsLoadingJson] = useState(false);
   const [isLoadingCsv, setIsLoadingCsv] = useState(false);
@@ -62,7 +59,7 @@ export default function ReviewDistributionPlanTableHeader({
   const downloadCsv = (results: AllowlistResult[]) => {
     const fullResult = getFullResults(results);
     const csv = [
-      Object.keys(fullResult[0]).join(","),
+      Object.keys(fullResult[0]!).join(","),
       ...fullResult.map((item) => Object.values(item).join(",")),
     ].join("\n");
 
@@ -83,7 +80,7 @@ export default function ReviewDistributionPlanTableHeader({
       value: row.amount,
     }));
     const csv = [
-      Object.keys(fullResult[0]).join(","),
+      Object.keys(fullResult[0]!).join(","),
       ...fullResult.map((item) => Object.values(item).join(",")),
     ].join("\n");
 
@@ -125,28 +122,33 @@ export default function ReviewDistributionPlanTableHeader({
     <DistributionPlanTableHeaderWrapper>
       <th
         scope="col"
-        className="tw-py-3 tw-pl-4 tw-pr-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px] sm:tw-pl-6">
+        className="tw-py-3 tw-pl-4 tw-pr-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px] sm:tw-pl-6"
+      >
         Name
       </th>
 
       <th
         scope="col"
-        className="tw-px-3 tw-py-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px]">
+        className="tw-px-3 tw-py-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px]"
+      >
         Description
       </th>
       <th
         scope="col"
-        className="tw-px-3 tw-py-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px]">
+        className="tw-px-3 tw-py-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px]"
+      >
         Wallets
       </th>
       <th
         scope="col"
-        className="tw-px-3 tw-py-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px]">
+        className="tw-px-3 tw-py-3 tw-whitespace-nowrap tw-text-left tw-text-[0.6875rem] tw-leading-[1.125rem] tw-font-medium tw-text-iron-400 tw-uppercase tw-tracking-[0.25px]"
+      >
         Spots
       </th>
       <th
         scope="col"
-        className="tw-pl-3 tw-pr-4 tw-py-3 tw-gap-x-3 tw-whitespace-nowrap tw-flex tw-justify-start">
+        className="tw-pl-3 tw-pr-4 tw-py-3 tw-gap-x-3 tw-whitespace-nowrap tw-flex tw-justify-start"
+      >
         <RoundedJsonIconButton
           onClick={() => fetchResults(FetchResultsType.JSON)}
           loading={isLoadingJson}

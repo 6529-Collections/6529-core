@@ -1,13 +1,14 @@
-import { AppWallet } from "@/components/app-wallets/AppWalletsContext";
-import { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
+import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
+import type { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
 import { publicEnv } from "@/config/env";
 import { CW_PROJECT_ID } from "@/constants";
 import { isElectron } from "@/helpers";
 import { ISeedWallet } from "@/shared/types";
 import { AdapterCacheError, AdapterError } from "@/src/errors/adapter";
 import { isIndexedDBError, logErrorSecurely } from "@/utils/error-sanitizer";
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import type { AppKitNetwork } from "@reown/appkit-common";
+import type { ChainAdapter} from "@reown/appkit/react";
 import { createAppKit } from "@reown/appkit/react";
 import { mainnet } from "viem/chains";
 
@@ -26,7 +27,7 @@ interface AppKitInitializationResult {
    * Optional to preserve backwards compatibility with mocks.
    * When provided, callers can await it to ensure AppKit is ready before using the adapter.
    */
-  ready?: Promise<void>;
+  ready?: Promise<void> | undefined;
 }
 
 /**
@@ -34,7 +35,7 @@ interface AppKitInitializationResult {
  */
 function debugLog(message: string, ...args: any[]): void {
   if (publicEnv.NODE_ENV === "development") {
-    console.log(`[AppKitInitialization] ${message}`, ...args);
+    console.warn(`[AppKitInitialization] ${message}`, ...args);
   }
 }
 
@@ -120,7 +121,7 @@ export function initializeAppKit(
  */
 function buildAppKitConfig(adapter: WagmiAdapter) {
   return {
-    adapters: [adapter],
+    adapters: [adapter] as ChainAdapter[],
     networks: [mainnet] as [AppKitNetwork, ...AppKitNetwork[]],
     projectId: CW_PROJECT_ID,
     metadata: {

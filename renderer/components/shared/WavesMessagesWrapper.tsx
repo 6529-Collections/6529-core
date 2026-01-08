@@ -3,10 +3,12 @@
 import useCreateModalState from "@/hooks/useCreateModalState";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import React, { ReactNode, useCallback, useEffect, useMemo, useState } from "react";
+import type { ReactNode} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createBreakpoint } from "react-use";
-import { ApiDrop } from "../../generated/models/ApiDrop";
-import { DropSize, ExtendedDrop } from "../../helpers/waves/drop.helpers";
+import type { ApiDrop } from "../../generated/models/ApiDrop";
+import type { ExtendedDrop } from "../../helpers/waves/drop.helpers";
+import { DropSize } from "../../helpers/waves/drop.helpers";
 import { useSidebarState } from "../../hooks/useSidebarState";
 import { commonApiFetch } from "../../services/api/common-api";
 import { useAuth } from "../auth/Auth";
@@ -23,8 +25,8 @@ const useBreakpoint = createBreakpoint({ XL: 1400, LG: 1024, S: 0 });
 
 interface WavesMessagesWrapperProps {
   readonly children: ReactNode;
-  readonly defaultPath?: string; // "/waves" or "/messages"
-  readonly showLeftSidebar?: boolean;
+  readonly defaultPath?: string | undefined; // "/waves" or "/messages"
+  readonly showLeftSidebar?: boolean | undefined;
 }
 
 const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({

@@ -107,20 +107,21 @@ export function CreateSeedWalletModal(
       onHide={() => handleHide(false)}
       backdrop
       keyboard={false}
-      centered>
-      <div className={styles.modalHeader}>
+      centered
+    >
+      <div className={styles["modalHeader"]}>
         <Modal.Title>
           {props.import ? `Import` : `Create New`} Wallet
         </Modal.Title>
       </div>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <label className="pb-1">Wallet Name</label>
         <input
           autoFocus
           type="text"
           placeholder="My Wallet..."
           value={walletName}
-          className={styles.newWalletInput}
+          className={styles["newWalletInput"]}
           onChange={(e) => {
             const value = e.target.value;
             if (/^[a-zA-Z0-9 ]*$/.test(value)) {
@@ -147,7 +148,7 @@ export function CreateSeedWalletModal(
           type={passHidden ? "password" : "text"}
           placeholder="******"
           value={walletPass}
-          className={styles.newWalletInput}
+          className={styles["newWalletInput"]}
           onChange={(e) => {
             const value = e.target.value;
             if (/^\S*$/.test(value)) {
@@ -165,7 +166,7 @@ export function CreateSeedWalletModal(
           )}
         </p>
       </Modal.Body>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button variant="secondary" onClick={() => handleHide(false)}>
           Cancel
         </Button>
@@ -173,14 +174,16 @@ export function CreateSeedWalletModal(
           <Button
             variant="primary"
             disabled={!walletName || !walletPass}
-            onClick={handleImport}>
+            onClick={handleImport}
+          >
             Import
           </Button>
         ) : (
           <Button
             variant="primary"
             disabled={!walletName || !walletPass}
-            onClick={handleCreate}>
+            onClick={handleCreate}
+          >
             Create
           </Button>
         )}
@@ -271,11 +274,12 @@ export function UnlockSeedWalletModal(
       onHide={() => handleHide()}
       backdrop
       keyboard={false}
-      centered>
-      <div className={styles.modalHeader}>
+      centered
+    >
+      <div className={styles["modalHeader"]}>
         <Modal.Title>Unlock Wallet</Modal.Title>
       </div>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <label className="pt-3 pb-1 d-flex align-items-center justify-content-between">
           <span className="unselectable">Wallet Password</span>
           <FontAwesomeIcon
@@ -293,7 +297,7 @@ export function UnlockSeedWalletModal(
           type={passHidden ? "password" : "text"}
           placeholder="******"
           value={walletPass}
-          className={styles.newWalletInput}
+          className={styles["newWalletInput"]}
           onChange={(e) => {
             const value = e.target.value;
             if (/^\S*$/.test(value)) {
@@ -312,7 +316,7 @@ export function UnlockSeedWalletModal(
           )}
         </p>
       </Modal.Body>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button variant="secondary" onClick={() => handleHide()}>
           Cancel
         </Button>
@@ -321,7 +325,8 @@ export function UnlockSeedWalletModal(
           disabled={
             unlocking || !walletPass || walletPass.length < SEED_MIN_PASS_LENGTH
           }
-          onClick={handleUnlock}>
+          onClick={handleUnlock}
+        >
           {unlocking ? "Unlocking..." : "Unlock"}
         </Button>
       </Modal.Footer>

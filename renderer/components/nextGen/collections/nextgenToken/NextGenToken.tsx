@@ -3,7 +3,7 @@
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import TransferSingle from "@/components/nft-transfer/TransferSingle";
 import { NEXTGEN_CONTRACT } from "@/constants";
-import {
+import type {
   NextGenCollection,
   NextGenToken,
   NextGenTrait,
@@ -253,7 +253,7 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
   function printToken() {
     return (
       <>
-        <Container fluid className={`${styles.tokenContainer} pt-4 pb-4`}>
+        <Container fluid className={`${styles["tokenContainer"]} pt-4 pb-4`}>
           <Row>
             <Col>
               <Container>

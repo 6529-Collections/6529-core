@@ -8,18 +8,19 @@ import {
   NEXTGEN_CORE,
   NEXTGEN_MINTER,
 } from "@/components/nextGen/nextgen_contracts";
-import {
+import type {
   CollectionWithMerkle,
   ProofResponse,
-  Status,
-  TokensPerAddress,
+  TokensPerAddress} from "@/components/nextGen/nextgen_entities";
+import {
+  Status
 } from "@/components/nextGen/nextgen_entities";
 import {
   getStatusFromDates,
   useMintSharedState,
 } from "@/components/nextGen/nextgen_helpers";
 import { publicEnv } from "@/config/env";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NextGenCollection } from "@/entities/INextgen";
 import { areEqualAddresses, getNetworkName } from "@/helpers/Helpers";
 import { fetchOwnerNfts } from "@/hooks/useAlchemyNftQueries";
 import { fetchUrl } from "@/services/6529api";
@@ -314,7 +315,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Mint To
                 <FontAwesomeIcon
-                  className={styles.infoIcon}
+                  className={styles["infoIcon"]}
                   icon={faInfoCircle}
                   data-tooltip-id={`mint-to-info-${props.collection.id}`}></FontAwesomeIcon>
                 <Tooltip
@@ -337,7 +338,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
               <Col sm={12}>
                 <Form.Select
                   disabled={!tokensOwnedForBurnAddressLoaded}
-                  className={styles.mintSelect}
+                  className={styles["mintSelect"]}
                   value={tokenId}
                   onChange={(e: any) => setTokenId(e.currentTarget.value)}>
                   <option value="" disabled>
@@ -360,7 +361,7 @@ export default function NextGenMintBurnWidget(props: Readonly<Props>) {
             <Form.Group as={Row} className="pt-4 mb-3">
               <Col sm={12}>
                 <Button
-                  className={styles.mintBtn}
+                  className={styles["mintBtn"]}
                   disabled={disableMint()}
                   onClick={handleMintClick}>
                   {getButtonText()}

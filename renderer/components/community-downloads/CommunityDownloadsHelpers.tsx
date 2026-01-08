@@ -1,6 +1,7 @@
 "use client";
 
-import { Fragment, ReactNode } from "react";
+import type { ReactNode } from "react";
+import { Fragment } from "react";
 import { Container, Row, Col, Table } from "react-bootstrap";
 import NothingHereYetSummer from "@/components/nothingHereYet/NothingHereYetSummer";
 import styles from "./CommunityDownloads.module.scss";
@@ -65,9 +66,9 @@ export function DownloadsTable<T>({
   }
 
   return (
-    <Row className={`pt-3 ${styles.downloadsScrollContainer}`}>
+    <Row className={`pt-3 ${styles["downloadsScrollContainer"]}`}>
       <Col>
-        <Table bordered={false} className={styles.downloadsTable}>
+        <Table bordered={false} className={styles["downloadsTable"]}>
           <thead>
             <tr>
               {columns.map((col) => (

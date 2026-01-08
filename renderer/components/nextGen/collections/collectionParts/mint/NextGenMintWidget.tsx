@@ -19,7 +19,7 @@ import {
 } from "@/components/nextGen/nextgen_helpers";
 import { publicEnv } from "@/config/env";
 import { NULL_ADDRESS } from "@/constants";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NextGenCollection } from "@/entities/INextgen";
 import {
   areEqualAddresses,
   capitalizeFirstChar,
@@ -81,9 +81,9 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
 
   const [currentProof, setCurrentProof] = useState<
     | {
-      index: number;
-      proof: ProofResponse;
-    }
+        index: number;
+        proof: ProofResponse;
+      }
     | undefined
   >();
   const [originalProofs, setOriginalProofs] = useState<ProofResponse[]>([]);
@@ -130,9 +130,9 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
 
     for (let index = 0; index < proofs.length; index++) {
       const response = proofs[index];
-      runningTotal += response.spots;
+      runningTotal += response?.spots!;
       if (index > 0) {
-        runningTotal -= proofs[index - 1].spots;
+        runningTotal -= proofs[index - 1]?.spots!;
       }
       if (props.mint_counts.allowlist < runningTotal) {
         return { proof: response, index };
@@ -154,23 +154,27 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           const proofResponses: ProofResponse[] = [];
           if (response.length > 0) {
             proofResponses.push({
-              keccak: response[0].keccak,
-              spots: response[0].spots,
-              info: response[0].info,
-              proof: response[0].proof,
+              keccak: response[0]?.keccak!,
+              spots: response[0]?.spots!,
+              info: response[0]?.info!,
+              proof: response[0]?.proof!,
             });
             for (let i = 1; i < response.length; i++) {
-              const spots = response[i].spots - response[i - 1].spots;
+              const spots = response[i]?.spots! - response[i - 1]?.spots!;
               proofResponses.push({
-                keccak: response[i].keccak,
+                keccak: response[i]?.keccak!,
                 spots: spots,
-                info: response[i].info,
-                proof: response[i].proof,
+                info: response[i]?.info,
+                proof: response[i]?.proof!,
               });
             }
           }
+          const activeProof = findActiveProof(proofResponses);
           setProofResponse(proofResponses);
-          setCurrentProof(findActiveProof(response));
+          setCurrentProof({
+            ...activeProof!,
+            proof: activeProof!.proof!,
+          });
           setOriginalProofs(response);
           setFetchingProofs(false);
         });
@@ -252,8 +256,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
           props.collection.id,
           mintCount,
           currentProof &&
-            currentProof.proof.spots > 0 &&
-            alStatus == Status.LIVE
+          currentProof.proof.spots > 0 &&
+          alStatus == Status.LIVE
             ? currentProof.proof.spots
             : 0,
           currentProof ? currentProof.proof.info : "",
@@ -327,7 +331,11 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
   }, [props.mint_counts]);
 
   useEffect(() => {
-    setCurrentProof(findActiveProof(originalProofs));
+    const currentProof = findActiveProof(originalProofs);
+    setCurrentProof({
+      ...currentProof!,
+      proof: currentProof!.proof!,
+    });
   }, [props.fetchingMintCounts]);
 
   function renderAllowlistStatus() {
@@ -353,8 +361,9 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
     if (publicStatus == Status.LIVE) {
       const publicRemaining =
         props.collection.max_purchases > props.mint_counts.public
-          ? ` (${props.collection.max_purchases - props.mint_counts.public
-          } remaining)`
+          ? ` (${
+              props.collection.max_purchases - props.mint_counts.public
+            } remaining)`
           : "";
       return `${props.mint_counts.public} / ${props.collection.max_purchases}${publicRemaining}`;
     }
@@ -423,7 +432,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
             onChange={() => {
               setErrors([]);
               setIsMinting(false);
-            }}>
+            }}
+          >
             <NextGenMintingFor
               title={"Mint For"}
               delegators={props.delegators}
@@ -434,22 +444,24 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Mint To
                 <FontAwesomeIcon
-                  className={styles.infoIcon}
+                  className={styles["infoIcon"]}
                   icon={faInfoCircle}
-                  data-tooltip-id={`mint-to-info-${props.collection.id}`}></FontAwesomeIcon>
+                  data-tooltip-id={`mint-to-info-${props.collection.id}`}
+                ></FontAwesomeIcon>
                 <Tooltip
                   id={`mint-to-info-${props.collection.id}`}
                   style={{
                     backgroundColor: "#1F2937",
                     color: "white",
                     padding: "4px 8px",
-                  }}>
+                  }}
+                >
                   Address to receive the minted tokens
                 </Tooltip>
               </Form.Label>
               <Col sm={12}>
                 <Form.Control
-                  className={`${styles.formInput} ${styles.formInputDisabled}`}
+                  className={`${styles["formInput"]} ${styles["formInputDisabled"]}`}
                   type="text"
                   placeholder="0x..."
                   disabled={!isConnected || disableMint()}
@@ -483,7 +495,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   <Form.Group
                     key={response.keccak}
                     as={Row}
-                    className="pt-2 pl-2">
+                    className="pt-2 pl-2"
+                  >
                     <Col>
                       <Form.Check
                         type="checkbox"
@@ -503,33 +516,37 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                           (currentProof && index != currentProof.index) ||
                           disableMint()
                         }
-                        className={`pt-1 pb-1 `}></Form.Check>
+                        className={`pt-1 pb-1 `}
+                      ></Form.Check>
                     </Col>
                   </Form.Group>
                 ))
               ))}
             <Form.Group
               as={Row}
-              className="pt-2 pb-2 d-flex align-items-center">
+              className="pt-2 pb-2 d-flex align-items-center"
+            >
               <Form.Label className="d-flex align-items-center">
                 Mint Count
                 <FontAwesomeIcon
-                  className={styles.infoIcon}
+                  className={styles["infoIcon"]}
                   icon={faInfoCircle}
-                  data-tooltip-id={`mint-count-info-${props.collection.id}`}></FontAwesomeIcon>
+                  data-tooltip-id={`mint-count-info-${props.collection.id}`}
+                ></FontAwesomeIcon>
                 <Tooltip
                   id={`mint-count-info-${props.collection.id}`}
                   style={{
                     backgroundColor: "#1F2937",
                     color: "white",
                     padding: "4px 8px",
-                  }}>
+                  }}
+                >
                   How many tokens to mint
                 </Tooltip>
               </Form.Label>
               <Col xs={3}>
                 <Form.Select
-                  className={styles.mintSelect}
+                  className={styles["mintSelect"]}
                   value={mintCount}
                   disabled={
                     !isConnected ||
@@ -540,7 +557,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   }
                   onChange={(e: any) => {
                     setMintCount(parseInt(e.currentTarget.value));
-                  }}>
+                  }}
+                >
                   {props.mint_counts ? (
                     renderAllowlistOptions() ?? renderPublicOptions()
                   ) : (
@@ -550,9 +568,10 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
               </Col>
               <Col xs={9}>
                 <Button
-                  className={styles.mintBtn}
+                  className={styles["mintBtn"]}
                   disabled={disableMint()}
-                  onClick={handleMintClick}>
+                  onClick={handleMintClick}
+                >
                   {renderButtonText()}
                   {isMinting && <Spinner />}
                 </Button>
@@ -563,7 +582,8 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                 <Form.Label
                   column
                   sm={12}
-                  className="d-flex align-items-center">
+                  className="d-flex align-items-center"
+                >
                   Errors
                 </Form.Label>
                 <Col sm={12} className="d-flex align-items-center">
@@ -580,7 +600,11 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
               hash={mintWrite.data}
               error={mintWrite.error}
               onSuccess={() => {
-                setCurrentProof(findActiveProof(originalProofs));
+                const currentProof = findActiveProof(originalProofs);
+                setCurrentProof({
+                  ...currentProof!,
+                  proof: currentProof!.proof!,
+                });
                 props.refreshMintCounts();
               }}
             />

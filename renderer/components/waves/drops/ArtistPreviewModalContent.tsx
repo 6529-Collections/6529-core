@@ -1,14 +1,14 @@
 "use client"
 
 import React from "react";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import { ArtistActiveSubmissionContent } from "./ArtistActiveSubmissionContent";
 import { ArtistWinningArtworksContent } from "./ArtistWinningArtworksContent";
 import { ArtistPreviewModalHeader } from "./ArtistPreviewModalHeader";
 import { ArtistPreviewModalTabs } from "./ArtistPreviewModalTabs";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ModalTab } from "./ArtistPreviewModal";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ModalTab } from "./ArtistPreviewModal";
 import { useCompactMode } from "@/contexts/CompactModeContext";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
@@ -16,7 +16,7 @@ interface ArtistPreviewModalContentProps {
   readonly user: ApiProfileMin;
   readonly isOpen: boolean;
   readonly onClose: () => void;
-  readonly isApp?: boolean;
+  readonly isApp?: boolean | undefined;
   readonly activeTab: ModalTab;
   readonly onTabChange: (tab: ModalTab) => void;
   readonly hasWinningArtworks: boolean;

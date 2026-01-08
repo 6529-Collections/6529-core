@@ -1,6 +1,6 @@
 "use client";
 
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import { createPossessionStr } from "@/helpers/Helpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -17,7 +17,7 @@ export default function ProfileName({
   readonly type: ProfileNameType;
 }) {
   const params = useParams();
-  const handleOrWallet = params?.user?.toString().toLowerCase();
+  const handleOrWallet = params?.["user"]?.toString().toLowerCase();
 
   const { profile } = useIdentity({
     handleOrWallet: handleOrWallet,

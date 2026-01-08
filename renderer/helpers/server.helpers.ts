@@ -1,11 +1,12 @@
-import { ActivityLogParamsConverted } from "@/components/profile-activity/ProfileActivityLogs";
-import { ProfileRatersParams } from "@/components/user/utils/raters-table/wrapper/ProfileRatersTableWrapper";
-import { ProfileActivityLog } from "@/entities/IProfile";
+import type { ActivityLogParamsConverted } from "@/components/profile-activity/ProfileActivityLogs";
+import type { ProfileRatersParams } from "@/components/user/utils/raters-table/wrapper/ProfileRatersTableWrapper";
+import type { ProfileActivityLog } from "@/entities/IProfile";
 import { SortDirection } from "@/entities/ISort";
-import { ProfileRatersParamsOrderBy, RateMatter } from "@/enums";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { RateMatter } from "@/enums";
+import { ProfileRatersParamsOrderBy } from "@/enums";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { commonApiFetch } from "@/services/api/common-api";
-import { Page } from "./Types";
+import type { Page } from "./Types";
 
 export const getUserProfile = async ({
   user,
@@ -35,7 +36,7 @@ export const userPageNeedsRedirect = ({
   };
   props: {};
 } | null => {
-  const userParam = req.query.user;
+  const userParam = req.query["user"];
   const userValue = Array.isArray(userParam) ? userParam[0] : userParam;
 
   if (
@@ -44,7 +45,7 @@ export const userPageNeedsRedirect = ({
     profile.handle.toLowerCase() !== userValue.toLowerCase()
   ) {
     const currentQuery = { ...req.query };
-    delete currentQuery.user;
+    delete currentQuery["user"];
     const toQueryStringValue = (input: unknown): string | null => {
       if (input === undefined || input === null) {
         return null;

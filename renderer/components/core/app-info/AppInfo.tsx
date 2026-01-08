@@ -46,7 +46,7 @@ export default function AppInfo() {
   }, []);
 
   const fetchMainWorker = () => {
-    window.api.getMainWorker().then(({ homeDir, mainTask }) => {
+    window.api.getMainWorker().then(({ mainTask }) => {
       setMainTask(mainTask);
     });
   };
@@ -220,7 +220,8 @@ function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
           <Button
             variant="primary"
             onClick={handleUpdate}
-            className="btn-block pt-2 pb-2 font-bolder">
+            className="btn-block pt-2 pb-2 font-bolder"
+          >
             Seize v{props.info.version}
           </Button>
         </Col>
@@ -229,7 +230,7 @@ function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
   );
 }
 
-function UpdateNotAvailable(props: Readonly<{ info: UpdateInfo }>) {
+function UpdateNotAvailable(_props: Readonly<{ info: UpdateInfo }>) {
   return (
     <Container className="text-center">
       <Row>
@@ -247,7 +248,7 @@ function UpdateNotAvailable(props: Readonly<{ info: UpdateInfo }>) {
   );
 }
 
-function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
+function UpdateDownloaded(_props: Readonly<{ info: UpdateInfo }>) {
   const [installing, setInstalling] = useState(false);
   function handleInstall() {
     window.updater.installUpdate();
@@ -271,7 +272,8 @@ function UpdateDownloaded(props: Readonly<{ info: UpdateInfo }>) {
             disabled={installing}
             variant="primary"
             onClick={handleInstall}
-            className="btn-block pt-2 pb-2 font-bolder">
+            className="btn-block pt-2 pb-2 font-bolder"
+          >
             {installing ? "Installing" : "Install!"}
           </Button>
         </Col>
@@ -318,7 +320,8 @@ function UpdateProgress(props: Readonly<{ progress: ProgressInfo }>) {
         </Col>
         <Col
           xs={12}
-          className="pb-3 text-center d-flex flex-column align-items-center">
+          className="pb-3 text-center d-flex flex-column align-items-center"
+        >
           <span className="font-larger">
             {props.progress.percent.toFixed(2)} %
           </span>

@@ -1,24 +1,20 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  WebSocketContext,
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type {
   WebSocketContextValue,
-  WebSocketProviderProps,
-} from "./WebSocketContext";
+  WebSocketProviderProps} from "./WebSocketContext";
 import {
+  WebSocketContext
+} from "./WebSocketContext";
+import type {
   MessageCallback,
   SubscriberMap,
-  WebSocketMessage,
+  WebSocketMessage} from "./WebSocketTypes";
+import {
   WebSocketStatus,
 } from "./WebSocketTypes";
-import { WsMessageType } from "@/helpers/Types";
+import type { WsMessageType } from "@/helpers/Types";
 import { getAuthJwt } from "../auth/auth.utils";
 
 // Default values for reconnection

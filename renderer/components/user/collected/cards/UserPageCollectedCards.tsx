@@ -1,10 +1,11 @@
 import CommonTablePagination from "@/components/utils/table/paginator/CommonTablePagination";
+import type {
+  CollectedCard} from "@/entities/IProfile";
 import {
   COLLECTED_COLLECTION_TYPE_TO_CONTRACT,
-  COLLECTED_COLLECTION_TYPE_TO_CONTRACT_TYPE,
-  CollectedCard,
+  COLLECTED_COLLECTION_TYPE_TO_CONTRACT_TYPE
 } from "@/entities/IProfile";
-import { ProfileCollectedFilters } from "../UserPageCollected";
+import type { ProfileCollectedFilters } from "../UserPageCollected";
 import UserPageCollectedCard from "./UserPageCollectedCard";
 import UserPageCollectedCardsNoCards from "./UserPageCollectedCardsNoCards";
 
@@ -12,7 +13,7 @@ import {
   buildTransferKey,
   useTransfer,
 } from "@/components/nft-transfer/TransferState";
-import { ContractType } from "@/enums";
+import type { ContractType } from "@/enums";
 
 export default function UserPageCollectedCards({
   cards,
@@ -31,7 +32,7 @@ export default function UserPageCollectedCards({
   readonly filters: ProfileCollectedFilters;
   readonly setPage: (page: number) => void;
   readonly dataTransfer: CollectedCard[];
-  readonly isTransferLoading?: boolean;
+  readonly isTransferLoading?: boolean | undefined;
 }) {
   const t = useTransfer();
   const isTransferEnabled = t.enabled;

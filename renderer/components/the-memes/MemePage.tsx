@@ -3,7 +3,7 @@
 import styles from "./TheMemes.module.scss";
 
 import { MEMES_CONTRACT } from "@/constants";
-import { DBResponse } from "@/entities/IDBResponse";
+import type { DBResponse } from "@/entities/IDBResponse";
 import dynamic from "next/dynamic";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
@@ -13,9 +13,9 @@ import MemePageMintCountdown from "@/components/mint-countdown-box/MemePageMintC
 import NFTImage from "@/components/nft-image/NFTImage";
 import { publicEnv } from "@/config/env";
 import { useTitle } from "@/contexts/TitleContext";
-import { MemesExtendedData, NFT, NftRank, NftTDH } from "@/entities/INFT";
-import { ConsolidatedTDH } from "@/entities/ITDH";
-import { Transaction } from "@/entities/ITransaction";
+import type { MemesExtendedData, NFT, NftRank, NftTDH } from "@/entities/INFT";
+import type { ConsolidatedTDH } from "@/entities/ITDH";
+import type { Transaction } from "@/entities/ITransaction";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { fetchUrl } from "@/services/6529api";
 import { commonApiFetch } from "@/services/api/common-api";
@@ -260,7 +260,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
                     sm={{ span: 12 }}
                     md={{ span: 6 }}
                     lg={{ span: 6 }}
-                    className={`${styles.nftImageWrapper} pt-2 pb-5`}>
+                    className={`${styles["nftImageWrapper"]} pt-2 pb-5`}>
                     <NFTImage
                       nft={nft}
                       animation={true}
@@ -332,7 +332,7 @@ export default function MemePage({ nftId }: { readonly nftId: string }) {
   const isLastCard = nftMeta?.collection_size === nft?.id;
 
   return (
-    <Container fluid className={styles.mainContainer}>
+    <Container fluid className={styles["mainContainer"]}>
       <Row>
         <Col>
           <Container className="pt-4 pb-4">

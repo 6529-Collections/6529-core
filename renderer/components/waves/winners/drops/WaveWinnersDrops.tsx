@@ -1,14 +1,14 @@
 import React from "react";
 import { WaveWinnersDrop } from "./WaveWinnersDrop";
-import { ApiWave } from "@/generated/models/ApiWave";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ApiWaveDecisionWinner } from "@/generated/models/ObjectSerializer";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ApiWaveDecisionWinner } from "@/generated/models/ObjectSerializer";
 
 interface WaveWinnersDropsProps {
   readonly wave: ApiWave;
   readonly onDropClick: (drop: ExtendedDrop) => void;
   readonly winners: ApiWaveDecisionWinner[];
-  readonly isLoading?: boolean;
+  readonly isLoading?: boolean | undefined;
 }
 
 export const WaveWinnersDrops: React.FC<WaveWinnersDropsProps> = ({

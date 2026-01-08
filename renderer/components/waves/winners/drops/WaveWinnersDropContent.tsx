@@ -2,14 +2,15 @@
 
 import React, { useState } from "react";
 import WaveDropContent from "@/components/waves/drops/WaveDropContent";
-import { ApiWaveDecisionWinner } from "@/generated/models/ApiWaveDecisionWinner";
+import type { ApiWaveDecisionWinner } from "@/generated/models/ApiWaveDecisionWinner";
 import { useRouter } from "next/navigation";
-import { DropSize, ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { DropSize } from "@/helpers/waves/drop.helpers";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 
 interface WaveWinnersDropContentProps {
   readonly winner: ApiWaveDecisionWinner;
-  readonly isCompetitionDrop?: boolean;
+  readonly isCompetitionDrop?: boolean | undefined;
 }
 
 export const WaveWinnersDropContent: React.FC<WaveWinnersDropContentProps> = ({
@@ -21,7 +22,7 @@ export const WaveWinnersDropContent: React.FC<WaveWinnersDropContentProps> = ({
 
   const onDropContentClick = (drop: ExtendedDrop) => {
     const waveMeta = (drop.wave as unknown as {
-      chat?: { scope?: { group?: { is_direct_message?: boolean } } };
+      chat?: { scope?: { group?: { is_direct_message?: boolean | undefined } | undefined } | undefined } | undefined;
     })?.chat;
     const href = getWaveRoute({
       waveId: drop.wave.id,

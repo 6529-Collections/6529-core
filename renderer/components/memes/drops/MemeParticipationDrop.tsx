@@ -3,14 +3,15 @@
 import DropListItemContentMedia from "@/components/drops/view/item/content/media/DropListItemContentMedia";
 import { MobileVotingModal, VotingModal } from "@/components/voting";
 import VotingModalButton from "@/components/voting/VotingModalButton";
-import { DropInteractionParams, DropLocation } from "@/components/waves/drops/Drop";
+import type { DropInteractionParams} from "@/components/waves/drops/Drop";
+import { DropLocation } from "@/components/waves/drops/Drop";
 import DropMobileMenuHandler from "@/components/waves/drops/DropMobileMenuHandler";
 import WaveDropReactions from "@/components/waves/drops/WaveDropReactions";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import { useCallback, useState } from "react";
 import MemeDropActions from "./meme-participation-drop/MemeDropActions";
 import MemeDropArtistInfo from "./meme-participation-drop/MemeDropArtistInfo";
@@ -76,11 +77,11 @@ export default function MemeParticipationDrop({
   const borderClasses = getBorderClasses(drop, isActiveDrop);
 
   const handleOnReply = useCallback(() => {
-    onReply({ drop, partId: drop.parts[0].part_id });
+    onReply({ drop, partId: drop.parts[0]?.part_id! });
   }, [onReply, drop]);
 
   const handleOnQuote = useCallback(() => {
-    onQuote({ drop, partId: drop.parts[0].part_id });
+    onQuote({ drop, partId: drop.parts[0]?.part_id! });
   }, [onQuote, drop]);
 
   return (

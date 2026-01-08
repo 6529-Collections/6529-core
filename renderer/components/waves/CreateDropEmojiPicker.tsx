@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, FC, useRef, useEffect } from "react";
+import type { FC} from "react";
+import { useState, useRef, useEffect } from "react";
 import { createPortal } from "react-dom";
 import Picker from "@emoji-mart/react";
 import data from "@emoji-mart/data";
@@ -11,7 +12,7 @@ import useIsMobileScreen from "@/hooks/isMobileScreen";
 import { useEmoji } from "@/contexts/EmojiContext";
 
 interface CreateDropEmojiPickerProps {
-  top?: string;
+  top?: string | undefined;
 }
 
 const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
@@ -30,7 +31,7 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
     left: number;
   }>({ top: 0, left: 0 });
 
-  const addEmoji = (emoji: { native?: string; id?: string }) => {
+  const addEmoji = (emoji: { native?: string | undefined; id?: string | undefined }) => {
     let emojiText = emoji.native;
     if (!emojiText && emoji.id) {
       emojiText = `:${emoji.id}:`;

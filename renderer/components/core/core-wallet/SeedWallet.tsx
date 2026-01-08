@@ -153,7 +153,8 @@ export default function SeedWallet(
           padding: "4px 8px",
         }}
         openEvents={{ mouseenter: true }}
-        closeEvents={{ mouseleave: true, blur: true, click: true }}>
+        closeEvents={{ mouseleave: true, blur: true, click: true }}
+      >
         {content}
       </Tooltip>
     );
@@ -190,7 +191,8 @@ export default function SeedWallet(
         <Col>
           <Link
             className="font-smaller d-flex align-items-center gap-2 decoration-none"
-            href="/core/core-wallets">
+            href="/core/core-wallets"
+          >
             <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
             Back to 6529 Desktop Wallets
           </Link>
@@ -200,7 +202,7 @@ export default function SeedWallet(
         <Col className="d-flex align-items-center justify-content-between">
           <h3 className="mb-0 d-flex align-items-center gap-2">
             <Image
-              className={styles.seedWalletAvatar}
+              className={styles["seedWalletAvatar"]}
               fetchPriority="high"
               loading="eager"
               height={50}
@@ -466,7 +468,8 @@ export default function SeedWallet(
         <Col className="d-flex align-items-center gap-2">
           <Button
             variant="danger"
-            onClick={() => deleteWallet(seedWallet.name, seedWallet.address)}>
+            onClick={() => deleteWallet(seedWallet.name, seedWallet.address)}
+          >
             Delete
           </Button>
         </Col>
@@ -488,14 +491,17 @@ export function SeedWalletPhraseWord(
       xs={props.full_width ? 12 : 6}
       sm={props.full_width ? 12 : 4}
       md={props.full_width ? 12 : 3}
-      className="pt-2 pb-2">
-      <Container className={styles.phrase}>
+      className="pt-2 pb-2"
+    >
+      <Container className={styles["phrase"]}>
         <Row>
           <Col className="d-flex gap-2 unselectable">
             {props.index && (
               <span className="font-color-h font-lighter">{props.index}</span>
             )}
-            <span className={`text-break ${props.hidden ? styles.blurry : ""}`}>
+            <span
+              className={`text-break ${props.hidden ? styles["blurry"] : ""}`}
+            >
               {props.word}
             </span>
           </Col>

@@ -7,7 +7,7 @@ import { useContext, useMemo, useState } from "react";
 import { AuthContext } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { CicStatement } from "@/entities/IProfile";
+import type { CicStatement } from "@/entities/IProfile";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { amIUser } from "@/helpers/Helpers";
 import { navigateToDirectMessage } from "@/helpers/navigation.helpers";
@@ -50,7 +50,7 @@ export default function UserPageHeaderClient({
   const params = useParams();
   const router = useRouter();
   const { isApp } = useDeviceInfo();
-  const routeHandleOrWallet = params?.user?.toString().toLowerCase() ?? null;
+  const routeHandleOrWallet = params?.["user"]?.toString().toLowerCase() ?? null;
   const normalizedHandleOrWallet =
     routeHandleOrWallet ?? handleOrWallet.toLowerCase();
 

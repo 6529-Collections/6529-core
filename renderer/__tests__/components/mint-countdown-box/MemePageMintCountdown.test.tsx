@@ -2,8 +2,9 @@ import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import MemePageMintCountdown from "@/components/mint-countdown-box/MemePageMintCountdown";
 import { Time } from "@/helpers/time";
 import useCapacitor from "@/hooks/useCapacitor";
+import type {
+  ManifoldClaim} from "@/hooks/useManifoldClaim";
 import {
-  ManifoldClaim,
   ManifoldClaimStatus,
   ManifoldPhase,
   useMemesManifoldClaim,
@@ -125,7 +126,7 @@ describe("MemePageMintCountdown", () => {
       const box = getByTestId("mint-countdown-box");
       expect(box).toHaveAttribute("data-is-ended", "true");
       // Title is still computed even if ended — current code uses "... Ends In"
-      expect(box.dataset.mintTitle).toMatch(/Ends In$/);
+      expect(box.dataset["mintTitle"]).toMatch(/Ends In$/);
       expect(box).toHaveAttribute("data-mint-date", "200");
     });
 

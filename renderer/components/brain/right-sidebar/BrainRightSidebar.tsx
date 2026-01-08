@@ -1,13 +1,13 @@
 "use client";
 
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { commonApiFetch } from "@/services/api/common-api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import React, { useState } from "react";
 import { createPortal } from "react-dom";
 
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { ChevronDoubleRightIcon } from "@heroicons/react/24/outline";
 import { useSidebarState } from "../../../hooks/useSidebarState";
 import { WaveContent } from "./WaveContent";
@@ -17,7 +17,7 @@ interface BrainRightSidebarProps {
   readonly onDropClick: (drop: ExtendedDrop) => void;
   readonly activeTab: SidebarTab;
   readonly setActiveTab: (tab: SidebarTab) => void;
-  readonly variant?: "overlay" | "inline";
+  readonly variant?: "overlay" | "inline" | undefined;
 }
 
 export enum Mode {

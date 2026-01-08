@@ -2,7 +2,7 @@
 
 import { useKeyPressEvent } from "react-use";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MentionTypeaheadOption } from "./MentionsPlugin";
+import type { MentionTypeaheadOption } from "./MentionsPlugin";
 import MentionsTypeaheadMenuItem from "./MentionsTypeaheadMenuItem";
 
 export default function MentionsTypeaheadMenu({
@@ -37,7 +37,7 @@ export default function MentionsTypeaheadMenu({
   useKeyPressEvent(" ", () => {
     if (typeof selectedIndex === "number" && options.length > 0) {
       setHighlightedIndex(selectedIndex);
-      selectOptionAndCleanUp(options[selectedIndex]);
+      selectOptionAndCleanUp(options[selectedIndex]!);
     }
   });
 

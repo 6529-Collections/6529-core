@@ -1,9 +1,9 @@
-"use client"
+"use client";
 
 import { useCallback } from "react";
 import { useVirtualizedWaveMessages } from "./useVirtualizedWaveMessages";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
-import { NextPageProps } from "@/contexts/wave/hooks/useWavePagination";
+import type { NextPageProps } from "@/contexts/wave/hooks/useWavePagination";
 import { DropSize } from "@/helpers/waves/drop.helpers";
 
 /**
@@ -72,13 +72,12 @@ export function useVirtualizedWaveDrops(
       maxWaitTimeMs?: number,
       pollIntervalMs?: number
     ) => {
-      if (virtualizedWaveMessages) {
-        return await virtualizedWaveMessages.waitAndRevealDrop(
-          serialNo,
-          maxWaitTimeMs,
-          pollIntervalMs
-        );
-      }
+      if (!virtualizedWaveMessages) return;
+      return await virtualizedWaveMessages.waitAndRevealDrop(
+        serialNo,
+        maxWaitTimeMs,
+        pollIntervalMs
+      );
     },
     [virtualizedWaveMessages]
   );

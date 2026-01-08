@@ -2,9 +2,9 @@
 
 import styles from "@/styles/Home.module.scss";
 import NextGenNavigationHeader from "@/components/nextGen/collections/NextGenNavigationHeader";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { NextGenCollection } from "@/entities/INextgen";
 import { NextGenCollectionHead } from "@/components/nextGen/collections/collectionParts/NextGenCollectionHeader";
-import { ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useShallowRedirect } from "./useShallowRedirect";
 
 export default function CollectionPageShell({
@@ -13,7 +13,7 @@ export default function CollectionPageShell({
   children,
 }: {
   readonly collection: NextGenCollection;
-  readonly withNav?: boolean;
+  readonly withNav?: boolean | undefined;
   readonly children: ReactNode;
 }) {
   useShallowRedirect(collection.name);
@@ -21,7 +21,7 @@ export default function CollectionPageShell({
   return (
     <>
       <NextGenCollectionHead collection={collection} />
-      <main className={styles.main}>
+      <main className={styles["main"]}>
         {withNav && <NextGenNavigationHeader />}
         {children}
       </main>

@@ -1,12 +1,17 @@
 "use client";
 
+import type {
+  DropInteractionParams} from "@/components/waves/drops/Drop";
 import Drop, {
-  DropInteractionParams,
   DropLocation,
 } from "@/components/waves/drops/Drop";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { convertApiDropToExtendedDrop, ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type {
+  ExtendedDrop} from "@/helpers/waves/drop.helpers";
+import {
+  convertApiDropToExtendedDrop
+} from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
 
 interface NotificationDropProps {
   readonly drop: ApiDrop;
@@ -15,7 +20,7 @@ interface NotificationDropProps {
   readonly onQuote: (param: DropInteractionParams) => void;
   readonly onReplyClick: (serialNo: number) => void;
   readonly onQuoteClick: (quote: ApiDrop) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }
 
 export default function NotificationDrop({

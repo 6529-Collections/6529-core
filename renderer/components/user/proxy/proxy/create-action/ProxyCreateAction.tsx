@@ -1,12 +1,12 @@
 "use client";
 
 import { useContext, useState } from "react";
-import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import ProxyCreateActionSelectType from "./select-type/ProxyCreateActionSelectType";
 import CommonChangeAnimation from "@/components/utils/animation/CommonChangeAnimation";
-import { ApiProfileProxyActionType } from "@/generated/models/ApiProfileProxyActionType";
+import type { ApiProfileProxyActionType } from "@/generated/models/ApiProfileProxyActionType";
 import ProxyCreateActionConfig from "./config/ProxyCreateActionConfig";
-import { CreateProxyAction } from "@/entities/IProxy";
+import type { CreateProxyAction } from "@/entities/IProxy";
 import { useMutation } from "@tanstack/react-query";
 import { commonApiPost } from "@/services/api/common-api";
 import { AuthContext } from "@/components/auth/Auth";
@@ -19,7 +19,7 @@ export default function ProxyCreateAction({
 }: {
   readonly profileProxy: ApiProfileProxy;
   readonly onActionCreated: () => void;
-  readonly onCancel?: () => void;
+  readonly onCancel?: (() => void) | undefined;
 }) {
   const { setToast, requestAuth } = useContext(AuthContext);
   const { onProfileProxyModify } = useContext(ReactQueryWrapperContext);
@@ -44,8 +44,6 @@ export default function ProxyCreateAction({
       }
       onProfileProxyModify({
         profileProxyId: profileProxy.id,
-        grantedToHandle: profileProxy.granted_to.handle,
-        createdByHandle: profileProxy.created_by.handle,
       });
       onActionCreated();
     },

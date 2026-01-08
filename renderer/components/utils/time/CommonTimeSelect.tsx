@@ -4,7 +4,7 @@ import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import { Time } from "@/helpers/time";
 import { useEffect, useState } from "react";
 import CommonInput from "../input/CommonInput";
-import { CommonSelectItem } from "../select/CommonSelect";
+import type { CommonSelectItem } from "../select/CommonSelect";
 import CommonDropdown from "../select/dropdown/CommonDropdown";
 
 enum TimeMode {
@@ -32,9 +32,9 @@ export default function CommonTimeSelect({
 }: {
   readonly currentTime: number | null;
   readonly onMillis: (millis: number) => void;
-  readonly disabled?: boolean;
-  readonly inline?: boolean;
-  readonly size?: "sm" | "md";
+  readonly disabled?: boolean | undefined;
+  readonly inline?: boolean | undefined;
+  readonly size?: "sm" | "md" | undefined;
 }) {
   const hours = currentTime
     ? +Time.millis(currentTime).diffFromNow().toHours().toFixed(0)

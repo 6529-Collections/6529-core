@@ -2,7 +2,6 @@
 
 import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
 import { useAuth } from "@/components/auth/Auth";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import BellIcon from "@/components/common/icons/BellIcon";
 import ChatBubbleIcon from "@/components/common/icons/ChatBubbleIcon";
 import DiscoverIcon from "@/components/common/icons/DiscoverIcon";
@@ -22,7 +21,7 @@ import useCapacitor from "@/hooks/useCapacitor";
 import { useSectionMap, useSidebarSections } from "@/hooks/useSidebarSections";
 import { useUnreadIndicator } from "@/hooks/useUnreadIndicator";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
-import { MagnifyingGlassIcon, UserIcon } from "@heroicons/react/24/outline";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 import { usePathname } from "next/navigation";
 import React, {
   useCallback,
@@ -47,7 +46,6 @@ const WebSidebarNav = React.forwardRef<
   const pathname = usePathname();
   const capacitor = useCapacitor();
   const { country } = useCookieConsent();
-  const { address } = useSeizeConnectContext();
   const { connectedProfile } = useAuth();
   const { appWalletsSupported } = useAppWallets();
   const { haveUnreadNotifications, notifications } = useUnreadNotifications(
@@ -78,12 +76,6 @@ const WebSidebarNav = React.forwardRef<
     () => setIsSearchOpen(true),
     { event: "keydown" }
   );
-
-  const profilePath = useMemo(() => {
-    if (connectedProfile?.handle) return `/${connectedProfile.handle}`;
-    if (address) return `/${address}`;
-    return null;
-  }, [connectedProfile?.handle, address]);
 
   const sections = useSidebarSections(
     appWalletsSupported,
@@ -226,7 +218,7 @@ const WebSidebarNav = React.forwardRef<
 
   useEffect(() => {
     setNotificationCount(notifications?.unread_count ?? 0);
-    if (haveUnreadNotifications && notifications?.notifications?.length) {
+    if (haveUnreadNotifications && notifications?.notifications?.[0]) {
       showNotification(
         notifications.notifications[0],
         notifications?.unread_count
@@ -273,9 +265,10 @@ const WebSidebarNav = React.forwardRef<
   return (
     <>
       <nav
-        className="tw-flex tw-flex-col tw-mt-4 tw-h-full tw-overflow-y-auto tw-overflow-x-hidden tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 tw-px-3"
-        aria-label="Desktop navigation">
-        <ul className="tw-list-none tw-m-0 tw-p-0">
+        className="tw-mt-4 tw-flex tw-h-full tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-px-3 tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300"
+        aria-label="Desktop navigation"
+      >
+        <ul className="tw-m-0 tw-list-none tw-p-0">
           <li>
             <WebSidebarNavItem
               href="/"
@@ -370,19 +363,6 @@ const WebSidebarNav = React.forwardRef<
             />
           </li>
 
-          {profilePath && (
-            <li>
-              <WebSidebarNavItem
-                href={profilePath}
-                icon={UserIcon}
-                iconSizeClass="tw-h-6 tw-w-6"
-                active={pathname === profilePath}
-                collapsed={isCollapsed}
-                label="Profile"
-              />
-            </li>
-          )}
-
           <li>
             <WebSidebarNavItem
               onClick={(event?: React.MouseEvent) => {
@@ -406,7 +386,8 @@ const WebSidebarNav = React.forwardRef<
             .map((section) => (
               <li
                 key={section.key}
-                className={isCollapsed ? "tw-relative" : undefined}>
+                className={isCollapsed ? "tw-relative" : undefined}
+              >
                 <WebSidebarExpandable
                   section={section}
                   expanded={expandedKeys.includes(section.key)}
@@ -427,7 +408,8 @@ const WebSidebarNav = React.forwardRef<
             key="search-modal"
             elementClasses="tw-fixed tw-inset-0 tw-z-50"
             elementRole="dialog"
-            onClicked={(event) => event.stopPropagation()}>
+            onClicked={(event) => event.stopPropagation()}
+          >
             <HeaderSearchModal onClose={() => setIsSearchOpen(false)} />
           </CommonAnimationOpacity>
         )}

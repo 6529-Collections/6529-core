@@ -15,8 +15,8 @@ import EthereumIcon from "@/components/user/utils/icons/EthereumIcon";
 import UserCICAndLevel from "@/components/user/utils/UserCICAndLevel";
 import YouOwnNftBadge from "@/components/you-own-nft-badge/YouOwnNftBadge";
 import { ETHEREUM_ICON_TEXT } from "@/constants";
-import { DBResponse } from "@/entities/IDBResponse";
-import { NextGenCollection, NextGenToken } from "@/entities/INextgen";
+import type { DBResponse } from "@/entities/IDBResponse";
+import type { NextGenCollection, NextGenToken } from "@/entities/INextgen";
 import {
   areEqualAddresses,
   formatAddress,
@@ -178,7 +178,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   data-tooltip-id={`opensea-${props.token.id}`}>
                   <Image
                     unoptimized
-                    className={styles.marketplace}
+                    className={styles["marketplace"]}
                     src="/opensea.png"
                     alt="opensea"
                     width={24}
@@ -244,7 +244,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   data-tooltip-id={`blur-${props.token.id}`}>
                   <Image
                     unoptimized
-                    className={styles.marketplace}
+                    className={styles["marketplace"]}
                     src="/blur.png"
                     alt="blur"
                     width={24}
@@ -292,7 +292,7 @@ export default function NextgenTokenAbout(props: Readonly<Props>) {
                   data-tooltip-id={`magic-eden-${props.token.id}`}>
                   <Image
                     unoptimized
-                    className={styles.marketplace}
+                    className={styles["marketplace"]}
                     src="/magiceden.png"
                     alt="magiceden"
                     width={24}
@@ -401,7 +401,7 @@ export function TraitScore(
   props: Readonly<{
     score: number;
     rank: number;
-    places?: number;
+    places?: number | undefined;
   }>
 ) {
   return (

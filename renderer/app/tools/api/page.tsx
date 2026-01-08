@@ -1,7 +1,7 @@
 import CodeExample from "@/components/code-example/CodeExample";
 import { getAppMetadata } from "@/components/providers/metadata";
 import styles from "@/styles/Home.module.scss";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 import { Col, Container, Row } from "react-bootstrap";
 
 export default function AboutApi() {
@@ -239,7 +239,7 @@ run().catch((err) => {
     process.exit(1);
 });`;
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <Container className="pt-4 pb-4">
         <Row>
           <Col>

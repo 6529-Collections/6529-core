@@ -2,7 +2,7 @@ import NftNavigation from "@/components/nft-navigation/NftNavigation";
 import { enterArtFullScreen, fullScreenSupported } from "@/helpers/Helpers";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ReadonlyURLSearchParams } from "next/navigation";
+import type { ReadonlyURLSearchParams } from "next/navigation";
 
 const makeParams = (query: string = "") =>
   new URLSearchParams(query) as unknown as ReadonlyURLSearchParams;
@@ -44,8 +44,8 @@ describe("NftNavigation", () => {
       />
     );
     const links = screen.getAllByRole("link");
-    expect(links[0].className).toMatch(/tw-pointer-events-none/);
-    expect(links[1].className).not.toMatch(/tw-pointer-events-none/);
+    expect(links[0]?.className).toMatch(/tw-pointer-events-none/);
+    expect(links[1]?.className).not.toMatch(/tw-pointer-events-none/);
   });
 
   it("shows fullscreen icon and triggers fullscreen", async () => {

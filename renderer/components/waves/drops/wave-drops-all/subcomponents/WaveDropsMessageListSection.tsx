@@ -5,7 +5,7 @@ import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import type { useVirtualizedWaveDrops } from "@/hooks/useVirtualizedWaveDrops";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
-import type { MutableRefObject } from "react";
+import type { RefObject } from "react";
 
 type WaveMessagesResult = ReturnType<
   typeof useVirtualizedWaveDrops
@@ -14,8 +14,8 @@ type WaveMessagesResult = ReturnType<
 interface WaveDropsMessageListSectionProps {
   readonly waveMessages: WaveMessagesResult;
   readonly dropId: string | null;
-  readonly scrollContainerRef: MutableRefObject<HTMLDivElement | null>;
-  readonly bottomAnchorRef: MutableRefObject<HTMLDivElement | null>;
+  readonly scrollContainerRef: RefObject<HTMLDivElement | null>;
+  readonly bottomAnchorRef: RefObject<HTMLDivElement | null>;
   readonly onTopIntersection: () => void;
   readonly onReply: ({
     drop,
@@ -34,15 +34,17 @@ interface WaveDropsMessageListSectionProps {
   readonly queueSerialTarget: (serialNo: number) => void;
   readonly activeDrop: ActiveDropState | null;
   readonly serialTarget: number | null;
-  readonly targetDropRef: MutableRefObject<HTMLDivElement | null>;
+  readonly targetDropRef: RefObject<HTMLDivElement | null>;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly isAtBottom: boolean;
   readonly scrollToBottom: () => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
   readonly pendingCount: number;
   readonly onRevealPending: () => void;
-  readonly bottomPaddingClassName?: string;
-  readonly unreadDividerSerialNo?: number | null;
+  readonly bottomPaddingClassName?: string | undefined;
+  readonly unreadDividerSerialNo?: number | null | undefined;
+  readonly boostedDrops?: ApiDrop[] | undefined;
+  readonly onBoostedDropClick?: ((serialNo: number) => void) | undefined;
 }
 
 const MIN_DROPS_FOR_PAGINATION = 25;
@@ -69,10 +71,12 @@ export const WaveDropsMessageListSection: React.FC<
   onRevealPending,
   bottomPaddingClassName,
   unreadDividerSerialNo,
+  boostedDrops,
+  onBoostedDropClick,
 }) => {
   const hasNextPage =
     !!waveMessages?.hasNextPage &&
-    (waveMessages?.drops?.length ?? 0) >= MIN_DROPS_FOR_PAGINATION;
+    waveMessages.drops.length >= MIN_DROPS_FOR_PAGINATION;
 
   return (
     <>
@@ -81,7 +85,8 @@ export const WaveDropsMessageListSection: React.FC<
         isFetchingNextPage={!!waveMessages?.isLoadingNextPage}
         hasNextPage={hasNextPage}
         onTopIntersection={onTopIntersection}
-        bottomPaddingClassName={bottomPaddingClassName}>
+        bottomPaddingClassName={bottomPaddingClassName}
+      >
         <DropsList
           scrollContainerRef={scrollContainerRef}
           onReplyClick={queueSerialTarget}
@@ -98,6 +103,8 @@ export const WaveDropsMessageListSection: React.FC<
           dropViewDropId={dropId}
           onDropContentClick={onDropContentClick}
           unreadDividerSerialNo={unreadDividerSerialNo}
+          boostedDrops={boostedDrops}
+          onBoostedDropClick={onBoostedDropClick}
           key="drops-list"
         />
         <div ref={bottomAnchorRef} style={{ height: "1px" }} />

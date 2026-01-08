@@ -2,16 +2,17 @@
 
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import CommonSkeletonLoader from "@/components/utils/animation/CommonSkeletonLoader";
-import { RatingWithProfileInfoAndLevel } from "@/entities/IProfile";
+import type { RatingWithProfileInfoAndLevel } from "@/entities/IProfile";
 
 import { SortDirection } from "@/entities/ISort";
+import type {
+  ProfileRatersParamsOrderBy} from "@/enums";
 import {
-  ProfileRatersParamsOrderBy,
   ProfileRatersTableType,
   RateMatter,
 } from "@/enums";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
-import { Page } from "@/helpers/Types";
+import type { Page } from "@/helpers/Types";
 import { commonApiFetch } from "@/services/api/common-api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useParams } from "next/navigation";
@@ -35,7 +36,7 @@ export default function ProfileRatersTableWrapper({
   readonly initialParams: ProfileRatersParams;
 }) {
   const params = useParams();
-  const handleOrWallet = (params?.user as string)?.toLowerCase();
+  const handleOrWallet = (params?.["user"] as string)?.toLowerCase();
   const pageSize = initialParams.pageSize;
   const given = initialParams.given;
   const matter = initialParams.matter;

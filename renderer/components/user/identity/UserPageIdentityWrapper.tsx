@@ -1,10 +1,10 @@
 "use client";
 
-import { ActivityLogParams } from "@/components/profile-activity/ProfileActivityLogs";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ActivityLogParams } from "@/components/profile-activity/ProfileActivityLogs";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useParams } from "next/navigation";
-import { ProfileRatersParams } from "../utils/raters-table/wrapper/ProfileRatersTableWrapper";
+import type { ProfileRatersParams } from "../utils/raters-table/wrapper/ProfileRatersTableWrapper";
 import UserPageSetUpProfileWrapper from "../utils/set-up-profile/UserPageSetUpProfileWrapper";
 import UserPageIdentity from "./UserPageIdentity";
 
@@ -20,7 +20,7 @@ export default function UserPageIdentityWrapper({
   readonly initialActivityLogParams: ActivityLogParams;
 }) {
   const params = useParams();
-  const user = (params?.user as string)?.toLowerCase();
+  const user = (params?.["user"] as string)?.toLowerCase();
 
   const { profile } = useIdentity({
     handleOrWallet: user,

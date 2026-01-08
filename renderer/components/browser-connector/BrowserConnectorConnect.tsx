@@ -35,10 +35,11 @@ export default function BrowserConnectorConnect(
   const [isRequestedChain, setIsRequestedChain] = useState(false);
 
   const openApp = useCallback(() => {
-    const connection = connections[0];
+    const connection = connections[0] ?? { accounts: [], chainId: 0 };
     const connectionInfo = {
-      accounts: connection.accounts.map((account) => account.toLowerCase()),
-      chainId: connection.chainId,
+      accounts:
+        connection?.accounts.map((account) => account.toLowerCase()) ?? [],
+      chainId: connection?.chainId ?? 0,
       auth: getAuth(),
     };
     const serializedInfo = JSON.stringify({
@@ -70,7 +71,7 @@ export default function BrowserConnectorConnect(
     <Container>
       <Row className="pb-3">
         <Col xs={12}>
-          <span className={styles.circledNumber}>1</span>
+          <span className={styles["circledNumber"]}>1</span>
           <span>Connect your wallet</span>
         </Col>
         {account.isConnected ? (
@@ -84,7 +85,8 @@ export default function BrowserConnectorConnect(
                 <Col xs={12}>
                   <button
                     onClick={() => account.seizeDisconnectAndLogout()}
-                    className="mt-3 tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
+                    className="mt-3 tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                  >
                     Disconnect
                   </button>
                 </Col>
@@ -106,10 +108,11 @@ export default function BrowserConnectorConnect(
       <hr />
       <Row
         className={`pt-3 pb-3 ${
-          isRequestedChain || !account.isConnected ? styles.disabled : ""
-        }`}>
+          isRequestedChain || !account.isConnected ? styles["disabled"] : ""
+        }`}
+      >
         <Col xs={12}>
-          <span className={styles.circledNumber}>2</span>
+          <span className={styles["circledNumber"]}>2</span>
           <span>
             Switch to {requestedChain?.name ?? `chain ${requestedChain.id}`}
           </span>
@@ -121,7 +124,8 @@ export default function BrowserConnectorConnect(
                 <button
                   disabled={isSwitchingChain}
                   onClick={() => switchChain({ chainId: requestedChain.id })}
-                  className="tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
+                  className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                >
                   {isSwitchingChain ? "Switching..." : "Switch"}
                 </button>
               </Col>
@@ -132,10 +136,11 @@ export default function BrowserConnectorConnect(
       <hr />
       <Row
         className={`pt-3 ${
-          !account.isConnected || !isRequestedChain ? styles.disabled : ""
-        }`}>
+          !account.isConnected || !isRequestedChain ? styles["disabled"] : ""
+        }`}
+      >
         <Col xs={12}>
-          <span className={styles.circledNumber}>3</span>
+          <span className={styles["circledNumber"]}>3</span>
           <span>Transfer Connection to 6529 Desktop</span>
         </Col>
         <Col xs={12} className="pt-4">
@@ -144,7 +149,8 @@ export default function BrowserConnectorConnect(
               <Col>
                 <button
                   onClick={openApp}
-                  className="tw-whitespace-nowrap tw-inline-flex tw-items-center tw-cursor-pointer tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-leading-6 tw-rounded-lg tw-font-semibold tw-text-white tw-border-0 tw-ring-1 tw-ring-inset tw-ring-primary-500 hover:tw-ring-primary-600 placeholder:tw-text-iron-300 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset tw-shadow-sm hover:tw-bg-primary-600 tw-transition tw-duration-300 tw-ease-out">
+                  className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                >
                   Open 6529 Desktop
                 </button>
               </Col>

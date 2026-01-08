@@ -6,7 +6,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
-import { ReadonlyURLSearchParams } from "next/navigation";
+import type { ReadonlyURLSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
 export default function NftNavigation(
@@ -15,8 +15,8 @@ export default function NftNavigation(
     path: string;
     startIndex: number;
     endIndex: number;
-    fullscreenElementId?: string;
-    params?: ReadonlyURLSearchParams;
+    fullscreenElementId?: string | undefined;
+    params?: ReadonlyURLSearchParams | undefined;
   }>
 ) {
   const isFirst = props.nftId === props.startIndex;

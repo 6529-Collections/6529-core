@@ -34,7 +34,7 @@ import { WalletErrorBoundary } from "./error-boundary";
 class WalletConnectionError extends Error {
   constructor(
     message: string,
-    public readonly cause?: unknown,
+    public override readonly cause?: unknown,
     public readonly code?: string
   ) {
     super(message);
@@ -45,7 +45,7 @@ class WalletConnectionError extends Error {
 class WalletDisconnectionError extends Error {
   constructor(
     message: string,
-    public readonly cause?: unknown,
+    public override readonly cause?: unknown,
     public readonly code?: string
   ) {
     super(message);
@@ -54,7 +54,10 @@ class WalletDisconnectionError extends Error {
 }
 
 class AuthenticationError extends Error {
-  constructor(message: string, public readonly cause?: unknown) {
+  constructor(
+    message: string,
+    public override readonly cause?: unknown
+  ) {
     super(message);
     this.name = "AuthenticationError";
   }
@@ -148,12 +151,14 @@ const createWalletError = (
 // Address validation utilities
 interface AddressValidationResult {
   isValid: boolean;
-  normalizedAddress?: string;
-  errorContext?: {
-    length: number;
-    format: "hex_prefixed" | "other";
-    debugAddress: string;
-  };
+  normalizedAddress?: string | undefined;
+  errorContext?:
+    | {
+        length: number;
+        format: "hex_prefixed" | "other";
+        debugAddress: string;
+      }
+    | undefined;
 }
 
 const isCapacitorPlatform = (): boolean => {

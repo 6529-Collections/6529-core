@@ -1,9 +1,9 @@
-import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
-import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
-import { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
+import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import type { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
+import type { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
 import type { ApiWaveOutcomeDistributionItem } from "@/generated/models/ApiWaveOutcomeDistributionItem";
-import { ApiWavesOverviewType } from "@/generated/models/ApiWavesOverviewType";
-import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import type { ApiWavesOverviewType } from "@/generated/models/ApiWavesOverviewType";
+import type { ApiWaveType } from "@/generated/models/ApiWaveType";
 
 export enum MyStreamWaveTab {
   CHAT = "CHAT",
@@ -125,7 +125,7 @@ export interface WaveOutcomeDistributionState {
   readonly fetchNextPage: () => void;
   readonly isLoading: boolean;
   readonly isError: boolean;
-  readonly errorMessage?: string;
+  readonly errorMessage?: string | undefined;
 }
 
 export interface CreateWaveConfig {
@@ -151,9 +151,9 @@ export interface WavesOverviewParams {
   limit: number;
   offset: number;
   type: ApiWavesOverviewType;
-  only_waves_followed_by_authenticated_user?: boolean;
+  only_waves_followed_by_authenticated_user?: boolean | undefined;
   /**
    * Filter waves by direct message flag. true -> only DMs, false -> exclude DMs.
    */
-  direct_message?: boolean;
+  direct_message?: boolean | undefined;
 }

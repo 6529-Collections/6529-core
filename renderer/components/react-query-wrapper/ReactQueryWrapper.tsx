@@ -1,29 +1,32 @@
 "use client";
 
-import { UserPageRepPropsRepRates } from "@/app/[user]/rep/page";
-import {
+import type { UserPageRepPropsRepRates } from "@/app/[user]/rep/page";
+import type {
   ApiProfileRepRatesState,
   ProfileActivityLog,
   RatingWithProfileInfoAndLevel,
 } from "@/entities/IProfile";
 import { RateMatter } from "@/enums";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiFeedItemType } from "@/generated/models/ApiFeedItemType";
-import { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
-import { ApiWave } from "@/generated/models/ApiWave";
-import { ApiWaveDropsFeed } from "@/generated/models/ApiWaveDropsFeed";
-import { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWaveDropsFeed } from "@/generated/models/ApiWaveDropsFeed";
+import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
 import { wait } from "@/helpers/Helpers";
 import { convertActivityLogParams } from "@/helpers/profile-logs.helpers";
 import { Time } from "@/helpers/time";
-import { CountlessPage, Page } from "@/helpers/Types";
+import type { CountlessPage, Page } from "@/helpers/Types";
 import { useQueryKeyListener } from "@/hooks/useQueryKeyListener";
-import { TypedFeedItem } from "@/types/feed.types";
-import { InfiniteData, useQueryClient } from "@tanstack/react-query";
+
+import {
+  type QueryClient,
+  type InfiniteData,
+  useQueryClient,
+} from "@tanstack/react-query";
 import Cookies from "js-cookie";
 import { createContext, useMemo } from "react";
-import { ActivityLogParams } from "../profile-activity/ProfileActivityLogs";
-import { ProfileRatersParams } from "../user/utils/raters-table/wrapper/ProfileRatersTableWrapper";
+import type { ActivityLogParams } from "../profile-activity/ProfileActivityLogs";
+import type { ProfileRatersParams } from "../user/utils/raters-table/wrapper/ProfileRatersTableWrapper";
 import { addDropToDrops } from "./utils/addDropsToDrops";
 import { increaseWavesOverviewDropsCount } from "./utils/increaseWavesOverviewDropsCount";
 import {
@@ -68,6 +71,7 @@ export enum QueryKey {
   RESERVOIR_NFT = "RESERVOIR_NFT",
   DROPS = "DROPS",
   DROPS_LEADERBOARD = "DROPS_LEADERBOARD",
+  BOOSTED_DROPS = "BOOSTED_DROPS",
   DROP = "DROP",
   DROP_DISCUSSION = "DROP_DISCUSSION",
   GROUPS = "GROUPS",
@@ -135,12 +139,8 @@ type ReactQueryWrapperContextType = {
   readonly setProfileProxy: (profileProxy: ApiProfileProxy) => void;
   readonly onProfileProxyModify: ({
     profileProxyId,
-    createdByHandle,
-    grantedToHandle,
   }: {
     readonly profileProxyId: string;
-    readonly createdByHandle: string;
-    readonly grantedToHandle: string;
   }) => void;
   onProfileCICModify: (params: {
     readonly targetProfile: ApiIdentity;
@@ -174,8 +174,8 @@ type ReactQueryWrapperContextType = {
   }: {
     activityLogs: InitProfileActivityLogsParams;
   }) => void;
-  waitAndInvalidateDrops: () => void;
-  addOptimisticDrop: (params: { readonly drop: ApiDrop }) => void;
+  waitAndInvalidateDrops: () => Promise<void>;
+  addOptimisticDrop: (params: { readonly drop: ApiDrop }) => Promise<void>;
   readonly invalidateDrops: () => void;
   onGroupRemoved: ({ groupId }: { readonly groupId: string }) => void;
   onGroupChanged: ({ groupId }: { readonly groupId: string }) => void;
@@ -193,58 +193,54 @@ type ReactQueryWrapperContextType = {
 
 export const ReactQueryWrapperContext =
   createContext<ReactQueryWrapperContextType>({
-    setProfile: () => { },
-    setWavesOverviewPage: () => { },
-    setProfileProxy: () => { },
-    setWave: () => { },
-    setWaveDrops: () => { },
-    onProfileProxyModify: () => { },
-    onProfileCICModify: () => { },
-    onProfileRepModify: () => { },
-    onProfileEdit: () => { },
-    onProfileStatementAdd: () => { },
-    onProfileStatementRemove: () => { },
-    onIdentityFollowChange: () => { },
-    initProfileRepPage: () => { },
-    initProfileIdentityPage: () => { },
-    initCommunityActivityPage: () => { },
-    waitAndInvalidateDrops: () => { },
-    addOptimisticDrop: () => { },
-    invalidateDrops: () => { },
-    onGroupRemoved: () => { },
-    onGroupChanged: () => { },
-    onGroupCreate: () => { },
-    onIdentityBulkRate: () => { },
-    onWaveCreated: () => { },
-    onWaveFollowChange: () => { },
-    invalidateAll: () => { },
-    invalidateNotifications: () => { },
-    invalidateIdentityTdhStats: () => { },
+    setProfile: () => {},
+    setWavesOverviewPage: () => {},
+    setProfileProxy: () => {},
+    setWave: () => {},
+    setWaveDrops: () => {},
+    onProfileProxyModify: () => {},
+    onProfileCICModify: () => {},
+    onProfileRepModify: () => {},
+    onProfileEdit: () => {},
+    onProfileStatementAdd: () => {},
+    onProfileStatementRemove: () => {},
+    onIdentityFollowChange: () => {},
+    initProfileRepPage: () => {},
+    initProfileIdentityPage: () => {},
+    initCommunityActivityPage: () => {},
+    waitAndInvalidateDrops: async () => {},
+    addOptimisticDrop: async () => {},
+    invalidateDrops: () => {},
+    onGroupRemoved: () => {},
+    onGroupChanged: () => {},
+    onGroupCreate: () => {},
+    onIdentityBulkRate: () => {},
+    onWaveCreated: () => {},
+    onWaveFollowChange: () => {},
+    invalidateAll: () => {},
+    invalidateNotifications: () => {},
+    invalidateIdentityTdhStats: () => {},
   });
 
-export default function ReactQueryWrapper({
-  children,
-}: {
-  readonly children: React.ReactNode;
-}) {
-  const queryClient = useQueryClient();
+const getHandlesFromProfile = (profile: ApiIdentity): string[] => {
+  const handles: string[] = [];
+  if (profile.handle) {
+    handles.push(profile.handle.toLowerCase());
+  }
 
-  const getHandlesFromProfile = (profile: ApiIdentity): string[] => {
-    const handles: string[] = [];
-    if (profile.handle) {
-      handles.push(profile.handle.toLowerCase());
+  profile.wallets?.forEach((wallet) => {
+    if (wallet.display) {
+      handles.push(wallet.display.toLowerCase());
     }
+    handles.push(wallet.wallet.toLowerCase());
+  });
 
-    profile.wallets?.forEach((wallet) => {
-      if (wallet.display) {
-        handles.push(wallet.display.toLowerCase());
-      }
-      handles.push(wallet.wallet.toLowerCase());
-    });
+  return handles;
+};
 
-    return handles;
-  };
-
+const createReactQueryContextValue = (
+  queryClient: QueryClient
+): ReactQueryWrapperContextType => {
   const invalidateQueries = ({
     key,
     values,
@@ -349,18 +345,11 @@ export default function ReactQueryWrapper({
 
   const onProfileProxyModify = ({
     profileProxyId,
-    createdByHandle,
-    grantedToHandle,
   }: {
     readonly profileProxyId: string;
-    readonly createdByHandle: string;
-    readonly grantedToHandle: string;
   }): void => {
     queryClient.invalidateQueries({
       queryKey: [QueryKey.PROFILE_PROXY, { id: profileProxyId }],
-    });
-    queryClient.invalidateQueries({
-      queryKey: [QueryKey.PROFILE_PROFILE_PROXIES],
     });
     queryClient.invalidateQueries({
       queryKey: [QueryKey.PROFILE_PROFILE_PROXIES],
@@ -605,7 +594,7 @@ export default function ReactQueryWrapper({
     const raterTarget =
       profileProxy?.created_by.handle ?? connectedProfile?.handle ?? null;
     const raterRepresentative = profileProxy
-      ? connectedProfile?.handle ?? null
+      ? (connectedProfile?.handle ?? null)
       : null;
 
     if (raterTarget) {
@@ -703,7 +692,7 @@ export default function ReactQueryWrapper({
     const raterTarget =
       profileProxy?.created_by.handle ?? connectedProfile?.handle ?? null;
     const raterRepresentative = profileProxy
-      ? connectedProfile?.handle ?? null
+      ? (connectedProfile?.handle ?? null)
       : null;
 
     if (raterTarget) {
@@ -804,152 +793,6 @@ export default function ReactQueryWrapper({
     });
   };
 
-  const increaseFeedItemsDropRedropCount = ({
-    drop,
-  }: {
-    readonly drop: ApiDrop;
-  }): void => {
-    queryClient.setQueryData(
-      [QueryKey.FEED_ITEMS],
-      (
-        oldData:
-          | {
-            pages: TypedFeedItem[][];
-          }
-          | undefined
-      ) => {
-        if (!oldData?.pages.length) {
-          return oldData;
-        }
-        const pages: TypedFeedItem[][] = JSON.parse(
-          JSON.stringify(oldData.pages)
-        );
-        const quotedDrops = drop.parts
-          .map((part) => part.quoted_drop)
-          .filter((quotedDrop) => !!quotedDrop);
-        if (quotedDrops.length) {
-          const modifiedPages = pages.map((items) => {
-            const modifiedItems = items.map((item) => {
-              if (item.type === ApiFeedItemType.DropCreated) {
-                const modifiedParts = item.item.parts.map((part) => {
-                  const isQuoted = quotedDrops.find(
-                    (qd) =>
-                      qd &&
-                      item.item.id === qd.drop_id &&
-                      part.part_id === qd.drop_part_id
-                  );
-
-                  return part;
-                });
-                return {
-                  ...item,
-                  item: {
-                    ...item.item,
-                    parts: modifiedParts,
-                  },
-                };
-              }
-              if (item.type === ApiFeedItemType.DropReplied) {
-                const modifiedParts = item.item.reply.parts.map((part) => {
-                  const isQuoted = quotedDrops.find(
-                    (qd) =>
-                      qd &&
-                      item.item.reply.id === qd.drop_id &&
-                      part.part_id === qd.drop_part_id
-                  );
-
-                  return part;
-                });
-                return {
-                  ...item,
-                  item: {
-                    ...item.item,
-                    reply: {
-                      ...item.item.reply,
-                      parts: modifiedParts,
-                    },
-                  },
-                };
-              }
-              return item;
-            });
-            return modifiedItems;
-          });
-          return {
-            ...oldData,
-            pages: modifiedPages,
-          };
-        }
-        return {
-          ...oldData,
-          pages,
-        };
-      }
-    );
-  };
-
-  const increaseDropsDropRedropCount = ({
-    drop,
-  }: {
-    readonly drop: ApiDrop;
-  }): void => {
-    queryClient.setQueryData(
-      [
-        QueryKey.DROPS,
-        {
-          limit: `10`,
-          context_profile: drop.author.handle,
-          wave_id: drop.wave.id,
-          include_replies: "true",
-        },
-      ],
-      (
-        oldData:
-          | {
-            pages: ApiDrop[][];
-          }
-          | undefined
-      ) => {
-        if (!oldData?.pages.length) {
-          return oldData;
-        }
-        const pages: ApiDrop[][] = JSON.parse(JSON.stringify(oldData.pages));
-        const quotedDrops = drop.parts
-          .map((part) => part.quoted_drop)
-          .filter((quotedDrop) => !!quotedDrop);
-        if (quotedDrops.length) {
-          const modifiedPages = pages.map((items) => {
-            const modifiedItems = items.map((item) => {
-              const modifiedParts = item.parts.map((part) => {
-                const isQuoted = quotedDrops.find(
-                  (qd) =>
-                    qd &&
-                    item.id === qd.drop_id &&
-                    part.part_id === qd.drop_part_id
-                );
-                return part;
-              });
-
-              return {
-                ...item,
-                parts: modifiedParts,
-              };
-            });
-            return modifiedItems;
-          });
-          return {
-            ...oldData,
-            pages: modifiedPages,
-          };
-        }
-        return {
-          ...oldData,
-          pages,
-        };
-      }
-    );
-  };
-
   const addReplyToDropDiscussion = ({
     drop,
   }: {
@@ -994,82 +837,6 @@ export default function ReactQueryWrapper({
     );
   };
 
-  const increaseFeedItemsDropDiscussionCount = ({
-    drop,
-  }: {
-    readonly drop: ApiDrop;
-  }): void => {
-    queryClient.setQueryData(
-      [QueryKey.FEED_ITEMS],
-      (
-        oldData:
-          | {
-            pages: TypedFeedItem[][];
-          }
-          | undefined
-      ) => {
-        if (!oldData?.pages.length) {
-          return oldData;
-        }
-        const pages: TypedFeedItem[][] = JSON.parse(
-          JSON.stringify(oldData.pages)
-        );
-        const repliedDrop = drop.reply_to;
-        if (repliedDrop) {
-          const modifiedPages = pages.map((items) => {
-            const modifiedItems = items.map((item) => {
-              if (item.type === ApiFeedItemType.DropCreated) {
-                const modifiedParts = item.item.parts.map((part) => {
-                  const isReplied =
-                    item.item.id === repliedDrop.drop_id &&
-                    part.part_id === repliedDrop.drop_part_id;
-
-                  return part;
-                });
-                return {
-                  ...item,
-                  item: {
-                    ...item.item,
-                    parts: modifiedParts,
-                  },
-                };
-              }
-              if (item.type === ApiFeedItemType.DropReplied) {
-                const modifiedParts = item.item.reply.parts.map((part) => {
-                  const isReplied =
-                    item.item.reply.id === repliedDrop.drop_id &&
-                    part.part_id === repliedDrop.drop_part_id;
-
-                  return part;
-                });
-                return {
-                  ...item,
-                  item: {
-                    ...item.item,
-                    reply: {
-                      ...item.item.reply,
-                      parts: modifiedParts,
-                    },
-                  },
-                };
-              }
-              return item;
-            });
-            return modifiedItems;
-          });
-          return {
-            ...oldData,
-            pages: modifiedPages,
-          };
-        }
-        return {
-          ...oldData,
-          pages,
-        };
-      }
-    );
-  };
-
   const addOptimisticDrop = async ({
     drop,
   }: {
@@ -1077,11 +844,8 @@ export default function ReactQueryWrapper({
   }): Promise<void> => {
     addDropToDrops(queryClient, { drop });
     increaseWavesOverviewDropsCount(queryClient, drop.wave.id);
-    increaseFeedItemsDropRedropCount({ drop });
-    increaseDropsDropRedropCount({ drop });
     if (drop.reply_to) {
       addReplyToDropDiscussion({ drop });
-      increaseFeedItemsDropDiscussionCount({ drop });
     }
   };
 
@@ -1213,6 +977,44 @@ export default function ReactQueryWrapper({
     });
   };
 
+  return {
+    setProfile,
+    setWave,
+    setWavesOverviewPage,
+    setWaveDrops,
+    setProfileProxy,
+    onProfileProxyModify,
+    onProfileCICModify,
+    onProfileRepModify,
+    onProfileEdit,
+    onProfileStatementAdd,
+    onProfileStatementRemove,
+    initProfileRepPage,
+    initProfileIdentityPage,
+    initCommunityActivityPage,
+    onGroupRemoved,
+    onGroupChanged,
+    waitAndInvalidateDrops,
+    addOptimisticDrop,
+    onIdentityBulkRate,
+    onGroupCreate,
+    onWaveCreated,
+    onWaveFollowChange,
+    invalidateAll,
+    onIdentityFollowChange,
+    invalidateDrops,
+    invalidateNotifications,
+    invalidateIdentityTdhStats,
+  };
+};
+
+export default function ReactQueryWrapper({
+  children,
+}: {
+  readonly children: React.ReactNode;
+}) {
+  const queryClient = useQueryClient();
+
   useQueryKeyListener([QueryKey.FEED_ITEMS], () => {
     Cookies.set([QueryKey.FEED_ITEMS].toString(), `${Time.now().toMillis()}`);
   });
@@ -1225,64 +1027,8 @@ export default function ReactQueryWrapper({
   });
 
   const value = useMemo(
-    () => ({
-      setProfile,
-      setWave,
-      setWavesOverviewPage,
-      setWaveDrops,
-      setProfileProxy,
-      onProfileProxyModify,
-      onProfileCICModify,
-      onProfileRepModify,
-      onProfileEdit,
-      onProfileStatementAdd,
-      onProfileStatementRemove,
-      initProfileRepPage,
-      initProfileIdentityPage,
-      initCommunityActivityPage,
-      onGroupRemoved,
-      onGroupChanged,
-      waitAndInvalidateDrops,
-      addOptimisticDrop,
-      onIdentityBulkRate,
-      onGroupCreate,
-      onWaveCreated,
-      onWaveFollowChange,
-      invalidateAll,
-      onIdentityFollowChange,
-      invalidateDrops,
-      invalidateNotifications,
-      invalidateIdentityTdhStats,
-    }),
-    [
-      setProfile,
-      setWave,
-      setWavesOverviewPage,
-      setWaveDrops,
-      setProfileProxy,
-      onProfileProxyModify,
-      onProfileCICModify,
-      onProfileRepModify,
-      onProfileEdit,
-      onProfileStatementAdd,
-      onProfileStatementRemove,
-      initProfileRepPage,
-      initProfileIdentityPage,
-      initCommunityActivityPage,
-      onGroupRemoved,
-      onGroupChanged,
-      waitAndInvalidateDrops,
-      addOptimisticDrop,
-      onIdentityBulkRate,
-      onGroupCreate,
-      onWaveCreated,
-      onWaveFollowChange,
-      invalidateAll,
-      onIdentityFollowChange,
-      invalidateDrops,
-      invalidateNotifications,
-      invalidateIdentityTdhStats,
-    ]
+    () => createReactQueryContextValue(queryClient),
+    [queryClient]
   );
 
   return (

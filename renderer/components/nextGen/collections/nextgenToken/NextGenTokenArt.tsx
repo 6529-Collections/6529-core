@@ -14,7 +14,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useRef, useState } from "react";
 import { Col, Container, Dropdown, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import { NextGenCollection, NextGenToken } from "@/entities/INextgen";
+import type { NextGenCollection, NextGenToken } from "@/entities/INextgen";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import Lightbulb from "./Lightbulb";
@@ -122,9 +122,9 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
   }, []);
 
   function getModeStyle(m: Mode) {
-    let s = `${styles.modeIcon}`;
+    let s = `${styles["modeIcon"]}`;
     if (m === mode) {
-      s += ` ${styles.modeIconSelected}`;
+      s += ` ${styles["modeIconSelected"]}`;
     }
     return s;
   }
@@ -160,15 +160,15 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
             isMobileScreen ? "justify-content-center" : "justify-content-start"
           }`}>
           <button
-            className={`unselectable ${styles.imageResolutionBtn} ${
-              mode === Mode.IMAGE ? styles.imageResolutionBtnSelected : ""
+            className={`unselectable ${styles["imageResolutionBtn"]} ${
+              mode === Mode.IMAGE ? styles["imageResolutionBtnSelected"] : ""
             }`}
             onClick={() => setMode(Mode.IMAGE)}>
             2K
           </button>
           <button
-            className={`unselectable ${styles.imageResolutionBtn} ${
-              mode === Mode.HIGH_RES ? styles.imageResolutionBtnSelected : ""
+            className={`unselectable ${styles["imageResolutionBtn"]} ${
+              mode === Mode.HIGH_RES ? styles["imageResolutionBtnSelected"] : ""
             }`}
             onClick={() => setMode(Mode.HIGH_RES)}>
             {isMobileDevice ? "8K" : "16K"}
@@ -198,7 +198,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
             {showZoomControls && (
               <>
                 <FontAwesomeIcon
-                  className={styles.modeIcon}
+                  className={styles["modeIcon"]}
                   icon={faMinusSquare}
                   onClick={handleScaleDown}
                   style={{
@@ -207,7 +207,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
                 />
                 <span className="unselectable">Scale: {zoomScale}</span>
                 <FontAwesomeIcon
-                  className={styles.modeIcon}
+                  className={styles["modeIcon"]}
                   icon={faPlusSquare}
                   onClick={handleScaleUp}
                   style={{
@@ -215,7 +215,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
                   }}
                 />
                 <FontAwesomeIcon
-                  className={styles.modeIcon}
+                  className={styles["modeIcon"]}
                   icon={faRefresh}
                   onClick={() => setZoomScale(MIN_ZOOM_SCALE)}
                   style={{
@@ -235,18 +235,18 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
           }`}>
           <Lightbulb
             mode="black"
-            className={styles.modeIcon}
+            className={styles["modeIcon"]!}
             onClick={() => setShowBlackbox(true)}
           />
           <Lightbulb
             mode="light"
-            className={styles.modeIcon}
+            className={styles["modeIcon"]!}
             onClick={() => setShowLightbox(true)}
           />
           <Dropdown drop={"down-centered"} className="d-flex">
-            <Dropdown.Toggle className={styles.downloadBtn}>
+            <Dropdown.Toggle className={styles["downloadBtn"]}>
               <FontAwesomeIcon
-                className={styles.modeIcon}
+                className={styles["modeIcon"]}
                 icon={faDownload}
                 data-tooltip-id={`download-tooltip-${props.token.id}`}
               />
@@ -276,7 +276,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
             </Dropdown.Menu>
           </Dropdown>
           <FontAwesomeIcon
-            className={styles.modeIcon}
+            className={styles["modeIcon"]}
             onClick={() => {
               const href = getCurrentHref();
               openInExternalBrowser(href);
@@ -295,7 +295,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
             Open in new tab
           </Tooltip>
           <FontAwesomeIcon
-            className={styles.modeIcon}
+            className={styles["modeIcon"]}
             icon={faMaximize}
             onClick={toggleFullScreen}
             data-tooltip-id={`fullscreen-tooltip-${props.token.id}`}
@@ -331,12 +331,12 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
 
   function getBoxStyle() {
     if (showLightbox) {
-      return styles.lightBox;
+      return styles["lightBox"];
     }
     if (showBlackbox) {
-      return styles.blackBox;
+      return styles["blackBox"];
     }
-    return `row ${styles.modeRow}`;
+    return `row ${styles["modeRow"]}`;
   }
 
   useEffect(() => {
@@ -354,7 +354,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
                   <div
                     className={
                       showLightbox || showBlackbox
-                        ? styles.lightBoxContent
+                        ? styles["lightBoxContent"]
                         : "col pt-3"
                     }
                     ref={tokenImageRef}>
@@ -377,7 +377,7 @@ export default function NextGenTokenArt(props: Readonly<Props>) {
       </Row>
       <Row>
         <Col>
-          <Container className={styles.modeRow}>
+          <Container className={styles["modeRow"]}>
             <Row className="pt-2 pb-1">{printModeIcons()}</Row>
           </Container>
         </Col>

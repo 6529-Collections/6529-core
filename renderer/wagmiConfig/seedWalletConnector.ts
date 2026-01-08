@@ -126,7 +126,7 @@ export function seedWalletConnector(parameters: {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  return createConnector((config) => ({
+  return createConnector((_config) => ({
     get icon() {
       return `https://robohash.org/${parameters.address}.png`;
     },
@@ -143,19 +143,11 @@ export function seedWalletConnector(parameters: {
     async setup() {
       //do nothing
     },
-    async connect<withCapabilities extends boolean = false>(opts?: {
+    async connect(opts?: {
       chainId?: number;
       isReconnecting?: boolean;
-      withCapabilities?: boolean | withCapabilities;
-    }): Promise<{
-      accounts: withCapabilities extends true
-        ? readonly {
-            address: `0x${string}`;
-            capabilities: Record<string, unknown>;
-          }[]
-        : readonly `0x${string}`[];
-      chainId: number;
-    }> {
+      withCapabilities?: boolean;
+    }) {
       console.log(`[${this.name}] Seed Wallet Connect method called`, opts);
       await init(this.name);
 
@@ -255,7 +247,7 @@ export function seedWalletConnector(parameters: {
             const requestId = generateRequestId();
             const request: SeedWalletRequest = {
               requestId,
-              from: connectionObject.accounts[0],
+              from: connectionObject.accounts[0] ?? "",
               method,
               params,
             };
@@ -308,16 +300,16 @@ export function seedWalletConnector(parameters: {
       updateProvider();
       return myChain;
     },
-    async onAccountsChanged(accounts) {
+    async onAccountsChanged(_accounts) {
       //do nothing
     },
-    onChainChanged(chain) {
+    onChainChanged(_chain) {
       //do nothing
     },
-    async onConnect(connectInfo) {
+    async onConnect(_connectInfo) {
       //do nothing
     },
-    async onDisconnect(error) {
+    async onDisconnect(_error) {
       //do nothing
     },
   }));

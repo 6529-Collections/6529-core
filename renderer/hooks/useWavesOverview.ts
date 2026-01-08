@@ -3,22 +3,22 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
 
-import { WavesOverviewParams } from "@/types/waves.types";
-import { ApiWavesOverviewType } from "@/generated/models/ApiWavesOverviewType";
+import type { WavesOverviewParams } from "@/types/waves.types";
+import type { ApiWavesOverviewType } from "@/generated/models/ApiWavesOverviewType";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { getDefaultQueryRetry } from "@/components/react-query-wrapper/utils/query-utils";
 
 interface UseWavesOverviewProps {
   readonly type: ApiWavesOverviewType;
-  readonly limit?: number;
-  readonly following?: boolean;
+  readonly limit?: number | undefined;
+  readonly following?: boolean | undefined;
   /**
    * If true, fetch only direct message waves. If false, exclude them. Undefined -> no filter.
    */
-  readonly directMessage?: boolean;
-  readonly refetchInterval?: number;
+  readonly directMessage?: boolean | undefined;
+  readonly refetchInterval?: number | undefined;
 }
 
 export const useWavesOverview = ({
@@ -50,7 +50,7 @@ export const useWavesOverview = ({
       };
 
       if (params.direct_message !== undefined) {
-        queryParams.direct_message = `${params.direct_message}`;
+        queryParams["direct_message"] = `${params.direct_message}`;
       }
 
       return await commonApiFetch<ApiWave[]>({

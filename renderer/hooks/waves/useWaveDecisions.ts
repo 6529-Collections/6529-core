@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiWave } from "@/generated/models/ApiWave";
-import { ApiWaveDecision } from "@/generated/models/ApiWaveDecision";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWaveDecision } from "@/generated/models/ApiWaveDecision";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 
 interface UseWaveDecisionsProps {
   readonly wave: ApiWave;
-  readonly enabled?: boolean;
+  readonly enabled?: boolean | undefined;
 }
 
 export function useWaveDecisions({ wave, enabled = true }: UseWaveDecisionsProps) {

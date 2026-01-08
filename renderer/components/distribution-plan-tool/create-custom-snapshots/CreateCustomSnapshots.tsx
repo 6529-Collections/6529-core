@@ -6,8 +6,9 @@ import {
     DistributionPlanToolStep,
 } from "../DistributionPlanToolContext";
 
+import type {
+    AllowlistCustomTokenPool} from "@/components/allowlist-tool/allowlist-tool.types";
 import {
-    AllowlistCustomTokenPool,
     AllowlistOperationCode,
 } from "@/components/allowlist-tool/allowlist-tool.types";
 import AllowlistToolCsvIcon from "@/components/allowlist-tool/icons/AllowlistToolCsvIcon";
@@ -37,12 +38,12 @@ export default function CreateCustomSnapshots() {
     );
     setCustomSnapshots(
       customSnapshotOperations.map<AllowlistCustomTokenPool>((o) => ({
-        id: o.params.id,
+        id: o.params["id"],
         allowlistId: distributionPlan.id,
-        name: o.params.name,
-        description: o.params.description,
-        walletsCount: new Set(o.params.tokens.map((t: any) => t.owner)).size,
-        tokensCount: o.params.tokens.length,
+        name: o.params["name"],
+        description: o.params["description"],
+        walletsCount: new Set(o.params["tokens"].map((t: any) => t.owner)).size,
+        tokensCount: o.params["tokens"].length,
       }))
     );
   }, [operations, distributionPlan]);

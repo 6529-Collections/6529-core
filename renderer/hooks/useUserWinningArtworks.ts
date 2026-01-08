@@ -1,12 +1,12 @@
 import { useQueries } from "@tanstack/react-query";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiProfileMin } from "@/generated/models/ApiProfileMin";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import { commonApiFetch } from "@/services/api/common-api";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 
 interface UseUserWinningArtworksProps {
   readonly user: ApiProfileMin;
-  readonly enabled?: boolean;
+  readonly enabled?: boolean | undefined;
 }
 
 const fetchDrop = async (dropId: string): Promise<ApiDrop> => {

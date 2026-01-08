@@ -1,10 +1,11 @@
 "use client";
 
+import type {
+  ReactNode} from "react";
 import React, {
   useState,
   useRef,
   useEffect,
-  ReactNode,
   useCallback,
 } from "react";
 import { DropSize } from "@/helpers/waves/drop.helpers";
@@ -18,7 +19,7 @@ interface VirtualScrollWrapperProps {
    * A manual delay in milliseconds to wait after media loads
    * before measuring (to account for any last-minute layout changes).
    */
-  readonly delay?: number;
+  readonly delay?: number | undefined;
 
   readonly scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 
@@ -117,7 +118,7 @@ export default function VirtualScrollWrapper({
 
     const observer = new IntersectionObserver(
       ([entry]) => {
-        const inView = entry.isIntersecting;
+        const inView = !!entry?.isIntersecting;
         if (!inView && containerRef.current && type !== DropSize.LIGHT) {
           // If leaving viewport, measure height in case content changed
           measureHeight();

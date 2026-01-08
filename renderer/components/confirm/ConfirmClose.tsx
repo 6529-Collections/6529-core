@@ -17,10 +17,10 @@ const ConfirmClose: React.FC<ConfirmProps> = ({
 }) => {
   return (
     <Modal show={show} onHide={onCancel} backdrop keyboard={false} centered>
-      <div className={styles.modalHeader}>
+      <div className={styles["modalHeader"]}>
         <Modal.Title>Close 6529 Desktop</Modal.Title>
       </div>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button variant="secondary" onClick={onCancel}>
           Cancel
         </Button>

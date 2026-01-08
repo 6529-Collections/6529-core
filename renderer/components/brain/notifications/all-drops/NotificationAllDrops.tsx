@@ -1,11 +1,11 @@
 "use client";
 
 import { UserFollowBtnSize } from "@/components/user/utils/UserFollowBtn";
-import { DropInteractionParams } from "@/components/waves/drops/Drop";
+import type { DropInteractionParams } from "@/components/waves/drops/Drop";
 import { numberWithCommas } from "@/helpers/Helpers";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import { INotificationAllDrops } from "@/types/feed.types";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { INotificationAllDrops } from "@/types/feed.types";
 import { getNotificationVoteColor } from "../drop-reacted/NotificationDropReacted";
 import NotificationsFollowBtn from "../NotificationsFollowBtn";
 import NotificationDrop from "../subcomponents/NotificationDrop";
@@ -27,7 +27,7 @@ export default function NotificationAllDrops({
   readonly activeDrop: ActiveDropState | null;
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }) {
   const { createReplyClickHandler, createQuoteClickHandler } =
     useWaveNavigation();
@@ -53,7 +53,8 @@ export default function NotificationAllDrops({
           <span
             className={`${getNotificationVoteColor(
               notification.additional_context.vote
-            )} tw-pl-1 tw-font-medium`}>
+            )} tw-pl-1 tw-font-medium`}
+          >
             {notification.additional_context.vote > 0 && "+"}
             {numberWithCommas(notification.additional_context.vote)}
           </span>
@@ -73,7 +74,8 @@ export default function NotificationAllDrops({
             profile={notification.related_identity}
             size={UserFollowBtnSize.SMALL}
           />
-        }>
+        }
+      >
         <span className="tw-text-sm tw-font-normal tw-text-iron-50">
           {getContent()}{" "}
           <NotificationTimestamp createdAt={notification.created_at} />

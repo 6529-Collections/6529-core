@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * 6529.io API
  * This is the API interface description. Brief terminology overview and an authentication example can be found at <a href=\"https://6529.io/about/api\">https://6529.io/about/api</a>.
@@ -63,6 +64,7 @@ export class ApiDrop {
     'subscribed_actions': Array<ApiDropSubscriptionTargetAction>;
     'is_signed': boolean;
     'reactions': Array<ApiDropReaction>;
+    'boosts': number;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -218,6 +220,12 @@ export class ApiDrop {
             "baseName": "reactions",
             "type": "Array<ApiDropReaction>",
             "format": ""
+        },
+        {
+            "name": "boosts",
+            "baseName": "boosts",
+            "type": "number",
+            "format": "int64"
         }    ];
 
     static getAttributeTypeMap() {

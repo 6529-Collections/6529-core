@@ -1,4 +1,5 @@
-import { NextRequest, NextResponse } from "next/server";
+import type { NextRequest} from "next/server";
+import { NextResponse } from "next/server";
 
 import {
   UrlGuardError,
@@ -27,7 +28,7 @@ function normalizeInputToUrl(input: RequestInfo | URL): URL {
   }
 
   if (typeof input === "object" && input !== null) {
-    const maybeUrl = (input as { url?: unknown }).url;
+    const maybeUrl = (input as { url?: unknown | undefined }).url;
     if (typeof maybeUrl === "string") {
       return new URL(maybeUrl);
     }

@@ -1,3 +1,3 @@
-export function useIsVersionStale(interval = 120_000) {
+export function useIsVersionStale(_interval = 120_000) {
   return false;
 }

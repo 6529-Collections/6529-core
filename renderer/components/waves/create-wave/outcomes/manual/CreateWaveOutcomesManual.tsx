@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
+import type {
   CreateWaveDatesConfig,
-  CreateWaveOutcomeConfig,
+  CreateWaveOutcomeConfig} from "@/types/waves.types";
+import {
   CreateWaveOutcomeType,
   CreateWaveOutcomeConfigWinnersCreditValueType,
 } from "@/types/waves.types";
@@ -42,10 +43,10 @@ export default function CreateWaveOutcomesManual({
   const parseRange = (range: string): number[] | null => {
     if (range.includes("-")) {
       const [start, end] = range.split("-").map((num) => parseInt(num));
-      if (isNaN(start) || isNaN(end) || start < 1 || end < start) {
+      if (isNaN(start!) || isNaN(end!) || start! < 1 || end! < start!) {
         return null;
       }
-      return Array.from({ length: end - start + 1 }, (_, i) => start + i);
+      return Array.from({ length: end! - start! + 1 }, (_, i) => start! + i);
     }
 
     const num = parseInt(range);

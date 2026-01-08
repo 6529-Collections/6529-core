@@ -1,6 +1,18 @@
 "use client";
 
-import styles from "./WaveDropReactions.module.scss";
+import { useAuth } from "@/components/auth/Auth";
+import { useEmoji } from "@/contexts/EmojiContext";
+import { useMyStream } from "@/contexts/wave/MyStreamContext";
+import type { ApiAddReactionToDropRequest } from "@/generated/models/ApiAddReactionToDropRequest";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDropContextProfileContext } from "@/generated/models/ApiDropContextProfileContext";
+import type { ApiDropReaction } from "@/generated/models/ApiDropReaction";
+import { formatLargeNumber } from "@/helpers/Helpers";
+import { buildTooltipId } from "@/helpers/tooltip.helpers";
+import { DropSize } from "@/helpers/waves/drop.helpers";
+import { commonApiDelete, commonApiPost } from "@/services/api/common-api";
+import clsx from "clsx";
+import Image from "next/image";
 import React, {
   useCallback,
   useEffect,
@@ -8,27 +20,14 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { formatLargeNumber } from "@/helpers/Helpers";
-import { useEmoji } from "@/contexts/EmojiContext";
-import { ApiDropReaction } from "@/generated/models/ApiDropReaction";
 import { Tooltip } from "react-tooltip";
-import { buildTooltipId } from "@/helpers/tooltip.helpers";
 import {
-  commonApiDelete,
-  commonApiPost,
-} from "@/services/api/common-api";
-import { useAuth } from "@/components/auth/Auth";
-import clsx from "clsx";
-import { ApiAddReactionToDropRequest } from "@/generated/models/ApiAddReactionToDropRequest";
-import { useMyStream } from "@/contexts/wave/MyStreamContext";
-import { DropSize } from "@/helpers/waves/drop.helpers";
-import {
-  findReactionIndex,
   cloneReactionEntries,
+  findReactionIndex,
   removeUserFromReactions,
   toProfileMin,
 } from "./reaction-utils";
+import styles from "./WaveDropReactions.module.scss";
 
 interface WaveDropReactionsProps {
   readonly drop: ApiDrop;
@@ -37,7 +36,7 @@ interface WaveDropReactionsProps {
 const WaveDropReactions: React.FC<WaveDropReactionsProps> = ({ drop }) => {
   return (
     <>
-      {drop.reactions?.map((reaction) => (
+      {drop.reactions.map((reaction) => (
         <WaveDropReaction
           key={`${reaction.reaction}-${reaction.profiles.length}`}
           drop={drop}
@@ -68,38 +67,68 @@ function WaveDropReaction({
     reaction.profiles.map((p) => p.handle ?? p.id)
   );
   const [animate, setAnimate] = useState(false);
-  const previousTotalRef = useRef(total);
 
+  // Refs to track previous values for change detection
+  const prevTotalRef = useRef(total);
+  const prevContextReactionRef = useRef(drop.context_profile_context?.reaction);
+  const prevProfilesRef = useRef(reaction.profiles);
+
+  // Sync selected when context reaction changes from server
   useEffect(() => {
+    if (
+      drop.context_profile_context?.reaction === prevContextReactionRef.current
+    ) {
+      return;
+    }
+
+    prevContextReactionRef.current = drop.context_profile_context?.reaction;
+    const isSelected =
+      reaction.reaction === drop.context_profile_context?.reaction;
+    const timeoutId = setTimeout(() => {
+      setSelected((current) => (current === isSelected ? current : isSelected));
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [drop.context_profile_context?.reaction, reaction.reaction]);
+
+  // Sync total and handles when profiles change from server
+  useEffect(() => {
+    if (reaction.profiles === prevProfilesRef.current) {
+      return;
+    }
+    prevProfilesRef.current = reaction.profiles;
+
     const nextTotal = reaction.profiles.length;
     const nextHandles = reaction.profiles.map((p) => p.handle ?? p.id);
 
-    setTotal((current) => (current === nextTotal ? current : nextTotal));
+    const timeoutId = setTimeout(() => {
+      setTotal((current) => (current === nextTotal ? current : nextTotal));
+      setHandles((current) => {
+        const sameLength = current.length === nextHandles.length;
+        const sameValues = sameLength
+          ? current.every((value, index) => value === nextHandles[index])
+          : false;
+        return sameValues ? current : nextHandles;
+      });
+    }, 0);
+    return () => clearTimeout(timeoutId);
+  }, [reaction.profiles]);
 
-    setHandles((current) => {
-      const sameLength = current.length === nextHandles.length;
-      const sameValues = sameLength
-        ? current.every((value, index) => value === nextHandles[index])
-        : false;
-      return sameValues ? current : nextHandles;
-    });
-  }, [reaction.profiles, reaction.profiles.length]);
-
+  // Trigger animation when total changes
   useEffect(() => {
-    const isSelected =
-      reaction.reaction === drop.context_profile_context?.reaction;
-    setSelected((current) => (current === isSelected ? current : isSelected));
-  }, [drop.context_profile_context?.reaction, reaction.reaction]);
-
-  useEffect(() => {
-    if (total !== previousTotalRef.current) {
-      setAnimate(true);
-      const timeout = setTimeout(() => setAnimate(false), 100);
-      previousTotalRef.current = total;
-      return () => clearTimeout(timeout);
+    if (total === prevTotalRef.current) {
+      return;
     }
-    previousTotalRef.current = total;
+    prevTotalRef.current = total;
+    // Defer to avoid synchronous setState in effect
+    const timeoutId = setTimeout(() => setAnimate(true), 0);
+    return () => clearTimeout(timeoutId);
   }, [total]);
+
+  useEffect(() => {
+    if (!animate) return;
+    const timeout = setTimeout(() => setAnimate(false), 100);
+    return () => clearTimeout(timeout);
+  }, [animate]);
 
   // derive emoji ID
   const emojiId = useMemo(
@@ -112,26 +141,35 @@ function WaveDropReaction({
   );
 
   // small + tooltip emoji nodes
+  const waveId = drop.wave.id;
+
   const { emojiNode, emojiNodeTooltip } = useMemo(() => {
     const custom = emojiMap
       .flatMap((cat) => cat.emojis)
       .find((e) => e.id === emojiId);
 
-    if (custom) {
+    const customSrc = custom?.skins[0]?.src;
+    if (customSrc) {
       return {
         emojiNode: (
-          <img
-            src={custom.skins[0].src}
-            alt={emojiId}
-            className="tw-max-w-4 tw-max-h-4 tw-object-contain"
-          />
+          <div className="tw-relative tw-size-4">
+            <Image
+              src={customSrc}
+              alt={emojiId}
+              fill
+              className="tw-object-contain"
+            />
+          </div>
         ),
         emojiNodeTooltip: (
-          <img
-            src={custom.skins[0].src}
-            alt={emojiId}
-            className="tw-max-w-8 tw-max-h-8 tw-object-contain tw-rounded-sm"
-          />
+          <div className="tw-relative tw-size-8">
+            <Image
+              src={customSrc}
+              alt={emojiId}
+              fill
+              className="tw-rounded-sm tw-object-contain"
+            />
+          </div>
         ),
       };
     }
@@ -140,13 +178,13 @@ function WaveDropReaction({
     if (native) {
       return {
         emojiNode: (
-          <span className="tw-text-[1rem] tw-flex tw-items-center tw-justify-center">
-            {native.skins[0].native}
+          <span className="tw-flex tw-items-center tw-justify-center tw-text-[1rem]">
+            {native.skins[0]?.native}
           </span>
         ),
         emojiNodeTooltip: (
-          <span className="tw-text-2xl tw-flex tw-items-center tw-justify-center">
-            {native.skins[0].native}
+          <span className="tw-flex tw-items-center tw-justify-center tw-text-2xl">
+            {native.skins[0]?.native}
           </span>
         ),
       };
@@ -157,7 +195,7 @@ function WaveDropReaction({
 
   const applyOptimisticReactionChange = useCallback(
     (willSelect: boolean) => {
-      if (!drop.wave?.id || !applyOptimisticDropUpdate) {
+      if (!waveId) {
         return;
       }
 
@@ -165,7 +203,7 @@ function WaveDropReaction({
 
       rollbackRef.current =
         applyOptimisticDropUpdate({
-          waveId: drop.wave.id,
+          waveId,
           dropId: drop.id,
           update: (draft) => {
             if (draft.type !== DropSize.FULL) {
@@ -186,7 +224,7 @@ function WaveDropReaction({
               );
 
               if (existingIndex >= 0) {
-                const target = reactionsWithoutUser[existingIndex];
+                const target = reactionsWithoutUser[existingIndex]!;
                 reactionsWithoutUser[existingIndex] = {
                   ...target,
                   profiles: [...target.profiles, userProfileMin],
@@ -200,14 +238,15 @@ function WaveDropReaction({
             }
 
             draft.reactions = reactionsWithoutUser;
-            const existingContext =
+            const existingContext: ApiDropContextProfileContext =
               draft.context_profile_context ??
-              drop.context_profile_context ?? {
-                rating: 0,
-                min_rating: 0,
-                max_rating: 0,
-                reaction: null,
-              };
+                drop.context_profile_context ?? {
+                  rating: 0,
+                  min_rating: 0,
+                  max_rating: 0,
+                  reaction: null,
+                  boosted: false,
+                };
 
             draft.context_profile_context = {
               ...existingContext,
@@ -222,7 +261,7 @@ function WaveDropReaction({
       applyOptimisticDropUpdate,
       connectedProfile,
       drop.id,
-      drop.wave?.id,
+      waveId,
       drop.context_profile_context,
       reaction.reaction,
     ]
@@ -272,13 +311,13 @@ function WaveDropReaction({
       // optimistic revert
       setSelected((s) => !s);
       setTotal((n) => Math.max(0, n + (selected ? 1 : -1)));
-      if (!selected) {
+      if (selected) {
         setHandles((h) =>
-          resolvedHandle ? h.filter((value) => value !== resolvedHandle) : h
+          resolvedHandle ? Array.from(new Set([...h, resolvedHandle])) : h
         );
       } else {
         setHandles((h) =>
-          resolvedHandle ? Array.from(new Set([...h, resolvedHandle])) : h
+          resolvedHandle ? h.filter((value) => value !== resolvedHandle) : h
         );
       }
       rollbackRef.current?.();
@@ -316,9 +355,9 @@ function WaveDropReaction({
   let animationStyle = "";
   if (animate) {
     if (selected) {
-      animationStyle = styles.reactionSlideUp;
+      animationStyle = styles["reactionSlideUp"]!;
     } else {
-      animationStyle = styles.reactionSlideDown;
+      animationStyle = styles["reactionSlideDown"]!;
     }
   }
 
@@ -330,20 +369,22 @@ function WaveDropReaction({
         data-tooltip-id={tooltipId}
         data-text-selection-exclude="true"
         className={clsx(
-          "tw-inline-flex tw-items-center tw-gap-x-2 tw-mt-1 tw-py-1 tw-px-2 tw-rounded-lg tw-shadow-sm tw-border tw-border-solid hover:tw-text-iron-100",
+          "tw-mt-1 tw-inline-flex tw-items-center tw-gap-x-2 tw-rounded-lg tw-border tw-border-solid tw-px-2 tw-py-1 tw-shadow-sm hover:tw-text-iron-100",
           borderStyle,
           bgStyle,
           hoverStyle
-        )}>
-        <div className="tw-flex tw-items-center tw-gap-x-1 tw-h-full">
-          <div className="tw-w-5 tw-h-5 tw-flex-shrink-0 tw-flex tw-items-center tw-justify-center">
+        )}
+      >
+        <div className="tw-flex tw-h-full tw-items-center tw-gap-x-1">
+          <div className="tw-flex tw-size-5 tw-flex-shrink-0 tw-items-center tw-justify-center">
             {emojiNode}
           </div>
           <span
             className={clsx(
-              "tw-text-xs tw-font-normal tw-min-w-[2ch]",
+              "tw-min-w-[2ch] tw-text-xs tw-font-normal",
               animationStyle
-            )}>
+            )}
+          >
             {formatLargeNumber(total)}
           </span>
         </div>
@@ -353,7 +394,8 @@ function WaveDropReaction({
         delayShow={250}
         place="bottom"
         opacity={1}
-        style={{ backgroundColor: "#37373E", color: "white", zIndex: 50 }}>
+        style={{ backgroundColor: "#37373E", color: "white", zIndex: 50 }}
+      >
         <div className="tw-flex tw-items-center tw-gap-2">
           {emojiNodeTooltip}
           <span className="tw-whitespace-nowrap">by {tooltipText}</span>

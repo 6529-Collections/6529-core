@@ -15,7 +15,7 @@ export default function TDHCalculation() {
   const [tdhInfo, setTdhInfo] = useState<TDHInfo>();
 
   const fetchContent = () => {
-    window.api.getScheduledWorkers().then(({ tasks }) => {
+    window.api.getScheduledWorkers().then(({ tasks }: { tasks: Task[] }) => {
       setTdhTask(
         tasks.find((t: Task) => t.namespace === ScheduledWorkerNames.TDH_WORKER)
       );
@@ -43,15 +43,15 @@ export default function TDHCalculation() {
       action?: string,
       statusPercentage?: number
     ) => {
-      setTdhTask((task) =>
+      setTdhTask((task: Task | undefined): Task | undefined =>
         task?.namespace === namespace
           ? {
               ...task,
               status: {
                 status,
                 message,
-                action,
-                statusPercentage,
+                action: action || "",
+                statusPercentage: statusPercentage || 0,
               },
             }
           : task

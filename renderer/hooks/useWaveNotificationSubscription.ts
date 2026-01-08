@@ -1,8 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
-import { GetWaveSubscription200Response } from "@/generated/models/GetWaveSubscription200Response";
+import type { GetWaveSubscription200Response } from "@/generated/models/GetWaveSubscription200Response";
 
 export function useWaveNotificationSubscription(wave: ApiWave) {
   const { seizeSettings } = useSeizeSettings();
@@ -17,7 +17,7 @@ export function useWaveNotificationSubscription(wave: ApiWave) {
       !!wave.id &&
       wave.metrics.subscribers_count <=
         seizeSettings.all_drops_notifications_subscribers_limit,
-    retry: (failureCount, error) => {
+    retry: (failureCount) => {
       if (failureCount >= 3) {
         return false;
       }

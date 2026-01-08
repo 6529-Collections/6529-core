@@ -2,7 +2,8 @@ import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { WebSocketProvider } from '@/services/websocket/WebSocketProvider';
 import { WebSocketContext } from '@/services/websocket/WebSocketContext';
-import { WebSocketStatus, WebSocketConfig } from '@/services/websocket/WebSocketTypes';
+import type { WebSocketConfig } from '@/services/websocket/WebSocketTypes';
+import { WebSocketStatus } from '@/services/websocket/WebSocketTypes';
 import { WsMessageType } from '@/helpers/Types';
 import * as authUtils from '@/services/auth/auth.utils';
 
@@ -108,7 +109,7 @@ describe('WebSocketProvider', () => {
       expect(result.current.status).toBe(WebSocketStatus.CONNECTING);
       expect(global.WebSocket).toHaveBeenCalledWith('ws://test?token=test-token');
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -137,7 +138,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -177,7 +178,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -223,7 +224,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       // Try to send when connecting - should not send
       act(() => {
@@ -253,7 +254,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -280,7 +281,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -324,7 +325,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('original-token');
       });
       
-      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws1.triggerOpen();
@@ -347,7 +348,7 @@ describe('WebSocketProvider', () => {
       expect(global.WebSocket).toHaveBeenCalledTimes(2);
       expect(global.WebSocket).toHaveBeenLastCalledWith('ws://test?token=fresh-token');
       
-      const ws2 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1].value as MockWebSocket;
+      const ws2 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1]?.value as MockWebSocket;
       
       // Simulate another failure
       act(() => {
@@ -377,7 +378,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws1.triggerOpen();
@@ -393,7 +394,7 @@ describe('WebSocketProvider', () => {
         jest.advanceTimersByTime(100);
       });
       
-      const ws2 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1].value as MockWebSocket;
+      const ws2 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1]?.value as MockWebSocket;
       
       // Fail second attempt
       act(() => {
@@ -405,7 +406,7 @@ describe('WebSocketProvider', () => {
         jest.advanceTimersByTime(150); // 100 * 1.5^1
       });
       
-      const ws3 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[2].value as MockWebSocket;
+      const ws3 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[2]?.value as MockWebSocket;
       
       // Fail third attempt - should stop trying
       act(() => {
@@ -433,7 +434,7 @@ describe('WebSocketProvider', () => {
         result.current.connect(); // Connect without token
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -462,7 +463,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws1.triggerOpen();
@@ -477,7 +478,7 @@ describe('WebSocketProvider', () => {
         jest.advanceTimersByTime(100);
       });
       
-      const ws2 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1].value as MockWebSocket;
+      const ws2 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1]?.value as MockWebSocket;
       
       // This time connection succeeds
       act(() => {
@@ -541,7 +542,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerError();
@@ -560,7 +561,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token1');
       });
       
-      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws1.triggerOpen();
@@ -586,7 +587,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -642,7 +643,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -679,7 +680,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -704,7 +705,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -728,7 +729,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -762,7 +763,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token1');
       });
       
-      let ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      let ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -781,7 +782,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token2');
       });
       
-      ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1].value as MockWebSocket;
+      ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[1]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -809,7 +810,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws.triggerOpen();
@@ -853,7 +854,7 @@ describe('WebSocketProvider', () => {
         result.current.connect('token');
       });
       
-      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0].value as MockWebSocket;
+      const ws1 = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[0]?.value as MockWebSocket;
       
       act(() => {
         ws1.triggerOpen();
@@ -862,7 +863,7 @@ describe('WebSocketProvider', () => {
       // Fail and reconnect maxAttempts times
       for (let i = 0; i < maxAttempts; i++) {
         const wsIndex = i;
-        const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[wsIndex].value as MockWebSocket;
+        const ws = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[wsIndex]?.value as MockWebSocket;
         
         act(() => {
           ws.triggerClose(1006);
@@ -876,7 +877,7 @@ describe('WebSocketProvider', () => {
       }
       
       // One final failure to trigger the max attempts warning
-      const lastWs = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[maxAttempts].value as MockWebSocket;
+      const lastWs = (global.WebSocket as jest.MockedFunction<typeof WebSocket>).mock.results[maxAttempts]?.value as MockWebSocket;
       act(() => {
         lastWs.triggerClose(1006);
       });

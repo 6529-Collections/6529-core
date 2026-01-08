@@ -2,7 +2,7 @@
 
 import { useKeyPressEvent } from "react-use";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { HashtagsTypeaheadOption } from "./HashtagsPlugin";
+import type { HashtagsTypeaheadOption } from "./HashtagsPlugin";
 import HashtagsTypeaheadMenuItem from "./HashtagsTypeaheadMenuItem";
 
 export default function HashtagsTypeaheadMenu({
@@ -37,7 +37,7 @@ export default function HashtagsTypeaheadMenu({
   useKeyPressEvent(" ", () => {
     if (typeof selectedIndex === "number" && options.length > 0) {
       setHighlightedIndex(selectedIndex);
-      selectOptionAndCleanUp(options[selectedIndex]);
+      selectOptionAndCleanUp(options[selectedIndex]!);
     }
   });
 

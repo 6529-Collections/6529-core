@@ -7,8 +7,8 @@ import CircleLoader, {
   CircleLoaderSize,
 } from "@/components/distribution-plan-tool/common/CircleLoader";
 import GroupCreateIdentitiesSelect from "@/components/groups/page/create/config/identities/select/GroupCreateIdentitiesSelect";
-import { CommunityMemberMinimal } from "@/entities/IProfile";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { CommunityMemberMinimal } from "@/entities/IProfile";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { navigateToDirectMessage } from "@/helpers/navigation.helpers";
 import { createDirectMessageWave } from "@/helpers/waves/waves.helpers";
@@ -24,7 +24,7 @@ export default function CreateDirectMessage({
 }: {
   readonly profile: ApiIdentity;
   readonly onBack: () => void;
-  readonly onSuccess?: () => void;
+  readonly onSuccess?: (() => void) | undefined;
 }) {
   const [isCreating, setIsCreating] = useState(false);
   const router = useRouter();
@@ -108,7 +108,8 @@ export default function CreateDirectMessage({
     tw-bg-primary-500 tw-text-white tw-border-primary-500 
     hover:tw-bg-primary-600 hover:tw-border-primary-600
     focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-600
-    disabled:tw-bg-gray-300 disabled:tw-text-gray-500 disabled:tw-border-gray-300 disabled:hover:tw-bg-gray-300 disabled:tw-cursor-not-allowed">
+    disabled:tw-bg-gray-300 disabled:tw-text-gray-500 disabled:tw-border-gray-300 disabled:hover:tw-bg-gray-300 disabled:tw-cursor-not-allowed"
+        >
           {isCreating ? (
             <CircleLoader size={CircleLoaderSize.MEDIUM} />
           ) : (

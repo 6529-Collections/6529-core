@@ -1,14 +1,14 @@
 
 import { LeaderboardFocus } from "@/enums";
 import CommunityNerdPageClient from "./page.client";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 
 
 export async function generateMetadata({
   params,
 }: {
-  readonly params: Promise<{ focus?: string }>;
+  readonly params: Promise<{ focus?: string | undefined }>;
 }): Promise<Metadata> {
   const { focus } = await params;
   const focusParam =
@@ -25,7 +25,7 @@ export async function generateMetadata({
 export default async function CommunityNerdPage({
   params,
 }: {
-  readonly params: Promise<{ focus?: string }>;
+  readonly params: Promise<{ focus?: string | undefined }>;
 }) {
   const { focus } = await params;
   const focusParam =

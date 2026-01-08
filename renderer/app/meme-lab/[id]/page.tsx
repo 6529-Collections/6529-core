@@ -3,7 +3,7 @@ import styles from "@/styles/Home.module.scss";
 import MemeLabPageComponent from "@/components/memelab/MemeLabPage";
 import { getSharedAppServerSideProps } from "@/components/the-memes/MemeShared";
 import { MEMELAB_CONTRACT } from "@/constants";
-import { Metadata } from "next";
+import type { Metadata } from "next";
 
 export default async function MemeLabPage({
   params,
@@ -12,7 +12,7 @@ export default async function MemeLabPage({
 }) {
   const { id } = await params;
   return (
-    <main className={styles.main}>
+    <main className={styles["main"]}>
       <MemeLabPageComponent nftId={id} />
     </main>
   );

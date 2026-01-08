@@ -1,7 +1,7 @@
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { ActiveDropState } from "@/types/dropInteractionTypes";
-import { DropInteractionParams, DropLocation } from "../Drop";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { DropInteractionParams, DropLocation } from "../Drop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import React from "react";
 import DefaultParticipationDrop from "./DefaultParticipationDrop";
 import MemeParticipationDrop from "@/components/memes/drops/MemeParticipationDrop";
@@ -16,8 +16,8 @@ interface ParticipationDropProps {
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuote: (param: DropInteractionParams) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
-  readonly onDropContentClick?: (drop: ExtendedDrop) => void;
-  readonly parentContainerRef?: React.RefObject<HTMLElement | null>;
+  readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
+  readonly parentContainerRef?: React.RefObject<HTMLElement | null> | undefined;
 }
 
 export default function ParticipationDrop(props: ParticipationDropProps) {

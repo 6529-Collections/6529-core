@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { ApiDropPart } from "@/generated/models/ApiDropPart";
+import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import WaveDropPartContentMedias from "./WaveDropPartContentMedias";
-import { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
-import { ReferencedNft } from "@/entities/IDrop";
-import { ApiWaveMin } from "@/generated/models/ApiWaveMin";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ReferencedNft } from "@/entities/IDrop";
+import type { ApiWaveMin } from "@/generated/models/ApiWaveMin";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import WaveDropPartContentMarkdown from "./WaveDropPartContentMarkdown";
 import { ImageScale } from "@/helpers/image.helpers";
 
@@ -21,13 +21,13 @@ interface WaveDropPartContentProps {
   readonly activePartIndex: number;
   readonly setActivePartIndex: (index: number) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
-  readonly isEditing?: boolean;
-  readonly isSaving?: boolean;
-  readonly onSave?: (newContent: string) => void;
-  readonly onCancel?: () => void;
-  readonly drop?: ApiDrop;
-  readonly isCompetitionDrop?: boolean;
-  readonly mediaImageScale?: ImageScale;
+  readonly isEditing?: boolean | undefined;
+  readonly isSaving?: boolean | undefined;
+  readonly onSave?: ((newContent: string) => void) | undefined;
+  readonly onCancel?: (() => void) | undefined;
+  readonly drop?: ApiDrop | undefined;
+  readonly isCompetitionDrop?: boolean | undefined;
+  readonly mediaImageScale?: ImageScale | undefined;
 }
 
 const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
@@ -78,7 +78,8 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
           e.stopPropagation();
           onClick();
         }}
-        aria-label={`${isPrevious ? "Previous" : "Next"} part`}>
+        aria-label={`${isPrevious ? "Previous" : "Next"} part`}
+      >
         <svg
           className="tw-size-5 sm:tw-size-4 tw-flex-shrink-0"
           xmlns="http://www.w3.org/2000/svg"
@@ -86,7 +87,8 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
           aria-hidden="true"
           viewBox="0 0 24 24"
           strokeWidth="2"
-          stroke="currentColor">
+          stroke="currentColor"
+        >
           <path
             strokeLinecap="round"
             strokeLinejoin="round"

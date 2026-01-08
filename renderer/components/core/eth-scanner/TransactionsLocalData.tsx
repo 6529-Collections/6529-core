@@ -71,8 +71,8 @@ export default function TransactionsLocalData() {
 
   return (
     <div className="tw-mt-6 tw-p-4">
-      <div className="tw-mb-6 tw-flex tw-flex-wrap tw-gap-4 tw-items-center tw-justify-between">
-        <div className="tw-flex tw-flex-wrap tw-gap-4 tw-items-center">
+      <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-4">
+        <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-4">
           <div className="tw-flex tw-items-center tw-gap-2">
             <span>Start Date:</span>
             <input
@@ -94,7 +94,7 @@ export default function TransactionsLocalData() {
                     : undefined
                 )
               }
-              className="tw-text-black tw-border tw-border-gray-300 tw-rounded tw-px-3 tw-py-2 tw-w-fit"
+              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
               placeholder="Start Date"
             />
           </div>
@@ -121,7 +121,7 @@ export default function TransactionsLocalData() {
                     : undefined
                 )
               }
-              className="tw-text-black tw-border tw-border-gray-300 tw-rounded tw-px-3 tw-py-2 tw-w-fit"
+              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
               placeholder="End Date"
             />
           </div>
@@ -132,7 +132,8 @@ export default function TransactionsLocalData() {
               onChange={(e) =>
                 updateQueryParams("limit", Number(e.target.value))
               }
-              className="tw-text-black tw-border tw-border-gray-300 tw-rounded tw-px-3 tw-py-2 tw-w-fit">
+              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
+            >
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={50}>50</option>
@@ -144,7 +145,8 @@ export default function TransactionsLocalData() {
               onChange={(e) =>
                 updateQueryParams("contractAddress", e.target.value)
               }
-              className="tw-text-black tw-border tw-border-gray-300 tw-rounded tw-px-3 tw-py-2 tw-w-fit">
+              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
+            >
               <option value={""}>All Contracts</option>
               <option value={MEMES_CONTRACT}>The Memes</option>
               <option value={GRADIENT_CONTRACT}>6529 Gradient</option>
@@ -159,8 +161,9 @@ export default function TransactionsLocalData() {
                 data-tooltip-id="clear-filters-tooltip"
                 onClick={() => {
                   setQueryParams(initialQueryParams);
-                }}>
-                <FontAwesomeIcon icon={faXmark} className="tw-w-4 tw-h-4" />
+                }}
+              >
+                <FontAwesomeIcon icon={faXmark} className="tw-h-4 tw-w-4" />
               </Button>
               <Tooltip
                 id="clear-filters-tooltip"
@@ -168,7 +171,8 @@ export default function TransactionsLocalData() {
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
-                }}>
+                }}
+              >
                 Clear Filters
               </Tooltip>
             </>
@@ -178,8 +182,9 @@ export default function TransactionsLocalData() {
           <Button
             variant="light"
             data-tooltip-id="refresh-results-tooltip"
-            onClick={fetchTransactions}>
-            <FontAwesomeIcon icon={faRefresh} className="tw-w-4 tw-h-4" />
+            onClick={fetchTransactions}
+          >
+            <FontAwesomeIcon icon={faRefresh} className="tw-h-4 tw-w-4" />
           </Button>
           <Tooltip
             id="refresh-results-tooltip"
@@ -187,13 +192,14 @@ export default function TransactionsLocalData() {
               backgroundColor: "#1F2937",
               color: "white",
               padding: "4px 8px",
-            }}>
+            }}
+          >
             Refresh Results
           </Tooltip>
         </div>
       </div>
 
-      <div className="tw-mb-6 tw-flex tw-flex-wrap tw-gap-4 tw-items-center">
+      <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-center tw-gap-4">
         <div className="tw-text-xl tw-font-semibold">
           Total Transactions:{" "}
           {isLoading ? <DotLoader /> : transactions?.total.toLocaleString()}
@@ -202,7 +208,7 @@ export default function TransactionsLocalData() {
 
       {/* Transactions Table */}
       <div className="tw-overflow-x-auto">
-        <Table bordered={false} className={styles.transactionsTable}>
+        <Table bordered={false} className={styles["transactionsTable"]}>
           <tbody>
             {transactions?.data.map((transaction) => (
               <LatestActivityRow

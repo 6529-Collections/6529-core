@@ -6,7 +6,7 @@ import {
   MenuOption,
   useBasicTypeaheadTriggerMatch,
 } from "@lexical/react/LexicalTypeaheadMenuPlugin";
-import { TextNode } from "lexical";
+import type { TextNode } from "lexical";
 import {
   forwardRef,
   useCallback,
@@ -15,14 +15,13 @@ import {
   useMemo,
   useState,
 } from "react";
-import * as React from "react";
 import * as ReactDOM from "react-dom";
 
 import { $createHashtagNode } from "@/components/drops/create/lexical/nodes/HashtagNode";
 import HashtagsTypeaheadMenu from "./HashtagsTypeaheadMenu";
 import { isEthereumAddress } from "@/helpers/AllowlistToolHelpers";
-import { ReferencedNft } from "@/entities/IDrop";
-import { ReservoirTokensResponseTokenElement } from "@/entities/IReservoir";
+import type { ReferencedNft } from "@/entities/IDrop";
+import type { ReservoirTokensResponseTokenElement } from "@/entities/IReservoir";
 import { isInCodeContext } from "@/components/drops/create/lexical/utils/codeContextDetection";
 import { getPossibleQueryMatch } from "./getPossibleQueryMatch";
 
@@ -36,7 +35,7 @@ function useHashtagLookupService(hashtagString: string | null) {
 
   const getResults = async (query: string): Promise<void> => {
     const [contract, tokenId] = query.split(":");
-    const isContract = isEthereumAddress(contract);
+    const isContract = isEthereumAddress(contract!);
     const isTokenId = !isNaN(Number(tokenId));
     if (!isContract || !isTokenId) {
       setResults([]);

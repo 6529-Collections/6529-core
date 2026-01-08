@@ -1,11 +1,11 @@
 "use client";
 
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
 import { commonApiFetch } from "@/services/api/common-api";
-import { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
+import type { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
 import { useEffect, useState } from "react";
-import { ApiIdentityAndSubscriptionActions } from "@/generated/models/ApiIdentityAndSubscriptionActions";
+import type { ApiIdentityAndSubscriptionActions } from "@/generated/models/ApiIdentityAndSubscriptionActions";
 import FollowersListWrapper from "@/components/utils/followers/FollowersListWrapper";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 
@@ -45,7 +45,7 @@ export default function UserPageFollowers({
         ...query,
       };
       if (pageParam) {
-        params.page = `${pageParam}`;
+        params["page"] = `${pageParam}`;
       }
       return await commonApiFetch<ApiIncomingIdentitySubscriptionsPage>({
         endpoint: `/identity-subscriptions/incoming/IDENTITY/${profile.id}`,

@@ -1,5 +1,5 @@
 import React from "react";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { BrainView } from "../BrainMobile";
 import { useWaveTimers } from "@/hooks/useWaveTimers";
 
@@ -9,7 +9,7 @@ interface MyStreamWaveTabsLeaderboardProps {
   readonly wave: ApiWave;
   readonly activeView: BrainView;
   readonly onViewChange: (view: BrainView) => void;
-  readonly registerTabRef?: RegisterTabRef;
+  readonly registerTabRef?: RegisterTabRef | undefined;
 }
 
 const MyStreamWaveTabsLeaderboard: React.FC<

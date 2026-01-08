@@ -1,6 +1,6 @@
 import DesktopIcon from "@/components/common/icons/DesktopIcon";
 import Squares2X2Icon from "@/components/common/icons/Squares2X2Icon";
-import { SidebarSection } from "@/components/navigation/navTypes";
+import type { SidebarSection } from "@/components/navigation/navTypes";
 import { AboutSection } from "@/enums";
 import {
   DocumentTextIcon,
@@ -118,7 +118,24 @@ export function useSidebarSections(
               { name: "API", href: "/tools/api" },
               { name: "EMMA", href: "/emma" },
               { name: "Block Finder", href: "/tools/block-finder" },
+            ],
+          },
+          {
+            name: "Open Data",
+            items: [
               { name: "Open Data", href: "/open-data" },
+              { name: "Network Metrics", href: "/open-data/network-metrics" },
+              ...(!isIos || country?.toUpperCase() === "US"
+                ? [
+                    {
+                      name: "Meme Subscriptions",
+                      href: "/open-data/meme-subscriptions",
+                    },
+                  ]
+                : []),
+              { name: "Rememes", href: "/open-data/rememes" },
+              { name: "Team", href: "/open-data/team" },
+              { name: "Royalties", href: "/open-data/royalties" },
             ],
           },
         ],
@@ -212,8 +229,8 @@ export interface SidebarPageEntry {
   name: string;
   href: string;
   section: string;
-  subsection?: string;
-  icon?: ComponentType<{ className?: string }>;
+  subsection?: string | undefined;
+  icon?: ComponentType<{ className?: string | undefined }> | undefined;
 }
 
 export function mapSidebarSectionsToPages(

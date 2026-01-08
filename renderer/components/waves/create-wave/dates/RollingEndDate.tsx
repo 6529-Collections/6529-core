@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCalendarAlt, faInfoCircle } from "@fortawesome/free-solid-svg-icons";
 import CommonCalendar from "@/components/utils/calendar/CommonCalendar";
-import { CreateWaveDatesConfig } from "@/types/waves.types";
+import type { CreateWaveDatesConfig } from "@/types/waves.types";
 import DateAccordion from "@/components/common/DateAccordion";
 import TimePicker from "@/components/common/TimePicker";
 import TooltipIconButton from "@/components/common/TooltipIconButton";
@@ -19,7 +19,6 @@ interface RollingEndDateProps {
   readonly dates: CreateWaveDatesConfig;
   readonly setDates: (dates: CreateWaveDatesConfig) => void;
   readonly isRollingMode: boolean;
-  readonly setIsRollingMode: (isRolling: boolean) => void;
   readonly isExpanded: boolean;
   readonly setIsExpanded: (expanded: boolean) => void;
 }
@@ -28,7 +27,6 @@ export default function RollingEndDate({
   dates,
   setDates,
   isRollingMode,
-  setIsRollingMode,
   isExpanded,
   setIsExpanded,
 }: RollingEndDateProps) {
@@ -51,7 +49,7 @@ export default function RollingEndDate({
       dates.firstDecisionTime,
       dates.subsequentDecisions
     );
-    return decisionTimes[decisionTimes.length - 1];
+    return decisionTimes[decisionTimes.length - 1]!;
   };
 
   // Update local state when dates change

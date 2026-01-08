@@ -9,8 +9,8 @@ import { printMemeReferences } from "@/components/rememes/RememePage";
 import { RememeSort } from "@/components/rememes/Rememes";
 import { publicEnv } from "@/config/env";
 import { OPENSEA_STORE_FRONT_CONTRACT } from "@/constants";
-import { DBResponse } from "@/entities/IDBResponse";
-import { MemesExtendedData, NFT, Rememe } from "@/entities/INFT";
+import type { DBResponse } from "@/entities/IDBResponse";
+import type { MemesExtendedData, NFT, Rememe } from "@/entities/INFT";
 import {
   areEqualAddresses,
   formatAddress,
@@ -71,7 +71,7 @@ export function MemePageLiveRightMenu(props: {
           </Row>
           <Row>
             <Col>
-              <Table bordered={false} className={styles.hodlersTableLive}>
+              <Table bordered={false} className={styles["hodlersTableLive"]}>
                 <tbody>
                   <tr>
                     <td>Edition Size</td>
@@ -352,7 +352,7 @@ export function MemePageLiveSubMenu(props: {
             {showRememesSort && (
               <span className="d-flex align-items-center gap-2 pt-2">
                 <Dropdown
-                  className={styles.rememesSortDropdown}
+                  className={styles["rememesSortDropdown"]}
                   drop={"down-centered"}>
                   <Dropdown.Toggle>
                     Sort: {selectedRememeSorting}
@@ -375,7 +375,7 @@ export function MemePageLiveSubMenu(props: {
                   <>
                     <FontAwesomeIcon
                       icon={faRefresh}
-                      className={styles.buttonIcon}
+                      className={styles["buttonIcon"]}
                       onClick={() => {
                         if (props.nft) {
                           fetchRememes(props.nft.id);

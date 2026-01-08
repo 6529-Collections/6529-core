@@ -1,9 +1,10 @@
 "use client";
 
 import React, { useRef, useContext, type ReactNode } from "react";
-import WebUnifiedWavesListWaves, {
+import type {
   WebUnifiedWavesListWavesHandle,
 } from "./WebUnifiedWavesListWaves";
+import WebUnifiedWavesListWaves from "./WebUnifiedWavesListWaves";
 import { UnifiedWavesListLoader } from "../waves/UnifiedWavesListLoader";
 import UnifiedWavesListEmpty from "../waves/UnifiedWavesListEmpty";
 import PrimaryButton from "../../../utils/button/PrimaryButton";
@@ -22,7 +23,7 @@ import useCreateModalState from "@/hooks/useCreateModalState";
 
 interface WebDirectMessagesListProps {
   readonly scrollContainerRef: React.RefObject<HTMLElement | null>;
-  readonly isCollapsed?: boolean;
+  readonly isCollapsed?: boolean | undefined;
 }
 
 const WebDirectMessagesList: React.FC<WebDirectMessagesListProps> = ({
@@ -35,8 +36,8 @@ const WebDirectMessagesList: React.FC<WebDirectMessagesListProps> = ({
     useCreateModalState();
 
   const globalScope = globalThis as typeof globalThis & {
-    window?: Window;
-    navigator?: Navigator;
+    window?: Window | undefined;
+    navigator?: Navigator | undefined;
   };
   const browserWindow = globalScope.window;
   const browserNavigator = globalScope.navigator;

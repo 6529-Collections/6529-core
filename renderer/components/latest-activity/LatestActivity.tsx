@@ -1,8 +1,8 @@
 "use client";
 
-import { NFT } from "@/entities/INFT";
-import { NextGenCollection } from "@/entities/INextgen";
-import { Transaction } from "@/entities/ITransaction";
+import type { NFT } from "@/entities/INFT";
+import type { NextGenCollection } from "@/entities/INextgen";
+import type { Transaction } from "@/entities/ITransaction";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import { useActivityData } from "@/hooks/useActivityData";
 import { useActivityFilters } from "@/hooks/useActivityFilters";
@@ -17,12 +17,12 @@ import ActivityTable from "./ActivityTable";
 interface Props {
   page: number;
   pageSize: number;
-  showMore?: boolean;
+  showMore?: boolean | undefined;
   // Optional props for SSR
-  initialActivity?: Transaction[];
-  initialTotalResults?: number;
-  initialNfts?: NFT[];
-  initialNextgenCollections?: NextGenCollection[];
+  initialActivity?: Transaction[] | undefined;
+  initialTotalResults?: number | undefined;
+  initialNfts?: NFT[] | undefined;
+  initialNextgenCollections?: NextGenCollection[] | undefined;
 }
 
 export default function LatestActivity(props: Readonly<Props>) {

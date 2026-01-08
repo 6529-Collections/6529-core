@@ -6,7 +6,7 @@ import { truncateTextMiddle } from "@/helpers/AllowlistToolHelpers";
 import { useEffect, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import { useCopyToClipboard } from "react-use";
-import { CreateSnapshotSnapshot } from "../CreateSnapshots";
+import type { CreateSnapshotSnapshot } from "../CreateSnapshots";
 import CreateSnapshotTableRowDownload from "./CreateSnapshotTableRowDownload";
 
 export default function CreateSnapshotTableRow({
@@ -14,7 +14,7 @@ export default function CreateSnapshotTableRow({
 }: {
   snapshot: CreateSnapshotSnapshot;
 }) {
-  const [copyState, copyToClipboard] = useCopyToClipboard();
+  const [_, copyToClipboard] = useCopyToClipboard();
   const getContractTruncated = () => {
     if (!snapshot.contract) {
       return "";

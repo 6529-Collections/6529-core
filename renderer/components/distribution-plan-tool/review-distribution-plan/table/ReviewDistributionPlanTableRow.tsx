@@ -1,6 +1,6 @@
 "use client";
 
-import { AllowlistResult } from "@/components/allowlist-tool/allowlist-tool.types";
+import type { AllowlistResult } from "@/components/allowlist-tool/allowlist-tool.types";
 import DistributionPlanTableRowWrapper from "@/components/distribution-plan-tool/common/DistributionPlanTableRowWrapper";
 import RoundedCsvIconButton from "@/components/distribution-plan-tool/common/RoundedCsvIconButton";
 import RoundedJsonIconButton from "@/components/distribution-plan-tool/common/RoundedJsonIconButton";
@@ -10,12 +10,13 @@ import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import { distributionPlanApiFetch } from "@/services/distribution-plan-api";
 import { useContext, useEffect, useState } from "react";
 import { PUBLIC_SUBSCRIPTIONS_PHASE_ID } from "./constants";
-import {
-  FetchResultsType,
+import type {
   FullResultWallet,
   ReviewDistributionPlanTableItem,
-  ReviewDistributionPlanTableItemType,
-  ReviewDistributionPlanTablePhase,
+  ReviewDistributionPlanTablePhase} from "./ReviewDistributionPlanTable";
+import {
+  FetchResultsType,
+  ReviewDistributionPlanTableItemType
 } from "./ReviewDistributionPlanTable";
 import { SubscriptionLinks } from "./ReviewDistributionPlanTableSubscription";
 
@@ -83,7 +84,7 @@ export default function ReviewDistributionPlanTableRow({
   const downloadCsv = (results: AllowlistResult[]) => {
     const fullResult = getFullResults(results);
     const csv = [
-      Object.keys(fullResult[0]).join(","),
+      Object.keys(fullResult[0]!).join(","),
       ...fullResult.map((item) => Object.values(item).join(",")),
     ].join("\n");
 
@@ -111,7 +112,7 @@ export default function ReviewDistributionPlanTableRow({
       {}
     );
     return Object.keys(merged).map<{ address: string; value: number }>(
-      (address) => ({ address, value: merged[address] })
+      (address) => ({ address, value: merged[address]! })
     );
   };
 
@@ -124,7 +125,7 @@ export default function ReviewDistributionPlanTableRow({
       value: row.amount,
     }));
     const csv = [
-      Object.keys(fullResult[0]).join(","),
+      Object.keys(fullResult[0]!).join(","),
       ...mergeAddressValues(fullResult).map((item) =>
         Object.values(item).join(",")
       ),

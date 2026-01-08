@@ -1,8 +1,8 @@
-import styles from "./SeedWallet.module.scss";
-import { Container, Row, Col } from "react-bootstrap";
 import { ISeedWallet } from "@/shared/types";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
+import { Col, Container, Row } from "react-bootstrap";
+import styles from "./SeedWallet.module.scss";
 
 export default function SeedWalletCard(
   props: Readonly<{
@@ -12,12 +12,13 @@ export default function SeedWalletCard(
   return (
     <Link
       href={`/core/core-wallets/${props.wallet.address}`}
-      className="decoration-none">
-      <Container className={styles.seedWalletCard}>
+      className="decoration-none"
+    >
+      <Container className={styles["seedWalletCard"]}>
         <Row>
           <Col className="text-break d-flex align-items-center gap-2">
             <Image
-              className={styles.seedWalletAvatar}
+              className={styles["seedWalletAvatar"]}
               fetchPriority="high"
               loading="eager"
               height={36}

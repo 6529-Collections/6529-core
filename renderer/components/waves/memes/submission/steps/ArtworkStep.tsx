@@ -1,12 +1,13 @@
-"use client"
+"use client";
 
 import React, { useCallback, useMemo } from "react";
 import PrimaryButton from "@/components/utils/button/PrimaryButton";
-import { TraitsData } from "../types/TraitsData";
+import type { TraitsData } from "../types/TraitsData";
 import MemesArtSubmissionFile from "@/components/waves/memes/MemesArtSubmissionFile";
 import ArtworkDetails from "../details/ArtworkDetails";
 import MemesArtSubmissionTraits from "@/components/waves/memes/MemesArtSubmissionTraits";
-import SubmissionProgress, { SubmissionPhase } from "../ui/SubmissionProgress";
+import type { SubmissionPhase } from "../ui/SubmissionProgress";
+import SubmissionProgress from "../ui/SubmissionProgress";
 import { useTraitsValidation } from "../validation";
 import type {
   InteractiveMediaMimeType,
@@ -145,19 +146,19 @@ interface ArtworkStepProps {
   readonly onExternalMimeTypeChange: (value: InteractiveMediaMimeType) => void;
   readonly onClearExternalMedia: () => void;
   readonly onSubmit: () => void;
-  readonly onCancel?: () => void; // Added cancel handler prop
+  readonly onCancel?: (() => void) | undefined; // Added cancel handler prop
   readonly updateTraitField: <K extends keyof TraitsData>(
     field: K,
     value: TraitsData[K]
   ) => void;
   readonly setTraits: (traits: Partial<TraitsData>) => void;
-  readonly isSubmitting?: boolean;
-  readonly submissionPhase?: SubmissionPhase;
-  readonly initialTraits?: TraitsData;
+  readonly isSubmitting?: boolean | undefined;
+  readonly submissionPhase?: SubmissionPhase | undefined;
+  readonly initialTraits?: TraitsData | undefined;
   // Additional props for SubmissionProgress
-  readonly uploadProgress?: number;
-  readonly fileInfo?: { name: string; size: number } | null;
-  readonly submissionError?: string;
+  readonly uploadProgress?: number | undefined;
+  readonly fileInfo?: { name: string; size: number } | null | undefined;
+  readonly submissionError?: string | undefined;
 }
 
 /**
@@ -281,7 +282,7 @@ const ArtworkStep: React.FC<ArtworkStepProps> = ({
       case "error":
         return "Try Again";
       default:
-        return "Submit to Memes";
+        return "Continue";
     }
   };
 

@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useContext, useMemo } from "react";
-import { ApiWave } from "@/generated/models/ApiWave";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { AuthContext } from "@/components/auth/Auth";
 import { WaveLeaderboardGalleryItem } from "./WaveLeaderboardGalleryItem";
+import type {
+  WaveDropsLeaderboardSort} from "@/hooks/useWaveDropsLeaderboard";
 import {
-  WaveDropsLeaderboardSort,
   useWaveDropsLeaderboard,
 } from "@/hooks/useWaveDropsLeaderboard";
 
@@ -36,7 +37,7 @@ export const WaveLeaderboardGallery: React.FC<WaveLeaderboardGalleryProps> = ({
   React.useEffect(() => {
     if (previousSort !== sort) {
       setPreviousSort(sort);
-      setAnimationKey(prev => prev + 1);
+      setAnimationKey((prev) => prev + 1);
     }
   }, [sort, previousSort]);
 
@@ -44,9 +45,9 @@ export const WaveLeaderboardGallery: React.FC<WaveLeaderboardGalleryProps> = ({
 
   // Filter drops to only include those with media
   const dropsWithMedia = useMemo(() => {
-    return drops?.filter(
-      (drop) => drop.parts?.[0]?.media?.length > 0
-    ) || [];
+    return (
+      drops?.filter((drop) => (drop.parts?.[0]?.media?.length ?? 0) > 0) || []
+    );
   }, [drops]);
 
   if (isFetching && dropsWithMedia.length === 0) {
@@ -83,7 +84,8 @@ export const WaveLeaderboardGallery: React.FC<WaveLeaderboardGalleryProps> = ({
             <button
               onClick={() => fetchNextPage()}
               disabled={isFetchingNextPage}
-              className="tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-transition tw-bg-iron-900 tw-text-iron-400 tw-border tw-border-solid tw-border-iron-800 desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-300">
+              className="tw-px-4 tw-py-2 tw-rounded-lg tw-text-sm tw-transition tw-bg-iron-900 tw-text-iron-400 tw-border tw-border-solid tw-border-iron-800 desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-300"
+            >
               {isFetchingNextPage ? "Loading more..." : "Load more drops"}
             </button>
           </div>

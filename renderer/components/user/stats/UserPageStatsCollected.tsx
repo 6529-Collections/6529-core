@@ -1,5 +1,5 @@
-import { OwnerBalance, OwnerBalanceMemes } from "@/entities/IBalances";
-import { MemeSeason } from "@/entities/ISeason";
+import type { OwnerBalance, OwnerBalanceMemes } from "@/entities/IBalances";
+import type { MemeSeason } from "@/entities/ISeason";
 import { numberWithCommas } from "@/helpers/Helpers";
 import { Fragment } from "react";
 import { Accordion, Col, Container, Row, Table } from "react-bootstrap";
@@ -53,14 +53,14 @@ function UserPageStatsCollectedTotals({
   return (
     <Accordion>
       <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button className={styles.collectedAccordionButton}>
+        <Accordion.Button className={styles["collectedAccordionButton"]}>
           <b>Overview</b>
         </Accordion.Button>
-        <Accordion.Body className={styles.collectedAccordionBody}>
+        <Accordion.Body className={styles["collectedAccordionBody"]}>
           <Container>
-            <Row className={`pt-2 pb-2 ${styles.scrollContainer}`}>
+            <Row className={`pt-2 pb-2 ${styles["scrollContainer"]}`}>
               <Col>
-                <Table className={styles.collectedAccordionTable}>
+                <Table className={styles["collectedAccordionTable"]}>
                   <UserPageStatsTableHead />
                   <tbody>
                     <UserPageStatsTableHr span={6} />
@@ -241,15 +241,15 @@ function UserPageStatsCollectedMemes({
   return (
     <Accordion>
       <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button className={styles.collectedAccordionButton}>
+        <Accordion.Button className={styles["collectedAccordionButton"]}>
           <b>Memes Breakdown By Season</b>
         </Accordion.Button>
-        <Accordion.Body className={styles.collectedAccordionBody}>
+        <Accordion.Body className={styles["collectedAccordionBody"]}>
           <Container>
-            <Row className={`pt-2 pb-2 ${styles.scrollContainer}`}>
+            <Row className={`pt-2 pb-2 ${styles["scrollContainer"]}`}>
               <Col>
                 {balanceMemes && (
-                  <Table className={styles.collectedAccordionTable}>
+                  <Table className={styles["collectedAccordionTable"]}>
                     <thead>
                       <tr>
                         <th colSpan={2}></th>

@@ -1,6 +1,6 @@
 import { render, screen } from '@testing-library/react';
 import CommunityMembersTableRow from '@/components/community/members-table/CommunityMembersTableRow';
-import { CommunityMemberOverview } from '@/entities/IProfile';
+import type { CommunityMemberOverview } from '@/entities/IProfile';
 
 jest.mock('@/helpers/Helpers', () => ({
   formatNumberWithCommasOrDash: (n: number) => `#${n}`,
@@ -62,6 +62,6 @@ describe('CommunityMembersTableRow', () => {
       </table>
     );
     const rows = screen.getAllByRole('row');
-    expect(rows[0].querySelector('.tw-opacity-50')).not.toBeNull();
+    expect(rows[0]?.querySelector('.tw-opacity-50')).not.toBeNull();
   });
 });

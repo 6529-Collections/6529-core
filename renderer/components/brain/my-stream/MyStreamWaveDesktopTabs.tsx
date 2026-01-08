@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { TabToggle } from "@/components/common/TabToggle";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { MyStreamWaveTab } from "@/types/waves.types";
 import { useContentTab, WaveVotingState } from "../ContentTabContext";
 import { useWave } from "@/hooks/useWave";
@@ -187,7 +187,7 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
       [MyStreamWaveTab.MY_VOTES, MyStreamWaveTab.FAQ].includes(activeTab) &&
       options.length > 0
     ) {
-      setActiveTab(options[0].key);
+      setActiveTab(options[0]?.key!);
     }
   }, [isMemesWave, activeTab, options, setActiveTab]);
 

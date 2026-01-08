@@ -3,8 +3,8 @@
 import { publicEnv } from "@/config/env";
 import { useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
-import { DBResponse } from "@/entities/IDBResponse";
-import { NextGenCollection } from "@/entities/INextgen";
+import type { DBResponse } from "@/entities/IDBResponse";
+import type { NextGenCollection } from "@/entities/INextgen";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { fetchUrl } from "@/services/6529api";
 import NextGenCollectionArtist from "./collectionParts/NextGenCollectionArtist";
@@ -51,18 +51,12 @@ export default function NextGenArtists() {
         </Col>
       </Row>
       {artistCollections.map(
-        (
-          ac: {
-            address: string;
-            collections: NextGenCollection[];
-          },
-          index: number
-        ) => {
+        (ac: { address: string; collections: NextGenCollection[] }) => {
           return (
             <Row key={`nextgen-artist-${ac.address}`}>
               <Col>
                 <NextGenCollectionArtist
-                  collection={ac.collections[0]}
+                  collection={ac.collections[0]!}
                   link_collections={ac.collections}
                 />
               </Col>

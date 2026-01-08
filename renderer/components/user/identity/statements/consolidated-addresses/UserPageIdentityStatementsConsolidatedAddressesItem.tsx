@@ -7,9 +7,9 @@ import EtherscanIcon from "@/components/user/utils/icons/EtherscanIcon";
 import OpenseaIcon from "@/components/user/utils/icons/OpenseaIcon";
 import CopyIcon from "@/components/utils/icons/CopyIcon";
 import {
-    DELEGATION_ALL_ADDRESS,
-    DELEGATION_CONTRACT,
-    NEVER_DATE,
+  DELEGATION_ALL_ADDRESS,
+  DELEGATION_CONTRACT,
+  NEVER_DATE,
 } from "@/constants";
 import { ApiWallet } from "@/generated/models/ApiWallet";
 import { openInExternalBrowser } from "@/helpers";
@@ -89,7 +89,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               )}
               target="_blank"
               rel="noopener noreferrer"
-              className="tw-text-primary-400 tw-underline">
+              className="tw-text-primary-400 tw-underline"
+            >
               View Transaction
             </a>
           )}
@@ -151,7 +152,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
           aria-label="Go to Opensea"
           className="tw-bg-transparent tw-border-none tw-p-0"
           data-tooltip-id={`opensea-tooltip-${address.wallet}`}
-          data-tooltip-content={isTouchScreen ? undefined : "Opensea"}>
+          {...(isTouchScreen ? null : { "data-tooltip-content": "Opensea" })}
+        >
           <div className="tw-flex-shrink-0 tw-w-6 tw-h-6 sm:tw-w-5 sm:tw-h-5 hover:tw-scale-110 tw-transition tw-duration-300 tw-ease-out">
             <OpenseaIcon />
           </div>
@@ -173,7 +175,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
           aria-label="Go to Etherscan"
           className="tw-bg-transparent tw-border-none tw-p-0"
           data-tooltip-id={`etherscan-tooltip-${address.wallet}`}
-          data-tooltip-content={isTouchScreen ? undefined : "Etherscan"}>
+          {...(!isTouchScreen ? { "data-tooltip-content": "Etherscan" } : null)}
+        >
           <div className="tw-flex-shrink-0 tw-w-6 tw-h-6 sm:tw-w-5 sm:tw-h-5 hover:tw-scale-110 tw-transition tw-duration-300 tw-ease-out">
             <EtherscanIcon />
           </div>
@@ -209,7 +212,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               viewBox="0 0 24 24"
               fill="none"
               aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg">
+              xmlns="http://www.w3.org/2000/svg"
+            >
               <path
                 d="M20 6L9 17L4 12"
                 stroke="#3CCB7F"
@@ -221,7 +225,6 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
             <UserPageIdentityStatementsConsolidatedAddressesItemPrimary
               isPrimary={isPrimary}
               canEdit={canEdit}
-              address={address}
               assignPrimary={assignPrimary}
               isAssigningPrimary={assigningPrimary}
             />
@@ -234,7 +237,8 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
               } tw-ml-2 tw-p-1.5 tw-bg-transparent tw-cursor-pointer tw-text-xs tw-font-semibold tw-text-iron-400 hover:tw-text-iron-200 tw-border-0 focus:tw-outline-none tw-transition tw-duration-300 tw-ease-out`}
               onClick={handleCopy}
               data-tooltip-id={`copy-tooltip-${address.wallet}`}
-              data-tooltip-content={isTouchScreen ? undefined : "Copy"}>
+              {...(!isTouchScreen ? { "data-tooltip-content": "Copy" } : null)}
+            >
               <CopyIcon />
             </button>
             {!isTouchScreen && (

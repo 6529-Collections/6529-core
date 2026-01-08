@@ -6,7 +6,7 @@ import { getWaveRoute } from "@/helpers/navigation.helpers";
 import UserCICAndLevel, {
   UserCICAndLevelSize,
 } from "@/components/user/utils/UserCICAndLevel";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import WaveDropTime from "./time/WaveDropTime";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { ArtistSubmissionBadge } from "./ArtistSubmissionBadge";
@@ -22,7 +22,7 @@ interface WaveDropHeaderProps {
   readonly currentPartIndex: number;
   readonly partsCount: number;
   readonly showWaveInfo: boolean;
-  readonly badge?: React.ReactNode;
+  readonly badge?: React.ReactNode | undefined;
 }
 
 const WaveDropHeader: React.FC<WaveDropHeaderProps> = ({
@@ -106,7 +106,7 @@ const WaveDropHeader: React.FC<WaveDropHeaderProps> = ({
         {showWaveInfo && drop.wave && (
           (() => {
             const waveMeta = (drop.wave as unknown as {
-              chat?: { scope?: { group?: { is_direct_message?: boolean } } };
+              chat?: { scope?: { group?: { is_direct_message?: boolean | undefined } | undefined } | undefined } | undefined;
             })?.chat;
             const waveHref = getWaveRoute({
               waveId: drop.wave.id,

@@ -5,5 +5,5 @@ const DEVICE_ID_KEY = "stable_device_id";
  * otherwise generates a new one, stores it, and returns it.
  */
 export async function getStableDeviceId(): Promise<string> {
-  throw new Error("Not implemented");
+  throw new Error(`Not implemented (DEVICE_ID_KEY: ${DEVICE_ID_KEY})`);
 }

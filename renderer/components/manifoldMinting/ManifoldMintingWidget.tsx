@@ -15,14 +15,11 @@ import {
   getTransactionLink,
 } from "@/helpers/Helpers";
 import { Time } from "@/helpers/time";
-import {
-  ManifoldClaim,
-  ManifoldClaimStatus,
-  ManifoldPhase,
-} from "@/hooks/useManifoldClaim";
+import type { ManifoldClaim } from "@/hooks/useManifoldClaim";
+import { ManifoldClaimStatus, ManifoldPhase } from "@/hooks/useManifoldClaim";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import DotLoader from "../dotLoader/DotLoader";
-import { ManifoldMerkleProof } from "./manifold-types";
+import type { ManifoldMerkleProof } from "./manifold-types";
 import styles from "./ManifoldMinting.module.scss";
 import ManifoldMintingConnect from "./ManifoldMintingConnect";
 
@@ -69,7 +66,7 @@ export default function ManifoldMintingWidget(
             setMerkleProofs(data);
           });
         })
-        .catch((error) => {
+        .catch(() => {
           setIsError(true);
         })
         .finally(() => {
@@ -80,7 +77,7 @@ export default function ManifoldMintingWidget(
 
   function getReadContractsParams() {
     const params: any = [];
-    merkleProofs.map((mp, i) => {
+    merkleProofs.map((mp) => {
       params.push({
         address: props.proxy as `0x${string}`,
         abi: props.abi,
@@ -136,7 +133,7 @@ export default function ManifoldMintingWidget(
     const selectedMerkleProofs: ManifoldMerkleProof[] = [];
     for (let i = 0; i < merkleProofsMints.length; i++) {
       if (!merkleProofsMints[i]) {
-        selectedMerkleProofs.push(merkleProofs[i]);
+        selectedMerkleProofs.push(merkleProofs[i]!);
       }
       if (selectedMerkleProofs.length === mintCount) {
         break;
@@ -203,7 +200,6 @@ export default function ManifoldMintingWidget(
     setMintStatus(<></>);
     const value = getValue();
     const args = getMintArgs();
-    console.log("i am mint args", args);
     mintWrite.writeContract({
       address: props.proxy as `0x${string}`,
       abi: props.abi,
@@ -220,8 +216,8 @@ export default function ManifoldMintingWidget(
       const fullError = mintWrite.error.message;
       const resolvedError = fullError
         .split("Request Arguments")[0]
-        .split(".")[0]
-        .split("Contract Call")[0];
+        ?.split(".")[0]
+        ?.split("Contract Call")[0];
       if (!resolvedError || resolvedError.length < 5) {
         setMintError(fullError);
       } else {
@@ -235,9 +231,9 @@ export default function ManifoldMintingWidget(
       setMintStatus(<></>);
       setMintError(
         waitMintWrite.error.message
-          .split("Request Arguments")[0]
-          .split(".")[0]
-          .split("Contract Call")[0]
+          ?.split("Request Arguments")[0]
+          ?.split(".")[0]
+          ?.split("Contract Call")[0]!
       );
     }
   }, [waitMintWrite.error]);
@@ -247,7 +243,8 @@ export default function ManifoldMintingWidget(
       <a
         href={getTransactionLink(MANIFOLD_NETWORK.id, hash)}
         target="_blank"
-        rel="noopener noreferrer">
+        rel="noopener noreferrer"
+      >
         view trx
       </a>
     );
@@ -307,7 +304,8 @@ export default function ManifoldMintingWidget(
           height: "100%",
         }}
         value={mintCount}
-        onChange={(e) => setMintCount(Number.parseInt(e.target.value))}>
+        onChange={(e) => setMintCount(Number.parseInt(e.target.value))}
+      >
         <option value="" disabled>
           Select
         </option>
@@ -364,7 +362,8 @@ export default function ManifoldMintingWidget(
               style={{
                 padding: "0.6rem",
               }}
-              onClick={onMint}>
+              onClick={onMint}
+            >
               <b>{getButtonText()}</b>
             </button>
           </Col>
@@ -425,7 +424,7 @@ export default function ManifoldMintingWidget(
 
   function printTable(title: string, value: string | number) {
     return (
-      <Table className={styles.spotsTable}>
+      <Table className={styles["spotsTable"]}>
         <tbody>
           <tr>
             <td>{title}</td>
@@ -449,7 +448,8 @@ export default function ManifoldMintingWidget(
           className="btn btn-primary btn-block"
           style={{
             padding: "0.6rem",
-          }}>
+          }}
+        >
           <b>
             {props.claim.status === ManifoldClaimStatus.ENDED
               ? "ENDED"

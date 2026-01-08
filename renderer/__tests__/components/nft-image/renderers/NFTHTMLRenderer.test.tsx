@@ -1,6 +1,6 @@
 import NFTHTMLRenderer from "@/components/nft-image/renderers/NFTHTMLRenderer";
-import { BaseRendererProps } from "@/components/nft-image/types/renderer-props";
-import { BaseNFT } from "@/entities/INFT";
+import type { BaseRendererProps } from "@/components/nft-image/types/renderer-props";
+import type { BaseNFT } from "@/entities/INFT";
 import { render, screen } from "@testing-library/react";
 
 // Mock NFTImageBalance to match new interface
@@ -287,7 +287,7 @@ describe("NFTHTMLRenderer", () => {
 
   describe("Edge Cases and Error Handling", () => {
     it("crashes when metadata is undefined (IMPLEMENTATION BUG)", () => {
-      const nft = createMockNFT({ metadata: undefined });
+      const nft = createMockNFT({ ...(undefined !== undefined ? { metadata: undefined } : {}) });
       const props = createDefaultProps({ nft, id: "test-iframe" });
 
       // The getSrc function has a bug - it checks "metadata" in nft but doesn't check if metadata is null/undefined

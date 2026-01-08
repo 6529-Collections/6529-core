@@ -1,5 +1,6 @@
 "use client";
 
+import { NEXTGEN_CHAIN_ID } from "@/components/nextGen/nextgen_contracts";
 import { NEXTGEN_GENERATOR_BASE_URL } from "@/constants";
 import { NextGenToken } from "@/entities/INextgen";
 import { openInExternalBrowser } from "@/helpers";
@@ -8,7 +9,6 @@ import { numberWithCommas } from "@/helpers/Helpers";
 import { useState } from "react";
 import { Col, Container, Dropdown, Row } from "react-bootstrap";
 import { mainnet } from "wagmi/chains";
-import { NEXTGEN_CHAIN_ID } from "@/components/nextGen/nextgen_contracts";
 import styles from "./NextGenToken.module.scss";
 import NextGenTokenDownload, { Resolution } from "./NextGenTokenDownload";
 
@@ -117,7 +117,7 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
         <Col className="d-flex flex-wrap gap-2">
           <Dropdown
             drop={"down-centered"}
-            className={`${styles.customRenderDropdown} d-flex align-items-center gap-2`}>
+            className={`${styles["customRenderDropdown"]} d-flex align-items-center gap-2`}>
             <span className="font-color-h">Render Type:</span>
             <Dropdown.Toggle>{renderType}</Dropdown.Toggle>
             <Dropdown.Menu>
@@ -134,7 +134,7 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
           </Dropdown>
           <Dropdown
             drop={"down-centered"}
-            className={`${styles.customRenderDropdown} d-flex align-items-center gap-2`}>
+            className={`${styles["customRenderDropdown"]} d-flex align-items-center gap-2`}>
             <span className="font-color-h">Script Version:</span>
             <Dropdown.Toggle>{scriptVersion}</Dropdown.Toggle>
             <Dropdown.Menu>
@@ -151,7 +151,7 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
           </Dropdown>
           <Dropdown
             drop={"down-centered"}
-            className={`${styles.customRenderDropdown} d-flex align-items-center gap-2`}>
+            className={`${styles["customRenderDropdown"]} d-flex align-items-center gap-2`}>
             <span className="font-color-h">Height:</span>
             <Dropdown.Toggle>
               {height ? `${numberWithCommas(height)} px` : "Screen Size"}
@@ -173,7 +173,7 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
                   <input
                     type="number"
                     placeholder="enter height"
-                    className={styles.customRenderInput}
+                    className={styles["customRenderInput"]}
                     value={height ?? ""}
                     onChange={(e) => {
                       setHeight(parseInt(e.target.value));
@@ -184,7 +184,7 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
             </Dropdown.Menu>
           </Dropdown>
           <button
-            className={`pt-2 pb-2 seize-btn no-wrap ${styles.sceneBtn}`}
+            className={`pt-2 pb-2 seize-btn no-wrap ${styles["sceneBtn"]}`}
             onClick={() => {
               go();
             }}>

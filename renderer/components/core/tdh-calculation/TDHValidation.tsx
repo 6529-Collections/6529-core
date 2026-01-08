@@ -14,7 +14,7 @@ import { Table } from "react-bootstrap";
 import { TDHInfo } from "../eth-scanner/Workers";
 import styles from "./TDHCalculation.module.scss";
 
-export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
+export default function TDHValidation({ localInfo }: { localInfo: TDHInfo | undefined }) {
   const [isFetchingRemote, setIsFetchingRemote] = useState(true);
   const [remoteInfo, setRemoteInfo] = useState<{
     tdh: number;
@@ -68,7 +68,7 @@ export default function TDHValidation({ localInfo }: { localInfo?: TDHInfo }) {
     : faXmarkCircle;
 
   return (
-    <div className={styles.tableContainer}>
+    <div className={styles["tableContainer"]}>
       <Table striped bordered className="align-middle">
         <thead>
           <tr>

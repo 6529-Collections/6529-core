@@ -1,6 +1,6 @@
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { CollectionSort } from "@/entities/IProfile";
-import { ApiXTdhTokensPage } from "@/generated/models/ApiXTdhTokensPage";
+import type { ApiXTdhTokensPage } from "@/generated/models/ApiXTdhTokensPage";
 import { commonApiFetch } from "@/services/api/common-api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 
@@ -10,7 +10,7 @@ interface UseXtdhTokensQueryProps {
   readonly pageSize: number;
   readonly sort: string;
   readonly order: string;
-  readonly contract?: string | null;
+  readonly contract?: string | null | undefined;
 }
 
 export const useXtdhTokensQuery = ({
@@ -48,7 +48,7 @@ export const useXtdhTokensQuery = ({
       };
 
       if (contract) {
-        params.contract = contract;
+        params["contract"] = contract;
       }
 
       return await commonApiFetch<ApiXTdhTokensPage>({

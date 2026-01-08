@@ -1,50 +1,42 @@
 "use client";
 
-import { CreateDropScreenType } from "../utils/CreateDropWrapper";
-import CreateDropContent, {
-  CreateDropContentHandles,
-} from "../utils/CreateDropContent";
-import { EditorState } from "lexical";
-import {
+import PrimaryButton from "@/components/utils/button/PrimaryButton";
+import type {
   CreateDropConfig,
-  DropMetadata,
   MentionedUser,
   ReferencedNft,
 } from "@/entities/IDrop";
-import PrimaryButton from "@/components/utils/button/PrimaryButton";
-import CreateDropSelectedFileIcon from "../utils/file/CreateDropSelectedFileIcon";
-import { CreateDropType, CreateDropViewType } from "../types";
+import type { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
+import type { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
-import CreateDropSelectedFilePreview from "../utils/file/CreateDropSelectedFilePreview";
+import type { EditorState } from "lexical";
 import { forwardRef, useImperativeHandle, useRef } from "react";
-import { ApiWaveParticipationRequirement } from "@/generated/models/ApiWaveParticipationRequirement";
-import { ApiWaveRequiredMetadata } from "@/generated/models/ApiWaveRequiredMetadata";
-import { ProfileMinWithoutSubs } from "@/helpers/ProfileTypes";
+import { CreateDropType, CreateDropViewType } from "../types";
+import type { CreateDropContentHandles } from "../utils/CreateDropContent";
+import CreateDropContent from "../utils/CreateDropContent";
+import { CreateDropScreenType } from "../utils/CreateDropWrapper";
+import CreateDropSelectedFileIcon from "../utils/file/CreateDropSelectedFileIcon";
+import CreateDropSelectedFilePreview from "../utils/file/CreateDropSelectedFilePreview";
 
 export interface CreateDropCompactHandles {
   clearEditorState: () => void;
 }
 interface CreateDropCompactProps {
   readonly waveId: string | null;
-  readonly profile: ProfileMinWithoutSubs;
-  readonly showProfile?: boolean;
   readonly screenType: CreateDropScreenType;
   readonly editorState: EditorState | null;
-  readonly title: string | null;
   readonly files: File[];
-  readonly metadata: DropMetadata[];
   readonly canSubmit: boolean;
   readonly canAddPart: boolean;
   readonly loading: boolean;
   readonly type: CreateDropType;
   readonly drop: CreateDropConfig | null;
   readonly showSubmit: boolean;
-  readonly showDropError?: boolean;
+  readonly showDropError?: boolean | undefined;
   readonly missingMedia: ApiWaveParticipationRequirement[];
   readonly missingMetadata: ApiWaveRequiredMetadata[];
   readonly children: React.ReactNode;
   readonly onViewChange: (newV: CreateDropViewType) => void;
-  readonly onMetadataRemove: (key: string) => void;
   readonly onEditorState: (editorState: EditorState | null) => void;
   readonly onMentionedUser: (
     newUser: Omit<MentionedUser, "current_handle">
@@ -52,7 +44,7 @@ interface CreateDropCompactProps {
   readonly onReferencedNft: (newNft: ReferencedNft) => void;
   readonly onFileRemove: (file: File) => void;
   readonly setFiles: (files: File[]) => void;
-  readonly onDrop?: () => void;
+  readonly onDrop?: (() => void) | undefined;
   readonly onDropPart: () => void;
 }
 
@@ -63,13 +55,9 @@ const CreateDropCompact = forwardRef<
   (
     {
       waveId,
-      profile,
-      showProfile = true,
       editorState,
       screenType,
       files,
-      title,
-      metadata,
       canSubmit,
       canAddPart,
       loading,
@@ -81,7 +69,6 @@ const CreateDropCompact = forwardRef<
       missingMetadata,
       children,
       onViewChange,
-      onMetadataRemove,
       onEditorState,
       onMentionedUser,
       onReferencedNft,
@@ -125,10 +112,10 @@ const CreateDropCompact = forwardRef<
     }));
 
     return (
-      <div className={`${getWrapperClasses()}  tw-bg-iron-900`}>
+      <div className={`${getWrapperClasses()} tw-bg-iron-900`}>
         {children}
         <div className="tw-inline-flex tw-w-full tw-items-start tw-gap-x-2 sm:tw-gap-x-3">
-          <div className="tw-w-full tw-flex tw-gap-x-2 sm:tw-gap-x-3">
+          <div className="tw-flex tw-w-full tw-gap-x-2 sm:tw-gap-x-3">
             <div className="tw-w-full">
               <CreateDropContent
                 ref={editorRef}
@@ -147,7 +134,8 @@ const CreateDropCompact = forwardRef<
                 onDrop={onDrop}
                 onViewClick={() => onViewChange(CreateDropViewType.FULL)}
                 setFiles={setFiles}
-                onDropPart={onDropPart}>
+                onDropPart={onDropPart}
+              >
                 {showSubmit && (
                   <div>
                     {onDrop && (
@@ -159,7 +147,8 @@ const CreateDropCompact = forwardRef<
                           screenType === CreateDropScreenType.MOBILE
                             ? "tw-px-3 tw-py-2"
                             : "tw-px-4 tw-py-2.5"
-                        }>
+                        }
+                      >
                         {getSubmitText()}
                       </PrimaryButton>
                     )}
@@ -173,10 +162,10 @@ const CreateDropCompact = forwardRef<
         {files.map((file, i) => (
           <div key={`drop-compact-file-${i}`} className="tw-mt-3">
             <div className="tw-w-full">
-              <div className="tw-px-4 tw-py-2 tw-ring-1 tw-ring-inset tw-ring-iron-650 hover:tw-ring-iron-600 tw-bg-iron-900 tw-rounded-lg tw-flex tw-items-center tw-gap-x-1 tw-justify-between tw-transition tw-duration-300 tw-ease-out">
+              <div className="tw-flex tw-items-center tw-justify-between tw-gap-x-1 tw-rounded-lg tw-bg-iron-900 tw-px-4 tw-py-2 tw-ring-1 tw-ring-inset tw-ring-iron-650 tw-transition tw-duration-300 tw-ease-out hover:tw-ring-iron-600">
                 <div className="tw-flex tw-items-center tw-gap-x-3 tw-truncate">
                   <CreateDropSelectedFileIcon file={file} />
-                  <p className="tw-mb-0 tw-text-sm tw-font-medium tw-text-iron-50 tw-truncate">
+                  <p className="tw-mb-0 tw-truncate tw-text-sm tw-font-medium tw-text-iron-50">
                     {file.name}
                   </p>
                 </div>
@@ -184,13 +173,15 @@ const CreateDropCompact = forwardRef<
                   onClick={() => onFileRemove(file)}
                   type="button"
                   aria-label="Remove file"
-                  className="-tw-mb-0.5 tw-h-8 tw-w-8 tw-flex tw-items-center tw-justify-center tw-bg-transparent tw-border-0 tw-rounded-full hover:tw-bg-iron-800">
+                  className="-tw-mb-0.5 tw-flex tw-size-8 tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-transparent hover:tw-bg-iron-800"
+                >
                   <svg
-                    className="tw-flex-shrink-0 tw-w-5 tw-h-5 tw-text-red"
+                    className="tw-size-5 tw-flex-shrink-0 tw-text-red"
                     viewBox="0 0 24 24"
                     fill="none"
                     aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg">
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
                     <path
                       d="M18 6L6 18M6 6L18 18"
                       stroke="currentColor"

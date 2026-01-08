@@ -1,4 +1,4 @@
-import { PredictBlockNumbersResponseApiModel } from "@/app/tools/block-finder/page.client";
+import type { PredictBlockNumbersResponseApiModel } from "@/app/tools/block-finder/page.client";
 import BlockPickerResultHeader from "./BlockPickerResultHeader";
 import BlockPickerResultTable from "./BlockPickerResultTable";
 
@@ -7,8 +7,8 @@ export default function BlockPickerResult({
   timestamp,
   predictedBlocks,
 }: {
-  blocknumber?: number;
-  timestamp?: number;
+  blocknumber?: number | undefined;
+  timestamp?: number | undefined;
   predictedBlocks: PredictBlockNumbersResponseApiModel[];
 }) {
   return (

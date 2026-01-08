@@ -2,7 +2,7 @@
 
 import React, { useContext } from "react";
 import { Tooltip } from "react-tooltip";
-import { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { AuthContext } from "@/components/auth/Auth";
 import { useWaveEligibility } from "@/contexts/wave/WaveEligibilityContext";
 
@@ -48,7 +48,7 @@ const WaveDropActionsQuote: React.FC<WaveDropActionsQuoteProps> = ({
         onClick={canQuote ? handleQuoteClick : undefined}
         disabled={!canQuote}
         aria-label="Quote drop"
-        data-tooltip-id={!isTemporaryDrop ? `quote-${drop.id}` : undefined}>
+        {...(!isTemporaryDrop ? { "data-tooltip-id": `quote-${drop.id}` } : {})}>
         <svg
           className={`tw-flex-shrink-0 tw-w-5 tw-h-5 tw-transition tw-ease-out tw-duration-300 ${canQuote ? "" : "tw-opacity-50"}`}
           viewBox="0 0 24 24"

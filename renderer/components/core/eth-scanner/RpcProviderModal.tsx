@@ -104,17 +104,19 @@ export function AddRpcProviderModal(
       onHide={() => handleHide(false)}
       backdrop
       keyboard={false}
-      centered>
-      <div className={styles.modalHeader}>
+      centered
+    >
+      <div className={styles["modalHeader"]}>
         <Modal.Title>Add RPC Provider</Modal.Title>
       </div>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <div className="font-smaller">
           RPC URLs Directory:{" "}
           <Link
             href="https://ethereumnodes.com/"
             target="_blank"
-            rel="noreferrer">
+            rel="noreferrer"
+          >
             https://ethereumnodes.com/
           </Link>
         </div>
@@ -127,7 +129,7 @@ export function AddRpcProviderModal(
             type="text"
             placeholder="https://..."
             value={url}
-            className={styles.modalInput}
+            className={styles["modalInput"]}
             onChange={(e) => {
               setUrl(e.target.value);
             }}
@@ -140,7 +142,8 @@ export function AddRpcProviderModal(
             onClick={() => {
               testRpcProvider();
               setTestingUrl(true);
-            }}>
+            }}
+          >
             <span className="d-flex align-items-center gap-1">
               {urlValidation ? (
                 <>
@@ -168,7 +171,7 @@ export function AddRpcProviderModal(
             type="text"
             placeholder="My RPC Provider..."
             value={name}
-            className={styles.modalInput}
+            className={styles["modalInput"]}
             onChange={(e) => {
               setName(e.target.value);
             }}
@@ -185,7 +188,8 @@ export function AddRpcProviderModal(
         </p>
       </Modal.Body>
       <Modal.Footer
-        className={`d-flex justify-content-between ${styles.modalContent}`}>
+        className={`d-flex justify-content-between ${styles["modalContent"]}`}
+      >
         <Button variant="danger" onClick={() => reset()}>
           Reset
         </Button>
@@ -199,7 +203,8 @@ export function AddRpcProviderModal(
             onClick={() => {
               setAddingRpcProvider(true);
               handleAdd();
-            }}>
+            }}
+          >
             {addingRpcProvider ? <Spinner dimension={16} /> : "Add"}
           </Button>
         </span>

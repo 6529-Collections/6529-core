@@ -4,12 +4,14 @@ import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import UserFollowBtn, {
   UserFollowBtnSize,
 } from "@/components/user/utils/UserFollowBtn";
-import {
+import type {
   ApiProfileRepRatesState,
-  CLASSIFICATIONS,
-  CicStatement,
+  CicStatement
 } from "@/entities/IProfile";
-import { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
+import {
+  CLASSIFICATIONS
+} from "@/entities/IProfile";
+import type { ApiIncomingIdentitySubscriptionsPage } from "@/generated/models/ApiIncomingIdentitySubscriptionsPage";
 import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
 import { useIdentity } from "@/hooks/useIdentity";
 import { commonApiFetch } from "@/services/api/common-api";

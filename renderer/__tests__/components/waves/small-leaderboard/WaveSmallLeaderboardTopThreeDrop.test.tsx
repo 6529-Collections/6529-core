@@ -1,8 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import React from 'react';
 import { WaveSmallLeaderboardTopThreeDrop } from '@/components/waves/small-leaderboard/WaveSmallLeaderboardTopThreeDrop';
-import { ExtendedDrop } from '@/helpers/waves/drop.helpers';
-import { ApiWave } from '@/generated/models/ApiWave';
+import type { ExtendedDrop } from '@/helpers/waves/drop.helpers';
+import type { ApiWave } from '@/generated/models/ApiWave';
 
 // Mock dependencies
 jest.mock('next/link', () => {
@@ -326,7 +326,7 @@ describe('WaveSmallLeaderboardTopThreeDrop', () => {
   });
 
   it('handles missing winning context gracefully', () => {
-    const drop = createMockDrop({ winning_context: undefined });
+    const drop = createMockDrop({ ...(undefined !== undefined ? { winning_context: undefined } : {}) });
     render(
       <WaveSmallLeaderboardTopThreeDrop
         drop={drop}

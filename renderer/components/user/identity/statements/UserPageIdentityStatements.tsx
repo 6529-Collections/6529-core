@@ -1,8 +1,8 @@
 "use client";
 
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { CicStatement } from "@/entities/IProfile";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { CicStatement } from "@/entities/IProfile";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { STATEMENT_GROUP } from "@/helpers/Types";
 import { commonApiFetch } from "@/services/api/common-api";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ export default function UserPageIdentityStatements({
   readonly profile: ApiIdentity;
 }) {
   const params = useParams();
-  const user = (params?.user as string)?.toLowerCase();
+  const user = (params?.["user"] as string)?.toLowerCase();
   const [socialMediaAccounts, setSocialMediaAccounts] = useState<
     CicStatement[]
   >([]);

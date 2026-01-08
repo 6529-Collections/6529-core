@@ -2,17 +2,18 @@
 
 import { AuthContext } from "@/components/auth/Auth";
 import { Spinner } from "@/components/dotLoader/DotLoader";
+import type {
+  SeasonMintRow} from "@/components/meme-calendar/meme-calendar.helpers";
 import {
   displayedSeasonNumberFromIndex,
   formatFullDate,
   getUpcomingMintsAcrossSeasons,
-  isMintingToday,
-  SeasonMintRow,
+  isMintingToday
 } from "@/components/meme-calendar/meme-calendar.helpers";
 import ShowMoreButton from "@/components/show-more-button/ShowMoreButton";
-import { NFTFinalSubscription } from "@/generated/models/NFTFinalSubscription";
-import { NFTSubscription } from "@/generated/models/NFTSubscription";
-import { SubscriptionDetails } from "@/generated/models/SubscriptionDetails";
+import type { NFTFinalSubscription } from "@/generated/models/NFTFinalSubscription";
+import type { NFTSubscription } from "@/generated/models/NFTSubscription";
+import type { SubscriptionDetails } from "@/generated/models/SubscriptionDetails";
 import { formatAddress } from "@/helpers/Helpers";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { faInfoCircle } from "@fortawesome/free-solid-svg-icons";
@@ -70,9 +71,9 @@ export default function UserPageSubscriptionsUpcoming(
             {subscriptions.map((subscription, index) => (
               <div
                 key={subscription.token_id}
-                className={`${styles.nftSubscriptionsListItem} ${
-                  index % 2 === 0 ? styles.odd : styles.even
-                } ${index === subscriptions.length - 1 ? styles.last : ""}`}>
+                className={`${styles["nftSubscriptionsListItem"]} ${
+                  index % 2 === 0 ? styles["odd"] : styles["even"]
+                } ${index === subscriptions.length - 1 ? styles["last"] : ""}`}>
                 <SubscriptionRow
                   profileKey={props.profileKey}
                   title="The Memes"
@@ -107,7 +108,7 @@ function SubscriptionRow(
     subscription: NFTSubscription;
     eligibilityCount: number;
     readonly: boolean;
-    minting_today?: boolean;
+    minting_today?: boolean | undefined;
     first: boolean;
     date: SeasonMintRow | null;
     refresh: () => void;

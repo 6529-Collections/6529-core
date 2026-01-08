@@ -1,5 +1,6 @@
 "use client";
 
+
 interface AwsRumProviderProps {
   readonly children: React.ReactNode;
 }

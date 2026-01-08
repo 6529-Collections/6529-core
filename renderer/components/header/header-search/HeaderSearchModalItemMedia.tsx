@@ -1,12 +1,12 @@
 import { memo } from "react";
 import Image from "next/image";
-import { NFTSearchResult } from "./HeaderSearchModalItem";
+import type { NFTSearchResult } from "./HeaderSearchModalItem";
 
 interface HeaderSearchModalItemMediaProps {
-  readonly nft?: NFTSearchResult;
-  readonly src?: string | null;
-  readonly alt?: string;
-  readonly roundedFull?: boolean;
+  readonly nft?: NFTSearchResult | undefined;
+  readonly src?: string | null | undefined;
+  readonly alt?: string | undefined;
+  readonly roundedFull?: boolean | undefined;
 }
 
 const HeaderSearchModalItemMedia = memo(

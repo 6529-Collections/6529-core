@@ -24,8 +24,8 @@ export default function ConfirmSeedWalletLock(
     name: string;
     address: string;
     show: boolean;
-    unlockedWallet?: ethers.Wallet;
-    pendingRequest?: SeedWalletRequest;
+    unlockedWallet?: ethers.Wallet | undefined;
+    pendingRequest?: SeedWalletRequest | undefined;
     onHide: () => void;
     onUnlock: (password: string) => Promise<boolean>;
     onLock: () => void;
@@ -108,7 +108,7 @@ export default function ConfirmSeedWalletLock(
           type={passHidden ? "password" : "text"}
           placeholder="******"
           value={walletPass}
-          className={styles.seedWalletInput}
+          className={styles["seedWalletInput"]}
           onChange={(e) => setWalletPass(e.target.value)}
           onKeyDown={handleKeyPress}
         />
@@ -148,8 +148,9 @@ export default function ConfirmSeedWalletLock(
       onHide={props.onHide}
       dialogClassName={
         !isTopModal(SEED_WALLET_LOCK_MODAL) ? "modal-blurred" : ""
-      }>
-      <div className={styles.modalHeader}>
+      }
+    >
+      <div className={styles["modalHeader"]}>
         <Modal.Title className="d-flex align-items-center gap-3">
           <FontAwesomeIcon
             icon={props.unlockedWallet ? faLockOpen : faLock}
@@ -158,12 +159,13 @@ export default function ConfirmSeedWalletLock(
           <span>{props.name}</span>
         </Modal.Title>
       </div>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <div className="font-smaller pb-3">Address: {props.address}</div>
         {props.unlockedWallet ? printUnlocked() : printLocked()}
       </Modal.Body>
       <Modal.Footer
-        className={`${styles.modalContent} d-flex align-items-center justify-content-between`}>
+        className={`${styles["modalContent"]} d-flex align-items-center justify-content-between`}
+      >
         <span>
           {props.pendingRequest && (
             <span className="font-lighter">
@@ -187,7 +189,8 @@ export default function ConfirmSeedWalletLock(
                 walletPass.length < SEED_MIN_PASS_LENGTH ||
                 unlocking
               }
-              onClick={() => handleUnlock(walletPass)}>
+              onClick={() => handleUnlock(walletPass)}
+            >
               {unlocking ? "Unlocking..." : "Unlock"}
             </Button>
           )}

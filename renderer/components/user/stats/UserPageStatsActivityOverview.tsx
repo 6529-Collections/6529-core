@@ -1,10 +1,10 @@
 "use client";
 
-import {
+import type {
     AggregatedActivity,
     AggregatedActivityMemes,
 } from "@/entities/IAggregatedActivity";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { numberWithCommas } from "@/helpers/Helpers";
 import { commonApiFetch } from "@/services/api/common-api";
 import { Fragment, useEffect, useState } from "react";
@@ -94,14 +94,14 @@ function UserPageStatsActivityOverviewTotals({
   return (
     <Accordion>
       <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button className={styles.collectedAccordionButton}>
+        <Accordion.Button className={styles["collectedAccordionButton"]}>
           <b>Overview</b>
         </Accordion.Button>
-        <Accordion.Body className={styles.collectedAccordionBody}>
+        <Accordion.Body className={styles["collectedAccordionBody"]}>
           <Container>
-            <Row className={`pt-2 pb-2 ${styles.scrollContainer}`}>
+            <Row className={`pt-2 pb-2 ${styles["scrollContainer"]}`}>
               <Col>
-                <Table className={styles.collectedAccordionTable}>
+                <Table className={styles["collectedAccordionTable"]}>
                   <UserPageStatsTableHead />
                   <tbody>
                     <UserPageStatsTableHr span={6} />
@@ -355,15 +355,15 @@ function UserPageStatsActivityOverviewMemes({
   return (
     <Accordion>
       <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button className={styles.collectedAccordionButton}>
+        <Accordion.Button className={styles["collectedAccordionButton"]}>
           <b>Memes Breakdown By Season</b>
         </Accordion.Button>
-        <Accordion.Body className={styles.collectedAccordionBody}>
+        <Accordion.Body className={styles["collectedAccordionBody"]}>
           <Container>
-            <Row className={`pt-2 pb-2 ${styles.scrollContainer}`}>
+            <Row className={`pt-2 pb-2 ${styles["scrollContainer"]}`}>
               <Col>
                 {activity && (
-                  <Table className={styles.collectedAccordionTable}>
+                  <Table className={styles["collectedAccordionTable"]}>
                     <thead>
                       <tr>
                         <th colSpan={1}></th>

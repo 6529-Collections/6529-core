@@ -76,10 +76,9 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
   const waveHref = useMemo(() => {
     if (!drop) return "";
 
-    const waveDetails =
-      (drop.wave as unknown as {
-        chat?: { scope?: { group?: { is_direct_message?: boolean } } };
-      }) ?? undefined;
+    const waveDetails = (drop.wave as unknown as {
+      chat?: { scope?: { group?: { is_direct_message?: boolean | undefined } | undefined } | undefined } | undefined;
+    }) ?? undefined;
 
     const isDirectMessage =
       waveDetails?.chat?.scope?.group?.is_direct_message ?? false;

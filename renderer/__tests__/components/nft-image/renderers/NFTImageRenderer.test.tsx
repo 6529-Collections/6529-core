@@ -1,6 +1,6 @@
 import NFTImageRenderer from "@/components/nft-image/renderers/NFTImageRenderer";
-import { BaseRendererProps } from "@/components/nft-image/types/renderer-props";
-import { BaseNFT } from "@/entities/INFT";
+import type { BaseRendererProps } from "@/components/nft-image/types/renderer-props";
+import type { BaseNFT } from "@/entities/INFT";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 // Mock next/image
@@ -210,7 +210,7 @@ describe("NFTImageRenderer", () => {
     });
 
     it("falls back to image when scaled is not available", () => {
-      const nft = createMockNFT({ scaled: undefined });
+      const nft = createMockNFT({ ...(undefined !== undefined ? { scaled: undefined } : {}) });
       const props = createDefaultProps({ nft, showOriginal: false });
       render(<NFTImageRenderer {...props} />);
 
@@ -236,7 +236,7 @@ describe("NFTImageRenderer", () => {
     });
 
     it("falls back from thumbnail to image when scaled not available", () => {
-      const nft = createMockNFT({ scaled: undefined });
+      const nft = createMockNFT({ ...(undefined !== undefined ? { scaled: undefined } : {}) });
       const props = createDefaultProps({ nft, showThumbnail: true });
       const { rerender } = render(<NFTImageRenderer {...props} />);
 

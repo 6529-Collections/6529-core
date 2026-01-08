@@ -3,7 +3,7 @@
 import { useState, useContext } from "react";
 import { useSignMessage } from "wagmi";
 import { UserRejectedRequestError } from "viem";
-import { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
+import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 import { DropHasher } from "@/utils/drop-hasher";
 import { AuthContext } from "@/components/auth/Auth";
 
@@ -27,7 +27,7 @@ export const useDropSignature = () => {
   }: {
     drop: ApiCreateDropRequest;
     termsOfService: string | null;
-  }): Promise<{ success: boolean; signature?: string }> => {
+  }): Promise<{ success: boolean; signature?: string | undefined }> => {
     try {
       setIsLoading(true);
 

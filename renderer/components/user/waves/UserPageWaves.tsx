@@ -3,8 +3,8 @@
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { useContext, useEffect, useState } from "react";
 import { useDebounce } from "react-use";
-import { ApiIdentity } from "@/generated/models/ApiIdentity";
-import { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { commonApiFetch } from "@/services/api/common-api";
 import { AuthContext } from "@/components/auth/Auth";
 import CircleLoader, {
@@ -15,11 +15,11 @@ import CommonIntersectionElement from "@/components/utils/CommonIntersectionElem
 import WaveItem from "@/components/waves/list/WaveItem";
 import UserPageWavesSearch from "./UserPageWavesSearch";
 interface SearchWavesParams {
-  readonly author?: string;
-  readonly name?: string;
+  readonly author?: string | undefined;
+  readonly name?: string | undefined;
   readonly limit: number;
-  readonly serial_no_less_than?: number;
-  readonly group_id?: string;
+  readonly serial_no_less_than?: number | undefined;
+  readonly group_id?: string | undefined;
 }
 
 export default function UserPageWaves({
@@ -84,15 +84,15 @@ export default function UserPageWaves({
     queryFn: async ({ pageParam }: { pageParam: number | null }) => {
       const queryParams: Record<string, string> = {};
       if (pageParam) {
-        queryParams.serial_no_less_than = `${pageParam}`;
+        queryParams["serial_no_less_than"] = `${pageParam}`;
       }
 
       if (debouncedParams.author) {
-        queryParams.author = debouncedParams.author;
+        queryParams["author"] = debouncedParams.author;
       }
 
       if (debouncedParams.name) {
-        queryParams.name = debouncedParams.name;
+        queryParams["name"] = debouncedParams.name;
       }
       return await commonApiFetch<ApiWave[]>({
         endpoint: `waves`,
@@ -116,15 +116,15 @@ export default function UserPageWaves({
     queryFn: async ({ pageParam }: { pageParam: number | null }) => {
       const queryParams: Record<string, string> = {};
       if (pageParam) {
-        queryParams.serial_no_less_than = `${pageParam}`;
+        queryParams["serial_no_less_than"] = `${pageParam}`;
       }
 
       if (debouncedParams.author) {
-        queryParams.author = debouncedParams.author;
+        queryParams["author"] = debouncedParams.author;
       }
 
       if (debouncedParams.name) {
-        queryParams.name = debouncedParams.name;
+        queryParams["name"] = debouncedParams.name;
       }
       return await commonApiFetch<ApiWave[]>({
         endpoint: `waves-public`,

@@ -1,7 +1,7 @@
 "use client";
 
-import React, { memo, useState, useCallback } from "react";
-import { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { memo, useState, useCallback } from "react";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import WaveDropContent from "@/components/waves/drops/WaveDropContent";
 
 interface DropContentSmallProps {

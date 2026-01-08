@@ -1,5 +1,5 @@
 import { getMediaType } from '@/components/nft-image/utils/media-type';
-import { BaseNFT, NFTLite } from '@/entities/INFT';
+import type { BaseNFT, NFTLite } from '@/entities/INFT';
 
 describe('media-type utils', () => {
   describe('getMediaType', () => {
@@ -88,7 +88,7 @@ describe('media-type utils', () => {
 
     describe('when animation is true but NFT has no metadata', () => {
       it('returns image type for BaseNFT without metadata', () => {
-        const nft = createMockNFT({ metadata: undefined });
+        const nft = createMockNFT({ ...(undefined !== undefined ? { metadata: undefined } : {}) });
         
         const result = getMediaType(nft, true);
         expect(result).toBe('image');
