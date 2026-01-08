@@ -79,7 +79,7 @@ export const isElectron = () => {
   if (
     typeof window !== "undefined" &&
     window.process &&
-    window.process.type === "renderer"
+    (window.process as NodeJS.Process & { type?: string }).type === "renderer"
   ) {
     return true;
   }
@@ -88,7 +88,7 @@ export const isElectron = () => {
   if (
     typeof process !== "undefined" &&
     process.versions &&
-    process.versions.electron
+    process.versions["electron"]
   ) {
     return true;
   }

@@ -27,7 +27,8 @@ export default function SeedWalletImport() {
           <Col>
             <Link
               className="font-smaller d-flex align-items-center gap-2 decoration-none"
-              href="/core/core-wallets">
+              href="/core/core-wallets"
+            >
               <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
               Back to 6529 Desktop Wallets
             </Link>
@@ -45,7 +46,8 @@ export default function SeedWalletImport() {
             <Button
               variant={isMnemonic ? "info" : "outline-info"}
               onClick={() => setIsMnemonic(true)}
-              className="btn-block">
+              className="btn-block"
+            >
               Mnemonic
             </Button>
           </Col>
@@ -53,7 +55,8 @@ export default function SeedWalletImport() {
             <Button
               variant={!isMnemonic ? "info" : "outline-info"}
               onClick={() => setIsMnemonic(false)}
-              className="btn-block">
+              className="btn-block"
+            >
               Private Key
             </Button>
           </Col>
@@ -111,7 +114,7 @@ function SeedWalletImportMnemonic() {
       <Row>
         {phrase.map((w, i) => (
           <Col xs={6} sm={4} md={3} className="pt-2 pb-2" key={getRandomKey()}>
-            <Container className={`${styles.phrase}`}>
+            <Container className={`${styles["phrase"]}`}>
               <Row>
                 <Col className="d-flex gap-2">
                   <span className="font-color-h font-lighter">{i + 1}</span>
@@ -121,7 +124,7 @@ function SeedWalletImportMnemonic() {
                       type="text"
                       placeholder={`word ${i + 1}`}
                       value={w}
-                      className={styles.importWalletWordInput}
+                      className={styles["importWalletWordInput"]}
                       onChange={(e) => {
                         const newPhrase = e.target.value;
                         if (/^[a-z]*$/.test(newPhrase)) {
@@ -153,14 +156,16 @@ function SeedWalletImportMnemonic() {
             variant="warning"
             onClick={clear}
             className="font-bolder"
-            disabled={!phrase.some((w) => w) && !isCompletePhrase()}>
+            disabled={!phrase.some((w) => w) && !isCompletePhrase()}
+          >
             Clear
           </Button>
           <Button
             variant="primary"
             disabled={!isCompletePhrase() || isReadonly}
             onClick={validate}
-            className="font-bolder">
+            className="font-bolder"
+          >
             Validate
           </Button>
         </Col>
@@ -207,7 +212,7 @@ function SeedWalletImportPrivateKey() {
     <Container className="pt-3 pb-5">
       <Row>
         <Col className="pt-2 pb-2">
-          <Container className={`${styles.phrase}`}>
+          <Container className={`${styles["phrase"]}`}>
             <Row>
               <Col className="d-flex gap-2">
                 <input
@@ -217,7 +222,7 @@ function SeedWalletImportPrivateKey() {
                   type="text"
                   placeholder="private key"
                   value={privateKey}
-                  className={styles.importWalletWordInput}
+                  className={styles["importWalletWordInput"]}
                   onChange={(e) => setPrivateKey(e.target.value)}
                 />
               </Col>
@@ -231,14 +236,16 @@ function SeedWalletImportPrivateKey() {
             variant="warning"
             onClick={clear}
             className="font-bolder"
-            disabled={!privateKey}>
+            disabled={!privateKey}
+          >
             Clear
           </Button>
           <Button
             variant="primary"
             disabled={!privateKey || isReadonly}
             onClick={validate}
-            className="font-bolder">
+            className="font-bolder"
+          >
             Validate
           </Button>
         </Col>
@@ -310,7 +317,8 @@ function ImportWallet(
       <Button
         variant="primary"
         onClick={() => setShowImportModal(true)}
-        className="d-flex align-items-center gap-2">
+        className="d-flex align-items-center gap-2"
+      >
         <FontAwesomeIcon icon={faPlusCircle} height={16} /> Import Wallet
       </Button>
     </div>

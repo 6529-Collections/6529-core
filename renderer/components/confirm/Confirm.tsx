@@ -19,13 +19,13 @@ const Confirm: React.FC<ConfirmProps> = ({
 }) => {
   return (
     <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <div className={styles.modalHeader}>
+      <div className={styles["modalHeader"]}>
         <Modal.Title>{title}</Modal.Title>
       </div>
-      <Modal.Body className={styles.modalContent}>
+      <Modal.Body className={styles["modalContent"]}>
         <p className="mt-2 mb-2">{message}</p>
       </Modal.Body>
-      <Modal.Footer className={styles.modalContent}>
+      <Modal.Footer className={styles["modalContent"]}>
         <Button variant="secondary" onClick={onHide}>
           Cancel
         </Button>

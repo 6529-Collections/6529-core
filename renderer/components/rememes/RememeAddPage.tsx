@@ -34,8 +34,7 @@ interface CheckList {
 export default function RememeAddPage() {
   useSetTitle("Add ReMemes | Collections");
   const { connectedProfile } = useAuth();
-  const { address, isConnected, seizeConnect, seizeConnectOpen } =
-    useSeizeConnectContext();
+  const { address, isConnected } = useSeizeConnectContext();
 
   const { seizeSettings } = useSeizeSettings();
 

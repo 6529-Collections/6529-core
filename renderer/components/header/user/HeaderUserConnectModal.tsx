@@ -60,7 +60,8 @@ export default function HeaderUserConnectModal({
     const conns = otherConnectors();
     return (
       <div
-        className={`${extraClass} d-flex flex-wrap align-items-center justify-content-center gap-2`}>
+        className={`${extraClass} d-flex flex-wrap align-items-center justify-content-center gap-2`}
+      >
         {conns.map((c) => (
           <ConnectorSelector
             key={c.id}
@@ -76,13 +77,14 @@ export default function HeaderUserConnectModal({
 
   return (
     <Modal
-      className={styles.connectModal}
+      className={styles["connectModal"] ?? ""}
       animation={show}
       show={show}
       onHide={onHide}
       backdrop
       keyboard={false}
-      centered>
+      centered
+    >
       <Modal.Header>
         <Modal.Title>Choose Connector</Modal.Title>
       </Modal.Header>
@@ -94,12 +96,14 @@ export default function HeaderUserConnectModal({
             <Accordion activeKey={activeKey}>
               <Accordion.Item defaultChecked={true} eventKey={"0"}>
                 <Accordion.Button
-                  className={styles.connectorCategoryAccordionButton}
-                  onClick={() => handleToggle("0")}>
+                  className={styles["connectorCategoryAccordionButton"]}
+                  onClick={() => handleToggle("0")}
+                >
                   <b>Seed Wallet</b>
                 </Accordion.Button>
                 <Accordion.Body
-                  className={styles.connectorCategoryAccordionBody}>
+                  className={styles["connectorCategoryAccordionBody"]}
+                >
                   <div className="d-flex flex-wrap align-items-center justify-content-center gap-2">
                     {seedConnectors().map((c) => (
                       <ConnectorSelector
@@ -130,7 +134,8 @@ export default function HeaderUserConnectModal({
                             style={{
                               color: "#0070f3",
                               cursor: "pointer",
-                            }}>
+                            }}
+                          >
                             take me there
                           </Link>
                         </p>
@@ -144,12 +149,14 @@ export default function HeaderUserConnectModal({
             <Accordion activeKey={activeKey} className="pt-3">
               <Accordion.Item defaultChecked={true} eventKey={"1"}>
                 <Accordion.Button
-                  className={styles.connectorCategoryAccordionButton}
-                  onClick={() => handleToggle("1")}>
+                  className={styles["connectorCategoryAccordionButton"]}
+                  onClick={() => handleToggle("1")}
+                >
                   <b>Browser</b>
                 </Accordion.Button>
                 <Accordion.Body
-                  className={styles.connectorCategoryAccordionBody}>
+                  className={styles["connectorCategoryAccordionBody"]}
+                >
                   <div className="d-flex flex-wrap align-items-center justify-content-center gap-2">
                     {browserConnectors().map((c) => (
                       <ConnectorSelector
@@ -167,12 +174,14 @@ export default function HeaderUserConnectModal({
             <Accordion activeKey={activeKey} className="pt-3 pb-3">
               <Accordion.Item defaultChecked={true} eventKey={"2"}>
                 <Accordion.Button
-                  className={styles.connectorCategoryAccordionButton}
-                  onClick={() => handleToggle("2")}>
+                  className={styles["connectorCategoryAccordionButton"]}
+                  onClick={() => handleToggle("2")}
+                >
                   <b>Third-Party</b>
                 </Accordion.Button>
                 <Accordion.Body
-                  className={styles.connectorCategoryAccordionBody}>
+                  className={styles["connectorCategoryAccordionBody"]}
+                >
                   {printOtherConnectors()}
                 </Accordion.Body>
               </Accordion.Item>
@@ -214,10 +223,10 @@ function ConnectorSelector(
 
   function printImage() {
     let imageSrc = "";
-    let imageClass = "";
+    let imageClass: string | undefined = undefined;
     if (props.connector.type === "seed-wallet") {
       imageSrc = props.connector.icon ?? "";
-      imageClass = styles.seedConnectorImage;
+      imageClass = styles["seedConnectorImage"];
     }
 
     switch (props.connector.name) {
@@ -269,7 +278,8 @@ function ConnectorSelector(
     <Button
       variant="outline-secondary"
       onClick={onConnect}
-      className="btn-block pt-3 pb-3 d-flex align-items-center justify-content-start gap-3">
+      className="btn-block pt-3 pb-3 d-flex align-items-center justify-content-start gap-3"
+    >
       {printImage()}
       <span className="d-flex flex-column align-items-start gap-1">
         <span>{props.connector.name}</span>

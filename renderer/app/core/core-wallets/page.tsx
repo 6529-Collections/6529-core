@@ -5,8 +5,8 @@ import { Metadata } from "next";
 
 export default function SeedWalletPage() {
   return (
-    <main className={styles.main}>
-      <div className="tw-relative tw-px-2 lg:tw-px-6 xl:tw-px-8 tw-mx-auto">
+    <main className={styles["main"]}>
+      <div className="tw-relative tw-mx-auto tw-px-2 lg:tw-px-6 xl:tw-px-8">
         <CoreWallets />
       </div>
     </main>

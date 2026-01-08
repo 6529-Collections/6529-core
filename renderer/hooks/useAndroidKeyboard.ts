@@ -118,15 +118,8 @@ export function useAndroidKeyboard(
     debouncedDetectKeyboard();
   }, [isSSR, debouncedDetectKeyboard]);
 
-  const showTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const hideTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     if (isSSR || !isAndroid) return;
-
-    let mounted = true;
-    let showCleanup: (() => void) | undefined;
-    let hideCleanup: (() => void) | undefined;
 
     // Add event listeners with proper cleanup references
     if (window.visualViewport) {

@@ -28,12 +28,14 @@ export function RPCProviderCards({
   return (
     <Accordion>
       <Accordion.Item
-        className={`${styles.rpcProvidersAccordionItem}`}
-        eventKey={"0"}>
+        className={`${styles["rpcProvidersAccordionItem"]}`}
+        eventKey={"0"}
+      >
         <Accordion.Header>Providers List</Accordion.Header>
         <Accordion.Body
           className="d-flex flex-wrap gap-2"
-          style={{ backgroundColor: "var($bg-color-2)" }}>
+          style={{ backgroundColor: "var($bg-color-2)" }}
+        >
           <Container>
             <Row>
               {rpcProviders.map((r) => (
@@ -112,7 +114,7 @@ function RPCProviderCard({
 
   return (
     <Col xs={12} sm={6} md={4} lg={3} className="pt-2 pb-2">
-      <Container className={styles.rpcUrl}>
+      <Container className={styles["rpcUrl"]}>
         <Row>
           <Col className="d-flex align-items-center justify-content-between">
             <span className="d-flex align-items-center gap-1">
@@ -121,7 +123,8 @@ function RPCProviderCard({
                 <>
                   <span
                     className="cursor-help"
-                    data-tooltip-id="default-rpc-provider-tooltip">
+                    data-tooltip-id="default-rpc-provider-tooltip"
+                  >
                     *
                   </span>
                   <Tooltip
@@ -130,7 +133,8 @@ function RPCProviderCard({
                       backgroundColor: "#1F2937",
                       color: "white",
                       padding: "4px 8px",
-                    }}>
+                    }}
+                  >
                     Default RPC provider - cannot be deleted
                   </Tooltip>
                 </>
@@ -160,7 +164,8 @@ function RPCProviderCard({
                 <Button
                   variant="danger"
                   size="sm"
-                  onClick={() => handleDeactivate()}>
+                  onClick={() => handleDeactivate()}
+                >
                   <span className="font-smaller">Deactivate</span>
                 </Button>
               </span>
@@ -169,14 +174,16 @@ function RPCProviderCard({
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => handleMakeActive()}>
+                  onClick={() => handleMakeActive()}
+                >
                   <span className="font-smaller">Set Active</span>
                 </Button>
                 {rpcProvider.deletable && (
                   <Button
                     variant="danger"
                     size="sm"
-                    onClick={() => handleDelete()}>
+                    onClick={() => handleDelete()}
+                  >
                     <span className="font-smaller">Delete</span>
                   </Button>
                 )}

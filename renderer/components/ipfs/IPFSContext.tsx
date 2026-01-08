@@ -17,7 +17,7 @@ interface IpfsUrls {
 }
 interface IpfsContextType {
   ipfsService: IpfsService | null;
-  ipfsUrls?: IpfsUrls;
+  ipfsUrls: IpfsUrls | undefined;
 }
 
 const IpfsContext = createContext<IpfsContextType | undefined>(undefined);

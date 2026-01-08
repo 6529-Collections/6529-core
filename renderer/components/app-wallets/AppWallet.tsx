@@ -94,9 +94,9 @@ export default function AppWalletComponent(
   }, [appWallet]);
 
   const doDownload = async (
-    wallet: AppWallet,
-    decryptedMnemonic: string,
-    decryptedPrivateKey: string
+    _wallet: AppWallet,
+    _decryptedMnemonic: string,
+    _decryptedPrivateKey: string
   ) => {
     alert("Not Supported");
   };
@@ -194,7 +194,8 @@ export default function AppWalletComponent(
         <Col>
           <Link
             className="font-smaller d-flex align-items-center gap-2 decoration-none"
-            href="/tools/app-wallets">
+            href="/tools/app-wallets"
+          >
             <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
             Back to App Wallets
           </Link>
@@ -242,7 +243,8 @@ export default function AppWalletComponent(
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
-                }}>
+                }}
+              >
                 View on Etherscan
               </Tooltip>
             </>
@@ -261,7 +263,8 @@ export default function AppWalletComponent(
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
-                }}>
+                }}
+              >
                 Download Recovery File
               </Tooltip>
             </>
@@ -309,7 +312,8 @@ export default function AppWalletComponent(
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
-                }}>
+                }}
+              >
                 {addressCopied ? "Copied!" : "Copy address to clipboard"}
               </Tooltip>
             </>
@@ -343,7 +347,8 @@ export default function AppWalletComponent(
                     backgroundColor: "#1F2937",
                     color: "white",
                     padding: "4px 8px",
-                  }}>
+                  }}
+                >
                   {revealPhrase ? "Hide" : "Reveal"}
                 </Tooltip>
               </>
@@ -383,7 +388,8 @@ export default function AppWalletComponent(
                       backgroundColor: "#1F2937",
                       color: "white",
                       padding: "4px 8px",
-                    }}>
+                    }}
+                  >
                     {mnemonicCopied ? "Copied!" : "Copy to clipboard"}
                   </Tooltip>
                 </>
@@ -434,7 +440,8 @@ export default function AppWalletComponent(
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
-                }}>
+                }}
+              >
                 {revealPrivateKey ? "Hide" : "Reveal"}
               </Tooltip>
             </>
@@ -476,7 +483,8 @@ export default function AppWalletComponent(
                     backgroundColor: "#1F2937",
                     color: "white",
                     padding: "4px 8px",
-                  }}>
+                  }}
+                >
                   {privateKeyCopied ? "Copied!" : "Copy to clipboard"}
                 </Tooltip>
               </>
@@ -495,7 +503,8 @@ export default function AppWalletComponent(
         <Col className="d-flex align-items-center gap-2">
           <Button
             variant="danger"
-            onClick={() => doDelete(appWallet.name, appWallet.address)}>
+            onClick={() => doDelete(appWallet.name, appWallet.address)}
+          >
             Delete
           </Button>
         </Col>
@@ -517,14 +526,17 @@ function AppWalletPhraseWord(
       xs={props.full_width ? 12 : 6}
       sm={props.full_width ? 12 : 4}
       md={props.full_width ? 12 : 3}
-      className="pt-2 pb-2">
+      className="pt-2 pb-2"
+    >
       <Container className={styles["phrase"]}>
         <Row>
           <Col className="d-flex gap-2 unselectable">
             {props.index && (
               <span className="font-color-h font-lighter">{props.index}</span>
             )}
-            <span className={`text-break ${props.hidden ? styles["blurry"] : ""}`}>
+            <span
+              className={`text-break ${props.hidden ? styles["blurry"] : ""}`}
+            >
               {props.word}
             </span>
           </Col>

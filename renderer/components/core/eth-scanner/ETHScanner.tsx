@@ -1,34 +1,30 @@
 "use client";
 
-import { Col, Container, Row } from "react-bootstrap";
-import { useState, useEffect } from "react";
 import DotLoader from "@/components/dotLoader/DotLoader";
 import { ScheduledWorkerNames, ScheduledWorkerStatus } from "@/shared/types";
-import { Task, WorkerCards } from "./Workers";
-import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
+import { useEffect, useState } from "react";
+import { Col, Container, Row } from "react-bootstrap";
 import { AddRpcProviderModal } from "./RpcProviderModal";
+import { RPCProvider, RPCProviderAdd, RPCProviderCards } from "./RpcProviders";
+import { Task, WorkerCards } from "./Workers";
 
 export default function ETHScanner() {
   const [fetchingTasks, setFetchingTasks] = useState(true);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [rpcProviders, setRpcProviders] = useState<RPCProvider[]>([]);
-  const [homeDir, setHomeDir] = useState<string>("");
 
   const [showAddRpcProviderModal, setShowAddRpcProviderModal] = useState(false);
 
   const fetchContent = () => {
-    window.api
-      .getScheduledWorkers()
-      .then(({ homeDir, rpcProviders, tasks }) => {
-        setHomeDir(homeDir);
-        setRpcProviders(rpcProviders);
-        setTasks(
-          tasks.filter(
-            (t: Task) => t.namespace !== ScheduledWorkerNames.TDH_WORKER
-          )
-        );
-        setFetchingTasks(false);
-      });
+    window.api.getScheduledWorkers().then(({ rpcProviders, tasks }) => {
+      setRpcProviders(rpcProviders);
+      setTasks(
+        tasks.filter(
+          (t: Task) => t.namespace !== ScheduledWorkerNames.TDH_WORKER
+        )
+      );
+      setFetchingTasks(false);
+    });
   };
 
   useEffect(() => {
@@ -43,16 +39,16 @@ export default function ETHScanner() {
       action?: string,
       statusPercentage?: number
     ) => {
-      setTasks((tasks) =>
-        tasks.map((task) =>
+      setTasks((tasks: Task[]) =>
+        tasks.map((task: Task) =>
           task.namespace === namespace
             ? {
                 ...task,
                 status: {
                   status,
                   message,
-                  action,
-                  statusPercentage,
+                  action: action || "",
+                  statusPercentage: statusPercentage || 0,
                 },
               }
             : task
@@ -108,11 +104,7 @@ export default function ETHScanner() {
             </Row>
             <Row className="pt-2">
               <Col>
-                <WorkerCards
-                  homeDir={homeDir}
-                  rpcProviders={rpcProviders}
-                  tasks={tasks}
-                />
+                <WorkerCards rpcProviders={rpcProviders} tasks={tasks} />
               </Col>
             </Row>
           </>

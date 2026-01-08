@@ -218,7 +218,7 @@ const WebSidebarNav = React.forwardRef<
 
   useEffect(() => {
     setNotificationCount(notifications?.unread_count ?? 0);
-    if (haveUnreadNotifications && notifications?.notifications?.length) {
+    if (haveUnreadNotifications && notifications?.notifications?.[0]) {
       showNotification(
         notifications.notifications[0],
         notifications?.unread_count
@@ -265,9 +265,10 @@ const WebSidebarNav = React.forwardRef<
   return (
     <>
       <nav
-        className="tw-flex tw-flex-col tw-mt-4 tw-h-full tw-overflow-y-auto tw-overflow-x-hidden tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 tw-px-3"
-        aria-label="Desktop navigation">
-        <ul className="tw-list-none tw-m-0 tw-p-0">
+        className="tw-mt-4 tw-flex tw-h-full tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-px-3 tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300"
+        aria-label="Desktop navigation"
+      >
+        <ul className="tw-m-0 tw-list-none tw-p-0">
           <li>
             <WebSidebarNavItem
               href="/"
@@ -385,7 +386,8 @@ const WebSidebarNav = React.forwardRef<
             .map((section) => (
               <li
                 key={section.key}
-                className={isCollapsed ? "tw-relative" : undefined}>
+                className={isCollapsed ? "tw-relative" : undefined}
+              >
                 <WebSidebarExpandable
                   section={section}
                   expanded={expandedKeys.includes(section.key)}
@@ -397,7 +399,6 @@ const WebSidebarNav = React.forwardRef<
                 {renderCollapsedSubmenu(section.key)}
               </li>
             ))}
-
         </ul>
       </nav>
 
@@ -407,7 +408,8 @@ const WebSidebarNav = React.forwardRef<
             key="search-modal"
             elementClasses="tw-fixed tw-inset-0 tw-z-50"
             elementRole="dialog"
-            onClicked={(event) => event.stopPropagation()}>
+            onClicked={(event) => event.stopPropagation()}
+          >
             <HeaderSearchModal onClose={() => setIsSearchOpen(false)} />
           </CommonAnimationOpacity>
         )}

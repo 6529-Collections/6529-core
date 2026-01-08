@@ -48,6 +48,9 @@ export async function decryptData(
   password: string
 ): Promise<string> {
   const [ivHex, encryptedHex] = encryptedData.split(":");
+  if (!ivHex || !encryptedHex) {
+    throw new Error("Invalid encrypted data");
+  }
   const iv = Buffer.from(ivHex, "hex");
   const key = await deriveKey(password, salt);
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { classNames } from "@/helpers/Helpers";
-import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
+import { useIntersectionObserver } from "@/hooks/scroll/useIntersectionObserver";
 import type {
   MutableRefObject,
   ReactNode

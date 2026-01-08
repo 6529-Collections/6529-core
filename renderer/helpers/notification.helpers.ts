@@ -23,7 +23,7 @@ export function generateNotificationData(
     const emojiId = reaction.replaceAll(":", "");
     const nativeEmoji = findNativeEmoji(emojiId);
     if (nativeEmoji) {
-      return nativeEmoji.skins[0].native;
+      return nativeEmoji.skins[0]?.native ?? "";
     }
     const normalizedReaction = reaction
       .replaceAll(":", "")
@@ -44,6 +44,7 @@ export function generateNotificationData(
   const getWavesRedirect = (): string => {
     if (!notification.related_drops?.length) return "/notifications";
     const drop = notification.related_drops[0];
+    if (!drop) return "/notifications";
     const waveId = drop.wave?.id;
     const isDm = drop.wave?.admin_group_id?.startsWith("dm-");
     if (!waveId) return "/notifications";
@@ -92,6 +93,7 @@ export function generateNotificationData(
         )
           return "/notifications";
         const replyDrop = notification.related_drops[1];
+        if (!replyDrop) return "/notifications";
         const waveId = replyDrop.wave?.id;
         if (!waveId) return "/notifications";
         const base = `/waves?wave=${waveId}`;

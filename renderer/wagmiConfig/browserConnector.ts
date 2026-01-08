@@ -70,7 +70,7 @@ export function browserConnector(parameters: {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  return createConnector((config) => ({
+  return createConnector((_config) => ({
     get icon() {
       return parameters.icon;
     },
@@ -87,19 +87,11 @@ export function browserConnector(parameters: {
     async setup() {
       //donthing
     },
-    async connect<withCapabilities extends boolean = false>(opts?: {
+    async connect(opts?: {
       isReconnecting?: boolean;
       chainId?: number;
-      withCapabilities?: boolean | withCapabilities;
-    }): Promise<{
-      accounts: withCapabilities extends true
-        ? readonly {
-            address: `0x${string}`;
-            capabilities: Record<string, unknown>;
-          }[]
-        : readonly `0x${string}`[];
-      chainId: number;
-    }> {
+      withCapabilities?: boolean;
+    }) {
       console.log(`[${this.name}] Browser Connect method called`, opts);
       await init(this.name);
 
@@ -252,16 +244,16 @@ export function browserConnector(parameters: {
       });
       return connectionObject.chainId === sepolia.id ? sepolia : mainnet;
     },
-    async onAccountsChanged(accounts) {
+    async onAccountsChanged(_accounts) {
       //do nothing
     },
-    onChainChanged(chain) {
+    onChainChanged(_chain) {
       //do nothing
     },
-    async onConnect(connectInfo) {
+    async onConnect(_connectInfo) {
       //do nothing
     },
-    async onDisconnect(error) {
+    async onDisconnect(_error) {
       //do nothing
     },
   }));

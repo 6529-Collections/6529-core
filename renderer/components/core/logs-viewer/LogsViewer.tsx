@@ -1,9 +1,9 @@
 "use client";
 
-import styles from "./LogsViewer.module.scss";
-import React, { useEffect, useState, useRef, UIEvent } from "react";
 import { LogLine } from "@/shared/types";
+import React, { UIEvent, useEffect, useRef, useState } from "react";
 import { Accordion, Button, useAccordionButton } from "react-bootstrap";
+import styles from "./LogsViewer.module.scss";
 
 interface LogsViewerProps {
   filePath: string;
@@ -34,11 +34,12 @@ function LogsViewerToggle({
   return (
     <Accordion.Button
       style={{ maxWidth: width, flex: "1" }}
-      className={`pt-3 pb-3 ${isOpen ? styles.accordionButtonOpen : ""}`}
+      className={`pt-3 pb-3 ${isOpen ? styles["accordionButtonOpen"] : ""}`}
       onClick={(e) => {
         decoratedOnClick(e);
         onClick?.();
-      }}>
+      }}
+    >
       {children}
     </Accordion.Button>
   );
@@ -80,14 +81,16 @@ export default function LogsViewer({
 
   return (
     <Accordion
-      onSelect={(eventKey) => setSelectedAccordionKey(eventKey as string)}>
+      onSelect={(eventKey) => setSelectedAccordionKey(eventKey as string)}
+    >
       <div className="d-flex align-items-center gap-2">
         {extraActions?.map((action, index) => (
           <LogsViewerToggle
             key={action.name}
             width={width}
             eventKey={index.toString()}
-            isOpen={selectedAccordionKey === index.toString()}>
+            isOpen={selectedAccordionKey === index.toString()}
+          >
             <b>{action.name}</b>
           </LogsViewerToggle>
         ))}
@@ -96,7 +99,8 @@ export default function LogsViewer({
           eventKey={(extraActions?.length ?? 0).toString()}
           isOpen={
             selectedAccordionKey === (extraActions?.length ?? 0).toString()
-          }>
+          }
+        >
           <b>{name ?? "Logs"}</b>
         </LogsViewerToggle>
         {isLogsOpen && (
@@ -108,7 +112,8 @@ export default function LogsViewer({
           <Button
             className="pt-2 pb-2 btn-white"
             disabled={selectedText.length === 0 || isCopied}
-            onClick={copySelectedText}>
+            onClick={copySelectedText}
+          >
             {isCopied ? "Selection Copied!" : "Copy Selection"}
           </Button>
         )}
@@ -168,7 +173,7 @@ export function LogsViewerInternal({
 
       setLines(uniqueLines);
       if (uniqueLines.length > 0) {
-        setFirstLineNumber(uniqueLines[0].id);
+        setFirstLineNumber(uniqueLines[0]?.id ?? 0);
       } else {
         setFirstLineNumber(0);
       }
@@ -227,7 +232,7 @@ export function LogsViewerInternal({
     }
   }, [lines]);
 
-  const handleScroll = async (event: UIEvent<HTMLDivElement>) => {
+  const handleScroll = async (_event: UIEvent<HTMLDivElement>) => {
     if (!containerRef.current || isFetching.current) {
       return;
     }
@@ -306,7 +311,8 @@ export function LogsViewerInternal({
   return (
     <div
       className="mt-2"
-      style={{ position: "relative", height: `${height}vh` }}>
+      style={{ position: "relative", height: `${height}vh` }}
+    >
       <div
         ref={containerRef}
         style={{
@@ -319,11 +325,13 @@ export function LogsViewerInternal({
         }}
         onScroll={handleScroll}
         onMouseUp={handleSelection}
-        onKeyUp={handleSelection}>
+        onKeyUp={handleSelection}
+      >
         {lines.map((line) => (
           <div
             key={line.id}
-            style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}>
+            style={{ whiteSpace: "pre-wrap", fontFamily: "monospace" }}
+          >
             {line.content}
           </div>
         ))}

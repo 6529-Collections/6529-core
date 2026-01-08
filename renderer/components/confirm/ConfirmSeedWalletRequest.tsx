@@ -115,7 +115,7 @@ export default function ConfirmSeedWalletRequest() {
   ) => {
     setSeedRequest({
       ...request,
-      privateKey: wallet?.privateKey,
+      privateKey: wallet?.privateKey ?? "",
     });
     balance.refetch();
     setShow(true);
@@ -167,7 +167,8 @@ export default function ConfirmSeedWalletRequest() {
               className="pt-3 pb-3"
               dangerouslySetInnerHTML={{
                 __html: getHtml(index, param),
-              }}></code>
+              }}
+            ></code>
           ))}
         </>
       );
@@ -196,7 +197,8 @@ export default function ConfirmSeedWalletRequest() {
                     width: "fit-content",
                     fontSize: "smaller",
                   }}
-                  onClick={() => setShowParsed(!showParsed)}>
+                  onClick={() => setShowParsed(!showParsed)}
+                >
                   {showParsed ? "Hide" : "Show"} Parsed Data
                 </Button>
               </span>
@@ -240,12 +242,14 @@ export default function ConfirmSeedWalletRequest() {
       centered
       dialogClassName={
         !isTopModal(SEED_WALLET_REQUEST_MODAL) ? "modal-blurred" : ""
-      }>
-      <div className={styles.modalHeader}>
+      }
+    >
+      <div className={styles["modalHeader"]}>
         <Modal.Title>Confirm Seed Wallet Request</Modal.Title>
       </div>
       <Modal.Body
-        className={`${styles.modalContent} ${styles.modalContentSeedRequest}`}>
+        className={`${styles["modalContent"]} ${styles["modalContentSeedRequest"]}`}
+      >
         <div className="mt-2 mb-2">
           <span className="d-flex flex-column">
             <span>Method</span>
@@ -257,7 +261,8 @@ export default function ConfirmSeedWalletRequest() {
         </div>
       </Modal.Body>
       <Modal.Footer
-        className={`${styles.modalContent} d-flex align-items-center justify-content-between`}>
+        className={`${styles["modalContent"]} d-flex align-items-center justify-content-between`}
+      >
         <span className="d-flex flex-column gap-2">
           <span>
             {balance.data && (
@@ -283,7 +288,8 @@ export default function ConfirmSeedWalletRequest() {
           <Button
             variant="primary"
             onClick={() => onConfirm(seedRequest)}
-            className="d-flex align-items-center gap-1">
+            className="d-flex align-items-center gap-1"
+          >
             <span>Confirm</span>
             {!hasEnoughBalance && (
               <FontAwesomeIcon

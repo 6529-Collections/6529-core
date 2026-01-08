@@ -1,20 +1,20 @@
 "use client";
 
+import { getSeedWallet } from "@/electron";
+import { areEqualAddresses } from "@/helpers/Helpers";
+import { decryptData, encryptData } from "@/shared/encrypt";
+import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
+import { ethers } from "ethers";
 import React, {
   createContext,
-  useContext,
-  useState,
   useCallback,
+  useContext,
   useEffect,
+  useState,
 } from "react";
-import { ethers } from "ethers";
 import { useConnections } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";
-import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
-import { getSeedWallet } from "@/electron";
-import { decryptData, encryptData } from "@/shared/encrypt";
-import { areEqualAddresses } from "@/helpers/Helpers";
 
 export const SEED_WALLET_KEY = "seed-wallet-pass";
 
@@ -193,7 +193,7 @@ export const SeedWalletProvider: React.FC<{
       return;
     }
 
-    if (connections[0].connector.type === "seed-wallet") {
+    if (connections[0]?.connector.type === "seed-wallet") {
       setConnectedAddress(connections[0].accounts[0]);
       setIsSeedWallet(true);
     } else {

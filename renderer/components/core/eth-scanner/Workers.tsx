@@ -143,11 +143,9 @@ const cronToLocalTime = (cronExpression: string): string => {
 };
 
 export function WorkerCards({
-  homeDir,
   rpcProviders,
   tasks,
 }: {
-  readonly homeDir: string;
   readonly rpcProviders: RPCProvider[];
   readonly tasks: Task[];
 }) {
@@ -333,7 +331,8 @@ export function WorkerCard({
           delayShow={150}
           place={"bottom"}
           openEvents={{ mouseenter: true }}
-          closeEvents={{ mouseleave: true, blur: true, click: true }}>
+          closeEvents={{ mouseleave: true, blur: true, click: true }}
+        >
           Click for more info
         </Tooltip>
       </>
@@ -352,7 +351,8 @@ export function WorkerCard({
                   onClick={() => setShowRunNowConfirm(true)}
                   disabled={
                     task.status?.status === ScheduledWorkerStatus.RUNNING
-                  }>
+                  }
+                >
                   Recalculate TDH Now
                 </Button>
               )}
@@ -372,7 +372,8 @@ export function WorkerCard({
                   <Button
                     variant="light"
                     data-tooltip-id="stop-worker-tooltip"
-                    onClick={() => setShowStopWorkerConfirm(true)}>
+                    onClick={() => setShowStopWorkerConfirm(true)}
+                  >
                     Stop
                   </Button>
                 )
@@ -381,7 +382,8 @@ export function WorkerCard({
                   <Button
                     variant="light"
                     data-tooltip-id="run-now-tooltip"
-                    onClick={() => setShowRunNowConfirm(true)}>
+                    onClick={() => setShowRunNowConfirm(true)}
+                  >
                     Run Now
                   </Button>
                 )}
@@ -400,7 +402,8 @@ export function WorkerCard({
                     } else {
                       setShowResetWorkerConfirm(true);
                     }
-                  }}>
+                  }}
+                >
                   Reset
                 </Button>
               )}
@@ -413,7 +416,8 @@ export function WorkerCard({
                   }
                   variant="light"
                   data-tooltip-id="recalculate-owners-tooltip"
-                  onClick={() => setShowRecalculateOwnersConfirm(true)}>
+                  onClick={() => setShowRecalculateOwnersConfirm(true)}
+                >
                   Recalculate Owners
                 </Button>
               )}
@@ -427,7 +431,8 @@ export function WorkerCard({
                   variant="light"
                   data-tooltip-id="reset-to-block-tooltip"
                   style={{ borderLeft: "2px solid #ced4da" }}
-                  onClick={() => setShowResetToBlockConfirm(true)}>
+                  onClick={() => setShowResetToBlockConfirm(true)}
+                >
                   Reset
                 </Button>
               )}
@@ -467,11 +472,13 @@ export function WorkerCard({
                   md={6}
                   className={`pt-2 pb-2 d-flex flex-column gap-2 justify-content-center ${
                     isMobile ? "align-items-center" : "align-items-start"
-                  }`}>
+                  }`}
+                >
                   <span
                     className={`pt-1 pb-1 d-flex flex-column gap-1 justify-content-center ${
                       isMobile ? "align-items-center" : "align-items-start"
-                    }`}>
+                    }`}
+                  >
                     <span className="d-flex align-items-center gap-3">
                       <span className="font-bolder font-larger">
                         {task.display}
@@ -495,7 +502,8 @@ export function WorkerCard({
                   md={6}
                   className={`pt-2 pb-2 d-flex flex-column gap-3 justify-content-center ${
                     isMobile ? "align-items-center" : "align-items-end"
-                  }`}>
+                  }`}
+                >
                   {printStatus()}
                 </Col>
               </Row>
@@ -615,7 +623,8 @@ function ResetToBlockConfirm({
           <Button
             variant="light"
             style={{ borderLeft: "2px solid #ced4da" }}
-            onClick={() => setBlock(minBlock.toString())}>
+            onClick={() => setBlock(minBlock.toString())}
+          >
             Min Block
           </Button>
         </InputGroup>
@@ -626,7 +635,8 @@ function ResetToBlockConfirm({
           onClick={() => {
             onHide();
             setBlock("");
-          }}>
+          }}
+        >
           Cancel
         </Button>
         <Button
@@ -635,7 +645,8 @@ function ResetToBlockConfirm({
             onConfirm(Number(block));
             setBlock("");
           }}
-          disabled={!block || Number(block) < minBlock}>
+          disabled={!block || Number(block) < minBlock}
+        >
           Confirm
         </Button>
       </Modal.Footer>

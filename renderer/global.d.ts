@@ -6,7 +6,7 @@ import {
   ElectronUpdater,
   ElectronNotifications,
   ElectronLocalDB,
-} from "../electron-src/preload";
+} from "../shared/preload-types";
 
 declare global {
   interface Window {
