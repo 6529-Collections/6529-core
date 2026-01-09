@@ -37,7 +37,32 @@ function signExecutable(filePath: string): void {
   }
 }
 
-function signAllExecutables(): void {
+function signIpfsBinaries(): void {
+  console.log("Signing IPFS binaries...");
+  const ipfsBinariesDir = path.join(__dirname, "../ipfs-binaries/win");
+
+  if (!fs.existsSync(ipfsBinariesDir)) {
+    console.warn(`IPFS binaries directory not found: ${ipfsBinariesDir}`);
+    return;
+  }
+
+  const architectures = ["x64", "arm64"];
+
+  for (const arch of architectures) {
+    const ipfsPath = path.join(ipfsBinariesDir, arch, "ipfs.exe");
+
+    if (fs.existsSync(ipfsPath)) {
+      signExecutable(ipfsPath);
+    } else {
+      console.warn(`IPFS binary not found: ${ipfsPath}`);
+    }
+  }
+
+  console.log("All IPFS binaries signed successfully!");
+}
+
+function signDistExecutables(): void {
+  console.log("Signing dist executables...");
   const dirPath = path.join(__dirname, "../dist");
 
   if (fs.existsSync(dirPath)) {
@@ -55,4 +80,10 @@ function signAllExecutables(): void {
   }
 }
 
-signAllExecutables();
+const args = process.argv.slice(2);
+
+if (args.includes("--ipfs")) {
+  signIpfsBinaries();
+} else {
+  signDistExecutables();
+}
