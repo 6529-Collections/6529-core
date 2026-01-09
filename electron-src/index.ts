@@ -1,4 +1,3 @@
-import { exec } from "child_process";
 import {
   crashReporter,
   ipcMain,
@@ -15,6 +14,7 @@ import { app, BrowserWindow, Menu, Notification } from "electron/main";
 import fs from "fs";
 import { getPort } from "get-port-please";
 import path from "node:path";
+import open, { apps } from "open";
 import { platform } from "os";
 import { Tail } from "tail";
 import {
@@ -523,61 +523,6 @@ ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
     });
 });
 
-function executeCommand(command: string): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
-    exec(command, (error) => {
-      if (error) {
-        Logger.error("Command execution failed:", error);
-        reject(error);
-      } else {
-        resolve();
-      }
-    });
-  });
-}
-
-function openInChrome(url: string): Promise<void> {
-  let command: string;
-
-  if (isMac()) {
-    command = `google-chrome "${url}" || open -a "Google Chrome" "${url}"`;
-  } else if (isWindows()) {
-    command = `start chrome "${url}"`;
-  } else {
-    command = `google-chrome "${url}" || xdg-open "${url}"`;
-  }
-
-  return executeCommand(command);
-}
-
-function openInFirefox(url: string): Promise<void> {
-  let command: string;
-
-  if (isMac()) {
-    command = `firefox "${url}" || open -a "Firefox" "${url}"`;
-  } else if (isWindows()) {
-    command = `start firefox "${url}"`;
-  } else {
-    command = `firefox "${url}" || xdg-open "${url}"`;
-  }
-
-  return executeCommand(command);
-}
-
-function openInBrave(url: string): Promise<void> {
-  let command: string;
-
-  if (isMac()) {
-    command = `brave-browser "${url}" || open -a "Brave Browser" "${url}"`;
-  } else if (isWindows()) {
-    command = `start brave "${url}"`;
-  } else {
-    command = `brave-browser "${url}" || xdg-open "${url}"`;
-  }
-
-  return executeCommand(command);
-}
-
 ipcMain.on("open-external", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL:", url);
@@ -623,19 +568,37 @@ ipcMain.on("open-external", (event, url) => {
 ipcMain.on("open-external-chrome", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Chrome:", url);
-  openInChrome(url);
+  open(url, { app: { name: apps.chrome } }).catch((err) => {
+    Logger.error(
+      "Failed to open in Chrome, falling back to default browser:",
+      err
+    );
+    shell.openExternal(url);
+  });
 });
 
 ipcMain.on("open-external-firefox", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Firefox:", url);
-  openInFirefox(url);
+  open(url, { app: { name: apps.firefox } }).catch((err) => {
+    Logger.error(
+      "Failed to open in Firefox, falling back to default browser:",
+      err
+    );
+    shell.openExternal(url);
+  });
 });
 
 ipcMain.on("open-external-brave", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL in Brave:", url);
-  openInBrave(url);
+  open(url, { app: { name: "Brave Browser" } }).catch((err) => {
+    Logger.error(
+      "Failed to open in Brave, falling back to default browser:",
+      err
+    );
+    shell.openExternal(url);
+  });
 });
 
 ipcMain.on("open-logs", (_event, name: string, logFile: string) => {
