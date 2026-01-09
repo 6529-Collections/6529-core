@@ -1,13 +1,13 @@
 //
 
+import { app } from "electron";
 import Logger from "electron-log";
-import path from "node:path";
-import fs from "node:fs";
-import next from "next";
 import { createServer } from "http";
+import next from "next";
+import fs from "node:fs";
+import path from "node:path";
 import { parse } from "url";
 import { isDev } from "./env";
-import { app } from "electron";
 
 if (!isDev) {
   // @ts-ignore
