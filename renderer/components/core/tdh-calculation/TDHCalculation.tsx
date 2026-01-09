@@ -51,7 +51,7 @@ export default function TDHCalculation() {
                 status,
                 message,
                 action: action || "",
-                statusPercentage: statusPercentage || 0,
+                ...(statusPercentage !== undefined && { statusPercentage }),
               },
             }
           : task

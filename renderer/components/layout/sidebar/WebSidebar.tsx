@@ -153,14 +153,15 @@ function WebSidebar({
             ? "tw-fixed tw-inset-y-0 tw-left-0 tw-z-[80] focus:tw-outline-none"
             : "tw-fixed tw-inset-y-0 tw-left-0 tw-z-40 focus:tw-outline-none"
         }
-        style={isMobile ? undefined : { left: "var(--layout-margin, 0px)" }}>
+        style={isMobile ? undefined : { left: "var(--layout-margin, 0px)" }}
+      >
         <div
           className="tw-group tw-relative tw-z-50 tw-h-full tw-border-0 tw-border-y-0 tw-border-l-0 tw-border-r tw-border-solid tw-border-iron-800 tw-bg-black tw-transition-[width] tw-duration-300 tw-ease-in-out focus:tw-outline-none"
           style={{ width: sidebarWidth }}
           aria-label="Primary sidebar"
           ref={scrollContainerRef}
         >
-          <div className="tw-flex tw-h-full tw-flex-col tw-pt-2">
+          <div className="tw-flex tw-h-full tw-flex-col tw-pt-10">
             <WebSidebarHeader
               collapsed={shouldShowCollapsed}
               onToggle={handleToggle}
