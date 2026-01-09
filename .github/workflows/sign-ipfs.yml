@@ -1,0 +1,86 @@
+name: Sign IPFS Binaries
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sign-ipfs:
+    name: Sign IPFS Binaries
+    runs-on: windows-latest
+
+    env:
+      AZURE_KEY_VAULT_URL: ${{ secrets.AZURE_KEY_VAULT_URL }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      CERT_NAME: ${{ secrets.CERT_NAME }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: Install signing dependencies
+        working-directory: ./sign-win
+        run: npm ci
+
+      - name: Set up .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Install AzureSignTool
+        shell: pwsh
+        run: |
+          dotnet tool uninstall --global AzureSignTool 2>$null
+          dotnet tool install --global AzureSignTool --version 6.0.1
+
+      - name: Add dotnet tools to PATH
+        run: echo "$env:USERPROFILE\\.dotnet\\tools" | Out-File -Append -FilePath $env:GITHUB_PATH -Encoding utf8
+        shell: pwsh
+
+      - name: Sign IPFS binaries
+        working-directory: ./sign-win
+        shell: pwsh
+        run: npx tsx sign-win.ts --ipfs
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Upload signed IPFS binaries to S3
+        shell: pwsh
+        run: aws s3 sync ./ipfs-binaries/win s3://6529bucket/ipfs-binaries-signed/win/ --exclude "*" --include "*/ipfs.exe"
+
+      - name: Notify Discord on failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Desktop - IPFS Signing failed ❌"
+          color: 0xff0000
+
+      - name: Notify Discord on success
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        continue-on-error: true
+        env:
+          DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
+        with:
+          title: "6529 Desktop - IPFS Binaries Signed ✅"
+          description: "Signed IPFS binaries uploaded to S3"
+          color: 0x00ff00
