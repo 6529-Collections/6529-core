@@ -1,13 +1,12 @@
 "use client";
 
-import { CommunityMembersQuery } from "@/app/network/page";
 import { AuthContext } from "@/components/auth/Auth";
 import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import type { CommunityMemberOverview } from "@/entities/IProfile";
 import { SortDirection } from "@/entities/ISort";
+import type { ApiCommunityMemberOverview } from "@/generated/models/ApiCommunityMemberOverview";
 import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import type { Page } from "@/helpers/Types";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
@@ -15,9 +14,10 @@ import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { useContext, useEffect, useRef, useState } from "react";
 import { CreditDirection } from "../GroupCard";
 
-import { CommunityMembersSortOption } from "@/enums";
+import { CommunityMembersQuery } from "@/app/network/page";
 import { ApiBulkRateRequest } from "@/generated/models/ApiBulkRateRequest";
 import { ApiBulkRateResponse } from "@/generated/models/ApiBulkRateResponse";
+import { ApiCommunityMembersSortOption } from "@/generated/models/ApiCommunityMembersSortOption";
 import { ApiRateMatter } from "@/generated/models/ApiRateMatter";
 import GroupCardActionWrapper from "../GroupCardActionWrapper";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
@@ -57,35 +57,35 @@ export default function GroupCardVoteAll({
     CreditDirection.ADD
   );
 
-  const { data: members, isFetching } = useQuery<Page<CommunityMemberOverview>>(
-    {
-      queryKey: [
-        QueryKey.COMMUNITY_MEMBERS_TOP,
-        {
+  const { data: members, isFetching } = useQuery<
+    Page<ApiCommunityMemberOverview>
+  >({
+    queryKey: [
+      QueryKey.COMMUNITY_MEMBERS_TOP,
+      {
+        page: 1,
+        pageSize: 1,
+        sort: ApiCommunityMembersSortOption.Level,
+        sortDirection: SortDirection.DESC,
+        groupId: group?.id ?? null,
+      },
+    ],
+    queryFn: async () =>
+      await commonApiFetch<
+        Page<ApiCommunityMemberOverview>,
+        CommunityMembersQuery
+      >({
+        endpoint: `community-members/top`,
+        params: {
           page: 1,
-          pageSize: 1,
-          sort: CommunityMembersSortOption.LEVEL,
-          sortDirection: SortDirection.DESC,
-          groupId: group?.id ?? null,
+          page_size: 1,
+          sort: ApiCommunityMembersSortOption.Level,
+          sort_direction: SortDirection.DESC,
+          group_id: group?.id,
         },
-      ],
-      queryFn: async () =>
-        await commonApiFetch<
-          Page<CommunityMemberOverview>,
-          CommunityMembersQuery
-        >({
-          endpoint: `community-members/top`,
-          params: {
-            page: 1,
-            page_size: 1,
-            sort: CommunityMembersSortOption.LEVEL,
-            sort_direction: SortDirection.DESC,
-            group_id: group?.id,
-          },
-        }),
-      placeholderData: keepPreviousData,
-    }
-  );
+      }),
+    placeholderData: keepPreviousData,
+  });
 
   const [membersCount, setMembersCount] = useState<number | null>(null);
   useEffect(() => {
@@ -147,16 +147,16 @@ export default function GroupCardVoteAll({
 
   const getMembersPage = async (
     page: number
-  ): Promise<Page<CommunityMemberOverview>> => {
+  ): Promise<Page<ApiCommunityMemberOverview>> => {
     return await commonApiFetch<
-      Page<CommunityMemberOverview>,
+      Page<ApiCommunityMemberOverview>,
       CommunityMembersQuery
     >({
       endpoint: `community-members/top`,
       params: {
         page: page,
         page_size: 100,
-        sort: CommunityMembersSortOption.LEVEL,
+        sort: ApiCommunityMembersSortOption.Level,
         sort_direction: SortDirection.DESC,
         group_id: group?.id,
       },
@@ -223,7 +223,8 @@ export default function GroupCardVoteAll({
       membersCount={membersCount}
       doneMembersCount={doneMembersCount}
       matter={matter}
-      onSave={onSave}>
+      onSave={onSave}
+    >
       {group && (
         <GroupCardVoteAllInputs
           matter={matter}
