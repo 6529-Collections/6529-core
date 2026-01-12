@@ -18,14 +18,11 @@ const nextDir = path.join(app.getAppPath(), "renderer");
 Logger.info("NEXT DIR:", nextDir);
 
 const rendererConfigTs = path.join(nextDir, "next.config.ts");
-const rendererConfigBak = path.join(nextDir, "next.config.ts.electronbak");
-const rendererConfigCompiled = path.join(nextDir, "next.config.compiled.js");
-
-if (fs.existsSync(rendererConfigCompiled)) {
-  fs.unlinkSync(rendererConfigCompiled);
-}
 if (fs.existsSync(rendererConfigTs)) {
-  fs.renameSync(rendererConfigTs, rendererConfigBak);
+  throw new Error(
+    `renderer/next.config.ts should not exist in the Electron repo. ` +
+      `Exclude it when copying the web repo.`
+  );
 }
 
 const nextConfig = {
@@ -37,13 +34,7 @@ const nextApp = next(nextConfig);
 const handle = nextApp.getRequestHandler();
 
 export async function prepareNext(port: number) {
-  try {
-    await nextApp.prepare();
-  } finally {
-    if (fs.existsSync(rendererConfigBak)) {
-      fs.renameSync(rendererConfigBak, rendererConfigTs);
-    }
-  }
+  await nextApp.prepare();
 
   const nextServer = createServer((req, res) => {
     const parsedUrl = parse(req.url!, true);
