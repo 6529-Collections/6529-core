@@ -1,4 +1,5 @@
 import dotenv from "dotenv";
+import type { NextConfig } from "next";
 import {
   PHASE_DEVELOPMENT_SERVER,
   PHASE_PRODUCTION_BUILD,
@@ -13,7 +14,7 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-function logOnce(label, message) {
+function logOnce(label: string, message: string | undefined): void {
   const k = `__LOG_${label}_ONCE__`;
   if (!process.env[k]) {
     process.env[k] = "1";
@@ -21,17 +22,22 @@ function logOnce(label, message) {
   }
 }
 
-// Resolve where Next lives (root vs /renderer when used inside Electron repo)
 const RENDERER_ROOT = fs.existsSync(path.join(__dirname, "renderer"))
   ? path.join(__dirname, "renderer")
   : __dirname;
 const NEXT_DIR = path.join(RENDERER_ROOT, ".next");
 logOnce("NEXT_DIR", NEXT_DIR);
 
-// ─────────────────────────────────────────────────────────────
-// Load runtime schema (permissive fallback if missing in packaged app)
-// ─────────────────────────────────────────────────────────────
-let publicEnvSchema;
+type EnvSchema = {
+  safeParse: (obj: unknown) => {
+    success: boolean;
+    data?: unknown;
+    error?: unknown;
+  };
+  _def: { shape: () => Record<string, unknown> };
+};
+
+let publicEnvSchema: EnvSchema;
 try {
   ({ publicEnvSchema } = require("./renderer/config/env.schema.runtime.cjs"));
 } catch {
@@ -43,13 +49,13 @@ try {
       "env.schema.runtime.cjs not found; using permissive schema"
     );
     publicEnvSchema = {
-      safeParse: (obj) => ({ success: true, data: obj }),
+      safeParse: (obj: unknown) => ({ success: true, data: obj }),
       _def: { shape: () => ({}) },
     };
   }
 }
 
-function computeVersionFromPkg() {
+function computeVersionFromPkg(): string {
   try {
     const pkg = require("./package.json");
     const VERSION = pkg.version || "0.0.0";
@@ -62,13 +68,16 @@ function computeVersionFromPkg() {
   }
 }
 
-function resolveAssetsFlagFromEnv() {
+function resolveAssetsFlagFromEnv(): boolean {
   return (
     ((process.env.ASSETS_FROM_S3 ?? "false") + "").toLowerCase() === "true"
   );
 }
 
-function persistBakedArtifacts(publicEnv, ASSETS_FROM_S3) {
+function persistBakedArtifacts(
+  publicEnv: unknown,
+  ASSETS_FROM_S3: boolean
+): void {
   try {
     fs.mkdirSync(NEXT_DIR, { recursive: true });
     fs.writeFileSync(
@@ -84,7 +93,7 @@ function persistBakedArtifacts(publicEnv, ASSETS_FROM_S3) {
   } catch {}
 }
 
-function loadBakedRuntimeConfig(VERSION) {
+function loadBakedRuntimeConfig(VERSION: string): unknown {
   let baked = {};
   if (process.env.PUBLIC_RUNTIME) {
     baked = JSON.parse(process.env.PUBLIC_RUNTIME);
@@ -97,7 +106,7 @@ function loadBakedRuntimeConfig(VERSION) {
   return parsed.data;
 }
 
-function loadAssetsFlagAtRuntime() {
+function loadAssetsFlagAtRuntime(): boolean {
   let flag = (process.env.ASSETS_FROM_S3 ?? "").toString().toLowerCase();
   if (!flag) {
     const p = path.join(NEXT_DIR, "ASSETS_FROM_S3");
@@ -107,7 +116,9 @@ function loadAssetsFlagAtRuntime() {
   return flag === "true";
 }
 
-function createSecurityHeaders(apiEndpoint = "") {
+function createSecurityHeaders(
+  apiEndpoint: string = ""
+): Array<{ key: string; value: string }> {
   return [
     {
       key: "Strict-Transport-Security",
@@ -124,7 +135,34 @@ function createSecurityHeaders(apiEndpoint = "") {
   ];
 }
 
-function sharedConfig(publicEnv, assetPrefix) {
+interface PublicEnv {
+  API_ENDPOINT?: string;
+  ALLOWLIST_API_ENDPOINT?: string;
+  BASE_ENDPOINT?: string;
+  ALCHEMY_API_KEY?: string;
+  NEXTGEN_CHAIN_ID?: number;
+  MOBILE_APP_SCHEME?: string;
+  CORE_SCHEME?: string;
+  TENOR_API_KEY?: string;
+  WS_ENDPOINT?: string;
+  DEV_MODE_MEMES_WAVE_ID?: string;
+  DEV_MODE_WALLET_ADDRESS?: string;
+  DEV_MODE_AUTH_JWT?: string;
+  USE_DEV_AUTH?: string;
+  STAGING_API_KEY?: string;
+  AWS_RUM_APP_ID?: string;
+  AWS_RUM_REGION?: string;
+  AWS_RUM_SAMPLE_RATE?: string;
+  ENABLE_SECURITY_LOGGING?: string;
+  VITE_FEATURE_AB_CARD?: string;
+  FEATURE_AB_CARD?: string;
+  PEPE_CACHE_TTL_MINUTES?: string;
+  PEPE_CACHE_MAX_ITEMS?: string;
+  FARCASTER_WARPCAST_API_BASE?: string;
+  FARCASTER_WARPCAST_API_KEY?: string;
+}
+
+function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
   return {
     reactCompiler: true,
     reactStrictMode: false,
@@ -204,23 +242,21 @@ function sharedConfig(publicEnv, assetPrefix) {
   };
 }
 
-const nextConfigFactory = (phase) => {
+const nextConfigFactory = (phase: string): NextConfig => {
   const mode = process.env.NODE_ENV;
   logOnce("NODE_ENV", mode);
 
-  // Build & Dev phases
   if (phase === PHASE_DEVELOPMENT_SERVER || phase === PHASE_PRODUCTION_BUILD) {
     if (mode) dotenv.config({ path: `.env.${mode}` });
     dotenv.config({ path: `.env` });
 
-    // Optional fallback: hydrate envs from baked/static JSON so Electron builds don't need .env
     try {
       const bakedMainPath = path.join(
         __dirname,
         "main/config/__PUBLIC_RUNTIME.json"
       );
       const sourceJsonPath = path.join(__dirname, "config/public-runtime.json");
-      let bakedSource = null;
+      let bakedSource: string | null = null;
       if (fs.existsSync(bakedMainPath)) {
         bakedSource = fs.readFileSync(bakedMainPath, "utf8");
         logOnce("ENV fallback", `Loaded from ${bakedMainPath}`);
@@ -241,23 +277,20 @@ const nextConfigFactory = (phase) => {
 
     const VERSION = computeVersionFromPkg();
     const ASSETS_FROM_S3 = resolveAssetsFlagFromEnv();
-    logOnce("ASSETS_FROM_S3", ASSETS_FROM_S3);
+    logOnce("ASSETS_FROM_S3", String(ASSETS_FROM_S3));
 
-    // Validate with your Zod schema
     const shape = publicEnvSchema._def.shape();
-    const publicRuntime = {};
+    const publicRuntime: Record<string, string | undefined> = {};
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
     publicRuntime.VERSION = VERSION;
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
 
     const parsed = publicEnvSchema.safeParse(publicRuntime);
     if (!parsed.success) throw parsed.error;
-    const publicEnv = parsed.data;
+    const publicEnv = parsed.data as PublicEnv;
 
-    // Bake for runtime (even though you ship /out, this is useful for parity/logging)
     persistBakedArtifacts(publicEnv, ASSETS_FROM_S3);
 
-    // No CDN asset prefix for static export by default
     const assetPrefix = ASSETS_FROM_S3
       ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
       : "";
@@ -278,7 +311,6 @@ const nextConfigFactory = (phase) => {
             : String(publicEnv.NEXTGEN_CHAIN_ID),
         MOBILE_APP_SCHEME: publicEnv.MOBILE_APP_SCHEME,
         CORE_SCHEME: publicEnv.CORE_SCHEME,
-        // IPFS_* intentionally omitted (Electron provides them)
         TENOR_API_KEY: publicEnv.TENOR_API_KEY,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
@@ -303,10 +335,9 @@ const nextConfigFactory = (phase) => {
     };
   }
 
-  // You don’t run a Next server in prod (static export), but keep this harmless.
   if (phase === PHASE_PRODUCTION_SERVER) {
     const VERSION = computeVersionFromPkg();
-    const publicEnv = loadBakedRuntimeConfig(VERSION);
+    const publicEnv = loadBakedRuntimeConfig(VERSION) as PublicEnv;
     const ASSETS_FROM_S3 = loadAssetsFlagAtRuntime();
     const assetPrefix = ASSETS_FROM_S3
       ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`

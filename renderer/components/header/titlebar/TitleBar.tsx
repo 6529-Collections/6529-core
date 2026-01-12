@@ -1,6 +1,7 @@
 "use client";
 
 import ConfirmClose from "@/components/confirm/ConfirmClose";
+import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { publicEnv } from "@/config/env";
 import { useGlobalRefresh } from "@/contexts/RefreshContext";
 import { useSearch } from "@/contexts/SearchContext";
@@ -17,7 +18,7 @@ import {
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import styles from "./TitleBar.module.scss";
 import TooltipButton from "./TooltipButton";
@@ -34,6 +35,7 @@ export default function TitleBar() {
   const searchParams = useSearchParams();
   const { isOpen, open, close } = useSearch();
   const { globalRefresh, refreshKey } = useGlobalRefresh();
+  const { invalidateAll } = useContext(ReactQueryWrapperContext);
   const isContentRefreshingRef = useRef(false);
 
   const prevPathnameRef = useRef(pathname);
@@ -213,6 +215,7 @@ export default function TitleBar() {
 
     isContentRefreshingRef.current = true;
     setNavigationLoading(true);
+    invalidateAll();
     globalRefresh();
   };
 

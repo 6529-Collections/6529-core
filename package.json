@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -12,17 +12,18 @@
   "scripts": {
     "pull-web": "git subtree pull --prefix=renderer https://github.com/6529-Collections/6529seize-frontend.git main",
     "postinstall": "electron-builder install-app-deps",
-    "clean": "rm -rf dist main renderer/out renderer/.next",
-    "clean-win": "rimraf dist main renderer/out renderer/.next",
+    "clean": "rm -rf dist main renderer/out renderer/.next next.config.mjs",
+    "clean-win": "rimraf dist main renderer/out renderer/.next next.config.mjs",
     "build-env-schema": "node renderer/scripts/build-env-schema.cjs && tsx scripts/bake-public-runtime.ts",
-    "dev": "npm run clean && npm run build-env-schema && npm run build-electron && ENVIRONMENT=staging electron . --dev",
-    "dev-win": "npm run clean-win && npm run build-env-schema && npm run build-electron-win && ENVIRONMENT=staging electron . --dev",
+    "build-next-config": "npx esbuild next.config.ts --outfile=next.config.mjs --format=esm --platform=node --target=node18",
+    "dev": "npm run clean && npm run build-env-schema && npm run build-next-config && npm run build-electron && ENVIRONMENT=staging electron . --dev",
+    "dev-win": "npm run clean-win && npm run build-env-schema && npm run build-next-config && npm run build-electron-win && ENVIRONMENT=staging electron . --dev",
     "rebuild-sql": "npx electron-rebuild -f -w better-sqlite3",
     "build-renderer": "next build renderer",
     "build-electron": "tsc -p electron-src && cp -r assets main/electron-src/",
     "build-electron-win": "tsc -p electron-src && xcopy /E /I assets main\\electron-src\\assets\\",
-    "build": "npm run clean && npm run build-env-schema && npm run build-renderer && npm run build-electron",
-    "build-win": "npm run clean-win && npm run build-env-schema && npm run build-renderer && npm run build-electron-win",
+    "build": "npm run clean && npm run build-env-schema && npm run build-next-config && npm run build-renderer && npm run build-electron",
+    "build-win": "npm run clean-win && npm run build-env-schema && npm run build-next-config && npm run build-renderer && npm run build-electron-win",
     "dist-win-staging": "npm run download-signed-ipfs && npm run build && electron-builder --config electron-builder.staging.json --win --x64 --publish never",
     "dist-win-staging-upload": "npm run dist-win-staging && npm run upload-staging-win-unsigned",
     "dist-win-production": "npm run download-signed-ipfs && npm run build && electron-builder --config electron-builder.production.json --win --x64 --arm64 --publish never",

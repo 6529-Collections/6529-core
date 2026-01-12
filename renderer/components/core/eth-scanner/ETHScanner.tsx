@@ -48,7 +48,7 @@ export default function ETHScanner() {
                   status,
                   message,
                   action: action || "",
-                  statusPercentage: statusPercentage || 0,
+                  ...(statusPercentage !== undefined && { statusPercentage }),
                 },
               }
             : task
