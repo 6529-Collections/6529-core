@@ -1,7 +1,7 @@
 "use client";
 
 import { NEXTGEN_CHAIN_ID } from "@/components/nextGen/nextgen_contracts";
-import { NEXTGEN_GENERATOR_BASE_URL } from "@/constants";
+import { NEXTGEN_GENERATOR_BASE_URL } from "@/constants/constants";
 import { NextGenToken } from "@/entities/INextgen";
 import { openInExternalBrowser } from "@/helpers";
 import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";

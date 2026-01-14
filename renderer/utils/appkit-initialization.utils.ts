@@ -1,7 +1,7 @@
 import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
 import type { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
 import { publicEnv } from "@/config/env";
-import { CW_PROJECT_ID } from "@/constants";
+import { CW_PROJECT_ID } from "@/constants/constants";
 import { isElectron } from "@/helpers";
 import { ISeedWallet } from "@/shared/types";
 import { AdapterCacheError, AdapterError } from "@/src/errors/adapter";

@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  GRADIENT_CONTRACT,
+  MEMELAB_CONTRACT,
+  MEMES_CONTRACT,
+  NEXTGEN_CONTRACT,
+} from "@/constants/constants";
 import { Transaction } from "@/entities/ITransaction";
 import { PaginatedResponseLocal } from "@/shared/types";
 import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
@@ -7,12 +13,6 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import { Button, Table } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import {
-  GRADIENT_CONTRACT,
-  MEMELAB_CONTRACT,
-  MEMES_CONTRACT,
-  NEXTGEN_CONTRACT,
-} from "../../../constants";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
