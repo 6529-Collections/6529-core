@@ -75,18 +75,12 @@ node_modules/
 # OS specific
 # Task files
 tasks.json
-tasks/ 
+tasks/
 .coverage-progress.json
 
 # Jest
 jest-failed-tests.txt
 jest-results.json
-
-# Claude folder
-claude.md
-.claude/commands/
-test.html
-.claude/
 
 # generated env schema for Node runtime
 /config/env.schema.runtime.cjs
@@ -98,3 +92,13 @@ scripts/lint-to-json.js
 eslint-rule-summary.csv
 
 .hooks
+.coderabbit.yml
+.cursorrules
+.cursor
+.cursorignore
+CLAUDE.md
+.claude
+AGENTS.md
+.codex
+.gemini
+.windsurfrules

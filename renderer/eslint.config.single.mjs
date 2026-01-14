@@ -45,7 +45,7 @@ const plugins = {
 // RULES
 // =============================================================================
 const rules = {
-   "sonarjs/no-duplicated-branches": "error",
+  "sonarjs/no-duplicated-branches": "error",
 };
 
 // =============================================================================
@@ -72,6 +72,8 @@ export default defineConfig([
     "*.tsx",
     "scripts/**",
     "stubs/**",
+    ".claude/**",
+        ".codex/**",
   ]),
 
   // Base config with Next.js rules

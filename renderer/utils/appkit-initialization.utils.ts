@@ -8,7 +8,7 @@ import { AdapterCacheError, AdapterError } from "@/src/errors/adapter";
 import { isIndexedDBError, logErrorSecurely } from "@/utils/error-sanitizer";
 import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import type { AppKitNetwork } from "@reown/appkit-common";
-import type { ChainAdapter} from "@reown/appkit/react";
+import type { ChainAdapter } from "@reown/appkit/react";
 import { createAppKit } from "@reown/appkit/react";
 import { mainnet } from "viem/chains";
 

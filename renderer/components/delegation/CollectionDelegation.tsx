@@ -21,14 +21,14 @@ import {
 } from "wagmi";
 import styles from "./Delegation.module.scss";
 
-import { DELEGATION_ABI } from "@/abis";
+import { DELEGATION_ABI } from "@/abis/abis";
 import {
   DELEGATION_ALL_ADDRESS,
   DELEGATION_CONTRACT,
   NULL_ADDRESS,
-} from "@/constants";
-import { DelegationCenterSection } from "@/enums";
+} from "@/constants/constants";
 import { areEqualAddresses, getTransactionLink } from "@/helpers/Helpers";
+import { DelegationCenterSection } from "@/types/enums";
 import {
   faCircleArrowLeft,
   faEdit,
@@ -50,9 +50,7 @@ import {
   type ContractDelegation,
   type ContractWalletDelegation,
 } from "./CollectionDelegation.utils";
-import type {
-  DelegationCollection
-} from "./delegation-constants";
+import type { DelegationCollection } from "./delegation-constants";
 import {
   ALL_USE_CASES,
   ANY_COLLECTION_PATH,

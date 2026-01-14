@@ -1,4 +1,4 @@
-import { MANIFOLD } from "@/constants";
+import { MANIFOLD } from "@/constants/constants";
 import { NextGenCollection } from "@/entities/INextgen";
 import { NFTLite } from "@/entities/INFT";
 import { Transaction } from "@/entities/ITransaction";
@@ -70,7 +70,8 @@ export function printRoyalties(value: number, royalties: number, from: string) {
         place="top-end"
         opacity={1}
         variant="light"
-        className="tw-leading-tight">
+        className="tw-leading-tight"
+      >
         <div className="tw-flex tw-gap-3">
           <span>Royalties</span>
           <span>
@@ -105,7 +106,8 @@ export function printGas(
         place="top-end"
         opacity={1}
         variant="light"
-        className="tw-leading-tight">
+        className="tw-leading-tight"
+      >
         <div className="tw-flex tw-flex-col tw-gap-1">
           {[
             ["Gas", `${displayDecimal(gas)}`],
@@ -114,9 +116,10 @@ export function printGas(
           ].map(([label, value]) => (
             <div
               key={label}
-              className="tw-flex tw-justify-between tw-w-full tw-gap-4">
-              <span className="tw-text-left tw-w-1/2">{label}</span>
-              <span className="tw-text-right tw-w-1/2">{value}</span>
+              className="tw-flex tw-w-full tw-justify-between tw-gap-4"
+            >
+              <span className="tw-w-1/2 tw-text-left">{label}</span>
+              <span className="tw-w-1/2 tw-text-right">{value}</span>
             </div>
           ))}
         </div>
@@ -276,7 +279,8 @@ export default function LatestActivityRow(props: Readonly<Props>) {
       <a
         href={`/nextgen/token/${props.tr.token_id}/provenance`}
         target="_blank"
-        rel="noopener noreferrer">
+        rel="noopener noreferrer"
+      >
         {collectionName} #{normalized.token_id}
         <Image
           unoptimized
@@ -381,7 +385,8 @@ export default function LatestActivityRow(props: Readonly<Props>) {
           href={`https://etherscan.io/tx/${props.tr.transaction}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="tw-flex">
+          className="tw-flex"
+        >
           <FontAwesomeIcon
             className={styles["gasIcon"]}
             icon={faExternalLinkSquare}
