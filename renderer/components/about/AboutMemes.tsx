@@ -1,4 +1,4 @@
-import { AboutSection } from "@/enums";
+import { AboutSection } from "@/types/enums";
 import Image from "next/image";
 import Link from "next/link";
 import { Col, Container, Row } from "react-bootstrap";
@@ -8,10 +8,7 @@ export default function AboutMemes() {
     <Container>
       <Row>
         <Col>
-          <h1>
-            Memes Are The Most Important
-            Thing In The World
-          </h1>
+          <h1>Memes Are The Most Important Thing In The World</h1>
         </Col>
       </Row>
       <Row className="pt-2 pb-2">
@@ -91,7 +88,8 @@ export default function AboutMemes() {
             <Link
               href={`/about/${AboutSection.FAQ}`}
               target="_blank"
-              rel="noopener noreferrer">
+              rel="noopener noreferrer"
+            >
               6529.io/about/faq
             </Link>
           </p>
@@ -106,7 +104,8 @@ export default function AboutMemes() {
             <Link
               href={`/about/${AboutSection.MINTING}`}
               target="_blank"
-              rel="noopener noreferrer">
+              rel="noopener noreferrer"
+            >
               6529.io/about/minting
             </Link>
           </p>

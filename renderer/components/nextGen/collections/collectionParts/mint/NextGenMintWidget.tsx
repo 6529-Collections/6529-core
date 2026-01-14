@@ -18,7 +18,7 @@ import {
   useMintSharedState,
 } from "@/components/nextGen/nextgen_helpers";
 import { publicEnv } from "@/config/env";
-import { NULL_ADDRESS } from "@/constants";
+import { NULL_ADDRESS } from "@/constants/constants";
 import type { NextGenCollection } from "@/entities/INextgen";
 import {
   areEqualAddresses,
@@ -516,7 +516,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                           (currentProof && index != currentProof.index) ||
                           disableMint()
                         }
-                        className={`pt-1 pb-1 `}
+                        className={`pt-1 pb-1`}
                       ></Form.Check>
                     </Col>
                   </Form.Group>
@@ -560,7 +560,7 @@ export default function NextGenMintWidget(props: Readonly<Props>) {
                   }}
                 >
                   {props.mint_counts ? (
-                    renderAllowlistOptions() ?? renderPublicOptions()
+                    (renderAllowlistOptions() ?? renderPublicOptions())
                   ) : (
                     <option value={0}>n/a</option>
                   )}

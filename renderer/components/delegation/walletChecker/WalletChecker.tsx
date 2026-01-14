@@ -1,16 +1,16 @@
 "use client";
 
 import Address from "@/components/address/Address";
+import EnsAddressInput from "@/components/utils/input/ens-address/EnsAddressInput";
 import { publicEnv } from "@/config/env";
 import {
   DELEGATION_ALL_ADDRESS,
   MEMES_CONTRACT,
   NEVER_DATE,
-} from "@/constants";
+} from "@/constants/constants";
 import type { DBResponse } from "@/entities/IDBResponse";
 import type { Delegation, WalletConsolidation } from "@/entities/IDelegation";
 import { areEqualAddresses, isValidEthAddress } from "@/helpers/Helpers";
-import { useEnsResolution } from "@/hooks/useEnsResolution";
 import { fetchUrl } from "@/services/6529api";
 import {
   faCheck,
@@ -64,13 +64,9 @@ export default function WalletCheckerComponent(
   const { address_query, setAddressQuery } = props;
 
   const [fetchedAddress, setFetchedAddress] = useState<string>("");
-  const {
-    inputValue: walletInput,
-    address: walletAddress,
-    handleInputChange: handleWalletInputChange,
-    ensNameQuery: walletAddressEns,
-    ensAddressQuery: walletAddressFromEns,
-  } = useEnsResolution({ initialValue: address_query ?? "", chainId: 1 });
+  const [walletInputValue, setWalletInputValue] = useState(address_query ?? "");
+  const [walletAddress, setWalletAddress] = useState("");
+  const [ensLoading, setEnsLoading] = useState(false);
 
   const [checking, setChecking] = useState(!!address_query);
   const [addressError, setAddressError] = useState(false);
@@ -184,40 +180,48 @@ export default function WalletCheckerComponent(
     []
   );
 
-  const {
-    data: consolidationsResponse,
-    status: consolidationsStatus,
-  } = useQuery<WalletConsolidation[]>({
-    queryKey: ["consolidations", walletAddress],
-    queryFn: async () => {
-      try {
-        const baseUrl = `${publicEnv.API_ENDPOINT}/api/consolidations/${walletAddress}?show_incomplete=true`;
-        const firstResponse: DBResponse<WalletConsolidation> = await fetchUrl(baseUrl);
-        const firstData = firstResponse.data;
+  const { data: consolidationsResponse, status: consolidationsStatus } =
+    useQuery<WalletConsolidation[]>({
+      queryKey: ["consolidations", walletAddress],
+      queryFn: async () => {
+        try {
+          const baseUrl = `${publicEnv.API_ENDPOINT}/api/consolidations/${walletAddress}?show_incomplete=true`;
+          const firstResponse: DBResponse<WalletConsolidation> =
+            await fetchUrl(baseUrl);
+          const firstData = firstResponse.data;
 
-        if (firstData.length > 0) {
-          const newWallet = areEqualAddresses(walletAddress, firstData[0]?.wallet1)
-            ? firstData[0]?.wallet2
-            : firstData[0]?.wallet1;
-          const nextUrl = `${publicEnv.API_ENDPOINT}/api/consolidations/${newWallet}?show_incomplete=true`;
-          try {
-            const secondResponse: DBResponse<WalletConsolidation> = await fetchUrl(nextUrl);
-            return [...firstData, ...secondResponse.data];
-          } catch {
-            console.error(`Failed to fetch consolidations for related wallet: ${newWallet}`);
-            return firstData;
+          if (firstData.length > 0) {
+            const newWallet = areEqualAddresses(
+              walletAddress,
+              firstData[0]?.wallet1
+            )
+              ? firstData[0]?.wallet2
+              : firstData[0]?.wallet1;
+            const nextUrl = `${publicEnv.API_ENDPOINT}/api/consolidations/${newWallet}?show_incomplete=true`;
+            try {
+              const secondResponse: DBResponse<WalletConsolidation> =
+                await fetchUrl(nextUrl);
+              return [...firstData, ...secondResponse.data];
+            } catch {
+              console.error(
+                `Failed to fetch consolidations for related wallet: ${newWallet}`
+              );
+              return firstData;
+            }
           }
-        }
 
-        return firstData;
-      } catch (error) {
-        console.error(`Failed to fetch consolidations for ${walletAddress}`, error);
-        throw error;
-      }
-    },
-    enabled: shouldFetchDelegations,
-    refetchOnWindowFocus: false,
-  });
+          return firstData;
+        } catch (error) {
+          console.error(
+            `Failed to fetch consolidations for ${walletAddress}`,
+            error
+          );
+          throw error;
+        }
+      },
+      enabled: shouldFetchDelegations,
+      refetchOnWindowFocus: false,
+    });
 
   useEffect(() => {
     if (consolidationsStatus === "success" && consolidationsResponse) {
@@ -379,30 +383,11 @@ export default function WalletCheckerComponent(
       return;
     }
 
-    const ensCandidate =
-      walletInput?.split(" - ")[0]?.trim().toLowerCase() ?? "";
-    const isEnsInput = ensCandidate.endsWith(".eth");
+    if (ensLoading) {
+      return;
+    }
 
     if (!walletAddress || !isValidEthAddress(walletAddress)) {
-      if (isEnsInput) {
-        if (walletAddressFromEns.isLoading) {
-          return;
-        }
-
-        if (!walletAddressFromEns.data || walletAddressFromEns.isError) {
-          setFetchedAddress("");
-          setDelegations([]);
-          setDelegationsLoaded(false);
-          setConsolidations([]);
-          setConsolidationsLoaded(false);
-          setConsolidatedWallets([]);
-          setAddressError(true);
-          setChecking(false);
-        }
-
-        return;
-      }
-
       setFetchedAddress("");
       setDelegations([]);
       setDelegationsLoaded(false);
@@ -422,15 +407,7 @@ export default function WalletCheckerComponent(
     setConsolidationsLoaded(false);
     setConsolidations([]);
     setConsolidatedWallets([]);
-  }, [
-    checking,
-    walletAddress,
-    walletInput,
-    walletAddressFromEns.isLoading,
-    walletAddressFromEns.data,
-    walletAddressFromEns.isError,
-    setAddressQuery,
-  ]);
+  }, [checking, walletAddress, ensLoading, setAddressQuery]);
 
   useEffect(() => {
     if (delegationsLoaded && consolidationsLoaded) {
@@ -442,8 +419,7 @@ export default function WalletCheckerComponent(
     checking ||
     !walletAddress ||
     (!isValidEthAddress(walletAddress) && !walletAddress.endsWith(".eth")) ||
-    walletAddressFromEns.isLoading ||
-    walletAddressEns.isLoading;
+    ensLoading;
 
   return (
     <Container className="pt-3 pb-3">
@@ -460,38 +436,44 @@ export default function WalletCheckerComponent(
               if (!formDisabled) {
                 setChecking(true);
               }
-            }}>
+            }}
+          >
             <Form.Group as={Row}>
               <Form.Label column sm={12} className="d-flex align-items-center">
                 Wallet Address
               </Form.Label>
               <Col sm={12}>
-                <Form.Control
+                <EnsAddressInput
                   disabled={delegationsLoaded || consolidationsLoaded}
                   autoFocus
-                  placeholder={"0x... or ENS"}
-                  className={`${styles["formInput"]}`}
-                  type="text"
-                  value={walletInput}
-                  onChange={(e) => {
-                    handleWalletInputChange(e.target.value);
+                  placeholder="0x... or ENS"
+                  className={styles["formInput"] ?? ""}
+                  value={walletInputValue}
+                  onAddressChange={(addr) => {
+                    setWalletAddress(addr);
                     setAddressError(false);
                   }}
+                  onLoadingChange={setEnsLoading}
+                  onError={setAddressError}
                 />
               </Col>
             </Form.Group>
             {addressError && (
               <Form.Group as={Row}>
-                <Form.Text className={styles["error"]}>Invalid address</Form.Text>
+                <Form.Text className={styles["error"]}>
+                  Invalid address
+                </Form.Text>
               </Form.Group>
             )}
             <Form.Group as={Row} className="pt-3 text-center">
               <Col
                 sm={12}
-                className="d-flex align-items-center justify-content-center gap-3">
+                className="d-flex align-items-center justify-content-center gap-3"
+              >
                 <Button
                   onClick={() => {
-                    handleWalletInputChange("");
+                    setWalletInputValue("");
+                    setWalletAddress("");
                     setDelegationsLoaded(false);
                     setDelegations([]);
                     setConsolidationsLoaded(false);
@@ -499,13 +481,15 @@ export default function WalletCheckerComponent(
                     setChecking(false);
                     setAddressQuery("");
                   }}
-                  className={styles["clearBtn"]}>
+                  className={styles["clearBtn"]}
+                >
                   Clear
                 </Button>
                 <Button
                   disabled={formDisabled}
                   onClick={() => setChecking(true)}
-                  className={styles["checkBtn"]}>
+                  className={styles["checkBtn"]}
+                >
                   {checking ? `Checking...` : `Check`}
                 </Button>
               </Col>
@@ -831,7 +815,8 @@ export default function WalletCheckerComponent(
                           {consolidationActions.map((c, index) => (
                             <li
                               key={`consolidated-wallets-${index}`}
-                              className="d-flex align-items-center gap-2">
+                              className="d-flex align-items-center gap-2"
+                            >
                               &bull;&nbsp;Register Consolidation from{" "}
                               {areEqualAddresses(fetchedAddress, c.to) ? (
                                 <Address

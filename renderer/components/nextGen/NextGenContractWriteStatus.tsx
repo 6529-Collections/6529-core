@@ -1,6 +1,6 @@
 "use client";
 
-import { NULL_MERKLE } from "@/constants";
+import { NULL_MERKLE } from "@/constants/constants";
 import { areEqualAddresses, getTransactionLink } from "@/helpers/Helpers";
 import { sanitizeErrorForUser } from "@/utils/error-sanitizer";
 import Link from "next/link";

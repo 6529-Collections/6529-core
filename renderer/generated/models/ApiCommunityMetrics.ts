@@ -16,6 +16,16 @@ import { HttpFile } from '../http/http';
 
 export class ApiCommunityMetrics {
     'drops_created': ApiCommunityMetric;
+    'distinct_droppers': ApiCommunityMetric;
+    'main_stage_submissions': ApiCommunityMetric;
+    'main_stage_distinct_voters': ApiCommunityMetric;
+    'main_stage_votes': ApiCommunityMetric;
+    'network_tdh': ApiCommunityMetric;
+    'tdh_on_main_stage_submissions': ApiCommunityMetric;
+    'consolidations_formed': ApiCommunityMetric;
+    'xtdh_granted': ApiCommunityMetric;
+    'active_identities': ApiCommunityMetric;
+    'profile_count': ApiCommunityMetric;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -25,6 +35,66 @@ export class ApiCommunityMetrics {
         {
             "name": "drops_created",
             "baseName": "drops_created",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "distinct_droppers",
+            "baseName": "distinct_droppers",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "main_stage_submissions",
+            "baseName": "main_stage_submissions",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "main_stage_distinct_voters",
+            "baseName": "main_stage_distinct_voters",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "main_stage_votes",
+            "baseName": "main_stage_votes",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "network_tdh",
+            "baseName": "network_tdh",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "tdh_on_main_stage_submissions",
+            "baseName": "tdh_on_main_stage_submissions",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "consolidations_formed",
+            "baseName": "consolidations_formed",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "xtdh_granted",
+            "baseName": "xtdh_granted",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "active_identities",
+            "baseName": "active_identities",
+            "type": "ApiCommunityMetric",
+            "format": ""
+        },
+        {
+            "name": "profile_count",
+            "baseName": "profile_count",
             "type": "ApiCommunityMetric",
             "format": ""
         }    ];
