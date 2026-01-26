@@ -330,6 +330,34 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiCommunityMetrics"
+  /community-metrics/series:
+    get:
+      tags:
+        - CommunityMetrics
+      summary: Get community metrics series.
+      operationId: getCommunityMetricsSeries
+      parameters:
+        - name: since
+          in: query
+          description: Unix millis timestamp for start of series.
+          required: true
+          schema:
+            type: number
+            format: int64
+        - name: to
+          in: query
+          description: Unix millis timestamp for end of series.
+          required: true
+          schema:
+            type: number
+            format: int64
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCommunityMetricsSeries"
   /community-metrics/mints:
     get:
       tags:
@@ -814,6 +842,20 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/ApiDropType"
+        - name: ids
+          in: query
+          description: Comma-separated list of drop IDs to fetch
+          required: false
+          schema:
+            type: string
+        - name: contains_media
+          in: query
+          description: >-
+            If true then only drops that have at least one media attachment will
+            be returned (false by default)
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -1008,6 +1050,95 @@ paths:
           description: successful operation
         "404":
           description: Drop not found
+  /drops/{dropId}/bookmark:
+    post:
+      tags:
+        - Drops
+      summary: Bookmark a drop
+      description: Requires the user to be authenticated
+      operationId: bookmarkDrop
+      parameters:
+        - name: dropId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDrop"
+        "400":
+          description: Invalid request
+        "404":
+          description: Drop not found
+    delete:
+      tags:
+        - Drops
+      summary: Remove bookmark from drop
+      description: Requires the user to be authenticated
+      operationId: unbookmarkDrop
+      parameters:
+        - name: dropId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDrop"
+        "404":
+          description: Drop not found
+  /drops-bookmarked/:
+    get:
+      tags:
+        - Drops
+      summary: Get bookmarked drops for authenticated user
+      description: >-
+        Requires the user to be authenticated. Returns drops bookmarked by the
+        current user, sorted by bookmark time.
+      operationId: getBookmarkedDrops
+      parameters:
+        - name: wave_id
+          in: query
+          description: Filter by wave
+          required: false
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 200
+        - name: sort_direction
+          in: query
+          description: Default is DESC (newest bookmarks first)
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiPageSortDirection"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDropsPage"
   /drops/{dropId}:
     get:
       tags:
@@ -1908,6 +2039,24 @@ paths:
           schema:
             type: number
             format: int64
+        - name: cause
+          in: query
+          description: Comma-separated list of notification causes to include
+          required: false
+          schema:
+            type: string
+        - name: cause_exclude
+          in: query
+          description: Comma-separated list of notification causes to exclude
+          required: false
+          schema:
+            type: string
+        - name: unread_only
+          in: query
+          description: Only return unread notifications
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -2738,6 +2887,100 @@ paths:
           description: Invalid request
         "401":
           description: Unauthorized
+  /push-notifications/devices:
+    get:
+      tags:
+        - Push Notifications
+      summary: Get all registered devices for the authenticated user
+      operationId: getDevices
+      responses:
+        "200":
+          description: List of registered devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiPushNotificationDevice"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - profile required
+  /push-notifications/devices/{device_id}:
+    delete:
+      tags:
+        - Push Notifications
+      summary: Delete a registered device
+      operationId: deleteDevice
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The device ID to delete
+      responses:
+        "204":
+          description: Device deleted successfully
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - profile required
+  /push-notifications/settings/{device_id}:
+    get:
+      tags:
+        - Push Notifications
+      summary: Get push notification settings for a device
+      operationId: getPushNotificationSettings
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The device ID to get settings for
+      responses:
+        "200":
+          description: Push notification settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiPushNotificationSettings"
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - profile required
+    put:
+      tags:
+        - Push Notifications
+      summary: Update push notification settings for a device
+      operationId: updatePushNotificationSettings
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: The device ID to update settings for
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiPushNotificationSettingsUpdate"
+      responses:
+        "200":
+          description: Updated push notification settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiPushNotificationSettings"
+        "400":
+          description: Invalid request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - profile required
   /bulk-rep:
     post:
       tags:
@@ -3982,6 +4225,22 @@ paths:
           required: false
           schema:
             type: boolean
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiWave"
+  /waves-overview/hot:
+    get:
+      tags:
+        - Waves
+      summary: Get hot waves overview.
+      description: Returns up to 25 public waves ranked by activity in the last 24 hours.
+      operationId: getHotWavesOverview
       responses:
         "200":
           description: successful operation
@@ -5814,37 +6073,82 @@ components:
           type: number
         value_count:
           type: number
-    ApiMintMetrics:
+    ApiCommunityMetricsSeries:
       type: object
       required:
-        - card
-        - mint_time
-        - subscriptions
-        - mints
+        - steps_start_times
+        - drops_created
+        - distinct_droppers
+        - main_stage_submissions
+        - main_stage_distinct_voters
+        - main_stage_votes
+        - network_tdh
+        - tdh_on_main_stage_submissions
+        - consolidations_formed
+        - xtdh_granted
+        - active_identities
+        - profile_count
       properties:
-        card:
-          type: number
-          format: int64
-        mint_time:
-          type: number
-          format: int64
-        subscriptions:
-          type: number
-          format: int64
-        mints:
-          type: number
-          format: int64
-    ApiMintMetricsPage:
-      type: object
-      required:
-        - data
-      allOf:
-        - $ref: "#/components/schemas/ApiPageBase"
-      properties:
-        data:
+        steps_start_times:
           type: array
           items:
-            $ref: "#/components/schemas/ApiMintMetrics"
+            type: number
+            format: int64
+        drops_created:
+          type: array
+          items:
+            type: number
+            format: int64
+        distinct_droppers:
+          type: array
+          items:
+            type: number
+            format: int64
+        main_stage_submissions:
+          type: array
+          items:
+            type: number
+            format: int64
+        main_stage_distinct_voters:
+          type: array
+          items:
+            type: number
+            format: int64
+        main_stage_votes:
+          type: array
+          items:
+            type: number
+            format: int64
+        network_tdh:
+          type: array
+          items:
+            type: number
+            format: int64
+        tdh_on_main_stage_submissions:
+          type: array
+          items:
+            type: number
+            format: int64
+        consolidations_formed:
+          type: array
+          items:
+            type: number
+            format: int64
+        xtdh_granted:
+          type: array
+          items:
+            type: number
+            format: int64
+        active_identities:
+          type: array
+          items:
+            type: number
+            format: int64
+        profile_count:
+          type: array
+          items:
+            type: number
+            format: int64
     ApiCompleteMultipartUploadRequest:
       required:
         - upload_id
@@ -6654,6 +6958,7 @@ components:
         - max_rating
         - reaction
         - boosted
+        - bookmarked
       properties:
         rating:
           type: number
@@ -6668,6 +6973,8 @@ components:
           type: string
           nullable: true
         boosted:
+          type: boolean
+        bookmarked:
           type: boolean
     ApiDropMedia:
       type: object
@@ -7253,6 +7560,7 @@ components:
         - banner2
         - active_main_stage_submission_ids
         - winner_main_stage_drop_ids
+        - is_wave_creator
       properties:
         id:
           type: string
@@ -7319,6 +7627,8 @@ components:
           type: array
           items:
             type: string
+        is_wave_creator:
+          type: boolean
     ApiIdentityAndSubscriptionActions:
       type: object
       required:
@@ -7453,6 +7763,46 @@ components:
         first_unread_drop_serial_no:
           type: integer
           nullable: true
+    ApiMintMetrics:
+      type: object
+      required:
+        - card
+        - mint_time
+        - subscriptions
+        - mints
+        - edition_size
+        - unminted
+      properties:
+        card:
+          type: number
+          format: int64
+        mint_time:
+          type: number
+          format: int64
+        subscriptions:
+          type: number
+          format: int64
+        mints:
+          type: number
+          format: int64
+        edition_size:
+          type: number
+          format: int64
+          nullable: true
+        unminted:
+          type: number
+          format: int64
+    ApiMintMetricsPage:
+      type: object
+      required:
+        - data
+      allOf:
+        - $ref: "#/components/schemas/ApiPageBase"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiMintMetrics"
     ApiNft:
       type: object
       required:
@@ -7702,10 +8052,13 @@ components:
       enum:
         - IDENTITY_SUBSCRIBED
         - IDENTITY_MENTIONED
+        - IDENTITY_REP
+        - IDENTITY_NIC
         - DROP_QUOTED
         - DROP_REPLIED
         - DROP_VOTED
         - DROP_REACTED
+        - DROP_BOOSTED
         - WAVE_CREATED
         - ALL_DROPS
         - PRIORITY_ALERT
@@ -7995,6 +8348,7 @@ components:
         - archived
         - active_main_stage_submission_ids
         - winner_main_stage_drop_ids
+        - is_wave_creator
       properties:
         id:
           type: string
@@ -8048,6 +8402,8 @@ components:
           type: array
           items:
             type: string
+        is_wave_creator:
+          type: boolean
     ApiProfileProxy:
       type: object
       required:
@@ -8146,6 +8502,91 @@ components:
         - READ_WAVE
         - CREATE_DROP_TO_WAVE
         - RATE_WAVE_DROP
+    ApiPushNotificationDevice:
+      type: object
+      required:
+        - device_id
+        - created_at
+        - updated_at
+      properties:
+        device_id:
+          type: string
+        platform:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ApiPushNotificationSettings:
+      type: object
+      required:
+        - identity_subscribed
+        - identity_mentioned
+        - identity_rep
+        - identity_nic
+        - drop_quoted
+        - drop_replied
+        - drop_voted
+        - drop_reacted
+        - drop_boosted
+        - wave_created
+      properties:
+        identity_subscribed:
+          type: boolean
+          description: Notify when someone follows you
+        identity_mentioned:
+          type: boolean
+          description: Notify when someone mentions you
+        identity_rep:
+          type: boolean
+          description: Notify when someone gives you REP
+        identity_nic:
+          type: boolean
+          description: Notify when someone gives you NIC
+        drop_quoted:
+          type: boolean
+          description: Notify when someone quotes your drop
+        drop_replied:
+          type: boolean
+          description: Notify when someone replies to your drop
+        drop_voted:
+          type: boolean
+          description: Notify when someone votes on your drop
+        drop_reacted:
+          type: boolean
+          description: Notify when someone reacts to your drop
+        drop_boosted:
+          type: boolean
+          description: Notify when someone boosts your drop
+        wave_created:
+          type: boolean
+          description: Notify when you are invited to a wave
+    ApiPushNotificationSettingsUpdate:
+      type: object
+      properties:
+        identity_subscribed:
+          type: boolean
+        identity_mentioned:
+          type: boolean
+        identity_rep:
+          type: boolean
+        identity_nic:
+          type: boolean
+        drop_quoted:
+          type: boolean
+        drop_replied:
+          type: boolean
+        drop_voted:
+          type: boolean
+        drop_reacted:
+          type: boolean
+        drop_boosted:
+          type: boolean
+        wave_created:
+          type: boolean
     ApiQuotedDrop:
       type: object
       required:
@@ -8654,7 +9095,6 @@ components:
         - participation
         - chat
         - wave
-        - outcomes
         - created_at
         - contributors_overview
         - subscribed_actions
@@ -8694,10 +9134,6 @@ components:
           $ref: "#/components/schemas/ApiWaveChatConfig"
         wave:
           $ref: "#/components/schemas/ApiWaveConfig"
-        outcomes:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveOutcomeOld"
         contributors_overview:
           type: array
           items:
@@ -9132,33 +9568,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiWaveOutcomeDistributionItem"
-    ApiWaveOutcomeOld:
-      type: object
-      required:
-        - type
-        - description
-        - index
-      properties:
-        type:
-          $ref: "#/components/schemas/ApiWaveOutcomeType"
-        subtype:
-          $ref: "#/components/schemas/ApiWaveOutcomeSubType"
-        description:
-          type: string
-        credit:
-          $ref: "#/components/schemas/ApiWaveOutcomeCredit"
-        rep_category:
-          type: string
-        amount:
-          type: number
-          format: int64
-        distribution:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveOutcomeDistributionItem"
-        index:
-          type: number
-          format: int64
     ApiWaveOutcomesPage:
       type: object
       required:

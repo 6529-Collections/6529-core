@@ -234,12 +234,3 @@ export const useSetWaveData = (
     setWaveData(data);
   }, [data, setWaveData]);
 };
-
-// Hook to set stream new items status
-export const useSetStreamHasNewItems = (hasNewItems: boolean) => {
-  const { setStreamHasNewItems } = useTitle();
-
-  useEffect(() => {
-    setStreamHasNewItems(hasNewItems);
-  }, [hasNewItems, setStreamHasNewItems]);
-};

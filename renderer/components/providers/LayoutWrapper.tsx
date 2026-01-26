@@ -20,6 +20,7 @@ export default function LayoutWrapper({
   readonly children: ReactNode;
 }) {
   const { isApp, hasTouchScreen } = useDeviceInfo();
+  const { refreshKey } = useGlobalRefresh();
   const isSmallScreen = useIsMobileScreen();
   const [isTouchTabletViewport, setIsTouchTabletViewport] = useState(() => {
     if (globalThis.window === undefined) {

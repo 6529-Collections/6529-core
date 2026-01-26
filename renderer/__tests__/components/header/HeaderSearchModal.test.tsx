@@ -39,6 +39,16 @@ jest.mock("react-use", () => {
 
 jest.mock("@tanstack/react-query", () => ({
   useQuery: (...args: any[]) => useQueryMock(...args),
+  useInfiniteQuery: () => ({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    hasNextPage: false,
+    fetchNextPage: jest.fn(),
+    isFetchingNextPage: false,
+  }),
+  keepPreviousData: (prev: unknown) => prev,
 }));
 jest.mock("next/navigation", () => ({
   useRouter: () => useRouter(),
@@ -207,7 +217,7 @@ function setup(options: SetupOptions = {}) {
       };
     });
   }
-  render(<HeaderSearchModal onClose={onClose} />);
+  render(<HeaderSearchModal onClose={onClose} wave={null} />);
   return { onClose, push, profilesRefetch, nftsRefetch, wavesRefetch };
 }
 

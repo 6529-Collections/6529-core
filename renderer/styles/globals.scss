@@ -96,7 +96,9 @@
 
   /* Prevent text selection on touch devices only */
   .touch-select-none {
-    @media (pointer: coarse) {
+    // Use any-* queries so hybrid devices (touchscreen + trackpad/mouse) don't
+    // get treated as touch-only when the primary pointer is coarse.
+    @media (any-hover: none) and (any-pointer: coarse) {
       user-select: none;
       -webkit-user-select: none;
       -moz-user-select: none;
@@ -201,6 +203,25 @@ body {
 
   &.capacitor-native footer {
     padding-bottom: 100px !important;
+  }
+}
+
+.mobile-wrapper-dialog {
+  input,
+  textarea,
+  select {
+    font-size: 16px;
+    touch-action: manipulation;
+  }
+}
+
+body.capacitor-native {
+  input,
+  textarea,
+  select,
+  [contenteditable="true"] {
+    font-size: max(1rem, 16px) !important;
+    touch-action: manipulation;
   }
 }
 
@@ -588,7 +609,9 @@ h5:not(.tailwind-scope h5) {
 
 .edit-profile {
   opacity: 0;
-  transition: visibility 0s, opacity 0.3s ease-out;
+  transition:
+    visibility 0s,
+    opacity 0.3s ease-out;
 }
 
 .edit-profile:hover {
@@ -651,21 +674,18 @@ h5:not(.tailwind-scope h5) {
 // Scroll shadow for content overflow indication
 .scroll-shadow {
   background:
-    /* Shadow at the top */ linear-gradient(
+    /* Shadow at the top */
+    linear-gradient(
         to bottom,
         rgba(14, 16, 21, 0.8) 0%,
         rgba(14, 16, 21, 0) 10px
       )
       0 0,
     /* Shadow at the bottom */
-      linear-gradient(
-        to top,
-        rgba(14, 16, 21, 0.8) 0%,
-        rgba(14, 16, 21, 0) 10px
-      )
+    linear-gradient(to top, rgba(14, 16, 21, 0.8) 0%, rgba(14, 16, 21, 0) 10px)
       0 100%,
     /* Preventing the shadows from overlapping the content */
-      radial-gradient(
+    radial-gradient(
         farthest-side at 50% 0,
         rgba(0, 0, 0, 0.2),
         rgba(0, 0, 0, 0)
@@ -679,7 +699,11 @@ h5:not(.tailwind-scope h5) {
       0 100%;
 
   background-repeat: no-repeat;
-  background-size: 100% 10px, 100% 10px, 100% 10px, 100% 10px;
+  background-size:
+    100% 10px,
+    100% 10px,
+    100% 10px,
+    100% 10px;
 
   /* Make sure the shadows remain fixed during scrolling */
   background-attachment: local, local, scroll, scroll;
@@ -721,7 +745,7 @@ h5:not(.tailwind-scope h5) {
   }
 }
 
-@media (hover: none) and (pointer: coarse) {
+@media (any-hover: none) and (any-pointer: coarse) {
   .touch-visible {
     display: block !important;
   }

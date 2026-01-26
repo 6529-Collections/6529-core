@@ -259,6 +259,7 @@ const WebSidebarNav = React.forwardRef<
       pathname,
       closeSubmenu,
       submenuAnchor,
+      submenuTrigger,
     ]
   );
 
@@ -410,7 +411,10 @@ const WebSidebarNav = React.forwardRef<
             elementRole="dialog"
             onClicked={(event) => event.stopPropagation()}
           >
-            <HeaderSearchModal onClose={() => setIsSearchOpen(false)} />
+            <HeaderSearchModal
+              onClose={() => setIsSearchOpen(false)}
+              wave={null}
+            />
           </CommonAnimationOpacity>
         )}
       </CommonAnimationWrapper>

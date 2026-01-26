@@ -63,6 +63,7 @@ export const useDropBoostMutation = (): UseDropBoostMutationReturn => {
               max_rating: 0,
               reaction: null,
               boosted: false,
+              bookmarked: false,
             };
 
           draft.context_profile_context = {
@@ -188,5 +189,3 @@ export const useDropBoostMutation = (): UseDropBoostMutationReturn => {
     isPending: mutation.isPending,
   };
 };
-
-export default useDropBoostMutation;

@@ -5,9 +5,9 @@ import type { ApiCommunityMetrics } from "@/generated/models/ApiCommunityMetrics
 import type { ApiCommunityMetricSample } from "@/generated/models/ApiCommunityMetricSample";
 import { commonApiFetch } from "@/services/api/common-api";
 
-export type CommunityMetricsInterval = "DAY" | "WEEK";
+type CommunityMetricsInterval = "DAY" | "WEEK";
 
-export interface MetricSample {
+interface MetricSample {
   readonly eventCount: number;
   readonly valueCount: number;
   readonly periodStart: number;
@@ -21,7 +21,7 @@ export interface MetricData {
   readonly valueCountChangePercent: number | null;
 }
 
-export interface CommunityMetrics {
+interface CommunityMetrics {
   readonly dropsCreated: MetricData;
   readonly distinctDroppers: MetricData;
   readonly mainStageSubmissions: MetricData;
@@ -31,6 +31,9 @@ export interface CommunityMetrics {
   readonly networkTdh: MetricData;
   readonly tdhOnMainStagePercentage: MetricData;
   readonly consolidationsFormed: MetricData;
+  readonly xtdhGranted: MetricData;
+  readonly activeIdentities: MetricData;
+  readonly profileCount: MetricData;
 }
 
 function sanitizeNumber(value: unknown): number {
@@ -144,6 +147,9 @@ async function fetchCommunityMetrics(
       networkTdh
     ),
     consolidationsFormed: transformMetric(response.consolidations_formed),
+    xtdhGranted: transformMetric(response.xtdh_granted),
+    activeIdentities: transformMetric(response.active_identities),
+    profileCount: transformMetric(response.profile_count),
   };
 }
 
