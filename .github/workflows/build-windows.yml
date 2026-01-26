@@ -48,7 +48,7 @@ jobs:
         if: ${{ inputs.should_run }}
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install Python 3.11 with distutils
         if: ${{ inputs.should_run }}
@@ -118,7 +118,7 @@ jobs:
         if: ${{ inputs.should_run }}
         uses: actions/setup-node@v3
         with:
-          node-version: 20
+          node-version: 22
 
       - name: Install signing dependencies
         if: ${{ inputs.should_run }}

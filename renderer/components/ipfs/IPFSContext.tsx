@@ -113,7 +113,7 @@ export const resolveIpfsUrlSync = (url: string) => {
   return `${cachedGatewayBase}/ipfs/${url.slice(7)}`;
 };
 
-export const resolveIpfsUrl = async (url: string) => {
+export const resolveIpfsUrlAsync = async (url: string) => {
   if (!url.startsWith("ipfs://")) {
     return url;
   }
@@ -128,4 +128,8 @@ export const resolveIpfsUrl = async (url: string) => {
     console.error("Error resolving IPFS URL", error);
     return url;
   }
+};
+
+export const resolveIpfsUrl = (url: string) => {
+  return resolveIpfsUrlSync(url);
 };
