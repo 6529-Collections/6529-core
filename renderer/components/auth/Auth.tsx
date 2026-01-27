@@ -151,7 +151,9 @@ export default function Auth({
     signMessage,
     isSigningPending,
     reset: resetSigning,
-  } = useSecureSign();
+  } = useSecureSign({
+    signatureType: isSafeWallet ? "contract" : "eoa",
+  });
   const [showSignModal, setShowSignModal] = useState(false);
 
   const { profile: connectedProfile, isLoading: fetchingProfile } = useIdentity(
