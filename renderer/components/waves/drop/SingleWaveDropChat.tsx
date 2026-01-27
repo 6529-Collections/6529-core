@@ -11,6 +11,7 @@ import {
   CreateDropWaveWrapperContext,
 } from "../CreateDropWaveWrapper";
 import PrivilegedDropCreator, { DropMode } from "../PrivilegedDropCreator";
+import WaveDropsAll from "../drops/wave-drops-all";
 
 interface SingleWaveDropChatProps {
   readonly wave: ApiWave;

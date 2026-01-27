@@ -1,9 +1,8 @@
 "use client";
 
 import { LogLine } from "@/shared/types";
+import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import React, { UIEvent, useEffect, useRef, useState } from "react";
-import { Accordion, Button, useAccordionButton } from "react-bootstrap";
-import styles from "./LogsViewer.module.scss";
 
 interface LogsViewerProps {
   filePath: string;
@@ -16,32 +15,43 @@ interface LogsViewerProps {
   }[];
 }
 
-function LogsViewerToggle({
+function LogsViewerTrigger({
   width,
   children,
-  eventKey,
   isOpen,
-  onClick,
+  onSelect,
+  summaryStyle = false,
 }: {
   width: number | string;
   children: React.ReactNode;
-  eventKey: string;
   isOpen: boolean;
-  onClick?: () => void;
+  onSelect: () => void;
+  summaryStyle?: boolean;
 }) {
-  const decoratedOnClick = useAccordionButton(eventKey);
-
+  const summaryClasses =
+    "tw-rounded-t-xl tw-border-0 tw-ring-0 tw-bg-iron-950 tw-px-4 tw-py-3 tw-font-medium tw-transition-colors desktop-hover:hover:tw-bg-iron-900 " +
+    (isOpen ? "tw-min-w-0 tw-flex-1" : "tw-w-full");
+  const defaultClasses =
+    "tw-flex tw-min-w-0 tw-flex-1 tw-cursor-pointer tw-items-center tw-gap-2 tw-rounded-xl tw-border-0 tw-px-4 tw-py-3 tw-text-left tw-font-medium tw-text-inherit tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-inset focus-visible:tw-ring-iron-500";
+  const stateClasses = summaryStyle
+    ? isOpen
+      ? "tw-bg-iron-900"
+      : ""
+    : isOpen
+      ? "tw-bg-iron-900"
+      : "tw-bg-black desktop-hover:hover:tw-bg-iron-900";
   return (
-    <Accordion.Button
-      style={{ maxWidth: width, flex: "1" }}
-      className={`pt-3 pb-3 ${isOpen ? styles["accordionButtonOpen"] : ""}`}
-      onClick={(e) => {
-        decoratedOnClick(e);
-        onClick?.();
-      }}
+    <button
+      type="button"
+      style={summaryStyle ? undefined : { maxWidth: width }}
+      className={`tw-flex tw-cursor-pointer tw-items-center tw-gap-2 tw-text-left tw-text-inherit focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-inset focus-visible:tw-ring-iron-500 ${summaryStyle ? summaryClasses : defaultClasses} ${stateClasses}`}
+      onClick={onSelect}
     >
-      {children}
-    </Accordion.Button>
+      <ChevronRightIcon
+        className={`tw-size-4 tw-shrink-0 tw-text-inherit tw-transition-transform ${isOpen ? "tw-rotate-90" : ""}`}
+      />
+      <span className="tw-truncate">{children}</span>
+    </button>
   );
 }
 
@@ -79,59 +89,76 @@ export default function LogsViewer({
     }
   }, [selectedAccordionKey]);
 
+  const logsKey = (extraActions?.length ?? 0).toString();
+
+  const summaryOnly = !extraActions?.length;
   return (
-    <Accordion
-      onSelect={(eventKey) => setSelectedAccordionKey(eventKey as string)}
-    >
-      <div className="d-flex align-items-center gap-2">
+    <div className="tw-rounded-xl tw-border tw-border-iron-800 tw-bg-iron-950 tw-text-iron-100 [color-scheme:dark]">
+      <div
+        className={`tw-flex tw-items-center tw-gap-2 tw-bg-iron-950 ${summaryOnly ? "tw-flex-nowrap tw-rounded-t-xl" : "tw-flex-wrap"}`}
+      >
         {extraActions?.map((action, index) => (
-          <LogsViewerToggle
+          <LogsViewerTrigger
             key={action.name}
             width={width}
-            eventKey={index.toString()}
             isOpen={selectedAccordionKey === index.toString()}
+            onSelect={() =>
+              setSelectedAccordionKey((k) =>
+                k === index.toString() ? "" : index.toString()
+              )
+            }
           >
             <b>{action.name}</b>
-          </LogsViewerToggle>
+          </LogsViewerTrigger>
         ))}
-        <LogsViewerToggle
+        <LogsViewerTrigger
           width={width}
-          eventKey={(extraActions?.length ?? 0).toString()}
-          isOpen={
-            selectedAccordionKey === (extraActions?.length ?? 0).toString()
+          isOpen={selectedAccordionKey === logsKey}
+          onSelect={() =>
+            setSelectedAccordionKey((k) => (k === logsKey ? "" : logsKey))
           }
+          summaryStyle={!extraActions?.length}
         >
           <b>{name ?? "Logs"}</b>
-        </LogsViewerToggle>
+        </LogsViewerTrigger>
         {isLogsOpen && (
-          <Button className="pt-2 pb-2 btn-grey" onClick={locateFile}>
+          <button
+            type="button"
+            onClick={locateFile}
+            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-py-2 tw-px-3 tw-text-sm tw-text-iron-100 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 desktop-hover:hover:tw-bg-iron-700"
+          >
             Locate
-          </Button>
+          </button>
         )}
         {isLogsOpen && selectedText.length > 0 && (
-          <Button
-            className="pt-2 pb-2 btn-white"
+          <button
+            type="button"
             disabled={selectedText.length === 0 || isCopied}
             onClick={copySelectedText}
+            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-white tw-py-2 tw-px-3 tw-text-sm tw-text-black focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 disabled:tw-opacity-50 desktop-hover:hover:tw-bg-iron-100"
           >
             {isCopied ? "Selection Copied!" : "Copy Selection"}
-          </Button>
+          </button>
         )}
       </div>
-      {extraActions?.map((action, index) => (
-        <Accordion.Collapse key={action.name} eventKey={index.toString()}>
-          <div>{action.content}</div>
-        </Accordion.Collapse>
-      ))}
-      <Accordion.Collapse eventKey={(extraActions?.length ?? 0).toString()}>
-        <LogsViewerInternal
-          filePath={filePath}
-          height={height}
-          onSelectionChange={setSelectedText}
-          run={isLogsOpen}
-        />
-      </Accordion.Collapse>
-    </Accordion>
+      {extraActions?.map((action, index) =>
+        selectedAccordionKey === index.toString() ? (
+          <div key={action.name} className="tw-overflow-hidden tw-rounded-b-xl tw-bg-iron-950 tw-py-4">
+            {action.content}
+          </div>
+        ) : null
+      )}
+      {selectedAccordionKey === logsKey && (
+        <div className="tw-overflow-hidden tw-rounded-b-xl tw-bg-iron-950 tw-px-4 tw-pb-4 tw-pt-2">
+          <LogsViewerInternal
+            filePath={filePath}
+            height={height}
+            onSelectionChange={setSelectedText}
+            run={isLogsOpen}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -310,17 +337,18 @@ export function LogsViewerInternal({
 
   return (
     <div
-      className="mt-2"
+      className="tw-mt-2"
       style={{ position: "relative", height: `${height}vh` }}
     >
       <div
         ref={containerRef}
+        className="tw-rounded-lg tw-ring-1 tw-ring-inset tw-ring-iron-800"
         style={{
           height: "100%",
           overflowY: "scroll",
           backgroundColor: "#000",
           color: "#fff",
-          padding: "10px",
+          padding: "16px",
           position: "relative",
         }}
         onScroll={handleScroll}

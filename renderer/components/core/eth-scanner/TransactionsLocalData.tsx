@@ -11,12 +11,10 @@ import { PaginatedResponseLocal } from "@/shared/types";
 import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
-import { Button, Table } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
-import styles from "./ETHScanner.module.scss";
 
 const initialQueryParams = {
   contractAddress: "",
@@ -70,7 +68,7 @@ export default function TransactionsLocalData() {
     JSON.stringify(queryParams) !== JSON.stringify(initialQueryParams);
 
   return (
-    <div className="tw-mt-6 tw-p-4">
+    <div className="tw-mt-4">
       <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-4">
         <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-4">
           <div className="tw-flex tw-items-center tw-gap-2">
@@ -94,7 +92,7 @@ export default function TransactionsLocalData() {
                     : undefined
                 )
               }
-              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
+              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
               placeholder="Start Date"
             />
           </div>
@@ -121,7 +119,7 @@ export default function TransactionsLocalData() {
                     : undefined
                 )
               }
-              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
+              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
               placeholder="End Date"
             />
           </div>
@@ -132,7 +130,7 @@ export default function TransactionsLocalData() {
               onChange={(e) =>
                 updateQueryParams("limit", Number(e.target.value))
               }
-              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
+              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -145,7 +143,7 @@ export default function TransactionsLocalData() {
               onChange={(e) =>
                 updateQueryParams("contractAddress", e.target.value)
               }
-              className="tw-w-fit tw-rounded tw-border tw-border-gray-300 tw-px-3 tw-py-2 tw-text-black"
+              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             >
               <option value={""}>All Contracts</option>
               <option value={MEMES_CONTRACT}>The Memes</option>
@@ -156,15 +154,16 @@ export default function TransactionsLocalData() {
           </div>
           {clearFiltersEnabled && (
             <>
-              <Button
-                variant="light"
+              <button
+                type="button"
                 data-tooltip-id="clear-filters-tooltip"
                 onClick={() => {
                   setQueryParams(initialQueryParams);
                 }}
+                className="tw-inline-flex tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-2 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
               >
                 <FontAwesomeIcon icon={faXmark} className="tw-h-4 tw-w-4" />
-              </Button>
+              </button>
               <Tooltip
                 id="clear-filters-tooltip"
                 style={{
@@ -179,13 +178,14 @@ export default function TransactionsLocalData() {
           )}
         </div>
         <div className="tw-flex tw-items-center tw-gap-2">
-          <Button
-            variant="light"
+          <button
+            type="button"
             data-tooltip-id="refresh-results-tooltip"
             onClick={fetchTransactions}
+            className="tw-inline-flex tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-2 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
           >
             <FontAwesomeIcon icon={faRefresh} className="tw-h-4 tw-w-4" />
-          </Button>
+          </button>
           <Tooltip
             id="refresh-results-tooltip"
             style={{
@@ -206,10 +206,9 @@ export default function TransactionsLocalData() {
         </div>
       </div>
 
-      {/* Transactions Table */}
-      <div className="tw-overflow-x-auto">
-        <Table bordered={false} className={styles["transactionsTable"]}>
-          <tbody>
+      <div className="tw-overflow-x-auto [&_tbody_tr:nth-child(odd)]:tw-bg-black [&_tbody_tr:nth-child(even)]:tw-bg-transparent">
+        <table className="tw-w-full tw-table-auto tw-border-collapse">
+          <tbody className="[&>tr]:tw-leading-10 [&>tr>td]:tw-whitespace-nowrap [&>tr>td]:tw-p-2 [&>tr>td:first-child]:tw-w-px">
             {transactions?.data.map((transaction) => (
               <LatestActivityRow
                 tr={transaction}
@@ -217,11 +216,11 @@ export default function TransactionsLocalData() {
               />
             ))}
           </tbody>
-        </Table>
+        </table>
       </div>
 
       {transactions?.total && transactions?.total > queryParams.limit ? (
-        <div className="text-center mt-4">
+        <div className="tw-mt-4 tw-text-center">
           <Pagination
             page={queryParams.page}
             pageSize={queryParams.limit}

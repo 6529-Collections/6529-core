@@ -1,6 +1,11 @@
+"use client";
+
 import React from "react";
-import { Button, Modal } from "react-bootstrap";
-import styles from "./Confirm.module.scss";
+import {
+  ConfirmModalShell,
+  confirmBtnPrimary,
+  confirmBtnSecondary,
+} from "@/components/shared/ConfirmModalShell";
 
 interface ConfirmProps {
   show: boolean;
@@ -16,25 +21,24 @@ const Confirm: React.FC<ConfirmProps> = ({
   onConfirm,
   title,
   message,
-}) => {
-  return (
-    <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <div className={styles["modalHeader"]}>
-        <Modal.Title>{title}</Modal.Title>
-      </div>
-      <Modal.Body className={styles["modalContent"]}>
-        <p className="mt-2 mb-2">{message}</p>
-      </Modal.Body>
-      <Modal.Footer className={styles["modalContent"]}>
-        <Button variant="secondary" onClick={onHide}>
+}) => (
+  <ConfirmModalShell
+    show={show}
+    title={title}
+    onBackdropClick={onHide}
+    footer={
+      <>
+        <button type="button" onClick={onHide} className={confirmBtnSecondary}>
           Cancel
-        </Button>
-        <Button variant="primary" onClick={onConfirm}>
+        </button>
+        <button type="button" onClick={onConfirm} className={confirmBtnPrimary}>
           Confirm
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  );
-};
+        </button>
+      </>
+    }
+  >
+    <p className="tw-m-0 tw-mt-2 tw-mb-2">{message}</p>
+  </ConfirmModalShell>
+);
 
 export default Confirm;

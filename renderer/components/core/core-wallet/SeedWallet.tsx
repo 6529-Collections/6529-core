@@ -26,12 +26,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
 import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import DotLoader, { Spinner } from "../../dotLoader/DotLoader";
-import styles from "./SeedWallet.module.scss";
 import { UnlockSeedWalletModal } from "./SeedWalletModal";
 
 export default function SeedWallet(
@@ -162,47 +160,39 @@ export default function SeedWallet(
 
   if (fetching) {
     return (
-      <Container className="pt-5 pb-5">
-        <Row>
-          <Col className="d-flex gap-2">
-            <span>Fetching wallet</span>
-            <Spinner />
-          </Col>
-        </Row>
-      </Container>
+      <div className="tw-py-5">
+        <div className="tw-flex tw-gap-2">
+          <span>Fetching wallet</span>
+          <Spinner />
+        </div>
+      </div>
     );
   }
 
   if (!seedWallet) {
     return (
-      <Container className="pt-5 pb-5">
-        <Row>
-          <Col>
-            Wallet with address <b>{props.address}</b> not found.
-          </Col>
-        </Row>
-      </Container>
+      <div className="tw-py-5">
+        Wallet with address <b>{props.address}</b> not found.
+      </div>
     );
   }
 
   return (
-    <Container className="pt-5 pb-5">
-      <Row>
-        <Col>
-          <Link
-            className="font-smaller d-flex align-items-center gap-2 decoration-none"
-            href="/core/core-wallets"
-          >
-            <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
-            Back to 6529 Desktop Wallets
-          </Link>
-        </Col>
-      </Row>
-      <Row className="pt-4">
-        <Col className="d-flex align-items-center justify-content-between">
-          <h3 className="mb-0 d-flex align-items-center gap-2">
+    <div className="tw-py-5">
+      <div>
+        <Link
+          className="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-inherit tw-no-underline hover:tw-underline"
+          href="/core/core-wallets"
+        >
+          <FontAwesomeIcon icon={faCircleArrowLeft} height={16} />
+          Back to 6529 Desktop Wallets
+        </Link>
+      </div>
+      <div className="tw-mt-6 tw-rounded-xl tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800">
+        <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2">
+          <h3 className="tw-m-0 tw-flex tw-items-center tw-gap-2">
             <Image
-              className={styles["seedWalletAvatar"]}
+              className="tw-size-12 tw-rounded-full tw-p-0.5 tw-ring-1 tw-ring-inset tw-ring-iron-800"
               fetchPriority="high"
               loading="eager"
               height={50}
@@ -212,10 +202,8 @@ export default function SeedWallet(
             />
             {seedWallet.name}
             {seedWallet.imported ? (
-              <span className="font-color-h"> (imported)</span>
-            ) : (
-              <></>
-            )}
+              <span className="tw-text-iron-400"> (imported)</span>
+            ) : null}
           </h3>
           <span>
             Balance:{" "}
@@ -225,26 +213,24 @@ export default function SeedWallet(
               <>
                 {fromGWEI(Number(balance.data.value))} {balance.data?.symbol}
                 {chainId === sepolia.id && (
-                  <span className="font-color-h"> (sepolia)</span>
+                  <span className="tw-text-iron-400"> (sepolia)</span>
                 )}
               </>
             ) : (
               <>Error</>
             )}
           </span>
-        </Col>
-      </Row>
-      <Row className="pt-4">
-        <Col className="d-flex align-items-center gap-2 justify-content-between">
+        </div>
+        <div className="tw-mt-4 tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-2">
           <span>
             Wallet Address:{" "}
-            <span className="font-larger font-bolder">
+            <span className="tw-text-lg tw-font-bold">
               {seedWallet.address.toLowerCase()}
             </span>
           </span>
-          <span className="d-flex align-items-center gap-2">
+          <span className="tw-flex tw-items-center tw-gap-2">
             <FontAwesomeIcon
-              className="cursor-pointer unselectable"
+              className="tw-cursor-pointer tw-select-none"
               data-tooltip-id="view-on-etherscan-tooltip"
               icon={faExternalLink}
               height={22}
@@ -257,7 +243,7 @@ export default function SeedWallet(
             {printTooltip("view-on-etherscan-tooltip", "View on Etherscan")}
 
             <FontAwesomeIcon
-              className="cursor-pointer unselectable"
+              className="tw-cursor-pointer tw-select-none"
               data-tooltip-id="download-recovery-file-tooltip"
               icon={faFileDownload}
               height={22}
@@ -296,7 +282,7 @@ export default function SeedWallet(
             />
 
             <FontAwesomeIcon
-              className="cursor-pointer unselectable"
+              className="tw-cursor-pointer tw-select-none"
               data-tooltip-id="copy-address-tooltip"
               icon={faCopy}
               height={22}
@@ -313,15 +299,13 @@ export default function SeedWallet(
               addressCopied ? "Copied!" : "Copy address to clipboard"
             )}
           </span>
-        </Col>
-      </Row>
-      <Row className="pt-5">
-        <Col className="d-flex align-items-center justify-content-between">
+        </div>
+        <div className="tw-mt-5 tw-flex tw-items-center tw-justify-between">
           <span>Mnemonic Phrase</span>
           {mnemonicAvailable && (
-            <span className="d-flex gap-3 align-items-center">
+            <span className="tw-flex tw-items-center tw-gap-3">
               <FontAwesomeIcon
-                className="cursor-pointer unselectable"
+                className="tw-cursor-pointer tw-select-none"
                 data-tooltip-id="reveal-phrase-tooltip"
                 icon={revealPhrase ? faEye : faEyeSlash}
                 height={22}
@@ -357,7 +341,7 @@ export default function SeedWallet(
               {revealPhrase && (
                 <>
                   <FontAwesomeIcon
-                    className="cursor-pointer unselectable"
+                    className="tw-cursor-pointer tw-select-none"
                     data-tooltip-id="copy-mnemonic-tooltip"
                     icon={faCopy}
                     height={22}
@@ -377,30 +361,28 @@ export default function SeedWallet(
               )}
             </span>
           )}
-        </Col>
-      </Row>
-      <Row className="pt-2">
-        {mnemonicAvailable ? (
-          phrase.map((w, i) => (
-            <SeedWalletPhraseWord
-              index={i + 1}
-              word={w}
-              hidden={!revealPhrase}
-              key={getRandomKey()}
-            />
-          ))
-        ) : (
-          <Col className="font-color-h">
-            Mnemonic phrase not available for this wallet
-          </Col>
-        )}
-      </Row>
-      <Row className="pt-4">
-        <Col className="d-flex align-items-center justify-content-between">
+        </div>
+        <div className="tw-mt-2 tw-grid tw-grid-cols-2 tw-gap-2 sm:tw-grid-cols-4">
+          {mnemonicAvailable ? (
+            phrase.map((w, i) => (
+              <SeedWalletPhraseWord
+                index={i + 1}
+                word={w}
+                hidden={!revealPhrase}
+                key={getRandomKey()}
+              />
+            ))
+          ) : (
+            <span className="tw-text-iron-400">
+              Mnemonic phrase not available for this wallet
+            </span>
+          )}
+        </div>
+        <div className="tw-mt-4 tw-flex tw-items-center tw-justify-between">
           <span>Private Key</span>
-          <span className="d-flex gap-3 align-items-center">
+          <span className="tw-flex tw-items-center tw-gap-3">
             <FontAwesomeIcon
-              className="cursor-pointer unselectable"
+              className="tw-cursor-pointer tw-select-none"
               data-tooltip-id="reveal-private-key-tooltip"
               icon={revealPrivateKey ? faEye : faEyeSlash}
               height={22}
@@ -436,7 +418,7 @@ export default function SeedWallet(
             {revealPrivateKey && (
               <>
                 <FontAwesomeIcon
-                  className="cursor-pointer unselectable"
+                  className="tw-cursor-pointer tw-select-none"
                   data-tooltip-id="copy-private-key-tooltip"
                   icon={faCopy}
                   height={22}
@@ -455,26 +437,25 @@ export default function SeedWallet(
               </>
             )}
           </span>
-        </Col>
-      </Row>
-      <Row className="pt-2">
-        <SeedWalletPhraseWord
-          word={privateKey}
-          hidden={!revealPrivateKey}
-          full_width={true}
-        />
-      </Row>
-      <Row className="pt-5">
-        <Col className="d-flex align-items-center gap-2">
-          <Button
-            variant="danger"
+        </div>
+        <div className="tw-mt-2">
+          <SeedWalletPhraseWord
+            word={privateKey}
+            hidden={!revealPrivateKey}
+            full_width={true}
+          />
+        </div>
+        <div className="tw-mt-5 tw-flex tw-items-center tw-gap-2">
+          <button
+            type="button"
             onClick={() => deleteWallet(seedWallet.name, seedWallet.address)}
+            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-[#dc2626] tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-white tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-red focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-iron-950 desktop-hover:hover:tw-bg-[#ef4444]"
           >
             Delete
-          </Button>
-        </Col>
-      </Row>
-    </Container>
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -487,26 +468,25 @@ export function SeedWalletPhraseWord(
   }>
 ) {
   return (
-    <Col
-      xs={props.full_width ? 12 : 6}
-      sm={props.full_width ? 12 : 4}
-      md={props.full_width ? 12 : 3}
-      className="pt-2 pb-2"
+    <div
+      className={
+        props.full_width ? "tw-w-full tw-py-2" : "tw-w-full tw-min-w-0 tw-py-2"
+      }
     >
-      <Container className={styles["phrase"]}>
-        <Row>
-          <Col className="d-flex gap-2 unselectable">
-            {props.index && (
-              <span className="font-color-h font-lighter">{props.index}</span>
-            )}
-            <span
-              className={`text-break ${props.hidden ? styles["blurry"] : ""}`}
-            >
-              {props.word}
+      <div className="tw-rounded-xl tw-p-4 tw-text-lg tw-ring-1 tw-ring-inset tw-ring-iron-800">
+        <div className="tw-flex tw-select-none tw-gap-2">
+          {props.index != null && (
+            <span className="tw-shrink-0 tw-font-light tw-text-iron-400">
+              {props.index}
             </span>
-          </Col>
-        </Row>
-      </Container>
-    </Col>
+          )}
+          <span
+            className={`${props.hidden ? "tw-select-none tw-blur" : ""} ${props.full_width ? "tw-break-all" : "tw-overflow-hidden tw-text-ellipsis tw-whitespace-nowrap"}`}
+          >
+            {props.word}
+          </span>
+        </div>
+      </div>
+    </div>
   );
 }

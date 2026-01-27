@@ -43,7 +43,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, Modal } from "react-bootstrap";
+import {
+  ConfirmModalShell,
+  confirmBtnDanger,
+  confirmBtnPrimary,
+} from "@/components/shared/ConfirmModalShell";
 import type { TypeOptions } from "react-toastify";
 import { Slide, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
@@ -53,7 +57,6 @@ import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "../react-query-wrapper/ReactQueryWrapper";
-import styles from "./Auth.module.scss";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
 
 // Custom error classes for authentication failures
@@ -673,61 +676,58 @@ export default function Auth({
         setActiveProfileProxy: onActiveProfileProxy,
       }}>
       {children}
-      <Modal
+      <ConfirmModalShell
         show={shouldShowSignModal}
-        onHide={() => {
-          // Only allow modal dismissal when not actively validating
+        title="Sign Authentication Request"
+        onBackdropClick={() => {
           if (authLoadingState !== "validating") {
             setShowSignModal(false);
           }
         }}
-        backdrop="static"
-        keyboard={false}
-        centered
-        dialogClassName={!isTopModal(AUTH_MODAL) ? "modal-blurred" : ""}>
-        <div className={styles["signModalHeader"]}>
-          <Modal.Title>Sign Authentication Request</Modal.Title>
-        </div>
-        <Modal.Body className={styles["signModalContent"]}>
-          <p className="mt-2 mb-2">
-            To connect your wallet, you will need to sign a message to confirm
-            your identity.
-          </p>
-
-          <ul className="font-lighter">
-            <li className="mt-1 mb-1">
-              This signature will be used to generate a secure token (JWT) to
-              authenticate your session.
-            </li>
-            <li className="mt-1 mb-1">
-              Your signature will not cost any gas and is purely for
-              authentication purposes.
-            </li>
-          </ul>
-        </Modal.Body>
-        <Modal.Footer className={styles["signModalContent"]}>
-          <Button
-            variant="danger"
-            onClick={() => {
-              setShowSignModal(false);
-              seizeDisconnectAndLogout();
-            }}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            onClick={() => requestAuth()}
-            disabled={isSigningPending}>
-            {isSigningPending ? (
-              <>
-                Confirm in your wallet <DotLoader />
-              </>
-            ) : (
-              "Sign"
-            )}
-          </Button>
-        </Modal.Footer>
-      </Modal>
+        dialogClassName={
+          !isTopModal(AUTH_MODAL) ? "tw-blur-[5px]" : ""
+        }
+        footer={
+          <>
+            <button
+              type="button"
+              className={confirmBtnDanger}
+              onClick={() => {
+                setShowSignModal(false);
+                seizeDisconnectAndLogout();
+              }}>
+              Cancel
+            </button>
+            <button
+              type="button"
+              className={confirmBtnPrimary}
+              onClick={() => requestAuth()}
+              disabled={isSigningPending}>
+              {isSigningPending ? (
+                <>
+                  Confirm in your wallet <DotLoader />
+                </>
+              ) : (
+                "Sign"
+              )}
+            </button>
+          </>
+        }>
+        <p className="tw-m-0 tw-mb-2 tw-mt-2">
+          To connect your wallet, you will need to sign a message to confirm
+          your identity.
+        </p>
+        <ul className="tw-m-0 tw-list-disc tw-pl-5 tw-font-light tw-text-iron-300">
+          <li className="tw-mb-1 tw-mt-1">
+            This signature will be used to generate a secure token (JWT) to
+            authenticate your session.
+          </li>
+          <li className="tw-mb-1 tw-mt-1">
+            Your signature will not cost any gas and is purely for
+            authentication purposes.
+          </li>
+        </ul>
+      </ConfirmModalShell>
     </AuthContext.Provider>
   );
 }

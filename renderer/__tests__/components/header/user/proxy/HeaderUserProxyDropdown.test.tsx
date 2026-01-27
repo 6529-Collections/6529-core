@@ -5,6 +5,17 @@ import { AuthContext } from '@/components/auth/Auth';
 
 jest.mock('@/components/header/user/proxy/HeaderUserProxyDropdownItem', () => () => <div data-testid="item" />);
 jest.mock('@/components/auth/SeizeConnectContext');
+jest.mock('@/contexts/SeedWalletContext', () => ({
+  useSeedWallet: () => ({
+    isSeedWallet: false,
+    isUnlocked: true,
+    lockWallet: jest.fn(),
+    setShowPasswordModal: jest.fn(),
+  }),
+}));
+jest.mock('@/contexts/ToastContext', () => ({
+  useToast: () => ({ showToast: jest.fn() }),
+}));
 
 const { useSeizeConnectContext: mockConnect } = require('@/components/auth/SeizeConnectContext');
 

@@ -10,11 +10,13 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
-import { Table } from "react-bootstrap";
 import { TDHInfo } from "../eth-scanner/Workers";
-import styles from "./TDHCalculation.module.scss";
 
-export default function TDHValidation({ localInfo }: { localInfo: TDHInfo | undefined }) {
+export default function TDHValidation({
+  localInfo,
+}: {
+  localInfo: TDHInfo | undefined;
+}) {
   const [isFetchingRemote, setIsFetchingRemote] = useState(true);
   const [remoteInfo, setRemoteInfo] = useState<{
     tdh: number;
@@ -41,124 +43,109 @@ export default function TDHValidation({ localInfo }: { localInfo: TDHInfo | unde
         icon={icon}
         color={status}
         height={20}
-        style={{ display: "block", margin: "0 auto" }}
+        className="tw-mx-auto tw-block"
       />
     );
   }
 
-  if (isFetchingRemote) {
-    return <div>Fetching Remote TDH Info...</div>;
-  }
-
-  const tdhStatus = localInfo?.totalTDH === remoteInfo?.tdh ? "green" : "red";
+  const tdhStatus = !remoteInfo ? "orange" : localInfo?.totalTDH === remoteInfo?.tdh ? "green" : "red";
   const tdhIcon =
-    localInfo?.totalTDH === remoteInfo?.tdh ? faCheckCircle : faXmarkCircle;
-  const blockStatus = localInfo?.block === remoteInfo?.block ? "green" : "red";
+    !remoteInfo ? faMinusCircle : localInfo?.totalTDH === remoteInfo?.tdh ? faCheckCircle : faXmarkCircle;
+  const blockStatus = !remoteInfo ? "orange" : localInfo?.block === remoteInfo?.block ? "green" : "red";
   const blockIcon =
-    localInfo?.block === remoteInfo?.block ? faCheckCircle : faXmarkCircle;
-  const merkleRootStatus = !remoteInfo?.merkle_root
+    !remoteInfo ? faMinusCircle : localInfo?.block === remoteInfo?.block ? faCheckCircle : faXmarkCircle;
+  const merkleRootStatus = !remoteInfo
     ? "orange"
-    : localInfo?.merkleRoot === remoteInfo?.merkle_root
-    ? "green"
-    : "red";
-  const merkleRootIcon = !remoteInfo?.merkle_root
+    : !remoteInfo?.merkle_root
+      ? "orange"
+      : localInfo?.merkleRoot === remoteInfo?.merkle_root
+        ? "green"
+        : "red";
+  const merkleRootIcon = !remoteInfo
     ? faMinusCircle
-    : localInfo?.merkleRoot === remoteInfo?.merkle_root
-    ? faCheckCircle
-    : faXmarkCircle;
+    : !remoteInfo?.merkle_root
+      ? faMinusCircle
+      : localInfo?.merkleRoot === remoteInfo?.merkle_root
+        ? faCheckCircle
+        : faXmarkCircle;
+
+  const remoteShimmer = (
+    <span className="tw-inline-block tw-h-4 tw-w-16 tw-animate-pulse tw-rounded tw-bg-iron-800" />
+  );
 
   return (
-    <div className={styles["tableContainer"]}>
-      <Table striped bordered className="align-middle">
+    <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800 [&_table]:tw-w-full [&_table]:tw-table-fixed [&_tbody_tr]:tw-w-full [&_td:nth-child(1)]:tw-flex-[0_0_8rem] [&_td:nth-child(1)]:tw-whitespace-nowrap [&_td:nth-child(2)]:tw-flex-[2_1_0%] [&_td:nth-child(3)]:tw-flex-[2_1_0%] [&_td:nth-child(4)]:tw-flex-[0_0_5rem] [&_td:nth-child(5)]:tw-flex-1 [&_td]:tw-flex [&_td]:tw-min-h-[65px] [&_td]:tw-items-center [&_td]:tw-gap-2 [&_td]:tw-p-2 [&_th:nth-child(1)]:tw-flex-[0_0_8rem] [&_th:nth-child(1)]:tw-whitespace-nowrap [&_th:nth-child(2)]:tw-flex-[2_1_0%] [&_th:nth-child(3)]:tw-flex-[2_1_0%] [&_th:nth-child(4)]:tw-flex-[0_0_5rem] [&_th:nth-child(5)]:tw-flex-1 [&_th]:tw-flex [&_th]:tw-items-center [&_th]:tw-gap-2 [&_th]:tw-p-2 [&_th]:tw-text-left [&_thead_tr]:tw-border-b [&_thead_tr]:tw-border-iron-800 [&_tr]:tw-flex [&_tr]:tw-flex-row [&_tr]:tw-items-stretch">
+      <table>
         <thead>
           <tr>
-            <th className="px-3" style={{ maxWidth: "10vw" }}>
-              Value
-            </th>
-            <th className="px-3" style={{ maxWidth: "25vw" }}>
-              Your Node
-            </th>
-            <th className="px-3" style={{ maxWidth: "25vw" }}>
-              6529.io
-            </th>
-            <th
-              className="px-3 justify-content-center"
-              style={{ maxWidth: "10vw" }}>
-              Match
-            </th>
-            <th className="px-3" style={{ maxWidth: "30vw" }}>
-              Notes
-            </th>
+            <th>Value</th>
+            <th>Your Node</th>
+            <th>6529.io</th>
+            <th className="tw-justify-center">Match</th>
+            <th>Notes</th>
           </tr>
         </thead>
         <tbody>
+          <hr className="tw-my-2 tw-w-full tw-border-0 tw-border-t tw-border-iron-700" />
           <tr>
-            <td className="px-3" style={{ maxWidth: "10vw" }}>
-              TDH
-            </td>
-            <td className="px-3" style={{ maxWidth: "25vw" }}>
+            <td>TDH</td>
+            <td>
               {localInfo?.totalTDH?.toLocaleString()}{" "}
               {localInfo?.totalTDH && (
                 <CopyIcon text={localInfo.totalTDH.toString()} />
               )}
             </td>
-            <td className="px-3" style={{ maxWidth: "25vw" }}>
-              {remoteInfo?.tdh?.toLocaleString()}
-              {remoteInfo?.tdh && <CopyIcon text={remoteInfo.tdh.toString()} />}
+            <td>
+              {isFetchingRemote ? remoteShimmer : (
+                <>
+                  {remoteInfo?.tdh?.toLocaleString()}
+                  {remoteInfo?.tdh && <CopyIcon text={remoteInfo.tdh.toString()} />}
+                </>
+              )}
             </td>
-            <td className="px-3 text-center" style={{ maxWidth: "10vw" }}>
+            <td className="tw-justify-center">
               {printStatusIcon(tdhIcon, tdhStatus)}
             </td>
-            <td className="px-3" style={{ maxWidth: "30vw" }}>
-              All TDH across the whole system
-            </td>
+            <td>All TDH across the whole system</td>
           </tr>
+          <hr className="tw-my-2 tw-w-full tw-border-0 tw-border-t tw-border-iron-700" />
           <tr>
-            <td className="px-3" style={{ maxWidth: "10vw" }}>
-              Last Block
-            </td>
-            <td className="px-3" style={{ maxWidth: "25vw" }}>
+            <td>Last Block</td>
+            <td>
               {localInfo?.block}
               {localInfo?.block && (
                 <CopyIcon text={localInfo.block.toString()} />
               )}
             </td>
-            <td className="px-3" style={{ maxWidth: "25vw" }}>
-              {remoteInfo?.block}
-              {remoteInfo?.block && (
-                <CopyIcon text={remoteInfo.block.toString()} />
+            <td>
+              {isFetchingRemote ? remoteShimmer : (
+                <>
+                  {remoteInfo?.block}
+                  {remoteInfo?.block && (
+                    <CopyIcon text={remoteInfo.block.toString()} />
+                  )}
+                </>
               )}
             </td>
-            <td className="px-3 text-center" style={{ maxWidth: "10vw" }}>
+            <td className="tw-justify-center">
               {printStatusIcon(blockIcon, blockStatus)}
             </td>
-            <td className="px-3" style={{ maxWidth: "30vw" }}>
-              The last Ethereum block that has been used to calculate TDH
-            </td>
+            <td>The last Ethereum block that has been used to calculate TDH</td>
           </tr>
+          <hr className="tw-my-2 tw-w-full tw-border-0 tw-border-t tw-border-iron-700" />
           <tr>
-            <td className="px-3" style={{ maxWidth: "10vw" }}>
-              Merkle Root
+            <td>Merkle Root</td>
+            <td className="tw-break-all tw-text-sm">{localInfo?.merkleRoot}</td>
+            <td className="tw-break-all tw-text-sm">
+              {isFetchingRemote ? remoteShimmer : (remoteInfo?.merkle_root ?? "N/A")}
             </td>
-            <td
-              className="px-3 font-smaller text-wrap"
-              style={{ wordBreak: "break-word", maxWidth: "25vw" }}>
-              {localInfo?.merkleRoot}
-            </td>
-            <td
-              className="px-3 font-smaller text-wrap"
-              style={{ wordBreak: "break-word", maxWidth: "25vw" }}>
-              {remoteInfo?.merkle_root ?? "N/A"}
-            </td>
-            <td className="px-3 text-center" style={{ maxWidth: "10vw" }}>
+            <td className="tw-justify-center">
               {printStatusIcon(merkleRootIcon, merkleRootStatus)}
             </td>
-            <td className="px-3" style={{ maxWidth: "30vw" }}>
-              A hash of all TDH values for all addresses
-            </td>
+            <td>A hash of all TDH values for all addresses</td>
           </tr>
         </tbody>
-      </Table>
+      </table>
     </div>
   );
 }
@@ -175,16 +162,14 @@ function CopyIcon({ text }: { text: string }) {
   return (
     <>
       <FontAwesomeIcon
-        className="pl-2 cursor-pointer unselectable"
+        className="tw-ml-2 tw-cursor-pointer tw-select-none"
         icon={faCopy}
         height={14}
         color={isCopied ? "green" : "white"}
         onClick={handleCopy}
       />
       {isCopied && (
-        <span
-          className="pl-2 font-smaller font-light"
-          style={{ color: "green" }}>
+        <span className="tw-ml-2 tw-text-sm tw-font-light tw-text-emerald-400">
           Copied!
         </span>
       )}

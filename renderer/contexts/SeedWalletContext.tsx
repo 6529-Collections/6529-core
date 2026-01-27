@@ -27,6 +27,7 @@ interface SeedWalletContextType {
     request: SeedWalletRequest
   ) => void;
   setShowPasswordModal: (show: boolean) => void;
+  lockWallet: () => void;
 }
 
 const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
@@ -207,6 +208,7 @@ export const SeedWalletProvider: React.FC<{
     isUnlocked,
     handleRequest,
     setShowPasswordModal,
+    lockWallet,
   };
 
   return (

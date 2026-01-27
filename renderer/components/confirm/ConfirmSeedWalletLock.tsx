@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  ConfirmModalShell,
+  confirmBtnDanger,
+  confirmBtnPrimary,
+  confirmBtnSecondary,
+  confirmInputClass,
+  confirmModalFooterBetween,
+} from "@/components/shared/ConfirmModalShell";
 import { useModalState } from "@/contexts/ModalStateContext";
 import { useToast } from "@/contexts/ToastContext";
 import { SeedWalletRequest } from "@/shared/types";
@@ -13,9 +21,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Modal } from "react-bootstrap";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
-import styles from "./Confirm.module.scss";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
 
@@ -32,11 +38,11 @@ export default function ConfirmSeedWalletLock(
   }>
 ) {
   const inputRef = useRef<HTMLInputElement>(null);
-
   const [unlocking, setUnlocking] = useState(false);
   const [walletPass, setWalletPass] = useState("");
   const [passHidden, setPassHidden] = useState(true);
   const { showToast } = useToast();
+  const { isTopModal, addModal, removeModal } = useModalState();
 
   useEffect(() => {
     if (!props.show) {
@@ -46,7 +52,13 @@ export default function ConfirmSeedWalletLock(
     }
   }, [props.show]);
 
-  const handleKeyPress = (e: any) => {
+  useEffect(() => {
+    if (props.show) addModal(SEED_WALLET_LOCK_MODAL);
+    else removeModal(SEED_WALLET_LOCK_MODAL);
+    return () => removeModal(SEED_WALLET_LOCK_MODAL);
+  }, [props.show, addModal, removeModal]);
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
     if (
       e.key === "Enter" &&
       walletPass &&
@@ -66,7 +78,6 @@ export default function ConfirmSeedWalletLock(
   const handleUnlock = useCallback(
     async (pass: string) => {
       setUnlocking(true);
-
       const doUnlock = async () => {
         try {
           const isSuccess = await props.onUnlock(pass);
@@ -82,120 +93,109 @@ export default function ConfirmSeedWalletLock(
           setUnlocking(false);
         }
       };
-
       setTimeout(doUnlock, 0);
     },
-    [unlocking]
+    [props, showToast]
   );
 
-  function printLocked() {
-    return (
-      <>
-        <label className="pb-1 d-flex align-items-center justify-content-between">
-          <span className="unselectable">Wallet Password</span>
-          <FontAwesomeIcon
-            icon={passHidden ? faEyeSlash : faEye}
-            height={18}
-            onClick={() => setPassHidden(!passHidden)}
-            style={{
-              cursor: "pointer",
-            }}
-          />
-        </label>
-        <input
-          ref={inputRef}
-          autoFocus
-          type={passHidden ? "password" : "text"}
-          placeholder="******"
-          value={walletPass}
-          className={styles["seedWalletInput"]}
-          onChange={(e) => setWalletPass(e.target.value)}
-          onKeyDown={handleKeyPress}
-        />
-      </>
-    );
-  }
-
-  function printUnlocked() {
-    return (
-      <div className="d-flex align-items-center gap-2">
-        <FontAwesomeIcon icon={faCheckCircle} color={"#00ff00"} height={18} />{" "}
-        <span>Your wallet is unlocked</span>
-      </div>
-    );
-  }
-
-  const { isTopModal, addModal, removeModal } = useModalState();
-
-  useEffect(() => {
-    if (props.show) {
-      addModal(SEED_WALLET_LOCK_MODAL);
-    } else {
-      removeModal(SEED_WALLET_LOCK_MODAL);
-    }
-
-    return () => {
-      removeModal(SEED_WALLET_LOCK_MODAL);
-    };
-  }, [props.show]);
-
   return (
-    <Modal
+    <ConfirmModalShell
       show={props.show}
-      keyboard={false}
-      centered
-      backdrop="static"
-      onHide={props.onHide}
-      dialogClassName={
-        !isTopModal(SEED_WALLET_LOCK_MODAL) ? "modal-blurred" : ""
-      }
-    >
-      <div className={styles["modalHeader"]}>
-        <Modal.Title className="d-flex align-items-center gap-3">
+      title={
+        <>
           <FontAwesomeIcon
             icon={props.unlockedWallet ? faLockOpen : faLock}
             height={22}
           />
-          <span>{props.name}</span>
-        </Modal.Title>
-      </div>
-      <Modal.Body className={styles["modalContent"]}>
-        <div className="font-smaller pb-3">Address: {props.address}</div>
-        {props.unlockedWallet ? printUnlocked() : printLocked()}
-      </Modal.Body>
-      <Modal.Footer
-        className={`${styles["modalContent"]} d-flex align-items-center justify-content-between`}
-      >
-        <span>
-          {props.pendingRequest && (
-            <span className="font-lighter">
-              pending: <code>{props.pendingRequest.method}</code>
-            </span>
-          )}
-        </span>
-        <span className="d-flex gap-2">
-          <Button variant="secondary" onClick={props.onHide}>
-            Close
-          </Button>
-          {props.unlockedWallet ? (
-            <Button variant="danger" onClick={handleLock}>
-              Lock
-            </Button>
-          ) : (
-            <Button
-              variant="primary"
-              disabled={
-                !walletPass ||
-                walletPass.length < SEED_MIN_PASS_LENGTH ||
-                unlocking
-              }
-              onClick={() => handleUnlock(walletPass)}
+          {props.name}
+        </>
+      }
+      titleClassName="tw-m-0 tw-flex tw-items-center tw-gap-3 tw-text-lg tw-font-semibold"
+      footerClassName={confirmModalFooterBetween}
+      dialogClassName={
+        !isTopModal(SEED_WALLET_LOCK_MODAL) ? "tw-blur-[5px]" : ""
+      }
+      footer={
+        <>
+          <span>
+            {props.pendingRequest && (
+              <span className="tw-font-light tw-text-iron-400">
+                pending:{" "}
+                <code className="tw-rounded tw-bg-iron-800 tw-px-1 tw-py-0.5">
+                  {props.pendingRequest.method}
+                </code>
+              </span>
+            )}
+          </span>
+          <span className="tw-flex tw-gap-2">
+            <button
+              type="button"
+              onClick={props.onHide}
+              className={confirmBtnSecondary}
             >
-              {unlocking ? "Unlocking..." : "Unlock"}
-            </Button>
-          )}
-        </span>
-      </Modal.Footer>
-    </Modal>
+              Close
+            </button>
+            {props.unlockedWallet ? (
+              <button
+                type="button"
+                onClick={handleLock}
+                className={confirmBtnDanger}
+              >
+                Lock
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={
+                  !walletPass ||
+                  walletPass.length < SEED_MIN_PASS_LENGTH ||
+                  unlocking
+                }
+                onClick={() => handleUnlock(walletPass)}
+                className={confirmBtnPrimary}
+              >
+                {unlocking ? "Unlocking..." : "Unlock"}
+              </button>
+            )}
+          </span>
+        </>
+      }
+    >
+      <div className="tw-pb-3 tw-text-sm tw-text-iron-400">
+        Address: {props.address}
+      </div>
+      {props.unlockedWallet ? (
+        <div className="tw-flex tw-items-center tw-gap-2">
+          <FontAwesomeIcon
+            icon={faCheckCircle}
+            className="tw-text-[#00ff00]"
+            height={18}
+          />
+          <span>Your wallet is unlocked</span>
+        </div>
+      ) : (
+        <>
+          <label className="tw-flex tw-select-none tw-items-center tw-justify-between tw-pb-1">
+            <span>Wallet Password</span>
+            <FontAwesomeIcon
+              icon={passHidden ? faEyeSlash : faEye}
+              height={18}
+              onClick={() => setPassHidden(!passHidden)}
+              className="tw-cursor-pointer"
+            />
+          </label>
+          <input
+            ref={inputRef}
+            autoFocus
+            type={passHidden ? "password" : "text"}
+            placeholder="******"
+            value={walletPass}
+            className={confirmInputClass}
+            onChange={(e) => setWalletPass(e.target.value)}
+            onKeyDown={handleKeyPress}
+          />
+        </>
+      )}
+    </ConfirmModalShell>
   );
 }

@@ -342,7 +342,7 @@ async function createWindow() {
 
   updateSplashMessage("Loading main window");
 
-  const url = `http://localhost:${PORT}/core/eth-transactions`;
+  const url = `http://localhost:${PORT}`;
 
   mainWindow.loadURL(url);
 
