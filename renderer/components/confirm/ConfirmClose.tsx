@@ -1,6 +1,12 @@
+"use client";
+
 import React from "react";
-import { Button, Modal } from "react-bootstrap";
-import styles from "./Confirm.module.scss";
+import {
+  ConfirmModalShell,
+  confirmBtnDanger,
+  confirmBtnPrimary,
+  confirmBtnSecondary,
+} from "@/components/shared/ConfirmModalShell";
 
 interface ConfirmProps {
   show: boolean;
@@ -14,25 +20,29 @@ const ConfirmClose: React.FC<ConfirmProps> = ({
   onQuit,
   onRunBackground,
   onCancel,
-}) => {
-  return (
-    <Modal show={show} onHide={onCancel} backdrop keyboard={false} centered>
-      <div className={styles["modalHeader"]}>
-        <Modal.Title>Close 6529 Desktop</Modal.Title>
-      </div>
-      <Modal.Footer className={styles["modalContent"]}>
-        <Button variant="secondary" onClick={onCancel}>
+}) => (
+  <ConfirmModalShell
+    show={show}
+    title="Close 6529 Desktop"
+    onBackdropClick={onCancel}
+    footer={
+      <>
+        <button type="button" onClick={onCancel} className={confirmBtnSecondary}>
           Cancel
-        </Button>
-        <Button variant="primary" onClick={onRunBackground}>
+        </button>
+        <button
+          type="button"
+          onClick={onRunBackground}
+          className={confirmBtnPrimary}
+        >
           Run in Background
-        </Button>
-        <Button variant="danger" onClick={onQuit}>
+        </button>
+        <button type="button" onClick={onQuit} className={confirmBtnDanger}>
           Quit
-        </Button>
-      </Modal.Footer>
-    </Modal>
-  );
-};
+        </button>
+      </>
+    }
+  />
+);
 
 export default ConfirmClose;

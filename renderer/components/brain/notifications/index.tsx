@@ -16,13 +16,16 @@ interface NotificationsProps {
 const NOTIFICATION_CAUSE_PRIORITY: Record<ApiNotificationCause, number> = {
   [ApiNotificationCause.IdentitySubscribed]: 0,
   [ApiNotificationCause.IdentityMentioned]: 1,
-  [ApiNotificationCause.DropQuoted]: 2,
-  [ApiNotificationCause.DropReplied]: 3,
-  [ApiNotificationCause.DropVoted]: 4,
-  [ApiNotificationCause.DropReacted]: 5,
-  [ApiNotificationCause.WaveCreated]: 6,
-  [ApiNotificationCause.AllDrops]: 7,
-  [ApiNotificationCause.PriorityAlert]: 8,
+  [ApiNotificationCause.IdentityRep]: 2,
+  [ApiNotificationCause.IdentityNic]: 3,
+  [ApiNotificationCause.DropQuoted]: 4,
+  [ApiNotificationCause.DropReplied]: 5,
+  [ApiNotificationCause.DropVoted]: 6,
+  [ApiNotificationCause.DropBoosted]: 7,
+  [ApiNotificationCause.DropReacted]: 8,
+  [ApiNotificationCause.WaveCreated]: 9,
+  [ApiNotificationCause.AllDrops]: 10,
+  [ApiNotificationCause.PriorityAlert]: 11,
 };
 
 const compareNotificationCause = (
@@ -50,7 +53,7 @@ export default function Notifications({
 
   const activeFilterKey = useMemo(
     () =>
-      activeFilter?.cause
+      activeFilter?.cause?.length
         ? [...activeFilter.cause].sort(compareNotificationCause).join("|")
         : "notifications-filter-all",
     [activeFilter]
@@ -70,9 +73,10 @@ export default function Notifications({
 
   return (
     <div
-      className="tw-relative tw-flex tw-flex-col tw-rounded-t-xl tw-overflow-x-hidden scroll-shadow"
-      style={notificationsViewStyle}>
-      <div className="tw-flex-1 tw-h-full tw-relative tw-flex-col tw-flex tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0">
+      className="scroll-shadow tw-relative tw-flex tw-flex-col tw-overflow-x-hidden tw-rounded-t-xl"
+      style={notificationsViewStyle}
+    >
+      <div className="tw-relative tw-flex tw-h-full tw-flex-1 tw-flex-col tw-px-2 sm:tw-px-4 md:tw-px-6 lg:tw-px-0">
         {isAuthenticated ? (
           <NotificationsCauseFilter
             activeFilter={activeFilter}
@@ -82,8 +86,9 @@ export default function Notifications({
         <div
           ref={scrollContainerRef}
           onScroll={handleScroll}
-          className="tw-flex tw-flex-1 tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300"
-          style={{ WebkitOverflowScrolling: "touch" }}>
+          className="tw-flex tw-flex-1 tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300"
+          style={{ WebkitOverflowScrolling: "touch" }}
+        >
           <NotificationsContent
             isLoadingProfile={contentState.isLoadingProfile}
             hasConnectedProfile={contentState.hasConnectedProfile}

@@ -1,12 +1,8 @@
 "use client";
 
 import { $convertFromMarkdownString } from "@lexical/markdown";
-import type {
-  InitialConfigType
-} from "@lexical/react/LexicalComposer";
-import {
-  LexicalComposer,
-} from "@lexical/react/LexicalComposer";
+import type { InitialConfigType } from "@lexical/react/LexicalComposer";
+import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
@@ -14,10 +10,6 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
-import type {
-  EditorState,
-  TextNode
-} from "lexical";
 import {
   $createParagraphNode,
   $createTextNode,
@@ -26,8 +18,10 @@ import {
   COMMAND_PRIORITY_HIGH,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
+  type EditorState,
   type LexicalNode,
   type RootNode,
+  type TextNode,
 } from "lexical";
 import React, {
   useCallback,
@@ -53,9 +47,7 @@ import {
   MentionNode,
 } from "@/components/drops/create/lexical/nodes/MentionNode";
 import EmojiPlugin from "@/components/drops/create/lexical/plugins/emoji/EmojiPlugin";
-import type {
-  NewMentionsPluginHandles,
-} from "@/components/drops/create/lexical/plugins/mentions/MentionsPlugin";
+import type { NewMentionsPluginHandles } from "@/components/drops/create/lexical/plugins/mentions/MentionsPlugin";
 import NewMentionsPlugin from "@/components/drops/create/lexical/plugins/mentions/MentionsPlugin";
 import PlainTextPastePlugin from "@/components/drops/create/lexical/plugins/PlainTextPastePlugin";
 import { HASHTAG_TRANSFORMER } from "@/components/drops/create/lexical/transformers/HastagTransformer";

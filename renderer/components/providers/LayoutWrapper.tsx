@@ -6,7 +6,7 @@ import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
 import WebLayout from "@/components/layout/WebLayout";
 import LayoutErrorFallback from "@/components/providers/LayoutErrorFallback";
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/constants/sidebar";
-import { RefreshProvider, useGlobalRefresh } from "@/contexts/RefreshContext";
+import { useGlobalRefresh } from "@/contexts/RefreshContext";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import TitleBarWrapper from "@/TitleBarWrapper";
@@ -20,6 +20,7 @@ export default function LayoutWrapper({
   readonly children: ReactNode;
 }) {
   const { isApp, hasTouchScreen } = useDeviceInfo();
+  const { refreshKey } = useGlobalRefresh();
   const isSmallScreen = useIsMobileScreen();
   const [isTouchTabletViewport, setIsTouchTabletViewport] = useState(() => {
     if (globalThis.window === undefined) {
@@ -27,7 +28,6 @@ export default function LayoutWrapper({
     }
     return globalThis.window.innerWidth < SIDEBAR_MOBILE_BREAKPOINT;
   });
-
   const pathname = usePathname();
 
   useEffect(() => {
@@ -89,32 +89,17 @@ export default function LayoutWrapper({
   }
 
   return (
-    <RefreshProvider>
-      <TitleBarWrapper>
-        <LayoutComponent>
-          <RefreshableLayout pathname={pathname}>{children}</RefreshableLayout>
-        </LayoutComponent>
-      </TitleBarWrapper>
-    </RefreshProvider>
-  );
-}
-
-export function RefreshableLayout({
-  children,
-  pathname,
-}: {
-  readonly children: ReactNode;
-  readonly pathname: string;
-}) {
-  const { refreshKey } = useGlobalRefresh();
-  return (
-    <ErrorBoundary
-      key={refreshKey}
-      FallbackComponent={LayoutErrorFallback}
-      resetKeys={[pathname, refreshKey]}
-    >
-      {children}
-      <FooterWrapper />
-    </ErrorBoundary>
+    <TitleBarWrapper>
+      <LayoutComponent>
+        <ErrorBoundary
+          key={refreshKey}
+          FallbackComponent={LayoutErrorFallback}
+          resetKeys={[pathname, refreshKey]}
+        >
+          {children}
+          <FooterWrapper />
+        </ErrorBoundary>
+      </LayoutComponent>
+    </TitleBarWrapper>
   );
 }

@@ -1,15 +1,21 @@
 "use client";
 
+import {
+  ConfirmModalShell,
+  confirmBtnDanger,
+  confirmBtnPrimary,
+  confirmBtnSecondary,
+  confirmInputClass,
+  confirmModalFooterBetween,
+} from "@/components/shared/ConfirmModalShell";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers } from "ethers";
 import Link from "next/link";
 import { useCallback, useRef, useState } from "react";
-import { Button, Modal } from "react-bootstrap";
 import { useToast } from "../../../contexts/ToastContext";
 import { addRpcProvider } from "../../../electron";
 import { Spinner } from "../../dotLoader/DotLoader";
-import styles from "./ETHScanner.module.scss";
 
 export function AddRpcProviderModal(
   props: Readonly<{
@@ -99,116 +105,111 @@ export function AddRpcProviderModal(
   }, [url]);
 
   return (
-    <Modal
+    <ConfirmModalShell
       show={props.show}
-      onHide={() => handleHide(false)}
-      backdrop
-      keyboard={false}
-      centered
+      title="Add RPC Provider"
+      onBackdropClick={() => handleHide(false)}
+      footerClassName={confirmModalFooterBetween}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={() => reset()}
+            className={confirmBtnDanger}
+          >
+            Reset
+          </button>
+          <span className="tw-flex tw-gap-2">
+            <button
+              type="button"
+              onClick={() => handleHide(false)}
+              className={confirmBtnSecondary}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              disabled={!name || !url || addingRpcProvider}
+              onClick={() => {
+                setAddingRpcProvider(true);
+                handleAdd();
+              }}
+              className={confirmBtnPrimary}
+            >
+              {addingRpcProvider ? <Spinner dimension={16} /> : "Add"}
+            </button>
+          </span>
+        </>
+      }
     >
-      <div className={styles["modalHeader"]}>
-        <Modal.Title>Add RPC Provider</Modal.Title>
+      <div className="tw-text-sm">
+        RPC URLs Directory:{" "}
+        <Link
+          href="https://ethereumnodes.com/"
+          target="_blank"
+          rel="noreferrer"
+          className="tw-text-primary-400 tw-underline"
+        >
+          https://ethereumnodes.com/
+        </Link>
       </div>
-      <Modal.Body className={styles["modalContent"]}>
-        <div className="font-smaller">
-          RPC URLs Directory:{" "}
-          <Link
-            href="https://ethereumnodes.com/"
-            target="_blank"
-            rel="noreferrer"
-          >
-            https://ethereumnodes.com/
-          </Link>
-        </div>
-        <div className="mt-3">
-          <label className="pb-1">RPC URL</label>
-          <input
-            ref={urlInputRef}
-            disabled={urlValidation}
-            autoFocus
-            type="text"
-            placeholder="https://..."
-            value={url}
-            className={styles["modalInput"]}
-            onChange={(e) => {
-              setUrl(e.target.value);
-            }}
-          />
-        </div>
-        <div className="text-right mt-2">
-          <Button
-            variant="primary"
-            disabled={!url || urlValidation || testingUrl}
-            onClick={() => {
-              testRpcProvider();
-              setTestingUrl(true);
-            }}
-          >
-            <span className="d-flex align-items-center gap-1">
-              {urlValidation ? (
-                <>
-                  <FontAwesomeIcon
-                    icon={faCheckCircle}
-                    color="white"
-                    height={16}
-                  />
-                  <span>Valid</span>
-                </>
-              ) : (
-                <>
-                  {testingUrl && <Spinner dimension={16} />}
-                  <span>{testingUrl ? "Testing..." : "Test"}</span>
-                </>
-              )}
-            </span>
-          </Button>
-        </div>
-        <div className="mt-1">
-          <label className="pb-1">Provider Name</label>
-          <input
-            ref={nameInputRef}
-            disabled={!urlValidation}
-            type="text"
-            placeholder="My RPC Provider..."
-            value={name}
-            className={styles["modalInput"]}
-            onChange={(e) => {
-              setName(e.target.value);
-            }}
-          />
-        </div>
-        <p className="mt-4 mb-1">
-          {error ? (
-            <span className="text-danger">{error}</span>
-          ) : urlValidation ? (
-            <>Provide a name for your new RPC provider</>
+      <div className="tw-mt-3">
+        <label className="tw-block tw-pb-1">RPC URL</label>
+        <input
+          ref={urlInputRef}
+          disabled={urlValidation}
+          autoFocus
+          type="text"
+          placeholder="https://..."
+          value={url}
+          className={confirmInputClass}
+          onChange={(e) => setUrl(e.target.value)}
+        />
+      </div>
+      <div className="tw-mt-2 tw-text-right">
+        <button
+          type="button"
+          disabled={!url || urlValidation || testingUrl}
+          onClick={() => {
+            testRpcProvider();
+            setTestingUrl(true);
+          }}
+          className={confirmBtnPrimary}
+        >
+          {urlValidation ? (
+            <>
+              <FontAwesomeIcon icon={faCheckCircle} color="white" height={16} />
+              <span>Valid</span>
+            </>
           ) : (
-            <>Provide a URL for your new RPC provider and test it</>
+            <>
+              {testingUrl && <Spinner dimension={16} />}
+              <span>{testingUrl ? "Testing..." : "Test"}</span>
+            </>
           )}
-        </p>
-      </Modal.Body>
-      <Modal.Footer
-        className={`d-flex justify-content-between ${styles["modalContent"]}`}
-      >
-        <Button variant="danger" onClick={() => reset()}>
-          Reset
-        </Button>
-        <span className="d-flex gap-2">
-          <Button variant="secondary" onClick={() => handleHide(false)}>
-            Cancel
-          </Button>
-          <Button
-            variant="success"
-            disabled={!name || !url || addingRpcProvider}
-            onClick={() => {
-              setAddingRpcProvider(true);
-              handleAdd();
-            }}
-          >
-            {addingRpcProvider ? <Spinner dimension={16} /> : "Add"}
-          </Button>
-        </span>
-      </Modal.Footer>
-    </Modal>
+        </button>
+      </div>
+      <div className="tw-mt-1">
+        <label className="tw-block tw-pb-1">Provider Name</label>
+        <input
+          ref={nameInputRef}
+          disabled={!urlValidation}
+          type="text"
+          placeholder="My RPC Provider..."
+          value={name}
+          className={confirmInputClass}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+      <p className="tw-mb-1 tw-mt-4">
+        {error ? (
+          <span className="tw-text-red-400">{error}</span>
+        ) : urlValidation ? (
+          <>Provide a name for your new RPC provider</>
+        ) : (
+          <>Provide a URL for your new RPC provider and test it</>
+        )}
+      </p>
+    </ConfirmModalShell>
   );
 }

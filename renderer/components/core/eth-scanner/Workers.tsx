@@ -18,18 +18,7 @@ import {
   TRANSACTIONS_START_BLOCK,
 } from "@/shared/types";
 import { useState } from "react";
-import {
-  Button,
-  Col,
-  Container,
-  Form,
-  InputGroup,
-  Modal,
-  ProgressBar,
-  Row,
-} from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import styles from "./ETHScanner.module.scss";
 import { RPCProvider } from "./RpcProviders";
 import TransactionsLocalData from "./TransactionsLocalData";
 
@@ -150,21 +139,17 @@ export function WorkerCards({
   readonly tasks: Task[];
 }) {
   return (
-    <Container className="no-padding">
-      <Row>
-        <Col>
-          {rpcProviders.length > 0 ? (
-            <>
-              {tasks.map((task) => (
-                <WorkerCard key={task.namespace} task={task} />
-              ))}
-            </>
-          ) : (
-            <>Add RPC Providers to enable app workers</>
-          )}
-        </Col>
-      </Row>
-    </Container>
+    <div>
+      {rpcProviders.length > 0 ? (
+        <>
+          {tasks.map((task) => (
+            <WorkerCard key={task.namespace} task={task} />
+          ))}
+        </>
+      ) : (
+        <>Add RPC Providers to enable app workers</>
+      )}
+    </div>
   );
 }
 
@@ -207,13 +192,12 @@ export function WorkerCard({
       return p;
     };
 
-    let progressVariant = "info";
-    if (task.status?.status === ScheduledWorkerStatus.COMPLETED) {
-      progressVariant = "success";
-    } else if (task.status?.status === ScheduledWorkerStatus.ERROR) {
-      progressVariant = "danger";
-    }
-
+    const progressBg =
+      task.status?.status === ScheduledWorkerStatus.COMPLETED
+        ? "tw-bg-emerald-500"
+        : task.status?.status === ScheduledWorkerStatus.ERROR
+          ? "tw-bg-red-500"
+          : "tw-bg-primary-500";
     const progressNowValue = task.status?.statusPercentage ?? 100;
     let progressNowLabel;
     if (task.status?.statusPercentage !== undefined) {
@@ -222,9 +206,9 @@ export function WorkerCard({
 
     return (
       <span>
-        <div className="d-flex align-items-center justify-content-end gap-2">
-          {progressNowLabel && (
-            <span className="font-lighter">
+        <div className="tw-flex tw-items-center tw-justify-end tw-gap-2">
+          {progressNowLabel !== undefined && (
+            <span className="tw-font-light tw-text-iron-400">
               {(Math.floor(progressNowLabel * 100) / 100).toLocaleString(
                 "en-US",
                 {
@@ -235,15 +219,14 @@ export function WorkerCard({
               %
             </span>
           )}
-          <ProgressBar
-            now={progressNowValue}
-            style={{ width: "20vw" }}
-            variant={progressVariant}
-            striped={task.status?.status === ScheduledWorkerStatus.RUNNING}
-            animated={task.status?.status === ScheduledWorkerStatus.RUNNING}
-          />
+          <div className="tw-h-4 tw-w-[20vw] tw-min-w-0 tw-overflow-hidden tw-rounded-full tw-bg-iron-800">
+            <div
+              className={`tw-h-full ${progressBg} ${task.status?.status === ScheduledWorkerStatus.RUNNING ? "tw-animate-pulse" : ""}`}
+              style={{ width: `${progressNowValue}%` }}
+            />
+          </div>
         </div>
-        <div className="text-right font-smaller font-color-h mt-1 d-flex font-lighter">
+        <div className="tw-mt-1 tw-flex tw-text-right tw-text-sm tw-font-light tw-text-iron-400">
           <span>{task.status?.message}</span>
           {printProgress()}
         </div>
@@ -338,107 +321,97 @@ export function WorkerCard({
       </>
     );
 
+    const btnLight =
+      "tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-white tw-px-3 tw-py-1.5 tw-text-sm tw-font-medium tw-text-black focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 disabled:tw-opacity-50 desktop-hover:hover:tw-bg-iron-100";
     if (task.namespace === ScheduledWorkerNames.TDH_WORKER) {
       return (
-        <Container className="mt-3 no-padding">
-          <Row>
-            <Col className="d-flex gap-3 align-items-center">
-              {infoButton(
-                "recalculate-tdh-now-tooltip",
-                <Button
-                  variant="light"
-                  data-tooltip-id="recalculate-tdh-now-tooltip"
-                  onClick={() => setShowRunNowConfirm(true)}
-                  disabled={
-                    task.status?.status === ScheduledWorkerStatus.RUNNING
-                  }
-                >
-                  Recalculate TDH Now
-                </Button>
-              )}
-            </Col>
-          </Row>
-        </Container>
+        <div className="tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+          {infoButton(
+            "recalculate-tdh-now-tooltip",
+            <button
+              type="button"
+              className={btnLight}
+              data-tooltip-id="recalculate-tdh-now-tooltip"
+              onClick={() => setShowRunNowConfirm(true)}
+              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+            >
+              Recalculate TDH Now
+            </button>
+          )}
+        </div>
       );
     }
 
     return (
-      <Container className="mt-3 no-padding">
-        <Row>
-          <Col className="d-flex gap-3 align-items-center">
-            {task.status?.status === ScheduledWorkerStatus.RUNNING
-              ? infoButton(
-                  "stop-worker-tooltip",
-                  <Button
-                    variant="light"
-                    data-tooltip-id="stop-worker-tooltip"
-                    onClick={() => setShowStopWorkerConfirm(true)}
-                  >
-                    Stop
-                  </Button>
-                )
-              : infoButton(
-                  "run-now-tooltip",
-                  <Button
-                    variant="light"
-                    data-tooltip-id="run-now-tooltip"
-                    onClick={() => setShowRunNowConfirm(true)}
-                  >
-                    Run Now
-                  </Button>
-                )}
-            {task.resetable &&
-              infoButton(
-                "reset-worker-tooltip",
-                <Button
-                  variant="light"
-                  data-tooltip-id="reset-worker-tooltip"
-                  disabled={
-                    task.status?.status === ScheduledWorkerStatus.RUNNING
-                  }
-                  onClick={() => {
-                    if (task.namespace === ScheduledWorkerNames.NFTS_WORKER) {
-                      setShowResetNFTsConfirm(true);
-                    } else {
-                      setShowResetWorkerConfirm(true);
-                    }
-                  }}
-                >
-                  Reset
-                </Button>
-              )}
-            {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
-              infoButton(
-                "recalculate-owners-tooltip",
-                <Button
-                  disabled={
-                    task.status?.status === ScheduledWorkerStatus.RUNNING
-                  }
-                  variant="light"
-                  data-tooltip-id="recalculate-owners-tooltip"
-                  onClick={() => setShowRecalculateOwnersConfirm(true)}
-                >
-                  Recalculate Owners
-                </Button>
-              )}
-            {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
-              infoButton(
-                "reset-to-block-tooltip",
-                <Button
-                  disabled={
-                    task.status?.status === ScheduledWorkerStatus.RUNNING
-                  }
-                  variant="light"
-                  data-tooltip-id="reset-to-block-tooltip"
-                  style={{ borderLeft: "2px solid #ced4da" }}
-                  onClick={() => setShowResetToBlockConfirm(true)}
-                >
-                  Reset
-                </Button>
-              )}
-          </Col>
-        </Row>
-      </Container>
+      <div className="tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-gap-3">
+        {task.status?.status === ScheduledWorkerStatus.RUNNING
+          ? infoButton(
+              "stop-worker-tooltip",
+              <button
+                type="button"
+                className={btnLight}
+                data-tooltip-id="stop-worker-tooltip"
+                onClick={() => setShowStopWorkerConfirm(true)}
+              >
+                Stop
+              </button>
+            )
+          : infoButton(
+              "run-now-tooltip",
+              <button
+                type="button"
+                className={btnLight}
+                data-tooltip-id="run-now-tooltip"
+                onClick={() => setShowRunNowConfirm(true)}
+              >
+                Run Now
+              </button>
+            )}
+        {task.resetable &&
+          infoButton(
+            "reset-worker-tooltip",
+            <button
+              type="button"
+              className={btnLight}
+              data-tooltip-id="reset-worker-tooltip"
+              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              onClick={() => {
+                if (task.namespace === ScheduledWorkerNames.NFTS_WORKER) {
+                  setShowResetNFTsConfirm(true);
+                } else {
+                  setShowResetWorkerConfirm(true);
+                }
+              }}
+            >
+              Reset
+            </button>
+          )}
+        {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
+          infoButton(
+            "recalculate-owners-tooltip",
+            <button
+              type="button"
+              className={btnLight}
+              data-tooltip-id="recalculate-owners-tooltip"
+              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              onClick={() => setShowRecalculateOwnersConfirm(true)}
+            >
+              Recalculate Owners
+            </button>
+          )}
+        {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
+          infoButton(
+            "reset-to-block-tooltip",
+            <button
+              type="button"
+              className={btnLight}
+              data-tooltip-id="reset-to-block-tooltip"
+              onClick={() => setShowResetToBlockConfirm(true)}
+            >
+              Reset
+            </button>
+          )}
+      </div>
     );
   }
 
@@ -461,64 +434,44 @@ export function WorkerCard({
   }
 
   return (
-    <Container className="no-padding pt-2 pb-4">
-      <Row>
-        <Col>
-          <Col xs={12}>
-            <Container className={styles["logCard"]}>
-              <Row>
-                <Col
-                  xs={12}
-                  md={6}
-                  className={`pt-2 pb-2 d-flex flex-column gap-2 justify-content-center ${
-                    isMobile ? "align-items-center" : "align-items-start"
-                  }`}
-                >
-                  <span
-                    className={`pt-1 pb-1 d-flex flex-column gap-1 justify-content-center ${
-                      isMobile ? "align-items-center" : "align-items-start"
-                    }`}
-                  >
-                    <span className="d-flex align-items-center gap-3">
-                      <span className="font-bolder font-larger">
-                        {task.display}
-                      </span>
-                      {task.status?.status === ScheduledWorkerStatus.RUNNING ? (
-                        <CircleLoader />
-                      ) : null}
-                    </span>
-                    <span className="font-smaller font-color-h">
-                      {task.description}
-                    </span>
-                    {task.cronExpression ? (
-                      <span className="font-smaller font-color-h">
-                        {cronToHumanReadable(task.cronExpression)}
-                      </span>
-                    ) : null}
-                  </span>
-                </Col>
-                <Col
-                  xs={12}
-                  md={6}
-                  className={`pt-2 pb-2 d-flex flex-column gap-3 justify-content-center ${
-                    isMobile ? "align-items-center" : "align-items-end"
-                  }`}
-                >
-                  {printStatus()}
-                </Col>
-              </Row>
-              <Row className="mt-3">
-                <Col>
-                  <LogsViewer
-                    filePath={task.logFile}
-                    extraActions={getExtraActions()}
-                  />
-                </Col>
-              </Row>
-            </Container>
-          </Col>
-        </Col>
-      </Row>
+    <div className="tw-pb-4">
+      <div className="tw-rounded-xl tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800">
+        <div
+          className={`tw-flex tw-flex-wrap tw-gap-2 tw-pb-2 ${isMobile ? "tw-flex-col tw-items-center" : "tw-flex-row tw-items-start tw-justify-between"}`}
+        >
+          <div
+            className={`tw-flex tw-flex-col tw-gap-1 ${isMobile ? "tw-items-center" : "tw-items-start"}`}
+          >
+            <div className="tw-flex tw-items-center tw-gap-3 tw-pb-1">
+              <span className="tw-text-lg tw-font-semibold tw-text-white">
+                {task.display}
+              </span>
+              {task.status?.status === ScheduledWorkerStatus.RUNNING ? (
+                <CircleLoader />
+              ) : null}
+            </div>
+            <span className="tw-text-sm tw-text-iron-400">
+              {task.description}
+            </span>
+            {task.cronExpression ? (
+              <span className="tw-text-sm tw-text-iron-400">
+                {cronToHumanReadable(task.cronExpression)}
+              </span>
+            ) : null}
+          </div>
+          <div
+            className={`tw-flex tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-items-center" : "tw-items-end"}`}
+          >
+            {printStatus()}
+          </div>
+        </div>
+        <div className="tw-mt-3">
+          <LogsViewer
+            filePath={task.logFile}
+            extraActions={getExtraActions()}
+          />
+        </div>
+      </div>
       {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
         <ResetToBlockConfirm
           show={showResetToBlockConfirm}
@@ -570,7 +523,7 @@ export function WorkerCard({
         title={`Stop ${task.display}`}
         message={`Stop the current execution of this worker. The worker will be paused and will not run again until the next scheduled run.`}
       />
-    </Container>
+    </div>
   );
 }
 
@@ -586,70 +539,82 @@ function ResetToBlockConfirm({
   onConfirm: (block: number) => void;
 }) {
   const [block, setBlock] = useState("");
+  if (!show) return null;
   return (
-    <Modal show={show} onHide={onHide} backdrop keyboard={false} centered>
-      <div className={styles["modalHeader"]}>
-        <Modal.Title>Reset to block</Modal.Title>
-      </div>
-      <Modal.Body className={styles["modalContent"]}>
-        <p className="mt-2 mb-2">
-          Roll back to a specific block number. All transactions after this
-          block will be deleted, and ownership balances will be recalculated as
-          if the sync only reached this block. Subsequent sync processes will
-          update the data from this point forward.
-        </p>
-        <p>
-          Use &apos;Min Block&apos; button to reset to the earliest available
-          block for this worker - {minBlock}.
-        </p>
-        <InputGroup className="tw-w-100 mt-4">
-          <Form.Control
-            className="no-glow"
-            type="number"
-            autoFocus
-            min={minBlock}
-            placeholder={`Enter block number`}
-            aria-label="Block"
-            aria-describedby="block-addon"
-            value={block}
-            onChange={(e) => {
-              const value = e.target.value;
-              const num = Number(value);
-              if (!isNaN(num) && num >= 0) {
-                setBlock(value);
-              }
+    <div
+      className="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-bg-black/50"
+      onClick={onHide}
+      role="dialog"
+      aria-modal
+    >
+      <div
+        className="tw-max-h-[90vh] tw-w-full tw-max-w-lg tw-overflow-auto tw-rounded-xl tw-bg-iron-950 tw-shadow-xl tw-ring-1 tw-ring-iron-800"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="tw-rounded-t tw-border-b tw-border-iron-800 tw-bg-iron-950 tw-p-4 tw-text-iron-100">
+          <h2 className="tw-m-0 tw-text-lg tw-font-semibold">Reset to block</h2>
+        </div>
+        <div className="tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-4 tw-text-iron-100">
+          <p className="tw-mb-2 tw-mt-2">
+            Roll back to a specific block number. All transactions after this
+            block will be deleted, and ownership balances will be recalculated
+            as if the sync only reached this block. Subsequent sync processes
+            will update the data from this point forward.
+          </p>
+          <p>
+            Use &apos;Min Block&apos; button to reset to the earliest available
+            block for this worker - {minBlock}.
+          </p>
+          <div className="tw-mt-4 tw-flex tw-w-full tw-overflow-hidden tw-rounded-lg tw-border tw-border-iron-700 tw-bg-iron-900">
+            <input
+              type="number"
+              autoFocus
+              min={minBlock}
+              placeholder="Enter block number"
+              aria-label="Block"
+              value={block}
+              className="tw-min-w-0 tw-flex-1 tw-border-0 tw-bg-transparent tw-px-3 tw-py-2 tw-text-iron-100 tw-outline-none placeholder:tw-text-iron-500"
+              onChange={(e) => {
+                const value = e.target.value;
+                const num = Number(value);
+                if (!isNaN(num) && num >= 0) {
+                  setBlock(value);
+                }
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => setBlock(minBlock.toString())}
+              className="tw-border-l tw-border-iron-700 tw-bg-iron-800 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-iron-100 desktop-hover:hover:tw-bg-iron-700"
+            >
+              Min Block
+            </button>
+          </div>
+        </div>
+        <div className="tw-flex tw-justify-end tw-gap-2 tw-rounded-b tw-border-0 tw-border-t tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-4 tw-text-iron-100">
+          <button
+            type="button"
+            onClick={() => {
+              onHide();
+              setBlock("");
             }}
-          />
-          <Button
-            variant="light"
-            style={{ borderLeft: "2px solid #ced4da" }}
-            onClick={() => setBlock(minBlock.toString())}
+            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-transparent tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-iron-100 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 desktop-hover:hover:tw-bg-iron-800"
           >
-            Min Block
-          </Button>
-        </InputGroup>
-      </Modal.Body>
-      <Modal.Footer className={styles["modalContent"]}>
-        <Button
-          variant="secondary"
-          onClick={() => {
-            onHide();
-            setBlock("");
-          }}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="primary"
-          onClick={() => {
-            onConfirm(Number(block));
-            setBlock("");
-          }}
-          disabled={!block || Number(block) < minBlock}
-        >
-          Confirm
-        </Button>
-      </Modal.Footer>
-    </Modal>
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onConfirm(Number(block));
+              setBlock("");
+            }}
+            disabled={!block || Number(block) < minBlock}
+            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-white focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 disabled:tw-opacity-50 desktop-hover:hover:tw-bg-primary-600"
+          >
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

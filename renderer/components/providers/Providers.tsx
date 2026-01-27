@@ -12,6 +12,7 @@ import { EmojiProvider } from "@/contexts/EmojiContext";
 import { HeaderProvider } from "@/contexts/HeaderContext";
 import { ModalStateProvider } from "@/contexts/ModalStateContext";
 import { NavigationHistoryProvider } from "@/contexts/NavigationHistoryContext";
+import { RefreshProvider } from "@/contexts/RefreshContext";
 import { ScrollPositionProvider } from "@/contexts/ScrollPositionContext";
 import { SearchProvider } from "@/contexts/SearchContext";
 import { SeedWalletProvider } from "@/contexts/SeedWalletContext";
@@ -44,52 +45,54 @@ export default function Providers({
           <IpfsImageSetup />
           <ReactQueryWrapper>
             <ModalStateProvider>
-              <SeizeSettingsProvider>
-                <EmojiProvider>
-                  <IpfsProvider>
-                    <SeizeConnectModalProvider>
-                      <SeizeConnectProvider>
-                        <ConfirmProvider>
-                          <ToastProvider>
-                            <SeedWalletProvider>
-                              <Auth>
-                                <WaveEligibilityProvider>
-                                  <NotificationsProvider>
-                                    <CookieConsentProvider>
-                                      <EULAConsentProvider>
-                                        <AppWebSocketProvider>
-                                          <LayoutProvider>
-                                            <MyStreamProvider>
-                                              <TitleProvider>
-                                                <HeaderProvider>
-                                                  <SearchProvider>
-                                                    <ScrollPositionProvider>
-                                                      <ViewProvider>
-                                                        <NavigationHistoryProvider>
-                                                          {children}
-                                                        </NavigationHistoryProvider>
-                                                      </ViewProvider>
-                                                    </ScrollPositionProvider>
-                                                  </SearchProvider>
-                                                </HeaderProvider>
-                                              </TitleProvider>
-                                            </MyStreamProvider>
-                                          </LayoutProvider>
-                                          <NewVersionToast />
-                                        </AppWebSocketProvider>
-                                      </EULAConsentProvider>
-                                    </CookieConsentProvider>
-                                  </NotificationsProvider>
-                                </WaveEligibilityProvider>
-                              </Auth>
-                            </SeedWalletProvider>
-                          </ToastProvider>
-                        </ConfirmProvider>
-                      </SeizeConnectProvider>
-                    </SeizeConnectModalProvider>
-                  </IpfsProvider>
-                </EmojiProvider>
-              </SeizeSettingsProvider>
+              <RefreshProvider>
+                <SeizeSettingsProvider>
+                  <EmojiProvider>
+                    <IpfsProvider>
+                      <SeizeConnectModalProvider>
+                        <SeizeConnectProvider>
+                          <ConfirmProvider>
+                            <ToastProvider>
+                              <SeedWalletProvider>
+                                <Auth>
+                                  <WaveEligibilityProvider>
+                                    <NotificationsProvider>
+                                      <CookieConsentProvider>
+                                        <EULAConsentProvider>
+                                          <AppWebSocketProvider>
+                                            <LayoutProvider>
+                                              <MyStreamProvider>
+                                                <TitleProvider>
+                                                  <HeaderProvider>
+                                                    <SearchProvider>
+                                                      <ScrollPositionProvider>
+                                                        <ViewProvider>
+                                                          <NavigationHistoryProvider>
+                                                            {children}
+                                                          </NavigationHistoryProvider>
+                                                        </ViewProvider>
+                                                      </ScrollPositionProvider>
+                                                    </SearchProvider>
+                                                  </HeaderProvider>
+                                                </TitleProvider>
+                                              </MyStreamProvider>
+                                            </LayoutProvider>
+                                            <NewVersionToast />
+                                          </AppWebSocketProvider>
+                                        </EULAConsentProvider>
+                                      </CookieConsentProvider>
+                                    </NotificationsProvider>
+                                  </WaveEligibilityProvider>
+                                </Auth>
+                              </SeedWalletProvider>
+                            </ToastProvider>
+                          </ConfirmProvider>
+                        </SeizeConnectProvider>
+                      </SeizeConnectModalProvider>
+                    </IpfsProvider>
+                  </EmojiProvider>
+                </SeizeSettingsProvider>
+              </RefreshProvider>
             </ModalStateProvider>
           </ReactQueryWrapper>
         </WagmiSetup>

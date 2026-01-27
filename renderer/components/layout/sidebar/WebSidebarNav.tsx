@@ -9,7 +9,10 @@ import HomeIcon from "@/components/common/icons/HomeIcon";
 import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import HeaderSearchModal from "@/components/header/header-search/HeaderSearchModal";
-import { resolveIpfsUrl, useIpfsContext } from "@/components/ipfs/IPFSContext";
+import {
+  resolveIpfsUrlAsync,
+  useIpfsContext,
+} from "@/components/ipfs/IPFSContext";
 import CommonAnimationOpacity from "@/components/utils/animation/CommonAnimationOpacity";
 import CommonAnimationWrapper from "@/components/utils/animation/CommonAnimationWrapper";
 import { useEmoji } from "@/contexts/EmojiContext";
@@ -201,7 +204,7 @@ const WebSidebarNav = React.forwardRef<
   ) {
     if (!isElectron() || !unreadCount) return;
     const relatedPfp = notification.related_identity?.pfp;
-    const newSrc = relatedPfp ? await resolveIpfsUrl(relatedPfp) : "";
+    const newSrc = relatedPfp ? await resolveIpfsUrlAsync(relatedPfp) : "";
     const notificationData = generateNotificationData(
       notification,
       findNativeEmoji
@@ -259,6 +262,7 @@ const WebSidebarNav = React.forwardRef<
       pathname,
       closeSubmenu,
       submenuAnchor,
+      submenuTrigger,
     ]
   );
 
@@ -410,7 +414,10 @@ const WebSidebarNav = React.forwardRef<
             elementRole="dialog"
             onClicked={(event) => event.stopPropagation()}
           >
-            <HeaderSearchModal onClose={() => setIsSearchOpen(false)} />
+            <HeaderSearchModal
+              onClose={() => setIsSearchOpen(false)}
+              wave={null}
+            />
           </CommonAnimationOpacity>
         )}
       </CommonAnimationWrapper>

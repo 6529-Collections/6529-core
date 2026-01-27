@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useMemo, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+} from "react";
 
 interface ModalStateContextType {
   addModal: (modalName: string) => void;
@@ -17,21 +23,22 @@ export const ModalStateProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [openModals, setOpenModals] = useState<string[]>([]);
 
-  const addModal = (modalName: string) => {
+  const addModal = useCallback((modalName: string) => {
     setOpenModals((prev) => [...prev, modalName]);
-  };
+  }, []);
 
-  const removeModal = (modalName: string) => {
+  const removeModal = useCallback((modalName: string) => {
     setOpenModals((prev) => prev.filter((name) => name !== modalName));
-  };
+  }, []);
 
-  const isTopModal = (modalName: string) => {
-    return openModals[openModals.length - 1] === modalName;
-  };
+  const isTopModal = useCallback(
+    (modalName: string) => openModals[openModals.length - 1] === modalName,
+    [openModals]
+  );
 
   const value = useMemo(
     () => ({ isTopModal, addModal, removeModal }),
-    [openModals]
+    [isTopModal, addModal, removeModal]
   );
 
   return (

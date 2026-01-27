@@ -31,6 +31,7 @@ export * from '../models/ApiCommunityMembersSortOption';
 export * from '../models/ApiCommunityMetric';
 export * from '../models/ApiCommunityMetricSample';
 export * from '../models/ApiCommunityMetrics';
+export * from '../models/ApiCommunityMetricsSeries';
 export * from '../models/ApiCompleteMultipartUploadRequest';
 export * from '../models/ApiCompleteMultipartUploadRequestPart';
 export * from '../models/ApiCompleteMultipartUploadResponse';
@@ -130,6 +131,9 @@ export * from '../models/ApiProfileMin';
 export * from '../models/ApiProfileProxy';
 export * from '../models/ApiProfileProxyAction';
 export * from '../models/ApiProfileProxyActionType';
+export * from '../models/ApiPushNotificationDevice';
+export * from '../models/ApiPushNotificationSettings';
+export * from '../models/ApiPushNotificationSettingsUpdate';
 export * from '../models/ApiQuotedDrop';
 export * from '../models/ApiQuotedDropResponse';
 export * from '../models/ApiRateMatter';
@@ -180,7 +184,6 @@ export * from '../models/ApiWaveOutcome';
 export * from '../models/ApiWaveOutcomeCredit';
 export * from '../models/ApiWaveOutcomeDistributionItem';
 export * from '../models/ApiWaveOutcomeDistributionItemsPage';
-export * from '../models/ApiWaveOutcomeOld';
 export * from '../models/ApiWaveOutcomeSubType';
 export * from '../models/ApiWaveOutcomeType';
 export * from '../models/ApiWaveOutcomesPage';
@@ -281,6 +284,7 @@ import { ApiCommunityMembersSortOption } from '../models/ApiCommunityMembersSort
 import { ApiCommunityMetric } from '../models/ApiCommunityMetric';
 import { ApiCommunityMetricSample } from '../models/ApiCommunityMetricSample';
 import { ApiCommunityMetrics } from '../models/ApiCommunityMetrics';
+import { ApiCommunityMetricsSeries } from '../models/ApiCommunityMetricsSeries';
 import { ApiCompleteMultipartUploadRequest } from '../models/ApiCompleteMultipartUploadRequest';
 import { ApiCompleteMultipartUploadRequestPart } from '../models/ApiCompleteMultipartUploadRequestPart';
 import { ApiCompleteMultipartUploadResponse } from '../models/ApiCompleteMultipartUploadResponse';
@@ -345,7 +349,7 @@ import { ApiGroupOwnsNft, ApiGroupOwnsNftNameEnum    } from '../models/ApiGroupO
 import { ApiGroupRepFilter      } from '../models/ApiGroupRepFilter';
 import { ApiGroupTdhFilter    } from '../models/ApiGroupTdhFilter';
 import { ApiGroupTdhInclusionStrategy } from '../models/ApiGroupTdhInclusionStrategy';
-import { ApiIdentity                       } from '../models/ApiIdentity';
+import { ApiIdentity                        } from '../models/ApiIdentity';
 import { ApiIdentityAndSubscriptionActions } from '../models/ApiIdentityAndSubscriptionActions';
 import { ApiIdentitySubscriptionActions } from '../models/ApiIdentitySubscriptionActions';
 import { ApiIdentitySubscriptionTargetAction } from '../models/ApiIdentitySubscriptionTargetAction';
@@ -380,6 +384,9 @@ import { ApiProfileMin } from '../models/ApiProfileMin';
 import { ApiProfileProxy } from '../models/ApiProfileProxy';
 import { ApiProfileProxyAction             } from '../models/ApiProfileProxyAction';
 import { ApiProfileProxyActionType } from '../models/ApiProfileProxyActionType';
+import { ApiPushNotificationDevice } from '../models/ApiPushNotificationDevice';
+import { ApiPushNotificationSettings } from '../models/ApiPushNotificationSettings';
+import { ApiPushNotificationSettingsUpdate } from '../models/ApiPushNotificationSettingsUpdate';
 import { ApiQuotedDrop } from '../models/ApiQuotedDrop';
 import { ApiQuotedDropResponse } from '../models/ApiQuotedDropResponse';
 import { ApiRateMatter } from '../models/ApiRateMatter';
@@ -430,7 +437,6 @@ import { ApiWaveOutcome        } from '../models/ApiWaveOutcome';
 import { ApiWaveOutcomeCredit } from '../models/ApiWaveOutcomeCredit';
 import { ApiWaveOutcomeDistributionItem } from '../models/ApiWaveOutcomeDistributionItem';
 import { ApiWaveOutcomeDistributionItemsPage } from '../models/ApiWaveOutcomeDistributionItemsPage';
-import { ApiWaveOutcomeOld         } from '../models/ApiWaveOutcomeOld';
 import { ApiWaveOutcomeSubType } from '../models/ApiWaveOutcomeSubType';
 import { ApiWaveOutcomeType } from '../models/ApiWaveOutcomeType';
 import { ApiWaveOutcomesPage } from '../models/ApiWaveOutcomesPage';
@@ -576,6 +582,7 @@ let typeMap: {[index: string]: any} = {
     "ApiCommunityMetric": ApiCommunityMetric,
     "ApiCommunityMetricSample": ApiCommunityMetricSample,
     "ApiCommunityMetrics": ApiCommunityMetrics,
+    "ApiCommunityMetricsSeries": ApiCommunityMetricsSeries,
     "ApiCompleteMultipartUploadRequest": ApiCompleteMultipartUploadRequest,
     "ApiCompleteMultipartUploadRequestPart": ApiCompleteMultipartUploadRequestPart,
     "ApiCompleteMultipartUploadResponse": ApiCompleteMultipartUploadResponse,
@@ -663,6 +670,9 @@ let typeMap: {[index: string]: any} = {
     "ApiProfileMin": ApiProfileMin,
     "ApiProfileProxy": ApiProfileProxy,
     "ApiProfileProxyAction": ApiProfileProxyAction,
+    "ApiPushNotificationDevice": ApiPushNotificationDevice,
+    "ApiPushNotificationSettings": ApiPushNotificationSettings,
+    "ApiPushNotificationSettingsUpdate": ApiPushNotificationSettingsUpdate,
     "ApiQuotedDrop": ApiQuotedDrop,
     "ApiQuotedDropResponse": ApiQuotedDropResponse,
     "ApiRatingWithProfileInfoAndLevel": ApiRatingWithProfileInfoAndLevel,
@@ -708,7 +718,6 @@ let typeMap: {[index: string]: any} = {
     "ApiWaveOutcome": ApiWaveOutcome,
     "ApiWaveOutcomeDistributionItem": ApiWaveOutcomeDistributionItem,
     "ApiWaveOutcomeDistributionItemsPage": ApiWaveOutcomeDistributionItemsPage,
-    "ApiWaveOutcomeOld": ApiWaveOutcomeOld,
     "ApiWaveOutcomesPage": ApiWaveOutcomesPage,
     "ApiWaveParticipationConfig": ApiWaveParticipationConfig,
     "ApiWaveRequiredMetadata": ApiWaveRequiredMetadata,

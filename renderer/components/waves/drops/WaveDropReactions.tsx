@@ -94,6 +94,8 @@ function WaveDropReaction({
     hasTouchScreen: isTouchDevice,
     onInteractionStart: handleLongPressStart,
     longPressDuration: 400,
+    // Allow the native click to fire on tap; we only need preventDefault when the long press actually triggers
+    preventDefault: false,
   });
 
   const wrappedTouchHandlers = useMemo(
@@ -293,6 +295,7 @@ function WaveDropReaction({
                   max_rating: 0,
                   reaction: null,
                   boosted: false,
+                  bookmarked: false,
                 };
 
             draft.context_profile_context = {

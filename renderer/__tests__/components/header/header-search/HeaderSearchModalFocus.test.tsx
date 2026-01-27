@@ -32,6 +32,16 @@ let escapeHandler: (() => void) | null = null;
 
 jest.mock("@tanstack/react-query", () => ({
   useQuery: (...args: any[]) => useQueryMock(...args),
+  useInfiniteQuery: () => ({
+    data: undefined,
+    isLoading: false,
+    isFetching: false,
+    isError: false,
+    hasNextPage: false,
+    fetchNextPage: jest.fn(),
+    isFetchingNextPage: false,
+  }),
+  keepPreviousData: (prev: unknown) => prev,
 }));
 
 jest.mock("next/navigation", () => ({
@@ -152,7 +162,7 @@ const PLACEHOLDER_TEXT = "Search 6529.io";
 describe("HeaderSearchModal focus management", () => {
   it("keeps focus trapped within the modal while it is open", async () => {
     const user = userEvent.setup();
-    render(<HeaderSearchButton />);
+    render(<HeaderSearchButton wave={null} />);
 
     const trigger = screen.getByRole("button", { name: /search/i });
     await user.click(trigger);
@@ -183,7 +193,7 @@ describe("HeaderSearchModal focus management", () => {
 
   it("returns focus to the trigger button when the modal closes", async () => {
     const user = userEvent.setup();
-    render(<HeaderSearchButton />);
+    render(<HeaderSearchButton wave={null} />);
 
     const trigger = screen.getByRole("button", { name: /search/i });
     await user.click(trigger);

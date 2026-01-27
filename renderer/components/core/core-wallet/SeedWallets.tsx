@@ -6,17 +6,18 @@ import { faPlusCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Button, Col, Container, Row } from "react-bootstrap";
 import { mainnet } from "viem/chains";
 import SeedWalletCard from "./SeedWalletCard";
 import { CreateSeedWalletModal } from "./SeedWalletModal";
 
 export const SEED_WALLETS_NETWORK = mainnet;
 
+const btnBase =
+  "tw-inline-flex tw-cursor-pointer tw-items-center tw-gap-2 tw-rounded-lg tw-border-0 tw-px-5 tw-py-3 tw-text-sm tw-font-medium tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-iron-950";
+
 export default function SeedWallets() {
   const router = useRouter();
   const [seedWallets, setSeedWallets] = useState<ISeedWallet[]>([]);
-
   const [showCreateModal, setShowCreateModal] = useState(false);
 
   const fetchWallets = () => {
@@ -29,59 +30,43 @@ export default function SeedWallets() {
     fetchWallets();
   }, []);
 
-  function printCreateRow() {
-    return (
-      <Container className={seedWallets.length > 0 ? "pt-5" : ""}>
-        <Row>
-          <Col className="d-flex align-items-center gap-3">
-            <CreateSeedWalletModal
-              show={showCreateModal}
-              onHide={(refresh: boolean) => {
-                setShowCreateModal(false);
-                if (refresh) {
-                  fetchWallets();
-                }
-              }}
-            />
-            <Button
-              variant="primary"
-              onClick={() => setShowCreateModal(true)}
-              className="d-flex align-items-center gap-2">
-              <FontAwesomeIcon icon={faPlusCircle} height={16} /> Create Wallet
-            </Button>
-            <Button
-              variant="success"
-              onClick={() => router.push("/core/core-wallets/import-wallet")}
-              className="d-flex align-items-center gap-2">
-              <FontAwesomeIcon icon={faPlusCircle} height={16} /> Import Wallet
-            </Button>
-          </Col>
-        </Row>
-      </Container>
-    );
-  }
-
   return (
-    <>
-      <Container className="pt-4 pb-4">
-        <Row className="pt-2 pb-4">
-          <Col className="d-flex align-items-center justify-content-between gap-2">
-            <h1>
-              <span className="font-lightest">6529 Desktop</span> Wallets
-            </h1>
-          </Col>
-        </Row>
-      </Container>
-      <Container>
-        <Row>
+    <div className="tw-py-8">
+      <h1 className="tw-m-0">
+        <span className="tw-text-iron-400">6529 Desktop</span> Wallets
+      </h1>
+      <div className="tw-pt-6">
+        <div className="tw-grid tw-grid-cols-1 tw-gap-4 sm:tw-grid-cols-2 md:tw-grid-cols-3">
           {seedWallets.map((s) => (
-            <Col xs={12} sm={6} md={4} key={s.address} className="pb-3">
-              <SeedWalletCard wallet={s} />
-            </Col>
+            <SeedWalletCard key={s.address} wallet={s} />
           ))}
-        </Row>
-      </Container>
-      {printCreateRow()}
-    </>
+        </div>
+      </div>
+      <div className={seedWallets.length > 0 ? "tw-pt-6" : ""}>
+        <div className="tw-flex tw-items-center tw-gap-3">
+          <CreateSeedWalletModal
+            show={showCreateModal}
+            onHide={(refresh: boolean) => {
+              setShowCreateModal(false);
+              if (refresh) fetchWallets();
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className={`${btnBase} tw-bg-primary-500 tw-text-white desktop-hover:hover:tw-bg-primary-600`}
+          >
+            <FontAwesomeIcon icon={faPlusCircle} className="tw-h-5 tw-w-5 tw-shrink-0" /> Create Wallet
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push("/core/core-wallets/import-wallet")}
+            className={`${btnBase} tw-bg-emerald-600 tw-text-white desktop-hover:hover:tw-bg-emerald-500`}
+          >
+            <FontAwesomeIcon icon={faPlusCircle} className="tw-h-5 tw-w-5 tw-shrink-0" /> Import Wallet
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import DropsList from "@/components/drops/view/DropsList";
 import { WaveDropsReverseContainer } from "@/components/waves/drops/WaveDropsReverseContainer";
 import { WaveDropsScrollBottomButton } from "@/components/waves/drops/WaveDropsScrollBottomButton";
+import { WaveDropsScrollToUnreadButton } from "@/components/waves/drops/WaveDropsScrollToUnreadButton";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import type { useVirtualizedWaveDrops } from "@/hooks/useVirtualizedWaveDrops";
@@ -45,6 +46,8 @@ interface WaveDropsMessageListSectionProps {
   readonly unreadDividerSerialNo?: number | null | undefined;
   readonly boostedDrops?: ApiDrop[] | undefined;
   readonly onBoostedDropClick?: ((serialNo: number) => void) | undefined;
+  readonly onScrollToUnread?: ((serialNo: number) => void) | undefined;
+  readonly onDismissUnread: () => void;
 }
 
 const MIN_DROPS_FOR_PAGINATION = 25;
@@ -73,6 +76,8 @@ export const WaveDropsMessageListSection: React.FC<
   unreadDividerSerialNo,
   boostedDrops,
   onBoostedDropClick,
+  onScrollToUnread,
+  onDismissUnread,
 }) => {
   const hasNextPage =
     !!waveMessages?.hasNextPage &&
@@ -109,6 +114,14 @@ export const WaveDropsMessageListSection: React.FC<
         />
         <div ref={bottomAnchorRef} style={{ height: "1px" }} />
       </WaveDropsReverseContainer>
+      {onScrollToUnread && (
+        <WaveDropsScrollToUnreadButton
+          unreadDividerSerialNo={unreadDividerSerialNo ?? null}
+          scrollContainerRef={scrollContainerRef}
+          onScrollToUnread={onScrollToUnread}
+          onDismiss={onDismissUnread}
+        />
+      )}
       <WaveDropsScrollBottomButton
         isAtBottom={isAtBottom}
         scrollToBottom={scrollToBottom}

@@ -1,22 +1,24 @@
 "use client";
 
+import { useHeaderContext } from "@/contexts/HeaderContext";
+import { useSearch } from "@/contexts/SearchContext";
+import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
+import useCapacitor from "@/hooks/useCapacitor";
+import { useDeepLinkNavigation } from "@/hooks/useDeepLinkNavigation";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { selectEditingDropId } from "@/store/editSlice";
 import dynamic from "next/dynamic";
-import type { ReactNode} from "react";
-import { useCallback } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import BottomNavigation from "../navigation/BottomNavigation";
-import { useViewContext } from "../navigation/ViewContext";
+import type { ReactNode } from "react";
+import { useCallback, useRef } from "react";
+import { useSelector } from "react-redux";
+import BrainMobileMessages from "../brain/mobile/BrainMobileMessages";
 import BrainMobileWaves from "../brain/mobile/BrainMobileWaves";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";
-import { useHeaderContext } from "@/contexts/HeaderContext";
-import { useSearch } from "@/contexts/SearchContext";
-import { useDeepLinkNavigation } from "@/hooks/useDeepLinkNavigation";
-import BrainMobileMessages from "../brain/mobile/BrainMobileMessages";
-import { useSelector } from "react-redux";
-import { selectEditingDropId } from "@/store/editSlice";
-import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
+import BottomNavigation from "../navigation/BottomNavigation";
+import { useViewContext } from "../navigation/ViewContext";
+import PullToRefresh from "../providers/PullToRefresh";
 
 const TouchDeviceHeader = dynamic(() => import("../header/AppHeader"), {
   ssr: false,
@@ -32,6 +34,7 @@ export default function AppLayout({ children }: Props) {
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
   const { containerRef: searchContainerRef } = useSearch();
+  const headerRef = useRef<HTMLDivElement | null>(null);
   const { activeView, homeActiveTab } = useViewContext();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -49,21 +52,29 @@ export default function AppLayout({ children }: Props) {
   const isHomeFeedView = pathname === "/" && homeActiveTab === "feed";
   const editingDropId = useSelector(selectEditingDropId);
   const { isApp } = useDeviceInfo();
-  const { isVisible: isKeyboardVisible, isAndroid } = useAndroidKeyboard();
+  const { isVisible: isAndroidKeyboardVisible, isAndroid } =
+    useAndroidKeyboard();
+  const { isIos, keyboardVisible: isIosKeyboardVisible } = useCapacitor();
   const isEditingOnMobile = isApp && editingDropId !== null;
-  const shouldHideBottomNav = isAndroid && isKeyboardVisible;
+  const isKeyboardVisible =
+    (isAndroid && isAndroidKeyboardVisible) || (isIos && isIosKeyboardVisible);
+  const shouldHideBottomNav = isKeyboardVisible;
 
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
+      headerRef.current = node;
       registerRef("header", node);
       setHeaderRef(node);
     },
     [registerRef, setHeaderRef]
   );
 
-  const safeAreaClass = shouldHideBottomNav
-    ? ""
-    : "tw-pb-[env(safe-area-inset-bottom,0px)]";
+  const isNavVisible =
+    !isSingleDropOpen && !isEditingOnMobile && !shouldHideBottomNav;
+  const safeAreaClass =
+    !isNavVisible && !isKeyboardVisible
+      ? "tw-pb-[env(safe-area-inset-bottom,0px)]"
+      : "";
 
   return (
     <div
@@ -71,6 +82,7 @@ export default function AppLayout({ children }: Props) {
         isHomeFeedView ? "tw-overflow-hidden" : "tw-overflow-auto"
       }`}
     >
+      <PullToRefresh triggerZoneRef={headerRef} />
       <div ref={headerWrapperRef}>
         <TouchDeviceHeader />
       </div>

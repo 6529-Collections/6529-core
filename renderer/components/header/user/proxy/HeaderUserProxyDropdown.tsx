@@ -3,6 +3,8 @@
 import {
   faDoorClosed,
   faDoorOpen,
+  faLock,
+  faLockOpen,
   faRepeat,
   faRightFromBracket,
 } from "@fortawesome/free-solid-svg-icons";
@@ -13,6 +15,8 @@ import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { AuthContext } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
+import { useToast } from "@/contexts/ToastContext";
 import HeaderUserProxyDropdownItem from "./HeaderUserProxyDropdownItem";
 
 export default function HeaderUserProxyDropdown({
@@ -34,6 +38,14 @@ export default function HeaderUserProxyDropdown({
 
   const { activeProfileProxy, setActiveProfileProxy, receivedProfileProxies } =
     useContext(AuthContext);
+
+  const {
+    isSeedWallet,
+    isUnlocked,
+    lockWallet,
+    setShowPasswordModal,
+  } = useSeedWallet();
+  const { showToast } = useToast();
 
   const onActivateProfileProxy = async (
     profileProxy: ApiProfileProxy | null
@@ -132,43 +144,85 @@ export default function HeaderUserProxyDropdown({
                       />
                     ))}
                   </div>
-                  <div className="tw-h-full tw-px-2 tw-pt-2">
-                    {isConnected ? (
-                      <button
-                        onClick={() => {
-                          seizeDisconnect();
-                          onClose();
-                        }}
-                        type="button"
-                        aria-label="Disconnect"
-                        title="Disconnect"
-                        className="tw-bg-transparent hover:tw-bg-iron-700 tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-300 hover:tw-text-iron-50 tw-rounded-lg tw-relative tw-cursor-pointer tw-select-none tw-px-3 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
-                        <FontAwesomeIcon
-                          icon={faDoorClosed}
-                          height={16}
-                          width={16}
-                        />
-                        <span>Disconnect Wallet</span>
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          seizeConnect();
-                          onClose();
-                        }}
-                        type="button"
-                        aria-label="Connect"
-                        title="Connect"
-                        className="tw-bg-transparent hover:tw-bg-iron-700 tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-300 hover:tw-text-iron-50 tw-rounded-lg tw-relative tw-cursor-pointer tw-select-none tw-px-3 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
-                        <FontAwesomeIcon
-                          icon={faDoorOpen}
-                          height={16}
-                          width={16}
-                        />
-                        <span>Connect Wallet</span>
-                      </button>
-                    )}
-                  </div>
+                  {isSeedWallet && (
+                    <div className="tw-h-full tw-px-2 tw-pt-2">
+                      {isUnlocked ? (
+                        <button
+                          onClick={() => {
+                            lockWallet();
+                            showToast("Wallet locked", "success");
+                            onClose();
+                          }}
+                          type="button"
+                          aria-label="Lock wallet"
+                          title="Lock wallet"
+                          className="tw-bg-transparent hover:tw-bg-iron-700 tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-300 hover:tw-text-iron-50 tw-rounded-lg tw-relative tw-cursor-pointer tw-select-none tw-px-3 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
+                          <FontAwesomeIcon
+                            icon={faLock}
+                            height={16}
+                            width={16}
+                          />
+                          <span>Lock wallet</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setShowPasswordModal(true);
+                            onClose();
+                          }}
+                          type="button"
+                          aria-label="Unlock wallet"
+                          title="Unlock wallet"
+                          className="tw-bg-transparent hover:tw-bg-iron-700 tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-300 hover:tw-text-iron-50 tw-rounded-lg tw-relative tw-cursor-pointer tw-select-none tw-px-3 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
+                          <FontAwesomeIcon
+                            icon={faLockOpen}
+                            height={16}
+                            width={16}
+                          />
+                          <span>Unlock wallet</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
+                  {!isSeedWallet && (
+                    <div className="tw-h-full tw-px-2 tw-pt-2">
+                      {isConnected ? (
+                        <button
+                          onClick={() => {
+                            seizeDisconnect();
+                            onClose();
+                          }}
+                          type="button"
+                          aria-label="Disconnect"
+                          title="Disconnect"
+                          className="tw-bg-transparent hover:tw-bg-iron-700 tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-300 hover:tw-text-iron-50 tw-rounded-lg tw-relative tw-cursor-pointer tw-select-none tw-px-3 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
+                          <FontAwesomeIcon
+                            icon={faDoorClosed}
+                            height={16}
+                            width={16}
+                          />
+                          <span>Disconnect Wallet</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            seizeConnect();
+                            onClose();
+                          }}
+                          type="button"
+                          aria-label="Connect"
+                          title="Connect"
+                          className="tw-bg-transparent hover:tw-bg-iron-700 tw-py-2.5 tw-w-full tw-h-full tw-border-none tw-text-md tw-font-medium tw-text-left tw-flex tw-items-center tw-gap-x-3 tw-text-iron-300 hover:tw-text-iron-50 tw-rounded-lg tw-relative tw-cursor-pointer tw-select-none tw-px-3 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400 tw-transition tw-duration-300 tw-ease-out">
+                          <FontAwesomeIcon
+                            icon={faDoorOpen}
+                            height={16}
+                            width={16}
+                          />
+                          <span>Connect Wallet</span>
+                        </button>
+                      )}
+                    </div>
+                  )}
                   <div className="tw-h-full tw-px-2 tw-pt-2">
                     <button
                       onClick={() => seizeDisconnectAndLogout(true)}

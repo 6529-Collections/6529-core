@@ -11,6 +11,7 @@ import { ImageScale } from "@/helpers/image.helpers";
 import {
   ExtendedDrop,
   getDropPreviewImageUrl,
+  getDropPromoVideoUrl,
 } from "@/helpers/waves/drop.helpers";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
@@ -84,6 +85,16 @@ export const MemesSingleWaveDropInfoPanel = ({
     return { url, fileInfo: info };
   }, [drop.metadata]);
 
+  const promoVideoData = useMemo(() => {
+    const url = getDropPromoVideoUrl(drop.metadata);
+    if (!url) return null;
+
+    const info = getFileInfoFromUrl(url);
+    if (!info) return null;
+
+    return { url, fileInfo: info };
+  }, [drop.metadata]);
+
   const fileName = useMemo(() => {
     let name = title;
     if (wave?.name) {
@@ -129,7 +140,6 @@ export const MemesSingleWaveDropInfoPanel = ({
                   isVotingEnded={isVotingEnded}
                   canShowVote={canShowVote}
                   onVoteClick={() => setIsVotingOpen(true)}
-                  variant="memes"
                 />
               </div>
 
@@ -144,7 +154,7 @@ export const MemesSingleWaveDropInfoPanel = ({
                 )}
               </div>
 
-              <WaveDropMetaRow drop={drop} isWinner={isWinner}>
+              <WaveDropMetaRow drop={drop} isWinner={isWinner} mimeType={artworkMedia?.mime_type}>
                 {manualOutcomes.length > 0 && (
                   <>
                     <span className="tw-text-white/40">·</span>
@@ -195,7 +205,9 @@ export const MemesSingleWaveDropInfoPanel = ({
             <SingleWaveDropInfoDetails drop={drop} />
             <WaveDropAdditionalInfo drop={drop} />
 
-            {(artworkMedia && fileInfo) || previewImageData ? (
+            {(artworkMedia && fileInfo) ||
+            previewImageData ||
+            promoVideoData ? (
               <div className="tw-mt-8 tw-border-x-0 tw-border-b-0 tw-border-t tw-border-solid tw-border-iron-800 tw-pt-8">
                 <div className="tw-inline-grid tw-grid-cols-[auto_auto_auto] tw-items-center tw-gap-x-3 tw-gap-y-2">
                   {artworkMedia && fileInfo && (
@@ -227,6 +239,23 @@ export const MemesSingleWaveDropInfoPanel = ({
                         href={previewImageData.url}
                         name={`${fileName ?? "preview"}-preview`}
                         extension={previewImageData.fileInfo.extension}
+                        variant="text"
+                        alwaysShowText
+                      />
+                    </>
+                  )}
+                  {promoVideoData && (
+                    <>
+                      <span className="tw-text-xs tw-font-medium tw-text-iron-600">
+                        Promo Video:
+                      </span>
+                      <span className="tw-text-xs tw-font-medium tw-text-iron-400">
+                        {promoVideoData.fileInfo.extension.toUpperCase()}
+                      </span>
+                      <Download
+                        href={promoVideoData.url}
+                        name={`${fileName ?? "promo"}-promo-video`}
+                        extension={promoVideoData.fileInfo.extension}
                         variant="text"
                         alwaysShowText
                       />

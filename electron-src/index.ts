@@ -179,11 +179,11 @@ if (!gotTheLock) {
       Logger.info(
         `Handling navigate Deep Link: ${
           urlObj.pathname
-        }?${urlObj.searchParams.toString()}`
+        }?${urlObj.searchParams.toString()}`,
       );
       mainWindow?.webContents.send(
         "navigate",
-        `${urlObj.pathname}?${urlObj.searchParams.toString()}`
+        `${urlObj.pathname}?${urlObj.searchParams.toString()}`,
       );
     } else {
       Logger.info("Unknown Deep Link", urlObj);
@@ -400,9 +400,9 @@ function initListeners(mw: BrowserWindow) {
     "did-fail-load",
     (_event, errorCode, errorDescription, validatedURL) => {
       Logger.error(
-        `Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`
+        `Failed to load URL: ${validatedURL}, Error Code: ${errorCode}, Description: ${errorDescription}`,
       );
-    }
+    },
   );
 }
 
@@ -413,7 +413,7 @@ async function createScheduledTasks() {
   scheduledWorkers = startSchedulers(
     rpcProvider?.url ?? null,
     getLogDirectory(),
-    postWorkerUpdate
+    postWorkerUpdate,
   );
 }
 
@@ -571,7 +571,7 @@ ipcMain.on("open-external-chrome", (event, url) => {
   open(url, { app: { name: apps.chrome } }).catch((err) => {
     Logger.error(
       "Failed to open in Chrome, falling back to default browser:",
-      err
+      err,
     );
     shell.openExternal(url);
   });
@@ -583,7 +583,7 @@ ipcMain.on("open-external-firefox", (event, url) => {
   open(url, { app: { name: apps.firefox } }).catch((err) => {
     Logger.error(
       "Failed to open in Firefox, falling back to default browser:",
-      err
+      err,
     );
     shell.openExternal(url);
   });
@@ -595,7 +595,7 @@ ipcMain.on("open-external-brave", (event, url) => {
   open(url, { app: { name: "Brave Browser" } }).catch((err) => {
     Logger.error(
       "Failed to open in Brave, falling back to default browser:",
-      err
+      err,
     );
     shell.openExternal(url);
   });
@@ -708,7 +708,7 @@ function postWorkerUpdate(
   status: ScheduledWorkerStatus,
   message: string,
   action?: string,
-  statusPercentage?: number
+  statusPercentage?: number,
 ) {
   if (!mainWindow?.isDestroyed()) {
     mainWindow?.webContents?.send(
@@ -717,7 +717,7 @@ function postWorkerUpdate(
       status,
       message,
       action,
-      statusPercentage
+      statusPercentage,
     );
   }
 }
@@ -817,7 +817,7 @@ ipcMain.on(
     pfp: string,
     title: string,
     body: string,
-    redirectPath: string
+    redirectPath: string,
   ) => {
     Logger.info(`Showing notification: [${id}] ${title} - ${body}, ${pfp}`);
 
@@ -836,11 +836,11 @@ ipcMain.on(
     notification.on("click", () => {
       mainWindow?.webContents.send(
         "navigate",
-        redirectPath || "/notifications"
+        redirectPath || "/notifications",
       );
     });
     notification.show();
-  }
+  },
 );
 
 ipcMain.on("notifications:set-badge", (_event, count: number) => {
@@ -848,7 +848,7 @@ ipcMain.on("notifications:set-badge", (_event, count: number) => {
     Logger.info(`Setting dock badge count: ${count}`);
     const success = app.setBadgeCount(count);
     Logger.info(
-      `Dock badge count set: ${success.toString()} [Current: ${app.getBadgeCount()}]`
+      `Dock badge count set: ${success.toString()} [Current: ${app.getBadgeCount()}]`,
     );
   }
 });
@@ -870,14 +870,14 @@ ipcMain.on(
   (_event, request: SeedWalletRequest) => {
     Logger.info(`Seed connector init request: ${request.requestId}`);
     mainWindow?.webContents.send("seed-connector-init-request", request);
-  }
+  },
 );
 
 ipcMain.on(
   "seed-connector-show-toast",
   (_event, toast: { type: string; message: string }) => {
     mainWindow?.webContents.send("seed-connector-show-toast", toast);
-  }
+  },
 );
 
 ipcMain.on("seed-connector-confirm", (_event, request: SeedWalletRequest) => {
@@ -956,7 +956,7 @@ ipcMain.on(DELETE_RPC_PROVIDER, (event, id: number) => {
 
 ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
   const worker = scheduledWorkers.find(
-    (worker) => worker.getNamespace() === namespace[0]
+    (worker) => worker.getNamespace() === namespace[0],
   );
   let status: boolean;
   if (worker) {
@@ -973,7 +973,7 @@ ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, args: [string, number]) => {
   const transactionsWorker = scheduledWorkers.find(
     (worker) =>
       worker instanceof TransactionsScheduledWorker &&
-      worker.getNamespace() === namespace
+      worker.getNamespace() === namespace,
   ) as TransactionsScheduledWorker | undefined;
   if (!transactionsWorker) {
     event.returnValue = {
@@ -990,7 +990,7 @@ ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, args: [string, number]) => {
 ipcMain.on(RECALCULATE_TRANSACTIONS_OWNERS, (event) => {
   Logger.info(`Recalculating owners`);
   const transactionsWorker = scheduledWorkers.find(
-    (worker) => worker instanceof TransactionsScheduledWorker
+    (worker) => worker instanceof TransactionsScheduledWorker,
   );
   if (!transactionsWorker) {
     event.returnValue = { error: true, data: "Transactions worker not found" };
@@ -1007,7 +1007,7 @@ ipcMain.on(RESET_WORKER, (event, args: [string]) => {
   const worker = scheduledWorkers.find(
     (worker) =>
       worker instanceof ResettableScheduledWorker &&
-      worker.getNamespace() === namespace
+      worker.getNamespace() === namespace,
   ) as ResettableScheduledWorker | undefined;
   if (!worker) {
     event.returnValue = {
@@ -1026,7 +1026,7 @@ ipcMain.on(STOP_WORKER, (event, args: [string]) => {
   Logger.info(`[${namespace}] Stop worker`);
   const worker = scheduledWorkers.find(
     (worker) =>
-      worker instanceof ScheduledWorker && worker.getNamespace() === namespace
+      worker instanceof ScheduledWorker && worker.getNamespace() === namespace,
   ) as ScheduledWorker | undefined;
   if (!worker) {
     event.returnValue = {
@@ -1060,7 +1060,7 @@ ipcMain.handle(
       console.error(error);
       return { lines: [] };
     }
-  }
+  },
 );
 
 ipcMain.on("start-tail", async (event: IpcMainEvent, filePath: string) => {
@@ -1104,7 +1104,7 @@ ipcMain.handle(
     _event: IpcMainInvokeEvent,
     filePath: string,
     startLine: number,
-    numLines: number
+    numLines: number,
   ) => {
     try {
       const data = await fs.promises.readFile(filePath, "utf-8");
@@ -1123,5 +1123,5 @@ ipcMain.handle(
       console.error(error);
       return { lines: [] };
     }
-  }
+  },
 );

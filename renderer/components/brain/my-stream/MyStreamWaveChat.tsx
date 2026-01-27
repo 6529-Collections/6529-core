@@ -1,22 +1,23 @@
 "use client";
 
 import { CreateDropWaveWrapper } from "@/components/waves/CreateDropWaveWrapper";
-import WaveDropsAll from "@/components/waves/drops/wave-drops-all";
+import { WaveDropsAllWithoutProvider } from "@/components/waves/drops/wave-drops-all";
+import { WaveGallery } from "@/components/waves/gallery";
 import MobileMemesArtSubmissionBtn from "@/components/waves/memes/submission/MobileMemesArtSubmissionBtn";
 import PrivilegedDropCreator, {
   DropMode,
 } from "@/components/waves/PrivilegedDropCreator";
+import { UnreadDividerProvider } from "@/contexts/wave/UnreadDividerContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getHomeFeedRoute } from "@/helpers/navigation.helpers";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useWave } from "@/hooks/useWave";
+import type { WaveViewMode } from "@/hooks/useWaveViewMode";
 import { selectEditingDropId } from "@/store/editSlice";
-import type {
-  ActiveDropState} from "@/types/dropInteractionTypes";
-import {
-  ActiveDropAction
-} from "@/types/dropInteractionTypes";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
@@ -31,43 +32,66 @@ interface InitialDropState {
 interface MyStreamWaveChatProps {
   readonly wave: ApiWave;
   readonly firstUnreadSerialNo: number | null;
+  readonly viewMode: WaveViewMode;
+  readonly onDropClick: (drop: ExtendedDrop) => void;
 }
 
 const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
   wave,
   firstUnreadSerialNo,
+  viewMode,
+  onDropClick,
 }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const containerRef = useRef<HTMLDivElement>(null);
-  const [initialDropState, setInitialDropState] =
-    useState<InitialDropState | null>(null);
   const { isMemesWave } = useWave(wave);
   const editingDropId = useSelector(selectEditingDropId);
   const { isApp } = useDeviceInfo();
-  const [activeDrop, setActiveDrop] = useState<ActiveDropState | null>(null);
 
-  const scrollTarget =
-    initialDropState?.waveId === wave.id ? initialDropState.serialNo : null;
+  const [activeDropState, setActiveDropState] = useState<{
+    readonly waveId: string;
+    readonly activeDrop: ActiveDropState | null;
+  }>({
+    waveId: wave.id,
+    activeDrop: null,
+  });
 
-  const dividerTarget =
-    initialDropState?.waveId === wave.id
-      ? initialDropState.dividerSerialNo
-      : firstUnreadSerialNo;
+  const activeDrop =
+    activeDropState.waveId === wave.id ? activeDropState.activeDrop : null;
 
-  useEffect(() => {
-    const dropParam = searchParams?.get("serialNo");
+  const setActiveDropForWave = (nextActiveDrop: ActiveDropState | null) => {
+    setActiveDropState({ waveId: wave.id, activeDrop: nextActiveDrop });
+  };
+
+  const capturedDividerRef = useRef<{
+    waveId: string;
+    serialNo: number | null;
+  } | null>(null);
+
+  if (
+    !capturedDividerRef.current ||
+    capturedDividerRef.current.waveId !== wave.id
+  ) {
+    capturedDividerRef.current = {
+      waveId: wave.id,
+      serialNo: firstUnreadSerialNo,
+    };
+  }
+
+  const initialDropState = useMemo<InitialDropState | null>(() => {
+    const dropParam = searchParams.get("serialNo");
     if (!dropParam) {
-      return;
+      return null;
     }
 
     const parsed = Number.parseInt(dropParam, 10);
     if (!Number.isFinite(parsed)) {
-      return;
+      return null;
     }
 
-    const dividerParam = searchParams?.get("divider");
+    const dividerParam = searchParams.get("divider");
     const dividerParsed = dividerParam
       ? Number.parseInt(dividerParam, 10)
       : null;
@@ -76,40 +100,71 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
         ? dividerParsed
         : firstUnreadSerialNo;
 
-    setInitialDropState({
+    return {
       waveId: wave.id,
       serialNo: parsed,
       dividerSerialNo,
-    });
+    };
+  }, [searchParams, wave.id, firstUnreadSerialNo]);
 
-    const params = new URLSearchParams(searchParams?.toString() || "");
+  useEffect(() => {
+    if (
+      initialDropState?.waveId === wave.id &&
+      initialDropState.dividerSerialNo !== null
+    ) {
+      capturedDividerRef.current = {
+        waveId: wave.id,
+        serialNo: initialDropState.dividerSerialNo,
+      };
+    } else if (
+      !capturedDividerRef.current ||
+      capturedDividerRef.current.waveId !== wave.id
+    ) {
+      capturedDividerRef.current = {
+        waveId: wave.id,
+        serialNo: firstUnreadSerialNo,
+      };
+    }
+  }, [initialDropState, wave.id, firstUnreadSerialNo]);
+
+  const scrollTarget =
+    initialDropState?.waveId === wave.id ? initialDropState.serialNo : null;
+
+  const dividerTarget =
+    initialDropState?.waveId === wave.id
+      ? initialDropState.dividerSerialNo
+      : (capturedDividerRef.current?.serialNo ?? null);
+
+  useEffect(() => {
+    if (!initialDropState) {
+      return;
+    }
+
+    const params = new URLSearchParams(searchParams.toString() || "");
+    if (!params.has("serialNo") && !params.has("divider")) {
+      return;
+    }
     params.delete("serialNo");
     params.delete("divider");
     const href = params.toString()
       ? `${pathname}?${params.toString()}`
       : pathname || getHomeFeedRoute();
     router.replace(href, { scroll: false });
-  }, [searchParams, router, pathname, wave.id, firstUnreadSerialNo]);
+  }, [initialDropState, searchParams, router, pathname]);
 
   const { waveViewStyle } = useLayout();
 
-  // Create container class based on wave type
   const containerClassName = useMemo(() => {
     const baseStyles =
       "tw-w-full tw-flex tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden lg:tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300 scroll-shadow";
 
-    // Always use flex-grow for consistent height handling
     const heightClass = "tw-flex-grow";
 
     return `${baseStyles} ${heightClass}`;
   }, []);
 
-  const containerStyle = waveViewStyle || {};
-
-  useEffect(() => setActiveDrop(null), [wave]);
-
   const onReply = (drop: ApiDrop, partId: number) => {
-    setActiveDrop({
+    setActiveDropForWave({
       action: ActiveDropAction.REPLY,
       drop,
       partId,
@@ -117,7 +172,7 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
   };
 
   const onQuote = (drop: ApiDrop, partId: number) => {
-    setActiveDrop({
+    setActiveDropForWave({
       action: ActiveDropAction.QUOTE,
       drop,
       partId,
@@ -133,42 +188,59 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
   };
 
   const onCancelReplyQuote = () => {
-    setActiveDrop(null);
+    setActiveDropForWave(null);
   };
 
+  if (viewMode === "gallery") {
+    return (
+      <div
+        ref={containerRef}
+        className="tw-flex tw-h-full tw-w-full tw-flex-col tw-overflow-hidden"
+        style={waveViewStyle}
+      >
+        <WaveGallery wave={wave} onDropClick={onDropClick} />
+      </div>
+    );
+  }
+
   return (
-    <div
-      ref={containerRef}
-      className={`${containerClassName}`}
-      style={containerStyle}>
-      
-      <WaveDropsAll
-        key={wave.id}
-        waveId={wave.id}
-        onReply={handleReply}
-        onQuote={handleQuote}
-        activeDrop={activeDrop}
-        initialDrop={scrollTarget}
-        dividerSerialNo={dividerTarget}
-        dropId={null}
-        isMuted={wave.metrics?.muted ?? false}
-      />
-      {!(isApp && editingDropId) && (
-        <div className="tw-mt-auto">
-          <CreateDropWaveWrapper>
-            <PrivilegedDropCreator
-              activeDrop={activeDrop}
-              onCancelReplyQuote={onCancelReplyQuote}
-              onDropAddedToQueue={onCancelReplyQuote}
-              wave={wave}
-              dropId={null}
-              fixedDropMode={DropMode.BOTH}
-            />
-          </CreateDropWaveWrapper>
-        </div>
-      )}
-      {isMemesWave && <MobileMemesArtSubmissionBtn wave={wave} />}
-    </div>
+    <UnreadDividerProvider
+      initialSerialNo={dividerTarget ?? null}
+      key={`unread-divider-${wave.id}`}
+    >
+      <div
+        ref={containerRef}
+        className={`${containerClassName}`}
+        style={waveViewStyle}
+      >
+        <WaveDropsAllWithoutProvider
+          key={wave.id}
+          waveId={wave.id}
+          onReply={handleReply}
+          onQuote={handleQuote}
+          activeDrop={activeDrop}
+          initialDrop={scrollTarget}
+          dividerSerialNo={dividerTarget}
+          dropId={null}
+          isMuted={wave.metrics.muted}
+        />
+        {!(isApp && editingDropId) && (
+          <div className="tw-mt-auto">
+            <CreateDropWaveWrapper>
+              <PrivilegedDropCreator
+                activeDrop={activeDrop}
+                onCancelReplyQuote={onCancelReplyQuote}
+                onDropAddedToQueue={onCancelReplyQuote}
+                wave={wave}
+                dropId={null}
+                fixedDropMode={DropMode.BOTH}
+              />
+            </CreateDropWaveWrapper>
+          </div>
+        )}
+        {isMemesWave && <MobileMemesArtSubmissionBtn wave={wave} />}
+      </div>
+    </UnreadDividerProvider>
   );
 };
 
