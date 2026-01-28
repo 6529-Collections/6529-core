@@ -2,6 +2,7 @@ import { getUserPageTabByRoute } from "@/components/user/layout/userTabs.config"
 import { ApiNotification } from "@/generated/models/ApiNotification";
 import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
 import { emojify } from "./emoji.helpers";
+import { formatNumberWithCommas } from "./Helpers";
 
 function getProfileRedirect(handle: string, subroute?: string): string {
   if (!subroute) return `/${handle}`;
@@ -93,7 +94,7 @@ export function generateNotificationData(
       const sign = amount > 0 ? "+" : "";
       notificationData = {
         title: `${emoji} Updated NIC Rating`,
-        body: `${handle} updated your NIC by ${sign}${amount}\nNew Total: ${total}`,
+        body: `${handle} updated your NIC by ${sign}${formatNumberWithCommas(amount)}\nNew Total: ${formatNumberWithCommas(total)}`,
         redirectPath: connectedProfileHandle
           ? getProfileRedirect(connectedProfileHandle, "identity")
           : "/notifications",
@@ -112,7 +113,7 @@ export function generateNotificationData(
       const sign = amount > 0 ? "+" : "";
       notificationData = {
         title: `${emoji} Updated REP${categoryText}`,
-        body: `${handle} updated your REP by ${sign}${amount}\nNew Total: ${total}`,
+        body: `${handle} updated your REP by ${sign}${formatNumberWithCommas(amount)}\nNew Total: ${formatNumberWithCommas(total)}`,
         redirectPath: connectedProfileHandle
           ? getProfileRedirect(connectedProfileHandle, "rep")
           : "/notifications",
