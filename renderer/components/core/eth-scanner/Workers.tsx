@@ -3,6 +3,12 @@
 import Confirm from "@/components/confirm/Confirm";
 import LogsViewer from "@/components/core/logs-viewer/LogsViewer";
 import CircleLoader from "@/components/distribution-plan-tool/common/CircleLoader";
+import {
+  ConfirmModalShell,
+  confirmBtnPrimary,
+  confirmBtnSecondary,
+  confirmInputClass,
+} from "@/components/shared/ConfirmModalShell";
 import { useToast } from "@/contexts/ToastContext";
 import {
   manualStartWorker,
@@ -539,66 +545,23 @@ function ResetToBlockConfirm({
   onConfirm: (block: number) => void;
 }) {
   const [block, setBlock] = useState("");
-  if (!show) return null;
+
+  const handleBackdrop = () => {
+    onHide();
+    setBlock("");
+  };
+
   return (
-    <div
-      className="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-bg-black/50"
-      onClick={onHide}
-      role="dialog"
-      aria-modal
-    >
-      <div
-        className="tw-max-h-[90vh] tw-w-full tw-max-w-lg tw-overflow-auto tw-rounded-xl tw-bg-iron-950 tw-shadow-xl tw-ring-1 tw-ring-iron-800"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="tw-rounded-t tw-border-b tw-border-iron-800 tw-bg-iron-950 tw-p-4 tw-text-iron-100">
-          <h2 className="tw-m-0 tw-text-lg tw-font-semibold">Reset to block</h2>
-        </div>
-        <div className="tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-4 tw-text-iron-100">
-          <p className="tw-mb-2 tw-mt-2">
-            Roll back to a specific block number. All transactions after this
-            block will be deleted, and ownership balances will be recalculated
-            as if the sync only reached this block. Subsequent sync processes
-            will update the data from this point forward.
-          </p>
-          <p>
-            Use &apos;Min Block&apos; button to reset to the earliest available
-            block for this worker - {minBlock}.
-          </p>
-          <div className="tw-mt-4 tw-flex tw-w-full tw-overflow-hidden tw-rounded-lg tw-border tw-border-iron-700 tw-bg-iron-900">
-            <input
-              type="number"
-              autoFocus
-              min={minBlock}
-              placeholder="Enter block number"
-              aria-label="Block"
-              value={block}
-              className="tw-min-w-0 tw-flex-1 tw-border-0 tw-bg-transparent tw-px-3 tw-py-2 tw-text-iron-100 tw-outline-none placeholder:tw-text-iron-500"
-              onChange={(e) => {
-                const value = e.target.value;
-                const num = Number(value);
-                if (!isNaN(num) && num >= 0) {
-                  setBlock(value);
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => setBlock(minBlock.toString())}
-              className="tw-border-l tw-border-iron-700 tw-bg-iron-800 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-iron-100 desktop-hover:hover:tw-bg-iron-700"
-            >
-              Min Block
-            </button>
-          </div>
-        </div>
-        <div className="tw-flex tw-justify-end tw-gap-2 tw-rounded-b tw-border-0 tw-border-t tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-4 tw-text-iron-100">
+    <ConfirmModalShell
+      show={show}
+      title="Reset to block"
+      onBackdropClick={handleBackdrop}
+      footer={
+        <>
           <button
             type="button"
-            onClick={() => {
-              onHide();
-              setBlock("");
-            }}
-            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-transparent tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-iron-100 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 desktop-hover:hover:tw-bg-iron-800"
+            onClick={handleBackdrop}
+            className={confirmBtnSecondary}
           >
             Cancel
           </button>
@@ -609,12 +572,48 @@ function ResetToBlockConfirm({
               setBlock("");
             }}
             disabled={!block || Number(block) < minBlock}
-            className="tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-white focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 disabled:tw-opacity-50 desktop-hover:hover:tw-bg-primary-600"
+            className={confirmBtnPrimary}
           >
             Confirm
           </button>
-        </div>
+        </>
+      }
+    >
+      <p className="tw-mb-2 tw-mt-0">
+        Roll back to a specific block number. All transactions after this block
+        will be deleted, and ownership balances will be recalculated as if the
+        sync only reached this block. Subsequent sync processes will update the
+        data from this point forward.
+      </p>
+      <p className="tw-mb-4 tw-mt-2">
+        Use &apos;Min Block&apos; button to reset to the earliest available
+        block for this worker - {minBlock}.
+      </p>
+      <div className="tw-flex tw-w-full tw-gap-2">
+        <input
+          type="number"
+          autoFocus
+          min={minBlock}
+          placeholder="Enter block number"
+          aria-label="Block"
+          value={block}
+          className={`${confirmInputClass} tw-min-w-0 tw-flex-1`}
+          onChange={(e) => {
+            const value = e.target.value;
+            const num = Number(value);
+            if (!isNaN(num) && num >= 0) {
+              setBlock(value);
+            }
+          }}
+        />
+        <button
+          type="button"
+          onClick={() => setBlock(minBlock.toString())}
+          className={confirmBtnSecondary}
+        >
+          Min Block
+        </button>
       </div>
-    </div>
+    </ConfirmModalShell>
   );
 }

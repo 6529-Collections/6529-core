@@ -1,6 +1,15 @@
+import { getUserPageTabByRoute } from "@/components/user/layout/userTabs.config";
 import { ApiNotification } from "@/generated/models/ApiNotification";
 import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
 import { emojify } from "./emoji.helpers";
+import { formatNumberWithCommas } from "./Helpers";
+
+function getProfileRedirect(handle: string, subroute?: string): string {
+  if (!subroute) return `/${handle}`;
+  const validTab = getUserPageTabByRoute(subroute);
+  if (!validTab) return `/${handle}`;
+  return `/${handle}/${validTab.route}`;
+}
 
 interface NotificationData {
   title: string;
@@ -14,7 +23,8 @@ type FindNativeEmoji = (
 
 export function generateNotificationData(
   notification: ApiNotification,
-  findNativeEmoji: FindNativeEmoji
+  findNativeEmoji: FindNativeEmoji,
+  connectedProfileHandle?: string | null
 ): NotificationData | null {
   const handle = notification.related_identity?.handle ?? "Someone";
   const cause = notification.cause;
@@ -41,9 +51,9 @@ export function generateNotificationData(
     return firstPart?.content ?? null;
   };
 
-  const getWavesRedirect = (): string => {
+  const getWavesRedirect = (dropIndex: number = 0): string => {
     if (!notification.related_drops?.length) return "/notifications";
-    const drop = notification.related_drops[0];
+    const drop = notification.related_drops[dropIndex];
     if (!drop) return "/notifications";
     const waveId = drop.wave?.id;
     const isDm = drop.wave?.admin_group_id?.startsWith("dm-");
@@ -60,7 +70,7 @@ export function generateNotificationData(
       notificationData = {
         title: `${handle} is now following you`,
         body: "View profile",
-        redirectPath: handle ? `/${handle}` : "/notifications",
+        redirectPath: handle ? getProfileRedirect(handle) : "/notifications",
       };
       break;
 
@@ -70,6 +80,43 @@ export function generateNotificationData(
         title: `${handle} mentioned you`,
         body: dropContent ?? "View drop",
         redirectPath: getWavesRedirect(),
+      };
+      break;
+    }
+
+    case ApiNotificationCause.IdentityNic: {
+      const nicCtx = notification.additional_context as
+        | { amount?: number; total?: number }
+        | undefined;
+      const amount = nicCtx?.amount ?? 0;
+      const total = nicCtx?.total ?? 0;
+      const emoji = amount > 0 ? "🚀" : "💔";
+      const sign = amount > 0 ? "+" : "";
+      notificationData = {
+        title: `${emoji} Updated NIC Rating`,
+        body: `${handle} updated your NIC by ${sign}${formatNumberWithCommas(amount)}\nNew Total: ${formatNumberWithCommas(total)}`,
+        redirectPath: connectedProfileHandle
+          ? getProfileRedirect(connectedProfileHandle, "identity")
+          : "/notifications",
+      };
+      break;
+    }
+    case ApiNotificationCause.IdentityRep: {
+      const repCtx = notification.additional_context as
+        | { amount?: number; total?: number; category?: string }
+        | undefined;
+      const amount = repCtx?.amount ?? 0;
+      const total = repCtx?.total ?? 0;
+      const category = repCtx?.category;
+      const categoryText = category ? ` for category '${category}'` : "";
+      const emoji = amount > 0 ? "🚀" : "💔";
+      const sign = amount > 0 ? "+" : "";
+      notificationData = {
+        title: `${emoji} Updated REP${categoryText}`,
+        body: `${handle} updated your REP by ${sign}${formatNumberWithCommas(amount)}\nNew Total: ${formatNumberWithCommas(total)}`,
+        redirectPath: connectedProfileHandle
+          ? getProfileRedirect(connectedProfileHandle, "rep")
+          : "/notifications",
       };
       break;
     }
@@ -86,24 +133,10 @@ export function generateNotificationData(
 
     case ApiNotificationCause.DropReplied: {
       const replyContent = getDropContent(1);
-      const redirectPath = (() => {
-        if (
-          !notification.related_drops?.length ||
-          notification.related_drops.length < 2
-        )
-          return "/notifications";
-        const replyDrop = notification.related_drops[1];
-        if (!replyDrop) return "/notifications";
-        const waveId = replyDrop.wave?.id;
-        if (!waveId) return "/notifications";
-        const base = `/waves?wave=${waveId}`;
-        const serialNo = replyDrop.serial_no;
-        return serialNo ? `${base}&serialNo=${serialNo}` : base;
-      })();
       notificationData = {
         title: `${handle} replied`,
         body: replyContent ?? "View drop",
-        redirectPath,
+        redirectPath: getWavesRedirect(1),
       };
       break;
     }
@@ -132,6 +165,16 @@ export function generateNotificationData(
       const dropContent = getDropContent();
       notificationData = {
         title: `${handle} reacted ${emojiText}`,
+        body: dropContent ?? "View drop",
+        redirectPath: getWavesRedirect(),
+      };
+      break;
+    }
+
+    case ApiNotificationCause.DropBoosted: {
+      const dropContent = getDropContent();
+      notificationData = {
+        title: `${handle} boosted your drop 🔥`,
         body: dropContent ?? "View drop",
         redirectPath: getWavesRedirect(),
       };
