@@ -207,7 +207,8 @@ const WebSidebarNav = React.forwardRef<
     const newSrc = relatedPfp ? await resolveIpfsUrlAsync(relatedPfp) : "";
     const notificationData = generateNotificationData(
       notification,
-      findNativeEmoji
+      findNativeEmoji,
+      connectedProfile?.handle ?? null
     );
     if (!notificationData) return;
     window.notifications.showNotification(
