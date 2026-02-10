@@ -19,8 +19,10 @@ import type { PluggableList } from "unified";
 import { useEmoji } from "@/contexts/EmojiContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ApiDropReferencedNFT } from "@/generated/models/ApiDropReferencedNFT";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
+import { useTweetPreviewMode } from "@/components/tweets/TweetPreviewModeContext";
 
 import {
   DropContentPartType,
@@ -64,7 +66,7 @@ const InlineCodeRenderer = ({
     {...props}
     style={{ ...style, textOverflow: "unset" }}
     className={mergeClassNames(
-      "tw-text-iron-200 tw-whitespace-pre-wrap tw-break-words",
+      "tw-whitespace-pre-wrap tw-break-words tw-text-iron-200",
       className
     )}
   >
@@ -126,7 +128,7 @@ const CodeBlockRenderer = ({
       ref={codeRef}
       style={{ ...style, textOverflow: "unset" }}
       className={mergeClassNames(
-        "tw-text-iron-200 tw-whitespace-pre-wrap tw-break-words",
+        "tw-whitespace-pre-wrap tw-break-words tw-text-iron-200",
         className
       )}
     >
@@ -173,12 +175,13 @@ const createMarkdownComponents = ({
   const ListItemRenderer = ({
     children,
     className,
+    node: _node,
     ...props
   }: MarkdownRendererProps<"li">) => (
     <li
       {...props}
       className={mergeClassNames(
-        "tw-text-md tw-text-iron-200 tw-break-words word-break",
+        "word-break tw-break-words tw-text-md tw-text-iron-200",
         className
       )}
     >
@@ -194,7 +197,7 @@ const createMarkdownComponents = ({
     <blockquote
       {...props}
       className={mergeClassNames(
-        "tw-text-iron-200 tw-break-words word-break tw-pl-4 tw-border-l-4 tw-border-l-iron-500 tw-border-solid tw-border-t-0 tw-border-r-0 tw-border-b-0",
+        "word-break tw-break-words tw-border-b-0 tw-border-l-4 tw-border-r-0 tw-border-t-0 tw-border-solid tw-border-l-iron-500 tw-pl-4 tw-text-iron-200",
         className
       )}
     >
@@ -220,6 +223,7 @@ const createMarkdownComponents = ({
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
+  readonly mentionedWaves: Array<ApiMentionedWave>;
   readonly referencedNfts: Array<ApiDropReferencedNFT>;
   readonly partContent: string | null;
   readonly onQuoteClick: (drop: ApiDrop) => void;
@@ -230,6 +234,7 @@ export interface DropPartMarkdownProps {
 
 function DropPartMarkdown({
   mentionedUsers,
+  mentionedWaves,
   referencedNfts,
   partContent,
   onQuoteClick,
@@ -239,6 +244,7 @@ function DropPartMarkdown({
 }: DropPartMarkdownProps) {
   const isMobile = useIsMobileScreen();
   const { emojiMap, findNativeEmoji } = useEmoji();
+  const tweetPreviewMode = useTweetPreviewMode();
 
   const textSizeClass = useMemo(() => {
     switch (textSize) {
@@ -255,8 +261,9 @@ function DropPartMarkdown({
         onQuoteClick,
         currentDropId,
         hideLinkPreviews,
+        tweetPreviewMode,
       }),
-    [onQuoteClick, currentDropId, hideLinkPreviews]
+    [onQuoteClick, currentDropId, hideLinkPreviews, tweetPreviewMode]
   );
 
   const { customRenderer, renderParagraph, processContent } = useMemo(
@@ -264,6 +271,7 @@ function DropPartMarkdown({
       createMarkdownContentRenderers({
         textSizeClass,
         mentionedUsers,
+        mentionedWaves,
         referencedNfts,
         emojiMap,
         findNativeEmoji,
@@ -272,6 +280,7 @@ function DropPartMarkdown({
     [
       textSizeClass,
       mentionedUsers,
+      mentionedWaves,
       referencedNfts,
       emojiMap,
       findNativeEmoji,

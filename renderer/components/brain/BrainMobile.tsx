@@ -1,36 +1,42 @@
 "use client";
 
-import { useAuth } from "@/components/auth/Auth";
-import CreateDirectMessageModal from "@/components/waves/create-dm/CreateDirectMessageModal";
-import CreateWaveModal from "@/components/waves/create-wave/CreateWaveModal";
-import { useMyStreamOptional } from "@/contexts/wave/MyStreamContext";
-import type { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiWaveType } from "@/generated/models/ApiWaveType";
-import { getHomeFeedRoute } from "@/helpers/navigation.helpers";
-import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { DropSize } from "@/helpers/waves/drop.helpers";
-import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { useWave } from "@/hooks/useWave";
-import { useWaveData } from "@/hooks/useWaveData";
-import { useWaveTimers } from "@/hooks/useWaveTimers";
-import { commonApiFetch } from "@/services/api/common-api";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
-import { WaveWinners } from "../waves/winners/WaveWinners";
+import { motion, AnimatePresence } from "framer-motion";
+import BrainMobileTabs from "./mobile/BrainMobileTabs";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { commonApiFetch } from "@/services/api/common-api";
 import BrainDesktopDrop from "./BrainDesktopDrop";
 import BrainMobileAbout from "./mobile/BrainMobileAbout";
-import BrainMobileMessages from "./mobile/BrainMobileMessages";
-import BrainMobileTabs from "./mobile/BrainMobileTabs";
-import BrainMobileWaves from "./mobile/BrainMobileWaves";
-import MyStreamWaveFAQ from "./my-stream/MyStreamWaveFAQ";
+import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
+import { DropSize } from "@/helpers/waves/drop.helpers";
+import { useWaveData } from "@/hooks/useWaveData";
 import MyStreamWaveLeaderboard from "./my-stream/MyStreamWaveLeaderboard";
 import MyStreamWaveOutcome from "./my-stream/MyStreamWaveOutcome";
+import { WaveWinners } from "../waves/winners/WaveWinners";
+import { useWaveTimers } from "@/hooks/useWaveTimers";
+import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 import MyStreamWaveMyVotes from "./my-stream/votes/MyStreamWaveMyVotes";
+import MyStreamWaveFAQ from "./my-stream/MyStreamWaveFAQ";
+import { useWave } from "@/hooks/useWave";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
+import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import BrainMobileWaves from "./mobile/BrainMobileWaves";
+import BrainMobileMessages from "./mobile/BrainMobileMessages";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
 import BrainNotifications from "./notifications/NotificationsContainer";
+import {
+  getActiveWaveIdFromUrl,
+  getHomeRoute,
+  getWaveHomeRoute,
+} from "@/helpers/navigation.helpers";
+import { markDropCloseNavigation } from "@/helpers/drop-close-navigation.helpers";
+import CreateWaveModal from "@/components/waves/create-wave/CreateWaveModal";
+import CreateDirectMessageModal from "@/components/waves/create-dm/CreateDirectMessageModal";
+import { useAuth } from "@/components/auth/Auth";
+import { useMyStreamOptional } from "@/contexts/wave/MyStreamContext";
+import { useClosingDropId } from "@/hooks/useClosingDropId";
 
 export enum BrainView {
   DEFAULT = "DEFAULT",
@@ -63,27 +69,40 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
   }, []);
 
   const [activeView, setActiveView] = useState<BrainView>(BrainView.DEFAULT);
-  const dropId = searchParams?.get('drop') ?? undefined;
+  const dropId = searchParams.get("drop") ?? undefined;
+  const { effectiveDropId, beginClosingDrop } = useClosingDropId(dropId);
   const { data: drop } = useQuery<ApiDrop>({
-    queryKey: [QueryKey.DROP, { drop_id: dropId }],
-    queryFn: async () =>
-      await commonApiFetch<ApiDrop>({
-        endpoint: `drops/${dropId}`,
-      }),
+    queryKey: [QueryKey.DROP, { drop_id: effectiveDropId }],
+    queryFn: async () => {
+      if (!effectiveDropId) {
+        throw new Error("Cannot fetch drop without a drop id");
+      }
+
+      return await commonApiFetch<ApiDrop>({
+        endpoint: `drops/${effectiveDropId}`,
+      });
+    },
     placeholderData: keepPreviousData,
-    enabled: !!dropId,
+    enabled: !!effectiveDropId,
   });
 
   // Use MyStreamContext for waveId to support client-side navigation via pushState
-  const waveId = myStream?.activeWave.id ?? searchParams?.get('wave') ?? null;
+  const waveId =
+    myStream?.activeWave.id ??
+    getActiveWaveIdFromUrl({ pathname, searchParams }) ??
+    null;
   const { data: wave } = useWaveData({
     waveId: waveId,
     onWaveNotFound: () => {
-      const params = new URLSearchParams(searchParams?.toString() || '');
-      params.delete('wave');
+      const params = new URLSearchParams(searchParams.toString() || "");
+      params.delete("wave");
+      const basePath = getWaveHomeRoute({
+        isDirectMessage: pathname.startsWith("/messages"),
+        isApp,
+      });
       const newUrl = params.toString()
-        ? `${pathname}?${params.toString()}`
-        : pathname || getHomeFeedRoute();
+        ? `${basePath}?${params.toString()}`
+        : basePath || getHomeRoute();
       router.push(newUrl, { scroll: false });
     },
   });
@@ -96,32 +115,36 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
   } = useWaveTimers(wave);
 
   const onDropClick = (drop: ExtendedDrop) => {
-    const params = new URLSearchParams(searchParams?.toString() || '');
-    params.set('drop', drop.id);
+    const params = new URLSearchParams(searchParams.toString() || "");
+    params.set("drop", drop.id);
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
   const onDropClose = () => {
-    const params = new URLSearchParams(searchParams?.toString() || '');
-    params.delete('drop');
+    if (dropId) {
+      beginClosingDrop(dropId);
+    }
+    markDropCloseNavigation();
+    const params = new URLSearchParams(searchParams.toString() || "");
+    params.delete("drop");
     const newUrl = params.toString()
       ? `${pathname}?${params.toString()}`
-      : pathname || getHomeFeedRoute();
-    router.push(newUrl, { scroll: false });
+      : pathname || getHomeRoute();
+    router.replace(newUrl, { scroll: false });
   };
 
   const isDropOpen =
-    drop &&
-    drop?.id?.toLowerCase() === dropId?.toLowerCase();
+    !!effectiveDropId &&
+    !!drop &&
+    drop.id.toLowerCase() === effectiveDropId.toLowerCase();
 
   const isRankWave = wave?.wave.type === ApiWaveType.Rank;
 
   const hasWave = Boolean(waveId);
 
   useEffect(() => {
-    const tabParam = searchParams?.get("tab");
-    const viewParam = searchParams?.get("view");
-    const createParam = searchParams?.get("create");
+    const viewParam = searchParams.get("view");
+    const createParam = searchParams.get("create");
 
     if (createParam && isApp) {
       setActiveView(BrainView.DEFAULT);
@@ -152,12 +175,7 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
       return;
     }
 
-    if (
-      pathname === "/" &&
-      (!tabParam || tabParam === "feed") &&
-      !waveId &&
-      !viewParam
-    ) {
+    if (pathname === "/" && !waveId && !viewParam) {
       setActiveView(BrainView.DEFAULT);
     }
   }, [pathname, searchParams, waveId, isApp]);
@@ -207,10 +225,19 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
     if (waveId && nonWaveViews.has(activeView)) {
       setActiveView(BrainView.DEFAULT);
     }
-  }, [hasWave, wave, isCompleted, firstDecisionDone, activeView, isMemesWave, waveId, pathname]);
+  }, [
+    hasWave,
+    wave,
+    isCompleted,
+    firstDecisionDone,
+    activeView,
+    isMemesWave,
+    waveId,
+    pathname,
+  ]);
 
   const closeCreateOverlay = useCallback(() => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
+    const params = new URLSearchParams(searchParams.toString() || "");
     params.delete("create");
     const base = pathname ?? "/";
     const next = params.toString() ? `${base}?${params.toString()}` : base;
@@ -219,7 +246,7 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
 
   const createOverlay = useMemo(() => {
     if (!isApp) return null;
-    const createParam = searchParams?.get("create");
+    const createParam = searchParams.get("create");
     if (!createParam) return null;
     if (!connectedProfile) return null;
 
@@ -247,9 +274,7 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
   }, [isApp, searchParams, connectedProfile, closeCreateOverlay]);
 
   const viewComponents: Record<BrainView, ReactNode> = {
-    [BrainView.ABOUT]: (
-      <BrainMobileAbout activeWaveId={waveId} />
-    ),
+    [BrainView.ABOUT]: <BrainMobileAbout activeWaveId={waveId} />,
     [BrainView.DEFAULT]: children,
     [BrainView.LEADERBOARD]:
       isRankWave && !!wave ? (
@@ -281,7 +306,7 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
     : "tw-absolute tw-inset-0 tw-z-[1010]";
 
   return (
-    <div className="tw-relative tw-flex tw-flex-col tw-h-full">
+    <div className="tw-relative tw-flex tw-h-full tw-flex-col">
       {createOverlay}
       {isDropOpen && (
         <div className={dropOverlayClass}>
@@ -314,7 +339,8 @@ const BrainMobile: React.FC<Props> = ({ children }) => {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: -20 }}
           transition={{ duration: 0.2, ease: "easeInOut" }}
-          className="tw-flex-1">
+          className="tw-flex-1"
+        >
           {viewComponents[activeView]}
         </motion.div>
       </AnimatePresence>

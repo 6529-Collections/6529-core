@@ -1,15 +1,13 @@
-import type { HomeTab } from "@/components/home/useHomeTabs";
 import type { NavItem as NavItemData, ViewKey } from "./navTypes";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 
 export const isNavItemActive = (
   item: NavItemData,
   pathname: string,
   searchParams: URLSearchParams,
   activeView: ViewKey | null,
-  isCurrentWaveDm: boolean,
-  homeActiveTab: HomeTab
+  isCurrentWaveDm: boolean
 ): boolean => {
-  // User profile pages and Network routes are active only when no in-app view is selected
   if (item.name === "Network" && activeView === null) {
     // Profile pages (/[user])
     if (pathname.startsWith("/[user]")) {
@@ -39,31 +37,30 @@ export const isNavItemActive = (
     return relatedHrefs.some((href) => pathname.startsWith(href));
   }
 
-  const waveParam = searchParams?.get("wave");
-  const hasWaveParam = typeof waveParam === "string";
-  const isWavesPath = pathname === "/waves";
-  const isMessagesPath = pathname === "/messages";
-  const tabParam = searchParams?.get("tab");
-  const isFeedTab = homeActiveTab === "feed";
-  const isHomeFeedPath = pathname === "/" && (tabParam === "feed" || isFeedTab);
-  const isWaveSubRoute =
-    hasWaveParam && (isHomeFeedPath || isWavesPath || isMessagesPath);
+  const waveParam = getActiveWaveIdFromUrl({ pathname, searchParams });
+  const hasWaveParam = typeof waveParam === "string" && waveParam.length > 0;
+  const isWavesPath = pathname === "/waves" || pathname.startsWith("/waves/");
+  const isMessagesPath =
+    pathname === "/messages" || pathname.startsWith("/messages/");
+  const isWaveSubRoute = hasWaveParam && (isWavesPath || isMessagesPath);
   const viewParam = searchParams?.get("view");
-  const isWavesView = pathname === "/waves" || viewParam === "waves";
-  const isMessagesView = pathname === "/messages" || viewParam === "messages";
+  const isWavesView = isWavesPath || viewParam === "waves";
+  const isMessagesView = isMessagesPath || viewParam === "messages";
 
   if (item.kind === "route") {
-    if (item.name === "Stream") {
-      return isHomeFeedPath && activeView === null;
-    }
     if (item.name === "Home") {
       return (
         pathname === "/" &&
         activeView === null &&
-        !isFeedTab &&
         !hasWaveParam &&
         !isWavesView &&
         !isMessagesView
+      );
+    }
+    if (item.name === "Discover") {
+      return (
+        (pathname === "/discover" || pathname.startsWith("/discover/")) &&
+        activeView === null
       );
     }
     return pathname === item.href && activeView === null;

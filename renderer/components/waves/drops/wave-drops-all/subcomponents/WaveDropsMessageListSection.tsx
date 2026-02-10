@@ -1,12 +1,11 @@
 import DropsList from "@/components/drops/view/DropsList";
 import { WaveDropsReverseContainer } from "@/components/waves/drops/WaveDropsReverseContainer";
-import { WaveDropsScrollBottomButton } from "@/components/waves/drops/WaveDropsScrollBottomButton";
-import { WaveDropsScrollToUnreadButton } from "@/components/waves/drops/WaveDropsScrollToUnreadButton";
+import { WaveDropsScrollControls } from "@/components/waves/drops/WaveDropsScrollControls";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import type { useVirtualizedWaveDrops } from "@/hooks/useVirtualizedWaveDrops";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
-import type { RefObject } from "react";
+import type { RefObject, Ref } from "react";
 
 type WaveMessagesResult = ReturnType<
   typeof useVirtualizedWaveDrops
@@ -16,8 +15,11 @@ interface WaveDropsMessageListSectionProps {
   readonly waveMessages: WaveMessagesResult;
   readonly dropId: string | null;
   readonly scrollContainerRef: RefObject<HTMLDivElement | null>;
+  readonly scrollContainerCallbackRef?: Ref<HTMLDivElement> | undefined;
   readonly bottomAnchorRef: RefObject<HTMLDivElement | null>;
+  readonly bottomAnchorCallbackRef?: Ref<HTMLDivElement> | undefined;
   readonly onTopIntersection: () => void;
+  readonly onScroll?: (() => void) | undefined;
   readonly onReply: ({
     drop,
     partId,
@@ -44,10 +46,12 @@ interface WaveDropsMessageListSectionProps {
   readonly onRevealPending: () => void;
   readonly bottomPaddingClassName?: string | undefined;
   readonly unreadDividerSerialNo?: number | null | undefined;
+  readonly unreadCount?: number | undefined;
   readonly boostedDrops?: ApiDrop[] | undefined;
   readonly onBoostedDropClick?: ((serialNo: number) => void) | undefined;
   readonly onScrollToUnread?: ((serialNo: number) => void) | undefined;
   readonly onDismissUnread: () => void;
+  readonly autoCollapseSerials?: ReadonlySet<number> | undefined;
 }
 
 const MIN_DROPS_FOR_PAGINATION = 25;
@@ -58,8 +62,11 @@ export const WaveDropsMessageListSection: React.FC<
   waveMessages,
   dropId,
   scrollContainerRef,
+  scrollContainerCallbackRef,
   bottomAnchorRef,
+  bottomAnchorCallbackRef,
   onTopIntersection,
+  onScroll,
   onReply,
   onQuote,
   queueSerialTarget,
@@ -74,23 +81,29 @@ export const WaveDropsMessageListSection: React.FC<
   onRevealPending,
   bottomPaddingClassName,
   unreadDividerSerialNo,
+  unreadCount,
   boostedDrops,
   onBoostedDropClick,
   onScrollToUnread,
   onDismissUnread,
+  autoCollapseSerials,
 }) => {
   const hasNextPage =
     !!waveMessages?.hasNextPage &&
     waveMessages.drops.length >= MIN_DROPS_FOR_PAGINATION;
 
+  const containerRef = scrollContainerCallbackRef ?? scrollContainerRef;
+  const anchorRef = bottomAnchorCallbackRef ?? bottomAnchorRef;
+
   return (
     <>
       <WaveDropsReverseContainer
-        ref={scrollContainerRef}
+        ref={containerRef}
         isFetchingNextPage={!!waveMessages?.isLoadingNextPage}
         hasNextPage={hasNextPage}
         onTopIntersection={onTopIntersection}
         bottomPaddingClassName={bottomPaddingClassName}
+        onScroll={onScroll}
       >
         <DropsList
           scrollContainerRef={scrollContainerRef}
@@ -110,24 +123,24 @@ export const WaveDropsMessageListSection: React.FC<
           unreadDividerSerialNo={unreadDividerSerialNo}
           boostedDrops={boostedDrops}
           onBoostedDropClick={onBoostedDropClick}
+          autoCollapseSerials={autoCollapseSerials}
           key="drops-list"
         />
-        <div ref={bottomAnchorRef} style={{ height: "1px" }} />
+        <div ref={anchorRef} style={{ height: "1px" }} />
       </WaveDropsReverseContainer>
       {onScrollToUnread && (
-        <WaveDropsScrollToUnreadButton
+        <WaveDropsScrollControls
           unreadDividerSerialNo={unreadDividerSerialNo ?? null}
+          unreadCount={unreadCount}
           scrollContainerRef={scrollContainerRef}
           onScrollToUnread={onScrollToUnread}
-          onDismiss={onDismissUnread}
+          onDismissUnread={onDismissUnread}
+          isAtBottom={isAtBottom}
+          scrollToBottom={scrollToBottom}
+          newMessagesCount={pendingCount}
+          onRevealNewMessages={onRevealPending}
         />
       )}
-      <WaveDropsScrollBottomButton
-        isAtBottom={isAtBottom}
-        scrollToBottom={scrollToBottom}
-        newMessagesCount={pendingCount}
-        onRevealNewMessages={onRevealPending}
-      />
     </>
   );
 };

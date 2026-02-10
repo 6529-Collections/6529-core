@@ -6,6 +6,8 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createBreakpoint } from "react-use";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
+import { markDropCloseNavigation } from "@/helpers/drop-close-navigation.helpers";
 import type { ApiDrop } from "../../generated/models/ApiDrop";
 import { DropSize } from "../../helpers/waves/drop.helpers";
 import { useSidebarState } from "../../hooks/useSidebarState";
@@ -20,6 +22,7 @@ import BrainRightSidebar, {
 import { QueryKey } from "../react-query-wrapper/ReactQueryWrapper";
 import CreateWaveModal from "../waves/create-wave/CreateWaveModal";
 import { WaveChatScrollProvider } from "@/contexts/wave/WaveChatScrollContext";
+import { useClosingDropId } from "@/hooks/useClosingDropId";
 
 const useBreakpoint = createBreakpoint({ XL: 1400, LG: 1024, S: 0 });
 
@@ -50,11 +53,13 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>(SidebarTab.ABOUT);
 
   const rawDropId = searchParams.get("drop") ?? undefined;
-  const waveId = searchParams.get("wave") ?? undefined;
+  const waveId =
+    getActiveWaveIdFromUrl({ pathname, searchParams }) ?? undefined;
 
   // Validate drop ID format (assuming alphanumeric + hyphens)
   const dropId =
     rawDropId && /^[a-zA-Z0-9-_]+$/.test(rawDropId) ? rawDropId : undefined;
+  const { effectiveDropId, beginClosingDrop } = useClosingDropId(dropId);
 
   // Check if we're on mobile (below LG breakpoint)
   const isMobile = breakpoint === "S";
@@ -68,27 +73,40 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
   }, [waveId, isRightSidebarOpen, closeRightSidebar]);
 
   const { data: drop, error: dropError } = useQuery<ApiDrop>({
-    queryKey: [QueryKey.DROP, { drop_id: dropId }],
-    queryFn: async () =>
-      await commonApiFetch<ApiDrop>({
-        endpoint: `drops/${dropId}`,
-      }),
+    queryKey: [QueryKey.DROP, { drop_id: effectiveDropId }],
+    queryFn: async () => {
+      if (!effectiveDropId) {
+        throw new Error("Cannot fetch drop without a drop id");
+      }
+
+      return await commonApiFetch<ApiDrop>({
+        endpoint: `drops/${effectiveDropId}`,
+      });
+    },
     placeholderData: keepPreviousData,
-    enabled: !!dropId,
+    enabled: !!effectiveDropId,
   });
 
   const onDropClose = useCallback(() => {
+    if (dropId) {
+      beginClosingDrop(dropId);
+      markDropCloseNavigation();
+    }
     const params = new URLSearchParams(searchParams.toString() || "");
     params.delete("drop");
     const newUrl = params.toString()
       ? `${pathname}?${params.toString()}`
       : pathname || defaultPath;
-    router.push(newUrl, { scroll: false });
-  }, [searchParams, pathname, defaultPath, router]);
+    router.replace(newUrl, { scroll: false });
+  }, [dropId, beginClosingDrop, searchParams, pathname, defaultPath, router]);
 
   const isDropOpen = useMemo(
-    () => Boolean(dropId && drop?.id.toLowerCase() === dropId.toLowerCase()),
-    [dropId, drop?.id]
+    () =>
+      Boolean(
+        effectiveDropId &&
+        drop?.id.toLowerCase() === effectiveDropId.toLowerCase()
+      ),
+    [effectiveDropId, drop?.id]
   );
 
   // Clear logic for when to show each part
@@ -106,7 +124,7 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
   }
 
   // Handle error state for drop loading
-  if (dropError && dropId) {
+  if (dropError && effectiveDropId) {
     console.error("Failed to load drop:", dropError);
   }
 
