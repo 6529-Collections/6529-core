@@ -100,6 +100,100 @@ let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
 let splash: BrowserWindow | null = null;
 
+const SPLASH_API_URL = "https://api.6529.io/desktop/splash";
+
+const SPLASH_MAX_WIDTH = 960;
+const SPLASH_MAX_HEIGHT = 560;
+const SPLASH_MIN_WIDTH = 680;
+const SPLASH_MIN_HEIGHT = 300;
+const SPLASH_LEFT_MIN_WIDTH_PX = 320;
+const SPLASH_SCREEN_RATIO = 0.5;
+
+type SplashCard = {
+  id: number;
+  name: string;
+  artist: string;
+  artist_seize_handle: string;
+  season: number;
+  width?: number;
+  height?: number;
+  icon: string;
+  thumbnail: string;
+  scaled: string;
+  image: string;
+};
+
+const SPLASH_CARD_STORE_KEY = "splash-card";
+const SPLASH_IMAGE_TYPE_STORE_KEY = "splash-image-type";
+const SPLASH_IMAGE_CARD_ID_STORE_KEY = "splash-image-card-id";
+const SPLASH_IMAGE_FILENAME = "splash-image";
+
+function getSplashImagePath(): string {
+  return path.join(app.getPath("userData"), SPLASH_IMAGE_FILENAME);
+}
+
+function isValidSplashCard(data: unknown): data is SplashCard {
+  return (
+    data !== null &&
+    typeof data === "object" &&
+    "id" in data &&
+    "scaled" in data &&
+    typeof (data as SplashCard).scaled === "string"
+  );
+}
+
+let splashCardData: SplashCard | null = null;
+
+let preloadSplashImagePromise: Promise<string | null> | null = null;
+
+function preloadSplashImage(url: string): Promise<string | null> {
+  return fetch(url)
+    .then((res) => {
+      const ct =
+        res.headers.get("content-type")?.split(";")[0]?.trim() || "image/png";
+      return res.arrayBuffer().then((buf) => ({ ct, buf }));
+    })
+    .then(({ ct, buf }) => {
+      const b64 = Buffer.from(buf).toString("base64");
+      return `data:${ct};base64,${b64}`;
+    })
+    .catch(() => null);
+}
+
+function loadSplashImageFromFile(card: SplashCard): Promise<string | null> {
+  const storedCardId = getValue(SPLASH_IMAGE_CARD_ID_STORE_KEY);
+  if (storedCardId !== card.id) return Promise.resolve(null);
+  const ct = getValue(SPLASH_IMAGE_TYPE_STORE_KEY);
+  if (typeof ct !== "string" || !ct) return Promise.resolve(null);
+  const filePath = getSplashImagePath();
+  try {
+    if (!fs.existsSync(filePath)) return Promise.resolve(null);
+    const buf = fs.readFileSync(filePath);
+    const b64 = buf.toString("base64");
+    return Promise.resolve(`data:${ct};base64,${b64}`);
+  } catch {
+    return Promise.resolve(null);
+  }
+}
+
+function saveSplashCardAndImage(data: SplashCard): Promise<void> {
+  return fetch(data.scaled)
+    .then((res) => {
+      const ct =
+        res.headers.get("content-type")?.split(";")[0]?.trim() || "image/png";
+      return res.arrayBuffer().then((buf) => ({ ct, buf: Buffer.from(buf) }));
+    })
+    .then(({ ct, buf }) => {
+      fs.writeFileSync(getSplashImagePath(), buf);
+      setValue(SPLASH_CARD_STORE_KEY, data);
+      setValue(SPLASH_IMAGE_TYPE_STORE_KEY, ct);
+      setValue(SPLASH_IMAGE_CARD_ID_STORE_KEY, data.id);
+    })
+    .catch(() => {
+      setValue(SPLASH_CARD_STORE_KEY, data);
+    });
+}
+
 let PORT: number;
 
 let IPFS_PORT: number;
@@ -252,6 +346,8 @@ if (!gotTheLock) {
     app.on("activate", async () => {
       if (!mainWindow || mainWindow.isDestroyed()) {
         await createWindow();
+      } else if (splash && !splash.isDestroyed()) {
+        splash.focus();
       } else {
         mainWindow.show();
         mainWindow.focus();
@@ -260,21 +356,123 @@ if (!gotTheLock) {
   });
 }
 
+async function sendSplashCardIfReady() {
+  if (!splashCardData || !splash || splash.isDestroyed() || !splash.webContents)
+    return;
+  let payload: SplashCard & { preloadedImageDataUrl?: string } = {
+    ...splashCardData,
+  };
+  if (preloadSplashImagePromise) {
+    try {
+      const dataUrl = await Promise.race([
+        preloadSplashImagePromise,
+        new Promise<string | null>((_, rej) =>
+          setTimeout(() => rej(new Error("timeout")), 5000),
+        ),
+      ]);
+      if (dataUrl) payload.preloadedImageDataUrl = dataUrl;
+    } catch {
+      // send without preloaded image
+    }
+  }
+  splash.webContents.send("splash-card", payload);
+}
+
+const SPLASH_LEFT_PANEL_RATIO = 0.4;
+const SPLASH_FETCH_MAX_ATTEMPTS = 3;
+
+function fetchSplashCard(attempt = 1): Promise<SplashCard> {
+  return fetch(SPLASH_API_URL)
+    .then((res) => {
+      if (!res.ok) throw new Error(`Splash API ${res.status}`);
+      return res.json();
+    })
+    .catch((err) => {
+      if (attempt >= SPLASH_FETCH_MAX_ATTEMPTS) throw err;
+      return fetchSplashCard(attempt + 1);
+    });
+}
+
+function getRightPanelWidth(totalWidth: number): number {
+  const leftWidth = Math.max(
+    totalWidth * SPLASH_LEFT_PANEL_RATIO,
+    SPLASH_LEFT_MIN_WIDTH_PX,
+  );
+  return totalWidth - leftWidth;
+}
+
 function createSplash() {
+  const { width: screenWidth, height: screenHeight } =
+    screen.getPrimaryDisplay().workAreaSize;
+  let width =
+    screenWidth >= SPLASH_MAX_WIDTH
+      ? SPLASH_MAX_WIDTH
+      : Math.max(
+          SPLASH_MIN_WIDTH,
+          Math.round(screenWidth * SPLASH_SCREEN_RATIO),
+        );
+  let height =
+    screenHeight >= SPLASH_MAX_HEIGHT
+      ? SPLASH_MAX_HEIGHT
+      : Math.max(
+          SPLASH_MIN_HEIGHT,
+          Math.round(screenHeight * SPLASH_SCREEN_RATIO),
+        );
+  if (
+    splashCardData?.width &&
+    splashCardData?.height &&
+    splashCardData.width > 0 &&
+    splashCardData.height > 0
+  ) {
+    const cardAspect = splashCardData.width / splashCardData.height;
+    const maxRightW = SPLASH_MAX_WIDTH * (1 - SPLASH_LEFT_PANEL_RATIO);
+    let rightW = Math.min(maxRightW, SPLASH_MAX_HEIGHT * cardAspect);
+    let rightH = rightW / cardAspect;
+    if (rightH > SPLASH_MAX_HEIGHT) {
+      rightH = SPLASH_MAX_HEIGHT;
+      rightW = rightH * cardAspect;
+    }
+    rightW = Math.max(rightW, SPLASH_LEFT_MIN_WIDTH_PX);
+    rightH = Math.max(rightH, SPLASH_MIN_HEIGHT);
+    width = Math.ceil(rightW / (1 - SPLASH_LEFT_PANEL_RATIO));
+    width = Math.max(SPLASH_MIN_WIDTH, Math.min(SPLASH_MAX_WIDTH, width));
+    const actualRightW = getRightPanelWidth(width);
+    height = Math.round(actualRightW / cardAspect);
+    height = Math.max(SPLASH_MIN_HEIGHT, Math.min(SPLASH_MAX_HEIGHT, height));
+  }
   splash = new BrowserWindow({
-    width: 300,
-    height: 300,
+    width,
+    height,
     frame: false,
-    backgroundColor: "#222",
-    transparent: true,
+    backgroundColor: "#000",
+    transparent: false,
     webPreferences: {
       preload: path.join(__dirname, "preload-splash.js"),
-      additionalArguments: [`--app-version=${app.getVersion()}`],
+      additionalArguments: [
+        `--app-version=${app.getVersion()}`,
+        `--has-saved-card=${splashCardData ? "true" : "false"}`,
+      ],
     },
   });
   const splashPath = path.join(__dirname, "assets", "splash.html");
   const splashURL = `file://${splashPath}`;
   splash.loadURL(splashURL);
+
+  if (splashCardData) {
+    fetchSplashCard()
+      .then((data: SplashCard) => saveSplashCardAndImage(data))
+      .catch(() => {});
+  } else {
+    fetchSplashCard()
+      .then((data: SplashCard) => {
+        splashCardData = data;
+        sendSplashCardIfReady();
+        return saveSplashCardAndImage(data);
+      })
+      .catch(() => {});
+  }
+
+  splash.webContents.once("did-finish-load", sendSplashCardIfReady);
 }
 
 function updateSplashMessage(newMessage: string) {
@@ -299,9 +497,23 @@ async function createWindow() {
     iconPath = path.join(__dirname, "assets", "icon.png");
   }
 
+  const savedCard = getValue(SPLASH_CARD_STORE_KEY);
+  if (isValidSplashCard(savedCard)) {
+    splashCardData = savedCard;
+    preloadSplashImagePromise = loadSplashImageFromFile(splashCardData).then(
+      (dataUrl) => dataUrl ?? preloadSplashImage(splashCardData!.scaled),
+    );
+  } else {
+    splashCardData = null;
+    preloadSplashImagePromise = null;
+  }
+
   Logger.info("Creating splash");
   if (!splash) {
     Logger.info("Splash does not exist, creating");
+    if (splashCardData && preloadSplashImagePromise) {
+      await preloadSplashImagePromise;
+    }
     createSplash();
   }
 

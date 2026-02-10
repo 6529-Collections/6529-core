@@ -1,91 +1,240 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link rel="preload" href="./icon.png" as="image" />
+    <link rel="preload" href="./6529.svg" as="image" />
+    <link
+      rel="preload"
+      href="./Montserrat-VariableFont_wght.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin />
     <title>Launching 6529 Desktop</title>
     <style>
+      @font-face {
+        font-family: "Montserrat";
+        src: url("./Montserrat-VariableFont_wght.woff2") format("woff2");
+        font-style: normal;
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      * {
+        box-sizing: border-box;
+      }
       body {
         display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
+        flex-direction: row;
         background-color: #000;
         height: 100vh;
         margin: 0;
         overflow: hidden;
-        font-family: Arial, Helvetica, sans-serif;
+        font-family:
+          "Montserrat", "Helvetica Neue", Helvetica, Arial, sans-serif;
+        color: #fff;
       }
-      img {
-        width: 200px;
-        animation: spin 5s linear infinite;
-        margin-bottom: 20px;
+      .left {
+        flex: 0 0 40%;
+        display: flex;
+        flex-direction: column;
+        min-width: 320px;
+        min-height: 0;
       }
-      p {
-        font-size: 16px;
-        font-weight: bolder;
-        color: white;
-        animation: pulse 2s infinite;
+      .left-inner {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        padding: 28px 34px 24px;
+        min-width: 0;
+        flex: 1;
+        box-sizing: border-box;
+      }
+      .top {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 18px;
+      }
+      .logo {
+        width: 45px;
+        height: 45px;
+        object-fit: contain;
+      }
+      .title {
+        font-size: clamp(24px, 3vw, 34px);
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: -0.02em;
+      }
+      .middle {
+        margin-top: auto;
+        font-size: clamp(14px, 1.4vw, 18px);
+        color: rgba(255, 255, 255, 0.92);
+        line-height: 1.35;
+      }
+      .middle .card-meta {
+        display: block;
+        font-weight: 600;
+      }
+      .middle .card-artist {
+        display: block;
+        margin-top: 4px;
+        font-weight: 600;
+      }
+      .bottom {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        margin-top: 30px;
       }
       #message {
-        font-size: 12px;
-        color: white;
-        opacity: 0.75;
+        font-size: clamp(14px, 1.2vw, 18px);
+        font-weight: 400;
+        color: rgba(255, 255, 255, 0.9);
+        animation: message-pulse 1.8s ease-in-out infinite;
       }
-      #version {
-        font-size: 10px;
-        color: gray;
-        opacity: 0.75;
-        position: fixed;
-        top: 8px;
-        right: 8px;
-        font-family: monospace;
-      }
-      @keyframes spin {
-        0% {
-          transform: rotateY(0deg);
-        }
+      @keyframes message-pulse {
+        0%,
         100% {
-          transform: rotateY(360deg);
-        }
-      }
-      @keyframes pulse {
-        0% {
-          opacity: 1;
+          opacity: 0.7;
         }
         50% {
-          opacity: 0.5;
-        }
-        100% {
           opacity: 1;
         }
+      }
+      #version {
+        font-size: clamp(12px, 1.1vw, 14px);
+        color: rgba(255, 255, 255, 0.58);
+        font-weight: 400;
+      }
+      .right {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #111;
+        min-width: 0;
+      }
+      .right img {
+        height: 150px;
+        width: auto;
+        object-fit: contain;
+      }
+      .right img.splash-card-loaded {
+        height: auto;
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+      .right img.splash-image-loading {
+        opacity: 0;
       }
     </style>
   </head>
   <body>
-    <span id="version"></span>
-    <img src="./icon.png" alt="6529" />
-    <p>Launching 6529 Desktop</p>
-    <span id="message">Initializing</span>
+    <div class="left">
+      <div class="left-inner">
+        <div class="top">
+          <img class="logo" src="./6529.svg" alt="6529" />
+          <span class="title">6529 Desktop</span>
+        </div>
+        <div class="middle">
+          <span class="card-meta" id="card-meta"></span>
+          <span class="card-artist" id="card-artist"></span>
+        </div>
+        <div class="bottom">
+          <span id="message">Initializing</span>
+          <span id="version"></span>
+        </div>
+      </div>
+    </div>
+    <div class="right">
+      <img id="splash-image" class="splash-image-loading" alt="6529" />
+    </div>
     <script>
       function updateMessage(message) {
         document.getElementById("message").textContent = message;
       }
 
-      document.addEventListener("DOMContentLoaded", () => {
+      function formatArtist(card) {
+        return card.artist || card.artist_seize_handle || "";
+      }
+
+      function setImageDimensions(img, panel, imgW, imgH) {
+        if (!panel || !imgW || !imgH) return;
+        var pw = panel.clientWidth;
+        var ph = panel.clientHeight;
+        var scale = Math.min(pw / imgW, ph / imgH);
+        var w = Math.round(imgW * scale);
+        var h = Math.round(imgH * scale);
+        img.style.width = w + "px";
+        img.style.height = h + "px";
+        img.style.maxWidth = w + "px";
+        img.style.maxHeight = h + "px";
+      }
+
+      function applySplashCard(card) {
+        var idStr = Number(card.id).toLocaleString();
+        var seasonStr = Number(card.season).toLocaleString();
+        document.getElementById("card-meta").textContent =
+          "The Memes, Season " + seasonStr + ", Card #" + idStr;
+        var artistName = formatArtist(card);
+        var titleText =
+          typeof card.name === "string" && card.name.trim() !== ""
+            ? '"' + card.name.trim() + '"<br/>by '
+            : "Artwork by ";
+        document.getElementById("card-artist").innerHTML =
+          titleText + artistName;
+        var img = document.getElementById("splash-image");
+        img.alt = "Card #" + idStr;
+        img.style.width = "";
+        img.style.height = "";
+        img.style.maxWidth = "";
+        img.style.maxHeight = "";
+        img.classList.remove("splash-card-loaded");
+        img.classList.add("splash-image-loading");
+        var panel = img.closest(".right");
+        if (card.width && card.height && panel) {
+          img.classList.add("splash-card-loaded");
+          setImageDimensions(img, panel, card.width, card.height);
+        }
+        img.onload = function () {
+          img.classList.remove("splash-image-loading");
+          img.classList.add("splash-card-loaded");
+          var nw = img.naturalWidth;
+          var nh = img.naturalHeight;
+          if (panel && nw && nh) {
+            setImageDimensions(img, panel, nw, nh);
+          } else if (card.width && card.height && panel) {
+            setImageDimensions(img, panel, card.width, card.height);
+          }
+        };
+        img.onerror = function () {
+          img.classList.remove("splash-image-loading", "splash-card-loaded");
+        };
+        img.src = card.preloadedImageDataUrl || card.scaled;
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
         if (window.splashAPI) {
-          console.log("Listening for message updates");
-          window.splashAPI.onUpdateMessage((event, newMessage) => {
-            console.log("Received message update:", newMessage);
+          var imgEl = document.getElementById("splash-image");
+          if (window.splashAPI.hasSavedCard) {
+          } else {
+            imgEl.src = "./6529.svg";
+            imgEl.onload = function () {
+              imgEl.classList.remove("splash-image-loading");
+            };
+          }
+          window.splashAPI.onUpdateMessage(function (event, newMessage) {
             updateMessage(newMessage);
           });
-          document.getElementById("version").textContent = window.splashAPI
-            .version
+          window.splashAPI.onSplashCard(function (event, card) {
+            applySplashCard(card);
+          });
+          var versionEl = document.getElementById("version");
+          versionEl.textContent = window.splashAPI.version
             ? "v" + window.splashAPI.version
             : "";
-        } else {
-          console.error("splashAPI is not available");
         }
       });
     </script>
