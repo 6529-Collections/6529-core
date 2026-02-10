@@ -14,6 +14,7 @@ import React, { useMemo } from "react";
 import { Tooltip } from "react-tooltip";
 import MyStreamWaveMyVoteInput from "./MyStreamWaveMyVoteInput";
 import MyStreamWaveMyVoteVotes from "./MyStreamWaveMyVoteVotes";
+import { useRouter } from "next/navigation";
 
 interface MyStreamWaveMyVoteProps {
   readonly drop: ExtendedDrop;
@@ -30,6 +31,7 @@ const MyStreamWaveMyVote: React.FC<MyStreamWaveMyVoteProps> = ({
   onToggleCheck,
   isResetting = false,
 }) => {
+  const router = useRouter();
   const artWork = drop.parts.at(0)?.media.at(0);
   const previewImageUrl = useMemo(
     () => getDropPreviewImageUrl(drop.metadata),
