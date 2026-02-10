@@ -9,41 +9,48 @@ import { useWaveData } from "@/hooks/useWaveData";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useMyStreamOptional } from "@/contexts/wave/MyStreamContext";
 import {
+  getActiveWaveIdFromUrl,
   getMessagesBaseRoute,
   getWavesBaseRoute,
   getWaveHomeRoute,
 } from "@/helpers/navigation.helpers";
+import { markDropCloseNavigation } from "@/helpers/drop-close-navigation.helpers";
 import { useViewContext } from "./ViewContext";
 import { useNavigationHistoryContext } from "@/contexts/NavigationHistoryContext";
+import { useClosingDropId } from "@/hooks/useClosingDropId";
 
 export default function BackButton() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams.toString();
   const [loading, setLoading] = useState(false);
   const { isApp } = useDeviceInfo();
   const myStream = useMyStreamOptional();
   const { clearLastVisited } = useViewContext();
   const { goBack } = useNavigationHistoryContext();
 
-  const waveId = myStream?.activeWave.id ?? searchParams?.get("wave") ?? null;
-  const dropId = searchParams?.get("drop") ?? null;
+  const waveId =
+    myStream?.activeWave.id ??
+    getActiveWaveIdFromUrl({ pathname, searchParams }) ??
+    null;
+  const dropIdFromUrl = searchParams.get("drop") ?? undefined;
+  const { effectiveDropId: dropId, beginClosingDrop } =
+    useClosingDropId(dropIdFromUrl);
 
-  const isInMessagesContext = pathname === "/messages";
+  const isInMessagesContext = pathname.startsWith("/messages");
 
   // Fetch wave to determine if it is DM
   const { data: wave } = useWaveData({
     waveId: waveId,
     onWaveNotFound: () => {
       myStream?.activeWave.set(null);
-      const params = new URLSearchParams(searchParams?.toString() || "");
+      const params = new URLSearchParams(searchParamsString || "");
       params.delete("wave");
-      const basePath =
-        pathname ??
-        getWaveHomeRoute({
-          isDirectMessage: isInMessagesContext,
-          isApp,
-        });
+      const basePath = getWaveHomeRoute({
+        isDirectMessage: isInMessagesContext,
+        isApp,
+      });
       const newUrl = params.toString()
         ? `${basePath}?${params.toString()}`
         : basePath;
@@ -56,7 +63,7 @@ export default function BackButton() {
   // Reset loading when URL changes
   useEffect(() => {
     setLoading(false);
-  }, [pathname, searchParams?.toString()]);
+  }, [pathname, searchParamsString]);
 
   const handleClick = () => {
     if (loading) return;
@@ -74,11 +81,12 @@ export default function BackButton() {
 
     // Drop open → close drop (remove ?drop param)
     if (dropId) {
-      setLoading(true);
-      const params = new URLSearchParams(searchParams?.toString() || "");
+      beginClosingDrop(dropId);
+      markDropCloseNavigation();
+      const params = new URLSearchParams(searchParamsString || "");
       params.delete("drop");
       const basePath =
-        pathname ??
+        pathname ||
         getWaveHomeRoute({
           isDirectMessage: isInMessagesContext || isDm,
           isApp,
@@ -107,7 +115,8 @@ export default function BackButton() {
       type="button"
       aria-label="Back"
       onClick={handleClick}
-      className="tw-flex tw-items-center tw-justify-center tw-h-10 tw-w-10 tw-bg-transparent tw-border-none">
+      className="tw-flex tw-h-10 tw-w-10 tw-items-center tw-justify-center tw-border-none tw-bg-transparent"
+    >
       {loading ? (
         <Spinner />
       ) : (

@@ -11,11 +11,13 @@
  * Do not edit the class manually.
  */
 
+import { ApiWaveMin } from '../models/ApiWaveMin';
 import { HttpFile } from '../http/http';
 
-export class ApiArtistsNft {
-    'id': number;
-    'collaboration_with': Array<string>;
+export class ApiMentionedWave {
+    'wave_name_in_content': string;
+    'wave_id': string;
+    'wave'?: ApiWaveMin;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -23,20 +25,26 @@ export class ApiArtistsNft {
 
     static readonly attributeTypeMap: Array<{name: string, baseName: string, type: string, format: string}> = [
         {
-            "name": "id",
-            "baseName": "id",
-            "type": "number",
-            "format": "int64"
+            "name": "wave_name_in_content",
+            "baseName": "wave_name_in_content",
+            "type": "string",
+            "format": ""
         },
         {
-            "name": "collaboration_with",
-            "baseName": "collaboration_with",
-            "type": "Array<string>",
+            "name": "wave_id",
+            "baseName": "wave_id",
+            "type": "string",
+            "format": ""
+        },
+        {
+            "name": "wave",
+            "baseName": "wave",
+            "type": "ApiWaveMin",
             "format": ""
         }    ];
 
     static getAttributeTypeMap() {
-        return ApiArtistsNft.attributeTypeMap;
+        return ApiMentionedWave.attributeTypeMap;
     }
 
     public constructor() {

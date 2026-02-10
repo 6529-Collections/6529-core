@@ -19,6 +19,7 @@ import HeaderPlaceholder from "../header/HeaderPlaceholder";
 import BottomNavigation from "../navigation/BottomNavigation";
 import { useViewContext } from "../navigation/ViewContext";
 import PullToRefresh from "../providers/PullToRefresh";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 
 const TouchDeviceHeader = dynamic(() => import("../header/AppHeader"), {
   ssr: false,
@@ -35,21 +36,23 @@ export default function AppLayout({ children }: Props) {
   const { setHeaderRef } = useHeaderContext();
   const { containerRef: searchContainerRef } = useSearch();
   const headerRef = useRef<HTMLDivElement | null>(null);
-  const { activeView, homeActiveTab } = useViewContext();
+  const { activeView } = useViewContext();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const isSingleDropOpen = searchParams?.get("drop") !== null;
-  const waveParam = searchParams?.get("wave");
+  const waveParam = getActiveWaveIdFromUrl({ pathname, searchParams });
   const viewParam = searchParams?.get("view");
   const hasWaveParam = Boolean(waveParam);
   const isViewingWavesOrMessages =
     viewParam === "waves" || viewParam === "messages";
+  const isWavesRoute = pathname === "/waves" || pathname.startsWith("/waves/");
+  const isMessagesRoute =
+    pathname === "/messages" || pathname.startsWith("/messages/");
   const isStreamRoute =
-    pathname === "/waves" ||
-    pathname === "/messages" ||
+    isWavesRoute ||
+    isMessagesRoute ||
     pathname === "/notifications" ||
     (pathname === "/" && (hasWaveParam || isViewingWavesOrMessages));
-  const isHomeFeedView = pathname === "/" && homeActiveTab === "feed";
   const editingDropId = useSelector(selectEditingDropId);
   const { isApp } = useDeviceInfo();
   const { isVisible: isAndroidKeyboardVisible, isAndroid } =
@@ -77,11 +80,7 @@ export default function AppLayout({ children }: Props) {
       : "";
 
   return (
-    <div
-      className={`${safeAreaClass} ${
-        isHomeFeedView ? "tw-overflow-hidden" : "tw-overflow-auto"
-      }`}
-    >
+    <div className={`${safeAreaClass} ${"tw-overflow-auto"}`}>
       <PullToRefresh triggerZoneRef={headerRef} />
       <div ref={headerWrapperRef}>
         <TouchDeviceHeader />
@@ -93,7 +92,7 @@ export default function AppLayout({ children }: Props) {
       ) : (
         <main ref={searchContainerRef}>{children}</main>
       )}
-      {!isSingleDropOpen && !isStreamRoute && !isHomeFeedView && (
+      {!isSingleDropOpen && !isStreamRoute && (
         <div className="tw-h-16 tw-w-full" />
       )}
       {!isSingleDropOpen && !isEditingOnMobile && (

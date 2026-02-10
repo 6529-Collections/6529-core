@@ -1,6 +1,7 @@
 "use client";
 
 import type { InitialConfigType } from "@lexical/react/LexicalComposer";
+import type { FocusEvent } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import {
   forwardRef,
@@ -28,10 +29,15 @@ import { TableCellNode, TableNode, TableRowNode } from "@lexical/table";
 import { CodeHighlightNode, CodeNode } from "@lexical/code";
 import { AutoLinkNode, LinkNode } from "@lexical/link";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
-import type { MentionedUser, ReferencedNft } from "@/entities/IDrop";
+import type {
+  MentionedUser,
+  MentionedWave,
+  ReferencedNft,
+} from "@/entities/IDrop";
 import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import { MentionNode } from "../drops/create/lexical/nodes/MentionNode";
 import { HashtagNode } from "../drops/create/lexical/nodes/HashtagNode";
+import { WaveMentionNode } from "../drops/create/lexical/nodes/WaveMentionNode";
 import { ImageNode } from "../drops/create/lexical/nodes/ImageNode";
 import ExampleTheme from "../drops/create/lexical/ExampleTheme";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
@@ -41,6 +47,8 @@ import type { NewMentionsPluginHandles } from "../drops/create/lexical/plugins/m
 import NewMentionsPlugin from "../drops/create/lexical/plugins/mentions/MentionsPlugin";
 import type { NewHastagsPluginHandles } from "../drops/create/lexical/plugins/hashtags/HashtagsPlugin";
 import NewHashtagsPlugin from "../drops/create/lexical/plugins/hashtags/HashtagsPlugin";
+import type { NewWaveMentionsPluginHandles } from "../drops/create/lexical/plugins/waves/WaveMentionsPlugin";
+import NewWaveMentionsPlugin from "../drops/create/lexical/plugins/waves/WaveMentionsPlugin";
 import { MaxLengthPlugin } from "../drops/create/lexical/plugins/MaxLengthPlugin";
 import DragDropPastePlugin from "../drops/create/lexical/plugins/DragDropPastePlugin";
 import EnterKeyPlugin from "../drops/create/lexical/plugins/enter/EnterKeyPlugin";
@@ -92,10 +100,12 @@ const CreateDropInput = forwardRef<
     readonly isDropMode: boolean;
     readonly onDrop?: (() => void) | undefined;
     readonly onEditorState: (editorState: EditorState) => void;
+    readonly onEditorBlur?: (event: FocusEvent<HTMLDivElement>) => void;
     readonly onReferencedNft: (referencedNft: ReferencedNft) => void;
     readonly onMentionedUser: (
       mentionedUser: Omit<MentionedUser, "current_handle">
     ) => void;
+    readonly onMentionedWave: (mentionedWave: MentionedWave) => void;
   }
 >(
   (
@@ -108,8 +118,10 @@ const CreateDropInput = forwardRef<
       isDropMode,
       submitting,
       onEditorState,
+      onEditorBlur,
       onReferencedNft,
       onMentionedUser,
+      onMentionedWave,
       onDrop,
     },
     ref
@@ -120,6 +132,7 @@ const CreateDropInput = forwardRef<
       nodes: [
         MentionNode,
         HashtagNode,
+        WaveMentionNode,
         RootNode,
         HeadingNode,
         ListNode,
@@ -151,6 +164,9 @@ const CreateDropInput = forwardRef<
       user: Omit<MentionedUser, "current_handle">
     ) => {
       onMentionedUser(user);
+    };
+    const onMentionedWaveAdded = (wave: MentionedWave) => {
+      onMentionedWave(wave);
     };
     const onHashtagAdded = (hashtag: ReferencedNft) => onReferencedNft(hashtag);
 
@@ -198,7 +214,14 @@ const CreateDropInput = forwardRef<
     const hashtagPluginRef = useRef<NewHastagsPluginHandles | null>(null);
     const isHashtagsOpen = () => !!hashtagPluginRef.current?.isHashtagsOpen();
 
-    const canSubmitWithEnter = () => !isMentionsOpen() && !isHashtagsOpen();
+    const waveMentionsPluginRef = useRef<NewWaveMentionsPluginHandles | null>(
+      null
+    );
+    const isWaveMentionsOpen = () =>
+      !!waveMentionsPluginRef.current?.isWaveMentionsOpen();
+
+    const canSubmitWithEnter = () =>
+      !isMentionsOpen() && !isHashtagsOpen() && !isWaveMentionsOpen();
 
     const canSubmitRef = useRef(canSubmit);
     const onDropRef = useRef(onDrop);
@@ -248,6 +271,7 @@ const CreateDropInput = forwardRef<
                           });
                         }
                       }}
+                      onBlur={onEditorBlur}
                       className={`editor-input-one-liner tw-form-input tw-block tw-max-h-[40vh] tw-w-full tw-resize-none tw-rounded-lg tw-border-0 tw-bg-iron-900 tw-py-2.5 tw-pl-3 tw-text-base tw-font-normal tw-leading-6 tw-text-white tw-caret-primary-400 tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-transition tw-duration-300 tw-ease-out tw-scrollbar-thin tw-scrollbar-track-iron-900 tw-scrollbar-thumb-iron-600 placeholder:tw-text-iron-500 focus:tw-bg-iron-950 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 sm:tw-text-sm ${
                         submitting ? "tw-cursor-default tw-opacity-50" : ""
                       } ${isCapacitor ? "tw-pr-[35px]" : "tw-pr-[40px]"}`}
@@ -272,6 +296,10 @@ const CreateDropInput = forwardRef<
                 waveId={waveId}
                 onSelect={onMentionedUserAdded}
                 ref={mentionsPluginRef}
+              />
+              <NewWaveMentionsPlugin
+                onSelect={onMentionedWaveAdded}
+                ref={waveMentionsPluginRef}
               />
               <NewHashtagsPlugin
                 onSelect={onHashtagAdded}

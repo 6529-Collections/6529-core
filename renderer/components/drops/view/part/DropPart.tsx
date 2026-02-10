@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { memo, useRef } from "react";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ApiDropReferencedNFT } from "@/generated/models/ApiDropReferencedNFT";
 import DropPfp from "@/components/drops/create/utils/DropPfp";
 import DropAuthor from "@/components/drops/create/utils/author/DropAuthor";
@@ -10,6 +11,7 @@ import Link from "next/link";
 import type { ProfileMinWithoutSubs } from "@/helpers/ProfileTypes";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { useRouter } from "next/navigation";
+import { getWavePathRoute, getWaveRoute } from "@/helpers/navigation.helpers";
 import DropPartContent from "./DropPartContent";
 import { DropPartSize } from "./DropPart.types";
 
@@ -28,6 +30,7 @@ interface DropPartProps {
   readonly profile: ProfileMinWithoutSubs;
   readonly dropTitle: string | null;
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
+  readonly mentionedWaves: Array<ApiMentionedWave>;
   readonly referencedNfts: Array<ApiDropReferencedNFT>;
   readonly partContent: string | null;
   readonly partMedias: DropPartPropsMedia[];
@@ -51,6 +54,7 @@ const DropPart = memo(
   ({
     profile,
     mentionedUsers,
+    mentionedWaves,
     referencedNfts,
     partContent,
     partMedias,
@@ -74,9 +78,33 @@ const DropPart = memo(
     const containerRef = useRef<HTMLDivElement>(null);
 
     const onQuoteClick = (drop: ApiDrop) => {
-      router.push(`/waves?wave=${drop.wave.id}&serialNo=${drop.serial_no}`, {
-        scroll: false,
-      });
+      const isDirectMessage =
+        (
+          drop.wave as {
+            chat?:
+              | {
+                  scope?:
+                    | {
+                        group?:
+                          | { is_direct_message?: boolean | undefined }
+                          | undefined;
+                      }
+                    | undefined;
+                }
+              | undefined;
+          }
+        ).chat?.scope?.group?.is_direct_message ?? false;
+      router.push(
+        getWaveRoute({
+          waveId: drop.wave.id,
+          serialNo: drop.serial_no,
+          isDirectMessage,
+          isApp: false,
+        }),
+        {
+          scroll: false,
+        }
+      );
     };
 
     return (
@@ -104,7 +132,7 @@ const DropPart = memo(
                   {wave?.id && (
                     <Link
                       onClick={(e) => e.stopPropagation()}
-                      href={`/waves?wave=${wave.id}`}
+                      href={getWavePathRoute(wave.id)}
                       className="tw-mb-0 tw-pb-0 tw-text-xs tw-text-iron-400 tw-no-underline tw-transition tw-duration-300 tw-ease-out hover:tw-text-iron-50"
                     >
                       <span>{wave.name}</span>
@@ -191,6 +219,7 @@ const DropPart = memo(
                 )}
                 <DropPartContent
                   mentionedUsers={mentionedUsers}
+                  mentionedWaves={mentionedWaves}
                   referencedNfts={referencedNfts}
                   partContent={partContent}
                   onQuoteClick={onQuoteClick}

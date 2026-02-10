@@ -13,27 +13,20 @@ import React, {
 import type { ViewKey, NavItem } from "./navTypes";
 import { commonApiFetch } from "@/services/api/common-api";
 import type { ApiWave } from "@/generated/models/ApiWave";
-import { useSearchParams, useRouter } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import {
-  getHomeFeedRoute,
-  getHomeLatestRoute,
+  getActiveWaveIdFromUrl,
+  getHomeRoute,
   getMessagesBaseRoute,
   getWaveRoute,
   getWavesBaseRoute,
 } from "@/helpers/navigation.helpers";
-import type { HomeTab } from "@/components/home/useHomeTabs";
-import {
-  HOME_TAB_EVENT,
-  getStoredHomeTab,
-  setStoredHomeTab,
-} from "@/components/home/useHomeTabs";
 
 interface ViewContextType {
   activeView: ViewKey | null;
   hardBack: (v: ViewKey) => void;
   handleNavClick: (item: NavItem) => void;
-  homeActiveTab: HomeTab;
   clearLastVisited: (type: "wave" | "dm") => void;
 }
 
@@ -43,50 +36,21 @@ export const ViewProvider: React.FC<{ readonly children: ReactNode }> = ({
   children,
 }) => {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { isApp } = useDeviceInfo();
   const [lastVisitedWave, setLastVisitedWave] = useState<string | null>(null);
   const [lastVisitedDm, setLastVisitedDm] = useState<string | null>(null);
-  const [homeActiveTab, setHomeActiveTab] = useState<HomeTab>(() =>
-    getStoredHomeTab()
-  );
-  const waveParam = searchParams.get("wave");
+  const waveParam = getActiveWaveIdFromUrl({ pathname, searchParams });
   const viewParam = searchParams.get("view");
   const lastFetchedWaveIdRef = useRef<string | null>(null);
 
-  // Derived state: activeView is computed from URL params, not stored in state
   const activeView = useMemo<ViewKey | null>(() => {
     if (waveParam) {
       return null;
     }
     return viewParam ? (viewParam as ViewKey) : null;
   }, [waveParam, viewParam]);
-
-  useEffect(() => {
-    const { window: browserWindow } = globalThis as typeof globalThis & {
-      window?: Window | undefined;
-    };
-
-    const handleTabEvent = (event: Event) => {
-      const detail = (event as CustomEvent<{ tab?: HomeTab | undefined }>)
-        .detail;
-      const tab = detail.tab;
-      if (tab !== "feed" && tab !== "latest") return;
-      setHomeActiveTab(tab);
-    };
-
-    browserWindow.addEventListener(
-      HOME_TAB_EVENT,
-      handleTabEvent as EventListener
-    );
-
-    return () => {
-      browserWindow.removeEventListener(
-        HOME_TAB_EVENT,
-        handleTabEvent as EventListener
-      );
-    };
-  }, []);
 
   const fetchWaveDetails = useCallback((targetWaveId: string) => {
     commonApiFetch<ApiWave>({
@@ -119,23 +83,16 @@ export const ViewProvider: React.FC<{ readonly children: ReactNode }> = ({
   const handleNavClick = useCallback(
     (item: NavItem) => {
       if (item.kind === "route") {
-        if (item.name === "Stream") {
-          // activeView will become null automatically when URL changes (no wave/view params)
-          setLastVisitedWave(null);
-          setLastVisitedDm(null);
-          setHomeActiveTab("feed");
-          setStoredHomeTab("feed");
-          router.push(getHomeFeedRoute());
-        } else if (item.name === "Home") {
-          // activeView will become null automatically when URL changes
-          setHomeActiveTab("latest");
-          setStoredHomeTab("latest");
-          router.push(getHomeLatestRoute());
+        if (item.name === "Home") {
+          router.push(getHomeRoute());
         } else {
           router.push(item.href);
         }
       } else if (item.viewKey === "waves") {
-        const currentWaveId = searchParams.get("wave");
+        const currentWaveId = getActiveWaveIdFromUrl({
+          pathname,
+          searchParams,
+        });
 
         if (currentWaveId) {
           setLastVisitedWave(null);
@@ -153,7 +110,10 @@ export const ViewProvider: React.FC<{ readonly children: ReactNode }> = ({
         }
       } else {
         // item.viewKey === "messages" (only remaining case)
-        const currentWaveId = searchParams.get("wave");
+        const currentWaveId = getActiveWaveIdFromUrl({
+          pathname,
+          searchParams,
+        });
 
         if (currentWaveId) {
           setLastVisitedDm(null);
@@ -171,7 +131,7 @@ export const ViewProvider: React.FC<{ readonly children: ReactNode }> = ({
         }
       }
     },
-    [router, lastVisitedWave, lastVisitedDm, isApp, searchParams]
+    [router, lastVisitedWave, lastVisitedDm, isApp, pathname, searchParams]
   );
 
   const hardBack = useCallback(
@@ -201,10 +161,9 @@ export const ViewProvider: React.FC<{ readonly children: ReactNode }> = ({
       activeView,
       handleNavClick,
       hardBack,
-      homeActiveTab,
       clearLastVisited,
     }),
-    [activeView, handleNavClick, hardBack, homeActiveTab, clearLastVisited]
+    [activeView, handleNavClick, hardBack, clearLastVisited]
   );
 
   return (

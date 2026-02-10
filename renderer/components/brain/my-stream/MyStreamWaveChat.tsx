@@ -7,10 +7,14 @@ import MobileMemesArtSubmissionBtn from "@/components/waves/memes/submission/Mob
 import PrivilegedDropCreator, {
   DropMode,
 } from "@/components/waves/PrivilegedDropCreator";
-import { UnreadDividerProvider } from "@/contexts/wave/UnreadDividerContext";
+import { useNotificationsContext } from "@/components/notifications/NotificationsContext";
+import {
+  UnreadDividerProvider,
+  useUnreadDivider,
+} from "@/contexts/wave/UnreadDividerContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
-import { getHomeFeedRoute } from "@/helpers/navigation.helpers";
+import { getHomeRoute } from "@/helpers/navigation.helpers";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useWave } from "@/hooks/useWave";
@@ -18,6 +22,7 @@ import type { WaveViewMode } from "@/hooks/useWaveViewMode";
 import { selectEditingDropId } from "@/store/editSlice";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import { ActiveDropAction } from "@/types/dropInteractionTypes";
+import { commonApiPostWithoutBodyAndResponse } from "@/services/api/common-api";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useSelector } from "react-redux";
@@ -35,6 +40,35 @@ interface MyStreamWaveChatProps {
   readonly viewMode: WaveViewMode;
   readonly onDropClick: (drop: ExtendedDrop) => void;
 }
+
+interface WaveChatLeaveHandlerProps {
+  readonly waveId: string;
+}
+
+const WaveChatLeaveHandler: React.FC<WaveChatLeaveHandlerProps> = ({
+  waveId,
+}) => {
+  const { setUnreadDividerSerialNo } = useUnreadDivider();
+  const { removeWaveDeliveredNotifications } = useNotificationsContext();
+
+  useEffect(() => {
+    return () => {
+      setUnreadDividerSerialNo(null);
+      void (async () => {
+        try {
+          await Promise.resolve(removeWaveDeliveredNotifications(waveId));
+          await commonApiPostWithoutBodyAndResponse({
+            endpoint: `notifications/wave/${waveId}/read`,
+          });
+        } catch (error: unknown) {
+          console.error("Failed to mark feed as read:", error);
+        }
+      })();
+    };
+  }, [waveId, setUnreadDividerSerialNo, removeWaveDeliveredNotifications]);
+
+  return null;
+};
 
 const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
   wave,
@@ -65,21 +99,6 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
     setActiveDropState({ waveId: wave.id, activeDrop: nextActiveDrop });
   };
 
-  const capturedDividerRef = useRef<{
-    waveId: string;
-    serialNo: number | null;
-  } | null>(null);
-
-  if (
-    !capturedDividerRef.current ||
-    capturedDividerRef.current.waveId !== wave.id
-  ) {
-    capturedDividerRef.current = {
-      waveId: wave.id,
-      serialNo: firstUnreadSerialNo,
-    };
-  }
-
   const initialDropState = useMemo<InitialDropState | null>(() => {
     const dropParam = searchParams.get("serialNo");
     if (!dropParam) {
@@ -107,33 +126,35 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
     };
   }, [searchParams, wave.id, firstUnreadSerialNo]);
 
-  useEffect(() => {
+  const [capturedDividerState] = useState<{
+    readonly waveId: string;
+    readonly serialNo: number | null;
+  }>(() => {
     if (
       initialDropState?.waveId === wave.id &&
       initialDropState.dividerSerialNo !== null
     ) {
-      capturedDividerRef.current = {
+      return {
         waveId: wave.id,
         serialNo: initialDropState.dividerSerialNo,
       };
-    } else if (
-      !capturedDividerRef.current ||
-      capturedDividerRef.current.waveId !== wave.id
-    ) {
-      capturedDividerRef.current = {
-        waveId: wave.id,
-        serialNo: firstUnreadSerialNo,
-      };
     }
-  }, [initialDropState, wave.id, firstUnreadSerialNo]);
+
+    return {
+      waveId: wave.id,
+      serialNo: firstUnreadSerialNo,
+    };
+  });
 
   const scrollTarget =
     initialDropState?.waveId === wave.id ? initialDropState.serialNo : null;
 
-  const dividerTarget =
-    initialDropState?.waveId === wave.id
-      ? initialDropState.dividerSerialNo
-      : (capturedDividerRef.current?.serialNo ?? null);
+  let dividerTarget = firstUnreadSerialNo;
+  if (initialDropState?.waveId === wave.id) {
+    dividerTarget = initialDropState.dividerSerialNo;
+  } else if (capturedDividerState.waveId === wave.id) {
+    dividerTarget = capturedDividerState.serialNo;
+  }
 
   useEffect(() => {
     if (!initialDropState) {
@@ -148,7 +169,7 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
     params.delete("divider");
     const href = params.toString()
       ? `${pathname}?${params.toString()}`
-      : pathname || getHomeFeedRoute();
+      : pathname || getHomeRoute();
     router.replace(href, { scroll: false });
   }, [initialDropState, searchParams, router, pathname]);
 
@@ -208,6 +229,7 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
       initialSerialNo={dividerTarget ?? null}
       key={`unread-divider-${wave.id}`}
     >
+      <WaveChatLeaveHandler waveId={wave.id} />
       <div
         ref={containerRef}
         className={`${containerClassName}`}
@@ -221,6 +243,7 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
           activeDrop={activeDrop}
           initialDrop={scrollTarget}
           dividerSerialNo={dividerTarget}
+          unreadCount={wave.metrics.your_unread_drops_count}
           dropId={null}
           isMuted={wave.metrics.muted}
         />

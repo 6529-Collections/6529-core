@@ -2,6 +2,7 @@
 
 import { FallbackImage } from "@/components/common/FallbackImage";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useInView } from "@/hooks/useInView";
 import React, { useCallback, useState } from "react";
 
@@ -13,6 +14,7 @@ interface Props {
 function MediaDisplayImage({ src, imageScale = ImageScale.AUTOx1080 }: Props) {
   const [ref, inView] = useInView<HTMLDivElement>();
   const [isLoading, setIsLoading] = useState(true);
+  const { hasTouchScreen } = useDeviceInfo();
 
   const handleImageLoad = useCallback(() => {
     setIsLoading(false);
@@ -32,11 +34,13 @@ function MediaDisplayImage({ src, imageScale = ImageScale.AUTOx1080 }: Props) {
   return (
     <div
       ref={ref}
-      className="tw-relative tw-mx-[1px] tw-flex tw-h-full tw-w-full tw-items-center tw-justify-center"
+      className="tw-relative tw-flex tw-h-full tw-w-full tw-items-center tw-justify-center"
     >
       {isLoading && (
         <div
-          className="tw-animate-pulse tw-rounded-xl tw-bg-iron-800"
+          className={`tw-rounded-xl tw-bg-iron-800 ${
+            hasTouchScreen ? "" : "tw-animate-pulse"
+          }`}
           style={loadingPlaceholderStyle}
         />
       )}

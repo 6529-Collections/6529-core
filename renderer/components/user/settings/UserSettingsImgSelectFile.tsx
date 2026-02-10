@@ -1,21 +1,8 @@
 "use client";
 
-import { useContext, useRef, useState, useEffect } from "react";
-import { AuthContext } from "@/components/auth/Auth";
-
-const ACCEPTED_FORMATS = [
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/gif",
-  "image/webp",
-];
-
-const ACCEPTED_FORMATS_DISPLAY = ACCEPTED_FORMATS.map(
-  (format) => `.${format.replace("image/", "")}`
-).join(", ");
-
-const FILE_SIZE_LIMIT = 2097152;
+import Image from "next/image";
+import { useImageUpload } from "./useImageUpload";
+import { ACCEPTED_FORMATS_DISPLAY } from "./imageValidation";
 
 export default function UserSettingsImgSelectFile({
   imageToShow,
@@ -24,63 +11,17 @@ export default function UserSettingsImgSelectFile({
   readonly imageToShow: string | null;
   readonly setFile: (file: File) => void;
 }) {
-  const { setToast } = useContext(AuthContext);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [shake, setShake] = useState<boolean>(false);
-  const onFileChange = (file: File) => {
-    setError(null);
-    if (ACCEPTED_FORMATS.indexOf(file.type) === -1) {
-      setError(null);
-      setToast({
-        type: "error",
-        message: "Invalid file type",
-      });
-    } else if (file.size > FILE_SIZE_LIMIT) {
-      setError("File size must be less than 2MB");
-      setShake(true);
-    } else {
-      setError(null);
-      setFile(file);
+  const { error, shake, dragging, onFileChange, dragHandlers } = useImageUpload(
+    {
+      maxSizeBytes: 2097152,
+      maxSizeLabel: "2MB",
+      setFile,
     }
-  };
-
-  const handleDrop = (e: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e?.dataTransfer?.files?.length) {
-      onFileChange(e.dataTransfer.files[0]);
-    }
-  };
-
-  const [dragging, setDragging] = useState(false);
-
-  const handleDrag = (e: any) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragging(true);
-    } else if (e.type === "dragleave") {
-      setDragging(false);
-    } else if (e.type === "drop") {
-      setDragging(false);
-    }
-  };
-
-  useEffect(() => {
-    if (shake) {
-      const timeout = setTimeout(() => setShake(false), 300);
-      return () => clearTimeout(timeout);
-    }
-    return;
-  }, [shake]);
+  );
 
   return (
     <div
-      onDrop={handleDrop}
-      onDragEnter={handleDrag}
-      onDragLeave={handleDrag}
-      onDragOver={handleDrag}
+      {...dragHandlers}
       className="tw-group tw-flex tw-w-full tw-items-center tw-justify-center"
     >
       <label
@@ -94,11 +35,12 @@ export default function UserSettingsImgSelectFile({
       >
         <div className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-pb-6 tw-pt-5">
           {imageToShow && (
-            <div className="tw-h-40 tw-w-40">
-              <img
+            <div className="tw-relative tw-h-40 tw-w-40">
+              <Image
                 src={imageToShow}
                 alt="Profile image"
-                className="tw-h-full tw-w-full tw-rounded-sm tw-object-contain"
+                fill
+                className="tw-rounded-sm tw-object-contain"
               />
             </div>
           )}
@@ -141,15 +83,13 @@ export default function UserSettingsImgSelectFile({
         </div>
         <input
           id="pfp-upload-input"
-          ref={inputRef}
           type="file"
           className="tw-hidden"
           accept={ACCEPTED_FORMATS_DISPLAY}
-          onChange={(e: any) => {
-            if (e.target.files) {
-              const f = e.target.files[0];
-              onFileChange(f);
-            }
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+            const f = e.target.files?.[0];
+            if (f) onFileChange(f);
+            e.target.value = ""; // allow selecting same file again
           }}
         />
       </label>
