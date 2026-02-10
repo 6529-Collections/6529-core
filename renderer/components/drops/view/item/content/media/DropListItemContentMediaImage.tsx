@@ -4,6 +4,7 @@ import { FallbackImage } from "@/components/common/FallbackImage";
 import { fullScreenSupported } from "@/helpers/Helpers";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import useCapacitor from "@/hooks/useCapacitor";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useInView } from "@/hooks/useInView";
 import { faExpand, faRotateLeft } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -49,6 +50,7 @@ function DropListItemContentMediaImage({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [errorCount, setErrorCount] = useState(0);
   const [retryTick, setRetryTick] = useState(0);
+  const { hasTouchScreen } = useDeviceInfo();
 
   const imgRef = useRef<HTMLImageElement>(null);
   const modalImageRef = useRef<HTMLImageElement>(null);
@@ -285,13 +287,15 @@ function DropListItemContentMediaImage({
     <>
       <div
         ref={ref}
-        className={`tw-relative tw-mx-[1px] tw-flex tw-h-full tw-w-full tw-items-center ${
+        className={`tw-relative tw-flex tw-h-full tw-w-full tw-items-center ${
           isCompetitionDrop ? "tw-justify-center" : ""
         }`}
       >
         {!loaded && errorCount <= maxRetries && (
           <div
-            className="tw-animate-pulse tw-rounded-xl tw-bg-iron-800"
+            className={`tw-rounded-xl tw-bg-iron-800 ${
+              hasTouchScreen ? "" : "tw-animate-pulse"
+            }`}
             style={loadingPlaceholderStyle}
           />
         )}
@@ -331,7 +335,9 @@ function DropListItemContentMediaImage({
           </div>
         )}
       </div>
-      {!disableModal && isModalOpen && createPortal(modalContent, document.body)}
+      {!disableModal &&
+        isModalOpen &&
+        createPortal(modalContent, document.body)}
     </>
   );
 }

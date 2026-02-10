@@ -13,9 +13,9 @@
 
 import { HttpFile } from '../http/http';
 
-export class ApiArtistsWork {
-    'title': string;
-    'link': string;
+export class ApiDropId {
+    'id': string;
+    'serial_no': number;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -23,20 +23,20 @@ export class ApiArtistsWork {
 
     static readonly attributeTypeMap: Array<{name: string, baseName: string, type: string, format: string}> = [
         {
-            "name": "title",
-            "baseName": "title",
+            "name": "id",
+            "baseName": "id",
             "type": "string",
             "format": ""
         },
         {
-            "name": "link",
-            "baseName": "link",
-            "type": "string",
-            "format": ""
+            "name": "serial_no",
+            "baseName": "serial_no",
+            "type": "number",
+            "format": "int64"
         }    ];
 
     static getAttributeTypeMap() {
-        return ApiArtistsWork.attributeTypeMap;
+        return ApiDropId.attributeTypeMap;
     }
 
     public constructor() {

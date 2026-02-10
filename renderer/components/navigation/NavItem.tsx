@@ -1,6 +1,7 @@
 "use client";
 
 import { useTitle } from "@/contexts/TitleContext";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { useUnreadIndicator } from "@/hooks/useUnreadIndicator";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import { useWave } from "@/hooks/useWave";
@@ -21,18 +22,15 @@ interface Props {
 const NavItem = ({ item }: Props) => {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { activeView, handleNavClick, homeActiveTab } = useViewContext();
+  const { activeView, handleNavClick } = useViewContext();
 
   const { name } = item;
   const { icon } = item;
 
-  const isStream = name === "Stream";
+  const isLogoItem = name === "Home";
 
   // Determine if the current wave (if any) is a DM
-  const waveIdFromQuery =
-    typeof searchParams?.get("wave") === "string"
-      ? searchParams?.get("wave")
-      : null;
+  const waveIdFromQuery = getActiveWaveIdFromUrl({ pathname, searchParams });
   const { data: waveData } = useWaveData({
     waveId: waveIdFromQuery,
     // Minimal onWaveNotFound, actual handling of not found is likely elsewhere
@@ -44,13 +42,14 @@ const NavItem = ({ item }: Props) => {
   const { connectedProfile } = useAuth();
   const { setTitle } = useTitle();
   const { notifications, haveUnreadNotifications } = useUnreadNotifications(
-    item.name === "Notifications" ? connectedProfile?.handle ?? null : null
+    item.name === "Notifications" ? (connectedProfile?.handle ?? null) : null
   );
 
   // Add unread messages logic
   const { hasUnread: hasUnreadMessages } = useUnreadIndicator({
     type: "messages",
-    handle: item.name === "Messages" ? connectedProfile?.handle ?? null : null,
+    handle:
+      item.name === "Messages" ? (connectedProfile?.handle ?? null) : null,
   });
 
   useEffect(() => {
@@ -69,7 +68,8 @@ const NavItem = ({ item }: Props) => {
         aria-label={name}
         aria-disabled="true"
         disabled
-        className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors tw-w-full tw-h-16 tw-opacity-40 tw-pointer-events-none tw-min-w-0">
+        className="tw-pointer-events-none tw-relative tw-flex tw-h-16 tw-w-full tw-min-w-0 tw-flex-col tw-items-center tw-justify-center tw-border-0 tw-bg-transparent tw-opacity-40 tw-transition-colors focus:tw-outline-none"
+      >
         <div className="tw-flex tw-items-center tw-justify-center">
           {item.iconComponent ? (
             <item.iconComponent
@@ -99,8 +99,7 @@ const NavItem = ({ item }: Props) => {
     pathname ?? "",
     searchParams ?? new URLSearchParams(),
     activeView,
-    isCurrentWaveDmValue,
-    homeActiveTab ?? "latest"
+    isCurrentWaveDmValue
   );
 
   return (
@@ -109,13 +108,13 @@ const NavItem = ({ item }: Props) => {
       aria-label={name}
       aria-current={isActive ? "page" : undefined}
       onClick={() => handleNavClick(item)}
-      className="tw-relative tw-bg-transparent tw-border-0 tw-flex tw-flex-col tw-items-center tw-justify-center focus:tw-outline-none tw-transition-colors 
-      tw-w-full tw-h-16 tw-min-w-0">
+      className="tw-relative tw-flex tw-h-16 tw-w-full tw-min-w-0 tw-flex-col tw-items-center tw-justify-center tw-border-0 tw-bg-transparent tw-transition-colors focus:tw-outline-none"
+    >
       {isActive && (
         <motion.div
           layoutId="nav-indicator"
-          className={`tw-absolute tw-top-0 tw-left-0 tw-w-full tw-h-0.5 tw-bg-white tw-rounded-full ${
-            isStream ? "tw-top-1" : ""
+          className={`tw-absolute tw-left-0 tw-top-0 tw-h-0.5 tw-w-full tw-rounded-full tw-bg-white ${
+            isLogoItem ? "tw-top-1" : ""
           }`}
         />
       )}
@@ -137,10 +136,10 @@ const NavItem = ({ item }: Props) => {
           />
         )}
         {item.name === "Notifications" && haveUnreadNotifications && (
-          <div className="tw-absolute -tw-right-1 -tw-top-1 tw-rounded-full tw-bg-red tw-h-2.5 tw-w-2.5"></div>
+          <div className="tw-absolute -tw-right-1 -tw-top-1 tw-h-2.5 tw-w-2.5 tw-rounded-full tw-bg-red"></div>
         )}
         {item.name === "Messages" && hasUnreadMessages && (
-          <div className="tw-absolute -tw-right-1 -tw-top-1 tw-rounded-full tw-bg-red tw-h-2.5 tw-w-2.5"></div>
+          <div className="tw-absolute -tw-right-1 -tw-top-1 tw-h-2.5 tw-w-2.5 tw-rounded-full tw-bg-red"></div>
         )}
       </div>
     </button>

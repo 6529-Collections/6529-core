@@ -6,11 +6,13 @@ import type {
   CreateDropPart,
   CreateDropRequestPart,
   MentionedUser,
+  MentionedWave,
   ReferencedNft,
 } from "@/entities/IDrop";
 import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import { ApiDropType } from "@/generated/models/ApiDropType";
 import type { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
 import type { ApiWave } from "@/generated/models/ApiWave";
@@ -31,6 +33,7 @@ import React, {
   useContext,
   useEffect,
   useMemo,
+  useLayoutEffect,
   useRef,
   useState,
 } from "react";
@@ -39,6 +42,7 @@ import { AuthContext } from "../auth/Auth";
 import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
 import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
 import { MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/MentionTransformer";
+import { WAVE_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/WaveMentionTransformer";
 import { ReactQueryWrapperContext } from "../react-query-wrapper/ReactQueryWrapper";
 import CreateDropActions from "./CreateDropActions";
 import { CreateDropContentFiles } from "./CreateDropContentFiles";
@@ -56,6 +60,7 @@ import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import type { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
 import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
+import { getBannerColorValue } from "@/helpers/profile-banner.helpers";
 import { WsMessageType } from "@/helpers/Types";
 import { useDropSignature } from "@/hooks/drops/useDropSignature";
 import { useWave } from "@/hooks/useWave";
@@ -203,7 +208,7 @@ const getPartNfts = (
   markdown: string | null,
   referencedNfts: ReferencedNft[]
 ) => {
-  return referencedNfts.filter((nft) => markdown?.includes(`#[${nft.name}]`));
+  return referencedNfts.filter((nft) => markdown?.includes(`$[${nft.name}]`));
 };
 
 const getUpdatedNfts = (
@@ -220,9 +225,29 @@ const getUpdatedNfts = (
   return [...existingNfts, ...notAddedNfts];
 };
 
+const getPartWaves = (
+  markdown: string | null,
+  mentionedWaves: MentionedWave[]
+) =>
+  mentionedWaves.filter((wave) =>
+    markdown?.includes(`#[${wave.wave_name_in_content}]`)
+  );
+
+const getUpdatedWaves = (
+  partWaves: MentionedWave[],
+  existingWaves: ApiMentionedWave[]
+) => {
+  const notAddedWaves = partWaves.filter(
+    (wave) =>
+      !existingWaves.some((existing) => existing.wave_id === wave.wave_id)
+  );
+  return [...existingWaves, ...notAddedWaves];
+};
+
 type HandleDropPartResult = {
   updatedMentions: ApiDropMentionedUser[];
   updatedNfts: ReferencedNft[];
+  updatedWaves: ApiMentionedWave[];
   updatedMarkdown: string;
 };
 
@@ -230,8 +255,10 @@ const handleDropPart = (
   markdown: string | null,
   existingMentions: ApiDropMentionedUser[],
   existingNfts: ReferencedNft[],
+  existingWaves: ApiMentionedWave[],
   mentionedUsers: Omit<MentionedUser, "current_handle">[],
-  referencedNfts: ReferencedNft[]
+  referencedNfts: ReferencedNft[],
+  mentionedWaves: MentionedWave[]
 ): HandleDropPartResult => {
   const partMentions = getPartMentions(markdown, mentionedUsers);
   const updatedMentions = getUpdatedMentions(partMentions, existingMentions);
@@ -239,11 +266,15 @@ const handleDropPart = (
   const partNfts = getPartNfts(markdown, referencedNfts);
   const updatedNfts = getUpdatedNfts(partNfts, existingNfts);
 
+  const partWaves = getPartWaves(markdown, mentionedWaves);
+  const updatedWaves = getUpdatedWaves(partWaves, existingWaves);
+
   const updatedMarkdown = markdown ?? "";
 
   return {
     updatedMentions,
     updatedNfts,
+    updatedWaves,
     updatedMarkdown,
   };
 };
@@ -379,8 +410,8 @@ const getOptimisticDrop = (
         connectedProfile.active_main_stage_submission_ids,
       winner_main_stage_drop_ids: connectedProfile.winner_main_stage_drop_ids,
       pfp: connectedProfile.pfp,
-      banner1_color: connectedProfile.banner1 ?? null,
-      banner2_color: connectedProfile.banner2 ?? null,
+      banner1_color: getBannerColorValue(connectedProfile.banner1),
+      banner2_color: getBannerColorValue(connectedProfile.banner2),
       cic: connectedProfile.cic,
       rep: connectedProfile.rep,
       tdh: connectedProfile.tdh,
@@ -415,6 +446,7 @@ const getOptimisticDrop = (
     parts_count: dropRequest.parts.length,
     referenced_nfts: dropRequest.referenced_nfts,
     mentioned_users: dropRequest.mentioned_users,
+    mentioned_waves: dropRequest.mentioned_waves ?? [],
     metadata: dropRequest.metadata,
     rating: 0,
     top_raters: [],
@@ -450,6 +482,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const { send } = useWebSocket();
   const { isApp } = useDeviceInfo();
   const actionsContainerRef = useRef<HTMLDivElement>(null);
+  const hasUserToggledOptionsRef = useRef(false);
+  const prevWaveIdRef = useRef(wave.id);
   const [isWideContainer, setIsWideContainer] = useState(false);
   const editingDropId = useSelector(selectEditingDropId);
   const { requestAuth, setToast, connectedProfile } = useContext(AuthContext);
@@ -462,11 +496,31 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const [editorState, setEditorState] = useState<EditorState | null>(null);
   const [files, setFiles] = useState<File[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<UploadingFile[]>([]);
-  const [showOptions, setShowOptions] = useState(false);
+  const [userShowOptions, setUserShowOptions] = useState(false);
+  const closeOnNextInputRef = useRef(false);
+  const isWaveChanged = prevWaveIdRef.current !== wave.id;
+  if (isWaveChanged) {
+    prevWaveIdRef.current = wave.id;
+    hasUserToggledOptionsRef.current = false;
+  }
+  const showOptions = isWideContainer || (userShowOptions && !isWaveChanged);
 
   useEffect(() => {
+    setUserShowOptions(false);
+    closeOnNextInputRef.current = false;
+  }, [wave.id]);
+
+  useLayoutEffect(() => {
     const container = actionsContainerRef.current;
     if (!container) return;
+
+    const measureWidth = () => {
+      const width = container.getBoundingClientRect().width;
+      const isWide = width >= CONTAINER_WIDTH_THRESHOLD;
+      setIsWideContainer((prev) => (prev === isWide ? prev : isWide));
+    };
+
+    measureWidth();
 
     const observer = new ResizeObserver((entries) => {
       const entry = entries[0];
@@ -474,11 +528,6 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         const width = entry.contentRect.width;
         const isWide = width >= CONTAINER_WIDTH_THRESHOLD;
         setIsWideContainer((prev) => (prev === isWide ? prev : isWide));
-        if (isWide) {
-          setShowOptions(true);
-        } else {
-          setShowOptions(false);
-        }
       }
     });
 
@@ -502,6 +551,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             ...SAFE_MARKDOWN_TRANSFORMERS,
             MENTION_TRANSFORMER,
             HASHTAG_TRANSFORMER,
+            WAVE_MENTION_TRANSFORMER,
             IMAGE_TRANSFORMER,
             EMOJI_TRANSFORMER,
           ])
@@ -578,6 +628,14 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     });
   };
 
+  const [mentionedWaves, setMentionedWaves] = useState<MentionedWave[]>([]);
+
+  const onMentionedWave = (newWave: MentionedWave) => {
+    setMentionedWaves((curr) => {
+      return [...curr, newWave];
+    });
+  };
+
   const createDropInputRef = useRef<CreateDropInputHandles | null>(null);
   const isInitialMountRef = useRef(true);
 
@@ -602,6 +660,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         ...replyToObj,
         parts: ensurePartsWithFallback(baseParts, hasMetadata),
         mentioned_users: drop?.mentioned_users ?? [],
+        mentioned_waves: drop?.mentioned_waves ?? [],
         referenced_nfts: drop?.referenced_nfts ?? [],
         metadata: convertMetadataToDropMetadata(metadata),
         signature: null,
@@ -636,6 +695,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         },
       ],
       mentioned_users: [],
+      mentioned_waves: [],
       referenced_nfts: [],
       metadata: [],
       signature: null,
@@ -647,7 +707,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const createCurrentDrop = (
     markdown: string | null,
     allMentions: ApiDropMentionedUser[],
-    allNfts: ReferencedNft[]
+    allNfts: ReferencedNft[],
+    allWaves: ApiMentionedWave[]
   ): CreateDropConfig => {
     const hasPartsInDrop = (drop?.parts.length ?? 0) > 0;
     const hasCurrentContent = !!(markdown?.trim().length || files.length);
@@ -679,6 +740,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       ...replyToObj,
       parts,
       mentioned_users: allMentions,
+      mentioned_waves: allWaves,
       referenced_nfts: allNfts,
       metadata: convertMetadataToDropMetadata(metadata),
       signature: null,
@@ -694,15 +756,23 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     }
 
     const markdown = getMarkdown;
-    const { updatedMentions, updatedNfts, updatedMarkdown } = handleDropPart(
-      markdown,
-      drop?.mentioned_users ?? [],
-      drop?.referenced_nfts ?? [],
-      mentionedUsers,
-      referencedNfts
-    );
+    const { updatedMentions, updatedNfts, updatedWaves, updatedMarkdown } =
+      handleDropPart(
+        markdown,
+        drop?.mentioned_users ?? [],
+        drop?.referenced_nfts ?? [],
+        drop?.mentioned_waves ?? [],
+        mentionedUsers,
+        referencedNfts,
+        mentionedWaves
+      );
 
-    return createCurrentDrop(updatedMarkdown, updatedMentions, updatedNfts);
+    return createCurrentDrop(
+      updatedMarkdown,
+      updatedMentions,
+      updatedNfts,
+      updatedWaves
+    );
   };
 
   const updateDropStateAndClearInput = (newDrop: CreateDropConfig) => {
@@ -730,6 +800,19 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       )
     );
 
+  const filterMentionedWaves = ({
+    mentionedWaves: mentionedWavesList,
+    parts,
+  }: {
+    readonly mentionedWaves: ApiMentionedWave[];
+    readonly parts: CreateDropPart[];
+  }): ApiMentionedWave[] =>
+    mentionedWavesList.filter((w) =>
+      parts.some((part) =>
+        part.content?.includes(`#[${w.wave_name_in_content}]`)
+      )
+    );
+
   const [dropEditorRefreshKey, setDropEditorRefreshKey] = useState(0);
 
   const refreshState = () => {
@@ -737,8 +820,11 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     setEditorState(null);
     setMetadata(initialMetadata);
     setMentionedUsers([]);
+    setMentionedWaves([]);
     setReferencedNfts([]);
     setDrop(null);
+    setUserShowOptions(false);
+    closeOnNextInputRef.current = false;
     setDropEditorRefreshKey((prev) => prev + 1);
   };
 
@@ -826,6 +912,10 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         ...dropRequest,
         mentioned_users: filterMentionedUsers({
           mentionedUsers: dropRequest.mentioned_users,
+          parts: dropRequest.parts,
+        }),
+        mentioned_waves: filterMentionedWaves({
+          mentionedWaves: dropRequest.mentioned_waves ?? [],
           parts: dropRequest.parts,
         }),
         wave_id: wave.id,
@@ -982,14 +1072,47 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     }
 
     setFiles(updatedFiles);
+    if (!isWideContainer) {
+      setUserShowOptions(false);
+      closeOnNextInputRef.current = false;
+    }
   };
+
+  const handleSetShowOptions = useCallback(
+    (next: boolean) => {
+      hasUserToggledOptionsRef.current = true;
+      setUserShowOptions(next);
+      if (isWideContainer) {
+        closeOnNextInputRef.current = false;
+        return;
+      }
+      closeOnNextInputRef.current = next;
+    },
+    [isWideContainer]
+  );
 
   const handleEditorStateChange = useCallback(
     (newEditorState: EditorState) => {
       setEditorState(newEditorState);
-      if (!isWideContainer) {
-        setShowOptions(false);
+      if (!isWideContainer && closeOnNextInputRef.current) {
+        setUserShowOptions(false);
+        closeOnNextInputRef.current = false;
       }
+    },
+    [isWideContainer]
+  );
+
+  const handleEditorBlur = useCallback(
+    (event: React.FocusEvent<HTMLDivElement>) => {
+      if (isWideContainer) {
+        return;
+      }
+      const nextTarget = event.relatedTarget as Node | null;
+      if (nextTarget && actionsContainerRef.current?.contains(nextTarget)) {
+        return;
+      }
+      setUserShowOptions(false);
+      closeOnNextInputRef.current = false;
     },
     [isWideContainer]
   );
@@ -1136,12 +1259,17 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
             canAddPart={canAddPart}
             submitting={submitting}
             showOptions={showOptions}
+            animateOptions={
+              !isWideContainer &&
+              hasUserToggledOptionsRef.current &&
+              !isWaveChanged
+            }
             isRequiredMetadataMissing={!!missingRequirements.metadata.length}
             isRequiredMediaMissing={!!missingRequirements.media.length}
             handleFileChange={handleFileChange}
             onAddMetadataClick={onAddMetadataClick}
             breakIntoStorm={breakIntoStorm}
-            setShowOptions={setShowOptions}
+            setShowOptions={handleSetShowOptions}
             onGifDrop={onGifDrop}
           />
           <div className="tw-w-full tw-flex-grow">
@@ -1156,8 +1284,10 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
               isDropMode={isDropMode}
               canSubmit={canSubmit}
               onEditorState={handleEditorStateChange}
+              onEditorBlur={handleEditorBlur}
               onReferencedNft={onReferencedNft}
               onMentionedUser={onMentionedUser}
+              onMentionedWave={onMentionedWave}
               onDrop={onDrop}
             />
           </div>

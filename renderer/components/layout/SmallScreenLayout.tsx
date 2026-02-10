@@ -2,8 +2,7 @@
 
 import { useHeaderContext } from "@/contexts/HeaderContext";
 import { useSearch } from "@/contexts/SearchContext";
-import { useSearchParams } from "next/navigation";
-import type { ReactNode} from "react";
+import type { ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
 import { SidebarProvider } from "../../hooks/useSidebarState";
@@ -22,9 +21,6 @@ export default function SmallScreenLayout({ children }: Props) {
   const { containerRef: searchContainerRef } = useSearch();
   const containerRef = useRef<HTMLDivElement | null>(null);
 
-  const searchParams = useSearchParams();
-  const activeTab = searchParams?.get("tab") || "latest";
-
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
       registerRef("header", node);
@@ -40,15 +36,6 @@ export default function SmallScreenLayout({ children }: Props) {
     };
   }, [registerRef, setHeaderRef]);
 
-  useEffect(() => {
-    const container = containerRef.current;
-    if (container && activeTab) {
-      requestAnimationFrame(() => {
-        container.scrollTop = 0;
-      });
-    }
-  }, [activeTab]);
-
   const toggleMenu = useCallback(() => {
     setIsMenuOpen((prev) => !prev);
   }, []);
@@ -59,11 +46,7 @@ export default function SmallScreenLayout({ children }: Props) {
 
   return (
     <SidebarProvider>
-      <div
-        ref={containerRef}
-        className={`tw-bg-black ${
-          activeTab === "feed" ? "tw-overflow-hidden" : "tw-overflow-auto"
-        }`}>
+      <div ref={containerRef} className="tw-overflow-auto tw-bg-black">
         <div ref={headerWrapperRef}>
           <SmallScreenHeader
             onMenuToggle={toggleMenu}
@@ -84,7 +67,8 @@ export default function SmallScreenLayout({ children }: Props) {
 
         <main
           ref={searchContainerRef}
-          className="tw-transition-opacity tw-duration-300">
+          className="tw-transition-opacity tw-duration-300"
+        >
           {children}
         </main>
       </div>
