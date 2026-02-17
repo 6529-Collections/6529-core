@@ -13,6 +13,11 @@ interface WaveDropQuoteWithDropIdProps {
   readonly partId: number;
   readonly maybeDrop: ApiDrop | null;
   readonly onQuoteClick: (drop: ApiDrop) => void;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly marketplaceImageOnly?: boolean | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 const WaveDropQuoteWithDropId: React.FC<WaveDropQuoteWithDropIdProps> = ({
@@ -20,6 +25,11 @@ const WaveDropQuoteWithDropId: React.FC<WaveDropQuoteWithDropIdProps> = ({
   partId,
   maybeDrop,
   onQuoteClick,
+  embedPath,
+  quotePath,
+  marketplaceImageOnly,
+  embedDepth,
+  maxEmbedDepth,
 }) => {
   const { connectedProfile } = useContext(AuthContext);
   const { data: drop } = useQuery<ApiDrop | undefined>({
@@ -46,6 +56,11 @@ const WaveDropQuoteWithDropId: React.FC<WaveDropQuoteWithDropIdProps> = ({
       drop={drop ?? null}
       partId={partId}
       onQuoteClick={onQuoteClick}
+      embedPath={embedPath}
+      quotePath={quotePath}
+      marketplaceImageOnly={marketplaceImageOnly}
+      embedDepth={embedDepth}
+      maxEmbedDepth={maxEmbedDepth}
     />
   );
 };

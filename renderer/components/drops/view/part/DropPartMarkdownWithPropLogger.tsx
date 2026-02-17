@@ -26,6 +26,11 @@ function areEqual(
     "textSize",
     "currentDropId",
     "hideLinkPreviews",
+    "marketplaceImageOnly",
+    "embedPath",
+    "quotePath",
+    "embedDepth",
+    "maxEmbedDepth",
   ];
 
   for (const key of propsToCheck) {
