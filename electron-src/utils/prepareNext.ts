@@ -21,7 +21,7 @@ const rendererConfigTs = path.join(nextDir, "next.config.ts");
 if (fs.existsSync(rendererConfigTs)) {
   throw new Error(
     `renderer/next.config.ts should not exist in the Electron repo. ` +
-      `Exclude it when copying the web repo.`
+      `Exclude it when copying the web repo.`,
   );
 }
 

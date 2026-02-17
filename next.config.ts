@@ -46,7 +46,7 @@ try {
   } catch {
     logOnce(
       "SCHEMA",
-      "env.schema.runtime.cjs not found; using permissive schema"
+      "env.schema.runtime.cjs not found; using permissive schema",
     );
     publicEnvSchema = {
       safeParse: (obj: unknown) => ({ success: true, data: obj }),
@@ -76,19 +76,19 @@ function resolveAssetsFlagFromEnv(): boolean {
 
 function persistBakedArtifacts(
   publicEnv: unknown,
-  ASSETS_FROM_S3: boolean
+  ASSETS_FROM_S3: boolean,
 ): void {
   try {
     fs.mkdirSync(NEXT_DIR, { recursive: true });
     fs.writeFileSync(
       path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
       JSON.stringify(publicEnv),
-      "utf8"
+      "utf8",
     );
     fs.writeFileSync(
       path.join(NEXT_DIR, "ASSETS_FROM_S3"),
       ASSETS_FROM_S3 ? "true" : "false",
-      "utf8"
+      "utf8",
     );
   } catch {}
 }
@@ -117,7 +117,7 @@ function loadAssetsFlagAtRuntime(): boolean {
 }
 
 function createSecurityHeaders(
-  apiEndpoint: string = ""
+  apiEndpoint: string = "",
 ): Array<{ key: string; value: string }> {
   return [
     {
@@ -212,29 +212,16 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         },
       ];
     },
-    webpack: (config, { dev, isServer }) => {
-      config.resolve.alias.canvas = false;
-      config.resolve.alias.encoding = false;
-      config.resolve.alias["@react-native-async-storage/async-storage"] = false;
-      config.resolve.alias["react-native"] = false;
-      config.resolve.alias["pino"] = "./stubs/empty.js";
-      config.resolve.alias["thread-stream"] = "./stubs/empty.js";
-      config.resolve.alias["idb-keyval"] = path.resolve(
-        process.cwd(),
-        "lib/storage/idb-keyval.ts"
-      );
-      if (!dev && !isServer) config.devtool = "source-map";
-      config.optimization.minimize = false;
-      return config;
-    },
     turbopack: {
       resolveAlias: {
-        canvas: "./stubs/empty.js",
-        encoding: "./stubs/empty.js",
-        "@react-native-async-storage/async-storage": "./stubs/empty.js",
-        "react-native": "./stubs/empty.js",
-        pino: "./stubs/empty.js",
-        "thread-stream": "./stubs/empty.js",
+        canvas: "./renderer/stubs/empty.js",
+        encoding: "./renderer/stubs/empty.js",
+        "@react-native-async-storage/async-storage":
+          "./renderer/stubs/empty.js",
+        "react-native": "./renderer/stubs/empty.js",
+        pino: "./renderer/stubs/empty.js",
+        "thread-stream": "./renderer/stubs/empty.js",
+        "idb-keyval": "./renderer/lib/storage/idb-keyval.ts",
       },
     },
     serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
@@ -253,7 +240,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
     try {
       const bakedMainPath = path.join(
         __dirname,
-        "main/config/__PUBLIC_RUNTIME.json"
+        "main/config/__PUBLIC_RUNTIME.json",
       );
       const sourceJsonPath = path.join(__dirname, "config/public-runtime.json");
       let bakedSource: string | null = null;
