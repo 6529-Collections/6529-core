@@ -15,6 +15,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import type { DropInteractionParams } from "../Drop";
 import { DropLocation } from "../Drop";
+import DropCurationButton from "../DropCurationButton";
 import WaveDropActions from "../WaveDropActions";
 import WaveDropAuthorPfp from "../WaveDropAuthorPfp";
 import WaveDropContent from "../WaveDropContent";
@@ -29,7 +30,6 @@ interface EndedParticipationDropProps {
   readonly showReplyAndQuote: boolean;
   readonly location: DropLocation;
   readonly onReply: (param: DropInteractionParams) => void;
-  readonly onQuote: (param: DropInteractionParams) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
 }
@@ -41,7 +41,6 @@ export default function EndedParticipationDrop({
   showReplyAndQuote,
   location,
   onReply,
-  onQuote,
   onQuoteClick,
   onDropContentClick,
 }: EndedParticipationDropProps) {
@@ -70,11 +69,6 @@ export default function EndedParticipationDrop({
     setIsSlideUp(false);
     onReply({ drop, partId: drop.parts[activePartIndex]?.part_id! });
   }, [onReply, drop, activePartIndex]);
-
-  const handleOnQuote = useCallback(() => {
-    setIsSlideUp(false);
-    onQuote({ drop, partId: drop.parts[activePartIndex]?.part_id! });
-  }, [onQuote, drop, activePartIndex]);
 
   const handleOnAddReaction = useCallback(() => {
     setIsSlideUp(false);
@@ -106,7 +100,6 @@ export default function EndedParticipationDrop({
             activePartIndex={activePartIndex}
             showVoting={false}
             onReply={handleOnReply}
-            onQuote={handleOnQuote}
           />
         )}
 
@@ -202,6 +195,12 @@ export default function EndedParticipationDrop({
           </div>
         )}
         <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
+          <DropCurationButton
+            dropId={drop.id}
+            waveId={drop.wave.id}
+            isCuratable={drop.context_profile_context?.curatable ?? false}
+            isCurated={drop.context_profile_context?.curated ?? false}
+          />
           <WaveDropReactions drop={drop} />
         </div>
 
@@ -212,7 +211,6 @@ export default function EndedParticipationDrop({
           showReplyAndQuote={showReplyAndQuote}
           setOpen={setIsSlideUp}
           onReply={handleOnReply}
-          onQuote={handleOnQuote}
           onAddReaction={handleOnAddReaction}
         />
       </div>

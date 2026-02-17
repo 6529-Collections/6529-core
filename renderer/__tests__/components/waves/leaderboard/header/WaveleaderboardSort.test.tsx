@@ -1,38 +1,73 @@
 import { WaveleaderboardSort } from "@/components/waves/leaderboard/header/WaveleaderboardSort";
 import { WaveDropsLeaderboardSort } from "@/hooks/useWaveDropsLeaderboard";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const commonDropdownMock = jest.fn((props: any) => (
+  <button
+    data-testid="sort-dropdown"
+    onClick={() => props.setSelected(WaveDropsLeaderboardSort.CREATED_AT)}
+  >
+    {props.filterLabel}: {props.activeItem}
+  </button>
+));
+
+jest.mock("@/components/utils/select/dropdown/CommonDropdown", () => ({
+  __esModule: true,
+  default: (props: any) => commonDropdownMock(props),
+}));
+
 describe("WaveleaderboardSort", () => {
-  it("highlights active sort and triggers changes", async () => {
+  beforeEach(() => {
+    commonDropdownMock.mockClear();
+  });
+
+  it("always renders dropdown sort and forwards selection", async () => {
     const onSortChange = jest.fn();
     const user = userEvent.setup();
-    const queryClient = new QueryClient();
 
     render(
-      <QueryClientProvider client={queryClient}>
-        <WaveleaderboardSort
-          sort={WaveDropsLeaderboardSort.RANK}
-          onSortChange={onSortChange}
-        />
-      </QueryClientProvider>
+      <WaveleaderboardSort
+        sort={WaveDropsLeaderboardSort.RANK}
+        onSortChange={onSortChange}
+      />
     );
 
-    const current = screen.getByText("Current Vote");
-    expect(current.className).toContain("tw-bg-white/10");
-
-    await user.click(screen.getByText("Projected Vote"));
-    expect(onSortChange).toHaveBeenCalledWith(
-      WaveDropsLeaderboardSort.RATING_PREDICTION
+    expect(screen.getByTestId("sort-dropdown")).toHaveTextContent("Sort: RANK");
+    expect(screen.getByTestId("sort-dropdown").parentElement).toHaveClass(
+      "tw-min-w-0"
     );
 
-    await user.click(screen.getByText("Hot"));
-    expect(onSortChange).toHaveBeenCalledWith(WaveDropsLeaderboardSort.TREND);
-
-    await user.click(screen.getByText("Newest"));
+    await user.click(screen.getByTestId("sort-dropdown"));
     expect(onSortChange).toHaveBeenCalledWith(
       WaveDropsLeaderboardSort.CREATED_AT
     );
+  });
+
+  it("passes correct props to CommonDropdown", () => {
+    render(
+      <WaveleaderboardSort
+        sort={WaveDropsLeaderboardSort.TREND}
+        onSortChange={jest.fn()}
+      />
+    );
+
+    expect(commonDropdownMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activeItem: WaveDropsLeaderboardSort.TREND,
+        filterLabel: "Sort",
+        size: "sm",
+        showFilterLabel: true,
+      })
+    );
+
+    const items = commonDropdownMock.mock.calls[0]![0].items;
+    expect(items).toHaveLength(4);
+    expect(items.map((i: any) => i.label)).toEqual([
+      "Current Vote",
+      "Projected Vote",
+      "Hot",
+      "Newest",
+    ]);
   });
 });
