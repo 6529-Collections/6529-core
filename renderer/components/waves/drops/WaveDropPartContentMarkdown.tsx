@@ -27,6 +27,7 @@ interface WaveDropPartContentMarkdownProps {
     | undefined;
   readonly onCancel?: (() => void) | undefined;
   readonly drop?: ApiDrop | undefined; // Add drop to check for edited status
+  readonly marketplaceImageOnly?: boolean | undefined;
 }
 
 const WaveDropPartContentMarkdown: React.FC<
@@ -43,7 +44,11 @@ const WaveDropPartContentMarkdown: React.FC<
   onSave,
   onCancel,
   drop,
+  marketplaceImageOnly = false,
 }) => {
+  const currentQuotePath =
+    drop?.serial_no === undefined ? [] : [`${wave.id}:${drop.serial_no}`];
+
   if (isEditing) {
     return (
       <EditDropLexical
@@ -81,6 +86,8 @@ const WaveDropPartContentMarkdown: React.FC<
           onQuoteClick={onQuoteClick}
           currentDropId={drop?.id}
           hideLinkPreviews={drop?.hide_link_preview}
+          marketplaceImageOnly={marketplaceImageOnly}
+          quotePath={currentQuotePath}
         />
         {drop?.updated_at && drop.updated_at !== drop.created_at && (
           <div className="tw-mt-0.5 tw-text-[10px] tw-font-normal tw-leading-none tw-text-iron-500">
@@ -99,6 +106,10 @@ const WaveDropPartContentMarkdown: React.FC<
                 : null
             }
             onQuoteClick={onQuoteClick}
+            embedPath={drop?.id ? [drop.id] : []}
+            quotePath={currentQuotePath}
+            marketplaceImageOnly={marketplaceImageOnly}
+            embedDepth={1}
           />
         </div>
       )}

@@ -29,7 +29,10 @@ import {
   createMarkdownContentRenderers,
 } from "./dropPartMarkdown/content";
 import { highlightCodeElement } from "./dropPartMarkdown/highlight";
-import { createLinkRenderer } from "./dropPartMarkdown/linkHandlers";
+import {
+  createLinkRenderer,
+  DEFAULT_MAX_EMBED_DEPTH,
+} from "./dropPartMarkdown/linkHandlers";
 
 const BreakComponent = () => <br />;
 
@@ -37,6 +40,16 @@ const mergeClassNames = (...classes: Array<string | undefined>): string =>
   classes.filter(Boolean).join(" ");
 
 const headingClassName = "tw-text-iron-200 tw-break-words word-break";
+
+const normalizeStringArray = (values?: readonly string[]): string[] => {
+  if (!values || values.length === 0) {
+    return [];
+  }
+
+  return values.filter(
+    (value): value is string => typeof value === "string" && value.length > 0
+  );
+};
 
 type MarkdownRendererProps<T extends ElementType> =
   ComponentPropsWithoutRef<T> &
@@ -230,6 +243,11 @@ export interface DropPartMarkdownProps {
   readonly textSize?: "sm" | "md" | undefined;
   readonly currentDropId?: string | undefined;
   readonly hideLinkPreviews?: boolean | undefined;
+  readonly marketplaceImageOnly?: boolean | undefined;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 function DropPartMarkdown({
@@ -241,6 +259,11 @@ function DropPartMarkdown({
   textSize,
   currentDropId,
   hideLinkPreviews = false,
+  marketplaceImageOnly = false,
+  embedPath,
+  quotePath,
+  embedDepth = 0,
+  maxEmbedDepth = DEFAULT_MAX_EMBED_DEPTH,
 }: DropPartMarkdownProps) {
   const isMobile = useIsMobileScreen();
   const { emojiMap, findNativeEmoji } = useEmoji();
@@ -255,6 +278,20 @@ function DropPartMarkdown({
     }
   }, [isMobile, textSize]);
 
+  const normalizedEmbedPath = useMemo(() => {
+    const path = normalizeStringArray(embedPath);
+    if (!currentDropId || path.includes(currentDropId)) {
+      return path;
+    }
+
+    return [...path, currentDropId];
+  }, [currentDropId, embedPath]);
+
+  const normalizedQuotePath = useMemo(
+    () => normalizeStringArray(quotePath),
+    [quotePath]
+  );
+
   const { renderAnchor, isSmartLink, renderImage } = useMemo(
     () =>
       createLinkRenderer({
@@ -262,8 +299,23 @@ function DropPartMarkdown({
         currentDropId,
         hideLinkPreviews,
         tweetPreviewMode,
+        marketplaceImageOnly,
+        embedPath: normalizedEmbedPath,
+        quotePath: normalizedQuotePath,
+        embedDepth,
+        maxEmbedDepth,
       }),
-    [onQuoteClick, currentDropId, hideLinkPreviews, tweetPreviewMode]
+    [
+      onQuoteClick,
+      currentDropId,
+      hideLinkPreviews,
+      tweetPreviewMode,
+      marketplaceImageOnly,
+      normalizedEmbedPath,
+      normalizedQuotePath,
+      embedDepth,
+      maxEmbedDepth,
+    ]
   );
 
   const { customRenderer, renderParagraph, processContent } = useMemo(
