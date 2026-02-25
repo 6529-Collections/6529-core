@@ -1,5 +1,5 @@
+import CollectionsMenuIcon from "@/components/common/icons/CollectionsMenuIcon";
 import DesktopIcon from "@/components/common/icons/DesktopIcon";
-import Squares2X2Icon from "@/components/common/icons/Squares2X2Icon";
 import type { SidebarSection } from "@/components/navigation/navTypes";
 import { AboutSection } from "@/types/enums";
 import {
@@ -59,7 +59,7 @@ export function useSidebarSections(
       {
         key: "collections",
         name: "Collections",
-        icon: Squares2X2Icon,
+        icon: CollectionsMenuIcon,
         items: [
           { name: "The Memes", href: "/the-memes" },
           { name: "6529 Gradient", href: "/6529-gradient" },
