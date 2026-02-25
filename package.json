@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -19,7 +19,7 @@
     "dev": "npm run clean && npm run build-env-schema && npm run build-next-config && npm run build-electron && ENVIRONMENT=staging electron . --dev",
     "dev-win": "npm run clean-win && npm run build-env-schema && npm run build-next-config && npm run build-electron-win && ENVIRONMENT=staging electron . --dev",
     "rebuild-sql": "npx electron-rebuild -f -w better-sqlite3",
-    "build-renderer": "next build renderer",
+    "build-renderer": "cd renderer && npx --no-install next build",
     "build-electron": "tsc -p electron-src && cp -r assets main/electron-src/",
     "build-electron-win": "tsc -p electron-src && xcopy /E /I assets main\\electron-src\\assets\\",
     "build": "npm run clean && npm run build-env-schema && npm run build-next-config && npm run build-renderer && npm run build-electron",

@@ -1,16 +1,22 @@
-/** @type {import('tailwindcss').Config} */
-module.exports = {
+import containerQueries from "@tailwindcss/container-queries";
+import forms from "@tailwindcss/forms";
+import scrollbar from "tailwind-scrollbar";
+import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
+
+export default {
   darkMode: "class",
   content: [
-    "./renderer/app/**/*.{js,ts,jsx,tsx}",
+    "./renderer/app/**/*.{js,ts,jsx,tsx,mdx}",
+    "./renderer/pages/**/*.{js,ts,jsx,tsx}",
     "./renderer/components/**/*.{js,ts,jsx,tsx}",
-
-    // Or if using `src` directory:
-    "./renderer/src/**/*.{js,ts,jsx,tsx}",
   ],
   prefix: "tw-",
   corePlugins: {
     preflight: false,
+  },
+  future: {
+    hoverOnlyWhenSupported: true,
   },
   theme: {
     extend: {
@@ -28,7 +34,6 @@ module.exports = {
         md: ["0.9375rem", "24px"],
       },
       colors: {
-        "primary-200": "#84ADFF",
         "primary-300": "#84ADFF",
         "primary-400": "#528BFF",
         "primary-500": "#406AFE",
@@ -161,19 +166,16 @@ module.exports = {
       },
     },
   },
-  variants: {
-    extend: {
-      fontSize: ["placeholder"],
-    },
-  },
   plugins: [
-    require("@tailwindcss/forms")({
+    forms({
       strategy: "class",
     }),
-    require("tailwind-scrollbar")({ nocompatible: true }),
-    require("@tailwindcss/container-queries"),
-    function ({ addVariant }) {
-      addVariant("desktop-hover", "@media (hover: hover) and (pointer: fine)");
-    },
+    scrollbar({ nocompatible: true }),
+    containerQueries,
+    plugin(({ addVariant }) => {
+      // Use any-* queries so hybrid devices (touchscreen + trackpad/mouse) still
+      // get hover styles even if the primary pointer is coarse.
+      addVariant("desktop-hover", "@media (any-hover: hover)");
+    }),
   ],
-};
+} satisfies Config;

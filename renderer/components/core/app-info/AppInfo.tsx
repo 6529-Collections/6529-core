@@ -192,7 +192,7 @@ function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
           alt="update"
         />
       </div>
-      <div className="tw-text-center">New Update Available!</div>
+      <div className="tw-text-center">New Version Available!</div>
       <div className="tw-mx-auto tw-mt-3 tw-max-w-xs">
         <button
           type="button"
@@ -235,7 +235,7 @@ function UpdateDownloaded(_props: Readonly<{ info: UpdateInfo }>) {
           alt="downloaded"
         />
       </div>
-      <div className="tw-text-center">Update Downloaded</div>
+      <div className="tw-text-center">New Version Downloaded!</div>
       <div className="tw-mx-auto tw-mt-3 tw-max-w-xs">
         <button
           type="button"
