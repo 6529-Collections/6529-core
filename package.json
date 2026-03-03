@@ -225,6 +225,6 @@
     "tar": "7.5.9",
     "fast-xml-parser": "5.4.2",
     "serialize-javascript": "7.0.4",
-    "minimatch": "10.2.4"
+    "minimatch": "9.0.9"
   }
 }
