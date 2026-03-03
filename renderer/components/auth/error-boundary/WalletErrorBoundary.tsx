@@ -1,7 +1,7 @@
-import { removeAuthJwt } from "@/services/auth/auth.utils";
-import { logError, sanitizeErrorMessage } from "@/src/utils/security-logger";
 import type { ErrorInfo, ReactNode } from "react";
 import { Component } from "react";
+import { sanitizeErrorMessage, logError } from "@/src/utils/security-logger";
+import { clearAllWalletAuth } from "@/services/auth/auth.utils";
 
 interface Props {
   children: ReactNode;
@@ -49,7 +49,7 @@ export class WalletErrorBoundary extends Component<Props, State> {
 
   private readonly handleReset = async () => {
     try {
-      removeAuthJwt();
+      clearAllWalletAuth();
       localStorage.clear();
       window.location.reload();
     } catch (error) {

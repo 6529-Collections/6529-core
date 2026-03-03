@@ -1,3 +1,15 @@
 {
-  "ProjectTree.useDefaultIgnore": true
+  "ProjectTree.useDefaultIgnore": true,
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [
+    {
+      "directory": "renderer",
+      "changeProcessCWD": true
+    }
+  ],
+  "editor.codeActionsOnSaveTimeout": 10000,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "explicit"
+  }
 }

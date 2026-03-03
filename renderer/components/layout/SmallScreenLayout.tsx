@@ -7,8 +7,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SIDEBAR_WIDTHS } from "../../constants/sidebar";
 import { SidebarProvider } from "../../hooks/useSidebarState";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
-import SmallScreenHeader from "./SmallScreenHeader";
 import WebSidebar from "./sidebar/WebSidebar";
+import SmallScreenHeader from "./SmallScreenHeader";
 
 interface Props {
   readonly children: ReactNode;
