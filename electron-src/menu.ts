@@ -31,4 +31,13 @@ export const menuTemplate: Array<MenuItemConstructorOptions | MenuItem> = [
       { role: "togglefullscreen" },
     ],
   },
+  {
+    label: "Window",
+    submenu: [
+      { role: "minimize" },
+      { role: "zoom" },
+      { type: "separator" },
+      { role: "front" },
+    ],
+  },
 ];
