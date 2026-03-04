@@ -4,9 +4,6 @@ import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import { useCompactMode } from "@/contexts/CompactModeContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
-import Image from "next/image";
-import Link from "next/link";
-import React from "react";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
 import Image from "next/image";
 import Link from "next/link";
@@ -86,7 +83,8 @@ const WaveDropAuthorPfp: React.FC<WaveDropAuthorPfpProps> = ({ drop }) => {
         prefetch={false}
         aria-label={`View ${tooltipUser}'s profile`}
         onClick={handleClick}
-        className={`${containerClasses} tw-block`}>
+        className={`${containerClasses} tw-block`}
+      >
         {avatarContent}
       </Link>
     </UserProfileTooltipWrapper>
