@@ -35,6 +35,7 @@ export function ConfirmModalShell(props: {
   children?: ReactNode;
   footer: ReactNode;
   onBackdropClick?: () => void;
+  overlayClassName?: string;
   dialogClassName?: string;
   bodyClassName?: string;
   footerClassName?: string;
@@ -46,6 +47,7 @@ export function ConfirmModalShell(props: {
     children,
     footer,
     onBackdropClick,
+    overlayClassName = "",
     dialogClassName = "",
     bodyClassName = "",
     footerClassName = confirmModalFooter,
@@ -53,10 +55,13 @@ export function ConfirmModalShell(props: {
   } = props;
 
   if (!show) return null;
+  const overlayZClass = overlayClassName.includes("tw-z-")
+    ? ""
+    : "tw-z-[10010]";
 
   const overlay = (
     <div
-      className="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-bg-black/50"
+      className={`tw-fixed tw-inset-0 ${overlayZClass} tw-flex tw-items-center tw-justify-center tw-bg-black/50 ${overlayClassName}`.trim()}
       onClick={onBackdropClick}
       role="dialog"
       aria-modal

@@ -54,7 +54,7 @@ export default function UserPageHeaderStatsTDHConsensus({
 
   return (
     <Link href="/core/tdh-calculation" className="tw-no-underline">
-      <div className="seize-card-white seize-card-white-clickable tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-y-3">
+      <div className="seize-card-white seize-card-white-clickable tw-flex tw-items-center tw-justify-between tw-gap-y-3">
         <span className="font-lighter">TDH Consensus</span>
         <span className="font-bolder tw-flex tw-items-center tw-gap-x-3">
           {fetchingTdhConsensus ? (
@@ -63,17 +63,19 @@ export default function UserPageHeaderStatsTDHConsensus({
             </>
           ) : (
             <>
+              <>
+                {tdhConsensusInfo?.boosted_tdh
+                  ? formatNumberWithCommas(tdhConsensusInfo?.boosted_tdh)
+                  : 0}{" "}
+                TDH
+              </>
               {concensusIcon && (
                 <FontAwesomeIcon
                   icon={concensusIcon}
                   color={concensusColor}
-                  height={30}
+                  size="lg"
                 />
               )}
-              {tdhConsensusInfo?.boosted_tdh
-                ? formatNumberWithCommas(tdhConsensusInfo?.boosted_tdh)
-                : 0}{" "}
-              TDH
             </>
           )}
         </span>
