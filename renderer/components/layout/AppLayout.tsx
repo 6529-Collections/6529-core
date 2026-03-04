@@ -93,7 +93,7 @@ export default function AppLayout({ children }: Props) {
         <main ref={searchContainerRef}>{children}</main>
       )}
       {!isSingleDropOpen && !isStreamRoute && (
-        <div className="tw-h-16 tw-w-full" />
+        <div className="tw-h-[85px] tw-w-full" />
       )}
       {!isSingleDropOpen && !isEditingOnMobile && (
         <BottomNavigation hidden={shouldHideBottomNav} />

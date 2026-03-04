@@ -30,6 +30,7 @@ import {
   setActiveWalletAccount,
   WALLET_ACCOUNTS_UPDATED_EVENT,
 } from "@/services/auth/auth.utils";
+import { useConnectedAccountsUnreadNotifications } from "@/hooks/useConnectedAccountsUnreadNotifications";
 import { WalletInitializationError } from "@/src/errors/wallet";
 import { SecurityEventType } from "@/src/types/security";
 import {
@@ -160,6 +161,9 @@ interface SeizeConnectContextType {
 
   /** Whether another account can be added */
   canAddConnectedAccount: boolean;
+
+  /** Unread notification counts keyed by connected account address (lowercased) */
+  connectedAccountUnreadNotifications: Readonly<Record<string, number>>;
 }
 
 const SeizeConnectContext = createContext<SeizeConnectContextType | undefined>(
@@ -1115,6 +1119,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     });
   }, [activeAddress, liveConnectedAddress, storedConnectedAccounts]);
 
+  const connectedAccountUnreadNotifications =
+    useConnectedAccountsUnreadNotifications(storedConnectedAccounts);
+
   const contextValue = useMemo(
     (): SeizeConnectContextType => ({
       address: activeAddress,
@@ -1137,6 +1144,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       initializationError,
       connectedAccounts,
       canAddConnectedAccount,
+      connectedAccountUnreadNotifications,
     }),
     [
       activeAddress,
@@ -1157,6 +1165,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       hasInitializationError,
       initializationError,
       canAddConnectedAccount,
+      connectedAccountUnreadNotifications,
     ]
   );
 
