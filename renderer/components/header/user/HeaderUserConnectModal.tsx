@@ -233,6 +233,8 @@ function getConnectorImage(connector: Connector): string {
     MetaMask: "/metamask.svg",
     WalletConnect: "/walletconnect.svg",
     "Coinbase Wallet": "/coinbase.svg",
+    "Base Account": "/coinbase.svg",
+    Base: "/coinbase.svg",
     Safe: "/safe.svg",
     Chrome: "/chrome.svg",
     Firefox: "/firefox.svg",
@@ -240,5 +242,5 @@ function getConnectorImage(connector: Connector): string {
     "Brave Wallet": "/brave.svg",
     "Rabby Wallet": "/rabby.png",
   };
-  return map[connector.name] ?? "";
+  return map[connector.name] ?? connector.icon ?? "";
 }
