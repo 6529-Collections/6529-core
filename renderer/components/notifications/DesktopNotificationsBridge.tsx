@@ -341,12 +341,12 @@ export default function DesktopNotificationsBridge() {
       );
 
       results.forEach((result, index) => {
-        if (result.status !== "fulfilled") {
+        const account = accounts[index];
+        if (!account) {
           return;
         }
 
-        const account = accounts[index];
-        if (!account) {
+        if (result.status !== "fulfilled") {
           return;
         }
 
