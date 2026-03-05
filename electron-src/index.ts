@@ -34,6 +34,7 @@ import {
   STOP_WORKER,
 } from "../electron-constants";
 import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
+import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
   addRpcProvider,
   addSeedWallet,
@@ -203,7 +204,18 @@ let IPFS_SERVER: IPFSServer;
 
 const gotTheLock = app.requestSingleInstanceLock();
 
-const shownNotifications = new Set<number>();
+const shownNotifications = new Set<string>();
+
+const getNotificationKey = (
+  id: number,
+  navigationContext?: NotificationNavigationContext
+): string => {
+  const targetAddress =
+    typeof navigationContext?.targetAddress === "string"
+      ? navigationContext.targetAddress.trim().toLowerCase()
+      : "";
+  return targetAddress ? `${targetAddress}:${id}` : `${id}`;
+};
 
 interface TailInstances {
   [filePath: string]: Tail;
@@ -1030,15 +1042,17 @@ ipcMain.on(
     title: string,
     body: string,
     redirectPath: string,
+    navigationContext?: NotificationNavigationContext,
   ) => {
     Logger.info(`Showing notification: [${id}] ${title} - ${body}, ${pfp}`);
 
-    if (shownNotifications.has(id)) {
+    const notificationKey = getNotificationKey(id, navigationContext);
+    if (shownNotifications.has(notificationKey)) {
       Logger.info(`Notification [${id}] already shown`);
       return;
     }
 
-    shownNotifications.add(id);
+    shownNotifications.add(notificationKey);
 
     const notification = new Notification({
       title,
@@ -1047,8 +1061,13 @@ ipcMain.on(
     });
     notification.on("click", () => {
       mainWindow?.webContents.send(
-        "navigate",
-        redirectPath || "/notifications",
+        "notification-navigate",
+        {
+          path: redirectPath || "/notifications",
+          targetAddress: navigationContext?.targetAddress ?? null,
+          targetProfileId: navigationContext?.targetProfileId ?? null,
+          targetProfileHandle: navigationContext?.targetProfileHandle ?? null,
+        },
       );
     });
     notification.show();

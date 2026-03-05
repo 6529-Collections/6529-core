@@ -1,5 +1,16 @@
 import { LogLine, ScheduledWorkerStatus, SeedWalletRequest } from "./types";
 
+export interface NotificationNavigationContext {
+  readonly targetAddress?: string | null;
+  readonly targetProfileId?: string | null;
+  readonly targetProfileHandle?: string | null;
+}
+
+export interface NotificationNavigatePayload
+  extends NotificationNavigationContext {
+  readonly path: string;
+}
+
 export interface ElectronAPI {
   on: (channel: string, callback: Function) => void;
   send: (channel: string, ...args: any[]) => void;
@@ -30,6 +41,12 @@ export interface ElectronAPI {
   handleWalletResponse: (response: any) => void;
   onNavigate: (url: any) => void;
   offNavigate: (callback: any) => void;
+  onNotificationNavigate: (
+    callback: (event: any, payload: NotificationNavigatePayload) => void
+  ) => void;
+  offNotificationNavigate: (
+    callback: (event: any, payload: NotificationNavigatePayload) => void
+  ) => void;
   onWorkerUpdate: (
     callback: (
       namespace: string,
@@ -76,7 +93,8 @@ export interface ElectronNotifications {
     pfp: string,
     title: string,
     body: string,
-    redirectPath: string
+    redirectPath: string,
+    navigationContext?: NotificationNavigationContext
   ) => void;
   setBadge: (count: number) => void;
 }

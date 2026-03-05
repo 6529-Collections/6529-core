@@ -4,6 +4,10 @@ import {
   ScheduledWorkerStatus,
   SeedWalletRequest,
 } from "../shared/types";
+import type {
+  NotificationNavigationContext,
+  NotificationNavigatePayload,
+} from "../shared/preload-types";
 
 export const api = {
   on: (channel: string, callback: Function) => {
@@ -72,6 +76,12 @@ export const api = {
   },
   offNavigate: (callback: any) =>
     ipcRenderer.removeListener("navigate", callback),
+  onNotificationNavigate: (
+    callback: (event: any, payload: NotificationNavigatePayload) => void
+  ) => ipcRenderer.on("notification-navigate", callback),
+  offNotificationNavigate: (
+    callback: (event: any, payload: NotificationNavigatePayload) => void
+  ) => ipcRenderer.removeListener("notification-navigate", callback),
   onWorkerUpdate: (
     callback: (
       namespace: string,
@@ -147,8 +157,18 @@ export const notifications = {
     pfp: string,
     title: string,
     body: string,
-    redirectPath: string
-  ) => ipcRenderer.send("notifications:show", id, pfp, title, body, redirectPath),
+    redirectPath: string,
+    navigationContext?: NotificationNavigationContext
+  ) =>
+    ipcRenderer.send(
+      "notifications:show",
+      id,
+      pfp,
+      title,
+      body,
+      redirectPath,
+      navigationContext
+    ),
   setBadge: (count: number) =>
     ipcRenderer.send("notifications:set-badge", count),
 };

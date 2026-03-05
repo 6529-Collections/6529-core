@@ -74,6 +74,11 @@ function resolveAssetsFlagFromEnv(): boolean {
   );
 }
 
+function resolveLocalDebugBuildFlagFromEnv(): boolean {
+  return ((process.env.NEXT_LOCAL_DEBUG ?? "false") + "").toLowerCase() ===
+    "true";
+}
+
 function persistBakedArtifacts(
   publicEnv: unknown,
   ASSETS_FROM_S3: boolean,
@@ -163,6 +168,8 @@ interface PublicEnv {
 }
 
 function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
+  const localDebugBuild = resolveLocalDebugBuildFlagFromEnv();
+
   return {
     reactCompiler: true,
     reactStrictMode: false,
@@ -226,6 +233,17 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
     assetPrefix,
+    webpack(config, { dev }) {
+      if (!dev && localDebugBuild) {
+        config.devtool = "source-map";
+        if (config.optimization) {
+          config.optimization.minimize = false;
+          config.optimization.moduleIds = "named";
+          config.optimization.chunkIds = "named";
+        }
+      }
+      return config;
+    },
   };
 }
 

@@ -2,6 +2,7 @@
 
 import SearchBar from "@/components/core/search-bar/SearchBar";
 import TitleBar from "@/components/header/titlebar/TitleBar";
+import DesktopNotificationsBridge from "@/components/notifications/DesktopNotificationsBridge";
 import { isElectron } from "@/helpers";
 
 export default function TitleBarWrapper({
@@ -12,6 +13,7 @@ export default function TitleBarWrapper({
   return isElectron() ? (
     <>
       <TitleBar />
+      <DesktopNotificationsBridge />
       <SearchBar />
       {children}
     </>
