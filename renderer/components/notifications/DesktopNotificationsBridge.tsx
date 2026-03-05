@@ -203,6 +203,17 @@ export default function DesktopNotificationsBridge() {
         return true;
       }
 
+      if (typeof window !== "undefined") {
+        const currentPath = window.location.pathname;
+        const currentParams = new URLSearchParams(window.location.search);
+        const isWaveScopedRoute =
+          currentPath === "/messages" || currentPath === "/waves";
+        if (isWaveScopedRoute && currentParams.has("wave")) {
+          router.replace(currentPath, { scroll: false });
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
       if (
         activeAddressRef.current?.toLowerCase() === matchedAddress.toLowerCase()
       ) {
@@ -210,29 +221,33 @@ export default function DesktopNotificationsBridge() {
       }
 
       try {
-        seizeSwitchConnectedAccount(matchedAddress);
+        await Promise.resolve(seizeSwitchConnectedAccount(matchedAddress));
       } catch {
         return false;
       }
 
       return await waitForProfileSwitchSettlement();
     },
-    [resolveAddressForNotificationPayload, seizeSwitchConnectedAccount]
+    [resolveAddressForNotificationPayload, router, seizeSwitchConnectedAccount]
   );
 
   const navigateToUrl = useCallback(
     (url: string) => {
-      const normalizedUrl = url.split("?")[0];
-      const normalizedPathname = pathname.split("?")[0];
+      if (typeof window === "undefined") {
+        router.push(url);
+        return;
+      }
 
-      if (normalizedPathname !== normalizedUrl) {
+      const currentUrl = `${window.location.pathname}${window.location.search}`;
+      if (currentUrl !== url) {
         router.push(url);
         return;
       }
 
       const currentParams = new URLSearchParams(window.location.search);
       currentParams.set("reload", "true");
-      const reloadUrl = `${normalizedUrl}?${currentParams.toString()}`;
+      const normalizedPathname = pathname.split("?")[0];
+      const reloadUrl = `${normalizedPathname}?${currentParams.toString()}`;
       router.replace(reloadUrl, { scroll: false });
     },
     [pathname, router]
