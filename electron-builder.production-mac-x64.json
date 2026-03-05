@@ -2,6 +2,7 @@
   "appId": "com.6529.6529core",
   "productName": "6529 Desktop",
   "asar": true,
+  "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "afterSign": "scripts/notarize.js",
   "extraMetadata": {
     "env": {
