@@ -54,7 +54,7 @@ export default function UserPageHeaderStatsTDHConsensus({
 
   return (
     <Link href="/core/tdh-calculation" className="tw-no-underline">
-      <div className="seize-card-white seize-card-white-clickable tw-flex tw-items-center tw-justify-between tw-gap-y-3">
+      <div className="tw-flex tw-transform-gpu tw-items-center tw-justify-between tw-gap-y-3 tw-rounded-lg tw-border tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-transition tw-duration-300 tw-ease-out desktop-hover:hover:tw-scale-[1.01] desktop-hover:hover:tw-border-iron-700 desktop-hover:hover:tw-bg-iron-900 desktop-hover:hover:tw-text-white">
         <span className="font-lighter">TDH Consensus</span>
         <span className="font-bolder tw-flex tw-items-center tw-gap-x-3">
           {fetchingTdhConsensus ? (
