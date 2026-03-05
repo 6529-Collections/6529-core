@@ -2035,6 +2035,26 @@ paths:
                 $ref: "#/components/schemas/ApiMemesMintStat"
         "404":
           description: Memes mint stats for id not found
+  /nft-link:
+    get:
+      tags:
+        - NFT Link
+      summary: Get marketplace data about NFT link
+      operationId: getNftLinkData
+      parameters:
+        - name: url
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: "#/components/schemas/ApiNftLinkResponse"
   /nft-owners:
     get:
       tags:
@@ -2685,6 +2705,84 @@ paths:
                 $ref: "#/components/schemas/ApiRatingWithProfileInfoAndLevelPage"
         "404":
           description: Profile not found
+  /profiles/{identity}/cic/overview:
+    get:
+      tags:
+        - ProfileCIC
+      summary: Get profile CIC overview
+      operationId: getProfileCicOverview
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: direction
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiRepDirection"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCicOverview"
+        "404":
+          description: Profile not found
+  /profiles/{identity}/cic/contributors:
+    get:
+      tags:
+        - ProfileCIC
+      summary: Get profile CIC contributors
+      operationId: getProfileCicContributors
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: direction
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiRepDirection"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCicContributorsPage"
+        "404":
+          description: Profile not found
   /profiles/{identity}/rep/rating:
     post:
       tags:
@@ -2798,6 +2896,138 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiRatingWithProfileInfoAndLevelPage"
+        "404":
+          description: Profile not found
+  /profiles/{identity}/rep/overview:
+    get:
+      tags:
+        - ProfileREP
+      summary: Get profile REP overview
+      operationId: getProfileRepOverview
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: direction
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiRepDirection"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiRepOverview"
+        "404":
+          description: Profile not found
+  /profiles/{identity}/rep/categories:
+    get:
+      tags:
+        - ProfileREP
+      summary: Get profile REP categories
+      operationId: getProfileRepCategories
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: direction
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiRepDirection"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+        - name: top_contributors_limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiRepCategoriesPage"
+        "404":
+          description: Profile not found
+  /profiles/{identity}/rep/categories/{category}/contributors:
+    get:
+      tags:
+        - ProfileREP
+      summary: Get profile REP contributors for category
+      operationId: getProfileRepCategoryContributors
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: category
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+            pattern: ^[a-zA-Z0-9?!,."() ]{1,100}$
+        - name: direction
+          in: query
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiRepDirection"
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiRepContributorsPage"
         "404":
           description: Profile not found
   /profiles:
@@ -3317,6 +3547,36 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/NFTSubscription"
+  /subscriptions/consolidation/upcoming-memes/{meme_id}/{consolidation_key}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Get upcoming meme subscription status for a consolidation
+      operationId: getUpcomingMemeSubscriptionStatus
+      parameters:
+        - name: meme_id
+          in: path
+          description: Meme token id
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: consolidation_key
+          in: path
+          description: Consolidation key
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiUpcomingMemeSubscriptionStatus"
+        "400":
+          description: Meme already dropped
   /subscriptions/upcoming-memes-counts:
     get:
       tags:
@@ -4784,8 +5044,31 @@ paths:
               - REALTIME_VOTE
               - MY_REALTIME_VOTE
               - CREATED_AT
+              - PRICE
               - RATING_PREDICTION
               - TREND
+        - name: price_currency
+          in: query
+          description: Optional currency filter used when sorting by PRICE
+          required: false
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          description: Optional minimum price filter used when sorting by PRICE
+          required: false
+          schema:
+            type: number
+            format: double
+            minimum: 0
+        - name: max_price
+          in: query
+          description: Optional maximum price filter used when sorting by PRICE
+          required: false
+          schema:
+            type: number
+            format: double
+            minimum: 0
         - name: curated_by_group
           in: query
           required: false
@@ -6073,6 +6356,48 @@ components:
           maxLength: 100
           minLength: 1
           pattern: ^[a-zA-Z0-9?!,."() ]{1,100}$
+    ApiCicContributor:
+      type: object
+      required:
+        - contribution
+        - profile
+      properties:
+        contribution:
+          type: number
+          format: int64
+        profile:
+          $ref: "#/components/schemas/ApiProfileMin"
+    ApiCicContributorsPage:
+      type: object
+      required:
+        - data
+      allOf:
+        - $ref: "#/components/schemas/ApiPageWithoutCount"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiCicContributor"
+    ApiCicOverview:
+      type: object
+      required:
+        - total_cic
+        - authenticated_user_contribution
+        - contributor_count
+        - contributors
+      properties:
+        total_cic:
+          type: number
+          format: int64
+        authenticated_user_contribution:
+          type: number
+          format: int64
+          nullable: true
+        contributor_count:
+          type: number
+          format: int64
+        contributors:
+          $ref: "#/components/schemas/ApiCicContributorsPage"
     ApiCommunityMemberMinimal:
       type: object
       required:
@@ -7140,6 +7465,10 @@ components:
           format: int64
         hide_link_preview:
           type: boolean
+        nft_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropNftLink"
     ApiDropAndDropVote:
       type: object
       required:
@@ -7256,6 +7585,19 @@ components:
         data_value:
           type: string
           maxLength: 5000
+    ApiDropNftLink:
+      type: object
+      required:
+        - url_in_text
+        - data
+      properties:
+        url_in_text:
+          type: string
+          maxLength: 2000
+        data:
+          anyOf:
+            - $ref: "#/components/schemas/ApiNftLinkData"
+            - type: "null"
     ApiDropPart:
       type: object
       required:
@@ -7547,6 +7889,10 @@ components:
           format: int64
         hide_link_preview:
           type: boolean
+        nft_links:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropNftLink"
     ApiDropWithoutWavesPageWithoutCount:
       type: object
       required:
@@ -7814,6 +8160,7 @@ components:
         - banner2
         - active_main_stage_submission_ids
         - winner_main_stage_drop_ids
+        - artist_of_prevote_cards
         - is_wave_creator
       properties:
         id:
@@ -7881,6 +8228,11 @@ components:
           type: array
           items:
             type: string
+        artist_of_prevote_cards:
+          type: array
+          items:
+            type: integer
+            format: int64
         is_wave_creator:
           type: boolean
     ApiIdentityAndSubscriptionActions:
@@ -8307,6 +8659,126 @@ components:
         highest_offer_from:
           type: string
           nullable: true
+    ApiNftLinkData:
+      type: object
+      required:
+        - canonical_id
+        - platform
+        - chain
+        - contract
+        - token
+        - name
+        - description
+        - media_uri
+        - last_error_message
+        - price
+        - price_currency
+        - last_successfully_updated
+        - failed_since
+        - media_preview
+      properties:
+        canonical_id:
+          type: string
+        platform:
+          type: string
+        chain:
+          type: string
+          nullable: true
+        contract:
+          type: string
+          nullable: true
+        token:
+          type: string
+          nullable: true
+        name:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        media_uri:
+          type: string
+          nullable: true
+        last_error_message:
+          type: string
+          nullable: true
+        price:
+          type: string
+          nullable: true
+        price_currency:
+          type: string
+          nullable: true
+        last_successfully_updated:
+          type: integer
+          format: int64
+          nullable: true
+        failed_since:
+          type: integer
+          format: int64
+          nullable: true
+        media_preview:
+          anyOf:
+            - $ref: "#/components/schemas/ApiNftLinkMediaPreview"
+            - type: "null"
+    ApiNftLinkMediaPreview:
+      type: object
+      required:
+        - status
+        - kind
+        - card_url
+        - thumb_url
+        - small_url
+        - width
+        - height
+        - mime_type
+      properties:
+        status:
+          type: string
+          enum:
+            - PENDING
+            - PROCESSING
+            - READY
+            - FAILED
+            - SKIPPED
+        kind:
+          type: string
+          nullable: true
+        card_url:
+          type: string
+          nullable: true
+        thumb_url:
+          type: string
+          nullable: true
+        small_url:
+          type: string
+          nullable: true
+        width:
+          type: integer
+          format: int64
+          nullable: true
+        height:
+          type: integer
+          format: int64
+          nullable: true
+        mime_type:
+          type: string
+          nullable: true
+    ApiNftLinkResponse:
+      type: object
+      required:
+        - is_enrichable
+        - validation_error
+        - data
+      properties:
+        is_enrichable:
+          type: boolean
+        validation_error:
+          type: string
+          nullable: true
+        data:
+          anyOf:
+            - $ref: "#/components/schemas/ApiNftLinkData"
+            - type: "null"
     ApiNftMedia:
       type: object
       required:
@@ -8715,6 +9187,7 @@ components:
         - archived
         - active_main_stage_submission_ids
         - winner_main_stage_drop_ids
+        - artist_of_prevote_cards
         - is_wave_creator
       properties:
         id:
@@ -8769,6 +9242,11 @@ components:
           type: array
           items:
             type: string
+        artist_of_prevote_cards:
+          type: array
+          items:
+            type: integer
+            format: int64
         is_wave_creator:
           type: boolean
     ApiProfileMinsPage:
@@ -9078,6 +9556,69 @@ components:
         platform:
           type: string
           description: Optional platform (ios, android, web)
+    ApiRepCategoriesPage:
+      type: object
+      required:
+        - data
+      allOf:
+        - $ref: "#/components/schemas/ApiPageWithoutCount"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiRepCategory"
+    ApiRepCategory:
+      type: object
+      required:
+        - category
+        - total_rep
+        - contributor_count
+        - authenticated_user_contribution
+        - top_contributors
+      properties:
+        category:
+          type: string
+        total_rep:
+          type: number
+          format: int64
+        contributor_count:
+          type: number
+          format: int64
+        authenticated_user_contribution:
+          type: number
+          format: int64
+          nullable: true
+        top_contributors:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiRepContributor"
+    ApiRepContributor:
+      type: object
+      required:
+        - contribution
+        - profile
+      properties:
+        contribution:
+          type: number
+          format: int64
+        profile:
+          $ref: "#/components/schemas/ApiProfileMin"
+    ApiRepContributorsPage:
+      type: object
+      required:
+        - data
+      allOf:
+        - $ref: "#/components/schemas/ApiPageWithoutCount"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiRepContributor"
+    ApiRepDirection:
+      type: string
+      enum:
+        - incoming
+        - outgoing
     ApiReplyToDrop:
       type: object
       required:
@@ -9105,6 +9646,26 @@ components:
           type: boolean
         drop:
           $ref: "#/components/schemas/ApiDropWithoutWave"
+    ApiRepOverview:
+      type: object
+      required:
+        - total_rep
+        - authenticated_user_contribution
+        - contributor_count
+        - contributors
+      properties:
+        total_rep:
+          type: number
+          format: int64
+        authenticated_user_contribution:
+          type: number
+          format: int64
+          nullable: true
+        contributor_count:
+          type: number
+          format: int64
+        contributors:
+          $ref: "#/components/schemas/ApiRepContributorsPage"
     ApiRepRating:
       type: object
       required:
@@ -9119,6 +9680,7 @@ components:
         - rememes_submission_tdh_threshold
         - all_drops_notifications_subscribers_limit
         - memes_wave_id
+        - curation_wave_id
       properties:
         rememes_submission_tdh_threshold:
           type: integer
@@ -9127,6 +9689,9 @@ components:
           type: integer
           format: int64
         memes_wave_id:
+          type: string
+          nullable: true
+        curation_wave_id:
           type: string
           nullable: true
     ApiStartMultipartMediaUploadResponse:
@@ -9324,6 +9889,25 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiTransaction"
+    ApiUpcomingMemeSubscriptionStatus:
+      type: object
+      required:
+        - subscribed
+        - eligibility
+      properties:
+        subscribed:
+          type: boolean
+        eligibility:
+          type: integer
+          format: int64
+        count:
+          type: integer
+          format: int64
+        source:
+          type: string
+          enum:
+            - automatic
+            - manual
     ApiUpdateDropRequest:
       type: object
       allOf:

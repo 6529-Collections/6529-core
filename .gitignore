@@ -38,8 +38,11 @@ dev.sqlite
 certificate.pfx
 
 .vscode
+!.vscode/settings.json
 
 
 # Task files
 renderer/tasks.json
 renderer/tasks/
+
+AGENTS.md

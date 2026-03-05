@@ -1,17 +1,11 @@
 "use client";
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  useCallback,
-  useContext,
-  useMemo,
-} from "react";
+import { useRef, useState, useCallback, useContext, useMemo } from "react";
 import type { CreateDropConfig } from "@/entities/IDrop";
 import CreateDropStormParts from "./CreateDropStormParts";
 import { AnimatePresence, motion } from "framer-motion";
 import CreateDropContent from "./CreateDropContent";
+import CreateCurationDropContent from "./CreateCurationDropContent";
 import { useMutation } from "@tanstack/react-query";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { ReactQueryWrapperContext } from "../react-query-wrapper/ReactQueryWrapper";
@@ -19,14 +13,15 @@ import { commonApiPost } from "@/services/api/common-api";
 import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { AuthContext } from "../auth/Auth";
-import { useProgressiveDebounce } from "@/hooks/useProgressiveDebounce";
 import { useKeyPressEvent } from "react-use";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { CurationComposerVariant } from "./PrivilegedDropCreator";
 import { DropMode } from "./PrivilegedDropCreator";
 import type { DropPrivileges } from "@/hooks/useDropPriviledges";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useUnreadDividerOptional } from "@/contexts/wave/UnreadDividerContext";
+import { useWave } from "@/hooks/useWave";
 
 interface CreateDropProps {
   readonly activeDrop: ActiveDropState | null;
@@ -37,6 +32,7 @@ interface CreateDropProps {
   readonly dropId: string | null;
   readonly fixedDropMode: DropMode;
   readonly privileges: DropPrivileges;
+  readonly curationComposerVariant?: CurationComposerVariant | undefined;
 }
 
 export interface DropMutationBody {
@@ -55,6 +51,7 @@ export default function CreateDrop({
   dropId,
   fixedDropMode,
   privileges,
+  curationComposerVariant = "default",
 }: CreateDropProps) {
   const { setToast } = useContext(AuthContext);
   const { waitAndInvalidateDrops } = useContext(ReactQueryWrapperContext);
@@ -62,8 +59,17 @@ export default function CreateDrop({
   useKeyPressEvent("Escape", () => onCancelReplyQuote());
   const [isStormMode, setIsStormMode] = useState(false);
   const [drop, setDrop] = useState<CreateDropConfig | null>(null);
+  const [dropModeOverride, setDropModeOverride] = useState<{
+    scopeKey: string;
+    value: boolean;
+  } | null>(null);
+  const [curationPrefillSeed, setCurationPrefillSeed] = useState<{
+    scopeKey: string;
+    url: string;
+  } | null>(null);
   const { processDropRemoved, processIncomingDrop } = useMyStream();
-  const getIsDropMode = () => {
+  const { isCurationWave } = useWave(wave);
+  const getDefaultIsDropMode = () => {
     if (fixedDropMode === DropMode.CHAT) {
       return false;
     }
@@ -76,35 +82,41 @@ export default function CreateDrop({
     return false;
   };
 
-  const [isDropMode, setIsDropMode] = useState(getIsDropMode());
-  useEffect(() => setIsDropMode(getIsDropMode()), [wave, activeDrop]);
+  const activeDropScope =
+    activeDrop === null
+      ? "none"
+      : `${activeDrop.action}:${activeDrop.drop.id}:${activeDrop.partId}`;
+  const modeScopeKey = `${wave.id}:${fixedDropMode}:${wave.chat.authenticated_user_eligible}:${wave.participation.authenticated_user_eligible}:${activeDropScope}`;
+  const modeScopeEpochRef = useRef(0);
+  const lastModeScopeKeyRef = useRef(modeScopeKey);
+  if (lastModeScopeKeyRef.current !== modeScopeKey) {
+    lastModeScopeKeyRef.current = modeScopeKey;
+    modeScopeEpochRef.current += 1;
+  }
+  const modeScopeToken = `${modeScopeKey}:${modeScopeEpochRef.current}`;
+  const defaultIsDropMode = getDefaultIsDropMode();
+  const isDropMode =
+    dropModeOverride?.scopeKey === modeScopeToken
+      ? dropModeOverride.value
+      : defaultIsDropMode;
+  const initialCurationUrl =
+    curationPrefillSeed?.scopeKey === modeScopeToken
+      ? curationPrefillSeed.url
+      : null;
+  const isCurationDropMode = isCurationWave && isDropMode;
 
-  const getIsDropModeDisabled = () => {
-    if (!wave.participation.authenticated_user_eligible) return true;
-    if (activeDrop) return true;
-    return false;
-  };
-
-  const [dropModeDisabled, setDropModeDisabled] = useState(
-    getIsDropModeDisabled()
-  );
-
-  useEffect(
-    () => setDropModeDisabled(getIsDropModeDisabled()),
-    [wave, activeDrop]
-  );
-
-  const onDropModeChange = useCallback(
+  const canSwitchDropMode = useCallback(
     (newIsDropMode: boolean) => {
       if (fixedDropMode !== DropMode.BOTH) {
-        return;
+        return false;
       }
+
       if (newIsDropMode && !wave.participation.authenticated_user_eligible) {
         setToast({
           message: "You are not eligible to drop in this wave",
           type: "error",
         });
-        return;
+        return false;
       }
 
       if (!newIsDropMode && !wave.chat.authenticated_user_eligible) {
@@ -112,12 +124,34 @@ export default function CreateDrop({
           message: "You are not eligible to chat in this wave",
           type: "error",
         });
-        return;
+        return false;
       }
 
-      setIsDropMode(newIsDropMode);
+      return true;
     },
-    [wave]
+    [fixedDropMode, setToast, wave]
+  );
+
+  const onDropModeChange = useCallback(
+    (newIsDropMode: boolean) => {
+      if (!canSwitchDropMode(newIsDropMode)) {
+        return;
+      }
+      setCurationPrefillSeed(null);
+      setDropModeOverride({ scopeKey: modeScopeToken, value: newIsDropMode });
+    },
+    [canSwitchDropMode, modeScopeToken]
+  );
+
+  const onSwitchToDropModeWithUrl = useCallback(
+    (url: string) => {
+      if (!canSwitchDropMode(true)) {
+        return;
+      }
+      setCurationPrefillSeed({ scopeKey: modeScopeToken, url });
+      setDropModeOverride({ scopeKey: modeScopeToken, value: true });
+    },
+    [canSwitchDropMode, modeScopeToken]
   );
 
   const onRemovePart = useCallback((partIndex: number) => {
@@ -147,6 +181,13 @@ export default function CreateDrop({
         processDropRemoved(body.drop.wave_id, body.dropId);
       }
       processIncomingDrop(serverDrop, ProcessIncomingDropType.DROP_INSERT);
+
+      if (isCurationWave && curationComposerVariant === "leaderboard") {
+        setToast({
+          message: "Drop submitted successfully",
+          type: "success",
+        });
+      }
     },
     onError: (error, body) => {
       setTimeout(() => {
@@ -173,27 +214,7 @@ export default function CreateDrop({
   // Use refs to avoid stale closures - fixes the stream unmounting issue
   const queueRef = useRef<DropMutationBody[]>([]);
   const isProcessingRef = useRef(false);
-  const [hasQueueChanged, setHasQueueChanged] = useState(false);
-
-  useProgressiveDebounce(
-    () => {
-      if (
-        queueRef.current.length === 0 &&
-        !isProcessingRef.current &&
-        hasQueueChanged
-      ) {
-        waitAndInvalidateDrops();
-        onAllDropsAdded?.();
-      }
-    },
-    [hasQueueChanged],
-    {
-      minDelay: 1000,
-      maxDelay: 4000,
-      increaseFactor: 1.5,
-      decreaseFactor: 1.2,
-    }
-  );
+  const hasBatchErrorsRef = useRef(false);
 
   const processNextDrop = useCallback(async () => {
     if (isProcessingRef.current || queueRef.current.length === 0) {
@@ -207,6 +228,7 @@ export default function CreateDrop({
       try {
         await addDropMutation.mutateAsync(dropRequest);
       } catch (error) {
+        hasBatchErrorsRef.current = true;
         console.error("Error processing drop:", error);
       }
     }
@@ -216,14 +238,21 @@ export default function CreateDrop({
     // Process next item if queue has more
     if (queueRef.current.length > 0) {
       processNextDrop();
+      return;
     }
-  }, [addDropMutation]);
+
+    const shouldNotifyAllDropsAdded = !hasBatchErrorsRef.current;
+    hasBatchErrorsRef.current = false;
+    void waitAndInvalidateDrops();
+    if (shouldNotifyAllDropsAdded) {
+      onAllDropsAdded?.();
+    }
+  }, [addDropMutation, onAllDropsAdded, waitAndInvalidateDrops]);
 
   const submitDrop = useCallback(
     (dropRequest: DropMutationBody) => {
       // Add to queue
       queueRef.current.push(dropRequest);
-      setHasQueueChanged(true);
 
       // Process immediately - avoids state update timing issues
       processNextDrop();
@@ -253,8 +282,8 @@ export default function CreateDrop({
       setDrop,
       setIsStormMode,
       onDropModeChange,
+      onSwitchToDropModeWithUrl,
       submitDrop,
-      dropModeDisabled,
       privileges,
     }),
     [
@@ -267,8 +296,8 @@ export default function CreateDrop({
       setDrop,
       setIsStormMode,
       onDropModeChange,
+      onSwitchToDropModeWithUrl,
       submitDrop,
-      dropModeDisabled,
       privileges,
     ]
   );
@@ -276,7 +305,7 @@ export default function CreateDrop({
   return (
     <>
       <AnimatePresence>
-        {isStormMode && (
+        {isStormMode && !isCurationDropMode && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
@@ -294,7 +323,20 @@ export default function CreateDrop({
         )}
       </AnimatePresence>
 
-      <CreateDropContent {...createDropContentProps} wave={wave} />
+      {isCurationDropMode ? (
+        <CreateCurationDropContent
+          activeDrop={activeDrop}
+          onCancelReplyQuote={onCancelReplyQuote}
+          wave={wave}
+          dropId={dropId}
+          isDropMode={isDropMode}
+          initialUrl={initialCurationUrl}
+          submitDrop={submitDrop}
+          curationComposerVariant={curationComposerVariant}
+        />
+      ) : (
+        <CreateDropContent {...createDropContentProps} wave={wave} />
+      )}
     </>
   );
 }

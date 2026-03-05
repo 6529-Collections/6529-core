@@ -1,5 +1,24 @@
 "use client";
 
+import "react-toastify/dist/ReactToastify.css";
+import { useQuery } from "@tanstack/react-query";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { Slide, toast } from "react-toastify";
+import { isAddress } from "viem";
+import {
+  ConfirmModalShell,
+  confirmBtnDanger,
+  confirmBtnPrimary,
+} from "@/components/shared/ConfirmModalShell";
 import { useModalState } from "@/contexts/ModalStateContext";
 import { ProfileConnectedStatus } from "@/entities/IProfile";
 import {
@@ -11,6 +30,7 @@ import type { ApiLoginRequest } from "@/generated/models/ApiLoginRequest";
 import type { ApiLoginResponse } from "@/generated/models/ApiLoginResponse";
 import type { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -22,9 +42,14 @@ import {
 } from "@/hooks/useSecureSign";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import {
+  canStoreAnotherWalletAccount,
   getAuthJwt,
+  getWalletAddress,
+  PROFILE_SWITCHED_EVENT,
   removeAuthJwt,
+  setActiveWalletAccount,
   setAuthJwt,
+  syncConnectedWalletProfile,
 } from "@/services/auth/auth.utils";
 import { validateAuthImmediate } from "@/services/auth/immediate-validation.utils";
 import { getRole, validateJwt } from "@/services/auth/jwt-validation.utils";
@@ -33,31 +58,13 @@ import {
   sanitizeErrorForUser,
 } from "@/utils/error-sanitizer";
 import { validateRoleForAuthentication } from "@/utils/role-validation";
-import { useQuery } from "@tanstack/react-query";
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import {
-  ConfirmModalShell,
-  confirmBtnDanger,
-  confirmBtnPrimary,
-} from "@/components/shared/ConfirmModalShell";
-import type { TypeOptions } from "react-toastify";
-import { Slide, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { isAddress } from "viem";
 import DotLoader from "../dotLoader/DotLoader";
 import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "../react-query-wrapper/ReactQueryWrapper";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
+import type { TypeOptions } from "react-toastify";
 
 // Custom error classes for authentication failures
 class AuthenticationNonceError extends Error {
@@ -88,13 +95,6 @@ class NonceResponseValidationError extends Error {
 }
 
 const AUTH_MODAL = "AuthModal";
-
-export enum TitleType {
-  PAGE = "PAGE",
-  WAVE = "WAVE",
-  MY_STREAM = "MY_STREAM",
-  NOTIFICATION = "NOTIFICATION",
-}
 
 type AuthContextType = {
   readonly connectedProfile: ApiIdentity | null;
@@ -138,14 +138,29 @@ export default function Auth({
   readonly children: React.ReactNode;
 }) {
   const { invalidateAll } = useContext(ReactQueryWrapperContext);
+  const pathname = usePathname();
+  const router = useRouter();
+  const searchParams = useSearchParams();
 
   const {
     address,
+    connectedAccounts,
     isConnected,
+    seizeDisconnect,
     seizeDisconnectAndLogout,
     isSafeWallet,
     connectionState,
   } = useSeizeConnectContext();
+
+  const isAddressAuthorized = useMemo(() => {
+    if (!address) {
+      return false;
+    }
+
+    return connectedAccounts.some(
+      (account) => account.address.toLowerCase() === address.toLowerCase()
+    );
+  }, [address, connectedAccounts]);
 
   const {
     signMessage,
@@ -165,6 +180,8 @@ export default function Auth({
 
   // Race condition prevention: AbortController and operation tracking
   const abortControllerRef = useRef<AbortController | null>(null);
+  const latestAddressRef = useRef<string | undefined>(address);
+  const activeValidationOperationIdRef = useRef<string | null>(null);
   const [authLoadingState, setAuthLoadingState] = useState<
     "idle" | "validating" | "signing"
   >("idle");
@@ -175,6 +192,7 @@ export default function Auth({
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
     }
+    activeValidationOperationIdRef.current = null;
     setAuthLoadingState("idle");
   }, []);
 
@@ -200,18 +218,33 @@ export default function Auth({
 
   const [activeProfileProxy, setActiveProfileProxy] =
     useState<ApiProfileProxy | null>(null);
+  const authRole = (() => {
+    try {
+      const authJwt = getAuthJwt();
+      return getRole(authJwt);
+    } catch (error) {
+      logErrorSecurely("derive_auth_role", error);
+      return null;
+    }
+  })();
 
   useEffect(() => {
-    const role = getRole(getAuthJwt());
-
-    if (role) {
-      const activeProxy = receivedProfileProxies?.find(
-        (proxy) => proxy.created_by.id === role
-      );
-
-      setActiveProfileProxy(activeProxy ?? null);
+    if (!address) {
+      setActiveProfileProxy(null);
+      return;
     }
-  }, [receivedProfileProxies]);
+
+    if (!authRole) {
+      setActiveProfileProxy(null);
+      return;
+    }
+
+    const activeProxy = receivedProfileProxies?.find(
+      (proxy) => proxy.created_by.id === authRole
+    );
+
+    setActiveProfileProxy(activeProxy ?? null);
+  }, [address, authRole, receivedProfileProxies]);
 
   const reset = useCallback(() => {
     invalidateAll();
@@ -236,6 +269,22 @@ export default function Auth({
     };
   }, [address, abortCurrentAuthOperation]);
 
+  useEffect(() => {
+    latestAddressRef.current = address;
+  }, [address]);
+
+  useEffect(() => {
+    if (!address || !connectedProfile?.id) {
+      return;
+    }
+
+    syncConnectedWalletProfile(
+      address,
+      connectedProfile.id,
+      connectedProfile.handle ?? null
+    );
+  }, [address, connectedProfile?.id, connectedProfile?.handle]);
+
   // Immediate authentication effect with race condition prevention
   useEffect(() => {
     // Clear previous operations when dependencies change
@@ -251,19 +300,39 @@ export default function Auth({
       return;
     }
 
+    if (!isAddressAuthorized) {
+      if (isConnected) {
+        setShowSignModal(true);
+      }
+      return;
+    }
+
+    // Clear any stale sign modal state when returning to an authorized account.
+    // If JWT validation still needs a signature, validateAuthImmediate will
+    // re-open it via onShowSignModal(true).
+    setShowSignModal(false);
+
+    const activeStoredAddress = getWalletAddress();
+    if (
+      activeStoredAddress &&
+      activeStoredAddress.toLowerCase() !== address.toLowerCase()
+    ) {
+      setActiveWalletAccount(address);
+    }
+
     // Capture current address at validation time to prevent race conditions
     const currentAddress = address;
 
     // Generate unique operation ID for this validation attempt
-    const operationId = `auth-${Date.now()}-${Math.random()
-      .toString(36)
-      .slice(2)}`;
+    const operationId = `auth-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    activeValidationOperationIdRef.current = operationId;
 
     // IMMEDIATE validation - no setTimeout to prevent timing window vulnerability
     const validateImmediately = async () => {
-      // Address consistency check - ensure address hasn't changed since effect start
-      if (currentAddress !== address) {
-        // Address changed during setup - abort this operation
+      if (
+        latestAddressRef.current !== currentAddress ||
+        activeValidationOperationIdRef.current !== operationId
+      ) {
         return;
       }
 
@@ -275,7 +344,7 @@ export default function Auth({
         const result = await validateAuthImmediate({
           params: {
             currentAddress,
-            connectionAddress: address,
+            connectionAddress: currentAddress,
             jwt: getAuthJwt(),
             activeProfileProxy,
             isConnected,
@@ -291,14 +360,20 @@ export default function Auth({
           },
         });
 
-        // If operation was cancelled or address changed, no further action needed
-        if (result.wasCancelled || currentAddress !== address) {
+        if (
+          result.wasCancelled ||
+          latestAddressRef.current !== currentAddress ||
+          activeValidationOperationIdRef.current !== operationId
+        ) {
           return;
         }
       } finally {
-        // Clean up only if this is still the current operation
-        if (!abortController.signal.aborted && currentAddress === address) {
+        if (
+          abortControllerRef.current === abortController &&
+          activeValidationOperationIdRef.current === operationId
+        ) {
           abortControllerRef.current = null;
+          activeValidationOperationIdRef.current = null;
           setAuthLoadingState("idle");
         }
       }
@@ -311,6 +386,7 @@ export default function Auth({
     address,
     activeProfileProxy,
     connectionState,
+    isAddressAuthorized,
     isConnected,
     abortCurrentAuthOperation,
     invalidateAll,
@@ -468,6 +544,14 @@ export default function Auth({
     readonly role: string | null;
   }): Promise<{ success: boolean }> => {
     try {
+      if (!canStoreAnotherWalletAccount(signerAddress)) {
+        setToast({
+          message: "Maximum connected profiles reached",
+          type: "error",
+        });
+        return { success: false };
+      }
+
       const nonceResponse = await getNonce({ signerAddress });
       const { nonce, server_signature } = nonceResponse;
 
@@ -501,12 +585,20 @@ export default function Auth({
           ...(role != null && { role }),
         },
       });
-      setAuthJwt(
+      const isPersisted = setAuthJwt(
         signerAddress,
         tokenResponse.token,
         tokenResponse.refresh_token,
         role ?? undefined
       );
+      if (!isPersisted) {
+        setToast({
+          message: "Failed to persist connected profile",
+          type: "error",
+        });
+        return { success: false };
+      }
+
       return { success: true };
     } catch (error) {
       // Handle specific authentication nonce errors with detailed messages
@@ -553,6 +645,37 @@ export default function Auth({
     setAuthLoadingState("signing");
 
     try {
+      if (!isAddressAuthorized) {
+        if (!canStoreAnotherWalletAccount(address)) {
+          setToast({
+            message: "Maximum connected profiles reached",
+            type: "error",
+          });
+          return { success: false };
+        }
+
+        const { success } = await requestSignIn({
+          signerAddress: address,
+          role: null,
+        });
+        if (!success) {
+          setShowSignModal(false);
+          try {
+            await seizeDisconnect();
+          } catch (error) {
+            logErrorSecurely(
+              "requestAuth_disconnect_after_failed_signin",
+              error
+            );
+          }
+          return { success: false };
+        }
+
+        invalidateAll();
+        setShowSignModal(false);
+        return { success: true };
+      }
+
       // Create a new abort controller for this auth request
       const abortController = new AbortController();
       const operationId = `manual-auth-${Date.now()}`;
@@ -592,6 +715,12 @@ export default function Auth({
   const onActiveProfileProxy = async (
     profileProxy: ApiProfileProxy | null
   ): Promise<void> => {
+    const isSameSelection =
+      (profileProxy?.id ?? null) === (activeProfileProxy?.id ?? null);
+    if (isSameSelection) {
+      return;
+    }
+
     removeAuthJwt();
     if (!address) {
       setActiveProfileProxy(null);
@@ -605,6 +734,9 @@ export default function Auth({
       });
       if (success) {
         setActiveProfileProxy(profileProxy);
+        if (globalThis.window !== undefined) {
+          globalThis.dispatchEvent(new CustomEvent(PROFILE_SWITCHED_EVENT));
+        }
       }
     } catch (error) {
       // Handle InvalidRoleStateError specifically
@@ -635,12 +767,53 @@ export default function Auth({
     }
   };
 
+  const navigateAfterProfileSwitch = useCallback(() => {
+    const activeWaveId = getActiveWaveIdFromUrl({ pathname, searchParams });
+    if (!activeWaveId) {
+      return;
+    }
+
+    const isMessagesRoute =
+      pathname === "/messages" || pathname.startsWith("/messages/");
+    if (isMessagesRoute) {
+      router.replace("/messages");
+      return;
+    }
+
+    const isWavesRoute =
+      pathname === "/waves" || pathname.startsWith("/waves/");
+    if (isWavesRoute || pathname === "/") {
+      router.replace("/waves");
+    }
+  }, [pathname, router, searchParams]);
+
+  useEffect(() => {
+    const onProfileSwitched = () => {
+      invalidateAll();
+      navigateAfterProfileSwitch();
+    };
+
+    if (globalThis.window === undefined) {
+      return;
+    }
+
+    globalThis.window.addEventListener(
+      PROFILE_SWITCHED_EVENT,
+      onProfileSwitched
+    );
+    return () => {
+      globalThis.window.removeEventListener(
+        PROFILE_SWITCHED_EVENT,
+        onProfileSwitched
+      );
+    };
+  }, [invalidateAll, navigateAfterProfileSwitch]);
+
   const showWaves = useMemo(() => {
     return !!connectedProfile?.handle && !activeProfileProxy && !!address;
   }, [connectedProfile?.handle, activeProfileProxy, address]);
 
   const { isTopModal, addModal, removeModal } = useModalState();
-
   useEffect(() => {
     if (showSignModal) {
       addModal(AUTH_MODAL);
@@ -650,7 +823,22 @@ export default function Auth({
     return () => {
       removeModal(AUTH_MODAL);
     };
-  }, [showSignModal]);
+  }, [showSignModal, addModal, removeModal]);
+
+  const onCancelSignRequest = useCallback(() => {
+    setShowSignModal(false);
+
+    if (!isAddressAuthorized) {
+      void seizeDisconnect().catch((error) => {
+        logErrorSecurely("onCancelSignRequest_disconnect", error);
+      });
+      return;
+    }
+
+    void seizeDisconnectAndLogout().catch((error) => {
+      logErrorSecurely("onCancelSignRequest_disconnectAndLogout", error);
+    });
+  }, [isAddressAuthorized, seizeDisconnect, seizeDisconnectAndLogout]);
 
   // Computed modal visibility to prevent flickering during rapid state changes
   const shouldShowSignModal = useMemo(() => {
@@ -676,7 +864,8 @@ export default function Auth({
           isProxy: !!activeProfileProxy,
         }),
         setActiveProfileProxy: onActiveProfileProxy,
-      }}>
+      }}
+    >
       {children}
       <ConfirmModalShell
         show={shouldShowSignModal}
@@ -686,25 +875,22 @@ export default function Auth({
             setShowSignModal(false);
           }
         }}
-        dialogClassName={
-          !isTopModal(AUTH_MODAL) ? "tw-blur-[5px]" : ""
-        }
+        dialogClassName={!isTopModal(AUTH_MODAL) ? "tw-blur-[5px]" : ""}
         footer={
           <>
             <button
               type="button"
               className={confirmBtnDanger}
-              onClick={() => {
-                setShowSignModal(false);
-                seizeDisconnectAndLogout();
-              }}>
+              onClick={onCancelSignRequest}
+            >
               Cancel
             </button>
             <button
               type="button"
               className={confirmBtnPrimary}
               onClick={() => requestAuth()}
-              disabled={isSigningPending}>
+              disabled={isSigningPending || authLoadingState === "validating"}
+            >
               {isSigningPending ? (
                 <>
                   Confirm in your wallet <DotLoader />
@@ -714,7 +900,8 @@ export default function Auth({
               )}
             </button>
           </>
-        }>
+        }
+      >
         <p className="tw-m-0 tw-mb-2 tw-mt-2">
           To connect your wallet, you will need to sign a message to confirm
           your identity.

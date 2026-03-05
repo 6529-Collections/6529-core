@@ -1,3 +1,18 @@
 {
-  "ProjectTree.useDefaultIgnore": true
+  "ProjectTree.useDefaultIgnore": true,
+  "eslint.useFlatConfig": true,
+  "eslint.workingDirectories": [
+    {
+      "directory": "renderer",
+      "changeProcessCWD": true
+    }
+  ],
+  "editor.codeActionsOnSaveTimeout": 10000,
+  "editor.codeActionsOnSave": {
+    "source.organizeImports": "explicit",
+    "source.fixAll.eslint": "explicit"
+  },
+  "typescript.tsserver.maxTsServerMemory": 4096,
+  "typescript.tsserver.experimental.enableProjectDiagnostics": false,
+  "typescript.disableAutomaticTypeAcquisition": true
 }

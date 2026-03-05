@@ -30,6 +30,106 @@ export interface Contract {
   type: ContractType;
 }
 
+const ARWEAVE_GATEWAYS: readonly string[] = [
+  "arweave.net",
+  "gateway.arweave.net",
+  "g8way.io",
+  "arweave.org",
+  "arweave.dev",
+  "ar-io.net",
+  "arweave.live",
+  "arweave.surf",
+  "arweave.team",
+  "arweavetoday.com",
+  "arweave.fyi",
+  "arweave.guide",
+];
+
+const safeParseUrl = (url: string): URL | null => {
+  try {
+    return new URL(url);
+  } catch {
+    return null;
+  }
+};
+
+const normalizeArweaveHost = (hostname: string): string => {
+  const lower = hostname.toLowerCase();
+  if (lower === "arweave.net" || lower.endsWith(".arweave.net")) {
+    return "arweave.net";
+  }
+  return lower;
+};
+
+const isArweaveGatewayHost = (hostname: string): boolean => {
+  return ARWEAVE_GATEWAYS.includes(normalizeArweaveHost(hostname));
+};
+
+const normalizeMetadataUri = (uri: string): string => {
+  const trimmed = uri.trim();
+
+  if (trimmed.startsWith("ar://")) {
+    const tx = trimmed.slice("ar://".length).replace(/^\/+/, "");
+    return `https://arweave.net/${tx}`;
+  }
+
+  return trimmed;
+};
+
+const getMetadataUriCandidates = (uri: string): string[] => {
+  const normalizedUri = normalizeMetadataUri(uri);
+  const parsedUrl = safeParseUrl(normalizedUri);
+  if (!parsedUrl || !isArweaveGatewayHost(parsedUrl.hostname)) {
+    return [normalizedUri];
+  }
+
+  const originalHost = normalizeArweaveHost(parsedUrl.hostname);
+  const fallbackUrls = ARWEAVE_GATEWAYS.filter(
+    (gatewayHost) => gatewayHost !== originalHost
+  ).map((gatewayHost) => {
+    const next = new URL(normalizedUri);
+    next.hostname = gatewayHost;
+    next.host = gatewayHost + (next.port ? `:${next.port}` : "");
+    return next.toString();
+  });
+
+  return [normalizedUri, ...fallbackUrls];
+};
+
+const fetchMetadataWithArweaveFallback = async (
+  uri: string
+): Promise<any> => {
+  const candidates = getMetadataUriCandidates(uri);
+  let lastStatusText = "Unknown error";
+
+  for (const candidateUri of candidates) {
+    try {
+      const response = await fetch(candidateUri);
+      if (response.ok) {
+        return await response.json();
+      }
+
+      lastStatusText = response.statusText || `${response.status}`;
+      if (candidates.length > 1) {
+        logInfo(
+          parentPort,
+          `Metadata fetch failed for ${candidateUri} (${response.status} ${lastStatusText}), trying fallback...`
+        );
+      }
+    } catch (error) {
+      lastStatusText = error instanceof Error ? error.message : `${error}`;
+      if (candidates.length > 1) {
+        logInfo(
+          parentPort,
+          `Metadata fetch failed for ${candidateUri} (${lastStatusText}), trying fallback...`
+        );
+      }
+    }
+  }
+
+  throw new Error(`Failed to fetch NFT metadata: ${lastStatusText}`);
+};
+
 export const retrieveNftFromURI = async (
   db: DataSource,
   contract: string,
@@ -42,12 +142,7 @@ export const retrieveNftFromURI = async (
     `Retrieving NFT [${contract} - ${tokenId}] from URI: ${uri}`
   );
 
-  const response = await fetch(uri);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch NFT metadata: ${response.statusText}`);
-  }
-
-  const json = await response.json();
+  const json = await fetchMetadataWithArweaveFallback(uri);
 
   const mintDate = await getMintDate(db, contract, tokenId);
 

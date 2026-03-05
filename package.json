@@ -43,7 +43,7 @@
     "upload-production-win-signed": "aws s3 sync ./dist s3://6529bucket/6529-core-app/win/",
     "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
     "sign-publish-production-win": "npm run clean-win && npm run download-production-win-unsigned && npm run sign-win && npm run upload-production-win-signed",
-    "dist-mac-local": "npm run build && electron-builder --config electron-builder.local.json --mac --arm64 --publish never",
+    "dist-mac-local": "NEXT_LOCAL_DEBUG=true npm run build && electron-builder --config electron-builder.local.json --mac --arm64 --dir --publish never",
     "dist-mac-staging": "npm run build && electron-builder --config electron-builder.staging.json --mac --arm64 --publish always",
     "dist-mac-production": "npm run build && electron-builder --config electron-builder.production.json --mac --arm64 --x64 --publish always",
     "dist-mac-production-x64": "npm run build && electron-builder --config electron-builder.production-mac-x64.json --mac --publish never",
@@ -75,7 +75,7 @@
     "@reduxjs/toolkit": "^2.2.5",
     "@reown/appkit": "^1.8.8",
     "@reown/appkit-adapter-wagmi": "^1.8.8",
-    "@sentry/nextjs": "^10.30.0",
+    "@sentry/nextjs": "^10.41.0",
     "@tailwindcss/container-queries": "^0.1.1",
     "@tailwindcss/forms": "^0.5.7",
     "@tanstack/query-core": "^5.45.0",
@@ -153,7 +153,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.0",
     "sass": "^1.77.6",
-    "swiper": "^11.1.4",
+    "swiper": "^12.1.2",
     "tail": "^2.2.6",
     "tailwind-scrollbar": "^3.1.0",
     "three": "^0.163.0",
@@ -164,8 +164,8 @@
     "wagmi": "^2.17.5"
   },
   "devDependencies": {
-    "@aws-sdk/client-cloudfront": "^3.637.0",
-    "@aws-sdk/client-s3": "^3.637.0",
+    "@aws-sdk/client-cloudfront": "^3.1000.0",
+    "@aws-sdk/client-s3": "^3.1000.0",
     "@electron/rebuild": "^4.0.2",
     "@playwright/test": "^1.52.0",
     "@tanstack/eslint-plugin-query": "^5.43.1",
@@ -222,6 +222,9 @@
       "react": "$react",
       "react-dom": "$react-dom"
     },
-    "tar": "7.5.7"
+    "tar": "7.5.9",
+    "fast-xml-parser": "5.4.2",
+    "serialize-javascript": "7.0.4",
+    "minimatch": "9.0.9"
   }
 }

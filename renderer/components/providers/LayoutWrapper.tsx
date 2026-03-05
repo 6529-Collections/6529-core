@@ -11,7 +11,8 @@ import useIsMobileScreen from "@/hooks/isMobileScreen";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import TitleBarWrapper from "@/TitleBarWrapper";
 import { usePathname } from "next/navigation";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import type { ReactNode } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { ErrorBoundary } from "react-error-boundary";
 
 export default function LayoutWrapper({

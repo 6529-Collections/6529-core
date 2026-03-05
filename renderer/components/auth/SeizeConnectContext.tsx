@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  useAppKit,
+  useAppKitAccount,
+  useAppKitState,
+  useDisconnect,
+  useWalletInfo,
+} from "@reown/appkit/react";
 import React, {
   createContext,
   useCallback,
@@ -9,11 +16,21 @@ import React, {
   useRef,
   useState,
 } from "react";
-
+import { getAddress, isAddress } from "viem";
 import { getNodeEnv, publicEnv } from "@/config/env";
+import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
 import { isElectron } from "@/helpers";
-import { getWalletAddress, removeAuthJwt } from "@/services/auth/auth.utils";
+import {
+  canStoreAnotherWalletAccount,
+  type ConnectedWalletAccount,
+  getConnectedWalletAccounts,
+  getWalletAddress,
+  removeAuthJwt,
+  setActiveWalletAccount,
+  WALLET_ACCOUNTS_UPDATED_EVENT,
+} from "@/services/auth/auth.utils";
+import { useConnectedAccountsUnreadNotifications } from "@/hooks/useConnectedAccountsUnreadNotifications";
 import { WalletInitializationError } from "@/src/errors/wallet";
 import { SecurityEventType } from "@/src/types/security";
 import {
@@ -23,14 +40,6 @@ import {
   logSecurityEvent,
 } from "@/src/utils/security-logger";
 import { isSafeWalletInfo } from "@/utils/wallet-detection";
-import {
-  useAppKit,
-  useAppKitAccount,
-  useAppKitState,
-  useDisconnect,
-  useWalletInfo,
-} from "@reown/appkit/react";
-import { getAddress, isAddress } from "viem";
 import { WalletErrorBoundary } from "./error-boundary";
 
 // Custom error types for better error handling
@@ -90,11 +99,17 @@ interface SeizeConnectContextType {
 
   /**
    * Disconnects wallet and clears authentication state
-   * @param reconnect - Whether to automatically reopen connection modal after logout
    * @throws {WalletDisconnectionError} When disconnection fails
    * @throws {AuthenticationError} When auth cleanup fails
    */
   seizeDisconnectAndLogout: (reconnect?: boolean) => Promise<void>;
+
+  /**
+   * Disconnects wallet and clears all authenticated profiles
+   * @throws {WalletDisconnectionError} When disconnection fails
+   * @throws {AuthenticationError} When auth cleanup fails
+   */
+  seizeDisconnectAndLogoutAll: () => Promise<void>;
 
   /**
    * Manually set the connected address (for internal use)
@@ -127,6 +142,28 @@ interface SeizeConnectContextType {
 
   /** The initialization error if one occurred */
   initializationError: Error | undefined;
+
+  /** All authenticated wallet accounts available for switching */
+  connectedAccounts: readonly {
+    readonly address: string;
+    readonly role: string | null;
+    readonly profileId: string | null;
+    readonly profileHandle: string | null;
+    readonly isActive: boolean;
+    readonly isConnected: boolean;
+  }[];
+
+  /** Switches the active authenticated account */
+  seizeSwitchConnectedAccount: (address: string) => void;
+
+  /** Opens wallet flow to add another authorized account */
+  seizeAddConnectedAccount: () => void;
+
+  /** Whether another account can be added */
+  canAddConnectedAccount: boolean;
+
+  /** Unread notification counts keyed by connected account address (lowercased) */
+  connectedAccountUnreadNotifications: Readonly<Record<string, number>>;
 }
 
 const SeizeConnectContext = createContext<SeizeConnectContextType | undefined>(
@@ -167,6 +204,10 @@ interface AddressValidationResult {
 const isCapacitorPlatform = (): boolean => {
   return !!globalThis.window?.Capacitor?.isNativePlatform?.();
 };
+
+const normalizeAddress = (address: string): string => address.toLowerCase();
+
+const ADD_FLOW_CANCEL_GRACE_MS: number = 5000;
 
 const validateStoredAddress = (
   storedAddress: string
@@ -354,8 +395,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();
   const state = useAppKitState();
-
   const { setShowConnectModal } = useSeizeConnectModal();
+  const [storedConnectedAccounts, setStoredConnectedAccounts] = useState<
+    ConnectedWalletAccount[]
+  >(() => getConnectedWalletAccounts());
+  const [isAddingConnectedAccount, setIsAddingConnectedAccount] =
+    useState(false);
 
   // Use consolidated wallet state management
   const {
@@ -369,6 +414,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     isInitialized,
   } = useConsolidatedWalletState();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const addFlowOriginAddressRef = useRef<string | null>(null);
+  const retryConnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isAddingConnectedAccountRef = useRef(false);
+  const isMountedRef = useRef(true);
   const nodeEnv = getNodeEnv();
   const isDevLikeEnv =
     nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
@@ -386,6 +435,43 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     isAddress(publicEnv.DEV_MODE_WALLET_ADDRESS)
       ? getAddress(publicEnv.DEV_MODE_WALLET_ADDRESS)
       : undefined;
+
+  const refreshStoredConnectedAccounts = useCallback(() => {
+    setStoredConnectedAccounts(getConnectedWalletAccounts());
+  }, []);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+      if (retryConnectTimeoutRef.current) {
+        clearTimeout(retryConnectTimeoutRef.current);
+        retryConnectTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    refreshStoredConnectedAccounts();
+
+    if (globalThis.window === undefined) return;
+
+    const handleAccountsUpdated = () => {
+      refreshStoredConnectedAccounts();
+    };
+
+    globalThis.addEventListener(
+      WALLET_ACCOUNTS_UPDATED_EVENT,
+      handleAccountsUpdated
+    );
+    return () => {
+      globalThis.removeEventListener(
+        WALLET_ACCOUNTS_UPDATED_EVENT,
+        handleAccountsUpdated
+      );
+    };
+  }, [refreshStoredConnectedAccounts]);
 
   useEffect(() => {
     // Wait for initialization to complete before processing account changes
@@ -410,19 +496,111 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
 
-      if (account.address && account.isConnected) {
-        // Validate and normalize address to checksummed format
-        if (isAddress(account.address)) {
-          const checksummedAddress = getAddress(account.address);
+      if (
+        isAddingConnectedAccount &&
+        account.address &&
+        account.isConnected &&
+        isAddress(account.address)
+      ) {
+        const checksummedConnectedAddress = getAddress(account.address);
+        const isAlreadyConnected =
+          walletState.status === "connected" &&
+          walletState.address === checksummedConnectedAddress;
+        if (!isAlreadyConnected) {
+          setConnected(checksummedConnectedAddress);
+        }
+        return;
+      }
 
-          // Only update if not already connected with same address
+      const activeStoredAddress = getWalletAddress();
+
+      if (
+        account.address &&
+        account.isConnected &&
+        isAddress(account.address)
+      ) {
+        const checksummedConnectedAddress = getAddress(account.address);
+        const isKnownStoredAccount = storedConnectedAccounts.some(
+          (storedAccount) =>
+            normalizeAddress(storedAccount.address) ===
+            normalizeAddress(checksummedConnectedAddress)
+        );
+
+        if (isKnownStoredAccount && activeStoredAddress) {
+          const isActiveStoredAddressValid = isAddress(activeStoredAddress);
+          if (isActiveStoredAddressValid) {
+            const checksummedStoredActiveAddress =
+              getAddress(activeStoredAddress);
+            const isStoredActiveKnownAccount = storedConnectedAccounts.some(
+              (storedAccount) =>
+                normalizeAddress(storedAccount.address) ===
+                normalizeAddress(checksummedStoredActiveAddress)
+            );
+            const isSwitchTransition =
+              normalizeAddress(checksummedConnectedAddress) !==
+              normalizeAddress(checksummedStoredActiveAddress);
+
+            if (isStoredActiveKnownAccount && isSwitchTransition) {
+              const isAlreadyConnected =
+                walletState.status === "connected" &&
+                walletState.address === checksummedStoredActiveAddress;
+              if (!isAlreadyConnected) {
+                setConnected(checksummedStoredActiveAddress);
+              }
+              return;
+            }
+          }
+        }
+
+        // If wallet is connected to an address that is not in stored profiles yet,
+        // prefer the live wallet address so auth can prompt and add it.
+        if (!isKnownStoredAccount) {
           const isAlreadyConnected =
             walletState.status === "connected" &&
-            walletState.address === checksummedAddress;
+            walletState.address === checksummedConnectedAddress;
           if (!isAlreadyConnected) {
-            setConnected(checksummedAddress);
+            setConnected(checksummedConnectedAddress);
           }
-        } else {
+          return;
+        }
+      }
+
+      if (
+        isAddingConnectedAccount &&
+        account.address &&
+        isAddress(account.address)
+      ) {
+        const checksummedCandidateAddress = getAddress(account.address);
+        const addFlowOriginAddress = addFlowOriginAddressRef.current;
+        const isCandidateDifferentFromOrigin =
+          !addFlowOriginAddress ||
+          normalizeAddress(checksummedCandidateAddress) !==
+            normalizeAddress(addFlowOriginAddress);
+
+        // During add-account flow, avoid snapping back to the stored active wallet
+        // when we've detected a different candidate address but connection isn't
+        // fully established yet.
+        if (isCandidateDifferentFromOrigin && !account.isConnected) {
+          if (walletState.status !== "connecting") {
+            setConnecting();
+          }
+          return;
+        }
+      }
+
+      if (activeStoredAddress && isAddress(activeStoredAddress)) {
+        const checksummedStoredAddress = getAddress(activeStoredAddress);
+        const isAlreadyConnected =
+          walletState.status === "connected" &&
+          walletState.address === checksummedStoredAddress;
+        if (!isAlreadyConnected) {
+          setConnected(checksummedStoredAddress);
+        }
+        return;
+      }
+
+      if (account.address && account.isConnected) {
+        if (!isAddress(account.address)) {
           // Invalid address from wallet - log security event and disconnect
           const addressStr = account.address as string | undefined;
           logSecurityEvent(
@@ -436,18 +614,18 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           );
 
           setDisconnected();
+          return;
+        }
+
+        const checksummedAddress = getAddress(account.address);
+        const isAlreadyConnected =
+          walletState.status === "connected" &&
+          walletState.address === checksummedAddress;
+        if (!isAlreadyConnected) {
+          setConnected(checksummedAddress);
         }
       } else if (account.isConnected === false) {
-        const storedAddress = getWalletAddress();
-        if (storedAddress && isAddress(storedAddress)) {
-          const checksummedAddress = getAddress(storedAddress);
-          const isAlreadyConnected =
-            walletState.status === "connected" &&
-            walletState.address === checksummedAddress;
-          if (!isAlreadyConnected) {
-            setConnected(checksummedAddress);
-          }
-        } else if (walletState.status !== "disconnected") {
+        if (walletState.status !== "disconnected") {
           setDisconnected();
         }
       } else if (account.status === "connecting") {
@@ -470,12 +648,113 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     account.isConnected,
     account.status,
     isInitialized,
+    storedConnectedAccounts,
     walletState,
     setConnected,
     setDisconnected,
     setConnecting,
     impersonatedAddress,
+    isAddingConnectedAccount,
   ]);
+
+  useEffect(() => {
+    if (!isAddingConnectedAccount) {
+      isAddingConnectedAccountRef.current = false;
+      addFlowOriginAddressRef.current = null;
+      if (retryConnectTimeoutRef.current) {
+        clearTimeout(retryConnectTimeoutRef.current);
+        retryConnectTimeoutRef.current = null;
+      }
+      return;
+    }
+
+    let cancelAddFlowTimeout: NodeJS.Timeout | null = null;
+
+    const liveConnectedWallet =
+      account.address && account.isConnected && isAddress(account.address)
+        ? getAddress(account.address)
+        : null;
+    const walletAddressCandidate =
+      account.address && isAddress(account.address)
+        ? getAddress(account.address)
+        : null;
+    const activeStoredAddress = getWalletAddress();
+    const addFlowOriginAddress = addFlowOriginAddressRef.current;
+    const isConnectedWalletNowStored =
+      !!liveConnectedWallet &&
+      !!activeStoredAddress &&
+      normalizeAddress(liveConnectedWallet) ===
+        normalizeAddress(activeStoredAddress);
+    const hasSwitchedFromOrigin =
+      !addFlowOriginAddress ||
+      !liveConnectedWallet ||
+      normalizeAddress(liveConnectedWallet) !==
+        normalizeAddress(addFlowOriginAddress);
+
+    if (isConnectedWalletNowStored && hasSwitchedFromOrigin) {
+      setIsAddingConnectedAccount(false);
+      addFlowOriginAddressRef.current = null;
+      return;
+    }
+
+    const addFlowReturnedToOrigin =
+      !state.open &&
+      !!liveConnectedWallet &&
+      !!addFlowOriginAddress &&
+      normalizeAddress(liveConnectedWallet) ===
+        normalizeAddress(addFlowOriginAddress);
+    if (addFlowReturnedToOrigin) {
+      setIsAddingConnectedAccount(false);
+      addFlowOriginAddressRef.current = null;
+      return;
+    }
+
+    const hasPendingDifferentCandidate =
+      !!walletAddressCandidate &&
+      !!addFlowOriginAddress &&
+      normalizeAddress(walletAddressCandidate) !==
+        normalizeAddress(addFlowOriginAddress);
+
+    const addFlowCancelled =
+      !state.open &&
+      account.status !== "connecting" &&
+      account.status !== "reconnecting" &&
+      !account.isConnected &&
+      !hasPendingDifferentCandidate;
+    if (addFlowCancelled) {
+      // AppKit/connector state can briefly report "closed + not connected"
+      // during successful transitions. Use a short grace period before treating
+      // this as a real user-cancelled add flow.
+      cancelAddFlowTimeout = setTimeout(() => {
+        setIsAddingConnectedAccount(false);
+        addFlowOriginAddressRef.current = null;
+      }, ADD_FLOW_CANCEL_GRACE_MS);
+    }
+
+    return () => {
+      if (cancelAddFlowTimeout) {
+        clearTimeout(cancelAddFlowTimeout);
+      }
+    };
+  }, [
+    account.address,
+    account.isConnected,
+    account.status,
+    isAddingConnectedAccount,
+    state.open,
+  ]);
+
+  const activeAddress = impersonatedAddress ?? connectedAddress;
+  const liveConnectedAddress =
+    impersonatedAddress ||
+    (account.address && account.isConnected && isAddress(account.address)
+      ? getAddress(account.address)
+      : undefined);
+  const isActiveWalletConnected = !!(
+    activeAddress &&
+    liveConnectedAddress &&
+    normalizeAddress(activeAddress) === normalizeAddress(liveConnectedAddress)
+  );
 
   const seizeConnect = useCallback((): void => {
     try {
@@ -507,6 +786,16 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [open, setShowConnectModal]);
 
   const seizeDisconnect = useCallback(async (): Promise<void> => {
+    const hasLiveProviderConnection = !!(
+      account.address &&
+      account.isConnected &&
+      isAddress(account.address)
+    );
+
+    if (!hasLiveProviderConnection && !isActiveWalletConnected) {
+      return;
+    }
+
     try {
       await disconnect();
     } catch (error: unknown) {
@@ -518,10 +807,17 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       logError("seizeDisconnect", walletError);
       throw walletError;
     }
-  }, [disconnect]);
+  }, [
+    account.address,
+    account.isConnected,
+    disconnect,
+    isActiveWalletConnected,
+  ]);
 
   const seizeDisconnectAndLogout = useCallback(
     async (reconnect?: boolean): Promise<void> => {
+      let didDisconnectCompletely = false;
+
       // CRITICAL: Wallet disconnect MUST succeed before auth cleanup
       try {
         await disconnect();
@@ -540,38 +836,16 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         );
       }
 
-      // Only proceed with auth cleanup after successful disconnect
       try {
         removeAuthJwt();
-        setDisconnected();
+        refreshStoredConnectedAccounts();
 
-        // If reconnect requested, delay after successful logout
-        if (reconnect) {
-          setTimeout(() => {
-            // Call open directly to avoid circular dependency with seizeConnect
-            try {
-              logSecurityEvent(
-                SecurityEventType.WALLET_CONNECTION_ATTEMPT,
-                createConnectionEventContext(
-                  "seizeDisconnectAndLogout_reconnect"
-                )
-              );
-              if (isElectron()) {
-                setShowConnectModal(true);
-              } else {
-                open({ view: "Connect" });
-              }
-            } catch (openError) {
-              logError(
-                "seizeDisconnectAndLogout_reconnect",
-                openError instanceof Error
-                  ? openError
-                  : new Error(
-                      `Failed to reopen wallet connection: ${openError}`
-                    )
-              );
-            }
-          }, 100);
+        const nextActiveAddress = getWalletAddress();
+        if (nextActiveAddress && isAddress(nextActiveAddress)) {
+          setConnected(getAddress(nextActiveAddress));
+        } else {
+          setDisconnected();
+          didDisconnectCompletely = true;
         }
       } catch (error: unknown) {
         const authError = new AuthenticationError(
@@ -581,9 +855,100 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         logError("seizeDisconnectAndLogout", authError);
         throw authError;
       }
+
+      if (!reconnect || !didDisconnectCompletely) {
+        return;
+      }
+
+      setTimeout(() => {
+        try {
+          logSecurityEvent(
+            SecurityEventType.WALLET_CONNECTION_ATTEMPT,
+            createConnectionEventContext("seizeDisconnectAndLogout_reconnect")
+          );
+          if (isElectron()) {
+            setShowConnectModal(true);
+          } else {
+            open({ view: "Connect" });
+          }
+        } catch (openError) {
+          logError(
+            "seizeDisconnectAndLogout_reconnect",
+            openError instanceof Error
+              ? openError
+              : new Error(`Failed to reopen wallet connection: ${openError}`)
+          );
+        }
+      }, 100);
     },
-    [disconnect, open, setDisconnected, setShowConnectModal] // FIXED: Use unified state transition
+    [
+      disconnect,
+      open,
+      refreshStoredConnectedAccounts,
+      setConnected,
+      setDisconnected,
+      setShowConnectModal,
+    ]
   );
+
+  const seizeDisconnectAndLogoutAll = useCallback(async (): Promise<void> => {
+    try {
+      await disconnect();
+    } catch (error: unknown) {
+      const walletError = createWalletError(
+        WalletDisconnectionError,
+        "disconnect wallet during logout all profiles",
+        error
+      );
+      logError("seizeDisconnectAndLogoutAll", walletError);
+
+      throw new AuthenticationError(
+        "Cannot complete sign out: wallet disconnection failed. User may still have active wallet connection.",
+        walletError
+      );
+    }
+
+    try {
+      let remainingProfiles = getConnectedWalletAccounts().length;
+      const maxIterations = Math.max(
+        MAX_CONNECTED_PROFILES * 2,
+        remainingProfiles + 2
+      );
+      let iterations = 0;
+
+      while (remainingProfiles > 0) {
+        iterations += 1;
+        if (iterations > maxIterations) {
+          const iterationError = new AuthenticationError(
+            `Failed to clear all authenticated profiles: exceeded ${maxIterations} iterations during logout cleanup.`
+          );
+          logError("seizeDisconnectAndLogoutAll", iterationError);
+          throw iterationError;
+        }
+
+        removeAuthJwt();
+        const nextRemainingProfiles = getConnectedWalletAccounts().length;
+        if (nextRemainingProfiles >= remainingProfiles) {
+          throw new Error("Failed to clear all authenticated profiles.");
+        }
+        remainingProfiles = nextRemainingProfiles;
+      }
+
+      refreshStoredConnectedAccounts();
+      setDisconnected();
+    } catch (error: unknown) {
+      if (error instanceof AuthenticationError) {
+        throw error;
+      }
+
+      const authError = new AuthenticationError(
+        "Failed to clear all authenticated profiles after successful wallet disconnect",
+        error
+      );
+      logError("seizeDisconnectAndLogoutAll", authError);
+      throw authError;
+    }
+  }, [disconnect, refreshStoredConnectedAccounts, setDisconnected]);
 
   const seizeAcceptConnection = useCallback(
     (address: string): void => {
@@ -619,43 +984,214 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       // Normalize address to checksummed format for consistency
       const checksummedAddress = getAddress(address);
       setConnected(checksummedAddress);
+      refreshStoredConnectedAccounts();
     },
-    [setConnected]
+    [refreshStoredConnectedAccounts, setConnected]
   );
+
+  const seizeSwitchConnectedAccount = useCallback(
+    (address: string): void => {
+      if (!isAddress(address)) {
+        throw new AuthenticationError(
+          "Cannot switch account: invalid Ethereum address format."
+        );
+      }
+
+      const checksummedAddress = getAddress(address);
+      if (
+        activeAddress &&
+        normalizeAddress(activeAddress) === normalizeAddress(checksummedAddress)
+      ) {
+        return;
+      }
+
+      const didSwitch = setActiveWalletAccount(checksummedAddress);
+      if (!didSwitch) {
+        throw new AuthenticationError(
+          "Cannot switch account: requested account is not available."
+        );
+      }
+
+      refreshStoredConnectedAccounts();
+      setConnected(checksummedAddress);
+    },
+    [activeAddress, refreshStoredConnectedAccounts, setConnected]
+  );
+
+  const canAddConnectedAccount = useMemo(() => {
+    return storedConnectedAccounts.length < MAX_CONNECTED_PROFILES;
+  }, [storedConnectedAccounts]);
+
+  const seizeAddConnectedAccount = useCallback((): void => {
+    if (!canAddConnectedAccount || !canStoreAnotherWalletAccount()) {
+      return;
+    }
+
+    if (isAddingConnectedAccountRef.current) {
+      return;
+    }
+
+    const clearAddConnectedAccountGuard = (): void => {
+      isAddingConnectedAccountRef.current = false;
+      addFlowOriginAddressRef.current = null;
+      if (retryConnectTimeoutRef.current) {
+        clearTimeout(retryConnectTimeoutRef.current);
+        retryConnectTimeoutRef.current = null;
+      }
+    };
+
+    isAddingConnectedAccountRef.current = true;
+
+    const liveConnectedWallet =
+      account.address && account.isConnected && isAddress(account.address)
+        ? getAddress(account.address)
+        : null;
+
+    addFlowOriginAddressRef.current = liveConnectedWallet;
+    setIsAddingConnectedAccount(true);
+
+    if (liveConnectedWallet) {
+      if (retryConnectTimeoutRef.current) {
+        clearTimeout(retryConnectTimeoutRef.current);
+        retryConnectTimeoutRef.current = null;
+      }
+
+      try {
+        disconnect()
+          .then(() => {
+            retryConnectTimeoutRef.current = setTimeout(() => {
+              retryConnectTimeoutRef.current = null;
+              if (!isMountedRef.current) {
+                clearAddConnectedAccountGuard();
+                return;
+              }
+              try {
+                seizeConnect();
+              } catch (error: unknown) {
+                clearAddConnectedAccountGuard();
+                setIsAddingConnectedAccount(false);
+                const connectionError = createWalletError(
+                  WalletConnectionError,
+                  "start add-account connection flow",
+                  error
+                );
+                logError("seizeAddConnectedAccount", connectionError);
+              }
+            }, 100);
+          })
+          .catch((error: unknown) => {
+            clearAddConnectedAccountGuard();
+            setIsAddingConnectedAccount(false);
+            const walletError = createWalletError(
+              WalletDisconnectionError,
+              "disconnect wallet before adding account",
+              error
+            );
+            logError("seizeAddConnectedAccount", walletError);
+          });
+      } catch (error: unknown) {
+        clearAddConnectedAccountGuard();
+        setIsAddingConnectedAccount(false);
+        const walletError = createWalletError(
+          WalletDisconnectionError,
+          "disconnect wallet before adding account",
+          error
+        );
+        logError("seizeAddConnectedAccount", walletError);
+      }
+      return;
+    }
+
+    try {
+      seizeConnect();
+    } catch (error: unknown) {
+      clearAddConnectedAccountGuard();
+      setIsAddingConnectedAccount(false);
+      const connectionError = createWalletError(
+        WalletConnectionError,
+        "start add-account connection flow",
+        error
+      );
+      logError("seizeAddConnectedAccount", connectionError);
+    }
+  }, [
+    account.address,
+    account.isConnected,
+    canAddConnectedAccount,
+    disconnect,
+    seizeConnect,
+  ]);
+
+  const connectedAccounts = useMemo(() => {
+    return storedConnectedAccounts.map((storedAccount) => {
+      const isActive =
+        !!activeAddress &&
+        normalizeAddress(storedAccount.address) ===
+          normalizeAddress(activeAddress);
+      const isConnectedForAccount = !!(
+        liveConnectedAddress &&
+        normalizeAddress(storedAccount.address) ===
+          normalizeAddress(liveConnectedAddress)
+      );
+
+      return {
+        address: storedAccount.address,
+        role: storedAccount.role,
+        profileId: storedAccount.profileId,
+        profileHandle: storedAccount.profileHandle,
+        isActive,
+        isConnected: isConnectedForAccount,
+      };
+    });
+  }, [activeAddress, liveConnectedAddress, storedConnectedAccounts]);
+
+  const connectedAccountUnreadNotifications =
+    useConnectedAccountsUnreadNotifications(storedConnectedAccounts);
 
   const contextValue = useMemo(
     (): SeizeConnectContextType => ({
-      address: impersonatedAddress ?? connectedAddress,
-      walletName: walletInfo?.name,
-      walletIcon: walletInfo?.icon,
+      address: activeAddress,
+      walletName: isActiveWalletConnected ? walletInfo?.name : undefined,
+      walletIcon: isActiveWalletConnected ? walletInfo?.icon : undefined,
       isSafeWallet: isSafeWalletInfo(walletInfo),
       seizeConnect,
       seizeDisconnect,
       seizeDisconnectAndLogout,
+      seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      seizeSwitchConnectedAccount,
+      seizeAddConnectedAccount,
       seizeConnectOpen: state.open,
-      isConnected: impersonatedAddress ? true : account.isConnected,
-      isAuthenticated: !!(impersonatedAddress ?? connectedAddress),
+      isConnected: isActiveWalletConnected,
+      isAuthenticated: !!activeAddress,
       connectionState: walletState.status, // Unified state machine
       walletState, // Expose unified state for advanced consumers
       hasInitializationError,
       initializationError,
+      connectedAccounts,
+      canAddConnectedAccount,
+      connectedAccountUnreadNotifications,
     }),
     [
-      connectedAddress,
-      impersonatedAddress,
+      activeAddress,
+      isActiveWalletConnected,
+      connectedAccounts,
       walletInfo?.name,
       walletInfo?.icon,
-      walletInfo?.type,
       seizeConnect,
       seizeDisconnect,
       seizeDisconnectAndLogout,
+      seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      seizeSwitchConnectedAccount,
+      seizeAddConnectedAccount,
       state.open,
       account.isConnected,
       walletState,
       hasInitializationError,
       initializationError,
+      canAddConnectedAccount,
+      connectedAccountUnreadNotifications,
     ]
   );
 

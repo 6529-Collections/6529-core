@@ -10,7 +10,7 @@ import { ApiDropPart } from "@/generated/models/ApiDropPart";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 import Image from "next/image";
 import Link from "next/link";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import WaveDropTime from "./time/WaveDropTime";
 
 interface WaveDropQuoteProps {
@@ -19,7 +19,6 @@ interface WaveDropQuoteProps {
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly embedPath?: readonly string[] | undefined;
   readonly quotePath?: readonly string[] | undefined;
-  readonly marketplaceImageOnly?: boolean | undefined;
   readonly embedDepth?: number | undefined;
   readonly maxEmbedDepth?: number | undefined;
 }
@@ -30,21 +29,16 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
   onQuoteClick,
   embedPath,
   quotePath,
-  marketplaceImageOnly,
   embedDepth,
   maxEmbedDepth,
 }) => {
-  const [quotedPart, setQuotedPart] = useState<ApiDropPart | null>(null);
-  useEffect(() => {
+  const quotedPart = useMemo<ApiDropPart | null>(() => {
     if (!drop) {
-      return;
+      return null;
     }
-    const part = drop.parts.find((part) => part.part_id === partId);
-    if (!part) {
-      return;
-    }
-    setQuotedPart(part);
-  }, [drop]);
+
+    return drop.parts.find((part) => part.part_id === partId) ?? null;
+  }, [drop, partId]);
 
   const renderProfilePicture = () => {
     if (!drop) {
@@ -62,7 +56,7 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
         <div className="tw-relative tw-h-full tw-w-full">
           <Image
             src={resolvedPfp}
-            alt={`${drop.author.handle}'s profile picture`}
+            alt={`${drop.author.handle ?? drop.author.primary_address}'s profile picture`}
             fill
             sizes="24px"
             className="tw-rounded-md tw-bg-transparent tw-object-cover"
@@ -78,7 +72,7 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
   };
 
   const goToQuoteDrop = () => {
-    if (drop?.wave.id && drop?.id) {
+    if (drop?.wave.id && drop.id) {
       onQuoteClick(drop);
     }
   };
@@ -101,7 +95,7 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
     };
 
     const isDirectMessage =
-      waveDetails?.chat?.scope?.group?.is_direct_message ?? false;
+      waveDetails.chat?.scope?.group?.is_direct_message ?? false;
 
     return getWaveRoute({
       waveId: drop.wave.id,
@@ -158,10 +152,10 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
 
                 <p className="tw-mb-0 tw-text-md tw-font-semibold tw-leading-none">
                   <Link
-                    href={`/${drop?.author.handle}`}
+                    href={`/${drop?.author.handle ?? drop?.author.primary_address}`}
                     className="tw-text-iron-200 tw-no-underline tw-transition tw-duration-300 tw-ease-out hover:tw-text-iron-500"
                   >
-                    {drop?.author.handle}
+                    {drop?.author.handle ?? drop?.author.primary_address}
                   </Link>
                 </p>
               </div>
@@ -189,10 +183,10 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
                 mentionedUsers={drop?.mentioned_users ?? []}
                 mentionedWaves={drop?.mentioned_waves ?? []}
                 referencedNfts={drop?.referenced_nfts ?? []}
+                nftLinks={drop?.nft_links}
                 textSize="sm"
                 onQuoteClick={onQuoteClick}
                 currentDropId={drop?.id}
-                marketplaceImageOnly={marketplaceImageOnly}
                 embedPath={embedPath}
                 quotePath={effectiveQuotePath}
                 embedDepth={embedDepth}

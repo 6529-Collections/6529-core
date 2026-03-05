@@ -11,6 +11,7 @@ import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { ensureStableSeizeLink } from "@/helpers/SeizeLinkParser";
 
 import LinkPreviewCard from "@/components/waves/LinkPreviewCard";
+import type { LinkPreviewInlineShowControl } from "@/components/waves/LinkPreviewContext";
 import DropPartMarkdownImage from "../DropPartMarkdownImage";
 import type { TweetPreviewMode } from "@/components/tweets/TweetPreviewModeContext";
 
@@ -28,11 +29,14 @@ interface LinkRendererConfig {
   readonly currentDropId?: string | undefined;
   readonly hideLinkPreviews?: boolean | undefined;
   readonly tweetPreviewMode?: TweetPreviewMode | undefined;
-  readonly marketplaceImageOnly?: boolean | undefined;
+  readonly isMemesWaveById?:
+    | ((waveId: string | undefined | null) => boolean)
+    | undefined;
   readonly embedPath?: readonly string[] | undefined;
   readonly quotePath?: readonly string[] | undefined;
   readonly embedDepth?: number | undefined;
   readonly maxEmbedDepth?: number | undefined;
+  readonly inlineShowControl?: LinkPreviewInlineShowControl | undefined;
 }
 
 interface LinkRenderer {
@@ -69,11 +73,12 @@ export const createLinkRenderer = ({
   currentDropId,
   hideLinkPreviews = false,
   tweetPreviewMode = "auto",
-  marketplaceImageOnly = false,
+  isMemesWaveById,
   embedPath,
   quotePath,
   embedDepth = 0,
   maxEmbedDepth = DEFAULT_MAX_EMBED_DEPTH,
+  inlineShowControl,
 }: LinkRendererConfig): LinkRenderer => {
   const seizeHandlers = createSeizeHandlers({
     onQuoteClick,
@@ -82,12 +87,13 @@ export const createLinkRenderer = ({
     quotePath: quotePath ?? [],
     embedDepth,
     maxEmbedDepth,
+    isMemesWaveById,
   });
   const handlers = createLinkHandlers({
     tweetPreviewMode,
     linkPreviewVariant: "chat",
-    marketplaceImageOnly,
   });
+  let inlineShowControlRendered = false;
 
   const renderImage: LinkRenderer["renderImage"] = ({ src }) => {
     if (typeof src !== "string") {
@@ -103,7 +109,8 @@ export const createLinkRenderer = ({
       return null;
     }
 
-    const stableHref = ensureStableSeizeLink(href);
+    const rawHref = href;
+    const stableHref = ensureStableSeizeLink(rawHref);
     if (!isValidLink(stableHref)) {
       return null;
     }
@@ -112,7 +119,7 @@ export const createLinkRenderer = ({
     const anchorProps = { ...props, href: stableHref };
     const renderFallbackAnchor = () =>
       renderExternalOrInternalLink(stableHref, anchorProps);
-    const matchSeize = findMatch(seizeHandlers, stableHref);
+    const matchSeize = findMatch(seizeHandlers, rawHref);
     const renderOpenGraph = () => {
       if (!shouldUseOpenGraphPreview(stableHref, parsedUrl)) {
         return renderFallbackAnchor();
@@ -150,9 +157,12 @@ export const createLinkRenderer = ({
       </ErrorBoundary>
     );
 
-    const renderFromHandler = (handler: LinkHandler): ReactElement | null => {
+    const renderFromHandler = (
+      handler: LinkHandler,
+      targetHref: string
+    ): ReactElement | null => {
       try {
-        const rendered = handler.render(stableHref);
+        const rendered = handler.render(targetHref);
         return renderHandlerContent(rendered);
       } catch {
         const ogContent = tryRenderOpenGraph();
@@ -164,11 +174,51 @@ export const createLinkRenderer = ({
     };
 
     if (hideLinkPreviews) {
-      return renderFallbackAnchor();
+      const fallbackAnchor = renderFallbackAnchor();
+      if (!inlineShowControl?.enabled || inlineShowControlRendered) {
+        return fallbackAnchor;
+      }
+
+      inlineShowControlRendered = true;
+
+      return (
+        <span className="tw-inline-flex tw-items-center tw-gap-x-2">
+          {fallbackAnchor}
+          <button
+            type="button"
+            disabled={inlineShowControl.isLoading}
+            className={`tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-px-2 tw-py-0.5 tw-text-xs tw-font-medium tw-leading-5 tw-text-iron-200 tw-transition tw-duration-200 ${
+              inlineShowControl.isLoading
+                ? "tw-cursor-default tw-opacity-60"
+                : "hover:tw-bg-iron-700 hover:tw-text-white"
+            }`}
+            aria-label={inlineShowControl.label}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              event.nativeEvent.stopImmediatePropagation();
+              if (!inlineShowControl.isLoading) {
+                inlineShowControl.onToggle();
+              }
+            }}
+            onMouseDown={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              event.nativeEvent.stopImmediatePropagation();
+            }}
+            onTouchStart={(event) => {
+              event.stopPropagation();
+              event.nativeEvent.stopImmediatePropagation();
+            }}
+          >
+            {inlineShowControl.label}
+          </button>
+        </span>
+      );
     }
 
     if (matchSeize) {
-      const rendered = renderFromHandler(matchSeize);
+      const rendered = renderFromHandler(matchSeize, rawHref);
       if (rendered) {
         return rendered;
       }
@@ -177,7 +227,7 @@ export const createLinkRenderer = ({
     const matchExternal = findMatch(handlers, stableHref);
 
     if (matchExternal) {
-      const rendered = renderFromHandler(matchExternal);
+      const rendered = renderFromHandler(matchExternal, stableHref);
       if (rendered) {
         return rendered;
       }
@@ -200,13 +250,14 @@ export const createLinkRenderer = ({
       return false;
     }
 
-    const stableHref = ensureStableSeizeLink(href);
+    const rawHref = href;
+    const stableHref = ensureStableSeizeLink(rawHref);
     if (!isValidLink(stableHref)) {
       return false;
     }
 
     const parsedUrl = parseUrl(stableHref);
-    const seizeMatch = findMatch(seizeHandlers, stableHref);
+    const seizeMatch = findMatch(seizeHandlers, rawHref);
     if (seizeMatch) {
       return seizeMatch.display === "block";
     }

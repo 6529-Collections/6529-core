@@ -9,17 +9,10 @@ import HomeIcon from "@/components/common/icons/HomeIcon";
 import WavesIcon from "@/components/common/icons/WavesIcon";
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import HeaderSearchModal from "@/components/header/header-search/HeaderSearchModal";
-import {
-  resolveIpfsUrlAsync,
-  useIpfsContext,
-} from "@/components/ipfs/IPFSContext";
+import { useIpfsContext } from "@/components/ipfs/IPFSContext";
 import CommonAnimationOpacity from "@/components/utils/animation/CommonAnimationOpacity";
 import CommonAnimationWrapper from "@/components/utils/animation/CommonAnimationWrapper";
-import { useEmoji } from "@/contexts/EmojiContext";
 import { useTitle } from "@/contexts/TitleContext";
-import { ApiNotification } from "@/generated/models/ApiNotification";
-import { isElectron } from "@/helpers";
-import { generateNotificationData } from "@/helpers/notification.helpers";
 import useCapacitor from "@/hooks/useCapacitor";
 import { useSectionMap, useSidebarSections } from "@/hooks/useSidebarSections";
 import { useUnreadIndicator } from "@/hooks/useUnreadIndicator";
@@ -59,7 +52,6 @@ const WebSidebarNav = React.forwardRef<
     handle: connectedProfile?.handle ?? null,
   });
   const { setNotificationCount } = useTitle();
-  const { findNativeEmoji } = useEmoji();
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
@@ -198,37 +190,9 @@ const WebSidebarNav = React.forwardRef<
     return undefined;
   }, [isCollapsed, submenuTrigger]);
 
-  async function showNotification(
-    notification: ApiNotification,
-    unreadCount: number
-  ) {
-    if (!isElectron() || !unreadCount) return;
-    const relatedPfp = notification.related_identity?.pfp;
-    const newSrc = relatedPfp ? await resolveIpfsUrlAsync(relatedPfp) : "";
-    const notificationData = generateNotificationData(
-      notification,
-      findNativeEmoji,
-      connectedProfile?.handle ?? null
-    );
-    if (!notificationData) return;
-    window.notifications.showNotification(
-      notification.id,
-      newSrc,
-      notificationData.title,
-      notificationData.body,
-      notificationData.redirectPath
-    );
-  }
-
   useEffect(() => {
     setNotificationCount(notifications?.unread_count ?? 0);
-    if (haveUnreadNotifications && notifications?.notifications?.[0]) {
-      showNotification(
-        notifications.notifications[0],
-        notifications?.unread_count
-      );
-    }
-  }, [notifications?.unread_count, haveUnreadNotifications]);
+  }, [notifications?.unread_count, setNotificationCount]);
 
   const renderCollapsedSubmenu = useCallback(
     (sectionKey: string) => {

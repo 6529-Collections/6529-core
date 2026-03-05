@@ -1,19 +1,44 @@
-import { render, screen } from '@testing-library/react';
-import UserPageRepHeader from '@/components/user/rep/header/UserPageRepHeader';
+import { render, screen } from "@testing-library/react";
+import UserPageRepHeader from "@/components/user/rep/header/UserPageRepHeader";
 
-describe('UserPageRepHeader', () => {
-  it('shows rep totals when provided', () => {
-    const repRates = {
-      total_rep_rating: 1500,
-      number_of_raters: 25,
+const mockProfile = {
+  handle: "testuser",
+  display: "Test User",
+  query: "testuser",
+} as any;
+
+describe("UserPageRepHeader", () => {
+  it("shows rep totals when provided", () => {
+    const overview = {
+      total_rep: 1500,
+      contributor_count: 25,
+      authenticated_user_contribution: null,
+      contributors: { data: [], page: 1, next: false },
     } as any;
-    render(<UserPageRepHeader repRates={repRates} />);
-    expect(screen.getByText('1,500')).toBeInTheDocument();
-    expect(screen.getByText('25')).toBeInTheDocument();
+    render(
+      <UserPageRepHeader
+        overview={overview}
+        categories={[]}
+        profile={mockProfile}
+        repDirection="received"
+        onRepDirectionChange={() => {}}
+        loading={false}
+      />
+    );
+    expect(screen.getByText("1,500")).toBeInTheDocument();
   });
 
-  it('renders empty values without repRates', () => {
-    const { container } = render(<UserPageRepHeader repRates={null} />);
-    expect(container).toHaveTextContent('Rep:');
+  it("renders without overview", () => {
+    const { container } = render(
+      <UserPageRepHeader
+        overview={null}
+        categories={[]}
+        profile={mockProfile}
+        repDirection="received"
+        onRepDirectionChange={() => {}}
+        loading={false}
+      />
+    );
+    expect(container).toHaveTextContent("Rep");
   });
 });

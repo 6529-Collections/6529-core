@@ -1,0 +1,658 @@
+import type { ApiDropNftLink } from "@/generated/models/ApiDropNftLink";
+import { ApiNftLinkMediaPreviewStatusEnum } from "@/generated/models/ApiNftLinkMediaPreview";
+import { getTimeAgo } from "@/helpers/Helpers";
+import type { WsMediaLinkUpdatedData } from "@/helpers/Types";
+import { asNonEmptyString } from "@/lib/text/nonEmptyString";
+import { matchesDomainOrSubdomain } from "@/lib/url/domains";
+import type { LinkPreviewResponse } from "@/services/api/link-preview-api";
+import type { ApiNftLinkResponse } from "@/services/api/nft-link-api";
+import type { QueryClient } from "@tanstack/react-query";
+
+type MediaCandidate =
+  | {
+      readonly url?: string | null | undefined;
+      readonly secureUrl?: string | null | undefined;
+      readonly type?: string | null | undefined;
+    }
+  | null
+  | undefined;
+
+type WsMediaPreviewCandidate = {
+  readonly card_url?: string | null | undefined;
+  readonly small_url?: string | null | undefined;
+  readonly thumb_url?: string | null | undefined;
+  readonly mime_type?: string | null | undefined;
+};
+
+export interface MarketplaceTypePreviewProps {
+  readonly href: string;
+  readonly compact?: boolean | undefined;
+}
+
+export type MarketplacePreviewMode = "default" | "opensea-sanitized";
+
+export type MarketplacePreviewState =
+  | { readonly type: "loading"; readonly href: string }
+  | {
+      readonly type: "success";
+      readonly href: string;
+      readonly resolvedMedia?: PickedMedia | undefined;
+      readonly resolvedPrice?: string | undefined;
+      readonly resolvedPriceCurrency?: string | undefined;
+      readonly resolvedTitle?: string | undefined;
+      readonly resolvedDataHealth: MarketplaceDataHealth;
+    }
+  | { readonly type: "error"; readonly href: string; readonly error: Error };
+
+type PickedMedia = {
+  readonly url: string;
+  readonly mimeType: string;
+};
+
+export type MarketplaceDataHealthState =
+  | "fresh"
+  | "stale"
+  | "error"
+  | "unknown";
+
+export interface MarketplaceDataHealth {
+  readonly state: MarketplaceDataHealthState;
+  readonly details: string;
+}
+
+export interface MarketplacePreviewData {
+  readonly href: string;
+  readonly canonicalId: string | null;
+  readonly platform: string | null;
+  readonly title: string | null;
+  readonly description: string | null;
+  readonly media: PickedMedia | null;
+  readonly price: string | null;
+  readonly priceCurrency: string | null;
+  readonly lastErrorMessage: string | null;
+  readonly lastSuccessfullyUpdatedMs: number | null;
+  readonly failedSinceMs: number | null;
+}
+
+const OPENSEA_HOST = "opensea.io";
+const MARKETPLACE_PREVIEW_QUERY_KEY = "MARKETPLACE_PREVIEW";
+const MARKETPLACE_DATA_STALE_AFTER_MS = 3 * 24 * 60 * 60 * 1000;
+const MARKETPLACE_PREVIEW_MODES: readonly MarketplacePreviewMode[] = [
+  "default",
+  "opensea-sanitized",
+];
+
+const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  avif: "image/avif",
+  gif: "image/gif",
+  jpeg: "image/jpeg",
+  jpg: "image/jpeg",
+  m4v: "video/x-m4v",
+  mov: "video/quicktime",
+  mp3: "audio/mpeg",
+  mp4: "video/mp4",
+  ogg: "audio/ogg",
+  ogv: "video/ogg",
+  flac: "audio/flac",
+  png: "image/png",
+  svg: "image/svg+xml",
+  wav: "audio/wav",
+  webm: "video/webm",
+  webp: "image/webp",
+  glb: "model/gltf-binary",
+  gltf: "model/gltf+json",
+  usdz: "model/vnd.usdz",
+};
+
+const asNullableString = (value: unknown): string | null =>
+  asNonEmptyString(value) ?? null;
+
+const asNullableTimestampMs = (value: unknown): number | null => {
+  let numericValue: number;
+  if (typeof value === "number") {
+    numericValue = value;
+  } else if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+    numericValue = Number(trimmed);
+  } else {
+    return null;
+  }
+
+  if (!Number.isFinite(numericValue)) {
+    return null;
+  }
+
+  const normalizedValue =
+    numericValue < 100_000_000_000 ? numericValue * 1000 : numericValue;
+
+  if (normalizedValue <= 0) {
+    return null;
+  }
+
+  return Math.trunc(normalizedValue);
+};
+
+const normalizeCanonicalId = (canonicalId: unknown): string | null => {
+  const value = asNonEmptyString(canonicalId);
+  return value ? value.toLowerCase() : null;
+};
+
+const isOpenSeaHref = (href: string): boolean => {
+  try {
+    const parsed = new URL(href);
+    return matchesDomainOrSubdomain(
+      parsed.hostname.toLowerCase(),
+      OPENSEA_HOST
+    );
+  } catch {
+    return false;
+  }
+};
+
+const isBlockedOpenSeaOverlayUrl = (url: string): boolean => {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const path = parsed.pathname.toLowerCase();
+
+    if (!matchesDomainOrSubdomain(host, OPENSEA_HOST)) {
+      return false;
+    }
+
+    return path.includes("opengraph");
+  } catch {
+    return false;
+  }
+};
+
+const inferMimeTypeFromUrl = (url: string): string | undefined => {
+  try {
+    const parsed = new URL(url);
+    const extensionMatch = parsed.pathname
+      .toLowerCase()
+      .match(/\.([a-z0-9]+)$/);
+    if (!extensionMatch?.[1]) {
+      return undefined;
+    }
+
+    return IMAGE_MIME_BY_EXTENSION[extensionMatch[1]];
+  } catch {
+    const path = url.split("?")[0]?.toLowerCase() ?? "";
+    const extensionMatch = path.match(/\.([a-z0-9]+)$/);
+    if (!extensionMatch?.[1]) {
+      return undefined;
+    }
+
+    return IMAGE_MIME_BY_EXTENSION[extensionMatch[1]];
+  }
+};
+
+const toPickedMedia = (candidate: MediaCandidate): PickedMedia | undefined => {
+  if (!candidate) {
+    return undefined;
+  }
+
+  const urlCandidate = candidate.url ?? candidate.secureUrl;
+  if (typeof urlCandidate !== "string" || urlCandidate.trim().length === 0) {
+    return undefined;
+  }
+
+  const url = urlCandidate.trim();
+  const mimeType =
+    asNonEmptyString(candidate.type) ?? inferMimeTypeFromUrl(url) ?? "image/*";
+
+  return {
+    url,
+    mimeType,
+  };
+};
+
+const pickMediaFromUrl = (value: unknown): PickedMedia | undefined => {
+  const url = asNonEmptyString(value);
+  if (!url) {
+    return undefined;
+  }
+
+  return {
+    url,
+    mimeType: inferMimeTypeFromUrl(url) ?? "image/*",
+  };
+};
+
+const asWsMediaPreviewCandidate = (
+  value: unknown
+): WsMediaPreviewCandidate | undefined => {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value as WsMediaPreviewCandidate;
+};
+
+const pickWsMediaPreview = (
+  update: WsMediaLinkUpdatedData
+): PickedMedia | undefined => {
+  const preview = asWsMediaPreviewCandidate(update.media_preview);
+  const url =
+    asNonEmptyString(preview?.card_url) ??
+    asNonEmptyString(preview?.small_url) ??
+    asNonEmptyString(preview?.thumb_url) ??
+    asNonEmptyString(update.card_url) ??
+    asNonEmptyString(update.small_url) ??
+    asNonEmptyString(update.thumb_url) ??
+    asNonEmptyString(update.media_preview_card_url) ??
+    asNonEmptyString(update.media_preview_small_url) ??
+    asNonEmptyString(update.media_preview_thumb_url);
+
+  if (!url) {
+    return undefined;
+  }
+
+  return {
+    url,
+    mimeType:
+      asNonEmptyString(preview?.mime_type) ??
+      asNonEmptyString(update.media_preview_mime_type) ??
+      inferMimeTypeFromUrl(url) ??
+      "image/*",
+  };
+};
+
+const pickWsMediaLinkUpdatedMedia = ({
+  current,
+  update,
+}: {
+  readonly current: MarketplacePreviewData;
+  readonly update: WsMediaLinkUpdatedData;
+}): PickedMedia | null =>
+  pickWsMediaPreview(update) ??
+  current.media ??
+  pickMediaFromUrl(update.media_uri) ??
+  null;
+
+const pickMedia = (data: LinkPreviewResponse): PickedMedia | undefined => {
+  const primary = toPickedMedia(data.image);
+  if (primary) {
+    return primary;
+  }
+
+  const images = data.images;
+  if (images === null || images === undefined) {
+    return undefined;
+  }
+
+  for (const image of images) {
+    const candidate = toPickedMedia(image);
+    if (candidate) {
+      return candidate;
+    }
+  }
+
+  return undefined;
+};
+
+const pickNftLinkMediaPreview = (
+  response: ApiNftLinkResponse | undefined
+): PickedMedia | undefined => {
+  const preview = response?.data?.media_preview;
+  if (preview?.status !== ApiNftLinkMediaPreviewStatusEnum.Ready) {
+    return undefined;
+  }
+
+  const url =
+    asNonEmptyString(preview.card_url) ??
+    asNonEmptyString(preview.small_url) ??
+    asNonEmptyString(preview.thumb_url);
+
+  if (!url) {
+    return undefined;
+  }
+
+  return {
+    url,
+    mimeType:
+      asNonEmptyString(preview.mime_type) ??
+      inferMimeTypeFromUrl(url) ??
+      "image/*",
+  };
+};
+
+const pickNftLinkMedia = (
+  response: ApiNftLinkResponse | undefined
+): PickedMedia | undefined =>
+  pickNftLinkMediaPreview(response) ??
+  pickMediaFromUrl(response?.data?.media_uri);
+
+const pickNftLinkPrice = (
+  response: ApiNftLinkResponse | undefined
+): string | undefined => asNonEmptyString(response?.data?.price);
+
+const pickNftLinkPriceCurrency = (
+  response: ApiNftLinkResponse | undefined
+): string | undefined => asNonEmptyString(response?.data?.price_currency);
+
+const pickNftLinkTitle = (
+  response: ApiNftLinkResponse | undefined
+): string | undefined => asNonEmptyString(response?.data?.name);
+
+const pickNftLinkDescription = (
+  response: ApiNftLinkResponse | undefined
+): string | undefined => asNonEmptyString(response?.data?.description);
+
+const pickNftLinkLastErrorMessage = (
+  response: ApiNftLinkResponse | undefined
+): string | null => asNullableString(response?.data?.last_error_message);
+
+const pickNftLinkLastSuccessfullyUpdatedMs = (
+  response: ApiNftLinkResponse | undefined
+): number | null =>
+  asNullableTimestampMs(response?.data?.last_successfully_updated);
+
+const pickNftLinkFailedSinceMs = (
+  response: ApiNftLinkResponse | undefined
+): number | null => asNullableTimestampMs(response?.data?.failed_since);
+
+export const fromNftLink = ({
+  href,
+  response,
+}: {
+  readonly href: string;
+  readonly response?: ApiNftLinkResponse | undefined;
+}): MarketplacePreviewData => ({
+  href,
+  canonicalId: asNullableString(response?.data?.canonical_id),
+  platform: asNullableString(response?.data?.platform),
+  title: pickNftLinkTitle(response) ?? null,
+  description: pickNftLinkDescription(response) ?? null,
+  media: pickNftLinkMedia(response) ?? null,
+  price: pickNftLinkPrice(response) ?? null,
+  priceCurrency: pickNftLinkPriceCurrency(response) ?? null,
+  lastErrorMessage: pickNftLinkLastErrorMessage(response),
+  lastSuccessfullyUpdatedMs: pickNftLinkLastSuccessfullyUpdatedMs(response),
+  failedSinceMs: pickNftLinkFailedSinceMs(response),
+});
+
+const fromApiDropNftLink = ({
+  href,
+  nftLink,
+}: {
+  readonly href: string;
+  readonly nftLink: ApiDropNftLink;
+}): MarketplacePreviewData =>
+  fromNftLink({
+    href,
+    response: {
+      is_enrichable: nftLink.data !== null,
+      validation_error: null,
+      data: nftLink.data,
+    },
+  });
+
+const mergeSeededMarketplacePreviewData = ({
+  current,
+  seeded,
+}: {
+  readonly current: MarketplacePreviewData | undefined;
+  readonly seeded: MarketplacePreviewData;
+}): MarketplacePreviewData => {
+  if (!current) {
+    return seeded;
+  }
+
+  return {
+    ...current,
+    canonicalId: current.canonicalId ?? seeded.canonicalId,
+    platform: current.platform ?? seeded.platform,
+    title: current.title ?? seeded.title,
+    description: current.description ?? seeded.description,
+    media: current.media ?? seeded.media,
+    price: current.price ?? seeded.price,
+    priceCurrency: current.priceCurrency ?? seeded.priceCurrency,
+    lastErrorMessage: current.lastErrorMessage ?? seeded.lastErrorMessage,
+    lastSuccessfullyUpdatedMs:
+      current.lastSuccessfullyUpdatedMs ?? seeded.lastSuccessfullyUpdatedMs,
+    failedSinceMs: current.failedSinceMs ?? seeded.failedSinceMs,
+  };
+};
+
+const normalizeHref = (value: unknown): string | null =>
+  asNonEmptyString(value) ?? null;
+
+export const primeMarketplacePreviewCacheFromNftLinks = ({
+  queryClient,
+  nftLinks,
+}: {
+  readonly queryClient: QueryClient;
+  readonly nftLinks: readonly ApiDropNftLink[] | null | undefined;
+}): void => {
+  if (typeof nftLinks?.length !== "number" || nftLinks.length === 0) {
+    return;
+  }
+
+  const seenHrefs = new Set<string>();
+  for (const nftLink of nftLinks) {
+    const href = normalizeHref(nftLink.url_in_text);
+    if (!href || seenHrefs.has(href)) {
+      continue;
+    }
+
+    seenHrefs.add(href);
+    const seededPreview = fromApiDropNftLink({ href, nftLink });
+    if (!seededPreview.media) continue;
+
+    for (const mode of MARKETPLACE_PREVIEW_MODES) {
+      queryClient.setQueryData<MarketplacePreviewData>(
+        [MARKETPLACE_PREVIEW_QUERY_KEY, { href, mode }],
+        (current) =>
+          mergeSeededMarketplacePreviewData({
+            current,
+            seeded: seededPreview,
+          })
+      );
+    }
+  }
+};
+
+export const needsOpenGraphFallback = (data: MarketplacePreviewData): boolean =>
+  data.title === null || data.media === null;
+
+export const mergeOpenGraphFallback = ({
+  href,
+  mode,
+  current,
+  linkPreview,
+}: {
+  readonly href: string;
+  readonly mode: MarketplacePreviewMode;
+  readonly current: MarketplacePreviewData;
+  readonly linkPreview: LinkPreviewResponse;
+}): MarketplacePreviewData => {
+  const linkPreviewResponse =
+    mode === "opensea-sanitized"
+      ? sanitizeOpenSeaOverlayMedia(href, linkPreview)
+      : linkPreview;
+
+  return {
+    ...current,
+    title: current.title ?? asNullableString(linkPreviewResponse.title),
+    description:
+      current.description ?? asNullableString(linkPreviewResponse.description),
+    media: current.media ?? pickMedia(linkPreviewResponse) ?? null,
+  };
+};
+
+const isSameMedia = (
+  first: PickedMedia | null,
+  second: PickedMedia | null
+): boolean =>
+  first?.url === second?.url && first?.mimeType === second?.mimeType;
+
+export const matchesMarketplacePreviewCanonicalId = ({
+  previewCanonicalId,
+  incomingCanonicalId,
+}: {
+  readonly previewCanonicalId: string | null;
+  readonly incomingCanonicalId: unknown;
+}): boolean => {
+  const normalizedPreviewCanonicalId = normalizeCanonicalId(previewCanonicalId);
+  const normalizedIncomingCanonicalId =
+    normalizeCanonicalId(incomingCanonicalId);
+
+  return (
+    normalizedPreviewCanonicalId !== null &&
+    normalizedPreviewCanonicalId === normalizedIncomingCanonicalId
+  );
+};
+
+export const patchFromMediaLinkUpdate = ({
+  current,
+  update,
+}: {
+  readonly current: MarketplacePreviewData;
+  readonly update: WsMediaLinkUpdatedData;
+}): MarketplacePreviewData => {
+  const nextCanonicalId = asNonEmptyString(update.canonical_id);
+  const nextPlatform = asNonEmptyString(update.platform);
+  const nextTitle = asNonEmptyString(update.name);
+  const nextDescription = asNonEmptyString(update.description);
+  const nextPrice = asNonEmptyString(update.price);
+  const nextPriceCurrency = asNonEmptyString(update.price_currency);
+  const nextMedia = pickWsMediaLinkUpdatedMedia({ current, update });
+  const nextLastErrorMessage = asNullableString(update.last_error_message);
+  const nextLastSuccessfullyUpdatedMs = asNullableTimestampMs(
+    update.last_successfully_updated
+  );
+  const nextFailedSinceMs = asNullableTimestampMs(update.failed_since);
+
+  const patched: MarketplacePreviewData = {
+    ...current,
+    canonicalId: nextCanonicalId ?? current.canonicalId,
+    platform: nextPlatform ?? current.platform,
+    title: nextTitle ?? current.title,
+    description: nextDescription ?? current.description,
+    media: nextMedia,
+    price: nextPrice ?? current.price,
+    priceCurrency: nextPriceCurrency ?? current.priceCurrency,
+    lastErrorMessage: nextLastErrorMessage,
+    lastSuccessfullyUpdatedMs: nextLastSuccessfullyUpdatedMs,
+    failedSinceMs: nextFailedSinceMs,
+  };
+
+  const didChange =
+    patched.canonicalId !== current.canonicalId ||
+    patched.platform !== current.platform ||
+    patched.title !== current.title ||
+    patched.description !== current.description ||
+    patched.price !== current.price ||
+    patched.priceCurrency !== current.priceCurrency ||
+    patched.lastErrorMessage !== current.lastErrorMessage ||
+    patched.lastSuccessfullyUpdatedMs !== current.lastSuccessfullyUpdatedMs ||
+    patched.failedSinceMs !== current.failedSinceMs ||
+    !isSameMedia(patched.media, current.media);
+
+  return didChange ? patched : current;
+};
+
+const toDataHealthDetails = ({
+  prefix,
+  timestampMs,
+}: {
+  readonly prefix: string;
+  readonly timestampMs: number;
+}): string => {
+  const localDateTime = new Date(timestampMs).toLocaleString();
+  return `${prefix} ${getTimeAgo(timestampMs)} (${localDateTime})`;
+};
+
+export const deriveMarketplaceDataHealth = (
+  data: MarketplacePreviewData | null | undefined
+): MarketplaceDataHealth => {
+  const lastErrorMessage = asNonEmptyString(data?.lastErrorMessage) ?? null;
+  const hasFailedSince =
+    data?.failedSinceMs !== null && data?.failedSinceMs !== undefined;
+  if (lastErrorMessage || hasFailedSince) {
+    return {
+      state: "error",
+      details: lastErrorMessage
+        ? `NFT data update error: ${lastErrorMessage}`
+        : "NFT data update error",
+    };
+  }
+
+  const updatedAt = data?.lastSuccessfullyUpdatedMs ?? null;
+  if (updatedAt === null) {
+    return {
+      state: "unknown",
+      details: "NFT data update status unavailable",
+    };
+  }
+
+  const isStale = Date.now() - updatedAt > MARKETPLACE_DATA_STALE_AFTER_MS;
+  if (isStale) {
+    return {
+      state: "stale",
+      details: toDataHealthDetails({
+        prefix: "NFT data stale: last successful update",
+        timestampMs: updatedAt,
+      }),
+    };
+  }
+
+  return {
+    state: "fresh",
+    details: toDataHealthDetails({
+      prefix: "NFT data fresh: last successful update",
+      timestampMs: updatedAt,
+    }),
+  };
+};
+
+const sanitizeOpenSeaOverlayMedia = (
+  href: string,
+  data: LinkPreviewResponse
+): LinkPreviewResponse => {
+  if (!isOpenSeaHref(href)) {
+    return data;
+  }
+
+  const primary = toPickedMedia(data.image);
+  const hasBlockedPrimary =
+    primary !== undefined && isBlockedOpenSeaOverlayUrl(primary.url);
+  const hasNonBlockedPrimary = primary !== undefined && !hasBlockedPrimary;
+
+  const images = data.images ?? [];
+  let hasNonBlockedImageCandidate = false;
+  const sanitizedImages = images.filter((image) => {
+    const candidate = toPickedMedia(image);
+    if (!candidate) {
+      return true;
+    }
+
+    if (isBlockedOpenSeaOverlayUrl(candidate.url)) {
+      return false;
+    }
+
+    hasNonBlockedImageCandidate = true;
+    return true;
+  });
+
+  const hasAnyNonBlockedCandidate =
+    hasNonBlockedPrimary || hasNonBlockedImageCandidate;
+  if (!hasAnyNonBlockedCandidate) {
+    return data;
+  }
+
+  const didChangeImages = sanitizedImages.length !== images.length;
+  if (!hasBlockedPrimary && !didChangeImages) {
+    return data;
+  }
+
+  return {
+    ...data,
+    image: hasBlockedPrimary ? null : data.image,
+    images: sanitizedImages,
+  };
+};
