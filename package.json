@@ -1,6 +1,6 @@
 {
   "name": "6529-core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "author": {
     "name": "6529",
     "email": "6529@6529.io"
@@ -222,7 +222,7 @@
       "react": "$react",
       "react-dom": "$react-dom"
     },
-    "tar": "7.5.9",
+    "tar": "7.5.10",
     "fast-xml-parser": "5.4.2",
     "serialize-javascript": "7.0.4",
     "minimatch": "9.0.9"
