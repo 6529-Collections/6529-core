@@ -442,6 +442,7 @@ export default defineConfig([
     plugins,
     rules,
     settings: {
+      "import/internal-regex": "^@/",
       "import/resolver": {
         typescript: {
           alwaysTryTypes: true,

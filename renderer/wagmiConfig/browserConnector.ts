@@ -1,4 +1,7 @@
-import { setAuthJwt } from "@/services/auth/auth.utils";
+import {
+  setActiveWalletAccount,
+  setAuthJwt,
+} from "@/services/auth/auth.utils";
 import { createConnector } from "@wagmi/core";
 import { mainnet, sepolia } from "viem/chains";
 
@@ -143,8 +146,58 @@ export function browserConnector(parameters: {
               accounts: response.accounts,
               chainId: response.chainId,
             };
-            const auth = response.auth;
-            setAuthJwt(auth.address, auth.token, auth.refreshToken, auth.role);
+            const auth = response.auth as
+              | {
+                  address?: string;
+                  token?: string;
+                  refreshToken?: string;
+                  role?: string | null;
+                }
+              | undefined;
+            const primaryConnectedAccount =
+              response.accounts?.[0] as `0x${string}` | undefined;
+            const hasMatchingAuthAddress =
+              typeof auth?.address === "string" &&
+              Array.isArray(response.accounts) &&
+              response.accounts.some(
+                (account: string) =>
+                  account.toLowerCase() === auth.address?.toLowerCase()
+              );
+
+            if (
+              hasMatchingAuthAddress &&
+              typeof auth?.token === "string" &&
+              typeof auth?.refreshToken === "string"
+            ) {
+              setAuthJwt(
+                auth.address!,
+                auth.token,
+                auth.refreshToken,
+                auth.role ?? undefined
+              );
+            } else if (
+              typeof auth?.address === "string" &&
+              typeof auth?.token === "string" &&
+              typeof auth?.refreshToken === "string"
+            ) {
+              console.warn(
+                `[${this.name}] Ignoring browser auth payload with non-matching address`,
+                {
+                  authAddress: auth.address,
+                  connectedAccounts: response.accounts,
+                }
+              );
+            }
+
+            if (typeof primaryConnectedAccount === "string") {
+              const didSwitch = setActiveWalletAccount(primaryConnectedAccount);
+              if (!didSwitch) {
+                console.log(
+                  `[${this.name}] Connected account is not active yet (likely awaiting auth):`,
+                  primaryConnectedAccount
+                );
+              }
+            }
             await window.store.set(
               CONNECTION_STORE,
               JSON.stringify(connectionObject)
