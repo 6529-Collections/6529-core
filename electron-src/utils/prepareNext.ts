@@ -67,10 +67,25 @@ function bootstrapNodePathSearch(): void {
   ];
   process.env.NODE_PATH = mergedNodePath.join(path.delimiter);
 
+  const normalizedNodePaths = Array.from(
+    new Set(mergedNodePath.filter((entry) => entry.length > 0))
+  );
+  for (let i = normalizedNodePaths.length - 1; i >= 0; i -= 1) {
+    const nodePathEntry = normalizedNodePaths[i];
+    if (!Module.globalPaths.includes(nodePathEntry)) {
+      Module.globalPaths.unshift(nodePathEntry);
+    }
+    if (!module.paths.includes(nodePathEntry)) {
+      module.paths.unshift(nodePathEntry);
+    }
+  }
+
   const moduleWithInit = Module as unknown as {
     _initPaths?: (() => void) | undefined;
   };
-  moduleWithInit._initPaths?.();
+  if (!Array.isArray(Module.globalPaths) || !Array.isArray(module.paths)) {
+    moduleWithInit._initPaths?.();
+  }
 
   Logger.info("NODE_PATH EXTRA:", existingDirs.join(path.delimiter));
 }

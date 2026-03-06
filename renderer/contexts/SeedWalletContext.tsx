@@ -11,9 +11,9 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
-import { useConnections } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";
 
@@ -38,8 +38,7 @@ const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
 export const SeedWalletProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const connections = useConnections();
-  const { address: activeAddress } = useSeizeConnectContext();
+  const { address: activeAddress, connectionState } = useSeizeConnectContext();
 
   const [isFetched, setIsFetched] = useState(false);
 
@@ -47,6 +46,7 @@ export const SeedWalletProvider: React.FC<{
 
   const [isSeedWallet, setIsSeedWallet] = useState<boolean>(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const connectedAddressRef = useRef<string | null>(null);
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
 
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
@@ -116,6 +116,10 @@ export const SeedWalletProvider: React.FC<{
   }, []);
 
   useEffect(() => {
+    connectedAddressRef.current = connectedAddress;
+  }, [connectedAddress]);
+
+  useEffect(() => {
     const handleDisconnect = () => {
       lockWallet();
     };
@@ -179,7 +183,9 @@ export const SeedWalletProvider: React.FC<{
     };
 
     if (!activeAddress) {
-      reset();
+      if (connectionState !== "initializing") {
+        reset();
+      }
       return;
     }
 
@@ -212,12 +218,12 @@ export const SeedWalletProvider: React.FC<{
           return;
         }
 
-        if (!areEqualAddresses(connectedAddress, seedWallet.address)) {
+        if (!areEqualAddresses(connectedAddressRef.current, seedWallet.address)) {
           lockWallet(false);
           setIsFetched(false);
+          setConnectedAddress(seedWallet.address);
         }
 
-        setConnectedAddress(seedWallet.address);
         setIsSeedWallet(true);
         setLockedWallet((previousWallet) => {
           if (
@@ -240,7 +246,7 @@ export const SeedWalletProvider: React.FC<{
     return () => {
       cancelled = true;
     };
-  }, [connections, connectedAddress, lockWallet, activeAddress]);
+  }, [activeAddress, connectionState, lockWallet]);
 
   const value = {
     isSeedWallet,

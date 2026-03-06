@@ -21,6 +21,7 @@ const LEGACY_CONNECTION_STORE = "seize-app-connection";
 const getConnectionStoreKey = (connectorId: string) =>
   `seize-app-connection-${connectorId}`;
 const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
+const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
 const INVALID_CONNECTION_PAYLOAD_ERROR =
   "Invalid connection payload: accounts must be array of 0x-prefixed 40-hex strings and chainId must be a positive integer.";
 
@@ -71,6 +72,9 @@ const parseConnectionPayload = (
   if (!Array.isArray(accountsInput)) {
     return null;
   }
+  if (accountsInput.length === 0) {
+    return null;
+  }
 
   const accounts: `0x${string}`[] = [];
   for (const account of accountsInput) {
@@ -101,10 +105,17 @@ export function browserConnector(parameters: {
   icon: string;
   id: string;
 }) {
+  type PendingDeepLinkResponse = {
+    response: ProviderResponse;
+    receivedAt: number;
+    cleanupTimeout: ReturnType<typeof setTimeout>;
+  };
+
   const connectionStoreKey = getConnectionStoreKey(parameters.id);
   const deepLinkCallbacks: Map<string, (response: ProviderResponse) => void> =
     new Map();
-  const pendingDeepLinkResponses: Map<string, ProviderResponse> = new Map();
+  const pendingDeepLinkResponses: Map<string, PendingDeepLinkResponse> =
+    new Map();
 
   let initialized = false;
   let scheme = "core6529";
@@ -113,6 +124,36 @@ export function browserConnector(parameters: {
   let connectionObject: ConnectionObject = {
     accounts: [],
     chainId: 1,
+  };
+
+  const clearPendingDeepLinkResponse = (requestId: string) => {
+    const pendingResponse = pendingDeepLinkResponses.get(requestId);
+    if (pendingResponse) {
+      clearTimeout(pendingResponse.cleanupTimeout);
+      pendingDeepLinkResponses.delete(requestId);
+    }
+  };
+
+  const storePendingDeepLinkResponse = (
+    requestId: string,
+    response: ProviderResponse
+  ) => {
+    clearPendingDeepLinkResponse(requestId);
+    const cleanupTimeout = setTimeout(() => {
+      pendingDeepLinkResponses.delete(requestId);
+    }, PENDING_DEEP_LINK_RESPONSE_TTL_MS);
+    pendingDeepLinkResponses.set(requestId, {
+      response,
+      receivedAt: Date.now(),
+      cleanupTimeout,
+    });
+  };
+
+  const clearAllPendingDeepLinkResponses = () => {
+    for (const pendingResponse of pendingDeepLinkResponses.values()) {
+      clearTimeout(pendingResponse.cleanupTimeout);
+    }
+    pendingDeepLinkResponses.clear();
   };
 
   const parseConnectionObject = (
@@ -150,10 +191,11 @@ export function browserConnector(parameters: {
 
       const callback = deepLinkCallbacks.get(requestId);
       if (callback) {
+        clearPendingDeepLinkResponse(requestId);
         callback(data.data);
         deepLinkCallbacks.delete(requestId);
       } else {
-        pendingDeepLinkResponses.set(requestId, data.data ?? {});
+        storePendingDeepLinkResponse(requestId, data.data ?? {});
         console.log(
           `[${name}] No callback found for requestId`,
           requestId
@@ -181,8 +223,8 @@ export function browserConnector(parameters: {
 
     const pendingResponse = pendingDeepLinkResponses.get(requestId);
     if (pendingResponse) {
-      pendingDeepLinkResponses.delete(requestId);
-      callback(pendingResponse);
+      clearPendingDeepLinkResponse(requestId);
+      callback(pendingResponse.response);
       deepLinkCallbacks.delete(requestId);
     }
   };
@@ -289,7 +331,7 @@ export function browserConnector(parameters: {
         const timeoutId = setTimeout(() => {
           console.log(`[${this.name}] Deep link callback timed out`, requestId);
           deepLinkCallbacks.delete(requestId);
-          pendingDeepLinkResponses.delete(requestId);
+          clearPendingDeepLinkResponse(requestId);
           reject(new Error("Connection request timed out"));
         }, 60000);
 
@@ -418,7 +460,7 @@ export function browserConnector(parameters: {
     },
     async disconnect() {
       deepLinkCallbacks.clear();
-      pendingDeepLinkResponses.clear();
+      clearAllPendingDeepLinkResponses();
       connectionObject = {
         accounts: [],
         chainId: 1,
@@ -452,7 +494,7 @@ export function browserConnector(parameters: {
                 requestId
               );
               deepLinkCallbacks.delete(requestId);
-              pendingDeepLinkResponses.delete(requestId);
+              clearPendingDeepLinkResponse(requestId);
               reject(new Error("Provider request timed out"));
             }, 60000);
 
