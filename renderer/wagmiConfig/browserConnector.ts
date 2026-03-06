@@ -142,8 +142,29 @@ export function browserConnector(parameters: {
           if (!response || response.error) {
             reject(new Error(response?.error));
           } else {
+            if (!Array.isArray(response.accounts)) {
+              reject(
+                new Error(
+                  "Invalid connection payload: accounts must be an array of strings."
+                )
+              );
+              return;
+            }
+            const validatedAccounts = response.accounts
+              .filter((account: unknown): account is string => {
+                return typeof account === "string";
+              })
+              .map((account) => account.toLowerCase() as `0x${string}`);
+            if (validatedAccounts.length !== response.accounts.length) {
+              reject(
+                new Error(
+                  "Invalid connection payload: accounts must be an array of strings."
+                )
+              );
+              return;
+            }
             connectionObject = {
-              accounts: response.accounts,
+              accounts: validatedAccounts,
               chainId: response.chainId,
             };
             const auth = response.auth as
@@ -154,19 +175,16 @@ export function browserConnector(parameters: {
                   role?: string | null;
                 }
               | undefined;
-            const primaryConnectedAccount =
-              response.accounts?.[0] as `0x${string}` | undefined;
+            const primaryConnectedAccount = validatedAccounts[0];
             const authAddressLower =
               typeof auth?.address === "string"
                 ? auth.address.toLowerCase()
                 : undefined;
             const matchingAuthAccount =
-              typeof authAddressLower === "string" &&
-              Array.isArray(response.accounts)
-                ? (response.accounts.find(
-                    (account: string) =>
-                      account.toLowerCase() === authAddressLower
-                  ) as `0x${string}` | undefined)
+              typeof authAddressLower === "string"
+                ? validatedAccounts.find(
+                    (account) => account === authAddressLower
+                  )
                 : undefined;
             const hasMatchingAuthAddress =
               typeof matchingAuthAccount === "string";
@@ -191,12 +209,13 @@ export function browserConnector(parameters: {
                 `[${this.name}] Ignoring browser auth payload with non-matching address`,
                 {
                   authAddress: auth.address,
-                  connectedAccounts: response.accounts,
+                  connectedAccounts: validatedAccounts,
                 }
               );
             }
 
-            const accountToActivate = matchingAuthAccount ?? primaryConnectedAccount;
+            const accountToActivate =
+              matchingAuthAccount ?? primaryConnectedAccount;
             if (typeof accountToActivate === "string") {
               const didSwitch = setActiveWalletAccount(accountToActivate);
               if (!didSwitch) {
@@ -212,9 +231,7 @@ export function browserConnector(parameters: {
             );
 
             if (opts?.withCapabilities) {
-              const accountsWithCaps = (
-                response.accounts as `0x${string}`[]
-              ).map((address) => ({
+              const accountsWithCaps = validatedAccounts.map((address) => ({
                 address,
                 capabilities: {} as Record<string, unknown>,
               })) as unknown as readonly {
@@ -230,7 +247,7 @@ export function browserConnector(parameters: {
             }
 
             resolve({
-              accounts: response.accounts as readonly `0x${string}`[],
+              accounts: validatedAccounts as readonly `0x${string}`[],
               chainId: response.chainId,
             } as any);
           }

@@ -511,9 +511,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
             : null;
         const shouldPreferStoredActiveAddress =
           !!checksummedStoredActiveAddress &&
-          (!addFlowOriginAddress ||
+          !!addFlowOriginAddress &&
             normalizeAddress(checksummedStoredActiveAddress) !==
-              normalizeAddress(addFlowOriginAddress));
+              normalizeAddress(addFlowOriginAddress);
         const nextConnectedAddress =
           shouldPreferStoredActiveAddress && checksummedStoredActiveAddress
             ? checksummedStoredActiveAddress

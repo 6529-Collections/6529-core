@@ -60,6 +60,7 @@ export default function HeaderUserProxyDropdown({
     setShowPasswordModal,
   } = useSeedWallet();
   const { showToast } = useToast();
+  const showSeedWalletActions = isSeedWallet && isConnected;
 
   const onActivateProfileProxy = async (
     profileProxy: ApiProfileProxy | null
@@ -243,7 +244,7 @@ export default function HeaderUserProxyDropdown({
                       ))}
                     </div>
                   )}
-                  {isSeedWallet ? (
+                  {showSeedWalletActions ? (
                     <div className="tw-h-full tw-px-2 tw-pt-2">
                       {isUnlocked ? (
                         <button
