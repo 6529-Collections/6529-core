@@ -1,5 +1,5 @@
-import { setAuthJwt } from "@/services/auth/auth.utils";
-import { createConnector } from "@wagmi/core";
+import { setActiveWalletAccount, setAuthJwt } from "@/services/auth/auth.utils";
+import { createConnector } from "wagmi";
 import { mainnet, sepolia } from "viem/chains";
 
 interface ProviderRequest {
@@ -17,7 +17,87 @@ interface ConnectionObject {
   chainId: number;
 }
 
-const CONNECTION_STORE = "seize-app-connection";
+const LEGACY_CONNECTION_STORE = "seize-app-connection";
+const getConnectionStoreKey = (connectorId: string) =>
+  `seize-app-connection-${connectorId}`;
+const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
+const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
+const INVALID_CONNECTION_PAYLOAD_ERROR =
+  "Invalid connection payload: accounts must be array of 0x-prefixed 40-hex strings and chainId must be a positive integer.";
+
+const parsePositiveChainId = (chainId: unknown): number | null => {
+  if (
+    typeof chainId === "number" &&
+    Number.isFinite(chainId) &&
+    Number.isInteger(chainId) &&
+    chainId > 0
+  ) {
+    return chainId;
+  }
+
+  if (typeof chainId === "bigint") {
+    if (chainId <= 0n || chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
+      return null;
+    }
+    return Number(chainId);
+  }
+
+  if (typeof chainId === "string") {
+    const normalizedChainId = chainId.trim().toLowerCase();
+    if (normalizedChainId.length === 0) {
+      return null;
+    }
+
+    const parsedChainId = /^0x[0-9a-f]+$/.test(normalizedChainId)
+      ? Number.parseInt(normalizedChainId.slice(2), 16)
+      : /^[0-9]+$/.test(normalizedChainId)
+        ? Number.parseInt(normalizedChainId, 10)
+        : Number.NaN;
+    if (
+      Number.isFinite(parsedChainId) &&
+      Number.isInteger(parsedChainId) &&
+      parsedChainId > 0
+    ) {
+      return parsedChainId;
+    }
+  }
+
+  return null;
+};
+
+const parseConnectionPayload = (
+  accountsInput: unknown,
+  chainIdInput: unknown
+): ConnectionObject | null => {
+  if (!Array.isArray(accountsInput)) {
+    return null;
+  }
+  if (accountsInput.length === 0) {
+    return null;
+  }
+
+  const accounts: `0x${string}`[] = [];
+  for (const account of accountsInput) {
+    if (typeof account !== "string") {
+      return null;
+    }
+    const normalizedAccount = account.toLowerCase();
+    if (!HEX_ADDRESS_REGEX.test(normalizedAccount)) {
+      return null;
+    }
+    accounts.push(normalizedAccount as `0x${string}`);
+  }
+
+  const chainId = parsePositiveChainId(chainIdInput);
+  if (chainId === null) {
+    return null;
+  }
+
+  return {
+    accounts,
+    chainId,
+  };
+};
 
 export function browserConnector(parameters: {
   openUrlFn: (url: string) => void;
@@ -25,7 +105,16 @@ export function browserConnector(parameters: {
   icon: string;
   id: string;
 }) {
+  type PendingDeepLinkResponse = {
+    response: ProviderResponse;
+    receivedAt: number;
+    cleanupTimeout: ReturnType<typeof setTimeout>;
+  };
+
+  const connectionStoreKey = getConnectionStoreKey(parameters.id);
   const deepLinkCallbacks: Map<string, (response: ProviderResponse) => void> =
+    new Map();
+  const pendingDeepLinkResponses: Map<string, PendingDeepLinkResponse> =
     new Map();
 
   let initialized = false;
@@ -37,23 +126,79 @@ export function browserConnector(parameters: {
     chainId: 1,
   };
 
+  const clearPendingDeepLinkResponse = (requestId: string) => {
+    const pendingResponse = pendingDeepLinkResponses.get(requestId);
+    if (pendingResponse) {
+      clearTimeout(pendingResponse.cleanupTimeout);
+      pendingDeepLinkResponses.delete(requestId);
+    }
+  };
+
+  const storePendingDeepLinkResponse = (
+    requestId: string,
+    response: ProviderResponse
+  ) => {
+    clearPendingDeepLinkResponse(requestId);
+    const cleanupTimeout = setTimeout(() => {
+      pendingDeepLinkResponses.delete(requestId);
+    }, PENDING_DEEP_LINK_RESPONSE_TTL_MS);
+    pendingDeepLinkResponses.set(requestId, {
+      response,
+      receivedAt: Date.now(),
+      cleanupTimeout,
+    });
+  };
+
+  const clearAllPendingDeepLinkResponses = () => {
+    for (const pendingResponse of pendingDeepLinkResponses.values()) {
+      clearTimeout(pendingResponse.cleanupTimeout);
+    }
+    pendingDeepLinkResponses.clear();
+  };
+
+  const parseConnectionObject = (
+    rawConnection: string | null
+  ): ConnectionObject | null => {
+    if (!rawConnection) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(rawConnection) as {
+        accounts?: unknown;
+        chainId?: unknown;
+      };
+      return parseConnectionPayload(parsed.accounts, parsed.chainId);
+    } catch {
+      return null;
+    }
+  };
+
   async function init(name: string) {
     if (!window || initialized) return;
 
-    const storedConnection = await window.store.get(CONNECTION_STORE);
-    if (storedConnection) {
-      connectionObject = JSON.parse(storedConnection);
+    const storedConnection = await window.store.get(connectionStoreKey);
+    const parsedStoredConnection = parseConnectionObject(storedConnection);
+    if (parsedStoredConnection) {
+      connectionObject = parsedStoredConnection;
     }
 
     window.api.onWalletConnection((_event: any, data: any) => {
-      const callback = deepLinkCallbacks.get(data.requestId);
+      const requestId =
+        typeof data?.requestId === "string" ? data.requestId : undefined;
+      if (!requestId) {
+        return;
+      }
+
+      const callback = deepLinkCallbacks.get(requestId);
       if (callback) {
+        clearPendingDeepLinkResponse(requestId);
         callback(data.data);
-        deepLinkCallbacks.delete(data.requestId);
+        deepLinkCallbacks.delete(requestId);
       } else {
+        storePendingDeepLinkResponse(requestId, data.data ?? {});
         console.log(
           `[${name}] No callback found for requestId`,
-          data.requestId
+          requestId
         );
       }
     });
@@ -69,6 +214,20 @@ export function browserConnector(parameters: {
   function generateRequestId(): string {
     return Math.random().toString(36).substring(2, 15);
   }
+
+  const registerDeepLinkCallback = (
+    requestId: string,
+    callback: (response: ProviderResponse) => void
+  ) => {
+    deepLinkCallbacks.set(requestId, callback);
+
+    const pendingResponse = pendingDeepLinkResponses.get(requestId);
+    if (pendingResponse) {
+      clearPendingDeepLinkResponse(requestId);
+      callback(pendingResponse.response);
+      deepLinkCallbacks.delete(requestId);
+    }
+  };
 
   return createConnector((_config) => ({
     get icon() {
@@ -127,33 +286,154 @@ export function browserConnector(parameters: {
         );
       }
 
+      const legacyStoredConnection = await window.store.get(
+        LEGACY_CONNECTION_STORE
+      );
+      const parsedLegacyConnection = parseConnectionObject(
+        legacyStoredConnection
+      );
+      if (
+        parsedLegacyConnection &&
+        parsedLegacyConnection.accounts.length > 0
+      ) {
+        connectionObject = parsedLegacyConnection;
+        await window.store.set(
+          connectionStoreKey,
+          JSON.stringify(connectionObject)
+        );
+        await window.store.remove(LEGACY_CONNECTION_STORE);
+
+        if (opts?.withCapabilities) {
+          const accountsWithCaps = connectionObject.accounts.map((address) => ({
+            address,
+            capabilities: {} as Record<string, unknown>,
+          })) as unknown as readonly {
+            address: `0x${string}`;
+            capabilities: Record<string, unknown>;
+          }[];
+          return {
+            accounts: accountsWithCaps as any,
+            chainId: connectionObject.chainId,
+          } as any;
+        }
+
+        return {
+          accounts: connectionObject.accounts as readonly `0x${string}`[],
+          chainId: connectionObject.chainId,
+        } as any;
+      }
+
       return new Promise((resolve, reject) => {
         const requestId = generateRequestId();
         const t = Date.now();
         const chainId = opts?.chainId || connectionObject.chainId;
         const url = `http://localhost:${port}/browser-connector?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
+        const timeoutId = setTimeout(() => {
+          console.log(`[${this.name}] Deep link callback timed out`, requestId);
+          deepLinkCallbacks.delete(requestId);
+          clearPendingDeepLinkResponse(requestId);
+          reject(new Error("Connection request timed out"));
+        }, 60000);
 
-        parameters.openUrlFn(url);
-
-        deepLinkCallbacks.set(requestId, async (response: any) => {
+        registerDeepLinkCallback(requestId, async (response: any) => {
+          clearTimeout(timeoutId);
           if (!response || response.error) {
             reject(new Error(response?.error));
           } else {
+            const validatedConnection = parseConnectionPayload(
+              response.accounts,
+              response.chainId
+            );
+            if (!validatedConnection) {
+              reject(new Error(INVALID_CONNECTION_PAYLOAD_ERROR));
+              return;
+            }
+            const {
+              accounts: validatedAccounts,
+              chainId: validatedChainId,
+            } = validatedConnection;
             connectionObject = {
-              accounts: response.accounts,
-              chainId: response.chainId,
+              accounts: validatedAccounts,
+              chainId: validatedChainId,
             };
-            const auth = response.auth;
-            setAuthJwt(auth.address, auth.token, auth.refreshToken, auth.role);
+            const auth = response.auth as
+              | {
+                  address?: string;
+                  token?: string;
+                  refreshToken?: string;
+                  role?: string | null;
+                }
+              | undefined;
+            const responseActiveAddressLower =
+              typeof response?.activeAddress === "string"
+                ? response.activeAddress.toLowerCase()
+                : null;
+            const primaryConnectedAccount =
+              responseActiveAddressLower &&
+              validatedAccounts.includes(
+                responseActiveAddressLower as `0x${string}`
+              )
+                ? (responseActiveAddressLower as `0x${string}`)
+                : validatedAccounts[0];
+            const authAddressLower =
+              typeof auth?.address === "string"
+                ? auth.address.toLowerCase()
+                : undefined;
+            const matchingAuthAccount =
+              typeof authAddressLower === "string"
+                ? validatedAccounts.find(
+                    (account) => account === authAddressLower
+                  )
+                : undefined;
+            const hasMatchingAuthAddress =
+              typeof matchingAuthAccount === "string";
+            const shouldPersistAuthForConnectedAccount =
+              hasMatchingAuthAddress &&
+              typeof primaryConnectedAccount === "string" &&
+              matchingAuthAccount === primaryConnectedAccount;
+
+            if (
+              shouldPersistAuthForConnectedAccount &&
+              typeof auth?.token === "string" &&
+              typeof auth?.refreshToken === "string"
+            ) {
+              setAuthJwt(
+                matchingAuthAccount,
+                auth.token,
+                auth.refreshToken,
+                auth.role ?? undefined
+              );
+            } else if (
+              typeof auth?.address === "string" &&
+              typeof auth?.token === "string" &&
+              typeof auth?.refreshToken === "string"
+            ) {
+              console.warn(
+                `[${this.name}] Ignoring browser auth payload with non-matching address`,
+                {
+                  authAddress: auth.address,
+                  connectedAccounts: validatedAccounts,
+                }
+              );
+            }
+
+            const accountToActivate = primaryConnectedAccount;
+            if (typeof accountToActivate === "string") {
+              const didSwitch = setActiveWalletAccount(accountToActivate);
+              if (!didSwitch) {
+                console.log(
+                  `[${this.name}] Connected account is not active yet (likely awaiting auth):`,
+                  accountToActivate
+                );
+              }
+            }
             await window.store.set(
-              CONNECTION_STORE,
+              connectionStoreKey,
               JSON.stringify(connectionObject)
             );
 
             if (opts?.withCapabilities) {
-              const accountsWithCaps = (
-                response.accounts as `0x${string}`[]
-              ).map((address) => ({
+              const accountsWithCaps = validatedAccounts.map((address) => ({
                 address,
                 capabilities: {} as Record<string, unknown>,
               })) as unknown as readonly {
@@ -163,32 +443,29 @@ export function browserConnector(parameters: {
 
               resolve({
                 accounts: accountsWithCaps as any,
-                chainId: response.chainId,
+                chainId: validatedChainId,
               } as any);
               return;
             }
 
             resolve({
-              accounts: response.accounts as readonly `0x${string}`[],
-              chainId: response.chainId,
+              accounts: validatedAccounts as readonly `0x${string}`[],
+              chainId: validatedChainId,
             } as any);
           }
         });
 
-        setTimeout(() => {
-          console.log(`[${this.name}] Deep link callback timed out`, requestId);
-          deepLinkCallbacks.delete(requestId);
-          reject(new Error("Connection request timed out"));
-        }, 60000);
+        parameters.openUrlFn(url);
       });
     },
     async disconnect() {
       deepLinkCallbacks.clear();
+      clearAllPendingDeepLinkResponses();
       connectionObject = {
         accounts: [],
         chainId: 1,
       };
-      await window.store.remove(CONNECTION_STORE);
+      await window.store.remove(connectionStoreKey);
     },
     async getAccounts() {
       return connectionObject.accounts;
@@ -211,10 +488,18 @@ export function browserConnector(parameters: {
             const encodedParams = encodeURIComponent(JSON.stringify(params));
             const t = Date.now();
             const url = `http://localhost:${port}/browser-connector?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
+            const timeoutId = setTimeout(() => {
+              console.log(
+                `[${this.name}] Deep link callback timed out`,
+                requestId
+              );
+              deepLinkCallbacks.delete(requestId);
+              clearPendingDeepLinkResponse(requestId);
+              reject(new Error("Provider request timed out"));
+            }, 60000);
 
-            parameters.openUrlFn(url);
-
-            deepLinkCallbacks.set(requestId, (response: any) => {
+            registerDeepLinkCallback(requestId, (response: any) => {
+              clearTimeout(timeoutId);
               if (!response || response.error) {
                 reject(new Error(response?.error));
               } else {
@@ -222,14 +507,7 @@ export function browserConnector(parameters: {
               }
             });
 
-            setTimeout(() => {
-              console.log(
-                `[${this.name}] Deep link callback timed out`,
-                requestId
-              );
-              deepLinkCallbacks.delete(requestId);
-              reject(new Error("Provider request timed out"));
-            }, 60000);
+            parameters.openUrlFn(url);
           });
         },
       };

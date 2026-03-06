@@ -220,6 +220,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
       ];
     },
     turbopack: {
+      root: __dirname,
       resolveAlias: {
         canvas: "./renderer/stubs/empty.js",
         encoding: "./renderer/stubs/empty.js",
@@ -231,7 +232,6 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         "idb-keyval": "./renderer/lib/storage/idb-keyval.ts",
       },
     },
-    serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
     assetPrefix,
     webpack(config, { dev }) {
       if (!dev && localDebugBuild) {

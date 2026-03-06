@@ -77,7 +77,7 @@ export default function HeaderUserConnectModal({
             Choose Connector
           </h2>
         </div>
-        <div className={confirmModalBody}>
+        <div className={`${confirmModalBody} tw-border-b-0`}>
           {isBrowser ? (
             renderConnectors(otherConnectors, "tw-mb-3")
           ) : (

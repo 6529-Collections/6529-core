@@ -1,7 +1,7 @@
 import { hexToString } from "@/helpers";
 import { SeedWalletRequest } from "@/shared/types";
-import { createConnector } from "@wagmi/core";
 import { ethers } from "ethers";
+import { createConnector } from "wagmi";
 import { UserRejectedRequestError } from "viem";
 import { mainnet, sepolia } from "viem/chains";
 

@@ -44,10 +44,8 @@ import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import {
   canStoreAnotherWalletAccount,
   getAuthJwt,
-  getWalletAddress,
   PROFILE_SWITCHED_EVENT,
   removeAuthJwt,
-  setActiveWalletAccount,
   setAuthJwt,
   syncConnectedWalletProfile,
 } from "@/services/auth/auth.utils";
@@ -311,14 +309,9 @@ export default function Auth({
     // If JWT validation still needs a signature, validateAuthImmediate will
     // re-open it via onShowSignModal(true).
     setShowSignModal(false);
-
-    const activeStoredAddress = getWalletAddress();
-    if (
-      activeStoredAddress &&
-      activeStoredAddress.toLowerCase() !== address.toLowerCase()
-    ) {
-      setActiveWalletAccount(address);
-    }
+    // Important: do not force-sync active stored account to `address` here.
+    // During Electron deep-link add-account flow, `address` can briefly lag the
+    // connector callback and this can incorrectly switch the active account back.
 
     // Capture current address at validation time to prevent race conditions
     const currentAddress = address;

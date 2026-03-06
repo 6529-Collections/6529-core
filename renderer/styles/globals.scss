@@ -792,21 +792,6 @@ pre code {
   }
 }
 
-.seize-card-white {
-  padding: 20px;
-  border: 1px solid transparent;
-  box-shadow: 0px 0px 10px rgba(255, 255, 255, 0.5);
-  transition: transform 0.3s ease;
-}
-
-.seize-card-white-clickable {
-  &:hover {
-    transform: scale(1.01);
-    box-shadow: 0px 0px 15px rgba(255, 255, 255, 0.75);
-    cursor: pointer;
-  }
-}
-
 .modal-blurred {
   filter: blur(5px);
 }

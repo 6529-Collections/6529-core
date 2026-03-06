@@ -1,7 +1,7 @@
 {
   "appId": "com.6529.6529localcore",
   "productName": "6529 Desktop Local",
-  "asar": false,
+  "asar": true,
   "afterPack": "scripts/after-pack-copy-next-node-modules.cjs",
   "extraMetadata": {
     "env": {

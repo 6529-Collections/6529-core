@@ -1,5 +1,12 @@
 "use client";
 
+import { AuthContext } from "@/components/auth/Auth";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
+import { useToast } from "@/contexts/ToastContext";
+import { getSeedWallets } from "@/electron";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
+import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import {
   faLock,
   faLockOpen,
@@ -11,12 +18,6 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { AnimatePresence, motion } from "framer-motion";
 import { useContext, useEffect, useState } from "react";
-import { AuthContext } from "@/components/auth/Auth";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
-import { useSeedWallet } from "@/contexts/SeedWalletContext";
-import { useToast } from "@/contexts/ToastContext";
-import type { ApiIdentity } from "@/generated/models/ApiIdentity";
-import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import HeaderUserConnectedAccounts from "../connected/HeaderUserConnectedAccounts";
 import HeaderUserProxyDropdownItem from "./HeaderUserProxyDropdownItem";
 
@@ -53,13 +54,45 @@ export default function HeaderUserProxyDropdown({
   const hasProxySection =
     !!activeProfileProxy || receivedProfileProxies.length > 0;
 
-  const {
-    isSeedWallet,
-    isUnlocked,
-    lockWallet,
-    setShowPasswordModal,
-  } = useSeedWallet();
+  const { isSeedWallet, isUnlocked, lockWallet, setShowPasswordModal } =
+    useSeedWallet();
   const { showToast } = useToast();
+  const showSeedWalletActions = isSeedWallet;
+  const [seedWalletAddresses, setSeedWalletAddresses] = useState<Set<string>>(
+    () => new Set()
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fetchSeedWalletAddresses = async () => {
+      try {
+        const response = await getSeedWallets();
+        if (cancelled) {
+          return;
+        }
+
+        if (response.error || !Array.isArray(response.data)) {
+          setSeedWalletAddresses(new Set());
+          return;
+        }
+
+        setSeedWalletAddresses(
+          new Set(response.data.map((wallet) => wallet.address.toLowerCase()))
+        );
+      } catch {
+        if (!cancelled) {
+          setSeedWalletAddresses(new Set());
+        }
+      }
+    };
+
+    fetchSeedWalletAddresses();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const onActivateProfileProxy = async (
     profileProxy: ApiProfileProxy | null
@@ -147,6 +180,11 @@ export default function HeaderUserProxyDropdown({
                       <HeaderUserConnectedAccounts
                         accounts={availableConnectedAccounts.map((account) => ({
                           ...account,
+                          isConnected:
+                            account.isConnected ||
+                            seedWalletAddresses.has(
+                              account.address.toLowerCase()
+                            ),
                           unreadNotificationsCount:
                             connectedAccountUnreadNotifications[
                               account.address.toLowerCase()
@@ -243,7 +281,7 @@ export default function HeaderUserProxyDropdown({
                       ))}
                     </div>
                   )}
-                  {isSeedWallet ? (
+                  {showSeedWalletActions ? (
                     <div className="tw-h-full tw-px-2 tw-pt-2">
                       {isUnlocked ? (
                         <button
@@ -258,7 +296,11 @@ export default function HeaderUserProxyDropdown({
                           title="Lock wallet"
                           className="tw-relative tw-flex tw-h-full tw-w-full tw-cursor-pointer tw-select-none tw-items-center tw-gap-x-3 tw-rounded-lg tw-border-none tw-bg-transparent tw-px-3 tw-py-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-700 hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
                         >
-                          <FontAwesomeIcon icon={faLock} height={16} width={16} />
+                          <FontAwesomeIcon
+                            icon={faLock}
+                            height={16}
+                            width={16}
+                          />
                           <span>Lock wallet</span>
                         </button>
                       ) : (
