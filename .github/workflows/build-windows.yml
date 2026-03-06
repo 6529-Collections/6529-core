@@ -66,7 +66,7 @@ jobs:
 
       - name: Install renderer dependencies
         if: ${{ inputs.should_run }}
-        run: npm run install-renderer-deps
+        run: npm run install-renderer-deps-ci
 
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}

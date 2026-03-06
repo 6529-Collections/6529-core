@@ -20,6 +20,80 @@ interface ConnectionObject {
 const LEGACY_CONNECTION_STORE = "seize-app-connection";
 const getConnectionStoreKey = (connectorId: string) =>
   `seize-app-connection-${connectorId}`;
+const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
+const INVALID_CONNECTION_PAYLOAD_ERROR =
+  "Invalid connection payload: accounts must be array of 0x-prefixed 40-hex strings and chainId must be a positive integer.";
+
+const parsePositiveChainId = (chainId: unknown): number | null => {
+  if (
+    typeof chainId === "number" &&
+    Number.isFinite(chainId) &&
+    Number.isInteger(chainId) &&
+    chainId > 0
+  ) {
+    return chainId;
+  }
+
+  if (typeof chainId === "bigint") {
+    if (chainId <= 0n || chainId > BigInt(Number.MAX_SAFE_INTEGER)) {
+      return null;
+    }
+    return Number(chainId);
+  }
+
+  if (typeof chainId === "string") {
+    const normalizedChainId = chainId.trim().toLowerCase();
+    if (normalizedChainId.length === 0) {
+      return null;
+    }
+
+    const parsedChainId = /^0x[0-9a-f]+$/.test(normalizedChainId)
+      ? Number.parseInt(normalizedChainId.slice(2), 16)
+      : /^[0-9]+$/.test(normalizedChainId)
+        ? Number.parseInt(normalizedChainId, 10)
+        : Number.NaN;
+    if (
+      Number.isFinite(parsedChainId) &&
+      Number.isInteger(parsedChainId) &&
+      parsedChainId > 0
+    ) {
+      return parsedChainId;
+    }
+  }
+
+  return null;
+};
+
+const parseConnectionPayload = (
+  accountsInput: unknown,
+  chainIdInput: unknown
+): ConnectionObject | null => {
+  if (!Array.isArray(accountsInput)) {
+    return null;
+  }
+
+  const accounts: `0x${string}`[] = [];
+  for (const account of accountsInput) {
+    if (typeof account !== "string") {
+      return null;
+    }
+    const normalizedAccount = account.toLowerCase();
+    if (!HEX_ADDRESS_REGEX.test(normalizedAccount)) {
+      return null;
+    }
+    accounts.push(normalizedAccount as `0x${string}`);
+  }
+
+  const chainId = parsePositiveChainId(chainIdInput);
+  if (chainId === null) {
+    return null;
+  }
+
+  return {
+    accounts,
+    chainId,
+  };
+};
 
 export function browserConnector(parameters: {
   openUrlFn: (url: string) => void;
@@ -52,22 +126,7 @@ export function browserConnector(parameters: {
         accounts?: unknown;
         chainId?: unknown;
       };
-      if (!Array.isArray(parsed.accounts)) {
-        return null;
-      }
-      const accounts = parsed.accounts
-        .filter((account: unknown): account is string => {
-          return typeof account === "string";
-        })
-        .map((account) => account.toLowerCase() as `0x${string}`);
-      if (accounts.length !== parsed.accounts.length) {
-        return null;
-      }
-      const chainId = typeof parsed.chainId === "number" ? parsed.chainId : 1;
-      return {
-        accounts,
-        chainId,
-      };
+      return parseConnectionPayload(parsed.accounts, parsed.chainId);
     } catch {
       return null;
     }
@@ -239,31 +298,21 @@ export function browserConnector(parameters: {
           if (!response || response.error) {
             reject(new Error(response?.error));
           } else {
-            if (!Array.isArray(response.accounts)) {
-              reject(
-                new Error(
-                  "Invalid connection payload: accounts must be an array of strings."
-                )
-              );
+            const validatedConnection = parseConnectionPayload(
+              response.accounts,
+              response.chainId
+            );
+            if (!validatedConnection) {
+              reject(new Error(INVALID_CONNECTION_PAYLOAD_ERROR));
               return;
             }
-            const rawAccounts: unknown[] = response.accounts;
-            const validatedAccounts = rawAccounts
-              .filter((account: unknown): account is string => {
-                return typeof account === "string";
-              })
-              .map((account) => account.toLowerCase() as `0x${string}`);
-            if (validatedAccounts.length !== rawAccounts.length) {
-              reject(
-                new Error(
-                  "Invalid connection payload: accounts must be an array of strings."
-                )
-              );
-              return;
-            }
+            const {
+              accounts: validatedAccounts,
+              chainId: validatedChainId,
+            } = validatedConnection;
             connectionObject = {
               accounts: validatedAccounts,
-              chainId: response.chainId,
+              chainId: validatedChainId,
             };
             const auth = response.auth as
               | {
@@ -352,14 +401,14 @@ export function browserConnector(parameters: {
 
               resolve({
                 accounts: accountsWithCaps as any,
-                chainId: response.chainId,
+                chainId: validatedChainId,
               } as any);
               return;
             }
 
             resolve({
               accounts: validatedAccounts as readonly `0x${string}`[],
-              chainId: response.chainId,
+              chainId: validatedChainId,
             } as any);
           }
         });

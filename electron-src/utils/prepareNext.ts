@@ -30,12 +30,23 @@ const nextConfig = {
   dev: isDev,
 };
 
-function bootstrapNodePathSearch(): void {
-  const candidateNodeModulesDirs = [
-    path.join(nextDir, "out", "node_modules"),
-    path.join(nextDir, "out", "dev", "node_modules"),
-    path.join(nextDir, "node_modules"),
+export const getNextNodeModulesCandidates = (
+  rendererDir: string,
+  devMode: boolean,
+): string[] => {
+  const packagedCandidates = [
+    path.join(rendererDir, "out", "node_modules"),
+    path.join(rendererDir, "out", "dev", "node_modules"),
   ];
+  const liveRendererCandidate = path.join(rendererDir, "node_modules");
+
+  return devMode
+    ? [liveRendererCandidate, ...packagedCandidates]
+    : [...packagedCandidates, liveRendererCandidate];
+};
+
+function bootstrapNodePathSearch(): void {
+  const candidateNodeModulesDirs = getNextNodeModulesCandidates(nextDir, isDev);
 
   const existingDirs = candidateNodeModulesDirs.filter((dir) =>
     fs.existsSync(dir),
@@ -74,11 +85,10 @@ type NextFactory = (config: { dir: string; dev: boolean }) => {
 };
 
 function resolveNextFactory(): NextFactory {
-  const candidatePackageJsons = [
-    path.join(nextDir, "out", "node_modules", "next", "package.json"),
-    path.join(nextDir, "out", "dev", "node_modules", "next", "package.json"),
-    path.join(nextDir, "node_modules", "next", "package.json"),
-  ];
+  const candidatePackageJsons = getNextNodeModulesCandidates(nextDir, isDev).map(
+    (candidateNodeModulesDir) =>
+      path.join(candidateNodeModulesDir, "next", "package.json"),
+  );
 
   for (const candidatePackageJson of candidatePackageJsons) {
     if (!fs.existsSync(candidatePackageJson)) {

@@ -14,7 +14,7 @@ const SOURCE_NODE_MODULES_PATHS = [
   path.join(ROOT, "node_modules"),
 ];
 
-const materializeSymlinksInTree = (rootPath, basePath) => {
+const materializeSymlinksInTree = (rootPath, basePath, allowedRoots) => {
   const directoriesToVisit = [rootPath];
 
   while (directoriesToVisit.length > 0) {
@@ -31,7 +31,7 @@ const materializeSymlinksInTree = (rootPath, basePath) => {
       if (entryStats.isSymbolicLink()) {
         const resolvedPath = fs.realpathSync(entryPath);
         fs.rmSync(entryPath, { recursive: true, force: true });
-        copyResolvedTree(resolvedPath, entryPath);
+        copyResolvedTree(resolvedPath, entryPath, { allowedRoots });
         const relativeEntryPath = path.relative(basePath, entryPath);
         console.log(
           `[materialize-renderer-out-node-modules] Materialized ${path.relative(
@@ -95,33 +95,71 @@ const listTopLevelPackageDirs = (nodeModulesPath) => {
   return packageDirs;
 };
 
-const enqueueDependencies = (queue, processed, manifest) => {
-  const dependencyNames = [
-    ...Object.keys(manifest.dependencies ?? {}),
-    ...Object.keys(manifest.optionalDependencies ?? {}),
-  ];
-  for (const dependencyName of dependencyNames) {
-    if (!processed.has(dependencyName)) {
-      queue.push(dependencyName);
-    }
+const enqueueDependencies = (queue, manifest) => {
+  for (const dependencyName of Object.keys(manifest.dependencies ?? {})) {
+    queue.push({ dependencyName, required: true });
+  }
+  for (const dependencyName of Object.keys(manifest.optionalDependencies ?? {})) {
+    queue.push({ dependencyName, required: false });
   }
 };
 
-const resolveSourcePackageDir = (dependencyName) => {
-  for (const sourceNodeModulesPath of SOURCE_NODE_MODULES_PATHS) {
-    const sourcePackagePath = packageNameToPath(
-      sourceNodeModulesPath,
-      dependencyName,
+const resolveSourcePackageDir = (
+  outNodeModulesPath,
+  targetPackagePath,
+  dependencyName,
+) => {
+  const normalizedOutNodeModulesPath = path.resolve(outNodeModulesPath);
+  let currentDir = path.dirname(targetPackagePath);
+
+  while (true) {
+    const normalizedCurrentDir = path.resolve(currentDir);
+    const relativeCurrentDir = path.relative(
+      normalizedOutNodeModulesPath,
+      normalizedCurrentDir,
     );
-    if (fs.existsSync(sourcePackagePath)) {
-      return sourcePackagePath;
+    if (
+      relativeCurrentDir.startsWith("..") ||
+      path.isAbsolute(relativeCurrentDir)
+    ) {
+      break;
     }
+
+    const relativeNodeModulesPath =
+      path.basename(normalizedCurrentDir) === "node_modules"
+        ? relativeCurrentDir
+        : path.join(relativeCurrentDir, "node_modules");
+
+    for (const sourceNodeModulesPath of SOURCE_NODE_MODULES_PATHS) {
+      const sourceNodeModulesCandidate =
+        relativeNodeModulesPath.length > 0
+          ? path.join(sourceNodeModulesPath, relativeNodeModulesPath)
+          : sourceNodeModulesPath;
+      const sourcePackagePath = packageNameToPath(
+        sourceNodeModulesCandidate,
+        dependencyName,
+      );
+      if (fs.existsSync(sourcePackagePath)) {
+        return sourcePackagePath;
+      }
+    }
+
+    if (normalizedCurrentDir === normalizedOutNodeModulesPath) {
+      break;
+    }
+
+    const parentDir = path.dirname(normalizedCurrentDir);
+    if (parentDir === normalizedCurrentDir) {
+      break;
+    }
+    currentDir = parentDir;
   }
+
   return null;
 };
 
 const hydrateDependenciesInOutNodeModules = (outNodeModulesPath) => {
-  const processed = new Set();
+  const processed = new Map();
   const queue = [];
 
   const topLevelPackageDirs = listTopLevelPackageDirs(outNodeModulesPath);
@@ -130,30 +168,49 @@ const hydrateDependenciesInOutNodeModules = (outNodeModulesPath) => {
     if (!manifest) {
       continue;
     }
-    enqueueDependencies(queue, processed, manifest);
+    enqueueDependencies(queue, manifest);
   }
 
   while (queue.length > 0) {
-    const dependencyName = queue.shift();
-    if (!dependencyName || processed.has(dependencyName)) {
+    const queueItem = queue.shift();
+    if (!queueItem || !queueItem.dependencyName) {
       continue;
     }
-    processed.add(dependencyName);
+    const { dependencyName, required } = queueItem;
+
+    const previousProcessed = processed.get(dependencyName);
+    if (previousProcessed?.required || (!required && previousProcessed)) {
+      continue;
+    }
+    processed.set(dependencyName, {
+      required: required || previousProcessed?.required || false,
+    });
 
     const targetPackagePath = packageNameToPath(
       outNodeModulesPath,
       dependencyName,
     );
     if (!fs.existsSync(targetPackagePath)) {
-      const sourcePackagePath = resolveSourcePackageDir(dependencyName);
+      const sourcePackagePath = resolveSourcePackageDir(
+        outNodeModulesPath,
+        targetPackagePath,
+        dependencyName,
+      );
       if (!sourcePackagePath) {
+        if (required) {
+          throw new Error(
+            `[materialize-renderer-out-node-modules] Missing required transitive dependency ${dependencyName} for ${path.relative(ROOT, outNodeModulesPath)}`,
+          );
+        }
         console.warn(
-          `[materialize-renderer-out-node-modules] Missing transitive dependency ${dependencyName} for ${path.relative(ROOT, outNodeModulesPath)}`,
+          `[materialize-renderer-out-node-modules] Missing optional transitive dependency ${dependencyName} for ${path.relative(ROOT, outNodeModulesPath)}`,
         );
         continue;
       }
 
-      copyResolvedTree(sourcePackagePath, targetPackagePath);
+      copyResolvedTree(sourcePackagePath, targetPackagePath, {
+        allowedRoots: SOURCE_NODE_MODULES_PATHS,
+      });
       console.log(
         `[materialize-renderer-out-node-modules] Hydrated ${dependencyName} in ${path.relative(ROOT, outNodeModulesPath)} from ${path.relative(ROOT, sourcePackagePath)}`,
       );
@@ -163,7 +220,7 @@ const hydrateDependenciesInOutNodeModules = (outNodeModulesPath) => {
     if (!manifest) {
       continue;
     }
-    enqueueDependencies(queue, processed, manifest);
+    enqueueDependencies(queue, manifest);
   }
 };
 
@@ -173,7 +230,10 @@ const materializeOutNodeModules = () => {
     if (!fs.existsSync(outNodeModulesPath)) {
       continue;
     }
-    materializeSymlinksInTree(outNodeModulesPath, outNodeModulesPath);
+    materializeSymlinksInTree(outNodeModulesPath, outNodeModulesPath, [
+      ...SOURCE_NODE_MODULES_PATHS,
+      outNodeModulesPath,
+    ]);
     hydrateDependenciesInOutNodeModules(outNodeModulesPath);
     didMaterialize = true;
   }

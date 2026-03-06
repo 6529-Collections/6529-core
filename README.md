@@ -40,7 +40,7 @@ npm run pull-web
 Renderer dependencies are installed from `renderer/package.json`.  
 After pulling frontend changes (or on a fresh clone), run:
 
-```
+```bash
 npm run deps
 ```
 
@@ -59,25 +59,25 @@ npm run deps
 
 Use:
 
-```
+```bash
 npm run deps
 npm run dev
 ```
 
-or if running on a windows machine:
+or if running on a Windows machine:
 
-```
+```bash
 npm run deps
 npm run dev-win
 ```
 
 Optional dependency security check:
 
-```
+```bash
 npm run audit-deps
 ```
 
-CI note: workflows intentionally use deterministic installs with `npm ci` and then `npm run install-renderer-deps`.
+CI note: workflows intentionally use deterministic installs with `npm ci` and then `npm run install-renderer-deps-ci`.
 
 ## Building and Publishing
 

@@ -59,6 +59,7 @@
     "invalidate-cf-paths-staging": "tsx scripts/invalidate-cf-paths.ts --staging",
     "invalidate-cf-paths-production": "tsx scripts/invalidate-cf-paths.ts",
     "install-renderer-deps": "npm --prefix renderer install --include=dev --no-audit --no-fund",
+    "install-renderer-deps-ci": "npm --prefix renderer ci --include=dev --no-audit --no-fund",
     "install-all-deps": "npm install --include=dev --no-audit --no-fund && npm run install-renderer-deps",
     "deps": "npm run install-all-deps",
     "audit-deps": "npm audit && npm --prefix renderer audit"

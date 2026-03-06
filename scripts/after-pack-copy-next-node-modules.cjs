@@ -11,10 +11,10 @@ const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "dev", "node_modules"),
 ];
 
-const copyDir = (from, to) => {
+const copyDir = (from, to, allowedRoots = []) => {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.rmSync(to, { recursive: true, force: true });
-  copyResolvedTree(from, to);
+  copyResolvedTree(from, to, { allowedRoots });
 };
 
 const resolveResourcesDir = (context) => {
@@ -43,13 +43,13 @@ const resolveResourcesDir = (context) => {
   return path.join(appOutDir, "resources");
 };
 
-const copyIntoAsar = async (asarPath, copyEntries) => {
+const copyIntoAsar = async (asarPath, copyEntries, allowedRoots) => {
   const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "6529-afterpack-"));
   try {
     asar.extractAll(asarPath, tempDir);
     for (const { sourceDir, relativePath } of copyEntries) {
       const targetDir = path.join(tempDir, relativePath);
-      copyDir(sourceDir, targetDir);
+      copyDir(sourceDir, targetDir, allowedRoots);
     }
     await asar.createPackage(tempDir, asarPath);
   } finally {
@@ -58,6 +58,7 @@ const copyIntoAsar = async (asarPath, copyEntries) => {
 };
 
 module.exports = async function afterPack(context) {
+  const allowedSourceRoots = [context.packager.projectDir];
   const copyEntries = SOURCE_RELATIVE_PATHS.map((relativePath) => ({
     relativePath,
     sourceDir: path.join(context.packager.projectDir, relativePath),
@@ -79,7 +80,7 @@ module.exports = async function afterPack(context) {
     if (!fs.existsSync(asarPath)) {
       throw new Error(`[afterPack] app.asar not found at ${asarPath}`);
     }
-    await copyIntoAsar(asarPath, copyEntries);
+    await copyIntoAsar(asarPath, copyEntries, allowedSourceRoots);
     for (const { relativePath } of copyEntries) {
       console.log(`[afterPack] Copied ${relativePath} into ${asarPath}`);
     }
@@ -92,7 +93,7 @@ module.exports = async function afterPack(context) {
   }
   for (const { sourceDir, relativePath } of copyEntries) {
     const targetDir = path.join(appDir, relativePath);
-    copyDir(sourceDir, targetDir);
+    copyDir(sourceDir, targetDir, allowedSourceRoots);
     console.log(`[afterPack] Copied ${relativePath} into ${targetDir}`);
   }
 };

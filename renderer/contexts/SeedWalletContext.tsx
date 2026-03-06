@@ -194,6 +194,9 @@ export const SeedWalletProvider: React.FC<{
 
         if (!seedWallet) {
           const allSeedWalletsResponse = await getSeedWallets();
+          if (cancelled) {
+            return;
+          }
           seedWallet =
             allSeedWalletsResponse &&
             !allSeedWalletsResponse.error &&
