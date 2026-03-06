@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP } from "@/constants/constants";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { formatAddress } from "@/helpers/Helpers";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useAuth } from "../auth/Auth";
@@ -24,6 +25,7 @@ export default function AppSidebarUserInfo({
     isConnected,
     connectedAccountUnreadNotifications,
   } = useSeizeConnectContext();
+  const { isSeedWallet } = useSeedWallet();
   const { activeProfileProxy } = useAuth();
   const { profile } = useIdentity({
     handleOrWallet: address ?? null,
@@ -31,7 +33,7 @@ export default function AppSidebarUserInfo({
   });
   const connectionIndicator = getConnectionProfileIndicator({
     isAuthenticated,
-    isConnected,
+    isConnected: isConnected || isSeedWallet,
   });
 
   const handleOrWallet = (() => {

@@ -207,7 +207,7 @@ const isCapacitorPlatform = (): boolean => {
 
 const normalizeAddress = (address: string): string => address.toLowerCase();
 
-const ADD_FLOW_CANCEL_GRACE_MS: number = 5000;
+const ADD_FLOW_CANCEL_GRACE_MS: number = 60000;
 
 const validateStoredAddress = (
   storedAddress: string
@@ -395,7 +395,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();
   const state = useAppKitState();
-  const { setShowConnectModal } = useSeizeConnectModal();
+  const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
   const [storedConnectedAccounts, setStoredConnectedAccounts] = useState<
     ConnectedWalletAccount[]
   >(() => getConnectedWalletAccounts());
@@ -415,6 +415,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   } = useConsolidatedWalletState();
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const addFlowOriginAddressRef = useRef<string | null>(null);
+  const addFlowHasLeftOriginRef = useRef(false);
+  const pendingAddFlowSwitchRef = useRef(false);
   const retryConnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAddingConnectedAccountRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -437,8 +439,11 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       : undefined;
 
   const refreshStoredConnectedAccounts = useCallback(() => {
-    setStoredConnectedAccounts(getConnectedWalletAccounts());
+    const accounts = getConnectedWalletAccounts();
+    setStoredConnectedAccounts(accounts);
   }, []);
+
+  const isConnectUiOpen = isElectron() ? showConnectModal : state.open;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -497,32 +502,54 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (
+        pendingAddFlowSwitchRef.current &&
+        account.address &&
+        account.isConnected &&
+        isAddress(account.address)
+      ) {
+        const checksummedConnectedAddress = getAddress(account.address);
+        const didSwitch = setActiveWalletAccount(checksummedConnectedAddress);
+        if (didSwitch) {
+          pendingAddFlowSwitchRef.current = false;
+          setIsAddingConnectedAccount(false);
+          addFlowOriginAddressRef.current = null;
+          addFlowHasLeftOriginRef.current = false;
+          refreshStoredConnectedAccounts();
+        }
+
+        const isAlreadyConnected =
+          walletState.status === "connected" &&
+          walletState.address === checksummedConnectedAddress;
+        if (!isAlreadyConnected) {
+          setConnected(checksummedConnectedAddress);
+        }
+        return;
+      }
+
+      if (
         isAddingConnectedAccount &&
         account.address &&
         account.isConnected &&
         isAddress(account.address)
       ) {
         const checksummedConnectedAddress = getAddress(account.address);
-        const addFlowOriginAddress = addFlowOriginAddressRef.current;
         const activeStoredAddress = getWalletAddress();
-        const checksummedStoredActiveAddress =
-          activeStoredAddress && isAddress(activeStoredAddress)
-            ? getAddress(activeStoredAddress)
-            : null;
-        const shouldPreferStoredActiveAddress =
-          !!checksummedStoredActiveAddress &&
-          !!addFlowOriginAddress &&
-            normalizeAddress(checksummedStoredActiveAddress) !==
-              normalizeAddress(addFlowOriginAddress);
-        const nextConnectedAddress =
-          shouldPreferStoredActiveAddress && checksummedStoredActiveAddress
-            ? checksummedStoredActiveAddress
-            : checksummedConnectedAddress;
+        const shouldSwitchStoredActiveAddress =
+          !activeStoredAddress ||
+          !isAddress(activeStoredAddress) ||
+          normalizeAddress(getAddress(activeStoredAddress)) !==
+            normalizeAddress(checksummedConnectedAddress);
+        if (shouldSwitchStoredActiveAddress) {
+          const didSwitch = setActiveWalletAccount(checksummedConnectedAddress);
+          if (didSwitch) {
+            refreshStoredConnectedAccounts();
+          }
+        }
         const isAlreadyConnected =
           walletState.status === "connected" &&
-          walletState.address === nextConnectedAddress;
+          walletState.address === checksummedConnectedAddress;
         if (!isAlreadyConnected) {
-          setConnected(nextConnectedAddress);
+          setConnected(checksummedConnectedAddress);
         }
         return;
       }
@@ -670,12 +697,14 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     setConnecting,
     impersonatedAddress,
     isAddingConnectedAccount,
+    refreshStoredConnectedAccounts,
   ]);
 
   useEffect(() => {
     if (!isAddingConnectedAccount) {
       isAddingConnectedAccountRef.current = false;
       addFlowOriginAddressRef.current = null;
+      addFlowHasLeftOriginRef.current = false;
       if (retryConnectTimeoutRef.current) {
         clearTimeout(retryConnectTimeoutRef.current);
         retryConnectTimeoutRef.current = null;
@@ -695,6 +724,17 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         : null;
     const activeStoredAddress = getWalletAddress();
     const addFlowOriginAddress = addFlowOriginAddressRef.current;
+    if (
+      addFlowOriginAddress &&
+      liveConnectedWallet &&
+      normalizeAddress(liveConnectedWallet) !==
+        normalizeAddress(addFlowOriginAddress)
+    ) {
+      addFlowHasLeftOriginRef.current = true;
+    }
+    if (!account.isConnected) {
+      addFlowHasLeftOriginRef.current = true;
+    }
     const isConnectedWalletNowStored =
       !!liveConnectedWallet &&
       !!activeStoredAddress &&
@@ -709,18 +749,23 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isConnectedWalletNowStored && hasSwitchedFromOrigin) {
       setIsAddingConnectedAccount(false);
       addFlowOriginAddressRef.current = null;
+      addFlowHasLeftOriginRef.current = false;
+      pendingAddFlowSwitchRef.current = false;
       return;
     }
 
     const addFlowReturnedToOrigin =
-      !state.open &&
+      !isConnectUiOpen &&
       !!liveConnectedWallet &&
       !!addFlowOriginAddress &&
+      addFlowHasLeftOriginRef.current &&
       normalizeAddress(liveConnectedWallet) ===
         normalizeAddress(addFlowOriginAddress);
     if (addFlowReturnedToOrigin) {
       setIsAddingConnectedAccount(false);
       addFlowOriginAddressRef.current = null;
+      addFlowHasLeftOriginRef.current = false;
+      pendingAddFlowSwitchRef.current = false;
       return;
     }
 
@@ -729,9 +774,11 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       !!addFlowOriginAddress &&
       normalizeAddress(walletAddressCandidate) !==
         normalizeAddress(addFlowOriginAddress);
+    const isAppFocused = globalThis.document?.hasFocus?.() ?? true;
 
     const addFlowCancelled =
-      !state.open &&
+      isAppFocused &&
+      !isConnectUiOpen &&
       account.status !== "connecting" &&
       account.status !== "reconnecting" &&
       !account.isConnected &&
@@ -743,6 +790,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       cancelAddFlowTimeout = setTimeout(() => {
         setIsAddingConnectedAccount(false);
         addFlowOriginAddressRef.current = null;
+        addFlowHasLeftOriginRef.current = false;
+        pendingAddFlowSwitchRef.current = false;
       }, ADD_FLOW_CANCEL_GRACE_MS);
     }
 
@@ -756,7 +805,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     account.isConnected,
     account.status,
     isAddingConnectedAccount,
-    state.open,
+    isConnectUiOpen,
   ]);
 
   const activeAddress = impersonatedAddress ?? connectedAddress;
@@ -1049,6 +1098,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     const clearAddConnectedAccountGuard = (): void => {
       isAddingConnectedAccountRef.current = false;
       addFlowOriginAddressRef.current = null;
+      addFlowHasLeftOriginRef.current = false;
+      pendingAddFlowSwitchRef.current = false;
       if (retryConnectTimeoutRef.current) {
         clearTimeout(retryConnectTimeoutRef.current);
         retryConnectTimeoutRef.current = null;
@@ -1063,6 +1114,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         : null;
 
     addFlowOriginAddressRef.current = liveConnectedWallet;
+    addFlowHasLeftOriginRef.current = false;
+    pendingAddFlowSwitchRef.current = true;
     setIsAddingConnectedAccount(true);
 
     if (liveConnectedWallet) {
@@ -1134,6 +1187,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     account.isConnected,
     canAddConnectedAccount,
     disconnect,
+    storedConnectedAccounts.length,
     seizeConnect,
   ]);
 
@@ -1176,7 +1230,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeAcceptConnection,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
-      seizeConnectOpen: state.open,
+      seizeConnectOpen: isConnectUiOpen,
       isConnected: isActiveWalletConnected,
       isAuthenticated: !!activeAddress,
       connectionState: walletState.status, // Unified state machine
@@ -1200,7 +1254,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeAcceptConnection,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
-      state.open,
+      isConnectUiOpen,
       account.isConnected,
       walletState,
       hasInitializationError,

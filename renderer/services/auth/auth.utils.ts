@@ -331,9 +331,7 @@ export const setAuthJwt = (
   if (accountIndex >= 0) {
     nextAccounts.splice(accountIndex, 1, nextAccount);
   } else {
-    if (nextAccounts.length >= MAX_CONNECTED_PROFILES) {
-      return false;
-    }
+    if (nextAccounts.length >= MAX_CONNECTED_PROFILES) return false;
     nextAccounts.push(nextAccount);
   }
   persistAccountsWithActive(nextAccounts, address);

@@ -14,6 +14,7 @@ import { useEffect, useRef, useState } from "react";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP } from "@/constants/constants";
 import { useNavigationHistoryContext } from "@/contexts/NavigationHistoryContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { useMyStreamOptional } from "@/contexts/wave/MyStreamContext";
 import { capitalizeEveryWord, formatAddress } from "@/helpers/Helpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -80,6 +81,7 @@ export default function AppHeader() {
     connectedAccountUnreadNotifications,
     seizeSwitchConnectedAccount,
   } = useSeizeConnectContext();
+  const { isSeedWallet } = useSeedWallet();
   const profileClickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
@@ -110,7 +112,7 @@ export default function AppHeader() {
 
   const connectionIndicator = getConnectionProfileIndicator({
     isAuthenticated,
-    isConnected,
+    isConnected: isConnected || isSeedWallet,
   });
   const hasUnreadOnOtherConnectedProfiles = connectedAccounts.some(
     (account) =>

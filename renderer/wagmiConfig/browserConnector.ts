@@ -1,8 +1,5 @@
-import {
-  setActiveWalletAccount,
-  setAuthJwt,
-} from "@/services/auth/auth.utils";
-import { createConnector } from "@wagmi/core";
+import { setActiveWalletAccount, setAuthJwt } from "@/services/auth/auth.utils";
+import { createConnector } from "wagmi";
 import { mainnet, sepolia } from "viem/chains";
 
 interface ProviderRequest {
@@ -20,7 +17,9 @@ interface ConnectionObject {
   chainId: number;
 }
 
-const CONNECTION_STORE = "seize-app-connection";
+const LEGACY_CONNECTION_STORE = "seize-app-connection";
+const getConnectionStoreKey = (connectorId: string) =>
+  `seize-app-connection-${connectorId}`;
 
 export function browserConnector(parameters: {
   openUrlFn: (url: string) => void;
@@ -28,8 +27,10 @@ export function browserConnector(parameters: {
   icon: string;
   id: string;
 }) {
+  const connectionStoreKey = getConnectionStoreKey(parameters.id);
   const deepLinkCallbacks: Map<string, (response: ProviderResponse) => void> =
     new Map();
+  const pendingDeepLinkResponses: Map<string, ProviderResponse> = new Map();
 
   let initialized = false;
   let scheme = "core6529";
@@ -40,23 +41,63 @@ export function browserConnector(parameters: {
     chainId: 1,
   };
 
+  const parseConnectionObject = (
+    rawConnection: string | null
+  ): ConnectionObject | null => {
+    if (!rawConnection) {
+      return null;
+    }
+    try {
+      const parsed = JSON.parse(rawConnection) as {
+        accounts?: unknown;
+        chainId?: unknown;
+      };
+      if (!Array.isArray(parsed.accounts)) {
+        return null;
+      }
+      const accounts = parsed.accounts
+        .filter((account: unknown): account is string => {
+          return typeof account === "string";
+        })
+        .map((account) => account.toLowerCase() as `0x${string}`);
+      if (accounts.length !== parsed.accounts.length) {
+        return null;
+      }
+      const chainId = typeof parsed.chainId === "number" ? parsed.chainId : 1;
+      return {
+        accounts,
+        chainId,
+      };
+    } catch {
+      return null;
+    }
+  };
+
   async function init(name: string) {
     if (!window || initialized) return;
 
-    const storedConnection = await window.store.get(CONNECTION_STORE);
-    if (storedConnection) {
-      connectionObject = JSON.parse(storedConnection);
+    const storedConnection = await window.store.get(connectionStoreKey);
+    const parsedStoredConnection = parseConnectionObject(storedConnection);
+    if (parsedStoredConnection) {
+      connectionObject = parsedStoredConnection;
     }
 
     window.api.onWalletConnection((_event: any, data: any) => {
-      const callback = deepLinkCallbacks.get(data.requestId);
+      const requestId =
+        typeof data?.requestId === "string" ? data.requestId : undefined;
+      if (!requestId) {
+        return;
+      }
+
+      const callback = deepLinkCallbacks.get(requestId);
       if (callback) {
         callback(data.data);
-        deepLinkCallbacks.delete(data.requestId);
+        deepLinkCallbacks.delete(requestId);
       } else {
+        pendingDeepLinkResponses.set(requestId, data.data ?? {});
         console.log(
           `[${name}] No callback found for requestId`,
-          data.requestId
+          requestId
         );
       }
     });
@@ -72,6 +113,20 @@ export function browserConnector(parameters: {
   function generateRequestId(): string {
     return Math.random().toString(36).substring(2, 15);
   }
+
+  const registerDeepLinkCallback = (
+    requestId: string,
+    callback: (response: ProviderResponse) => void
+  ) => {
+    deepLinkCallbacks.set(requestId, callback);
+
+    const pendingResponse = pendingDeepLinkResponses.get(requestId);
+    if (pendingResponse) {
+      pendingDeepLinkResponses.delete(requestId);
+      callback(pendingResponse);
+      deepLinkCallbacks.delete(requestId);
+    }
+  };
 
   return createConnector((_config) => ({
     get icon() {
@@ -130,15 +185,57 @@ export function browserConnector(parameters: {
         );
       }
 
+      const legacyStoredConnection = await window.store.get(
+        LEGACY_CONNECTION_STORE
+      );
+      const parsedLegacyConnection = parseConnectionObject(
+        legacyStoredConnection
+      );
+      if (
+        parsedLegacyConnection &&
+        parsedLegacyConnection.accounts.length > 0
+      ) {
+        connectionObject = parsedLegacyConnection;
+        await window.store.set(
+          connectionStoreKey,
+          JSON.stringify(connectionObject)
+        );
+        await window.store.remove(LEGACY_CONNECTION_STORE);
+
+        if (opts?.withCapabilities) {
+          const accountsWithCaps = connectionObject.accounts.map((address) => ({
+            address,
+            capabilities: {} as Record<string, unknown>,
+          })) as unknown as readonly {
+            address: `0x${string}`;
+            capabilities: Record<string, unknown>;
+          }[];
+          return {
+            accounts: accountsWithCaps as any,
+            chainId: connectionObject.chainId,
+          } as any;
+        }
+
+        return {
+          accounts: connectionObject.accounts as readonly `0x${string}`[],
+          chainId: connectionObject.chainId,
+        } as any;
+      }
+
       return new Promise((resolve, reject) => {
         const requestId = generateRequestId();
         const t = Date.now();
         const chainId = opts?.chainId || connectionObject.chainId;
         const url = `http://localhost:${port}/browser-connector?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
+        const timeoutId = setTimeout(() => {
+          console.log(`[${this.name}] Deep link callback timed out`, requestId);
+          deepLinkCallbacks.delete(requestId);
+          pendingDeepLinkResponses.delete(requestId);
+          reject(new Error("Connection request timed out"));
+        }, 60000);
 
-        parameters.openUrlFn(url);
-
-        deepLinkCallbacks.set(requestId, async (response: any) => {
+        registerDeepLinkCallback(requestId, async (response: any) => {
+          clearTimeout(timeoutId);
           if (!response || response.error) {
             reject(new Error(response?.error));
           } else {
@@ -150,12 +247,13 @@ export function browserConnector(parameters: {
               );
               return;
             }
-            const validatedAccounts = response.accounts
+            const rawAccounts: unknown[] = response.accounts;
+            const validatedAccounts = rawAccounts
               .filter((account: unknown): account is string => {
                 return typeof account === "string";
               })
               .map((account) => account.toLowerCase() as `0x${string}`);
-            if (validatedAccounts.length !== response.accounts.length) {
+            if (validatedAccounts.length !== rawAccounts.length) {
               reject(
                 new Error(
                   "Invalid connection payload: accounts must be an array of strings."
@@ -175,7 +273,17 @@ export function browserConnector(parameters: {
                   role?: string | null;
                 }
               | undefined;
-            const primaryConnectedAccount = validatedAccounts[0];
+            const responseActiveAddressLower =
+              typeof response?.activeAddress === "string"
+                ? response.activeAddress.toLowerCase()
+                : null;
+            const primaryConnectedAccount =
+              responseActiveAddressLower &&
+              validatedAccounts.includes(
+                responseActiveAddressLower as `0x${string}`
+              )
+                ? (responseActiveAddressLower as `0x${string}`)
+                : validatedAccounts[0];
             const authAddressLower =
               typeof auth?.address === "string"
                 ? auth.address.toLowerCase()
@@ -188,9 +296,13 @@ export function browserConnector(parameters: {
                 : undefined;
             const hasMatchingAuthAddress =
               typeof matchingAuthAccount === "string";
+            const shouldPersistAuthForConnectedAccount =
+              hasMatchingAuthAddress &&
+              typeof primaryConnectedAccount === "string" &&
+              matchingAuthAccount === primaryConnectedAccount;
 
             if (
-              hasMatchingAuthAddress &&
+              shouldPersistAuthForConnectedAccount &&
               typeof auth?.token === "string" &&
               typeof auth?.refreshToken === "string"
             ) {
@@ -214,8 +326,7 @@ export function browserConnector(parameters: {
               );
             }
 
-            const accountToActivate =
-              matchingAuthAccount ?? primaryConnectedAccount;
+            const accountToActivate = primaryConnectedAccount;
             if (typeof accountToActivate === "string") {
               const didSwitch = setActiveWalletAccount(accountToActivate);
               if (!didSwitch) {
@@ -226,7 +337,7 @@ export function browserConnector(parameters: {
               }
             }
             await window.store.set(
-              CONNECTION_STORE,
+              connectionStoreKey,
               JSON.stringify(connectionObject)
             );
 
@@ -253,20 +364,17 @@ export function browserConnector(parameters: {
           }
         });
 
-        setTimeout(() => {
-          console.log(`[${this.name}] Deep link callback timed out`, requestId);
-          deepLinkCallbacks.delete(requestId);
-          reject(new Error("Connection request timed out"));
-        }, 60000);
+        parameters.openUrlFn(url);
       });
     },
     async disconnect() {
       deepLinkCallbacks.clear();
+      pendingDeepLinkResponses.clear();
       connectionObject = {
         accounts: [],
         chainId: 1,
       };
-      await window.store.remove(CONNECTION_STORE);
+      await window.store.remove(connectionStoreKey);
     },
     async getAccounts() {
       return connectionObject.accounts;
@@ -289,10 +397,18 @@ export function browserConnector(parameters: {
             const encodedParams = encodeURIComponent(JSON.stringify(params));
             const t = Date.now();
             const url = `http://localhost:${port}/browser-connector?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
+            const timeoutId = setTimeout(() => {
+              console.log(
+                `[${this.name}] Deep link callback timed out`,
+                requestId
+              );
+              deepLinkCallbacks.delete(requestId);
+              pendingDeepLinkResponses.delete(requestId);
+              reject(new Error("Provider request timed out"));
+            }, 60000);
 
-            parameters.openUrlFn(url);
-
-            deepLinkCallbacks.set(requestId, (response: any) => {
+            registerDeepLinkCallback(requestId, (response: any) => {
+              clearTimeout(timeoutId);
               if (!response || response.error) {
                 reject(new Error(response?.error));
               } else {
@@ -300,14 +416,7 @@ export function browserConnector(parameters: {
               }
             });
 
-            setTimeout(() => {
-              console.log(
-                `[${this.name}] Deep link callback timed out`,
-                requestId
-              );
-              deepLinkCallbacks.delete(requestId);
-              reject(new Error("Provider request timed out"));
-            }, 60000);
+            parameters.openUrlFn(url);
           });
         },
       };
