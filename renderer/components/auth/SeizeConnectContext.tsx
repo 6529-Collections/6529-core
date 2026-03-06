@@ -207,7 +207,7 @@ const isCapacitorPlatform = (): boolean => {
 
 const normalizeAddress = (address: string): string => address.toLowerCase();
 
-const ADD_FLOW_CANCEL_GRACE_MS: number = 60000;
+const ADD_FLOW_CANCEL_GRACE_MS: number = 30000;
 
 const validateStoredAddress = (
   storedAddress: string
