@@ -41,7 +41,7 @@ Renderer dependencies are installed from `renderer/package.json`.
 After pulling frontend changes (or on a fresh clone), run:
 
 ```
-npm run install-renderer-deps
+npm run deps
 ```
 
 ##### Checklist
@@ -51,9 +51,8 @@ npm run install-renderer-deps
 - merge `main` into `pull-web`
 - run `npm run pull-web`
 - resolve conflicts
-- run `npm run install-renderer-deps`
+- run `npm run deps`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
-- delete file `renderer/package-lock.json` (will clash if not deleted)
 - update root `next.config.mjs` with any related changes from `renderer/next.config.mjs` and delete file `renderer/next.config.mjs`
 
 ### Running locally - dev
@@ -61,18 +60,24 @@ npm run install-renderer-deps
 Use:
 
 ```
-npm ci
-npm run install-renderer-deps
+npm run deps
 npm run dev
 ```
 
 or if running on a windows machine:
 
 ```
-npm ci
-npm run install-renderer-deps
+npm run deps
 npm run dev-win
 ```
+
+Optional dependency security check:
+
+```
+npm run audit-deps
+```
+
+CI note: workflows intentionally use deterministic installs with `npm ci` and then `npm run install-renderer-deps`.
 
 ## Building and Publishing
 
