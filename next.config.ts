@@ -220,6 +220,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
       ];
     },
     turbopack: {
+      root: __dirname,
       resolveAlias: {
         canvas: "./renderer/stubs/empty.js",
         encoding: "./renderer/stubs/empty.js",

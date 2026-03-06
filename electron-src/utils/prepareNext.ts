@@ -3,8 +3,8 @@
 import { app } from "electron";
 import Logger from "electron-log";
 import { createServer } from "http";
-import next from "next";
 import fs from "node:fs";
+import Module, { createRequire } from "node:module";
 import path from "node:path";
 import { parse } from "url";
 import { isDev } from "./env";
@@ -30,6 +30,88 @@ const nextConfig = {
   dev: isDev,
 };
 
+function bootstrapNodePathSearch(): void {
+  const candidateNodeModulesDirs = [
+    path.join(nextDir, "out", "node_modules"),
+    path.join(nextDir, "out", "dev", "node_modules"),
+    path.join(nextDir, "node_modules"),
+  ];
+
+  const existingDirs = candidateNodeModulesDirs.filter((dir) =>
+    fs.existsSync(dir),
+  );
+
+  if (existingDirs.length === 0) {
+    Logger.info("NODE_PATH EXTRA:", "none");
+    return;
+  }
+
+  const currentNodePath = (process.env.NODE_PATH ?? "")
+    .split(path.delimiter)
+    .filter((entry) => entry.length > 0);
+
+  const mergedNodePath = [
+    ...existingDirs.filter((dir) => !currentNodePath.includes(dir)),
+    ...currentNodePath,
+  ];
+  process.env.NODE_PATH = mergedNodePath.join(path.delimiter);
+
+  const moduleWithInit = Module as unknown as {
+    _initPaths?: (() => void) | undefined;
+  };
+  moduleWithInit._initPaths?.();
+
+  Logger.info("NODE_PATH EXTRA:", existingDirs.join(path.delimiter));
+}
+
+type NextFactory = (config: { dir: string; dev: boolean }) => {
+  prepare: () => Promise<void>;
+  getRequestHandler: () => (
+    req: unknown,
+    res: unknown,
+    parsedUrl?: unknown,
+  ) => void;
+};
+
+function resolveNextFactory(): NextFactory {
+  const candidatePackageJsons = [
+    path.join(nextDir, "out", "node_modules", "next", "package.json"),
+    path.join(nextDir, "out", "dev", "node_modules", "next", "package.json"),
+    path.join(nextDir, "node_modules", "next", "package.json"),
+  ];
+
+  for (const candidatePackageJson of candidatePackageJsons) {
+    if (!fs.existsSync(candidatePackageJson)) {
+      continue;
+    }
+    try {
+      const requireFromCandidate = createRequire(candidatePackageJson);
+      const loaded = requireFromCandidate("next") as
+        | NextFactory
+        | { default?: NextFactory };
+      const nextFactory =
+        typeof loaded === "function" ? loaded : loaded.default;
+      if (typeof nextFactory === "function") {
+        Logger.info("NEXT MODULE:", candidatePackageJson);
+        return nextFactory;
+      }
+    } catch (error) {
+      Logger.warn("NEXT MODULE LOAD FAILED:", candidatePackageJson, error);
+    }
+  }
+
+  const appRequire = createRequire(path.join(app.getAppPath(), "package.json"));
+  const loaded = appRequire("next") as NextFactory | { default?: NextFactory };
+  const nextFactory = typeof loaded === "function" ? loaded : loaded.default;
+  if (typeof nextFactory !== "function") {
+    throw new Error("Failed to resolve Next.js module");
+  }
+  Logger.info("NEXT MODULE:", "app-level fallback");
+  return nextFactory;
+}
+
+bootstrapNodePathSearch();
+const next = resolveNextFactory();
 const nextApp = next(nextConfig);
 const handle = nextApp.getRequestHandler();
 

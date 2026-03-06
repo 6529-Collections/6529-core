@@ -37,7 +37,12 @@ npm run pull-web
 
 #### Packages
 
-Any package in this repository's package.json needs to be duplicated in the root package.json - this has to do with electron-builder not detecting the required dependencies of subtrees properly during build phase so it needs to be done in the root package.json
+Renderer dependencies are installed from `renderer/package.json`.  
+After pulling frontend changes (or on a fresh clone), run:
+
+```
+npm run install-renderer-deps
+```
 
 ##### Checklist
 
@@ -46,7 +51,7 @@ Any package in this repository's package.json needs to be duplicated in the root
 - merge `main` into `pull-web`
 - run `npm run pull-web`
 - resolve conflicts
-- duplicate changes from `renderer/package.json` in root `package.json`
+- run `npm run install-renderer-deps`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - delete file `renderer/package-lock.json` (will clash if not deleted)
 - update root `next.config.mjs` with any related changes from `renderer/next.config.mjs` and delete file `renderer/next.config.mjs`
@@ -56,12 +61,16 @@ Any package in this repository's package.json needs to be duplicated in the root
 Use:
 
 ```
+npm ci
+npm run install-renderer-deps
 npm run dev
 ```
 
 or if running on a windows machine:
 
 ```
+npm ci
+npm run install-renderer-deps
 npm run dev-win
 ```
 
