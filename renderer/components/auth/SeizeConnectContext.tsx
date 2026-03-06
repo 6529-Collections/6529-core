@@ -503,11 +503,26 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         isAddress(account.address)
       ) {
         const checksummedConnectedAddress = getAddress(account.address);
+        const addFlowOriginAddress = addFlowOriginAddressRef.current;
+        const activeStoredAddress = getWalletAddress();
+        const checksummedStoredActiveAddress =
+          activeStoredAddress && isAddress(activeStoredAddress)
+            ? getAddress(activeStoredAddress)
+            : null;
+        const shouldPreferStoredActiveAddress =
+          !!checksummedStoredActiveAddress &&
+          (!addFlowOriginAddress ||
+            normalizeAddress(checksummedStoredActiveAddress) !==
+              normalizeAddress(addFlowOriginAddress));
+        const nextConnectedAddress =
+          shouldPreferStoredActiveAddress && checksummedStoredActiveAddress
+            ? checksummedStoredActiveAddress
+            : checksummedConnectedAddress;
         const isAlreadyConnected =
           walletState.status === "connected" &&
-          walletState.address === checksummedConnectedAddress;
+          walletState.address === nextConnectedAddress;
         if (!isAlreadyConnected) {
-          setConnected(checksummedConnectedAddress);
+          setConnected(nextConnectedAddress);
         }
         return;
       }

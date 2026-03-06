@@ -7,10 +7,34 @@ const asar = require("@electron/asar");
 
 const SOURCE_RELATIVE_PATH = path.join("renderer", "out", "node_modules");
 
+const copyResolvedTree = (source, destination) => {
+  const stats = fs.lstatSync(source);
+
+  if (stats.isSymbolicLink()) {
+    const resolved = fs.realpathSync(source);
+    copyResolvedTree(resolved, destination);
+    return;
+  }
+
+  if (stats.isDirectory()) {
+    fs.mkdirSync(destination, { recursive: true });
+    for (const entry of fs.readdirSync(source)) {
+      copyResolvedTree(
+        path.join(source, entry),
+        path.join(destination, entry)
+      );
+    }
+    return;
+  }
+
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.copyFileSync(source, destination);
+};
+
 const copyDir = (from, to) => {
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.rmSync(to, { recursive: true, force: true });
-  fs.cpSync(from, to, { recursive: true, dereference: true });
+  copyResolvedTree(from, to);
 };
 
 const resolveResourcesDir = (context) => {

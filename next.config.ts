@@ -231,7 +231,6 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         "idb-keyval": "./renderer/lib/storage/idb-keyval.ts",
       },
     },
-    serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
     assetPrefix,
     webpack(config, { dev }) {
       if (!dev && localDebugBuild) {

@@ -156,13 +156,20 @@ export function browserConnector(parameters: {
               | undefined;
             const primaryConnectedAccount =
               response.accounts?.[0] as `0x${string}` | undefined;
+            const authAddressLower =
+              typeof auth?.address === "string"
+                ? auth.address.toLowerCase()
+                : undefined;
+            const matchingAuthAccount =
+              typeof authAddressLower === "string" &&
+              Array.isArray(response.accounts)
+                ? (response.accounts.find(
+                    (account: string) =>
+                      account.toLowerCase() === authAddressLower
+                  ) as `0x${string}` | undefined)
+                : undefined;
             const hasMatchingAuthAddress =
-              typeof auth?.address === "string" &&
-              Array.isArray(response.accounts) &&
-              response.accounts.some(
-                (account: string) =>
-                  account.toLowerCase() === auth.address?.toLowerCase()
-              );
+              typeof matchingAuthAccount === "string";
 
             if (
               hasMatchingAuthAddress &&
@@ -170,7 +177,7 @@ export function browserConnector(parameters: {
               typeof auth?.refreshToken === "string"
             ) {
               setAuthJwt(
-                auth.address!,
+                matchingAuthAccount,
                 auth.token,
                 auth.refreshToken,
                 auth.role ?? undefined
@@ -189,12 +196,13 @@ export function browserConnector(parameters: {
               );
             }
 
-            if (typeof primaryConnectedAccount === "string") {
-              const didSwitch = setActiveWalletAccount(primaryConnectedAccount);
+            const accountToActivate = matchingAuthAccount ?? primaryConnectedAccount;
+            if (typeof accountToActivate === "string") {
+              const didSwitch = setActiveWalletAccount(accountToActivate);
               if (!didSwitch) {
                 console.log(
                   `[${this.name}] Connected account is not active yet (likely awaiting auth):`,
-                  primaryConnectedAccount
+                  accountToActivate
                 );
               }
             }
