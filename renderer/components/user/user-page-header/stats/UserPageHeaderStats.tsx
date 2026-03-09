@@ -57,7 +57,7 @@ export default function UserPageHeaderStats({
         isOpen={isFollowersModalOpen}
         onClose={() => setIsFollowersModalOpen(false)}
       />
-      <div className="tw-mt-4">
+      <div className="tw-my-4">
         <UserPageHeaderStatsTDHConsensus profile={profile} />
       </div>
     </div>

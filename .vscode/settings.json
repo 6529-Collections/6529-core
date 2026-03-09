@@ -1,6 +1,9 @@
 {
   "ProjectTree.useDefaultIgnore": true,
   "eslint.useFlatConfig": true,
+  "eslint.options": {
+    "overrideConfigFile": "${workspaceFolder}/config/eslint.console-log-override.mjs"
+  },
   "eslint.workingDirectories": [
     {
       "directory": "renderer",

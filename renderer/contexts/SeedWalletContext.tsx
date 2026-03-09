@@ -1,6 +1,7 @@
 "use client";
 
-import { getSeedWallet } from "@/electron";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { getSeedWallet, getSeedWallets } from "@/electron";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { decryptData, encryptData } from "@/shared/encrypt";
 import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
@@ -10,9 +11,9 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
-import { useConnections } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";
 
@@ -37,7 +38,7 @@ const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
 export const SeedWalletProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const connections = useConnections();
+  const { address: activeAddress, connectionState } = useSeizeConnectContext();
 
   const [isFetched, setIsFetched] = useState(false);
 
@@ -45,6 +46,7 @@ export const SeedWalletProvider: React.FC<{
 
   const [isSeedWallet, setIsSeedWallet] = useState<boolean>(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
+  const connectedAddressRef = useRef<string | null>(null);
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
 
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
@@ -114,6 +116,10 @@ export const SeedWalletProvider: React.FC<{
   }, []);
 
   useEffect(() => {
+    connectedAddressRef.current = connectedAddress;
+  }, [connectedAddress]);
+
+  useEffect(() => {
     const handleDisconnect = () => {
       lockWallet();
     };
@@ -166,21 +172,8 @@ export const SeedWalletProvider: React.FC<{
   }, [lockedWallet]);
 
   useEffect(() => {
-    if (!connectedAddress) {
-      return;
-    }
+    let cancelled = false;
 
-    getSeedWallet(connectedAddress)
-      .then((data) => {
-        setLockedWallet(data.data);
-      })
-      .catch((e) => {
-        console.error("Error fetching seed wallet", e);
-        setIsFetched(true);
-      });
-  }, [connectedAddress]);
-
-  useEffect(() => {
     const reset = () => {
       lockWallet();
       setConnectedAddress(null);
@@ -189,18 +182,71 @@ export const SeedWalletProvider: React.FC<{
       setIsFetched(true);
     };
 
-    if (!connections || connections.length === 0) {
-      reset();
+    if (!activeAddress) {
+      if (connectionState !== "initializing") {
+        reset();
+      }
       return;
     }
 
-    if (connections[0]?.connector.type === "seed-wallet") {
-      setConnectedAddress(connections[0].accounts[0]);
-      setIsSeedWallet(true);
-    } else {
-      reset();
-    }
-  }, [connections]);
+    getSeedWallet(activeAddress)
+      .then(async (response) => {
+        if (cancelled) {
+          return;
+        }
+
+        let seedWallet =
+          response && !response.error && response.data ? response.data : null;
+
+        if (!seedWallet) {
+          const allSeedWalletsResponse = await getSeedWallets();
+          if (cancelled) {
+            return;
+          }
+          seedWallet =
+            allSeedWalletsResponse &&
+            !allSeedWalletsResponse.error &&
+            Array.isArray(allSeedWalletsResponse.data)
+              ? (allSeedWalletsResponse.data.find((wallet) =>
+                  areEqualAddresses(wallet.address, activeAddress)
+                ) ?? null)
+              : null;
+        }
+
+        if (!seedWallet) {
+          reset();
+          return;
+        }
+
+        if (!areEqualAddresses(connectedAddressRef.current, seedWallet.address)) {
+          lockWallet(false);
+          setIsFetched(false);
+          setConnectedAddress(seedWallet.address);
+        }
+
+        setIsSeedWallet(true);
+        setLockedWallet((previousWallet) => {
+          if (
+            previousWallet &&
+            areEqualAddresses(previousWallet.address, seedWallet.address)
+          ) {
+            return previousWallet;
+          }
+          return seedWallet;
+        });
+      })
+      .catch((e) => {
+        if (cancelled) {
+          return;
+        }
+        console.error("Error fetching seed wallet", e);
+        reset();
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeAddress, connectionState, lockWallet]);
 
   const value = {
     isSeedWallet,

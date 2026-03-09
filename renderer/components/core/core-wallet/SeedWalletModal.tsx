@@ -16,6 +16,19 @@ import { createSeedWallet, importSeedWallet } from "../../../electron";
 
 export const SEED_MIN_PASS_LENGTH = 6;
 
+const showTimedError = (
+  message: string,
+  setError: (value: string) => void,
+  timeoutRef: { current: NodeJS.Timeout | null }
+) => {
+  if (timeoutRef.current) clearTimeout(timeoutRef.current);
+  setError(message);
+  timeoutRef.current = setTimeout(() => {
+    setError("");
+    timeoutRef.current = null;
+  }, 5000);
+};
+
 export function CreateSeedWalletModal(
   props: Readonly<{
     show: boolean;
@@ -35,12 +48,7 @@ export function CreateSeedWalletModal(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showError = (message: string) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setError(message);
-    timeoutRef.current = setTimeout(() => {
-      setError("");
-      timeoutRef.current = null;
-    }, 5000);
+    showTimedError(message, setError, timeoutRef);
   };
 
   const handleHide = (refresh: boolean) => {
@@ -187,12 +195,7 @@ export function UnlockSeedWalletModal(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const showError = (message: string) => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    setError(message);
-    timeoutRef.current = setTimeout(() => {
-      setError("");
-      timeoutRef.current = null;
-    }, 5000);
+    showTimedError(message, setError, timeoutRef);
   };
 
   const handleHide = () => {
