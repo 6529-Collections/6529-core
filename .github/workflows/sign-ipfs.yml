@@ -72,6 +72,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
+          status: failure
           title: "6529 Desktop - IPFS Signing failed ❌"
           color: 0xff0000
 
@@ -82,6 +83,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
+          status: success
           title: "6529 Desktop - IPFS Binaries Signed ✅"
           description: "Signed IPFS binaries uploaded to S3"
           color: 0x00ff00

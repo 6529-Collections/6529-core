@@ -94,6 +94,7 @@ jobs:
         env:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
+          status: failure
           title: "6529 Desktop - Windows Signing failed ❌"
           description: "ENV: ${{ inputs.env }} - v${{ inputs.version }}"
           content: "<@&1162355330798325861>"
