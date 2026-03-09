@@ -96,7 +96,7 @@ export default function HeaderShare({
   );
 }
 
-function HeaderQRModal({
+export function HeaderQRModal({
   show,
   onClose,
 }: {

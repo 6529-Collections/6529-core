@@ -28,6 +28,7 @@ import { ViewProvider } from "../navigation/ViewContext";
 import AnchorInterceptorSetup from "./AnchorInterceptorSetup";
 import CapacitorSetup from "./CapacitorSetup";
 import IpfsImageSetup from "./IpfsImageSetup";
+import MixpanelSetup from "./MixpanelSetup";
 import QueryClientSetup from "./QueryClientSetup";
 import WagmiSetup from "./WagmiSetup";
 
@@ -58,6 +59,7 @@ export default function Providers({
                                   <WaveEligibilityProvider>
                                     <NotificationsProvider>
                                       <CookieConsentProvider>
+                                        <MixpanelSetup />
                                         <EULAConsentProvider>
                                           <AppWebSocketProvider>
                                             <LayoutProvider>
