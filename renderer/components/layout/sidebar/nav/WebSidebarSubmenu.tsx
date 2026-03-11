@@ -1,8 +1,5 @@
 "use client";
 
-import type { SidebarSection } from "@/components/navigation/navTypes";
-import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import {
   useCallback,
@@ -13,6 +10,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import type { SidebarSection } from "@/components/navigation/navTypes";
 
 interface WebSidebarSubmenuProps {
   readonly section: SidebarSection;
@@ -44,12 +42,13 @@ function WebSidebarSubmenu({
     : undefined;
 
   const [computedTop, setComputedTop] = useState<number>(() => anchorTop ?? 16);
-
-  const combinedItems = useMemo(
-    () => [
-      ...section.items,
-      ...(section.subsections?.flatMap((sub) => sub.items) ?? []),
-    ],
+  const totalItemCount = useMemo(
+    () =>
+      section.items.length +
+      (section.subsections?.reduce(
+        (count, subsection) => count + subsection.items.length + 1,
+        0
+      ) ?? 0),
     [section.items, section.subsections]
   );
 
@@ -116,13 +115,7 @@ function WebSidebarSubmenu({
 
       setComputedTop((previous) => (previous === top ? previous : top));
     }
-  }, [
-    browserWindow,
-    anchorTop,
-    anchorHeight,
-    section.key,
-    combinedItems.length,
-  ]);
+  }, [browserWindow, anchorTop, anchorHeight, section.key, totalItemCount]);
 
   const isActive = useCallback((href: string) => pathname === href, [pathname]);
 
@@ -141,43 +134,70 @@ function WebSidebarSubmenu({
       : `${leftOffset}px`;
 
   const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
+  const renderLink = (
+    item: { name: string; href: string },
+    nested: boolean = false
+  ) => {
+    const active = isActive(item.href);
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        className={`tw-touch-action-manipulation tw-group tw-flex tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-all tw-duration-300 focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-600 focus-visible:tw-ring-offset-1 ${
+          nested
+            ? "tw-min-h-10 tw-px-3 tw-py-2 tw-text-sm"
+            : "tw-mb-1 tw-px-3 tw-py-2 tw-text-md"
+        } ${
+          active
+            ? "tw-bg-iron-700 tw-font-semibold tw-text-white desktop-hover:hover:tw-text-white"
+            : "tw-font-medium tw-text-iron-300 desktop-hover:hover:tw-bg-iron-700/50 desktop-hover:hover:tw-text-iron-50"
+        }`}
+        aria-current={active ? "page" : undefined}
+        role="menuitem"
+        onClick={onClose}
+      >
+        <span className="tw-truncate">{item.name}</span>
+      </Link>
+    );
+  };
 
   return createPortal(
     <div
       ref={containerRef}
-      className="tailwind-scope tw-fixed tw-z-[95] tw-w-64 tw-max-h-[65vh] tw-bg-iron-800 tw-border tw-border-solid tw-border-iron-700 tw-rounded-lg tw-shadow-[0_20px_45px_rgba(7,7,11,0.7)] tw-overflow-hidden tw-flex tw-flex-col"
+      className="tailwind-scope tw-fixed tw-z-[95] tw-flex tw-max-h-[65vh] tw-w-64 tw-flex-col tw-overflow-hidden tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-800 tw-shadow-[0_20px_45px_rgba(7,7,11,0.7)]"
       style={{
         left: leftStyle,
         top: topStyle,
       }}
       role="menu"
-      aria-label={`${section.name} sub-navigation`}>
-      <div className="tw-px-6 tw-pt-4 tw-pb-2 tw-border-b tw-border-iron-700 tw-border-solid tw-border-x-0 tw-border-t-0">
+      aria-label={`${section.name} sub-navigation`}
+    >
+      <div className="tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-700 tw-px-6 tw-pb-2 tw-pt-4">
         <h3 className="tw-text-base tw-font-semibold tw-text-iron-50">
           {section.name}
         </h3>
       </div>
 
-      <div className="tw-flex-1 tw-p-3 tw-overflow-y-auto tw-scrollbar-thin tw-scrollbar-thumb-iron-500 tw-scrollbar-track-iron-800 desktop-hover:hover:tw-scrollbar-thumb-iron-300">
-        {combinedItems.map((item) => {
-          const active = isActive(item.href);
+      <div className="tw-flex-1 tw-overflow-y-auto tw-p-3 tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300">
+        {section.items.map((item) => renderLink(item))}
+
+        {section.subsections?.map((subsection) => {
           return (
-            <Link
-              key={item.href}
-              href={item.href}
-              target={item.isExternal ? "_blank" : undefined}
-              rel={item.isExternal ? "noopener noreferrer" : undefined}
-              className={`tw-group tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-lg tw-px-3 tw-py-2 tw-mb-1 tw-text-md tw-transition-all tw-duration-300 tw-touch-action-manipulation focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-600 focus-visible:tw-ring-offset-1 tw-ring-offset-iron-950 ${
-                active
-                  ? "tw-text-white tw-bg-iron-700 tw-font-semibold desktop-hover:hover:tw-text-white"
-                  : "tw-text-iron-300 desktop-hover:hover:tw-bg-iron-700/50 desktop-hover:hover:tw-text-iron-50 tw-font-medium"
-              }`}
-              aria-current={active ? "page" : undefined}
-              role="menuitem"
-              onClick={onClose}>
-              <span className="tw-truncate">{item.name}</span>
-              {item.isExternal && <FontAwesomeIcon icon={faExternalLinkAlt} />}
-            </Link>
+            <div
+              key={subsection.name}
+              className={
+                section.items.length > 0 ? "tw-mt-3" : "tw-mt-3 first:tw-mt-0"
+              }
+            >
+              <div className="tw-px-3 tw-pb-1 tw-text-xs tw-font-semibold tw-uppercase tw-tracking-[0.14em] tw-text-iron-500">
+                {subsection.name}
+              </div>
+
+              <div className="tw-ml-3 tw-border-0 tw-border-l tw-border-solid tw-border-iron-700 tw-pl-2">
+                {subsection.items.map((item) => renderLink(item, true))}
+              </div>
+            </div>
           );
         })}
       </div>

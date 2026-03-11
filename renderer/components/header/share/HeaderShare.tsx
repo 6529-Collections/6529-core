@@ -2,10 +2,10 @@
 
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { publicEnv } from "@/config/env";
+import { openInExternalBrowser } from "@/helpers";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 import useCapacitor from "@/hooks/useCapacitor";
 import { DeepLinkScope } from "@/hooks/useDeepLinkNavigation";
-import { useElectron } from "@/hooks/useElectron";
 import {
   getRefreshToken,
   getWalletAddress,
@@ -14,16 +14,43 @@ import {
 import { faCopy, faExternalLink } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ShareIcon } from "@heroicons/react/24/outline";
-import yaml from "js-yaml";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Button, Modal } from "react-bootstrap";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import styles from "./HeaderShare.module.scss";
 import { ShareMobileApp } from "./HeaderShareMobileApps";
 
 const QRCode = require("qrcode");
+
+const bodyScrollLock = (() => {
+  let lockCount = 0;
+  let previousOverflow = "";
+
+  return {
+    lock: () => {
+      if (typeof document === "undefined") {
+        return;
+      }
+
+      if (lockCount === 0) {
+        previousOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+      }
+
+      lockCount += 1;
+    },
+    unlock: () => {
+      if (typeof document === "undefined" || lockCount === 0) {
+        return;
+      }
+
+      lockCount -= 1;
+      if (lockCount === 0) {
+        document.body.style.overflow = previousOverflow;
+      }
+    },
+  };
+})();
 
 enum Mode {
   NAVIGATE,
@@ -34,17 +61,49 @@ enum Mode {
 enum SubMode {
   BROWSER,
   APP,
-  CORE,
 }
 
 const squareStyle = {
   width: "100%",
-  maxWidth: "1000px",
-  aspectRatio: "1 / 1",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
 };
+
+function getSubTabCount(activeTab: Mode): number {
+  if (activeTab === Mode.NAVIGATE || activeTab === Mode.SHARE) {
+    return 2;
+  }
+
+  return 1;
+}
+
+function getSubTabLabel(activeTab: Mode): string {
+  if (activeTab === Mode.APPS) {
+    return "Select Platform";
+  }
+  if (activeTab === Mode.SHARE) {
+    return "Open Link In";
+  }
+  return "Open URL In";
+}
+
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  const selectors = [
+    'a[href]:not([tabindex="-1"])',
+    'button:not([disabled]):not([tabindex="-1"])',
+    'textarea:not([disabled]):not([tabindex="-1"])',
+    'input:not([disabled]):not([tabindex="-1"])',
+    'select:not([disabled]):not([tabindex="-1"])',
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(",");
+
+  return Array.from(container.querySelectorAll<HTMLElement>(selectors)).filter(
+    (element) =>
+      !element.hasAttribute("disabled") &&
+      element.getAttribute("aria-hidden") !== "true"
+  );
+}
 
 export default function HeaderShare({
   isCollapsed = false,
@@ -73,7 +132,8 @@ export default function HeaderShare({
         } active:tw-bg-transparent`}
         data-tooltip-id="sidebar-tooltip"
         data-tooltip-content="Share"
-        data-tooltip-hidden={!isCollapsed}>
+        data-tooltip-hidden={!isCollapsed}
+      >
         <div
           className={`tw-flex tw-h-full tw-w-full tw-items-center ${
             isCollapsed ? "" : "tw-gap-x-2"
@@ -105,8 +165,10 @@ export function HeaderQRModal({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-
   const isMobile = useIsMobileDevice();
+
+  const [shouldRender, setShouldRender] = useState(show);
+  const [isVisible, setIsVisible] = useState(show);
 
   const { isAuthenticated } = useSeizeConnectContext();
 
@@ -119,8 +181,7 @@ export function HeaderQRModal({
   const [navigateAppUrl, setNavigateAppUrl] = useState<string>("");
   const [shareConnectionAppUrl, setShareConnectionAppUrl] =
     useState<string>("");
-  const [navigateCoreUrl, setNavigateCoreUrl] = useState<string>("");
-  const [shareConnectionCoreUrl, setShareConnectionCoreUrl] =
+  const [shareConnectionBrowserUrl, setShareConnectionBrowserUrl] =
     useState<string>("");
 
   const [navigateBrowserSrc, setNavigateBrowserSrc] = useState<string>("");
@@ -128,6 +189,86 @@ export function HeaderQRModal({
   const [shareConnectionSrc, setShareConnectionSrc] = useState<string>("");
 
   const [urlCopied, setUrlCopied] = useState<boolean>(false);
+  const onCloseRef = useRef(onClose);
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dialogRef = useRef<HTMLDialogElement | null>(null);
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+
+  const trapFocusInDialog = useCallback((event: KeyboardEvent) => {
+    if (event.key !== "Tab") {
+      return;
+    }
+
+    const dialog = dialogRef.current;
+    if (!dialog) {
+      return;
+    }
+
+    const focusableElements = getFocusableElements(dialog);
+    if (focusableElements.length === 0) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements.at(-1);
+    if (!firstElement || !lastElement) {
+      event.preventDefault();
+      dialog.focus();
+      return;
+    }
+    const activeElement = document.activeElement as HTMLElement | null;
+    const activeInsideDialog = activeElement
+      ? dialog.contains(activeElement)
+      : false;
+
+    if (event.shiftKey) {
+      if (
+        !activeInsideDialog ||
+        activeElement === firstElement ||
+        activeElement === dialog
+      ) {
+        event.preventDefault();
+        lastElement.focus();
+      }
+      return;
+    }
+
+    if (!activeInsideDialog || activeElement === lastElement) {
+      event.preventDefault();
+      firstElement.focus();
+    }
+  }, []);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
+  const handleEscapeKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      if (event.key === "Tab") {
+        trapFocusInDialog(event);
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.stopPropagation();
+        event.preventDefault();
+        onCloseRef.current();
+      }
+    },
+    [trapFocusInDialog]
+  );
 
   function generateSources(
     refreshToken: string | null,
@@ -145,51 +286,66 @@ export function HeaderQRModal({
     }
 
     const appScheme = publicEnv.MOBILE_APP_SCHEME ?? "mobile6529";
-    const coreScheme = publicEnv.CORE_SCHEME ?? "core6529";
+    const baseEndpoint =
+      (publicEnv.BASE_ENDPOINT || window.location.origin).replace(/\/+$/, "") ||
+      window.location.origin;
 
-    const browserUrl = `${window.location.origin}${routerPath}`;
+    const browserUrl = `${baseEndpoint}${routerPath}`;
     const appUrl = `${appScheme}://${DeepLinkScope.NAVIGATE}${routerPath}`;
-    const coreUrl = `${coreScheme}://${DeepLinkScope.NAVIGATE}${routerPath}`;
 
     setNavigateBrowserUrl(browserUrl);
     setNavigateAppUrl(appUrl);
-    setNavigateCoreUrl(coreUrl);
 
     let shareConnectionAppUrl = "";
-    let shareConnectionCoreUrl = "";
+    let shareConnectionBrowserUrl = "";
 
     if (refreshToken && walletAddress) {
       shareConnectionAppUrl = `${appScheme}://${DeepLinkScope.SHARE_CONNECTION}?token=${refreshToken}&address=${walletAddress}`;
-      shareConnectionCoreUrl = `${coreScheme}://${DeepLinkScope.NAVIGATE}/accept-connection-sharing?token=${refreshToken}&address=${walletAddress}`;
+      const search = new URLSearchParams({
+        token: refreshToken,
+        address: walletAddress,
+      });
+      shareConnectionBrowserUrl = `${baseEndpoint}/accept-connection-sharing?${search.toString()}`;
 
       if (role) {
         shareConnectionAppUrl += `&role=${role}`;
-        shareConnectionCoreUrl += `&role=${role}`;
+        search.set("role", role);
+        shareConnectionBrowserUrl = `${baseEndpoint}/accept-connection-sharing?${search.toString()}`;
       }
       setShareConnectionAppUrl(shareConnectionAppUrl);
-      setShareConnectionCoreUrl(shareConnectionCoreUrl);
+      setShareConnectionBrowserUrl(shareConnectionBrowserUrl);
     } else {
       setShareConnectionSrc("");
+      setShareConnectionBrowserUrl("");
     }
 
-    QRCode.toDataURL(browserUrl, { width: 500, margin: 0 }).then(
-      (dataUrl: string) => {
+    QRCode.toDataURL(browserUrl, { width: 500, margin: 0 })
+      .then((dataUrl: string) => {
         setNavigateBrowserSrc(dataUrl);
-      }
-    );
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to generate browser QR code", error);
+        setNavigateBrowserSrc("");
+      });
 
-    QRCode.toDataURL(appUrl, { width: 500, margin: 0 }).then(
-      (dataUrl: string) => {
+    QRCode.toDataURL(appUrl, { width: 500, margin: 0 })
+      .then((dataUrl: string) => {
         setNavigateAppSrc(dataUrl);
-      }
-    );
+      })
+      .catch((error: unknown) => {
+        console.error("Failed to generate mobile app QR code", error);
+        setNavigateAppSrc("");
+      });
 
     if (shareConnectionAppUrl) {
-      QRCode.toDataURL(shareConnectionAppUrl, { width: 500, margin: 0 }).then(
-        (dataUrl: string) => {
+      QRCode.toDataURL(shareConnectionAppUrl, { width: 500, margin: 0 })
+        .then((dataUrl: string) => {
           setShareConnectionSrc(dataUrl);
-        }
-      );
+        })
+        .catch((error: unknown) => {
+          console.error("Failed to generate share connection QR code", error);
+          setShareConnectionSrc("");
+        });
     }
   }
 
@@ -209,175 +365,296 @@ export function HeaderQRModal({
       setShareConnectionSrc("");
     }, 150);
     return () => clearTimeout(timer);
-  }, [show]);
+  }, [show, isAuthenticated]);
 
-  function printImage() {
-    const renderQRCodeImage = (src: string, alt: string) => {
-      const defaultStyle = {
-        maxWidth: "100%",
-        height: "auto",
-        border: "5px solid #fff",
-      };
-      return (
-        <Image
-          unoptimized
-          priority
-          loading="eager"
-          src={src}
-          alt={alt}
-          width={1000}
-          height={1000}
-          className="unselectable"
-          style={{ ...defaultStyle }}
-        />
-      );
-    };
-
-    const renderCoreLink = (url: string) => {
-      return (
-        <div className="tw-flex tw-items-center tw-gap-2" style={squareStyle}>
-          <a
-            href={url}
-            className="decoration-none tw-flex tw-flex-col tw-items-center tw-gap-8">
-            <Image
-              unoptimized
-              priority
-              loading="eager"
-              src="/6529Core.png"
-              alt="6529 Desktop"
-              width={150}
-              height={150}
-              className="unselectable"
-            />
-            <Button
-              variant="primary"
-              className="tw-flex tw-w-full tw-items-center tw-gap-2"
-            >
-              <FontAwesomeIcon icon={faExternalLink} />
-              <div className="no-wrap">Open in 6529 Desktop</div>
-            </Button>
-          </a>
-        </div>
-      );
-    };
-
-    let content = null;
-    let url = "";
-
-    if (activeTab === Mode.NAVIGATE) {
-      switch (activeSubTab) {
-        case SubMode.BROWSER:
-          url = navigateBrowserUrl;
-          content = renderQRCodeImage(
-            navigateBrowserSrc,
-            "Browser Link - QR Code"
-          );
-          break;
-        case SubMode.APP:
-          url = navigateAppUrl;
-          content = renderQRCodeImage(
-            navigateAppSrc,
-            "Mobile App Link - QR Code"
-          );
-          break;
-        case SubMode.CORE:
-          url = navigateCoreUrl;
-          content = renderCoreLink(navigateCoreUrl);
-          break;
-        default:
-          break;
-      }
-    } else if (activeTab === Mode.SHARE) {
-      switch (activeSubTab) {
-        case SubMode.APP:
-          url = shareConnectionAppUrl;
-          content = renderQRCodeImage(
-            shareConnectionSrc,
-            "Share Connection - QR Code"
-          );
-          break;
-        case SubMode.CORE:
-          content = renderCoreLink(shareConnectionCoreUrl);
-          url = shareConnectionCoreUrl;
-          break;
-        default:
-          content = <span>Invalid submode for SHARE</span>;
-          break;
-      }
-    } else if (activeTab === Mode.APPS) {
-      switch (activeSubTab) {
-        case SubMode.APP:
-          content = (
-            <div
-              className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-12 tw-p-10"
-              style={squareStyle}
-            >
-              <ShareMobileApp platform="ios" />
-              <ShareMobileApp platform="android" />
-            </div>
-          );
-          break;
-        case SubMode.CORE:
-          content = <CoreAppsDownload />;
-          break;
-      }
+  useEffect(() => {
+    if (show) {
+      setShouldRender(true);
+      const raf = requestAnimationFrame(() => setIsVisible(true));
+      return () => cancelAnimationFrame(raf);
     }
 
+    setIsVisible(false);
+    const timeout = setTimeout(() => setShouldRender(false), 200);
+    return () => clearTimeout(timeout);
+  }, [show]);
+
+  useEffect(() => {
+    if (!shouldRender) {
+      return;
+    }
+
+    bodyScrollLock.lock();
+    globalThis.addEventListener("keydown", handleEscapeKeyDown);
+
+    return () => {
+      bodyScrollLock.unlock();
+      globalThis.removeEventListener("keydown", handleEscapeKeyDown);
+    };
+  }, [shouldRender, handleEscapeKeyDown]);
+
+  useEffect(() => {
+    if (!shouldRender) {
+      return;
+    }
+
+    const activeElement = document.activeElement;
+    previouslyFocusedElementRef.current =
+      activeElement instanceof HTMLElement ? activeElement : null;
+
+    const raf = requestAnimationFrame(() => {
+      const dialog = dialogRef.current;
+      if (!dialog) {
+        return;
+      }
+
+      const focusableElements = getFocusableElements(dialog);
+      const firstFocusableElement = focusableElements[0];
+      if (firstFocusableElement) {
+        firstFocusableElement.focus();
+        return;
+      }
+
+      dialog.focus();
+    });
+
+    return () => {
+      cancelAnimationFrame(raf);
+      previouslyFocusedElementRef.current?.focus();
+    };
+  }, [shouldRender]);
+
+  const renderQRCodeImage = (src: string, alt: string) => {
+    const normalizedSrc = src?.trim();
+
     return (
-      <>
-        {content}
-        {url && (
-          <div className="d-flex align-items-center gap-2 mt-2">
-            <div className={styles["url"]}>{url}</div>
-            <FontAwesomeIcon
-              icon={faCopy}
-              className={`${styles["urlCopy"]} ${urlCopied ? styles["copied"] : ""}`}
+      <div className="tw-relative tw-h-full tw-w-full">
+        {normalizedSrc ? (
+          <Image
+            unoptimized
+            priority
+            loading="eager"
+            src={normalizedSrc}
+            alt={alt}
+            fill
+            sizes="(max-width: 768px) 92vw, 28rem"
+            className="unselectable tw-object-contain"
+          />
+        ) : (
+          <div className="tw-h-full tw-w-full tw-animate-pulse tw-rounded-md tw-bg-iron-900/40" />
+        )}
+      </div>
+    );
+  };
+
+  const renderBrowserLink = (url: string) => {
+    const isDisabled = !url;
+
+    return (
+      <div className="tw-flex tw-items-center tw-gap-2" style={squareStyle}>
+        <div className="tw-flex tw-w-full tw-flex-col tw-items-center tw-gap-10 tw-px-4">
+          <Image
+            unoptimized
+            priority
+            loading="eager"
+            src="/6529io.png"
+            alt="6529"
+            width={256}
+            height={256}
+            className="unselectable tw-h-auto tw-w-[8.5rem] tw-rounded-2xl sm:tw-w-[10rem]"
+          />
+          <button
+            type="button"
+            disabled={isDisabled}
+            onClick={() => openInExternalBrowser(url)}
+            className="tw-inline-flex tw-items-center tw-justify-center tw-gap-2 tw-rounded-lg tw-border-0 tw-bg-iron-200 tw-px-8 tw-py-3 tw-text-iron-900 disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          >
+            <FontAwesomeIcon icon={faExternalLink} />
+            <span className="no-wrap">Open in Browser</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  const getNavigateContent = () => {
+    if (activeSubTab === SubMode.BROWSER) {
+      return {
+        content: renderQRCodeImage(
+          navigateBrowserSrc,
+          "Browser Link - QR Code"
+        ),
+        url: navigateBrowserUrl,
+      };
+    }
+
+    return {
+      content: renderQRCodeImage(navigateAppSrc, "Mobile App Link - QR Code"),
+      url: navigateAppUrl,
+    };
+  };
+
+  const getShareContent = () => {
+    if (activeSubTab === SubMode.BROWSER) {
+      return {
+        content: renderBrowserLink(shareConnectionBrowserUrl),
+        url: shareConnectionBrowserUrl,
+      };
+    }
+
+    if (activeSubTab === SubMode.APP) {
+      return {
+        content: renderQRCodeImage(
+          shareConnectionSrc,
+          "Share Connection - QR Code"
+        ),
+        url: shareConnectionAppUrl,
+      };
+    }
+
+    return { content: <span>Invalid submode for SHARE</span>, url: "" };
+  };
+
+  const getAppsContent = () => {
+    return {
+      content: (
+        <div
+          className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-gap-12 tw-p-10"
+          style={squareStyle}
+        >
+          <ShareMobileApp platform="ios" />
+          <ShareMobileApp platform="android" />
+        </div>
+      ),
+      url: "",
+    };
+  };
+
+  const getDisplayContent = () => {
+    if (activeTab === Mode.NAVIGATE) {
+      return getNavigateContent();
+    }
+
+    if (activeTab === Mode.SHARE) {
+      return getShareContent();
+    }
+
+    return getAppsContent();
+  };
+
+  function printImage() {
+    const { content, url } = getDisplayContent();
+
+    return (
+      <div className="tw-flex tw-flex-col tw-gap-2">
+        <div className="tw-relative tw-aspect-square tw-w-full tw-overflow-hidden">
+          <div className="tw-absolute tw-inset-0 tw-flex tw-items-center tw-justify-center">
+            {content}
+          </div>
+        </div>
+        {url ? (
+          <div className="tw-flex tw-h-10 tw-items-center tw-gap-2 tw-rounded-lg tw-bg-iron-900 tw-px-3">
+            <div
+              className="tw-min-w-0 tw-flex-1 tw-overflow-hidden tw-text-ellipsis tw-whitespace-nowrap tw-text-sm tw-text-iron-400"
+              title={url}
+            >
+              {url}
+            </div>
+            <button
+              type="button"
+              aria-label="Copy URL"
+              className="tw-inline-flex tw-h-8 tw-w-8 tw-items-center tw-justify-center tw-rounded-md tw-border-0 tw-bg-transparent tw-text-iron-400 tw-transition-colors hover:tw-bg-iron-800 hover:tw-text-iron-100"
               data-tooltip-id="copy-url-tooltip"
-              onClick={() => {
-                navigator.clipboard.writeText(url);
-                setUrlCopied(true);
-                setTimeout(() => setUrlCopied(false), 500);
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(url);
+                  setUrlCopied(true);
+                  if (copyTimeoutRef.current) {
+                    clearTimeout(copyTimeoutRef.current);
+                  }
+                  copyTimeoutRef.current = setTimeout(() => {
+                    setUrlCopied(false);
+                    copyTimeoutRef.current = null;
+                  }, 500);
+                } catch (error) {
+                  console.error("Failed to copy share URL to clipboard", error);
+                }
               }}
-            />
+            >
+              <FontAwesomeIcon
+                icon={faCopy}
+                className={urlCopied ? "tw-text-green-500" : ""}
+              />
+            </button>
             <Tooltip
               id="copy-url-tooltip"
-              place="top"
+              place="top-end"
               content={urlCopied ? "Copied!" : "Copy URL"}
               openEvents={isMobile ? { click: true } : { mouseenter: true }}
               closeEvents={isMobile ? { click: true } : { mouseleave: true }}
+              positionStrategy="fixed"
               style={{
+                zIndex: 10000,
                 backgroundColor: "#1F2937",
                 color: "white",
+                opacity: 1,
                 padding: "4px 8px",
               }}
             />
           </div>
+        ) : (
+          <div className="tw-h-10" />
         )}
-      </>
+      </div>
     );
   }
 
+  if (!shouldRender) {
+    return null;
+  }
+
   return (
-    <Modal
-      show={show}
-      onHide={onClose}
-      keyboard
-      centered
-      data-testid="header-share-modal"
+    <div
+      className={`tailwind-scope tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-bg-black/70 tw-p-2 tw-transition-opacity tw-duration-200 sm:tw-p-4 ${
+        isVisible ? "tw-opacity-100" : "tw-opacity-0"
+      }`}
     >
-      <Modal.Body className={styles["modalBody"]}>
-        <ModalMenu
-          isShareConnection={!!getRefreshToken()}
-          activeTab={activeTab}
-          activeSubTab={activeSubTab}
-          onTabChange={(tab, subTab) => {
-            setActiveTab(tab);
-            setActiveSubTab(subTab);
-          }}
-        />
-        {printImage()}
-      </Modal.Body>
-    </Modal>
+      <button
+        type="button"
+        aria-label="Close share modal"
+        className="tw-absolute tw-inset-0 tw-border-0 tw-bg-transparent"
+        onClick={onClose}
+      />
+      <dialog
+        ref={dialogRef}
+        open
+        tabIndex={-1}
+        aria-modal="true"
+        aria-labelledby="header-share-title"
+        data-testid="header-share-modal"
+        className={`tw-relative tw-flex tw-w-full tw-max-w-md tw-flex-col tw-overflow-y-auto tw-rounded-xl tw-border tw-border-iron-700 tw-bg-iron-950 tw-text-left tw-shadow-xl tw-transition-all tw-duration-200 ${
+          isVisible
+            ? "tw-translate-y-0 tw-scale-100 tw-opacity-100"
+            : "tw-translate-y-1 tw-scale-95 tw-opacity-0"
+        }`}
+      >
+        <div className="tw-flex tw-flex-col tw-gap-2">
+          <h2 id="header-share-title" className="tw-sr-only">
+            Share
+          </h2>
+          <ModalMenu
+            isShareConnection={!!getRefreshToken()}
+            activeTab={activeTab}
+            activeSubTab={activeSubTab}
+            onTabChange={(tab, subTab) => {
+              setActiveTab(tab);
+              setActiveSubTab(subTab);
+            }}
+          />
+          {printImage()}
+        </div>
+      </dialog>
+    </div>
   );
 }
 
@@ -392,207 +669,91 @@ function ModalMenu({
   readonly activeSubTab: SubMode;
   readonly onTabChange: (tab: Mode, subTab: SubMode) => void;
 }) {
-  const isElectron = useElectron();
+  const topTabCount = isShareConnection ? 3 : 2;
+  const subTabCount = getSubTabCount(activeTab);
+  const subTabLabel = getSubTabLabel(activeTab);
+  const getMenuButtonClass = (active: boolean) => {
+    const baseClassName =
+      "tw-inline-flex tw-h-10 tw-w-full tw-min-w-0 tw-items-center tw-justify-center tw-overflow-hidden tw-text-ellipsis tw-whitespace-nowrap tw-rounded-xl tw-border-0 tw-px-2 tw-text-[15px] tw-font-medium tw-transition tw-duration-200";
+
+    if (active) {
+      return `${baseClassName} tw-bg-iron-700 tw-text-iron-50`;
+    }
+
+    return `${baseClassName} tw-bg-iron-900 tw-text-iron-400 hover:tw-bg-iron-800 hover:tw-text-iron-100`;
+  };
 
   return (
-    <div className="pt-2 pb-3 d-flex flex-column">
-      <div className="d-flex gap-2">
-        {isShareConnection && (
-          <Button
-            className={
-              activeTab === Mode.SHARE ? styles["disabledMenuBtn"] : ""
-            }
-            variant={activeTab === Mode.SHARE ? "light" : "outline-light"}
-            onClick={() => onTabChange(Mode.SHARE, SubMode.APP)}>
-            Share Connection
-          </Button>
-        )}
-        <Button
-          className={
-            activeTab === Mode.NAVIGATE ? styles["disabledMenuBtn"] : ""
-          }
-          variant={activeTab === Mode.NAVIGATE ? "light" : "outline-light"}
-          onClick={() => onTabChange(Mode.NAVIGATE, SubMode.APP)}>
-          Current URL
-        </Button>
-        <Button
-          className={activeTab === Mode.APPS ? styles["disabledMenuBtn"] : ""}
-          variant={activeTab === Mode.APPS ? "light" : "outline-light"}
-          onClick={() => onTabChange(Mode.APPS, SubMode.APP)}>
-          6529 Apps
-        </Button>
-      </div>
-
-      <div className="mt-3 d-flex gap-2">
-        <Button
-          variant={activeSubTab === SubMode.APP ? "light" : "outline-light"}
-          onClick={() => onTabChange(activeTab, SubMode.APP)}>
-          <span className="font-smaller">6529 Mobile</span>
-        </Button>
-        {activeTab === Mode.NAVIGATE && (
-          <Button
-            variant={
-              activeSubTab === SubMode.BROWSER ? "light" : "outline-light"
-            }
-            onClick={() => onTabChange(activeTab, SubMode.BROWSER)}>
-            <span className="font-smaller">Browser</span>
-          </Button>
-        )}
-        {!isElectron && (
-          <Button
-            variant={activeSubTab === SubMode.CORE ? "light" : "outline-light"}
-            onClick={() => onTabChange(activeTab, SubMode.CORE)}>
-            <span className="font-smaller">6529 Desktop</span>
-          </Button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-function CoreAppsDownload() {
-  interface OSInfo {
-    name: "windows" | "mac" | "linux";
-    url: string;
-    displayName: string;
-    downloadPath: string;
-    image: string;
-    enabled: boolean;
-    version?: string | undefined;
-  }
-
-  interface FileData {
-    url: string;
-    sha512: string;
-    size: number;
-  }
-
-  interface LatestYml {
-    version: string;
-    files: FileData[];
-  }
-
-  const osConfigs: OSInfo[] = [
-    {
-      name: "windows",
-      url: "https://6529bucket.s3.eu-west-1.amazonaws.com/6529-core-app/win/latest.yml",
-      displayName: "Windows",
-      downloadPath: "6529-core-app/win/links",
-      image: "/windows.png",
-      enabled: true,
-    },
-    {
-      name: "mac",
-      url: "https://6529bucket.s3.eu-west-1.amazonaws.com/6529-core-app/mac/latest-mac.yml",
-      displayName: "macOS",
-      downloadPath: "6529-core-app/mac/links",
-      image: "/macos.png",
-      enabled: true,
-    },
-    {
-      name: "linux",
-      url: "https://6529bucket.s3.eu-west-1.amazonaws.com/6529-core-app/linux/latest-linux.yml",
-      displayName: "Linux",
-      downloadPath: "6529-core-app/linux/links",
-      image: "/linux.png",
-      enabled: true,
-    },
-  ];
-
-  const [versions, setVersions] = useState<OSInfo[]>([]);
-
-  useEffect(() => {
-    const fetchYml = async (url: string): Promise<LatestYml> => {
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${url}`);
-      }
-
-      const text = await response.text();
-      return yaml.load(text) as LatestYml;
-    };
-
-    const loadVersions = async () => {
-      const versions: OSInfo[] = [];
-      for (const osConfig of osConfigs.filter((config) => config.enabled)) {
-        try {
-          const ymlData = await fetchYml(osConfig.url);
-          versions.push({ ...osConfig, version: ymlData.version });
-        } catch (error) {
-          console.error(
-            `Failed to fetch or process ${osConfig.displayName}:`,
-            error
-          );
-        }
-      }
-      setVersions(versions);
-    };
-
-    loadVersions();
-  }, []);
-
-  return (
-    <div style={squareStyle}>
-      <div className="tw-inline-flex tw-flex-col tw-gap-10">
-        {versions.map((version) => (
-          <CoreAppDownload
-            key={version.name}
-            platform={version.displayName}
-            icon={version.image}
-            title={version.displayName}
-            downloadPath={version.downloadPath}
-            version={version.version ?? ""}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function CoreAppDownload({
-  platform,
-  icon,
-  title,
-  downloadPath,
-  version,
-}: {
-  readonly platform: string;
-  readonly icon: string;
-  readonly title: string;
-  readonly downloadPath: string;
-  readonly version: string;
-}) {
-  if (!version) {
-    return null;
-  }
-
-  const url = `https://d3lqz0a4bldqgf.cloudfront.net/${downloadPath}/${version}.html`;
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="decoration-none tw-flex tw-w-full tw-items-center tw-gap-4 tw-rounded-lg tw-border tw-border-solid tw-border-white tw-bg-black tw-px-5 tw-py-3 tw-transition-all tw-duration-300 tw-ease-out hover:tw-scale-[1.03]"
-    >
-      <div className="tw-rounded-full tw-bg-white tw-p-4">
-        <Image
-          unoptimized
-          priority
-          loading="eager"
-          src={icon}
-          alt={title}
-          width={40}
-          height={40}
-          className="unselectable"
-        />
-      </div>
-      <div className="tw-flex tw-w-full tw-items-center tw-gap-2">
-        <div className="no-wrap tw-text-lg tw-font-semibold">
-          {platform} v{version}
+    <div className="tw-flex tw-flex-col tw-gap-2">
+      <div className="tw-flex tw-flex-col tw-gap-1">
+        <div className="tw-px-1 tw-text-[11px] tw-font-bold tw-uppercase tw-tracking-[0.08em] tw-text-iron-500">
+          Share Type
+        </div>
+        <div
+          className="tw-grid tw-gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${topTabCount}, minmax(0, 1fr))`,
+          }}
+        >
+          {isShareConnection && (
+            <button
+              type="button"
+              disabled={activeTab === Mode.SHARE}
+              className={getMenuButtonClass(activeTab === Mode.SHARE)}
+              onClick={() => onTabChange(Mode.SHARE, SubMode.APP)}
+            >
+              Connection
+            </button>
+          )}
+          <button
+            type="button"
+            disabled={activeTab === Mode.NAVIGATE}
+            className={getMenuButtonClass(activeTab === Mode.NAVIGATE)}
+            onClick={() => onTabChange(Mode.NAVIGATE, SubMode.APP)}
+          >
+            Current URL
+          </button>
+          <button
+            type="button"
+            disabled={activeTab === Mode.APPS}
+            className={getMenuButtonClass(activeTab === Mode.APPS)}
+            onClick={() => onTabChange(Mode.APPS, SubMode.APP)}
+          >
+            6529 Apps
+          </button>
         </div>
       </div>
-    </a>
+
+      <div className="tw-flex tw-flex-col tw-gap-1">
+        <div className="tw-px-1 tw-text-[11px] tw-font-bold tw-uppercase tw-tracking-[0.08em] tw-text-iron-500">
+          {subTabLabel}
+        </div>
+        <div
+          className="tw-grid tw-gap-2"
+          style={{
+            gridTemplateColumns: `repeat(${subTabCount}, minmax(0, 1fr))`,
+          }}
+        >
+          <button
+            type="button"
+            disabled={activeSubTab === SubMode.APP}
+            className={getMenuButtonClass(activeSubTab === SubMode.APP)}
+            onClick={() => onTabChange(activeTab, SubMode.APP)}
+          >
+            <span>6529 Mobile</span>
+          </button>
+          {(activeTab === Mode.NAVIGATE || activeTab === Mode.SHARE) && (
+            <button
+              type="button"
+              disabled={activeSubTab === SubMode.BROWSER}
+              className={getMenuButtonClass(activeSubTab === SubMode.BROWSER)}
+              onClick={() => onTabChange(activeTab, SubMode.BROWSER)}
+            >
+              <span>Browser</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
