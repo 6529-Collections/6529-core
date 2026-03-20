@@ -3,50 +3,41 @@ import type { AppKitAdapterManager } from "@/components/providers/AppKitAdapterM
 import { publicEnv } from "@/config/env";
 import { CW_PROJECT_ID } from "@/constants/constants";
 import { isElectron } from "@/helpers";
-import { ISeedWallet } from "@/shared/types";
+import type { ISeedWallet } from "@/shared/types";
 import { AdapterCacheError, AdapterError } from "@/src/errors/adapter";
 import { isIndexedDBError, logErrorSecurely } from "@/utils/error-sanitizer";
-import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import type { AppKitNetwork } from "@reown/appkit-common";
 import type { ChainAdapter } from "@reown/appkit/react";
 import { createAppKit } from "@reown/appkit/react";
+import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import type { AppKitNetwork } from "@reown/appkit-common";
+import type { Chain } from "viem";
 import { mainnet } from "viem/chains";
 
-// Configuration interface for AppKit initialization
 export interface AppKitInitializationConfig {
   wallets: AppWallet[];
-  seedWallets: ISeedWallet[];
+  seedWallets?: ISeedWallet[] | undefined;
   adapterManager: AppKitAdapterManager;
   isCapacitor: boolean;
+  chains?: Chain[] | undefined;
 }
 
-// Result interface
 interface AppKitInitializationResult {
   adapter: WagmiAdapter;
-  /**
-   * Optional to preserve backwards compatibility with mocks.
-   * When provided, callers can await it to ensure AppKit is ready before using the adapter.
-   */
   ready?: Promise<void> | undefined;
 }
 
-/**
- * Debug logger helper to reduce conditional complexity
- */
 function debugLog(message: string, ...args: any[]): void {
   if (publicEnv.NODE_ENV === "development") {
     console.warn(`[AppKitInitialization] ${message}`, ...args);
   }
 }
 
-/**
- * Creates adapter with proper error handling
- */
 function createAdapter(
   wallets: AppWallet[],
   seedWallets: ISeedWallet[],
   adapterManager: AppKitAdapterManager,
-  isCapacitor: boolean
+  isCapacitor: boolean,
+  chains: Chain[]
 ): WagmiAdapter {
   debugLog(
     `Initializing AppKit adapter (${isCapacitor ? "mobile" : "web"} - ${
@@ -57,7 +48,12 @@ function createAdapter(
   );
 
   try {
-    return adapterManager.createAdapterWithCache(wallets, seedWallets);
+    return adapterManager.createAdapterWithCache(
+      wallets,
+      seedWallets,
+      isCapacitor,
+      chains
+    );
   } catch (error) {
     if (isIndexedDBError(error)) {
       logErrorSecurely(
@@ -86,26 +82,28 @@ function createAdapter(
   }
 }
 
-/**
- * Initializes AppKit with wallets using a fail-fast approach with retry logic
- * Extracted from WagmiSetup component for better maintainability and testability
- */
 export function initializeAppKit(
   config: AppKitInitializationConfig
 ): AppKitInitializationResult {
-  const { wallets, adapterManager, seedWallets, isCapacitor } = config;
+  const {
+    wallets,
+    adapterManager,
+    seedWallets = [],
+    isCapacitor,
+    chains = [mainnet],
+  } = config;
 
   const newAdapter = createAdapter(
     wallets,
     seedWallets,
     adapterManager,
-    isCapacitor
+    isCapacitor,
+    chains
   );
-  const appKitConfig = buildAppKitConfig(newAdapter);
+  const appKitConfig = buildAppKitConfig(newAdapter, chains);
   const appKit = createAppKit(appKitConfig);
   appKit.setEIP6963Enabled(false);
   const ready = appKit.ready();
-  // Prevent unhandled rejections if a caller chooses not to await `ready`.
   ready.catch((error) => {
     logErrorSecurely("[AppKitInitialization] AppKit ready() failed", error);
   });
@@ -116,13 +114,15 @@ export function initializeAppKit(
   };
 }
 
-/**
- * Builds the AppKit configuration object
- */
-function buildAppKitConfig(adapter: WagmiAdapter) {
+function buildAppKitConfig(adapter: WagmiAdapter, chains: Chain[]) {
+  if (chains.length === 0) {
+    throw new Error(
+      "AppKit initialization requires at least one configured chain."
+    );
+  }
   return {
     adapters: [adapter] as ChainAdapter[],
-    networks: [mainnet] as [AppKitNetwork, ...AppKitNetwork[]],
+    networks: chains as [AppKitNetwork, ...AppKitNetwork[]],
     projectId: CW_PROJECT_ID,
     metadata: {
       name: "6529.io",

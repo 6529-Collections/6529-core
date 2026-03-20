@@ -3,7 +3,7 @@
 import { getSeedWallets } from "@/electron";
 import { isElectron } from "@/helpers";
 import { useAppWalletPasswordModal } from "@/hooks/useAppWalletPasswordModal";
-import { ISeedWallet } from "@/shared/types";
+import type { ISeedWallet } from "@/shared/types";
 import { AppKitValidationError } from "@/src/errors/appkit-initialization";
 import type { AppKitInitializationConfig } from "@/utils/appkit-initialization.utils";
 import { initializeAppKit } from "@/utils/appkit-initialization.utils";
@@ -19,30 +19,17 @@ import {
   APP_WALLET_CONNECTOR_TYPE,
   createAppWalletConnector,
 } from "@/wagmiConfig/wagmiAppWalletConnector";
-import { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
+import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { Chain } from "viem";
+import { mainnet, sepolia } from "viem/chains";
 import { WagmiProvider } from "wagmi";
-import type { AppWallet } from "../app-wallets/AppWalletsContext";
-import { useAppWallets } from "../app-wallets/AppWalletsContext";
-import { useAuth } from "../auth/Auth";
-import { AppKitAdapterManager } from "./AppKitAdapterManager";
+import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
+import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
+import { useAuth } from "@/components/auth/Auth";
+import { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
+import { publicEnv } from "@/config/env";
 
-/**
- * Installs a defensive wrapper around `window.ethereum` (EIP-1193 provider).
- *
- * Why this exists:
- * - Some injected providers expose methods (e.g. `request`, `on`) that rely on `this`
- *   being the provider object. If a consumer reads a method and calls it later, the
- *   binding can be lost (often surfacing as "Illegal invocation" / broken requests).
- * - Some providers can throw during property access (early initialization, unusual
- *   getters). The proxy catches these reads to avoid crashing app initialization.
- *
- * What the proxy does:
- * - Binds function properties to the underlying provider so `this` is preserved.
- * - Returns `undefined` for properties whose access throws.
- *
- * This runs once per page load and only touches `window.ethereum`.
- */
 function installSafeEthereumProxy(): void {
   if (globalThis.window === undefined) return;
 
@@ -58,6 +45,19 @@ function installSafeEthereumProxy(): void {
     !ethereum ||
     (typeof ethereum !== "object" && typeof ethereum !== "function")
   ) {
+    w.__6529_safeEthereumProxyInstalled = true;
+    return;
+  }
+
+  const ownEthereumDescriptor = Object.getOwnPropertyDescriptor(w, "ethereum");
+  if (
+    ownEthereumDescriptor?.configurable === false &&
+    !canAssignProperty(ownEthereumDescriptor)
+  ) {
+    logErrorSecurely(
+      "[WagmiSetup] Skipping safe ethereum proxy install for read-only window.ethereum",
+      new Error("window.ethereum cannot be reassigned")
+    );
     w.__6529_safeEthereumProxyInstalled = true;
     return;
   }
@@ -87,7 +87,16 @@ function installSafeEthereumProxy(): void {
       },
     });
 
-    w.ethereum = proxy;
+    if (ownEthereumDescriptor?.configurable === false) {
+      w.ethereum = proxy;
+    } else {
+      Object.defineProperty(w, "ethereum", {
+        configurable: true,
+        enumerable: ownEthereumDescriptor?.enumerable ?? true,
+        writable: true,
+        value: proxy,
+      });
+    }
     w.__6529_safeEthereumProxyInstalled = true;
   } catch (error) {
     logErrorSecurely(
@@ -98,11 +107,21 @@ function installSafeEthereumProxy(): void {
   }
 }
 
+function canAssignProperty(descriptor: PropertyDescriptor): boolean {
+  if ("get" in descriptor || "set" in descriptor) {
+    return typeof descriptor.set === "function";
+  }
+
+  return descriptor.writable !== false;
+}
+
 export default function WagmiSetup({
   children,
 }: {
   readonly children: React.ReactNode;
 }) {
+  const enableTestnet = publicEnv.DROP_FORGE_TESTNET === true;
+
   const appWalletPasswordModal = useAppWalletPasswordModal();
   const { setToast } = useAuth();
   const { appWallets } = useAppWallets();
@@ -111,34 +130,29 @@ export default function WagmiSetup({
     null
   );
   const [isMounted, setIsMounted] = useState(false);
-
-  // Track processed wallets by address for efficient comparison
   const processedWallets = useRef<Set<string>>(new Set());
-
-  // No Capacitor in 6529 Desktop
   const isCapacitor = false;
 
-  // Use the same adapter manager for both mobile and web
-  // AppKit will automatically handle the appropriate connectors
   const adapterManager = useMemo(
     () => new AppKitAdapterManager(appWalletPasswordModal.requestPassword),
     [appWalletPasswordModal.requestPassword]
   );
 
-  // Handle client-side mounting for App Router
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  // Prevent concurrent initialization attempts
   const [isInitializing, setIsInitializing] = useState(false);
 
-  // Create adapter with essential configuration only
   const initializeAppKitWithWallets = useCallback(
     (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
-      // Basic validation - let util handle detailed validation
       if (!adapterManager) {
         throw new AppKitValidationError("Internal API failed");
+      }
+
+      const chains: Chain[] = [mainnet];
+      if (enableTestnet) {
+        chains.push(sepolia);
       }
 
       const config: AppKitInitializationConfig = {
@@ -146,14 +160,14 @@ export default function WagmiSetup({
         seedWallets,
         adapterManager: adapterManager as AppKitAdapterManager,
         isCapacitor,
+        chains,
       };
 
       return initializeAppKit(config);
     },
-    [adapterManager, isCapacitor]
+    [adapterManager, isCapacitor, enableTestnet]
   );
 
-  // Initialize AppKit with fail-fast approach
   const setupAppKitAdapter = useCallback(
     async (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
       if (isInitializing) {
@@ -173,7 +187,7 @@ export default function WagmiSetup({
           message: userMessage,
           type: "error",
         });
-        throw error; // FAIL-FAST: Re-throw to prevent app from continuing in broken state
+        throw error;
       } finally {
         setIsInitializing(false);
       }
@@ -181,24 +195,22 @@ export default function WagmiSetup({
     [isInitializing, initializeAppKitWithWallets, setToast]
   );
 
-  // Initialize adapter eagerly on mount with empty wallets
   useEffect(() => {
     if (isMounted && !currentAdapter && !isInitializing) {
       installSafeEthereumProxy();
-      // Prevent unhandled promise rejections during eager initialization.
-      // Fail-fast behavior is preserved by leaving `currentAdapter` unset.
       (async () => {
-        const seedWallets = isElectron() ? (await getSeedWallets()).data : [];
+        const response = isElectron()
+          ? await getSeedWallets()
+          : { data: [] as ISeedWallet[] };
+        const seedWallets = Array.isArray(response.data) ? response.data : [];
         setupAppKitAdapter([], seedWallets).catch(() => undefined);
       })();
     }
-  }, [isMounted, currentAdapter, isInitializing]); // setupAppKitAdapter intentionally excluded to prevent loops
+  }, [isMounted, currentAdapter, isInitializing]);
 
-  // Inject wallet connectors dynamically using hooks (simplified approach)
   useEffect(() => {
     if (!currentAdapter) return;
 
-    // Check if wallets have actually changed to prevent unnecessary re-injection
     const currentAddresses = new Set(appWallets.map((w) => w.address));
     const addressesEqual =
       processedWallets.current.size === currentAddresses.size &&
@@ -209,7 +221,6 @@ export default function WagmiSetup({
     if (addressesEqual) return;
 
     try {
-      // Create connectors for current wallets
       const connectors = appWallets
         .map((wallet) => {
           const connector = createAppWalletConnector(
@@ -227,18 +238,15 @@ export default function WagmiSetup({
         })
         .filter((connector) => connector !== null);
 
-      // Get existing non-app-wallet connectors
       const existingConnectors = currentAdapter.wagmiConfig.connectors.filter(
         (c) => c.id !== APP_WALLET_CONNECTOR_TYPE
       );
 
-      // Update connector state with fail-fast approach
       currentAdapter.wagmiConfig._internal.connectors.setState([
         ...connectors,
         ...existingConnectors,
       ]);
 
-      // Update processed wallets tracking
       processedWallets.current = currentAddresses;
     } catch (error) {
       logErrorSecurely("[WagmiSetup] Connector injection failed", error);
@@ -247,7 +255,6 @@ export default function WagmiSetup({
         message: userMessage,
         type: "error",
       });
-      // Don't throw here - let the component continue but notify the user
     }
   }, [currentAdapter, appWallets, appWalletPasswordModal, setToast]);
 
@@ -256,8 +263,9 @@ export default function WagmiSetup({
       if (!currentAdapter) return;
       if (!isElectron()) return;
 
-      const newSeedWallets = await getSeedWallets();
-      const newSeedConnectors = newSeedWallets.data.map((wallet) => {
+      const response = await getSeedWallets();
+      const newSeedWallets = Array.isArray(response.data) ? response.data : [];
+      const newSeedConnectors = newSeedWallets.map((wallet) => {
         const connector = seedWalletConnector({
           address: wallet.address,
           name: wallet.name,
@@ -280,9 +288,8 @@ export default function WagmiSetup({
     return () => {
       window.api?.offSeedWalletsChange(updateWagmiConfig);
     };
-  }, [currentAdapter, isElectron]);
+  }, [currentAdapter]);
 
-  // Show loading state until fully initialized
   if (!isMounted || !currentAdapter) {
     return null;
   }

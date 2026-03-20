@@ -68,6 +68,13 @@ function computeVersionFromPkg(): string {
   }
 }
 
+function getAssetPrefix(assetsFromS3: boolean, version: string): string {
+  if (!assetsFromS3) {
+    return "";
+  }
+  return `https://dnclu2fna0b2b.cloudfront.net/web_build/${version}`;
+}
+
 function resolveAssetsFlagFromEnv(): boolean {
   return (
     ((process.env.ASSETS_FROM_S3 ?? "false") + "").toLowerCase() === "true"
@@ -151,6 +158,7 @@ interface PublicEnv {
   TENOR_API_KEY?: string;
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
+  DEV_MODE_CURATION_WAVE_ID?: string;
   DEV_MODE_WALLET_ADDRESS?: string;
   DEV_MODE_AUTH_JWT?: string;
   USE_DEV_AUTH?: string;
@@ -165,6 +173,7 @@ interface PublicEnv {
   PEPE_CACHE_MAX_ITEMS?: string;
   FARCASTER_WARPCAST_API_BASE?: string;
   FARCASTER_WARPCAST_API_KEY?: string;
+  DROP_FORGE_TESTNET?: boolean;
 }
 
 function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
@@ -296,9 +305,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
 
     persistBakedArtifacts(publicEnv, ASSETS_FROM_S3);
 
-    const assetPrefix = ASSETS_FROM_S3
-      ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
-      : "";
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
 
     return {
       ...sharedConfig(publicEnv, assetPrefix),
@@ -319,6 +326,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         TENOR_API_KEY: publicEnv.TENOR_API_KEY,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
+        DEV_MODE_CURATION_WAVE_ID: publicEnv.DEV_MODE_CURATION_WAVE_ID,
         DEV_MODE_WALLET_ADDRESS: publicEnv.DEV_MODE_WALLET_ADDRESS,
         DEV_MODE_AUTH_JWT: publicEnv.DEV_MODE_AUTH_JWT,
         USE_DEV_AUTH: publicEnv.USE_DEV_AUTH,
@@ -333,6 +341,10 @@ const nextConfigFactory = (phase: string): NextConfig => {
         PEPE_CACHE_MAX_ITEMS: publicEnv.PEPE_CACHE_MAX_ITEMS,
         FARCASTER_WARPCAST_API_BASE: publicEnv.FARCASTER_WARPCAST_API_BASE,
         FARCASTER_WARPCAST_API_KEY: publicEnv.FARCASTER_WARPCAST_API_KEY,
+        DROP_FORGE_TESTNET:
+          publicEnv.DROP_FORGE_TESTNET === undefined
+            ? undefined
+            : String(publicEnv.DROP_FORGE_TESTNET),
       },
       async generateBuildId() {
         return VERSION;
@@ -344,9 +356,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
     const VERSION = computeVersionFromPkg();
     const publicEnv = loadBakedRuntimeConfig(VERSION) as PublicEnv;
     const ASSETS_FROM_S3 = loadAssetsFlagAtRuntime();
-    const assetPrefix = ASSETS_FROM_S3
-      ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
-      : "";
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
     return sharedConfig(publicEnv, assetPrefix);
   }
 

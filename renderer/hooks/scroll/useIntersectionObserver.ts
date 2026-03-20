@@ -41,6 +41,7 @@ export function useIntersectionObserver(
     };
   }, [
     targetRef,
+    options.root,
     options.rootMargin,
     options.threshold,
     enabled,

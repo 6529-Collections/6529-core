@@ -1,10 +1,10 @@
 "use client";
 
-import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
-import { ApiDrop } from "@/generated/models/ApiDrop";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
+import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
+import type { ApiDrop } from "@/generated/models/ApiDrop";
 import ContentDisplay from "./ContentDisplay";
 import DropLoading from "./DropLoading";
 import DropNotFound from "./DropNotFound";
@@ -18,9 +18,6 @@ interface WaveDropReplyProps {
   readonly onReplyClick: (serialNo: number) => void;
 }
 
-/**
- * Component to display a reply in a wave drop
- */
 export default function WaveDropReply({
   dropId,
   dropPartId,
