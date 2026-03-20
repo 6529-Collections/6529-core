@@ -23,8 +23,17 @@ function computeVersion() {
 
   const VERSION = process.env.VERSION || computeVersion();
   const ASSETS_FROM_S3 = (process.env.ASSETS_FROM_S3 ?? "false").toLowerCase();
+  const NEXT_LOCAL_DEBUG =
+    (process.env.NEXT_LOCAL_DEBUG ?? "false").toLowerCase() === "true";
 
-  const baked = { ...raw, VERSION, ASSETS_FROM_S3 };
+  const baked = {
+    ...raw,
+    VERSION,
+    ASSETS_FROM_S3,
+    DROP_FORGE_TESTNET: NEXT_LOCAL_DEBUG
+      ? true
+      : raw.DROP_FORGE_TESTNET ?? false,
+  };
 
   fs.mkdirSync(path.dirname(DEST_JSON), { recursive: true });
   fs.writeFileSync(DEST_JSON, JSON.stringify(baked, null, 2), "utf8");
