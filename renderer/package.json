@@ -121,7 +121,7 @@
     "lexical": "^0.14.5",
     "lodash": "^4.17.23",
     "mixpanel-browser": "^2.75.0",
-    "next": "16.1",
+    "next": "16.2.1",
     "next-redux-wrapper": "^8.1.0",
     "next-sitemap": "^4.2.3",
     "open": "^10.2.0",
@@ -179,14 +179,14 @@
     "dotenv": "^16.0.3",
     "esbuild": "^0.25.10",
     "eslint": "^9.38.0",
-    "eslint-config-next": "16.0.7",
+    "eslint-config-next": "16.2.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-diff": "^2.0.3",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-promise": "^7.2.1",
     "eslint-plugin-react-compiler": "^19.1.0-rc.2",
-    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-hooks": "7.0.0",
     "eslint-plugin-react-you-might-not-need-an-effect": "^0.8.5",
     "eslint-plugin-security": "^3.0.1",
     "eslint-plugin-sonarjs": "^3.0.5",
@@ -218,6 +218,7 @@
       "react": "$react",
       "react-dom": "$react-dom"
     },
+    "eslint-plugin-react-hooks": "7.0.0",
     "react-toggle": {
       "react": "$react",
       "react-dom": "$react-dom"
