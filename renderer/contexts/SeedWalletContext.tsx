@@ -5,6 +5,7 @@ import { getSeedWallet, getSeedWallets } from "@/electron";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { decryptData, encryptData } from "@/shared/encrypt";
 import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
+import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import { ethers } from "ethers";
 import React, {
   createContext,
@@ -14,6 +15,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { useAccount, useChainId, useConnect, useConnectors } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";
 
@@ -39,6 +41,10 @@ export const SeedWalletProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
   const { address: activeAddress, connectionState } = useSeizeConnectContext();
+  const { connector: activeConnector } = useAccount();
+  const chainId = useChainId();
+  const connectors = useConnectors();
+  const { connect } = useConnect();
 
   const [isFetched, setIsFetched] = useState(false);
 
@@ -51,6 +57,7 @@ export const SeedWalletProvider: React.FC<{
 
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
   const [unlockedWallet, setUnlockedWallet] = useState<ethers.Wallet>();
+  const lastConnectorSyncTargetRef = useRef<string | null>(null);
 
   const [pendingCallback, setPendingCallback] = useState<{
     callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void;
@@ -247,6 +254,40 @@ export const SeedWalletProvider: React.FC<{
       cancelled = true;
     };
   }, [activeAddress, connectionState, lockWallet]);
+
+  useEffect(() => {
+    if (!isSeedWallet || !activeAddress) {
+      lastConnectorSyncTargetRef.current = null;
+      return;
+    }
+
+    const seedWalletConnector = connectors.find(
+      (connector) =>
+        connector.type === SEED_WALLET_CONNECTOR_TYPE &&
+        areEqualAddresses(connector.id, activeAddress)
+    );
+
+    if (!seedWalletConnector) {
+      lastConnectorSyncTargetRef.current = null;
+      return;
+    }
+
+    if (activeConnector?.uid === seedWalletConnector.uid) {
+      lastConnectorSyncTargetRef.current = null;
+      return;
+    }
+
+    const syncTarget = `${seedWalletConnector.uid}:${chainId}`;
+    if (lastConnectorSyncTargetRef.current === syncTarget) {
+      return;
+    }
+    lastConnectorSyncTargetRef.current = syncTarget;
+
+    connect({
+      connector: seedWalletConnector,
+      chainId,
+    });
+  }, [activeAddress, activeConnector?.uid, chainId, connect, connectors, isSeedWallet]);
 
   const value = {
     isSeedWallet,

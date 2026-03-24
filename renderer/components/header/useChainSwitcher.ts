@@ -1,4 +1,4 @@
-import { useChainId, useChains, useSwitchChain } from "wagmi";
+import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi";
 
 type UseChainSwitcherResult = {
   chains: ReturnType<typeof useChains>;
@@ -29,6 +29,7 @@ function getNextChain(chains: ReturnType<typeof useChains>, chainId: number) {
 }
 
 export function useChainSwitcher(): UseChainSwitcherResult {
+  const { connector: activeConnector } = useAccount();
   const chains = useChains();
   const chainId = useChainId();
   const { switchChain } = useSwitchChain();
@@ -41,7 +42,11 @@ export function useChainSwitcher(): UseChainSwitcherResult {
 
   const switchToNextChain = (): boolean => {
     if (!nextChain) return false;
-    switchChain({ chainId: nextChain.id });
+
+    switchChain({
+      chainId: nextChain.id,
+      connector: activeConnector,
+    });
     return true;
   };
 
