@@ -135,8 +135,9 @@ export default class IPFSServer {
       ],
     };
 
-    // Configure Gateway
-    config.Addresses.Gateway = `/ip4/0.0.0.0/tcp/${this.ipfsPort}`;
+    // Configure Gateway. WebUI disables browse-by-CID when the configured host
+    // is only a bind address like 0.0.0.0, so advertise the loopback endpoint.
+    config.Addresses.Gateway = `/ip4/127.0.0.1/tcp/${this.ipfsPort}`;
     config.Addresses.Swarm = [`/ip4/0.0.0.0/tcp/${this.swarmPort}`];
     config.Addresses.Announce = [];
     config.Addresses.NoAnnounce = [];
