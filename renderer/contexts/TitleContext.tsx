@@ -10,7 +10,6 @@ import React, {
   useState,
 } from "react";
 import { publicEnv } from "@/config/env";
-import { isElectron } from "@/helpers";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { useMyStreamOptional } from "./wave/MyStreamContext";
 
@@ -169,12 +168,6 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
       setWaveData,
     };
   }, [computedTitle, notificationCount]);
-
-  useEffect(() => {
-    if (isElectron()) {
-      window.notifications.setBadge(notificationCount);
-    }
-  }, [notificationCount]);
 
   return (
     <TitleContext.Provider value={contextValue}>

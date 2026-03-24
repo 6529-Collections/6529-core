@@ -381,7 +381,7 @@ export default function HeaderUserMenuDropdown({
                       )}
                     </li>
                   )}
-                  {isConnected && chains.length > 1 && (
+                  {(isConnected || isSeedWallet) && chains.length > 1 && (
                     <li className="tw-h-full tw-px-2 tw-pt-2">
                       <span className="tw-relative tw-flex tw-h-full tw-w-full tw-select-none tw-px-3 tw-pt-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out">
                         Network: {currentChainName}
