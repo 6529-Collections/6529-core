@@ -1,3 +1,9 @@
+import {
+  createAppKit,
+  type ChainAdapter,
+  type CreateAppKit,
+  type WalletFeature,
+} from "@reown/appkit/react";
 import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
 import type { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
 import { publicEnv } from "@/config/env";
@@ -6,8 +12,6 @@ import { isElectron } from "@/helpers";
 import type { ISeedWallet } from "@/shared/types";
 import { AdapterCacheError, AdapterError } from "@/src/errors/adapter";
 import { isIndexedDBError, logErrorSecurely } from "@/utils/error-sanitizer";
-import type { ChainAdapter } from "@reown/appkit/react";
-import { createAppKit } from "@reown/appkit/react";
 import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import type { AppKitNetwork } from "@reown/appkit-common";
 import type { Chain } from "viem";
@@ -114,12 +118,18 @@ export function initializeAppKit(
   };
 }
 
-function buildAppKitConfig(adapter: WagmiAdapter, chains: Chain[]) {
+function buildAppKitConfig(
+  adapter: WagmiAdapter,
+  chains: Chain[]
+): CreateAppKit {
   if (chains.length === 0) {
     throw new Error(
       "AppKit initialization requires at least one configured chain."
     );
   }
+
+  const walletFeaturesOrder: WalletFeature[] = ["send"];
+
   return {
     adapters: [adapter] as ChainAdapter[],
     networks: chains as [AppKitNetwork, ...AppKitNetwork[]],
@@ -142,9 +152,10 @@ function buildAppKitConfig(adapter: WagmiAdapter, chains: Chain[]) {
       analytics: true,
       email: false,
       socials: [],
+      onramp: false,
+      swaps: false,
       connectMethodsOrder: ["wallet" as const],
+      walletFeaturesOrder,
     },
-    enableOnramp: false,
-    enableSwaps: false,
   };
 }

@@ -14,6 +14,7 @@ export function sharedConfig(
     compress: true,
     productionBrowserSourceMaps: true,
     sassOptions: { quietDeps: true },
+    allowedDevOrigins: ["192.168.1.133"],
     images: {
       loader: "default",
       remotePatterns: [
@@ -48,7 +49,10 @@ export function sharedConfig(
       return [
         {
           source: "/:path*",
-          headers: createSecurityHeaders(publicEnv["API_ENDPOINT"]),
+          headers: createSecurityHeaders(
+            publicEnv["API_ENDPOINT"],
+            publicEnv["IPFS_GATEWAY_ENDPOINT"]
+          ),
         },
       ];
     },

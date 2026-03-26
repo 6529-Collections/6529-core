@@ -73,7 +73,7 @@ export default defineConfig([
     "scripts/**",
     "stubs/**",
     ".claude/**",
-        ".codex/**",
+    ".codex/**",
   ]),
 
   // Base config with Next.js rules
