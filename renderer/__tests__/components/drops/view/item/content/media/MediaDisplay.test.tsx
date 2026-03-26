@@ -32,6 +32,7 @@ jest.mock("@/components/common/SandboxedExternalIframe", () => (props: any) => (
     data-src={props.src}
     data-title={props.title}
     data-class-name={props.className}
+    data-container-class-name={props.containerClassName}
   />
 ));
 jest.mock(
@@ -100,6 +101,37 @@ describe("MediaDisplay", () => {
     );
   });
 
+  it("forwards iframe container classes for html media", () => {
+    render(
+      <MediaDisplay
+        media_mime_type="text/html"
+        media_url="ipfs://hash"
+        iframeContainerClassName="tw-w-full"
+      />
+    );
+
+    expect(screen.getByTestId("iframe")).toHaveAttribute(
+      "data-container-class-name",
+      "tw-w-full"
+    );
+  });
+
+  it("renders preview image instead of iframe for html when preview is provided", () => {
+    render(
+      <MediaDisplay
+        media_mime_type="text/html"
+        media_url="ipfs://hash"
+        previewImageUrl="preview.png"
+      />
+    );
+
+    expect(screen.getByTestId("image")).toHaveAttribute(
+      "data-src",
+      "preview.png"
+    );
+    expect(screen.queryByTestId("iframe")).not.toBeInTheDocument();
+  });
+
   it("renders gated html iframe with normalized ipfs url after activation", () => {
     render(
       <MediaDisplay
@@ -118,6 +150,29 @@ describe("MediaDisplay", () => {
     expect(screen.getByTestId("iframe")).toHaveAttribute(
       "data-title",
       "Interactive HTML media"
+    );
+  });
+
+  it("keeps gated html behavior when preview is provided", () => {
+    render(
+      <MediaDisplay
+        media_mime_type="text/html"
+        media_url="ipfs://hash"
+        previewImageUrl="preview.png"
+        requireInteractionToLoad
+      />
+    );
+
+    expect(screen.getByTestId("image")).toHaveAttribute(
+      "data-src",
+      "preview.png"
+    );
+
+    fireEvent.click(screen.getByTestId("load-gate"));
+
+    expect(screen.getByTestId("iframe")).toHaveAttribute(
+      "data-src",
+      "https://ipfs.io/ipfs/hash"
     );
   });
 
