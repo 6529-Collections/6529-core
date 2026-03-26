@@ -1,8 +1,14 @@
-import { publicEnv } from "@/config/env";
 import { canonicalizeArweaveGatewayHostname } from "@/lib/media/arweave-gateways";
 
+function isLoopbackHostname(hostname: string): boolean {
+  const normalizedHostname = canonicalizeArweaveGatewayHostname(hostname);
+  return (
+    normalizedHostname === "127.0.0.1" || normalizedHostname === "localhost"
+  );
+}
+
 export function getConfiguredIpfsGatewayHost(
-  gatewayEndpoint: string | undefined = publicEnv.IPFS_GATEWAY_ENDPOINT
+  gatewayEndpoint?: string
 ): string | null {
   if (!gatewayEndpoint) {
     return null;
@@ -10,7 +16,9 @@ export function getConfiguredIpfsGatewayHost(
 
   try {
     const parsedUrl = new URL(gatewayEndpoint);
-    if (parsedUrl.protocol !== "https:") {
+    const isLoopbackHttp =
+      parsedUrl.protocol === "http:" && isLoopbackHostname(parsedUrl.hostname);
+    if (parsedUrl.protocol !== "https:" && !isLoopbackHttp) {
       return null;
     }
 

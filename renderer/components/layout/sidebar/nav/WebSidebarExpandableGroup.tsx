@@ -76,10 +76,15 @@ function WebSidebarExpandableGroup({
                     : "tw-text-iron-400 tw-bg-transparent desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white active:tw-text-white"
                 }`}
                 aria-current={isActive(item.href) ? "page" : undefined}>
-                {item.name}
-                {item.isExternal && (
-                  <FontAwesomeIcon icon={faExternalLinkAlt} />
-                )}
+                <span className="tw-flex tw-items-center tw-gap-2">
+                  <span>{item.name}</span>
+                  {item.isExternal && (
+                    <FontAwesomeIcon
+                      icon={faExternalLinkAlt}
+                      className="tw-h-3 tw-w-3 tw-flex-shrink-0"
+                    />
+                  )}
+                </span>
               </Link>
             ))}
           </div>

@@ -49,10 +49,7 @@ export function sharedConfig(
       return [
         {
           source: "/:path*",
-          headers: createSecurityHeaders(
-            publicEnv["API_ENDPOINT"],
-            publicEnv["IPFS_GATEWAY_ENDPOINT"]
-          ),
+          headers: createSecurityHeaders(publicEnv["API_ENDPOINT"]),
         },
       ];
     },

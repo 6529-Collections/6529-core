@@ -11,6 +11,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import type { SidebarSection } from "@/components/navigation/navTypes";
+import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 interface WebSidebarSubmenuProps {
   readonly section: SidebarSection;
@@ -135,7 +137,7 @@ function WebSidebarSubmenu({
 
   const topStyle = Number.isFinite(computedTop) ? `${computedTop}px` : "16px";
   const renderLink = (
-    item: { name: string; href: string },
+    item: { name: string; href: string; isExternal?: boolean },
     nested: boolean = false
   ) => {
     const active = isActive(item.href);
@@ -144,6 +146,8 @@ function WebSidebarSubmenu({
       <Link
         key={item.href}
         href={item.href}
+        target={item.isExternal ? "_blank" : undefined}
+        rel={item.isExternal ? "noopener noreferrer" : undefined}
         className={`tw-touch-action-manipulation tw-group tw-flex tw-items-center tw-rounded-lg tw-no-underline tw-ring-offset-iron-950 tw-transition-all tw-duration-300 focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-iron-600 focus-visible:tw-ring-offset-1 ${
           nested
             ? "tw-min-h-10 tw-px-3 tw-py-2 tw-text-sm"
@@ -157,7 +161,15 @@ function WebSidebarSubmenu({
         role="menuitem"
         onClick={onClose}
       >
-        <span className="tw-truncate">{item.name}</span>
+        <span className="tw-flex tw-items-center tw-gap-2 tw-truncate">
+          <span className="tw-truncate">{item.name}</span>
+          {item.isExternal && (
+            <FontAwesomeIcon
+              icon={faExternalLinkAlt}
+              className="tw-h-3 tw-w-3 tw-flex-shrink-0"
+            />
+          )}
+        </span>
       </Link>
     );
   };

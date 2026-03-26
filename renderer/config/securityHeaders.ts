@@ -1,5 +1,12 @@
 import { ARWEAVE_GATEWAY_CSP_SOURCES } from "../lib/media/arweave-gateways";
 
+function isLoopbackHostname(hostname: string): boolean {
+  const normalizedHostname = hostname.trim().toLowerCase();
+  return (
+    normalizedHostname === "127.0.0.1" || normalizedHostname === "localhost"
+  );
+}
+
 function getConfiguredIpfsGatewaySource(
   ipfsGatewayEndpoint: string | undefined
 ): string {
@@ -9,7 +16,9 @@ function getConfiguredIpfsGatewaySource(
 
   try {
     const parsedUrl = new URL(ipfsGatewayEndpoint);
-    if (parsedUrl.protocol !== "https:") {
+    const isLoopbackHttp =
+      parsedUrl.protocol === "http:" && isLoopbackHostname(parsedUrl.hostname);
+    if (parsedUrl.protocol !== "https:" && !isLoopbackHttp) {
       return "";
     }
 
@@ -30,6 +39,12 @@ export function createSecurityHeaders(
   const arweaveGatewaySources = ARWEAVE_GATEWAY_CSP_SOURCES.join(" ");
   const configuredIpfsGatewaySource =
     getConfiguredIpfsGatewaySource(ipfsGatewayEndpoint);
+  const localGatewaySources = [
+    "http://127.0.0.1:*",
+    "http://localhost:*",
+    "https://127.0.0.1:*",
+    "https://localhost:*",
+  ];
   const connectSrc = joinSources([
     "*",
     "'self'",
@@ -60,6 +75,7 @@ export function createSecurityHeaders(
   const mediaSrc = joinSources([
     "'self'",
     "blob:",
+    ...localGatewaySources,
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
     arweaveGatewaySources,
@@ -71,6 +87,7 @@ export function createSecurityHeaders(
   ]);
   const frameSrc = joinSources([
     "'self'",
+    ...localGatewaySources,
     "https://ipfs.io",
     "https://ipfs.io/ipfs/",
     configuredIpfsGatewaySource,

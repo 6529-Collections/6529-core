@@ -12,6 +12,8 @@ const DEFAULT_IPFS_GATEWAY_HOSTS = new Set([
   "ipfs.io",
   "www.ipfs.io",
   "cf-ipfs.com",
+  "localhost",
+  "127.0.0.1",
 ]);
 
 function dedupe(list: readonly string[]): string[] {

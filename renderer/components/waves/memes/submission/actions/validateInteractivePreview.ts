@@ -1,7 +1,6 @@
-'use server';
+"use server";
 
-import type {
-  InteractiveMediaValidationResult} from "../constants/security";
+import type { InteractiveMediaValidationResult } from "../constants/security";
 import {
   INTERACTIVE_MEDIA_ALLOWED_CONTENT_TYPES,
   INTERACTIVE_MEDIA_GATEWAY_BASE_URL,
@@ -114,7 +113,8 @@ export async function validateInteractivePreview({
   if (!trimmedPath || trimmedPath !== path) {
     return {
       ok: false,
-      reason: "Invalid path: only relative paths under the gateway origin are allowed.",
+      reason:
+        "Invalid path: only relative paths under the gateway origin are allowed.",
     };
   }
 
@@ -133,7 +133,8 @@ export async function validateInteractivePreview({
   ) {
     return {
       ok: false,
-      reason: "Invalid path: only relative paths under the gateway origin are allowed.",
+      reason:
+        "Invalid path: only relative paths under the gateway origin are allowed.",
     };
   }
 
@@ -153,7 +154,8 @@ export async function validateInteractivePreview({
   if (!ensureAllowedHost(targetUrl)) {
     return {
       ok: false,
-      reason: "Invalid path: resolved target is not permitted under allowed gateway hosts.",
+      reason:
+        "Invalid path: resolved target is not permitted under allowed gateway hosts.",
     };
   }
 
@@ -161,15 +163,12 @@ export async function validateInteractivePreview({
   try {
     response = await performGatewayRequest(targetUrl, "HEAD");
   } catch (error) {
-    console.error(
-      "[validateInteractivePreview] HEAD request failed",
-      {
-        provider,
-        path,
-        targetUrl,
-        error,
-      }
-    );
+    console.error("[validateInteractivePreview] HEAD request failed", {
+      provider,
+      path,
+      targetUrl,
+      error,
+    });
     return {
       ok: false,
       reason: "Unable to reach the content gateway.",

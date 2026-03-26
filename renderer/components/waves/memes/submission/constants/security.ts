@@ -7,10 +7,17 @@ import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 
 const DEFAULT_INTERACTIVE_MEDIA_IPFS_HOSTS = ["ipfs.io", "www.ipfs.io"];
 
+const configuredIpfsGatewayHost = getConfiguredIpfsGatewayHost();
+const configuredSubmissionIpfsGatewayHost =
+  configuredIpfsGatewayHost === "localhost" ||
+  configuredIpfsGatewayHost === "127.0.0.1"
+    ? null
+    : configuredIpfsGatewayHost;
+
 const INTERACTIVE_MEDIA_IPFS_HOSTS = new Set<string>(
   [
     ...DEFAULT_INTERACTIVE_MEDIA_IPFS_HOSTS,
-    getConfiguredIpfsGatewayHost(),
+    configuredSubmissionIpfsGatewayHost,
   ].filter((value): value is string => Boolean(value))
 );
 
