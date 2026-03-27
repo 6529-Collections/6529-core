@@ -2,6 +2,7 @@
   "name": "6529seize",
   "version": "1.0.0",
   "private": true,
+  "packageManager": "npm@10.9.4",
   "scripts": {
     "build:env-schema": "node scripts/build-env-schema.cjs",
     "predev": "npm run build:env-schema",
