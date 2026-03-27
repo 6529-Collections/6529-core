@@ -7,7 +7,6 @@
   },
   "description": "6529 Desktop Application",
   "private": false,
-  "packageManager": "npm@10.9.4",
   "license": "MIT",
   "main": "main/electron-src/index.js",
   "scripts": {
