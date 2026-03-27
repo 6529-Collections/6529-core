@@ -17,6 +17,7 @@ import React, {
   useState,
 } from "react";
 import { getAddress, isAddress } from "viem";
+import { useAccount } from "wagmi";
 import { getNodeEnv, publicEnv } from "@/config/env";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
@@ -40,6 +41,8 @@ import {
   logSecurityEvent,
 } from "@/src/utils/security-logger";
 import { isSafeWalletInfo } from "@/utils/wallet-detection";
+import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
+import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import { WalletErrorBoundary } from "./error-boundary";
 
 // Custom error types for better error handling
@@ -391,6 +394,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const account = useAppKitAccount();
+  const wagmiAccount = useAccount();
   const { walletInfo } = useWalletInfo();
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();
@@ -1086,15 +1090,15 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     return storedConnectedAccounts.length < MAX_CONNECTED_PROFILES;
   }, [storedConnectedAccounts]);
 
+  const activeConnectorType = wagmiAccount.connector?.type;
+  const isActiveAppWalletConnector =
+    activeConnectorType === APP_WALLET_CONNECTOR_TYPE;
+  const isActiveSeedWalletConnector =
+    activeConnectorType === SEED_WALLET_CONNECTOR_TYPE;
+  const shouldBypassConnectedWalletAddFlow =
+    isActiveAppWalletConnector || isActiveSeedWalletConnector;
+
   const seizeAddConnectedAccount = useCallback((): void => {
-    if (!canAddConnectedAccount || !canStoreAnotherWalletAccount()) {
-      return;
-    }
-
-    if (isAddingConnectedAccountRef.current) {
-      return;
-    }
-
     const clearAddConnectedAccountGuard = (): void => {
       isAddingConnectedAccountRef.current = false;
       addFlowOriginAddressRef.current = null;
@@ -1106,89 +1110,126 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       }
     };
 
-    isAddingConnectedAccountRef.current = true;
+    if (!canAddConnectedAccount || !canStoreAnotherWalletAccount()) {
+      return;
+    }
 
     const liveConnectedWallet =
       account.address && account.isConnected && isAddress(account.address)
         ? getAddress(account.address)
         : null;
+    const addFlowOriginAddress = addFlowOriginAddressRef.current;
+    const addFlowReturnedToOrigin =
+      !state.open &&
+      !!liveConnectedWallet &&
+      !!addFlowOriginAddress &&
+      normalizeAddress(liveConnectedWallet) ===
+        normalizeAddress(addFlowOriginAddress);
+    const hasStaleAddConnectedAccountGuard =
+      isAddingConnectedAccountRef.current &&
+      (!isAddingConnectedAccount ||
+        addFlowReturnedToOrigin ||
+        (!state.open &&
+          !retryConnectTimeoutRef.current &&
+          !liveConnectedWallet &&
+          account.status !== "connecting" &&
+          account.status !== "reconnecting"));
 
+    if (hasStaleAddConnectedAccountGuard) {
+      clearAddConnectedAccountGuard();
+      setIsAddingConnectedAccount(false);
+    }
+
+    if (isAddingConnectedAccountRef.current) {
+      return;
+    }
+
+    if (!liveConnectedWallet || shouldBypassConnectedWalletAddFlow) {
+      isAddingConnectedAccountRef.current = true;
+      addFlowOriginAddressRef.current = liveConnectedWallet;
+      addFlowHasLeftOriginRef.current = false;
+      pendingAddFlowSwitchRef.current = false;
+      setIsAddingConnectedAccount(true);
+
+      try {
+        seizeConnect();
+      } catch (error: unknown) {
+        clearAddConnectedAccountGuard();
+        setIsAddingConnectedAccount(false);
+        const connectionError = createWalletError(
+          WalletConnectionError,
+          "start add-account connection flow",
+          error
+        );
+        logError("seizeAddConnectedAccount", connectionError);
+      }
+      return;
+    }
+
+    isAddingConnectedAccountRef.current = true;
     addFlowOriginAddressRef.current = liveConnectedWallet;
     addFlowHasLeftOriginRef.current = false;
     pendingAddFlowSwitchRef.current = true;
     setIsAddingConnectedAccount(true);
 
-    if (liveConnectedWallet) {
-      if (retryConnectTimeoutRef.current) {
-        clearTimeout(retryConnectTimeoutRef.current);
-        retryConnectTimeoutRef.current = null;
-      }
-
-      try {
-        disconnect()
-          .then(() => {
-            retryConnectTimeoutRef.current = setTimeout(() => {
-              retryConnectTimeoutRef.current = null;
-              if (!isMountedRef.current) {
-                clearAddConnectedAccountGuard();
-                return;
-              }
-              try {
-                seizeConnect();
-              } catch (error: unknown) {
-                clearAddConnectedAccountGuard();
-                setIsAddingConnectedAccount(false);
-                const connectionError = createWalletError(
-                  WalletConnectionError,
-                  "start add-account connection flow",
-                  error
-                );
-                logError("seizeAddConnectedAccount", connectionError);
-              }
-            }, 100);
-          })
-          .catch((error: unknown) => {
-            clearAddConnectedAccountGuard();
-            setIsAddingConnectedAccount(false);
-            const walletError = createWalletError(
-              WalletDisconnectionError,
-              "disconnect wallet before adding account",
-              error
-            );
-            logError("seizeAddConnectedAccount", walletError);
-          });
-      } catch (error: unknown) {
-        clearAddConnectedAccountGuard();
-        setIsAddingConnectedAccount(false);
-        const walletError = createWalletError(
-          WalletDisconnectionError,
-          "disconnect wallet before adding account",
-          error
-        );
-        logError("seizeAddConnectedAccount", walletError);
-      }
-      return;
+    if (retryConnectTimeoutRef.current) {
+      clearTimeout(retryConnectTimeoutRef.current);
+      retryConnectTimeoutRef.current = null;
     }
 
     try {
-      seizeConnect();
+      disconnect()
+        .then(() => {
+          retryConnectTimeoutRef.current = setTimeout(() => {
+            retryConnectTimeoutRef.current = null;
+            if (!isMountedRef.current) {
+              clearAddConnectedAccountGuard();
+              return;
+            }
+            try {
+              seizeConnect();
+            } catch (error: unknown) {
+              clearAddConnectedAccountGuard();
+              setIsAddingConnectedAccount(false);
+              const connectionError = createWalletError(
+                WalletConnectionError,
+                "start add-account connection flow",
+                error
+              );
+              logError("seizeAddConnectedAccount", connectionError);
+            }
+          }, 100);
+        })
+        .catch((error: unknown) => {
+          clearAddConnectedAccountGuard();
+          setIsAddingConnectedAccount(false);
+          const walletError = createWalletError(
+            WalletDisconnectionError,
+            "disconnect wallet before adding account",
+            error
+          );
+          logError("seizeAddConnectedAccount", walletError);
+        });
     } catch (error: unknown) {
       clearAddConnectedAccountGuard();
       setIsAddingConnectedAccount(false);
-      const connectionError = createWalletError(
-        WalletConnectionError,
-        "start add-account connection flow",
+      const walletError = createWalletError(
+        WalletDisconnectionError,
+        "disconnect wallet before adding account",
         error
       );
-      logError("seizeAddConnectedAccount", connectionError);
+      logError("seizeAddConnectedAccount", walletError);
     }
   }, [
     account.address,
     account.isConnected,
+    account.status,
     canAddConnectedAccount,
     disconnect,
-    storedConnectedAccounts.length,
+    isAddingConnectedAccount,
+    shouldBypassConnectedWalletAddFlow,
     seizeConnect,
+    state.open,
   ]);
 
   const connectedAccounts = useMemo(() => {
