@@ -1,11 +1,5 @@
 "use client";
 
-import { publicEnv } from "@/config/env";
-import { ApiDrop } from "@/generated/models/ApiDrop";
-import { ApiDropType } from "@/generated/models/ApiDropType";
-import { ApiSeizeSettings } from "@/generated/models/ApiSeizeSettings";
-import { fetchUrl } from "@/services/6529api";
-import type { ReactNode } from "react";
 import {
   createContext,
   useCallback,
@@ -15,6 +9,12 @@ import {
   useRef,
   useState,
 } from "react";
+import { publicEnv } from "@/config/env";
+import { ApiDrop } from "@/generated/models/ApiDrop";
+import { ApiDropType } from "@/generated/models/ApiDropType";
+import type { ApiSeizeSettings } from "@/generated/models/ApiSeizeSettings";
+import { fetchUrl } from "@/services/6529api";
+import type { ReactNode } from "react";
 
 type TempApiSeizeSettings = ApiSeizeSettings & {
   curation_wave_id: string | null;
@@ -25,8 +25,6 @@ type SeizeSettingsContextType = {
   isMemesWave: (waveId: string | undefined | null) => boolean;
   isCurationWave: (waveId: string | undefined | null) => boolean;
   isMemesSubmission: (drop: ApiDrop | undefined | null) => boolean;
-  // True once at least one fetch succeeds; stays true during background refreshes
-  // unless callers opt into reset=true before reloading.
   isLoaded: boolean;
   loadError: Error | null;
   loadSeizeSettings: (options?: {
@@ -48,6 +46,8 @@ export const SeizeSettingsProvider = ({
     all_drops_notifications_subscribers_limit: 0,
     memes_wave_id: null,
     curation_wave_id: null,
+    distribution_admin_wallets: [],
+    claims_admin_wallets: [],
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
@@ -67,13 +67,16 @@ export const SeizeSettingsProvider = ({
 
         if (!isMountedRef.current) return;
 
-        setSeizeSettings({
+        setSeizeSettings((previous) => ({
+          ...previous,
           ...settings,
+          distribution_admin_wallets: settings.distribution_admin_wallets ?? [],
+          claims_admin_wallets: settings.claims_admin_wallets ?? [],
           memes_wave_id:
             publicEnv.DEV_MODE_MEMES_WAVE_ID ?? settings.memes_wave_id,
           curation_wave_id:
             publicEnv.DEV_MODE_CURATION_WAVE_ID ?? settings.curation_wave_id,
-        });
+        }));
         setLoadError(null);
         setIsLoaded(true);
       } catch (error) {
@@ -82,7 +85,6 @@ export const SeizeSettingsProvider = ({
         const normalizedError =
           error instanceof Error ? error : new Error(String(error));
         setLoadError(normalizedError);
-        // Keep isLoaded true during background refreshes unless reset was requested
         if (reset) {
           setIsLoaded(false);
         }
@@ -93,7 +95,7 @@ export const SeizeSettingsProvider = ({
   );
 
   useEffect(() => {
-    loadSeizeSettings();
+    loadSeizeSettings().catch(() => undefined);
 
     return () => {
       isMountedRef.current = false;

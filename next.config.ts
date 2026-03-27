@@ -68,6 +68,13 @@ function computeVersionFromPkg(): string {
   }
 }
 
+function getAssetPrefix(assetsFromS3: boolean, version: string): string {
+  if (!assetsFromS3) {
+    return "";
+  }
+  return `https://dnclu2fna0b2b.cloudfront.net/web_build/${version}`;
+}
+
 function resolveAssetsFlagFromEnv(): boolean {
   return (
     ((process.env.ASSETS_FROM_S3 ?? "false") + "").toLowerCase() === "true"
@@ -75,8 +82,9 @@ function resolveAssetsFlagFromEnv(): boolean {
 }
 
 function resolveLocalDebugBuildFlagFromEnv(): boolean {
-  return ((process.env.NEXT_LOCAL_DEBUG ?? "false") + "").toLowerCase() ===
-    "true";
+  return (
+    ((process.env.NEXT_LOCAL_DEBUG ?? "false") + "").toLowerCase() === "true"
+  );
 }
 
 function persistBakedArtifacts(
@@ -121,9 +129,59 @@ function loadAssetsFlagAtRuntime(): boolean {
   return flag === "true";
 }
 
+function joinSources(sources: Array<string | undefined>): string {
+  return sources.filter(Boolean).join(" ");
+}
+
 function createSecurityHeaders(
   apiEndpoint: string = "",
 ): Array<{ key: string; value: string }> {
+  const localGatewaySources = [
+    "http://127.0.0.1:*",
+    "http://localhost:*",
+    "https://127.0.0.1:*",
+    "https://localhost:*",
+  ];
+  const mediaSrc = joinSources([
+    "'self'",
+    "blob:",
+    ...localGatewaySources,
+    "https://*.cloudfront.net",
+    "https://videos.files.wordpress.com",
+    "https://arweave.net",
+    "https://*.arweave.net",
+    "https://ipfs.io/ipfs/*",
+    "https://cf-ipfs.com/ipfs/*",
+    "https://*.twimg.com",
+    "https://artblocks.io",
+    "https://*.artblocks.io",
+  ]);
+  const frameSrc = joinSources([
+    "'self'",
+    ...localGatewaySources,
+    "https://media.generator.seize.io",
+    "https://media.generator.6529.io",
+    "https://generator.seize.io",
+    "https://arweave.net",
+    "https://*.arweave.net",
+    "https://ipfs.io/ipfs/*",
+    "https://cf-ipfs.com/ipfs/*",
+    "https://nftstorage.link",
+    "https://*.ipfs.nftstorage.link",
+    "https://verify.walletconnect.com",
+    "https://verify.walletconnect.org",
+    "https://secure.walletconnect.com",
+    "https://d3lqz0a4bldqgf.cloudfront.net",
+    "https://www.youtube.com",
+    "https://www.youtube-nocookie.com",
+    "https://*.youtube.com",
+    "https://artblocks.io",
+    "https://*.artblocks.io",
+    "https://docs.google.com",
+    "https://drive.google.com",
+    "https://*.google.com",
+  ]);
+
   return [
     {
       key: "Strict-Transport-Security",
@@ -131,7 +189,7 @@ function createSecurityHeaders(
     },
     {
       key: "Content-Security-Policy",
-      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ https://arweave.net/* https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src 'self' blob: https://*.cloudfront.net https://videos.files.wordpress.com https://arweave.net https://*.arweave.net https://ipfs.io/ipfs/* https://cf-ipfs.com/ipfs/* https://*.twimg.com https://artblocks.io https://*.artblocks.io; frame-src 'self' https://media.generator.seize.io https://media.generator.6529.io https://generator.seize.io https://arweave.net https://*.arweave.net https://ipfs.io/ipfs/* https://cf-ipfs.com/ipfs/* https://nftstorage.link https://*.ipfs.nftstorage.link https://verify.walletconnect.com https://verify.walletconnect.org https://secure.walletconnect.com https://d3lqz0a4bldqgf.cloudfront.net https://www.youtube.com https://www.youtube-nocookie.com https://*.youtube.com https://artblocks.io https://*.artblocks.io https://docs.google.com https://drive.google.com https://*.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
+      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ https://arweave.net/* https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
     },
     { key: "X-Frame-Options", value: "SAMEORIGIN" },
     { key: "X-Content-Type-Options", value: "nosniff" },
@@ -151,6 +209,7 @@ interface PublicEnv {
   TENOR_API_KEY?: string;
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
+  DEV_MODE_CURATION_WAVE_ID?: string;
   DEV_MODE_WALLET_ADDRESS?: string;
   DEV_MODE_AUTH_JWT?: string;
   USE_DEV_AUTH?: string;
@@ -165,6 +224,7 @@ interface PublicEnv {
   PEPE_CACHE_MAX_ITEMS?: string;
   FARCASTER_WARPCAST_API_BASE?: string;
   FARCASTER_WARPCAST_API_KEY?: string;
+  DROP_FORGE_TESTNET?: boolean;
 }
 
 function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
@@ -296,9 +356,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
 
     persistBakedArtifacts(publicEnv, ASSETS_FROM_S3);
 
-    const assetPrefix = ASSETS_FROM_S3
-      ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
-      : "";
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
 
     return {
       ...sharedConfig(publicEnv, assetPrefix),
@@ -319,6 +377,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         TENOR_API_KEY: publicEnv.TENOR_API_KEY,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
+        DEV_MODE_CURATION_WAVE_ID: publicEnv.DEV_MODE_CURATION_WAVE_ID,
         DEV_MODE_WALLET_ADDRESS: publicEnv.DEV_MODE_WALLET_ADDRESS,
         DEV_MODE_AUTH_JWT: publicEnv.DEV_MODE_AUTH_JWT,
         USE_DEV_AUTH: publicEnv.USE_DEV_AUTH,
@@ -333,6 +392,10 @@ const nextConfigFactory = (phase: string): NextConfig => {
         PEPE_CACHE_MAX_ITEMS: publicEnv.PEPE_CACHE_MAX_ITEMS,
         FARCASTER_WARPCAST_API_BASE: publicEnv.FARCASTER_WARPCAST_API_BASE,
         FARCASTER_WARPCAST_API_KEY: publicEnv.FARCASTER_WARPCAST_API_KEY,
+        DROP_FORGE_TESTNET:
+          publicEnv.DROP_FORGE_TESTNET === undefined
+            ? undefined
+            : String(publicEnv.DROP_FORGE_TESTNET),
       },
       async generateBuildId() {
         return VERSION;
@@ -344,9 +407,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
     const VERSION = computeVersionFromPkg();
     const publicEnv = loadBakedRuntimeConfig(VERSION) as PublicEnv;
     const ASSETS_FROM_S3 = loadAssetsFlagAtRuntime();
-    const assetPrefix = ASSETS_FROM_S3
-      ? `https://dnclu2fna0b2b.cloudfront.net/web_build/${VERSION}`
-      : "";
+    const assetPrefix = getAssetPrefix(ASSETS_FROM_S3, VERSION);
     return sharedConfig(publicEnv, assetPrefix);
   }
 

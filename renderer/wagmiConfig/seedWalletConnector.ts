@@ -126,7 +126,7 @@ export function seedWalletConnector(parameters: {
     return Math.random().toString(36).substring(2, 15);
   }
 
-  return createConnector((_config) => ({
+  return createConnector(({ emitter }) => ({
     get icon() {
       return `https://robohash.org/${parameters.address}.png`;
     },
@@ -298,6 +298,7 @@ export function seedWalletConnector(parameters: {
       );
       console.log(`[${this.name}] Switched to chain`, myChain.name);
       updateProvider();
+      emitter.emit("change", { chainId: myChain.id });
       return myChain;
     },
     async onAccountsChanged(_accounts) {

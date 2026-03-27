@@ -1,8 +1,5 @@
 "use client";
 
-import { publicEnv } from "@/config/env";
-import { isElectron } from "@/helpers";
-import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { usePathname, useSearchParams } from "next/navigation";
 import React, {
   createContext,
@@ -12,6 +9,8 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { publicEnv } from "@/config/env";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { useMyStreamOptional } from "./wave/MyStreamContext";
 
 type TitleContextType = {
@@ -28,7 +27,6 @@ export const DEFAULT_TITLE = publicEnv.BASE_ENDPOINT?.includes("staging")
   ? "6529 Staging"
   : "6529.io";
 
-// Default titles for routes
 const getDefaultTitleForRoute = (pathname: string | null): string => {
   if (!pathname) return DEFAULT_TITLE;
   if (pathname === "/") return "6529.io";
@@ -43,11 +41,9 @@ const getDefaultTitleForRoute = (pathname: string | null): string => {
   if (pathname.startsWith("/nextgen")) return "NextGen | Collections";
   if (pathname.startsWith("/rememes")) return "Rememes | Collections";
   if (pathname.startsWith("/open-data")) return "Open Data | Tools";
-  // Handle profile pages (e.g., /username)
   if (pathname !== "/" && pathname.split("/").length === 2) {
     const segments = pathname.split("/");
     const firstSegment = segments[1];
-    // Check if it's not one of the known routes
     const knownRoutes = [
       "waves",
       "the-memes",
@@ -61,6 +57,7 @@ const getDefaultTitleForRoute = (pathname: string | null): string => {
       "about",
       "delegation",
       "meme-calendar",
+      "drop-forge",
     ];
     if (!knownRoutes.includes(firstSegment!)) {
       return `Profile | 6529.io`;
@@ -134,7 +131,6 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   };
 
-  // Compute the title based on current state
   const computedTitle = useMemo(() => {
     const waveTitle = (() => {
       if (!waveParam || !waveData) return null;
@@ -154,7 +150,6 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
     return title;
   }, [isWaveRoute, waveParam, waveData, title, notificationCount]);
 
-  // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => {
     let notificationText = "";
     if (notificationCount === 1) {
@@ -174,12 +169,6 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
     };
   }, [computedTitle, notificationCount]);
 
-  useEffect(() => {
-    if (isElectron()) {
-      window.notifications.setBadge(notificationCount);
-    }
-  }, [notificationCount]);
-
   return (
     <TitleContext.Provider value={contextValue}>
       {children}
@@ -195,18 +184,15 @@ export const useTitle = () => {
   return context;
 };
 
-// Hook to set page title - use this in page components
 export const useSetTitle = (pageTitle: string) => {
   const { setTitle } = useTitle();
   const pathname = usePathname();
 
-  // Set title immediately on mount and when title changes
   useEffect(() => {
     setTitle(pageTitle);
   }, [pageTitle, setTitle, pathname]);
 };
 
-// Hook to set wave data for title
 export const useSetWaveData = (
   data: { name: string; newItemsCount: number } | null
 ) => {

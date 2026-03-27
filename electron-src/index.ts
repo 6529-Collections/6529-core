@@ -110,6 +110,45 @@ const SPLASH_MIN_HEIGHT = 300;
 const SPLASH_LEFT_MIN_WIDTH_PX = 320;
 const SPLASH_SCREEN_RATIO = 0.5;
 
+function isLocalIpfsApiUrl(url: string): boolean {
+  return url.startsWith(IPFS_SERVER.getApiEndpoint());
+}
+
+function openIpfsWindow(url: string): void {
+  const bounds = mainWindow?.getBounds();
+  const isFullScreen = mainWindow?.isFullScreen() ?? false;
+  const isMaximized = mainWindow?.isMaximized() ?? false;
+
+  const ipfsWindow = new BrowserWindow({
+    x: bounds?.x ?? undefined,
+    y: bounds?.y ?? undefined,
+    width: bounds?.width ?? 1200,
+    height: bounds?.height ?? 800,
+    backgroundColor: "#222",
+    titleBarStyle: "hidden",
+    titleBarOverlay: { color: "#000", symbolColor: "#fff", height: 30 },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, "preload.js"),
+      spellcheck: true,
+    },
+    show: false,
+  });
+
+  if (isFullScreen) {
+    ipfsWindow.setFullScreen(true);
+  } else if (isMaximized) {
+    ipfsWindow.maximize();
+  }
+
+  ipfsWindow.once("ready-to-show", () => {
+    ipfsWindow.show();
+  });
+
+  ipfsWindow.loadURL(url);
+}
+
 type SplashCard = {
   id: number;
   name: string;
@@ -618,6 +657,32 @@ async function createWindow() {
 }
 
 function initListeners(mw: BrowserWindow) {
+  mw.webContents.setWindowOpenHandler(({ url }) => {
+    if (isLocalIpfsApiUrl(url)) {
+      Logger.info(
+        "Redirecting IPFS window.open() into dedicated BrowserWindow:",
+        url
+      );
+      openIpfsWindow(url);
+      return { action: "deny" };
+    }
+
+    return { action: "allow" };
+  });
+
+  mw.webContents.on("will-navigate", (event, url) => {
+    if (!isLocalIpfsApiUrl(url)) {
+      return;
+    }
+
+    Logger.info(
+      "Preventing main window IPFS navigation and opening dedicated BrowserWindow:",
+      url
+    );
+    event.preventDefault();
+    openIpfsWindow(url);
+  });
+
   mw.webContents.on("did-navigate", updateNavigationState);
   mw.webContents.on("did-navigate-in-page", updateNavigationState);
   mw.webContents.on(
@@ -750,40 +815,8 @@ ipcMain.on(DELETE_SEED_WALLET, (event, args) => {
 ipcMain.on("open-external", (event, url) => {
   event.preventDefault();
   Logger.info("Opening external URL:", url);
-  if (url.startsWith(IPFS_SERVER.getApiEndpoint())) {
-    // Open IPFS endpoint in an Electron BrowserWindow that mirrors the main window's size/state
-    const bounds = mainWindow?.getBounds();
-    const isFullScreen = mainWindow?.isFullScreen() ?? false;
-    const isMaximized = mainWindow?.isMaximized() ?? false;
-
-    const ipfsWindow = new BrowserWindow({
-      x: bounds?.x ?? undefined,
-      y: bounds?.y ?? undefined,
-      width: bounds?.width ?? 1200,
-      height: bounds?.height ?? 800,
-      backgroundColor: "#222",
-      titleBarStyle: "hidden",
-      titleBarOverlay: { color: "#000", symbolColor: "#fff", height: 30 },
-      webPreferences: {
-        nodeIntegration: false,
-        contextIsolation: true,
-        preload: path.join(__dirname, "preload.js"),
-        spellcheck: true,
-      },
-      show: false,
-    });
-
-    if (isFullScreen) {
-      ipfsWindow.setFullScreen(true);
-    } else if (isMaximized) {
-      ipfsWindow.maximize();
-    }
-
-    ipfsWindow.once("ready-to-show", () => {
-      ipfsWindow.show();
-    });
-
-    ipfsWindow.loadURL(url);
+  if (isLocalIpfsApiUrl(url)) {
+    openIpfsWindow(url);
   } else {
     shell.openExternal(url);
   }

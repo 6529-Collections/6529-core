@@ -10,7 +10,7 @@ import type { ApiNotificationsResponse } from "@/generated/models/ApiNotificatio
 import { isElectron } from "@/helpers";
 import { generateNotificationData } from "@/helpers/notification.helpers";
 import { usePathname, useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { commonApiFetch } from "@/services/api/common-api";
 import {
   getConnectedWalletAccounts,
@@ -97,8 +97,12 @@ export default function DesktopNotificationsBridge() {
   const pathname = usePathname();
   const { connectedProfile } = useAuth();
   const { findNativeEmoji } = useEmoji();
-  const { address, connectedAccounts, seizeSwitchConnectedAccount } =
-    useSeizeConnectContext();
+  const {
+    address,
+    connectedAccounts,
+    connectedAccountUnreadNotifications,
+    seizeSwitchConnectedAccount,
+  } = useSeizeConnectContext();
   const connectedProfileRef = useRef<ApiIdentity | null>(connectedProfile);
   const activeAddressRef = useRef(address);
   const connectedAccountsRef = useRef(connectedAccounts);
@@ -116,6 +120,23 @@ export default function DesktopNotificationsBridge() {
   useEffect(() => {
     connectedAccountsRef.current = connectedAccounts;
   }, [connectedAccounts]);
+
+  const dockBadgeCount = useMemo(
+    () =>
+      Object.values(connectedAccountUnreadNotifications).reduce(
+        (total, count) => total + clampUnreadCount(count),
+        0
+      ),
+    [connectedAccountUnreadNotifications]
+  );
+
+  useEffect(() => {
+    if (!isElectron()) {
+      return;
+    }
+
+    window.notifications.setBadge(dockBadgeCount);
+  }, [dockBadgeCount]);
 
   const resolveAddressForNotificationPayload = useCallback(
     (payload: NotificationNavigatePayload): string | null => {
