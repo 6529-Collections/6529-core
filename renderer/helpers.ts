@@ -75,6 +75,15 @@ export function getRandomKey() {
 }
 
 export const isElectron = () => {
+  // In desktop builds with context isolation, the preload bridge is the
+  // most reliable renderer signal we control.
+  if (
+    typeof window !== "undefined" &&
+    typeof (window as Window & { api?: unknown }).api === "object"
+  ) {
+    return true;
+  }
+
   // Check if running in an Electron renderer process
   if (
     typeof window !== "undefined" &&

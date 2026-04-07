@@ -1,5 +1,6 @@
 "use client";
 
+import { parseIpfsUrl } from "@/helpers/Helpers";
 import React, {
   createContext,
   useContext,
@@ -24,10 +25,19 @@ const IpfsContext = createContext<IpfsContextType | undefined>(undefined);
 
 let cachedGatewayBase: string | null = null;
 
-const readIpfsConfig = async () => {
-  const ipfsInfo = await window.api.getIpfsInfo();
-  const apiEndpoint = ipfsInfo.apiEndpoint;
-  const gatewayEndpoint = ipfsInfo.gatewayEndpoint;
+const buildIpfsConfig = (input: {
+  apiEndpoint?: string | null;
+  gatewayEndpoint?: string | null;
+  mfsPath?: string | null;
+  ipfsPort?: number | null;
+  ipfsRpcPort?: number | null;
+}) => {
+  const apiEndpoint =
+    input.apiEndpoint?.trim() ||
+    (input.ipfsRpcPort ? `http://127.0.0.1:${input.ipfsRpcPort}` : "");
+  const gatewayEndpoint =
+    input.gatewayEndpoint?.trim() ||
+    (input.ipfsPort ? `http://127.0.0.1:${input.ipfsPort}` : "");
 
   if (!apiEndpoint || !gatewayEndpoint) {
     throw new Error("Missing IPFS_API_ENDPOINT or IPFS_GATEWAY_ENDPOINT");
@@ -42,14 +52,30 @@ const readIpfsConfig = async () => {
     ? trimmed.slice(0, -5)
     : trimmed;
 
-  const mfsPath = ipfsInfo.mfsPath;
-
   return {
     apiEndpoint,
     gatewayEndpoint: trimmed,
     gatewayBase,
-    mfsPath,
+    mfsPath: input.mfsPath ?? undefined,
   } as const;
+};
+
+const readIpfsConfig = async () => {
+  const bridge =
+    typeof window !== "undefined"
+      ? (window as Window & { api?: typeof window.api }).api
+      : undefined;
+  if (!bridge) {
+    throw new Error("Electron bridge is unavailable");
+  }
+
+  try {
+    const ipfsInfo = await bridge.getIpfsInfo();
+    return buildIpfsConfig(ipfsInfo ?? {});
+  } catch (error) {
+    const appInfo = await bridge.getInfo();
+    return buildIpfsConfig(appInfo ?? {});
+  }
 };
 
 const getEnv = async () => readIpfsConfig();
@@ -62,7 +88,12 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (ipfsService) return;
-    if (!isElectron()) return;
+    if (
+      typeof window === "undefined" ||
+      typeof window.api?.getInfo !== "function"
+    ) {
+      if (!isElectron()) return;
+    }
 
     getEnv()
       .then((info) => {
@@ -106,8 +137,7 @@ export const resolveIpfsUrlSync = (url: string) => {
   }
 
   if (!cachedGatewayBase) {
-    console.warn("IPFS gateway not yet initialized, returning original URL");
-    return url;
+    return parseIpfsUrl(url);
   }
 
   return `${cachedGatewayBase}/ipfs/${url.slice(7)}`;

@@ -5,7 +5,12 @@ import {
 } from "@/lib/media/arweave-gateways";
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 
-const DEFAULT_INTERACTIVE_MEDIA_IPFS_HOSTS = ["ipfs.io", "www.ipfs.io"];
+const DEFAULT_INTERACTIVE_MEDIA_IPFS_HOSTS = [
+  "ipfs.io",
+  "www.ipfs.io",
+  "127.0.0.1",
+  "localhost",
+];
 
 const configuredIpfsGatewayHost = getConfiguredIpfsGatewayHost();
 const configuredSubmissionIpfsGatewayHost =
@@ -28,7 +33,7 @@ const CIDV1_PATTERN = /^b[a-z2-7]{52,}$/;
 
 const ARWEAVE_TX_ID_PATTERN = /^[a-zA-Z0-9_-]{43,87}$/;
 
-const IPFS_PATH_PATTERN = /^\/ipfs\/([^/]+)$/;
+const IPFS_PATH_PATTERN = /^\/ipfs\/([^/]+)(?:\/.*)?$/;
 const ARWEAVE_PATH_PATTERN = /^\/([^/]+)$/;
 
 export const canonicalizeInteractiveMediaHostname = (
@@ -36,6 +41,11 @@ export const canonicalizeInteractiveMediaHostname = (
 ): string => {
   return canonicalizeArweaveGatewayHostname(hostname);
 };
+
+const isLoopbackInteractiveMediaHost = (hostname: string): boolean =>
+  ["127.0.0.1", "localhost"].includes(
+    canonicalizeInteractiveMediaHostname(hostname)
+  );
 
 const isIpfsHost = (hostname: string): boolean =>
   INTERACTIVE_MEDIA_IPFS_HOSTS.has(
@@ -170,10 +180,6 @@ export const canonicalizeInteractiveMediaUrl = (src: string): string | null => {
     return null;
   }
 
-  if (parsedUrl.protocol !== "https:") {
-    return null;
-  }
-
   if (parsedUrl.username || parsedUrl.password) {
     return null;
   }
@@ -182,19 +188,28 @@ export const canonicalizeInteractiveMediaUrl = (src: string): string | null => {
     return null;
   }
 
-  if (parsedUrl.port) {
-    if (parsedUrl.port === "443") {
-      parsedUrl.port = "";
-    } else {
-      return null;
-    }
-  }
-
   const normalizedHostname = canonicalizeInteractiveMediaHostname(
     parsedUrl.hostname
   );
   if (!normalizedHostname) {
     return null;
+  }
+
+  const isLoopbackHost = isLoopbackInteractiveMediaHost(normalizedHostname);
+  const isLoopbackHttp =
+    parsedUrl.protocol === "http:" && isLoopbackHost;
+  if (parsedUrl.protocol !== "https:" && !isLoopbackHttp) {
+    return null;
+  }
+
+  if (parsedUrl.port) {
+    if (isLoopbackHost) {
+      // Desktop IPFS gateways use loopback hosts with dynamic ports.
+    } else if (parsedUrl.port === "443") {
+      parsedUrl.port = "";
+    } else {
+      return null;
+    }
   }
 
   if (normalizedHostname !== parsedUrl.hostname) {

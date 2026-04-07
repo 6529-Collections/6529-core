@@ -220,7 +220,7 @@ export function useSidebarSections(
         ],
       },
     ],
-    [appWalletsSupported, hideSubscriptions]
+    [appWalletsSupported, hideSubscriptions, ipfsWebuiUrl]
   );
 }
 
