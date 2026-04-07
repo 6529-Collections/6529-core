@@ -5,6 +5,7 @@ import UserCICAndLevel, {
 } from "@/components/user/utils/UserCICAndLevel";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { getTimeAgoShort } from "@/helpers/Helpers";
+import { areSameProfileIdentity } from "@/helpers/ProfileHelpers";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
@@ -13,8 +14,6 @@ import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
-import type { DropInteractionParams } from "../Drop";
-import { DropLocation } from "../Drop";
 import DropCurationButton from "../DropCurationButton";
 import WaveDropActions from "../WaveDropActions";
 import WaveDropAuthorPfp from "../WaveDropAuthorPfp";
@@ -22,6 +21,13 @@ import WaveDropContent from "../WaveDropContent";
 import WaveDropMetadata from "../WaveDropMetadata";
 import WaveDropMobileMenu from "../WaveDropMobileMenu";
 import WaveDropReactions from "../WaveDropReactions";
+import ParticipationIdentityProfileCard from "./ParticipationIdentityProfileCard";
+import {
+  getParticipationIdentityProfile,
+  getParticipationVisibleMetadata,
+} from "./participationIdentityProfile.helpers";
+import type { DropInteractionParams } from "../drop.types";
+import { DropLocation } from "../drop.types";
 
 interface EndedParticipationDropProps {
   readonly drop: ExtendedDrop;
@@ -46,6 +52,20 @@ export default function EndedParticipationDrop({
 }: EndedParticipationDropProps) {
   const isActiveDrop = activeDrop?.drop.id === drop.id;
   const router = useRouter();
+  const identityProfile = getParticipationIdentityProfile({
+    wave: drop.wave,
+    metadata: drop.metadata,
+  });
+  const visibleMetadata = getParticipationVisibleMetadata({
+    wave: drop.wave,
+    metadata: drop.metadata,
+  });
+  const isSelfNominee = identityProfile
+    ? areSameProfileIdentity({
+        left: drop.author,
+        right: identityProfile,
+      })
+    : false;
 
   const [activePartIndex, setActivePartIndex] = useState(0);
   const [longPressTriggered, setLongPressTriggered] = useState(false);
@@ -75,9 +95,6 @@ export default function EndedParticipationDrop({
   }, []);
 
   const getDropLocationBackground = () => {
-    if (location === DropLocation.WAVE) {
-      return "tw-bg-iron-900/60 tw-ring-1 tw-ring-inset tw-ring-iron-800";
-    }
     return "tw-bg-iron-950 tw-ring-1 tw-ring-inset tw-ring-iron-800";
   };
 
@@ -92,7 +109,7 @@ export default function EndedParticipationDrop({
       } tw-w-full`}
     >
       <div
-        className={`tw-group tw-relative tw-flex tw-w-full tw-flex-col tw-overflow-hidden tw-rounded-lg tw-px-4 tw-py-3 tw-transition-colors tw-duration-200 tw-ease-linear ${dropBackgroundClass}`}
+        className={`tw-group tw-relative tw-flex tw-w-full tw-flex-col tw-overflow-hidden tw-rounded-xl tw-px-4 tw-py-3 tw-transition-colors tw-duration-200 tw-ease-linear ${dropBackgroundClass}`}
       >
         {!isMobile && showReplyAndQuote && (
           <WaveDropActions
@@ -189,9 +206,20 @@ export default function EndedParticipationDrop({
           </div>
         </div>
 
-        {drop.metadata.length > 0 && (
+        {identityProfile && (
+          <div className="tw-ml-[3.25rem]">
+            <ParticipationIdentityProfileCard
+              profile={identityProfile}
+              contextId={drop.id}
+              variant="chat"
+              showIdentityHeader={!isSelfNominee}
+            />
+          </div>
+        )}
+
+        {visibleMetadata.length > 0 && (
           <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
-            <WaveDropMetadata metadata={drop.metadata} />
+            <WaveDropMetadata metadata={visibleMetadata} />
           </div>
         )}
         <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">

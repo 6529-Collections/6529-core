@@ -1,9 +1,12 @@
 "use client";
 
-import { formatNumberWithCommas } from "@/helpers/Helpers";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  formatMemesQuickVoteLeftThisRoundText,
+  formatMemesQuickVoteUnratedText,
+} from "@/hooks/memesQuickVote.helpers";
 import MemesQuickVoteActionBar from "./MemesQuickVoteActionBar";
+import MemesQuickVoteDescription from "./MemesQuickVoteDescription";
 import MemesQuickVoteDropHeader from "./MemesQuickVoteDropHeader";
 
 type VoteFeedbackSource = "custom-submit" | "quick-amount";
@@ -16,10 +19,11 @@ interface MemesQuickVoteControlsProps {
   readonly isCustomOpen: boolean;
   readonly isSubmitting: boolean;
   readonly isVoteFeedbackActive: boolean;
+  readonly leftThisRoundCount: number;
   readonly latestUsedAmount: number | null;
-  readonly remainingCount: number;
   readonly quickAmounts: readonly number[];
   readonly uncastPower: number | null;
+  readonly unratedCount: number;
   readonly votingLabel: string | null;
   readonly onCustomChange: (value: string) => void;
   readonly onCustomSubmit: () => void;
@@ -28,106 +32,23 @@ interface MemesQuickVoteControlsProps {
   readonly onVoteAmount: (amount: number) => void;
 }
 
-function MemesQuickVoteDescription({
-  description,
+function MemesQuickVoteStatPill({
+  children,
+  tone = "secondary",
 }: {
-  readonly description: string;
+  readonly children: string;
+  readonly tone?: "primary" | "secondary";
 }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isOverflowing, setIsOverflowing] = useState(false);
-  const visibleDescriptionRef = useRef<HTMLParagraphElement | null>(null);
-  const clampClass = isExpanded ? "tw-line-clamp-none" : "tw-line-clamp-4";
-  const descriptionClassName =
-    "tw-mb-0 tw-whitespace-pre-line tw-text-sm tw-font-medium tw-leading-relaxed tw-text-iron-400 md:tw-text-md";
-
-  const measureOverflow = useCallback(() => {
-    const visibleDescription = visibleDescriptionRef.current;
-
-    if (!visibleDescription) {
-      return;
-    }
-
-    const computedStyles = globalThis.getComputedStyle(visibleDescription);
-    const lineHeight = Number.parseFloat(computedStyles.lineHeight || "0");
-    const collapsedHeight = lineHeight * 4;
-
-    if (!Number.isFinite(collapsedHeight) || collapsedHeight <= 0) {
-      return;
-    }
-
-    const previousDisplay = visibleDescription.style.display;
-    const previousOverflow = visibleDescription.style.overflow;
-    const previousWebkitLineClamp = visibleDescription.style.webkitLineClamp;
-
-    visibleDescription.style.display = "block";
-    visibleDescription.style.overflow = "visible";
-    visibleDescription.style.webkitLineClamp = "unset";
-
-    const fullHeight = visibleDescription.getBoundingClientRect().height;
-
-    visibleDescription.style.display = previousDisplay;
-    visibleDescription.style.overflow = previousOverflow;
-    visibleDescription.style.webkitLineClamp = previousWebkitLineClamp;
-
-    const nextIsOverflowing = fullHeight > collapsedHeight + 1;
-
-    setIsOverflowing((current) =>
-      current === nextIsOverflowing ? current : nextIsOverflowing
-    );
-  }, []);
-
-  useEffect(() => {
-    const frameId = globalThis.requestAnimationFrame(() => {
-      measureOverflow();
-    });
-
-    if (typeof ResizeObserver === "undefined") {
-      const handleResize = () => {
-        measureOverflow();
-      };
-
-      globalThis.addEventListener("resize", handleResize);
-      return () => {
-        globalThis.removeEventListener("resize", handleResize);
-        globalThis.cancelAnimationFrame(frameId);
-      };
-    }
-
-    const observer = new ResizeObserver(() => {
-      measureOverflow();
-    });
-
-    if (visibleDescriptionRef.current) {
-      observer.observe(visibleDescriptionRef.current);
-    }
-
-    return () => {
-      observer.disconnect();
-      globalThis.cancelAnimationFrame(frameId);
-    };
-  }, [measureOverflow]);
-
   return (
-    <div className="tw-space-y-1.5">
-      <p
-        ref={visibleDescriptionRef}
-        className={`${descriptionClassName} ${clampClass}`}
-      >
-        {description}
-      </p>
-      {isOverflowing && (
-        <button
-          type="button"
-          aria-expanded={isExpanded}
-          onClick={() => {
-            setIsExpanded((current) => !current);
-          }}
-          className="tw-inline-flex tw-w-fit tw-border-0 tw-bg-transparent tw-px-0 tw-py-1 tw-text-xs tw-font-medium tw-leading-none tw-text-iron-500 tw-transition-colors tw-duration-200 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-white/15 desktop-hover:hover:tw-text-iron-300"
-        >
-          {isExpanded ? "See less" : "See more"}
-        </button>
-      )}
-    </div>
+    <span
+      className={`tw-rounded-full tw-border tw-border-solid tw-border-white/5 tw-bg-white/[0.03] tw-px-4 tw-py-1.5 tw-shadow-sm tw-backdrop-blur-md ${
+        tone === "primary"
+          ? "tw-text-[13px] tw-font-bold tw-text-iron-300"
+          : "tw-text-[13px] tw-font-medium tw-text-iron-400"
+      }`}
+    >
+      {children}
+    </span>
   );
 }
 
@@ -139,10 +60,11 @@ export default function MemesQuickVoteControls({
   isCustomOpen,
   isSubmitting,
   isVoteFeedbackActive,
+  leftThisRoundCount,
   latestUsedAmount,
-  remainingCount,
   quickAmounts,
   uncastPower,
+  unratedCount,
   votingLabel,
   onCustomChange,
   onCustomSubmit,
@@ -163,9 +85,12 @@ export default function MemesQuickVoteControls({
       className="tw-flex tw-shrink-0 tw-flex-col tw-gap-0 md:tw-h-full md:tw-min-h-0 md:tw-overflow-hidden md:tw-bg-[#0a0a0a]/30"
     >
       <div className="tw-hidden tw-shrink-0 tw-flex-wrap tw-gap-2 tw-px-8 md:tw-flex md:tw-pb-6 md:tw-pt-6">
-        <span className="tw-rounded-full tw-border tw-border-solid tw-border-white/5 tw-bg-white/[0.03] tw-px-4 tw-py-1.5 tw-text-[13px] tw-font-bold tw-text-iron-300 tw-shadow-sm tw-backdrop-blur-md">
-          {formatNumberWithCommas(remainingCount)} unexplored
-        </span>
+        <MemesQuickVoteStatPill tone="primary">
+          {formatMemesQuickVoteLeftThisRoundText(leftThisRoundCount)}
+        </MemesQuickVoteStatPill>
+        <MemesQuickVoteStatPill>
+          {formatMemesQuickVoteUnratedText(unratedCount)}
+        </MemesQuickVoteStatPill>
       </div>
 
       <div className="tw-relative tw-hidden tw-min-h-0 tw-flex-1 md:tw-flex">

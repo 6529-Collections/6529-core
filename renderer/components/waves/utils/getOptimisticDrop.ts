@@ -65,7 +65,10 @@ export const getOptimisticDrop = (
       admin_drop_deletion_enabled: false,
       authenticated_user_admin: false,
       forbid_negative_votes: wave.voting.forbid_negative_votes,
+      submission_type: wave.participation.submission_strategy?.type ?? null,
+      selections: wave.selections,
     },
+    selections: [],
     author: {
       id: connectedProfile.id,
       handle: connectedProfile.handle,

@@ -1,10 +1,36 @@
 "use client";
 
-import { usePrefetchMemesQuickVote } from "@/hooks/usePrefetchMemesQuickVote";
+import {
+  useMemesQuickVoteQueue,
+  type UseMemesQuickVoteQueueResult,
+} from "@/hooks/useMemesQuickVoteQueue";
 import { useCallback, useRef, useState } from "react";
+
+export type MemesQuickVoteDialogState = Pick<
+  UseMemesQuickVoteQueueResult,
+  | "activeDrop"
+  | "hasDiscoveryError"
+  | "isExhausted"
+  | "isRestartingRound"
+  | "leftThisRoundCount"
+  | "latestUsedAmount"
+  | "nextDrop"
+  | "recentAmounts"
+  | "retryDiscovery"
+  | "submitVote"
+  | "skipDrop"
+  | "uncastPower"
+  | "unratedCount"
+  | "votingLabel"
+> & {
+  readonly isOpen: boolean;
+  readonly onClose: () => void;
+  readonly sessionId: number;
+};
 
 type UseMemesQuickVoteDialogControllerResult = {
   readonly closeQuickVote: () => void;
+  readonly dialogState: MemesQuickVoteDialogState;
   readonly isQuickVoteOpen: boolean;
   readonly openQuickVote: () => void;
   readonly prefetchQuickVote: () => void;
@@ -13,12 +39,15 @@ type UseMemesQuickVoteDialogControllerResult = {
 
 export const useMemesQuickVoteDialogController =
   (): UseMemesQuickVoteDialogControllerResult => {
-    const prefetchMemesQuickVote = usePrefetchMemesQuickVote();
     const [isQuickVoteOpen, setIsQuickVoteOpen] = useState(false);
     const [quickVoteSessionId, setQuickVoteSessionId] = useState(0);
     const lastIssuedSessionIdRef = useRef(0);
     const reservedSessionIdRef = useRef<number | null>(null);
-    const prefetchedSessionIdsRef = useRef(new Set<number>());
+    const quickVoteQueue = useMemesQuickVoteQueue({
+      enabled: quickVoteSessionId > 0,
+      sessionId: quickVoteSessionId,
+    });
+    const { retryDiscovery } = quickVoteQueue;
 
     const reserveSessionId = useCallback(() => {
       if (reservedSessionIdRef.current !== null) {
@@ -31,17 +60,24 @@ export const useMemesQuickVoteDialogController =
     }, []);
 
     const prefetchQuickVote = useCallback(() => {
-      const sessionId = reserveSessionId();
-
-      if (prefetchedSessionIdsRef.current.has(sessionId)) {
+      if (quickVoteSessionId > 0) {
+        retryDiscovery();
         return;
       }
 
-      prefetchedSessionIdsRef.current.add(sessionId);
-      void prefetchMemesQuickVote(sessionId);
-    }, [prefetchMemesQuickVote, reserveSessionId]);
+      const sessionId = reserveSessionId();
+      lastIssuedSessionIdRef.current = sessionId;
+      reservedSessionIdRef.current = null;
+      setQuickVoteSessionId(sessionId);
+    }, [quickVoteSessionId, reserveSessionId, retryDiscovery]);
 
     const openQuickVote = useCallback(() => {
+      if (quickVoteSessionId > 0) {
+        retryDiscovery();
+        setIsQuickVoteOpen(true);
+        return;
+      }
+
       const sessionId =
         reservedSessionIdRef.current ?? lastIssuedSessionIdRef.current + 1;
 
@@ -49,7 +85,7 @@ export const useMemesQuickVoteDialogController =
       reservedSessionIdRef.current = null;
       setQuickVoteSessionId(sessionId);
       setIsQuickVoteOpen(true);
-    }, []);
+    }, [quickVoteSessionId, retryDiscovery]);
 
     const closeQuickVote = useCallback(() => {
       setIsQuickVoteOpen(false);
@@ -57,6 +93,25 @@ export const useMemesQuickVoteDialogController =
 
     return {
       closeQuickVote,
+      dialogState: {
+        activeDrop: quickVoteQueue.activeDrop,
+        hasDiscoveryError: quickVoteQueue.hasDiscoveryError,
+        isExhausted: quickVoteQueue.isExhausted,
+        isRestartingRound: quickVoteQueue.isRestartingRound,
+        isOpen: isQuickVoteOpen,
+        leftThisRoundCount: quickVoteQueue.leftThisRoundCount,
+        latestUsedAmount: quickVoteQueue.latestUsedAmount,
+        nextDrop: quickVoteQueue.nextDrop,
+        onClose: closeQuickVote,
+        recentAmounts: quickVoteQueue.recentAmounts,
+        retryDiscovery: quickVoteQueue.retryDiscovery,
+        sessionId: quickVoteSessionId,
+        skipDrop: quickVoteQueue.skipDrop,
+        submitVote: quickVoteQueue.submitVote,
+        uncastPower: quickVoteQueue.uncastPower,
+        unratedCount: quickVoteQueue.unratedCount,
+        votingLabel: quickVoteQueue.votingLabel,
+      },
       isQuickVoteOpen,
       openQuickVote,
       prefetchQuickVote,
