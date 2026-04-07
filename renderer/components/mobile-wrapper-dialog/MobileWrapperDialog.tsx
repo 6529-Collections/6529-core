@@ -9,6 +9,90 @@ import {
 import clsx from "clsx";
 import { Fragment } from "react";
 
+function DialogCloseButton({
+  onClick,
+  className,
+}: {
+  readonly onClick: () => void;
+  readonly className?: string;
+}) {
+  return (
+    <button
+      type="button"
+      title="Close panel"
+      aria-label="Close panel"
+      className={clsx(
+        "tw-inline-flex tw-items-center tw-justify-center tw-rounded-full tw-border-none tw-bg-transparent tw-p-2.5 tw-text-iron-400 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-white/[0.04] hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-white/20",
+        className
+      )}
+      onClick={onClick}
+    >
+      <svg
+        className="tw-h-6 tw-w-6 tw-flex-shrink-0 tw-text-current"
+        viewBox="0 0 24 24"
+        fill="none"
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <path
+          d="M18 6L6 18M6 6L18 18"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
+
+function DialogHeader({
+  title,
+  showDesktopCloseButton,
+  onClose,
+}: {
+  readonly title: string | undefined;
+  readonly showDesktopCloseButton: boolean;
+  readonly onClose: () => void;
+}) {
+  return (
+    <div className="tw-px-4 sm:tw-px-6">
+      <div className="tw-flex tw-items-start tw-justify-between tw-gap-3">
+        {title && (
+          <DialogTitle className="tw-text-base tw-font-semibold tw-text-iron-50">
+            {title}
+          </DialogTitle>
+        )}
+        {showDesktopCloseButton && (
+          <DialogCloseButton
+            onClick={onClose}
+            className="tw-hidden md:tw-inline-flex"
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function getSlideTransition(tabletModal?: boolean) {
+  return {
+    enter:
+      "tw-duration-250 sm:tw-duration-350 tw-transform tw-transition tw-ease-in-out",
+    enterFrom: clsx(
+      "tw-translate-y-full",
+      tabletModal && "md:tw-translate-y-4 md:tw-opacity-0"
+    ),
+    enterTo: clsx("tw-translate-y-0", tabletModal && "md:tw-opacity-100"),
+    leave:
+      "tw-duration-250 sm:tw-duration-350 tw-transform tw-transition tw-ease-in-out",
+    leaveFrom: clsx("tw-translate-y-0", tabletModal && "md:tw-opacity-100"),
+    leaveTo: clsx(
+      "tw-translate-y-full",
+      tabletModal && "md:tw-translate-y-4 md:tw-opacity-0"
+    ),
+  };
+}
+
 export default function MobileWrapperDialog({
   title,
   isOpen,
@@ -21,7 +105,9 @@ export default function MobileWrapperDialog({
   fixedHeight,
   tabletModal,
   showScrollbar,
+  allowOverflow,
   maxWidthClass,
+  dismissible = true,
 }: {
   readonly title?: string | undefined;
   readonly isOpen: boolean;
@@ -34,9 +120,16 @@ export default function MobileWrapperDialog({
   readonly fixedHeight?: boolean | undefined;
   readonly tabletModal?: boolean | undefined;
   readonly showScrollbar?: boolean | undefined;
+  readonly allowOverflow?: boolean | undefined;
   readonly maxWidthClass?: string | undefined;
+  readonly dismissible?: boolean | undefined;
 }) {
   const { isCapacitor, isIos } = useCapacitor();
+  const handleClose = () => {
+    if (dismissible) {
+      onClose();
+    }
+  };
 
   const bottomPadding = noPadding
     ? "env(safe-area-inset-bottom,0px)"
@@ -59,32 +152,19 @@ export default function MobileWrapperDialog({
 
   const containerClassNames = clsx(
     "tw-pointer-events-none tw-fixed tw-inset-x-0 tw-bottom-0 tw-flex tw-max-w-full tw-justify-center tw-pt-10",
-    tabletModal && "md:tw-inset-0 md:tw-items-center md:tw-pt-0 md:tw-p-6"
+    tabletModal && "md:tw-inset-0 md:tw-items-center md:tw-p-6 md:tw-pt-0"
   );
 
-  const slideTransition = {
-    enter:
-      "tw-duration-250 sm:tw-duration-350 tw-transform tw-transition tw-ease-in-out",
-    enterFrom: clsx(
-      "tw-translate-y-full",
-      tabletModal && "md:tw-translate-y-4 md:tw-opacity-0"
-    ),
-    enterTo: clsx("tw-translate-y-0", tabletModal && "md:tw-opacity-100"),
-    leave:
-      "tw-duration-250 sm:tw-duration-350 tw-transform tw-transition tw-ease-in-out",
-    leaveFrom: clsx("tw-translate-y-0", tabletModal && "md:tw-opacity-100"),
-    leaveTo: clsx(
-      "tw-translate-y-full",
-      tabletModal && "md:tw-translate-y-4 md:tw-opacity-0"
-    ),
-  };
+  const slideTransition = getSlideTransition(tabletModal);
+
+  const showDesktopHeaderCloseButton = dismissible && !!tabletModal;
 
   return (
     <Transition appear={true} show={isOpen} as={Fragment}>
       <Dialog
         as="div"
         className="tailwind-scope tw-absolute tw-z-[1010]"
-        onClose={onClose}
+        onClose={handleClose}
       >
         <TransitionChild
           as={Fragment}
@@ -104,7 +184,7 @@ export default function MobileWrapperDialog({
           className="tw-fixed tw-inset-0"
           onClick={(e) => {
             e.stopPropagation();
-            onClose();
+            handleClose();
           }}
         >
           <div
@@ -118,44 +198,32 @@ export default function MobileWrapperDialog({
                   style={{ touchAction: "manipulation" }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <TransitionChild
-                    as={Fragment}
-                    enter="tw-duration-250 tw-ease-in-out"
-                    enterFrom="tw-opacity-0"
-                    enterTo="tw-opacity-100"
-                    leave="tw-duration-250 tw-ease-in-out"
-                    leaveFrom="tw-opacity-100"
-                    leaveTo="tw-opacity-0"
-                  >
-                    <div className="tw-absolute -tw-top-16 tw-right-0 tw-flex tw-pt-4 tw-pr-2 md:tw-pr-0">
-                      <button
-                        type="button"
-                        title="Close panel"
-                        aria-label="Close panel"
-                        className="tw-relative tw-rounded-md tw-border-none tw-bg-transparent tw-p-2.5 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-white"
-                        onClick={onClose}
+                  {dismissible && (
+                    <TransitionChild
+                      as={Fragment}
+                      enter="tw-duration-250 tw-ease-in-out"
+                      enterFrom="tw-opacity-0"
+                      enterTo="tw-opacity-100"
+                      leave="tw-duration-250 tw-ease-in-out"
+                      leaveFrom="tw-opacity-100"
+                      leaveTo="tw-opacity-0"
+                    >
+                      <div
+                        className={clsx(
+                          "tw-absolute -tw-top-16 tw-right-0 tw-flex tw-pr-2 tw-pt-4 md:tw-pr-0",
+                          tabletModal && "md:tw-hidden"
+                        )}
                       >
-                        <svg
-                          className="tw-h-6 tw-w-6 tw-flex-shrink-0 tw-text-white"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          aria-hidden="true"
-                          xmlns="http://www.w3.org/2000/svg"
-                        >
-                          <path
-                            d="M18 6L6 18M6 6L18 18"
-                            stroke="currentColor"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </div>
-                  </TransitionChild>
+                        <DialogCloseButton onClick={handleClose} />
+                      </div>
+                    </TransitionChild>
+                  )}
                   <div
                     className={clsx(
-                      "tw-flex tw-flex-col tw-overflow-hidden tw-rounded-t-xl tw-bg-iron-950",
+                      "tw-flex tw-flex-col tw-rounded-t-xl tw-bg-iron-950",
+                      allowOverflow
+                        ? "tw-overflow-visible"
+                        : "tw-overflow-hidden",
                       tabletModal && "md:tw-rounded-xl"
                     )}
                     style={{
@@ -166,20 +234,22 @@ export default function MobileWrapperDialog({
                   >
                     <div
                       className={clsx(
-                        "tw-flex tw-scroll-py-3 tw-flex-col tw-overflow-y-auto tw-flex-1 tw-min-h-0",
+                        "tw-flex tw-min-h-0 tw-flex-1 tw-scroll-py-3 tw-flex-col",
+                        allowOverflow
+                          ? "tw-overflow-visible"
+                          : "tw-overflow-y-auto",
                         noPadding ? "tw-py-0" : "tw-py-6",
                         showScrollbar &&
+                          !allowOverflow &&
                           "tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300"
                       )}
                       style={{ paddingBottom: bottomPadding }}
                     >
-                      <div className="tw-px-4 sm:tw-px-6">
-                        {title && (
-                          <DialogTitle className="tw-text-base tw-font-semibold tw-text-iron-50">
-                            {title}
-                          </DialogTitle>
-                        )}
-                      </div>
+                      <DialogHeader
+                        title={title}
+                        showDesktopCloseButton={showDesktopHeaderCloseButton}
+                        onClose={handleClose}
+                      />
                       {children}
                     </div>
                   </div>

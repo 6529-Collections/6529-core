@@ -1009,6 +1009,12 @@ paths:
           required: false
           schema:
             type: string
+        - name: selection_id
+          in: query
+          description: Only include drops that belong to the given selection
+          required: false
+          schema:
+            type: string
         - name: serial_no_less_than
           in: query
           description: Used to find older drops
@@ -5643,6 +5649,12 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/ApiDropType"
+        - name: selection_id
+          in: query
+          description: Only include drops that belong to the given selection
+          required: false
+          schema:
+            type: string
       responses:
         "200":
           description: successful operation
@@ -5650,6 +5662,40 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiWaveDropsFeed"
+  /waves/{id}/undiscovered-drop:
+    get:
+      tags:
+        - Waves
+      summary: Get the next undiscovered participatory drop for quick vote
+      operationId: getWaveUndiscoveredDrop
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: skip
+          in: query
+          required: false
+          description: >-
+            Zero-based offset into the newest unvoted and unskipped drops for
+            this wave. If no unskipped drops remain, the offset applies to the
+            earliest skipped unvoted drops instead.
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiUndiscoveredDrop"
+        "403":
+          description: User is not eligible to quick vote in this wave
+        "404":
+          description: Wave not found
   /waves/{id}/pinned-drop:
     post:
       tags:
@@ -5856,6 +5902,122 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiDropsLeaderboardPage"
+  /waves/{id}/selections:
+    get:
+      tags:
+        - Waves
+      summary: List selections configured for wave
+      operationId: listWaveSelections
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiWaveSelection"
+    post:
+      tags:
+        - Waves
+      summary: Create selection for wave
+      operationId: createWaveSelection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiWaveSelectionRequest"
+      responses:
+        "201":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiWaveSelection"
+  /waves/{id}/selections/{selectionId}:
+    delete:
+      tags:
+        - Waves
+      summary: Delete selection from wave
+      operationId: deleteWaveSelection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: selectionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+  /waves/{id}/selections/{selectionId}/drops:
+    post:
+      tags:
+        - Waves
+      summary: Add drop to selection
+      operationId: addDropToWaveSelection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: selectionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiWaveSelectionDropRequest"
+      responses:
+        "201":
+          description: successful operation
+  /waves/{id}/selections/{selectionId}/drops/{dropId}:
+    delete:
+      tags:
+        - Waves
+      summary: Remove drop from selection
+      operationId: removeDropFromWaveSelection
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: selectionId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: dropId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
   /waves/{id}/curation-groups:
     get:
       tags:
@@ -8215,6 +8377,7 @@ components:
         - title
         - context_profile_context
         - subscribed_actions
+        - selections
         - rank
         - is_signed
         - reactions
@@ -8306,6 +8469,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropSubscriptionTargetAction"
+        selections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiWaveSelection"
         is_signed:
           type: boolean
         reactions:
@@ -8452,7 +8619,7 @@ components:
         resolved_profile:
           anyOf:
             - type: "null"
-            - $ref: "#/components/schemas/ApiProfileMin"
+            - $ref: "#/components/schemas/ApiDropResolvedIdentityProfile"
     ApiDropNftLink:
       type: object
       required:
@@ -8505,7 +8672,6 @@ components:
       type: object
       required:
         - rating
-        - category
       properties:
         rating:
           type: number
@@ -8513,6 +8679,7 @@ components:
         category:
           type: string
           maxLength: 100
+          nullable: true
     ApiDropReaction:
       type: object
       required:
@@ -8541,6 +8708,21 @@ components:
         name:
           type: string
           maxLength: 500
+    ApiDropResolvedIdentityProfile:
+      allOf:
+        - $ref: "#/components/schemas/ApiProfileMin"
+        - type: object
+          required:
+            - bio
+            - top_rep_categories
+          properties:
+            bio:
+              type: string
+              nullable: true
+            top_rep_categories:
+              type: array
+              items:
+                $ref: "#/components/schemas/ApiProfileRepCategorySummary"
     ApiDropSearchStrategy:
       type: string
       enum:
@@ -8666,6 +8848,7 @@ components:
         - raters_count
         - title
         - subscribed_actions
+        - selections
         - context_profile_context
         - rank
         - is_signed
@@ -8756,6 +8939,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropSubscriptionTargetAction"
+        selections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiWaveSelection"
         is_signed:
           type: boolean
         reactions:
@@ -10370,6 +10557,17 @@ components:
         - READ_WAVE
         - CREATE_DROP_TO_WAVE
         - RATE_WAVE_DROP
+    ApiProfileRepCategorySummary:
+      type: object
+      required:
+        - category
+        - rep
+      properties:
+        category:
+          type: string
+        rep:
+          type: number
+          format: int64
     ApiPushNotificationDevice:
       type: object
       required:
@@ -10918,6 +11116,23 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiTransaction"
+    ApiUndiscoveredDrop:
+      type: object
+      required:
+        - drop
+        - left_to_vote_in_current_round
+        - total_count
+      properties:
+        drop:
+          anyOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ApiDrop"
+        left_to_vote_in_current_round:
+          type: integer
+          format: int64
+        total_count:
+          type: integer
+          format: int64
     ApiUpcomingMemeSubscriptionStatus:
       type: object
       required:
@@ -11057,10 +11272,6 @@ components:
         visibility:
           $ref: "#/components/schemas/ApiCreateNewWaveVisibilityConfig"
         participation:
-          description: >-
-            Wave participation configuration. `submission_strategy` is immutable
-            after creation and, if provided on update, must match the existing
-            value exactly.
           $ref: "#/components/schemas/ApiUpdateWaveParticipationConfig"
         chat:
           $ref: "#/components/schemas/ApiCreateNewWaveChatConfig"
@@ -11148,6 +11359,7 @@ components:
         - subscribed_actions
         - metrics
         - pauses
+        - selections
         - pinned
       properties:
         id:
@@ -11200,6 +11412,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiWaveDecisionPause"
+        selections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiWaveSelection"
         pinned:
           type: boolean
     ApiWaveChatConfig:
@@ -11539,6 +11755,7 @@ components:
         - picture
         - description_drop_id
         - last_drop_time
+        - submission_type
         - authenticated_user_eligible_to_vote
         - authenticated_user_eligible_to_participate
         - authenticated_user_eligible_to_chat
@@ -11553,6 +11770,7 @@ components:
         - admin_group_id
         - admin_drop_deletion_enabled
         - forbid_negative_votes
+        - selections
         - pinned
       properties:
         id:
@@ -11568,6 +11786,10 @@ components:
           description: Unix timestamp in milliseconds of the most recent drop in this wave
           type: number
           format: int64
+        submission_type:
+          anyOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ApiWaveParticipationSubmissionStrategyType"
         authenticated_user_eligible_to_vote:
           type: boolean
         authenticated_user_eligible_to_participate:
@@ -11605,6 +11827,10 @@ components:
           type: boolean
         forbid_negative_votes:
           type: boolean
+        selections:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiWaveSelection"
         pinned:
           type: boolean
     ApiWaveOutcome:
@@ -11794,6 +12020,32 @@ components:
           anyOf:
             - type: "null"
             - $ref: "#/components/schemas/ApiGroup"
+    ApiWaveSelection:
+      type: object
+      required:
+        - id
+        - title
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+    ApiWaveSelectionDropRequest:
+      type: object
+      required:
+        - drop_id
+      properties:
+        drop_id:
+          type: string
+    ApiWaveSelectionRequest:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 250
     ApiWavesOverviewType:
       type: string
       enum:

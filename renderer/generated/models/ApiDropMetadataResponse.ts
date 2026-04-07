@@ -11,13 +11,13 @@
  * Do not edit the class manually.
  */
 
-import { ApiProfileMin } from '../models/ApiProfileMin';
+import { ApiDropResolvedIdentityProfile } from '../models/ApiDropResolvedIdentityProfile';
 import { HttpFile } from '../http/http';
 
 export class ApiDropMetadataResponse {
     'data_key': string;
     'data_value': string;
-    'resolved_profile'?: ApiProfileMin | null;
+    'resolved_profile'?: ApiDropResolvedIdentityProfile | null;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -39,7 +39,7 @@ export class ApiDropMetadataResponse {
         {
             "name": "resolved_profile",
             "baseName": "resolved_profile",
-            "type": "ApiProfileMin",
+            "type": "ApiDropResolvedIdentityProfile",
             "format": ""
         }    ];
 

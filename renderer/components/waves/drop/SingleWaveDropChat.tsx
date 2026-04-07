@@ -1,16 +1,17 @@
 "use client";
 
-import { ApiDrop, ApiWave } from "@/generated/models/ObjectSerializer";
+import React, { useMemo, useState } from "react";
+import type { ApiDrop, ApiWave } from "@/generated/models/ObjectSerializer";
 import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import { ActiveDropAction } from "@/types/dropInteractionTypes";
-import React, { useMemo, useState } from "react";
 import {
   CreateDropWaveWrapper,
   CreateDropWaveWrapperContext,
 } from "../CreateDropWaveWrapper";
-import PrivilegedDropCreator, { DropMode } from "../PrivilegedDropCreator";
+import PrivilegedDropCreator from "../PrivilegedDropCreator";
+import { DropMode } from "../dropComposer.types";
 import WaveDropsAll from "../drops/wave-drops-all";
 
 interface SingleWaveDropChatProps {
@@ -41,15 +42,15 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   });
 
   const handleDropAction = ({
-    drop,
+    targetDrop,
     partId,
     action,
   }: {
-    drop: ApiDrop;
+    targetDrop: ApiDrop;
     partId: number;
     action: ActiveDropAction;
   }) => {
-    setActiveDrop({ action, drop, partId });
+    setActiveDrop({ action, drop: targetDrop, partId });
   };
 
   const resetActiveDrop = () => {
@@ -70,14 +71,14 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                 <WaveDropsAll
                   waveId={wave.id}
                   onReply={({
-                    drop,
+                    drop: repliedDrop,
                     partId,
                   }: {
                     drop: ApiDrop;
                     partId: number;
                   }) =>
                     handleDropAction({
-                      drop,
+                      targetDrop: repliedDrop,
                       partId,
                       action: ActiveDropAction.REPLY,
                     })
@@ -86,7 +87,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                   initialDrop={null}
                   unreadCount={wave.metrics.your_unread_drops_count}
                   dropId={drop.id}
-                  isMuted={wave.metrics?.muted ?? false}
+                  isMuted={wave.metrics.muted}
                 />
               </div>
               <div
