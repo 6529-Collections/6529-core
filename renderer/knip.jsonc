@@ -17,6 +17,7 @@
       "eslint.config.single.mjs",
       "eslint.config.tight.mjs",
       "eslint.config.diff.mjs",
+      "eslint.config.single.mjs",
       "jest.config.js",
       "jest.setup.js",
       "next-sitemap.config.ts",

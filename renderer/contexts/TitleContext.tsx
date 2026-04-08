@@ -91,9 +91,9 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
     pathname?.startsWith("/messages") ||
     (pathname === "/" && searchParams?.get("view") === "waves");
   const waveParam = isWaveRoute
-    ? myStream?.activeWave.id ??
+    ? (myStream?.activeWave.id ??
       getActiveWaveIdFromUrl({ pathname, searchParams }) ??
-      null
+      null)
     : null;
 
   useEffect(() => {

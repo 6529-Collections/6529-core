@@ -14,7 +14,9 @@ export async function register() {
 
 export const onRequestError = sentryEnabled
   ? async (
-      ...args: Parameters<typeof import("@sentry/nextjs")["captureRequestError"]>
+      ...args: Parameters<
+        (typeof import("@sentry/nextjs"))["captureRequestError"]
+      >
     ) => {
       if (!serverInstrumentationEnabled) return;
       const Sentry = await import("@sentry/nextjs");
