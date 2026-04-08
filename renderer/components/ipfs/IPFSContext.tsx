@@ -1,11 +1,7 @@
 "use client";
 
-<<<<<<< HEAD
-import { parseIpfsUrl } from "@/helpers/Helpers";
-=======
 import { publicEnv } from "@/config/env";
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
->>>>>>> main
 import React, {
   createContext,
   useContext,
@@ -31,7 +27,15 @@ const IpfsContext = createContext<IpfsContextType | undefined>(undefined);
 
 let cachedGatewayBase: string | null = null;
 
-<<<<<<< HEAD
+const normalizeGatewayBase = (gatewayEndpoint: string): string => {
+  let trimmed = gatewayEndpoint;
+  while (trimmed.endsWith("/")) {
+    trimmed = trimmed.slice(0, -1);
+  }
+
+  return trimmed.endsWith("/ipfs") ? trimmed.slice(0, -5) : trimmed;
+};
+
 const buildIpfsConfig = (input: {
   apiEndpoint?: string | null;
   gatewayEndpoint?: string | null;
@@ -45,40 +49,13 @@ const buildIpfsConfig = (input: {
   const gatewayEndpoint =
     input.gatewayEndpoint?.trim() ||
     (input.ipfsPort ? `http://127.0.0.1:${input.ipfsPort}` : "");
-=======
-const normalizeGatewayBase = (gatewayEndpoint: string): string => {
-  let trimmed = gatewayEndpoint;
-  while (trimmed.endsWith("/")) {
-    trimmed = trimmed.slice(0, -1);
-  }
-
-  return trimmed.endsWith("/ipfs") ? trimmed.slice(0, -5) : trimmed;
-};
-
-const readIpfsConfig = async () => {
-  const ipfsInfo = await window.api.getIpfsInfo();
-  const apiEndpoint = ipfsInfo.apiEndpoint;
-  const gatewayEndpoint = ipfsInfo.gatewayEndpoint;
->>>>>>> main
 
   if (!apiEndpoint || !gatewayEndpoint) {
     throw new Error("Missing IPFS_API_ENDPOINT or IPFS_GATEWAY_ENDPOINT");
   }
 
-<<<<<<< HEAD
-  let trimmed = gatewayEndpoint;
-  while (trimmed.endsWith("/")) {
-    trimmed = trimmed.slice(0, -1);
-  }
-
-  const gatewayBase = trimmed.endsWith("/ipfs")
-    ? trimmed.slice(0, -5)
-    : trimmed;
-=======
   const trimmedGatewayEndpoint = gatewayEndpoint.replace(/\/+$/, "");
   const gatewayBase = normalizeGatewayBase(trimmedGatewayEndpoint);
-  const mfsPath = ipfsInfo.mfsPath;
->>>>>>> main
 
   return {
     apiEndpoint,
@@ -100,7 +77,7 @@ const readIpfsConfig = async () => {
   try {
     const ipfsInfo = await bridge.getIpfsInfo();
     return buildIpfsConfig(ipfsInfo ?? {});
-  } catch (error) {
+  } catch {
     const appInfo = await bridge.getInfo();
     return buildIpfsConfig(appInfo ?? {});
   }
@@ -232,16 +209,11 @@ export const resolveIpfsUrlSync = (url: string) => {
     return url;
   }
 
-<<<<<<< HEAD
-  if (!cachedGatewayBase) {
-    return parseIpfsUrl(url);
-=======
   try {
     return rewriteGatewayUrl(url, gatewayBase) ?? url;
   } catch (error) {
     console.error("Error resolving IPFS URL", error);
     return url;
->>>>>>> main
   }
 };
 
