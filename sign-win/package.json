@@ -3,14 +3,14 @@
   "type": "module",
   "scripts": {
     "win-update-latest": "tsx ./win-update-latest.ts",
-    "sign-win": "tsx ./sign-win.ts && npm run win-update-latest",
+    "sign-win": "tsx ./sign-win.ts && pnpm run win-update-latest",
     "clean-win": "rimraf ../dist main renderer/out renderer/.next",
     "download-staging-win-unsigned": "aws s3 sync s3://6529bucket/6529-staging-core-app/win-unsigned/ ../dist",
     "download-production-win-unsigned": "aws s3 sync s3://6529bucket/6529-core-app/win-unsigned/ ../dist",
     "upload-staging-win-signed": "aws s3 sync ../dist s3://6529bucket/6529-staging-core-app/win/",
     "upload-production-win-signed": "aws s3 sync ../dist s3://6529bucket/6529-core-app/win/",
-    "sign-publish-staging-win": "npm run clean-win && npm run download-staging-win-unsigned && npm run sign-win && npm run upload-staging-win-signed",
-    "sign-publish-production-win": "npm run clean-win && npm run download-production-win-unsigned && npm run sign-win && npm run upload-production-win-signed"
+    "sign-publish-staging-win": "pnpm run clean-win && pnpm run download-staging-win-unsigned && pnpm run sign-win && pnpm run upload-staging-win-signed",
+    "sign-publish-production-win": "pnpm run clean-win && pnpm run download-production-win-unsigned && pnpm run sign-win && pnpm run upload-production-win-signed"
   },
   "dependencies": {
     "dotenv": "^16.4.7",
@@ -20,5 +20,6 @@
     "js-yaml": "^4.1.0",
     "tsx": "^4.19.3",
     "typescript": "^5.8.3"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }

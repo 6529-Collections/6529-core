@@ -27,6 +27,8 @@ jobs:
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       CERT_NAME: ${{ secrets.CERT_NAME }}
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check if should run
@@ -44,11 +46,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        if: ${{ inputs.should_run }}
+        run: corepack enable pnpm
 
       - name: Install signing dependencies
         if: ${{ inputs.should_run }}
-        working-directory: ./sign-win
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Set up .NET SDK
         if: ${{ inputs.should_run }}
@@ -78,13 +84,12 @@ jobs:
 
       - name: Sign executables & upload to S3
         if: ${{ inputs.should_run }}
-        working-directory: ./sign-win
         shell: pwsh
         run: |
           if ("${{ inputs.env }}" -eq "Staging") {
-            npm run sign-publish-staging-win
+            pnpm run sign-publish-staging-win
           } else {
-            npm run sign-publish-production-win
+            pnpm run sign-publish-production-win
           }
 
       - name: Notify Discord on failure

@@ -31,6 +31,20 @@ try {
 }
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const electronRendererFiles = [
+  "app/core/**",
+  "components/core/**",
+  "components/header/titlebar/**",
+  "contexts/SeedWalletContext.tsx",
+  "hooks/useLocalStorage.ts",
+  "lib/fetch/ssrFetch.ts",
+  "wagmiConfig/**",
+];
+const rootBackedDependencyFiles = [
+  ...electronRendererFiles,
+  "contexts/SearchContext.tsx",
+  "helpers/emoji.helpers.ts",
+];
 
 // =============================================================================
 // PLUGINS
@@ -432,6 +446,7 @@ export default defineConfig([
     "*.tsx",
     "scripts/**",
     "stubs/**",
+    "**/.next-static-export/**",
     ".claude/**",
     ".codex/**",
   ]),
@@ -469,6 +484,7 @@ export default defineConfig([
     ignores: [
       "scripts/**",
       "**/next.config.*",
+      "**/.next-static-export/**",
       "config/env.ts",
       "config/serverEnv.ts",
       "config/alchemyEnv.ts",
@@ -493,6 +509,20 @@ export default defineConfig([
             "Accessing process.env is restricted. Use environment variables safely.",
         },
       ],
+    },
+  },
+
+  {
+    files: electronRendererFiles,
+    rules: {
+      "no-console": ["error", { allow: ["warn", "error", "log"] }],
+    },
+  },
+
+  {
+    files: rootBackedDependencyFiles,
+    rules: {
+      "import/no-extraneous-dependencies": "off",
     },
   },
 
