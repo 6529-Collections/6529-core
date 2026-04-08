@@ -1,7 +1,7 @@
 import TDHCalculation from "@/components/core/tdh-calculation/TDHCalculation";
 import { getAppMetadata } from "@/components/providers/metadata";
 import styles from "@/styles/Home.module.scss";
-import { Metadata } from "playwright/types/test";
+import type { Metadata } from "next";
 
 export default function TDHConsensusPage() {
   return (

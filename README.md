@@ -74,7 +74,8 @@ After pulling frontend changes (or on a fresh clone), run:
 - resolve conflicts
 - run `6529 install`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
-- update root `next.config.mjs` with any related changes from `renderer/next.config.mjs` and delete file `renderer/next.config.mjs`
+- merge any relevant `renderer/next.config.ts` changes into root `next.config.ts`
+- ensure `renderer/next.config.ts` is removed; this repo uses the root Next config overlay
 
 ### Running locally - dev
 
