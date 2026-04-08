@@ -143,7 +143,7 @@ jobs:
 
       - name: Install signing dependencies
         if: ${{ inputs.should_run }}
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Set up .NET SDK
         if: ${{ inputs.should_run }}
