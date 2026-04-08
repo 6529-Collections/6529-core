@@ -425,6 +425,7 @@ export default defineConfig([
     "*.tsx",
     "scripts/**",
     "stubs/**",
+    "**/.next-static-export/**",
     ".claude/**",
     ".codex/**",
   ]),
@@ -462,6 +463,7 @@ export default defineConfig([
     ignores: [
       "scripts/**",
       "**/next.config.*",
+      "**/.next-static-export/**",
       "config/env.ts",
       "config/serverEnv.ts",
       "config/alchemyEnv.ts",

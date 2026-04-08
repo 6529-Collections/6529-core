@@ -17,6 +17,9 @@ jobs:
   build-windows:
     name: ${{ inputs.should_run && 'Build' || 'Build Skipped' }}
     runs-on: macos-latest
+    env:
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check if should run
@@ -49,6 +52,11 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        if: ${{ inputs.should_run }}
+        run: corepack enable pnpm
 
       - name: Install Python 3.11 with distutils
         if: ${{ inputs.should_run }}
@@ -62,11 +70,7 @@ jobs:
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
-        run: npm ci
-
-      - name: Install renderer dependencies
-        if: ${{ inputs.should_run }}
-        run: npm run install-renderer-deps-ci
+        run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}
@@ -90,9 +94,9 @@ jobs:
         if: ${{ inputs.should_run }}
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
-            npm run dist-win-staging-upload
+            pnpm run dist-win-staging-upload
           else
-            npm run dist-win-production-upload
+            pnpm run dist-win-production-upload
           fi
 
   sign-windows:
@@ -106,6 +110,8 @@ jobs:
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       CERT_NAME: ${{ secrets.CERT_NAME }}
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check if should run
@@ -123,11 +129,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        if: ${{ inputs.should_run }}
+        run: corepack enable pnpm
 
       - name: Install signing dependencies
         if: ${{ inputs.should_run }}
-        working-directory: ./sign-win
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Set up .NET SDK
         if: ${{ inputs.should_run }}
@@ -157,11 +167,10 @@ jobs:
 
       - name: Sign executables & upload to S3
         if: ${{ inputs.should_run }}
-        working-directory: ./sign-win
         shell: pwsh
         run: |
           if ("${{ inputs.env }}" -eq "Staging") {
-            npm run sign-publish-staging-win
+            pnpm run sign-publish-staging-win
           } else {
-            npm run sign-publish-production-win
+            pnpm run sign-publish-production-win
           }

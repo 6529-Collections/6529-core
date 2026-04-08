@@ -27,10 +27,31 @@ git checkout pull-web
 git merge main
 ```
 
-Run the following script to fetch new changes from branch 'main' of 6529seize-frontend repository
+Bootstrap the repo-scoped `6529` wrapper once from the repo root:
 
 ```
-npm run pull-web
+./bin/6529 bootstrap
+```
+
+Then open a new shell, or activate the current one immediately:
+
+```bash
+source <(./bin/6529 bootstrap --print-export)
+```
+
+Install dependencies for both the Electron repo and the `renderer/` subtree:
+
+```bash
+6529 install
+```
+
+Do not `cd renderer` for bootstrap or installs in this repo. The supported
+entrypoint is the root wrapper only.
+
+Run the following command to fetch new changes from branch `main` of `6529seize-frontend`:
+
+```
+6529 pull-web
 ```
 
 ⚠️ Note: there might be conflicts that need resolving
@@ -41,7 +62,7 @@ Renderer dependencies are installed from `renderer/package.json`.
 After pulling frontend changes (or on a fresh clone), run:
 
 ```bash
-npm run deps
+6529 install
 ```
 
 ##### Checklist
@@ -49,9 +70,9 @@ npm run deps
 - start from latest `main`
 - checkout branch `pull-web`
 - merge `main` into `pull-web`
-- run `npm run pull-web`
+- run `6529 pull-web`
 - resolve conflicts
-- run `npm run deps`
+- run `6529 install`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - update root `next.config.mjs` with any related changes from `renderer/next.config.mjs` and delete file `renderer/next.config.mjs`
 
@@ -60,24 +81,27 @@ npm run deps
 Use:
 
 ```bash
-npm run deps
-npm run dev
+6529 install
+6529 run dev
 ```
 
 or if running on a Windows machine:
 
 ```bash
-npm run deps
-npm run dev-win
+6529 install
+6529 run dev-win
 ```
 
 Optional dependency security check:
 
 ```bash
-npm run audit-deps
+6529 run audit-deps
 ```
 
-CI note: workflows intentionally use deterministic installs with `npm ci` and then `npm run install-renderer-deps-ci`.
+The `6529` shim is repo-scoped. After bootstrap it is only injected while your current working directory is inside this repository tree; it is not intended to become a machine-global command.
+
+CI and GitHub Actions now use the same root pnpm flow. There is no separate
+npm bootstrap path for Windows signing or CloudFront invalidation jobs.
 
 ## Building and Publishing
 
@@ -90,7 +114,7 @@ This project uses `better-sqlite3`
 When changing between building different platforms, you need to rebuild this package first by running:
 
 ```
-npm run rebuild-sql
+6529 run rebuild-sql
 ```
 
 Use the following steps to build for each platform:
@@ -102,13 +126,13 @@ Use the following steps to build for each platform:
 Staging
 
 ```
-npm run dist-win-staging-upload
+6529 run dist-win-staging-upload
 ```
 
 Production
 
 ```
-npm run dist-win-production-upload
+6529 run dist-win-production-upload
 ```
 
 The above commands will:
@@ -131,13 +155,13 @@ Use [**Build All Platforms** GitHub workflow](https://github.com/6529-Collection
 Staging
 
 ```
-npm run dist-mac-staging
+6529 run dist-mac-staging
 ```
 
 Production
 
 ```
-npm run dist-mac-production
+6529 run dist-mac-production
 ```
 
 Packaged versions: arm64 (silicon), x64 (intel)
