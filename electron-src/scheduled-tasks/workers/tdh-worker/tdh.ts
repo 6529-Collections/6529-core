@@ -17,6 +17,7 @@ import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses, getDaysDiff } from "../../../../shared/helpers";
+import * as numbers from "../../../../shared/numbers";
 import { Time } from "../../../../shared/time";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
 import { logInfo, sendStatusUpdate } from "../../worker-helpers";
@@ -49,7 +50,7 @@ export const ADDITIONAL_CARD_SET_BOOST = 0.05;
 export const ADDITIONAL_CARD_SET_RATIO = 0.6529;
 
 function roundBoostValue(value: number): number {
-  return Math.round(value * 1e6) / 1e6;
+  return numbers.roundDecimals(value, 6);
 }
 
 function getBoostableSeasons(seasons: MemesSeason[]): MemesSeason[] {
