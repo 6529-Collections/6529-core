@@ -17,6 +17,9 @@ jobs:
   build-linux:
     name: ${{ inputs.should_run && 'Build' || 'Skipped' }}
     runs-on: ubuntu-latest
+    env:
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check if should run
@@ -49,14 +52,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        if: ${{ inputs.should_run }}
+        run: corepack enable pnpm
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
-        run: npm ci
-
-      - name: Install renderer dependencies
-        if: ${{ inputs.should_run }}
-        run: npm run install-renderer-deps-ci
+        run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}
@@ -81,8 +85,8 @@ jobs:
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
             echo "Building for Staging..."
-            npm run dist-linux-staging
+            pnpm run dist-linux-staging
           else
             echo "Building for Production..."
-            npm run dist-linux-production
+            pnpm run dist-linux-production
           fi

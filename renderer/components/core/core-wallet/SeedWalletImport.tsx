@@ -10,7 +10,7 @@ import { ethers } from "ethers";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
-import { MNEMONIC_NA } from "../../../../electron-constants";
+import { MNEMONIC_NA } from "@/electron-constants";
 import { useToast } from "../../../contexts/ToastContext";
 import { getRandomKey } from "../../../helpers";
 import { CreateSeedWalletModal } from "./SeedWalletModal";

@@ -14,8 +14,10 @@
       "scripts/**/*.{ts,js,cjs,mjs}",  // local CLIs used via package.json scripts
       "bin/**/*.mjs",                // repo-local Node CLIs launched from shell helpers
       "app/**/route.{ts,tsx}",         // Next App Router route handlers (if used)
+      "eslint.config.single.mjs",
       "eslint.config.tight.mjs",
       "eslint.config.diff.mjs",
+      "eslint.config.single.mjs",
       "jest.config.js",
       "jest.setup.js",
       "next-sitemap.config.ts",
@@ -41,6 +43,7 @@
       "playwright.config.ts": ["exports"],
       "next-sitemap.config.ts": ["exports"],
       "jest.config.js": ["exports"],
+      "eslint.config.single.mjs": ["exports"],
       "eslint.config.tight.mjs": ["exports"],
       "eslint.config.diff.mjs": ["exports"],
       "utils/sentry-client-filters.ts": ["exports", "types"],

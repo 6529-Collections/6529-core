@@ -22,6 +22,8 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check if should run
@@ -73,14 +75,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        if: ${{ inputs.should_run }}
+        run: corepack enable pnpm
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
-        run: npm ci
-
-      - name: Install renderer dependencies
-        if: ${{ inputs.should_run }}
-        run: npm run install-renderer-deps-ci
+        run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}
@@ -112,10 +115,10 @@ jobs:
         run: |
           if [ "${{ inputs.env }}" = "Staging" ]; then
             echo "Building for Staging..."
-            npm run dist-mac-staging
+            pnpm run dist-mac-staging
           else
             echo "Building for Production..."
-            npm run dist-mac-production-arm64
+            pnpm run dist-mac-production-arm64
           fi
 
       - name: Upload arm64 artifact
@@ -134,6 +137,8 @@ jobs:
       APPLE_ID: ${{ secrets.APPLE_ID }}
       APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check if should run
@@ -185,14 +190,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        if: ${{ inputs.should_run }}
+        run: corepack enable pnpm
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
-        run: npm ci
-
-      - name: Install renderer dependencies
-        if: ${{ inputs.should_run }}
-        run: npm run install-renderer-deps-ci
+        run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}
@@ -221,7 +227,7 @@ jobs:
 
       - name: Build for x64
         if: ${{ inputs.should_run }}
-        run: npm run dist-mac-production-x64
+        run: pnpm run dist-mac-production-x64
 
       - name: Upload x64 artifact
         if: ${{ inputs.should_run && inputs.env == 'Production' }}
@@ -246,9 +252,16 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        run: corepack enable pnpm
 
       - name: Install dependencies
-        run: npm ci
+        env:
+          SEIZE_6529_COMMAND: "1"
+          SEIZE_SECURE_INSTALL: "1"
+        run: pnpm install --frozen-lockfile
 
       - name: Download arm64 artifact
         uses: actions/download-artifact@v4

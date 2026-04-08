@@ -13,6 +13,16 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES = [
+  "arweave.net",
+  "**.arweave.net",
+  "ardrive.net",
+  "**.ardrive.net",
+  "gateway.arweave.net",
+  "**.gateway.arweave.net",
+  "gateway.ar.io",
+  "**.gateway.ar.io",
+];
 
 function logOnce(label: string, message: string | undefined): void {
   const k = `__LOG_${label}_ONCE__`;
@@ -251,16 +261,27 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         { protocol: "http", hostname: "staging.6529.io" },
         { protocol: "https", hostname: "arweave.net" },
         { protocol: "http", hostname: "arweave.net" },
+        ...ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES.map((hostname) => ({
+          protocol: "https" as const,
+          hostname,
+        })),
         { protocol: "https", hostname: "localhost" },
         { protocol: "http", hostname: "localhost" },
         { protocol: "https", hostname: "media.generator.seize.io" },
         { protocol: "http", hostname: "media.generator.seize.io" },
         { protocol: "https", hostname: "d3lqz0a4bldqgf.cloudfront.net" },
         { protocol: "http", hostname: "d3lqz0a4bldqgf.cloudfront.net" },
+        { protocol: "https", hostname: "img.youtube.com" },
+        { protocol: "https", hostname: "i.seadn.io" },
+        { protocol: "https", hostname: "i2.seadn.io" },
+        { protocol: "https", hostname: "i2c.seadn.io" },
+        { protocol: "https", hostname: "i.ytimg.com" },
+        { protocol: "https", hostname: "res.cloudinary.com" },
         { protocol: "https", hostname: "robohash.org" },
         { protocol: "http", hostname: "robohash.org" },
         { protocol: "https", hostname: "ipfs.6529.io" },
         { protocol: "http", hostname: "ipfs.6529.io" },
+        { protocol: "https", hostname: "ipfs.io" },
         { protocol: "https", hostname: "127.0.0.1" },
         { protocol: "http", hostname: "127.0.0.1" },
       ],
@@ -271,6 +292,9 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     },
     transpilePackages: ["react-tweet"],
     poweredByHeader: false,
+    logging: {
+      incomingRequests: false,
+    },
     async headers() {
       return [
         {
@@ -301,9 +325,10 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           config.optimization.moduleIds = "named";
           config.optimization.chunkIds = "named";
         }
-      }
+        }
       return config;
     },
+    serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
   };
 }
 

@@ -17,6 +17,8 @@ jobs:
       AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
       AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
       CERT_NAME: ${{ secrets.CERT_NAME }}
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
 
     steps:
       - name: Check out
@@ -29,10 +31,13 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 22
+          cache: pnpm
+
+      - name: Enable Corepack pnpm
+        run: corepack enable pnpm
 
       - name: Install signing dependencies
-        working-directory: ./sign-win
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4
@@ -50,9 +55,8 @@ jobs:
         shell: pwsh
 
       - name: Sign IPFS binaries
-        working-directory: ./sign-win
         shell: pwsh
-        run: npx tsx sign-win.ts --ipfs
+        run: pnpm run sign-ipfs
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4

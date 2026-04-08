@@ -11,7 +11,9 @@ const OUT_NODE_MODULES_PATHS = [
 ];
 const SOURCE_NODE_MODULES_PATHS = [
   path.join(ROOT, "renderer", "node_modules"),
+  path.join(ROOT, "renderer", "node_modules", ".pnpm", "node_modules"),
   path.join(ROOT, "node_modules"),
+  path.join(ROOT, "node_modules", ".pnpm", "node_modules"),
 ];
 
 const materializeSymlinksInTree = (rootPath, basePath, allowedRoots) => {

@@ -82,7 +82,7 @@ const enhancedFetch: typeof fetch = async (
     clientId = env.SSR_CLIENT_ID;
     clientSecret = env.SSR_CLIENT_SECRET;
   } catch {
-    console.debug(
+    console.warn(
       `[SSR Fetch] [PATH: ${path}] SSR credentials unavailable, falling back to unauthenticated fetch. Internal rate limits will not be bypassed.`
     );
     return originalFetch(input, init);
@@ -119,7 +119,7 @@ const enhancedFetch: typeof fetch = async (
       enhancedHeaders.set(key, value);
     });
   } catch (error) {
-    console.debug(
+    console.warn(
       `[SSR Fetch] [PATH: ${path}] Failed to get app common headers:`,
       error instanceof Error ? error.message : error
     );
