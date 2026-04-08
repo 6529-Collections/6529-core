@@ -179,7 +179,7 @@ jobs:
         env:
           SEIZE_6529_COMMAND: "1"
           SEIZE_SECURE_INSTALL: "1"
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Configure AWS Credentials
         if: env.SHOULD_FAIL != 'true'
@@ -286,7 +286,7 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
