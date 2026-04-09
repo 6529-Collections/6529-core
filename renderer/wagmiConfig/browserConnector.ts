@@ -25,6 +25,9 @@ const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
 const INVALID_CONNECTION_PAYLOAD_ERROR =
   "Invalid connection payload: accounts must be array of 0x-prefixed 40-hex strings and chainId must be a positive integer.";
 
+export const BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT =
+  "6529-browser-connector-connection-changed";
+
 const parsePositiveChainId = (chainId: unknown): number | null => {
   if (
     typeof chainId === "number" &&
@@ -105,6 +108,20 @@ export function browserConnector(parameters: {
   icon: string;
   id: string;
 }) {
+  const dispatchBrowserConnectorConnectionChanged = (
+    address: `0x${string}` | null
+  ) => {
+    if (globalThis.window === undefined) {
+      return;
+    }
+
+    globalThis.window.dispatchEvent(
+      new CustomEvent(BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT, {
+        detail: { address },
+      })
+    );
+  };
+
   type PendingDeepLinkResponse = {
     response: ProviderResponse;
     receivedAt: number;
@@ -431,6 +448,9 @@ export function browserConnector(parameters: {
               connectionStoreKey,
               JSON.stringify(connectionObject)
             );
+            dispatchBrowserConnectorConnectionChanged(
+              accountToActivate ?? null
+            );
 
             if (opts?.withCapabilities) {
               const accountsWithCaps = validatedAccounts.map((address) => ({
@@ -466,6 +486,7 @@ export function browserConnector(parameters: {
         chainId: 1,
       };
       await window.store.remove(connectionStoreKey);
+      dispatchBrowserConnectorConnectionChanged(null);
     },
     async getAccounts() {
       return connectionObject.accounts;

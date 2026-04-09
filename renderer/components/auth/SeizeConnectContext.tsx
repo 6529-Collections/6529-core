@@ -42,6 +42,7 @@ import {
 } from "@/src/utils/security-logger";
 import { isSafeWalletInfo } from "@/utils/wallet-detection";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
+import { BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT } from "@/wagmiConfig/browserConnector";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import { WalletErrorBoundary } from "./error-boundary";
 
@@ -405,6 +406,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   >(() => getConnectedWalletAccounts());
   const [isAddingConnectedAccount, setIsAddingConnectedAccount] =
     useState(false);
+  const [browserConnectorConnectedAddress, setBrowserConnectorConnectedAddress] =
+    useState<string | null>(null);
 
   // Use consolidated wallet state management
   const {
@@ -459,6 +462,14 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       };
     }
 
+    if (browserConnectorConnectedAddress) {
+      return {
+        address: browserConnectorConnectedAddress,
+        isConnected: true,
+        status: "connected" as const,
+      };
+    }
+
     return {
       address: appKitAccount.address,
       isConnected: appKitAccount.isConnected,
@@ -468,6 +479,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     appKitAccount.address,
     appKitAccount.isConnected,
     appKitAccount.status,
+    browserConnectorConnectedAddress,
     wagmiAccount.address,
     wagmiAccount.isConnected,
     wagmiAccount.status,
@@ -512,6 +524,39 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       );
     };
   }, [refreshStoredConnectedAccounts]);
+
+  useEffect(() => {
+    if (globalThis.window === undefined) {
+      return;
+    }
+
+    const handleBrowserConnectorConnectionChanged = (
+      event: Event
+    ): void => {
+      const nextAddress = (
+        event as CustomEvent<{ address?: string | null }>
+      ).detail?.address;
+
+      if (typeof nextAddress === "string" && isAddress(nextAddress)) {
+        setBrowserConnectorConnectedAddress(getAddress(nextAddress));
+        return;
+      }
+
+      setBrowserConnectorConnectedAddress(null);
+    };
+
+    globalThis.window.addEventListener(
+      BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
+      handleBrowserConnectorConnectionChanged as EventListener
+    );
+
+    return () => {
+      globalThis.window.removeEventListener(
+        BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
+        handleBrowserConnectorConnectionChanged as EventListener
+      );
+    };
+  }, []);
 
   useEffect(() => {
     // Wait for initialization to complete before processing account changes
