@@ -124,6 +124,8 @@ jobs:
     name: Publish
     runs-on: ubuntu-latest
     needs: [build-mac, build-windows, build-linux]
+    env:
+      SEIZE_6529_COMMAND: "1"
     steps:
       - name: Determine required builds status
         run: |
@@ -191,8 +193,6 @@ jobs:
 
       - name: Publish S3 Links
         if: env.SHOULD_FAIL != 'true'
-        env:
-          SEIZE_6529_COMMAND: "1"
         run: |
           if [ "${{ github.event.inputs.env }}" = "Staging" ]; then
             pnpm run publish-links-staging
@@ -216,13 +216,10 @@ jobs:
         if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         env:
           ARWEAVE_KEY: ${{ secrets.ARWEAVE_KEY }}
-          SEIZE_6529_COMMAND: "1"
         run: pnpm run publish-links-production-arweave
 
       - name: Invalidate CloudFront
         if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
-        env:
-          SEIZE_6529_COMMAND: "1"
         run: |
           pnpm run invalidate-cf-paths-production -- --version=${{ github.event.inputs.version }}
 
