@@ -88,6 +88,11 @@ jobs:
         if: ${{ inputs.should_run }}
         run: pnpm install --frozen-lockfile
 
+      - name: Install renderer dependencies
+        if: ${{ inputs.should_run }}
+        working-directory: renderer
+        run: pnpm install --frozen-lockfile
+
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}
         uses: aws-actions/configure-aws-credentials@v4
@@ -204,6 +209,11 @@ jobs:
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install renderer dependencies
+        if: ${{ inputs.should_run }}
+        working-directory: renderer
         run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials
