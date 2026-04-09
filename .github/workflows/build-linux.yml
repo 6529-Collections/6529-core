@@ -47,19 +47,27 @@ jobs:
             exit 1
           fi
 
+      - name: Set up pnpm
+        if: ${{ inputs.should_run }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
       - name: Set up Node
         if: ${{ inputs.should_run }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Enable Corepack pnpm
-        if: ${{ inputs.should_run }}
-        run: corepack enable pnpm
-
       - name: Install dependencies
         if: ${{ inputs.should_run }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install renderer dependencies
+        if: ${{ inputs.should_run }}
+        working-directory: renderer
         run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials

@@ -13,17 +13,41 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES = [
+const ARWEAVE_GATEWAY_HOSTS = [
   "arweave.net",
-  "**.arweave.net",
   "ardrive.net",
-  "**.ardrive.net",
   "gateway.arweave.net",
-  "**.gateway.arweave.net",
   "gateway.ar.io",
-  "**.gateway.ar.io",
 ];
-
+const IPFS_FALLBACK_GATEWAY_HOSTS = [
+  "ipfs.6529.io",
+  "ipfs.io",
+  "cf-ipfs.com",
+  "nftstorage.link",
+  "*.ipfs.nftstorage.link",
+];
+const ARWEAVE_GATEWAY_CSP_SOURCES = ARWEAVE_GATEWAY_HOSTS.flatMap(
+  (hostname) => [`https://${hostname}`, `https://*.${hostname}`],
+);
+const ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES = ARWEAVE_GATEWAY_HOSTS.flatMap(
+  (hostname) => [hostname, `**.${hostname}`],
+);
+const IPFS_FALLBACK_MEDIA_SOURCES = IPFS_FALLBACK_GATEWAY_HOSTS.flatMap(
+  (entry) =>
+    entry.startsWith("*.")
+      ? [`https://${entry}`]
+      : [`https://${entry}`, `https://${entry}/ipfs/*`],
+);
+const IPFS_FALLBACK_FRAME_SOURCES = IPFS_FALLBACK_GATEWAY_HOSTS.flatMap(
+  (entry) =>
+    entry.startsWith("*.")
+      ? [`https://${entry}`]
+      : [`https://${entry}`, `https://${entry}/ipfs/*`],
+);
+const IPFS_FALLBACK_REMOTE_PATTERN_HOSTNAMES =
+  IPFS_FALLBACK_GATEWAY_HOSTS.map((entry) =>
+    entry.startsWith("*.") ? `**.${entry.slice(2)}` : entry,
+  );
 function logOnce(label: string, message: string | undefined): void {
   const k = `__LOG_${label}_ONCE__`;
   if (!process.env[k]) {
@@ -146,6 +170,7 @@ function joinSources(sources: Array<string | undefined>): string {
 function createSecurityHeaders(
   apiEndpoint: string = "",
 ): Array<{ key: string; value: string }> {
+  const arweaveGatewaySources = ARWEAVE_GATEWAY_CSP_SOURCES.join(" ");
   const localGatewaySources = [
     "http://127.0.0.1:*",
     "http://localhost:*",
@@ -158,10 +183,8 @@ function createSecurityHeaders(
     ...localGatewaySources,
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
-    "https://arweave.net",
-    "https://*.arweave.net",
-    "https://ipfs.io/ipfs/*",
-    "https://cf-ipfs.com/ipfs/*",
+    arweaveGatewaySources,
+    ...IPFS_FALLBACK_MEDIA_SOURCES,
     "https://*.twimg.com",
     "https://artblocks.io",
     "https://*.artblocks.io",
@@ -172,12 +195,8 @@ function createSecurityHeaders(
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",
-    "https://arweave.net",
-    "https://*.arweave.net",
-    "https://ipfs.io/ipfs/*",
-    "https://cf-ipfs.com/ipfs/*",
-    "https://nftstorage.link",
-    "https://*.ipfs.nftstorage.link",
+    arweaveGatewaySources,
+    ...IPFS_FALLBACK_FRAME_SOURCES,
     "https://verify.walletconnect.com",
     "https://verify.walletconnect.org",
     "https://secure.walletconnect.com",
@@ -199,7 +218,7 @@ function createSecurityHeaders(
     },
     {
       key: "Content-Security-Policy",
-      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ https://arweave.net/* https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
+      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
     },
     { key: "X-Frame-Options", value: "SAMEORIGIN" },
     { key: "X-Content-Type-Options", value: "nosniff" },
@@ -279,9 +298,10 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         { protocol: "https", hostname: "res.cloudinary.com" },
         { protocol: "https", hostname: "robohash.org" },
         { protocol: "http", hostname: "robohash.org" },
-        { protocol: "https", hostname: "ipfs.6529.io" },
-        { protocol: "http", hostname: "ipfs.6529.io" },
-        { protocol: "https", hostname: "ipfs.io" },
+        ...IPFS_FALLBACK_REMOTE_PATTERN_HOSTNAMES.map((hostname) => ({
+          protocol: "https" as const,
+          hostname,
+        })),
         { protocol: "https", hostname: "127.0.0.1" },
         { protocol: "http", hostname: "127.0.0.1" },
       ],
@@ -328,7 +348,6 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         }
       return config;
     },
-    serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
   };
 }
 

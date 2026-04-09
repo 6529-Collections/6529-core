@@ -15,6 +15,7 @@ const SOURCE_NODE_MODULES_PATHS = [
   path.join(ROOT, "node_modules"),
   path.join(ROOT, "node_modules", ".pnpm", "node_modules"),
 ];
+const REQUIRED_RENDERER_RUNTIME_PACKAGES = ["next", "react", "react-dom"];
 
 const materializeSymlinksInTree = (rootPath, basePath, allowedRoots) => {
   const directoriesToVisit = [rootPath];
@@ -160,6 +161,33 @@ const resolveSourcePackageDir = (
   return null;
 };
 
+const seedRequiredRuntimePackages = (outNodeModulesPath) => {
+  for (const dependencyName of REQUIRED_RENDERER_RUNTIME_PACKAGES) {
+    const targetPackagePath = packageNameToPath(outNodeModulesPath, dependencyName);
+    if (fs.existsSync(targetPackagePath)) {
+      continue;
+    }
+
+    const sourcePackagePath = resolveSourcePackageDir(
+      outNodeModulesPath,
+      targetPackagePath,
+      dependencyName,
+    );
+    if (!sourcePackagePath) {
+      throw new Error(
+        `[materialize-renderer-out-node-modules] Missing required renderer runtime package ${dependencyName} for ${path.relative(ROOT, outNodeModulesPath)}`,
+      );
+    }
+
+    copyResolvedTree(sourcePackagePath, targetPackagePath, {
+      allowedRoots: SOURCE_NODE_MODULES_PATHS,
+    });
+    console.log(
+      `[materialize-renderer-out-node-modules] Seeded ${dependencyName} in ${path.relative(ROOT, outNodeModulesPath)} from ${path.relative(ROOT, sourcePackagePath)}`,
+    );
+  }
+};
+
 const hydrateDependenciesInOutNodeModules = (outNodeModulesPath) => {
   const processed = new Map();
   const queue = [];
@@ -236,6 +264,7 @@ const materializeOutNodeModules = () => {
       ...SOURCE_NODE_MODULES_PATHS,
       outNodeModulesPath,
     ]);
+    seedRequiredRuntimePackages(outNodeModulesPath);
     hydrateDependenciesInOutNodeModules(outNodeModulesPath);
     didMaterialize = true;
   }

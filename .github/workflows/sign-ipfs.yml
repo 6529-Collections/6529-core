@@ -27,17 +27,20 @@ jobs:
           ref: ${{ github.ref_name }}
           lfs: true
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Enable Corepack pnpm
-        run: corepack enable pnpm
-
       - name: Install signing dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Set up .NET SDK
         uses: actions/setup-dotnet@v4

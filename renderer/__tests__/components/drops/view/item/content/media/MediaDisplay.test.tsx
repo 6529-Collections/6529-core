@@ -125,6 +125,11 @@ describe("MediaDisplay", () => {
       "data-title",
       "Interactive HTML media"
     );
+    expect(mockSandboxedExternalIframe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        allowLocalIpfsGateway: true,
+      })
+    );
   });
 
   it("forwards iframe container classes for html media", () => {

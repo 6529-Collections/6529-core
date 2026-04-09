@@ -115,6 +115,7 @@ function InteractiveHtmlMediaDisplay({
       key={activeUrl}
       title={DEFAULT_HTML_MEDIA_TITLE}
       src={activeUrl}
+      allowLocalIpfsGateway
       className="tw-h-full tw-w-full"
       containerClassName={iframeContainerClassName}
       onLoad={() => {

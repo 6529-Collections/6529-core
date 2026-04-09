@@ -32,6 +32,26 @@ function joinSources(sources: Array<string | undefined>): string {
   return sources.filter(Boolean).join(" ");
 }
 
+const IPFS_FALLBACK_GATEWAY_ENTRIES = [
+  "ipfs.6529.io",
+  "ipfs.io",
+  "cf-ipfs.com",
+  "nftstorage.link",
+  "*.ipfs.nftstorage.link",
+] as const;
+const IPFS_FALLBACK_MEDIA_SOURCES = IPFS_FALLBACK_GATEWAY_ENTRIES.flatMap(
+  (entry) =>
+    entry.startsWith("*.")
+      ? [`https://${entry}`]
+      : [`https://${entry}`, `https://${entry}/ipfs/*`]
+);
+const IPFS_FALLBACK_FRAME_SOURCES = IPFS_FALLBACK_GATEWAY_ENTRIES.flatMap(
+  (entry) =>
+    entry.startsWith("*.")
+      ? [`https://${entry}`]
+      : [`https://${entry}`, `https://${entry}/ipfs/*`]
+);
+
 export function createSecurityHeaders(
   apiEndpoint: string | undefined = "",
   ipfsGatewayEndpoint: string | undefined = ""
@@ -80,7 +100,7 @@ export function createSecurityHeaders(
     "https://videos.files.wordpress.com",
     arweaveGatewaySources,
     configuredIpfsGatewaySource,
-    "https://cf-ipfs.com/ipfs/*",
+    ...IPFS_FALLBACK_MEDIA_SOURCES,
     "https://*.twimg.com",
     "https://artblocks.io",
     "https://*.artblocks.io",
@@ -88,17 +108,12 @@ export function createSecurityHeaders(
   const frameSrc = joinSources([
     "'self'",
     ...localGatewaySources,
-    "https://ipfs.io",
-    "https://ipfs.io/ipfs/",
+    ...IPFS_FALLBACK_FRAME_SOURCES,
     configuredIpfsGatewaySource,
-    "https://cf-ipfs.com",
-    "https://cf-ipfs.com/ipfs/",
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",
     arweaveGatewaySources,
-    "https://nftstorage.link",
-    "https://*.ipfs.nftstorage.link",
     "https://verify.walletconnect.com",
     "https://verify.walletconnect.org",
     "https://secure.walletconnect.com",

@@ -36,10 +36,19 @@ const normalizeGatewayBase = (gatewayEndpoint: string): string => {
   return trimmed.endsWith("/ipfs") ? trimmed.slice(0, -5) : trimmed;
 };
 
-const readIpfsConfig = async () => {
-  const ipfsInfo = await window.api.getIpfsInfo();
-  const apiEndpoint = ipfsInfo.apiEndpoint;
-  const gatewayEndpoint = ipfsInfo.gatewayEndpoint;
+const buildIpfsConfig = (input: {
+  apiEndpoint?: string | null;
+  gatewayEndpoint?: string | null;
+  mfsPath?: string | null;
+  ipfsPort?: number | null;
+  ipfsRpcPort?: number | null;
+}) => {
+  const apiEndpoint =
+    input.apiEndpoint?.trim() ||
+    (input.ipfsRpcPort ? `http://127.0.0.1:${input.ipfsRpcPort}` : "");
+  const gatewayEndpoint =
+    input.gatewayEndpoint?.trim() ||
+    (input.ipfsPort ? `http://127.0.0.1:${input.ipfsPort}` : "");
 
   if (!apiEndpoint || !gatewayEndpoint) {
     throw new Error("Missing IPFS_API_ENDPOINT or IPFS_GATEWAY_ENDPOINT");
@@ -47,19 +56,101 @@ const readIpfsConfig = async () => {
 
   const trimmedGatewayEndpoint = gatewayEndpoint.replace(/\/+$/, "");
   const gatewayBase = normalizeGatewayBase(trimmedGatewayEndpoint);
-  const mfsPath = ipfsInfo.mfsPath;
 
   return {
     apiEndpoint,
     gatewayEndpoint: trimmedGatewayEndpoint,
     gatewayBase,
-    mfsPath,
+    mfsPath: input.mfsPath ?? undefined,
   } as const;
+};
+
+type IpfsConfigInput = Parameters<typeof buildIpfsConfig>[0];
+
+const isOptionalStringField = (
+  value: unknown
+): value is string | null | undefined =>
+  value === undefined || value === null || typeof value === "string";
+
+const isOptionalPortField = (
+  value: unknown
+): value is number | null | undefined =>
+  value === undefined ||
+  value === null ||
+  (typeof value === "number" && Number.isInteger(value) && value > 0);
+
+const isIpfsConfigInput = (
+  value: unknown
+): value is IpfsConfigInput => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    !isOptionalStringField(candidate["apiEndpoint"]) ||
+    !isOptionalStringField(candidate["gatewayEndpoint"]) ||
+    !isOptionalStringField(candidate["mfsPath"]) ||
+    !isOptionalPortField(candidate["ipfsPort"]) ||
+    !isOptionalPortField(candidate["ipfsRpcPort"])
+  ) {
+    return false;
+  }
+
+  const hasApiConfig =
+    (typeof candidate["apiEndpoint"] === "string" &&
+      candidate["apiEndpoint"].trim() !== "") ||
+    typeof candidate["ipfsRpcPort"] === "number";
+  const hasGatewayConfig =
+    (typeof candidate["gatewayEndpoint"] === "string" &&
+      candidate["gatewayEndpoint"].trim() !== "") ||
+    typeof candidate["ipfsPort"] === "number";
+
+  return hasApiConfig && hasGatewayConfig;
+};
+
+const readIpfsConfig = async () => {
+  const bridge =
+    typeof window !== "undefined"
+      ? (window as Window & { api?: typeof window.api }).api
+      : undefined;
+  if (!bridge) {
+    throw new Error("Electron bridge is unavailable");
+  }
+
+  const fallbackToAppInfo = async (reason: string, details?: unknown) => {
+    console.error(
+      `Failed to resolve IPFS config from getIpfsInfo(), falling back to getInfo()/buildIpfsConfig(): ${reason}`,
+      details
+    );
+    const appInfo = await bridge.getInfo();
+    return buildIpfsConfig(appInfo ?? {});
+  };
+
+  let ipfsInfo: unknown;
+  try {
+    ipfsInfo = await bridge.getIpfsInfo();
+  } catch (error) {
+    return fallbackToAppInfo("bridge call failed", error);
+  }
+
+  if (!isIpfsConfigInput(ipfsInfo)) {
+    return fallbackToAppInfo("invalid getIpfsInfo() payload shape", ipfsInfo);
+  }
+
+  try {
+    return buildIpfsConfig(ipfsInfo);
+  } catch (error) {
+    return fallbackToAppInfo("invalid getIpfsInfo() payload", {
+      ipfsInfo,
+      error,
+    });
+  }
 };
 
 const getEnv = async () => readIpfsConfig();
 
-const getConfiguredGatewayBaseForSync = (): string | null => {
+export const getConfiguredGatewayBaseForSync = (): string | null => {
   const runtimeGatewayEndpoint = (
     publicEnv as typeof publicEnv & {
       IPFS_GATEWAY_ENDPOINT?: string;
@@ -120,7 +211,15 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (ipfsService) return;
-    if (!isElectron()) return;
+    if (typeof window === "undefined") {
+      return;
+    }
+    if (
+      !isElectron() &&
+      typeof window.api?.getInfo !== "function"
+    ) {
+      return;
+    }
 
     getEnv()
       .then((info) => {

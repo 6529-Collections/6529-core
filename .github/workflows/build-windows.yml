@@ -47,16 +47,19 @@ jobs:
             exit 1
           fi
 
+      - name: Set up pnpm
+        if: ${{ inputs.should_run }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
       - name: Set up Node
         if: ${{ inputs.should_run }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
-
-      - name: Enable Corepack pnpm
-        if: ${{ inputs.should_run }}
-        run: corepack enable pnpm
 
       - name: Install Python 3.11 with distutils
         if: ${{ inputs.should_run }}
@@ -70,6 +73,11 @@ jobs:
 
       - name: Install dependencies
         if: ${{ inputs.should_run }}
+        run: pnpm install --frozen-lockfile
+
+      - name: Install renderer dependencies
+        if: ${{ inputs.should_run }}
+        working-directory: renderer
         run: pnpm install --frozen-lockfile
 
       - name: Configure AWS Credentials
@@ -124,20 +132,23 @@ jobs:
         with:
           ref: ${{ github.ref_name }}
 
+      - name: Set up pnpm
+        if: ${{ inputs.should_run }}
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
       - name: Set up Node
         if: ${{ inputs.should_run }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
 
-      - name: Enable Corepack pnpm
-        if: ${{ inputs.should_run }}
-        run: corepack enable pnpm
-
       - name: Install signing dependencies
         if: ${{ inputs.should_run }}
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
 
       - name: Set up .NET SDK
         if: ${{ inputs.should_run }}
