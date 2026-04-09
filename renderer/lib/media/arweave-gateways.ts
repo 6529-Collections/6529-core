@@ -1,10 +1,7 @@
+import arweaveGatewayHosts from "./arweave-gateway-hosts.json";
+
 // Ordered list: the array order defines the Arweave fallback retry order.
-const ARWEAVE_GATEWAY_HOSTS = [
-  "arweave.net",
-  "ardrive.net",
-  "gateway.arweave.net",
-  "gateway.ar.io",
-] as const;
+const ARWEAVE_GATEWAY_HOSTS = arweaveGatewayHosts as readonly string[];
 
 const dedupe = (values: readonly string[]): string[] =>
   Array.from(new Set(values));

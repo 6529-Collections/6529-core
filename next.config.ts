@@ -9,21 +9,38 @@ import fs from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { ARWEAVE_GATEWAY_CSP_SOURCES } from "./renderer/lib/media/arweave-gateways";
 
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES = [
-  "arweave.net",
-  "**.arweave.net",
-  "ardrive.net",
-  "**.ardrive.net",
-  "gateway.arweave.net",
-  "**.gateway.arweave.net",
-  "gateway.ar.io",
-  "**.gateway.ar.io",
-];
+const IPFS_FALLBACK_GATEWAY_HOSTS = require(
+  "./renderer/lib/media/ipfs-gateway-hosts.json",
+) as string[];
+const ARWEAVE_GATEWAY_HOSTS = require(
+  "./renderer/lib/media/arweave-gateway-hosts.json",
+) as string[];
+const ARWEAVE_GATEWAY_CSP_SOURCES = ARWEAVE_GATEWAY_HOSTS.flatMap(
+  (hostname) => [`https://${hostname}`, `https://*.${hostname}`],
+);
+const ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES = ARWEAVE_GATEWAY_HOSTS.flatMap(
+  (hostname) => [hostname, `**.${hostname}`],
+);
+const IPFS_FALLBACK_MEDIA_SOURCES = IPFS_FALLBACK_GATEWAY_HOSTS.flatMap(
+  (entry) =>
+    entry.startsWith("*.")
+      ? [`https://${entry}`]
+      : [`https://${entry}`, `https://${entry}/ipfs/*`],
+);
+const IPFS_FALLBACK_FRAME_SOURCES = IPFS_FALLBACK_GATEWAY_HOSTS.flatMap(
+  (entry) =>
+    entry.startsWith("*.")
+      ? [`https://${entry}`]
+      : [`https://${entry}`, `https://${entry}/ipfs/*`],
+);
+const IPFS_FALLBACK_REMOTE_PATTERN_HOSTNAMES =
+  IPFS_FALLBACK_GATEWAY_HOSTS.map((entry) =>
+    entry.startsWith("*.") ? `**.${entry.slice(2)}` : entry,
+  );
 function logOnce(label: string, message: string | undefined): void {
   const k = `__LOG_${label}_ONCE__`;
   if (!process.env[k]) {
@@ -160,8 +177,7 @@ function createSecurityHeaders(
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
     arweaveGatewaySources,
-    "https://ipfs.io/ipfs/*",
-    "https://cf-ipfs.com/ipfs/*",
+    ...IPFS_FALLBACK_MEDIA_SOURCES,
     "https://*.twimg.com",
     "https://artblocks.io",
     "https://*.artblocks.io",
@@ -173,10 +189,7 @@ function createSecurityHeaders(
     "https://media.generator.6529.io",
     "https://generator.seize.io",
     arweaveGatewaySources,
-    "https://ipfs.io/ipfs/*",
-    "https://cf-ipfs.com/ipfs/*",
-    "https://nftstorage.link",
-    "https://*.ipfs.nftstorage.link",
+    ...IPFS_FALLBACK_FRAME_SOURCES,
     "https://verify.walletconnect.com",
     "https://verify.walletconnect.org",
     "https://secure.walletconnect.com",
@@ -278,9 +291,10 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         { protocol: "https", hostname: "res.cloudinary.com" },
         { protocol: "https", hostname: "robohash.org" },
         { protocol: "http", hostname: "robohash.org" },
-        { protocol: "https", hostname: "ipfs.6529.io" },
-        { protocol: "http", hostname: "ipfs.6529.io" },
-        { protocol: "https", hostname: "ipfs.io" },
+        ...IPFS_FALLBACK_REMOTE_PATTERN_HOSTNAMES.map((hostname) => ({
+          protocol: "https" as const,
+          hostname,
+        })),
         { protocol: "https", hostname: "127.0.0.1" },
         { protocol: "http", hostname: "127.0.0.1" },
       ],
