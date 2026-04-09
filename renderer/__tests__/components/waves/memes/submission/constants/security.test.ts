@@ -21,14 +21,12 @@ describe("interactive media security", () => {
     );
   });
 
-  it("allows loopback http ipfs gateways with dynamic ports", () => {
+  it("rejects loopback http ipfs gateways with dynamic ports", () => {
     expect(
       canonicalizeInteractiveMediaUrl(
         "http://127.0.0.1:9255/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
       )
-    ).toBe(
-      "http://127.0.0.1:9255/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
-    );
+    ).toBeNull();
   });
 
   it("rejects non-loopback http gateways", () => {

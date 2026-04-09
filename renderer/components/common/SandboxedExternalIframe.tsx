@@ -1,5 +1,6 @@
 "use client";
 
+import { canonicalizeLocalInteractiveMediaUrl } from "@/components/common/localInteractiveMediaUrl";
 import { canonicalizeInteractiveMediaUrl } from "@/components/waves/memes/submission/constants/security";
 import React, { useEffect, useMemo, useRef, useState } from "react";
 
@@ -11,6 +12,7 @@ const DEFAULT_SANDBOX = "allow-scripts";
 interface SandboxedExternalIframeProps {
   readonly src: string;
   readonly title: string;
+  readonly allowLocalIpfsGateway?: boolean | undefined;
   readonly className?: string | undefined;
   readonly fallback?: React.ReactNode | undefined;
   readonly containerClassName?: string | undefined;
@@ -34,6 +36,7 @@ interface SandboxedExternalIframeProps {
 const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
   src,
   title,
+  allowLocalIpfsGateway = false,
   className,
   fallback = null,
   containerClassName,
@@ -44,8 +47,12 @@ const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
   const [isVisible, setIsVisible] = useState(false);
 
   const canonicalSrc = useMemo(
-    () => canonicalizeInteractiveMediaUrl(src),
-    [src]
+    () =>
+      canonicalizeInteractiveMediaUrl(src) ??
+      (allowLocalIpfsGateway
+        ? canonicalizeLocalInteractiveMediaUrl(src)
+        : null),
+    [allowLocalIpfsGateway, src]
   );
 
   const frameClassName = useMemo(() => {

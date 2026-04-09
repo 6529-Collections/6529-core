@@ -328,7 +328,6 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         }
       return config;
     },
-    serverExternalPackages: ["@reown/appkit", "@reown/appkit-adapter-wagmi"],
   };
 }
 

@@ -65,6 +65,11 @@ const buildIpfsConfig = (input: {
   } as const;
 };
 
+const isIpfsConfigInput = (
+  value: unknown
+): value is Parameters<typeof buildIpfsConfig>[0] =>
+  typeof value === "object" && value !== null;
+
 const readIpfsConfig = async () => {
   const bridge =
     typeof window !== "undefined"
@@ -74,9 +79,9 @@ const readIpfsConfig = async () => {
     throw new Error("Electron bridge is unavailable");
   }
 
+  let ipfsInfo: unknown;
   try {
-    const ipfsInfo = await bridge.getIpfsInfo();
-    return buildIpfsConfig(ipfsInfo ?? {});
+    ipfsInfo = await bridge.getIpfsInfo();
   } catch (error) {
     console.error(
       "Failed to resolve IPFS config from getIpfsInfo(), falling back to getInfo()/buildIpfsConfig()",
@@ -85,11 +90,25 @@ const readIpfsConfig = async () => {
     const appInfo = await bridge.getInfo();
     return buildIpfsConfig(appInfo ?? {});
   }
+
+  if (!isIpfsConfigInput(ipfsInfo)) {
+    throw new Error("Invalid IPFS config returned from getIpfsInfo()");
+  }
+
+  try {
+    return buildIpfsConfig(ipfsInfo);
+  } catch (error) {
+    console.error("Invalid IPFS config returned from getIpfsInfo()", {
+      ipfsInfo,
+      error,
+    });
+    throw error;
+  }
 };
 
 const getEnv = async () => readIpfsConfig();
 
-const getConfiguredGatewayBaseForSync = (): string | null => {
+export const getConfiguredGatewayBaseForSync = (): string | null => {
   const runtimeGatewayEndpoint = (
     publicEnv as typeof publicEnv & {
       IPFS_GATEWAY_ENDPOINT?: string;
@@ -150,11 +169,14 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
 
   useEffect(() => {
     if (ipfsService) return;
+    if (typeof window === "undefined") {
+      return;
+    }
     if (
-      typeof window === "undefined" ||
+      !isElectron() &&
       typeof window.api?.getInfo !== "function"
     ) {
-      if (!isElectron()) return;
+      return;
     }
 
     getEnv()

@@ -8,8 +8,6 @@ import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 const DEFAULT_INTERACTIVE_MEDIA_IPFS_HOSTS = [
   "ipfs.io",
   "www.ipfs.io",
-  "127.0.0.1",
-  "localhost",
 ];
 
 const configuredIpfsGatewayHost = getConfiguredIpfsGatewayHost();

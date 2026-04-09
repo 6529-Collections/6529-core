@@ -115,6 +115,7 @@ async function getPlainPaths(
 // Config
 const config: IConfig = {
   siteUrl: "https://6529.io",
+  sourceDir: "out",
   generateRobotsTxt: true,
   changefreq: "daily",
   exclude: ["/access", "/restricted", "/nextgen/manager"],
