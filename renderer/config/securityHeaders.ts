@@ -1,5 +1,4 @@
 import { ARWEAVE_GATEWAY_CSP_SOURCES } from "../lib/media/arweave-gateways";
-import ipfsGatewayHosts from "../lib/media/ipfs-gateway-hosts.json";
 
 function isLoopbackHostname(hostname: string): boolean {
   const normalizedHostname = hostname.trim().toLowerCase();
@@ -33,7 +32,13 @@ function joinSources(sources: Array<string | undefined>): string {
   return sources.filter(Boolean).join(" ");
 }
 
-const IPFS_FALLBACK_GATEWAY_ENTRIES = ipfsGatewayHosts as readonly string[];
+const IPFS_FALLBACK_GATEWAY_ENTRIES = [
+  "ipfs.6529.io",
+  "ipfs.io",
+  "cf-ipfs.com",
+  "nftstorage.link",
+  "*.ipfs.nftstorage.link",
+] as const;
 const IPFS_FALLBACK_MEDIA_SOURCES = IPFS_FALLBACK_GATEWAY_ENTRIES.flatMap(
   (entry) =>
     entry.startsWith("*.")

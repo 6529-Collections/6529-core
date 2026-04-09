@@ -13,12 +13,19 @@ import { fileURLToPath } from "node:url";
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const IPFS_FALLBACK_GATEWAY_HOSTS = require(
-  "./renderer/lib/media/ipfs-gateway-hosts.json",
-) as string[];
-const ARWEAVE_GATEWAY_HOSTS = require(
-  "./renderer/lib/media/arweave-gateway-hosts.json",
-) as string[];
+const ARWEAVE_GATEWAY_HOSTS = [
+  "arweave.net",
+  "ardrive.net",
+  "gateway.arweave.net",
+  "gateway.ar.io",
+];
+const IPFS_FALLBACK_GATEWAY_HOSTS = [
+  "ipfs.6529.io",
+  "ipfs.io",
+  "cf-ipfs.com",
+  "nftstorage.link",
+  "*.ipfs.nftstorage.link",
+];
 const ARWEAVE_GATEWAY_CSP_SOURCES = ARWEAVE_GATEWAY_HOSTS.flatMap(
   (hostname) => [`https://${hostname}`, `https://*.${hostname}`],
 );
