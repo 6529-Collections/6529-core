@@ -65,10 +65,49 @@ const buildIpfsConfig = (input: {
   } as const;
 };
 
+type IpfsConfigInput = Parameters<typeof buildIpfsConfig>[0];
+
+const isOptionalStringField = (
+  value: unknown
+): value is string | null | undefined =>
+  value === undefined || value === null || typeof value === "string";
+
+const isOptionalPortField = (
+  value: unknown
+): value is number | null | undefined =>
+  value === undefined ||
+  value === null ||
+  (typeof value === "number" && Number.isInteger(value) && value > 0);
+
 const isIpfsConfigInput = (
   value: unknown
-): value is Parameters<typeof buildIpfsConfig>[0] =>
-  typeof value === "object" && value !== null;
+): value is IpfsConfigInput => {
+  if (typeof value !== "object" || value === null) {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (
+    !isOptionalStringField(candidate["apiEndpoint"]) ||
+    !isOptionalStringField(candidate["gatewayEndpoint"]) ||
+    !isOptionalStringField(candidate["mfsPath"]) ||
+    !isOptionalPortField(candidate["ipfsPort"]) ||
+    !isOptionalPortField(candidate["ipfsRpcPort"])
+  ) {
+    return false;
+  }
+
+  const hasApiConfig =
+    (typeof candidate["apiEndpoint"] === "string" &&
+      candidate["apiEndpoint"].trim() !== "") ||
+    typeof candidate["ipfsRpcPort"] === "number";
+  const hasGatewayConfig =
+    (typeof candidate["gatewayEndpoint"] === "string" &&
+      candidate["gatewayEndpoint"].trim() !== "") ||
+    typeof candidate["ipfsPort"] === "number";
+
+  return hasApiConfig && hasGatewayConfig;
+};
 
 const readIpfsConfig = async () => {
   const bridge =
@@ -79,30 +118,33 @@ const readIpfsConfig = async () => {
     throw new Error("Electron bridge is unavailable");
   }
 
+  const fallbackToAppInfo = async (reason: string, details?: unknown) => {
+    console.error(
+      `Failed to resolve IPFS config from getIpfsInfo(), falling back to getInfo()/buildIpfsConfig(): ${reason}`,
+      details
+    );
+    const appInfo = await bridge.getInfo();
+    return buildIpfsConfig(appInfo ?? {});
+  };
+
   let ipfsInfo: unknown;
   try {
     ipfsInfo = await bridge.getIpfsInfo();
   } catch (error) {
-    console.error(
-      "Failed to resolve IPFS config from getIpfsInfo(), falling back to getInfo()/buildIpfsConfig()",
-      error
-    );
-    const appInfo = await bridge.getInfo();
-    return buildIpfsConfig(appInfo ?? {});
+    return fallbackToAppInfo("bridge call failed", error);
   }
 
   if (!isIpfsConfigInput(ipfsInfo)) {
-    throw new Error("Invalid IPFS config returned from getIpfsInfo()");
+    return fallbackToAppInfo("invalid getIpfsInfo() payload shape", ipfsInfo);
   }
 
   try {
     return buildIpfsConfig(ipfsInfo);
   } catch (error) {
-    console.error("Invalid IPFS config returned from getIpfsInfo()", {
+    return fallbackToAppInfo("invalid getIpfsInfo() payload", {
       ipfsInfo,
       error,
     });
-    throw error;
   }
 };
 
