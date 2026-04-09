@@ -2,6 +2,7 @@ import { useRouter } from "next/navigation";
 import { useId, useMemo, useState } from "react";
 
 import { useAuth } from "@/components/auth/Auth";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import DropPfp from "@/components/drops/create/utils/DropPfp";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import UserFollowBtn, {
@@ -113,6 +114,7 @@ export default function UserProfileTooltip({
       : CLASSIFICATIONS[profile.classification].title;
 
   const { connectedProfile, activeProfileProxy, setToast } = useAuth();
+  const { isConnected } = useSeizeConnectContext();
   const profileHandle = profile?.handle ?? null;
   const normalizedProfileHandle = useMemo(
     () => profileHandle?.toLowerCase() ?? null,
@@ -123,7 +125,8 @@ export default function UserProfileTooltip({
     [connectedProfile?.handle]
   );
   const showFollowButton = Boolean(
-    normalizedProfileHandle &&
+    isConnected &&
+      normalizedProfileHandle &&
       normalizedProfileHandle !== normalizedConnectedHandle
   );
   const tooltipInstanceId = useId();
