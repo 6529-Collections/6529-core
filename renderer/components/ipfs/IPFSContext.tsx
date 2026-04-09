@@ -77,7 +77,11 @@ const readIpfsConfig = async () => {
   try {
     const ipfsInfo = await bridge.getIpfsInfo();
     return buildIpfsConfig(ipfsInfo ?? {});
-  } catch {
+  } catch (error) {
+    console.error(
+      "Failed to resolve IPFS config from getIpfsInfo(), falling back to getInfo()/buildIpfsConfig()",
+      error
+    );
     const appInfo = await bridge.getInfo();
     return buildIpfsConfig(appInfo ?? {});
   }

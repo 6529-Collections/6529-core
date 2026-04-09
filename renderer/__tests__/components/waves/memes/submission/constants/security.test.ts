@@ -14,23 +14,27 @@ describe("interactive media security", () => {
   it("allows nested public ipfs paths", () => {
     expect(
       canonicalizeInteractiveMediaUrl(
-        "https://ipfs.io/ipfs/bafybeigdyrzt/index.html"
+        "https://ipfs.io/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
       )
-    ).toBe("https://ipfs.io/ipfs/bafybeigdyrzt/index.html");
+    ).toBe(
+      "https://ipfs.io/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
+    );
   });
 
   it("allows loopback http ipfs gateways with dynamic ports", () => {
     expect(
       canonicalizeInteractiveMediaUrl(
-        "http://127.0.0.1:9255/ipfs/bafybeigdyrzt/index.html"
+        "http://127.0.0.1:9255/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
       )
-    ).toBe("http://127.0.0.1:9255/ipfs/bafybeigdyrzt/index.html");
+    ).toBe(
+      "http://127.0.0.1:9255/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
+    );
   });
 
   it("rejects non-loopback http gateways", () => {
     expect(
       canonicalizeInteractiveMediaUrl(
-        "http://ipfs.io/ipfs/bafybeigdyrzt/index.html"
+        "http://ipfs.io/ipfs/bafybeigdyrzt5sfp7udm7hu76uh7y26nf3efuylqabf3oclgtqy55fbzdi/index.html"
       )
     ).toBeNull();
   });

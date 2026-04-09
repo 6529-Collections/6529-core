@@ -79,7 +79,8 @@ export const isElectron = () => {
   // most reliable renderer signal we control.
   if (
     typeof window !== "undefined" &&
-    typeof (window as Window & { api?: unknown }).api === "object"
+    typeof (window as Window & { api?: unknown }).api === "object" &&
+    (window as Window & { api?: unknown }).api !== null
   ) {
     return true;
   }

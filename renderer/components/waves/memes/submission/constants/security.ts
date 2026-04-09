@@ -229,11 +229,6 @@ export const canonicalizeInteractiveMediaUrl = (src: string): string | null => {
     return null;
   }
 
-  parsedUrl.username = "";
-  parsedUrl.password = "";
-  parsedUrl.hash = "";
-  parsedUrl.search = "";
-
   return parsedUrl.toString();
 };
 

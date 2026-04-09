@@ -169,7 +169,7 @@ jobs:
 
       - name: Set up Node
         if: env.SHOULD_FAIL != 'true'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
@@ -280,7 +280,7 @@ jobs:
           run_install: false
 
       - name: Set up Node
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
