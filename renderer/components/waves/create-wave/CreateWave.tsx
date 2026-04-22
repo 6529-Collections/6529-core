@@ -29,6 +29,9 @@ import { multiPartUpload } from "./services/multiPartUpload";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
+import { useGroupMutations } from "@/hooks/groups/useGroupMutations";
+import type { ApiCreateGroup } from "@/generated/models/ApiCreateGroup";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 export default function CreateWave({
   profile,
   onBack,
@@ -41,10 +44,14 @@ export default function CreateWave({
   const router = useRouter();
   const { isIos, keyboardVisible } = useCapacitor();
   const { requestAuth, setToast, connectedProfile } = useContext(AuthContext);
-  const { waitAndInvalidateDrops, onWaveCreated } = useContext(
+  const { waitAndInvalidateDrops, onWaveCreated, onGroupCreate } = useContext(
     ReactQueryWrapperContext
   );
   const [submitting, setSubmitting] = useState(false);
+  const { submit: submitInlineGroup } = useGroupMutations({
+    requestAuth,
+    onGroupCreate,
+  });
 
   // Use the hook for configuration state management
   const {
@@ -113,6 +120,32 @@ export default function CreateWave({
 
   const onHaveDropToSubmitChange = (haveDrop: boolean) => {
     if (haveDrop) setShowDropError(false);
+  };
+
+  const onInlineGroupCreate = async (
+    payload: ApiCreateGroup
+  ): Promise<ApiGroupFull | null> => {
+    const result = await submitInlineGroup({
+      payload,
+      currentHandle: connectedProfile?.handle ?? null,
+    });
+
+    if (!result.ok) {
+      if (result.reason !== "auth") {
+        setToast({
+          message: result.error,
+          type: "error",
+        });
+      }
+      return null;
+    }
+
+    setToast({
+      message: "Group created and attached.",
+      type: "success",
+    });
+
+    return result.group;
   };
 
   const onComplete = async () => {
@@ -205,6 +238,7 @@ export default function CreateWave({
     ),
     [CreateWaveStep.GROUPS]: (
       <CreateWaveGroups
+        waveName={config.overview.name}
         waveType={config.overview.type}
         groups={config.groups}
         groupsCache={groupsCache}
@@ -212,6 +246,7 @@ export default function CreateWave({
         adminCanDeleteDrops={config.drops.adminCanDeleteDrops}
         setChatEnabled={onChatEnabledChange}
         onGroupSelect={onGroupSelect}
+        onInlineGroupCreate={onInlineGroupCreate}
         setDropsAdminCanDelete={setDropsAdminCanDelete}
       />
     ),

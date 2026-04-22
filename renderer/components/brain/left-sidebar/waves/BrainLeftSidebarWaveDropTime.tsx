@@ -23,11 +23,24 @@ const BrainLeftSidebarWaveDropTime: React.FC<
   }, []);
 
   useEffect(() => {
-    setNow((previousNow) => {
-      const currentNow = Date.now();
-      return previousNow === currentNow ? previousNow : currentNow;
-    });
-  }, [time]);
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        setNow(Date.now());
+      }
+    };
+
+    const handleFocus = () => {
+      setNow(Date.now());
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, []);
 
   const label = getTimeAgoShort(time, now);
 

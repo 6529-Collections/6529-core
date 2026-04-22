@@ -4,6 +4,7 @@ import React, { useMemo } from "react";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import WaveDropPartContentMedias from "./WaveDropPartContentMedias";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ReferencedNft } from "@/entities/IDrop";
 import type { ApiWaveMin } from "@/generated/models/ApiWaveMin";
@@ -13,6 +14,7 @@ import { ImageScale } from "@/helpers/image.helpers";
 
 interface WaveDropPartContentProps {
   readonly mentionedUsers: ApiDropMentionedUser[];
+  readonly mentionedGroups?: ApiDropGroupMention[] | undefined;
   readonly mentionedWaves: ApiMentionedWave[];
   readonly referencedNfts: ReferencedNft[];
   readonly wave: ApiWaveMin;
@@ -29,6 +31,7 @@ interface WaveDropPartContentProps {
     | ((
         newContent: string,
         mentions?: ApiDropMentionedUser[],
+        mentionedGroups?: ApiDropGroupMention[],
         mentionedWaves?: ApiMentionedWave[]
       ) => void)
     | undefined;
@@ -36,6 +39,7 @@ interface WaveDropPartContentProps {
   readonly drop?: ApiDrop | undefined;
   readonly isCompetitionDrop?: boolean | undefined;
   readonly mediaImageScale?: ImageScale | undefined;
+  readonly fullWidthMedia?: boolean | undefined;
   readonly onLinkCardActionsActiveChange?:
     | ((href: string, active: boolean) => void)
     | undefined;
@@ -43,6 +47,7 @@ interface WaveDropPartContentProps {
 
 const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   mentionedUsers,
+  mentionedGroups = [],
   mentionedWaves,
   referencedNfts,
   wave,
@@ -60,6 +65,7 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   drop,
   isCompetitionDrop = false,
   mediaImageScale = ImageScale.AUTOx450,
+  fullWidthMedia = false,
   onLinkCardActionsActiveChange,
 }) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
@@ -71,6 +77,10 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   const memoizedMentionedWaves = useMemo(
     () => mentionedWaves,
     [mentionedWaves]
+  );
+  const memoizedMentionedGroups = useMemo(
+    () => mentionedGroups,
+    [mentionedGroups]
   );
   const memoizedReferencedNfts = useMemo(
     () => referencedNfts,
@@ -140,6 +150,7 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
           <div>
             <WaveDropPartContentMarkdown
               mentionedUsers={memoizedMentionedUsers}
+              mentionedGroups={memoizedMentionedGroups}
               mentionedWaves={memoizedMentionedWaves}
               referencedNfts={memoizedReferencedNfts}
               part={activePart}
@@ -158,6 +169,7 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
               activePart={activePart}
               isCompetitionDrop={isCompetitionDrop}
               imageScale={mediaImageScale}
+              fullWidthMedia={fullWidthMedia}
             />
           )}
         </div>

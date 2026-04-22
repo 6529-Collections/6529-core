@@ -13,6 +13,13 @@ import { buildSubmissionMetadata } from "./submissionMetadata";
 interface PreviewMediaSelection {
   readonly mediaSource: "upload" | "url";
   readonly selectedFile: File | null;
+  readonly existingMedia:
+    | {
+        readonly url: string;
+        readonly mimeType: string;
+      }
+    | null
+    | undefined;
   readonly externalUrl: string;
   readonly externalMimeType: string;
   readonly isExternalValid: boolean;
@@ -45,6 +52,13 @@ const buildPreviewMedia = ({
     return {
       url: uploadArtworkUrl,
       mime_type: mediaSelection.selectedFile.type || "image/jpeg",
+    };
+  }
+
+  if (mediaSelection.mediaSource === "upload" && mediaSelection.existingMedia) {
+    return {
+      url: mediaSelection.existingMedia.url,
+      mime_type: mediaSelection.existingMedia.mimeType,
     };
   }
 
@@ -116,10 +130,9 @@ export const buildPreviewDrop = ({
       admin_drop_deletion_enabled: wave.wave.admin_drop_deletion_enabled,
       forbid_negative_votes: wave.voting.forbid_negative_votes,
       pinned: wave.pinned,
+      identity_wave: wave.identity_wave,
       submission_type: wave.participation.submission_strategy?.type ?? null,
-      selections: wave.selections,
     },
-    selections: [],
     author: {
       id: connectedProfile?.id ?? "preview-user",
       handle: connectedProfile?.handle ?? "preview-user",
@@ -134,6 +147,7 @@ export const buildPreviewDrop = ({
       xtdh_rate: connectedProfile?.xtdh_rate ?? 0,
       level: connectedProfile?.level ?? 0,
       primary_address: primaryAddress,
+      profile_wave_id: connectedProfile?.profile_wave_id ?? null,
       subscribed_actions: [],
       archived: false,
       active_main_stage_submission_ids:
@@ -170,5 +184,6 @@ export const buildPreviewDrop = ({
     reactions: [],
     boosts: 0,
     hide_link_preview: false,
+    mentioned_groups: [],
   };
 };

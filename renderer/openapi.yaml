@@ -960,10 +960,26 @@ paths:
             type: integer
             format: int64
             minimum: 1
+        - name: min_serial_no
+          in: query
+          required: false
+          description: Oldest message if null
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+        - name: older_first
+          in: query
+          required: false
+          description: >-
+            By default this endpoint orders things newer first, but if you set
+            it to true then it starts from older drops.
+          schema:
+            type: boolean
         - name: wave_id
           in: query
           description: Drops in wave with given ID
-          required: true
+          required: false
           schema:
             type: string
       responses:
@@ -1009,12 +1025,26 @@ paths:
           required: false
           schema:
             type: string
-        - name: selection_id
+        - name: curation_id
           in: query
-          description: Only include drops that belong to the given selection
+          description: >-
+            Only include drops with persisted membership in the curation
+            identified by ApiWaveCuration.id (UUID string)
           required: false
           schema:
             type: string
+            format: uuid
+        - name: curation_name
+          in: query
+          description: >-
+            Only include drops with persisted membership in curations with this
+            ApiWaveCuration.name across all visible waves. Cannot be combined
+            with curation_id.
+          required: false
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 50
         - name: serial_no_less_than
           in: query
           description: Used to find older drops
@@ -1478,48 +1508,29 @@ paths:
     get:
       tags:
         - Drops
-      summary: Get identities who curated a drop
-      operationId: getDropCurators
+      summary: Get curations for a drop
+      operationId: getDropCurations
       parameters:
         - name: dropId
           in: path
           required: true
           schema:
             type: string
-        - name: page
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-        - name: page_size
-          in: query
-          required: false
-          schema:
-            type: integer
-            format: int64
-            minimum: 1
-            maximum: 2000
-        - name: sort_direction
-          in: query
-          description: Default is DESC
-          required: false
-          schema:
-            $ref: "#/components/schemas/ApiPageSortDirection"
       responses:
         "200":
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiProfileMinsPage"
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiDropCuration"
         "404":
           description: Drop not found
     post:
       tags:
         - Drops
-      summary: Mark a drop as curated by authenticated user
+      summary: Add a drop to a curation
       operationId: addDropCuration
       parameters:
         - name: dropId
@@ -1527,13 +1538,19 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiDropCurationRequest"
       responses:
         "201":
           description: successful operation
     delete:
       tags:
         - Drops
-      summary: Remove authenticated user"s curation from a drop
+      summary: Remove a drop from a curation
       operationId: removeDropCuration
       parameters:
         - name: dropId
@@ -1541,10 +1558,16 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiDropCurationRequest"
       responses:
-        "201":
+        "200":
           description: successful operation
-  /drops/{dropId}/reactions:
+  /drops/{dropId}/reaction:
     post:
       tags:
         - Drops
@@ -1891,6 +1914,13 @@ paths:
           schema:
             type: number
             format: int64
+        - name: include_profile_groups
+          description: Include pure profile groups in search results
+          in: query
+          required: false
+          schema:
+            type: boolean
+            default: false
       responses:
         "200":
           description: successful operation
@@ -2997,10 +3027,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  subscribed:
-                    type: boolean
+                $ref: "#/components/schemas/ApiWaveNotificationPreferences"
     post:
       tags:
         - Notifications
@@ -3012,16 +3039,19 @@ paths:
           required: true
           schema:
             type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiUpdateWaveNotificationPreferencesRequest"
       responses:
         "200":
           description: successful operation
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  subscribed:
-                    type: boolean
+                $ref: "#/components/schemas/ApiWaveNotificationPreferences"
     delete:
       tags:
         - Notifications
@@ -3039,10 +3069,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  subscribed:
-                    type: boolean
+                $ref: "#/components/schemas/ApiWaveNotificationPreferences"
   /blocks:
     get:
       tags:
@@ -3700,6 +3727,79 @@ paths:
                 $ref: "#/components/schemas/ApiIdentity"
         "400":
           description: Invalid request
+  /profiles/{identity}/wave:
+    get:
+      tags:
+        - Profiles
+      summary: Get profile wave
+      operationId: getProfileWave
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProfileWave"
+        "404":
+          description: Profile not found
+    post:
+      tags:
+        - Profiles
+      summary: Set explicit profile wave
+      operationId: setProfileWave
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiSetProfileWaveRequest"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiIdentity"
+        "400":
+          description: Invalid request
+        "403":
+          description: Forbidden
+        "404":
+          description: Profile or wave not found
+    delete:
+      tags:
+        - Profiles
+      summary: Clear explicit profile wave
+      operationId: clearProfileWave
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiIdentity"
+        "403":
+          description: Forbidden
+        "404":
+          description: Profile not found
   /profiles/{identity}/proxies:
     get:
       tags:
@@ -4280,6 +4380,33 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/RedeemedSubscriptionCountsPage"
+  /subscriptions/redeemed-memes-counts/download:
+    get:
+      tags:
+        - Subscriptions
+      summary: Download redeemed meme subscription counts as CSV
+      description: >-
+        Downloads a CSV with meme_id, artist, drop_date, unique_profiles,
+        subscriptions_count, and proceeds for MEMES cards with id >= 220. When
+        `szn` is provided, only cards in that season are included.
+      operationId: downloadRedeemedMemeSubscriptionCounts
+      parameters:
+        - name: szn
+          in: query
+          description: Optional MEMES season filter
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
   /subscriptions/consolidation/logs/{consolidation_key}:
     get:
       tags:
@@ -5649,12 +5776,15 @@ paths:
           required: false
           schema:
             $ref: "#/components/schemas/ApiDropType"
-        - name: selection_id
+        - name: curation_id
           in: query
-          description: Only include drops that belong to the given selection
+          description: >-
+            Only include drops with persisted membership in the curation
+            identified by ApiWaveCuration.id (UUID string)
           required: false
           schema:
             type: string
+            format: uuid
       responses:
         "200":
           description: successful operation
@@ -5881,11 +6011,15 @@ paths:
             type: number
             format: double
             minimum: 0
-        - name: curated_by_group
+        - name: curation_id
           in: query
+          description: >-
+            Only include drops with persisted membership in the curation
+            identified by ApiWaveCuration.id (UUID string)
           required: false
           schema:
             type: string
+            format: uuid
         - name: unvoted_by_me
           in: query
           description: >-
@@ -5902,12 +6036,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiDropsLeaderboardPage"
-  /waves/{id}/selections:
+  /waves/{id}/curations:
     get:
       tags:
         - Waves
-      summary: List selections configured for wave
-      operationId: listWaveSelections
+      summary: List curations configured for wave
+      operationId: listWaveCurations
       parameters:
         - name: id
           in: path
@@ -5922,12 +6056,12 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/ApiWaveSelection"
+                  $ref: "#/components/schemas/ApiWaveCuration"
     post:
       tags:
         - Waves
-      summary: Create selection for wave
-      operationId: createWaveSelection
+      summary: Create curation for wave
+      operationId: createWaveCuration
       parameters:
         - name: id
           in: path
@@ -5939,113 +6073,70 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApiWaveSelectionRequest"
+              $ref: "#/components/schemas/ApiWaveCurationRequest"
       responses:
         "201":
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiWaveSelection"
-  /waves/{id}/selections/{selectionId}:
-    delete:
-      tags:
-        - Waves
-      summary: Delete selection from wave
-      operationId: deleteWaveSelection
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: selectionId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: successful operation
-  /waves/{id}/selections/{selectionId}/drops:
-    post:
-      tags:
-        - Waves
-      summary: Add drop to selection
-      operationId: addDropToWaveSelection
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: selectionId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ApiWaveSelectionDropRequest"
-      responses:
-        "201":
-          description: successful operation
-  /waves/{id}/selections/{selectionId}/drops/{dropId}:
-    delete:
-      tags:
-        - Waves
-      summary: Remove drop from selection
-      operationId: removeDropFromWaveSelection
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: selectionId
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: dropId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        "200":
-          description: successful operation
-  /waves/{id}/curation-groups:
+                $ref: "#/components/schemas/ApiWaveCuration"
+  /waves/{id}/curations/{curation_id}/drops:
     get:
       tags:
         - Waves
-      summary: List curation groups configured for wave
-      operationId: listWaveCurationGroups
+      summary: List drops in a curation for wave
+      operationId: listWaveCurationDrops
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
+        - name: curation_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+            default: 50
       responses:
         "200":
           description: successful operation
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/ApiWaveCurationGroup"
+                $ref: "#/components/schemas/ApiCurationDropsPage"
+        "404":
+          description: Wave or curation not found
+  /waves/{id}/curations/{curationId}:
     post:
       tags:
         - Waves
-      summary: Create curation group for wave
-      operationId: createWaveCurationGroup
+      summary: Update curation for wave
+      operationId: updateWaveCuration
       parameters:
         - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: curationId
           in: path
           required: true
           schema:
@@ -6055,56 +6146,26 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ApiWaveCurationGroupRequest"
+              $ref: "#/components/schemas/ApiWaveCurationRequest"
       responses:
         "201":
           description: successful operation
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ApiWaveCurationGroup"
-  /waves/{id}/curation-groups/{curationGroupId}:
-    post:
-      tags:
-        - Waves
-      summary: Update curation group for wave
-      operationId: updateWaveCurationGroup
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: curationGroupId
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/ApiWaveCurationGroupRequest"
-      responses:
-        "201":
-          description: successful operation
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ApiWaveCurationGroup"
+                $ref: "#/components/schemas/ApiWaveCuration"
     delete:
       tags:
         - Waves
-      summary: Delete curation group from wave
-      operationId: deleteWaveCurationGroup
+      summary: Delete curation from wave
+      operationId: deleteWaveCuration
       parameters:
         - name: id
           in: path
           required: true
           schema:
             type: string
-        - name: curationGroupId
+        - name: curationId
           in: path
           required: true
           schema:
@@ -7843,8 +7904,10 @@ components:
           $ref: "#/components/schemas/ApiReplyToDrop"
         drop_type:
           $ref: "#/components/schemas/ApiDropType"
-        mentions_all:
-          type: boolean
+        mentioned_groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropGroupMention"
     ApiCreateGroup:
       type: object
       required:
@@ -8332,6 +8395,29 @@ components:
         description:
           type: string
           nullable: true
+    ApiCurationDrop:
+      type: object
+      required:
+        - drop_priority_order
+      allOf:
+        - $ref: "#/components/schemas/ApiDropWithoutWave"
+      properties:
+        drop_priority_order:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+    ApiCurationDropsPage:
+      type: object
+      required:
+        - data
+      allOf:
+        - $ref: "#/components/schemas/ApiPageWithoutCount"
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiCurationDrop"
     ApiDistributionAirdropsCsvUploadRequest:
       type: object
       required:
@@ -8365,6 +8451,7 @@ components:
         - updated_at
         - referenced_nfts
         - mentioned_users
+        - mentioned_groups
         - mentioned_waves
         - metadata
         - parts
@@ -8377,7 +8464,6 @@ components:
         - title
         - context_profile_context
         - subscribed_actions
-        - selections
         - rank
         - is_signed
         - reactions
@@ -8437,6 +8523,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropMentionedUser"
+        mentioned_groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropGroupMention"
         mentioned_waves:
           type: array
           items:
@@ -8469,10 +8559,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropSubscriptionTargetAction"
-        selections:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveSelection"
         is_signed:
           type: boolean
         reactions:
@@ -8553,6 +8639,39 @@ components:
           type: boolean
         curated:
           type: boolean
+    ApiDropCuration:
+      type: object
+      required:
+        - drop_included
+        - authenticated_user_can_curate
+        - drop_priority_order
+      allOf:
+        - $ref: "#/components/schemas/ApiWaveCuration"
+      properties:
+        drop_included:
+          type: boolean
+        authenticated_user_can_curate:
+          type: boolean
+        drop_priority_order:
+          type: integer
+          format: int64
+          minimum: 1
+          nullable: true
+    ApiDropCurationRequest:
+      type: object
+      required:
+        - curation_id
+      properties:
+        curation_id:
+          type: string
+        priority_order:
+          type: integer
+          format: int64
+          minimum: 1
+    ApiDropGroupMention:
+      type: string
+      enum:
+        - ALL
     ApiDropId:
       type: object
       required:
@@ -8837,6 +8956,7 @@ components:
         - updated_at
         - referenced_nfts
         - mentioned_users
+        - mentioned_groups
         - mentioned_waves
         - metadata
         - parts
@@ -8848,7 +8968,6 @@ components:
         - raters_count
         - title
         - subscribed_actions
-        - selections
         - context_profile_context
         - rank
         - is_signed
@@ -8907,6 +9026,10 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropMentionedUser"
+        mentioned_groups:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropGroupMention"
         mentioned_waves:
           type: array
           items:
@@ -8939,10 +9062,6 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropSubscriptionTargetAction"
-        selections:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveSelection"
         is_signed:
           type: boolean
         reactions:
@@ -9229,6 +9348,7 @@ components:
         - active_main_stage_submission_ids
         - winner_main_stage_drop_ids
         - artist_of_prevote_cards
+        - profile_wave_id
         - is_wave_creator
       properties:
         id:
@@ -9301,6 +9421,9 @@ components:
           items:
             type: integer
             format: int64
+        profile_wave_id:
+          type: string
+          nullable: true
         is_wave_creator:
           type: boolean
     ApiIdentityActivity:
@@ -9385,6 +9508,10 @@ components:
       type: object
       required:
         - id
+        - wave_id
+        - wave_name
+        - author
+        - created_at
         - serial_no
         - drop_type
         - part_1_text
@@ -9395,6 +9522,15 @@ components:
       properties:
         id:
           type: string
+        wave_id:
+          type: string
+        wave_name:
+          type: string
+        author:
+          type: string
+        created_at:
+          type: number
+          format: int64
         serial_no:
           description: Sequence number of the drop in Seize
           type: number
@@ -9466,6 +9602,7 @@ components:
         - proceeds_usd
         - artist_split_eth
         - artist_split_usd
+        - payment_details
       properties:
         id:
           type: integer
@@ -9495,6 +9632,10 @@ components:
         artist_split_usd:
           type: number
           format: double
+        payment_details:
+          anyOf:
+            - type: "null"
+            - $ref: "#/components/schemas/ApiPaymentDetails"
     ApiMemesMintStatsPage:
       type: object
       required:
@@ -10356,6 +10497,19 @@ components:
           format: int64
         next:
           type: boolean
+    ApiPaymentDetails:
+      type: object
+      required:
+        - payment_address
+        - has_designated_payee
+        - designated_payee_name
+      properties:
+        payment_address:
+          $ref: "#/components/schemas/ApiEthereumAddress"
+        has_designated_payee:
+          type: boolean
+        designated_payee_name:
+          type: string
     ApiProfileClassification:
       type: string
       enum:
@@ -10387,6 +10541,7 @@ components:
         - active_main_stage_submission_ids
         - winner_main_stage_drop_ids
         - artist_of_prevote_cards
+        - profile_wave_id
         - is_wave_creator
       properties:
         id:
@@ -10446,6 +10601,9 @@ components:
           items:
             type: integer
             format: int64
+        profile_wave_id:
+          type: string
+          nullable: true
         is_wave_creator:
           type: boolean
     ApiProfileMinsPage:
@@ -10568,6 +10726,18 @@ components:
         rep:
           type: number
           format: int64
+    ApiProfileWave:
+      type: object
+      required:
+        - profile_wave_id
+        - profile_curation_id
+      properties:
+        profile_wave_id:
+          type: string
+          nullable: true
+        profile_curation_id:
+          type: string
+          nullable: true
     ApiPushNotificationDevice:
       type: object
       required:
@@ -10894,6 +11064,7 @@ components:
         - distribution_admin_wallets
         - claims_admin_wallets
         - announcements_wave_id
+        - quorum_wave_id
       properties:
         rememes_submission_tdh_threshold:
           type: integer
@@ -10918,6 +11089,9 @@ components:
         announcements_wave_id:
           type: string
           nullable: true
+        quorum_wave_id:
+          type: string
+          nullable: true
     ApiSetPinnedDropRequest:
       type: object
       required:
@@ -10925,6 +11099,20 @@ components:
       properties:
         drop_id:
           type: string
+    ApiSetProfileWaveRequest:
+      type: object
+      required:
+        - wave_id
+      properties:
+        wave_id:
+          type: string
+          minLength: 1
+          maxLength: 100
+        profile_curation_id:
+          type: string
+          nullable: true
+          minLength: 1
+          maxLength: 50
     ApiStartMultipartMediaUploadResponse:
       required:
         - upload_id
@@ -11160,9 +11348,6 @@ components:
       type: object
       allOf:
         - $ref: "#/components/schemas/ApiCreateWaveDropRequest"
-      properties:
-        mentions_all:
-          type: boolean
     ApiUpdateProxyActionRequest:
       type: object
       properties:
@@ -11202,6 +11387,15 @@ components:
             Decisions before this time will not be made. Should not overlap with
             other pauses. Needs to be after start_time, after now and after
             wave.next_decision_time
+    ApiUpdateWaveNotificationPreferencesRequest:
+      type: object
+      properties:
+        subscribed:
+          type: boolean
+        enabled_group_notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropGroupMention"
     ApiUpdateWaveParticipationConfig:
       type: object
       required:
@@ -11363,8 +11557,8 @@ components:
         - subscribed_actions
         - metrics
         - pauses
-        - selections
         - pinned
+        - identity_wave
       properties:
         id:
           description: The ID of the wave
@@ -11416,11 +11610,9 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiWaveDecisionPause"
-        selections:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveSelection"
         pinned:
+          type: boolean
+        identity_wave:
           type: boolean
     ApiWaveChatConfig:
       type: object
@@ -11512,7 +11704,7 @@ components:
         - REP
         - XTDH
         - TDH_PLUS_XTDH
-    ApiWaveCurationGroup:
+    ApiWaveCuration:
       type: object
       required:
         - id
@@ -11521,6 +11713,7 @@ components:
         - group_id
         - created_at
         - updated_at
+        - priority_order
       properties:
         id:
           type: string
@@ -11536,7 +11729,11 @@ components:
         updated_at:
           type: number
           format: int64
-    ApiWaveCurationGroupRequest:
+        priority_order:
+          type: integer
+          format: int32
+          minimum: 1
+    ApiWaveCurationRequest:
       type: object
       required:
         - name
@@ -11548,6 +11745,10 @@ components:
           maxLength: 50
         group_id:
           type: string
+        priority_order:
+          type: integer
+          format: int32
+          minimum: 1
     ApiWaveDecision:
       type: object
       required:
@@ -11774,8 +11975,8 @@ components:
         - admin_group_id
         - admin_drop_deletion_enabled
         - forbid_negative_votes
-        - selections
         - pinned
+        - identity_wave
       properties:
         id:
           type: string
@@ -11831,12 +12032,22 @@ components:
           type: boolean
         forbid_negative_votes:
           type: boolean
-        selections:
-          type: array
-          items:
-            $ref: "#/components/schemas/ApiWaveSelection"
         pinned:
           type: boolean
+        identity_wave:
+          type: boolean
+    ApiWaveNotificationPreferences:
+      type: object
+      required:
+        - subscribed
+        - enabled_group_notifications
+      properties:
+        subscribed:
+          type: boolean
+        enabled_group_notifications:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiDropGroupMention"
     ApiWaveOutcome:
       type: object
       required:
@@ -12024,32 +12235,6 @@ components:
           anyOf:
             - type: "null"
             - $ref: "#/components/schemas/ApiGroup"
-    ApiWaveSelection:
-      type: object
-      required:
-        - id
-        - title
-      properties:
-        id:
-          type: string
-        title:
-          type: string
-    ApiWaveSelectionDropRequest:
-      type: object
-      required:
-        - drop_id
-      properties:
-        drop_id:
-          type: string
-    ApiWaveSelectionRequest:
-      type: object
-      required:
-        - title
-      properties:
-        title:
-          type: string
-          minLength: 1
-          maxLength: 250
     ApiWavesOverviewType:
       type: string
       enum:

@@ -190,6 +190,7 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
               <DropPartMarkdownWithPropLogger
                 partContent={quotedPart?.content ?? ""}
                 mentionedUsers={drop?.mentioned_users ?? []}
+                mentionedGroups={drop?.mentioned_groups ?? []}
                 mentionedWaves={drop?.mentioned_waves ?? []}
                 referencedNfts={drop?.referenced_nfts ?? []}
                 nftLinks={drop?.nft_links}

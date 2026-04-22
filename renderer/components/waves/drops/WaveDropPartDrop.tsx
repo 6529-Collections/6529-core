@@ -2,6 +2,7 @@ import React from "react";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import WaveDropPartTitle from "./WaveDropPartTitle";
 import WaveDropPartContent from "./WaveDropPartContent";
@@ -22,12 +23,14 @@ interface WaveDropPartDropProps {
     | ((
         newContent: string,
         mentions?: ApiDropMentionedUser[],
+        mentionedGroups?: ApiDropGroupMention[],
         mentionedWaves?: ApiMentionedWave[]
       ) => void)
     | undefined;
   readonly onCancel?: (() => void) | undefined;
   isCompetitionDrop?: boolean | undefined;
   mediaImageScale?: ImageScale | undefined;
+  fullWidthMedia?: boolean | undefined;
   readonly onLinkCardActionsActiveChange?:
     | ((href: string, active: boolean) => void)
     | undefined;
@@ -48,6 +51,7 @@ const WaveDropPartDrop: React.FC<WaveDropPartDropProps> = ({
   onCancel,
   isCompetitionDrop = false,
   mediaImageScale = ImageScale.AUTOx450,
+  fullWidthMedia = false,
   onLinkCardActionsActiveChange,
 }) => {
   return (
@@ -57,6 +61,7 @@ const WaveDropPartDrop: React.FC<WaveDropPartDropProps> = ({
           <WaveDropPartTitle title={drop.title} />
           <WaveDropPartContent
             mentionedUsers={drop.mentioned_users}
+            mentionedGroups={drop.mentioned_groups}
             mentionedWaves={drop.mentioned_waves}
             referencedNfts={drop.referenced_nfts}
             wave={drop.wave}
@@ -74,6 +79,7 @@ const WaveDropPartDrop: React.FC<WaveDropPartDropProps> = ({
             drop={drop}
             isCompetitionDrop={isCompetitionDrop}
             mediaImageScale={mediaImageScale}
+            fullWidthMedia={fullWidthMedia}
             onLinkCardActionsActiveChange={onLinkCardActionsActiveChange}
           />
         </div>

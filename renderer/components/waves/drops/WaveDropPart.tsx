@@ -3,6 +3,7 @@
 import React, { memo, useRef } from "react";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import WaveDropPartDrop from "./WaveDropPartDrop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
@@ -22,12 +23,14 @@ interface WaveDropPartProps {
     | ((
         newContent: string,
         mentions?: ApiDropMentionedUser[],
+        mentionedGroups?: ApiDropGroupMention[],
         mentionedWaves?: ApiMentionedWave[]
       ) => void)
     | undefined;
   readonly onCancel?: (() => void) | undefined;
   readonly isCompetitionDrop?: boolean | undefined;
   readonly mediaImageScale?: ImageScale | undefined;
+  readonly fullWidthMedia?: boolean | undefined;
   readonly hasTouch?: boolean | undefined;
   readonly onLinkCardActionsActiveChange?:
     | ((href: string, active: boolean) => void)
@@ -52,6 +55,7 @@ const WaveDropPart: React.FC<WaveDropPartProps> = memo(
     onCancel,
     isCompetitionDrop = false,
     mediaImageScale = ImageScale.AUTOx450,
+    fullWidthMedia = false,
     hasTouch = false,
     onLinkCardActionsActiveChange,
   }) => {
@@ -150,6 +154,7 @@ const WaveDropPart: React.FC<WaveDropPartProps> = memo(
             onCancel={onCancel}
             isCompetitionDrop={isCompetitionDrop}
             mediaImageScale={mediaImageScale}
+            fullWidthMedia={fullWidthMedia}
             onLinkCardActionsActiveChange={onLinkCardActionsActiveChange}
           />
         </div>

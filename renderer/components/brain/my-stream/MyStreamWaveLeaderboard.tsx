@@ -30,7 +30,7 @@ import { WaveDropsLeaderboardSort } from "@/hooks/useWaveDropsLeaderboard";
 import useLocalPreference from "@/hooks/useLocalPreference";
 import MemesArtSubmissionModal from "@/components/waves/memes/MemesArtSubmissionModal";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useWaveCurationGroups } from "@/hooks/waves/useWaveCurationGroups";
+import { useWaveCurations } from "@/hooks/waves/useWaveCurations";
 import { getWaveDropEligibility } from "@/components/waves/leaderboard/dropEligibility";
 import {
   resolveWaveSubmissionExperience,
@@ -50,11 +50,13 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
-  const { isMemesWave, isCurationWave, participation } = useWave(wave);
+  const { isMemesWave, isCurationWave, isQuorumWave, participation } =
+    useWave(wave);
   const { leaderboardViewStyle } = useLayout(); // Get pre-calculated style from context
   const submissionExperience = resolveWaveSubmissionExperience({
     isMemesWave,
     isCurationWave,
+    isQuorumWave,
     submissionStrategy: wave.participation.submission_strategy ?? null,
   });
 
@@ -90,6 +92,7 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
   const showToggleableDropInput =
     submissionExperience !== WaveSubmissionExperience.MEMES_LEGACY &&
     submissionExperience !== WaveSubmissionExperience.CURATION_LEGACY &&
+    submissionExperience !== WaveSubmissionExperience.QUORUM_PROPOSAL &&
     isCreateDropOpen;
 
   const onCreateDrop = useCallback(() => {
@@ -107,6 +110,14 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
         return;
       }
       setIsCurationDropModalOpen(true);
+      return;
+    }
+
+    if (submissionExperience === WaveSubmissionExperience.QUORUM_PROPOSAL) {
+      if (!canCreateDrop) {
+        return;
+      }
+      setIsCreateDropOpen(true);
       return;
     }
 
@@ -144,12 +155,12 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
     data: curationGroups = [],
     isLoading: isLoadingCurationGroups,
     isError: isCurationGroupsError,
-  } = useWaveCurationGroups({
+  } = useWaveCurations({
     waveId: wave.id,
     enabled: wave.wave.type !== ApiWaveType.Chat,
   });
 
-  const rawCuratedByGroupId = searchParams.get("curated_by_group");
+  const rawCuratedByGroupId = searchParams.get("curation_id");
 
   const curationGroupIdSet = useMemo(
     () => new Set(curationGroups.map((group) => group.id)),
@@ -195,9 +206,9 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
       const nextParams = new URLSearchParams(searchParams.toString());
 
       if (groupId) {
-        nextParams.set("curated_by_group", groupId);
+        nextParams.set("curation_id", groupId);
       } else {
-        nextParams.delete("curated_by_group");
+        nextParams.delete("curation_id");
       }
 
       const nextQuery = nextParams.toString();
@@ -336,6 +347,14 @@ const MyStreamWaveLeaderboard: React.FC<MyStreamWaveLeaderboardProps> = ({
               isOpen={isCurationDropModalOpen}
               wave={wave}
               onClose={() => setIsCurationDropModalOpen(false)}
+            />
+          )}
+        {submissionExperience === WaveSubmissionExperience.QUORUM_PROPOSAL &&
+          isCreateDropOpen && (
+            <WaveDropCreate
+              wave={wave}
+              onCancel={() => setIsCreateDropOpen(false)}
+              onSuccess={() => setIsCreateDropOpen(false)}
             />
           )}
 

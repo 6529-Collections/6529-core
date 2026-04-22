@@ -9,7 +9,7 @@ import { WaveDropsLeaderboardSort } from "@/hooks/useWaveDropsLeaderboard";
 const useWave = jest.fn();
 const useLayout = jest.fn();
 const useLocalPreference = jest.fn();
-const useWaveCurationGroups = jest.fn();
+const useWaveCurations = jest.fn();
 const replace = jest.fn();
 let searchParamsString = "";
 let dropsProps: any;
@@ -33,8 +33,8 @@ jest.mock(
     (...args: any[]) =>
       useLocalPreference(...args)
 );
-jest.mock("@/hooks/waves/useWaveCurationGroups", () => ({
-  useWaveCurationGroups: (...args: any[]) => useWaveCurationGroups(...args),
+jest.mock("@/hooks/waves/useWaveCurations", () => ({
+  useWaveCurations: (...args: any[]) => useWaveCurations(...args),
 }));
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace }),
@@ -130,7 +130,7 @@ describe("MyStreamWaveLeaderboard", () => {
     createDropProps = [];
     curationModalProps = undefined;
     useLayout.mockReturnValue({ leaderboardViewStyle: {} });
-    useWaveCurationGroups.mockReturnValue({
+    useWaveCurations.mockReturnValue({
       data: [],
       isLoading: false,
       isError: false,
@@ -248,6 +248,33 @@ describe("MyStreamWaveLeaderboard", () => {
     expect(screen.queryByTestId("curation-modal")).not.toBeInTheDocument();
   });
 
+  it("routes quorum proposal creation through the create flow", async () => {
+    const user = userEvent.setup();
+    useWave.mockReturnValue({
+      isMemesWave: false,
+      isCurationWave: false,
+      isQuorumWave: true,
+      participation: {
+        isEligible: true,
+        canSubmitNow: true,
+        hasReachedLimit: false,
+      },
+    });
+    useLocalPreference.mockReturnValueOnce(["list", jest.fn()]);
+    useLocalPreference.mockReturnValueOnce([
+      WaveDropsLeaderboardSort.RANK,
+      jest.fn(),
+    ]);
+
+    renderLeaderboard();
+
+    await user.click(screen.getByTestId("header"));
+
+    expect(screen.getByTestId("create-drop")).toBeInTheDocument();
+    expect(screen.queryByTestId("memes")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("curation-modal")).not.toBeInTheDocument();
+  });
+
   it("renders non-meme content-only grid mode", () => {
     useWave.mockReturnValue({
       isMemesWave: false,
@@ -273,7 +300,7 @@ describe("MyStreamWaveLeaderboard", () => {
   });
 
   it("reads curation group from URL and keeps price filters local", () => {
-    searchParamsString = "curated_by_group=group-1&min_price=1.5&max_price=4.2";
+    searchParamsString = "curation_id=group-1&min_price=1.5&max_price=4.2";
     useWave.mockReturnValue({
       isMemesWave: false,
       isCurationWave: true,
@@ -283,7 +310,7 @@ describe("MyStreamWaveLeaderboard", () => {
         hasReachedLimit: false,
       },
     });
-    useWaveCurationGroups.mockReturnValue({
+    useWaveCurations.mockReturnValue({
       data: [{ id: "group-1", name: "Curators", group_id: "g1" }],
       isLoading: false,
       isError: false,
@@ -343,7 +370,7 @@ describe("MyStreamWaveLeaderboard", () => {
         hasReachedLimit: false,
       },
     });
-    useWaveCurationGroups.mockReturnValue({
+    useWaveCurations.mockReturnValue({
       data: [{ id: "group-1", name: "Curators", group_id: "g1" }],
       isLoading: false,
       isError: false,
@@ -357,7 +384,7 @@ describe("MyStreamWaveLeaderboard", () => {
     renderLeaderboard();
 
     headerProps.onCurationGroupChange("group-1");
-    expect(replace).toHaveBeenCalledWith("/waves?curated_by_group=group-1", {
+    expect(replace).toHaveBeenCalledWith("/waves?curation_id=group-1", {
       scroll: false,
     });
 
@@ -366,7 +393,7 @@ describe("MyStreamWaveLeaderboard", () => {
   });
 
   it("updates local price filters without touching URL", () => {
-    searchParamsString = "curated_by_group=group-1";
+    searchParamsString = "curation_id=group-1";
     useWave.mockReturnValue({
       isMemesWave: false,
       isCurationWave: true,
@@ -376,7 +403,7 @@ describe("MyStreamWaveLeaderboard", () => {
         hasReachedLimit: false,
       },
     });
-    useWaveCurationGroups.mockReturnValue({
+    useWaveCurations.mockReturnValue({
       data: [{ id: "group-1", name: "Curators", group_id: "g1" }],
       isLoading: false,
       isError: false,

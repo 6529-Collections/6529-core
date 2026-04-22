@@ -28,11 +28,21 @@ type WaveTabParams = {
   isCurationWave: boolean;
   votingState: WaveVotingState;
   hasFirstDecisionPassed: boolean;
+  transientPreferredTab?: MyStreamWaveTab | null;
 };
+
+export interface SetActiveContentTabOptions {
+  readonly persist?: boolean;
+}
+
+export type SetActiveContentTab = (
+  tab: MyStreamWaveTab,
+  options?: SetActiveContentTabOptions
+) => void;
 
 interface ContentTabContextType {
   activeContentTab: MyStreamWaveTab;
-  setActiveContentTab: (tab: MyStreamWaveTab) => void;
+  setActiveContentTab: SetActiveContentTab;
   availableTabs: MyStreamWaveTab[];
   updateAvailableTabs: (params: WaveTabParams | null) => void;
 }
@@ -58,7 +68,9 @@ const buildMemesTabs = (
   hasFirstDecisionPassed: boolean
 ) => {
   const tabs: MyStreamWaveTab[] = [];
-  if (votingState !== WaveVotingState.ENDED) {
+  if (votingState === WaveVotingState.ENDED) {
+    tabs.push(MyStreamWaveTab.SUBMISSIONS);
+  } else {
     tabs.push(MyStreamWaveTab.LEADERBOARD);
   }
   tabs.push(MyStreamWaveTab.CHAT);
@@ -79,7 +91,9 @@ const buildDefaultTabs = (
   isCurationWave: boolean
 ) => {
   const tabs: MyStreamWaveTab[] = [MyStreamWaveTab.CHAT];
-  if (votingState !== WaveVotingState.ENDED) {
+  if (votingState === WaveVotingState.ENDED) {
+    tabs.push(MyStreamWaveTab.SUBMISSIONS);
+  } else {
     tabs.push(MyStreamWaveTab.LEADERBOARD);
   }
   if (isCurationWave) {
@@ -91,7 +105,9 @@ const buildDefaultTabs = (
   if (!isCurationWave) {
     tabs.push(MyStreamWaveTab.OUTCOME);
   }
-  tabs.push(MyStreamWaveTab.MY_VOTES);
+  if (isCurationWave) {
+    tabs.push(MyStreamWaveTab.MY_VOTES);
+  }
   return tabs;
 };
 
@@ -116,12 +132,11 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
     MyStreamWaveTab.CHAT,
   ]);
   const currentWaveIdRef = useRef<string | null>(null);
-  const activeContentTabRef = useRef<MyStreamWaveTab>(activeContentTabRaw);
   const tabsByWaveIdRef = useRef<Record<string, MyStreamWaveTab>>(tabsByWaveId);
-
-  useEffect(() => {
-    activeContentTabRef.current = activeContentTabRaw;
-  }, [activeContentTabRaw]);
+  const transientTabOverrideRef = useRef<{
+    waveId: string;
+    tab: MyStreamWaveTab;
+  } | null>(null);
 
   useEffect(() => {
     tabsByWaveIdRef.current = tabsByWaveId;
@@ -129,7 +144,6 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
 
   const setActiveTabInternal = useCallback((tab: MyStreamWaveTab) => {
     setActiveContentTabRaw(tab);
-    activeContentTabRef.current = tab;
   }, []);
 
   // Function to determine which tabs are available based on wave state
@@ -139,6 +153,7 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
       if (!params) {
         setAvailableTabs([MyStreamWaveTab.CHAT]);
         currentWaveIdRef.current = null;
+        transientTabOverrideRef.current = null;
         setActiveTabInternal(MyStreamWaveTab.CHAT);
         return;
       }
@@ -151,6 +166,7 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
         isCurationWave,
         votingState,
         hasFirstDecisionPassed,
+        transientPreferredTab,
       } = params;
 
       let tabs: MyStreamWaveTab[];
@@ -170,14 +186,51 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
         );
       }
 
+      if (
+        transientTabOverrideRef.current !== null &&
+        transientTabOverrideRef.current.waveId !== waveId
+      ) {
+        transientTabOverrideRef.current = null;
+      }
+
+      if (
+        waveId !== null &&
+        transientPreferredTab !== null &&
+        transientPreferredTab !== undefined &&
+        tabs.includes(transientPreferredTab)
+      ) {
+        transientTabOverrideRef.current = {
+          waveId,
+          tab: transientPreferredTab,
+        };
+      }
+
       setAvailableTabs(tabs);
       currentWaveIdRef.current = waveId ?? null;
 
+      const transientTab =
+        waveId !== null && transientTabOverrideRef.current?.waveId === waveId
+          ? transientTabOverrideRef.current.tab
+          : null;
+
+      if (transientTab !== null && tabs.includes(transientTab)) {
+        setActiveTabInternal(transientTab);
+        return;
+      }
+      if (transientTab !== null) {
+        transientTabOverrideRef.current = null;
+      }
+
       const storedTab = waveId ? tabsByWaveIdRef.current[waveId] : undefined;
-      const defaultTab =
-        isMemesWave && tabs.includes(MyStreamWaveTab.LEADERBOARD)
-          ? MyStreamWaveTab.LEADERBOARD
-          : MyStreamWaveTab.CHAT;
+      let defaultTab = MyStreamWaveTab.CHAT;
+      if (
+        votingState === WaveVotingState.ENDED &&
+        tabs.includes(MyStreamWaveTab.SUBMISSIONS)
+      ) {
+        defaultTab = MyStreamWaveTab.SUBMISSIONS;
+      } else if (isMemesWave && tabs.includes(MyStreamWaveTab.LEADERBOARD)) {
+        defaultTab = MyStreamWaveTab.LEADERBOARD;
+      }
 
       const nextTab =
         storedTab !== undefined && tabs.includes(storedTab)
@@ -191,11 +244,17 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
 
   // Wrapper for setActiveContentTab that validates the tab
   const setActiveContentTab = useCallback(
-    (tab: MyStreamWaveTab) => {
+    (tab: MyStreamWaveTab, options?: SetActiveContentTabOptions) => {
       // Only set the tab if it's available
       if (availableTabs.includes(tab)) {
         setActiveTabInternal(tab);
         const waveId = currentWaveIdRef.current;
+        if (options?.persist === false) {
+          transientTabOverrideRef.current =
+            waveId === null ? null : { waveId, tab };
+          return;
+        }
+        transientTabOverrideRef.current = null;
         if (waveId) {
           const nextMap = {
             ...tabsByWaveIdRef.current,
@@ -206,6 +265,7 @@ export const ContentTabProvider: React.FC<{ children: ReactNode }> = ({
         }
       } else {
         // If tab is not available, default to CHAT
+        transientTabOverrideRef.current = null;
         setActiveTabInternal(MyStreamWaveTab.CHAT);
       }
     },

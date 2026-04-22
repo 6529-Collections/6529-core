@@ -12,7 +12,6 @@ import type {
   WebSocketMessage,
 } from "./WebSocketTypes";
 import { WebSocketStatus } from "./WebSocketTypes";
-import type { WsMessageType } from "@/helpers/Types";
 import { asNonEmptyString } from "@/lib/text/nonEmptyString";
 import { getAuthJwt } from "../auth/auth.utils";
 
@@ -105,33 +104,35 @@ export function WebSocketProvider({
    * Parse and route incoming WebSocket messages
    */
   const handleMessage = useCallback((event: MessageEvent<unknown>) => {
+    if (typeof event.data !== "string") {
+      return;
+    }
+
+    let parsed: unknown;
     try {
-      if (typeof event.data !== "string") {
-        return;
-      }
+      parsed = JSON.parse(event.data);
+    } catch {
+      return;
+    }
 
-      // Parse the message
-      const parsed: unknown = JSON.parse(event.data);
-      const message = normalizeIncomingMessage(parsed);
-      if (!message) {
-        return;
-      }
+    const message = normalizeIncomingMessage(parsed);
+    if (!message) {
+      return;
+    }
 
-      // Get subscribers for this message type
-      const subscribers = subscribersRef.current.get(message.type);
+    // Get subscribers for this message type
+    const subscribers = subscribersRef.current.get(message.type);
 
-      // If there are subscribers, notify them with the message data
-      if (subscribers) {
-        subscribers.forEach((callback) => {
-          try {
-            callback(message.data);
-          } catch (error) {
-            console.error("Error in subscriber callback:", error);
-          }
-        });
+    if (!subscribers) {
+      return;
+    }
+
+    for (const subscriber of subscribers) {
+      try {
+        subscriber(message.data);
+      } catch {
+        // Keep one subscriber failure from blocking the remaining handlers.
       }
-    } catch (error) {
-      console.error("Failed to parse WebSocket message:", error);
     }
   }, []);
 
@@ -148,41 +149,40 @@ export function WebSocketProvider({
   /**
    * Attempt reconnection with exponential backoff
    */
-  const attemptReconnect = useCallback(() => {
-    // Clear any existing timer
-    clearReconnectTimer();
+  const attemptReconnect = useCallback(
+    (connectSocket: (token?: string) => void) => {
+      // Clear any existing timer
+      clearReconnectTimer();
 
-    // Check if we've exceeded max attempts
-    const maxAttempts =
-      config.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
-    if (reconnectAttemptsRef.current >= maxAttempts) {
-      console.warn(
-        `WebSocket reconnect failed after ${reconnectAttemptsRef.current} attempts`
+      // Check if we've exceeded max attempts
+      const maxAttempts =
+        config.maxReconnectAttempts ?? DEFAULT_MAX_RECONNECT_ATTEMPTS;
+      if (reconnectAttemptsRef.current >= maxAttempts) {
+        return;
+      }
+
+      // Calculate delay based on attempts
+      const baseDelay = config.reconnectDelay ?? DEFAULT_RECONNECT_DELAY;
+      const delay = calculateReconnectDelay(
+        reconnectAttemptsRef.current,
+        baseDelay,
+        MAX_RECONNECT_DELAY
       );
-      return;
-    }
-
-    // Calculate delay based on attempts
-    const baseDelay = config.reconnectDelay ?? DEFAULT_RECONNECT_DELAY;
-    const delay = calculateReconnectDelay(
-      reconnectAttemptsRef.current,
-      baseDelay,
-      MAX_RECONNECT_DELAY
-    );
-
-    // Schedule reconnection
-    reconnectTimerRef.current = setTimeout(() => {
-      reconnectAttemptsRef.current += 1;
-      // Attempt reconnection with the stored token
-      connect(reconnectTokenRef.current);
-    }, delay);
-  }, [config.maxReconnectAttempts, config.reconnectDelay]);
+      // Schedule reconnection
+      reconnectTimerRef.current = setTimeout(() => {
+        reconnectAttemptsRef.current += 1;
+        // Attempt reconnection with the stored token
+        connectSocket(reconnectTokenRef.current);
+      }, delay);
+    },
+    [clearReconnectTimer, config.maxReconnectAttempts, config.reconnectDelay]
+  );
 
   /**
    * Connect to WebSocket server
    */
   const connect = useCallback(
-    (token?: string) => {
+    function connectSocket(token?: string) {
       // Store token for potential reconnection
       reconnectTokenRef.current = token;
 
@@ -213,27 +213,46 @@ export function WebSocketProvider({
 
         // Set up event handlers
         ws.onopen = () => {
+          if (wsRef.current !== ws) {
+            return;
+          }
+
           setStatus(WebSocketStatus.CONNECTED);
 
           // Reset reconnect attempts on successful connection
           reconnectAttemptsRef.current = 0;
         };
 
-        ws.onmessage = handleMessage;
+        ws.onmessage = (event) => {
+          if (wsRef.current !== ws) {
+            return;
+          }
+
+          handleMessage(event);
+        };
 
         ws.onclose = (event) => {
+          if (wsRef.current !== ws) {
+            return;
+          }
+
           // Clean up WebSocket
           wsRef.current = null;
           setStatus(WebSocketStatus.DISCONNECTED);
 
+          const shouldReconnect =
+            event.code !== 1000 && !isManualDisconnectRef.current;
+          const freshToken = shouldReconnect
+            ? (getAuthJwt() ?? reconnectTokenRef.current)
+            : undefined;
+
           // Only attempt reconnect for unexpected closure (not code 1000)
           // and if this wasn't a manual disconnect
-          if (event.code !== 1000 && !isManualDisconnectRef.current) {
+          if (shouldReconnect) {
             // Get fresh token before reconnecting
-            const freshToken = getAuthJwt() || reconnectTokenRef.current;
             if (freshToken) {
               reconnectTokenRef.current = freshToken; // Update stored token
-              attemptReconnect();
+              attemptReconnect(connectSocket);
             }
           } else {
             // Reset reconnect attempts for intentional disconnects
@@ -241,19 +260,13 @@ export function WebSocketProvider({
           }
         };
 
-        ws.onerror = (error) => {
-          console.error("WebSocket error:", error);
-          // State will be updated by onclose handler
-        };
-
         // Store the WebSocket reference
         wsRef.current = ws;
-      } catch (error) {
-        console.error("Failed to connect to WebSocket:", error);
+      } catch {
         setStatus(WebSocketStatus.DISCONNECTED);
 
         // Schedule reconnect even for connection errors
-        attemptReconnect();
+        attemptReconnect(connectSocket);
       }
     },
     [config.url, handleMessage, clearReconnectTimer, attemptReconnect]
@@ -284,19 +297,19 @@ export function WebSocketProvider({
    * Subscribe to a specific message type
    */
   const subscribe = useCallback(
-    <T,>(messageType: string, callback: MessageCallback<T>) => {
+    <T,>(messageType: string, subscriber: MessageCallback<T>) => {
       // Get or create subscriber set for this message type
       if (!subscribersRef.current.has(messageType)) {
         subscribersRef.current.set(messageType, new Set());
       }
 
-      // Add the callback to subscribers
+      // Add the subscriber handler
       const subscribers = subscribersRef.current.get(messageType)!;
-      subscribers.add(callback as MessageCallback);
+      subscribers.add(subscriber as MessageCallback);
 
       // Return unsubscribe function
       return () => {
-        subscribers.delete(callback as MessageCallback);
+        subscribers.delete(subscriber as MessageCallback);
 
         // Clean up empty subscriber sets
         if (subscribers.size === 0) {
@@ -312,14 +325,20 @@ export function WebSocketProvider({
    * @param messageType - Type identifier for the message
    * @param data - Payload for the message
    */
-  const send = useCallback(<T,>(messageType: WsMessageType, data: T) => {
-    const ws = wsRef.current;
-    if (!ws || ws.readyState !== WebSocket.OPEN) {
-      return;
-    }
-    const message: WebSocketMessage<T> = { type: messageType, ...data };
-    ws.send(JSON.stringify(message));
-  }, []);
+  const send: WebSocketContextValue["send"] = useCallback(
+    (messageType, data) => {
+      const ws = wsRef.current;
+      if (ws?.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      const message: WebSocketMessage<typeof data> = {
+        type: messageType,
+        ...data,
+      };
+      ws.send(JSON.stringify(message));
+    },
+    []
+  );
 
   // Clean up on unmount
   useEffect(() => {
