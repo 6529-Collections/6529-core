@@ -10,6 +10,7 @@ import type { ReferencedNft } from "@/entities/IDrop";
 import type { ApiWaveMin } from "@/generated/models/ApiWaveMin";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import WaveDropPartContentMarkdown from "./WaveDropPartContentMarkdown";
+import WaveDropPartContentAttachments from "./WaveDropPartContentAttachments";
 import { ImageScale } from "@/helpers/image.helpers";
 import type { DropContentPresentation } from "./dropContentPresentation";
 
@@ -45,6 +46,10 @@ interface WaveDropPartContentProps {
     | ((href: string, active: boolean) => void)
     | undefined;
   readonly contentPresentation?: DropContentPresentation | undefined;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
@@ -70,6 +75,10 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   fullWidthMedia = false,
   onLinkCardActionsActiveChange,
   contentPresentation = "default",
+  embedPath,
+  quotePath,
+  embedDepth,
+  maxEmbedDepth,
 }) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
 
@@ -166,6 +175,10 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
               drop={drop}
               onLinkCardActionsActiveChange={onLinkCardActionsActiveChange}
               contentPresentation={contentPresentation}
+              embedPath={embedPath}
+              quotePath={quotePath}
+              embedDepth={embedDepth}
+              maxEmbedDepth={maxEmbedDepth}
             />
           </div>
           {!!activePart.media.length && (
@@ -176,6 +189,9 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
               fullWidthMedia={fullWidthMedia}
             />
           )}
+          <WaveDropPartContentAttachments
+            attachments={activePart.attachments ?? []}
+          />
         </div>
 
         {isStorm && (

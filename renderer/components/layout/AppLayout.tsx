@@ -10,14 +10,14 @@ import { selectEditingDropId } from "@/store/editSlice";
 import dynamic from "next/dynamic";
 import { usePathname, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import { useCallback, useRef } from "react";
+import { Suspense, useCallback, useRef } from "react";
 import { useSelector } from "react-redux";
 import BrainMobileMessages from "../brain/mobile/BrainMobileMessages";
 import BrainMobileWaves from "../brain/mobile/BrainMobileWaves";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";
 import BottomNavigation from "../navigation/BottomNavigation";
-import { useViewContext } from "../navigation/ViewContext";
+import { getActiveViewFromUrl } from "../navigation/ViewContext";
 import PullToRefresh from "../providers/PullToRefresh";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { useMemesQuickVoteDialogController } from "@/hooks/useMemesQuickVoteDialogController";
@@ -46,17 +46,31 @@ function WavesQuickVoteView() {
   );
 }
 
-export default function AppLayout({ children }: Props) {
+function AppLayoutFallback({ children }: Props) {
+  return (
+    <div className="tw-overflow-auto">
+      <HeaderPlaceholder />
+      <main>{children}</main>
+      <div className="tw-h-[85px] tw-w-full" />
+    </div>
+  );
+}
+
+function AppLayoutContent({ children }: Props) {
   useDeepLinkNavigation();
   const { registerRef } = useLayout();
   const { setHeaderRef } = useHeaderContext();
   const { containerRef: searchContainerRef } = useSearch();
   const headerRef = useRef<HTMLDivElement | null>(null);
-  const { activeView } = useViewContext();
   const pathname = usePathname();
+  // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense
   const searchParams = useSearchParams();
   const isSingleDropOpen = searchParams.get("drop") !== null;
   const waveParam = getActiveWaveIdFromUrl({ pathname, searchParams });
+  const activeView = getActiveViewFromUrl({
+    activeWaveId: waveParam,
+    searchParams,
+  });
   const viewParam = searchParams.get("view");
   const hasWaveParam = Boolean(waveParam);
   const isViewingWavesOrMessages =
@@ -118,5 +132,13 @@ export default function AppLayout({ children }: Props) {
         <BottomNavigation hidden={shouldHideBottomNav} />
       )}
     </div>
+  );
+}
+
+export default function AppLayout({ children }: Props) {
+  return (
+    <Suspense fallback={<AppLayoutFallback>{children}</AppLayoutFallback>}>
+      <AppLayoutContent>{children}</AppLayoutContent>
+    </Suspense>
   );
 }

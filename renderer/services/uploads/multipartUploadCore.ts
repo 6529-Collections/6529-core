@@ -1,13 +1,23 @@
-import axios from "axios";
+import axios, { CanceledError, isCancel } from "axios";
 import pLimit from "p-limit";
-import pRetry from "p-retry";
+import pRetry, { AbortError } from "p-retry";
+import { ApiMediaUploadMimeType } from "@/generated/models/ApiMediaUploadMimeType";
 import { commonApiPost } from "@/services/api/common-api";
+import {
+  getContentType,
+  toApiMediaUploadMimeType,
+} from "@/services/uploads/mediaUploadMimeType";
 import type { ApiCreateMediaUploadUrlRequest } from "@/generated/models/ApiCreateMediaUploadUrlRequest";
 import type { ApiStartMultipartMediaUploadResponse } from "@/generated/models/ApiStartMultipartMediaUploadResponse";
 import type { ApiUploadPartOfMultipartUploadRequest } from "@/generated/models/ApiUploadPartOfMultipartUploadRequest";
 import type { ApiUploadPartOfMultipartUploadResponse } from "@/generated/models/ApiUploadPartOfMultipartUploadResponse";
 import type { ApiCompleteMultipartUploadRequest } from "@/generated/models/ApiCompleteMultipartUploadRequest";
 import type { ApiCompleteMultipartUploadResponse } from "@/generated/models/ApiCompleteMultipartUploadResponse";
+import type { ApiAttachment } from "@/generated/models/ApiAttachment";
+import type { ApiCreateAttachmentMultipartUploadRequest } from "@/generated/models/ApiCreateAttachmentMultipartUploadRequest";
+import type { ApiCreateAttachmentMultipartUploadResponse } from "@/generated/models/ApiCreateAttachmentMultipartUploadResponse";
+import type { ApiCompleteAttachmentMultipartUploadRequest } from "@/generated/models/ApiCompleteAttachmentMultipartUploadRequest";
+import { getApiAttachmentUploadMimeType } from "@/services/uploads/attachmentUploadMimeType";
 
 const PART_SIZE = 5 * 1024 * 1024;
 const CONCURRENCY = 5;
@@ -24,65 +34,42 @@ interface MultipartUploadCoreParams {
   file: File;
   endpoints: MultipartUploadEndpoints;
   onProgress?: ((bytesUploaded: number) => void) | undefined;
+  signal?: AbortSignal | undefined;
 }
 
-export function getContentType(file: File): string {
-  if (file.type) {
-    return file.type;
-  }
+export {
+  getContentType,
+  toApiMediaUploadMimeType,
+} from "@/services/uploads/mediaUploadMimeType";
 
-  const fileName = file.name.toLowerCase();
-  if (fileName.endsWith(".glb")) {
-    return "model/gltf-binary";
-  }
-  if (fileName.endsWith(".gltf")) {
-    return "model/gltf+json";
-  }
-  if (fileName.endsWith(".mp4")) {
-    return "video/mp4";
-  }
-  if (fileName.endsWith(".mov")) {
-    return "video/quicktime";
-  }
-  if (fileName.endsWith(".png")) {
-    return "image/png";
-  }
-  if (fileName.endsWith(".jpg") || fileName.endsWith(".jpeg")) {
-    return "image/jpeg";
-  }
-  if (fileName.endsWith(".gif")) {
-    return "image/gif";
-  }
-  if (fileName.endsWith(".webp")) {
-    return "image/webp";
-  }
-
-  return "application/octet-stream";
-}
-
-export async function multipartUploadCore({
-  file,
-  endpoints,
-  onProgress,
-}: MultipartUploadCoreParams): Promise<string> {
+export function getApiMediaUploadMimeType(file: File): ApiMediaUploadMimeType {
   const contentType = getContentType(file);
+  const apiContentType = toApiMediaUploadMimeType(contentType);
 
-  const startData = await commonApiPost<
-    ApiCreateMediaUploadUrlRequest,
-    ApiStartMultipartMediaUploadResponse
-  >({
-    endpoint: endpoints.start,
-    body: {
-      file_name: file.name,
-      content_type: contentType,
-    },
-  });
-
-  const { upload_id, key } = startData;
-  if (!upload_id || !key) {
-    throw new Error("Server did not return required upload_id or key");
+  if (!apiContentType) {
+    throw new Error(`Unsupported file type for upload: ${file.name}`);
   }
 
+  return apiContentType;
+}
+
+async function uploadMultipartParts({
+  file,
+  uploadId,
+  key,
+  contentType,
+  partEndpoint,
+  onProgress,
+  signal,
+}: {
+  readonly file: File;
+  readonly uploadId: string;
+  readonly key: string;
+  readonly contentType: string;
+  readonly partEndpoint: string;
+  readonly onProgress?: ((bytesUploaded: number) => void) | undefined;
+  readonly signal?: AbortSignal | undefined;
+}): Promise<Array<{ eTag: string; partNumber: number }>> {
   const totalParts = Math.ceil(file.size / PART_SIZE);
   const limit = pLimit(CONCURRENCY);
 
@@ -95,6 +82,10 @@ export async function multipartUploadCore({
     const blobPart = file.slice(startByte, endByte);
 
     const uploadChunk = async () => {
+      if (signal?.aborted) {
+        throw new AbortError("Upload aborted");
+      }
+
       const previousProgress = partProgress.get(partNumber) ?? 0;
       if (previousProgress > 0 && onProgress) {
         // Remove any bytes counted from a failed prior attempt for this part
@@ -104,44 +95,60 @@ export async function multipartUploadCore({
       let lastChunkLoaded = 0;
       partProgress.set(partNumber, 0);
 
-      const partResp = await commonApiPost<
-        ApiUploadPartOfMultipartUploadRequest,
-        ApiUploadPartOfMultipartUploadResponse
-      >({
-        endpoint: endpoints.part,
-        body: {
-          upload_id,
-          key,
-          part_no: partNumber,
-        },
-      });
+      try {
+        const partResp = await commonApiPost<
+          ApiUploadPartOfMultipartUploadRequest,
+          ApiUploadPartOfMultipartUploadResponse
+        >({
+          endpoint: partEndpoint,
+          body: {
+            upload_id: uploadId,
+            key,
+            part_no: partNumber,
+          },
+          ...(signal ? { signal } : {}),
+        });
 
-      const { upload_url } = partResp;
-      if (!upload_url) {
-        throw new Error("No upload_url returned for part " + partNumber);
+        const { upload_url } = partResp;
+        if (!upload_url) {
+          throw new Error("No upload_url returned for part " + partNumber);
+        }
+
+        const s3Resp = await axios.put(upload_url, blobPart, {
+          headers: {
+            "Content-Type": contentType,
+          },
+          ...(signal ? { signal } : {}),
+          onUploadProgress: (event) => {
+            if (event.loaded !== undefined && onProgress) {
+              const chunkDelta = Math.max(event.loaded - lastChunkLoaded, 0);
+              lastChunkLoaded = event.loaded;
+              partProgress.set(partNumber, event.loaded);
+              onProgress(chunkDelta);
+            }
+          },
+        });
+
+        const eTagHeader = s3Resp.headers["etag"];
+        const eTag = eTagHeader ? eTagHeader.replaceAll('"', "") : "";
+        if (!eTag) {
+          throw new Error(`No ETag returned for part ${partNumber}`);
+        }
+
+        return { eTag, partNumber };
+      } catch (error: unknown) {
+        if (
+          signal?.aborted ||
+          isCancel(error) ||
+          error instanceof CanceledError ||
+          (error instanceof DOMException && error.name === "AbortError")
+        ) {
+          throw new AbortError(
+            error instanceof Error ? error : new Error(String(error))
+          );
+        }
+        throw error;
       }
-
-      const s3Resp = await axios.put(upload_url, blobPart, {
-        headers: {
-          "Content-Type": contentType,
-        },
-        onUploadProgress: (event) => {
-          if (event.loaded !== undefined && onProgress) {
-            const chunkDelta = Math.max(event.loaded - lastChunkLoaded, 0);
-            lastChunkLoaded = event.loaded;
-            partProgress.set(partNumber, event.loaded);
-            onProgress(chunkDelta);
-          }
-        },
-      });
-
-      const eTagHeader = s3Resp.headers["etag"];
-      const eTag = eTagHeader ? eTagHeader.replaceAll('"', "") : "";
-      if (!eTag) {
-        throw new Error(`No ETag returned for part ${partNumber}`);
-      }
-
-      return { eTag, partNumber };
     };
 
     const chunkPromise = limit(() =>
@@ -154,7 +161,43 @@ export async function multipartUploadCore({
     partPromises.push(chunkPromise);
   }
 
-  const uploadedParts = await Promise.all(partPromises);
+  return await Promise.all(partPromises);
+}
+
+export async function multipartUploadCore({
+  file,
+  endpoints,
+  onProgress,
+  signal,
+}: MultipartUploadCoreParams): Promise<string> {
+  const contentType = getApiMediaUploadMimeType(file);
+
+  const startData = await commonApiPost<
+    ApiCreateMediaUploadUrlRequest,
+    ApiStartMultipartMediaUploadResponse
+  >({
+    endpoint: endpoints.start,
+    body: {
+      file_name: file.name,
+      content_type: contentType,
+    },
+    ...(signal ? { signal } : {}),
+  });
+
+  const { upload_id, key } = startData;
+  if (!upload_id || !key) {
+    throw new Error("Server did not return required upload_id or key");
+  }
+
+  const uploadedParts = await uploadMultipartParts({
+    file,
+    uploadId: upload_id,
+    key,
+    contentType,
+    partEndpoint: endpoints.part,
+    onProgress,
+    signal,
+  });
 
   const completionData = await commonApiPost<
     ApiCompleteMultipartUploadRequest,
@@ -169,6 +212,7 @@ export async function multipartUploadCore({
         etag: p.eTag,
       })),
     },
+    ...(signal ? { signal } : {}),
   });
 
   const { media_url } = completionData;
@@ -177,4 +221,63 @@ export async function multipartUploadCore({
   }
 
   return media_url;
+}
+
+export async function multipartAttachmentUploadCore({
+  file,
+  endpoints,
+  onProgress,
+  signal,
+}: MultipartUploadCoreParams): Promise<ApiAttachment> {
+  const contentType = getApiAttachmentUploadMimeType(file);
+
+  if (!contentType) {
+    throw new Error(`Unsupported attachment type for upload: ${file.name}`);
+  }
+
+  const startData = await commonApiPost<
+    ApiCreateAttachmentMultipartUploadRequest,
+    ApiCreateAttachmentMultipartUploadResponse
+  >({
+    endpoint: endpoints.start,
+    body: {
+      file_name: file.name,
+      content_type: contentType,
+    },
+    ...(signal ? { signal } : {}),
+  });
+
+  const { attachment_id, upload_id, key } = startData;
+  if (!attachment_id || !upload_id || !key) {
+    throw new Error(
+      "Server did not return required attachment_id, upload_id, or key"
+    );
+  }
+
+  const uploadedParts = await uploadMultipartParts({
+    file,
+    uploadId: upload_id,
+    key,
+    contentType,
+    partEndpoint: endpoints.part,
+    onProgress,
+    signal,
+  });
+
+  return await commonApiPost<
+    ApiCompleteAttachmentMultipartUploadRequest,
+    ApiAttachment
+  >({
+    endpoint: endpoints.complete,
+    body: {
+      attachment_id,
+      upload_id,
+      key,
+      parts: uploadedParts.map((p) => ({
+        part_no: p.partNumber,
+        etag: p.eTag,
+      })),
+    },
+    ...(signal ? { signal } : {}),
+  });
 }

@@ -7,8 +7,8 @@ import CircleLoader, {
 import { Spinner } from "@/components/dotLoader/DotLoader";
 import { TweetPreviewModeProvider } from "@/components/tweets/TweetPreviewModeContext";
 import CommonIntersectionElement from "@/components/utils/CommonIntersectionElement";
-import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { ApiDropType } from "@/generated/models/ApiDropType";
+import CurationDropFooter from "@/components/waves/drops/CurationDropFooter";
 import Drop, { DropLocation } from "@/components/waves/drops/Drop";
 import DropMinimalIdentityRow from "@/components/waves/drops/DropMinimalIdentityRow";
 import WaveDropContent from "@/components/waves/drops/WaveDropContent";
@@ -20,6 +20,7 @@ import { areSameProfileIdentity } from "@/helpers/ProfileHelpers";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useCurationManagementPermission } from "@/hooks/useCurationManagementPermission";
 import { useDropCurationMembershipMutation } from "@/hooks/drops/useDropCurationMembershipMutation";
+import { useNavigateToDropWave } from "@/hooks/useNavigateToDropWave";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import { XMarkIcon } from "@heroicons/react/24/outline";
@@ -40,6 +41,11 @@ interface UserPageProfileWaveMasonryProps {
 
 const MASONRY_COLUMN_WIDTH = 300;
 const MASONRY_GUTTER = 16;
+const noop = () => {};
+const CURATION_CARD_CLASS_NAME =
+  "tw-group tw-relative tw-isolate tw-rounded-xl";
+const CURATION_CARD_HOVER_FRAME_CLASS_NAME =
+  "tw-pointer-events-none tw-absolute tw-inset-0 tw-z-10 tw-rounded-xl tw-border tw-border-solid tw-border-transparent tw-transition-colors tw-duration-200 tw-ease-out desktop-hover:group-hover:tw-border-white/10 motion-reduce:tw-transition-none";
 
 export type ProfileIdentitySummary = {
   readonly id?: string | null | undefined;
@@ -221,6 +227,7 @@ function UserPageProfileWaveMasonryCard({
   const [activePartIndex, setActivePartIndex] = useState(0);
   const replyTo = drop.reply_to;
   const activePart = drop.parts[activePartIndex] ?? drop.parts[0];
+  const navigateToDropWave = useNavigateToDropWave();
   const layout = getProfileMasonryCardLayout({
     activePart,
     drop,
@@ -237,10 +244,10 @@ function UserPageProfileWaveMasonryCard({
       drop={drop}
       activePartIndex={activePartIndex}
       setActivePartIndex={setActivePartIndex}
-      onQuoteClick={(_quotedDrop: ApiDrop) => {}}
+      onQuoteClick={navigateToDropWave}
       onLongPress={() => {}}
       setLongPressTriggered={(_triggered: boolean) => {}}
-      onDropContentClick={undefined}
+      onDropContentClick={navigateToDropWave}
       mediaImageScale={ImageScale.AUTOx1080}
       fullWidthMedia={true}
     />
@@ -248,7 +255,7 @@ function UserPageProfileWaveMasonryCard({
 
   if (layout.usesDefaultDropRenderer) {
     return (
-      <article className="tw-group tw-relative tw-isolate">
+      <article className={CURATION_CARD_CLASS_NAME}>
         {removeButton}
 
         <Drop
@@ -260,18 +267,25 @@ function UserPageProfileWaveMasonryCard({
           showReplyAndQuote={false}
           location={DropLocation.MY_STREAM}
           dropViewDropId={null}
-          onReply={() => {}}
-          onReplyClick={() => {}}
-          onQuoteClick={() => {}}
+          onReply={noop}
+          onReplyClick={noop}
+          onQuoteClick={navigateToDropWave}
+          onDropContentClick={navigateToDropWave}
+          footer={<CurationDropFooter drop={drop} />}
           identityMode={layout.identityMode}
+          timestampLayout="stacked"
           showInteractions={false}
+        />
+        <div
+          aria-hidden="true"
+          className={CURATION_CARD_HOVER_FRAME_CLASS_NAME}
         />
       </article>
     );
   }
 
   return (
-    <article className="tw-group tw-relative tw-isolate">
+    <article className={CURATION_CARD_CLASS_NAME}>
       {removeButton}
 
       <div className="tw-overflow-hidden tw-rounded-xl tw-bg-black/70 tw-ring-1 tw-ring-inset tw-ring-white/10">
@@ -279,11 +293,12 @@ function UserPageProfileWaveMasonryCard({
           <div className="tw-flex tw-items-start tw-gap-x-3 tw-px-4 tw-pb-4 tw-pt-4">
             <WaveDropAuthorPfp drop={drop} />
             <div className="tw-min-w-0 tw-flex-1">
-              <DropMinimalIdentityRow drop={drop} />
+              <DropMinimalIdentityRow drop={drop} timestampLayout="stacked" />
               <div className="tw-mt-2">{dropContent}</div>
               {drop.metadata.length > 0 && (
                 <WaveDropMetadata metadata={drop.metadata} />
               )}
+              <CurationDropFooter drop={drop} className="tw-mt-3" />
             </div>
           </div>
         ) : (
@@ -292,7 +307,10 @@ function UserPageProfileWaveMasonryCard({
               <div className="tw-flex tw-items-start tw-gap-x-3 tw-px-4 tw-pt-4">
                 <WaveDropAuthorPfp drop={drop} />
                 <div className="tw-min-w-0 tw-flex-1">
-                  <DropMinimalIdentityRow drop={drop} />
+                  <DropMinimalIdentityRow
+                    drop={drop}
+                    timestampLayout="stacked"
+                  />
                 </div>
               </div>
             )}
@@ -319,9 +337,17 @@ function UserPageProfileWaveMasonryCard({
                 <WaveDropMetadata metadata={drop.metadata} />
               </div>
             )}
+            <CurationDropFooter
+              drop={drop}
+              className="tw-px-4 tw-pb-4 tw-pt-2"
+            />
           </>
         )}
       </div>
+      <div
+        aria-hidden="true"
+        className={CURATION_CARD_HOVER_FRAME_CLASS_NAME}
+      />
     </article>
   );
 }

@@ -3,7 +3,7 @@
 import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropType } from "@/generated/models/ApiDropType";
-import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import type { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getOptimisticDropId } from "@/helpers/waves/drop.helpers";
@@ -67,6 +67,7 @@ export const getOptimisticDrop = (
       forbid_negative_votes: wave.voting.forbid_negative_votes,
       submission_type: wave.participation.submission_strategy?.type ?? null,
       identity_wave: wave.identity_wave,
+      voting_credit_nfts: wave.voting.credit_nfts,
     },
     author: {
       id: connectedProfile.id,
@@ -103,6 +104,7 @@ export const getOptimisticDrop = (
         url: media.url,
         mime_type: media.mime_type,
       })),
+      attachments: [],
       quoted_drop: part.quoted_drop
         ? {
             ...part.quoted_drop,

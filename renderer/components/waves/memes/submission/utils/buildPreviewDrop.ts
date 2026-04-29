@@ -133,6 +133,7 @@ export const buildPreviewDrop = ({
       pinned: wave.pinned,
       identity_wave: wave.identity_wave,
       submission_type: wave.participation.submission_strategy?.type ?? null,
+      voting_credit_nfts: wave.voting.credit_nfts,
     },
     author: {
       id: connectedProfile?.id ?? "preview-user",
@@ -169,6 +170,7 @@ export const buildPreviewDrop = ({
         part_id: 1,
         content: traits.description || null,
         media: [media],
+        attachments: [],
         quoted_drop: null,
       },
     ],

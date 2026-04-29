@@ -30,7 +30,9 @@ import type {
   DropIdentityMode,
   DropInteractionParams,
   DropLocation,
+  DropTimestampLayout,
 } from "../drop.types";
+import { hasDropFooter } from "../drop.types";
 
 interface OngoingParticipationDropProps {
   readonly drop: ExtendedDrop;
@@ -41,9 +43,15 @@ interface OngoingParticipationDropProps {
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
+  readonly footer?: React.ReactNode;
   readonly identityMode?: DropIdentityMode | undefined;
+  readonly timestampLayout?: DropTimestampLayout | undefined;
   readonly showInteractions?: boolean | undefined;
   readonly contentPresentation?: DropContentPresentation | undefined;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 export default function OngoingParticipationDrop({
@@ -55,9 +63,15 @@ export default function OngoingParticipationDrop({
   onReply,
   onQuoteClick,
   onDropContentClick,
+  footer,
   identityMode = "default",
+  timestampLayout = "inline",
   showInteractions = true,
   contentPresentation = "default",
+  embedPath,
+  quotePath,
+  embedDepth,
+  maxEmbedDepth,
 }: OngoingParticipationDropProps) {
   const isActiveDrop = activeDrop?.drop.id === drop.id;
   const { canShowVote } = useDropInteractionRules(drop);
@@ -127,11 +141,15 @@ export default function OngoingParticipationDrop({
         <div className="tw-flex tw-w-full tw-flex-col">
           {showIdentity &&
             (identityMode === "minimal" ? (
-              <DropMinimalIdentityRow drop={drop} />
+              <DropMinimalIdentityRow
+                drop={drop}
+                timestampLayout={timestampLayout}
+              />
             ) : (
               <ParticipationDropHeader
                 drop={drop}
                 showWaveInfo={showWaveInfo}
+                timestampLayout={timestampLayout}
               />
             ))}
           <ParticipationDropContent
@@ -144,6 +162,10 @@ export default function OngoingParticipationDrop({
             setLongPressTriggered={setLongPressTriggered}
             isCompetitionDrop={true}
             contentPresentation={contentPresentation}
+            embedPath={embedPath}
+            quotePath={quotePath}
+            embedDepth={embedDepth}
+            maxEmbedDepth={maxEmbedDepth}
           />
         </div>
       </div>
@@ -163,11 +185,20 @@ export default function OngoingParticipationDrop({
           metadata={visibleMetadata}
           contextId={drop.id}
         />
-        <ParticipationDropFooter
-          drop={drop}
-          voteAction={voteAction}
-          showInteractions={showInteractions}
-        />
+        {(showInteractions || !hasDropFooter(footer)) && (
+          <ParticipationDropFooter
+            drop={drop}
+            voteAction={voteAction}
+            showInteractions={showInteractions}
+          />
+        )}
+        {hasDropFooter(footer) && (
+          <div
+            className={`${showIdentity ? "tw-ml-[3.25rem]" : ""} tw-px-4 tw-pb-4 tw-pt-2`}
+          >
+            {footer}
+          </div>
+        )}
       </div>
 
       {showInteractions &&
