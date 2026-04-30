@@ -104,7 +104,7 @@ export function initializeAppKit(
     isCapacitor,
     chains
   );
-  const appKitConfig = buildAppKitConfig(newAdapter, chains);
+  const appKitConfig = buildAppKitConfig(newAdapter, chains, isCapacitor);
   const appKit = createAppKit(appKitConfig);
   appKit.setEIP6963Enabled(false);
   const ready = appKit.ready();
@@ -120,7 +120,8 @@ export function initializeAppKit(
 
 function buildAppKitConfig(
   adapter: WagmiAdapter,
-  chains: Chain[]
+  chains: Chain[],
+  isCapacitor: boolean
 ): CreateAppKit {
   if (chains.length === 0) {
     throw new Error(
@@ -148,6 +149,7 @@ function buildAppKitConfig(
     enableWalletGuide: false,
     allWallets: isElectron() ? ("HIDE" as const) : ("SHOW" as const),
     featuredWalletIds: isElectron() ? [] : ["metamask", "walletConnect"],
+    enableCoinbase: !isCapacitor,
     features: {
       analytics: true,
       email: false,
