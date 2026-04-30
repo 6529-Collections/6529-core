@@ -15,6 +15,10 @@ function setup() {
 }
 
 describe("ContentTabContext", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
   it("defaults to CHAT when params null", () => {
     const { result } = setup();
     act(() => result.current.updateAvailableTabs(null));
@@ -114,6 +118,37 @@ describe("ContentTabContext", () => {
     expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
   });
 
+  it("forces CHAT for chat waves", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "default-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    act(() => result.current.setActiveContentTab(MyStreamWaveTab.LEADERBOARD));
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "chat-wave",
+        isChatWave: true,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+
+    expect(result.current.availableTabs).toEqual([MyStreamWaveTab.CHAT]);
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
+  });
+
   it("adds SALES and omits OUTCOME for curation waves", () => {
     const { result } = setup();
     act(() =>
@@ -134,6 +169,65 @@ describe("ContentTabContext", () => {
       MyStreamWaveTab.SALES,
       MyStreamWaveTab.MY_VOTES,
     ]);
+  });
+
+  it("shows SUBMISSIONS and defaults to it when voting ended", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "ended-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.ENDED,
+        hasFirstDecisionPassed: true,
+      })
+    );
+
+    expect(result.current.availableTabs).toEqual([
+      MyStreamWaveTab.CHAT,
+      MyStreamWaveTab.SUBMISSIONS,
+      MyStreamWaveTab.WINNERS,
+      MyStreamWaveTab.OUTCOME,
+      MyStreamWaveTab.MY_VOTES,
+    ]);
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.SUBMISSIONS);
+  });
+
+  it("normalizes stored LEADERBOARD to SUBMISSIONS once voting ends", () => {
+    const { result } = setup();
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "ended-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    act(() => result.current.setActiveContentTab(MyStreamWaveTab.LEADERBOARD));
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "ended-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.ENDED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+
+    expect(result.current.availableTabs).toContain(MyStreamWaveTab.SUBMISSIONS);
+    expect(result.current.availableTabs).not.toContain(
+      MyStreamWaveTab.LEADERBOARD
+    );
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.SUBMISSIONS);
   });
 
   it("restores stored tab for memes wave even when it is CHAT", () => {
@@ -173,6 +267,241 @@ describe("ContentTabContext", () => {
       })
     );
     expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
+  });
+
+  it("does not persist transient tab overrides", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+
+    act(() =>
+      result.current.setActiveContentTab(MyStreamWaveTab.CHAT, {
+        persist: false,
+      })
+    );
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "other-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.LEADERBOARD);
+  });
+
+  it("uses transient preferred tab to override stored or default tab", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    act(() => result.current.setActiveContentTab(MyStreamWaveTab.OUTCOME));
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "other-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+        transientPreferredTab: MyStreamWaveTab.CHAT,
+      })
+    );
+
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
+  });
+
+  it("does not persist transient preferred tab after leaving the wave", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+        transientPreferredTab: MyStreamWaveTab.CHAT,
+      })
+    );
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "other-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.LEADERBOARD);
+  });
+
+  it("keeps transient active tab during same-wave availability recalculations", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+
+    act(() =>
+      result.current.setActiveContentTab(MyStreamWaveTab.CHAT, {
+        persist: false,
+      })
+    );
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: true,
+      })
+    );
+
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
+  });
+
+  it("keeps transient preferred tab during same-wave availability recalculations", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+        transientPreferredTab: MyStreamWaveTab.CHAT,
+      })
+    );
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "meme-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: true,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: true,
+      })
+    );
+
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
+  });
+
+  it("reapplies the stored tab on same-wave recalculation when there is no transient override", () => {
+    const { result } = setup();
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "default-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: true,
+      })
+    );
+    act(() => result.current.setActiveContentTab(MyStreamWaveTab.WINNERS));
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "default-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: false,
+      })
+    );
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.CHAT);
+
+    act(() =>
+      result.current.updateAvailableTabs({
+        waveId: "default-wave",
+        isChatWave: false,
+        hasAuthenticatedProfile: true,
+        isMemesWave: false,
+        isCurationWave: false,
+        votingState: WaveVotingState.NOT_STARTED,
+        hasFirstDecisionPassed: true,
+      })
+    );
+
+    expect(result.current.activeContentTab).toBe(MyStreamWaveTab.WINNERS);
   });
 
   it("falls back to default when stored tab is unavailable", () => {

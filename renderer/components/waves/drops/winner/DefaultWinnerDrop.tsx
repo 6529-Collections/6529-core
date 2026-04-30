@@ -8,12 +8,17 @@ import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import Link from "next/link";
 import { memo, useCallback, useState } from "react";
-import type { DropInteractionParams } from "../drop.types";
-import { DropLocation } from "../drop.types";
+import type {
+  DropIdentityMode,
+  DropInteractionParams,
+  DropTimestampLayout,
+} from "../drop.types";
+import { DropLocation, hasDropFooter } from "../drop.types";
 import {
   getRankHoverBorderClass,
   getRankStaticBorderClass,
 } from "../dropRankStyles";
+import DropMinimalIdentityRow from "../DropMinimalIdentityRow";
 import WaveDropActions from "../WaveDropActions";
 import WaveDropAuthorPfp from "../WaveDropAuthorPfp";
 import WaveDropContent from "../WaveDropContent";
@@ -54,6 +59,10 @@ interface DefautWinnerDropProps {
   readonly onReplyClick: (serialNo: number) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
+  readonly footer?: React.ReactNode;
+  readonly identityMode?: DropIdentityMode | undefined;
+  readonly timestampLayout?: DropTimestampLayout | undefined;
+  readonly showInteractions?: boolean | undefined;
 }
 
 const DefaultWinnerDrop = ({
@@ -66,7 +75,11 @@ const DefaultWinnerDrop = ({
   onReplyClick,
   onQuoteClick,
   onDropContentClick,
+  footer,
   showReplyAndQuote,
+  identityMode = "default",
+  timestampLayout = "inline",
+  showInteractions = true,
 }: DefautWinnerDropProps) => {
   const [activePartIndex, setActivePartIndex] = useState<number>(0);
   const [isSlideUp, setIsSlideUp] = useState(false);
@@ -80,6 +93,7 @@ const DefaultWinnerDrop = ({
   const effectiveRank = drop.winning_context?.place ?? drop.rank;
 
   const decisionTime = drop.winning_context?.decision_time;
+  const showIdentity = identityMode !== "hidden";
 
   const visibleMetadata = getWinnerVisibleMetadata({
     wave: drop.wave,
@@ -93,10 +107,10 @@ const DefaultWinnerDrop = ({
     : getBackgroundColorClass(location);
 
   const handleLongPress = useCallback(() => {
-    if (!hasTouch) return;
+    if (!showInteractions || !hasTouch) return;
     setLongPressTriggered(true);
     setIsSlideUp(true);
-  }, [hasTouch]);
+  }, [hasTouch, showInteractions]);
 
   const handleOnReply = useCallback(() => {
     setIsSlideUp(false);
@@ -136,23 +150,33 @@ const DefaultWinnerDrop = ({
         )}
 
         <div className="tw-relative tw-z-10 tw-flex tw-w-full tw-gap-x-3 tw-border-0 tw-bg-transparent tw-text-left">
-          <WaveDropAuthorPfp drop={drop} />
+          {showIdentity && <WaveDropAuthorPfp drop={drop} />}
           <div className="tw-flex tw-w-full tw-flex-col">
             <div className="tw-flex tw-flex-col tw-items-start">
-              <WaveDropHeader
-                drop={drop}
-                showWaveInfo={false}
-                isStorm={isStorm}
-                currentPartIndex={activePartIndex}
-                partsCount={drop.parts.length}
-                badge={
-                  <WinnerDropBadge
-                    rank={effectiveRank}
-                    decisionTime={decisionTime ?? null}
+              {showIdentity &&
+                (identityMode === "minimal" ? (
+                  <DropMinimalIdentityRow
+                    drop={drop}
+                    timestampLayout={timestampLayout}
                   />
-                }
-              />
-              {showWaveInfo &&
+                ) : (
+                  <WaveDropHeader
+                    drop={drop}
+                    showWaveInfo={false}
+                    isStorm={isStorm}
+                    currentPartIndex={activePartIndex}
+                    partsCount={drop.parts.length}
+                    badge={
+                      <WinnerDropBadge
+                        rank={effectiveRank}
+                        decisionTime={decisionTime ?? null}
+                      />
+                    }
+                    timestampLayout={timestampLayout}
+                  />
+                ))}
+              {identityMode === "default" &&
+                showWaveInfo &&
                 (() => {
                   const waveDetails = drop.wave as unknown as {
                     chat?:
@@ -187,7 +211,7 @@ const DefaultWinnerDrop = ({
                   );
                 })()}
             </div>
-            <div className="tw-mt-2">
+            <div className={showIdentity ? "tw-mt-2" : ""}>
               <WaveDropContent
                 drop={drop}
                 activePartIndex={activePartIndex}
@@ -202,7 +226,7 @@ const DefaultWinnerDrop = ({
             </div>
           </div>
         </div>
-        {!isMobile && showReplyAndQuote && (
+        {!isMobile && showInteractions && showReplyAndQuote && (
           <div className="tw-absolute tw-right-0 tw-top-1">
             <WaveDropActions
               drop={drop}
@@ -211,26 +235,39 @@ const DefaultWinnerDrop = ({
             />
           </div>
         )}
-        <div className="tw-ml-[3.25rem] tw-flex tw-flex-col tw-gap-2">
+        <div
+          className={`${showIdentity ? "tw-ml-[3.25rem]" : ""} tw-flex tw-flex-col tw-gap-2`}
+        >
           <WaveWinnerIdentity drop={drop} variant="full" cardVariant="chat" />
           {visibleMetadata.length > 0 && (
             <WaveDropMetadata metadata={visibleMetadata} />
           )}
-          <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
-            {!!drop.raters_count && <WaveDropRatings drop={drop} />}
-            <WaveDropReactions drop={drop} />
-          </div>
+          {showInteractions && (
+            <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
+              {!!drop.raters_count && <WaveDropRatings drop={drop} />}
+              <WaveDropReactions drop={drop} />
+            </div>
+          )}
         </div>
+        {hasDropFooter(footer) && (
+          <div
+            className={`${showIdentity ? "tw-ml-[3.25rem]" : ""} tw-pb-1 tw-pt-2`}
+          >
+            {footer}
+          </div>
+        )}
       </div>
-      <WaveDropMobileMenu
-        drop={drop}
-        isOpen={isSlideUp}
-        longPressTriggered={longPressTriggered}
-        showReplyAndQuote={showReplyAndQuote}
-        setOpen={setIsSlideUp}
-        onReply={handleOnReply}
-        onAddReaction={handleOnAddReaction}
-      />
+      {showInteractions && (
+        <WaveDropMobileMenu
+          drop={drop}
+          isOpen={isSlideUp}
+          longPressTriggered={longPressTriggered}
+          showReplyAndQuote={showReplyAndQuote}
+          setOpen={setIsSlideUp}
+          onReply={handleOnReply}
+          onAddReaction={handleOnAddReaction}
+        />
+      )}
     </div>
   );
 };

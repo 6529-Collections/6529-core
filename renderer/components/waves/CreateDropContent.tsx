@@ -10,6 +10,8 @@ import type {
   ReferencedNft,
 } from "@/entities/IDrop";
 import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
+import { ApiAttachmentStatus } from "@/generated/models/ApiAttachmentStatus";
+import type { ApiCreateDropPart } from "@/generated/models/ApiCreateDropPart";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import { ApiDropType } from "@/generated/models/ApiDropType";
@@ -40,6 +42,7 @@ import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/Hastag
 import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
 import { MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/MentionTransformer";
 import { WAVE_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/WaveMentionTransformer";
+import { GROUP_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/GroupMentionTransformer";
 import { ReactQueryWrapperContext } from "../react-query-wrapper/ReactQueryWrapper";
 import CreateDropActions from "./CreateDropActions";
 import { CreateDropContentFiles } from "./CreateDropContentFiles";
@@ -52,6 +55,7 @@ import CreateDropReplyingWrapper from "./CreateDropReplyingWrapper";
 import { CreateDropSubmit } from "./CreateDropSubmit";
 
 import { exportDropMarkdown } from "@/components/waves/drops/normalizeDropMarkdown";
+import { getMentionedGroupsFromEditorState } from "@/components/drops/create/lexical/utils/groupMentionDetection";
 import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
@@ -65,7 +69,14 @@ import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import CreateDropIdentityField from "./CreateDropIdentityField";
 import CreateDropIdentityPickerModal from "./CreateDropIdentityPickerModal";
 import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
-import { multiPartUpload } from "./create-wave/services/multiPartUpload";
+import {
+  multiPartAttachmentUpload,
+  multiPartUpload,
+} from "./create-wave/services/multiPartUpload";
+import {
+  isAttachmentUploadFile,
+  validateAttachmentUploadFile,
+} from "@/services/uploads/attachmentUploadMimeType";
 import type { DropMutationBody } from "./CreateDrop";
 import { generateMetadataId, useDropMetadata } from "./hooks/useDropMetadata";
 import {
@@ -88,6 +99,8 @@ import {
   type SelectableIdentityOption,
 } from "../utils/input/profile-search/getSelectableIdentity";
 import { ApiWaveParticipationIdentitySubmissionWhoCanBeSubmitted } from "@/generated/models/ApiWaveParticipationIdentitySubmissionWhoCanBeSubmitted";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
+import { getMentionedGroupsFromParts } from "@/helpers/waves/drop-group-mentions";
 
 // Use next/dynamic for lazy loading with SSR support
 const TermsSignatureFlow = dynamic(
@@ -143,10 +156,35 @@ interface CreateDropContentProps {
   readonly dropModeToggleExitLabel: string | null;
   readonly canExitDropMode: boolean;
   readonly submissionExperience: WaveSubmissionExperience;
+  readonly externalAttachmentDrop?:
+    | {
+        readonly token: number;
+        readonly files: File[];
+      }
+    | null
+    | undefined;
+  readonly onExternalAttachmentDropConsumed?: (() => void) | undefined;
 }
 
 const CONTAINER_WIDTH_THRESHOLD = 500;
 const SELECT_OTHER_IDENTITY_ERROR = "Select someone else to nominate.";
+
+const getFileIdentity = (file: File): string =>
+  [file.name, file.size, file.type, file.lastModified].join(":");
+
+const getInactiveDropActionLabel = (
+  submissionExperience: WaveSubmissionExperience
+): "drop" | "nominate" | "proposal" => {
+  if (submissionExperience === WaveSubmissionExperience.IDENTITY) {
+    return "nominate";
+  }
+
+  if (submissionExperience === WaveSubmissionExperience.QUORUM_PROPOSAL) {
+    return "proposal";
+  }
+
+  return "drop";
+};
 
 const normalizeIdentityValue = (identity: string | null | undefined) =>
   identity?.trim().toLowerCase() ?? null;
@@ -333,16 +371,56 @@ const generateMediaForPart = async (
   });
 };
 
+const generateAttachmentForPart = async (
+  attachment: File,
+  setUploadingFiles: React.Dispatch<React.SetStateAction<UploadingFile[]>>
+) => {
+  setUploadingFiles((prev) => [
+    ...prev,
+    { file: attachment, isUploading: true, progress: 0 },
+  ]);
+  return await multiPartAttachmentUpload({
+    file: attachment,
+    onProgress: (progress) =>
+      setUploadingFiles((prev) =>
+        prev.map((uf) => (uf.file === attachment ? { ...uf, progress } : uf))
+      ),
+  }).finally(() => {
+    setUploadingFiles((prev) => prev.filter((uf) => uf.file !== attachment));
+  });
+};
+
 const generatePart = async (
   part: CreateDropPart,
   setUploadingFiles: React.Dispatch<React.SetStateAction<UploadingFile[]>>
 ): Promise<CreateDropRequestPart> => {
+  const mediaFiles = part.media.filter((file) => !isAttachmentUploadFile(file));
+  const attachmentFiles = part.media.filter(isAttachmentUploadFile);
   const media = await Promise.all(
-    part.media.map((media) => generateMediaForPart(media, setUploadingFiles))
+    mediaFiles.map((media) => generateMediaForPart(media, setUploadingFiles))
   );
+  const uploadedAttachments = await Promise.all(
+    attachmentFiles.map((attachment) =>
+      generateAttachmentForPart(attachment, setUploadingFiles)
+    )
+  );
+  const badAttachment = uploadedAttachments.find(
+    (attachment) => attachment.status === ApiAttachmentStatus.Bad
+  );
+  if (badAttachment) {
+    throw new Error(
+      badAttachment.error_reason ??
+        `${badAttachment.file_name} failed attachment validation.`
+    );
+  }
   return {
-    ...part,
+    content: part.content,
+    quoted_drop: part.quoted_drop,
     media,
+    attachments: uploadedAttachments.map((attachment) => ({
+      attachment_id: attachment.attachment_id,
+    })),
+    uploaded_attachments: uploadedAttachments,
   };
 };
 
@@ -356,12 +434,26 @@ const generateParts = async (
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (message.includes("content_type")) {
-      throw new Error("File type not supported. Please use MP4 for videos.");
+    if (
+      message.includes("content_type") ||
+      message.includes("Unsupported file type")
+    ) {
+      throw new Error("File type not supported.");
     }
     throw new Error("Error uploading file. Please try again.");
   }
 };
+
+const stripUploadedAttachments = (
+  parts: CreateDropRequestPart[]
+): ApiCreateDropPart[] =>
+  parts.map(({ uploaded_attachments, attachments, ...part }) => {
+    const requestPart: ApiCreateDropPart = { ...part };
+    if (attachments?.length) {
+      requestPart.attachments = attachments;
+    }
+    return requestPart;
+  });
 
 const CreateDropContent: React.FC<CreateDropContentProps> = ({
   activeDrop,
@@ -381,6 +473,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   dropModeToggleExitLabel,
   canExitDropMode,
   submissionExperience,
+  externalAttachmentDrop,
+  onExternalAttachmentDropConsumed,
 }) => {
   const { isSafeWallet, address } = useSeizeConnectContext();
   const { send } = useWebSocket();
@@ -465,6 +559,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     submissionExperience === WaveSubmissionExperience.IDENTITY;
   const isCurationSubmissionExperience =
     submissionExperience === WaveSubmissionExperience.CURATION_LEGACY;
+  const inactiveDropActionLabel =
+    getInactiveDropActionLabel(submissionExperience);
   const identitySubmissionMode = isIdentitySubmissionExperience
     ? (wave.participation.submission_strategy?.config.who_can_be_submitted ??
       null)
@@ -545,6 +641,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const hasMetadataValidationErrors = Object.keys(metadataErrorById).length > 0;
 
   const hasMetadata = useMemo(() => hasMetadataContent(metadata), [metadata]);
+  const canMentionAll = wave.wave.authenticated_user_eligible_for_admin;
 
   const getMarkdown = useMemo(
     () =>
@@ -552,13 +649,21 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         ? exportDropMarkdown(editorState, [
             ...SAFE_MARKDOWN_TRANSFORMERS,
             MENTION_TRANSFORMER,
+            ...(canMentionAll ? [GROUP_MENTION_TRANSFORMER] : []),
             HASHTAG_TRANSFORMER,
             WAVE_MENTION_TRANSFORMER,
             IMAGE_TRANSFORMER,
             EMOJI_TRANSFORMER,
           ])
         : null,
-    [editorState]
+    [canMentionAll, editorState]
+  );
+  const currentPartMentionedGroups = useMemo(
+    () =>
+      editorState
+        ? getMentionedGroupsFromEditorState(editorState, canMentionAll)
+        : [],
+    [canMentionAll, editorState]
   );
 
   const isStormModeActive = isStormMode;
@@ -624,6 +729,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     isCurationSubmissionExperience;
 
   const [referencedNfts, setReferencedNfts] = useState<ReferencedNft[]>([]);
+  const lastExternalAttachmentDropTokenRef = useRef<number | null>(null);
 
   const onReferencedNft = (newNft: ReferencedNft) => {
     setReferencedNfts([
@@ -729,6 +835,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         ...replyToObj,
         parts: ensurePartsWithFallback(baseParts, hasMetadata),
         mentioned_users: drop?.mentioned_users ?? [],
+        mentioned_groups: getMentionedGroupsFromParts(baseParts, canMentionAll),
         mentioned_waves: drop?.mentioned_waves ?? [],
         referenced_nfts: drop?.referenced_nfts ?? [],
         metadata: getSubmissionMetadata(),
@@ -745,25 +852,29 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const replyToObj = replyTo ? { reply_to: replyTo } : {};
 
   const createGifDrop = (gif: string): CreateDropConfig => {
+    const parts: CreateDropPart[] = [
+      ...(drop?.parts ?? []),
+      {
+        content: gif,
+        quoted_drop:
+          activeDrop?.action === ActiveDropAction.QUOTE
+            ? {
+                drop_id: activeDrop.drop.id,
+                drop_part_id: activeDrop.partId,
+              }
+            : null,
+        media: files,
+        mentioned_groups: [],
+      },
+    ];
+
     return {
       title: null,
       drop_type: isDropMode ? ApiDropType.Participatory : ApiDropType.Chat,
       ...replyToObj,
-      parts: [
-        ...(drop?.parts ?? []),
-        {
-          content: gif,
-          quoted_drop:
-            activeDrop?.action === ActiveDropAction.QUOTE
-              ? {
-                  drop_id: activeDrop.drop.id,
-                  drop_part_id: activeDrop.partId,
-                }
-              : null,
-          media: files,
-        },
-      ],
+      parts,
       mentioned_users: [],
+      mentioned_groups: getMentionedGroupsFromParts(parts, canMentionAll),
       mentioned_waves: [],
       referenced_nfts: [],
       metadata: getSubmissionMetadata(),
@@ -777,7 +888,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     markdown: string | null,
     allMentions: ApiDropMentionedUser[],
     allNfts: ReferencedNft[],
-    allWaves: ApiMentionedWave[]
+    allWaves: ApiMentionedWave[],
+    currentMentionedGroups: ApiDropGroupMention[]
   ): CreateDropConfig => {
     const availableFiles = files;
     const hasPartsInDrop = (drop?.parts.length ?? 0) > 0;
@@ -802,6 +914,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
               content: markdown?.length ? markdown : null,
               quoted_drop: quotedDrop,
               media: availableFiles,
+              mentioned_groups: currentMentionedGroups,
             },
           ];
 
@@ -814,6 +927,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       ...replyToObj,
       parts,
       mentioned_users: allMentions,
+      mentioned_groups: getMentionedGroupsFromParts(parts, canMentionAll),
       mentioned_waves: allWaves,
       referenced_nfts: allNfts,
       metadata: getSubmissionMetadata(),
@@ -848,7 +962,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       updatedMarkdown,
       updatedMentions,
       updatedNfts,
-      updatedWaves
+      updatedWaves,
+      currentPartMentionedGroups
     );
   };
 
@@ -889,6 +1004,13 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         part.content?.includes(`#[${w.wave_name_in_content}]`)
       )
     );
+
+  const filterMentionedGroups = ({
+    parts,
+  }: {
+    readonly parts: CreateDropPart[];
+  }): ApiDropGroupMention[] =>
+    getMentionedGroupsFromParts(parts, canMentionAll);
 
   const [dropEditorRefreshKey, setDropEditorRefreshKey] = useState(0);
 
@@ -985,11 +1107,15 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     }
 
     try {
-      const parts = await generateParts(dropRequest.parts, setUploadingFiles);
-      if (!parts.length) {
+      const generatedParts = await generateParts(
+        dropRequest.parts,
+        setUploadingFiles
+      );
+      if (!generatedParts.length) {
         setSubmitting(false);
         return;
       }
+      const parts = stripUploadedAttachments(generatedParts);
 
       const requestBody: ApiCreateDropRequest = {
         ...dropRequest,
@@ -999,6 +1125,9 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         }),
         mentioned_waves: filterMentionedWaves({
           mentionedWaves: dropRequest.mentioned_waves ?? [],
+          parts: dropRequest.parts,
+        }),
+        mentioned_groups: filterMentionedGroups({
           parts: dropRequest.parts,
         }),
         metadata: dropRequest.metadata,
@@ -1021,11 +1150,18 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       );
 
       if (optimisticDrop) {
-        addOptimisticDrop({ drop: optimisticDrop });
+        const optimisticDropWithAttachments = {
+          ...optimisticDrop,
+          parts: optimisticDrop.parts.map((part, index) => ({
+            ...part,
+            attachments: generatedParts[index]?.uploaded_attachments ?? [],
+          })),
+        };
+        addOptimisticDrop({ drop: optimisticDropWithAttachments });
         setTimeout(
           () =>
             processIncomingDrop(
-              optimisticDrop,
+              optimisticDropWithAttachments,
               ProcessIncomingDropType.DROP_INSERT
             ),
           0
@@ -1194,27 +1330,86 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   }, [activeDrop, isApp, focusMobileInput]);
 
   const handleFileChange = (newFiles: File[]) => {
-    let updatedFiles = [...files, ...newFiles];
-    let removedCount = 0;
-
-    if (updatedFiles.length > MAX_DROP_UPLOAD_FILES) {
-      removedCount = updatedFiles.length - MAX_DROP_UPLOAD_FILES;
-      updatedFiles = updatedFiles.slice(-MAX_DROP_UPLOAD_FILES);
-
+    try {
+      newFiles.forEach((file) => {
+        if (isAttachmentUploadFile(file)) {
+          validateAttachmentUploadFile(file);
+        }
+      });
+    } catch (error) {
       setToast({
-        message: `File limit exceeded. The ${removedCount} oldest file${
-          removedCount > 1 ? "s were" : " was"
+        message: error instanceof Error ? error.message : String(error),
+        type: "error",
+      });
+      return;
+    }
+
+    const existingPartFiles = drop?.parts.flatMap((part) => part.media) ?? [];
+    const existingFileIds = new Set(
+      [...existingPartFiles, ...files].map(getFileIdentity)
+    );
+    const uniqueNewFiles = newFiles.filter((file) => {
+      const fileId = getFileIdentity(file);
+      if (existingFileIds.has(fileId)) {
+        return false;
+      }
+      existingFileIds.add(fileId);
+      return true;
+    });
+    const duplicateCount = newFiles.length - uniqueNewFiles.length;
+    const existingCount = existingPartFiles.length;
+    const total = existingCount + files.length + uniqueNewFiles.length;
+    const overflow = Math.max(0, total - MAX_DROP_UPLOAD_FILES);
+    const mergedFiles = [...files, ...uniqueNewFiles];
+    const updatedFiles = overflow
+      ? mergedFiles.slice(-MAX_DROP_UPLOAD_FILES)
+      : mergedFiles;
+
+    setFiles(updatedFiles);
+
+    if (overflow > 0) {
+      setToast({
+        message: `File limit exceeded. The ${overflow} oldest file${
+          overflow > 1 ? "s were" : " was"
         } removed to maintain the ${MAX_DROP_UPLOAD_FILES}-file limit. New files have been added.`,
         type: "warning",
       });
     }
 
-    setFiles(updatedFiles);
+    if (duplicateCount > 0) {
+      setToast({
+        message: `${duplicateCount} duplicate file${
+          duplicateCount > 1 ? "s were" : " was"
+        } skipped.`,
+        type: "warning",
+      });
+    }
+
     if (!isWideContainer) {
       setShowOptionsState({ scopeKey: wave.id, value: false });
       closeOnNextInputRef.current = false;
     }
   };
+
+  const latestHandleFileChangeRef = useRef(handleFileChange);
+  latestHandleFileChangeRef.current = handleFileChange;
+
+  useEffect(() => {
+    if (!externalAttachmentDrop || externalAttachmentDrop.files.length === 0) {
+      return;
+    }
+
+    if (
+      lastExternalAttachmentDropTokenRef.current ===
+      externalAttachmentDrop.token
+    ) {
+      return;
+    }
+
+    lastExternalAttachmentDropTokenRef.current = externalAttachmentDrop.token;
+    latestHandleFileChangeRef.current(externalAttachmentDrop.files);
+    onExternalAttachmentDropConsumed?.();
+  }, [externalAttachmentDrop, onExternalAttachmentDropConsumed]);
 
   const handleSetShowOptions = useCallback(
     (next: boolean) => {
@@ -1593,12 +1788,14 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
               submitting={submitting}
               isStormMode={isStormModeActive}
               isDropMode={isDropMode}
+              canMentionAll={canMentionAll}
               canSubmit={canSubmit}
               onEditorState={handleEditorStateChange}
               onEditorBlur={handleEditorBlur}
               onReferencedNft={onReferencedNft}
               onMentionedUser={onMentionedUser}
               onMentionedWave={onMentionedWave}
+              onAttachmentFiles={handleFileChange}
               onDrop={onDrop}
             />
             {showCurationDropModeWarning && (
@@ -1627,11 +1824,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
                   onDropModeChange={handleDropModeChange}
                   privileges={privileges}
                   exitLabel={dropModeToggleExitLabel}
-                  inactiveActionLabel={
-                    submissionExperience === WaveSubmissionExperience.IDENTITY
-                      ? "nominate"
-                      : "drop"
-                  }
+                  inactiveActionLabel={inactiveDropActionLabel}
                 />
               )}
             <CreateDropSubmit

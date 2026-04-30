@@ -36,6 +36,7 @@ import type {
 } from "@/entities/IDrop";
 import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import { MentionNode } from "../drops/create/lexical/nodes/MentionNode";
+import { GroupMentionNode } from "../drops/create/lexical/nodes/GroupMentionNode";
 import { HashtagNode } from "../drops/create/lexical/nodes/HashtagNode";
 import { WaveMentionNode } from "../drops/create/lexical/nodes/WaveMentionNode";
 import { ImageNode } from "../drops/create/lexical/nodes/ImageNode";
@@ -98,6 +99,7 @@ const CreateDropInput = forwardRef<
     readonly isStormMode: boolean;
     readonly submitting: boolean;
     readonly isDropMode: boolean;
+    readonly canMentionAll?: boolean | undefined;
     readonly onDrop?: (() => void) | undefined;
     readonly onEditorState: (editorState: EditorState) => void;
     readonly onEditorBlur?: (event: FocusEvent<HTMLDivElement>) => void;
@@ -106,6 +108,9 @@ const CreateDropInput = forwardRef<
       mentionedUser: Omit<MentionedUser, "current_handle">
     ) => void;
     readonly onMentionedWave: (mentionedWave: MentionedWave) => void;
+    readonly onAttachmentFiles?: ((files: File[]) => void) | undefined;
+    readonly hasValidationError?: boolean | undefined;
+    readonly validationHelperText?: string | null | undefined;
   }
 >(
   (
@@ -116,12 +121,16 @@ const CreateDropInput = forwardRef<
       canSubmit,
       isStormMode,
       isDropMode,
+      canMentionAll = false,
       submitting,
       onEditorState,
       onEditorBlur,
       onReferencedNft,
       onMentionedUser,
       onMentionedWave,
+      onAttachmentFiles,
+      hasValidationError = false,
+      validationHelperText = null,
       onDrop,
     },
     ref
@@ -131,6 +140,7 @@ const CreateDropInput = forwardRef<
       namespace: "User Drop",
       nodes: [
         MentionNode,
+        GroupMentionNode,
         HashtagNode,
         WaveMentionNode,
         RootNode,
@@ -295,6 +305,7 @@ const CreateDropInput = forwardRef<
               <NewMentionsPlugin
                 waveId={waveId}
                 onSelect={onMentionedUserAdded}
+                canMentionAll={canMentionAll}
                 ref={mentionsPluginRef}
               />
               <NewWaveMentionsPlugin
@@ -306,7 +317,7 @@ const CreateDropInput = forwardRef<
                 ref={hashtagPluginRef}
               />
               <MaxLengthPlugin maxLength={25000} />
-              <DragDropPastePlugin />
+              <DragDropPastePlugin onAttachmentFiles={onAttachmentFiles} />
               <ListPlugin />
               <PlainTextPastePlugin />
               <MarkdownShortcutPlugin
@@ -325,6 +336,14 @@ const CreateDropInput = forwardRef<
             </div>
           </div>
         </LexicalComposer>
+        {hasValidationError && validationHelperText && (
+          <div
+            role="alert"
+            className="tw-mt-2 tw-text-xs tw-font-medium tw-text-error"
+          >
+            {validationHelperText}
+          </div>
+        )}
       </div>
     );
   }

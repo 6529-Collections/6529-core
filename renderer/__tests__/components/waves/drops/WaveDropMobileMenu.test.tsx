@@ -1,15 +1,33 @@
 import { AuthContext } from "@/components/auth/Auth";
 import WaveDropMobileMenu from "@/components/waves/drops/WaveDropMobileMenu";
+import { WaveDropLayerProvider } from "@/components/waves/drops/WaveDropLayerContext";
 import { ApiDropType } from "@/generated/models/ApiDropType";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockIsMemesWave = jest.fn();
+const mockIsQuorumWave = jest.fn();
 const writeText = jest.fn().mockResolvedValue(undefined);
+const addReactionMock = jest.fn((props: any) => (
+  <div
+    data-testid="add-reaction"
+    data-dialog-z-index={props.dialogZIndexClassName}
+  />
+));
+const mobileWrapperMock = jest.fn((props: any) =>
+  props.isOpen ? (
+    <div data-testid="wrapper" data-z-index={props.zIndexClassName}>
+      {props.children}
+    </div>
+  ) : null
+);
 
 jest.mock("@/hooks/drops/useDropInteractionRules", () => ({
   useDropInteractionRules: jest.fn(),
+}));
+jest.mock("@/hooks/drops/useCanShowDropCurationsAction", () => ({
+  useCanShowDropCurationsAction: jest.fn(() => false),
 }));
 jest.mock("@/components/waves/drops/WaveDropMobileMenuDelete", () => () => (
   <div data-testid="delete" />
@@ -30,20 +48,26 @@ jest.mock("@/components/waves/drops/WaveDropActionsMarkUnread", () => () => (
 jest.mock("@/components/waves/drops/WaveDropActionsRate", () => () => (
   <div data-testid="clap" />
 ));
-jest.mock("@/components/waves/drops/WaveDropActionsAddReaction", () => () => (
-  <div data-testid="add-reaction" />
-));
+jest.mock("@/components/waves/drops/WaveDropActionsAddReaction", () => ({
+  __esModule: true,
+  default: (props: any) => addReactionMock(props),
+}));
 jest.mock("@/components/waves/drops/WaveDropActionsQuickReact", () => () => (
   <div data-testid="quick-react" />
 ));
 jest.mock(
   "@/components/utils/select/dropdown/CommonDropdownItemsMobileWrapper",
-  () => (props: any) =>
-    props.isOpen ? <div data-testid="wrapper">{props.children}</div> : null
+  () => ({
+    __esModule: true,
+    default: (props: any) => mobileWrapperMock(props),
+  })
 );
 
 jest.mock("@/contexts/SeizeSettingsContext", () => ({
-  useSeizeSettings: () => ({ isMemesWave: mockIsMemesWave }),
+  useSeizeSettings: () => ({
+    isMemesWave: mockIsMemesWave,
+    isQuorumWave: mockIsQuorumWave,
+  }),
 }));
 jest.mock("@/contexts/EmojiContext", () => ({
   useEmoji: () => ({
@@ -70,7 +94,10 @@ const mockedUseDropInteractionRules = jest.mocked(useDropInteractionRules);
 
 beforeEach(() => {
   writeText.mockClear();
+  addReactionMock.mockClear();
+  mobileWrapperMock.mockClear();
   mockIsMemesWave.mockReturnValue(false);
+  mockIsQuorumWave.mockReturnValue(false);
   mockedUseDropInteractionRules.mockReturnValue({
     canShowVote: true,
     canVote: true,
@@ -107,7 +134,6 @@ test("copies serial jump links for non-memes drops", async () => {
         longPressTriggered={false}
         setOpen={jest.fn()}
         onReply={jest.fn()}
-        onQuote={jest.fn()}
         onAddReaction={jest.fn()}
       />
     </AuthContext.Provider>
@@ -142,7 +168,40 @@ test("copies canonical drop links for memes submissions", async () => {
         longPressTriggered={false}
         setOpen={jest.fn()}
         onReply={jest.fn()}
-        onQuote={jest.fn()}
+        onAddReaction={jest.fn()}
+      />
+    </AuthContext.Provider>
+  );
+  await userEvent.click(screen.getByText("Copy link"));
+  expect(writeText).toHaveBeenCalledWith("https://base/waves/w?drop=1");
+});
+
+test("copies canonical drop links for quorum participation drops", async () => {
+  mockIsQuorumWave.mockReturnValue(true);
+
+  const drop = {
+    id: "1",
+    serial_no: 1,
+    wave: { id: "w" },
+    drop_type: ApiDropType.Participatory,
+    author: { handle: "alice" },
+  } as any;
+  render(
+    <AuthContext.Provider
+      value={
+        {
+          connectedProfile: { handle: "alice" },
+          activeProfileProxy: null,
+        } as any
+      }
+    >
+      <WaveDropMobileMenu
+        drop={drop}
+        isOpen
+        showReplyAndQuote
+        longPressTriggered={false}
+        setOpen={jest.fn()}
+        onReply={jest.fn()}
         onAddReaction={jest.fn()}
       />
     </AuthContext.Provider>
@@ -177,7 +236,6 @@ test("hides follow and clap when author and memes wave", () => {
         longPressTriggered={false}
         setOpen={jest.fn()}
         onReply={jest.fn()}
-        onQuote={jest.fn()}
         onAddReaction={jest.fn()}
       />
     </AuthContext.Provider>
@@ -223,7 +281,6 @@ test("shows pinned-drop action in the mobile menu for admins", () => {
         longPressTriggered={false}
         setOpen={jest.fn()}
         onReply={jest.fn()}
-        onQuote={jest.fn()}
         onAddReaction={jest.fn()}
       />
     </AuthContext.Provider>
@@ -269,7 +326,6 @@ test("does not show pinned-drop action in the mobile menu for non-admins", () =>
         longPressTriggered={false}
         setOpen={jest.fn()}
         onReply={jest.fn()}
-        onQuote={jest.fn()}
         onAddReaction={jest.fn()}
       />
     </AuthContext.Provider>
@@ -357,4 +413,98 @@ test("shows only copy link in the mobile menu for guests", () => {
   expect(screen.queryByTestId("clap")).toBeNull();
   expect(screen.queryByTestId("set-pinned-drop")).toBeNull();
   expect(screen.queryByTestId("delete")).toBeNull();
+});
+
+test("uses single-drop layer overrides when provided by context", () => {
+  const drop = {
+    id: "1",
+    serial_no: 1,
+    wave: { id: "w" },
+    drop_type: ApiDropType.Chat,
+    author: { handle: "alice" },
+  } as any;
+
+  render(
+    <WaveDropLayerProvider
+      value={{
+        mobileMenuZIndexClassName: "tw-z-[1020]",
+        mobileDialogZIndexClassName: "tw-z-[1030]",
+      }}
+    >
+      <AuthContext.Provider
+        value={
+          {
+            connectedProfile: { handle: "alice" },
+            activeProfileProxy: null,
+          } as any
+        }
+      >
+        <WaveDropMobileMenu
+          drop={drop}
+          isOpen
+          showReplyAndQuote
+          longPressTriggered={false}
+          setOpen={jest.fn()}
+          onReply={jest.fn()}
+          onAddReaction={jest.fn()}
+        />
+      </AuthContext.Provider>
+    </WaveDropLayerProvider>
+  );
+
+  expect(screen.getByTestId("wrapper")).toHaveAttribute(
+    "data-z-index",
+    "tw-z-[1020]"
+  );
+  expect(screen.getByTestId("add-reaction")).toHaveAttribute(
+    "data-dialog-z-index",
+    "tw-z-[1030]"
+  );
+});
+
+test("preserves default layer values when context overrides are undefined", () => {
+  const drop = {
+    id: "1",
+    serial_no: 1,
+    wave: { id: "w" },
+    drop_type: ApiDropType.Chat,
+    author: { handle: "alice" },
+  } as any;
+
+  render(
+    <WaveDropLayerProvider
+      value={{
+        mobileMenuZIndexClassName: undefined,
+        mobileDialogZIndexClassName: "tw-z-[1030]",
+      }}
+    >
+      <AuthContext.Provider
+        value={
+          {
+            connectedProfile: { handle: "alice" },
+            activeProfileProxy: null,
+          } as any
+        }
+      >
+        <WaveDropMobileMenu
+          drop={drop}
+          isOpen
+          showReplyAndQuote
+          longPressTriggered={false}
+          setOpen={jest.fn()}
+          onReply={jest.fn()}
+          onAddReaction={jest.fn()}
+        />
+      </AuthContext.Provider>
+    </WaveDropLayerProvider>
+  );
+
+  expect(screen.getByTestId("wrapper")).toHaveAttribute(
+    "data-z-index",
+    "tw-z-[1000]"
+  );
+  expect(screen.getByTestId("add-reaction")).toHaveAttribute(
+    "data-dialog-z-index",
+    "tw-z-[1030]"
+  );
 });

@@ -3,33 +3,49 @@
 import { useTitle } from "@/contexts/TitleContext";
 import { useUnreadIndicator } from "@/hooks/useUnreadIndicator";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
-import { motion } from "framer-motion";
+import { LazyMotion, domMax, m } from "framer-motion";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth } from "../auth/Auth";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { useNotificationsContext } from "../notifications/NotificationsContext";
+import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { isNavItemActive } from "./isNavItemActive";
+import { getActiveViewFromUrl, useViewContext } from "./ViewContext";
 import type { NavItem as NavItemData } from "./navTypes";
-import { useViewContext } from "./ViewContext";
 
 interface Props {
   readonly item: NavItemData;
   readonly isCurrentWaveDm?: boolean;
 }
 
-const NavItem = ({ item, isCurrentWaveDm = false }: Props) => {
+const iconSlotClass =
+  "tw-mt-4 tw-flex tw-h-9 tw-items-center tw-justify-center";
+
+const ActiveNavIndicator = () => (
+  <LazyMotion features={domMax}>
+    <m.div
+      layoutId="nav-indicator"
+      className="tw-absolute tw-left-0 tw-top-0 tw-h-0.5 tw-w-full tw-rounded-full tw-bg-white"
+    />
+  </LazyMotion>
+);
+
+const NavItemContent = ({ item, isCurrentWaveDm = false }: Props) => {
   const pathname = usePathname();
+  // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense
   const searchParams = useSearchParams();
-  const { activeView, handleNavClick } = useViewContext();
+  const activeWaveId = getActiveWaveIdFromUrl({ pathname, searchParams });
+  const activeView = getActiveViewFromUrl({
+    activeWaveId,
+    searchParams,
+  });
+  const { handleNavClick } = useViewContext();
 
   const { name } = item;
   const { icon } = item;
   const { address, seizeConnect } = useSeizeConnectContext();
-
-  const iconSlotClass =
-    "tw-mt-4 tw-flex tw-h-9 tw-items-center tw-justify-center";
 
   const { connectedProfile } = useAuth();
   const normalizedConnectedHandle = (
@@ -54,7 +70,8 @@ const NavItem = ({ item, isCurrentWaveDm = false }: Props) => {
   useEffect(() => {
     if (item.name !== "Notifications") return;
     if (haveUnreadNotifications) {
-      setTitle(`(${notifications?.unread_count}) Notifications | 6529.io`);
+      const unreadNotificationsCount = notifications?.unread_count ?? 0;
+      setTitle(`(${unreadNotificationsCount}) Notifications | 6529.io`);
     }
     if (!haveUnreadNotifications) {
       void removeAllDeliveredNotifications();
@@ -102,7 +119,7 @@ const NavItem = ({ item, isCurrentWaveDm = false }: Props) => {
   const iconSizeClass = item.iconSizeClass ?? "tw-size-7";
 
   const isProfileItem = item.kind === "route" && item.name === "Profile";
-  const normalizedPathname = (pathname ?? "").toLowerCase();
+  const normalizedPathname = pathname.toLowerCase();
   const isProfileActive =
     isProfileItem &&
     activeView === null &&
@@ -114,8 +131,8 @@ const NavItem = ({ item, isCurrentWaveDm = false }: Props) => {
     ? isProfileActive
     : isNavItemActive(
         item,
-        pathname ?? "",
-        searchParams ?? new URLSearchParams(),
+        pathname,
+        searchParams,
         activeView,
         isCurrentWaveDm
       );
@@ -145,12 +162,7 @@ const NavItem = ({ item, isCurrentWaveDm = false }: Props) => {
       onClick={handleClick}
       className="tw-relative tw-flex tw-h-full tw-w-full tw-min-w-0 tw-flex-col tw-items-center tw-justify-start tw-border-0 tw-bg-transparent tw-transition-colors focus:tw-outline-none"
     >
-      {isActive && (
-        <motion.div
-          layoutId="nav-indicator"
-          className="tw-absolute tw-left-0 tw-top-0 tw-h-0.5 tw-w-full tw-rounded-full tw-bg-white"
-        />
-      )}
+      {isActive && <ActiveNavIndicator />}
       <div className={`tw-relative ${iconSlotClass}`}>
         {item.iconComponent ? (
           <item.iconComponent
@@ -178,5 +190,7 @@ const NavItem = ({ item, isCurrentWaveDm = false }: Props) => {
     </button>
   );
 };
+
+const NavItem = (props: Props) => <NavItemContent {...props} />;
 
 export default NavItem;

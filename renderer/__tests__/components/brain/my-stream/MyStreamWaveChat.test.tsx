@@ -102,11 +102,18 @@ jest.mock("@/services/api/common-api", () => ({
 
 const wave = { id: "10", participation: {}, metrics: { muted: false } } as any;
 const mockOnDropClick = jest.fn();
+const setDocumentVisibility = (visibilityState: DocumentVisibilityState) => {
+  Object.defineProperty(document, "visibilityState", {
+    configurable: true,
+    value: visibilityState,
+  });
+};
 
 describe("MyStreamWaveChat", () => {
   let store: any;
 
   beforeEach(() => {
+    setDocumentVisibility("visible");
     capturedPropsHolder.current = {};
     replaceMock.mockClear();
     searchParamsMock.get.mockReset();
@@ -179,6 +186,45 @@ describe("MyStreamWaveChat", () => {
     expect(screen.queryByTestId("memes-btn")).toBeNull();
   });
 
+  it("keeps serialNo until chat view renders", async () => {
+    searchParamsMock.get.mockImplementation((key: string) =>
+      key === "serialNo" ? "5" : null
+    );
+    searchParamsMock.toString.mockReturnValue("serialNo=5");
+
+    const { rerender } = renderWithProvider(
+      <MyStreamWaveChat
+        wave={wave}
+        firstUnreadSerialNo={null}
+        viewMode="gallery"
+        onDropClick={mockOnDropClick}
+      />
+    );
+
+    expect(screen.getByTestId("gallery")).toBeInTheDocument();
+    expect(replaceMock).not.toHaveBeenCalled();
+
+    rerender(
+      <ReactQueryWrapperContext.Provider
+        value={{ invalidateNotifications: invalidateNotificationsMock } as any}
+      >
+        <Provider store={store}>
+          <MyStreamWaveChat
+            wave={wave}
+            firstUnreadSerialNo={null}
+            viewMode="chat"
+            onDropClick={mockOnDropClick}
+          />
+        </Provider>
+      </ReactQueryWrapperContext.Provider>
+    );
+
+    await waitFor(() => {
+      expect(replaceMock).toHaveBeenCalledTimes(1);
+      expect(capturedPropsHolder.current.initialDrop).toBe(5);
+    });
+  });
+
   it("invalidates notifications on unmount", async () => {
     searchParamsMock.get.mockReturnValueOnce("5").mockReturnValue(null);
     searchParamsMock.toString.mockReturnValue("serialNo=5");
@@ -203,6 +249,27 @@ describe("MyStreamWaveChat", () => {
       });
       expect(invalidateNotificationsMock).toHaveBeenCalled();
     });
+  });
+
+  it("does not call the read endpoint on unmount when the tab is hidden", async () => {
+    setDocumentVisibility("hidden");
+
+    const { unmount } = renderWithProvider(
+      <MyStreamWaveChat
+        wave={wave}
+        firstUnreadSerialNo={null}
+        viewMode="chat"
+        onDropClick={mockOnDropClick}
+      />
+    );
+
+    await act(async () => {
+      unmount();
+    });
+
+    expect(commonApiPostWithoutBodyAndResponse).not.toHaveBeenCalled();
+    expect(invalidateNotificationsMock).not.toHaveBeenCalled();
+    expect(mockRemoveWaveDeliveredNotifications).not.toHaveBeenCalled();
   });
 
   it("skips notification cleanup on unmount for anonymous viewers", async () => {

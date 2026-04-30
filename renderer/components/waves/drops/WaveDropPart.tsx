@@ -3,10 +3,12 @@
 import React, { memo, useRef } from "react";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import WaveDropPartDrop from "./WaveDropPartDrop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { ImageScale } from "@/helpers/image.helpers";
+import type { DropContentPresentation } from "./dropContentPresentation";
 
 interface WaveDropPartProps {
   readonly drop: ExtendedDrop;
@@ -22,16 +24,23 @@ interface WaveDropPartProps {
     | ((
         newContent: string,
         mentions?: ApiDropMentionedUser[],
+        mentionedGroups?: ApiDropGroupMention[],
         mentionedWaves?: ApiMentionedWave[]
       ) => void)
     | undefined;
   readonly onCancel?: (() => void) | undefined;
   readonly isCompetitionDrop?: boolean | undefined;
   readonly mediaImageScale?: ImageScale | undefined;
+  readonly fullWidthMedia?: boolean | undefined;
   readonly hasTouch?: boolean | undefined;
   readonly onLinkCardActionsActiveChange?:
     | ((href: string, active: boolean) => void)
     | undefined;
+  readonly contentPresentation?: DropContentPresentation | undefined;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 const LONG_PRESS_DURATION = 500; // milliseconds
@@ -52,8 +61,14 @@ const WaveDropPart: React.FC<WaveDropPartProps> = memo(
     onCancel,
     isCompetitionDrop = false,
     mediaImageScale = ImageScale.AUTOx450,
+    fullWidthMedia = false,
     hasTouch = false,
     onLinkCardActionsActiveChange,
+    contentPresentation = "default",
+    embedPath,
+    quotePath,
+    embedDepth,
+    maxEmbedDepth,
   }) => {
     const activePart = drop.parts[activePartIndex];
 
@@ -150,7 +165,13 @@ const WaveDropPart: React.FC<WaveDropPartProps> = memo(
             onCancel={onCancel}
             isCompetitionDrop={isCompetitionDrop}
             mediaImageScale={mediaImageScale}
+            fullWidthMedia={fullWidthMedia}
             onLinkCardActionsActiveChange={onLinkCardActionsActiveChange}
+            contentPresentation={contentPresentation}
+            embedPath={embedPath}
+            quotePath={quotePath}
+            embedDepth={embedDepth}
+            maxEmbedDepth={maxEmbedDepth}
           />
         </div>
       </div>

@@ -1,8 +1,17 @@
 "use client";
 
-import { keepPreviousData, useInfiniteQuery } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useInfiniteQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { useCallback, useMemo } from "react";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import {
+  updateAttachmentInCachedDrops,
+  updateDropInCachedDrops,
+} from "@/components/react-query-wrapper/utils/updateAttachmentInCachedDrops";
+import type { ApiAttachment } from "@/generated/models/ApiAttachment";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropType } from "@/generated/models/ApiDropType";
 import { DropSize, type ExtendedDrop } from "@/helpers/waves/drop.helpers";
@@ -18,6 +27,7 @@ interface UseWaveDropsProps {
   readonly waveId: string;
   readonly dropType?: ApiDropType | undefined;
   readonly containsMedia?: boolean | undefined;
+  readonly curationId?: string | undefined;
   readonly limit?: number | undefined;
   readonly enabled?: boolean | undefined;
 }
@@ -52,6 +62,7 @@ export function useWaveDrops({
   waveId,
   dropType,
   containsMedia = false,
+  curationId,
   limit = DEFAULT_WAVE_DROPS_LIMIT,
   enabled = true,
 }: UseWaveDropsProps) {
@@ -64,18 +75,24 @@ export function useWaveDrops({
           limit,
           dropType: dropType ?? null,
           containsMedia,
+          curationId: curationId ?? null,
           context: "wave-drops",
         },
       ] as const,
-    [waveId, limit, dropType, containsMedia]
+    [waveId, limit, dropType, containsMedia, curationId]
   );
+  const queryClient = useQueryClient();
 
   const {
     data,
+    dataUpdatedAt,
+    error,
     fetchNextPage: onFetchNextPage,
     hasNextPage,
+    isError,
     isFetching,
     isFetchingNextPage,
+    isPlaceholderData,
     refetch,
   } = useInfiniteQuery({
     queryKey,
@@ -91,6 +108,10 @@ export function useWaveDrops({
 
       if (dropType !== undefined) {
         params["drop_type"] = dropType;
+      }
+
+      if (curationId) {
+        params["curation_id"] = curationId;
       }
 
       if (typeof pageParam === "number") {
@@ -133,18 +154,33 @@ export function useWaveDrops({
           return;
         }
 
+        updateDropInCachedDrops(queryClient, message);
         requestRefetch();
       },
-      [requestRefetch, waveId]
+      [queryClient, requestRefetch, waveId]
+    )
+  );
+
+  useWebSocketMessage<ApiAttachment>(
+    WsMessageType.ATTACHMENT_STATUS_UPDATE,
+    useCallback(
+      (attachment) => {
+        updateAttachmentInCachedDrops(queryClient, attachment);
+      },
+      [queryClient]
     )
   );
 
   return {
+    dataUpdatedAt,
     drops,
+    error,
     fetchNextPage,
     hasNextPage,
+    isError,
     isFetching,
     isFetchingNextPage,
+    isPlaceholderData,
     refetch,
   };
 }

@@ -10,7 +10,7 @@ import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import type { ApiWaveDropsFeed } from "@/generated/models/ApiWaveDropsFeed";
-import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { wait } from "@/helpers/Helpers";
 import { convertActivityLogParams } from "@/helpers/profile-logs.helpers";
 import { Time } from "@/helpers/time";
@@ -95,7 +95,7 @@ export enum QueryKey {
   WAVES_PUBLIC = "WAVES_PUBLIC",
   WAVES_SEARCH = "WAVES_SEARCH",
   WAVE = "WAVE",
-  WAVE_CURATION_GROUPS = "WAVE_CURATION_GROUPS",
+  WAVE_CURATIONS = "WAVE_CURATIONS",
   WAVE_LOGS = "WAVE_LOGS",
   WAVE_VOTERS = "WAVE_VOTERS",
   WAVE_FOLLOWERS = "WAVE_FOLLOWERS",

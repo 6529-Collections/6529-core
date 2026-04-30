@@ -9,10 +9,18 @@ import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import type { OperationalData } from "../types/OperationalData";
 import type { TraitsData } from "../types/TraitsData";
 import { buildSubmissionMetadata } from "./submissionMetadata";
+import { ApiProfileClassification } from "@/generated/models/ApiProfileClassification";
 
 interface PreviewMediaSelection {
   readonly mediaSource: "upload" | "url";
   readonly selectedFile: File | null;
+  readonly existingMedia:
+    | {
+        readonly url: string;
+        readonly mimeType: string;
+      }
+    | null
+    | undefined;
   readonly externalUrl: string;
   readonly externalMimeType: string;
   readonly isExternalValid: boolean;
@@ -45,6 +53,13 @@ const buildPreviewMedia = ({
     return {
       url: uploadArtworkUrl,
       mime_type: mediaSelection.selectedFile.type || "image/jpeg",
+    };
+  }
+
+  if (mediaSelection.mediaSource === "upload" && mediaSelection.existingMedia) {
+    return {
+      url: mediaSelection.existingMedia.url,
+      mime_type: mediaSelection.existingMedia.mimeType,
     };
   }
 
@@ -116,10 +131,10 @@ export const buildPreviewDrop = ({
       admin_drop_deletion_enabled: wave.wave.admin_drop_deletion_enabled,
       forbid_negative_votes: wave.voting.forbid_negative_votes,
       pinned: wave.pinned,
+      identity_wave: wave.identity_wave,
       submission_type: wave.participation.submission_strategy?.type ?? null,
-      selections: wave.selections,
+      voting_credit_nfts: wave.voting.credit_nfts,
     },
-    selections: [],
     author: {
       id: connectedProfile?.id ?? "preview-user",
       handle: connectedProfile?.handle ?? "preview-user",
@@ -134,6 +149,7 @@ export const buildPreviewDrop = ({
       xtdh_rate: connectedProfile?.xtdh_rate ?? 0,
       level: connectedProfile?.level ?? 0,
       primary_address: primaryAddress,
+      profile_wave_id: connectedProfile?.profile_wave_id ?? null,
       subscribed_actions: [],
       archived: false,
       active_main_stage_submission_ids:
@@ -142,6 +158,9 @@ export const buildPreviewDrop = ({
         connectedProfile?.winner_main_stage_drop_ids ?? [],
       is_wave_creator: connectedProfile?.is_wave_creator ?? false,
       artist_of_prevote_cards: connectedProfile?.artist_of_prevote_cards ?? [],
+      classification:
+        connectedProfile?.classification ?? ApiProfileClassification.Pseudonym,
+      sub_classification: connectedProfile?.sub_classification ?? null,
     },
     created_at: now,
     updated_at: null,
@@ -151,6 +170,7 @@ export const buildPreviewDrop = ({
         part_id: 1,
         content: traits.description || null,
         media: [media],
+        attachments: [],
         quoted_drop: null,
       },
     ],
@@ -170,5 +190,6 @@ export const buildPreviewDrop = ({
     reactions: [],
     boosts: 0,
     hide_link_preview: false,
+    mentioned_groups: [],
   };
 };

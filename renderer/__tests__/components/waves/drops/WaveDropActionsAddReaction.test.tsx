@@ -1,12 +1,21 @@
 import React from "react";
-import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import WaveDropActionsAddReaction from "@/components/waves/drops/WaveDropActionsAddReaction";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { DropSize } from "@/helpers/waves/drop.helpers";
 import { ApiDropType } from "@/generated/models/ApiDropType";
+import * as commonApi from "@/services/api/common-api";
 
 const applyOptimisticDropUpdateMock = jest.fn(() => ({ rollback: jest.fn() }));
 const setToastMock = jest.fn();
+const mobileWrapperDialogMock = jest.fn(
+  ({ isOpen, children, zIndexClassName }: any) =>
+    isOpen ? (
+      <div data-testid="mobile-dialog" data-z-index={zIndexClassName}>
+        {children}
+      </div>
+    ) : null
+);
 
 jest.mock("@/contexts/wave/MyStreamContext", () => ({
   useMyStream: jest.fn(() => ({
@@ -39,7 +48,30 @@ jest.mock("@/services/api/common-api", () => ({
   commonApiPost: jest.fn(() => Promise.resolve({})),
 }));
 
-// Mock emoji-mart/react Picker and emoji-mart/data
+jest.mock("@sentry/nextjs", () => ({
+  __esModule: true,
+  addBreadcrumb: jest.fn(),
+  withScope: jest.fn((callback: (scope: any) => void) => {
+    const scope = {
+      setLevel: jest.fn(),
+      setFingerprint: jest.fn(),
+      setTag: jest.fn(),
+      setExtras: jest.fn(),
+    };
+    callback(scope);
+  }),
+  captureException: jest.fn(),
+}));
+
+jest.mock("@/services/websocket/useWebSocketMessage", () => ({
+  useWebsocketStatus: jest.fn(() => "connected"),
+}));
+
+jest.mock("@/components/mobile-wrapper-dialog/MobileWrapperDialog", () => ({
+  __esModule: true,
+  default: (props: any) => mobileWrapperDialogMock(props),
+}));
+
 jest.mock("@emoji-mart/react", () => ({
   __esModule: true,
   default: ({ onEmojiSelect }: any) => (
@@ -54,7 +86,6 @@ jest.mock("@emoji-mart/data", () => ({
   default: {},
 }));
 
-// Mock useEmoji
 jest.mock("@/contexts/EmojiContext", () => ({
   useEmoji: jest.fn(() => ({
     emojiMap: [],
@@ -66,7 +97,6 @@ jest.mock("@/contexts/EmojiContext", () => ({
   })),
 }));
 
-// Mock drop object
 const baseDrop = {
   id: "12345",
   wave: { id: "wave-1" },
@@ -92,6 +122,7 @@ const tempDrop = {
   stableKey: "temp-001",
   stableHash: "hash-temp-001",
 } as ExtendedDrop;
+
 describe("WaveDropActionsAddReaction", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -124,7 +155,6 @@ describe("WaveDropActionsAddReaction", () => {
     fireEvent.click(button);
     expect(await screen.findByTestId("mock-picker")).toBeInTheDocument();
 
-    // Simulate Escape key
     fireEvent.keyDown(document, { key: "Escape" });
     await waitFor(() => {
       expect(screen.queryByTestId("mock-picker")).not.toBeInTheDocument();
@@ -138,7 +168,6 @@ describe("WaveDropActionsAddReaction", () => {
     fireEvent.click(button);
     expect(await screen.findByTestId("mock-picker")).toBeInTheDocument();
 
-    // Simulate outside click
     fireEvent.mouseDown(document.body);
     await waitFor(() => {
       expect(screen.queryByTestId("mock-picker")).not.toBeInTheDocument();
@@ -164,11 +193,46 @@ describe("WaveDropActionsAddReaction", () => {
     });
   });
 
+  it("shows the structured API error message when adding a reaction fails", async () => {
+    (commonApi.commonApiPost as jest.Mock).mockRejectedValueOnce(
+      new Error("Unauthorized")
+    );
+
+    render(<WaveDropActionsAddReaction drop={mockDrop} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /add reaction/i }));
+    fireEvent.click(await screen.findByText(/select emoji/i));
+
+    await waitFor(() => {
+      expect(setToastMock).toHaveBeenCalledWith({
+        message: "Unauthorized",
+        type: "error",
+      });
+    });
+  });
+
   it("opens and closes picker on mobile button click", async () => {
     render(<WaveDropActionsAddReaction drop={mockDrop} isMobile={true} />);
     const button = screen.getByRole("button", { name: /add reaction/i });
 
     fireEvent.click(button);
     expect(await screen.findByTestId("mock-picker")).toBeInTheDocument();
+  });
+
+  it("forwards custom dialog z-index to the mobile wrapper", async () => {
+    render(
+      <WaveDropActionsAddReaction
+        drop={mockDrop}
+        isMobile={true}
+        dialogZIndexClassName="tw-z-[1030]"
+      />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /add reaction/i }));
+
+    expect(await screen.findByTestId("mobile-dialog")).toHaveAttribute(
+      "data-z-index",
+      "tw-z-[1030]"
+    );
   });
 });

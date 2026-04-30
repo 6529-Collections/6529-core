@@ -17,6 +17,7 @@ import CreateWaveDescription from "./description/CreateWaveDescription";
 import { getCreateNewWaveBody } from "@/helpers/waves/create-wave.helpers";
 import { AuthContext } from "@/components/auth/Auth";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import type { ApiCreateDropPart } from "@/generated/models/ApiCreateDropPart";
 import type { ApiCreateWaveDropRequest } from "@/generated/models/ApiCreateWaveDropRequest";
 import { useRouter } from "next/navigation";
 import { generateDropPart } from "./services/waveMediaService";
@@ -29,6 +30,9 @@ import { multiPartUpload } from "./services/multiPartUpload";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
+import { useGroupMutations } from "@/hooks/groups/useGroupMutations";
+import type { ApiCreateGroup } from "@/generated/models/ApiCreateGroup";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 export default function CreateWave({
   profile,
   onBack,
@@ -41,10 +45,14 @@ export default function CreateWave({
   const router = useRouter();
   const { isIos, keyboardVisible } = useCapacitor();
   const { requestAuth, setToast, connectedProfile } = useContext(AuthContext);
-  const { waitAndInvalidateDrops, onWaveCreated } = useContext(
+  const { waitAndInvalidateDrops, onWaveCreated, onGroupCreate } = useContext(
     ReactQueryWrapperContext
   );
   const [submitting, setSubmitting] = useState(false);
+  const { submit: submitInlineGroup } = useGroupMutations({
+    requestAuth,
+    onGroupCreate,
+  });
 
   // Use the hook for configuration state management
   const {
@@ -115,6 +123,32 @@ export default function CreateWave({
     if (haveDrop) setShowDropError(false);
   };
 
+  const onInlineGroupCreate = async (
+    payload: ApiCreateGroup
+  ): Promise<ApiGroupFull | null> => {
+    const result = await submitInlineGroup({
+      payload,
+      currentHandle: connectedProfile?.handle ?? null,
+    });
+
+    if (!result.ok) {
+      if (result.reason !== "auth") {
+        setToast({
+          message: result.error,
+          type: "error",
+        });
+      }
+      return null;
+    }
+
+    setToast({
+      message: "Group created and attached.",
+      type: "success",
+    });
+
+    return result.group;
+  };
+
   const onComplete = async () => {
     setSubmitting(true);
     const { success } = await requestAuth();
@@ -152,14 +186,22 @@ export default function CreateWave({
 
     const dropRequest: ApiCreateWaveDropRequest = {
       title: drop.title ?? null,
-      parts: dropParts.map((part) => ({
-        content: part.content,
-        quoted_drop: part.quoted_drop,
-        media: part.media.map((media) => ({
-          url: media.url,
-          mime_type: media.mime_type,
-        })),
-      })),
+      parts: dropParts.map((part): ApiCreateDropPart => {
+        const requestPart: ApiCreateDropPart = {
+          content: part.content,
+          quoted_drop: part.quoted_drop,
+          media: part.media.map((media) => ({
+            url: media.url,
+            mime_type: media.mime_type,
+          })),
+        };
+
+        if (part.attachments?.length) {
+          requestPart.attachments = part.attachments;
+        }
+
+        return requestPart;
+      }),
       referenced_nfts: drop.referenced_nfts.map((nft) => ({
         contract: nft.contract,
         token: nft.token,
@@ -205,6 +247,7 @@ export default function CreateWave({
     ),
     [CreateWaveStep.GROUPS]: (
       <CreateWaveGroups
+        waveName={config.overview.name}
         waveType={config.overview.type}
         groups={config.groups}
         groupsCache={groupsCache}
@@ -212,6 +255,7 @@ export default function CreateWave({
         adminCanDeleteDrops={config.drops.adminCanDeleteDrops}
         setChatEnabled={onChatEnabledChange}
         onGroupSelect={onGroupSelect}
+        onInlineGroupCreate={onInlineGroupCreate}
         setDropsAdminCanDelete={setDropsAdminCanDelete}
       />
     ),

@@ -5,7 +5,6 @@ import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useIntersectionObserver } from "@/hooks/useIntersectionObserver";
 import type { WaveDropsLeaderboardSort } from "@/hooks/useWaveDropsLeaderboard";
 import { useWaveDropsLeaderboard } from "@/hooks/useWaveDropsLeaderboard";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import React from "react";
 import { WaveLeaderboardDrop } from "./WaveLeaderboardDrop";
 import { WaveLeaderboardEmptyState } from "./WaveLeaderboardEmptyState";
@@ -15,6 +14,7 @@ import { WaveLeaderboardLoadingBar } from "./WaveLeaderboardLoadingBar";
 interface WaveLeaderboardDropsProps {
   readonly wave: ApiWave;
   readonly sort: WaveDropsLeaderboardSort;
+  readonly onDropClick: (drop: ExtendedDrop) => void;
   readonly onCreateDrop?: (() => void) | undefined;
   readonly curatedByGroupId?: string | undefined;
   readonly minPrice?: number | undefined;
@@ -25,15 +25,13 @@ interface WaveLeaderboardDropsProps {
 export const WaveLeaderboardDrops: React.FC<WaveLeaderboardDropsProps> = ({
   wave,
   sort,
+  onDropClick,
   onCreateDrop,
   curatedByGroupId,
   minPrice,
   maxPrice,
   priceCurrency,
 }) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { drops, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage } =
     useWaveDropsLeaderboard({
       waveId: wave.id,
@@ -49,12 +47,6 @@ export const WaveLeaderboardDrops: React.FC<WaveLeaderboardDropsProps> = ({
       await fetchNextPage();
     }
   });
-
-  const onDropClick = (drop: ExtendedDrop) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("drop", drop.id);
-    router.push(`${pathname}?${params.toString()}`);
-  };
 
   if (isFetching && drops.length === 0) {
     return <WaveLeaderboardLoading />;

@@ -25,6 +25,7 @@ type SeizeSettingsContextType = {
   seizeSettings: TempApiSeizeSettings;
   isMemesWave: (waveId: string | undefined | null) => boolean;
   isCurationWave: (waveId: string | undefined | null) => boolean;
+  isQuorumWave: (waveId: string | undefined | null) => boolean;
   isAnnouncementsWave: (waveId: string | undefined | null) => boolean;
   isMemesSubmission: (drop: ApiDrop | undefined | null) => boolean;
   isLoaded: boolean;
@@ -48,9 +49,10 @@ export const SeizeSettingsProvider = ({
     all_drops_notifications_subscribers_limit: 0,
     memes_wave_id: null,
     curation_wave_id: null,
+    quorum_wave_id: null,
+    announcements_wave_id: null,
     distribution_admin_wallets: [],
     claims_admin_wallets: [],
-    announcements_wave_id: null,
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
@@ -79,6 +81,8 @@ export const SeizeSettingsProvider = ({
             publicEnv.DEV_MODE_MEMES_WAVE_ID ?? settings.memes_wave_id,
           curation_wave_id:
             publicEnv.DEV_MODE_CURATION_WAVE_ID ?? settings.curation_wave_id,
+          quorum_wave_id:
+            publicEnv.DEV_MODE_QUORUM_WAVE_ID ?? settings.quorum_wave_id,
         }));
         setLoadError(null);
         setIsLoaded(true);
@@ -105,8 +109,12 @@ export const SeizeSettingsProvider = ({
     };
   }, [loadSeizeSettings]);
 
-  const { memes_wave_id, curation_wave_id, announcements_wave_id } =
-    seizeSettings;
+  const {
+    memes_wave_id,
+    curation_wave_id,
+    quorum_wave_id,
+    announcements_wave_id,
+  } = seizeSettings;
   const normalizedAnnouncementsWaveId = useMemo(
     () => normalizeOptionalWaveId(announcements_wave_id),
     [announcements_wave_id]
@@ -126,6 +134,14 @@ export const SeizeSettingsProvider = ({
       return curation_wave_id === waveId;
     },
     [curation_wave_id]
+  );
+
+  const isQuorumWave = useCallback(
+    (waveId: string | undefined | null): boolean => {
+      if (!waveId) return false;
+      return quorum_wave_id === waveId;
+    },
+    [quorum_wave_id]
   );
 
   const isAnnouncementsWave = useCallback(
@@ -156,6 +172,7 @@ export const SeizeSettingsProvider = ({
       seizeSettings,
       isMemesWave,
       isCurationWave,
+      isQuorumWave,
       isAnnouncementsWave,
       isMemesSubmission,
       isLoaded,
@@ -166,6 +183,7 @@ export const SeizeSettingsProvider = ({
       seizeSettings,
       isMemesWave,
       isCurationWave,
+      isQuorumWave,
       isAnnouncementsWave,
       isMemesSubmission,
       isLoaded,

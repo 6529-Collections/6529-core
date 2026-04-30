@@ -4,15 +4,19 @@ import React, { useMemo } from "react";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import WaveDropPartContentMedias from "./WaveDropPartContentMedias";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ReferencedNft } from "@/entities/IDrop";
 import type { ApiWaveMin } from "@/generated/models/ApiWaveMin";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import WaveDropPartContentMarkdown from "./WaveDropPartContentMarkdown";
+import WaveDropPartContentAttachments from "./WaveDropPartContentAttachments";
 import { ImageScale } from "@/helpers/image.helpers";
+import type { DropContentPresentation } from "./dropContentPresentation";
 
 interface WaveDropPartContentProps {
   readonly mentionedUsers: ApiDropMentionedUser[];
+  readonly mentionedGroups?: ApiDropGroupMention[] | undefined;
   readonly mentionedWaves: ApiMentionedWave[];
   readonly referencedNfts: ReferencedNft[];
   readonly wave: ApiWaveMin;
@@ -29,6 +33,7 @@ interface WaveDropPartContentProps {
     | ((
         newContent: string,
         mentions?: ApiDropMentionedUser[],
+        mentionedGroups?: ApiDropGroupMention[],
         mentionedWaves?: ApiMentionedWave[]
       ) => void)
     | undefined;
@@ -36,13 +41,20 @@ interface WaveDropPartContentProps {
   readonly drop?: ApiDrop | undefined;
   readonly isCompetitionDrop?: boolean | undefined;
   readonly mediaImageScale?: ImageScale | undefined;
+  readonly fullWidthMedia?: boolean | undefined;
   readonly onLinkCardActionsActiveChange?:
     | ((href: string, active: boolean) => void)
     | undefined;
+  readonly contentPresentation?: DropContentPresentation | undefined;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   mentionedUsers,
+  mentionedGroups = [],
   mentionedWaves,
   referencedNfts,
   wave,
@@ -60,7 +72,13 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   drop,
   isCompetitionDrop = false,
   mediaImageScale = ImageScale.AUTOx450,
+  fullWidthMedia = false,
   onLinkCardActionsActiveChange,
+  contentPresentation = "default",
+  embedPath,
+  quotePath,
+  embedDepth,
+  maxEmbedDepth,
 }) => {
   const contentRef = React.useRef<HTMLDivElement>(null);
 
@@ -71,6 +89,10 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
   const memoizedMentionedWaves = useMemo(
     () => mentionedWaves,
     [mentionedWaves]
+  );
+  const memoizedMentionedGroups = useMemo(
+    () => mentionedGroups,
+    [mentionedGroups]
   );
   const memoizedReferencedNfts = useMemo(
     () => referencedNfts,
@@ -140,6 +162,7 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
           <div>
             <WaveDropPartContentMarkdown
               mentionedUsers={memoizedMentionedUsers}
+              mentionedGroups={memoizedMentionedGroups}
               mentionedWaves={memoizedMentionedWaves}
               referencedNfts={memoizedReferencedNfts}
               part={activePart}
@@ -151,6 +174,11 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
               onCancel={onCancel}
               drop={drop}
               onLinkCardActionsActiveChange={onLinkCardActionsActiveChange}
+              contentPresentation={contentPresentation}
+              embedPath={embedPath}
+              quotePath={quotePath}
+              embedDepth={embedDepth}
+              maxEmbedDepth={maxEmbedDepth}
             />
           </div>
           {!!activePart.media.length && (
@@ -158,8 +186,12 @@ const WaveDropPartContent: React.FC<WaveDropPartContentProps> = ({
               activePart={activePart}
               isCompetitionDrop={isCompetitionDrop}
               imageScale={mediaImageScale}
+              fullWidthMedia={fullWidthMedia}
             />
           )}
+          <WaveDropPartContentAttachments
+            attachments={activePart.attachments ?? []}
+          />
         </div>
 
         {isStorm && (

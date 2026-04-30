@@ -15,6 +15,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useState } from "react";
 import DropCurationButton from "../DropCurationButton";
+import DropMinimalIdentityRow from "../DropMinimalIdentityRow";
 import WaveDropActions from "../WaveDropActions";
 import WaveDropAuthorPfp from "../WaveDropAuthorPfp";
 import WaveDropContent from "../WaveDropContent";
@@ -26,8 +27,13 @@ import {
   getParticipationIdentityProfile,
   getParticipationVisibleMetadata,
 } from "./participationIdentityProfile.helpers";
-import type { DropInteractionParams } from "../drop.types";
-import { DropLocation } from "../drop.types";
+import type { DropContentPresentation } from "../dropContentPresentation";
+import type {
+  DropIdentityMode,
+  DropInteractionParams,
+  DropTimestampLayout,
+} from "../drop.types";
+import { DropLocation, hasDropFooter } from "../drop.types";
 
 interface EndedParticipationDropProps {
   readonly drop: ExtendedDrop;
@@ -38,6 +44,15 @@ interface EndedParticipationDropProps {
   readonly onReply: (param: DropInteractionParams) => void;
   readonly onQuoteClick: (drop: ApiDrop) => void;
   readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
+  readonly footer?: React.ReactNode;
+  readonly identityMode?: DropIdentityMode | undefined;
+  readonly timestampLayout?: DropTimestampLayout | undefined;
+  readonly showInteractions?: boolean | undefined;
+  readonly contentPresentation?: DropContentPresentation | undefined;
+  readonly embedPath?: readonly string[] | undefined;
+  readonly quotePath?: readonly string[] | undefined;
+  readonly embedDepth?: number | undefined;
+  readonly maxEmbedDepth?: number | undefined;
 }
 
 export default function EndedParticipationDrop({
@@ -49,6 +64,15 @@ export default function EndedParticipationDrop({
   onReply,
   onQuoteClick,
   onDropContentClick,
+  footer,
+  identityMode = "default",
+  timestampLayout = "inline",
+  showInteractions = true,
+  contentPresentation = "default",
+  embedPath,
+  quotePath,
+  embedDepth,
+  maxEmbedDepth,
 }: EndedParticipationDropProps) {
   const isActiveDrop = activeDrop?.drop.id === drop.id;
   const router = useRouter();
@@ -72,6 +96,8 @@ export default function EndedParticipationDrop({
   const [isSlideUp, setIsSlideUp] = useState(false);
   const isMobile = useIsMobileDevice();
   const hasTouch = useIsTouchDevice() || isMobile;
+  const showIdentity = identityMode !== "hidden";
+  const isStackedTimestamp = timestampLayout === "stacked";
 
   const handleNavigation = (e: React.MouseEvent, path: string) => {
     e.preventDefault();
@@ -80,10 +106,10 @@ export default function EndedParticipationDrop({
   };
 
   const handleLongPress = useCallback(() => {
-    if (!hasTouch) return;
+    if (!showInteractions || !hasTouch) return;
     setLongPressTriggered(true);
     setIsSlideUp(true);
-  }, [hasTouch]);
+  }, [hasTouch, showInteractions]);
 
   const handleOnReply = useCallback(() => {
     setIsSlideUp(false);
@@ -111,7 +137,7 @@ export default function EndedParticipationDrop({
       <div
         className={`tw-group tw-relative tw-flex tw-w-full tw-flex-col tw-overflow-hidden tw-rounded-xl tw-px-4 tw-py-3 tw-transition-colors tw-duration-200 tw-ease-linear ${dropBackgroundClass}`}
       >
-        {!isMobile && showReplyAndQuote && (
+        {!isMobile && showInteractions && showReplyAndQuote && (
           <WaveDropActions
             drop={drop}
             activePartIndex={activePartIndex}
@@ -121,43 +147,69 @@ export default function EndedParticipationDrop({
         )}
 
         <div className="tw-flex tw-w-full tw-gap-x-3 tw-border-0 tw-bg-transparent tw-text-left">
-          <WaveDropAuthorPfp drop={drop} />
+          {showIdentity && <WaveDropAuthorPfp drop={drop} />}
 
           <div className="tw-flex tw-w-full tw-flex-col tw-gap-y-2">
-            <div className="tw-flex tw-flex-col tw-gap-y-2">
-              <div className="tw-flex tw-items-center tw-gap-x-2">
-                <UserCICAndLevel
-                  level={drop.author.level}
-                  size={UserCICAndLevelSize.SMALL}
+            {showIdentity &&
+              (identityMode === "minimal" ? (
+                <DropMinimalIdentityRow
+                  drop={drop}
+                  timestampLayout={timestampLayout}
                 />
-
-                <p className="tw-mb-0 tw-text-md tw-font-semibold tw-leading-none">
-                  <Link
-                    onClick={(e) =>
-                      handleNavigation(
-                        e,
-                        `/${drop.author.handle ?? drop.author.primary_address}`
-                      )
+              ) : (
+                <div className="tw-flex tw-flex-col tw-gap-y-2">
+                  <div
+                    className={
+                      isStackedTimestamp
+                        ? "tw-flex tw-min-w-0 tw-flex-col tw-items-start tw-gap-y-1"
+                        : "tw-flex tw-items-center tw-gap-x-2"
                     }
-                    href={`/${drop.author.handle ?? drop.author.primary_address}`}
-                    className="tw-text-iron-200 tw-no-underline tw-transition tw-duration-300 tw-ease-out hover:tw-text-iron-500"
                   >
-                    {drop.author.handle ?? drop.author.primary_address}
-                  </Link>
-                </p>
+                    <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
+                      <UserCICAndLevel
+                        level={drop.author.level}
+                        size={UserCICAndLevelSize.SMALL}
+                      />
 
-                <div className="tw-size-[3px] tw-flex-shrink-0 tw-rounded-full tw-bg-iron-600"></div>
+                      <p className="tw-mb-0 tw-text-md tw-font-semibold tw-leading-none">
+                        <Link
+                          onClick={(e) =>
+                            handleNavigation(
+                              e,
+                              `/${drop.author.handle ?? drop.author.primary_address}`
+                            )
+                          }
+                          href={`/${drop.author.handle ?? drop.author.primary_address}`}
+                          className="tw-text-iron-200 tw-no-underline tw-transition tw-duration-300 tw-ease-out hover:tw-text-iron-500"
+                        >
+                          {drop.author.handle ?? drop.author.primary_address}
+                        </Link>
+                      </p>
 
-                <p className="tw-mb-0 tw-whitespace-nowrap tw-text-xs tw-font-normal tw-leading-none tw-text-iron-500">
-                  {getTimeAgoShort(drop.created_at)}
-                </p>
-              </div>
-              <div className="tw-flex tw-w-fit tw-items-center tw-whitespace-nowrap tw-rounded-md tw-border tw-border-solid tw-border-iron-500/25 tw-bg-iron-600/10 tw-px-2 tw-py-0.5 tw-font-medium tw-text-iron-500">
-                <span className="tw-text-xs">Participant</span>
-              </div>
-            </div>
+                      {!isStackedTimestamp && (
+                        <div className="tw-size-[3px] tw-flex-shrink-0 tw-rounded-full tw-bg-iron-600"></div>
+                      )}
 
-            {showWaveInfo &&
+                      {!isStackedTimestamp && (
+                        <p className="tw-mb-0 tw-whitespace-nowrap tw-text-xs tw-font-normal tw-leading-none tw-text-iron-500">
+                          {getTimeAgoShort(drop.created_at)}
+                        </p>
+                      )}
+                    </div>
+                    {isStackedTimestamp && (
+                      <p className="tw-mb-0 tw-whitespace-nowrap tw-text-xs tw-font-normal tw-leading-none tw-text-iron-500">
+                        {getTimeAgoShort(drop.created_at)}
+                      </p>
+                    )}
+                  </div>
+                  <div className="tw-flex tw-w-fit tw-items-center tw-whitespace-nowrap tw-rounded-md tw-border tw-border-solid tw-border-iron-500/25 tw-bg-iron-600/10 tw-px-2 tw-py-0.5 tw-font-medium tw-text-iron-500">
+                    <span className="tw-text-xs">Participant</span>
+                  </div>
+                </div>
+              ))}
+
+            {identityMode === "default" &&
+              showWaveInfo &&
               (() => {
                 const waveMeta = (
                   drop.wave as unknown as {
@@ -202,12 +254,17 @@ export default function EndedParticipationDrop({
               setLongPressTriggered={setLongPressTriggered}
               isCompetitionDrop={true}
               hasTouch={hasTouch}
+              contentPresentation={contentPresentation}
+              embedPath={embedPath}
+              quotePath={quotePath}
+              embedDepth={embedDepth}
+              maxEmbedDepth={maxEmbedDepth}
             />
           </div>
         </div>
 
         {identityProfile && (
-          <div className="tw-ml-[3.25rem]">
+          <div className={showIdentity ? "tw-ml-[3.25rem]" : ""}>
             <ParticipationIdentityProfileCard
               profile={identityProfile}
               contextId={drop.id}
@@ -222,25 +279,36 @@ export default function EndedParticipationDrop({
             <WaveDropMetadata metadata={visibleMetadata} />
           </div>
         )}
-        <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
-          <DropCurationButton
-            dropId={drop.id}
-            waveId={drop.wave.id}
-            isCuratable={drop.context_profile_context?.curatable ?? false}
-            isCurated={drop.context_profile_context?.curated ?? false}
-          />
-          <WaveDropReactions drop={drop} />
-        </div>
+        {showInteractions && (
+          <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
+            <DropCurationButton
+              dropId={drop.id}
+              waveId={drop.wave.id}
+              isCuratable={drop.context_profile_context?.curatable ?? false}
+              isCurated={drop.context_profile_context?.curated ?? false}
+            />
+            <WaveDropReactions drop={drop} />
+          </div>
+        )}
+        {hasDropFooter(footer) && (
+          <div
+            className={`${showIdentity ? "tw-ml-[3.25rem]" : ""} tw-pb-1 tw-pt-2`}
+          >
+            {footer}
+          </div>
+        )}
 
-        <WaveDropMobileMenu
-          drop={drop}
-          isOpen={isSlideUp}
-          longPressTriggered={longPressTriggered}
-          showReplyAndQuote={showReplyAndQuote}
-          setOpen={setIsSlideUp}
-          onReply={handleOnReply}
-          onAddReaction={handleOnAddReaction}
-        />
+        {showInteractions && (
+          <WaveDropMobileMenu
+            drop={drop}
+            isOpen={isSlideUp}
+            longPressTriggered={longPressTriggered}
+            showReplyAndQuote={showReplyAndQuote}
+            setOpen={setIsSlideUp}
+            onReply={handleOnReply}
+            onAddReaction={handleOnAddReaction}
+          />
+        )}
       </div>
     </div>
   );

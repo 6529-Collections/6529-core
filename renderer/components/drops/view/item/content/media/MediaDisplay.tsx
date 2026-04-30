@@ -15,6 +15,7 @@ import MediaDisplayAudio from "./MediaDisplayAudio";
 import MediaDisplayImage from "./MediaDisplayImage";
 import MediaDisplayVideo from "./MediaDisplayVideo";
 import type { MediaLoadStrategy } from "./mediaLoadStrategy";
+import UnsupportedMediaLink from "./UnsupportedMediaLink";
 
 enum MediaType {
   IMAGE = "IMAGE",
@@ -52,6 +53,7 @@ function InteractiveHtmlMediaDisplay({
   );
   const [activeIndex, setActiveIndex] = useState(0);
   const [didLoadCurrentUrl, setDidLoadCurrentUrl] = useState(false);
+  const [isIframeVisible, setIsIframeVisible] = useState(false);
   const activeUrl = urls[activeIndex];
 
   useEffect(() => {
@@ -61,6 +63,7 @@ function InteractiveHtmlMediaDisplay({
   useEffect(() => {
     setActiveIndex(0);
     setDidLoadCurrentUrl(false);
+    setIsIframeVisible(false);
   }, [urls]);
 
   useEffect(() => {
@@ -70,6 +73,7 @@ function InteractiveHtmlMediaDisplay({
   useEffect(() => {
     if (
       !activeUrl ||
+      !isIframeVisible ||
       didLoadCurrentUrl ||
       activeIndex + 1 >= urls.length ||
       !shouldUseIframeFallbackTimeout(activeUrl)
@@ -88,7 +92,7 @@ function InteractiveHtmlMediaDisplay({
     return () => {
       globalThis.clearTimeout(timeoutId);
     };
-  }, [activeIndex, activeUrl, didLoadCurrentUrl, urls.length]);
+  }, [activeIndex, activeUrl, didLoadCurrentUrl, isIframeVisible, urls.length]);
 
   const advanceToNextUrl = () => {
     setActiveIndex((current) =>
@@ -122,6 +126,9 @@ function InteractiveHtmlMediaDisplay({
         setDidLoadCurrentUrl(true);
       }}
       onError={advanceToNextUrl}
+      onVisible={() => {
+        setIsIframeVisible(true);
+      }}
     />
   );
 }
@@ -258,7 +265,12 @@ export default function MediaDisplay({
         />
       );
     case MediaType.UNKNOWN:
-      return <></>;
+      return (
+        <UnsupportedMediaLink
+          media_url={media_url}
+          disableMediaInteraction={disableMediaInteraction}
+        />
+      );
     default:
       assertUnreachable(mediaType);
       return;

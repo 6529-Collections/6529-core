@@ -1,9 +1,7 @@
 import React from "react";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import type { ApiWave } from "@/generated/models/ObjectSerializer";
-import { MemesLeaderboardDrop } from "@/components/memes/drops/MemesLeaderboardDrop";
-import { useWave } from "@/hooks/useWave";
-import { DefaultWaveLeaderboardDrop } from "./DefaultWaveLeaderboardDrop";
+import type { ApiWave } from "@/generated/models/ApiWave";
+import { useWaveLeaderboardRendererSet } from "../leaderboardRendererRegistry";
 
 interface WaveLeaderboardDropProps {
   readonly drop: ExtendedDrop;
@@ -16,14 +14,7 @@ export const WaveLeaderboardDrop: React.FC<WaveLeaderboardDropProps> = ({
   wave,
   onDropClick,
 }) => {
-  const { isMemesWave } = useWave(wave);
-  if (isMemesWave) {
-    return <MemesLeaderboardDrop drop={drop} onDropClick={onDropClick} />;
-  }
-  return (
-    <DefaultWaveLeaderboardDrop
-      drop={drop}
-      onDropClick={onDropClick}
-    />
-  );
+  const { LeaderboardDrop } = useWaveLeaderboardRendererSet(wave.id);
+
+  return <LeaderboardDrop drop={drop} wave={wave} onDropClick={onDropClick} />;
 };

@@ -10,20 +10,38 @@ jest.mock("@/services/websocket/useWebSocketMessage", () => ({
 }));
 
 jest.mock("@/services/api/common-api", () => ({
-  commonApiFetch: jest.fn(),
-  commonApiPostWithoutBodyAndResponse: jest
-    .fn()
-    .mockResolvedValue(undefined),
+  commonApiPostWithoutBodyAndResponse: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock("@/services/api/drop-api", () => ({
+  fetchDropByIdBatched: jest.fn(),
+}));
+
+jest.mock("@tanstack/react-query", () => ({
+  useQueryClient: jest.fn(() => ({
+    setQueriesData: jest.fn(),
+  })),
 }));
 
 const {
-  commonApiFetch,
   commonApiPostWithoutBodyAndResponse,
 } = require("@/services/api/common-api");
+const { fetchDropByIdBatched } = require("@/services/api/drop-api");
 
 const flushPromises = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 describe("useWaveRealtimeUpdater", () => {
+  const setDocumentVisibility = (visibilityState: DocumentVisibilityState) => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: visibilityState,
+    });
+  };
+
+  beforeEach(() => {
+    setDocumentVisibility("visible");
+  });
+
   afterEach(() => {
     jest.clearAllMocks();
   });
@@ -61,7 +79,9 @@ describe("useWaveRealtimeUpdater", () => {
 
   it("handles aborted fetch without logging", async () => {
     const consoleLog = jest.spyOn(console, "log").mockImplementation(() => {});
-    const consoleError = jest.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = jest
+      .spyOn(console, "error")
+      .mockImplementation(() => {});
     const store: any = { wave1: { drops: [], latestFetchedSerialNo: 1 } };
     const props = baseProps(store);
     props.syncNewestMessages = jest
@@ -120,7 +140,12 @@ describe("useWaveRealtimeUpdater", () => {
       },
     };
     const props = baseProps(store);
-    commonApiFetch.mockResolvedValue({ id: "d4", author: {} });
+    fetchDropByIdBatched.mockResolvedValue({
+      id: "d4",
+      author: {},
+      wave: { id: "wave1" },
+      context_profile_context: null,
+    });
     const { result } = renderHook(() => useWaveRealtimeUpdater(props));
     const drop: any = { id: "d4", wave: { id: "wave1" }, author: {} };
     await act(async () =>
@@ -130,7 +155,7 @@ describe("useWaveRealtimeUpdater", () => {
       )
     );
     await flushPromises();
-    expect(commonApiFetch).toHaveBeenCalledWith({ endpoint: "drops/d4" });
+    expect(fetchDropByIdBatched).toHaveBeenCalledWith("d4");
     expect(props.updateData).toHaveBeenCalled();
   });
 
@@ -209,6 +234,28 @@ describe("useWaveRealtimeUpdater", () => {
     expect(commonApiPostWithoutBodyAndResponse).toHaveBeenCalledWith({
       endpoint: "notifications/wave/wave1/read",
     });
+  });
+
+  it("does not call the read endpoint for an active hidden wave", async () => {
+    setDocumentVisibility("hidden");
+    const store = {
+      wave1: { drops: [], latestFetchedSerialNo: 10 },
+    };
+    const props = baseProps(store);
+    props.activeWaveId = "wave1";
+    const { result } = renderHook(() => useWaveRealtimeUpdater(props));
+    const drop: any = { id: "d9-hidden", wave: { id: "wave1" }, author: {} };
+
+    await act(async () =>
+      result.current.processIncomingDrop(
+        drop,
+        ProcessIncomingDropType.DROP_INSERT
+      )
+    );
+    await flushPromises();
+
+    expect(commonApiPostWithoutBodyAndResponse).not.toHaveBeenCalled();
+    expect(props.removeWaveDeliveredNotifications).not.toHaveBeenCalled();
   });
 
   it("does not mark non-active wave as read", async () => {

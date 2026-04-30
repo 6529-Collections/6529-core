@@ -3,16 +3,20 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { ApiQuotedDrop } from "@/generated/models/ApiQuotedDrop";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
-import { commonApiFetch } from "@/services/api/common-api";
 import { useEffect, useState } from "react";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import DropPart from "@/components/drops/view/part/DropPart";
 import { DropPartSize } from "@/components/drops/view/part/DropPart.types";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiDropReferencedNFT } from "@/generated/models/ApiDropReferencedNFT";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ProfileMinWithoutSubs } from "@/helpers/ProfileTypes";
-import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import {
+  DROP_DETAIL_STALE_TIME_MS,
+  fetchDropByIdBatched,
+  getDropQueryKey,
+} from "@/services/api/drop-api";
 
 interface PartConfigWave {
   readonly name: string;
@@ -24,6 +28,7 @@ interface PartConfig {
   readonly dropId: string;
   readonly part: ApiDropPart;
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
+  readonly mentionedGroups: Array<ApiDropGroupMention>;
   readonly mentionedWaves: Array<ApiMentionedWave>;
   readonly referencedNfts: Array<ApiDropReferencedNFT>;
   readonly createdAt: number;
@@ -38,14 +43,13 @@ export default function CreateDropStormViewPartQuote({
   readonly profile: ProfileMinWithoutSubs;
   readonly quotedDrop: ApiQuotedDrop;
 }) {
+  const quotedDropId = quotedDrop.drop_id;
   const { data: drop } = useQuery<ApiDrop>({
-    queryKey: [QueryKey.DROP, quotedDrop.drop_id],
-    queryFn: async () =>
-      await commonApiFetch<ApiDrop>({
-        endpoint: `/drops/${quotedDrop.drop_id}`,
-      }),
-    enabled: typeof quotedDrop.drop_id === "string",
+    queryKey: getDropQueryKey(quotedDropId),
+    queryFn: () => fetchDropByIdBatched(quotedDropId),
+    enabled: quotedDropId.trim().length > 0,
     placeholderData: keepPreviousData,
+    staleTime: DROP_DETAIL_STALE_TIME_MS,
   });
 
   const getPartConfig = (): PartConfig | null => {
@@ -62,6 +66,7 @@ export default function CreateDropStormViewPartQuote({
       dropId: drop.id,
       part,
       mentionedUsers: drop.mentioned_users,
+      mentionedGroups: drop.mentioned_groups,
       mentionedWaves: drop.mentioned_waves,
       referencedNfts: drop.referenced_nfts,
       createdAt: drop.created_at,
@@ -74,7 +79,7 @@ export default function CreateDropStormViewPartQuote({
     };
   };
 
-  const [partConfig, setPartConfig] = useState<PartConfig | null>(
+  const [partConfig, setPartConfig] = useState<PartConfig | null>(() =>
     getPartConfig()
   );
   useEffect(() => setPartConfig(getPartConfig()), [drop]);
@@ -85,6 +90,7 @@ export default function CreateDropStormViewPartQuote({
           dropId={partConfig.dropId}
           profile={profile}
           mentionedUsers={partConfig.mentionedUsers}
+          mentionedGroups={partConfig.mentionedGroups}
           mentionedWaves={partConfig.mentionedWaves}
           referencedNfts={partConfig.referencedNfts}
           smallMenuIsShown={false}

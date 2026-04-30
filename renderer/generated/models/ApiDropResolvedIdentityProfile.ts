@@ -12,6 +12,7 @@
  */
 
 import { ApiIdentitySubscriptionTargetAction } from '../models/ApiIdentitySubscriptionTargetAction';
+import { ApiProfileClassification } from '../models/ApiProfileClassification';
 import { ApiProfileRepCategorySummary } from '../models/ApiProfileRepCategorySummary';
 import { HttpFile } from '../http/http';
 
@@ -28,12 +29,15 @@ export class ApiDropResolvedIdentityProfile {
     'xtdh': number;
     'xtdh_rate': number;
     'level': number;
+    'classification': ApiProfileClassification;
+    'sub_classification': string | null;
     'primary_address': string;
     'subscribed_actions': Array<ApiIdentitySubscriptionTargetAction>;
     'archived': boolean;
     'active_main_stage_submission_ids': Array<string>;
     'winner_main_stage_drop_ids': Array<string>;
     'artist_of_prevote_cards': Array<number>;
+    'profile_wave_id': string | null;
     'is_wave_creator': boolean;
     'bio': string | null;
     'top_rep_categories': Array<ApiProfileRepCategorySummary>;
@@ -116,6 +120,18 @@ export class ApiDropResolvedIdentityProfile {
             "format": "int64"
         },
         {
+            "name": "classification",
+            "baseName": "classification",
+            "type": "ApiProfileClassification",
+            "format": ""
+        },
+        {
+            "name": "sub_classification",
+            "baseName": "sub_classification",
+            "type": "string",
+            "format": ""
+        },
+        {
             "name": "primary_address",
             "baseName": "primary_address",
             "type": "string",
@@ -152,6 +168,12 @@ export class ApiDropResolvedIdentityProfile {
             "format": "int64"
         },
         {
+            "name": "profile_wave_id",
+            "baseName": "profile_wave_id",
+            "type": "string",
+            "format": ""
+        },
+        {
             "name": "is_wave_creator",
             "baseName": "is_wave_creator",
             "type": "boolean",
@@ -177,3 +199,5 @@ export class ApiDropResolvedIdentityProfile {
     public constructor() {
     }
 }
+
+

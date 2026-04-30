@@ -23,6 +23,7 @@ import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropNftLink } from "@/generated/models/ApiDropNftLink";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
+import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ApiDropReferencedNFT } from "@/generated/models/ApiDropReferencedNFT";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
@@ -45,6 +46,8 @@ import {
 } from "./dropPartMarkdown/linkHandlers";
 
 const BreakComponent = () => <br />;
+
+const EMPTY_MENTIONED_GROUPS: ApiDropGroupMention[] = [];
 
 const mergeClassNames = (...classes: Array<string | undefined>): string =>
   classes.filter(Boolean).join(" ");
@@ -246,6 +249,7 @@ const createMarkdownComponents = ({
 
 export interface DropPartMarkdownProps {
   readonly mentionedUsers: Array<ApiDropMentionedUser>;
+  readonly mentionedGroups?: Array<ApiDropGroupMention> | undefined;
   readonly mentionedWaves: Array<ApiMentionedWave>;
   readonly referencedNfts: Array<ApiDropReferencedNFT>;
   readonly nftLinks?: readonly ApiDropNftLink[] | undefined;
@@ -266,6 +270,7 @@ export interface DropPartMarkdownProps {
 
 function DropPartMarkdown({
   mentionedUsers,
+  mentionedGroups = EMPTY_MENTIONED_GROUPS,
   mentionedWaves,
   referencedNfts,
   nftLinks,
@@ -327,6 +332,7 @@ function DropPartMarkdown({
         hideLinkPreviews,
         tweetPreviewMode,
         isMemesWaveById: seizeSettings?.isMemesWave,
+        isQuorumWaveById: seizeSettings?.isQuorumWave,
         embedPath: normalizedEmbedPath,
         quotePath: normalizedQuotePath,
         embedDepth,
@@ -338,6 +344,7 @@ function DropPartMarkdown({
       hideLinkPreviews,
       tweetPreviewMode,
       seizeSettings?.isMemesWave,
+      seizeSettings?.isQuorumWave,
       normalizedEmbedPath,
       normalizedQuotePath,
       embedDepth,
@@ -350,6 +357,7 @@ function DropPartMarkdown({
       createMarkdownContentRenderers({
         textSizeClass,
         mentionedUsers,
+        mentionedGroups,
         mentionedWaves,
         referencedNfts,
         emojiMap,
@@ -359,6 +367,7 @@ function DropPartMarkdown({
     [
       textSizeClass,
       mentionedUsers,
+      mentionedGroups,
       mentionedWaves,
       referencedNfts,
       emojiMap,

@@ -56,6 +56,10 @@ jest.mock("@/components/waves/create-wave/services/multiPartUpload", () => ({
   multiPartUpload: jest.fn(),
 }));
 
+jest.mock("@/hooks/groups/useGroupMutations", () => ({
+  useGroupMutations: jest.fn(),
+}));
+
 // Mock step components
 jest.mock("@/components/waves/create-wave/overview/CreateWaveOverview", () => {
   return function MockCreateWaveOverview() {
@@ -119,6 +123,7 @@ import { useAddWaveMutation } from "@/components/waves/create-wave/services/wave
 import { getAdminGroupId } from "@/components/waves/create-wave/services/waveGroupService";
 import { generateDropPart } from "@/components/waves/create-wave/services/waveMediaService";
 import { getCreateNewWaveBody } from "@/helpers/waves/create-wave.helpers";
+import { useGroupMutations } from "@/hooks/groups/useGroupMutations";
 
 const mockedUseRouter = useRouter as jest.Mock;
 const mockedUseWaveConfig = useWaveConfig as jest.Mock;
@@ -127,6 +132,7 @@ const mockedGetCreateNewWaveBody = getCreateNewWaveBody as jest.Mock;
 const mockedGenerateDropPart = generateDropPart as jest.Mock;
 const mockedGetAdminGroupId = getAdminGroupId as jest.Mock;
 const mockedMultiPartUpload = multiPartUpload as jest.Mock;
+const mockedUseGroupMutations = useGroupMutations as jest.Mock;
 
 describe("CreateWave", () => {
   const mockRouter = {
@@ -157,6 +163,7 @@ describe("CreateWave", () => {
   const mockQueryContext = {
     waitAndInvalidateDrops: jest.fn(),
     onWaveCreated: jest.fn(),
+    onGroupCreate: jest.fn(),
   };
 
   const mockWaveConfig = {
@@ -242,6 +249,9 @@ describe("CreateWave", () => {
     mockedGetAdminGroupId.mockResolvedValue("admin-group-id");
     mockedMultiPartUpload.mockResolvedValue({
       url: "https://example.com/image.jpg",
+    });
+    mockedUseGroupMutations.mockReturnValue({
+      submit: jest.fn(),
     });
     mockAuthContext.requestAuth.mockResolvedValue({ success: true });
 

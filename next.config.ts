@@ -239,6 +239,7 @@ interface PublicEnv {
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
   DEV_MODE_CURATION_WAVE_ID?: string;
+  DEV_MODE_QUORUM_WAVE_ID?: string;
   DEV_MODE_WALLET_ADDRESS?: string;
   DEV_MODE_AUTH_JWT?: string;
   USE_DEV_AUTH?: string;
@@ -422,6 +423,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,
         DEV_MODE_CURATION_WAVE_ID: publicEnv.DEV_MODE_CURATION_WAVE_ID,
+        DEV_MODE_QUORUM_WAVE_ID: publicEnv.DEV_MODE_QUORUM_WAVE_ID,
         DEV_MODE_WALLET_ADDRESS: publicEnv.DEV_MODE_WALLET_ADDRESS,
         DEV_MODE_AUTH_JWT: publicEnv.DEV_MODE_AUTH_JWT,
         USE_DEV_AUTH: publicEnv.USE_DEV_AUTH,

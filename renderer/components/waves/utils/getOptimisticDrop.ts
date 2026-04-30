@@ -3,7 +3,7 @@
 import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropType } from "@/generated/models/ApiDropType";
-import type { ApiIdentity } from "@/generated/models/ObjectSerializer";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import type { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getOptimisticDropId } from "@/helpers/waves/drop.helpers";
@@ -66,9 +66,9 @@ export const getOptimisticDrop = (
       authenticated_user_admin: false,
       forbid_negative_votes: wave.voting.forbid_negative_votes,
       submission_type: wave.participation.submission_strategy?.type ?? null,
-      selections: wave.selections,
+      identity_wave: wave.identity_wave,
+      voting_credit_nfts: wave.voting.credit_nfts,
     },
-    selections: [],
     author: {
       id: connectedProfile.id,
       handle: connectedProfile.handle,
@@ -88,8 +88,11 @@ export const getOptimisticDrop = (
       subscribed_actions: [],
       archived: false,
       primary_address: connectedProfile.primary_wallet,
+      profile_wave_id: connectedProfile.profile_wave_id,
       is_wave_creator: connectedProfile.is_wave_creator,
       artist_of_prevote_cards: connectedProfile.artist_of_prevote_cards,
+      classification: connectedProfile.classification,
+      sub_classification: connectedProfile.sub_classification,
     },
     created_at: Date.now(),
     updated_at: null,
@@ -101,6 +104,7 @@ export const getOptimisticDrop = (
         url: media.url,
         mime_type: media.mime_type,
       })),
+      attachments: [],
       quoted_drop: part.quoted_drop
         ? {
             ...part.quoted_drop,
@@ -128,5 +132,6 @@ export const getOptimisticDrop = (
     reactions: [],
     boosts: 0,
     hide_link_preview: false,
+    mentioned_groups: dropRequest.mentioned_groups ?? [],
   };
 };
