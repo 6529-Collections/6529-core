@@ -10,7 +10,7 @@ import {
   generateUniqueKeys,
   mapToExtendedDrops,
 } from "@/helpers/waves/wave-drops.helpers";
-import { commonApiFetch } from "@/services/api/common-api";
+import { fetchWaveLeaderboardV2 } from "@/services/api/wave-drops-v2-api";
 import { useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useMemo } from "react";
 
@@ -64,7 +64,11 @@ export function useWaveDropsLeaderboard({
     [curatedByGroupId]
   );
   const canonicalPriceFilters = useMemo(() => {
-    const normalizedPriceCurrency = priceCurrency?.trim() ?? undefined;
+    const trimmedPriceCurrency = priceCurrency?.trim();
+    const normalizedPriceCurrency =
+      trimmedPriceCurrency && trimmedPriceCurrency.length > 0
+        ? trimmedPriceCurrency
+        : undefined;
     const normalizedMinPrice =
       typeof minPrice === "number" && Number.isFinite(minPrice) && minPrice >= 0
         ? minPrice
@@ -181,8 +185,8 @@ export function useWaveDropsLeaderboard({
       readonly targetSort: WaveDropsLeaderboardSort;
       readonly targetSortDirection: "ASC" | "DESC" | undefined;
     }) =>
-      await commonApiFetch<ApiDropsLeaderboardPage>({
-        endpoint: `waves/${waveId}/leaderboard`,
+      await fetchWaveLeaderboardV2({
+        waveId,
         params: buildLeaderboardParams({
           pageParam,
           pageSize,

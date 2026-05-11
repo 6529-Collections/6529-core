@@ -2,7 +2,11 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import React from "react";
 import MyStreamWaveMyVoteInput from "@/components/brain/my-stream/votes/MyStreamWaveMyVoteInput";
 import { AuthContext } from "@/components/auth/Auth";
-import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import {
+  QueryKey,
+  ReactQueryWrapperContext,
+} from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 jest.mock("@tanstack/react-query", () => ({
@@ -30,7 +34,19 @@ const wrapper = ({ children }: any) => (
 
 const drop: any = {
   id: "d1",
+  wave: { id: "wave-1", voting_credit_type: ApiWaveCreditType.Tdh },
   context_profile_context: { rating: 0, min_rating: 0, max_rating: 10 },
+};
+
+const expectMaxVotes = (value: string) => {
+  const maxLabel = screen.getByText((_, element) => {
+    return (
+      element?.tagName.toLowerCase() === "p" &&
+      element.textContent?.replace(/\s+/g, " ").trim() === `Max ${value}`
+    );
+  });
+
+  expect(maxLabel).toBeInTheDocument();
 };
 
 describe("MyStreamWaveMyVoteInput", () => {
@@ -60,8 +76,23 @@ describe("MyStreamWaveMyVoteInput", () => {
       context_profile_context: { rating: 2, min_rating: 0, max_rating: 10 },
     };
     render(<MyStreamWaveMyVoteInput drop={dropWithRating} />, { wrapper });
-    expect(screen.getByText(/Max\s*10/)).toBeInTheDocument();
+    expectMaxVotes("10");
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
+  });
+
+  it("uses the wave voting credit label in the input", () => {
+    render(
+      <MyStreamWaveMyVoteInput
+        drop={{
+          ...drop,
+          wave: { id: "wave-1", voting_credit_type: ApiWaveCreditType.Rep },
+        }}
+      />,
+      { wrapper }
+    );
+
+    expect(screen.getByText("Rep")).toBeInTheDocument();
+    expect(screen.queryByText("TDH")).not.toBeInTheDocument();
   });
 
   it("keeps max visible with negative current rating", () => {
@@ -72,7 +103,7 @@ describe("MyStreamWaveMyVoteInput", () => {
     render(<MyStreamWaveMyVoteInput drop={dropWithNegativeRating} />, {
       wrapper,
     });
-    expect(screen.getByText(/Max\s*10/)).toBeInTheDocument();
+    expectMaxVotes("10");
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
   });
 
@@ -85,6 +116,22 @@ describe("MyStreamWaveMyVoteInput", () => {
     fireEvent.click(screen.getByRole("button", { name: "Submit vote" }));
     await waitFor(() => expect(auth.requestAuth).toHaveBeenCalled());
     expect(mutateAsync).toHaveBeenCalledWith({ rate: 10 });
+  });
+
+  it("does not submit when voting is closed", () => {
+    render(<MyStreamWaveMyVoteInput drop={drop} isVotingClosed={true} />, {
+      wrapper,
+    });
+
+    const input = screen.getByRole("textbox");
+    expect(input).toBeDisabled();
+
+    fireEvent.change(input, { target: { value: "5" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Submit vote" }));
+
+    expect(auth.requestAuth).not.toHaveBeenCalled();
+    expect(mutateAsync).not.toHaveBeenCalled();
   });
 
   it("updates input value immediately after successful vote", async () => {
@@ -101,11 +148,53 @@ describe("MyStreamWaveMyVoteInput", () => {
     await waitFor(() =>
       expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("5")
     );
-    expect(screen.getByText(/Max\s*10/)).toBeInTheDocument();
+    expectMaxVotes("10");
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
     expect(invalidateQueries).toHaveBeenCalledWith({
-      queryKey: ["DROPS_LEADERBOARD"],
+      queryKey: [QueryKey.DROPS_LEADERBOARD],
     });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: [QueryKey.WAVE, { wave_id: "wave-1" }],
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: [QueryKey.WAVE_DECISIONS, { waveId: "wave-1" }],
+    });
+  });
+
+  it("does not invalidate approval status when auth fails", async () => {
+    auth.requestAuth.mockResolvedValueOnce({ success: false });
+
+    render(<MyStreamWaveMyVoteInput drop={drop} />, { wrapper });
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit vote" }));
+
+    await waitFor(() => expect(auth.requestAuth).toHaveBeenCalled());
+
+    expect(mutateAsync).not.toHaveBeenCalled();
+    expect(invalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it("does not invalidate approval status when the vote update fails", async () => {
+    useMutationMock.mockImplementation((config: any) => ({
+      mutateAsync: async (variables: { rate: number }) => {
+        mutateAsync(variables);
+        const error = new Error("API Error");
+        config.onError?.(error);
+        throw error;
+      },
+    }));
+
+    render(<MyStreamWaveMyVoteInput drop={drop} />, { wrapper });
+
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: "5" } });
+    fireEvent.click(screen.getByRole("button", { name: "Submit vote" }));
+
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ rate: 5 }));
+
+    expect(invalidateQueries).not.toHaveBeenCalled();
   });
 
   it("falls back to submitted value when response context is missing", async () => {
@@ -130,7 +219,7 @@ describe("MyStreamWaveMyVoteInput", () => {
     await waitFor(() =>
       expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("4")
     );
-    expect(screen.getByText(/Max\s*10/)).toBeInTheDocument();
+    expectMaxVotes("10");
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
   });
 
@@ -161,7 +250,7 @@ describe("MyStreamWaveMyVoteInput", () => {
 
     const rerenderedInput = screen.getByRole("textbox");
     expect((rerenderedInput as HTMLInputElement).value).toBe("4");
-    expect(screen.getByText(/Max\s*9/)).toBeInTheDocument();
+    expectMaxVotes("9");
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
   });
 
@@ -182,9 +271,7 @@ describe("MyStreamWaveMyVoteInput", () => {
     fireEvent.change(input, { target: { value: "5" } });
     fireEvent.click(screen.getByRole("button", { name: "Submit vote" }));
 
-    await waitFor(() =>
-      expect(screen.getByText(/Max\s*10/)).toBeInTheDocument()
-    );
+    await waitFor(() => expectMaxVotes("10"));
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
     expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("5");
 
@@ -195,7 +282,7 @@ describe("MyStreamWaveMyVoteInput", () => {
     rerender(<MyStreamWaveMyVoteInput drop={serverUpdatedDrop} />);
 
     expect((screen.getByRole("textbox") as HTMLInputElement).value).toBe("6");
-    expect(screen.getByText(/Max\s*9/)).toBeInTheDocument();
+    expectMaxVotes("9");
     expect(screen.queryByText(/^Available/)).not.toBeInTheDocument();
   });
 });

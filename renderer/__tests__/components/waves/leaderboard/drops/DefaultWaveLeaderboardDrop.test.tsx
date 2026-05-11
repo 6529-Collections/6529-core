@@ -63,12 +63,15 @@ jest.mock(
   () => ({ WaveLeaderboardDropContent: () => <div data-testid="content" /> })
 );
 jest.mock(
-  "@/components/waves/leaderboard/drops/footer/WaveLeaderboardDropFooter",
-  () => ({ WaveLeaderboardDropFooter: () => <div data-testid="footer" /> })
-);
-jest.mock(
   "@/components/waves/leaderboard/drops/header/WaveleaderboardDropRaters",
-  () => ({ WaveLeaderboardDropRaters: () => <div data-testid="raters" /> })
+  () => ({
+    WaveLeaderboardDropRaters: (props: any) => (
+      <div
+        data-testid="raters"
+        data-is-voting-closed={String(props.isVotingClosed)}
+      />
+    ),
+  })
 );
 
 jest.mock(
@@ -85,6 +88,11 @@ describe("DefaultWaveLeaderboardDrop", () => {
     id: "1",
     rank: 1,
     wave: { id: "w1" },
+    author: {
+      handle: "alice",
+      primary_address: "0xalice",
+      pfp: null,
+    },
     context_profile_context: { curatable: true, curated: false },
   };
 
@@ -104,8 +112,89 @@ describe("DefaultWaveLeaderboardDrop", () => {
     expect(screen.getByTestId("modal")).toBeInTheDocument();
   });
 
+  it("closes voting modal when voting closes", () => {
+    const { rerender } = render(
+      <DefaultWaveLeaderboardDrop drop={drop} onDropClick={jest.fn()} />
+    );
+
+    fireEvent.click(screen.getByTestId("vote"));
+    expect(screen.getByTestId("modal")).toBeInTheDocument();
+
+    rerender(
+      <DefaultWaveLeaderboardDrop
+        drop={drop}
+        onDropClick={jest.fn()}
+        isVotingClosed={true}
+      />
+    );
+
+    expect(screen.queryByTestId("modal")).toBeNull();
+    expect(screen.queryByTestId("vote")).toBeNull();
+  });
+
+  it("hides vote action while controls are locked without showing closed state", () => {
+    render(
+      <DefaultWaveLeaderboardDrop
+        drop={drop}
+        onDropClick={jest.fn()}
+        isVotingClosed={false}
+        isVotingControlsLocked={true}
+      />
+    );
+
+    expect(screen.queryByTestId("vote")).toBeNull();
+    expect(screen.getByTestId("raters")).toHaveAttribute(
+      "data-is-voting-closed",
+      "false"
+    );
+  });
+
+  it("closes voting modal when controls become locked", () => {
+    const { rerender } = render(
+      <DefaultWaveLeaderboardDrop drop={drop} onDropClick={jest.fn()} />
+    );
+
+    fireEvent.click(screen.getByTestId("vote"));
+    expect(screen.getByTestId("modal")).toBeInTheDocument();
+
+    rerender(
+      <DefaultWaveLeaderboardDrop
+        drop={drop}
+        onDropClick={jest.fn()}
+        isVotingControlsLocked={true}
+      />
+    );
+
+    expect(screen.queryByTestId("modal")).toBeNull();
+    expect(screen.queryByTestId("vote")).toBeNull();
+  });
+
+  it("hides voting button when voting is closed", () => {
+    render(
+      <DefaultWaveLeaderboardDrop
+        drop={drop}
+        onDropClick={jest.fn()}
+        isVotingClosed={true}
+      />
+    );
+
+    expect(screen.queryByTestId("vote")).toBeNull();
+  });
+
   it("renders curation button", () => {
     render(<DefaultWaveLeaderboardDrop drop={drop} onDropClick={jest.fn()} />);
+    expect(screen.getByTestId("curate")).toBeInTheDocument();
+  });
+
+  it("renders curation button when voting is closed", () => {
+    render(
+      <DefaultWaveLeaderboardDrop
+        drop={drop}
+        onDropClick={jest.fn()}
+        isVotingClosed={true}
+      />
+    );
+
     expect(screen.getByTestId("curate")).toBeInTheDocument();
   });
 

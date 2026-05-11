@@ -94,7 +94,11 @@ const BrainMobileTabs: React.FC<BrainMobileTabsProps> = ({
     [registerRef]
   );
 
-  const { isMemesWave, isCurationWave, isRankWave } = useWave(wave);
+  const { isMemesWave, isCurationWave, isRankWave, isApproveWave } =
+    useWave(wave);
+  const isCompetitionWave = isRankWave || isApproveWave;
+  const supportsOutcomeView = isCompetitionWave && !isCurationWave;
+  const canShowMyVotesTab = isCurationWave || hasAuthenticatedProfile;
 
   // Get unread indicator for messages
   const { hasUnread: hasUnreadMessages } = useUnreadIndicator({
@@ -297,8 +301,8 @@ const BrainMobileTabs: React.FC<BrainMobileTabsProps> = ({
             </span>
           </button>
         )}
-        {!isRankWave && salesTabButton}
-        {waveActive && wave && isRankWave && (
+        {!isCompetitionWave && salesTabButton}
+        {waveActive && wave && isCompetitionWave && (
           <>
             <MyStreamWaveTabsLeaderboard
               wave={wave}
@@ -306,7 +310,7 @@ const BrainMobileTabs: React.FC<BrainMobileTabsProps> = ({
               onViewChange={handleWaveViewChange}
               renderAfterLeaderboard={salesTabButton}
             />
-            {(isCurationWave || (isMemesWave && hasAuthenticatedProfile)) && (
+            {canShowMyVotesTab && (
               <>
                 <button
                   ref={getActiveButtonRef(activeView === BrainView.MY_VOTES)}
@@ -325,21 +329,23 @@ const BrainMobileTabs: React.FC<BrainMobileTabsProps> = ({
                 </button>
               </>
             )}
-            <button
-              ref={getActiveButtonRef(activeView === BrainView.OUTCOME)}
-              onClick={() => handleWaveViewChange(BrainView.OUTCOME)}
-              className={getTabButtonClassName(
-                activeView === BrainView.OUTCOME
-              )}
-            >
-              <span
-                className={getTabTextClassName({
-                  isActive: activeView === BrainView.OUTCOME,
-                })}
+            {supportsOutcomeView && (
+              <button
+                ref={getActiveButtonRef(activeView === BrainView.OUTCOME)}
+                onClick={() => handleWaveViewChange(BrainView.OUTCOME)}
+                className={getTabButtonClassName(
+                  activeView === BrainView.OUTCOME
+                )}
               >
-                Outcome
-              </span>
-            </button>
+                <span
+                  className={getTabTextClassName({
+                    isActive: activeView === BrainView.OUTCOME,
+                  })}
+                >
+                  Outcome
+                </span>
+              </button>
+            )}
             {isMemesWave && (
               <button
                 ref={getActiveButtonRef(activeView === BrainView.FAQ)}

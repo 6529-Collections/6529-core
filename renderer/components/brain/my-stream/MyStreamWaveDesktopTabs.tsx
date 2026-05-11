@@ -110,6 +110,24 @@ const TAB_LABELS: Record<MyStreamWaveTab, string> = {
   [MyStreamWaveTab.FAQ]: "FAQ",
 };
 
+const getTabLabel = ({
+  isApproveWave,
+  tab,
+}: {
+  readonly isApproveWave: boolean;
+  readonly tab: MyStreamWaveTab;
+}): string => {
+  if (isApproveWave && tab === MyStreamWaveTab.LEADERBOARD) {
+    return "Approvals";
+  }
+
+  if (isApproveWave && tab === MyStreamWaveTab.WINNERS) {
+    return "Approved";
+  }
+
+  return TAB_LABELS[tab];
+};
+
 const getWaveVotingState = ({
   isUpcoming,
   isCompleted,
@@ -301,10 +319,13 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
   const hasAuthenticatedProfile = Boolean(connectedProfile?.handle);
   const {
     isChatWave,
+    isApproveWave,
     isMemesWave,
     isCurationWave,
+    isRankWave,
     pauses: { filterDecisionsDuringPauses },
   } = useWave(wave);
+  const isCompetitionWave = isRankWave || isApproveWave;
   const {
     voting: { isUpcoming, isCompleted },
     decisions: { firstDecisionDone },
@@ -407,6 +428,7 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
       isChatWave,
       hasAuthenticatedProfile,
       isCurationWave,
+      isApproveWave,
       votingState,
       hasFirstDecisionPassed: firstDecisionDone,
       transientPreferredTab: hasSerialTarget ? MyStreamWaveTab.CHAT : null,
@@ -415,6 +437,7 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
     wave,
     isMemesWave,
     isChatWave,
+    isApproveWave,
     hasAuthenticatedProfile,
     isCurationWave,
     votingState,
@@ -434,7 +457,10 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
       availableTabs
         .filter((tab) => {
           if (tab === MyStreamWaveTab.MY_VOTES) {
-            return isCurationWave || (isMemesWave && hasAuthenticatedProfile);
+            return (
+              isCurationWave ||
+              (hasAuthenticatedProfile && (isMemesWave || isCompetitionWave))
+            );
           }
           if (tab === MyStreamWaveTab.SALES) {
             return isCurationWave;
@@ -446,10 +472,17 @@ const MyStreamWaveDesktopTabs: React.FC<MyStreamWaveDesktopTabsProps> = ({
         })
         .map((tab) => ({
           key: tab,
-          label: TAB_LABELS[tab],
+          label: getTabLabel({ isApproveWave, tab }),
           panelId: getContentTabPanelId(tab),
         })),
-    [availableTabs, hasAuthenticatedProfile, isMemesWave, isCurationWave]
+    [
+      availableTabs,
+      hasAuthenticatedProfile,
+      isApproveWave,
+      isCompetitionWave,
+      isMemesWave,
+      isCurationWave,
+    ]
   );
 
   const curationOptions: TabOption[] = useMemo(

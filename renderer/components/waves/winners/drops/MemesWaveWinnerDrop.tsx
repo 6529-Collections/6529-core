@@ -9,6 +9,7 @@ import UserCICAndLevel, {
 import CommonDropdownItemsMobileWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsMobileWrapper";
 import UserProfileTooltipWrapper from "@/components/utils/tooltip/UserProfileTooltipWrapper";
 import WaveDropActionsOpen from "@/components/waves/drops/WaveDropActionsOpen";
+import WaveDropMobileMenuCopyLink from "@/components/waves/drops/WaveDropMobileMenuCopyLink";
 import WaveDropMobileMenuOpen from "@/components/waves/drops/WaveDropMobileMenuOpen";
 import WaveDropTime from "@/components/waves/drops/time/WaveDropTime";
 import { DropAuthorBadges } from "@/components/waves/drops/DropAuthorBadges";
@@ -44,6 +45,28 @@ const getRankHoverClass = (place: number | null): string => {
   return getRankHoverBorderClass(place);
 };
 
+const isClickFromCardDom = (
+  event: React.MouseEvent<HTMLDivElement>
+): boolean => {
+  return event.currentTarget.contains(event.target as Node);
+};
+
+const getNonEmptyText = (
+  value: string | null | undefined
+): string | undefined => {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
+};
+
+const getMetadataValue = (
+  winner: ApiWaveDecisionWinner,
+  dataKey: string
+): string | undefined =>
+  getNonEmptyText(
+    winner.drop.metadata.find((metadata) => metadata.data_key === dataKey)
+      ?.data_value
+  );
+
 export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
   winner,
   wave,
@@ -51,18 +74,63 @@ export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
 }) => {
   // Get device info from useDeviceInfo hook
   const { hasTouchScreen } = useDeviceInfo();
+  const suppressNextClickRef = React.useRef(false);
+
+  const handleInteractionStart = React.useCallback(() => {
+    suppressNextClickRef.current = true;
+  }, []);
+
+  const handleClickCapture = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!isClickFromCardDom(event)) {
+        return;
+      }
+
+      if (!suppressNextClickRef.current) {
+        return;
+      }
+
+      suppressNextClickRef.current = false;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+    []
+  );
+
+  const handleMenuClickCapture = React.useCallback(() => {
+    suppressNextClickRef.current = false;
+  }, []);
 
   // Use long press interaction hook with touch screen info from device hook
   const { isActive, setIsActive, touchHandlers } = useLongPressInteraction({
     hasTouchScreen,
+    onInteractionStart: handleInteractionStart,
+    preventDefault: false,
   });
 
+  const handleMobileMenuOpenChange = React.useCallback(
+    (nextIsActive: boolean) => {
+      if (!nextIsActive) {
+        suppressNextClickRef.current = false;
+      }
+
+      setIsActive(nextIsActive);
+    },
+    [setIsActive]
+  );
+
+  const handleMobileMenuClose = React.useCallback(() => {
+    handleMobileMenuOpenChange(false);
+  }, [handleMobileMenuOpenChange]);
+
   const title =
-    winner.drop.metadata.find((m) => m.data_key === "title")?.data_value ??
+    getNonEmptyText(winner.drop.title) ??
+    getMetadataValue(winner, "title") ??
     "Artwork Title";
   const description =
-    winner.drop.metadata.find((m) => m.data_key === "description")
-      ?.data_value ?? "This is an artwork submission for The Memes collection.";
+    getNonEmptyText(winner.drop.parts.at(0)?.content) ??
+    getMetadataValue(winner, "description") ??
+    "This is an artwork submission for The Memes collection.";
 
   const artworkMedia = winner.drop.parts.at(0)?.media.at(0);
 
@@ -85,9 +153,21 @@ export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
   // Convert the drop to ExtendedDrop using the helper function
   const extendedDrop = convertApiDropToExtendedDrop(winner.drop);
 
+  const handleClick = React.useCallback(
+    (event: React.MouseEvent<HTMLDivElement>) => {
+      if (!isClickFromCardDom(event)) {
+        return;
+      }
+
+      onDropClick(extendedDrop);
+    },
+    [extendedDrop, onDropClick]
+  );
+
   return (
     <div
-      onClick={() => onDropClick(extendedDrop)}
+      onClickCapture={handleClickCapture}
+      onClick={handleClick}
       className="touch-select-none tw-w-full tw-cursor-pointer tw-rounded-xl tw-transition-all tw-duration-300 tw-ease-out"
     >
       <div
@@ -204,47 +284,49 @@ export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
               </div>
 
               <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-leading-5">
-                <div className="tw-flex tw-items-center -tw-space-x-2">
-                  {topVoters.map((voter) => (
-                    <React.Fragment key={voter.profile.handle}>
-                      <Link
-                        href={`/${voter.profile.handle ?? voter.profile.id}`}
-                        onClick={(e) => e.stopPropagation()}
-                        scroll={false}
-                        className="tw-transition-transform desktop-hover:hover:tw-translate-y-[-2px]"
-                        data-tooltip-id={`voter-${voter.profile.handle ?? voter.profile.primary_address}-${voter.rating}`}
-                      >
-                        {voter.profile.pfp ? (
-                          <Image
-                            className="tw-h-6 tw-w-6 tw-rounded-md tw-border-2 tw-border-solid tw-border-[#111] tw-bg-iron-800 tw-object-contain"
-                            src={getScaledImageUri(
-                              voter.profile.pfp,
-                              ImageScale.W_AUTO_H_50
-                            )}
-                            alt={`${
-                              voter.profile.handle ?? voter.profile.id
-                            }'s profile picture`}
-                            width={24}
-                            height={24}
-                          />
-                        ) : (
-                          <div className="tw-h-6 tw-w-6 tw-rounded-md tw-border-2 tw-border-solid tw-border-[#111] tw-bg-iron-800" />
-                        )}
-                      </Link>
-                      <Tooltip
-                        id={`voter-${voter.profile.handle ?? voter.profile.primary_address}-${voter.rating}`}
-                        place="top"
-                        offset={8}
-                        opacity={1}
-                        positionStrategy="fixed"
-                        style={TOOLTIP_STYLES}
-                      >
-                        {voter.profile.handle} -{" "}
-                        {formatNumberWithCommas(voter.rating)}
-                      </Tooltip>
-                    </React.Fragment>
-                  ))}
-                </div>
+                {topVoters.length > 0 && (
+                  <div className="tw-flex tw-items-center -tw-space-x-2">
+                    {topVoters.map((voter) => (
+                      <React.Fragment key={voter.profile.handle}>
+                        <Link
+                          href={`/${voter.profile.handle ?? voter.profile.id}`}
+                          onClick={(e) => e.stopPropagation()}
+                          scroll={false}
+                          className="tw-transition-transform desktop-hover:hover:tw-translate-y-[-2px]"
+                          data-tooltip-id={`voter-${voter.profile.handle ?? voter.profile.primary_address}-${voter.rating}`}
+                        >
+                          {voter.profile.pfp ? (
+                            <Image
+                              className="tw-h-6 tw-w-6 tw-rounded-md tw-border-2 tw-border-solid tw-border-[#111] tw-bg-iron-800 tw-object-contain"
+                              src={getScaledImageUri(
+                                voter.profile.pfp,
+                                ImageScale.W_AUTO_H_50
+                              )}
+                              alt={`${
+                                voter.profile.handle ?? voter.profile.id
+                              }'s profile picture`}
+                              width={24}
+                              height={24}
+                            />
+                          ) : (
+                            <div className="tw-h-6 tw-w-6 tw-rounded-md tw-border-2 tw-border-solid tw-border-[#111] tw-bg-iron-800" />
+                          )}
+                        </Link>
+                        <Tooltip
+                          id={`voter-${voter.profile.handle ?? voter.profile.primary_address}-${voter.rating}`}
+                          place="top"
+                          offset={8}
+                          opacity={1}
+                          positionStrategy="fixed"
+                          style={TOOLTIP_STYLES}
+                        >
+                          {voter.profile.handle} -{" "}
+                          {formatNumberWithCommas(voter.rating)}
+                        </Tooltip>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                )}
                 <span className="tw-font-medium tw-text-iron-50">
                   {formatNumberWithCommas(ratersCount)}{" "}
                   <span className="tw-font-normal tw-text-iron-400">
@@ -278,13 +360,20 @@ export const MemesWaveWinnersDrop: React.FC<MemesWaveWinnersDropProps> = ({
             createPortal(
               <CommonDropdownItemsMobileWrapper
                 isOpen={isActive}
-                setOpen={setIsActive}
+                setOpen={handleMobileMenuOpenChange}
               >
-                <div className="tw-grid tw-grid-cols-1 tw-gap-y-2">
+                <div
+                  onClickCapture={handleMenuClickCapture}
+                  className="tw-grid tw-grid-cols-1 tw-gap-y-2"
+                >
                   {/* Open drop option */}
                   <WaveDropMobileMenuOpen
                     drop={extendedDrop}
-                    onOpenChange={() => setIsActive(false)}
+                    onOpenChange={handleMobileMenuClose}
+                  />
+                  <WaveDropMobileMenuCopyLink
+                    drop={extendedDrop}
+                    onCopy={() => setIsActive(false)}
                   />
                 </div>
               </CommonDropdownItemsMobileWrapper>,

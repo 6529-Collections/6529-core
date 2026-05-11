@@ -1,5 +1,6 @@
 "use client";
 
+import { openInExternalBrowser } from "@/helpers";
 import { getFileInfoFromUrl } from "@/helpers/file.helpers";
 import {
   ArrowTopRightOnSquareIcon,
@@ -80,7 +81,7 @@ export default function UnsupportedMediaLink({
     }
 
     setConfirmOpen(false);
-    globalThis.window.open(safeUrl, "_blank", "noopener,noreferrer");
+    openInExternalBrowser(safeUrl);
   };
 
   if (!safeUrl || disableMediaInteraction) {

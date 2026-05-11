@@ -15,18 +15,26 @@ import PrivilegedDropCreator from "../PrivilegedDropCreator";
 import { DropMode } from "../dropComposer.types";
 import WaveDropsAll from "../drops/wave-drops-all";
 import { WaveDropLayerProvider } from "../drops/WaveDropLayerContext";
+import { useWaveEligibility } from "@/contexts/wave/WaveEligibilityContext";
 
 interface SingleWaveDropChatProps {
   readonly wave: ApiWave;
   readonly drop: ApiDrop;
+  readonly winningThreshold?: number | null | undefined;
+  readonly isVotingClosed?: boolean | undefined;
+  readonly isVotingControlsLocked?: boolean | undefined;
 }
 
 export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   wave,
   drop,
+  winningThreshold = null,
+  isVotingClosed = false,
+  isVotingControlsLocked = false,
 }) => {
   const { isApp } = useDeviceInfo();
   const { isVisible: isKeyboardVisible } = useAndroidKeyboard();
+  const { updateEligibility } = useWaveEligibility();
 
   // Apply Android keyboard adjustments to the fixed input area
   const inputContainerStyle = useMemo(() => {
@@ -42,6 +50,8 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
     drop: drop,
     partId: 1,
   });
+  const isVotingActionLocked = isVotingClosed || isVotingControlsLocked;
+  const fixedDropMode = isVotingActionLocked ? DropMode.CHAT : DropMode.BOTH;
 
   const handleDropAction = ({
     targetDrop,
@@ -63,6 +73,18 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
     });
   };
 
+  React.useEffect(() => {
+    updateEligibility(wave.id, {
+      authenticated_user_eligible_to_chat:
+        wave.chat.authenticated_user_eligible,
+      authenticated_user_eligible_to_vote:
+        wave.voting.authenticated_user_eligible,
+      authenticated_user_eligible_to_participate:
+        wave.participation.authenticated_user_eligible,
+      authenticated_user_admin: wave.wave.authenticated_user_eligible_for_admin,
+    });
+  }, [updateEligibility, wave]);
+
   return (
     <WaveDropLayerProvider
       value={{
@@ -78,6 +100,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                 <div className="tw-min-h-0 tw-flex-1">
                   <WaveDropsAll
                     waveId={wave.id}
+                    wave={wave}
                     onReply={({
                       drop: repliedDrop,
                       partId,
@@ -96,6 +119,9 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                     unreadCount={wave.metrics.your_unread_drops_count}
                     dropId={drop.id}
                     isMuted={wave.metrics.muted}
+                    winningThreshold={winningThreshold}
+                    isVotingClosed={isVotingClosed}
+                    isVotingControlsLocked={isVotingControlsLocked}
                   />
                 </div>
                 <div
@@ -117,7 +143,7 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
                       onDropAddedToQueue={resetActiveDrop}
                       wave={wave}
                       dropId={drop.id}
-                      fixedDropMode={DropMode.BOTH}
+                      fixedDropMode={fixedDropMode}
                     />
                   </CreateDropWaveWrapper>
                 </div>

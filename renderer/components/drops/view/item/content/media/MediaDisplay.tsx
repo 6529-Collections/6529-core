@@ -247,7 +247,6 @@ export default function MediaDisplay({
         <MediaDisplayVideo
           src={media_url}
           showControls={!disableMediaInteraction}
-          disableClickHandler={disableMediaInteraction}
         />
       );
     case MediaType.AUDIO:

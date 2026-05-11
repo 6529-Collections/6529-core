@@ -48,6 +48,7 @@ interface EndedParticipationDropProps {
   readonly identityMode?: DropIdentityMode | undefined;
   readonly timestampLayout?: DropTimestampLayout | undefined;
   readonly showInteractions?: boolean | undefined;
+  readonly winningThreshold?: number | null | undefined;
   readonly contentPresentation?: DropContentPresentation | undefined;
   readonly embedPath?: readonly string[] | undefined;
   readonly quotePath?: readonly string[] | undefined;
@@ -253,6 +254,7 @@ export default function EndedParticipationDrop({
               onQuoteClick={onQuoteClick}
               setLongPressTriggered={setLongPressTriggered}
               isCompetitionDrop={true}
+              mediaContainerHeightClassName="tw-h-96"
               hasTouch={hasTouch}
               contentPresentation={contentPresentation}
               embedPath={embedPath}
