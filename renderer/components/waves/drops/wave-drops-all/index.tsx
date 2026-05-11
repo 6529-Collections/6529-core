@@ -9,10 +9,14 @@ import {
 } from "@/contexts/wave/UnreadDividerContext";
 import { useWaveChatScrollOptional } from "@/contexts/wave/WaveChatScrollContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
+import type { ApiWave } from "@/generated/models/ApiWave";
 import { getWaveRoute } from "@/helpers/navigation.helpers";
 import type { Drop, ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { DropSize } from "@/helpers/waves/drop.helpers";
-import { isWaveDirectMessage } from "@/helpers/waves/wave.helpers";
+import {
+  isWaveDirectMessage,
+  toApiWaveMin,
+} from "@/helpers/waves/wave.helpers";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useScrollBehavior } from "@/hooks/useScrollBehavior";
 import { useVirtualizedWaveDrops } from "@/hooks/useVirtualizedWaveDrops";
@@ -35,6 +39,7 @@ const EMPTY_DROPS: Drop[] = [];
 
 interface WaveDropsAllProps {
   readonly waveId: string;
+  readonly wave?: ApiWave | undefined;
   readonly dropId: string | null;
   readonly onReply: ({
     drop,
@@ -50,10 +55,14 @@ interface WaveDropsAllProps {
   readonly onDropContentClick?: ((drop: ExtendedDrop) => void) | undefined;
   readonly bottomPaddingClassName?: string | undefined;
   readonly isMuted?: boolean | undefined;
+  readonly winningThreshold?: number | null | undefined;
+  readonly isVotingClosed?: boolean | undefined;
+  readonly isVotingControlsLocked?: boolean | undefined;
 }
 
 const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   waveId,
+  wave,
   dropId,
   onReply,
   activeDrop,
@@ -63,6 +72,9 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   onDropContentClick,
   bottomPaddingClassName,
   isMuted = false,
+  winningThreshold,
+  isVotingClosed = false,
+  isVotingControlsLocked = false,
 }) => {
   const router = useRouter();
   const { removeWaveDeliveredNotifications } = useNotificationsContext();
@@ -71,7 +83,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   const { waveMessages, fetchNextPage, waitAndRevealDrop } =
-    useVirtualizedWaveDrops(waveId, dropId);
+    useVirtualizedWaveDrops(waveId, dropId, wave);
 
   const { setUnreadDividerSerialNo } = useUnreadDivider();
 
@@ -81,7 +93,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
     isMuted
   );
 
-  const { data: boostedDrops } = useWaveBoostedDrops({ waveId });
+  const { data: boostedDrops } = useWaveBoostedDrops({ waveId, wave });
 
   const scrollBehavior = useScrollBehavior();
   const {
@@ -131,6 +143,23 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
     waveMessages,
     shouldPinToBottom,
   });
+
+  const renderedWaveMessagesWithFullWave = useMemo(() => {
+    if (!renderedWaveMessages || !wave) {
+      return renderedWaveMessages;
+    }
+
+    const waveMin = toApiWaveMin(wave);
+    return {
+      ...renderedWaveMessages,
+      drops: renderedWaveMessages.drops.map(
+        (drop: Drop): Drop =>
+          drop.type === DropSize.FULL && drop.wave.id === wave.id
+            ? { ...drop, wave: waveMin }
+            : drop
+      ),
+    };
+  }, [renderedWaveMessages, wave]);
 
   const {
     serialTarget,
@@ -191,7 +220,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
   }, [waveChatScroll, waveId, queueSerialTarget]);
 
   const revealPendingDrops = useCallback(() => {
-    if (!waveMessages?.drops?.length) {
+    if ((waveMessages?.drops.length ?? 0) === 0) {
       return;
     }
 
@@ -199,48 +228,44 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
     forcePinToBottom();
   }, [waveMessages, revealDeferredPendingDrops, forcePinToBottom]);
 
-  const handleTopIntersection = useCallback(async () => {
-    if (
-      waveMessages?.hasNextPage &&
-      !waveMessages?.isLoading &&
-      !waveMessages?.isLoadingNextPage
-    ) {
-      await fetchNextPage(
-        {
-          waveId,
-          type: DropSize.FULL,
-        },
-        dropId
-      );
+  const canFetchMoreDrops =
+    !!waveMessages &&
+    waveMessages.hasNextPage &&
+    !waveMessages.isLoading &&
+    !waveMessages.isLoadingNextPage;
+
+  const handleTopIntersection = useCallback(() => {
+    if (!canFetchMoreDrops) {
+      return;
     }
-  }, [
-    waveMessages?.hasNextPage,
-    waveMessages?.isLoading,
-    waveMessages?.isLoadingNextPage,
-    fetchNextPage,
-    waveId,
-    dropId,
-  ]);
+
+    void fetchNextPage(
+      {
+        waveId,
+        type: DropSize.FULL,
+      },
+      dropId
+    ).catch(() => undefined);
+  }, [canFetchMoreDrops, fetchNextPage, waveId, dropId]);
 
   const handleQuoteClick = useCallback(
     (drop: ApiDrop) => {
       if (drop.wave.id === waveId) {
         queueSerialTarget(drop.serial_no);
       } else {
-        const waveDetails =
-          (drop.wave as unknown as {
-            chat?:
-              | {
-                  scope?:
-                    | {
-                        group?:
-                          | { is_direct_message?: boolean | undefined }
-                          | undefined;
-                      }
-                    | undefined;
-                }
-              | undefined;
-          }) ?? undefined;
+        const waveDetails = drop.wave as unknown as {
+          chat?:
+            | {
+                scope?:
+                  | {
+                      group?:
+                        | { is_direct_message?: boolean | undefined }
+                        | undefined;
+                    }
+                  | undefined;
+              }
+            | undefined;
+        };
         const isDirectMessage = isWaveDirectMessage(drop.wave.id, waveDetails);
         const href = getWaveRoute({
           waveId: drop.wave.id,
@@ -263,7 +288,7 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
     >
       <TweetPreviewModeProvider mode={tweetPreviewMode}>
         <WaveDropsContent
-          waveMessages={renderedWaveMessages}
+          waveMessages={renderedWaveMessagesWithFullWave}
           dropId={dropId}
           scrollContainerRef={scrollContainerRef}
           scrollContainerCallbackRef={scrollContainerCallbackRef}
@@ -289,6 +314,9 @@ const WaveDropsAllInner: React.FC<WaveDropsAllProps> = ({
           unreadCount={unreadCount}
           autoCollapseSerials={autoCollapseSerials}
           suspendLightDropHydration={isScrolling || serialTarget !== null}
+          winningThreshold={winningThreshold}
+          isVotingClosed={isVotingClosed}
+          isVotingControlsLocked={isVotingControlsLocked}
         />
       </TweetPreviewModeProvider>
       <WaveDropsScrollingOverlay isVisible={isScrolling} />
@@ -301,6 +329,7 @@ export const WaveDropsAllWithoutProvider: React.FC<WaveDropsAllProps> =
 
 const WaveDropsAll: React.FC<WaveDropsAllProps> = ({
   waveId,
+  wave,
   dropId,
   onReply,
   activeDrop,
@@ -310,6 +339,9 @@ const WaveDropsAll: React.FC<WaveDropsAllProps> = ({
   onDropContentClick,
   bottomPaddingClassName,
   isMuted = false,
+  winningThreshold,
+  isVotingClosed = false,
+  isVotingControlsLocked = false,
 }) => {
   return (
     <UnreadDividerProvider
@@ -319,6 +351,7 @@ const WaveDropsAll: React.FC<WaveDropsAllProps> = ({
       <WaveDropsAllInner
         key={waveId}
         waveId={waveId}
+        wave={wave}
         dropId={dropId}
         onReply={onReply}
         activeDrop={activeDrop}
@@ -328,6 +361,9 @@ const WaveDropsAll: React.FC<WaveDropsAllProps> = ({
         onDropContentClick={onDropContentClick}
         bottomPaddingClassName={bottomPaddingClassName}
         isMuted={isMuted}
+        winningThreshold={winningThreshold}
+        isVotingClosed={isVotingClosed}
+        isVotingControlsLocked={isVotingControlsLocked}
       />
     </UnreadDividerProvider>
   );

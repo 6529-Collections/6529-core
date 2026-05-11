@@ -1,4 +1,4 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import type { ReadonlyURLSearchParams } from "next/navigation";
 import { BrainView } from "@/components/brain/mobile/brainMobileViews";
 import { useBrainMobileActiveView } from "@/components/brain/mobile/useBrainMobileActiveView";
@@ -46,5 +46,144 @@ describe("useBrainMobileActiveView", () => {
     );
 
     expect(result.current.activeView).toBe(BrainView.SUBMISSIONS);
+  });
+
+  it("does not switch completed approve waves to submissions", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          isApproveWave: true,
+          isRankWave: false,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    expect(result.current.activeView).toBe(BrainView.DEFAULT);
+  });
+
+  it("resets Outcome to default for approve curation waves", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          isApproveWave: true,
+          isCurationWave: true,
+          isRankWave: false,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.OUTCOME);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.DEFAULT);
+  });
+
+  it("resets Outcome to submissions for completed rank curation waves", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          isCurationWave: true,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.OUTCOME);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.SUBMISSIONS);
+  });
+
+  it("keeps My Votes for authenticated normal rank waves", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          hasAuthenticatedProfile: true,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.MY_VOTES);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.MY_VOTES);
+  });
+
+  it("resets My Votes for guests on normal rank waves", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          hasAuthenticatedProfile: false,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.MY_VOTES);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.SUBMISSIONS);
+  });
+
+  it("keeps My Votes for curation rank waves without requiring login", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          hasAuthenticatedProfile: false,
+          isCurationWave: true,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.MY_VOTES);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.MY_VOTES);
+  });
+
+  it("keeps My Votes for authenticated normal approve waves", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          hasAuthenticatedProfile: true,
+          isApproveWave: true,
+          isRankWave: false,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.MY_VOTES);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.MY_VOTES);
+  });
+
+  it("resets My Votes for guests on normal approve waves", () => {
+    const { result } = renderHook(() =>
+      useBrainMobileActiveView(
+        createProps({
+          isApproveWave: true,
+          isRankWave: false,
+          wave: { id: "wave-1" } as UseBrainMobileActiveViewProps["wave"],
+        })
+      )
+    );
+
+    act(() => {
+      result.current.onViewChange(BrainView.MY_VOTES);
+    });
+
+    expect(result.current.activeView).toBe(BrainView.DEFAULT);
   });
 });

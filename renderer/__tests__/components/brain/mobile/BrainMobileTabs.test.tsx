@@ -19,9 +19,10 @@ enum BrainView {
 }
 
 const push = jest.fn();
+const replace = jest.fn();
 
 jest.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace }),
   useSearchParams: () => ({
     get: jest.fn().mockReturnValue(null),
   }),
@@ -53,6 +54,10 @@ jest.mock("@/components/auth/Auth", () => ({
   useAuth: jest.fn(),
 }));
 
+jest.mock("@/hooks/waves/useWaveCurations", () => ({
+  useWaveCurations: () => ({ data: [] }),
+}));
+
 const leaderboardMock = jest.fn();
 jest.mock("@/components/brain/my-stream/MyStreamWaveTabsLeaderboard", () => ({
   __esModule: true,
@@ -74,6 +79,12 @@ const { useUnreadIndicator } = require("@/hooks/useUnreadIndicator");
 const { useUnreadNotifications } = require("@/hooks/useUnreadNotifications");
 const { useAuth } = require("@/components/auth/Auth");
 
+const createWave = () =>
+  ({
+    id: "1",
+    wave: { authenticated_user_eligible_for_admin: false },
+  }) as any;
+
 describe("BrainMobileTabs", () => {
   const onViewChange = jest.fn();
   beforeEach(() => {
@@ -82,6 +93,7 @@ describe("BrainMobileTabs", () => {
       isMemesWave: false,
       isCurationWave: false,
       isRankWave: false,
+      isApproveWave: false,
     });
     (useUnreadIndicator as jest.Mock).mockReturnValue({ hasUnread: false });
     (useUnreadNotifications as jest.Mock).mockReturnValue({
@@ -97,6 +109,7 @@ describe("BrainMobileTabs", () => {
       isMemesWave: false,
       isCurationWave: false,
       isRankWave: false,
+      isApproveWave: false,
     });
     render(
       <BrainMobileTabs
@@ -121,6 +134,7 @@ describe("BrainMobileTabs", () => {
       isMemesWave: false,
       isCurationWave: false,
       isRankWave: false,
+      isApproveWave: false,
     });
     (useUnreadIndicator as jest.Mock).mockReturnValue({ hasUnread: true });
     (useUnreadNotifications as jest.Mock).mockReturnValue({
@@ -167,16 +181,16 @@ describe("BrainMobileTabs", () => {
         showWavesTab={false}
         showStreamBack={false}
         isApp={false}
-        wave={{ id: "1" } as any}
+        wave={createWave()}
       />
     );
 
     expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
     expect(leaderboardMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        wave: { id: "1" },
+        wave: expect.objectContaining({ id: "1" }),
         activeView: BrainView.ABOUT,
-        onViewChange,
+        onViewChange: expect.any(Function),
       })
     );
     expect(screen.getByText("My Votes")).toBeInTheDocument();
@@ -199,13 +213,68 @@ describe("BrainMobileTabs", () => {
         showWavesTab={false}
         showStreamBack={false}
         isApp={false}
-        wave={{ id: "1" } as any}
+        wave={createWave()}
       />
     );
 
+    expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
     expect(screen.getByText("Sales")).toBeInTheDocument();
     expect(screen.getByText("My Votes")).toBeInTheDocument();
+    expect(screen.queryByText("Outcome")).toBeNull();
     expect(screen.queryByText("FAQ")).toBeNull();
+  });
+
+  it("renders My Votes for authenticated normal rank wave", () => {
+    (useWave as jest.Mock).mockReturnValue({
+      isMemesWave: false,
+      isCurationWave: false,
+      isRankWave: true,
+      isApproveWave: false,
+    });
+
+    render(
+      <BrainMobileTabs
+        activeView={BrainView.ABOUT}
+        onViewChange={onViewChange}
+        waveActive={true}
+        showWavesTab={false}
+        showStreamBack={false}
+        isApp={false}
+        wave={createWave()}
+      />
+    );
+
+    expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
+    expect(screen.getByText("My Votes")).toBeInTheDocument();
+    expect(screen.getByText("Outcome")).toBeInTheDocument();
+  });
+
+  it("hides My Votes for guests on normal rank waves", () => {
+    (useWave as jest.Mock).mockReturnValue({
+      isMemesWave: false,
+      isCurationWave: false,
+      isRankWave: true,
+      isApproveWave: false,
+    });
+    (useAuth as jest.Mock).mockReturnValue({
+      connectedProfile: null,
+    });
+
+    render(
+      <BrainMobileTabs
+        activeView={BrainView.ABOUT}
+        onViewChange={onViewChange}
+        waveActive={true}
+        showWavesTab={false}
+        showStreamBack={false}
+        isApp={false}
+        wave={createWave()}
+      />
+    );
+
+    expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
+    expect(screen.queryByText("My Votes")).toBeNull();
+    expect(screen.getByText("Outcome")).toBeInTheDocument();
   });
 
   it("hides My Votes for guests on memes rank wave", () => {
@@ -226,7 +295,7 @@ describe("BrainMobileTabs", () => {
         showWavesTab={false}
         showStreamBack={false}
         isApp={false}
-        wave={{ id: "1" } as any}
+        wave={createWave()}
       />
     );
 
@@ -251,11 +320,96 @@ describe("BrainMobileTabs", () => {
         showWavesTab={false}
         showStreamBack={false}
         isApp={false}
-        wave={{ id: "1" } as any}
+        wave={createWave()}
       />
     );
 
     expect(screen.getByText("Sales")).toBeInTheDocument();
     expect(screen.queryByTestId("leaderboard")).toBeNull();
+  });
+
+  it("renders leaderboard tabs for approve waves", () => {
+    (useWave as jest.Mock).mockReturnValue({
+      isMemesWave: false,
+      isCurationWave: false,
+      isRankWave: false,
+      isApproveWave: true,
+    });
+
+    render(
+      <BrainMobileTabs
+        activeView={BrainView.ABOUT}
+        onViewChange={onViewChange}
+        waveActive={true}
+        showWavesTab={false}
+        showStreamBack={false}
+        isApp={false}
+        wave={createWave()}
+      />
+    );
+
+    expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
+    expect(screen.getByText("Outcome")).toBeInTheDocument();
+    expect(screen.getByText("My Votes")).toBeInTheDocument();
+    expect(leaderboardMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        wave: expect.objectContaining({ id: "1" }),
+        activeView: BrainView.ABOUT,
+      })
+    );
+  });
+
+  it("hides My Votes for guests on normal approve waves", () => {
+    (useWave as jest.Mock).mockReturnValue({
+      isMemesWave: false,
+      isCurationWave: false,
+      isRankWave: false,
+      isApproveWave: true,
+    });
+    (useAuth as jest.Mock).mockReturnValue({
+      connectedProfile: null,
+    });
+
+    render(
+      <BrainMobileTabs
+        activeView={BrainView.ABOUT}
+        onViewChange={onViewChange}
+        waveActive={true}
+        showWavesTab={false}
+        showStreamBack={false}
+        isApp={false}
+        wave={createWave()}
+      />
+    );
+
+    expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
+    expect(screen.queryByText("My Votes")).toBeNull();
+    expect(screen.getByText("Outcome")).toBeInTheDocument();
+  });
+
+  it("renders curation tabs without Outcome for approve curation waves", () => {
+    (useWave as jest.Mock).mockReturnValue({
+      isMemesWave: false,
+      isCurationWave: true,
+      isRankWave: false,
+      isApproveWave: true,
+    });
+
+    render(
+      <BrainMobileTabs
+        activeView={BrainView.ABOUT}
+        onViewChange={onViewChange}
+        waveActive={true}
+        showWavesTab={false}
+        showStreamBack={false}
+        isApp={false}
+        wave={createWave()}
+      />
+    );
+
+    expect(screen.getByTestId("leaderboard")).toBeInTheDocument();
+    expect(screen.getByText("Sales")).toBeInTheDocument();
+    expect(screen.getByText("My Votes")).toBeInTheDocument();
+    expect(screen.queryByText("Outcome")).toBeNull();
   });
 });
