@@ -27,6 +27,10 @@ Common commands:
   6529 install:frozen  -> frozen secure install for root + renderer
   6529 ci              -> frozen secure install for root + renderer
   6529 install:prod    -> prod secure install for root + renderer
+  6529 update          -> show pnpm audit findings
+  6529 update:fix      -> sfw pnpm audit --fix
+  6529 update:all      -> sfw pnpm update
+  6529 audit-deps      -> show renderer pnpm audit findings
   6529 pull-web        -> pull the frontend subtree into renderer/
   6529 run dev         -> run the Electron app in dev mode
   6529 run build       -> build renderer + Electron app
@@ -106,6 +110,32 @@ case "$command_name" in
       exit 1
     fi
     exec "$REAL_PNPM" run install:secure:prod "$@"
+    ;;
+  update)
+    if [[ "$#" -gt 0 ]]; then
+      echo "\`6529 update\` shows audit findings and does not accept package arguments." >&2
+      echo "Use \`6529 update:fix\` for pnpm audit --fix or \`6529 update:all [package...]\` for intentional pnpm updates." >&2
+      exit 1
+    fi
+    node "$REPO_ROOT/scripts/assert-no-package-lock.cjs"
+    exec node "$REPO_ROOT/scripts/run-secure-pnpm.cjs" audit
+    ;;
+  update:fix)
+    if [[ "$#" -gt 0 ]]; then
+      echo "\`6529 update:fix\` does not accept package arguments." >&2
+      exit 1
+    fi
+    node "$REPO_ROOT/scripts/assert-no-package-lock.cjs"
+    exec node "$REPO_ROOT/scripts/run-secure-pnpm.cjs" audit --fix
+    ;;
+  update:all)
+    node "$REPO_ROOT/scripts/assert-no-package-lock.cjs"
+    exec node "$REPO_ROOT/scripts/run-secure-pnpm.cjs" update "$@"
+    ;;
+  audit-deps)
+    node "$REPO_ROOT/scripts/assert-no-package-lock.cjs"
+    cd "$REPO_ROOT/renderer"
+    exec ./bin/pnpm audit "$@"
     ;;
   deps)
     exec "$REAL_PNPM" run deps "$@"

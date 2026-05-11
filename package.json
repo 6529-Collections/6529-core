@@ -66,8 +66,7 @@
     "install-renderer-deps": "node scripts/require-6529-command.cjs && bash -lc 'cd renderer && ./bin/6529 install'",
     "install-renderer-deps-ci": "node scripts/require-6529-command.cjs && bash -lc 'cd renderer && ./bin/6529 install:frozen'",
     "install-all-deps": "node scripts/require-6529-command.cjs && pnpm run install:secure",
-    "deps": "node scripts/require-6529-command.cjs && pnpm run install:secure",
-    "audit-deps": "node scripts/require-6529-command.cjs && pnpm audit && bash -lc 'cd renderer && SEIZE_6529_COMMAND=1 ./bin/pnpm audit'"
+    "deps": "node scripts/require-6529-command.cjs && pnpm run install:secure"
   },
   "dependencies": {
     "@electron/notarize": "^1.2.3",
@@ -75,8 +74,9 @@
     "@tailwindcss/forms": "^0.5.7",
     "app-root-path": "^3.1.0",
     "axios": "^1.12.2",
-    "better-sqlite3": "12.0.0",
+    "better-sqlite3": "12.9.0",
     "bottleneck": "^2.19.5",
+    "builder-util-runtime": "9.5.1",
     "dotenv": "^16.4.5",
     "electron-context-menu": "^3.6.1",
     "electron-localshortcut": "^3.2.1",
@@ -95,7 +95,7 @@
     "minidump": "^0.26.0",
     "moment-timezone": "^0.5.46",
     "module-details-from-path": "^1.0.4",
-    "next": "16.2.1",
+    "next": "16.2.3",
     "node-cron": "^3.0.3",
     "node-emoji": "^2.2.0",
     "open": "^10.2.0",
@@ -113,6 +113,7 @@
   "devDependencies": {
     "@aws-sdk/client-cloudfront": "^3.1000.0",
     "@aws-sdk/client-s3": "^3.1000.0",
+    "@electron/asar": "^3.4.1",
     "@electron/rebuild": "^4.0.2",
     "@playwright/test": "^1.52.0",
     "@tanstack/eslint-plugin-query": "^5.43.1",
@@ -136,7 +137,7 @@
     "autoprefixer": "^10.4.19",
     "babel-plugin-react-compiler": "^1.0.0",
     "baseline-browser-mapping": "^2.9.19",
-    "electron": "^36.0.0",
+    "electron": "^41.3.0",
     "electron-builder": "^24.13.3",
     "esbuild": "0.25.12",
     "eslint": "^9.38.0",
@@ -152,7 +153,8 @@
     "eslint-plugin-unused-imports": "^4.3.0",
     "node-abi": "^4.14.0",
     "pino-pretty": "^13.1.2",
-    "postcss": "^8.4.38",
+    "prebuild-install": "^7.1.3",
+    "postcss": "^8.5.12",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "rimraf": "^6.0.1",
@@ -160,12 +162,6 @@
     "ts-morph": "^27.0.0",
     "tsx": "^4.20.6",
     "typescript": "^5.9.3"
-  },
-  "overrides": {
-    "tar": "7.5.13",
-    "fast-xml-parser": "5.5.9",
-    "serialize-javascript": "7.0.4",
-    "minimatch": "9.0.9"
   },
   "packageManager": "pnpm@10.33.0"
 }
