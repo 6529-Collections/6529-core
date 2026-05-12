@@ -22,6 +22,7 @@ interface SandboxedExternalIframeProps {
   readonly onError?:
     | React.IframeHTMLAttributes<HTMLIFrameElement>["onError"]
     | undefined;
+  readonly iframeRef?: React.Ref<HTMLIFrameElement> | undefined;
   /** Fires once when the container scrolls into view and the iframe is about to render. */
   readonly onVisible?: (() => void) | undefined;
 }
@@ -44,6 +45,7 @@ const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
   containerClassName,
   onLoad,
   onError,
+  iframeRef,
   onVisible,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -102,7 +104,7 @@ const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
     return () => {
       observer.disconnect();
     };
-  }, [canonicalSrc, isVisible]);
+  }, [canonicalSrc, isVisible, onVisible]);
 
   const parsedCanonicalUrl = useMemo(() => {
     if (!canonicalSrc) {
@@ -132,8 +134,9 @@ const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
     const baseProps = {
       src: canonicalSrc,
       sandbox: DEFAULT_SANDBOX,
-      // `allow=""` intentionally denies all Permission Policy features beyond the sandbox defaults.
-      allow: "",
+      // Fullscreen is allowed so the parent viewer can expand the isolated frame itself.
+      allow: "fullscreen",
+      allowFullScreen: true,
       referrerPolicy: "no-referrer",
       loading: "lazy",
     } as React.IframeHTMLAttributes<HTMLIFrameElement> & {
@@ -195,6 +198,7 @@ const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
         {isVisible ? (
           <iframe
             {...iframeProps}
+            ref={iframeRef}
             title={iframeTitle}
             onLoad={onLoad}
             onError={onError}
