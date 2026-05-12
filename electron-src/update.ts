@@ -33,6 +33,7 @@ export async function downloadUpdate() {
     } catch (error) {
       Logger.error("Update download failed", error);
       mainWindow?.webContents.send("update-error", error);
+      throw error;
     }
   }
 }
