@@ -23,12 +23,17 @@ export function checkForUpdates(window: Electron.BrowserWindow | null) {
   }
 }
 
-export function downloadUpdate() {
+export async function downloadUpdate() {
   Logger.info("Downloading update");
   if (isDev) {
     simulateDownloadProgress();
   } else {
-    autoUpdater.downloadUpdate();
+    try {
+      await autoUpdater.downloadUpdate();
+    } catch (error) {
+      Logger.error("Update download failed", error);
+      mainWindow?.webContents.send("update-error", error);
+    }
   }
 }
 
