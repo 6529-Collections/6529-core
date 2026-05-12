@@ -9,7 +9,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useEffect, useState } from "react";
 import { Col, Container, Dropdown, Row } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import useDownloader from "react-use-downloader";
+import useDownloader from "@/hooks/useDownloader";
 
 export enum Resolution {
   "Thumbnail" = "Thumbnail",
@@ -87,7 +87,8 @@ export function NextGenTokenDownloadDropdownItem(props: NextGenTokenProps) {
             `${props.token.id}_${props.resolution.toUpperCase()}.png`
           );
         }
-      }}>
+      }}
+    >
       {props.resolution}
       {imageExists && imageSize > 0
         ? ` (${numberWithCommas(imageSize)} MB)`
@@ -127,7 +128,8 @@ export default function NextGenTokenDownload(
             backgroundColor: "#1F2937",
             color: "white",
             padding: "4px 8px",
-          }}>
+          }}
+        >
           Open in new tab
         </Tooltip>
         <NextGenTokenDownloadButton token={props.token} quality={quality} />
@@ -146,7 +148,7 @@ export default function NextGenTokenDownload(
   }
 
   return (
-    <Container className="no-padding pt-1 pb-1 ">
+    <Container className="no-padding pt-1 pb-1">
       <Row className="d-flex flex-wrap align-items-center">
         <Col xs={4}>
           <span className="no-wrap">
@@ -197,7 +199,8 @@ function NextGenTokenDownloadButton(
           backgroundColor: "#1F2937",
           color: "white",
           padding: "4px 8px",
-        }}>
+        }}
+      >
         Download
       </Tooltip>
     </>
