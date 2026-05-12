@@ -94,7 +94,9 @@ autoUpdater.on("download-progress", (progress) => {
 
 autoUpdater.on("update-downloaded", (info) => {
   Logger.info("Update downloaded", info);
-  mainWindow?.webContents.send("update-downloaded", info.version);
+  mainWindow?.webContents.send("update-downloaded", {
+    version: info.version,
+  });
 });
 
 autoUpdater.on("error", (error) => {
