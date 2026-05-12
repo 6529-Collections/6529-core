@@ -9,8 +9,8 @@ They redirect to active routes or external assets.
 
 This page covers:
 
-- middleware exact-path redirects (`301`)
-- middleware desktop `/my-stream*` compatibility redirects (`301`)
+- proxy exact-path redirects (`301`)
+- proxy desktop `/my-stream*` compatibility redirects (`301`)
 - route-level legacy aliases (`307`)
 - `/waves?wave=<id>` normalization to `/waves/<id>` (`307`)
 
@@ -20,8 +20,8 @@ Profile-only legacy aliases are documented in
 ## User Journey
 
 1. Request starts at a legacy URL.
-2. Middleware exact-path map runs first.
-3. Desktop-only `/my-stream*` middleware compatibility runs next.
+2. Proxy exact-path map runs first.
+3. Desktop-only `/my-stream*` proxy compatibility runs next.
 4. Access control runs (`401 -> /access`, `403 -> /restricted`).
 5. Route-level redirects run (including `/waves?wave=<id>` normalization).
 6. Canonical destination route loads.
@@ -30,12 +30,12 @@ Profile-only legacy aliases are documented in
 
 | Legacy family | Status | Destination type | Query behavior |
 | --- | --- | --- | --- |
-| Middleware exact-path map | `301` | fixed target per mapping | source query preserved unless target defines its own query |
-| Middleware `/my-stream` + `/my-stream/notifications` (desktop OS only) | `301` | computed route (`/`, `/waves`, `/waves/<id>`, `/messages`, `/messages?wave=<id>`, `/notifications`) | reads only `view`, `wave`, `drop`, `serialNo`; ignores all other keys |
+| Proxy exact-path map | `301` | fixed target per mapping | source query preserved unless target defines its own query |
+| Proxy `/my-stream` + `/my-stream/notifications` (desktop OS only) | `301` | computed route (`/`, `/waves`, `/waves/<id>`, `/messages`, `/messages?wave=<id>`, `/notifications`) | reads only `view`, `wave`, `drop`, `serialNo`; ignores all other keys |
 | Route-level legacy aliases | `307` | fixed route/asset target | source query not forwarded |
 | `/waves?wave=<id>` | `307` | `/waves/<id>` | keeps all keys except `wave` |
 
-## Middleware Exact-Path Legacy Map (`301`)
+## Proxy Exact-Path Legacy Map (`301`)
 
 Rules:
 
@@ -116,17 +116,17 @@ Rules:
 
 ## Edge Cases
 
-- `/om/OM` resolves through middleware exact-path map (case-insensitive match to
-  `/om/om/`), so it is treated as middleware redirect behavior.
+- `/om/OM` resolves through proxy exact-path map (case-insensitive match to
+  `/om/om/`), so it is treated as proxy redirect behavior.
 - On non-desktop user agents, `/my-stream*` compatibility redirect does not run.
   These URLs can continue to access control and then fall through to not-found.
 
 ## Failure and Recovery
 
-- Middleware redirects run before access control.
+- Proxy redirects run before access control.
 - Route-level redirects run only after access control passes.
 - Access denied redirects to `/access` (`401`) or `/restricted` (`403`).
-- Middleware failures redirect to `/error`.
+- Proxy failures redirect to `/error`.
 - If the destination route fails, use
   [Route Error and Not-Found Screens](feature-route-error-and-not-found.md).
 - External redirect targets can fail independently; retry from another network
