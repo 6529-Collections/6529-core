@@ -41,6 +41,7 @@ import {
   useSecureSign,
 } from "@/hooks/useSecureSign";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
+import { AUTH_SIGNATURE_FAILED_MESSAGE } from "@/services/auth/auth.messages";
 import {
   canStoreAnotherWalletAccount,
   getAuthJwt,
@@ -567,7 +568,7 @@ export default function Auth({
 
       if (!clientSignature.signature) {
         setToast({
-          message: "Error requesting authentication, please try again",
+          message: AUTH_SIGNATURE_FAILED_MESSAGE,
           type: "error",
         });
         return { success: false };
