@@ -180,7 +180,10 @@ export default function AppInfo() {
 }
 
 function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
+  const [downloading, setDownloading] = useState(false);
+
   function handleUpdate() {
+    setDownloading(true);
     window.updater.downloadUpdate();
   }
 
@@ -196,10 +199,11 @@ function UpdateAvailable(props: Readonly<{ info: UpdateInfo }>) {
       <div className="tw-mx-auto tw-mt-3 tw-max-w-xs">
         <button
           type="button"
+          disabled={downloading}
           onClick={handleUpdate}
-          className="tw-w-full tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-py-2 tw-text-base tw-font-bold tw-text-white tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-primary-600"
+          className="tw-w-full tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-py-2 tw-text-base tw-font-bold tw-text-white tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 disabled:tw-cursor-not-allowed disabled:tw-opacity-50 desktop-hover:hover:tw-bg-primary-600 disabled:desktop-hover:hover:tw-bg-primary-500"
         >
-          Seize v{props.info.version}
+          {downloading ? "Downloading" : `Seize v${props.info.version}`}
         </button>
       </div>
     </div>

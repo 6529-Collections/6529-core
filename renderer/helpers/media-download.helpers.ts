@@ -37,8 +37,6 @@ export function triggerDirectDownload(url: string, fileName: string) {
   const anchor = document.createElement("a");
   anchor.href = safeUrl;
   anchor.download = fileName;
-  anchor.target = "_blank";
-  anchor.rel = "noopener noreferrer";
   document.body.append(anchor);
   anchor.click();
   anchor.remove();
@@ -82,9 +80,8 @@ export async function downloadMediaUrl({
   }
 
   const objectUrl = URL.createObjectURL(blob);
-  try {
-    triggerDirectDownload(objectUrl, fileName);
-  } finally {
+  triggerDirectDownload(objectUrl, fileName);
+  globalThis.window.setTimeout(() => {
     URL.revokeObjectURL(objectUrl);
-  }
+  }, 1000);
 }

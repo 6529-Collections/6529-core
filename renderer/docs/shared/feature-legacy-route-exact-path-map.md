@@ -4,7 +4,7 @@ Parent: [Legacy Route Redirects](feature-legacy-route-redirects.md)
 
 ## Overview
 
-This page lists the full middleware exact-path legacy redirect map.
+This page lists the full proxy exact-path legacy redirect map.
 For redirect order, access-control behavior, and other legacy families, use
 [Legacy Route Redirects](feature-legacy-route-redirects.md).
 

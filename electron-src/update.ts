@@ -23,12 +23,18 @@ export function checkForUpdates(window: Electron.BrowserWindow | null) {
   }
 }
 
-export function downloadUpdate() {
+export async function downloadUpdate() {
   Logger.info("Downloading update");
   if (isDev) {
-    simulateDownloadProgress();
+    await simulateDownloadProgress();
   } else {
-    autoUpdater.downloadUpdate();
+    try {
+      await autoUpdater.downloadUpdate();
+    } catch (error) {
+      Logger.error("Update download failed", error);
+      mainWindow?.webContents.send("update-error", error);
+      throw error;
+    }
   }
 }
 
@@ -48,35 +54,38 @@ autoUpdater.on("update-available", (info) => {
 });
 
 function simulateDownloadProgress() {
-  let progress = {
-    percent: 0,
-    bytesPerSecond: 0,
-    transferred: 0,
-    total: 300 * 1024 * 1024, // 300MB in bytes
-  };
+  return new Promise<void>((resolve) => {
+    let progress = {
+      percent: 0,
+      bytesPerSecond: 0,
+      transferred: 0,
+      total: 300 * 1024 * 1024, // 300MB in bytes
+    };
 
-  const interval = setInterval(() => {
-    progress.bytesPerSecond =
-      Math.random() * (5 * 1024 * 1024 - 1 * 1024 * 1024) + 1 * 1024 * 1024;
+    const interval = setInterval(() => {
+      progress.bytesPerSecond =
+        Math.random() * (5 * 1024 * 1024 - 1 * 1024 * 1024) + 1 * 1024 * 1024;
 
-    progress.transferred += progress.bytesPerSecond * 0.05;
+      progress.transferred += progress.bytesPerSecond * 0.05;
 
-    progress.percent = (progress.transferred / progress.total) * 100;
+      progress.percent = (progress.transferred / progress.total) * 100;
 
-    if (progress.percent > 100) {
-      progress.percent = 100;
-      progress.transferred = progress.total;
-    }
+      if (progress.percent > 100) {
+        progress.percent = 100;
+        progress.transferred = progress.total;
+      }
 
-    mainWindow?.webContents.send("update-progress", progress);
+      mainWindow?.webContents.send("update-progress", progress);
 
-    if (progress.percent >= 100) {
-      clearInterval(interval);
-      mainWindow?.webContents.send("update-downloaded", {
-        version: "1.0.0",
-      });
-    }
-  }, 1);
+      if (progress.percent >= 100) {
+        clearInterval(interval);
+        mainWindow?.webContents.send("update-downloaded", {
+          version: "1.0.0",
+        });
+        resolve();
+      }
+    }, 1);
+  });
 }
 
 autoUpdater.on("download-progress", (progress) => {
@@ -86,7 +95,9 @@ autoUpdater.on("download-progress", (progress) => {
 
 autoUpdater.on("update-downloaded", (info) => {
   Logger.info("Update downloaded", info);
-  mainWindow?.webContents.send("update-downloaded", info.version);
+  mainWindow?.webContents.send("update-downloaded", {
+    version: info.version,
+  });
 });
 
 autoUpdater.on("error", (error) => {

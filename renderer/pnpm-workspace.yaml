@@ -26,3 +26,4 @@ overrides:
   postcss: 8.5.12
   react-toggle>react: $react
   react-toggle>react-dom: $react-dom
+  uuid: 14.0.0
