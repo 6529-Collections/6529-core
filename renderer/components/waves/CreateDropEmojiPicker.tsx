@@ -2,6 +2,7 @@
 
 import { useEmoji } from "@/contexts/EmojiContext";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
+import { useCreateDropEmojiPickerLayer } from "@/components/waves/CreateDropEmojiPickerLayerContext";
 import data from "@emoji-mart/data";
 import Picker from "@emoji-mart/react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -19,6 +20,8 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
   top = "tw-top-2",
 }) => {
   const isMobile = useIsMobileScreen();
+  const { desktopZIndex, mobileZIndexClassName } =
+    useCreateDropEmojiPickerLayer();
 
   const { emojiMap, categories, categoryIcons } = useEmoji();
 
@@ -30,6 +33,36 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
     top: number;
     left: number;
   }>({ top: 0, left: 0 });
+
+  const getPickerPosition = () => {
+    const button = buttonRef.current;
+
+    if (!button) {
+      return null;
+    }
+
+    const rect = button.getBoundingClientRect();
+
+    return {
+      top: rect.top + globalThis.scrollY - 420,
+      left: rect.left + globalThis.scrollX - 250,
+    };
+  };
+
+  const handleTogglePicker = () => {
+    if (showPicker) {
+      setShowPicker(false);
+      return;
+    }
+
+    const nextPickerPosition = getPickerPosition();
+
+    if (nextPickerPosition) {
+      setPickerPosition(nextPickerPosition);
+    }
+
+    setShowPicker(true);
+  };
 
   const addEmoji = (emoji: {
     native?: string | undefined;
@@ -56,17 +89,6 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
     }
     setShowPicker(false);
   };
-
-  useEffect(() => {
-    if (showPicker && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-
-      setPickerPosition({
-        top: rect.top + window.scrollY - 420,
-        left: rect.left + window.scrollX - 250,
-      });
-    }
-  }, [showPicker]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -97,7 +119,7 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
         <button
           ref={buttonRef}
           className="tw-flex tw-items-center tw-justify-center tw-rounded tw-border-none tw-bg-transparent tw-p-[0.35rem] tw-opacity-50 tw-transition tw-duration-150 hover:tw-bg-[rgb(40,40,40)] hover:tw-text-[#FFCC22] hover:tw-opacity-100"
-          onClick={() => setShowPicker(!showPicker)}
+          onClick={handleTogglePicker}
         >
           <svg
             className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-transition tw-duration-300 tw-ease-out"
@@ -123,7 +145,7 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
                 position: "absolute",
                 top: pickerPosition.top,
                 left: pickerPosition.left,
-                zIndex: 1000,
+                zIndex: desktopZIndex,
               }}
               className="tw-rounded-lg tw-border tw-bg-iron-800 tw-p-[1px] tw-shadow-lg"
             >
@@ -144,6 +166,7 @@ const CreateDropEmojiPicker: FC<CreateDropEmojiPickerProps> = ({
         <MobileWrapperDialog
           isOpen={showPicker}
           onClose={() => setShowPicker(false)}
+          zIndexClassName={mobileZIndexClassName}
         >
           <div
             className="tw-flex tw-h-full tw-w-full tw-items-center tw-justify-center"

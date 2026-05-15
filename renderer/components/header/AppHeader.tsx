@@ -8,6 +8,7 @@ import {
   LinkIcon,
   CheckIcon,
 } from "@heroicons/react/24/outline";
+import { PlusIcon } from "@heroicons/react/24/solid";
 import Image from "next/image";
 import { useParams, usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -15,6 +16,10 @@ import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP } from "@/constants/constants";
 import { useNavigationHistoryContext } from "@/contexts/NavigationHistoryContext";
 import { useSeedWallet } from "@/contexts/SeedWalletContext";
+import {
+  type HeaderWaveDropAction,
+  useHeaderContext,
+} from "@/contexts/HeaderContext";
 import { useMyStreamOptional } from "@/contexts/wave/MyStreamContext";
 import { capitalizeEveryWord, formatAddress } from "@/helpers/Helpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -30,6 +35,7 @@ import AppSidebar from "./AppSidebar";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import HeaderActionButtons from "./HeaderActionButtons";
 import NetworkHealthCTA from "./NetworkHealthCTA";
+import PrimaryButton from "../utils/button/PrimaryButton";
 import { useWaveShareCopyAction } from "@/hooks/waves/useWaveShareCopyAction";
 import WaveDescriptionPopover from "@/components/waves/header/WaveDescriptionPopover";
 import WavePicture from "@/components/waves/WavePicture";
@@ -257,6 +263,46 @@ const HeaderWaveLinkAction = ({
   );
 };
 
+const HeaderDropActionButton = ({
+  action,
+}: {
+  readonly action: HeaderWaveDropAction | null;
+}) => {
+  if (!action) {
+    return null;
+  }
+
+  const title = action.restrictionMessage ?? action.label;
+
+  return (
+    <PrimaryButton
+      loading={false}
+      disabled={!action.canOpen}
+      onClicked={action.onOpen}
+      padding="tw-px-2.5 tw-py-2"
+      title={title}
+      ariaLabel={action.label}
+    >
+      <PlusIcon className="-tw-ml-1 tw-h-4 tw-w-4 tw-flex-shrink-0" />
+      <span>{action.compactLabel}</span>
+    </PrimaryButton>
+  );
+};
+
+const getHeaderDropAction = ({
+  activeWave,
+  waveDropAction,
+}: {
+  readonly activeWave: ApiWave | null;
+  readonly waveDropAction: HeaderWaveDropAction | null;
+}): HeaderWaveDropAction | null => {
+  if (!activeWave || waveDropAction?.waveId !== activeWave.id) {
+    return null;
+  }
+
+  return waveDropAction;
+};
+
 const switchToNextConnectedAccount = ({
   connectedAccounts,
   seizeSwitchConnectedAccount,
@@ -325,6 +371,7 @@ const handleProfileActivate = ({
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const myStream = useMyStreamOptional();
+  const { waveDropAction } = useHeaderContext();
   const {
     address,
     isAuthenticated,
@@ -384,6 +431,7 @@ export default function AppHeader() {
   const waveId = myStream?.activeWave.id ?? null;
   const { wave, isLoading, isFetching } = useWaveById(waveId);
   const activeWave = waveId && wave?.id === waveId ? wave : null;
+  const headerDropAction = getHeaderDropAction({ activeWave, waveDropAction });
 
   const { viewMode, toggleViewMode } = useWaveViewMode(waveId ?? "");
   const { isRankWave, isMemesWave, isDm } = useWave(activeWave);
@@ -527,6 +575,7 @@ export default function AppHeader() {
           />
         </div>
         <div className="tw-flex tw-flex-shrink-0 tw-items-center tw-justify-end tw-gap-x-1">
+          <HeaderDropActionButton action={headerDropAction} />
           <HeaderGalleryToggle
             showGalleryToggle={showGalleryToggle}
             viewMode={viewMode}
