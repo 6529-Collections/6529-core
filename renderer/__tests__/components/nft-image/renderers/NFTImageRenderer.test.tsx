@@ -154,6 +154,8 @@ describe("NFTImageRenderer", () => {
       const wrapper = screen.getByRole("img").parentElement;
       expect(wrapper).toHaveClass("custom-height");
       expect(wrapper).toHaveClass("custom-bg");
+      expect(wrapper).toHaveClass("tw-bg-iron-900");
+      expect(wrapper).not.toHaveClass("mb-2");
 
       const image = screen.getByRole("img");
       expect(image).toHaveClass("custom-image");
@@ -210,7 +212,7 @@ describe("NFTImageRenderer", () => {
     });
 
     it("falls back to image when scaled is not available", () => {
-      const nft = createMockNFT({ ...(undefined !== undefined ? { scaled: undefined } : {}) });
+      const nft = createMockNFT({ scaled: "" });
       const props = createDefaultProps({ nft, showOriginal: false });
       render(<NFTImageRenderer {...props} />);
 
@@ -236,7 +238,7 @@ describe("NFTImageRenderer", () => {
     });
 
     it("falls back from thumbnail to image when scaled not available", () => {
-      const nft = createMockNFT({ ...(undefined !== undefined ? { scaled: undefined } : {}) });
+      const nft = createMockNFT({ scaled: "" });
       const props = createDefaultProps({ nft, showThumbnail: true });
       const { rerender } = render(<NFTImageRenderer {...props} />);
 

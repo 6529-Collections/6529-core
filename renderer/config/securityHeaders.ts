@@ -102,6 +102,7 @@ export function createSecurityHeaders(
     configuredIpfsGatewaySource,
     ...IPFS_FALLBACK_MEDIA_SOURCES,
     "https://*.twimg.com",
+    "https://video.twimg.com",
     "https://artblocks.io",
     "https://*.artblocks.io",
   ]);

@@ -1,7 +1,6 @@
 @use "../../styles/variables.scss";
 
 .nftAnimation {
-  background-color: variables.$dark-grey;
   padding: 0;
   position: relative;
 
@@ -69,7 +68,6 @@
 }
 
 .imageWrapper {
-  background-color: variables.$dark-grey;
   padding: 0;
   position: relative;
 }
@@ -90,6 +88,13 @@
 .balanceBigger {
   padding: 6px 25px;
   bottom: -45px;
+}
+
+.balanceInline {
+  font-family: variables.$main-font;
+  font-size: variables.$font-size;
+  color: variables.$lightest-grey !important;
+  white-space: nowrap;
 }
 
 .transparentBG {

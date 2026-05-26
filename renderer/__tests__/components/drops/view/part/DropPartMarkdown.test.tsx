@@ -1,48 +1,6 @@
 /** @jest-environment jsdom */
 import React from "react";
 
-jest.mock("next/dynamic", () => {
-  let mode: "skeleton" | "eager" = "eager";
-  const calls: any[] = [];
-  const mock = jest.fn((loader: any, options: any) => {
-    calls.push([loader, options]);
-    const Comp = (props: any) => {
-      if (mode === "skeleton") {
-        const L = options?.loading as React.ComponentType | undefined;
-        return L ? <L /> : null;
-      }
-      // Eager mode: immediately render the underlying component.
-      // We know the loader resolves to react-tweet's Tweet, so just render that mock directly.
-      const { Tweet } = require("react-tweet");
-      const T = Tweet as React.ComponentType<any>;
-      return <T {...props} />;
-    };
-    (Comp as any).__loader = loader;
-    (Comp as any).__options = options;
-    return Comp;
-  });
-  const setMode = (m: "skeleton" | "eager") => {
-    mode = m;
-  };
-  return {
-    __esModule: true,
-    default: mock,
-    __calls: calls,
-    __setMode: setMode,
-  };
-});
-
-// Use this in assertions: dynamicSpy.mock.calls[0] => [loader, options]
-const {
-  default: dynamicSpy,
-  __calls: dynamicCalls,
-  __setMode: setDynamicMode,
-} = require("next/dynamic") as {
-  default: jest.Mock;
-  __calls: any[];
-  __setMode: (m: "skeleton" | "eager") => void;
-};
-
 import { publicEnv } from "@/config/env";
 import {
   fetchYoutubePreview,
@@ -83,38 +41,45 @@ const originalArtBlocksFlags = {
 };
 
 jest.mock("@/hooks/isMobileScreen", () => () => false);
-jest.mock("@/contexts/EmojiContext", () => ({
-  useEmoji: () => ({
+jest.mock("@/contexts/EmojiContext", () => {
+  const emojiContext = {
     emojiMap: [],
     loading: false,
     categories: [],
     categoryIcons: {},
     findNativeEmoji: jest.fn(),
     findCustomEmoji: jest.fn(),
-  }),
-}));
+  };
 
-const tweetMock = jest.fn(({ id, components, onError }: any) => {
-  if (id === "1111111111") {
-    throw new Error("boom");
-  }
-
-  if (id === "2222222222") {
-    const error = new Error("not found");
-    onError?.(error);
-    const NotFound = components?.TweetNotFound;
-    return NotFound ? <NotFound error={error} /> : null;
-  }
-
-  return <div>tweet:{id}</div>;
+  return {
+    useEmoji: () => emojiContext,
+  };
 });
 
-jest.mock("react-tweet", () => ({
-  Tweet: (props: any) => tweetMock(props),
-}));
 jest.mock("@/services/api/youtube", () => ({
   fetchYoutubePreview: jest.fn(),
 }));
+jest.mock(
+  "@/components/drops/view/item/content/media/DropListItemContentMediaImage",
+  () => {
+    let mountId = 0;
+
+    function MockDropListItemContentMediaImage({
+      src,
+    }: {
+      readonly src: string;
+    }) {
+      const [currentMountId] = React.useState(() => String(++mountId));
+
+      return <img alt="Drop media" src={src} data-mount-id={currentMountId} />;
+    }
+
+    return {
+      __esModule: true,
+      default: MockDropListItemContentMediaImage,
+    };
+  }
+);
 
 const mockFetchYoutubePreview = fetchYoutubePreview as jest.MockedFunction<
   typeof fetchYoutubePreview
@@ -138,6 +103,14 @@ const mockFarcasterCard = jest.fn(({ href }: any) => (
   <div data-testid="farcaster-card" data-href={href} />
 ));
 
+const mockTwitterPreviewCard = jest.fn(({ href, tweetId }: any) => (
+  <div
+    data-testid="twitter-post-preview"
+    data-href={href}
+    data-tweet-id={tweetId}
+  />
+));
+
 jest.mock("@/components/waves/LinkPreviewCard", () => ({
   __esModule: true,
   default: (props: any) => mockLinkPreviewCard(props),
@@ -151,6 +124,11 @@ jest.mock("@/src/components/waves/ArtBlocksTokenCard", () => ({
 jest.mock("@/components/waves/FarcasterCard", () => ({
   __esModule: true,
   default: (props: any) => mockFarcasterCard(props),
+}));
+
+jest.mock("@/components/waves/TwitterPreviewCard", () => ({
+  __esModule: true,
+  default: (props: any) => mockTwitterPreviewCard(props),
 }));
 
 jest.mock("@/components/waves/ChatItemHrefButtons", () => ({
@@ -174,10 +152,7 @@ beforeEach(() => {
   mockLinkPreviewCard.mockClear();
   mockArtBlocksTokenCard.mockClear();
   mockFarcasterCard.mockClear();
-});
-
-afterEach(() => {
-  tweetMock.mockClear();
+  mockTwitterPreviewCard.mockClear();
 });
 
 describe("DropPartMarkdown", () => {
@@ -210,6 +185,315 @@ describe("DropPartMarkdown", () => {
     );
   });
 
+  it("renders one markdown image as a standalone image", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="![Seize](/one.png)"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole("img", { name: "Drop media" })).toHaveLength(1);
+    expect(container.querySelector(".tw-grid.tw-grid-cols-1")).toBeNull();
+    expect(
+      container.querySelector(".tw-relative.tw-mt-2.tw-w-full")
+    ).not.toBeNull();
+  });
+
+  it("renders a markdown image with a safe base64 data URI", () => {
+    const dataUri = "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2w==";
+
+    render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent={`hello\n\n![Seize](${dataUri})`}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText("hello")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Drop media" })).toHaveAttribute(
+      "src",
+      dataUri
+    );
+  });
+
+  it("does not render markdown images with non-image data URIs", () => {
+    render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="![Seize](data:text/html;base64,PHNjcmlwdD5hbGVydCgxKTwvc2NyaXB0Pg==)"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("img", { name: "Drop media" })).toBeNull();
+  });
+
+  it("does not render markdown images with unsafe invalid sources", () => {
+    render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="![Seize](javascript:alert(1)) ![Seize](//example.com/image.png)"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("img", { name: "Drop media" })).toBeNull();
+  });
+
+  it("preserves whitespace between a markdown image and following text", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent={"![Seize](/one.png)\ncaption"}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const paragraphs = Array.from(container.querySelectorAll("p"));
+
+    expect(screen.getAllByRole("img", { name: "Drop media" })).toHaveLength(1);
+    expect(container.querySelector(".tw-grid.tw-grid-cols-1")).toBeNull();
+    expect(paragraphs).toHaveLength(1);
+    expect(paragraphs[0]?.textContent?.startsWith("\ncaption")).toBe(true);
+  });
+
+  it("does not render image-to-smart-link whitespace as a text paragraph", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent={"![Seize](/one.png)\nhttps://google.com"}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const paragraphs = Array.from(container.querySelectorAll("p.word-break"));
+
+    expect(screen.getAllByRole("img", { name: "Drop media" })).toHaveLength(1);
+    expect(screen.getAllByTestId("link-preview")).toHaveLength(1);
+    expect(
+      paragraphs.some((paragraph) => paragraph.textContent?.trim() === "")
+    ).toBe(false);
+  });
+
+  it("does not render trailing image whitespace as an empty paragraph", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent={"![Seize](/one.png)\n"}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const paragraphs = Array.from(container.querySelectorAll("p.word-break"));
+
+    expect(screen.getAllByRole("img", { name: "Drop media" })).toHaveLength(1);
+    expect(
+      paragraphs.some((paragraph) => paragraph.textContent?.trim() === "")
+    ).toBe(false);
+  });
+
+  it("groups consecutive markdown images in one responsive grid", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="![Seize](/one.png)![Seize](/two.png)"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const group = container.querySelector(".tw-grid.tw-grid-cols-1");
+
+    expect(group).not.toBeNull();
+    expect(group).toHaveClass(
+      "tw-mt-2",
+      "tw-gap-2",
+      "sm:tw-grid-cols-[repeat(auto-fit,minmax(min(12rem,100%),16rem))]"
+    );
+    expect(group?.querySelectorAll("img")).toHaveLength(2);
+    expect(group?.querySelector(".tw-mt-2")).toBeNull();
+  });
+
+  it("keeps grouped markdown images mounted across parent rerenders", () => {
+    const content = "![Seize](/one.png)![Seize](/two.png)";
+    const mentionedUsers: never[] = [];
+    const mentionedWaves: never[] = [];
+    const referencedNfts: never[] = [];
+    const onQuoteClick = jest.fn();
+    const { rerender } = render(
+      <DropPartMarkdown
+        mentionedUsers={mentionedUsers}
+        mentionedWaves={mentionedWaves}
+        referencedNfts={referencedNfts}
+        partContent={content}
+        onQuoteClick={onQuoteClick}
+      />
+    );
+
+    const originalMountIds = screen
+      .getAllByRole("img", { name: "Drop media" })
+      .map((image) => image.getAttribute("data-mount-id"));
+    expect(originalMountIds).toHaveLength(2);
+
+    rerender(
+      <DropPartMarkdown
+        mentionedUsers={mentionedUsers}
+        mentionedWaves={mentionedWaves}
+        referencedNfts={referencedNfts}
+        partContent={content}
+        onQuoteClick={onQuoteClick}
+      />
+    );
+
+    expect(
+      screen
+        .getAllByRole("img", { name: "Drop media" })
+        .map((image) => image.getAttribute("data-mount-id"))
+    ).toEqual(originalMountIds);
+  });
+
+  it("only remounts the grouped markdown image whose URL changes", () => {
+    const mentionedUsers: never[] = [];
+    const mentionedWaves: never[] = [];
+    const referencedNfts: never[] = [];
+    const onQuoteClick = jest.fn();
+    const { rerender } = render(
+      <DropPartMarkdown
+        mentionedUsers={mentionedUsers}
+        mentionedWaves={mentionedWaves}
+        referencedNfts={referencedNfts}
+        partContent="![Seize](/one.png)![Seize](/two.png)"
+        onQuoteClick={onQuoteClick}
+      />
+    );
+
+    const originalMountIds = screen
+      .getAllByRole("img", { name: "Drop media" })
+      .map((image) => image.getAttribute("data-mount-id"));
+    expect(originalMountIds).toHaveLength(2);
+    const [firstOriginalMountId, secondOriginalMountId] = originalMountIds;
+    if (!firstOriginalMountId || !secondOriginalMountId) {
+      throw new Error("Expected initial markdown images to have mount IDs");
+    }
+
+    rerender(
+      <DropPartMarkdown
+        mentionedUsers={mentionedUsers}
+        mentionedWaves={mentionedWaves}
+        referencedNfts={referencedNfts}
+        partContent="![Seize](/one.png)![Seize](/three.png)"
+        onQuoteClick={onQuoteClick}
+      />
+    );
+
+    const updatedImages = screen.getAllByRole("img", { name: "Drop media" });
+    expect(updatedImages.map((image) => image.getAttribute("src"))).toEqual([
+      "/one.png",
+      "/three.png",
+    ]);
+    const [firstUpdatedImage, secondUpdatedImage] = updatedImages;
+    if (!firstUpdatedImage || !secondUpdatedImage) {
+      throw new Error("Expected updated markdown images to render");
+    }
+
+    expect(firstUpdatedImage).toHaveAttribute(
+      "data-mount-id",
+      firstOriginalMountId
+    );
+    expect(secondUpdatedImage.getAttribute("data-mount-id")).not.toBe(
+      secondOriginalMountId
+    );
+  });
+
+  it("keeps whitespace-only markdown between images in the same image group", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent={"![Seize](/one.png)\n   ![Seize](/two.png)"}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const group = container.querySelector(".tw-grid.tw-grid-cols-1");
+
+    expect(group).not.toBeNull();
+    expect(group?.querySelectorAll("img")).toHaveLength(2);
+  });
+
+  it("groups consecutive bare image URLs in one responsive grid", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent={
+          "https://cdn.example.com/one.jpg\nhttps://cdn.example.com/two.gif?cache=1"
+        }
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const group = container.querySelector(".tw-grid.tw-grid-cols-1");
+
+    expect(group).not.toBeNull();
+    expect(group?.querySelectorAll("img")).toHaveLength(2);
+    expect(group?.querySelector(".tw-mt-2")).toBeNull();
+  });
+
+  it("keeps named image URL markdown links as links", () => {
+    render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="[open image](https://cdn.example.com/one.jpg)"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(screen.queryByRole("img", { name: "Drop media" })).toBeNull();
+    expect(screen.getByRole("link", { name: "open image" })).toHaveAttribute(
+      "href",
+      "https://cdn.example.com/one.jpg"
+    );
+  });
+
+  it("does not group markdown images when visible text is between them", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="![Seize](/one.png) text ![Seize](/two.png)"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(screen.getAllByRole("img", { name: "Drop media" })).toHaveLength(2);
+    expect(screen.getByText("text")).toBeInTheDocument();
+    expect(container.querySelector(".tw-grid.tw-grid-cols-1")).toBeNull();
+  });
+
   it("handles external links", () => {
     const content = "[link](https://google.com)";
     render(
@@ -222,7 +506,10 @@ describe("DropPartMarkdown", () => {
       />
     );
     expect(mockLinkPreviewCard).toHaveBeenCalledTimes(1);
-    const previewCall = mockLinkPreviewCard.mock.calls[0][0];
+    const previewCall = mockLinkPreviewCard.mock.calls[0]?.[0];
+    if (!previewCall) {
+      throw new Error("Expected link preview card props");
+    }
     expect(previewCall.href).toBe("https://google.com");
 
     const a = screen.getByRole("link", { name: "link" });
@@ -243,6 +530,7 @@ describe("DropPartMarkdown", () => {
     );
 
     expect(screen.getByText("@all")).toHaveClass("tw-text-primary-400");
+    expect(screen.getByText("@all")).toHaveClass("tw-align-middle");
 
     rerender(
       <DropPartMarkdown
@@ -258,6 +546,35 @@ describe("DropPartMarkdown", () => {
     expect(screen.getByText("hello @all")).not.toHaveClass(
       "tw-text-primary-400"
     );
+  });
+
+  it("renders bold markdown on the browser baseline without aligning plain text spans", () => {
+    const { container } = render(
+      <DropPartMarkdown
+        mentionedUsers={[]}
+        mentionedWaves={[]}
+        referencedNfts={[]}
+        partContent="our votes my **Residual Barrier** piece"
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const strong = container.querySelector("strong");
+    if (!strong) {
+      throw new Error("Expected bold markdown to render a strong element");
+    }
+    expect(strong).toHaveTextContent("Residual Barrier");
+
+    const plainTextSpans = Array.from(
+      container.querySelectorAll("p > span")
+    ).filter((span) =>
+      ["our votes my ", " piece"].includes(span.textContent ?? "")
+    );
+    expect(plainTextSpans).toHaveLength(2);
+    plainTextSpans.forEach((span) => {
+      expect(span).not.toHaveClass("emoji-text-node");
+      expect(span).not.toHaveClass("tw-align-middle");
+    });
   });
 
   it("renders a standalone check mark emoji with the large emoji style", () => {
@@ -286,7 +603,7 @@ describe("DropPartMarkdown", () => {
     );
 
     expect(screen.getByText("✅ done")).not.toHaveClass("emoji-text-node");
-    expect(screen.getByText("✅ done")).toHaveClass("tw-align-middle");
+    expect(screen.getByText("✅ done")).not.toHaveClass("tw-align-middle");
   });
 
   it("renders Art Blocks token card when feature enabled", async () => {
@@ -306,7 +623,10 @@ describe("DropPartMarkdown", () => {
     await waitFor(() =>
       expect(mockArtBlocksTokenCard).toHaveBeenCalledTimes(1)
     );
-    const call = mockArtBlocksTokenCard.mock.calls[0][0];
+    const call = mockArtBlocksTokenCard.mock.calls[0]?.[0];
+    if (!call) {
+      throw new Error("Expected Art Blocks card props");
+    }
     expect(call.href).toBe("https://www.artblocks.io/token/662000");
     expect(call.id).toEqual({ tokenId: "662000" });
     expect(mockLinkPreviewCard).not.toHaveBeenCalled();
@@ -327,7 +647,10 @@ describe("DropPartMarkdown", () => {
 
     expect(mockFarcasterCard).toHaveBeenCalledTimes(1);
     expect(mockLinkPreviewCard).not.toHaveBeenCalled();
-    const call = mockFarcasterCard.mock.calls[0][0];
+    const call = mockFarcasterCard.mock.calls[0]?.[0];
+    if (!call) {
+      throw new Error("Expected Farcaster card props");
+    }
     expect(call.href).toBe("https://warpcast.com/alice/0x123");
   });
 
@@ -376,7 +699,7 @@ describe("DropPartMarkdown", () => {
     );
   });
 
-  it("renders a fallback link when tweet data is unavailable", async () => {
+  it("renders Twitter/X links with the local Twitter preview card", () => {
     const content = "[tweet](https://twitter.com/someuser/status/2222222222)";
 
     render(
@@ -389,28 +712,32 @@ describe("DropPartMarkdown", () => {
       />
     );
 
-    const fallbackLink = await screen.findByRole("link", {
-      name: /tweet unavailable/i,
-    });
-
-    expect(fallbackLink).toHaveAttribute(
-      "href",
-      "https://twitter.com/someuser/status/2222222222"
+    expect(mockTwitterPreviewCard).toHaveBeenCalledWith(
+      expect.objectContaining({
+        href: "https://twitter.com/someuser/status/2222222222",
+        tweetId: "2222222222",
+      })
     );
-    expect(fallbackLink).toHaveAttribute("target", "_blank");
-    expect(fallbackLink).toHaveTextContent(/Tweet unavailable/i);
-    expect(fallbackLink).toHaveTextContent(/Open on X/i);
-    const tweetWrapper = fallbackLink.parentElement;
+    expect(screen.getByTestId("twitter-post-preview")).toHaveAttribute(
+      "data-tweet-id",
+      "2222222222"
+    );
+    const tweetWrapper = screen.getByTestId(
+      "twitter-post-preview"
+    ).parentElement;
     if (!tweetWrapper) {
-      throw new Error("Expected tweet fallback wrapper");
+      throw new Error("Expected Twitter preview card wrapper");
     }
     expect(tweetWrapper).toHaveClass("tw-w-full", "lg:tw-max-w-[480px]");
   });
 
-  it("renders a fallback link when the tweet embed throws", async () => {
+  it("falls back to regular link when the local Twitter preview card throws", async () => {
     const consoleErrorSpy = jest
       .spyOn(console, "error")
       .mockImplementation(() => {});
+    mockTwitterPreviewCard.mockImplementationOnce(() => {
+      throw new Error("boom");
+    });
 
     try {
       const content = "[tweet](https://twitter.com/foo/status/1111111111)";
@@ -425,19 +752,12 @@ describe("DropPartMarkdown", () => {
         />
       );
 
-      const fallbackLink = await screen.findByRole("link", {
-        name: /tweet unavailable/i,
-      });
+      const fallbackLink = await screen.findByRole("link", { name: "tweet" });
 
       expect(fallbackLink).toHaveAttribute(
         "href",
         "https://twitter.com/foo/status/1111111111"
       );
-      const tweetWrapper = fallbackLink.parentElement;
-      if (!tweetWrapper) {
-        throw new Error("Expected tweet fallback wrapper");
-      }
-      expect(tweetWrapper).toHaveClass("tw-w-full", "lg:tw-max-w-[480px]");
     } finally {
       consoleErrorSpy.mockRestore();
     }
@@ -646,38 +966,6 @@ describe("DropPartMarkdown", () => {
     );
     expect(fallbackLink).toHaveAttribute("href", url);
     expect(fallbackLink).toHaveTextContent(/youtube preview unavailable/i);
-  });
-
-  it("lazy loads tweet embeds with a loading skeleton", async () => {
-    setDynamicMode("skeleton");
-    try {
-      const content =
-        "Check this [tweet](https://twitter.com/user/status/1234567890)";
-
-      render(
-        <DropPartMarkdown
-          mentionedUsers={[]}
-          mentionedWaves={[]}
-          referencedNfts={[]}
-          partContent={content}
-          onQuoteClick={jest.fn()}
-        />
-      );
-
-      expect(
-        screen.queryByTestId("tweet-embed-loading") ??
-          screen.queryByText("Tweet unavailable")
-      ).not.toBeNull();
-
-      expect(dynamicCalls.length).toBeGreaterThanOrEqual(1);
-      const [loader, options] = dynamicCalls[0];
-      expect(options?.ssr).toBe(false);
-
-      const loadedTweetComponent = await loader();
-      expect(loadedTweetComponent).toBeDefined();
-    } finally {
-      setDynamicMode("eager");
-    }
   });
 
   it("renders plain links when link previews are hidden for the drop", () => {

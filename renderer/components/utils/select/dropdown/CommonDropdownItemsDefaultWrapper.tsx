@@ -8,12 +8,21 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
-  useState,
+  useSyncExternalStore,
 } from "react";
 import { useClickAway, useKeyPressEvent } from "react-use";
 
 const VIEWPORT_PADDING = 16;
 const MENU_GAP = 8;
+const DEFAULT_MENU_MIN_WIDTH = 224;
+type DropdownHorizontalAlign = "auto" | "left" | "right";
+const unsubscribeFromClientMount = () => undefined;
+const subscribeToClientMount = (onStoreChange: () => void) => {
+  onStoreChange();
+  return unsubscribeFromClientMount;
+};
+const getClientMountSnapshot = () => true;
+const getServerMountSnapshot = () => false;
 
 export default function CommonDropdownItemsDefaultWrapper({
   isOpen,
@@ -21,6 +30,8 @@ export default function CommonDropdownItemsDefaultWrapper({
   buttonRef,
   dynamicPosition = true,
   closeOnFocusOutside = true,
+  horizontalAlign = "auto",
+  minWidth = DEFAULT_MENU_MIN_WIDTH,
   portalClassName = "tw-z-[999]",
   children,
 }: {
@@ -29,10 +40,17 @@ export default function CommonDropdownItemsDefaultWrapper({
   readonly buttonRef: RefObject<HTMLButtonElement | HTMLDivElement | null>;
   readonly dynamicPosition?: boolean | undefined;
   readonly closeOnFocusOutside?: boolean | undefined;
+  readonly horizontalAlign?: DropdownHorizontalAlign | undefined;
+  readonly minWidth?: number | undefined;
   readonly portalClassName?: string | undefined;
   readonly children: ReactNode;
 }) {
   const listRef = useRef<HTMLDivElement>(null);
+  const mounted = useSyncExternalStore(
+    subscribeToClientMount,
+    getClientMountSnapshot,
+    getServerMountSnapshot
+  );
   useClickAway(listRef, (e) => {
     if (
       buttonRef.current &&
@@ -54,9 +72,9 @@ export default function CommonDropdownItemsDefaultWrapper({
 
     const buttonRect = buttonRef.current.getBoundingClientRect();
     const dropdownEl = dropdownRef.current;
+    const width = Math.max(buttonRect.width, minWidth);
+    dropdownEl.style.width = `${width}px`;
 
-    // Get width from the list element if possible, otherwise the wrapper
-    const width = listRef.current?.offsetWidth ?? dropdownEl.offsetWidth;
     const height = listRef.current?.offsetHeight ?? dropdownEl.offsetHeight;
 
     const scrollX = window.scrollX;
@@ -79,25 +97,24 @@ export default function CommonDropdownItemsDefaultWrapper({
     const maxTop = Math.max(viewportTop, viewportBottom - height);
     const top = Math.min(Math.max(unclampedTop, viewportTop), maxTop);
 
-    // Horizontal position: default to left align
-    let left = buttonRect.left + scrollX;
-
-    // Check if it overflows right edge of viewport
-    if (buttonRect.left + width > window.innerWidth - VIEWPORT_PADDING) {
-      // Switch to right align (align right edge of dropdown with right edge of button)
-      left = buttonRect.right + scrollX - width;
-    }
+    const shouldRightAlign =
+      horizontalAlign === "right" ||
+      (horizontalAlign === "auto" &&
+        buttonRect.left + width > window.innerWidth - VIEWPORT_PADDING);
+    let left = shouldRightAlign
+      ? buttonRect.right + scrollX - width
+      : buttonRect.left + scrollX;
 
     const maxLeft = Math.max(viewportLeft, viewportRight - width);
     left = Math.min(Math.max(left, viewportLeft), maxLeft);
 
     dropdownEl.style.top = `${top}px`;
     dropdownEl.style.left = `${left}px`;
-  }, [dynamicPosition, isOpen, buttonRef]);
+  }, [dynamicPosition, horizontalAlign, isOpen, buttonRef, minWidth]);
 
   useLayoutEffect(() => {
     position();
-  }, [position]);
+  }, [mounted, position]);
 
   useEffect(() => {
     if (!dynamicPosition || !isOpen) return;
@@ -137,18 +154,17 @@ export default function CommonDropdownItemsDefaultWrapper({
     };
   }, [buttonRef, closeOnFocusOutside, isOpen, setOpen]);
 
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
   if (!mounted) return null;
 
   return createPortal(
     <div
       className={`tw-absolute ${portalClassName}`}
       ref={dropdownRef}
-      style={{ left: 0, top: 0 }}
+      style={{
+        left: 0,
+        top: 0,
+        width: `${minWidth}px`,
+      }}
     >
       <AnimatePresence mode="wait" initial={false}>
         {isOpen && (
@@ -156,13 +172,13 @@ export default function CommonDropdownItemsDefaultWrapper({
             ref={listRef}
             role="menu"
             tabIndex={-1}
-            className="tw-w-56 tw-rounded-lg tw-bg-iron-900 tw-py-1 tw-shadow-lg tw-ring-1 tw-ring-white/10 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-white/20"
+            className="tw-w-full tw-rounded-lg tw-bg-iron-900 tw-py-1 tw-shadow-lg tw-ring-1 tw-ring-white/10 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-white/20"
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="tw-max-h-80 tw-overflow-y-auto tw-overflow-x-hidden">
+            <div className="tw-max-h-80 tw-overflow-y-auto tw-overflow-x-hidden [scrollbar-color:#3f3f46_#18181b] [scrollbar-width:thin] [&::-webkit-scrollbar-thumb:hover]:tw-bg-iron-600 [&::-webkit-scrollbar-thumb]:tw-rounded-full [&::-webkit-scrollbar-thumb]:tw-bg-iron-700 [&::-webkit-scrollbar-track]:tw-bg-iron-900 [&::-webkit-scrollbar]:tw-w-2">
               <ul className="tw-mx-0 tw-mb-0 tw-flex tw-list-none tw-flex-col tw-gap-0.5 tw-px-2">
                 {children}
               </ul>

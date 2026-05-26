@@ -8,6 +8,22 @@ import { CREATE_WAVE_VALIDATION_ERROR } from "@/helpers/waves/create-wave.valida
 const mockTimeWeightedVoting = jest.fn((props: { errorMessage?: string }) => (
   <div data-testid="time-weighted">{props.errorMessage}</div>
 ));
+const mockNegativeVotingToggle = jest.fn(
+  (props: {
+    allowNegativeVotes: boolean;
+    onChange: (allowNegativeVotes: boolean) => void;
+    isDisabled?: boolean;
+  }) => (
+    <button
+      type="button"
+      data-testid="negative"
+      data-disabled={props.isDisabled}
+      onClick={() => props.onChange(!props.allowNegativeVotes)}
+    >
+      {String(props.allowNegativeVotes)}
+    </button>
+  )
+);
 
 jest.mock(
   "@/components/utils/radio/CommonBorderedRadioButton",
@@ -16,7 +32,7 @@ jest.mock(
       data-testid={`radio-${props.type}`}
       onClick={() => props.onChange(props.type)}
     >
-      {props.label}
+      {props.children}
     </button>
   )
 );
@@ -26,8 +42,33 @@ jest.mock(
   () => () => <div data-testid="rep" />
 );
 jest.mock(
+  "@/components/waves/create-wave/voting/MemeCardSetPicker",
+  () =>
+    (props: {
+      creditNfts: unknown[];
+      memeCount: number | null;
+      isMemeCountLoading: boolean;
+      isMemeCountError: boolean;
+    }) => (
+      <div
+        data-testid="meme-card-set-picker"
+        data-meme-count={props.memeCount ?? ""}
+        data-loading={props.isMemeCountLoading}
+        data-error={props.isMemeCountError}
+      >
+        {props.creditNfts.length}
+      </div>
+    )
+);
+jest.mock(
   "@/components/waves/create-wave/voting/NegativeVotingToggle",
-  () => () => <div data-testid="negative" />
+  () =>
+    (props: {
+      allowNegativeVotes: boolean;
+      onChange: (allowNegativeVotes: boolean) => void;
+      isDisabled?: boolean;
+    }) =>
+      mockNegativeVotingToggle(props)
 );
 jest.mock(
   "@/components/waves/create-wave/voting/TimeWeightedVoting",
@@ -40,12 +81,19 @@ describe("CreateWaveVoting", () => {
     selectedType: ApiWaveCreditType.Rep,
     category: null,
     profileId: null,
+    creditNfts: [],
+    memeCount: null,
+    isMemeCountLoading: false,
+    isMemeCountError: false,
+    allowNegativeVotes: true,
     maxVotesPerIdentityPerDrop: null,
     approvalThreshold: null,
     errors: [],
     onTypeChange: jest.fn(),
     setCategory: jest.fn(),
     setProfileId: jest.fn(),
+    setCreditNfts: jest.fn(),
+    onAllowNegativeVotesChange: jest.fn(),
     setMaxVotesPerIdentityPerDrop: jest.fn(),
     setApprovalThreshold: jest.fn(),
     timeWeighted: {
@@ -55,6 +103,10 @@ describe("CreateWaveVoting", () => {
     } as any,
     onTimeWeightedChange: jest.fn(),
   };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   it("returns null when no selected type", () => {
     const { container } = render(
@@ -80,11 +132,91 @@ describe("CreateWaveVoting", () => {
     expect(screen.queryByTestId("approval-threshold-setting")).toBeNull();
   });
 
+  it("passes enabled negative voting props from config", async () => {
+    const user = userEvent.setup();
+    const onAllowNegativeVotesChange = jest.fn();
+
+    render(
+      <CreateWaveVoting
+        {...baseProps}
+        allowNegativeVotes={false}
+        onAllowNegativeVotesChange={onAllowNegativeVotesChange}
+      />
+    );
+
+    const negativeVotingProps = mockNegativeVotingToggle.mock.calls[0]?.[0];
+
+    expect(negativeVotingProps).toMatchObject({
+      allowNegativeVotes: false,
+      isDisabled: false,
+    });
+    expect(negativeVotingProps?.onChange).toBe(onAllowNegativeVotesChange);
+
+    await user.click(screen.getByTestId("negative"));
+
+    expect(onAllowNegativeVotesChange).toHaveBeenCalledWith(true);
+  });
+
   it("invokes onTypeChange when radio clicked", async () => {
     const user = userEvent.setup();
     render(<CreateWaveVoting {...baseProps} />);
     await user.click(screen.getByTestId(`radio-${ApiWaveCreditType.Tdh}`));
     expect(baseProps.onTypeChange).toHaveBeenCalledWith(ApiWaveCreditType.Tdh);
+  });
+
+  it("renders compact voting option labels", () => {
+    const { rerender } = render(<CreateWaveVoting {...baseProps} />);
+
+    expect(
+      screen.getByTestId(`radio-${ApiWaveCreditType.TdhPlusXtdh}`)
+    ).toHaveTextContent("TDH + XTDH");
+    expect(
+      screen.getByTestId(`radio-${ApiWaveCreditType.Tdh}`)
+    ).toHaveTextContent("TDH");
+    expect(
+      screen.getByTestId(`radio-${ApiWaveCreditType.Rep}`)
+    ).toHaveTextContent("Rep");
+    expect(
+      screen.getByTestId(`radio-${ApiWaveCreditType.CardSetTdh}`)
+    ).toHaveTextContent("Memes TDH");
+    expect(screen.queryByText(/^By /)).toBeNull();
+
+    rerender(
+      <CreateWaveVoting {...baseProps} waveType={ApiWaveType.Approve} />
+    );
+
+    expect(
+      screen.getByTestId(`radio-${ApiWaveCreditType.CardSetTdh}`)
+    ).toHaveTextContent("Memes TDH");
+    expect(screen.queryByText(/^By /)).toBeNull();
+  });
+
+  it("shows Meme card picker when Meme Card TDH is selected", () => {
+    render(
+      <CreateWaveVoting
+        {...baseProps}
+        selectedType={ApiWaveCreditType.CardSetTdh}
+        creditNfts={[{ contract: "contract", token_id: 1 }]}
+        memeCount={100}
+        isMemeCountLoading={true}
+        isMemeCountError={false}
+      />
+    );
+
+    expect(screen.getByTestId("meme-card-set-picker")).toHaveTextContent("1");
+    expect(screen.getByTestId("meme-card-set-picker")).toHaveAttribute(
+      "data-meme-count",
+      "100"
+    );
+    expect(screen.getByTestId("meme-card-set-picker")).toHaveAttribute(
+      "data-loading",
+      "true"
+    );
+    expect(screen.getByTestId("meme-card-set-picker")).toHaveAttribute(
+      "data-error",
+      "false"
+    );
+    expect(screen.queryByTestId("rep")).toBeNull();
   });
 
   it("omits negative voting for chat waves", () => {

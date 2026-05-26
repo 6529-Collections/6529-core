@@ -2,6 +2,7 @@ import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import type { ApiUpdateWaveRequest } from "@/generated/models/ApiUpdateWaveRequest";
 import type { ApiWave } from "@/generated/models/ApiWave";
+import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import { commonApiPost } from "@/services/api/common-api";
 import { CreateWaveStepStatus } from "@/types/waves.types";
 
@@ -31,6 +32,26 @@ const getPeriodUpdate = <T>(
   return { period };
 };
 
+const getSlowModeUpdate = (
+  slowModeCooldownMs: number | null | undefined
+): Partial<{ readonly slow_mode_cooldown_ms: number }> => {
+  if (slowModeCooldownMs === null || slowModeCooldownMs === undefined) {
+    return {};
+  }
+
+  return { slow_mode_cooldown_ms: slowModeCooldownMs };
+};
+
+const getCreditNftsUpdate = (
+  wave: ApiWave
+): Partial<{ readonly credit_nfts: ApiWave["voting"]["credit_nfts"] }> => {
+  if (wave.voting.credit_type !== ApiWaveCreditType.CardSetTdh) {
+    return {};
+  }
+
+  return { credit_nfts: wave.voting.credit_nfts ?? [] };
+};
+
 export const convertWaveToUpdateWave = (
   wave: ApiWave
 ): ApiUpdateWaveRequest => ({
@@ -45,6 +66,7 @@ export const convertWaveToUpdateWave = (
     creditor_id: wave.voting.creditor?.id ?? null,
     signature_required: !!wave.voting.signature_required,
     ...getPeriodUpdate(wave.voting.period),
+    ...getCreditNftsUpdate(wave),
     forbid_negative_votes: wave.voting.forbid_negative_votes,
   },
   visibility: {
@@ -57,6 +79,8 @@ export const convertWaveToUpdateWave = (
       group_id: wave.chat.scope.group?.id ?? null,
     },
     enabled: wave.chat.enabled,
+    links_disabled: wave.chat.links_disabled === true,
+    ...getSlowModeUpdate(wave.chat.slow_mode_cooldown_ms),
   },
   participation: {
     scope: {

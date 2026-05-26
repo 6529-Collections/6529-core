@@ -1,5 +1,6 @@
 import type { ApiCreateNewWave } from "@/generated/models/ApiCreateNewWave";
 import type { ApiCreateWaveDropRequest } from "@/generated/models/ApiCreateWaveDropRequest";
+import { MEMES_CONTRACT } from "@/constants/constants";
 import { ApiWaveCreditScope } from "@/generated/models/ApiWaveCreditScope";
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import { ApiWaveOutcomeCredit } from "@/generated/models/ApiWaveOutcomeCredit";
@@ -412,7 +413,15 @@ export const getCreateNewWaveBody = ({
         min: config.dates.votingStartDate,
         max: endDate,
       },
-      forbid_negative_votes: false,
+      forbid_negative_votes: config.voting.allowNegativeVotes === false,
+      ...(config.voting.type === ApiWaveCreditType.CardSetTdh
+        ? {
+            credit_nfts: config.voting.creditNfts.map((nft) => ({
+              contract: MEMES_CONTRACT,
+              token_id: nft.token_id,
+            })),
+          }
+        : {}),
     },
     visibility: {
       scope: {
@@ -449,6 +458,7 @@ export const getCreateNewWaveBody = ({
         group_id: config.groups.canChat,
       },
       enabled: config.chat.enabled,
+      links_disabled: false,
     },
     wave: {
       admin_drop_deletion_enabled: config.drops.adminCanDeleteDrops,

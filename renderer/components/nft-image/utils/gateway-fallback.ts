@@ -102,7 +102,9 @@ type MediaErrorEvent = React.SyntheticEvent<
 const DS_ORIGINAL = "arweaveOriginalSrc";
 const DS_LAST_HOST = "arweaveLastGatewayHost";
 
-function classifyGatewayAssetUrl(url: string):
+function classifyGatewayAssetUrl(
+  url: string
+):
   | { kind: "empty" }
   | { kind: "ipfs"; sourceUrl: string }
   | { kind: "arweave"; sourceUrl: string }
@@ -128,7 +130,7 @@ function classifyGatewayAssetUrl(url: string):
   return { kind: "other", sourceUrl: trimmed };
 }
 
-export function getArweaveGatewayFallbackUrls(url: string): string[] {
+export function getMediaGatewayFallbackUrls(url: string): string[] {
   const assetUrl = classifyGatewayAssetUrl(url);
   if (assetUrl.kind === "empty") {
     return [];

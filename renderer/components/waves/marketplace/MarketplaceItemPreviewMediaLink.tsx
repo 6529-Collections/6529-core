@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Image from "next/image";
 import type { ReactNode } from "react";
 
 import MediaDisplay from "@/components/drops/view/item/content/media/MediaDisplay";
@@ -32,7 +32,7 @@ export default function MarketplaceItemPreviewMediaLink({
   mediaMimeType,
   resolvedPreviewHref,
 }: MarketplaceItemPreviewMediaLinkProps) {
-  const { href, target, rel } = resolvedPreviewHref;
+  const href = resolvedPreviewHref.href;
   const isImage = isImageMimeType(mediaMimeType);
   const isVideo = isVideoMimeType(mediaMimeType);
   const useDirectImageRendering = isImage && isGammaioHref(href);
@@ -42,10 +42,14 @@ export default function MarketplaceItemPreviewMediaLink({
   let mediaContent: ReactNode;
 
   if (useDirectImageRendering) {
+    // Gamma media can resolve through several hosts, so this direct preview skips optimization.
     mediaContent = (
-      <img
+      <Image
         src={mediaUrl}
         alt="Marketplace item media"
+        width={320}
+        height={320}
+        unoptimized
         className="tw-block tw-h-auto tw-max-h-72 tw-min-h-[12.5rem] tw-w-auto tw-min-w-[12.5rem] tw-max-w-full tw-object-contain"
         style={{ imageRendering: "pixelated" }}
         data-testid="media-display"
@@ -81,12 +85,8 @@ export default function MarketplaceItemPreviewMediaLink({
   }
 
   return (
-    <Link
-      href={href}
-      target={target}
-      rel={rel}
-      prefetch={false}
-      className="tw-flex tw-w-full tw-flex-col tw-overflow-hidden tw-no-underline"
+    <div
+      className="tw-flex tw-w-full tw-flex-col tw-overflow-hidden"
       data-testid="marketplace-item-media-link"
     >
       <div
@@ -95,6 +95,6 @@ export default function MarketplaceItemPreviewMediaLink({
       >
         {mediaContent}
       </div>
-    </Link>
+    </div>
   );
 }

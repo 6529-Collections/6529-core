@@ -51,12 +51,18 @@ const createRect = ({
 const originalInnerWidth = window.innerWidth;
 const originalInnerHeight = window.innerHeight;
 
+function getPortalWrapper() {
+  const wrapper = screen.getByRole("menu").closest(".tw-absolute");
+  expect(wrapper).not.toBeNull();
+  return wrapper as HTMLElement;
+}
+
 afterEach(() => {
-  Object.defineProperty(window, "innerWidth", {
+  Object.defineProperty(globalThis, "innerWidth", {
     configurable: true,
     value: originalInnerWidth,
   });
-  Object.defineProperty(window, "innerHeight", {
+  Object.defineProperty(globalThis, "innerHeight", {
     configurable: true,
     value: originalInnerHeight,
   });
@@ -79,11 +85,11 @@ test("closes on escape press", () => {
 });
 
 test("positions the dropdown below the trigger when there is space", async () => {
-  Object.defineProperty(window, "innerWidth", {
+  Object.defineProperty(globalThis, "innerWidth", {
     configurable: true,
     value: 1280,
   });
-  Object.defineProperty(window, "innerHeight", {
+  Object.defineProperty(globalThis, "innerHeight", {
     configurable: true,
     value: 720,
   });
@@ -113,10 +119,10 @@ test("positions the dropdown below the trigger when there is space", async () =>
   );
 
   await waitFor(() => {
-    expect(screen.getByRole("menu").parentElement).toHaveStyle({
-      left: "100px",
-      top: "240px",
-    });
+    const wrapper = getPortalWrapper();
+    expect(wrapper.style.left).toBe("100px");
+    expect(wrapper.style.top).toBe("240px");
+    expect(wrapper.style.width).toBe("224px");
   });
 });
 
@@ -155,11 +161,152 @@ test("positions the dropdown above the trigger near the viewport bottom", async 
   );
 
   await waitFor(() => {
-    expect(screen.getByRole("menu").parentElement).toHaveStyle({
-      left: "100px",
-      top: "312px",
-    });
+    const wrapper = getPortalWrapper();
+    expect(wrapper.style.left).toBe("100px");
+    expect(wrapper.style.top).toBe("312px");
+    expect(wrapper.style.width).toBe("224px");
   });
+});
+
+test("uses trigger width when it is wider than the minimum menu width", async () => {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: 1280,
+  });
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 720,
+  });
+  jest.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockReturnValue(160);
+  jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(120);
+
+  const button = document.createElement("button");
+  Object.defineProperty(button, "getBoundingClientRect", {
+    configurable: true,
+    value: () =>
+      createRect({
+        top: 200,
+        bottom: 232,
+        left: 100,
+        right: 420,
+      }),
+  });
+
+  render(
+    <CommonDropdownItemsDefaultWrapper
+      isOpen={true}
+      setOpen={() => {}}
+      buttonRef={{ current: button }}
+    >
+      <li>item</li>
+    </CommonDropdownItemsDefaultWrapper>
+  );
+
+  await waitFor(() => {
+    const wrapper = getPortalWrapper();
+    expect(wrapper.style.left).toBe("100px");
+    expect(wrapper.style.top).toBe("240px");
+    expect(wrapper.style.width).toBe("320px");
+  });
+});
+
+test("uses a custom minimum menu width when provided", async () => {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: 1280,
+  });
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 720,
+  });
+  jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(120);
+
+  const button = document.createElement("button");
+  Object.defineProperty(button, "getBoundingClientRect", {
+    configurable: true,
+    value: () =>
+      createRect({
+        top: 200,
+        bottom: 232,
+        left: 100,
+        right: 132,
+      }),
+  });
+
+  render(
+    <CommonDropdownItemsDefaultWrapper
+      isOpen={true}
+      setOpen={() => {}}
+      buttonRef={{ current: button }}
+      minWidth={320}
+    >
+      <li>item</li>
+    </CommonDropdownItemsDefaultWrapper>
+  );
+
+  await waitFor(() => {
+    const wrapper = getPortalWrapper();
+    expect(wrapper.style.width).toBe("320px");
+  });
+});
+
+test("right-aligns the dropdown to the trigger when requested", async () => {
+  Object.defineProperty(window, "innerWidth", {
+    configurable: true,
+    value: 1280,
+  });
+  Object.defineProperty(window, "innerHeight", {
+    configurable: true,
+    value: 720,
+  });
+  jest.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(120);
+
+  const button = document.createElement("button");
+  Object.defineProperty(button, "getBoundingClientRect", {
+    configurable: true,
+    value: () =>
+      createRect({
+        top: 200,
+        bottom: 232,
+        left: 500,
+        right: 600,
+      }),
+  });
+
+  render(
+    <CommonDropdownItemsDefaultWrapper
+      isOpen={true}
+      setOpen={() => {}}
+      buttonRef={{ current: button }}
+      horizontalAlign="right"
+    >
+      <li>item</li>
+    </CommonDropdownItemsDefaultWrapper>
+  );
+
+  await waitFor(() => {
+    const wrapper = getPortalWrapper();
+    expect(wrapper.style.left).toBe("376px");
+  });
+});
+
+test("renders the menu scroll region with dark scrollbar styling", async () => {
+  render(
+    <CommonDropdownItemsDefaultWrapper
+      isOpen={true}
+      setOpen={() => {}}
+      buttonRef={{ current: null }}
+    >
+      <li>item</li>
+    </CommonDropdownItemsDefaultWrapper>
+  );
+
+  const scrollRegion = screen.getByRole("menu")
+    .firstElementChild as HTMLElement;
+  expect(scrollRegion).toHaveClass(
+    "[scrollbar-color:#3f3f46_#18181b]",
+    "[scrollbar-width:thin]"
+  );
 });
 
 test("closes when focus moves outside the trigger and portaled menu by default", async () => {

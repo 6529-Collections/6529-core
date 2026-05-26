@@ -1,6 +1,7 @@
 "use client";
 
 import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ChatRestriction } from "@/hooks/useDropPriviledges";
 import { commonApiFetch } from "@/services/api/common-api";
 import React, {
   createContext,
@@ -13,6 +14,7 @@ import React, {
 
 interface WaveEligibility {
   authenticated_user_eligible_to_chat: boolean;
+  authenticated_user_chat_restriction?: ChatRestriction | null;
   authenticated_user_eligible_to_vote: boolean;
   authenticated_user_eligible_to_participate: boolean;
   authenticated_user_admin: boolean;
@@ -62,18 +64,25 @@ export const WaveEligibilityProvider: React.FC<
 
   const updateEligibility = useCallback(
     (waveId: string, newEligibility: Partial<WaveEligibility>) => {
+      const updatesRawEligibility =
+        "authenticated_user_eligible_to_chat" in newEligibility ||
+        "authenticated_user_eligible_to_vote" in newEligibility ||
+        "authenticated_user_eligible_to_participate" in newEligibility ||
+        "authenticated_user_admin" in newEligibility;
+
       setEligibility((prev) => ({
         ...prev,
         [waveId]: {
           ...prev[waveId],
           ...newEligibility,
-          lastUpdated: Date.now(),
+          lastUpdated: updatesRawEligibility
+            ? Date.now()
+            : (prev[waveId]?.lastUpdated ?? 0),
         } as WaveEligibility,
       }));
     },
     []
   );
-
   const refreshEligibility = useCallback(
     async (waveId: string) => {
       // Prevent multiple concurrent refreshes for the same wave
@@ -94,17 +103,15 @@ export const WaveEligibilityProvider: React.FC<
           endpoint: `waves/${waveId}`,
         });
 
-        if (wave) {
-          updateEligibility(waveId, {
-            authenticated_user_eligible_to_chat:
-              wave.chat.authenticated_user_eligible,
-            authenticated_user_eligible_to_vote:
-              wave.participation.authenticated_user_eligible,
-            authenticated_user_eligible_to_participate:
-              wave.participation.authenticated_user_eligible,
-            authenticated_user_admin: false, // This needs to be obtained from drops, not main wave object
-          });
-        }
+        updateEligibility(waveId, {
+          authenticated_user_eligible_to_chat:
+            wave.chat.authenticated_user_eligible,
+          authenticated_user_eligible_to_vote:
+            wave.voting.authenticated_user_eligible,
+          authenticated_user_eligible_to_participate:
+            wave.participation.authenticated_user_eligible,
+          authenticated_user_admin: false, // This needs to be obtained from drops, not main wave object
+        });
       } catch (error) {
         // Silently fail - keep existing eligibility data
         console.warn(
@@ -124,7 +131,6 @@ export const WaveEligibilityProvider: React.FC<
     },
     [eligibility]
   );
-
   const value: WaveEligibilityContextType = useMemo(
     () => ({
       eligibility,

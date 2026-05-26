@@ -4,6 +4,7 @@ import {
   convertWaveToUpdateWave,
   getCreateWaveStepStatus,
 } from "@/helpers/waves/waves.helpers";
+import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import { CreateWaveStepStatus } from "@/types/waves.types";
 
 jest.mock("@/services/api/common-api", () => ({
@@ -110,7 +111,11 @@ describe("waves.helpers", () => {
           forbid_negative_votes: true,
         },
         visibility: { scope: { group_id: "vis" } },
-        chat: { scope: { group_id: "chat" }, enabled: true },
+        chat: {
+          scope: { group_id: "chat" },
+          enabled: true,
+          links_disabled: false,
+        },
         participation: {
           scope: { group_id: "part" },
           no_of_applications_allowed_per_participant: 2,
@@ -131,6 +136,66 @@ describe("waves.helpers", () => {
           decisions_strategy: "strategy",
         },
       });
+    });
+
+    it("preserves existing slow mode cooldown", () => {
+      const wave = makeWave();
+      wave.chat.slow_mode_cooldown_ms = 30_000;
+
+      const result = convertWaveToUpdateWave(wave);
+
+      expect(result.chat).toEqual({
+        scope: { group_id: "chat" },
+        enabled: true,
+        links_disabled: false,
+        slow_mode_cooldown_ms: 30_000,
+      });
+    });
+
+    it("omits slow mode when wave has no slow mode", () => {
+      const wave = makeWave();
+
+      const result = convertWaveToUpdateWave(wave);
+
+      expect(result.chat).not.toHaveProperty("slow_mode_cooldown_ms");
+    });
+
+    it("preserves disabled links", () => {
+      const wave = makeWave();
+      wave.chat.links_disabled = true;
+
+      const result = convertWaveToUpdateWave(wave);
+
+      expect(result.chat).toMatchObject({
+        links_disabled: true,
+      });
+    });
+
+    it("preserves card-set TDH credit NFTs", () => {
+      const creditNfts = [
+        { contract: "0xmemes", token_id: 1 },
+        { contract: "0xmemes", token_id: 2 },
+      ];
+      const wave = makeWave();
+      wave.voting.credit_type = ApiWaveCreditType.CardSetTdh;
+      wave.voting.credit_nfts = creditNfts;
+
+      const result = convertWaveToUpdateWave(wave);
+
+      expect(result.voting).toMatchObject({
+        credit_type: ApiWaveCreditType.CardSetTdh,
+        credit_nfts: creditNfts,
+      });
+    });
+
+    it("does not add credit NFTs for standard voting", () => {
+      const wave = makeWave();
+      wave.voting.credit_type = ApiWaveCreditType.Tdh;
+      wave.voting.credit_nfts = [{ contract: "0xmemes", token_id: 1 }];
+
+      const result = convertWaveToUpdateWave(wave);
+
+      expect(result.voting).not.toHaveProperty("credit_nfts");
     });
 
     it.each([
