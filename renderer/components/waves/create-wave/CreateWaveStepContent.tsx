@@ -53,10 +53,12 @@ export default function CreateWaveStepContent({
     onCategoryChange,
     onProfileIdChange,
     onCreditNftsChange,
+    onCreditScopeChange,
     onMaxVotesPerIdentityPerDropChange,
     onAllowNegativeVotesChange,
     onTimeWeightedVotingChange,
     onThresholdChange,
+    onThresholdTimeChange,
     onApprovalMaxWinnersChange,
     onChatEnabledChange,
   } = controller;
@@ -111,20 +113,24 @@ export default function CreateWaveStepContent({
           category={config.voting.category}
           profileId={config.voting.profileId}
           creditNfts={config.voting.creditNfts}
+          creditScope={config.voting.creditScope}
           memeCount={config.voting.creditNftMemeCount}
           isMemeCountLoading={isMemeCountLoading}
           isMemeCountError={isMemeCountError}
           allowNegativeVotes={config.voting.allowNegativeVotes}
           maxVotesPerIdentityPerDrop={config.voting.maxVotesPerIdentityPerDrop}
           approvalThreshold={config.approval.threshold}
+          approvalThresholdTimeMs={config.approval.thresholdTimeMs}
           errors={errors}
           onTypeChange={onVotingTypeChange}
           setCategory={onCategoryChange}
           setProfileId={onProfileIdChange}
           setCreditNfts={onCreditNftsChange}
+          onCreditScopeChange={onCreditScopeChange}
           onAllowNegativeVotesChange={onAllowNegativeVotesChange}
           setMaxVotesPerIdentityPerDrop={onMaxVotesPerIdentityPerDropChange}
           setApprovalThreshold={onThresholdChange}
+          setApprovalThresholdTimeMs={onThresholdTimeChange}
           timeWeighted={config.voting.timeWeighted}
           onTimeWeightedChange={onTimeWeightedVotingChange}
         />

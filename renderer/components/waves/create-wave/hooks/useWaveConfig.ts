@@ -10,6 +10,7 @@ import { CreateWaveGroupConfigType, CreateWaveStep } from "@/types/waves.types";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { Time } from "@/helpers/time";
 import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import { ApiWaveCreditScope } from "@/generated/models/ApiWaveCreditScope";
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import type { ApiWaveCreditNft } from "@/generated/models/ApiWaveCreditNft";
 import type { Period } from "../types/period";
@@ -69,6 +70,7 @@ export function useWaveConfig() {
       },
       voting: {
         type: ApiWaveCreditType.TdhPlusXtdh,
+        creditScope: ApiWaveCreditScope.Wave,
         category: null,
         profileId: null,
         creditNfts: [],
@@ -287,6 +289,7 @@ export function useWaveConfig() {
       ...prev,
       voting: {
         type,
+        creditScope: prev.voting.creditScope,
         category: null,
         profileId: null,
         creditNfts:
@@ -347,6 +350,16 @@ export function useWaveConfig() {
       voting: {
         ...prev.voting,
         creditNfts,
+      },
+    }));
+  };
+
+  const onCreditScopeChange = (creditScope: ApiWaveCreditScope) => {
+    setConfig((prev) => ({
+      ...prev,
+      voting: {
+        ...prev.voting,
+        creditScope,
       },
     }));
   };
@@ -441,6 +454,7 @@ export function useWaveConfig() {
     onCategoryChange,
     onProfileIdChange,
     onCreditNftsChange,
+    onCreditScopeChange,
     onMaxVotesPerIdentityPerDropChange,
     onAllowNegativeVotesChange,
     onTimeWeightedVotingChange,

@@ -8,6 +8,7 @@ import type {
 } from "@/helpers/waves/drop.helpers";
 import { DropSize } from "@/helpers/waves/drop.helpers";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import type { ImageScale } from "@/helpers/image.helpers";
 import { useMemo } from "react";
 import DropContext from "./DropContext";
 import { DropLocation } from "./drop.types";
@@ -41,7 +42,12 @@ interface DropProps {
   readonly identityMode?: DropIdentityMode | undefined;
   readonly timestampLayout?: DropTimestampLayout | undefined;
   readonly showInteractions?: boolean | undefined;
+  readonly inlineAuthorOnDesktop?: boolean | undefined;
+  readonly mediaImageScale?: ImageScale | undefined;
+  readonly fullWidthMedia?: boolean | undefined;
+  readonly fullWidthLinkPreviews?: boolean | undefined;
   readonly winningThreshold?: number | null | undefined;
+  readonly winningThresholdMinDurationMs?: number | null | undefined;
   readonly isVotingClosed?: boolean | undefined;
   readonly isVotingControlsLocked?: boolean | undefined;
   readonly embedPath?: readonly string[] | undefined;
@@ -69,7 +75,12 @@ export default function Drop({
   identityMode,
   timestampLayout,
   showInteractions = true,
+  inlineAuthorOnDesktop,
+  mediaImageScale,
+  fullWidthMedia,
+  fullWidthLinkPreviews,
   winningThreshold,
+  winningThresholdMinDurationMs,
   isVotingClosed = false,
   isVotingControlsLocked = false,
   embedPath,
@@ -97,7 +108,12 @@ export default function Drop({
         identityMode={identityMode}
         timestampLayout={timestampLayout}
         showInteractions={showInteractions}
+        inlineAuthorOnDesktop={inlineAuthorOnDesktop}
+        mediaImageScale={mediaImageScale}
+        fullWidthMedia={fullWidthMedia}
+        fullWidthLinkPreviews={fullWidthLinkPreviews}
         winningThreshold={winningThreshold}
+        winningThresholdMinDurationMs={winningThresholdMinDurationMs}
         isVotingClosed={isVotingClosed}
         isVotingControlsLocked={isVotingControlsLocked}
         embedPath={embedPath}
@@ -125,6 +141,11 @@ export default function Drop({
         identityMode={identityMode}
         timestampLayout={timestampLayout}
         showInteractions={showInteractions}
+        inlineAuthorOnDesktop={inlineAuthorOnDesktop}
+        mediaImageScale={mediaImageScale}
+        fullWidthMedia={fullWidthMedia}
+        fullWidthLinkPreviews={fullWidthLinkPreviews}
+        winningThreshold={winningThreshold}
         embedPath={embedPath}
         quotePath={quotePath}
         embedDepth={embedDepth}
@@ -152,6 +173,10 @@ export default function Drop({
         identityMode={identityMode}
         timestampLayout={timestampLayout}
         showInteractions={showInteractions}
+        inlineAuthorOnDesktop={inlineAuthorOnDesktop}
+        mediaImageScale={mediaImageScale}
+        fullWidthMedia={fullWidthMedia}
+        fullWidthLinkPreviews={fullWidthLinkPreviews}
         embedPath={embedPath}
         quotePath={quotePath}
         embedDepth={embedDepth}

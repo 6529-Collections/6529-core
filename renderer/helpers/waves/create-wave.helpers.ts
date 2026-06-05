@@ -405,7 +405,7 @@ export const getCreateNewWaveBody = ({
         group_id: config.groups.canVote,
       },
       credit_type: config.voting.type ?? ApiWaveCreditType.TdhPlusXtdh,
-      credit_scope: ApiWaveCreditScope.Wave,
+      credit_scope: config.voting.creditScope ?? ApiWaveCreditScope.Wave,
       credit_category: config.voting.category,
       creditor_id: config.voting.profileId,
       signature_required: false,
@@ -466,6 +466,10 @@ export const getCreateNewWaveBody = ({
       winning_threshold:
         config.overview.type === ApiWaveType.Approve
           ? config.approval.threshold
+          : null,
+      winning_threshold_min_duration_ms:
+        config.overview.type === ApiWaveType.Approve
+          ? (config.approval.thresholdTimeMs ?? 0)
           : null,
       // TODO - should be in outcomes
       max_winners: getApproveMaxWinners({ config }),

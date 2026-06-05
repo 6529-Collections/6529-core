@@ -74,6 +74,8 @@ export enum QueryKey {
   RESERVOIR_NFT = "RESERVOIR_NFT",
   DROPS = "DROPS",
   DROPS_LEADERBOARD = "DROPS_LEADERBOARD",
+  DROP_VOTERS = "DROP_VOTERS",
+  DROP_VOTE_LOGS = "DROP_VOTE_LOGS",
   BOOSTED_DROPS = "BOOSTED_DROPS",
   DROP = "DROP",
   DROP_DISCUSSION = "DROP_DISCUSSION",
@@ -93,6 +95,7 @@ export enum QueryKey {
   WAVES_OVERVIEW = "WAVES_OVERVIEW",
   WAVES_OVERVIEW_PUBLIC = "WAVES_OVERVIEW_PUBLIC",
   WAVES_V2 = "WAVES_V2",
+  OFFICIAL_WAVES = "OFFICIAL_WAVES",
   WAVES = "WAVES",
   WAVES_PUBLIC = "WAVES_PUBLIC",
   WAVES_SEARCH = "WAVES_SEARCH",
@@ -918,6 +921,11 @@ const createReactQueryContextValue = (
         queryKey: [QueryKey.WAVES_V2],
       })
       .catch(() => undefined);
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.OFFICIAL_WAVES],
+      })
+      .catch(() => undefined);
     queryClient.invalidateQueries({
       queryKey: [QueryKey.WAVES],
     });
@@ -944,6 +952,12 @@ const createReactQueryContextValue = (
     });
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [QueryKey.DROP_VOTERS],
+    });
+    queryClient.invalidateQueries({
+      queryKey: [QueryKey.DROP_VOTE_LOGS],
     });
     queryClient.invalidateQueries({
       queryKey: [QueryKey.PROFILE_DROPS],

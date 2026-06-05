@@ -19,7 +19,7 @@ import type { ApiWave } from "@/generated/models/ApiWave";
 import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { selectEditingDropId } from "@/store/editSlice";
+import { selectEditingDropId, setEditingDropId } from "@/store/editSlice";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
@@ -35,7 +35,7 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { useAuth } from "../auth/Auth";
 import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
 import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
@@ -58,6 +58,7 @@ import { containsDisallowedLink } from "@/components/drops/view/part/dropPartMar
 import { getMentionedGroupsFromEditorState } from "@/components/drops/create/lexical/utils/groupMentionDetection";
 import { ProcessIncomingDropType } from "@/contexts/wave/hooks/useWaveRealtimeUpdater";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
+import { useWaveChatScrollOptional } from "@/contexts/wave/WaveChatScrollContext";
 import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
 import { WsMessageType } from "@/helpers/Types";
 import { isReservedIdentitySubmissionMetadataKey } from "@/helpers/waves/identity-submission-metadata";
@@ -109,6 +110,7 @@ import {
   areHandlesEqual,
   isChatLinkRestrictionApplicable,
 } from "@/helpers/waves/chat-link-restriction.helpers";
+import { useLatestEditableChatDropTarget } from "./hooks/useLatestEditableChatDropTarget";
 
 // Use next/dynamic for lazy loading with SSR support
 const TermsSignatureFlow = dynamic(
@@ -532,13 +534,16 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const actionsContainerRef = useRef<HTMLDivElement>(null);
   const [actionsContainerElement, setActionsContainerElement] =
     useState<HTMLDivElement | null>(null);
-  const hasUserToggledOptionsRef = useRef(false);
+  const shouldAnimateOptionsRef = useRef(false);
   const prevWaveIdRef = useRef(wave.id);
   const [isWideContainer, setIsWideContainer] = useState(false);
+  const dispatch = useDispatch();
   const editingDropId = useSelector(selectEditingDropId);
-  const { requestAuth, setToast, connectedProfile } = useAuth();
+  const { requestAuth, setToast, connectedProfile, activeProfileProxy } =
+    useAuth();
   const { addOptimisticDrop } = useContext(ReactQueryWrapperContext);
   const { processIncomingDrop } = useMyStream();
+  const waveChatScroll = useWaveChatScrollOptional();
   const { signDrop } = useDropSignature();
 
   const [submitting, setSubmitting] = useState(false);
@@ -560,18 +565,21 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const [identityPickerErrorMessageState, setIdentityPickerErrorMessageState] =
     useState<ScopedValueState<string | null> | null>(null);
   const closeOnNextInputRef = useRef(false);
+  const shouldCollapseOptionsAfterMarkdownSyncRef = useRef(false);
   const prevIsDropModeRef = useRef(isDropMode);
   const [dropModeSessionEpoch, setDropModeSessionEpoch] = useState(0);
   const isWaveChanged = prevWaveIdRef.current !== wave.id;
   if (isWaveChanged) {
     prevWaveIdRef.current = wave.id;
-    hasUserToggledOptionsRef.current = false;
+    shouldAnimateOptionsRef.current = false;
     closeOnNextInputRef.current = false;
+    shouldCollapseOptionsAfterMarkdownSyncRef.current = false;
   }
   const dropModeSessionScopeKey = `${wave.id}:drop-mode:${dropModeSessionEpoch}`;
   const showOptions =
-    isWideContainer ||
-    (showOptionsState?.scopeKey === wave.id ? showOptionsState.value : false);
+    showOptionsState?.scopeKey === wave.id
+      ? showOptionsState.value
+      : isWideContainer;
 
   const setActionsContainerRef = useCallback((node: HTMLDivElement | null) => {
     actionsContainerRef.current = node;
@@ -712,6 +720,28 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         : null,
     [canMentionAll, editorState]
   );
+  const collapseOptions = useCallback(() => {
+    shouldAnimateOptionsRef.current = true;
+    setShowOptionsState((current) =>
+      current?.scopeKey === wave.id && current.value === false
+        ? current
+        : { scopeKey: wave.id, value: false }
+    );
+    closeOnNextInputRef.current = false;
+  }, [wave.id]);
+  useLayoutEffect(() => {
+    if (!shouldCollapseOptionsAfterMarkdownSyncRef.current) {
+      return;
+    }
+
+    shouldCollapseOptionsAfterMarkdownSyncRef.current = false;
+
+    if ((getMarkdown?.trim().length ?? 0) === 0) {
+      return;
+    }
+
+    collapseOptions();
+  }, [collapseOptions, getMarkdown]);
   const currentPartMentionedGroups = useMemo(
     () =>
       editorState
@@ -795,6 +825,39 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const canSubmit =
     getCanSubmit() && !isSlowModeSubmitBlocked && !isLinksSubmitBlocked;
   const canAddPart = getCanAddPart();
+  const latestEditableChatDropTarget = useLatestEditableChatDropTarget({
+    waveId: wave.id,
+    connectedProfile,
+    isProxyMode: Boolean(activeProfileProxy),
+  });
+  const canEditLastDropWithArrow =
+    !isDropMode &&
+    !isStormModeActive &&
+    !submitting &&
+    editingDropId === null &&
+    activeDrop === null &&
+    (getMarkdown?.trim().length ?? 0) === 0 &&
+    files.length === 0 &&
+    (drop?.parts.length ?? 0) === 0 &&
+    latestEditableChatDropTarget !== null;
+  const handleRequestEditLastDrop = useCallback((): boolean => {
+    if (!canEditLastDropWithArrow || !latestEditableChatDropTarget) {
+      return false;
+    }
+
+    dispatch(setEditingDropId(latestEditableChatDropTarget.id));
+    waveChatScroll?.requestScrollToSerialNo({
+      waveId: wave.id,
+      serialNo: latestEditableChatDropTarget.serialNo,
+    });
+    return true;
+  }, [
+    canEditLastDropWithArrow,
+    dispatch,
+    latestEditableChatDropTarget,
+    wave.id,
+    waveChatScroll,
+  ]);
   const normalizedCurationDropUrl = useMemo(() => {
     if (!isCurationSubmissionExperience || isDropMode) {
       return null;
@@ -1049,6 +1112,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 
   const updateDropStateAndClearInput = (newDrop: CreateDropConfig) => {
     setDrop(newDrop);
+    shouldCollapseOptionsAfterMarkdownSyncRef.current = false;
     createDropInputRef.current?.clearEditorState();
     setFiles([]);
   };
@@ -1108,7 +1172,9 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     setIdentityPickerOpenState(null);
     setIdentityPickerErrorMessageState(null);
     setShowOptionsState(null);
+    shouldAnimateOptionsRef.current = false;
     closeOnNextInputRef.current = false;
+    shouldCollapseOptionsAfterMarkdownSyncRef.current = false;
     setDropEditorRefreshKey((prev) => prev + 1);
   };
 
@@ -1291,7 +1357,10 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
           0
         );
       }
-      !!getMarkdown?.length && createDropInputRef.current?.clearEditorState();
+      if (getMarkdown?.length) {
+        shouldCollapseOptionsAfterMarkdownSyncRef.current = false;
+        createDropInputRef.current?.clearEditorState();
+      }
       if (shouldKeepChatFocused) {
         shouldRefocusAfterChatSubmitRef.current = true;
       } else if (document.activeElement instanceof HTMLElement) {
@@ -1500,6 +1569,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
     }
 
     if (!isWideContainer) {
+      shouldAnimateOptionsRef.current = true;
       setShowOptionsState({ scopeKey: wave.id, value: false });
       closeOnNextInputRef.current = false;
     }
@@ -1527,7 +1597,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 
   const handleSetShowOptions = useCallback(
     (next: boolean) => {
-      hasUserToggledOptionsRef.current = true;
+      shouldAnimateOptionsRef.current = true;
       setShowOptionsState({ scopeKey: wave.id, value: next });
       if (isWideContainer) {
         closeOnNextInputRef.current = false;
@@ -1541,12 +1611,17 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
   const handleEditorStateChange = useCallback(
     (newEditorState: EditorState) => {
       setEditorState(newEditorState);
-      if (!isWideContainer && closeOnNextInputRef.current) {
-        setShowOptionsState({ scopeKey: wave.id, value: false });
-        closeOnNextInputRef.current = false;
+      shouldCollapseOptionsAfterMarkdownSyncRef.current = true;
+
+      if (isWideContainer) {
+        return;
+      }
+
+      if (closeOnNextInputRef.current) {
+        collapseOptions();
       }
     },
-    [isWideContainer, wave.id]
+    [collapseOptions, isWideContainer]
   );
 
   const handleEditorBlur = useCallback(
@@ -1558,6 +1633,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       if (nextTarget && actionsContainerRef.current?.contains(nextTarget)) {
         return;
       }
+      shouldAnimateOptionsRef.current = true;
       setShowOptionsState({ scopeKey: wave.id, value: false });
       closeOnNextInputRef.current = false;
     },
@@ -1910,7 +1986,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
                   </p>
                 )}
               </div>
-              <div className="tw-col-start-1 tw-row-start-2 tw-self-center">
+              <div className="tw-col-start-1 tw-row-start-2 tw-mb-1 tw-self-end">
                 <CreateDropActions
                   isStormMode={isStormModeActive}
                   isDropMode={isDropMode}
@@ -1918,7 +1994,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
                   submitting={submitting}
                   showOptions={showOptions}
                   animateOptions={
-                    !isWideContainer && hasUserToggledOptionsRef.current
+                    shouldAnimateOptionsRef.current &&
+                    showOptionsState?.scopeKey === wave.id
                   }
                   isRequiredMetadataMissing={
                     !!missingRequirements.metadata.length
@@ -1949,6 +2026,8 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
                   onMentionedUser={onMentionedUser}
                   onMentionedWave={onMentionedWave}
                   onAttachmentFiles={handleFileChange}
+                  canEditLastDropWithArrow={canEditLastDropWithArrow}
+                  onRequestEditLastDrop={handleRequestEditLastDrop}
                   onDrop={onDrop}
                 />
                 {showCurationDropModeWarning && (

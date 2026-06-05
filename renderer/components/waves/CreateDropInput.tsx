@@ -60,6 +60,7 @@ import EmojiPlugin from "../drops/create/lexical/plugins/emoji/EmojiPlugin";
 import { EmojiNode } from "../drops/create/lexical/nodes/EmojiNode";
 import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
 import PlainTextPastePlugin from "@/components/drops/create/lexical/plugins/PlainTextPastePlugin";
+import EditLastDropArrowUpPlugin from "./EditLastDropArrowUpPlugin";
 
 export interface CreateDropInputHandles {
   clearEditorState: () => void;
@@ -111,6 +112,8 @@ const CreateDropInput = forwardRef<
     readonly onAttachmentFiles?: ((files: File[]) => void) | undefined;
     readonly hasValidationError?: boolean | undefined;
     readonly validationHelperText?: string | null | undefined;
+    readonly canEditLastDropWithArrow?: boolean | undefined;
+    readonly onRequestEditLastDrop?: (() => boolean) | undefined;
   }
 >(
   (
@@ -131,6 +134,8 @@ const CreateDropInput = forwardRef<
       onAttachmentFiles,
       hasValidationError = false,
       validationHelperText = null,
+      canEditLastDropWithArrow = false,
+      onRequestEditLastDrop,
       onDrop,
     },
     ref
@@ -221,19 +226,19 @@ const CreateDropInput = forwardRef<
     }));
 
     const mentionsPluginRef = useRef<NewMentionsPluginHandles | null>(null);
-    const isMentionsOpen = () => !!mentionsPluginRef.current?.isMentionsOpen();
-
     const hashtagPluginRef = useRef<NewHastagsPluginHandles | null>(null);
-    const isHashtagsOpen = () => !!hashtagPluginRef.current?.isHashtagsOpen();
-
     const waveMentionsPluginRef = useRef<NewWaveMentionsPluginHandles | null>(
       null
     );
-    const isWaveMentionsOpen = () =>
-      !!waveMentionsPluginRef.current?.isWaveMentionsOpen();
+    const canUseShortcutKeys = useCallback(
+      () =>
+        !mentionsPluginRef.current?.isMentionsOpen() &&
+        !hashtagPluginRef.current?.isHashtagsOpen() &&
+        !waveMentionsPluginRef.current?.isWaveMentionsOpen(),
+      []
+    );
 
-    const canSubmitWithEnter = () =>
-      !isMentionsOpen() && !isHashtagsOpen() && !isWaveMentionsOpen();
+    const canSubmitWithEnter = canUseShortcutKeys;
 
     const canSubmitRef = useRef(canSubmit);
     const onDropRef = useRef(onDrop);
@@ -333,6 +338,11 @@ const CreateDropInput = forwardRef<
                 handleSubmit={handleSubmit}
                 canSubmitWithEnter={canSubmitWithEnter}
                 disabled={submitting}
+              />
+              <EditLastDropArrowUpPlugin
+                canEditLastDropWithArrow={canEditLastDropWithArrow}
+                onRequestEditLastDrop={onRequestEditLastDrop}
+                canUseArrowUpShortcut={canUseShortcutKeys}
               />
               <EmojiPlugin />
             </div>

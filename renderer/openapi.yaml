@@ -5973,6 +5973,14 @@ paths:
             minimum: 1
             maximum: 2000
             default: 100
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for winner drops by whether an additional action was
+            promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -6415,6 +6423,61 @@ paths:
           description: Invalid request
         "404":
           description: Drop not found
+  /waves/{id}/subwaves:
+    get:
+      tags:
+        - Waves
+      summary: Get wave subwaves.
+      description: Returns direct subwaves of a wave.
+      operationId: listWaveSubwaves
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/waves-v2.handlers"
+          name: handleListWaveSubwaves
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Default is 1
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Number of subwaves to return
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: sort
+          in: query
+          description: Sort subwaves by name or creation time
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiSubwavesSort"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiWaveOverviewPage"
+        "400":
+          description: Invalid request
+        "404":
+          description: Wave not found
   /waves/{id}/drops:
     get:
       tags:
@@ -6729,6 +6792,14 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for participatory drops by whether an additional
+            action was promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -7051,6 +7122,27 @@ paths:
                 $ref: "#/components/schemas/ApiWaveSubscriptionActions"
         "404":
           description: Wave not found
+  /v2/official-waves:
+    get:
+      tags:
+        - WavesV2
+      summary: Get official waves
+      operationId: getOfficialWaves
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/waves-v2.handlers"
+          name: handleGetOfficialWaves
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiWaveOverview"
   /v2/waves:
     get:
       tags:
@@ -7328,6 +7420,14 @@ paths:
             minimum: 1
             maximum: 2000
             default: 100
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for winner drops by whether an additional action was
+            promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -7437,6 +7537,14 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for participatory drops by whether an additional
+            action was promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -9137,6 +9245,8 @@ components:
           $ref: "#/components/schemas/ApiReplyToDrop"
         drop_type:
           $ref: "#/components/schemas/ApiDropType"
+        is_additional_action_promised:
+          type: boolean
         mentioned_groups:
           type: array
           items:
@@ -9352,6 +9462,10 @@ components:
           type: string
           example: https://example.com/picture.jpg
           nullable: true
+        parent_wave_id:
+          description: Optional top-level parent wave id when creating a subwave.
+          type: string
+          nullable: true
         description_drop:
           $ref: "#/components/schemas/ApiCreateWaveDropRequest"
         voting:
@@ -9563,6 +9677,17 @@ components:
           format: int64
           minimum: 1
           nullable: true
+        winning_threshold_min_duration_ms:
+          description: >-
+            Milliseconds a drop must continuously stay at or above
+            winning_threshold before winning an APPROVE wave. Defaults to 0,
+            which declares a winner as soon as the threshold is reached. When
+            time_lock_ms is set, this duration is measured against the
+            time-scaled weighted vote.
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         max_winners:
           description: >-
             Total number of APPROVE decisions this wave may produce. Null means
@@ -9582,9 +9707,9 @@ components:
         time_lock_ms:
           nullable: true
           description: >-
-            Vote of a voter is considered eligible after this amount of time
-            after casting it. If not set then votes are eligible immediately
-            after casting.
+            When set, vote totals use a trailing time-scaled weighted average
+            over this duration, so new vote changes gradually gain or lose
+            influence. If not set, votes are counted immediately.
           type: integer
           format: int64
           minimum: 1
@@ -9761,6 +9886,7 @@ components:
         - is_signed
         - reactions
         - boosts
+        - is_additional_action_promised
         - hide_link_preview
       properties:
         id:
@@ -9861,6 +9987,9 @@ components:
         boosts:
           type: number
           format: int64
+        is_additional_action_promised:
+          type: boolean
+          nullable: true
         hide_link_preview:
           type: boolean
         nft_links:
@@ -10578,6 +10707,7 @@ components:
         - is_signed
         - reactions
         - boosts
+        - is_additional_action_promised
         - hide_link_preview
       properties:
         id:
@@ -10676,6 +10806,9 @@ components:
         boosts:
           type: number
           format: int64
+        is_additional_action_promised:
+          type: boolean
+          nullable: true
         hide_link_preview:
           type: boolean
         nft_links:
@@ -12965,6 +13098,16 @@ components:
           $ref: "#/components/schemas/ApiSubmissionDropVoting"
         has_metadata:
           type: boolean
+        is_additional_action_promised:
+          type: boolean
+        over_threshold_since_ms:
+          description: >-
+            Unix timestamp in milliseconds when this active APPROVE submission
+            most recently started continuously meeting the winning threshold.
+            Omitted unless the drop is currently over threshold and has not yet
+            won.
+          type: integer
+          format: int64
     ApiSubmissionDropStatus:
       type: string
       enum:
@@ -13018,6 +13161,11 @@ components:
         current:
           type: integer
           format: int64
+    ApiSubwavesSort:
+      type: string
+      enum:
+        - NAME
+        - CREATED_AT
     ApiTargetAndSubscriptionActions:
       type: object
       required:
@@ -13510,6 +13658,10 @@ components:
           type: boolean
         identity_wave:
           type: boolean
+        parent_wave:
+          $ref: "#/components/schemas/ApiWaveOverview"
+        has_subwaves:
+          type: boolean
     ApiWaveChatConfig:
       type: object
       required:
@@ -13539,6 +13691,7 @@ components:
         - type
         - time_lock_ms
         - winning_threshold
+        - winning_threshold_min_duration_ms
         - max_winners
         - max_votes_per_identity_to_drop
         - admin_group
@@ -13560,6 +13713,16 @@ components:
           format: int64
           minimum: 1
           nullable: true
+        winning_threshold_min_duration_ms:
+          description: >-
+            Milliseconds a drop must continuously stay at or above
+            winning_threshold before winning an APPROVE wave. Null for
+            non-APPROVE waves. When time_lock_ms is set, this duration is
+            measured against the time-scaled weighted vote.
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         max_winners:
           description: >-
             Total number of APPROVE decisions this wave may produce. Null means
@@ -13579,9 +13742,9 @@ components:
         time_lock_ms:
           nullable: true
           description: >-
-            Vote of a voter is considered eligible after this amount of time
-            after casting it. If not set then votes are eligible immediately
-            after casting.
+            When set, vote totals use a trailing time-scaled weighted average
+            over this duration, so new vote changes gradually gain or lose
+            influence. If not set, votes are counted immediately.
           type: integer
           format: int64
           minimum: 1
@@ -13636,11 +13799,9 @@ components:
           format: int64
           minimum: 0
     ApiWaveCreditScope:
-      description: |
-        The scope of the credit. 
-        * WAVE - Credit is spendable across all drops in wave.
       enum:
         - WAVE
+        - DROP
     ApiWaveCreditType:
       type: string
       description: |
@@ -13973,6 +14134,7 @@ components:
         - voting_period_start
         - voting_period_end
         - voting_credit_type
+        - voting_credit_scope
         - voting_credit_nfts
         - visibility_group_id
         - participation_group_id
@@ -14034,6 +14196,8 @@ components:
           nullable: true
         voting_credit_type:
           $ref: "#/components/schemas/ApiWaveCreditType"
+        voting_credit_scope:
+          $ref: "#/components/schemas/ApiWaveCreditScope"
         voting_credit_nfts:
           anyOf:
             - type: "null"
@@ -14184,6 +14348,10 @@ components:
             $ref: "#/components/schemas/ApiWaveOverviewContributor"
         context_profile_context:
           $ref: "#/components/schemas/ApiWaveOverviewContextProfileContext"
+        parent_wave:
+          $ref: "#/components/schemas/ApiWaveOverview"
+        has_subwaves:
+          type: boolean
     ApiWaveOverviewContextProfileContext:
       type: object
       required:
@@ -14453,6 +14621,7 @@ components:
       required:
         - scope
         - credit_type
+        - credit_scope
         - credit_category
         - credit_nfts
         - signature_required
@@ -14464,6 +14633,8 @@ components:
           $ref: "#/components/schemas/ApiWaveScope"
         credit_type:
           $ref: "#/components/schemas/ApiWaveCreditType"
+        credit_scope:
+          $ref: "#/components/schemas/ApiWaveCreditScope"
         credit_category:
           description: >-
             Only relevant when credit_type=REP. The REP category which is usable

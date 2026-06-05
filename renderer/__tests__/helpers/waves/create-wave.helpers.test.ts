@@ -11,6 +11,7 @@ import { ApiWaveParticipationIdentitySubmissionAllowDuplicates } from "@/generat
 import { ApiWaveParticipationIdentitySubmissionWhoCanBeSubmitted } from "@/generated/models/ApiWaveParticipationIdentitySubmissionWhoCanBeSubmitted";
 import { ApiWaveParticipationSubmissionStrategyType } from "@/generated/models/ApiWaveParticipationSubmissionStrategyType";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import { ApiWaveCreditScope } from "@/generated/models/ApiWaveCreditScope";
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import { ApiWaveMetadataType } from "@/generated/models/ApiWaveMetadataType";
 import { MEMES_CONTRACT } from "@/constants/constants";
@@ -50,6 +51,7 @@ const createBaseConfig = (waveType: ApiWaveType) =>
     chat: { enabled: true },
     voting: {
       type: null,
+      creditScope: ApiWaveCreditScope.Wave,
       category: null,
       profileId: null,
       allowNegativeVotes: true,
@@ -191,6 +193,7 @@ describe("create-wave.helpers", () => {
       expect(res.participation.required_metadata).toEqual([
         { name: "m", type: ApiWaveMetadataType.String },
       ]);
+      expect(res.voting.credit_scope).toBe(ApiWaveCreditScope.Wave);
       expect(res.voting.period.max).toBe(2 + 3 + 5);
       expect(res.voting.forbid_negative_votes).toBe(false);
       expect(res.wave.admin_drop_deletion_enabled).toBe(true);
@@ -221,6 +224,19 @@ describe("create-wave.helpers", () => {
       });
 
       expect(res.voting.forbid_negative_votes).toBe(true);
+    });
+
+    it("maps configured voting credit scope", () => {
+      const config = createBaseConfig(ApiWaveType.Rank);
+      config.voting.creditScope = ApiWaveCreditScope.Drop;
+
+      const res = getCreateNewWaveBody({
+        drop: createDrop(),
+        picture: null,
+        config,
+      });
+
+      expect(res.voting.credit_scope).toBe(ApiWaveCreditScope.Drop);
     });
 
     it("defaults omitted negative vote config to allowed", () => {
@@ -517,6 +533,67 @@ describe("create-wave.helpers", () => {
       });
 
       expect(res.wave.max_winners).toBe(3);
+    });
+
+    it("maps approve threshold hold time to the wave config", () => {
+      const config = createBaseConfig(ApiWaveType.Approve);
+      config.approval.thresholdTimeMs = 120_000;
+
+      const res = getCreateNewWaveBody({
+        drop: createDrop(),
+        picture: null,
+        config,
+      });
+
+      expect(res.wave.winning_threshold_min_duration_ms).toBe(120_000);
+    });
+
+    it("sends immediate approve threshold hold time when blank", () => {
+      const config = createBaseConfig(ApiWaveType.Approve);
+      config.approval.thresholdTimeMs = null;
+
+      const res = getCreateNewWaveBody({
+        drop: createDrop(),
+        picture: null,
+        config,
+      });
+
+      expect(res.wave.winning_threshold_min_duration_ms).toBe(0);
+    });
+
+    it("sends approve threshold hold time and time lock when both are set", () => {
+      const config = createBaseConfig(ApiWaveType.Approve);
+      config.dates.submissionStartDate = 1;
+      config.dates.votingStartDate = 1;
+      config.dates.endDate = 1 + 600_000;
+      config.approval.thresholdTimeMs = 120_000;
+      config.voting.timeWeighted = {
+        enabled: true,
+        averagingInterval: 5,
+        averagingIntervalUnit: "minutes",
+      };
+
+      const res = getCreateNewWaveBody({
+        drop: createDrop(),
+        picture: null,
+        config,
+      });
+
+      expect(res.wave.winning_threshold_min_duration_ms).toBe(120_000);
+      expect(res.wave.time_lock_ms).toBe(300_000);
+    });
+
+    it("sends null threshold hold time for non-approve waves", () => {
+      const config = createBaseConfig(ApiWaveType.Rank);
+      config.approval.thresholdTimeMs = 120_000;
+
+      const res = getCreateNewWaveBody({
+        drop: createDrop(),
+        picture: null,
+        config,
+      });
+
+      expect(res.wave.winning_threshold_min_duration_ms).toBeNull();
     });
 
     it("filters rank outcomes with missing or non-positive total amounts", () => {

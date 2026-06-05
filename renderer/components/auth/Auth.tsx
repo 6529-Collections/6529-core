@@ -33,6 +33,7 @@ import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
+import { getToastAutoClose } from "@/helpers/toast.helpers";
 import { useIdentity } from "@/hooks/useIdentity";
 import {
   ConnectionMismatchError,
@@ -57,6 +58,7 @@ import {
   logErrorSecurely,
   sanitizeErrorForUser,
 } from "@/utils/error-sanitizer";
+import { measureMobileLaunchAsync } from "@/utils/monitoring/mobileLaunchTiming";
 import { validateRoleForAuthentication } from "@/utils/role-validation";
 import DotLoader from "../dotLoader/DotLoader";
 import {
@@ -342,24 +344,28 @@ export default function Auth({
       setAuthLoadingState("validating");
 
       try {
-        const result = await validateAuthImmediate({
-          params: {
-            currentAddress,
-            connectionAddress: currentAddress,
-            jwt: getAuthJwt(),
-            activeProfileProxy,
-            isConnected,
-            operationId,
-            abortSignal: abortController.signal,
-          },
-          callbacks: {
-            onShowSignModal: setShowSignModal,
-            onInvalidateCache: invalidateAll,
-            onReset: reset,
-            onRemoveJwt: removeAuthJwt,
-            onLogError: logErrorSecurely,
-          },
-        });
+        const result = await measureMobileLaunchAsync(
+          "auth_immediate_validation",
+          () =>
+            validateAuthImmediate({
+              params: {
+                currentAddress,
+                connectionAddress: currentAddress,
+                jwt: getAuthJwt(),
+                activeProfileProxy,
+                isConnected,
+                operationId,
+                abortSignal: abortController.signal,
+              },
+              callbacks: {
+                onShowSignModal: setShowSignModal,
+                onInvalidateCache: invalidateAll,
+                onReset: reset,
+                onRemoveJwt: removeAuthJwt,
+                onLogError: logErrorSecurely,
+              },
+            })
+        );
 
         if (
           result.wasCancelled ||
@@ -380,7 +386,9 @@ export default function Auth({
       }
     };
 
-    validateImmediately();
+    void validateImmediately().catch((error) => {
+      logErrorSecurely("auth_immediate_validation_unhandled", error);
+    });
 
     // No cleanup needed - immediate execution prevents stale timeouts
   }, [
@@ -476,7 +484,7 @@ export default function Auth({
   }) => {
     toast(message, {
       position: "top-right",
-      autoClose: 3000,
+      autoClose: getToastAutoClose(type),
       hideProgressBar: false,
       draggable: false,
       closeOnClick: true,
