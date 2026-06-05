@@ -7,6 +7,7 @@ import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import type { ApiReplyToDropResponse } from "@/generated/models/ApiReplyToDropResponse";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getOptimisticDropId } from "@/helpers/waves/drop.helpers";
+import type { ApiWaveMinWithChatLinkSettings } from "@/helpers/waves/wave.helpers";
 import { getBannerColorValue } from "@/helpers/profile-banner.helpers";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import { ActiveDropAction } from "@/types/dropInteractionTypes";
@@ -55,6 +56,7 @@ export const getOptimisticDrop = (
       authenticated_user_eligible_to_chat:
         wave.chat.authenticated_user_eligible,
       voting_credit_type: wave.voting.credit_type,
+      voting_credit_scope: wave.voting.credit_scope,
       voting_period_start: wave.voting.period?.min ?? null,
       voting_period_end: wave.voting.period?.max ?? null,
       visibility_group_id: null,
@@ -68,7 +70,9 @@ export const getOptimisticDrop = (
       submission_type: wave.participation.submission_strategy?.type ?? null,
       identity_wave: wave.identity_wave,
       voting_credit_nfts: wave.voting.credit_nfts,
-    },
+      links_disabled: wave.chat.links_disabled,
+      wave_author_handle: wave.author.handle ?? null,
+    } as ApiWaveMinWithChatLinkSettings,
     author: {
       id: connectedProfile.id,
       handle: connectedProfile.handle,
@@ -131,6 +135,8 @@ export const getOptimisticDrop = (
     rating_prediction: 0,
     reactions: [],
     boosts: 0,
+    is_additional_action_promised:
+      dropRequest.is_additional_action_promised ?? false,
     hide_link_preview: false,
     mentioned_groups: dropRequest.mentioned_groups ?? [],
   };

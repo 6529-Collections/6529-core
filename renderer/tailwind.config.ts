@@ -202,6 +202,10 @@ const tailwindConfig: Config = {
     containerQueries,
     plugin(({ addVariant }) => {
       addVariant("desktop-hover", "@media (any-hover: hover)");
+      addVariant(
+        "touch-only",
+        "@media (any-hover: none) and (any-pointer: coarse)"
+      );
     }),
   ],
 };

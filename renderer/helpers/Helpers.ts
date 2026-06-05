@@ -211,28 +211,60 @@ export const fullScreenSupported = (): boolean => {
   return check;
 };
 
-export const enterArtFullScreen = async (elementId: string): Promise<void> => {
-  const element: any = document.getElementById(elementId);
+type FullscreenRequestElement = Omit<HTMLElement, "requestFullscreen"> & {
+  readonly requestFullscreen?: (() => Promise<void> | void) | undefined;
+  readonly mozRequestFullScreen?: (() => Promise<void> | void) | undefined;
+  readonly webkitRequestFullscreen?: (() => Promise<void> | void) | undefined;
+  readonly msRequestFullscreen?: (() => Promise<void> | void) | undefined;
+};
+
+export const enterArtFullScreen = async (
+  elementId: string
+): Promise<boolean> => {
+  if (typeof globalThis.document === "undefined") {
+    return false;
+  }
+
+  const element = globalThis.document.getElementById(
+    elementId
+  ) as FullscreenRequestElement | null;
 
   if (!element) {
     console.error(`Element with ID '${elementId}' not found.`);
-    return;
+    return false;
   }
 
-  const request =
-    element.requestFullscreen ||
-    element.mozRequestFullScreen ||
-    element.webkitRequestFullscreen ||
-    element.msRequestFullscreen;
-
-  if (request) {
-    try {
-      await request.call(element);
-    } catch (err) {
-      console.error(`Error attempting to enable fullscreen mode: ${err}`);
+  try {
+    if (element.requestFullscreen !== undefined) {
+      await element.requestFullscreen();
+      return true;
     }
-  } else {
+    if (element.mozRequestFullScreen !== undefined) {
+      await element.mozRequestFullScreen();
+      return true;
+    }
+    if (element.webkitRequestFullscreen !== undefined) {
+      await element.webkitRequestFullscreen();
+      return true;
+    }
+    if (element.msRequestFullscreen !== undefined) {
+      await element.msRequestFullscreen();
+      return true;
+    }
+
     console.warn("Fullscreen API is not supported by this browser.");
+    return false;
+  } catch (err) {
+    let errorMessage = "Unknown fullscreen error";
+    if (err instanceof Error) {
+      errorMessage = `${err.name}: ${err.message}`;
+    } else if (typeof err === "string") {
+      errorMessage = err;
+    }
+    console.error(
+      `Error attempting to enable fullscreen mode: ${errorMessage}`
+    );
+    return false;
   }
 };
 
@@ -349,14 +381,11 @@ export function printMintDate(date?: Date) {
     return "-";
   }
   const mintDate = new Date(date);
-  return `
-      ${mintDate.toLocaleString("default", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })}
-      (${getDateDisplay(mintDate)})
-    `;
+  return mintDate.toLocaleString("default", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 export function getRandomColor() {
@@ -866,17 +895,43 @@ export const removeBaseEndpoint = (link: string) => {
   return link.replaceAll(baseEndpoint, "");
 };
 
+const formatUserPageMetadataPath = (path: string): string | null => {
+  const words = path
+    .split(/[/_-]+/)
+    .map((word) => word.trim())
+    .filter(Boolean);
+
+  if (words.length === 0) {
+    return null;
+  }
+
+  return words
+    .map((word) => {
+      const normalized = word.toLowerCase();
+      return `${normalized.charAt(0).toUpperCase()}${normalized.slice(1)}`;
+    })
+    .join(" ");
+};
+
 export const getMetadataForUserPage = (
   profile: ApiIdentity,
   path?: string
 ): PageSSRMetadata => {
   const display = profile.handle ?? formatAddress(profile.display);
+  const pathTitle = path ? formatUserPageMetadataPath(path) : null;
+  const imageIdentity =
+    profile.normalised_handle ??
+    profile.handle ??
+    profile.primary_wallet ??
+    profile.display;
   return {
-    title: display + (path ? ` | ${path}` : ""),
-    ogImage: profile.pfp ?? "",
-    description: `Level ${
-      profile.level
-    } / TDH: ${profile.tdh.toLocaleString()} / Rep: ${profile.rep.toLocaleString()}`,
+    title: pathTitle ? `${display} - ${pathTitle}` : display,
+    ogImage: `${publicEnv.BASE_ENDPOINT}/api/og-metadata/profiles/${encodeURIComponent(
+      imageIdentity
+    )}`,
+    ogImageHeight: 630,
+    ogImageWidth: 1200,
+    description: "Identity",
     twitterCard: "summary_large_image",
   };
 };

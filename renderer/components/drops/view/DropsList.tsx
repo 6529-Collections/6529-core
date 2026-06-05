@@ -3,7 +3,6 @@
 import Drop, { DropLocation } from "@/components/waves/drops/Drop";
 import LightDrop from "@/components/waves/drops/LightDrop";
 import VirtualScrollWrapper from "@/components/waves/drops/VirtualScrollWrapper";
-import { TweetPreviewModeProvider } from "@/components/tweets/TweetPreviewModeContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type {
   Drop as DropType,
@@ -49,6 +48,7 @@ interface DropsListProps {
   readonly autoCollapseSerials?: ReadonlySet<number> | undefined;
   readonly suspendLightDropHydration?: boolean | undefined;
   readonly winningThreshold?: number | null | undefined;
+  readonly winningThresholdMinDurationMs?: number | null | undefined;
   readonly isVotingClosed?: boolean | undefined;
   readonly isVotingControlsLocked?: boolean | undefined;
 }
@@ -74,9 +74,9 @@ const DropsList = memo(
     unreadDividerSerialNo,
     boostedDrops,
     onBoostedDropClick,
-    autoCollapseSerials,
     suspendLightDropHydration = false,
     winningThreshold,
+    winningThresholdMinDurationMs,
     isVotingClosed = false,
     isVotingControlsLocked = false,
   }: DropsListProps) => {
@@ -114,6 +114,7 @@ const DropsList = memo(
         onDropContentClick,
         scrollContainerRef,
         winningThreshold,
+        winningThresholdMinDurationMs,
         isVotingClosed,
         isVotingControlsLocked,
       };
@@ -131,6 +132,7 @@ const DropsList = memo(
       onDropContentClick,
       scrollContainerRef,
       winningThreshold,
+      winningThresholdMinDurationMs,
       isVotingClosed,
       isVotingControlsLocked,
     ]);
@@ -250,22 +252,14 @@ const DropsList = memo(
               parentContainerRef={getItemData.parentContainerRef}
               onDropContentClick={getItemData.onDropContentClick}
               winningThreshold={getItemData.winningThreshold}
+              winningThresholdMinDurationMs={
+                getItemData.winningThresholdMinDurationMs
+              }
               isVotingClosed={getItemData.isVotingClosed}
               isVotingControlsLocked={getItemData.isVotingControlsLocked}
             />
           ) : (
             <MemoizedLightDrop drop={drop} />
-          );
-
-        const dropContentWithPreviewMode =
-          drop.type === DropSize.FULL && autoCollapseSerials ? (
-            <TweetPreviewModeProvider
-              mode={autoCollapseSerials.has(drop.serial_no) ? "auto" : "never"}
-            >
-              {dropContent}
-            </TweetPreviewModeProvider>
-          ) : (
-            dropContent
           );
 
         const dropElement = (
@@ -293,7 +287,7 @@ const DropsList = memo(
               type={drop.type}
               suspendLightDropHydration={suspendLightDropHydration}
             >
-              {dropContentWithPreviewMode}
+              {dropContent}
             </VirtualScrollWrapper>
           </HighlightDropWrapper>
         );
@@ -306,7 +300,6 @@ const DropsList = memo(
       location,
       renderBoostCard,
       renderUnreadDivider,
-      autoCollapseSerials,
       suspendLightDropHydration,
     ]);
   }

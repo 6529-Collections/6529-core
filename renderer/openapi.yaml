@@ -687,8 +687,8 @@ paths:
         - Distributions
       summary: Get distributions
       description: >-
-        At least one filter parameter (search, card_id, contract, or wallet) is
-        required
+        At least one filter parameter (search, card_id, contract, wallet, phase,
+        or minted) is required
       operationId: getDistributions
       parameters:
         - name: page_size
@@ -732,6 +732,20 @@ paths:
           required: false
           schema:
             type: string
+        - name: phase
+          in: query
+          description: Filter by distribution phase(s), comma-separated for multiple
+          required: false
+          schema:
+            type: string
+        - name: minted
+          in: query
+          description: >-
+            Filter by mint status. true returns wallets with minted count
+            greater than 0; false returns wallets with minted count equal to 0
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -3740,6 +3754,101 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiNotificationsResponseV2"
+  /og-metadata/profiles/{identity}:
+    get:
+      tags:
+        - OG Metadata
+      summary: Get OG metadata for a profile
+      operationId: getOgMetadataProfile
+      security: []
+      x-6529-router:
+        enabled: true
+        auth: none
+        cache:
+          ttlSeconds: 300
+        handler:
+          import: "@/api/og-metadata/og-metadata.handlers"
+          name: handleGetOgMetadataProfile
+      parameters:
+        - name: identity
+          in: path
+          required: true
+          description: Profile id, handle, wallet address, or ENS name
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiOgMetadata"
+        "404":
+          description: Profile not found
+  /og-metadata/waves/{id}:
+    get:
+      tags:
+        - OG Metadata
+      summary: Get OG metadata for a wave
+      operationId: getOgMetadataWave
+      security: []
+      x-6529-router:
+        enabled: true
+        auth: none
+        cache:
+          ttlSeconds: 300
+        handler:
+          import: "@/api/og-metadata/og-metadata.handlers"
+          name: handleGetOgMetadataWave
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Wave id
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiOgMetadata"
+        "404":
+          description: Wave not found
+  /og-metadata/drops/{drop}:
+    get:
+      tags:
+        - OG Metadata
+      summary: Get OG metadata for a drop by id or serial number
+      operationId: getOgMetadataDrop
+      security: []
+      x-6529-router:
+        enabled: true
+        auth: none
+        cache:
+          ttlSeconds: 300
+        handler:
+          import: "@/api/og-metadata/og-metadata.handlers"
+          name: handleGetOgMetadataDrop
+      parameters:
+        - name: drop
+          in: path
+          required: true
+          description: Drop UUID or numeric drop serial number
+          schema:
+            type: string
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiOgMetadata"
+        "400":
+          description: Invalid drop identifier
+        "404":
+          description: Drop not found
   /blocks:
     get:
       tags:
@@ -5959,6 +6068,14 @@ paths:
             minimum: 1
             maximum: 2000
             default: 100
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for winner drops by whether an additional action was
+            promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -6401,6 +6518,61 @@ paths:
           description: Invalid request
         "404":
           description: Drop not found
+  /waves/{id}/subwaves:
+    get:
+      tags:
+        - Waves
+      summary: Get wave subwaves.
+      description: Returns direct subwaves of a wave.
+      operationId: listWaveSubwaves
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/waves-v2.handlers"
+          name: handleListWaveSubwaves
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: page
+          in: query
+          description: Default is 1
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          description: Number of subwaves to return
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: sort
+          in: query
+          description: Sort subwaves by name or creation time
+          required: false
+          schema:
+            $ref: "#/components/schemas/ApiSubwavesSort"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiWaveOverviewPage"
+        "400":
+          description: Invalid request
+        "404":
+          description: Wave not found
   /waves/{id}/drops:
     get:
       tags:
@@ -6715,6 +6887,14 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for participatory drops by whether an additional
+            action was promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -7037,6 +7217,27 @@ paths:
                 $ref: "#/components/schemas/ApiWaveSubscriptionActions"
         "404":
           description: Wave not found
+  /v2/official-waves:
+    get:
+      tags:
+        - WavesV2
+      summary: Get official waves
+      operationId: getOfficialWaves
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/waves-v2.handlers"
+          name: handleGetOfficialWaves
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiWaveOverview"
   /v2/waves:
     get:
       tags:
@@ -7314,6 +7515,14 @@ paths:
             minimum: 1
             maximum: 2000
             default: 100
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for winner drops by whether an additional action was
+            promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -7423,6 +7632,14 @@ paths:
           schema:
             type: boolean
             default: false
+        - name: is_additional_action_promised
+          in: query
+          description: >-
+            Optional filter for participatory drops by whether an additional
+            action was promised
+          required: false
+          schema:
+            type: boolean
       responses:
         "200":
           description: successful operation
@@ -9123,6 +9340,8 @@ components:
           $ref: "#/components/schemas/ApiReplyToDrop"
         drop_type:
           $ref: "#/components/schemas/ApiDropType"
+        is_additional_action_promised:
+          type: boolean
         mentioned_groups:
           type: array
           items:
@@ -9338,6 +9557,10 @@ components:
           type: string
           example: https://example.com/picture.jpg
           nullable: true
+        parent_wave_id:
+          description: Optional top-level parent wave id when creating a subwave.
+          type: string
+          nullable: true
         description_drop:
           $ref: "#/components/schemas/ApiCreateWaveDropRequest"
         voting:
@@ -9375,6 +9598,12 @@ components:
         scope:
           $ref: "#/components/schemas/ApiCreateNewWaveScope"
         enabled:
+          type: boolean
+        slow_mode_cooldown_ms:
+          type: integer
+          format: int64
+          minimum: 1000
+        links_disabled:
           type: boolean
     ApiCreateNewWaveParticipationConfig:
       type: object
@@ -9543,6 +9772,17 @@ components:
           format: int64
           minimum: 1
           nullable: true
+        winning_threshold_min_duration_ms:
+          description: >-
+            Milliseconds a drop must continuously stay at or above
+            winning_threshold before winning an APPROVE wave. Defaults to 0,
+            which declares a winner as soon as the threshold is reached. When
+            time_lock_ms is set, this duration is measured against the
+            time-scaled weighted vote.
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         max_winners:
           description: >-
             Total number of APPROVE decisions this wave may produce. Null means
@@ -9562,9 +9802,9 @@ components:
         time_lock_ms:
           nullable: true
           description: >-
-            Vote of a voter is considered eligible after this amount of time
-            after casting it. If not set then votes are eligible immediately
-            after casting.
+            When set, vote totals use a trailing time-scaled weighted average
+            over this duration, so new vote changes gradually gain or lose
+            influence. If not set, votes are counted immediately.
           type: integer
           format: int64
           minimum: 1
@@ -9741,6 +9981,7 @@ components:
         - is_signed
         - reactions
         - boosts
+        - is_additional_action_promised
         - hide_link_preview
       properties:
         id:
@@ -9841,6 +10082,9 @@ components:
         boosts:
           type: number
           format: int64
+        is_additional_action_promised:
+          type: boolean
+          nullable: true
         hide_link_preview:
           type: boolean
         nft_links:
@@ -10023,25 +10267,32 @@ components:
       required:
         - data_key
         - data_value
+      description: >-
+        Drop metadata. data_value maximum length is 255 when data_key is title,
+        8000 when data_key is description, and 5000 for all other metadata keys.
       properties:
         data_key:
           type: string
           maxLength: 500
         data_value:
           type: string
-          maxLength: 5000
+          maxLength: 8000
     ApiDropMetadataResponse:
       type: object
       required:
         - data_key
         - data_value
+      description: >-
+        Drop metadata response. data_value maximum length is 255 when data_key
+        is title, 8000 when data_key is description, and 5000 for all other
+        metadata keys.
       properties:
         data_key:
           type: string
           maxLength: 500
         data_value:
           type: string
-          maxLength: 5000
+          maxLength: 8000
         resolved_profile:
           anyOf:
             - type: "null"
@@ -10051,13 +10302,17 @@ components:
       required:
         - data_key
         - data_value
+      description: >-
+        Drop metadata V2 response. data_value maximum length is 255 when
+        data_key is title, 8000 when data_key is description, and 5000 for all
+        other metadata keys.
       properties:
         data_key:
           type: string
           maxLength: 500
         data_value:
           type: string
-          maxLength: 5000
+          maxLength: 8000
         resolved_profile:
           $ref: "#/components/schemas/ApiDropResolvedIdentityProfileV2"
     ApiDropNftLink:
@@ -10547,6 +10802,7 @@ components:
         - is_signed
         - reactions
         - boosts
+        - is_additional_action_promised
         - hide_link_preview
       properties:
         id:
@@ -10645,6 +10901,9 @@ components:
         boosts:
           type: number
           format: int64
+        is_additional_action_promised:
+          type: boolean
+          nullable: true
         hide_link_preview:
           type: boolean
         nft_links:
@@ -11069,6 +11328,11 @@ components:
           format: int64
         profile_wave_id:
           type: string
+        profile_wave_name:
+          type: string
+        profile_wave_pfp:
+          type: string
+          nullable: true
     ApiIdentityOverviewContextProfileContext:
       type: object
       required:
@@ -11886,12 +12150,21 @@ components:
         amount:
           type: number
           format: double
+        rater_rating:
+          type: number
+          format: double
         total:
           type: number
           format: double
         category:
           type: string
         vote:
+          type: number
+          format: double
+        vote_change:
+          type: number
+          format: double
+        total_vote:
           type: number
           format: double
         reaction:
@@ -12008,6 +12281,193 @@ components:
           $ref: "#/components/schemas/ApiWaveOverview"
         additional_context:
           $ref: "#/components/schemas/ApiNotificationAdditionalContextV2"
+    ApiOgMediaAsset:
+      type: object
+      required:
+        - url
+      properties:
+        url:
+          type: string
+          maxLength: 2000
+        mime_type:
+          type: string
+          maxLength: 100
+          nullable: true
+        width:
+          type: integer
+          format: int64
+          nullable: true
+        height:
+          type: integer
+          format: int64
+          nullable: true
+    ApiOgMetadata:
+      type: object
+      required:
+        - entity_type
+        - entity_id
+      properties:
+        entity_type:
+          $ref: "#/components/schemas/ApiOgMetadataEntityType"
+        entity_id:
+          type: string
+        author:
+          $ref: "#/components/schemas/ApiOgMetadataProfile"
+        profile:
+          $ref: "#/components/schemas/ApiOgMetadataProfile"
+        wave:
+          $ref: "#/components/schemas/ApiOgMetadataWave"
+        drop:
+          $ref: "#/components/schemas/ApiOgMetadataDrop"
+    ApiOgMetadataDrop:
+      type: object
+      required:
+        - id
+        - serial_no
+        - drop_type
+      properties:
+        id:
+          type: string
+        serial_no:
+          type: integer
+          format: int64
+        drop_type:
+          $ref: "#/components/schemas/ApiDropMainType"
+        submission_status:
+          $ref: "#/components/schemas/ApiSubmissionDropStatus"
+        submitted_at:
+          type: integer
+          format: int64
+          nullable: true
+        won_at:
+          type: integer
+          format: int64
+          nullable: true
+        is_additional_action_promised:
+          type: boolean
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        content:
+          type: string
+          nullable: true
+        votes:
+          $ref: "#/components/schemas/ApiSubmissionDropVoting"
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiOgMediaAsset"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiAttachment"
+    ApiOgMetadataEntityType:
+      type: string
+      enum:
+        - PROFILE
+        - WAVE
+        - DROP
+    ApiOgMetadataProfile:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        handle:
+          type: string
+          nullable: true
+        primary_address:
+          type: string
+          nullable: true
+        profile_enabled_at:
+          type: integer
+          format: int64
+          nullable: true
+        classification:
+          $ref: "#/components/schemas/ApiProfileClassification"
+        sub_classification:
+          type: string
+          nullable: true
+        followers_count:
+          type: integer
+          format: int64
+        has_active_submissions:
+          type: boolean
+        has_winning_submissions:
+          type: boolean
+        cic:
+          type: integer
+          format: int64
+          nullable: true
+        rep:
+          type: integer
+          format: int64
+          nullable: true
+        level:
+          type: integer
+          format: int64
+          nullable: true
+        tdh:
+          type: number
+          format: double
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        twitter_handle:
+          type: string
+          nullable: true
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiOgMediaAsset"
+        banner:
+          $ref: "#/components/schemas/ApiOgMetadataProfileBanner"
+    ApiOgMetadataProfileBanner:
+      type: object
+      required:
+        - primary
+        - secondary
+        - media
+      properties:
+        primary:
+          type: string
+          nullable: true
+        secondary:
+          type: string
+          nullable: true
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiOgMediaAsset"
+    ApiOgMetadataWave:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        subscribers_count:
+          type: integer
+          format: int64
+        drops_count:
+          type: integer
+          format: int64
+        media:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiOgMediaAsset"
     ApiOutgoingIdentitySubscriptionsPage:
       type: object
       required:
@@ -12920,6 +13380,22 @@ components:
           $ref: "#/components/schemas/ApiSubmissionDropVoting"
         has_metadata:
           type: boolean
+        is_additional_action_promised:
+          type: boolean
+        over_threshold_since_ms:
+          description: >-
+            Unix timestamp in milliseconds when this active APPROVE submission
+            most recently started continuously meeting the winning threshold.
+            Omitted unless the drop is currently over threshold and has not yet
+            won.
+          type: integer
+          format: int64
+        won_at:
+          description: >-
+            Unix timestamp in milliseconds when this submission won. Omitted
+            unless the submission has won.
+          type: integer
+          format: int64
     ApiSubmissionDropStatus:
       type: string
       enum:
@@ -12973,6 +13449,11 @@ components:
         current:
           type: integer
           format: int64
+    ApiSubwavesSort:
+      type: string
+      enum:
+        - NAME
+        - CREATED_AT
     ApiTargetAndSubscriptionActions:
       type: object
       required:
@@ -13465,25 +13946,40 @@ components:
           type: boolean
         identity_wave:
           type: boolean
+        parent_wave:
+          $ref: "#/components/schemas/ApiWaveOverview"
+        has_subwaves:
+          type: boolean
     ApiWaveChatConfig:
       type: object
       required:
         - scope
         - enabled
+        - links_disabled
         - authenticated_user_eligible
       properties:
         scope:
           $ref: "#/components/schemas/ApiWaveScope"
         enabled:
           type: boolean
+        links_disabled:
+          type: boolean
         authenticated_user_eligible:
           type: boolean
+        next_drop_allowed:
+          type: integer
+          format: int64
+        slow_mode_cooldown_ms:
+          type: integer
+          format: int64
+          minimum: 1000
     ApiWaveConfig:
       type: object
       required:
         - type
         - time_lock_ms
         - winning_threshold
+        - winning_threshold_min_duration_ms
         - max_winners
         - max_votes_per_identity_to_drop
         - admin_group
@@ -13505,6 +14001,16 @@ components:
           format: int64
           minimum: 1
           nullable: true
+        winning_threshold_min_duration_ms:
+          description: >-
+            Milliseconds a drop must continuously stay at or above
+            winning_threshold before winning an APPROVE wave. Null for
+            non-APPROVE waves. When time_lock_ms is set, this duration is
+            measured against the time-scaled weighted vote.
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
         max_winners:
           description: >-
             Total number of APPROVE decisions this wave may produce. Null means
@@ -13524,9 +14030,9 @@ components:
         time_lock_ms:
           nullable: true
           description: >-
-            Vote of a voter is considered eligible after this amount of time
-            after casting it. If not set then votes are eligible immediately
-            after casting.
+            When set, vote totals use a trailing time-scaled weighted average
+            over this duration, so new vote changes gradually gain or lose
+            influence. If not set, votes are counted immediately.
           type: integer
           format: int64
           minimum: 1
@@ -13581,11 +14087,9 @@ components:
           format: int64
           minimum: 0
     ApiWaveCreditScope:
-      description: |
-        The scope of the credit. 
-        * WAVE - Credit is spendable across all drops in wave.
       enum:
         - WAVE
+        - DROP
     ApiWaveCreditType:
       type: string
       description: |
@@ -13918,6 +14422,7 @@ components:
         - voting_period_start
         - voting_period_end
         - voting_credit_type
+        - voting_credit_scope
         - voting_credit_nfts
         - visibility_group_id
         - participation_group_id
@@ -13979,6 +14484,8 @@ components:
           nullable: true
         voting_credit_type:
           $ref: "#/components/schemas/ApiWaveCreditType"
+        voting_credit_scope:
+          $ref: "#/components/schemas/ApiWaveCreditScope"
         voting_credit_nfts:
           anyOf:
             - type: "null"
@@ -14090,6 +14597,7 @@ components:
         - subscribers_count
         - has_competition
         - is_dm_wave
+        - links_disabled
         - description_drop
         - total_drops_count
         - is_private
@@ -14113,6 +14621,8 @@ components:
           type: boolean
         is_dm_wave:
           type: boolean
+        links_disabled:
+          type: boolean
         description_drop:
           $ref: "#/components/schemas/ApiWaveOverviewDescriptionDrop"
         total_drops_count:
@@ -14126,6 +14636,10 @@ components:
             $ref: "#/components/schemas/ApiWaveOverviewContributor"
         context_profile_context:
           $ref: "#/components/schemas/ApiWaveOverviewContextProfileContext"
+        parent_wave:
+          $ref: "#/components/schemas/ApiWaveOverview"
+        has_subwaves:
+          type: boolean
     ApiWaveOverviewContextProfileContext:
       type: object
       required:
@@ -14141,6 +14655,9 @@ components:
           type: boolean
         can_chat:
           type: boolean
+        next_drop_allowed:
+          type: integer
+          format: int64
         unread_drops:
           type: integer
           format: int64
@@ -14392,6 +14909,7 @@ components:
       required:
         - scope
         - credit_type
+        - credit_scope
         - credit_category
         - credit_nfts
         - signature_required
@@ -14403,6 +14921,8 @@ components:
           $ref: "#/components/schemas/ApiWaveScope"
         credit_type:
           $ref: "#/components/schemas/ApiWaveCreditType"
+        credit_scope:
+          $ref: "#/components/schemas/ApiWaveCreditScope"
         credit_category:
           description: >-
             Only relevant when credit_type=REP. The REP category which is usable

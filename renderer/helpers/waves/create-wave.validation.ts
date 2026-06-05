@@ -1,6 +1,7 @@
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import { ApiWaveParticipationSubmissionStrategyType } from "@/generated/models/ApiWaveParticipationSubmissionStrategyType";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import { MEMES_CONTRACT } from "@/constants/constants";
 import { isReservedIdentitySubmissionMetadataKey } from "./identity-submission-metadata";
 import { assertUnreachable } from "../AllowlistToolHelpers";
 import type {
@@ -28,6 +29,8 @@ export enum CREATE_WAVE_VALIDATION_ERROR {
   DROPS_REQUIRED_METADATA_NON_UNIQUE = "DROPS_REQUIRED_METADATA_NON_UNIQUE",
   DROPS_REQUIRED_METADATA_RESERVED_IDENTITY_KEY = "DROPS_REQUIRED_METADATA_RESERVED_IDENTITY_KEY",
   APPROVAL_THRESHOLD_REQUIRED = "APPROVAL_THRESHOLD_REQUIRED",
+  APPROVAL_THRESHOLD_TIME_INVALID = "APPROVAL_THRESHOLD_TIME_INVALID",
+  APPROVAL_THRESHOLD_TIME_EXCEEDS_WAVE_DURATION = "APPROVAL_THRESHOLD_TIME_EXCEEDS_WAVE_DURATION",
   OUTCOMES_REQUIRED = "OUTCOMES_REQUIRED",
   CHAT_WAVE_CANNOT_HAVE_APPLICATIONS_PER_PARTICIPANT = "CHAT_WAVE_CANNOT_HAVE_APPLICATIONS_PER_PARTICIPANT",
   CHAT_WAVE_CANNOT_HAVE_REQUIRED_TYPES = "CHAT_WAVE_CANNOT_HAVE_REQUIRED_TYPES",
@@ -44,6 +47,10 @@ export enum CREATE_WAVE_VALIDATION_ERROR {
   TIME_WEIGHTED_VOTING_INTERVAL_TOO_LARGE = "TIME_WEIGHTED_VOTING_INTERVAL_TOO_LARGE",
   TIME_WEIGHTED_VOTING_INTERVAL_EXCEEDS_WAVE_DURATION = "TIME_WEIGHTED_VOTING_INTERVAL_EXCEEDS_WAVE_DURATION",
   MAX_VOTES_PER_IDENTITY_PER_DROP_INVALID = "MAX_VOTES_PER_IDENTITY_PER_DROP_INVALID",
+  CARD_SET_TDH_VOTING_NFTS_REQUIRED = "CARD_SET_TDH_VOTING_NFTS_REQUIRED",
+  CARD_SET_TDH_VOTING_NFTS_CONTRACT_INVALID = "CARD_SET_TDH_VOTING_NFTS_CONTRACT_INVALID",
+  CARD_SET_TDH_VOTING_MEME_COUNT_UNAVAILABLE = "CARD_SET_TDH_VOTING_MEME_COUNT_UNAVAILABLE",
+  CARD_SET_TDH_VOTING_FULL_SET_NOT_ALLOWED = "CARD_SET_TDH_VOTING_FULL_SET_NOT_ALLOWED",
   RANK_DECISION_TIME_MUST_BE_IN_FUTURE = "RANK_DECISION_TIME_MUST_BE_IN_FUTURE",
   RANK_FIRST_DECISION_TIME_MUST_BE_AFTER_OR_EQUAL_TO_VOTING_START_DATE = "RANK_FIRST_DECISION_TIME_MUST_BE_AFTER_OR_EQUAL_TO_VOTING_START_DATE",
 }
@@ -192,6 +199,14 @@ const hasReservedIdentitySubmissionMetadataKey = ({
     isReservedIdentitySubmissionMetadataKey(item.key)
   );
 
+const getUniqueCreditNftIdsCount = (voting: CreateWaveVotingConfig): number => {
+  const uniqueIds = new Set<number>();
+  for (const nft of voting.creditNfts) {
+    uniqueIds.add(nft.token_id);
+  }
+  return uniqueIds.size;
+};
+
 const getDropsValidationErrors = ({
   waveType,
   drops,
@@ -294,6 +309,24 @@ const getVotingValidationErrors = ({
     errors.push(CREATE_WAVE_VALIDATION_ERROR.APPROVAL_THRESHOLD_REQUIRED);
   }
 
+  if (waveType === ApiWaveType.Approve && approval.thresholdTimeMs !== null) {
+    if (
+      !Number.isInteger(approval.thresholdTimeMs) ||
+      approval.thresholdTimeMs <= 0 ||
+      approval.thresholdTimeMs % MINUTE_IN_MS !== 0
+    ) {
+      errors.push(CREATE_WAVE_VALIDATION_ERROR.APPROVAL_THRESHOLD_TIME_INVALID);
+    } else if (dates.endDate !== null) {
+      const waveDurationMs = dates.endDate - dates.submissionStartDate;
+
+      if (waveDurationMs >= 0 && approval.thresholdTimeMs > waveDurationMs) {
+        errors.push(
+          CREATE_WAVE_VALIDATION_ERROR.APPROVAL_THRESHOLD_TIME_EXCEEDS_WAVE_DURATION
+        );
+      }
+    }
+  }
+
   // For Rank and Approve waves
   if (voting.type === null) {
     errors.push(CREATE_WAVE_VALIDATION_ERROR.VOTING_TYPE_REQUIRED);
@@ -320,6 +353,41 @@ const getVotingValidationErrors = ({
     if (voting.profileId !== null) {
       errors.push(
         CREATE_WAVE_VALIDATION_ERROR.TDH_VOTING_CANNOT_HAVE_PROFILE_ID
+      );
+    }
+  }
+
+  if (voting.type === ApiWaveCreditType.CardSetTdh) {
+    const { creditNfts } = voting;
+    if (!creditNfts.length) {
+      errors.push(
+        CREATE_WAVE_VALIDATION_ERROR.CARD_SET_TDH_VOTING_NFTS_REQUIRED
+      );
+    }
+
+    if (
+      creditNfts.some(
+        (nft) => nft.contract.toLowerCase() !== MEMES_CONTRACT.toLowerCase()
+      )
+    ) {
+      errors.push(
+        CREATE_WAVE_VALIDATION_ERROR.CARD_SET_TDH_VOTING_NFTS_CONTRACT_INVALID
+      );
+    }
+
+    if (
+      voting.creditNftMemeCount === null ||
+      !Number.isInteger(voting.creditNftMemeCount) ||
+      voting.creditNftMemeCount <= 0
+    ) {
+      errors.push(
+        CREATE_WAVE_VALIDATION_ERROR.CARD_SET_TDH_VOTING_MEME_COUNT_UNAVAILABLE
+      );
+    } else if (
+      getUniqueCreditNftIdsCount(voting) >= voting.creditNftMemeCount
+    ) {
+      errors.push(
+        CREATE_WAVE_VALIDATION_ERROR.CARD_SET_TDH_VOTING_FULL_SET_NOT_ALLOWED
       );
     }
   }

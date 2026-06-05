@@ -1,5 +1,6 @@
 import type { ApiCreateNewWave } from "@/generated/models/ApiCreateNewWave";
 import type { ApiCreateWaveDropRequest } from "@/generated/models/ApiCreateWaveDropRequest";
+import { MEMES_CONTRACT } from "@/constants/constants";
 import { ApiWaveCreditScope } from "@/generated/models/ApiWaveCreditScope";
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
 import { ApiWaveOutcomeCredit } from "@/generated/models/ApiWaveOutcomeCredit";
@@ -404,7 +405,7 @@ export const getCreateNewWaveBody = ({
         group_id: config.groups.canVote,
       },
       credit_type: config.voting.type ?? ApiWaveCreditType.TdhPlusXtdh,
-      credit_scope: ApiWaveCreditScope.Wave,
+      credit_scope: config.voting.creditScope ?? ApiWaveCreditScope.Wave,
       credit_category: config.voting.category,
       creditor_id: config.voting.profileId,
       signature_required: false,
@@ -412,7 +413,15 @@ export const getCreateNewWaveBody = ({
         min: config.dates.votingStartDate,
         max: endDate,
       },
-      forbid_negative_votes: false,
+      forbid_negative_votes: config.voting.allowNegativeVotes === false,
+      ...(config.voting.type === ApiWaveCreditType.CardSetTdh
+        ? {
+            credit_nfts: config.voting.creditNfts.map((nft) => ({
+              contract: MEMES_CONTRACT,
+              token_id: nft.token_id,
+            })),
+          }
+        : {}),
     },
     visibility: {
       scope: {
@@ -449,6 +458,7 @@ export const getCreateNewWaveBody = ({
         group_id: config.groups.canChat,
       },
       enabled: config.chat.enabled,
+      links_disabled: false,
     },
     wave: {
       admin_drop_deletion_enabled: config.drops.adminCanDeleteDrops,
@@ -456,6 +466,10 @@ export const getCreateNewWaveBody = ({
       winning_threshold:
         config.overview.type === ApiWaveType.Approve
           ? config.approval.threshold
+          : null,
+      winning_threshold_min_duration_ms:
+        config.overview.type === ApiWaveType.Approve
+          ? (config.approval.thresholdTimeMs ?? 0)
           : null,
       // TODO - should be in outcomes
       max_winners: getApproveMaxWinners({ config }),

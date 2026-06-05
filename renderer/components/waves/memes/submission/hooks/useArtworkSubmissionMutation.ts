@@ -15,7 +15,6 @@ import type { TraitsData } from "../types/TraitsData";
 import type { SubmissionPhase } from "../ui/SubmissionProgress";
 import {
   buildSubmissionMetadata,
-  METADATA_VALUE_MAX_LENGTH,
   getSubmissionMetadataLengthValidation,
 } from "../utils/submissionMetadata";
 
@@ -38,6 +37,7 @@ interface ArtworkSubmissionData {
     | undefined;
   traits: TraitsData;
   operationalData?: OperationalData;
+  isAdditionalActionPromised: boolean;
   waveId: string;
   termsOfService: string | null;
 }
@@ -49,6 +49,7 @@ const transformToApiRequest = (data: {
   waveId: string;
   traits: TraitsData;
   operationalData?: OperationalData | undefined;
+  isAdditionalActionPromised?: boolean | undefined;
   mediaUrl: string;
   mimeType: string;
   signerAddress: string;
@@ -58,6 +59,7 @@ const transformToApiRequest = (data: {
     waveId,
     traits,
     operationalData,
+    isAdditionalActionPromised = false,
     mediaUrl,
     mimeType,
     signerAddress,
@@ -73,6 +75,7 @@ const transformToApiRequest = (data: {
   const request: ApiCreateDropRequest = {
     wave_id: waveId,
     drop_type: ApiDropType.Participatory,
+    is_additional_action_promised: isAdditionalActionPromised,
     title: traits.title,
     parts: [
       {
@@ -280,11 +283,11 @@ export function useArtworkSubmissionMutation() {
       });
       if (metadataLengthValidation.hasErrors) {
         const fields = metadataLengthValidation.errors
-          .map((item) => `${item.dataKey} (${item.length})`)
+          .map((item) => `${item.dataKey} (${item.length}/${item.maxLength})`)
           .join(", ");
 
         setToast({
-          message: `Metadata exceeds ${METADATA_VALUE_MAX_LENGTH} characters for: ${fields}`,
+          message: `Metadata exceeds character limits for: ${fields}`,
           type: "error",
         });
         return null;
@@ -320,6 +323,7 @@ export function useArtworkSubmissionMutation() {
         waveId: data.waveId,
         traits: data.traits,
         operationalData: data.operationalData,
+        isAdditionalActionPromised: data.isAdditionalActionPromised,
         mediaUrl: media.url,
         mimeType: media.mime_type,
         signerAddress,

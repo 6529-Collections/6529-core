@@ -6,6 +6,7 @@ import {
 import { Suspense, cache } from "react";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { getAppMetadata } from "@/components/providers/metadata";
@@ -14,12 +15,19 @@ import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import { prefetchWavesOverview } from "@/helpers/stream.helpers";
 import { commonApiFetch } from "@/services/api/common-api";
 import type { ApiWave } from "@/generated/models/ApiWave";
+import type { ApiOgMetadata } from "@/generated/models/ApiOgMetadata";
+import type { ApiOgMetadataProfile } from "@/generated/models/ApiOgMetadataProfile";
+import { ApiDropMainType } from "@/generated/models/ApiDropMainType";
 import { Time } from "@/helpers/time";
 import { formatAddress } from "@/helpers/Helpers";
-import { formatCount } from "@/helpers/format.helpers";
 import { DROP_CLOSE_COOKIE_NAME } from "@/helpers/drop-close-navigation.helpers";
+import {
+  getWaveRouteWithSearchParams,
+  type RouteSearchParams,
+} from "@/helpers/navigation.helpers";
+import { publicEnv } from "@/config/env";
 
-export type WavesSearchParams = Record<string, string | string[] | undefined>;
+export type WavesSearchParams = RouteSearchParams;
 
 type WaveRequestContext = {
   readonly waveId: string | null;
@@ -40,6 +48,10 @@ export const getFirstSearchParamValue = (
   }
   return typeof value === "string" ? value : null;
 };
+
+const getDropMetadataId = (searchParams: WavesSearchParams): string | null =>
+  getFirstSearchParamValue(searchParams, "serialNo") ||
+  getFirstSearchParamValue(searchParams, "drop");
 
 const fetchWaveCached = cache(
   async (
@@ -67,7 +79,37 @@ const fetchWaveCached = cache(
   }
 );
 
-async function fetchWaveContext(
+const fetchDropOgMetadataCached = cache(
+  async (dropId: string, headersKey: string): Promise<ApiOgMetadata | null> => {
+    const normalizedDropId = dropId.trim();
+    const encodedDropId = encodeURIComponent(normalizedDropId);
+    let headers: Record<string, string> = {};
+    try {
+      headers = headersKey
+        ? (JSON.parse(headersKey) as Record<string, string>)
+        : {};
+    } catch {
+      headers = {};
+    }
+    try {
+      return await commonApiFetch<ApiOgMetadata>({
+        endpoint: `og-metadata/drops/${encodedDropId}`,
+        headers,
+      });
+    } catch (error) {
+      console.warn("Failed to fetch drop OG metadata", {
+        dropId: normalizedDropId,
+        error,
+      });
+      return null;
+    }
+  }
+);
+
+export const isApiWaveDirectMessage = (wave: ApiWave): boolean =>
+  wave.chat?.scope?.group?.is_direct_message === true;
+
+export async function fetchWaveContext(
   waveId: string | null,
   providedCookies?: CookieStore
 ): Promise<WaveRequestContext> {
@@ -94,15 +136,31 @@ async function fetchWaveContext(
 export async function renderWavesPageContent({
   waveId,
   searchParams,
+  routeContext = "waves",
 }: {
   waveId: string | null;
   searchParams: WavesSearchParams;
+  routeContext?: "waves" | "messages" | undefined;
 }) {
   const cookieStore = await cookies();
   const context = await fetchWaveContext(waveId, cookieStore);
   const queryClient = new QueryClient();
 
   if (context.waveId && context.wave) {
+    const isDirectMessage = isApiWaveDirectMessage(context.wave);
+    if (
+      (routeContext === "waves" && isDirectMessage) ||
+      (routeContext === "messages" && !isDirectMessage)
+    ) {
+      redirect(
+        getWaveRouteWithSearchParams({
+          waveId: context.waveId,
+          searchParams,
+          isDirectMessage,
+        })
+      );
+    }
+
     queryClient.setQueryData(
       [QueryKey.WAVE, { wave_id: context.waveId }],
       context.wave
@@ -143,7 +201,8 @@ export async function renderWavesPageContent({
 }
 
 export async function buildWavesMetadata(
-  waveId: string | null
+  waveId: string | null,
+  searchParams: WavesSearchParams = {}
 ): Promise<Metadata> {
   if (waveId === null) {
     return getAppMetadata({
@@ -172,35 +231,100 @@ export async function buildWavesMetadata(
 
   const authorHandle =
     wave.author.handle && wave.author.handle.trim().length > 0
-      ? `@${wave.author.handle}`
+      ? `@${wave.author.handle.replace(/^@/, "")}`
       : formatAddress(wave.author.primary_address);
 
-  const subscribersCount = wave.metrics.subscribers_count;
-  const dropsCount = wave.metrics.drops_count;
-  const subscribers = formatCount(subscribersCount);
-  const drops = formatCount(dropsCount);
-  const descriptionParts = [
-    authorHandle && `Created by ${authorHandle}`,
-    subscribers &&
-      `${subscribers} ${subscribersCount === 1 ? "subscriber" : "subscribers"}`,
-    drops && `${drops} ${dropsCount === 1 ? "drop" : "drops"} shared`,
-  ].filter((part): part is string => typeof part === "string");
+  const dropMetadataId = getDropMetadataId(searchParams)?.trim();
+  if (dropMetadataId) {
+    const dropMetadata = await fetchDropOgMetadataCached(
+      dropMetadataId,
+      metadataHeadersKey
+    );
+    const dropPageMetadata = buildDropPageMetadata({
+      dropId: dropMetadataId,
+      metadata: dropMetadata,
+      waveName,
+    });
 
-  const metadata: Parameters<typeof getAppMetadata>[0] = {
-    title: `${waveName} | Waves`,
-    description:
-      descriptionParts.length > 0
-        ? `${waveName} — ${descriptionParts.join(" • ")}`
-        : "Browse and explore waves",
-  };
+    if (dropPageMetadata) {
+      return getAppMetadata(dropPageMetadata);
+    }
+  }
 
-  return getAppMetadata(
-    wave.picture
-      ? {
-          ...metadata,
-          ogImage: wave.picture,
-          twitterCard: "summary_large_image",
-        }
-      : metadata
-  );
+  return getAppMetadata({
+    title: `${waveName} by ${authorHandle}`,
+    description: "Waves",
+    ogImage: `${
+      publicEnv.BASE_ENDPOINT
+    }/api/og-metadata/waves/${encodeURIComponent(waveId)}`,
+    ogImageHeight: 630,
+    ogImageWidth: 1200,
+    twitterCard: "summary_large_image",
+  });
 }
+
+const getDropAuthorDisplay = (
+  author: ApiOgMetadataProfile | undefined
+): string => {
+  const handle = author?.handle?.trim();
+  if (handle) {
+    return `@${handle.replace(/^@/, "")}`;
+  }
+
+  const address = author?.primary_address?.trim();
+  return address ? formatAddress(address) : "Unknown";
+};
+
+const getDropTitle = (
+  value: string | null | undefined,
+  fallback: string
+): string => {
+  const normalized = value?.trim();
+  return normalized && normalized.length > 0 ? normalized : fallback;
+};
+
+const buildDropPageMetadata = ({
+  dropId,
+  metadata,
+  waveName,
+}: {
+  readonly dropId: string;
+  readonly metadata: ApiOgMetadata | null;
+  readonly waveName: string;
+}) => {
+  const drop = metadata?.drop;
+  const author = getDropAuthorDisplay(metadata?.author);
+
+  if (!drop) {
+    return null;
+  }
+
+  const ogImage = `${
+    publicEnv.BASE_ENDPOINT
+  }/api/og-metadata/drops/${encodeURIComponent(dropId)}`;
+
+  if (drop.drop_type === ApiDropMainType.Submission) {
+    const title = getDropTitle(drop.title, `Drop #${drop.serial_no}`);
+    return {
+      title: `${title} by ${author}`,
+      description: `${waveName} | Waves`,
+      ogImage,
+      ogImageHeight: 630,
+      ogImageWidth: 1200,
+      twitterCard: "summary_large_image" as const,
+    };
+  }
+
+  if (drop.drop_type === ApiDropMainType.Chat) {
+    return {
+      title: `${author} in ${waveName}`,
+      description: "Waves",
+      ogImage,
+      ogImageHeight: 630,
+      ogImageWidth: 1200,
+      twitterCard: "summary_large_image" as const,
+    };
+  }
+
+  return null;
+};

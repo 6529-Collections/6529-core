@@ -25,11 +25,14 @@ export class ApiWaveOverview {
     'subscribers_count': number;
     'has_competition': boolean;
     'is_dm_wave': boolean;
+    'links_disabled': boolean;
     'description_drop': ApiWaveOverviewDescriptionDrop;
     'total_drops_count': number;
     'is_private': boolean;
     'contributors'?: Array<ApiWaveOverviewContributor>;
     'context_profile_context'?: ApiWaveOverviewContextProfileContext;
+    'parent_wave'?: ApiWaveOverview;
+    'has_subwaves'?: boolean;
 
     static readonly discriminator: string | undefined = undefined;
 
@@ -85,6 +88,12 @@ export class ApiWaveOverview {
             "format": ""
         },
         {
+            "name": "links_disabled",
+            "baseName": "links_disabled",
+            "type": "boolean",
+            "format": ""
+        },
+        {
             "name": "description_drop",
             "baseName": "description_drop",
             "type": "ApiWaveOverviewDescriptionDrop",
@@ -112,6 +121,18 @@ export class ApiWaveOverview {
             "name": "context_profile_context",
             "baseName": "context_profile_context",
             "type": "ApiWaveOverviewContextProfileContext",
+            "format": ""
+        },
+        {
+            "name": "parent_wave",
+            "baseName": "parent_wave",
+            "type": "ApiWaveOverview",
+            "format": ""
+        },
+        {
+            "name": "has_subwaves",
+            "baseName": "has_subwaves",
+            "type": "boolean",
             "format": ""
         }    ];
 

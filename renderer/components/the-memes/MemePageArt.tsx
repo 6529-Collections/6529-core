@@ -1,48 +1,35 @@
 "use client";
 
-import MediaTypeBadge from "@/components/drops/media/MediaTypeBadge";
-import { ArweaveLinksTable } from "@/components/nft-attributes/ArweaveLinksTable";
-import NFTAttributes from "@/components/nft-attributes/NFTAttributes";
-import NFTImage from "@/components/nft-image/NFTImage";
-import { getResolvedAnimationSrc } from "@/components/nft-image/utils/animation-source";
-import { getResolvedImageSrc } from "@/components/nft-image/utils/image-source";
-import type { IAttribute, MemesExtendedData, NFT } from "@/entities/INFT";
 import {
-  enterArtFullScreen,
-  fullScreenSupported,
-  numberWithCommas,
-  parseNftDescriptionToHtml,
-  printMintDate,
-} from "@/helpers/Helpers";
+  AdditionalDetailsSection,
+  ArweaveLinkRow,
+  EmptyDetailsState,
+  MetadataCard,
+  MetricBlock,
+  type AdditionalDetailsMediaRow,
+} from "@/components/the-memes/MemePageAdditionalDetails";
+import { getResolvedAnimationSrc } from "@/components/nft-image/utils/animation-source";
+import type { IAttribute, MemesExtendedData, NFT } from "@/entities/INFT";
+import { numberWithCommas } from "@/helpers/Helpers";
 import {
   getAnimationDimensionsFromMetadata,
   getAnimationFileTypeFromMetadata,
-  getAnimationMimeTypeFromMetadata,
   getImageDimensionsFromMetadata,
   getImageFileTypeFromMetadata,
-  getImageMimeTypeFromMetadata,
 } from "@/helpers/nft.helpers";
-import { faExpandAlt } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { Carousel, Col, Container, Row, Table } from "react-bootstrap";
-import ArtistProfileHandle from "./ArtistProfileHandle";
-import styles from "./TheMemes.module.scss";
+import {
+  BoltIcon,
+  ChartBarIcon,
+  ChartBarSquareIcon,
+  LinkIcon,
+  SwatchIcon,
+} from "@heroicons/react/24/outline";
 
 const PROPERTY_EXCLUDED_TRAITS = new Set([
   "Type - Season",
   "Type - Meme",
   "Type - Card",
 ]);
-
-function formatTdhRate(value: number | undefined): string {
-  if (!value || value <= 0) {
-    return "N/A";
-  }
-
-  return numberWithCommas(Math.round(value * 100) / 100);
-}
 
 function shouldShowPropertyAttribute(attribute: IAttribute): boolean {
   const displayType = attribute.display_type?.trim().toLowerCase();
@@ -53,544 +40,281 @@ function shouldShowPropertyAttribute(attribute: IAttribute): boolean {
   );
 }
 
+type MediaRow = AdditionalDetailsMediaRow;
+
+type MediaMetadata = {
+  readonly animation_details?: {
+    readonly format?: string | null | undefined;
+    readonly width?: number | null | undefined;
+    readonly height?: number | null | undefined;
+  } | null;
+  readonly image_details?: {
+    readonly format?: string | null | undefined;
+    readonly width?: number | null | undefined;
+    readonly height?: number | null | undefined;
+  } | null;
+};
+
+type MemeMetadata = MediaMetadata & {
+  readonly image?: unknown;
+  readonly animation?: unknown;
+  readonly animation_url?: unknown;
+  readonly attributes?: unknown;
+};
+
 export function MemePageArt(props: {
   show: boolean;
   nft: NFT | undefined;
   nftMeta: MemesExtendedData | undefined;
 }) {
-  const [isFullScreenSupported, setIsFullScreenSupported] = useState(false);
-
-  const [currentSlide, setCurrentSlide] = useState(0);
-
-  const animationHref = getResolvedAnimationSrc(props.nft);
-  const hasAnimation = Boolean(animationHref);
-  const imageFormat = getImageFileTypeFromMetadata(props.nft?.metadata);
-  const animationFormat = getAnimationFileTypeFromMetadata(props.nft?.metadata);
-  const imageDimensions = getImageDimensionsFromMetadata(props.nft?.metadata);
-  const animationDimensions = getAnimationDimensionsFromMetadata(
-    props.nft?.metadata
-  );
-  const imageHref = getResolvedImageSrc(props.nft);
-  const metadataHref = props.nft?.uri.trim() ?? "";
-  const metadata =
-    props.nft?.metadata !== null && typeof props.nft?.metadata === "object"
-      ? (props.nft.metadata as {
-          readonly image?: unknown;
-          readonly animation?: unknown;
-          readonly animation_url?: unknown;
-        })
-      : undefined;
-  const artImageHref =
-    (typeof metadata?.image === "string" ? metadata.image.trim() : "") ||
-    (typeof props.nft?.image === "string" ? props.nft.image.trim() : "") ||
-    "";
-  const artAnimationHref =
-    (typeof metadata?.animation_url === "string"
-      ? metadata.animation_url.trim()
-      : "") ||
-    (typeof metadata?.animation === "string"
-      ? metadata.animation.trim()
-      : "") ||
-    (typeof props.nft?.animation === "string"
-      ? props.nft.animation.trim()
-      : "") ||
-    "";
-  const hasImage = Boolean(imageHref);
-  const isShowingAnimation = hasAnimation && (currentSlide === 0 || !imageHref);
-  let fullscreenElementId = "";
-  if (isShowingAnimation) {
-    fullscreenElementId = "the-art-fullscreen-animation";
-  } else if (hasImage) {
-    fullscreenElementId = "the-art-fullscreen-img";
+  if (!props.show || !props.nft || !props.nftMeta) {
+    return <></>;
   }
-  const fileType = isShowingAnimation ? animationFormat : imageFormat;
-  const fileTypeMimeType = isShowingAnimation
-    ? getAnimationMimeTypeFromMetadata(props.nft?.metadata)
-    : getImageMimeTypeFromMetadata(props.nft?.metadata);
-  const dimensions = isShowingAnimation ? animationDimensions : imageDimensions;
-  const arweaveRows = [
-    metadataHref
-      ? {
-          label: "JSON",
-          url: metadataHref,
-          openLabel: "Open JSON in new tab",
-        }
-      : null,
-    artImageHref
-      ? {
-          label: imageFormat?.toUpperCase() || "IMAGE",
-          url: artImageHref,
-          openLabel: "Open image in new tab",
-          extension: imageFormat ?? "",
-          downloadName: props.nft?.name || `meme-${props.nft?.id ?? "asset"}`,
-        }
-      : null,
-    artAnimationHref
-      ? {
-          label: animationFormat?.toUpperCase() || "ANIMATION",
-          url: artAnimationHref,
-          openLabel: "Open animation in new tab",
-          extension: animationFormat ?? "",
-          downloadName: props.nft?.name || `meme-${props.nft?.id ?? "asset"}`,
-        }
-      : null,
-  ].filter(Boolean) as {
-    label: string;
-    url: string;
-    openLabel: string;
-    extension?: string | undefined;
-    downloadName?: string | undefined;
-  }[];
 
-  const distributionPlanLink = (() => {
-    const id = props.nft?.id;
-    if (!id) return "";
-    if (props.nft?.has_distribution) return `/the-memes/${id}/distribution`;
-    if (id > 3)
-      return `https://github.com/6529-Collections/thememecards/tree/main/card${id}`;
-    return `https://github.com/6529-Collections/thememecards/tree/main/card1-3`;
-  })();
+  const { nft, nftMeta } = props;
+  const animationHref = getResolvedAnimationSrc(nft);
+  const hasAnimation = Boolean(animationHref);
+  const rawMetadata: unknown = nft.metadata;
+  const mediaMetadata = getMediaMetadata(rawMetadata);
+  const metadata = getMetadataObject(rawMetadata);
+  const imageFormat = getImageFileTypeFromMetadata(mediaMetadata);
+  const animationFormat = getAnimationFileTypeFromMetadata(mediaMetadata);
+  const imageDimensions = getImageDimensionsFromMetadata(mediaMetadata);
+  const animationDimensions = getAnimationDimensionsFromMetadata(mediaMetadata);
+  const metadataHref = nft.uri.trim();
+  const attributes = Array.isArray(metadata?.attributes)
+    ? metadata.attributes.filter(isAttribute)
+    : [];
+  const artImageHref = firstNonEmpty([
+    typeof metadata?.image === "string" ? metadata.image : undefined,
+    nft.image,
+  ]);
+  const artAnimationHref = firstNonEmpty([
+    typeof metadata?.animation_url === "string"
+      ? metadata.animation_url
+      : undefined,
+    typeof metadata?.animation === "string" ? metadata.animation : undefined,
+    nft.animation,
+  ]);
+  const dimensions = hasAnimation ? animationDimensions : imageDimensions;
+  const mediaRows: MediaRow[] = [
+    ...(metadataHref
+      ? [
+          {
+            label: "JSON",
+            title: "JSON Metadata",
+            url: metadataHref,
+            openLabel: "Open raw metadata in new tab",
+          },
+        ]
+      : []),
+    ...(artImageHref
+      ? [
+          {
+            label: imageFormat?.toUpperCase() ?? "IMAGE",
+            title: "Image Asset",
+            url: artImageHref,
+            openLabel: "Open image in new tab",
+            extension: imageFormat ?? "",
+            downloadName: nft.name,
+          },
+        ]
+      : []),
+    ...(artAnimationHref
+      ? [
+          {
+            label: animationFormat?.toUpperCase() ?? "ANIMATION",
+            title: "Animation Asset",
+            url: artAnimationHref,
+            openLabel: "Open animation in new tab",
+            extension: animationFormat ?? "",
+            downloadName: nft.name,
+          },
+        ]
+      : []),
+  ];
 
   const detailRows = [
     {
-      key: "edition-size",
-      label: "Edition Size",
-      value: <span className="tw-font-medium">{props.nft?.supply}</span>,
+      key: "meme",
+      label: "Meme name",
+      value: nftMeta.meme_name,
     },
     {
       key: "collection",
       label: "Collection",
-      value: <span className="tw-font-medium">{props.nft?.collection}</span>,
-    },
-    {
-      key: "season",
-      label: "Season",
-      value: <span className="tw-font-medium">{props.nftMeta?.season}</span>,
-    },
-    {
-      key: "meme",
-      label: "Meme",
-      value: <span className="tw-font-medium">{props.nftMeta?.meme_name}</span>,
-    },
-    {
-      key: "mint-date",
-      label: "Mint Date",
-      value: (
-        <span className="tw-font-medium">
-          {printMintDate(props.nft?.mint_date)}
-        </span>
-      ),
-    },
-    {
-      key: "artist-name",
-      label: "Artist Name",
-      value: <span className="tw-font-medium">{props.nft?.artist}</span>,
-    },
-    {
-      key: "artist-profile",
-      label: "Artist Profile",
-      value: (
-        <span className="tw-font-medium">
-          {props.nft ? <ArtistProfileHandle nft={props.nft} /> : null}
-        </span>
-      ),
-    },
-    ...(fileType
-      ? [
-          {
-            key: "file-type",
-            label: "File Type",
-            value: (
-              <span className="tw-font-medium">
-                <MediaTypeBadge
-                  mimeType={fileTypeMimeType ?? undefined}
-                  size="sm"
-                  showTooltip={false}
-                  showLabel={true}
-                  tone="color"
-                  labelClassName="tw-text-inherit tw-font-medium"
-                />
-              </span>
-            ),
-          },
-        ]
-      : []),
-    ...(distributionPlanLink
-      ? [
-          {
-            key: "minting-approach",
-            label: "Minting Approach",
-            value: (
-              <span className="tw-font-medium">
-                <Link
-                  href={distributionPlanLink}
-                  target={props.nft?.has_distribution ? "_self" : "_blank"}
-                  rel={
-                    props.nft?.has_distribution
-                      ? undefined
-                      : "noopener noreferrer"
-                  }
-                  className={styles["distributionPlanLink"]}
-                >
-                  Distribution Plan
-                </Link>
-              </span>
-            ),
-          },
-        ]
-      : []),
-    {
-      key: "mint-price",
-      label: "Mint Price",
-      value: (
-        <span className="tw-font-medium">
-          {props.nft && props.nft.mint_price > 0
-            ? `${numberWithCommas(
-                Math.round(props.nft.mint_price * 100000) / 100000
-              )} ETH`
-            : `N/A`}
-        </span>
-      ),
-    },
-    {
-      key: "tdh-rate",
-      label: "TDH Rate",
-      value: (
-        <span className="tw-font-medium">
-          {formatTdhRate(props.nft?.hodl_rate)}
-        </span>
-      ),
+      value: nft.collection,
     },
     {
       key: "dimensions",
       label: "Dimensions",
-      value: <span className="tw-font-medium">{dimensions || "N/A"}</span>,
+      value: dimensions ?? "N/A",
     },
   ];
-  const detailSplitIndex = Math.ceil(detailRows.length / 2);
-  const detailColumns = [
-    detailRows.slice(0, detailSplitIndex),
-    detailRows.slice(detailSplitIndex),
+
+  const propertyAttributes = attributes.filter(shouldShowPropertyAttribute);
+  const statsRows = [
+    ...detailRows,
+    {
+      key: "season",
+      label: "Season",
+      value: getAttributeValue(attributes, "Type - Season"),
+    },
+    {
+      key: "meme-number",
+      label: "Meme",
+      value: getAttributeValue(attributes, "Type - Meme"),
+    },
+    {
+      key: "card-number",
+      label: "Card number",
+      value: getAttributeValue(attributes, "Type - Card"),
+    },
+  ];
+  const boostRows = attributes.filter(
+    (attribute) => attribute.display_type === "boost_percentage"
+  );
+  const tdhRows = [
+    {
+      key: "tdh",
+      label: "TDH",
+      value: numberWithCommas(Math.round(nft.boosted_tdh * 100) / 100),
+      highlightedLabel: true,
+    },
+    {
+      key: "unweighted-tdh",
+      label: "Unweighted TDH",
+      value: numberWithCommas(Math.round(nft.tdh__raw * 100) / 100),
+    },
+    {
+      key: "meme-rank",
+      label: "Meme Rank",
+      value: nft.tdh_rank ? `#${numberWithCommas(nft.tdh_rank)}` : "-",
+    },
   ];
 
-  useEffect(() => {
-    setIsFullScreenSupported(fullScreenSupported());
-  }, []);
+  return (
+    <div className="tw-space-y-14 tw-pb-8 tw-pt-8">
+      {mediaRows.length > 0 && (
+        <AdditionalDetailsSection title="Arweave links" icon={LinkIcon}>
+          <div>
+            {mediaRows.map((row) => (
+              <ArweaveLinkRow row={row} key={`${row.label}-${row.url}`} />
+            ))}
+          </div>
+        </AdditionalDetailsSection>
+      )}
 
-  useEffect(() => {
-    setCurrentSlide(0);
-  }, [props.nft]);
+      <AdditionalDetailsSection title="Properties" icon={SwatchIcon}>
+        {propertyAttributes.length > 0 ? (
+          <div className="tw-grid tw-grid-cols-2 tw-gap-3 sm:tw-grid-cols-3 lg:tw-grid-cols-4">
+            {propertyAttributes.map((attribute) => (
+              <MetadataCard
+                key={attribute.trait_type}
+                label={attribute.trait_type}
+                value={attribute.value}
+              />
+            ))}
+          </div>
+        ) : (
+          <EmptyDetailsState>No properties found.</EmptyDetailsState>
+        )}
+      </AdditionalDetailsSection>
 
-  function carouselHandlerSlide(event: any) {
-    setCurrentSlide(event);
+      <AdditionalDetailsSection title="TDH breakdown" icon={ChartBarSquareIcon}>
+        <div className="tw-flex tw-flex-wrap tw-gap-x-6 tw-gap-y-6 sm:tw-gap-x-16">
+          {tdhRows.map((row) => (
+            <MetricBlock
+              key={row.key}
+              label={row.label}
+              value={row.value}
+              highlightedLabel={row.highlightedLabel}
+            />
+          ))}
+        </div>
+      </AdditionalDetailsSection>
+
+      <div className="tw-grid tw-grid-cols-1 tw-gap-x-16 tw-gap-y-14 lg:tw-grid-cols-2">
+        <AdditionalDetailsSection title="Stats" icon={ChartBarIcon}>
+          <div className="tw-grid tw-grid-cols-2 tw-gap-x-4 tw-gap-y-6 sm:tw-gap-x-12 sm:tw-gap-y-8">
+            {statsRows.map((row) => (
+              <MetricBlock key={row.key} label={row.label} value={row.value} />
+            ))}
+          </div>
+        </AdditionalDetailsSection>
+
+        <AdditionalDetailsSection title="Boosts" icon={BoltIcon}>
+          {boostRows.length > 0 ? (
+            <div className="tw-grid tw-grid-cols-2 tw-gap-x-4 tw-gap-y-6 sm:tw-gap-x-12 sm:tw-gap-y-8">
+              {boostRows.map((attribute) => (
+                <MetricBlock
+                  key={attribute.trait_type}
+                  label={attribute.trait_type}
+                  value={`${Number(attribute.value) > 0 ? "+" : ""}${
+                    attribute.value
+                  }%`}
+                  highlightedLabel={Number(attribute.value) > 0}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyDetailsState>No boosts found.</EmptyDetailsState>
+          )}
+        </AdditionalDetailsSection>
+      </div>
+    </div>
+  );
+}
+
+function getAttributeValue(
+  attributes: readonly IAttribute[],
+  traitType: string
+) {
+  return (
+    attributes.find((attribute) => attribute.trait_type === traitType)?.value ??
+    "N/A"
+  );
+}
+
+function isAttribute(value: unknown): value is IAttribute {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    typeof (value as { readonly trait_type?: unknown }).trait_type === "string"
+  );
+}
+
+function getMediaMetadata(
+  metadata: unknown
+): MediaMetadata | string | null | undefined {
+  if (
+    typeof metadata === "string" ||
+    metadata === null ||
+    metadata === undefined
+  ) {
+    return metadata;
   }
 
-  const currentFormat = fileType ?? "";
-
-  if (props.show && props.nft && props.nftMeta) {
-    return (
-      <>
-        <Container className="p-0">
-          <Row className="position-relative">
-            {hasAnimation ? (
-              <>
-                <Col xs={12} className={styles["artHeader"]}>
-                  <div className={styles["artHeaderContent"]}>
-                    <div className={styles["artFormatLabel"]}>
-                      {currentFormat}
-                    </div>
-                    {isFullScreenSupported && (
-                      <FontAwesomeIcon
-                        icon={faExpandAlt}
-                        className={styles["fullScreen"]}
-                        onClick={() =>
-                          fullscreenElementId &&
-                          enterArtFullScreen(fullscreenElementId)
-                        }
-                      />
-                    )}
-                  </div>
-                </Col>
-                <Carousel
-                  className={styles["memesCarousel"]}
-                  interval={null}
-                  indicators={false}
-                  wrap={false}
-                  onSlide={carouselHandlerSlide}
-                >
-                  <Carousel.Item className="text-center">
-                    <NFTImage
-                      nft={props.nft}
-                      animation={true}
-                      height={650}
-                      transparentBG={true}
-                      showOriginal={true}
-                      showBalance={false}
-                      id="the-art-fullscreen-animation"
-                    />
-                  </Carousel.Item>
-                  {hasImage && (
-                    <Carousel.Item className="text-center">
-                      <NFTImage
-                        nft={props.nft}
-                        animation={false}
-                        height={650}
-                        showBalance={false}
-                        transparentBG={true}
-                        showOriginal={true}
-                        id="the-art-fullscreen-img"
-                      />
-                    </Carousel.Item>
-                  )}
-                </Carousel>
-              </>
-            ) : (
-              <>
-                <Col xs={12} className={styles["artHeader"]}>
-                  <div className={styles["artHeaderContent"]}>
-                    <div className={styles["artFormatLabel"]}>
-                      {currentFormat}
-                    </div>
-                    {isFullScreenSupported && (
-                      <FontAwesomeIcon
-                        icon={faExpandAlt}
-                        className={styles["fullScreen"]}
-                        onClick={() =>
-                          fullscreenElementId &&
-                          enterArtFullScreen(fullscreenElementId)
-                        }
-                      />
-                    )}
-                  </div>
-                </Col>
-                {hasImage && (
-                  <NFTImage
-                    nft={props.nft}
-                    animation={false}
-                    height={650}
-                    transparentBG={true}
-                    showOriginal={true}
-                    showBalance={false}
-                    id="the-art-fullscreen-img"
-                  />
-                )}
-              </>
-            )}
-          </Row>
-        </Container>
-        <Container className="pt-5 pb-3">
-          <Row>
-            <Col>
-              <Container>
-                <Row>
-                  <Col>
-                    <Row>
-                      <Col>
-                        <h3 className="tw-pb-2">Arweave Links</h3>
-                      </Col>
-                    </Row>
-                    <ArweaveLinksTable
-                      rows={arweaveRows}
-                      linkClassName={styles["arweaveLink"]}
-                    />
-                  </Col>
-                </Row>
-              </Container>
-            </Col>
-          </Row>
-        </Container>
-        <Container className="pt-3 pb-3">
-          <Row>
-            <Col xs={{ span: 12 }}>
-              <Container>
-                <Row>
-                  <Col>
-                    <h3>Card Details</h3>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col xs={{ span: 12 }} className="d-lg-none">
-                    <Table bordered={false}>
-                      <tbody>
-                        {detailRows.map((row) => (
-                          <tr key={row.key}>
-                            <td>{row.label}</td>
-                            <td>{row.value}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </Table>
-                  </Col>
-                  {detailColumns.map((columnRows) => (
-                    <Col
-                      key={columnRows.map((row) => row.key).join("-")}
-                      xs={{ span: 12 }}
-                      lg={{ span: 6 }}
-                      className="d-none d-lg-block"
-                    >
-                      <Table bordered={false}>
-                        <tbody>
-                          {columnRows.map((row) => (
-                            <tr key={row.key}>
-                              <td>{row.label}</td>
-                              <td>{row.value}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </Table>
-                    </Col>
-                  ))}
-                </Row>
-              </Container>
-            </Col>
-          </Row>
-        </Container>
-        <Container className="pt-3 pb-3">
-          <Row>
-            <Col>
-              <Container>
-                <Row>
-                  <Col>
-                    <h3>Card Description</h3>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col
-                    dangerouslySetInnerHTML={{
-                      __html: parseNftDescriptionToHtml(props.nft.description),
-                    }}
-                  ></Col>
-                </Row>
-              </Container>
-            </Col>
-          </Row>
-        </Container>
-        <Container className="pt-3 pb-3">
-          <Row>
-            <Col>
-              <Container>
-                <Row>
-                  <Col>
-                    <h3>Properties</h3>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col>
-                    <NFTAttributes
-                      attributes={props.nft.metadata.attributes.filter(
-                        shouldShowPropertyAttribute
-                      )}
-                    />
-                  </Col>
-                </Row>
-              </Container>
-            </Col>
-          </Row>
-        </Container>
-        <Container className="pt-3 pb-3">
-          <Row>
-            <Col
-              xs={{ span: 12 }}
-              sm={{ span: 6 }}
-              md={{ span: 6 }}
-              lg={{ span: 6 }}
-            >
-              <Container>
-                <Row>
-                  <Col>
-                    <h3>Stats</h3>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col
-                    xs={{ span: 12 }}
-                    sm={{ span: 10 }}
-                    md={{ span: 8 }}
-                    lg={{ span: 6 }}
-                  >
-                    <Table>
-                      <tbody>
-                        <tr>
-                          <td>Type - Season</td>
-                          <td className="text-right">
-                            {
-                              props.nft.metadata.attributes.find(
-                                (a: any) => a.trait_type === "Type - Season"
-                              ).value
-                            }
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Type - Meme</td>
-                          <td className="text-right">
-                            {
-                              props.nft.metadata.attributes.find(
-                                (a: any) => a.trait_type === "Type - Meme"
-                              ).value
-                            }
-                          </td>
-                        </tr>
-                        <tr>
-                          <td>Type - Card</td>
-                          <td className="text-right">
-                            {
-                              props.nft.metadata.attributes.find(
-                                (a: any) => a.trait_type === "Type - Card"
-                              ).value
-                            }
-                          </td>
-                        </tr>
-                      </tbody>
-                    </Table>
-                  </Col>
-                </Row>
-              </Container>
-            </Col>
-            <Col
-              xs={{ span: 12 }}
-              sm={{ span: 6 }}
-              md={{ span: 6 }}
-              lg={{ span: 6 }}
-            >
-              <Container>
-                <Row>
-                  <Col>
-                    <h3>Boosts</h3>
-                  </Col>
-                </Row>
-                <Row>
-                  <Col
-                    xs={{ span: 12 }}
-                    sm={{ span: 10 }}
-                    md={{ span: 8 }}
-                    lg={{ span: 6 }}
-                  >
-                    <Table>
-                      <tbody>
-                        {props.nft.metadata.attributes
-                          .filter(
-                            (a: any) => a.display_type === "boost_percentage"
-                          )
-                          .map((a: any) => (
-                            <tr key={a.trait_type}>
-                              <td>{a.trait_type}</td>
-                              <td className="text-right">
-                                {a.value > 0 && "+"}
-                                {a.value}%
-                              </td>
-                            </tr>
-                          ))}
-                      </tbody>
-                    </Table>
-                  </Col>
-                </Row>
-              </Container>
-            </Col>
-          </Row>
-        </Container>
-      </>
-    );
-  } else {
-    return <></>;
+  if (typeof metadata === "object") {
+    return metadata as MediaMetadata;
   }
+
+  return undefined;
+}
+
+function getMetadataObject(metadata: unknown): MemeMetadata | undefined {
+  return metadata !== null && typeof metadata === "object"
+    ? (metadata as MemeMetadata)
+    : undefined;
+}
+
+function firstNonEmpty(values: readonly (string | null | undefined)[]) {
+  for (const value of values) {
+    const trimmedValue = value?.trim();
+    if (trimmedValue) {
+      return trimmedValue;
+    }
+  }
+
+  return "";
 }

@@ -1,10 +1,14 @@
-import type { ClassAttributes, HTMLAttributes, ReactNode } from "react";
-import { Children, Fragment, isValidElement } from "react";
+import type {
+  ClassAttributes,
+  HTMLAttributes,
+  ReactElement,
+  ReactNode,
+} from "react";
+import { Children, Fragment, cloneElement, isValidElement } from "react";
 import type { ExtraProps } from "react-markdown";
 import emojiRegex from "emoji-regex";
 
 import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
-import type { DropListItemContentPartProps } from "@/components/drops/view/item/content/DropListItemContentPart";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
 import type { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import { ApiDropGroupMention as ApiDropGroupMentionValue } from "@/generated/models/ApiDropGroupMention";
@@ -12,17 +16,20 @@ import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import type { ApiDropReferencedNFT } from "@/generated/models/ApiDropReferencedNFT";
 import DropListItemContentPart from "@/components/drops/view/item/content/DropListItemContentPart";
 import {
+  DropContentPartType,
+  type DropListItemContentPartProps,
+} from "@/components/drops/view/item/content/DropListItemContentPart.types";
+import {
   ALL_GROUP_MENTION_TEXT,
   hasMentionedGroup,
   markAllGroupMentionTokens,
 } from "@/helpers/waves/drop-group-mentions";
-
-export enum DropContentPartType {
-  MENTION = "MENTION",
-  GROUP_MENTION = "GROUP_MENTION",
-  HASHTAG = "HASHTAG",
-  WAVE_MENTION = "WAVE_MENTION",
-}
+import { isDirectImageUrl } from "./linkUtils";
+import { normalizeDropMarkdownContent } from "./normalizeContent";
+import {
+  DropPartMarkdownImageGroup,
+  type DropPartMarkdownImageLayout,
+} from "../DropPartMarkdownImage";
 
 interface EmojiCategory {
   emojis: Array<{ id: string; skins: Array<{ src: string }> }>;
@@ -33,6 +40,18 @@ interface NativeEmojiSkin {
 }
 
 type FindNativeEmoji = (emojiId: string) => { skins: NativeEmojiSkin[] } | null;
+
+interface CustomEmojiImageProps {
+  readonly alt: string;
+  readonly bigEmoji: boolean;
+  readonly src: string | undefined;
+}
+
+interface MarkdownElementProps {
+  readonly children?: ReactNode | undefined;
+  readonly href?: unknown;
+  readonly src?: unknown;
+}
 
 interface MarkdownContentConfig {
   readonly textSizeClass: string;
@@ -55,25 +74,136 @@ interface MarkdownContentRenderers {
   readonly processContent: (content: string | null) => string | null;
 }
 
+type MarkdownImageElement = ReactElement<{
+  readonly children?: ReactNode | undefined;
+  readonly href?: string | undefined;
+  readonly layout?: DropPartMarkdownImageLayout | undefined;
+  readonly src?: string | undefined;
+}>;
+
+type MarkdownLinkElement = ReactElement<{
+  readonly href: string;
+}>;
+
+interface MarkdownImageChunkItem {
+  readonly image: MarkdownImageElement;
+  readonly flattenedIndex: number;
+}
+
 const customEmojiRegex = /(:\w+:)/g;
 const nativeEmojiRegex = emojiRegex();
 
+const isReactNodeArray = (
+  content: ReactNode | undefined
+): content is ReactNode[] => Array.isArray(content);
+
+const isCustomEmojiToken = (value: string): boolean => {
+  customEmojiRegex.lastIndex = 0;
+  const isMatch = customEmojiRegex.test(value);
+  customEmojiRegex.lastIndex = 0;
+  return isMatch;
+};
+
+const getMarkdownElementProps = (
+  node: ReactNode
+): MarkdownElementProps | null =>
+  isValidElement<MarkdownElementProps>(node) ? node.props : null;
+
+const hasElementSrc = (
+  elementProps: MarkdownElementProps | null
+): elementProps is MarkdownElementProps & { readonly src: string } =>
+  typeof elementProps?.src === "string" && elementProps.src.length > 0;
+
+const getTextFromChildren = (children: ReactNode | undefined): string | null =>
+  Children.toArray(children).reduce<string | null>((text, child) => {
+    if (text === null) {
+      return null;
+    }
+
+    if (typeof child === "string" || typeof child === "number") {
+      return `${text}${child}`;
+    }
+
+    return null;
+  }, "");
+
+const getSmartHref = (
+  elementProps: MarkdownElementProps | null
+): string | null =>
+  typeof elementProps?.href === "string" ? elementProps.href : null;
+
+const getBareImageHref = (
+  elementProps: MarkdownElementProps | null
+): string | null => {
+  const href = getSmartHref(elementProps);
+  if (!href || !isDirectImageUrl(href)) {
+    return null;
+  }
+
+  const linkText = getTextFromChildren(elementProps?.children);
+  return linkText?.trim() === href.trim() ? href : null;
+};
+
+const isWhitespaceOnlyTextNode = (node: ReactNode): boolean =>
+  typeof node === "string" && node.trim().length === 0;
+
+const isMarkdownImageElement = (
+  node: ReactNode
+): node is MarkdownImageElement => {
+  const elementProps = getMarkdownElementProps(node);
+  return hasElementSrc(elementProps) || getBareImageHref(elementProps) !== null;
+};
+
+const getMarkdownImageSource = (image: MarkdownImageElement): string =>
+  image.props.src ?? image.props.href ?? "";
+
+const getMarkdownImageKey = ({
+  flattenedIndex,
+  image,
+}: MarkdownImageChunkItem): string =>
+  `markdown-image:${flattenedIndex}:${getMarkdownImageSource(image)}`;
+
+const getMarkdownImageGroupKey = (
+  items: readonly MarkdownImageChunkItem[]
+): string =>
+  `markdown-image-group:${items.map((item) => item.flattenedIndex).join("|")}`;
+
+const isSmartLinkElement = (
+  node: ReactNode,
+  isSmartLink: (href: string) => boolean
+): node is MarkdownLinkElement => {
+  const href = getSmartHref(getMarkdownElementProps(node));
+  return href !== null && href.length > 0 && isSmartLink(href);
+};
+
 const containsOnlyNativeEmojis = (str: string): boolean => {
   const text = str.trim();
-  if (!text) {
+  if (text.length === 0) {
     return true;
   }
 
   nativeEmojiRegex.lastIndex = 0;
-  let hasEmoji = false;
-  const textWithoutEmojis = text.replace(nativeEmojiRegex, () => {
-    hasEmoji = true;
-    return "";
-  });
+  const hasEmoji = nativeEmojiRegex.test(text);
   nativeEmojiRegex.lastIndex = 0;
 
-  return hasEmoji && textWithoutEmojis.trim() === "";
+  if (!hasEmoji) {
+    return false;
+  }
+
+  const textWithoutEmojis = text.replace(nativeEmojiRegex, "");
+  nativeEmojiRegex.lastIndex = 0;
+
+  return textWithoutEmojis.trim() === "";
 };
+
+const CustomEmojiImage = ({ alt, bigEmoji, src }: CustomEmojiImageProps) => (
+  // eslint-disable-next-line @next/next/no-img-element -- Emoji markdown tokens have dynamic inline dimensions.
+  <img
+    src={src}
+    alt={alt}
+    className={`${bigEmoji ? "emoji-node-big" : "emoji-node"}`}
+  />
+);
 
 export const createMarkdownContentRenderers = ({
   textSizeClass,
@@ -106,10 +236,10 @@ export const createMarkdownContentRenderers = ({
     }
 
     return (
-      <img
+      <CustomEmojiImage
         src={emoji.skins[0]?.src}
         alt={emojiId}
-        className={`${bigEmoji ? "emoji-node-big" : "emoji-node"}`}
+        bigEmoji={bigEmoji}
       />
     );
   };
@@ -166,9 +296,9 @@ export const createMarkdownContentRenderers = ({
 
     const areAllPartsEmojis = content
       .split(customEmojiRegex)
-      .filter((part) => !!part)
+      .filter((part) => part.length > 0)
       .every(
-        (part) => part.match(customEmojiRegex) || containsOnlyNativeEmojis(part)
+        (part) => isCustomEmojiToken(part) || containsOnlyNativeEmojis(part)
       );
 
     let currentContent = content;
@@ -190,10 +320,10 @@ export const createMarkdownContentRenderers = ({
       });
     }
 
-    const parts = currentContent
+    return currentContent
       .split(splitter)
       .filter((part) => part !== "")
-      .map((part) => {
+      .map((part): ReactNode => {
         const partProps = values[part];
         if (partProps) {
           const randomId = getRandomObjectId();
@@ -201,25 +331,22 @@ export const createMarkdownContentRenderers = ({
         }
 
         const segments = part.split(customEmojiRegex);
-        return segments.map((segment) =>
-          segment.match(customEmojiRegex) ? (
-            <Fragment key={getRandomObjectId()}>
-              {renderEmoji(segment, areAllPartsEmojis)}
-            </Fragment>
-          ) : (
-            <span
-              key={getRandomObjectId()}
-              className={
-                areAllPartsEmojis ? "emoji-text-node" : "tw-align-middle"
-              }
-            >
-              {segment}
-            </span>
-          )
+        return segments.map(
+          (segment): ReactNode =>
+            isCustomEmojiToken(segment) ? (
+              <Fragment key={getRandomObjectId()}>
+                {renderEmoji(segment, areAllPartsEmojis)}
+              </Fragment>
+            ) : (
+              <span
+                key={getRandomObjectId()}
+                className={areAllPartsEmojis ? "emoji-text-node" : undefined}
+              >
+                {segment}
+              </span>
+            )
         );
       });
-
-    return parts;
   };
 
   const customRenderer = (content: ReactNode | undefined): ReactNode => {
@@ -227,8 +354,8 @@ export const createMarkdownContentRenderers = ({
       return customPartRenderer(content);
     }
 
-    if (Array.isArray(content)) {
-      return content.map((child) => {
+    if (isReactNodeArray(content)) {
+      return content.map((child): ReactNode => {
         if (typeof child === "string") {
           return customPartRenderer(child);
         }
@@ -285,6 +412,8 @@ export const createMarkdownContentRenderers = ({
 
     const elements: ReactNode[] = [];
     let currentTextChunk: ReactNode[] = [];
+    let currentImageChunk: MarkdownImageChunkItem[] = [];
+    let pendingWhitespaceAfterImage: ReactNode[] = [];
 
     const flushTextChunk = () => {
       if (currentTextChunk.length > 0) {
@@ -293,40 +422,89 @@ export const createMarkdownContentRenderers = ({
       }
     };
 
-    for (const node of flattened) {
-      const element = isValidElement(node);
-      const src = element && (node.props as any)?.src;
-      const href = element && (node.props as any)?.href;
-      if (src || (href && isSmartLink(href))) {
+    const flushImageChunk = () => {
+      if (currentImageChunk.length === 0) {
+        return;
+      }
+
+      if (currentImageChunk.length === 1) {
+        const [item] = currentImageChunk;
+        if (item) {
+          elements.push(item.image);
+        }
+        currentImageChunk = [];
+        return;
+      }
+
+      elements.push(
+        <DropPartMarkdownImageGroup
+          key={getMarkdownImageGroupKey(currentImageChunk)}
+        >
+          {currentImageChunk.map((item) =>
+            cloneElement(item.image, {
+              key: getMarkdownImageKey(item),
+              layout: "grouped",
+            })
+          )}
+        </DropPartMarkdownImageGroup>
+      );
+      currentImageChunk = [];
+    };
+
+    const restorePendingWhitespaceAfterImage = () => {
+      if (pendingWhitespaceAfterImage.length > 0) {
+        currentTextChunk.push(...pendingWhitespaceAfterImage);
+        pendingWhitespaceAfterImage = [];
+      }
+    };
+
+    for (const [flattenedIndex, node] of flattened.entries()) {
+      if (isMarkdownImageElement(node)) {
+        flushTextChunk();
+        pendingWhitespaceAfterImage = [];
+        currentImageChunk.push({ image: node, flattenedIndex });
+        continue;
+      }
+
+      if (currentImageChunk.length > 0 && isWhitespaceOnlyTextNode(node)) {
+        pendingWhitespaceAfterImage.push(node);
+        continue;
+      }
+
+      if (
+        currentImageChunk.length > 0 &&
+        isSmartLinkElement(node, isSmartLink)
+      ) {
+        flushImageChunk();
+        pendingWhitespaceAfterImage = [];
         flushTextChunk();
         elements.push(node);
-      } else {
-        currentTextChunk.push(node);
+        continue;
       }
+
+      if (currentImageChunk.length > 0) {
+        flushImageChunk();
+        restorePendingWhitespaceAfterImage();
+      }
+
+      if (isSmartLinkElement(node, isSmartLink)) {
+        flushTextChunk();
+        elements.push(node);
+        continue;
+      }
+
+      currentTextChunk.push(node);
     }
 
+    flushImageChunk();
     flushTextChunk();
 
     return <>{elements}</>;
   };
 
-  const processContent = (content: string | null) => {
-    if (!content) {
-      return content;
-    }
-
-    return content.replace(/\n{3,}/g, (match: string) => {
-      const extraBlankLines = match.length - 2;
-      const fillerParagraphs = Array(extraBlankLines)
-        .fill("&nbsp;")
-        .join("\n\n");
-      return `\n\n${fillerParagraphs}\n\n`;
-    });
-  };
-
   return {
     customRenderer,
     renderParagraph,
-    processContent,
+    processContent: normalizeDropMarkdownContent,
   };
 };

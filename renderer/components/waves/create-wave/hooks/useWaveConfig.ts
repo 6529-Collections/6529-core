@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   CreateWaveConfig,
   CreateWaveOutcomeType,
@@ -10,11 +10,14 @@ import { CreateWaveGroupConfigType, CreateWaveStep } from "@/types/waves.types";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { Time } from "@/helpers/time";
 import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import { ApiWaveCreditScope } from "@/generated/models/ApiWaveCreditScope";
 import { ApiWaveCreditType } from "@/generated/models/ApiWaveCreditType";
+import type { ApiWaveCreditNft } from "@/generated/models/ApiWaveCreditNft";
 import type { Period } from "../types/period";
 import type { CREATE_WAVE_VALIDATION_ERROR } from "@/helpers/waves/create-wave.validation";
 import { getCreateWaveValidationErrors } from "@/helpers/waves/create-wave.validation";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
+import { useMemeCardCount } from "./useMemeCardCount";
 
 interface EndDateConfig {
   time: number | null;
@@ -67,8 +70,12 @@ export function useWaveConfig() {
       },
       voting: {
         type: ApiWaveCreditType.TdhPlusXtdh,
+        creditScope: ApiWaveCreditScope.Wave,
         category: null,
         profileId: null,
+        creditNfts: [],
+        creditNftMemeCount: null,
+        allowNegativeVotes: true,
         maxVotesPerIdentityPerDrop: null,
         winningThreshold: null,
         timeWeighted: {
@@ -107,6 +114,28 @@ export function useWaveConfig() {
   const [groupsCache, setGroupsCache] = useState<Record<string, ApiGroupFull>>(
     {}
   );
+
+  const shouldLoadMemeCount =
+    config.voting.type === ApiWaveCreditType.CardSetTdh;
+  const memeCountQuery = useMemeCardCount({ enabled: shouldLoadMemeCount });
+  const memeCount =
+    shouldLoadMemeCount && !memeCountQuery.isError
+      ? (memeCountQuery.data ?? null)
+      : null;
+
+  const effectiveConfig = useMemo<CreateWaveConfig>(() => {
+    if (config.voting.creditNftMemeCount === memeCount) {
+      return config;
+    }
+
+    return {
+      ...config,
+      voting: {
+        ...config.voting,
+        creditNftMemeCount: memeCount,
+      },
+    };
+  }, [config, memeCount]);
 
   // Update end date config when config changes
   useEffect(() => {
@@ -169,7 +198,10 @@ export function useWaveConfig() {
     readonly direction: "forward" | "backward";
   }) => {
     if (direction === "forward") {
-      const newErrors = getCreateWaveValidationErrors({ config, step });
+      const newErrors = getCreateWaveValidationErrors({
+        config: effectiveConfig,
+        step,
+      });
       if (newErrors.length) {
         setErrors(newErrors);
         return;
@@ -257,8 +289,13 @@ export function useWaveConfig() {
       ...prev,
       voting: {
         type,
+        creditScope: prev.voting.creditScope,
         category: null,
         profileId: null,
+        creditNfts:
+          type === ApiWaveCreditType.CardSetTdh ? prev.voting.creditNfts : [],
+        creditNftMemeCount: null,
+        allowNegativeVotes: prev.voting.allowNegativeVotes,
         maxVotesPerIdentityPerDrop: prev.voting.maxVotesPerIdentityPerDrop,
         winningThreshold: prev.voting.winningThreshold,
         timeWeighted: prev.voting.timeWeighted,
@@ -307,6 +344,26 @@ export function useWaveConfig() {
     }));
   };
 
+  const onCreditNftsChange = (creditNfts: ApiWaveCreditNft[]) => {
+    setConfig((prev) => ({
+      ...prev,
+      voting: {
+        ...prev.voting,
+        creditNfts,
+      },
+    }));
+  };
+
+  const onCreditScopeChange = (creditScope: ApiWaveCreditScope) => {
+    setConfig((prev) => ({
+      ...prev,
+      voting: {
+        ...prev.voting,
+        creditScope,
+      },
+    }));
+  };
+
   const onMaxVotesPerIdentityPerDropChange = (
     maxVotesPerIdentityPerDrop: number | null
   ) => {
@@ -315,6 +372,16 @@ export function useWaveConfig() {
       voting: {
         ...prev.voting,
         maxVotesPerIdentityPerDrop,
+      },
+    }));
+  };
+
+  const onAllowNegativeVotesChange = (allowNegativeVotes: boolean) => {
+    setConfig((prev) => ({
+      ...prev,
+      voting: {
+        ...prev.voting,
+        allowNegativeVotes,
       },
     }));
   };
@@ -360,7 +427,7 @@ export function useWaveConfig() {
   };
 
   return {
-    config,
+    config: effectiveConfig,
     setConfig,
     endDateConfig,
     setEndDateConfig,
@@ -368,6 +435,8 @@ export function useWaveConfig() {
     selectedOutcomeType,
     errors,
     groupsCache,
+    isMemeCountLoading: shouldLoadMemeCount && memeCountQuery.isLoading,
+    isMemeCountError: shouldLoadMemeCount && memeCountQuery.isError,
     // Section updaters
     setOverview,
     setDates,
@@ -384,7 +453,10 @@ export function useWaveConfig() {
     onVotingTypeChange,
     onCategoryChange,
     onProfileIdChange,
+    onCreditNftsChange,
+    onCreditScopeChange,
     onMaxVotesPerIdentityPerDropChange,
+    onAllowNegativeVotesChange,
     onTimeWeightedVotingChange,
     onWinningThresholdChange,
     onThresholdChange,

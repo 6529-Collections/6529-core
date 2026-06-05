@@ -10,6 +10,7 @@ import {
   fetchDropRepliesV2,
   fetchDropsV2ByIds,
   fetchDropV2ById,
+  fetchGlobalBoostedDropsV2,
   fetchWaveDropsFeedV2,
   mapLeaderboardDropV2,
 } from "@/services/api/wave-drops-v2-api";
@@ -104,7 +105,7 @@ const createEnrichableDrop = (overrides: Partial<ApiDropV2> = {}) => ({
     has_metadata: true,
     voting: {
       is_open: true,
-      total_votes_given: 0,
+      total_votes_given: 14,
       current_calculated_vote: 10,
       predicted_final_vote: 12,
       voters_count: 7,
@@ -169,6 +170,8 @@ describe("fetchWaveDropsFeedV2", () => {
       artist_of_main_stage_submissions: 1,
       artist_of_memes: 1,
       profile_wave_id: "profile-wave-1",
+      profile_wave_name: "Profile Wave",
+      profile_wave_pfp: "https://example.com/wave.png",
     };
 
     commonApiFetchMock.mockResolvedValueOnce({
@@ -221,6 +224,24 @@ describe("fetchWaveDropsFeedV2", () => {
     expect(result.drops[0]?.metadata).toEqual(priorityMetadata);
   });
 
+  it("preserves no-negative vote waves on feed and drop results", async () => {
+    commonApiFetchMock.mockResolvedValueOnce({
+      wave: {
+        ...wave,
+        forbid_negative_votes: true,
+      },
+      drops: [createDrop(1)],
+    });
+
+    const result = await fetchWaveDropsFeedV2({
+      waveId: "wave-1",
+      limit: 20,
+    });
+
+    expect(result.wave.forbid_negative_votes).toBe(true);
+    expect(result.drops[0]?.wave.forbid_negative_votes).toBe(true);
+  });
+
   it("does not fetch full metadata or top raters for list drops", async () => {
     commonApiFetchMock.mockResolvedValueOnce({
       wave,
@@ -237,6 +258,55 @@ describe("fetchWaveDropsFeedV2", () => {
     expect(result.drops[0]?.metadata).toEqual(priorityMetadata);
     expect(result.drops[0]?.top_raters).toEqual([]);
     expect(result.drops[0]?.raters_count).toBe(7);
+    expect(result.drops[0]).toEqual(
+      expect.objectContaining({
+        rating: 10,
+        realtime_rating: 14,
+        rating_prediction: 12,
+      })
+    );
+  });
+
+  it("preserves the over-threshold timestamp on hydrated legacy drops", async () => {
+    commonApiFetchMock.mockResolvedValueOnce({
+      wave,
+      drops: [
+        createEnrichableDrop({
+          submission_context: {
+            ...createEnrichableDrop().submission_context,
+            over_threshold_since_ms: 123_456,
+          },
+        } as Partial<ApiDropV2>),
+      ],
+    });
+
+    const result = await fetchWaveDropsFeedV2({
+      waveId: "wave-1",
+      limit: 20,
+    });
+
+    expect(result.drops[0]).toEqual(
+      expect.objectContaining({
+        over_threshold_since_ms: 123_456,
+      })
+    );
+  });
+
+  it("leaves missing over-threshold timestamps unset on hydrated drops", async () => {
+    commonApiFetchMock.mockResolvedValueOnce({
+      wave,
+      drops: [createEnrichableDrop()],
+    });
+
+    const result = await fetchWaveDropsFeedV2({
+      waveId: "wave-1",
+      limit: 20,
+    });
+
+    expect(
+      (result.drops[0] as { readonly over_threshold_since_ms?: number })
+        ?.over_threshold_since_ms
+    ).toBeUndefined();
   });
 
   it("maps V2 priority metadata into leaderboard legacy drops", () => {
@@ -263,6 +333,49 @@ describe("fetchWaveDropsFeedV2", () => {
     });
 
     expect(drop.metadata).toEqual(priorityMetadata);
+  });
+
+  it("preserves the over-threshold timestamp on leaderboard drops", () => {
+    const drop = mapLeaderboardDropV2({
+      drop: createEnrichableDrop({
+        submission_context: {
+          ...createEnrichableDrop().submission_context,
+          over_threshold_since_ms: 123_456,
+        },
+      }) as unknown as ApiDropV2,
+      wave: {
+        id: "wave-1",
+        name: "Wave 1",
+        picture: null,
+        voting_credit_type: "TDH",
+      } as unknown as ApiWaveMin,
+    });
+
+    expect(drop).toEqual(
+      expect.objectContaining({
+        over_threshold_since_ms: 123_456,
+      })
+    );
+  });
+
+  it("maps V2 submission voting totals into leaderboard legacy vote fields", () => {
+    const drop = mapLeaderboardDropV2({
+      drop: createEnrichableDrop() as unknown as ApiDropV2,
+      wave: {
+        id: "wave-1",
+        name: "Wave 1",
+        picture: null,
+        voting_credit_type: "TDH",
+      } as unknown as ApiWaveMin,
+    });
+
+    expect(drop).toEqual(
+      expect.objectContaining({
+        rating: 10,
+        realtime_rating: 14,
+        rating_prediction: 12,
+      })
+    );
   });
 
   it("fetches only additional parts for multi-part drops", async () => {
@@ -379,6 +492,48 @@ describe("fetchBoostedDropsV2", () => {
     expectNoListEnrichmentCalls();
     expect(result[0]?.metadata).toEqual(priorityMetadata);
     expect(result[0]?.top_raters).toEqual([]);
+  });
+});
+
+describe("fetchGlobalBoostedDropsV2", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it("fetches global boosted drops through v2 with the minimum boosts filter", async () => {
+    commonApiFetchMock.mockResolvedValueOnce({
+      data: [createEnrichableDrop({ wave })],
+      count: 1,
+      page: 1,
+      next: false,
+    });
+
+    const result = await fetchGlobalBoostedDropsV2({
+      limit: 50,
+      countOnlyBoostsAfter: 123,
+      minBoosts: 3,
+    });
+
+    expect(commonApiFetchMock).toHaveBeenCalledTimes(1);
+    expect(commonApiFetchMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        endpoint: "v2/boosted-drops",
+        params: expect.objectContaining({
+          sort: "boosts",
+          sort_direction: "DESC",
+          page_size: "50",
+          count_only_boosts_after: "123",
+          min_boosts: "3",
+        }),
+      })
+    );
+    expectNoListEnrichmentCalls();
+    expect(result[0]?.wave).toEqual(
+      expect.objectContaining({
+        id: "wave-1",
+        name: "Wave 1",
+      })
+    );
   });
 });
 
