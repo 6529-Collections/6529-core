@@ -8,7 +8,9 @@ import {
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 import { parseIpfsUrl } from "@/helpers/Helpers";
 
+const PRODUCT_IPFS_GATEWAY_HOST = "ipfs.6529.io";
 const DEFAULT_IPFS_GATEWAY_HOSTS = new Set([
+  PRODUCT_IPFS_GATEWAY_HOST,
   "ipfs.io",
   "www.ipfs.io",
   "cf-ipfs.com",
@@ -72,11 +74,26 @@ function getIpfsProtocolUrlFromGatewayUrl(url: string): string | null {
   return `ipfs://${identifierPath}${parsedUrl.search}${parsedUrl.hash}`;
 }
 
+function getProductIpfsGatewayUrl(url: string): string | null {
+  if (!isIpfsProtocolUrl(url)) {
+    return null;
+  }
+
+  return `https://${PRODUCT_IPFS_GATEWAY_HOST}/ipfs/${url.slice(
+    "ipfs://".length
+  )}`;
+}
+
 function getIpfsFallbackUrls(url: string): string[] {
-  const primaryUrl = resolveIpfsUrlSync(url);
+  const resolvedPrimaryUrl = resolveIpfsUrlSync(url);
+  const primaryUrl =
+    resolvedPrimaryUrl === url && isIpfsProtocolUrl(url)
+      ? null
+      : resolvedPrimaryUrl;
+  const productFallbackUrl = getProductIpfsGatewayUrl(url);
   const fallbackUrl = parseIpfsUrl(url);
 
-  return dedupe([primaryUrl, fallbackUrl].filter(Boolean));
+  return dedupe([primaryUrl, productFallbackUrl, fallbackUrl].filter(Boolean));
 }
 
 function buildUrlWithGateway(

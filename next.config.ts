@@ -163,14 +163,66 @@ function loadAssetsFlagAtRuntime(): boolean {
   return flag === "true";
 }
 
-function joinSources(sources: Array<string | undefined>): string {
+function joinSources(sources: Array<string | false | undefined>): string {
   return sources.filter(Boolean).join(" ");
+}
+
+function isLocalhostHostname(hostname: string): boolean {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname === "[::1]"
+  );
+}
+
+function getConfiguredConnectSource(
+  endpoint: string | undefined,
+  allowInsecureLocalhost = false,
+): string {
+  if (!endpoint) {
+    return "";
+  }
+
+  try {
+    const parsedUrl = new URL(endpoint);
+    if (parsedUrl.protocol === "https:" || parsedUrl.protocol === "wss:") {
+      return parsedUrl.origin;
+    }
+
+    if (
+      allowInsecureLocalhost &&
+      (parsedUrl.protocol === "http:" || parsedUrl.protocol === "ws:") &&
+      isLocalhostHostname(parsedUrl.hostname)
+    ) {
+      return parsedUrl.origin;
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+interface SecurityHeaderOptions {
+  readonly allowInsecureLocalhostConnectSrc?: boolean | undefined;
+  readonly allowUnsafeEval?: boolean | undefined;
+  readonly webSocketEndpoint?: string | undefined;
 }
 
 function createSecurityHeaders(
   apiEndpoint: string = "",
+  options: SecurityHeaderOptions = {},
 ): Array<{ key: string; value: string }> {
   const arweaveGatewaySources = ARWEAVE_GATEWAY_CSP_SOURCES.join(" ");
+  const configuredApiSource = getConfiguredConnectSource(
+    apiEndpoint,
+    options.allowInsecureLocalhostConnectSrc,
+  );
+  const configuredWebSocketSource = getConfiguredConnectSource(
+    options.webSocketEndpoint,
+    options.allowInsecureLocalhostConnectSrc,
+  );
   const localGatewaySources = [
     "http://127.0.0.1:*",
     "http://localhost:*",
@@ -218,7 +270,7 @@ function createSecurityHeaders(
     },
     {
       key: "Content-Security-Policy",
-      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
+      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com${options.allowUnsafeEval ? " 'unsafe-eval'" : ""}; connect-src * 'self' blob: ${configuredApiSource} ${configuredWebSocketSource} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
     },
     { key: "X-Frame-Options", value: "SAMEORIGIN" },
     { key: "X-Content-Type-Options", value: "nosniff" },
@@ -320,7 +372,18 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
       return [
         {
           source: "/:path*",
-          headers: createSecurityHeaders(publicEnv.API_ENDPOINT),
+          headers: createSecurityHeaders(
+            publicEnv.API_ENDPOINT,
+            {
+              allowInsecureLocalhostConnectSrc:
+                process.env.NODE_ENV === "development" ||
+                process.env.NODE_ENV === "local",
+              allowUnsafeEval:
+                process.env.NODE_ENV === "development" ||
+                process.env.NODE_ENV === "local",
+              webSocketEndpoint: publicEnv.WS_ENDPOINT,
+            },
+          ),
         },
       ];
     },
