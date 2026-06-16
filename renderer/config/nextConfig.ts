@@ -59,7 +59,6 @@ export function sharedConfig(
           source: "/:path*",
           headers: createSecurityHeaders(
             publicEnv["API_ENDPOINT"],
-            publicEnv["IPFS_GATEWAY_ENDPOINT"],
             {
               allowInsecureLocalhostConnectSrc:
                 publicEnv.NODE_ENV === "development" ||

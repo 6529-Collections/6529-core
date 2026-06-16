@@ -22,6 +22,10 @@ function dedupe(list: readonly string[]): string[] {
   return Array.from(new Set(list));
 }
 
+function isNonEmptyString(value: string | null | undefined): value is string {
+  return !!value;
+}
+
 function safeParseUrl(url: string): URL | null {
   try {
     return new URL(url);
@@ -93,7 +97,9 @@ function getIpfsFallbackUrls(url: string): string[] {
   const productFallbackUrl = getProductIpfsGatewayUrl(url);
   const fallbackUrl = parseIpfsUrl(url);
 
-  return dedupe([primaryUrl, productFallbackUrl, fallbackUrl].filter(Boolean));
+  return dedupe(
+    [primaryUrl, productFallbackUrl, fallbackUrl].filter(isNonEmptyString)
+  );
 }
 
 function buildUrlWithGateway(

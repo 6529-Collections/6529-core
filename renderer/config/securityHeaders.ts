@@ -37,12 +37,6 @@ function getConfiguredConnectSource(
   }
 }
 
-function getConfiguredIpfsGatewaySource(
-  ipfsGatewayEndpoint: string | undefined
-): string {
-  return getConfiguredConnectSource(ipfsGatewayEndpoint);
-}
-
 function joinSources(sources: Array<string | false | undefined>): string {
   return sources.filter(Boolean).join(" ");
 }
@@ -82,7 +76,6 @@ interface SecurityHeaderOptions {
 
 export function createSecurityHeaders(
   apiEndpoint: string | undefined = "",
-  ipfsGatewayEndpoint: string | undefined = "",
   options: SecurityHeaderOptions = {}
 ) {
   const arweaveGatewaySources = ARWEAVE_GATEWAY_CSP_SOURCES;
@@ -94,8 +87,6 @@ export function createSecurityHeaders(
     options.webSocketEndpoint,
     options.allowInsecureLocalhostConnectSrc
   );
-  const configuredIpfsGatewaySource =
-    getConfiguredIpfsGatewaySource(ipfsGatewayEndpoint);
   const localGatewaySources = [
     "http://127.0.0.1:*",
     "http://localhost:*",
@@ -142,7 +133,6 @@ export function createSecurityHeaders(
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
     ...arweaveGatewaySources,
-    configuredIpfsGatewaySource,
     ...IPFS_FALLBACK_MEDIA_SOURCES,
     "https://*.twimg.com",
     "https://artblocks.io",
@@ -152,7 +142,6 @@ export function createSecurityHeaders(
     "'self'",
     ...localGatewaySources,
     ...IPFS_FALLBACK_FRAME_SOURCES,
-    configuredIpfsGatewaySource,
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",
