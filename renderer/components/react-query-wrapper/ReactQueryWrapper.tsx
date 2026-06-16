@@ -75,6 +75,7 @@ export enum QueryKey {
   DROPS = "DROPS",
   DROPS_LEADERBOARD = "DROPS_LEADERBOARD",
   DROP_VOTERS = "DROP_VOTERS",
+  DROP_POLL_VOTERS = "DROP_POLL_VOTERS",
   DROP_VOTE_LOGS = "DROP_VOTE_LOGS",
   BOOSTED_DROPS = "BOOSTED_DROPS",
   DROP = "DROP",
@@ -95,11 +96,14 @@ export enum QueryKey {
   WAVES_OVERVIEW = "WAVES_OVERVIEW",
   WAVES_OVERVIEW_PUBLIC = "WAVES_OVERVIEW_PUBLIC",
   WAVES_V2 = "WAVES_V2",
+  WAVE_SUBWAVES = "WAVE_SUBWAVES",
   OFFICIAL_WAVES = "OFFICIAL_WAVES",
   WAVES = "WAVES",
   WAVES_PUBLIC = "WAVES_PUBLIC",
   WAVES_SEARCH = "WAVES_SEARCH",
   WAVE = "WAVE",
+  WAVE_POLLS = "WAVE_POLLS",
+  WAVE_METADATA = "WAVE_METADATA",
   WAVE_CURATIONS = "WAVE_CURATIONS",
   WAVE_LOGS = "WAVE_LOGS",
   WAVE_VOTERS = "WAVE_VOTERS",
@@ -923,6 +927,11 @@ const createReactQueryContextValue = (
       .catch(() => undefined);
     queryClient
       .invalidateQueries({
+        queryKey: [QueryKey.WAVE_SUBWAVES],
+      })
+      .catch(() => undefined);
+    queryClient
+      .invalidateQueries({
         queryKey: [QueryKey.OFFICIAL_WAVES],
       })
       .catch(() => undefined);
@@ -953,9 +962,19 @@ const createReactQueryContextValue = (
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP],
     });
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.WAVE_POLLS],
+      })
+      .catch(() => undefined);
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP_VOTERS],
     });
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.DROP_POLL_VOTERS],
+      })
+      .catch(() => undefined);
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP_VOTE_LOGS],
     });

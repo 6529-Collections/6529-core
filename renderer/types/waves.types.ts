@@ -16,6 +16,7 @@ export enum MyStreamWaveTab {
   WINNERS = "WINNERS",
   OUTCOME = "OUTCOME",
   MY_VOTES = "MY_VOTES",
+  POLLS = "POLLS",
   FAQ = "FAQ",
 }
 
@@ -101,6 +102,16 @@ export interface CreateWaveApprovalConfig {
   readonly maxWinners: number | null;
 }
 
+export interface CreateWaveApproveDisplayConfig {
+  readonly approvalsTabLabel: string;
+  readonly approvedTabLabel: string;
+}
+
+export interface CreateWaveDisplayConfig {
+  readonly approve: CreateWaveApproveDisplayConfig;
+  readonly outcomesVisible: boolean;
+}
+
 export enum CreateWaveOutcomeType {
   MANUAL = "MANUAL",
   REP = "REP",
@@ -151,6 +162,7 @@ export interface CreateWaveConfig {
   readonly voting: CreateWaveVotingConfig;
   readonly outcomes: CreateWaveOutcomeConfig[];
   readonly approval: CreateWaveApprovalConfig;
+  readonly display: CreateWaveDisplayConfig;
 }
 
 export enum CreateWaveStepStatus {
@@ -173,10 +185,13 @@ export interface SidebarWave {
   readonly id: string;
   readonly name: string;
   readonly type: ApiWaveType;
+  readonly createdAt: number;
   readonly picture: string | null;
   readonly contributors: readonly SidebarWaveContributor[];
   readonly isDirectMessage: boolean;
   readonly hasCompetition: boolean;
+  readonly parentWaveId: string | null;
+  readonly hasSubwaves: boolean;
   readonly descriptionDrop: SidebarWaveDescriptionDrop;
   readonly totalDropsCount: number;
   readonly isPrivate: boolean;

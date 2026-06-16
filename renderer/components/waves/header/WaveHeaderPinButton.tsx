@@ -1,16 +1,15 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faThumbtack } from "@fortawesome/free-solid-svg-icons";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
-import { Tooltip } from "react-tooltip";
 import { useAuth } from "@/components/auth/Auth";
+import MyStreamActionTooltip from "@/components/brain/my-stream/MyStreamActionTooltip";
 import {
   usePinnedWavesServer,
   MAX_PINNED_WAVES,
 } from "@/hooks/usePinnedWavesServer";
+import { getToastErrorDetails } from "@/helpers/toast.helpers";
 
 interface WaveHeaderPinButtonProps {
   readonly waveId: string;
@@ -48,13 +47,6 @@ const WaveHeaderPinButton: React.FC<WaveHeaderPinButtonProps> = ({
   const hideTooltip = useCallback(() => setShowMaxLimitTooltip(false), []);
 
   // Helper function to show error toast
-  const showErrorToast = useCallback(
-    (message: string) => {
-      setToast({ type: "error", message });
-    },
-    [setToast]
-  );
-
   // Memoize tooltip content to prevent unnecessary re-calculations
   const tooltipContent = useMemo(() => {
     if (isPinned) return PIN_ACTIONS.UNPIN;
@@ -64,9 +56,9 @@ const WaveHeaderPinButton: React.FC<WaveHeaderPinButtonProps> = ({
 
   const buttonStyles = useMemo(() => {
     if (isPinned) {
-      return "tw-text-iron-200 tw-bg-iron-700 desktop-hover:hover:tw-bg-iron-650 desktop-hover:hover:tw-text-iron-100";
+      return "tw-border-0 tw-bg-iron-800 tw-text-iron-100 tw-ring-1 tw-ring-inset tw-ring-white/10 desktop-hover:hover:tw-bg-iron-700 desktop-hover:hover:tw-text-white";
     }
-    return "tw-text-iron-500 desktop-hover:hover:tw-text-iron-300 desktop-hover:hover:tw-bg-iron-700 tw-bg-transparent active:tw-bg-iron-700";
+    return "tw-border-0 tw-text-iron-500 desktop-hover:hover:tw-text-iron-300 desktop-hover:hover:tw-bg-iron-700 tw-bg-transparent active:tw-bg-iron-700";
   }, [isPinned]);
 
   const ariaLabel = useMemo(() => {
@@ -126,7 +118,11 @@ const WaveHeaderPinButton: React.FC<WaveHeaderPinButtonProps> = ({
 
       if (!canPinWave(waveId)) {
         setShowMaxLimitTooltip(true);
-        showErrorToast(`Maximum ${MAX_PINNED_WAVES} pinned waves allowed`);
+        setToast({
+          type: "error",
+          title: `Maximum ${MAX_PINNED_WAVES} pinned waves reached.`,
+          description: "Unpin another wave first.",
+        });
         return;
       }
 
@@ -134,10 +130,14 @@ const WaveHeaderPinButton: React.FC<WaveHeaderPinButtonProps> = ({
     } catch (error) {
       console.error("Error updating wave pin status:", error);
 
-      const errorMessage =
-        error instanceof Error ? error.message : "Something went wrong";
-      const action = isPinned ? "unpin" : "pin";
-      showErrorToast(`Failed to ${action} wave: ${errorMessage}`);
+      setToast({
+        type: "error",
+        title: isPinned
+          ? "Couldn't unpin this wave."
+          : "Couldn't pin this wave.",
+        description: "Please try again.",
+        details: getToastErrorDetails(error),
+      });
     }
   };
 
@@ -146,26 +146,27 @@ const WaveHeaderPinButton: React.FC<WaveHeaderPinButtonProps> = ({
       <button
         onClick={handleClick}
         disabled={isCurrentlyProcessing}
-        className={`tw-flex tw-h-8 tw-w-8 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-transition-all tw-duration-200 ${buttonStyles} ${isCurrentlyProcessing ? "tw-cursor-not-allowed tw-opacity-50" : ""}`}
+        className={`tw-flex tw-size-8 tw-items-center tw-justify-center tw-rounded-lg tw-transition-all tw-duration-200 ${buttonStyles} ${isCurrentlyProcessing ? "tw-cursor-not-allowed tw-opacity-50" : ""}`}
         aria-label={ariaLabel}
         data-tooltip-id={`wave-header-pin-${waveId}`}
+        data-tooltip-content={tooltipContent}
       >
-        <FontAwesomeIcon
-          icon={faThumbtack}
-          className={`tw-size-3.5 tw-flex-shrink-0 ${isPinned ? "tw-rotate-[-45deg]" : ""}`}
-        />
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`tw-size-4 tw-flex-shrink-0 ${isPinned ? "tw-rotate-[-45deg]" : ""}`}
+          aria-hidden="true"
+        >
+          <path d="M12 17v5" />
+          <path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z" />
+        </svg>
       </button>
-      <Tooltip
-        id={`wave-header-pin-${waveId}`}
-        place="top"
-        style={{
-          backgroundColor: "#1F2937",
-          color: "white",
-          padding: "4px 8px",
-        }}
-      >
-        <span className="tw-text-xs">{tooltipContent}</span>
-      </Tooltip>
+      <MyStreamActionTooltip id={`wave-header-pin-${waveId}`} />
     </>
   );
 };

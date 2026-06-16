@@ -1,8 +1,22 @@
 import { getAppMetadata } from "@/components/providers/metadata";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import { buildArticlePageJsonLd } from "@/lib/structured-data/article";
 import type { Metadata } from "next";
 export default function BlogFromFibonacciToFidenzaPage() {
   return (
     <div>
+      <JsonLdScript
+        data={buildArticlePageJsonLd({
+          path: "/blog/from-fibonacci-to-fidenza",
+          headline: "From Fibonacci to Fidenza: The Golden Ratio in Generative Art",
+          description: "A look at the golden ratio, Fibonacci, Fidenza, and generative art.",
+          image: "https://dnclu2fna0b2b.cloudfront.net/wp-content/uploads/2022/04/Fidenza-313.png",
+          author: "Sabrina Khan",
+          datePublished: "2022-11-10T05:29:37+00:00",
+          dateModified: "2022-11-15T18:08:28+00:00",
+          section: "Blog",
+        })}
+      />
       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
       <meta
@@ -54,7 +68,7 @@ export default function BlogFromFibonacciToFidenzaPage() {
       <meta name="twitter:data2" content="20 minutes" />
       {/* / Yoast SEO plugin. */}
       <link rel="dns-prefetch" href="//stats.wp.com" />
-      <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+      <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
       <link
         rel="alternate"
         type="application/rss+xml"
@@ -209,7 +223,7 @@ There is an autonomous artist among us, a faceless, soulless creature, who, at t
       <link
         rel="stylesheet"
         id="font-awesome-css"
-        href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
         type="text/css"
         media="all"
       />

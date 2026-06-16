@@ -1,26 +1,37 @@
 import { render, screen } from "@testing-library/react";
 import React from "react";
-import WaveHeader, {
-  WaveHeaderPinnedSide,
-} from "@/components/waves/header/WaveHeader";
+import WaveHeader from "@/components/waves/header/WaveHeader";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { AuthContext } from "@/components/auth/Auth";
 
-jest.mock("@/components/waves/header/WaveHeaderFollow", () => (props: any) => (
-  <div
-    data-full-width={String(props.fullWidth)}
-    data-testid="wave-header-follow"
-  />
-));
-jest.mock("@/components/waves/header/options/WaveHeaderOptions", () => () => (
-  <div />
-));
+jest.mock("@/components/waves/header/WaveHeaderFollow", () => ({
+  __esModule: true,
+  default: (props: any) => (
+    <div
+      data-full-width={String(props.fullWidth)}
+      data-testid="wave-header-follow"
+    />
+  ),
+  WaveFollowBtnSize: {
+    SMALL: "SMALL",
+    MEDIUM: "MEDIUM",
+  },
+}));
+jest.mock(
+  "@/components/waves/header/options/WaveHeaderOptions",
+  () => (props: any) => (
+    <div
+      data-testid="wave-header-options"
+      data-show-owner={String(props.showOwnerActions)}
+    />
+  )
+);
 jest.mock("@/components/waves/header/name/WaveHeaderName", () => () => (
   <div data-testid="name" />
 ));
 jest.mock("@/components/waves/header/WaveHeaderFollowers", () => () => <div />);
-jest.mock("@/components/waves/header/WaveHeaderDescription", () => () => (
-  <div data-testid="description" />
+jest.mock("@/components/waves/header/WaveHeaderPinButton", () => () => (
+  <div data-testid="wave-header-pin" />
 ));
 jest.mock("@/components/waves/WavePicture", () => () => <div />);
 jest.mock("@/components/waves/specs/WaveNotificationSettings", () => () => (
@@ -40,6 +51,7 @@ const baseWave: any = {
   metrics: { drops_count: 1 },
   chat: { scope: { group: { is_direct_message: false } } },
   wave: { type: ApiWaveType.Chat },
+  subscribed_actions: [],
 };
 
 describe("WaveHeader", () => {
@@ -68,7 +80,6 @@ describe("WaveHeader", () => {
     const { container } = wrapper(baseWave, {
       useRing: false,
       useRounded: false,
-      pinnedSide: WaveHeaderPinnedSide.RIGHT,
     });
     expect(document.querySelector("svg")).toBeNull();
     expect(container.firstChild?.firstChild).not.toHaveClass("tw-ring-1");
@@ -96,23 +107,106 @@ describe("WaveHeader", () => {
     expect(screen.queryByLabelText("Edit wave picture")).toBeNull();
   });
 
-  it("stacks follow and notification controls for connected users", () => {
-    wrapper(baseWave, undefined, { connectedProfile: { handle: "alice" } });
+  it("shows pin action for root waves", () => {
+    wrapper({ ...baseWave, subscribed_actions: ["drop_created"] });
+
+    expect(screen.getByTestId("wave-header-pin")).toBeInTheDocument();
+  });
+
+  it("hides pin action for subwaves", () => {
+    wrapper(
+      {
+        ...baseWave,
+        parent_wave: { id: "parent-wave" },
+      },
+      undefined,
+      { connectedProfile: { handle: "alice" } }
+    );
+
+    expect(screen.queryByTestId("wave-header-pin")).toBeNull();
+  });
+
+  it("only mounts create-subwave options for eligible top-level waves", () => {
+    wrapper(
+      {
+        ...baseWave,
+        wave: {
+          ...baseWave.wave,
+          authenticated_user_eligible_for_admin: true,
+        },
+      },
+      undefined,
+      { connectedProfile: { handle: "alice" } }
+    );
+
+    expect(screen.getByTestId("wave-header-options")).toHaveAttribute(
+      "data-show-owner",
+      "false"
+    );
+  });
+
+  it("does not mount create-subwave options for eligible subwaves", () => {
+    wrapper(
+      {
+        ...baseWave,
+        parent_wave: { id: "parent-wave" },
+        wave: {
+          ...baseWave.wave,
+          authenticated_user_eligible_for_admin: true,
+        },
+      },
+      undefined,
+      { connectedProfile: { handle: "alice" } }
+    );
+
+    expect(screen.queryByTestId("wave-header-options")).toBeNull();
+  });
+
+  it("shows owner options for subwaves without showing pin", () => {
+    wrapper(
+      {
+        ...baseWave,
+        parent_wave: { id: "parent-wave" },
+      },
+      undefined,
+      { connectedProfile: { handle: "a" } }
+    );
+
+    expect(screen.getByTestId("wave-header-options")).toHaveAttribute(
+      "data-show-owner",
+      "true"
+    );
+    expect(
+      screen.getByTestId("wave-header-options").parentElement?.className
+    ).toContain("tw-mt-[22px]");
+    expect(screen.queryByTestId("wave-header-pin")).toBeNull();
+  });
+
+  it("places owner options next to the pin action", () => {
+    wrapper({ ...baseWave, subscribed_actions: ["drop_created"] }, undefined, {
+      connectedProfile: { handle: "a" },
+    });
 
     const follow = screen.getByTestId("wave-header-follow");
     const notifications = screen.getByTestId("wave-notification-settings");
+    const options = screen.getByTestId("wave-header-options");
+    const pin = screen.getByTestId("wave-header-pin");
+    const topActionRow = follow.parentElement?.parentElement;
+    const pinActionGroup = pin.parentElement;
 
-    expect(follow).toHaveAttribute("data-full-width", "true");
-    expect(follow.parentElement).toHaveClass(
+    expect(topActionRow).toHaveClass(
+      "tw-mt-8",
       "tw-flex",
-      "tw-w-48",
-      "tw-flex-col",
-      "tw-items-stretch",
-      "tw-gap-y-1.5"
+      "tw-min-w-0",
+      "tw-flex-1",
+      "tw-justify-end"
     );
+    expect(notifications.parentElement?.parentElement).toBe(topActionRow);
+    expect(options.parentElement).toBe(pinActionGroup);
+    expect(pinActionGroup).toHaveClass("tw-gap-1.5");
+    expect(pinActionGroup).not.toBe(topActionRow);
     expect(
-      follow.compareDocumentPosition(notifications) &
-        Node.DOCUMENT_POSITION_FOLLOWING
+      options.compareDocumentPosition(pin) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
 });

@@ -138,8 +138,10 @@ export default function GroupCardVoteAll({
       }),
     onError: (error) => {
       setToast({
-        message: error as unknown as string,
         type: "error",
+        title: "Couldn't update group ratings.",
+        description: "Please try again.",
+        details: getToastErrorDetails(error),
       });
       throw error;
     },

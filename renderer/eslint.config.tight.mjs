@@ -449,6 +449,7 @@ export default defineConfig([
     "**/.next-static-export/**",
     ".claude/**",
     ".codex/**",
+    ".deepsec/**",
   ]),
 
   // Base config with Next.js rules

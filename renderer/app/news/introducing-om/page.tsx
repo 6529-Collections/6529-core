@@ -1,7 +1,21 @@
 import { getAppMetadata } from "@/components/providers/metadata";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import { buildArticlePageJsonLd } from "@/lib/structured-data/article";
 import Link from "next/link";
 const IndexPage = () => (
   <div>
+    <JsonLdScript
+      data={buildArticlePageJsonLd({
+        path: "/news/introducing-om",
+        headline: "Introducing OM",
+        description: "Introducing OM, the alpha version of the first district of OM.",
+        image: "https://dnclu2fna0b2b.cloudfront.net/wp-content/uploads/2022/04/Artboard-1-80.jpg",
+        author: "6529er",
+        datePublished: "2022-04-14T17:26:36+00:00",
+        dateModified: "2022-04-14T21:42:14+00:00",
+        section: "News",
+      })}
+    />
     <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
     <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
     <meta
@@ -41,7 +55,7 @@ const IndexPage = () => (
     <meta name="twitter:data2" content="8 minutes" />
     {/* / Yoast SEO plugin. */}
     <link rel="dns-prefetch" href="//stats.wp.com" />
-    <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+    <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
     <link
       rel="alternate"
       type="application/rss+xml"
@@ -188,7 +202,7 @@ const IndexPage = () => (
     <link
       rel="stylesheet"
       id="font-awesome-css"
-      href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
       type="text/css"
       media="all"
     />
