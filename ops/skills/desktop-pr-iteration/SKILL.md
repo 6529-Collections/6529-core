@@ -44,7 +44,7 @@ Include:
 - If CI fails, inspect logs before changing code. Use the GitHub CI-fix workflow or equivalent repository tooling for repeated failures.
 - If review bots comment, treat actionable findings as normal review feedback. Fix, test, push, and reply only with evidence.
 - Do not mark review threads resolved unless the fix is pushed and validated, or the finding is clearly not applicable and explained.
-- The 6529bot responsiveness harness runs the repository root `./bin/6529 run dev` on Ubuntu and expects the renderer web app at `PORT=3001`. Preserve the narrow bot-server branch in `bin/6529` that delegates this path to `renderer/`; it detects either `REVIEWBOT_RESPONSIVENESS_OUTPUT_DIR` or the generated Playwright server env (`PORT_SEARCH_LIMIT=1`, localhost `BASE_ENDPOINT`, prod API/WS endpoints, `ASSETS_FROM_S3=true`). The normal desktop dev path should still start Electron.
+- The 6529bot responsiveness harness runs the repository root `./bin/6529 run dev` on Ubuntu and expects the renderer web app at `PORT=3001`. Preserve the narrow bot-server branch in `bin/6529` that delegates this path to `renderer/`; it detects either `REVIEWBOT_RESPONSIVENESS_OUTPUT_DIR` or the generated Playwright server env (`PORT_SEARCH_LIMIT=1`, localhost `BASE_ENDPOINT`, prod API/WS endpoints, `ASSETS_FROM_S3=true`). That branch must run root `build-next-config` before entering `renderer/`, so Next loads the generated root `next.config.mjs` instead of trying to compile `next.config.ts` during the bot dev server start. The normal desktop dev path should still start Electron.
 - Stop after CI and bots are happy, leaving the PR as draft unless the user explicitly asks to mark ready or merge.
 
 ## Closeout

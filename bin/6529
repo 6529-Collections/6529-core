@@ -153,6 +153,7 @@ case "$command_name" in
           "${ASSETS_FROM_S3:-}" == "true" ]]
     }; then
       shift
+      "$REAL_PNPM" run build-next-config
       cd "$REPO_ROOT/renderer"
       exec "$REAL_PNPM" run dev "$@"
     fi
