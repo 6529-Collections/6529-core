@@ -1,6 +1,11 @@
 "use client";
 
 import { publicEnv } from "@/config/env";
+import {
+  normalizeDecentralizedMediaUrl,
+  parseDecentralizedMediaRef,
+  to6529ResolverUrl,
+} from "@/lib/media/decentralized-media";
 import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
 import React, {
   createContext,
@@ -79,9 +84,7 @@ const isOptionalPortField = (
   value === null ||
   (typeof value === "number" && Number.isInteger(value) && value > 0);
 
-const isIpfsConfigInput = (
-  value: unknown
-): value is IpfsConfigInput => {
+const isIpfsConfigInput = (value: unknown): value is IpfsConfigInput => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -151,16 +154,10 @@ const readIpfsConfig = async () => {
 const getEnv = async () => readIpfsConfig();
 
 export const getConfiguredGatewayBaseForSync = (): string | null => {
-  const runtimeGatewayEndpoint = (
-    publicEnv as typeof publicEnv & {
-      IPFS_GATEWAY_ENDPOINT?: string;
-    }
-  ).IPFS_GATEWAY_ENDPOINT;
-  const configuredGatewayEndpoint = runtimeGatewayEndpoint ?? cachedGatewayBase;
-  if (!configuredGatewayEndpoint) {
+  if (!cachedGatewayBase) {
     return null;
   }
-  return normalizeGatewayBase(configuredGatewayEndpoint);
+  return normalizeGatewayBase(cachedGatewayBase);
 };
 
 function joinUrlPaths(basePathname: string, pathName: string): string {
@@ -203,6 +200,15 @@ function rewriteGatewayUrl(url: string, gatewayBase: string): string | null {
   return parsedUrl.toString();
 }
 
+function resolveViaMediaResolver(url: string): string {
+  const parsed = parseDecentralizedMediaRef(url);
+  if (!parsed) {
+    return url;
+  }
+
+  return to6529ResolverUrl(parsed, publicEnv.MEDIA_RESOLVER_ENDPOINT);
+}
+
 export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -214,10 +220,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window === "undefined") {
       return;
     }
-    if (
-      !isElectron() &&
-      typeof window.api?.getInfo !== "function"
-    ) {
+    if (!isElectron() && typeof window.api?.getInfo !== "function") {
       return;
     }
 
@@ -263,31 +266,30 @@ export const useIpfsService = (): IpfsService | null => {
 };
 
 export const resolveIpfsUrlSync = (url: string) => {
+  const gatewayBase = getConfiguredGatewayBaseForSync();
+
   if (url.startsWith("ipfs://")) {
-    const gatewayBase = getConfiguredGatewayBaseForSync();
     if (!gatewayBase) {
-      console.warn("IPFS gateway not yet initialized, returning original URL");
-      return url;
+      return resolveViaMediaResolver(url);
     }
     return `${gatewayBase}/ipfs/${url.slice(7)}`;
   }
 
-  const gatewayBase = getConfiguredGatewayBaseForSync();
   if (!gatewayBase) {
-    return url;
+    return resolveViaMediaResolver(url);
   }
 
   try {
-    return rewriteGatewayUrl(url, gatewayBase) ?? url;
+    return rewriteGatewayUrl(url, gatewayBase) ?? resolveViaMediaResolver(url);
   } catch (error) {
     console.error("Error resolving IPFS URL", error);
-    return url;
+    return resolveViaMediaResolver(url);
   }
 };
 
 export const resolveIpfsUrlAsync = async (url: string) => {
   if (!url.startsWith("ipfs://")) {
-    return url;
+    return resolveIpfsUrlSync(url);
   }
 
   try {
@@ -296,10 +298,13 @@ export const resolveIpfsUrlAsync = async (url: string) => {
     return `${info.gatewayBase}/ipfs/${url.slice(7)}`;
   } catch (error) {
     console.error("Error resolving IPFS URL", error);
-    return url;
+    return resolveViaMediaResolver(url);
   }
 };
 
 export const resolveIpfsUrl = (url: string) => {
   return resolveIpfsUrlSync(url);
 };
+
+export const resolveDecentralizedMediaUrlSync = (url: string) =>
+  normalizeDecentralizedMediaUrl(url, publicEnv.MEDIA_RESOLVER_ENDPOINT) ?? url;

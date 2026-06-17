@@ -1,4 +1,6 @@
 import { ARWEAVE_GATEWAY_CSP_SOURCES } from "../lib/media/arweave-gateways";
+import { getMediaResolverSource } from "../lib/media/decentralized-media";
+import { IPFS_GATEWAY_CSP_SOURCES } from "../lib/media/ipfs-gateways";
 
 function isLocalhostHostname(hostname: string): boolean {
   return (
@@ -41,26 +43,6 @@ function joinSources(sources: Array<string | false | undefined>): string {
   return sources.filter(Boolean).join(" ");
 }
 
-const IPFS_FALLBACK_GATEWAY_ENTRIES = [
-  "ipfs.6529.io",
-  "ipfs.io",
-  "cf-ipfs.com",
-  "nftstorage.link",
-  "*.ipfs.nftstorage.link",
-] as const;
-const IPFS_FALLBACK_MEDIA_SOURCES = IPFS_FALLBACK_GATEWAY_ENTRIES.flatMap(
-  (entry) =>
-    entry.startsWith("*.")
-      ? [`https://${entry}`]
-      : [`https://${entry}`, `https://${entry}/ipfs/*`]
-);
-const IPFS_FALLBACK_FRAME_SOURCES = IPFS_FALLBACK_GATEWAY_ENTRIES.flatMap(
-  (entry) =>
-    entry.startsWith("*.")
-      ? [`https://${entry}`]
-      : [`https://${entry}`, `https://${entry}/ipfs/*`]
-);
-
 function cspDirective(
   name: string,
   sources: Array<string | false | undefined>
@@ -76,6 +58,7 @@ interface SecurityHeaderOptions {
 
 export function createSecurityHeaders(
   apiEndpoint: string | undefined = "",
+  mediaResolverEndpoint: string | undefined = "",
   options: SecurityHeaderOptions = {}
 ) {
   const arweaveGatewaySources = ARWEAVE_GATEWAY_CSP_SOURCES;
@@ -93,6 +76,8 @@ export function createSecurityHeaders(
     "https://127.0.0.1:*",
     "https://localhost:*",
   ];
+  const ipfsGatewaySources = IPFS_GATEWAY_CSP_SOURCES.join(" ");
+  const mediaResolverSource = getMediaResolverSource(mediaResolverEndpoint);
   const connectSrc = [
     "'self'",
     "blob:",
@@ -110,7 +95,9 @@ export function createSecurityHeaders(
     "https://www.googletagmanager.com",
     "https://*.google-analytics.com",
     "https://cloudflare-eth.com/",
+    mediaResolverSource,
     ...arweaveGatewaySources,
+    ipfsGatewaySources,
     "https://rpc.walletconnect.com/v1/",
     "https://sts.us-east-1.amazonaws.com",
     "https://sts.us-west-2.amazonaws.com",
@@ -132,8 +119,9 @@ export function createSecurityHeaders(
     ...localGatewaySources,
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
+    mediaResolverSource,
     ...arweaveGatewaySources,
-    ...IPFS_FALLBACK_MEDIA_SOURCES,
+    ipfsGatewaySources,
     "https://*.twimg.com",
     "https://artblocks.io",
     "https://*.artblocks.io",
@@ -141,7 +129,8 @@ export function createSecurityHeaders(
   const frameSrc = [
     "'self'",
     ...localGatewaySources,
-    ...IPFS_FALLBACK_FRAME_SOURCES,
+    mediaResolverSource,
+    ipfsGatewaySources,
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",

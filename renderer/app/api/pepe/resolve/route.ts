@@ -3,6 +3,7 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { publicEnv } from "@/config/env";
+import { normalizeDecentralizedMediaUrl } from "@/lib/media/decentralized-media";
 import {
   assertContentType,
   isHtmlContentType,
@@ -124,15 +125,6 @@ const cache = new LruTtlCache<string, Preview>({
 
 const USER_AGENT =
   "6529seize-pepe-card/1.0 (+https://6529.io; fetching pepe.wtf previews)";
-
-function trimTrailingSlashes(value: string): string {
-  let end = value.length;
-  while (end > 0 && value.codePointAt(end - 1) === 47) {
-    end -= 1;
-  }
-  return end === value.length ? value : value.slice(0, end);
-}
-
 function isCounterpartyAssetCode(value: string): boolean {
   const upper = value.toUpperCase();
   return /^[A-Z0-9]{3,}$/.test(upper) || /^A[0-9]{6,}$/.test(upper);
@@ -208,17 +200,11 @@ async function fetchJson<T>(url: string, timeoutMs = 4000): Promise<T | null> {
   }
 }
 
-async function ipfsToHttp(url: string): Promise<string> {
-  const match = url.match(/^ipfs:\/\/(ipfs\/)?(.+)$/i);
-  if (!match) {
-    return url;
-  }
-
-  const [, , path] = match;
-
-  const ipfsInfo = await window.api.getIpfsInfo();
-  const gatewayEndpoint = trimTrailingSlashes(ipfsInfo.gatewayEndpoint);
-  return `${gatewayEndpoint}/${path?.replace(/^\/+/, "")}`;
+function decentralizedMediaToHttp(url: string): string {
+  return (
+    normalizeDecentralizedMediaUrl(url, publicEnv.MEDIA_RESOLVER_ENDPOINT) ??
+    url
+  );
 }
 
 function absolutizeRelativeUrl(candidate: string, base: string): string {
@@ -247,7 +233,7 @@ async function normalizeImageUrl(
   }
 
   if (trimmed.startsWith("ipfs://")) {
-    return await ipfsToHttp(trimmed);
+    return decentralizedMediaToHttp(trimmed);
   }
 
   if (/^https?:\/\//i.test(trimmed)) {
@@ -382,7 +368,7 @@ async function tryExtractImageFromDescription(
     }
 
     if (trimmed.startsWith("ipfs://")) {
-      return await ipfsToHttp(trimmed);
+      return decentralizedMediaToHttp(trimmed);
     }
 
     if (/\.(json|js)(?:\?.*)?$/i.test(trimmed) || /json/i.test(trimmed)) {
@@ -403,7 +389,7 @@ async function tryExtractImageFromDescription(
 
         if (candidate) {
           const normalized = candidate.startsWith("ipfs://")
-            ? await ipfsToHttp(candidate)
+            ? decentralizedMediaToHttp(candidate)
             : absolutizeRelativeUrl(candidate, trimmed);
           return normalized;
         }
@@ -418,7 +404,7 @@ async function tryExtractImageFromDescription(
   if (/ipfs:\/\//i.test(description)) {
     const ipfsMatch = description.match(/ipfs:\/\/[^\s"'<>]+/i);
     if (ipfsMatch) {
-      return await ipfsToHttp(ipfsMatch[0]);
+      return decentralizedMediaToHttp(ipfsMatch[0]);
     }
   }
 
