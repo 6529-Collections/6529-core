@@ -142,7 +142,7 @@ export default function UserPageHeaderEditPfp({
       setFile(null);
       setSelectedMeme(null);
       setToast({
-        message: "Profile updated",
+        message: "Profile updated.",
         type: "success",
       });
       onClose();
@@ -163,7 +163,7 @@ export default function UserPageHeaderEditPfp({
     const { success } = await requestAuth();
     if (!success) {
       setToast({
-        message: "You must be logged in to save settings",
+        message: "Log in to save settings.",
         type: "error",
       });
       return;
@@ -172,7 +172,7 @@ export default function UserPageHeaderEditPfp({
     if (!file && !selectedMeme) {
       setError(null);
       setToast({
-        message: "You must select an image",
+        message: "Select an image.",
         type: "error",
       });
       return;

@@ -18,14 +18,21 @@ const ARWEAVE_GATEWAY_HOSTS = [
   "ardrive.net",
   "gateway.arweave.net",
   "gateway.ar.io",
+  "ar-io.net",
 ];
 const IPFS_FALLBACK_GATEWAY_HOSTS = [
+  "media.6529.io",
   "ipfs.6529.io",
   "ipfs.io",
   "cf-ipfs.com",
+  "cloudflare-ipfs.com",
+  "gateway.pinata.cloud",
   "nftstorage.link",
   "*.ipfs.nftstorage.link",
+  "*.ipfs.dweb.link",
+  "*.ipfs.cf-ipfs.com",
 ];
+const DEFAULT_MEDIA_RESOLVER_ENDPOINT = "https://media.6529.io";
 const ARWEAVE_GATEWAY_CSP_SOURCES = ARWEAVE_GATEWAY_HOSTS.flatMap(
   (hostname) => [`https://${hostname}`, `https://*.${hostname}`],
 );
@@ -44,10 +51,9 @@ const IPFS_FALLBACK_FRAME_SOURCES = IPFS_FALLBACK_GATEWAY_HOSTS.flatMap(
       ? [`https://${entry}`]
       : [`https://${entry}`, `https://${entry}/ipfs/*`],
 );
-const IPFS_FALLBACK_REMOTE_PATTERN_HOSTNAMES =
-  IPFS_FALLBACK_GATEWAY_HOSTS.map((entry) =>
-    entry.startsWith("*.") ? `**.${entry.slice(2)}` : entry,
-  );
+const IPFS_FALLBACK_REMOTE_PATTERN_HOSTNAMES = IPFS_FALLBACK_GATEWAY_HOSTS.map(
+  (entry) => (entry.startsWith("*.") ? `**.${entry.slice(2)}` : entry),
+);
 function logOnce(label: string, message: string | undefined): void {
   const k = `__LOG_${label}_ONCE__`;
   if (!process.env[k]) {
@@ -167,10 +173,39 @@ function joinSources(sources: Array<string | undefined>): string {
   return sources.filter(Boolean).join(" ");
 }
 
+function getMediaResolverSource(
+  mediaResolverEndpoint: string | undefined,
+): string {
+  if (!mediaResolverEndpoint) {
+    return DEFAULT_MEDIA_RESOLVER_ENDPOINT;
+  }
+
+  try {
+    const parsedUrl = new URL(mediaResolverEndpoint);
+    return parsedUrl.protocol === "https:"
+      ? parsedUrl.origin
+      : DEFAULT_MEDIA_RESOLVER_ENDPOINT;
+  } catch {
+    return DEFAULT_MEDIA_RESOLVER_ENDPOINT;
+  }
+}
+
+function getMediaResolverHostname(
+  mediaResolverEndpoint: string | undefined,
+): string {
+  try {
+    return new URL(getMediaResolverSource(mediaResolverEndpoint)).hostname;
+  } catch {
+    return "media.6529.io";
+  }
+}
+
 function createSecurityHeaders(
   apiEndpoint: string = "",
+  mediaResolverEndpoint: string | undefined = "",
 ): Array<{ key: string; value: string }> {
   const arweaveGatewaySources = ARWEAVE_GATEWAY_CSP_SOURCES.join(" ");
+  const mediaResolverSource = getMediaResolverSource(mediaResolverEndpoint);
   const localGatewaySources = [
     "http://127.0.0.1:*",
     "http://localhost:*",
@@ -181,6 +216,7 @@ function createSecurityHeaders(
     "'self'",
     "blob:",
     ...localGatewaySources,
+    mediaResolverSource,
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
     arweaveGatewaySources,
@@ -192,6 +228,7 @@ function createSecurityHeaders(
   const frameSrc = joinSources([
     "'self'",
     ...localGatewaySources,
+    mediaResolverSource,
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",
@@ -218,7 +255,7 @@ function createSecurityHeaders(
     },
     {
       key: "Content-Security-Policy",
-      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
+      value: `default-src 'none'; script-src 'self' 'unsafe-inline' https://dnclu2fna0b2b.cloudfront.net https://www.google-analytics.com https://www.googletagmanager.com/ https://dataplane.rum.us-east-1.amazonaws.com 'unsafe-eval'; connect-src * 'self' blob: ${apiEndpoint} ${mediaResolverSource} https://registry.walletconnect.com/api/v2/wallets wss://*.bridge.walletconnect.org wss://*.walletconnect.com wss://www.walletlink.org/rpc https://explorer-api.walletconnect.com/v3/wallets https://www.googletagmanager.com https://*.google-analytics.com https://cloudflare-eth.com/ ${arweaveGatewaySources} https://rpc.walletconnect.com/v1/ https://sts.us-east-1.amazonaws.com https://sts.us-west-2.amazonaws.com; font-src 'self' data: https://fonts.gstatic.com https://fonts.reown.com https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com; img-src 'self' data: blob: ipfs: https://artblocks.io https://*.artblocks.io *; media-src ${mediaSrc}; frame-src ${frameSrc}; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com/css2 https://dnclu2fna0b2b.cloudfront.net https://cdnjs.cloudflare.com http://cdnjs.cloudflare.com https://cdn.jsdelivr.net; object-src data:;`,
     },
     { key: "X-Frame-Options", value: "SAMEORIGIN" },
     { key: "X-Content-Type-Options", value: "nosniff" },
@@ -254,6 +291,10 @@ interface PublicEnv {
   PEPE_CACHE_MAX_ITEMS?: string;
   FARCASTER_WARPCAST_API_BASE?: string;
   FARCASTER_WARPCAST_API_KEY?: string;
+  MEDIA_RESOLVER_ENDPOINT?: string;
+  IPFS_API_ENDPOINT?: string;
+  IPFS_GATEWAY_ENDPOINT?: string;
+  IPFS_MFS_PATH?: string;
   DROP_FORGE_TESTNET?: boolean;
 }
 
@@ -281,6 +322,10 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
         { protocol: "http", hostname: "staging.6529.io" },
         { protocol: "https", hostname: "arweave.net" },
         { protocol: "http", hostname: "arweave.net" },
+        {
+          protocol: "https",
+          hostname: getMediaResolverHostname(publicEnv.MEDIA_RESOLVER_ENDPOINT),
+        },
         ...ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES.map((hostname) => ({
           protocol: "https" as const,
           hostname,
@@ -320,7 +365,10 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
       return [
         {
           source: "/:path*",
-          headers: createSecurityHeaders(publicEnv.API_ENDPOINT),
+          headers: createSecurityHeaders(
+            publicEnv.API_ENDPOINT,
+            publicEnv.MEDIA_RESOLVER_ENDPOINT,
+          ),
         },
       ];
     },
@@ -346,7 +394,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
           config.optimization.moduleIds = "named";
           config.optimization.chunkIds = "named";
         }
-        }
+      }
       return config;
     },
   };
@@ -438,6 +486,10 @@ const nextConfigFactory = (phase: string): NextConfig => {
         PEPE_CACHE_MAX_ITEMS: publicEnv.PEPE_CACHE_MAX_ITEMS,
         FARCASTER_WARPCAST_API_BASE: publicEnv.FARCASTER_WARPCAST_API_BASE,
         FARCASTER_WARPCAST_API_KEY: publicEnv.FARCASTER_WARPCAST_API_KEY,
+        MEDIA_RESOLVER_ENDPOINT: publicEnv.MEDIA_RESOLVER_ENDPOINT,
+        IPFS_API_ENDPOINT: publicEnv.IPFS_API_ENDPOINT,
+        IPFS_GATEWAY_ENDPOINT: publicEnv.IPFS_GATEWAY_ENDPOINT,
+        IPFS_MFS_PATH: publicEnv.IPFS_MFS_PATH,
         DROP_FORGE_TESTNET:
           publicEnv.DROP_FORGE_TESTNET === undefined
             ? undefined

@@ -1,7 +1,6 @@
 "use client";
 
-import { useContext } from "react";
-import { AuthContext } from "@/components/auth/Auth";
+import { useAuth } from "@/components/auth/Auth";
 import { MAX_DROP_UPLOAD_FILES } from "@/helpers/Helpers";
 
 export default function CreateDropActionsRow({
@@ -17,7 +16,7 @@ export default function CreateDropActionsRow({
   readonly breakIntoStorm: () => void;
   readonly disabled?: boolean | undefined;
 }) {
-  const { setToast } = useContext(AuthContext);
+  const { setToast } = useAuth();
   return (
     <div className="tw-mt-3 tw-flex tw-items-center tw-gap-x-6">
       <div className="tw-flex tw-w-full tw-items-center tw-justify-between">
@@ -62,7 +61,7 @@ export default function CreateDropActionsRow({
                   const files: File[] = Array.from(e.target.files);
                   if (files.length > MAX_DROP_UPLOAD_FILES) {
                     setToast({
-                      message: `You can only upload up to ${MAX_DROP_UPLOAD_FILES} files at a time`,
+                      message: `Upload ${MAX_DROP_UPLOAD_FILES} or fewer files at a time.`,
                       type: "error",
                     });
                     e.target.value = "";

@@ -3,14 +3,22 @@ import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 
 import { publicEnv } from "@/config/env";
-import LruTtlCache from "@/lib/cache/lruTtl";
+import { normalizeDecentralizedMediaUrl } from "@/lib/media/decentralized-media";
 import {
-  UrlGuardError,
-  fetchPublicJson,
-  fetchPublicUrl,
-} from "@/lib/security/urlGuard";
+  assertContentType,
+  isHtmlContentType,
+  isTolerantJsonContentType,
+  readLimitedJson,
+  readLimitedText,
+} from "@/lib/fetch/limitedBody";
+import LruTtlCache from "@/lib/cache/lruTtl";
+import { UrlGuardError, fetchPublicUrl } from "@/lib/security/urlGuard";
 
 const TOKENSCAN_BASE = "https://tokenscan.io/api";
+export const HTML_RESPONSE_MAX_BYTES = 8 * 1024 * 1024;
+const JSON_RESPONSE_MAX_BYTES = 2 * 1024 * 1024;
+const HTML_ACCEPT_HEADER =
+  "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8";
 
 type PepeKind = "asset" | "collection" | "artist" | "set";
 
@@ -41,11 +49,14 @@ type AssetPreview = BasePreview & {
   readonly supply?: number | null | undefined;
   readonly holders?: number | null | undefined;
   readonly image?: string | null | undefined;
-  readonly links?: {
-    readonly horizon?: string | undefined;
-    readonly xchain?: string | undefined;
-    readonly wiki?: string | undefined;
-  } | null | undefined;
+  readonly links?:
+    | {
+        readonly horizon?: string | undefined;
+        readonly xchain?: string | undefined;
+        readonly wiki?: string | undefined;
+      }
+    | null
+    | undefined;
   readonly market?: Market | null | undefined;
 };
 
@@ -53,34 +64,46 @@ type CollectionPreview = BasePreview & {
   readonly kind: "collection";
   readonly name?: string | undefined;
   readonly image?: string | null | undefined;
-  readonly stats?: {
-    readonly items?: number | null | undefined;
-    readonly floorSats?: number | null | undefined;
-  } | null | undefined;
+  readonly stats?:
+    | {
+        readonly items?: number | null | undefined;
+        readonly floorSats?: number | null | undefined;
+      }
+    | null
+    | undefined;
 };
 
 type ArtistPreview = BasePreview & {
   readonly kind: "artist";
   readonly name?: string | undefined;
   readonly image?: string | null | undefined;
-  readonly stats?: {
-    readonly uniqueCards?: number | null | undefined;
-    readonly collections?: string[] | null | undefined;
-  } | null | undefined;
+  readonly stats?:
+    | {
+        readonly uniqueCards?: number | null | undefined;
+        readonly collections?: string[] | null | undefined;
+      }
+    | null
+    | undefined;
 };
 
 type SetPreview = BasePreview & {
   readonly kind: "set";
   readonly name?: string | undefined;
   readonly image?: string | null | undefined;
-  readonly stats?: {
-    readonly items?: number | null | undefined;
-    readonly fullSetFloorSats?: number | null | undefined;
-    readonly lastSaleValuationSats?: number | null | undefined;
-  } | null | undefined;
-  readonly links?: {
-    readonly wiki?: string | undefined;
-  } | null | undefined;
+  readonly stats?:
+    | {
+        readonly items?: number | null | undefined;
+        readonly fullSetFloorSats?: number | null | undefined;
+        readonly lastSaleValuationSats?: number | null | undefined;
+      }
+    | null
+    | undefined;
+  readonly links?:
+    | {
+        readonly wiki?: string | undefined;
+      }
+    | null
+    | undefined;
 };
 
 type Preview = AssetPreview | CollectionPreview | ArtistPreview | SetPreview;
@@ -102,15 +125,6 @@ const cache = new LruTtlCache<string, Preview>({
 
 const USER_AGENT =
   "6529seize-pepe-card/1.0 (+https://6529.io; fetching pepe.wtf previews)";
-
-function trimTrailingSlashes(value: string): string {
-  let end = value.length;
-  while (end > 0 && value.codePointAt(end - 1) === 47) {
-    end -= 1;
-  }
-  return end === value.length ? value : value.slice(0, end);
-}
-
 function isCounterpartyAssetCode(value: string): boolean {
   const upper = value.toUpperCase();
   return /^[A-Z0-9]{3,}$/.test(upper) || /^A[0-9]{6,}$/.test(upper);
@@ -130,8 +144,7 @@ async function fetchText(
       url,
       {
         headers: {
-          accept:
-            "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          accept: HTML_ACCEPT_HEADER,
         },
       },
       {
@@ -144,7 +157,10 @@ async function fetchText(
       return null;
     }
 
-    return await response.text();
+    assertContentType(response.headers, isHtmlContentType, "HTML", {
+      allowMissing: true,
+    });
+    return await readLimitedText(response, HTML_RESPONSE_MAX_BYTES);
   } catch (error) {
     if (error instanceof UrlGuardError) {
       return null;
@@ -155,7 +171,7 @@ async function fetchText(
 
 async function fetchJson<T>(url: string, timeoutMs = 4000): Promise<T | null> {
   try {
-    return await fetchPublicJson<T>(
+    const response = await fetchPublicUrl(
       url,
       {
         headers: {
@@ -167,6 +183,15 @@ async function fetchJson<T>(url: string, timeoutMs = 4000): Promise<T | null> {
         userAgent: USER_AGENT,
       }
     );
+
+    if (!response.ok) {
+      return null;
+    }
+
+    assertContentType(response.headers, isTolerantJsonContentType, "JSON", {
+      allowMissing: true,
+    });
+    return await readLimitedJson<T>(response, JSON_RESPONSE_MAX_BYTES);
   } catch (error) {
     if (error instanceof UrlGuardError) {
       return null;
@@ -175,17 +200,11 @@ async function fetchJson<T>(url: string, timeoutMs = 4000): Promise<T | null> {
   }
 }
 
-async function ipfsToHttp(url: string): Promise<string> {
-  const match = url.match(/^ipfs:\/\/(ipfs\/)?(.+)$/i);
-  if (!match) {
-    return url;
-  }
-
-  const [, , path] = match;
-
-  const ipfsInfo = await window.api.getIpfsInfo();
-  const gatewayEndpoint = trimTrailingSlashes(ipfsInfo.gatewayEndpoint);
-  return `${gatewayEndpoint}/${path?.replace(/^\/+/, "")}`;
+function decentralizedMediaToHttp(url: string): string {
+  return (
+    normalizeDecentralizedMediaUrl(url, publicEnv.MEDIA_RESOLVER_ENDPOINT) ??
+    url
+  );
 }
 
 function absolutizeRelativeUrl(candidate: string, base: string): string {
@@ -196,10 +215,7 @@ function absolutizeRelativeUrl(candidate: string, base: string): string {
   }
 }
 
-async function normalizeImageUrl(
-  candidate: unknown,
-  base: string
-): Promise<string | null> {
+function normalizeImageUrl(candidate: unknown, base: string): string | null {
   if (typeof candidate !== "string") {
     return null;
   }
@@ -214,7 +230,7 @@ async function normalizeImageUrl(
   }
 
   if (trimmed.startsWith("ipfs://")) {
-    return await ipfsToHttp(trimmed);
+    return decentralizedMediaToHttp(trimmed);
   }
 
   if (/^https?:\/\//i.test(trimmed)) {
@@ -348,10 +364,6 @@ async function tryExtractImageFromDescription(
       continue;
     }
 
-    if (trimmed.startsWith("ipfs://")) {
-      return await ipfsToHttp(trimmed);
-    }
-
     if (/\.(json|js)(?:\?.*)?$/i.test(trimmed) || /json/i.test(trimmed)) {
       const metadata = await fetchJson<Record<string, unknown>>(trimmed, 2500);
       if (metadata) {
@@ -370,7 +382,7 @@ async function tryExtractImageFromDescription(
 
         if (candidate) {
           const normalized = candidate.startsWith("ipfs://")
-            ? await ipfsToHttp(candidate)
+            ? decentralizedMediaToHttp(candidate)
             : absolutizeRelativeUrl(candidate, trimmed);
           return normalized;
         }
@@ -385,7 +397,7 @@ async function tryExtractImageFromDescription(
   if (/ipfs:\/\//i.test(description)) {
     const ipfsMatch = description.match(/ipfs:\/\/[^\s"'<>]+/i);
     if (ipfsMatch) {
-      return await ipfsToHttp(ipfsMatch[0]);
+      return decentralizedMediaToHttp(ipfsMatch[0]);
     }
   }
 
@@ -424,7 +436,7 @@ async function scrapePepeAssetPage(slug: string): Promise<ScrapedAsset> {
     scraped.collection = extractFirstString(collections) ?? undefined;
 
     const imageCandidate = extractFirstString(images);
-    scraped.image = await normalizeImageUrl(imageCandidate, href);
+    scraped.image = normalizeImageUrl(imageCandidate, href);
 
     const assetCode = assetCandidates.find((candidate) =>
       isCounterpartyAssetCode(candidate)
@@ -465,7 +477,7 @@ async function scrapePepeAssetPage(slug: string): Promise<ScrapedAsset> {
 
   if (!scraped.image) {
     const metaImage = extractFirstString(metaImages);
-    const normalizedMetaImage = await normalizeImageUrl(metaImage, href);
+    const normalizedMetaImage = normalizeImageUrl(metaImage, href);
     if (normalizedMetaImage) {
       scraped.image = normalizedMetaImage;
     }
@@ -601,7 +613,7 @@ async function resolveCollection(slug: string): Promise<CollectionPreview> {
   const name =
     extractFirstString(deepFindAll(nextData, ["name", "title"])) ??
     slug.replaceAll("-", " ").replaceAll(/\b\w/g, (c) => c.toUpperCase());
-  let image = await normalizeImageUrl(
+  let image = normalizeImageUrl(
     extractFirstString(
       deepFindAll(nextData, ["image", "thumbnail_url", "imageUrl", "imageURL"])
     ),
@@ -609,7 +621,7 @@ async function resolveCollection(slug: string): Promise<CollectionPreview> {
   );
 
   if (!image) {
-    image = await normalizeImageUrl(extractFirstString(metaImages), href);
+    image = normalizeImageUrl(extractFirstString(metaImages), href);
   }
 
   return {
@@ -628,7 +640,7 @@ async function resolveArtist(slug: string): Promise<ArtistPreview> {
   const name =
     extractFirstString(deepFindAll(nextData, ["name", "title"])) ??
     slug.replaceAll("-", " ");
-  let image = await normalizeImageUrl(
+  let image = normalizeImageUrl(
     extractFirstString(
       deepFindAll(nextData, ["image", "thumbnail_url", "imageUrl", "imageURL"])
     ),
@@ -636,7 +648,7 @@ async function resolveArtist(slug: string): Promise<ArtistPreview> {
   );
 
   if (!image) {
-    image = await normalizeImageUrl(extractFirstString(metaImages), href);
+    image = normalizeImageUrl(extractFirstString(metaImages), href);
   }
   const collections = Array.from(
     new Set(
@@ -662,7 +674,7 @@ async function resolveSet(slug: string): Promise<SetPreview> {
   const name =
     extractFirstString(deepFindAll(nextData, ["name", "title"])) ??
     slug.replaceAll("-", " ");
-  let image = await normalizeImageUrl(
+  let image = normalizeImageUrl(
     extractFirstString(
       deepFindAll(nextData, ["image", "thumbnail_url", "imageUrl", "imageURL"])
     ),
@@ -670,7 +682,7 @@ async function resolveSet(slug: string): Promise<SetPreview> {
   );
 
   if (!image) {
-    image = await normalizeImageUrl(extractFirstString(metaImages), href);
+    image = normalizeImageUrl(extractFirstString(metaImages), href);
   }
 
   let wiki: string | null = null;

@@ -1,9 +1,21 @@
 import { getAppMetadata } from "@/components/providers/metadata";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import { buildArticlePageJsonLd } from "@/lib/structured-data/article";
 import type { Metadata } from "next";
 
 export default function TweetstormsPage() {
   return (
     <div>
+      <JsonLdScript
+        data={buildArticlePageJsonLd({
+          path: "/education/tweetstorms",
+          headline: "Tweetstorms",
+          description: "6529 tweetstorms and long-form educational threads.",
+          image: "https://dnclu2fna0b2b.cloudfront.net/wp-content/uploads/2021/09/6529-header-logo.png",
+          dateModified: "2022-11-01T08:22:52+00:00",
+          section: "Education",
+        })}
+      />
       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
       <meta
@@ -28,7 +40,7 @@ export default function TweetstormsPage() {
       <meta name="twitter:data1" content="4 minutes" />
       {/* / Yoast SEO plugin. */}
       <link rel="dns-prefetch" href="//stats.wp.com" />
-      <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+      <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
       <link
         rel="alternate"
         type="application/rss+xml"
@@ -174,7 +186,7 @@ Current Pinned Tweet:"
       <link
         rel="stylesheet"
         id="font-awesome-css"
-        href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
         type="text/css"
         media="all"
       />

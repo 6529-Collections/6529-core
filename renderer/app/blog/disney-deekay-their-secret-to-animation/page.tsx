@@ -1,8 +1,22 @@
 import { getAppMetadata } from "@/components/providers/metadata";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import { buildArticlePageJsonLd } from "@/lib/structured-data/article";
 import type { Metadata } from "next";
 export default function BlogDisneyDeekayTheirSecretToAnimationPage() {
   return (
     <div>
+      <JsonLdScript
+        data={buildArticlePageJsonLd({
+          path: "/blog/disney-deekay-their-secret-to-animation",
+          headline: "Disney and DeeKay: Their Secret to Animation",
+          description: "Some animators possess the talent to move us, rattle us, charm, inspire, delight and amaze in ways that make their art form endure. From Disney to DeeKay, these are the animators who are gifted with the secret recipe for animation that both reflects and affects our humanity.",
+          image: "https://dnclu2fna0b2b.cloudfront.net/wp-content/uploads/2023/02/deekay.jpeg",
+          author: "Sabrina Khan",
+          datePublished: "2023-02-23T18:30:32+00:00",
+          dateModified: "2023-03-16T19:43:46+00:00",
+          section: "Blog",
+        })}
+      />
       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
       <meta
@@ -63,7 +77,7 @@ export default function BlogDisneyDeekayTheirSecretToAnimationPage() {
       <meta name="twitter:data2" content="16 minutes" />
       {/* / Yoast SEO plugin. */}
       <link rel="dns-prefetch" href="//stats.wp.com" />
-      <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+      <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
       <link
         rel="alternate"
         type="application/rss+xml"
@@ -228,7 +242,7 @@ These are the legendary words of DeeKay Kwon, a South Korean artist"
       <link
         rel="stylesheet"
         id="font-awesome-css"
-        href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
         type="text/css"
         media="all"
       />

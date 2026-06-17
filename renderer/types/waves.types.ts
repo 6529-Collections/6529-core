@@ -5,8 +5,11 @@ import type { ApiWaveParticipationSubmissionStrategy } from "@/generated/models/
 import type { ApiWaveOutcomeDistributionItem } from "@/generated/models/ApiWaveOutcomeDistributionItem";
 import type { ApiWaveType } from "@/generated/models/ApiWaveType";
 import type { ApiDropMedia } from "@/generated/models/ApiDropMedia";
+import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import type { ApiWaveCreditNft } from "@/generated/models/ApiWaveCreditNft";
 import type { ApiWaveCreditScope } from "@/generated/models/ApiWaveCreditScope";
+import type { ApiWaveRepSummary } from "@/generated/models/ApiWaveRepSummary";
+import type { ApiWaveScore } from "@/generated/models/ApiWaveScore";
 
 export enum MyStreamWaveTab {
   CHAT = "CHAT",
@@ -16,6 +19,7 @@ export enum MyStreamWaveTab {
   WINNERS = "WINNERS",
   OUTCOME = "OUTCOME",
   MY_VOTES = "MY_VOTES",
+  POLLS = "POLLS",
   FAQ = "FAQ",
 }
 
@@ -101,6 +105,16 @@ export interface CreateWaveApprovalConfig {
   readonly maxWinners: number | null;
 }
 
+export interface CreateWaveApproveDisplayConfig {
+  readonly approvalsTabLabel: string;
+  readonly approvedTabLabel: string;
+}
+
+export interface CreateWaveDisplayConfig {
+  readonly approve: CreateWaveApproveDisplayConfig;
+  readonly outcomesVisible: boolean;
+}
+
 export enum CreateWaveOutcomeType {
   MANUAL = "MANUAL",
   REP = "REP",
@@ -151,6 +165,7 @@ export interface CreateWaveConfig {
   readonly voting: CreateWaveVotingConfig;
   readonly outcomes: CreateWaveOutcomeConfig[];
   readonly approval: CreateWaveApprovalConfig;
+  readonly display: CreateWaveDisplayConfig;
 }
 
 export enum CreateWaveStepStatus {
@@ -173,10 +188,14 @@ export interface SidebarWave {
   readonly id: string;
   readonly name: string;
   readonly type: ApiWaveType;
+  readonly createdAt: number;
+  readonly creator: ApiProfileMin | null;
   readonly picture: string | null;
   readonly contributors: readonly SidebarWaveContributor[];
   readonly isDirectMessage: boolean;
   readonly hasCompetition: boolean;
+  readonly parentWaveId: string | null;
+  readonly hasSubwaves: boolean;
   readonly descriptionDrop: SidebarWaveDescriptionDrop;
   readonly totalDropsCount: number;
   readonly isPrivate: boolean;
@@ -187,6 +206,8 @@ export interface SidebarWave {
   readonly pinned: boolean;
   readonly muted: boolean;
   readonly subscribed: boolean;
+  readonly waveRep: ApiWaveRepSummary | null;
+  readonly waveScore: ApiWaveScore | null;
 }
 
 export interface SidebarWavesPage {

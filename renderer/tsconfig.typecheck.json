@@ -9,6 +9,7 @@
   "exclude": [
     "next-env.d.ts",
     ".next/dev/types/**",
+    "out/**",
     "node_modules",
     "generated/**",
     "__tests__/**",

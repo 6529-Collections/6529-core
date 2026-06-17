@@ -1,9 +1,21 @@
 import { getAppMetadata } from "@/components/providers/metadata";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import { buildArticlePageJsonLd } from "@/lib/structured-data/article";
 import type { Metadata } from "next";
 
 export default function PodcastsPage() {
   return (
     <div>
+      <JsonLdScript
+        data={buildArticlePageJsonLd({
+          path: "/education/podcasts",
+          headline: "Podcasts",
+          description: "6529 podcasts and audio resources for learning about NFTs and decentralization.",
+          image: "https://dnclu2fna0b2b.cloudfront.net/wp-content/uploads/2021/09/6529-header-logo.png",
+          dateModified: "2022-06-15T11:51:53+00:00",
+          section: "Education",
+        })}
+      />
       <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
       <meta httpEquiv="Content-Type" content="text/html; charset=utf-8" />
       <meta
@@ -28,7 +40,7 @@ export default function PodcastsPage() {
       <meta name="twitter:data1" content="24 minutes" />
       {/* / Yoast SEO plugin. */}
       <link rel="dns-prefetch" href="//stats.wp.com" />
-      <link rel="dns-prefetch" href="//cdnjs.cloudflare.com" />
+      <link rel="dns-prefetch" href="https://cdnjs.cloudflare.com" />
       <link
         rel="alternate"
         type="application/rss+xml"
@@ -188,7 +200,7 @@ This is without question the Real Vision"
       <link
         rel="stylesheet"
         id="font-awesome-css"
-        href="//cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.14.0/css/all.min.css?ver=6.7"
         type="text/css"
         media="all"
       />

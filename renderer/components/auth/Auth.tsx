@@ -1,6 +1,4 @@
 "use client";
-
-import "react-toastify/dist/ReactToastify.css";
 import { useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
@@ -12,13 +10,17 @@ import {
   useRef,
   useState,
 } from "react";
-import { Slide, toast } from "react-toastify";
 import { isAddress } from "viem";
 import {
   ConfirmModalShell,
   confirmBtnDanger,
   confirmBtnPrimary,
 } from "@/components/shared/ConfirmModalShell";
+import type { AppToastInput } from "@/components/utils/toast/AppToast";
+import {
+  AppToastContainer,
+  showAppToast,
+} from "@/components/utils/toast/AppToast";
 import { useModalState } from "@/contexts/ModalStateContext";
 import { ProfileConnectedStatus } from "@/entities/IProfile";
 import {
@@ -33,7 +35,6 @@ import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
-import { getToastAutoClose } from "@/helpers/toast.helpers";
 import { useIdentity } from "@/hooks/useIdentity";
 import {
   ConnectionMismatchError,
@@ -66,7 +67,6 @@ import {
   ReactQueryWrapperContext,
 } from "../react-query-wrapper/ReactQueryWrapper";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
-import type { TypeOptions } from "react-toastify";
 
 // Custom error classes for authentication failures
 class AuthenticationNonceError extends Error {
@@ -106,13 +106,7 @@ type AuthContextType = {
   readonly activeProfileProxy: ApiProfileProxy | null;
   readonly showWaves: boolean;
   readonly requestAuth: () => Promise<{ success: boolean }>;
-  readonly setToast: ({
-    message,
-    type,
-  }: {
-    message: string | React.ReactNode;
-    type: TypeOptions;
-  }) => void;
+  readonly setToast: (toast: AppToastInput) => void;
   readonly setActiveProfileProxy: (
     profileProxy: ApiProfileProxy | null
   ) => Promise<void>;
@@ -475,23 +469,8 @@ export default function Auth({
     }
   };
 
-  const setToast = ({
-    message,
-    type,
-  }: {
-    message: string | React.ReactNode;
-    type: TypeOptions;
-  }) => {
-    toast(message, {
-      position: "top-right",
-      autoClose: getToastAutoClose(type),
-      hideProgressBar: false,
-      draggable: false,
-      closeOnClick: true,
-      transition: Slide,
-      theme: "dark",
-      type,
-    });
+  const setToast = (toast: AppToastInput) => {
+    showAppToast(toast);
   };
 
   const getSignature = async ({
@@ -918,6 +897,7 @@ export default function Auth({
       }}
     >
       {children}
+      <AppToastContainer />
       <ConfirmModalShell
         show={shouldShowSignModal}
         title="Sign Authentication Request"

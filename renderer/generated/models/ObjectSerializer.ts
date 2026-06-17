@@ -24,6 +24,7 @@ export * from '../models/ApiBulkRepTarget';
 export * from '../models/ApiChangeGroupVisibility';
 export * from '../models/ApiChangeProfileCicRating';
 export * from '../models/ApiChangeProfileRepRating';
+export * from '../models/ApiChangeWaveRepRating';
 export * from '../models/ApiCicContributor';
 export * from '../models/ApiCicContributorsPage';
 export * from '../models/ApiCicOverview';
@@ -45,6 +46,7 @@ export * from '../models/ApiConsolidatedTdh';
 export * from '../models/ApiCreateAttachmentMultipartUploadRequest';
 export * from '../models/ApiCreateAttachmentMultipartUploadResponse';
 export * from '../models/ApiCreateDropPart';
+export * from '../models/ApiCreateDropPollRequest';
 export * from '../models/ApiCreateDropRequest';
 export * from '../models/ApiCreateGroup';
 export * from '../models/ApiCreateGroupDescription';
@@ -70,6 +72,7 @@ export * from '../models/ApiCreateNewWaveVotingConfigBase';
 export * from '../models/ApiCreateOrUpdateProfileRequest';
 export * from '../models/ApiCreateWaveConfig';
 export * from '../models/ApiCreateWaveDropRequest';
+export * from '../models/ApiCreateWaveMetadataRequest';
 export * from '../models/ApiCreateWaveOutcome';
 export * from '../models/ApiCreateWaveOutcomeDistributionItem';
 export * from '../models/ApiCuratedProfileWaveDropsPage';
@@ -99,6 +102,11 @@ export * from '../models/ApiDropNftLink';
 export * from '../models/ApiDropPart';
 export * from '../models/ApiDropPartQuoteV2';
 export * from '../models/ApiDropPartV2';
+export * from '../models/ApiDropPoll';
+export * from '../models/ApiDropPollOption';
+export * from '../models/ApiDropPollVoteRequest';
+export * from '../models/ApiDropPollVotersPage';
+export * from '../models/ApiDropPollsPage';
 export * from '../models/ApiDropRater';
 export * from '../models/ApiDropRatingRequest';
 export * from '../models/ApiDropReaction';
@@ -180,6 +188,7 @@ export * from '../models/ApiNotification';
 export * from '../models/ApiNotificationAdditionalContextV2';
 export * from '../models/ApiNotificationCause';
 export * from '../models/ApiNotificationDropReactedReactor';
+export * from '../models/ApiNotificationPollVoteOption';
 export * from '../models/ApiNotificationV2';
 export * from '../models/ApiNotificationsResponse';
 export * from '../models/ApiNotificationsResponseV2';
@@ -279,6 +288,7 @@ export * from '../models/ApiWaveDecisionsStrategy';
 export * from '../models/ApiWaveDropsFeed';
 export * from '../models/ApiWaveDropsFeedV2';
 export * from '../models/ApiWaveLog';
+export * from '../models/ApiWaveMetadata';
 export * from '../models/ApiWaveMetadataType';
 export * from '../models/ApiWaveMetrics';
 export * from '../models/ApiWaveMin';
@@ -302,12 +312,31 @@ export * from '../models/ApiWaveParticipationRequirement';
 export * from '../models/ApiWaveParticipationSubmissionStrategy';
 export * from '../models/ApiWaveParticipationSubmissionStrategyIdentityConf';
 export * from '../models/ApiWaveParticipationSubmissionStrategyType';
+export * from '../models/ApiWavePoll';
+export * from '../models/ApiWaveRepCategoriesPage';
+export * from '../models/ApiWaveRepCategory';
+export * from '../models/ApiWaveRepCategorySummary';
+export * from '../models/ApiWaveRepContributor';
+export * from '../models/ApiWaveRepContributorsPage';
+export * from '../models/ApiWaveRepOverview';
+export * from '../models/ApiWaveRepRating';
+export * from '../models/ApiWaveRepSummary';
 export * from '../models/ApiWaveRequiredMetadata';
 export * from '../models/ApiWaveScope';
+export * from '../models/ApiWaveScore';
+export * from '../models/ApiWaveScoreComponents';
+export * from '../models/ApiWaveScoreFormula';
+export * from '../models/ApiWaveScoreHotnessComponentWeights';
+export * from '../models/ApiWaveScorePenalties';
+export * from '../models/ApiWaveScoreQualityComponentWeights';
+export * from '../models/ApiWaveScoreQualityGate';
+export * from '../models/ApiWaveScoreSort';
+export * from '../models/ApiWaveScoreVisibilityComponentWeights';
 export * from '../models/ApiWaveSubscriptionActions';
 export * from '../models/ApiWaveSubscriptionTargetAction';
 export * from '../models/ApiWaveType';
 export * from '../models/ApiWaveVisibilityConfig';
+export * from '../models/ApiWaveVisibilityTier';
 export * from '../models/ApiWaveVoter';
 export * from '../models/ApiWaveVotersPage';
 export * from '../models/ApiWaveVotingConfig';
@@ -405,6 +434,7 @@ import { ApiBulkRepTarget } from '../models/ApiBulkRepTarget';
 import { ApiChangeGroupVisibility } from '../models/ApiChangeGroupVisibility';
 import { ApiChangeProfileCicRating } from '../models/ApiChangeProfileCicRating';
 import { ApiChangeProfileRepRating } from '../models/ApiChangeProfileRepRating';
+import { ApiChangeWaveRepRating } from '../models/ApiChangeWaveRepRating';
 import { ApiCicContributor } from '../models/ApiCicContributor';
 import { ApiCicContributorsPage } from '../models/ApiCicContributorsPage';
 import { ApiCicOverview } from '../models/ApiCicOverview';
@@ -426,7 +456,8 @@ import { ApiConsolidatedTdh } from '../models/ApiConsolidatedTdh';
 import { ApiCreateAttachmentMultipartUploadRequest   } from '../models/ApiCreateAttachmentMultipartUploadRequest';
 import { ApiCreateAttachmentMultipartUploadResponse     } from '../models/ApiCreateAttachmentMultipartUploadResponse';
 import { ApiCreateDropPart } from '../models/ApiCreateDropPart';
-import { ApiCreateDropRequest               } from '../models/ApiCreateDropRequest';
+import { ApiCreateDropPollRequest } from '../models/ApiCreateDropPollRequest';
+import { ApiCreateDropRequest                } from '../models/ApiCreateDropRequest';
 import { ApiCreateGroup } from '../models/ApiCreateGroup';
 import { ApiCreateGroupDescription } from '../models/ApiCreateGroupDescription';
 import { ApiCreateMediaUploadUrlRequest   } from '../models/ApiCreateMediaUploadUrlRequest';
@@ -451,14 +482,15 @@ import { ApiCreateNewWaveVotingConfigBase          } from '../models/ApiCreateNe
 import { ApiCreateOrUpdateProfileRequest        } from '../models/ApiCreateOrUpdateProfileRequest';
 import { ApiCreateWaveConfig          } from '../models/ApiCreateWaveConfig';
 import { ApiCreateWaveDropRequest } from '../models/ApiCreateWaveDropRequest';
+import { ApiCreateWaveMetadataRequest } from '../models/ApiCreateWaveMetadataRequest';
 import { ApiCreateWaveOutcome        } from '../models/ApiCreateWaveOutcome';
 import { ApiCreateWaveOutcomeDistributionItem } from '../models/ApiCreateWaveOutcomeDistributionItem';
 import { ApiCuratedProfileWaveDropsPage } from '../models/ApiCuratedProfileWaveDropsPage';
-import { ApiCurationDrop                                } from '../models/ApiCurationDrop';
+import { ApiCurationDrop                                 } from '../models/ApiCurationDrop';
 import { ApiCurationDropsPage } from '../models/ApiCurationDropsPage';
 import { ApiDistributionAirdropsCsvUploadRequest } from '../models/ApiDistributionAirdropsCsvUploadRequest';
 import { ApiDistributionAirdropsUploadResponse } from '../models/ApiDistributionAirdropsUploadResponse';
-import { ApiDrop                                } from '../models/ApiDrop';
+import { ApiDrop                                 } from '../models/ApiDrop';
 import { ApiDropAndDropVote } from '../models/ApiDropAndDropVote';
 import { ApiDropAndWave } from '../models/ApiDropAndWave';
 import { ApiDropAttachmentReference } from '../models/ApiDropAttachmentReference';
@@ -480,6 +512,11 @@ import { ApiDropNftLink } from '../models/ApiDropNftLink';
 import { ApiDropPart } from '../models/ApiDropPart';
 import { ApiDropPartQuoteV2 } from '../models/ApiDropPartQuoteV2';
 import { ApiDropPartV2 } from '../models/ApiDropPartV2';
+import { ApiDropPoll } from '../models/ApiDropPoll';
+import { ApiDropPollOption } from '../models/ApiDropPollOption';
+import { ApiDropPollVoteRequest } from '../models/ApiDropPollVoteRequest';
+import { ApiDropPollVotersPage } from '../models/ApiDropPollVotersPage';
+import { ApiDropPollsPage } from '../models/ApiDropPollsPage';
 import { ApiDropRater } from '../models/ApiDropRater';
 import { ApiDropRatingRequest } from '../models/ApiDropRatingRequest';
 import { ApiDropReaction } from '../models/ApiDropReaction';
@@ -493,7 +530,7 @@ import { ApiDropSubscriptionActions } from '../models/ApiDropSubscriptionActions
 import { ApiDropSubscriptionTargetAction } from '../models/ApiDropSubscriptionTargetAction';
 import { ApiDropTraceItem } from '../models/ApiDropTraceItem';
 import { ApiDropType } from '../models/ApiDropType';
-import { ApiDropV2                          } from '../models/ApiDropV2';
+import { ApiDropV2                           } from '../models/ApiDropV2';
 import { ApiDropV2ContextProfileContext } from '../models/ApiDropV2ContextProfileContext';
 import { ApiDropV2Page } from '../models/ApiDropV2Page';
 import { ApiDropV2PageWithoutCount } from '../models/ApiDropV2PageWithoutCount';
@@ -502,7 +539,7 @@ import { ApiDropVoteEditLog } from '../models/ApiDropVoteEditLog';
 import { ApiDropVoter } from '../models/ApiDropVoter';
 import { ApiDropVotersPage } from '../models/ApiDropVotersPage';
 import { ApiDropWinningContext } from '../models/ApiDropWinningContext';
-import { ApiDropWithoutWave                               } from '../models/ApiDropWithoutWave';
+import { ApiDropWithoutWave                                } from '../models/ApiDropWithoutWave';
 import { ApiDropWithoutWavesPageWithoutCount } from '../models/ApiDropWithoutWavesPageWithoutCount';
 import { ApiDropsLeaderboardPage } from '../models/ApiDropsLeaderboardPage';
 import { ApiDropsLeaderboardPageV2 } from '../models/ApiDropsLeaderboardPageV2';
@@ -561,6 +598,7 @@ import { ApiNotification        } from '../models/ApiNotification';
 import { ApiNotificationAdditionalContextV2 } from '../models/ApiNotificationAdditionalContextV2';
 import { ApiNotificationCause } from '../models/ApiNotificationCause';
 import { ApiNotificationDropReactedReactor } from '../models/ApiNotificationDropReactedReactor';
+import { ApiNotificationPollVoteOption } from '../models/ApiNotificationPollVoteOption';
 import { ApiNotificationV2         } from '../models/ApiNotificationV2';
 import { ApiNotificationsResponse } from '../models/ApiNotificationsResponse';
 import { ApiNotificationsResponseV2 } from '../models/ApiNotificationsResponseV2';
@@ -660,6 +698,7 @@ import { ApiWaveDecisionsStrategy } from '../models/ApiWaveDecisionsStrategy';
 import { ApiWaveDropsFeed } from '../models/ApiWaveDropsFeed';
 import { ApiWaveDropsFeedV2 } from '../models/ApiWaveDropsFeedV2';
 import { ApiWaveLog } from '../models/ApiWaveLog';
+import { ApiWaveMetadata } from '../models/ApiWaveMetadata';
 import { ApiWaveMetadataType } from '../models/ApiWaveMetadataType';
 import { ApiWaveMetrics } from '../models/ApiWaveMetrics';
 import { ApiWaveMin                         } from '../models/ApiWaveMin';
@@ -683,12 +722,31 @@ import { ApiWaveParticipationRequirement } from '../models/ApiWaveParticipationR
 import { ApiWaveParticipationSubmissionStrategy   } from '../models/ApiWaveParticipationSubmissionStrategy';
 import { ApiWaveParticipationSubmissionStrategyIdentityConf   } from '../models/ApiWaveParticipationSubmissionStrategyIdentityConf';
 import { ApiWaveParticipationSubmissionStrategyType } from '../models/ApiWaveParticipationSubmissionStrategyType';
+import { ApiWavePoll } from '../models/ApiWavePoll';
+import { ApiWaveRepCategoriesPage } from '../models/ApiWaveRepCategoriesPage';
+import { ApiWaveRepCategory } from '../models/ApiWaveRepCategory';
+import { ApiWaveRepCategorySummary } from '../models/ApiWaveRepCategorySummary';
+import { ApiWaveRepContributor } from '../models/ApiWaveRepContributor';
+import { ApiWaveRepContributorsPage } from '../models/ApiWaveRepContributorsPage';
+import { ApiWaveRepOverview } from '../models/ApiWaveRepOverview';
+import { ApiWaveRepRating } from '../models/ApiWaveRepRating';
+import { ApiWaveRepSummary } from '../models/ApiWaveRepSummary';
 import { ApiWaveRequiredMetadata   } from '../models/ApiWaveRequiredMetadata';
 import { ApiWaveScope } from '../models/ApiWaveScope';
+import { ApiWaveScore            } from '../models/ApiWaveScore';
+import { ApiWaveScoreComponents } from '../models/ApiWaveScoreComponents';
+import { ApiWaveScoreFormula } from '../models/ApiWaveScoreFormula';
+import { ApiWaveScoreHotnessComponentWeights } from '../models/ApiWaveScoreHotnessComponentWeights';
+import { ApiWaveScorePenalties } from '../models/ApiWaveScorePenalties';
+import { ApiWaveScoreQualityComponentWeights } from '../models/ApiWaveScoreQualityComponentWeights';
+import { ApiWaveScoreQualityGate } from '../models/ApiWaveScoreQualityGate';
+import { ApiWaveScoreSort } from '../models/ApiWaveScoreSort';
+import { ApiWaveScoreVisibilityComponentWeights } from '../models/ApiWaveScoreVisibilityComponentWeights';
 import { ApiWaveSubscriptionActions } from '../models/ApiWaveSubscriptionActions';
 import { ApiWaveSubscriptionTargetAction } from '../models/ApiWaveSubscriptionTargetAction';
 import { ApiWaveType } from '../models/ApiWaveType';
 import { ApiWaveVisibilityConfig } from '../models/ApiWaveVisibilityConfig';
+import { ApiWaveVisibilityTier } from '../models/ApiWaveVisibilityTier';
 import { ApiWaveVoter } from '../models/ApiWaveVoter';
 import { ApiWaveVotersPage } from '../models/ApiWaveVotersPage';
 import { ApiWaveVotingConfig           } from '../models/ApiWaveVotingConfig';
@@ -813,8 +871,10 @@ let enumsMap: Set<string> = new Set<string>([
     "ApiWaveParticipationIdentitySubmissionWhoCanBeSubmitted",
     "ApiWaveParticipationRequirement",
     "ApiWaveParticipationSubmissionStrategyType",
+    "ApiWaveScoreSort",
     "ApiWaveSubscriptionTargetAction",
     "ApiWaveType",
+    "ApiWaveVisibilityTier",
     "ApiWavesOverviewType",
     "ApiWavesPinFilter",
     "ApiWavesV2ListType",
@@ -848,6 +908,7 @@ let typeMap: {[index: string]: any} = {
     "ApiChangeGroupVisibility": ApiChangeGroupVisibility,
     "ApiChangeProfileCicRating": ApiChangeProfileCicRating,
     "ApiChangeProfileRepRating": ApiChangeProfileRepRating,
+    "ApiChangeWaveRepRating": ApiChangeWaveRepRating,
     "ApiCicContributor": ApiCicContributor,
     "ApiCicContributorsPage": ApiCicContributorsPage,
     "ApiCicOverview": ApiCicOverview,
@@ -868,6 +929,7 @@ let typeMap: {[index: string]: any} = {
     "ApiCreateAttachmentMultipartUploadRequest": ApiCreateAttachmentMultipartUploadRequest,
     "ApiCreateAttachmentMultipartUploadResponse": ApiCreateAttachmentMultipartUploadResponse,
     "ApiCreateDropPart": ApiCreateDropPart,
+    "ApiCreateDropPollRequest": ApiCreateDropPollRequest,
     "ApiCreateDropRequest": ApiCreateDropRequest,
     "ApiCreateGroup": ApiCreateGroup,
     "ApiCreateGroupDescription": ApiCreateGroupDescription,
@@ -893,6 +955,7 @@ let typeMap: {[index: string]: any} = {
     "ApiCreateOrUpdateProfileRequest": ApiCreateOrUpdateProfileRequest,
     "ApiCreateWaveConfig": ApiCreateWaveConfig,
     "ApiCreateWaveDropRequest": ApiCreateWaveDropRequest,
+    "ApiCreateWaveMetadataRequest": ApiCreateWaveMetadataRequest,
     "ApiCreateWaveOutcome": ApiCreateWaveOutcome,
     "ApiCreateWaveOutcomeDistributionItem": ApiCreateWaveOutcomeDistributionItem,
     "ApiCuratedProfileWaveDropsPage": ApiCuratedProfileWaveDropsPage,
@@ -920,6 +983,11 @@ let typeMap: {[index: string]: any} = {
     "ApiDropPart": ApiDropPart,
     "ApiDropPartQuoteV2": ApiDropPartQuoteV2,
     "ApiDropPartV2": ApiDropPartV2,
+    "ApiDropPoll": ApiDropPoll,
+    "ApiDropPollOption": ApiDropPollOption,
+    "ApiDropPollVoteRequest": ApiDropPollVoteRequest,
+    "ApiDropPollVotersPage": ApiDropPollVotersPage,
+    "ApiDropPollsPage": ApiDropPollsPage,
     "ApiDropRater": ApiDropRater,
     "ApiDropRatingRequest": ApiDropRatingRequest,
     "ApiDropReaction": ApiDropReaction,
@@ -991,6 +1059,7 @@ let typeMap: {[index: string]: any} = {
     "ApiNotification": ApiNotification,
     "ApiNotificationAdditionalContextV2": ApiNotificationAdditionalContextV2,
     "ApiNotificationDropReactedReactor": ApiNotificationDropReactedReactor,
+    "ApiNotificationPollVoteOption": ApiNotificationPollVoteOption,
     "ApiNotificationV2": ApiNotificationV2,
     "ApiNotificationsResponse": ApiNotificationsResponse,
     "ApiNotificationsResponseV2": ApiNotificationsResponseV2,
@@ -1080,6 +1149,7 @@ let typeMap: {[index: string]: any} = {
     "ApiWaveDropsFeed": ApiWaveDropsFeed,
     "ApiWaveDropsFeedV2": ApiWaveDropsFeedV2,
     "ApiWaveLog": ApiWaveLog,
+    "ApiWaveMetadata": ApiWaveMetadata,
     "ApiWaveMetrics": ApiWaveMetrics,
     "ApiWaveMin": ApiWaveMin,
     "ApiWaveNotificationPreferences": ApiWaveNotificationPreferences,
@@ -1095,8 +1165,25 @@ let typeMap: {[index: string]: any} = {
     "ApiWaveParticipationConfig": ApiWaveParticipationConfig,
     "ApiWaveParticipationSubmissionStrategy": ApiWaveParticipationSubmissionStrategy,
     "ApiWaveParticipationSubmissionStrategyIdentityConf": ApiWaveParticipationSubmissionStrategyIdentityConf,
+    "ApiWavePoll": ApiWavePoll,
+    "ApiWaveRepCategoriesPage": ApiWaveRepCategoriesPage,
+    "ApiWaveRepCategory": ApiWaveRepCategory,
+    "ApiWaveRepCategorySummary": ApiWaveRepCategorySummary,
+    "ApiWaveRepContributor": ApiWaveRepContributor,
+    "ApiWaveRepContributorsPage": ApiWaveRepContributorsPage,
+    "ApiWaveRepOverview": ApiWaveRepOverview,
+    "ApiWaveRepRating": ApiWaveRepRating,
+    "ApiWaveRepSummary": ApiWaveRepSummary,
     "ApiWaveRequiredMetadata": ApiWaveRequiredMetadata,
     "ApiWaveScope": ApiWaveScope,
+    "ApiWaveScore": ApiWaveScore,
+    "ApiWaveScoreComponents": ApiWaveScoreComponents,
+    "ApiWaveScoreFormula": ApiWaveScoreFormula,
+    "ApiWaveScoreHotnessComponentWeights": ApiWaveScoreHotnessComponentWeights,
+    "ApiWaveScorePenalties": ApiWaveScorePenalties,
+    "ApiWaveScoreQualityComponentWeights": ApiWaveScoreQualityComponentWeights,
+    "ApiWaveScoreQualityGate": ApiWaveScoreQualityGate,
+    "ApiWaveScoreVisibilityComponentWeights": ApiWaveScoreVisibilityComponentWeights,
     "ApiWaveSubscriptionActions": ApiWaveSubscriptionActions,
     "ApiWaveVisibilityConfig": ApiWaveVisibilityConfig,
     "ApiWaveVoter": ApiWaveVoter,

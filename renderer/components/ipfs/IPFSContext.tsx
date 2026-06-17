@@ -1,7 +1,11 @@
 "use client";
 
 import { publicEnv } from "@/config/env";
-import { getConfiguredIpfsGatewayHost } from "@/lib/media/ipfs-gateways";
+import {
+  normalizeDecentralizedMediaUrl,
+  parseDecentralizedMediaRef,
+  to6529ResolverUrl,
+} from "@/lib/media/decentralized-media";
 import React, {
   createContext,
   useContext,
@@ -37,11 +41,11 @@ const normalizeGatewayBase = (gatewayEndpoint: string): string => {
 };
 
 const buildIpfsConfig = (input: {
-  apiEndpoint?: string | null;
-  gatewayEndpoint?: string | null;
-  mfsPath?: string | null;
-  ipfsPort?: number | null;
-  ipfsRpcPort?: number | null;
+  apiEndpoint?: string | null | undefined;
+  gatewayEndpoint?: string | null | undefined;
+  mfsPath?: string | null | undefined;
+  ipfsPort?: number | null | undefined;
+  ipfsRpcPort?: number | null | undefined;
 }) => {
   const apiEndpoint =
     input.apiEndpoint?.trim() ||
@@ -79,9 +83,7 @@ const isOptionalPortField = (
   value === null ||
   (typeof value === "number" && Number.isInteger(value) && value > 0);
 
-const isIpfsConfigInput = (
-  value: unknown
-): value is IpfsConfigInput => {
+const isIpfsConfigInput = (value: unknown): value is IpfsConfigInput => {
   if (typeof value !== "object" || value === null) {
     return false;
   }
@@ -114,8 +116,15 @@ const readIpfsConfig = async () => {
     typeof window !== "undefined"
       ? (window as Window & { api?: typeof window.api }).api
       : undefined;
-  if (!bridge) {
-    throw new Error("Electron bridge is unavailable");
+  if (
+    typeof bridge?.getIpfsInfo !== "function" ||
+    typeof bridge?.getInfo !== "function"
+  ) {
+    return buildIpfsConfig({
+      apiEndpoint: publicEnv.IPFS_API_ENDPOINT,
+      gatewayEndpoint: publicEnv.IPFS_GATEWAY_ENDPOINT,
+      mfsPath: publicEnv.IPFS_MFS_PATH,
+    });
   }
 
   const fallbackToAppInfo = async (reason: string, details?: unknown) => {
@@ -163,46 +172,6 @@ export const getConfiguredGatewayBaseForSync = (): string | null => {
   return normalizeGatewayBase(configuredGatewayEndpoint);
 };
 
-function joinUrlPaths(basePathname: string, pathName: string): string {
-  const normalizedBase = basePathname.endsWith("/")
-    ? basePathname.slice(0, -1)
-    : basePathname;
-  const normalizedPath = pathName.startsWith("/") ? pathName : `/${pathName}`;
-
-  if (!normalizedBase) {
-    return normalizedPath;
-  }
-
-  return `${normalizedBase}${normalizedPath}`;
-}
-
-function rewriteGatewayUrl(url: string, gatewayBase: string): string | null {
-  const configuredGatewayHost = getConfiguredIpfsGatewayHost(gatewayBase);
-  if (!configuredGatewayHost) {
-    return null;
-  }
-
-  const parsedUrl = new URL(url);
-  const normalizedHost = parsedUrl.hostname.toLowerCase();
-  if (normalizedHost !== "ipfs.io" && normalizedHost !== "www.ipfs.io") {
-    return null;
-  }
-
-  if (!parsedUrl.pathname.startsWith("/ipfs/")) {
-    return null;
-  }
-
-  const configuredGatewayBase = new URL(gatewayBase);
-  parsedUrl.protocol = configuredGatewayBase.protocol;
-  parsedUrl.hostname = configuredGatewayBase.hostname;
-  parsedUrl.port = configuredGatewayBase.port;
-  parsedUrl.pathname = joinUrlPaths(
-    configuredGatewayBase.pathname,
-    parsedUrl.pathname
-  );
-  return parsedUrl.toString();
-}
-
 export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -214,10 +183,7 @@ export const IpfsProvider: React.FC<{ children: React.ReactNode }> = ({
     if (typeof window === "undefined") {
       return;
     }
-    if (
-      !isElectron() &&
-      typeof window.api?.getInfo !== "function"
-    ) {
+    if (!isElectron() && !publicEnv.IPFS_API_ENDPOINT) {
       return;
     }
 
@@ -258,48 +224,33 @@ export const useIpfsContext = (): IpfsContextType => {
 };
 
 export const useIpfsService = (): IpfsService | null => {
-  const { ipfsService } = useIpfsContext();
-  return ipfsService;
+  const context = useContext(IpfsContext);
+  if (!context) {
+    throw new Error("useIpfsService must be used within an IpfsProvider");
+  }
+  return context.ipfsService;
 };
 
 export const resolveIpfsUrlSync = (url: string) => {
-  if (url.startsWith("ipfs://")) {
-    const gatewayBase = getConfiguredGatewayBaseForSync();
-    if (!gatewayBase) {
-      console.warn("IPFS gateway not yet initialized, returning original URL");
+  try {
+    const parsed = parseDecentralizedMediaRef(url);
+    if (!parsed) {
       return url;
     }
-    return `${gatewayBase}/ipfs/${url.slice(7)}`;
-  }
 
-  const gatewayBase = getConfiguredGatewayBaseForSync();
-  if (!gatewayBase) {
-    return url;
-  }
-
-  try {
-    return rewriteGatewayUrl(url, gatewayBase) ?? url;
+    return to6529ResolverUrl(parsed, publicEnv.MEDIA_RESOLVER_ENDPOINT);
   } catch (error) {
     console.error("Error resolving IPFS URL", error);
     return url;
   }
 };
 
-export const resolveIpfsUrlAsync = async (url: string) => {
-  if (!url.startsWith("ipfs://")) {
-    return url;
-  }
-
-  try {
-    const info = await readIpfsConfig();
-    cachedGatewayBase = info.gatewayBase;
-    return `${info.gatewayBase}/ipfs/${url.slice(7)}`;
-  } catch (error) {
-    console.error("Error resolving IPFS URL", error);
-    return url;
-  }
-};
+export const resolveIpfsUrlAsync = async (url: string) =>
+  resolveIpfsUrlSync(url);
 
 export const resolveIpfsUrl = (url: string) => {
   return resolveIpfsUrlSync(url);
 };
+
+export const resolveDecentralizedMediaUrlSync = (url: string) =>
+  normalizeDecentralizedMediaUrl(url, publicEnv.MEDIA_RESOLVER_ENDPOINT) ?? url;

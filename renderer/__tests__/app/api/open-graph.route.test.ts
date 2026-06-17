@@ -1,7 +1,26 @@
+import type { NextRequest } from "next/server";
+import { ReadableStream as NodeReadableStream } from "node:stream/web";
+import { MessagePort as NodeMessagePort } from "node:worker_threads";
+
 import { publicEnv } from "@/config/env";
+
+if (typeof globalThis.ReadableStream === "undefined") {
+  Object.defineProperty(globalThis, "ReadableStream", {
+    value: NodeReadableStream,
+  });
+}
+
+if (typeof globalThis.MessagePort === "undefined") {
+  Object.defineProperty(globalThis, "MessagePort", {
+    value: NodeMessagePort,
+  });
+}
 
 const mockFetchPublicUrl = jest.fn();
 
+/**
+ * Captures mocked JSON responses from the OpenGraph route.
+ */
 const nextResponseJsonRoute = jest.fn(
   (body: unknown, init?: { status?: number | undefined }) => ({
     status: init?.status ?? 200,
@@ -60,6 +79,10 @@ jest.mock("@/app/api/open-graph/transient/service", () => ({
   createTransientPlan: jest.fn(() => null),
 }));
 
+jest.mock("@/app/api/open-graph/6529/service", () => ({
+  createFirstParty6529Plan: jest.fn(() => null),
+}));
+
 jest.mock("@/app/api/open-graph/ens", () => ({
   detectEnsTarget: jest.fn(),
   fetchEnsPreview: jest.fn(),
@@ -94,6 +117,9 @@ let opensea: {
 let transient: {
   createTransientPlan: jest.Mock;
 };
+let firstParty6529: {
+  createFirstParty6529Plan: jest.Mock;
+};
 let UrlGuardError: typeof import("@/lib/security/urlGuard").UrlGuardError;
 let ensRouteModule: {
   detectEnsTarget: jest.Mock;
@@ -106,6 +132,33 @@ const DEFAULT_USER_AGENT =
 const originalFetch = global.fetch;
 const mockFetch = jest.fn();
 
+/**
+ * Creates a single-read stream body for OpenGraph request and response mocks.
+ */
+const createBody = (body: string): ReadableStream<Uint8Array> => {
+  const bytes = new TextEncoder().encode(body);
+  let consumed = false;
+
+  return {
+    getReader: () => ({
+      read: async () => {
+        if (consumed) {
+          return { done: true, value: undefined };
+        }
+        consumed = true;
+        return { done: false, value: bytes };
+      },
+      cancel: async () => {
+        consumed = true;
+      },
+      releaseLock: () => undefined,
+    }),
+  } as unknown as ReadableStream<Uint8Array>;
+};
+
+/**
+ * Loads the route after resetting modules so mocked dependencies are fresh.
+ */
 async function loadRoute(): Promise<void> {
   jest.resetModules();
   ({ GET, POST } = await import("../../../app/api/open-graph/route"));
@@ -142,6 +195,11 @@ async function loadRoute(): Promise<void> {
   ) as {
     createTransientPlan: jest.Mock;
   };
+  firstParty6529 = jest.requireMock(
+    "@/app/api/open-graph/6529/service"
+  ) as {
+    createFirstParty6529Plan: jest.Mock;
+  };
   ensRouteModule = jest.requireMock("@/app/api/open-graph/ens") as {
     detectEnsTarget: jest.Mock;
     fetchEnsPreview: jest.Mock;
@@ -162,6 +220,7 @@ describe("open-graph API route", () => {
     foundation.createFoundationPlan.mockReturnValue(null);
     opensea.createOpenSeaPlan.mockReturnValue(null);
     transient.createTransientPlan.mockReturnValue(null);
+    firstParty6529.createFirstParty6529Plan.mockReturnValue(null);
     compound.createCompoundPlan.mockReturnValue(null);
     utils.buildGoogleWorkspaceResponse.mockResolvedValue(null);
     mockFetch.mockReset();
@@ -183,6 +242,9 @@ describe("open-graph API route", () => {
     }
   });
 
+  /**
+   * Creates a response object for guarded OpenGraph fetch mocks.
+   */
   const createResponse = (
     status: number,
     options: {
@@ -190,22 +252,34 @@ describe("open-graph API route", () => {
       body?: string | undefined;
       url?: string | undefined;
     } = {}
-  ) => {
-    const headerEntries = Object.entries(options.headers ?? {}).reduce(
-      (map, [key, value]) => map.set(key.toLowerCase(), value),
-      new Map<string, string>()
-    );
-
-    return {
+  ): Response =>
+    ({
       status,
       ok: status >= 200 && status < 300,
-      headers: {
-        get: (name: string) => headerEntries.get(name.toLowerCase()) ?? null,
-      },
-      text: async () => options.body ?? "",
+      headers: new Headers(options.headers),
+      body: createBody(options.body ?? ""),
       url: options.url ?? "https://example.com/final",
-    };
-  };
+    }) as unknown as Response;
+
+  /**
+   * Creates a JSON batch request with a stream-backed body.
+   */
+  const createJsonRequest = (body: unknown): NextRequest =>
+    createStreamRequest(JSON.stringify(body), {
+      "content-type": "application/json",
+    });
+
+  /**
+   * Creates a request-like object with caller-specified content headers.
+   */
+  const createStreamRequest = (
+    body: string,
+    headers: Record<string, string>
+  ): NextRequest =>
+    ({
+      headers: new Headers(headers),
+      body: createBody(body),
+    }) as unknown as NextRequest;
 
   it("returns 400 when the URL is missing", async () => {
     guard.parsePublicUrl.mockImplementation(() => {
@@ -270,6 +344,10 @@ describe("open-graph API route", () => {
     const first = await GET(request);
     const second = await GET(request);
 
+    expect(firstParty6529.createFirstParty6529Plan).toHaveBeenCalledWith(
+      new URL("http://safe.example/article"),
+      { apiAuth: null }
+    );
     expect(compound.createCompoundPlan).toHaveBeenCalledWith(
       new URL("http://safe.example/article")
     );
@@ -321,6 +399,151 @@ describe("open-graph API route", () => {
       "text/html",
       "https://cdn.safe.example/page"
     );
+  });
+
+  it("uses first-party 6529 plans before provider and generic plans", async () => {
+    const firstPartyData = {
+      type: "6529.collection",
+      kind: "the-memes",
+      title: "The Collective Synapse",
+      kicker: "The Memes #509",
+    };
+    const execute = jest.fn(async () => ({
+      data: firstPartyData,
+      ttl: 45_000,
+    }));
+    const cookies = {
+      get: jest.fn(() => ({ value: "cookie-secret" })),
+    };
+
+    firstParty6529.createFirstParty6529Plan.mockReturnValue({
+      cacheKey: "6529:auth:the-memes:/the-memes/509",
+      execute,
+    });
+
+    const request = {
+      nextUrl: new URL(
+        "https://app.local/api/open-graph?url=https://6529.io/the-memes/509"
+      ),
+      cookies,
+      headers: new Headers({ "x-6529-auth": "header-secret" }),
+    } as any;
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(firstPartyData);
+    expect(firstParty6529.createFirstParty6529Plan).toHaveBeenCalledWith(
+      new URL("https://6529.io/the-memes/509"),
+      { apiAuth: "cookie-secret" }
+    );
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(guard.assertPublicUrl).not.toHaveBeenCalled();
+    expect(manifold.createManifoldPlan).not.toHaveBeenCalled();
+    expect(foundation.createFoundationPlan).not.toHaveBeenCalled();
+    expect(opensea.createOpenSeaPlan).not.toHaveBeenCalled();
+    expect(transient.createTransientPlan).not.toHaveBeenCalled();
+    expect(compound.createCompoundPlan).not.toHaveBeenCalled();
+    expect(mockFetchPublicUrl).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("falls back to generic metadata when first-party 6529 enrichment fails", async () => {
+    const html =
+      "<html><head><title>The Collective Synapse</title></head><body></body></html>";
+    const fallbackData = {
+      requestUrl: "https://6529.io/the-memes/509",
+      url: "https://6529.io/the-memes/509",
+      title: "The Collective Synapse",
+      description: "The Memes #509 | Collections | 6529.io",
+      siteName: "6529.io",
+      image: {
+        url: "https://cdn.6529.io/memes/509.png",
+        secureUrl: "https://cdn.6529.io/memes/509.png",
+      },
+      images: [],
+    };
+    const execute = jest.fn(async () => {
+      throw new Error("The Memes card was not found.");
+    });
+    const fetchResponse = createResponse(200, {
+      headers: { "content-type": "text/html" },
+      body: html,
+      url: "https://6529.io/the-memes/509",
+    });
+
+    firstParty6529.createFirstParty6529Plan.mockReturnValue({
+      cacheKey: "6529:staging:the-memes:/the-memes/509",
+      execute,
+    });
+    mockFetch.mockResolvedValueOnce(fetchResponse);
+    mockFetchPublicUrl.mockImplementationOnce(
+      async (url, init = {}, options = {}) => {
+        expect(url).toEqual(new URL("https://6529.io/the-memes/509"));
+        const result = await options.fetchImpl?.(url, init);
+        return (result ?? fetchResponse) as any;
+      }
+    );
+    utils.buildGoogleWorkspaceResponse.mockResolvedValueOnce(null);
+    utils.buildResponse.mockReturnValue(fallbackData);
+
+    const request = {
+      nextUrl: new URL(
+        "https://app.local/api/open-graph?url=https://6529.io/the-memes/509"
+      ),
+    } as any;
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(fallbackData);
+    expect(execute).toHaveBeenCalledTimes(1);
+    expect(guard.assertPublicUrl).toHaveBeenCalledWith(
+      new URL("https://6529.io/the-memes/509"),
+      expect.any(Object)
+    );
+    expect(mockFetchPublicUrl).toHaveBeenCalledTimes(1);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+    expect(utils.buildResponse).toHaveBeenCalledWith(
+      new URL("https://6529.io/the-memes/509"),
+      html,
+      "text/html",
+      "https://6529.io/the-memes/509"
+    );
+  });
+
+  it("does not trust caller-supplied auth headers for first-party 6529 plans", async () => {
+    const firstPartyData = {
+      type: "6529.collection",
+      kind: "the-memes",
+      title: "The Collective Synapse",
+    };
+    const execute = jest.fn(async () => ({
+      data: firstPartyData,
+      ttl: 45_000,
+    }));
+
+    firstParty6529.createFirstParty6529Plan.mockReturnValue({
+      cacheKey: "6529:public:the-memes:/the-memes/509",
+      execute,
+    });
+
+    const request = {
+      nextUrl: new URL(
+        "https://app.local/api/open-graph?url=https://6529.io/the-memes/509"
+      ),
+      headers: new Headers({ "x-6529-auth": "header-secret" }),
+    } as any;
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual(firstPartyData);
+    expect(firstParty6529.createFirstParty6529Plan).toHaveBeenCalledWith(
+      new URL("https://6529.io/the-memes/509"),
+      { apiAuth: null }
+    );
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 
   it("applies host-specific overrides for facebook", async () => {
@@ -428,6 +651,69 @@ describe("open-graph API route", () => {
     expect(await response.json()).toEqual(googlePayload);
     expect(utils.buildResponse).not.toHaveBeenCalled();
     expect(mockFetchPublicUrl).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects oversized HTML responses before parsing metadata", async () => {
+    const fetchResponse = createResponse(200, {
+      headers: {
+        "content-length": `${8 * 1024 * 1024 + 1}`,
+        "content-type": "text/html",
+      },
+      body: "<html></html>",
+      url: "https://large.example/page",
+    });
+
+    mockFetch.mockResolvedValueOnce(fetchResponse);
+    mockFetchPublicUrl.mockImplementationOnce(
+      async (url, init = {}, options = {}) => {
+        const result = await options.fetchImpl?.(url, init);
+        return (result ?? fetchResponse) as any;
+      }
+    );
+
+    const request = {
+      nextUrl: new URL(
+        "https://app.local/api/open-graph?url=https://large.example/page"
+      ),
+    } as any;
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: "Preview response is too large to process safely.",
+    });
+    expect(utils.buildResponse).not.toHaveBeenCalled();
+  });
+
+  it("rejects non-HTML preview responses", async () => {
+    const fetchResponse = createResponse(200, {
+      headers: { "content-type": "image/png" },
+      body: "png",
+      url: "https://image.example/file.png",
+    });
+
+    mockFetch.mockResolvedValueOnce(fetchResponse);
+    mockFetchPublicUrl.mockImplementationOnce(
+      async (url, init = {}, options = {}) => {
+        const result = await options.fetchImpl?.(url, init);
+        return (result ?? fetchResponse) as any;
+      }
+    );
+
+    const request = {
+      nextUrl: new URL(
+        "https://app.local/api/open-graph?url=https://image.example/file.png"
+      ),
+    } as any;
+
+    const response = await GET(request);
+
+    expect(response.status).toBe(415);
+    expect(await response.json()).toEqual({
+      error: "Preview URL did not return readable HTML metadata.",
+    });
+    expect(utils.buildResponse).not.toHaveBeenCalled();
   });
 
   it("uses compound plan when available", async () => {
@@ -665,11 +951,9 @@ describe("open-graph API route", () => {
       })),
     }));
 
-    const request = {
-      json: async () => ({
-        urls: [" https://one.example/article ", "https://two.example/article"],
-      }),
-    } as any;
+    const request = createJsonRequest({
+      urls: [" https://one.example/article ", "https://two.example/article"],
+    });
 
     const response = await POST(request);
 
@@ -702,11 +986,9 @@ describe("open-graph API route", () => {
       execute,
     });
 
-    const request = {
-      json: async () => ({
-        urls: ["https://one.example/article", " https://one.example/article "],
-      }),
-    } as any;
+    const request = createJsonRequest({
+      urls: ["https://one.example/article", " https://one.example/article "],
+    });
 
     const response = await POST(request);
 
@@ -745,11 +1027,9 @@ describe("open-graph API route", () => {
       })),
     }));
 
-    const request = {
-      json: async () => ({
-        urls: ["https://good.example/article", "bad-url"],
-      }),
-    } as any;
+    const request = createJsonRequest({
+      urls: ["https://good.example/article", "bad-url"],
+    });
 
     const response = await POST(request);
 
@@ -768,9 +1048,9 @@ describe("open-graph API route", () => {
   });
 
   it("returns 400 for invalid POST batch bodies", async () => {
-    const request = {
-      json: async () => ({ urls: "https://one.example/article" }),
-    } as any;
+    const request = createJsonRequest({
+      urls: "https://one.example/article",
+    });
 
     const response = await POST(request);
 
@@ -782,18 +1062,16 @@ describe("open-graph API route", () => {
   });
 
   it("returns 400 when POST includes more than 5 unique urls", async () => {
-    const request = {
-      json: async () => ({
-        urls: [
-          "https://one.example/article",
-          "https://two.example/article",
-          "https://three.example/article",
-          "https://four.example/article",
-          "https://five.example/article",
-          "https://six.example/article",
-        ],
-      }),
-    } as any;
+    const request = createJsonRequest({
+      urls: [
+        "https://one.example/article",
+        "https://two.example/article",
+        "https://three.example/article",
+        "https://four.example/article",
+        "https://five.example/article",
+        "https://six.example/article",
+      ],
+    });
 
     const response = await POST(request);
 
@@ -816,11 +1094,9 @@ describe("open-graph API route", () => {
     );
     ensRouteModule.fetchEnsPreview.mockResolvedValue(previewPayload);
 
-    const request = {
-      json: async () => ({
-        urls: ["vitalik.eth"],
-      }),
-    } as any;
+    const request = createJsonRequest({
+      urls: ["vitalik.eth"],
+    });
 
     const response = await POST(request);
 
@@ -833,6 +1109,33 @@ describe("open-graph API route", () => {
     });
     expect(ensRouteModule.fetchEnsPreview).toHaveBeenCalledWith(ensTarget);
     expect(guard.parsePublicUrl).not.toHaveBeenCalled();
+  });
+
+  it("rejects oversized POST bodies", async () => {
+    const request = createStreamRequest("{}", {
+      "content-length": `${64 * 1024 + 1}`,
+      "content-type": "application/json",
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({
+      error: "Open graph batch request body is too large.",
+    });
+  });
+
+  it("rejects non-JSON POST bodies", async () => {
+    const request = createStreamRequest("{}", {
+      "content-type": "text/plain",
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(415);
+    expect(await response.json()).toEqual({
+      error: "Open graph batch request body must be JSON.",
+    });
   });
 
   it("handles ENS previews when detected", async () => {

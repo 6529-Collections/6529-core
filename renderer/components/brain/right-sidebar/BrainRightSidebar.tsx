@@ -1,34 +1,24 @@
 "use client";
 
+import React, { useState } from "react";
+import { createPortal } from "react-dom";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { commonApiFetch } from "@/services/api/common-api";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import React, { useState } from "react";
-import { createPortal } from "react-dom";
 
-import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { ChevronDoubleRightIcon } from "@heroicons/react/24/outline";
-import { useSidebarState } from "../../../hooks/useSidebarState";
 import { WaveContent } from "./WaveContent";
+import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import { useSidebarState } from "../../../hooks/useSidebarState";
+import { ChevronDoubleRightIcon } from "@heroicons/react/24/outline";
+import { Mode, type SidebarTab } from "./BrainRightSidebarTypes";
+
+export { SidebarTab } from "./BrainRightSidebarTypes";
 
 interface BrainRightSidebarProps {
   readonly waveId: string | null | undefined;
   readonly activeTab: SidebarTab;
   readonly setActiveTab: (tab: SidebarTab) => void;
   readonly variant?: "overlay" | "inline" | undefined;
-}
-
-export enum Mode {
-  CONTENT = "CONTENT",
-  FOLLOWERS = "FOLLOWERS",
-}
-
-export enum SidebarTab {
-  ABOUT = "ABOUT",
-  LEADERBOARD = "LEADERBOARD",
-  WINNERS = "WINNERS",
-  TOP_VOTERS = "TOP_VOTERS",
-  ACTIVITY_LOG = "ACTIVITY_LOG",
 }
 
 interface SidebarState {
@@ -45,10 +35,14 @@ const useBrainRightSidebarState = (
 
   const { data: wave } = useQuery<ApiWave>({
     queryKey: [QueryKey.WAVE, { wave_id: waveId }],
-    queryFn: async () =>
-      await commonApiFetch<ApiWave>({
+    queryFn: async () => {
+      if (!waveId) {
+        throw new Error("Wave id is required");
+      }
+      return commonApiFetch<ApiWave>({
         endpoint: `waves/${waveId}`,
-      }),
+      });
+    },
     enabled: !!waveId,
     staleTime: 60000,
     placeholderData: keepPreviousData,

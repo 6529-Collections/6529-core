@@ -1,38 +1,40 @@
 "use client";
 
+import { useContext, useEffect, useRef, useState } from "react";
+import type { ApiCommunityMemberOverview } from "@/generated/models/ApiCommunityMemberOverview";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import { AuthContext } from "@/components/auth/Auth";
 import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { SortDirection } from "@/entities/ISort";
-import type { ApiCommunityMemberOverview } from "@/generated/models/ApiCommunityMemberOverview";
-import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
-import type { Page } from "@/helpers/Types";
-import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { useContext, useEffect, useRef, useState } from "react";
 import { CreditDirection } from "../GroupCard";
+import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
+import type { Page } from "@/helpers/Types";
+import { getToastErrorDetails } from "@/helpers/toast.helpers";
+import type { CommunityMembersQuery } from "@/app/network/page";
+import { SortDirection } from "@/entities/ISort";
+import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 
-import { CommunityMembersQuery } from "@/app/network/page";
-import { ApiBulkRateRequest } from "@/generated/models/ApiBulkRateRequest";
-import { ApiBulkRateResponse } from "@/generated/models/ApiBulkRateResponse";
-import { ApiCommunityMembersSortOption } from "@/generated/models/ApiCommunityMembersSortOption";
-import { ApiRateMatter } from "@/generated/models/ApiRateMatter";
 import GroupCardActionWrapper from "../GroupCardActionWrapper";
+import { ApiRateMatter } from "@/generated/models/ApiRateMatter";
+import type { GroupCardRateMatter } from "../GroupCard";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
 import GroupCardVoteAllInputs from "./GroupCardVoteAllInputs";
+import { ApiCommunityMembersSortOption } from "@/generated/models/ApiCommunityMembersSortOption";
+import type { ApiBulkRateRequest } from "@/generated/models/ApiBulkRateRequest";
+import type { ApiBulkRateResponse } from "@/generated/models/ApiBulkRateResponse";
 
 export default function GroupCardVoteAll({
   matter,
   group,
   onCancel,
 }: {
-  readonly matter: ApiRateMatter;
+  readonly matter: GroupCardRateMatter;
   readonly group?: ApiGroupFull | undefined;
   readonly onCancel: () => void;
 }) {
-  const SUCCESS_LABEL: Record<ApiRateMatter, string> = {
+  const SUCCESS_LABEL: Record<GroupCardRateMatter, string> = {
     [ApiRateMatter.Cic]: "NIC distributed.",
     [ApiRateMatter.Rep]: "Rep distributed.",
   };
@@ -138,8 +140,10 @@ export default function GroupCardVoteAll({
       }),
     onError: (error) => {
       setToast({
-        message: error as unknown as string,
         type: "error",
+        title: "Couldn't update group ratings.",
+        description: "Please try again.",
+        details: getToastErrorDetails(error),
       });
       throw error;
     },

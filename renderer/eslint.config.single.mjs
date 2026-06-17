@@ -74,6 +74,7 @@ export default defineConfig([
     "stubs/**",
     ".claude/**",
     ".codex/**",
+    ".deepsec/**",
   ]),
 
   // Base config with Next.js rules

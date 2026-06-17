@@ -1,0 +1,4 @@
+interface:
+  display_name: "Sync Desktop Renderer"
+  short_description: "Sync web frontend into Electron renderer."
+  default_prompt: "Use $sync-desktop-renderer to bring 6529-core renderer up to current web."
