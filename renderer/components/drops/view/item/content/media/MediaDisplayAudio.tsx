@@ -18,7 +18,7 @@ function MediaDisplayAudio({
     <div className="tw-w-full tw-h-full">
       {showControls && safeSrc ? (
         <audio controls className="tw-w-full tw-max-h-10">
-          <source src={safeSrc} type="audio/mpeg" />
+          <source src={encodeURI(safeSrc)} type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>
       ) : (

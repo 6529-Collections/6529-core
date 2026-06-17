@@ -91,7 +91,7 @@ export function useHlsPlayer({
       return;
     }
 
-    videoEl.src = safeFallback;
+    videoEl.src = encodeURI(safeFallback);
     videoEl.load();
     setIsLoading(false);
     if (autoPlay) {
@@ -203,7 +203,7 @@ export function useHlsPlayer({
       hlsRef.current = hls;
 
       // Configure error handlers
-      setupHlsErrorHandlers(hls, HlsConstructor, videoEl, safeSrc);
+      setupHlsErrorHandlers(hls, HlsConstructor, videoEl, encodeURI(safeSrc));
 
       // Once the manifest is parsed, we can attempt autoplay
       hls.on(HlsConstructor.Events.MANIFEST_PARSED, () => {
@@ -214,7 +214,7 @@ export function useHlsPlayer({
         }
       });
 
-      hls.loadSource(safeSrc);
+      hls.loadSource(encodeURI(safeSrc));
       hls.attachMedia(videoEl);
     } catch (error) {
       // If dynamic import fails, fallback if possible
@@ -264,7 +264,7 @@ export function useHlsPlayer({
         return;
       }
 
-      videoEl.src = safeSrc;
+      videoEl.src = encodeURI(safeSrc);
       videoEl.load();
       setIsLoading(false);
       if (autoPlay) {
