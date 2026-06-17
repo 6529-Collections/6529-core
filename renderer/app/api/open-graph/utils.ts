@@ -6,6 +6,7 @@ import type {
   GoogleWorkspaceLinkPreview,
   LinkPreviewResponse,
 } from "@/services/api/link-preview-api";
+import { fetchPublicUrl } from "@/lib/security/urlGuard";
 
 const TITLE_KEYS = ["og:title", "twitter:title", "title"] as const;
 const DESCRIPTION_KEYS = [
@@ -461,17 +462,21 @@ async function fetchGooglePreviewHtml(url: string): Promise<{
     return { html: null, ok: false };
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GOOGLE_PREVIEW_TIMEOUT_MS);
-
   try {
-    const response = await fetch(validatedUrl.toString(), {
-      headers: {
-        "user-agent": LINK_PREVIEW_USER_AGENT,
-        accept: HTML_ACCEPT_HEADER,
+    const response = await fetchPublicUrl(
+      validatedUrl,
+      {
+        headers: {
+          accept: HTML_ACCEPT_HEADER,
+        },
       },
-      signal: controller.signal,
-    });
+      {
+        policy: { allowedHosts: [GOOGLE_DOCS_HOST] },
+        maxRedirects: 2,
+        timeoutMs: GOOGLE_PREVIEW_TIMEOUT_MS,
+        userAgent: LINK_PREVIEW_USER_AGENT,
+      }
+    );
 
     if (!response.ok) {
       return { html: null, ok: false };
@@ -481,8 +486,6 @@ async function fetchGooglePreviewHtml(url: string): Promise<{
     return { html, ok: true };
   } catch {
     return { html: null, ok: false };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
