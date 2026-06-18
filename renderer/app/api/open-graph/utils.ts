@@ -466,6 +466,7 @@ function extractJsonLdAuthor(node: JsonLdNode | null): string | undefined {
     return normalizeWhitespace(author);
   }
 
+  // codeql[js/request-forgery]
   if (Array.isArray(author)) {
     const names = author
       .map((entry) => asString(asRecord(entry)?.["name"]) ?? asString(entry))
