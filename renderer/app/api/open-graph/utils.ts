@@ -5,6 +5,7 @@ import type {
   GoogleWorkspaceLinkPreview,
   LinkPreviewResponse,
 } from "@/services/api/link-preview-api";
+import { fetchPublicUrl } from "@/lib/security/urlGuard";
 import { load } from "cheerio";
 
 const TITLE_KEYS = ["og:title", "twitter:title", "title"] as const;
@@ -783,24 +784,22 @@ async function fetchGooglePreviewHtml(url: string): Promise<{
     return { html: null, ok: false };
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    GOOGLE_PREVIEW_TIMEOUT_MS
-  );
-
   try {
-    // validateGooglePreviewUrl pins this fetch to https://docs.google.com, known
-    // preview paths, and an allowlist of query parameters.
-
-    // codeql[js/request-forgery]
-    const response = await fetch(validatedUrl.toString(), {
-      headers: {
-        "user-agent": LINK_PREVIEW_USER_AGENT,
-        accept: HTML_ACCEPT_HEADER,
+    const response = await fetchPublicUrl(
+      validatedUrl,
+      {
+        headers: {
+          "user-agent": LINK_PREVIEW_USER_AGENT,
+          accept: HTML_ACCEPT_HEADER,
+        },
       },
-      signal: controller.signal,
-    });
+      {
+        policy: {
+          allowedHosts: [GOOGLE_DOCS_HOST],
+        },
+        timeoutMs: GOOGLE_PREVIEW_TIMEOUT_MS,
+      }
+    );
 
     if (!response.ok) {
       return { html: null, ok: false };
@@ -810,8 +809,6 @@ async function fetchGooglePreviewHtml(url: string): Promise<{
     return { html, ok: true };
   } catch {
     return { html: null, ok: false };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
