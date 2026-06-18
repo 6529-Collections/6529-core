@@ -180,15 +180,19 @@ describe("open-graph route helpers", () => {
     expect(result.title).toBe("Safe Fallback");
   });
 
-  it("ignores JSON-LD image values for preview fetch candidates", () => {
+  it("bounds deeply nested JSON-LD image arrays", () => {
+    const deepImage = Array.from({ length: 20 }).reduce<unknown>(
+      (value) => [value],
+      "/deep-image.jpg"
+    );
     const html = `
       <html>
         <head>
-          <title>JSON-LD Image Fallback</title>
+          <title>Deep Image Fallback</title>
           <script type="application/ld+json">${JSON.stringify({
             "@type": "Article",
-            headline: "JSON-LD Image Title",
-            image: "https://cdn.example.com/jsonld-image.jpg",
+            headline: "Deep Image Fallback",
+            image: deepImage,
           })}</script>
         </head>
         <body></body>
@@ -197,9 +201,8 @@ describe("open-graph route helpers", () => {
 
     const result = buildResponse(baseUrl, html, "text/html");
 
-    expect(result.title).toBe("JSON-LD Image Title");
+    expect(result.title).toBe("Deep Image Fallback");
     expect(result.image).toBeNull();
-    expect(result.images).toEqual([]);
   });
 
   it("ignores unsafe generic metadata URLs", () => {
