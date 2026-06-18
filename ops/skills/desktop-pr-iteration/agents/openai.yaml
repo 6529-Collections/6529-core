@@ -1,0 +1,4 @@
+interface:
+  display_name: "Desktop PR Iteration"
+  short_description: "Open and iterate desktop release PRs."
+  default_prompt: "Use $desktop-pr-iteration to open a 6529-core desktop update PR and iterate with CI and bots."

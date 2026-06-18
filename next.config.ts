@@ -151,8 +151,13 @@ function loadBakedRuntimeConfig(VERSION: string): unknown {
   if (process.env.PUBLIC_RUNTIME) {
     baked = JSON.parse(process.env.PUBLIC_RUNTIME);
   } else {
-    const p = path.join(NEXT_DIR, "PUBLIC_RUNTIME.json");
-    if (fs.existsSync(p)) baked = JSON.parse(fs.readFileSync(p, "utf8"));
+    const candidates = [
+      path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
+      path.join(__dirname, "main/config/__PUBLIC_RUNTIME.json"),
+      path.join(__dirname, "config/public-runtime.json"),
+    ];
+    const p = candidates.find((candidate) => fs.existsSync(candidate));
+    if (p) baked = JSON.parse(fs.readFileSync(p, "utf8"));
   }
   const parsed = publicEnvSchema.safeParse({ ...baked, VERSION });
   if (!parsed.success) throw parsed.error;

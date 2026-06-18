@@ -1,0 +1,4 @@
+interface:
+  display_name: "Test Desktop Build"
+  short_description: "Validate and package 6529 Electron desktop."
+  default_prompt: "Use $test-desktop-build to validate and package the 6529 Electron app on Windows."
