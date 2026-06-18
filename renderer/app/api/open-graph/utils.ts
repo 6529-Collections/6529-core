@@ -64,6 +64,7 @@ const JSON_LD_SCRIPT_MAX_CHARS = 128 * 1024;
 const JSON_LD_MAX_NODES = 64;
 const JSON_LD_MAX_DEPTH = 8;
 const JSON_LD_IMAGE_MAX_CANDIDATES = 16;
+const PUBLIC_METADATA_URL_PROTOCOLS = new Set(["http:", "https:"]);
 
 type GoogleWorkspaceKind = "docs" | "sheets" | "slides";
 type LoadedHtml = ReturnType<typeof load>;
@@ -263,7 +264,7 @@ function extractCanonicalUrl($: LoadedHtml, baseUrl: URL): string | undefined {
   const href = normalizeWhitespace(
     $('link[rel~="canonical"]').first().attr("href")
   );
-  return resolveUrl(baseUrl, href);
+  return resolvePublicMetadataUrl(baseUrl, href);
 }
 
 function iconPreferenceScore(rel: string, href: string): number {
@@ -295,7 +296,7 @@ function extractIconLinks($: LoadedHtml, baseUrl: URL): string[] {
       return;
     }
 
-    const resolved = resolveUrl(baseUrl, href);
+    const resolved = resolvePublicMetadataUrl(baseUrl, href);
     if (!resolved) {
       return;
     }
@@ -318,6 +319,31 @@ function resolveUrl(
 
   try {
     return new URL(value, baseUrl).toString();
+  } catch {
+    return undefined;
+  }
+}
+
+function resolvePublicMetadataUrl(
+  baseUrl: URL,
+  value: string | undefined
+): string | undefined {
+  const resolved = resolveUrl(baseUrl, value);
+  if (!resolved) {
+    return undefined;
+  }
+
+  try {
+    const parsed = new URL(resolved);
+    if (!PUBLIC_METADATA_URL_PROTOCOLS.has(parsed.protocol)) {
+      return undefined;
+    }
+
+    if (parsed.username || parsed.password) {
+      return undefined;
+    }
+
+    return parsed.toString();
   } catch {
     return undefined;
   }
@@ -449,7 +475,7 @@ function extractJsonLdImage(
   const candidate = node["image"] ?? node["thumbnailUrl"] ?? node["thumbnail"];
   if (typeof candidate === "string") {
     budget.remaining -= 1;
-    return resolveUrl(baseUrl, candidate);
+    return resolvePublicMetadataUrl(baseUrl, candidate);
   }
 
   if (Array.isArray(candidate)) {
@@ -473,7 +499,7 @@ function extractJsonLdImage(
   if (record) {
     budget.remaining -= 1;
   }
-  return resolveUrl(
+  return resolvePublicMetadataUrl(
     baseUrl,
     asString(record?.["url"]) ?? asString(record?.["contentUrl"])
   );
@@ -509,7 +535,7 @@ function extractImageCandidates(
 
   for (const key of IMAGE_KEYS) {
     for (const value of imageMetadata.get(key.toLowerCase()) ?? []) {
-      const resolved = resolveUrl(baseUrl, value);
+      const resolved = resolvePublicMetadataUrl(baseUrl, value);
       if (!resolved || byUrl.has(resolved)) {
         continue;
       }

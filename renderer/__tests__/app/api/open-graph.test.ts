@@ -205,6 +205,33 @@ describe("open-graph route helpers", () => {
     expect(result.image).toBeNull();
   });
 
+  it("ignores unsafe generic metadata URLs", () => {
+    const html = `
+      <html>
+        <head>
+          <title>Unsafe Metadata</title>
+          <meta property="og:image" content="javascript:alert(1)" />
+          <meta name="twitter:image" content="data:image/svg+xml;base64,PHN2Zy8+" />
+          <link rel="canonical" href="ftp://example.com/file" />
+          <link rel="icon" href="https://user:pass@example.com/icon.png" />
+          <script type="application/ld+json">${JSON.stringify({
+            "@type": "Article",
+            headline: "Unsafe Metadata",
+            image: "file:///etc/passwd",
+          })}</script>
+        </head>
+      </html>
+    `;
+
+    const result = buildResponse(baseUrl, html, "text/html");
+
+    expect(result.url).toBe("https://example.com/article");
+    expect(result.image).toBeNull();
+    expect(result.images).toEqual([]);
+    expect(result.favicon).toBeNull();
+    expect(result.favicons).toEqual([]);
+  });
+
   it("builds a Google Docs preview with public availability", async () => {
     const initialHtml =
       "<html><head><title>Doc Title</title></head><body></body></html>";
