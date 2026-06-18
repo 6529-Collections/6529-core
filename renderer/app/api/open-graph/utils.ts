@@ -764,6 +764,9 @@ async function fetchGooglePreviewHtml(url: string): Promise<{
   );
 
   try {
+    // validateGooglePreviewUrl pins this fetch to https://docs.google.com, known
+    // preview paths, and an allowlist of query parameters.
+    // codeql[js/request-forgery]
     const response = await fetch(validatedUrl.toString(), {
       headers: {
         "user-agent": LINK_PREVIEW_USER_AGENT,

@@ -168,14 +168,9 @@ const SandboxedExternalIframe: React.FC<SandboxedExternalIframeProps> = ({
         Untrusted interactive content
       </span>
       {parsedCanonicalUrl ? (
-        <a
-          href={canonicalSrc}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="tw-text-xs tw-font-medium tw-text-primary-300 tw-transition hover:tw-text-primary-300"
-        >
+        <span className="tw-text-xs tw-font-medium tw-text-primary-300">
           {parsedCanonicalUrl.hostname}
-        </a>
+        </span>
       ) : (
         <span className="tw-text-xs tw-text-iron-400">{canonicalSrc}</span>
       )}

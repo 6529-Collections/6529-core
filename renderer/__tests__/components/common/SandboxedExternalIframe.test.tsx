@@ -1,4 +1,4 @@
-import { act, render } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import SandboxedExternalIframe from "@/components/common/SandboxedExternalIframe";
 
 jest.mock("@/components/waves/memes/submission/constants/security", () => ({
@@ -63,5 +63,14 @@ describe("SandboxedExternalIframe", () => {
 
     expect(firstOnVisible).not.toHaveBeenCalled();
     expect(secondOnVisible).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the source host without exposing a clickable banner link", () => {
+    render(
+      <SandboxedExternalIframe src="https://example.com/media" title="Media" />
+    );
+
+    expect(screen.getByText("example.com")).toBeInTheDocument();
+    expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 });

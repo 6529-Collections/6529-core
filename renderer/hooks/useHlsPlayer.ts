@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { getSafeMediaSourceUrl } from "@/components/drops/view/item/content/media/safeMediaSourceUrl";
 import type HlsType from "hls.js";
 
 interface UseHlsPlayerParams {
@@ -84,7 +85,13 @@ export function useHlsPlayer({
    * Fallback to a raw MP4 (or original src) if HLS is unsupported or fails.
    */
   function fallbackToSrc(videoEl: HTMLVideoElement, fallback: string) {
-    videoEl.src = fallback;
+    const safeFallback = getSafeMediaSourceUrl(fallback);
+    if (!safeFallback) {
+      setIsLoading(false);
+      return;
+    }
+
+    videoEl.src = safeFallback;
     videoEl.load();
     setIsLoading(false);
     if (autoPlay) {
@@ -148,6 +155,12 @@ export function useHlsPlayer({
    */
   async function initHls(videoEl: HTMLVideoElement, changedSource: boolean) {
     try {
+      const safeSrc = getSafeMediaSourceUrl(src);
+      if (!safeSrc) {
+        setIsLoading(false);
+        return;
+      }
+
       const mod = await import("hls.js");
       const HlsConstructor = mod.default; // typed import (no "as any")
 
@@ -185,7 +198,7 @@ export function useHlsPlayer({
       hlsRef.current = hls;
 
       // Configure error handlers
-      setupHlsErrorHandlers(hls, HlsConstructor, videoEl, src);
+      setupHlsErrorHandlers(hls, HlsConstructor, videoEl, safeSrc);
 
       // Once the manifest is parsed, we can attempt autoplay
       hls.on(HlsConstructor.Events.MANIFEST_PARSED, () => {
@@ -196,7 +209,7 @@ export function useHlsPlayer({
         }
       });
 
-      hls.loadSource(src);
+      hls.loadSource(safeSrc);
       hls.attachMedia(videoEl);
     } catch (error) {
       // If dynamic import fails, fallback if possible
@@ -240,7 +253,13 @@ export function useHlsPlayer({
       initHls(videoEl, changedSource);
     } else {
       // Not HLS => just assign the src
-      videoEl.src = src;
+      const safeSrc = getSafeMediaSourceUrl(src);
+      if (!safeSrc) {
+        setIsLoading(false);
+        return;
+      }
+
+      videoEl.src = safeSrc;
       videoEl.load();
       setIsLoading(false);
       if (autoPlay) {
