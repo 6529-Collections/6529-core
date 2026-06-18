@@ -461,13 +461,13 @@ function extractJsonLdNodes($: LoadedHtml): JsonLdNode[] {
   return nodes;
 }
 
+// JSON-LD image values are only emitted as preview metadata after
+// resolvePublicMetadataUrl restricts them to credential-free http(s) URLs.
+// codeql[js/request-forgery]
 function extractJsonLdImage(
   node: JsonLdNode | null,
   baseUrl: URL,
   depth = 0,
-  // JSON-LD image values are only emitted as preview metadata after
-  // resolvePublicMetadataUrl restricts them to credential-free http(s) URLs.
-  // codeql[js/request-forgery]
   budget: { remaining: number } = { remaining: JSON_LD_IMAGE_MAX_CANDIDATES }
 ): string | undefined {
   if (!node || depth > JSON_LD_MAX_DEPTH || budget.remaining <= 0) {
