@@ -11,6 +11,8 @@
  * Do not edit the class manually.
  */
 
+import { HttpFile } from '../http/http';
+
 export class ApiWaveScoreVisibilityComponentWeights {
     'quality_score': number;
     'gated_hotness_score': number;

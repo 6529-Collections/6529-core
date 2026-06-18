@@ -11,6 +11,8 @@
  * Do not edit the class manually.
  */
 
+import { HttpFile } from '../http/http';
+
 export enum ApiWaveScoreSort {
     Balanced = 'BALANCED',
     Quality = 'QUALITY',

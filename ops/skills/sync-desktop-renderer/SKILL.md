@@ -38,6 +38,7 @@ Preserve or reapply desktop-specific behavior in these areas:
 - `renderer/config/env.schema.ts`: desktop optional IPFS env and media resolver defaults.
 - `renderer/config/securityHeaders.ts`, `renderer/lib/media/ipfs-gateways.ts`, root `next.config.ts`: local IPFS gateway, media resolver, CSP, and image host compatibility.
 - `renderer/components/drops/view/item/content/media/UnsupportedMediaLink.tsx`: external-browser handling and decentralized media normalization.
+- `renderer/styles/seize-bootstrap.scss`: keep the explicit `../node_modules/bootstrap/scss/bootstrap` import if bare `bootstrap/scss/bootstrap` fails under Turbopack/Sass on the Windows pnpm install.
 
 ## Root Config Sync
 

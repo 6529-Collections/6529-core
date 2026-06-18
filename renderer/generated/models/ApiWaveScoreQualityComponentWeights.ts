@@ -11,6 +11,8 @@
  * Do not edit the class manually.
  */
 
+import { HttpFile } from '../http/http';
+
 export class ApiWaveScoreQualityComponentWeights {
     'creator_score': number;
     'level_weighted_participation_score': number;

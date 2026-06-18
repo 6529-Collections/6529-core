@@ -11,6 +11,8 @@
  * Do not edit the class manually.
  */
 
+import { HttpFile } from '../http/http';
+
 export class ApiWaveScorePenalties {
     'single_actor_penalty': number;
     'low_trust_flood_penalty': number;
