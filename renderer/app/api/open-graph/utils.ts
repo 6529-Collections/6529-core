@@ -63,7 +63,6 @@ const GOOGLE_TITLE_MAX_LENGTH = 160;
 const JSON_LD_SCRIPT_MAX_CHARS = 128 * 1024;
 const JSON_LD_MAX_NODES = 64;
 const JSON_LD_MAX_DEPTH = 8;
-const JSON_LD_IMAGE_MAX_CANDIDATES = 16;
 const PUBLIC_METADATA_URL_PROTOCOLS = new Set(["http:", "https:"]);
 
 type GoogleWorkspaceKind = "docs" | "sheets" | "slides";
@@ -361,7 +360,7 @@ function parsePositiveInteger(value: string | undefined): number | undefined {
 type JsonLdNode = Record<string, unknown>;
 type ImageCandidate = {
   readonly url: string;
-  readonly source: "json-ld" | "og" | "twitter";
+  readonly source: "og" | "twitter";
 };
 
 function safeParseJsonLd(raw: string): unknown {
@@ -461,53 +460,6 @@ function extractJsonLdNodes($: LoadedHtml): JsonLdNode[] {
   return nodes;
 }
 
-// JSON-LD image values are only emitted as preview metadata after
-// resolvePublicMetadataUrl restricts them to credential-free http(s) URLs.
-// codeql[js/request-forgery]
-function extractJsonLdImage(
-  node: JsonLdNode | null,
-  baseUrl: URL,
-  depth = 0,
-  budget: { remaining: number } = { remaining: JSON_LD_IMAGE_MAX_CANDIDATES }
-): string | undefined {
-  if (!node || depth > JSON_LD_MAX_DEPTH || budget.remaining <= 0) {
-    return undefined;
-  }
-
-  // The shared budget limits candidate nodes across nested JSON-LD image arrays.
-  const candidate = node["image"] ?? node["thumbnailUrl"] ?? node["thumbnail"];
-  if (typeof candidate === "string") {
-    budget.remaining -= 1;
-    return resolvePublicMetadataUrl(baseUrl, candidate);
-  }
-
-  if (Array.isArray(candidate)) {
-    for (const entry of candidate) {
-      const image = extractJsonLdImage(
-        { image: entry },
-        baseUrl,
-        depth + 1,
-        budget
-      );
-      if (image) {
-        return image;
-      }
-      if (budget.remaining <= 0) {
-        break;
-      }
-    }
-  }
-
-  const record = asRecord(candidate);
-  if (record) {
-    budget.remaining -= 1;
-  }
-  return resolvePublicMetadataUrl(
-    baseUrl,
-    asString(record?.["url"]) ?? asString(record?.["contentUrl"])
-  );
-}
-
 function extractJsonLdAuthor(node: JsonLdNode | null): string | undefined {
   const author = node?.["author"] ?? node?.["creator"];
   if (typeof author === "string") {
@@ -530,8 +482,7 @@ function getImageSource(key: string): ImageCandidate["source"] {
 
 function extractImageCandidates(
   $: LoadedHtml,
-  baseUrl: URL,
-  jsonLdImage: string | undefined
+  baseUrl: URL
 ): ImageCandidate[] {
   const imageMetadata = collectMetaContent($, IMAGE_KEYS);
   const byUrl = new Map<string, ImageCandidate>();
@@ -550,13 +501,6 @@ function extractImageCandidates(
     }
   }
 
-  if (jsonLdImage && !byUrl.has(jsonLdImage)) {
-    byUrl.set(jsonLdImage, {
-      url: jsonLdImage,
-      source: "json-ld",
-    });
-  }
-
   return Array.from(byUrl.values());
 }
 
@@ -568,7 +512,7 @@ function extractImageMetadataForSource(
   readonly width?: number | undefined;
   readonly height?: number | undefined;
 } {
-  if (source === "json-ld" || !source) {
+  if (!source) {
     return {};
   }
 
@@ -1018,8 +962,7 @@ export function buildResponse(
   const siteName =
     extractFirstMetaContent($, SITE_NAME_KEYS) ??
     asString(asRecord(jsonLdNode?.["publisher"])?.["name"]);
-  const jsonLdImage = extractJsonLdImage(jsonLdNode, url);
-  const imageCandidates = extractImageCandidates($, url, jsonLdImage);
+  const imageCandidates = extractImageCandidates($, url);
   const canonicalUrl =
     extractFirstMetaContent($, URL_KEYS) ?? extractCanonicalUrl($, url);
   const type = extractFirstMetaContent($, TYPE_KEYS);
