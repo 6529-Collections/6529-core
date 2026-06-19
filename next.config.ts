@@ -66,6 +66,7 @@ const RENDERER_ROOT = fs.existsSync(path.join(__dirname, "renderer"))
   ? path.join(__dirname, "renderer")
   : __dirname;
 const NEXT_DIR = path.join(RENDERER_ROOT, ".next");
+const SASS_LOAD_PATHS = [path.join(RENDERER_ROOT, "node_modules")];
 logOnce("NEXT_DIR", NEXT_DIR);
 
 type EnvSchema = {
@@ -355,7 +356,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     distDir: "out",
     compress: true,
     productionBrowserSourceMaps: true,
-    sassOptions: { quietDeps: true },
+    sassOptions: { loadPaths: SASS_LOAD_PATHS, quietDeps: true },
     experimental: {
       webpackMemoryOptimizations: true,
       webpackBuildWorker: true,
