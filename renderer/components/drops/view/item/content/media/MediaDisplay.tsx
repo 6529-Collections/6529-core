@@ -171,6 +171,7 @@ export default function MediaDisplay({
   previewImageUrl,
   requireInteractionToLoad = false,
   iframeContainerClassName,
+  fillVideoContainer = false,
   loadStrategy = "in-view",
 }: {
   readonly media_mime_type: string;
@@ -180,6 +181,7 @@ export default function MediaDisplay({
   readonly previewImageUrl?: string | null | undefined;
   readonly requireInteractionToLoad?: boolean | undefined;
   readonly iframeContainerClassName?: string | undefined;
+  readonly fillVideoContainer?: boolean | undefined;
   readonly loadStrategy?: MediaLoadStrategy | undefined;
 }) {
   const getMediaType = (): MediaType => {
@@ -266,6 +268,7 @@ export default function MediaDisplay({
           src={media_url}
           mimeType={media_mime_type}
           showControls={!disableMediaInteraction}
+          fillContainer={fillVideoContainer}
         />
       );
     case MediaType.AUDIO:

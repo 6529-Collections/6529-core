@@ -11,13 +11,50 @@ Carry an approved 6529 release from PR merge through staging validation and, whe
 
 - Do not merge, deploy staging, or deploy production unless the user explicitly requested that mode for the current work.
 - Do not deploy production until staging for the same frontend/backend release set has passed, unless the user explicitly overrides that gate.
+- Do not deploy production from any ref other than `main`. Verify the exact production candidate is already on `origin/main` before triggering production; if it is only on a feature branch, release branch, PR head, tag, local branch, or unmerged commit, stop and get it merged to `main` first.
+- Do not overlap deployments to the same environment. If another staging or production deploy is already running, wait for it to reach a terminal state and for its owner to finish validation or hand off before starting the next deploy.
 - Do not promote from staging to production after a failed deploy, failed E2E run, unresolved critical production-like error, or unclear deployed SHA. Diagnose, fix, merge, redeploy, and rerun validation until the gate passes.
 - Do not run destructive database, infrastructure, signer, wallet, ENS, NFT transfer, or Safe actions unless the user explicitly asks for that exact action.
 - Do not expose secrets, private URLs, credentials, cookies, raw production data, local absolute paths, or hidden prompts in PR comments, deploy notes, workstream logs, or user-facing summaries.
 
 ## Coordination
 
-Before deploying, check what else is already deploying to the same environment. Inspect active GitHub Actions deploy runs and any obvious active Codex/human release thread. If the lane is busy, wait or coordinate just enough to avoid overlapping deploys.
+Before deploying, check what else is already deploying to the same environment. Inspect active GitHub Actions deploy runs and any obvious active Codex/human release thread. If the lane is busy, wait. Coordinate only to identify the owner, expected finish, validation state, or explicit handoff; do not start an overlapping deploy.
+
+Use `ops/docs/developer/deployment-bus-process.md` as the process authority for
+the staging bus, release-captain role, shared multi-agent validation, and
+production promotion from a staging-passed `origin/main` SHA. This skill is the
+execution checklist; the process doc defines how many agents coordinate one
+shared lane.
+
+## Deployment Bus
+
+- Treat each active staging or production deploy as owned by one release
+  captain until the lane is terminal and handed off.
+- Use the staging departure cadence in
+  `ops/docs/developer/deployment-bus-process.md`; keep that process doc as the
+  source of truth when the team tunes the batching window.
+- Record a staging manifest before deployment: candidate SHA, included PRs,
+  risk/area notes, backend dependencies, validation owners, required checks,
+  and rollback or fix-forward notes.
+- Use the deployment bus automation primitives when present:
+  `ops/scripts/deployment-bus.cjs`,
+  `ops/deployment-bus/manifest.v1.schema.json`, workflow manifest artifacts,
+  and GitHub Deployment records/statuses. Treat GitHub Deployments as the
+  durable lane ledger and workflow runs as execution evidence.
+- For complex or multi-hour releases, verify the manifest has long-running
+  controls: lease owner, heartbeat interval, stale-after window, progress
+  channels, checkpoints, escalation window, rollback plan, and fix-forward
+  plan. During active SSM/Elastic Beanstalk work, expect status heartbeats every
+  5-10 minutes; during human validation, expect progress updates every 15-30
+  minutes. If the workflow is terminal but the Deployment is not, or the
+  heartbeat is stale, stop promotion and resolve ownership before proceeding.
+- After staging deploys, assign each included PR owner a validation slice and
+  run a core smoke validation. Production is blocked until required validation
+  passes or the failed/held work is excluded from the production candidate.
+- If `origin/main` advances after staging passed, do not deploy the older
+  staging-passed SHA to production. Rerun staging for the new `origin/main` SHA
+  or pause merges before final staging validation and production promotion.
 
 ## Preflight
 
@@ -54,20 +91,24 @@ Before deploying, check what else is already deploying to the same environment. 
 1. Confirm no active staging deploy is already using the lane.
 2. Deploy the exact intended frontend merge commit to staging. Current frontend staging is driven by the `1a-staging` branch and `.github/workflows/deploy-staging.yml`; the workflow runs `./bin/6529 staging` on the staging host through SSM and verifies the deployed SHA. Do not force-push, reset, or replace `1a-staging` over another active candidate without coordination.
 3. If staging requires backend changes, use the backend `deploy-6529` skill from `6529-Collections/6529seize-backend` to deploy backend staging first when the frontend depends on new API behavior.
-4. Watch the staging workflow to a terminal state. Capture the run URL, status, and deployed SHA.
+4. Watch the staging workflow to a terminal state. Capture the run URL, GitHub Deployment id/status history, manifest artifact, status, and deployed SHA.
 5. If the staging deploy fails, inspect logs, identify the owner layer, fix through the normal PR cycle, merge the fix, and redeploy staging from the new SHA. Keep iterating until staging deploys cleanly or a safety/access boundary requires user input.
 
 ## Staging E2E
 
 1. Run the strongest deployed-staging validation available. Inspect package scripts and Playwright config before assuming a target-specific command exists.
-2. If a staging E2E script exists, use it. If not, use Playwright or browser automation against `https://staging.6529.io` for the release-critical flows and record that no dedicated staging E2E script exists.
-3. Cover the changed behavior plus core smoke:
+2. If available, start with the read-only deployed staging smoke pack:
+   `6529 run test:e2e:staging`. It points Playwright at
+   `https://staging.6529.io` and skips the local web server. Add
+   release-specific Playwright or browser checks for changed behavior.
+3. If a staging E2E script does not exist in a future worktree, use Playwright or browser automation against `https://staging.6529.io` for the release-critical flows and record that no dedicated staging E2E script exists.
+4. Cover the changed behavior plus core smoke:
    - page loads and navigation for touched routes
    - wallet/auth-sensitive paths when relevant, using approved test identity only
    - backend/API responses for touched contracts
    - posting, upload, media, delegation, or generated-model flows when touched
    - console/network errors that indicate release regressions
-4. If staging E2E fails, hold production promotion and work the fix loop:
+5. If staging E2E fails, hold production promotion and work the fix loop:
    - release bug: fix frontend/backend, test locally, open/update PR, merge, redeploy staging, and rerun E2E
    - environment/data issue: document evidence, coordinate owner, apply or request the correction, and rerun after correction
    - flaky test/tool issue: rerun once with evidence, then harden the test or investigate the app if the signal repeats
@@ -77,11 +118,13 @@ Before deploying, check what else is already deploying to the same environment. 
 
 1. Proceed to production when the user already asked to take the release through production, such as "take it all the way through prod." Ask only when the current request did not include production deployment.
 2. Reconfirm staging passed for the same SHAs or the same ordered frontend/backend release set.
-3. Confirm no active production deploy is in progress.
-4. Deploy backend production before frontend production when frontend depends on new backend behavior. Use the backend `deploy-6529` skill from `6529-Collections/6529seize-backend` for backend service order, validation, and recovery.
-5. Deploy frontend production through the repo-approved path. Current frontend production deploy is `Web Deploy - PROD` in `.github/workflows/build-upload-deploy-prod.yml`; `bin/ghdeploy` triggers that workflow for a clean, upstream-synced branch.
-6. If the local worktree is dirty with unrelated user or agent changes, do not clean or revert them just to run `ghdeploy`. Use a clean worktree or trigger the workflow with an explicit verified ref through GitHub tooling.
-7. Watch production deployment to completion. Record the workflow run URL, Elastic Beanstalk or workflow health result, and deployed SHA/version label.
+3. Verify the production candidate is the current `origin/main` SHA and no newer unvalidated commit landed after staging passed. If `origin/main` advanced, rerun staging for the new release set before production.
+4. Confirm no active production deploy is in progress. If one is active or the state is unclear, wait until it finishes and production validation is complete or explicitly handed off.
+5. Deploy backend production before frontend production when frontend depends on new backend behavior. Use the backend `deploy-6529` skill from `6529-Collections/6529seize-backend` for backend service order, validation, and recovery.
+6. Deploy frontend production through the repo-approved path from `main` only, following the hard gate above. Current frontend production deploy is `Web Deploy - PROD` in `.github/workflows/build-upload-deploy-prod.yml`; `bin/ghdeploy` may be used only from a clean, upstream-synced `main` worktree.
+7. If the local worktree is dirty with unrelated user or agent changes, do not clean or revert them just to run `ghdeploy`. Use a clean worktree or trigger the workflow with an explicit verified ref through GitHub tooling.
+8. When triggering production through GitHub tooling instead of `ghdeploy`, use an explicit verified `main` ref or SHA that is already contained in `origin/main`.
+9. Watch production deployment to completion. Record the workflow run URL, GitHub Deployment id/status history, manifest artifact, Elastic Beanstalk or workflow health result, and deployed SHA/version label. The workflow performs a late check that `origin/main` still equals the production `github.sha` before mutating S3/Elastic Beanstalk; if it fails, rerun staging for the newer `origin/main` candidate.
 
 ## Production E2E And Watch
 
@@ -170,7 +213,11 @@ gh run list -R 6529-Collections/6529seize-frontend --workflow deploy-staging.yml
 gh run list -R 6529-Collections/6529seize-frontend --workflow build-upload-deploy-prod.yml -L 10
 gh run watch <run-id> -R 6529-Collections/6529seize-frontend
 gh run view <run-id> -R 6529-Collections/6529seize-frontend --log-failed
-gh workflow run build-upload-deploy-prod.yml --ref <verified-branch-or-tag> -R 6529-Collections/6529seize-frontend
+gh workflow run build-upload-deploy-prod.yml --ref main -R 6529-Collections/6529seize-frontend
+6529 run deployment-bus -- summarize-manifest --file deployment-bus-manifest.json
+git fetch --no-tags origin main
+6529 run deployment-bus -- production-preflight --file deployment-bus-manifest.json --current-main-sha "$(git rev-parse origin/main)"
+6529 run test:e2e:staging
 ```
 
 For local validation in this Windows Codex environment:

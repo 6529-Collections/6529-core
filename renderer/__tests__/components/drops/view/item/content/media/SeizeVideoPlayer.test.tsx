@@ -51,15 +51,15 @@ function mockPrefersReducedMotion(matches: boolean) {
   jest.spyOn(globalThis, "matchMedia").mockImplementation(
     (query: string) =>
       ({
-      addEventListener: jest.fn(),
-      addListener: jest.fn(),
-      dispatchEvent: jest.fn(),
-      matches,
-      media: query,
-      onchange: null,
-      removeEventListener: jest.fn(),
-      removeListener: jest.fn(),
-    }) as MediaQueryList
+        addEventListener: jest.fn(),
+        addListener: jest.fn(),
+        dispatchEvent: jest.fn(),
+        matches,
+        media: query,
+        onchange: null,
+        removeEventListener: jest.fn(),
+        removeListener: jest.fn(),
+      }) as MediaQueryList
   );
 }
 
@@ -337,9 +337,9 @@ describe("SeizeVideoPlayer", () => {
   });
 
   it("uses the mounted player wrapper as its fullscreen target", async () => {
-    const requestFullscreen = jest.fn().mockImplementation(function (this:
-      | HTMLElement
-      | undefined) {
+    const requestFullscreen = jest.fn().mockImplementation(function (
+      this: HTMLElement | undefined
+    ) {
       Object.defineProperty(document, "fullscreenElement", {
         configurable: true,
         value: this,
@@ -405,6 +405,117 @@ describe("SeizeVideoPlayer", () => {
     await userEvent.click(screen.getByRole("button", { name: "Play video" }));
 
     expect(HTMLMediaElement.prototype.play).toHaveBeenCalled();
+  });
+
+  it("places minimal playback on the left and mute on the right", () => {
+    render(<SeizeVideoPlayer src="https://example.com/video.mp4" autoPlay />);
+
+    const pauseButton = screen.getByRole("button", { name: "Pause video" });
+    const muteButton = screen.getByRole("button", { name: "Unmute video" });
+
+    expect(pauseButton.parentElement).toHaveClass("tw-left-3");
+    expect(muteButton.parentElement).toHaveClass("tw-right-3");
+  });
+
+  it("toggles minimal playback from video clicks", () => {
+    let paused = false;
+    const { container } = render(
+      <SeizeVideoPlayer src="https://example.com/video.mp4" autoPlay={false} />
+    );
+    const video = container.querySelector("video");
+    if (!video) {
+      throw new Error("Expected video element to render");
+    }
+    Object.defineProperty(video, "paused", {
+      configurable: true,
+      get: () => paused,
+    });
+    fireEvent.play(video);
+
+    const pauseCallsBeforeClick = jest.mocked(HTMLMediaElement.prototype.pause)
+      .mock.calls.length;
+
+    fireEvent.click(video);
+
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalledTimes(
+      pauseCallsBeforeClick + 1
+    );
+
+    paused = true;
+    const playCallsBeforeClick = jest.mocked(HTMLMediaElement.prototype.play)
+      .mock.calls.length;
+
+    fireEvent.click(video);
+
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(
+      playCallsBeforeClick + 1
+    );
+  });
+
+  it("does not toggle playback from native-control video clicks", () => {
+    const { container } = render(
+      <SeizeVideoPlayer
+        src="https://example.com/video.mp4"
+        template="watch-media"
+      />
+    );
+    const video = container.querySelector("video");
+    if (!video) {
+      throw new Error("Expected video element to render");
+    }
+    Object.defineProperty(video, "paused", {
+      configurable: true,
+      value: false,
+    });
+
+    fireEvent.click(video);
+
+    expect(HTMLMediaElement.prototype.pause).not.toHaveBeenCalled();
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+  });
+
+  it("keeps footer seeking disabled until duration is known", () => {
+    render(<SeizeVideoPlayer src="https://example.com/video.mp4" />);
+
+    expect(screen.getByRole("slider", { name: "Seek video" })).toBeDisabled();
+  });
+
+  it("seeks minimal videos from the footer timeline", () => {
+    const { container } = render(
+      <SeizeVideoPlayer src="https://example.com/video.mp4" />
+    );
+    const video = container.querySelector("video");
+    if (!video) {
+      throw new Error("Expected video element to render");
+    }
+    Object.defineProperty(video, "duration", {
+      configurable: true,
+      value: 200,
+    });
+    video.currentTime = 0;
+
+    fireEvent.durationChange(video);
+
+    const seek = screen.getByRole("slider", { name: "Seek video" });
+    expect(seek).not.toBeDisabled();
+
+    jest.mocked(HTMLMediaElement.prototype.pause).mockClear();
+    jest.mocked(HTMLMediaElement.prototype.play).mockClear();
+
+    fireEvent.click(seek);
+
+    expect(HTMLMediaElement.prototype.pause).not.toHaveBeenCalled();
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+
+    fireEvent.change(seek, { target: { value: "25" } });
+
+    expect(video.currentTime).toBe(50);
+    expect(seek).toHaveValue("25");
+
+    video.currentTime = 100;
+    fireEvent.seeked(video);
+
+    expect(seek).toHaveValue("50");
   });
 
   it("uses native controls for watch media and suppresses custom controls", () => {
@@ -484,7 +595,9 @@ describe("SeizeVideoPlayer", () => {
     const playSpy = jest.spyOn(HTMLMediaElement.prototype, "play");
     render(<SeizeVideoPlayer src="https://example.com/video.mp4" />);
 
-    await userEvent.click(screen.getAllByRole("button", { name: "Play video" })[0]);
+    await userEvent.click(
+      screen.getAllByRole("button", { name: "Play video" })[0]
+    );
 
     expect(playSpy).toHaveBeenCalled();
   });
@@ -577,10 +690,12 @@ describe("SeizeVideoPlayer", () => {
     }
 
     expect(video.muted).toBe(false);
+    expect(video.defaultMuted).toBe(false);
 
     await userEvent.click(screen.getByRole("button", { name: "Mute video" }));
 
     expect(video.muted).toBe(true);
+    expect(video.defaultMuted).toBe(true);
   });
 
   it("stays paused when play is rejected", async () => {

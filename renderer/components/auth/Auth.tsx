@@ -606,7 +606,8 @@ export default function Auth({
         });
       } else if (error instanceof AuthenticationNonceError) {
         setToast({
-          message: "Couldn't reach the authentication service. Please try again.",
+          message:
+            "Couldn't reach the authentication service. Please try again.",
           type: "error",
         });
       } else {
@@ -790,7 +791,8 @@ export default function Auth({
       if (error instanceof MissingActiveProfileError) {
         logErrorSecurely("onActiveProfileProxy_missing_profile", error);
         setToast({
-          message: "Couldn't authenticate this profile. Select a profile and try again.",
+          message:
+            "Couldn't authenticate this profile. Select a profile and try again.",
           type: "error",
         });
         setActiveProfileProxy(null);

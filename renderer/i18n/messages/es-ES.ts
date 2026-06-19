@@ -1,3 +1,4 @@
+import { ES_ES_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import type { MessageKey } from "@/i18n/messages/en-US";
 
 export const ES_ES_MESSAGES = {
@@ -11,9 +12,12 @@ export const ES_ES_MESSAGES = {
   "media.video.play": "Reproducir video",
   "media.video.player": "Reproductor de video",
   "media.video.playPreview": "Reproducir vista previa del video",
+  "media.video.seek": "Cambiar la posicion del video",
   "media.video.unmute": "Activar sonido del video",
-  "media.video.unsupported":
-    "Tu navegador no admite la etiqueta de video.",
+  "media.video.unsupported": "Tu navegador no admite la etiqueta de video.",
+  "profileCms.interactive.fullscreen": "Pantalla completa",
+  "profileCms.interactive.exitFullscreen": "Salir de pantalla completa",
+  ...ES_ES_NEW_VERSION_TOAST_MESSAGES,
   "theMemes.documentTitle": "The Memes | Colecciones",
   "theMemes.description.collections": "Colecciones",
   "theMemes.sorting.regionLabel": "Orden de memes",

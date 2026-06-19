@@ -138,6 +138,7 @@ const UnifiedWavesListWaves = forwardRef<
       waves,
       activeWaveId: activeWave.id,
       activeParentWaveId: activeWave.parentWaveId,
+      loadingSubwaveParentIds: streamWaves.loadingSubwaveParentIds,
       onParentExpand: streamWaves.loadSubwavesForParent,
     });
 
@@ -178,8 +179,7 @@ const UnifiedWavesListWaves = forwardRef<
     const allRows = useMemo(() => getRows(allWaves), [allWaves, getRows]);
     const animatedAnnouncementRows =
       useAnimatedSidebarWaveRows(announcementRows);
-    const animatedHighlyRatedRows =
-      useAnimatedSidebarWaveRows(highlyRatedRows);
+    const animatedHighlyRatedRows = useAnimatedSidebarWaveRows(highlyRatedRows);
     const animatedPinnedRows = useAnimatedSidebarWaveRows(pinnedRows);
     const animatedFollowingRows = useAnimatedSidebarWaveRows(followingRows);
     const animatedAllRows = useAnimatedSidebarWaveRows(allRows);
@@ -187,6 +187,8 @@ const UnifiedWavesListWaves = forwardRef<
       animatedAllRows.length > 0 ? animatedAllRows : animatedFollowingRows;
     const staticFollowingRows =
       animatedAllRows.length > 0 ? animatedFollowingRows : [];
+    const hasVirtualizedFollowingRows =
+      animatedAllRows.length === 0 && animatedFollowingRows.length > 0;
     const virtualizedAriaLabel =
       animatedAllRows.length > 0
         ? t(SIDEBAR_LOCALE, "waves.sidebar.allQualityRankedAriaLabel")
@@ -218,6 +220,7 @@ const UnifiedWavesListWaves = forwardRef<
         depth={row.depth}
         canExpand={row.canExpand}
         isExpanded={row.isExpanded}
+        isLoadingSubwaves={row.isLoadingSubwaves}
         hasUnreadSubwaves={row.hasUnreadSubwaves && !row.isExpanded}
         isLastSubwave={row.isLastSubwave}
         onToggleExpand={toggleParent}
@@ -243,7 +246,10 @@ const UnifiedWavesListWaves = forwardRef<
 
         {announcementRows.length > 0 && (
           <SidebarWaveRowsSection
-            ariaLabel="Announcement waves"
+            ariaLabel={t(
+              SIDEBAR_LOCALE,
+              "waves.sidebar.announcementWavesAriaLabel"
+            )}
             className="tw-flex tw-flex-col"
             getRowHeight={getSidebarRowHeight}
             isRowVisible={(row) =>
@@ -341,10 +347,7 @@ const UnifiedWavesListWaves = forwardRef<
               />
             )}
             <SidebarWaveRowsSection
-              ariaLabel={t(
-                SIDEBAR_LOCALE,
-                "waves.sidebar.followingAriaLabel"
-              )}
+              ariaLabel={t(SIDEBAR_LOCALE, "waves.sidebar.followingAriaLabel")}
               className="tw-flex tw-flex-col"
               getRowHeight={getSidebarRowHeight}
               isRowVisible={(row) =>
@@ -369,6 +372,12 @@ const UnifiedWavesListWaves = forwardRef<
         {!hideHeaders && animatedAllRows.length > 0 && (
           <SidebarCategoryLabel
             label={t(SIDEBAR_LOCALE, "waves.sidebar.all")}
+          />
+        )}
+
+        {!hideHeaders && hasVirtualizedFollowingRows && (
+          <SidebarCategoryLabel
+            label={t(SIDEBAR_LOCALE, "waves.sidebar.following")}
           />
         )}
 

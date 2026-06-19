@@ -41,6 +41,7 @@ function getNetworkSection(): SidebarSection {
       { name: "TDH", href: "/network/tdh" },
       { name: "xTDH", href: "/xtdh" },
       { name: "Wave Score", href: "/network/wave-score" },
+      { name: "REP Categories", href: "/rep/categories" },
     ],
     subsections: [
       {
@@ -212,10 +213,6 @@ function getAboutSection(hideSubscriptions: boolean): SidebarSection {
           },
           { name: "ENS", href: `/about/${AboutSection.ENS}` },
           { name: "License", href: `/about/${AboutSection.LICENSE}` },
-          {
-            name: "Release Notes",
-            href: `/about/${AboutSection.RELEASE_NOTES}`,
-          },
         ],
       },
     ],
