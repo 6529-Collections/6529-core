@@ -75,6 +75,7 @@ export enum QueryKey {
   DROPS = "DROPS",
   DROPS_LEADERBOARD = "DROPS_LEADERBOARD",
   DROP_VOTERS = "DROP_VOTERS",
+  DROP_POLL_VOTERS = "DROP_POLL_VOTERS",
   DROP_VOTE_LOGS = "DROP_VOTE_LOGS",
   BOOSTED_DROPS = "BOOSTED_DROPS",
   DROP = "DROP",
@@ -95,15 +96,24 @@ export enum QueryKey {
   WAVES_OVERVIEW = "WAVES_OVERVIEW",
   WAVES_OVERVIEW_PUBLIC = "WAVES_OVERVIEW_PUBLIC",
   WAVES_V2 = "WAVES_V2",
+  WAVE_SUBWAVES = "WAVE_SUBWAVES",
   OFFICIAL_WAVES = "OFFICIAL_WAVES",
   WAVES = "WAVES",
   WAVES_PUBLIC = "WAVES_PUBLIC",
   WAVES_SEARCH = "WAVES_SEARCH",
   WAVE = "WAVE",
+  WAVE_POLLS = "WAVE_POLLS",
+  WAVE_METADATA = "WAVE_METADATA",
   WAVE_CURATIONS = "WAVE_CURATIONS",
   WAVE_LOGS = "WAVE_LOGS",
   WAVE_VOTERS = "WAVE_VOTERS",
   WAVE_FOLLOWERS = "WAVE_FOLLOWERS",
+  WAVE_REP_RATING = "WAVE_REP_RATING",
+  WAVE_REP_CREDIT = "WAVE_REP_CREDIT",
+  WAVE_REP_OVERVIEW = "WAVE_REP_OVERVIEW",
+  WAVE_REP_CATEGORIES = "WAVE_REP_CATEGORIES",
+  WAVE_REP_CATEGORY_CONTRIBUTORS = "WAVE_REP_CATEGORY_CONTRIBUTORS",
+  WAVE_REP_LOGS = "WAVE_REP_LOGS",
   FEED_ITEMS = "FEED_ITEMS",
   WAVE_DECISIONS = "WAVE_DECISIONS",
   WAVE_DECISIONS_SALES = "WAVE_DECISIONS_SALES",
@@ -116,6 +126,13 @@ export enum QueryKey {
   MARKETPLACE_PREVIEW = "MARKETPLACE_PREVIEW",
   REP_OVERVIEW = "REP_OVERVIEW",
   REP_CATEGORIES = "REP_CATEGORIES",
+  GLOBAL_REP_CATEGORY_SEARCH = "GLOBAL_REP_CATEGORY_SEARCH",
+  GLOBAL_REP_CATEGORY_SUGGESTED = "GLOBAL_REP_CATEGORY_SUGGESTED",
+  GLOBAL_REP_CATEGORY_OVERVIEW = "GLOBAL_REP_CATEGORY_OVERVIEW",
+  GLOBAL_REP_CATEGORY_PAGE = "GLOBAL_REP_CATEGORY_PAGE",
+  GLOBAL_REP_CATEGORY_WAVE_OVERVIEW = "GLOBAL_REP_CATEGORY_WAVE_OVERVIEW",
+  GLOBAL_REP_CATEGORY_WAVES_PAGE = "GLOBAL_REP_CATEGORY_WAVES_PAGE",
+  GLOBAL_REP_CATEGORY_WAVE_CONTRIBUTORS_PAGE = "GLOBAL_REP_CATEGORY_WAVE_CONTRIBUTORS_PAGE",
   CIC_OVERVIEW = "CIC_OVERVIEW",
 }
 
@@ -500,6 +517,20 @@ const createReactQueryContextValue = (
     });
   };
 
+  const invalidateRepCategoryAnalytics = () => {
+    [
+      QueryKey.GLOBAL_REP_CATEGORY_SEARCH,
+      QueryKey.GLOBAL_REP_CATEGORY_SUGGESTED,
+      QueryKey.GLOBAL_REP_CATEGORY_OVERVIEW,
+      QueryKey.GLOBAL_REP_CATEGORY_PAGE,
+      QueryKey.GLOBAL_REP_CATEGORY_WAVE_OVERVIEW,
+      QueryKey.GLOBAL_REP_CATEGORY_WAVES_PAGE,
+      QueryKey.GLOBAL_REP_CATEGORY_WAVE_CONTRIBUTORS_PAGE,
+    ].forEach((queryKey) => {
+      queryClient.invalidateQueries({ queryKey: [queryKey] });
+    });
+  };
+
   const invalidateProfileRaters = ({
     profile,
     matter,
@@ -640,6 +671,7 @@ const createReactQueryContextValue = (
     queryClient.invalidateQueries({
       queryKey: [QueryKey.REP_CATEGORIES],
     });
+    invalidateRepCategoryAnalytics();
     invalidateProfileRaters({
       profile: targetProfile,
       matter: RateMatter.REP,
@@ -892,6 +924,7 @@ const createReactQueryContextValue = (
     queryClient.invalidateQueries({
       queryKey: [QueryKey.REP_CATEGORIES],
     });
+    invalidateRepCategoryAnalytics();
     queryClient.invalidateQueries({
       queryKey: [QueryKey.CIC_OVERVIEW],
     });
@@ -919,6 +952,11 @@ const createReactQueryContextValue = (
     queryClient
       .invalidateQueries({
         queryKey: [QueryKey.WAVES_V2],
+      })
+      .catch(() => undefined);
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.WAVE_SUBWAVES],
       })
       .catch(() => undefined);
     queryClient
@@ -953,9 +991,19 @@ const createReactQueryContextValue = (
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP],
     });
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.WAVE_POLLS],
+      })
+      .catch(() => undefined);
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP_VOTERS],
     });
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.DROP_POLL_VOTERS],
+      })
+      .catch(() => undefined);
     queryClient.invalidateQueries({
       queryKey: [QueryKey.DROP_VOTE_LOGS],
     });

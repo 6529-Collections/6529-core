@@ -144,6 +144,19 @@ case "$command_name" in
     exec "$REAL_PNPM" run pull-web "$@"
     ;;
   run)
+    if [[ "${1:-}" == "dev" ]] && {
+      [[ -n "${REVIEWBOT_RESPONSIVENESS_OUTPUT_DIR:-}" ]] ||
+        [[ "${PORT_SEARCH_LIMIT:-}" == "1" &&
+          "${BASE_ENDPOINT:-}" == "http://127.0.0.1:${PORT:-}" &&
+          "${API_ENDPOINT:-}" == "https://api.6529.io" &&
+          "${WS_ENDPOINT:-}" == "wss://ws.6529.io" &&
+          "${ASSETS_FROM_S3:-}" == "true" ]]
+    }; then
+      shift
+      "$REAL_PNPM" run build-next-config
+      cd "$REPO_ROOT/renderer"
+      exec "$REAL_PNPM" run dev "$@"
+    fi
     exec "$REAL_PNPM" run "$@"
     ;;
   exec)

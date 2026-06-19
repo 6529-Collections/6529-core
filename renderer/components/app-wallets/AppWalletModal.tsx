@@ -3,7 +3,8 @@
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { faEye, faEyeSlash } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { RefObject, useCallback, useRef, useState } from "react";
+import type { RefObject } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Button, Modal } from "react-bootstrap";
 import { useAuth } from "../auth/Auth";
 import { decryptData } from "./app-wallet-helpers";
@@ -32,11 +33,13 @@ const showAppWalletError = (
 export function CreateAppWalletModal(
   props: Readonly<{
     show: boolean;
-    import?: {
-      address: string;
-      mnemonic: string;
-      privateKey: string;
-    } | undefined;
+    import?:
+      | {
+          address: string;
+          mnemonic: string;
+          privateKey: string;
+        }
+      | undefined;
     onHide: (isSuccess?: boolean) => void;
   }>
 ) {
@@ -79,12 +82,13 @@ export function CreateAppWalletModal(
     const success = await createAppWallet(walletName, walletPass);
     if (!success) {
       setToast({
-        message: `Error creating wallet`,
+        message: `Couldn't create this wallet. Check the details and try again.`,
         type: "error",
       });
     } else {
       setToast({
-        message: `Wallet '${walletName}' created successfully - Download Recovery File immediately!`,
+        title: "Wallet created.",
+        description: `Download the recovery file now to keep access to ${walletName}.`,
         type: "success",
       });
       handleHide(true);
@@ -117,15 +121,22 @@ export function CreateAppWalletModal(
     );
     if (!success) {
       setToast({
-        message: `Error importing wallet`,
+        message: `Couldn't import this wallet. Check the file and try again.`,
         type: "error",
       });
     } else {
-      setToast({ message: "Wallet imported successfully!", type: "success" });
+      setToast({ message: "Wallet imported.", type: "success" });
       handleHide(true);
     }
     setIsAdding(false);
-  }, [handleHide, importAppWallet, importData, setToast, walletName, walletPass]);
+  }, [
+    handleHide,
+    importAppWallet,
+    importData,
+    setToast,
+    walletName,
+    walletPass,
+  ]);
 
   return (
     <Modal
@@ -133,11 +144,10 @@ export function CreateAppWalletModal(
       onHide={() => handleHide()}
       backdrop
       keyboard={false}
-      centered>
+      centered
+    >
       <Modal.Header className={styles["modalHeader"]}>
-        <Modal.Title>
-          {importData ? `Import` : `Create New`} Wallet
-        </Modal.Title>
+        <Modal.Title>{importData ? `Import` : `Create New`} Wallet</Modal.Title>
       </Modal.Header>
       <Modal.Body className={styles["modalContent"]}>
         <label className="pb-1" htmlFor="walletName">
@@ -208,14 +218,16 @@ export function CreateAppWalletModal(
           <Button
             variant="primary"
             disabled={!walletName || !walletPass || isAdding}
-            onClick={handleImport}>
+            onClick={handleImport}
+          >
             {isAdding ? "Importing..." : "Import"}
           </Button>
         ) : (
           <Button
             variant="primary"
             disabled={!walletName || !walletPass || isAdding}
-            onClick={handleCreate}>
+            onClick={handleCreate}
+          >
             {isAdding ? "Creating..." : "Create"}
           </Button>
         )}
@@ -287,7 +299,14 @@ export function UnlockAppWalletModal(
     };
 
     setTimeout(doUnlock, 0);
-  }, [address, address_hashed, handleHide, onUnlock, showUnlockError, walletPass]);
+  }, [
+    address,
+    address_hashed,
+    handleHide,
+    onUnlock,
+    showUnlockError,
+    walletPass,
+  ]);
 
   return (
     <Modal
@@ -295,7 +314,8 @@ export function UnlockAppWalletModal(
       onHide={() => handleHide()}
       backdrop
       keyboard={false}
-      centered>
+      centered
+    >
       <Modal.Header className={styles["modalHeader"]}>
         <Modal.Title>Unlock Wallet</Modal.Title>
       </Modal.Header>
@@ -349,7 +369,8 @@ export function UnlockAppWalletModal(
           disabled={
             unlocking || !walletPass || walletPass.length < SEED_MIN_PASS_LENGTH
           }
-          onClick={handleUnlock}>
+          onClick={handleUnlock}
+        >
           {unlocking ? "Unlocking..." : "Unlock"}
         </Button>
       </Modal.Footer>

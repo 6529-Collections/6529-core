@@ -18,6 +18,7 @@
   "files": [
     "main/**/*",
     "next.config.mjs",
+    "renderer/config/env.schema.runtime.cjs",
     "renderer/out/**/*",
     "renderer/public/**/*"
   ],

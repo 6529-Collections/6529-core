@@ -105,8 +105,7 @@ export default function AppWalletComponent(
     async (name: string, address: string) => {
       if (areEqualAddresses(address, account.address)) {
         setToast({
-          message:
-            "You are currently connected with this wallet - Disconnect first!",
+          message: "Disconnect this wallet before deleting it.",
           type: "error",
         });
         return;
@@ -120,13 +119,14 @@ export default function AppWalletComponent(
       const success = await deleteAppWallet(address);
       if (!success) {
         setToast({
-          message: `Error deleting wallet`,
+          message: `Couldn't delete this wallet. Please try again.`,
           type: "error",
         });
       } else {
         router.push("/tools/app-wallets");
         setToast({
-          message: `Wallet '${name}' deleted successfully`,
+          title: "Wallet deleted.",
+          description: `${name} was removed from this app.`,
           type: "success",
         });
       }

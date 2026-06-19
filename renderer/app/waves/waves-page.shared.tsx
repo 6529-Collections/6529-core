@@ -9,7 +9,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { getAppMetadata } from "@/components/providers/metadata";
+import {
+  getAppMetadata,
+  getLargeSocialCardMetadata,
+} from "@/components/providers/metadata";
 import WavesPageClient from "./page.client";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import { prefetchWavesOverview } from "@/helpers/stream.helpers";
@@ -25,7 +28,11 @@ import {
   getWaveRouteWithSearchParams,
   type RouteSearchParams,
 } from "@/helpers/navigation.helpers";
-import { publicEnv } from "@/config/env";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import {
+  buildWavePageJsonLd,
+  buildWavesIndexPageJsonLd,
+} from "@/lib/structured-data/waves";
 
 export type WavesSearchParams = RouteSearchParams;
 
@@ -49,9 +56,47 @@ export const getFirstSearchParamValue = (
   return typeof value === "string" ? value : null;
 };
 
+const getStructuredDataDropParam = (
+  searchParams: WavesSearchParams
+): { key: "serialNo" | "drop"; value: string } | null => {
+  const serialNo = getFirstSearchParamValue(searchParams, "serialNo")?.trim();
+  if (serialNo) {
+    return { key: "serialNo", value: serialNo };
+  }
+
+  const drop = getFirstSearchParamValue(searchParams, "drop")?.trim();
+  if (drop) {
+    return { key: "drop", value: drop };
+  }
+
+  return null;
+};
+
 const getDropMetadataId = (searchParams: WavesSearchParams): string | null =>
-  getFirstSearchParamValue(searchParams, "serialNo") ||
-  getFirstSearchParamValue(searchParams, "drop");
+  getStructuredDataDropParam(searchParams)?.value ?? null;
+
+const buildWaveStructuredDataPath = ({
+  waveId,
+  searchParams,
+}: {
+  readonly waveId: string | null;
+  readonly searchParams: WavesSearchParams;
+}): string => {
+  if (waveId === null) {
+    return "/waves";
+  }
+
+  const params = new URLSearchParams();
+  const dropParam = getStructuredDataDropParam(searchParams);
+
+  if (dropParam) {
+    params.set(dropParam.key, dropParam.value);
+  }
+
+  const queryString = params.toString();
+  const path = `/waves/${encodeURIComponent(waveId)}`;
+  return queryString ? `${path}?${queryString}` : path;
+};
 
 const fetchWaveCached = cache(
   async (
@@ -168,6 +213,14 @@ export async function renderWavesPageContent({
   }
 
   const hasDrop = Boolean(getFirstSearchParamValue(searchParams, "drop"));
+  const dropMetadataId = getDropMetadataId(searchParams)?.trim();
+  const dropMetadata =
+    context.wave && dropMetadataId
+      ? await fetchDropOgMetadataCached(
+          dropMetadataId,
+          JSON.stringify(context.headers)
+        )
+      : null;
   const hasRecentDropCloseNavigation =
     cookieStore.get(DROP_CLOSE_COOKIE_NAME)?.value === "1";
   const shouldPrefetch =
@@ -192,11 +245,27 @@ export async function renderWavesPageContent({
   }
 
   return (
-    <HydrationBoundary state={dehydrate(queryClient)}>
-      <Suspense fallback={null}>
-        <WavesPageClient />
-      </Suspense>
-    </HydrationBoundary>
+    <>
+      <JsonLdScript
+        data={
+          context.wave
+            ? buildWavePageJsonLd({
+                wave: context.wave,
+                path: buildWaveStructuredDataPath({
+                  waveId: context.waveId,
+                  searchParams,
+                }),
+                dropMetadata,
+              })
+            : buildWavesIndexPageJsonLd()
+        }
+      />
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <Suspense fallback={null}>
+          <WavesPageClient />
+        </Suspense>
+      </HydrationBoundary>
+    </>
   );
 }
 
@@ -251,16 +320,14 @@ export async function buildWavesMetadata(
     }
   }
 
-  return getAppMetadata({
-    title: `${waveName} by ${authorHandle}`,
-    description: "Waves",
-    ogImage: `${
-      publicEnv.BASE_ENDPOINT
-    }/api/og-metadata/waves/${encodeURIComponent(waveId)}`,
-    ogImageHeight: 630,
-    ogImageWidth: 1200,
-    twitterCard: "summary_large_image",
-  });
+  return getAppMetadata(
+    getLargeSocialCardMetadata({
+      title: `${waveName} by ${authorHandle}`,
+      description: "Waves",
+      ogImage: `/api/og-metadata/waves/${encodeURIComponent(waveId)}`,
+      ogImageAlt: `${waveName} wave social card`,
+    })
+  );
 }
 
 const getDropAuthorDisplay = (
@@ -299,31 +366,25 @@ const buildDropPageMetadata = ({
     return null;
   }
 
-  const ogImage = `${
-    publicEnv.BASE_ENDPOINT
-  }/api/og-metadata/drops/${encodeURIComponent(dropId)}`;
+  const ogImage = `/api/og-metadata/drops/${encodeURIComponent(dropId)}`;
 
   if (drop.drop_type === ApiDropMainType.Submission) {
     const title = getDropTitle(drop.title, `Drop #${drop.serial_no}`);
-    return {
+    return getLargeSocialCardMetadata({
       title: `${title} by ${author}`,
       description: `${waveName} | Waves`,
       ogImage,
-      ogImageHeight: 630,
-      ogImageWidth: 1200,
-      twitterCard: "summary_large_image" as const,
-    };
+      ogImageAlt: `${title} drop social card`,
+    });
   }
 
   if (drop.drop_type === ApiDropMainType.Chat) {
-    return {
+    return getLargeSocialCardMetadata({
       title: `${author} in ${waveName}`,
       description: "Waves",
       ogImage,
-      ogImageHeight: 630,
-      ogImageWidth: 1200,
-      twitterCard: "summary_large_image" as const,
-    };
+      ogImageAlt: `${author} drop in ${waveName} social card`,
+    });
   }
 
   return null;
