@@ -1,5 +1,7 @@
 "use client";
 
+/* eslint max-lines-per-function: "off" */
+
 import { useMemo, useCallback, useState } from "react";
 import { useAuth } from "@/components/auth/Auth";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
@@ -36,7 +38,10 @@ type SidebarWaveWithDiscoverySection = SidebarWave & {
   readonly sidebarSection?: SidebarDiscoverySection;
 };
 
-const HIGHLY_RATED_WAVE_LIMIT = 3;
+const SIDEBAR_DISCOVERY_SECTION_HIGHLY_RATED: SidebarDiscoverySection =
+  "highly-rated";
+const SIDEBAR_DISCOVERY_SECTION_ALL: SidebarDiscoverySection = "all";
+const HIGHLY_RATED_WAVE_LIMIT = 10;
 const HIGHLY_RATED_QUERY_PAGE_SIZE = 10;
 
 // V2 overview, pinned, and announcement wave sources are root-wave
@@ -74,14 +79,22 @@ const getFirstUnreadSerialNo = (
 const isKnownWaveForCurrentViewer = (wave: SidebarWave) =>
   wave.subscribed || wave.followedSubwavesCount > 0;
 
+const noopWaveAction = async (_waveId: string) => undefined;
+const noopAsyncWaveAction = async () => undefined;
+
 /**
  * Hook for managing and fetching waves list including pinned waves
  * @returns Wave list data and loading states
  */
 const useWavesList = () => {
   const queryClient = useQueryClient();
-  const { connectedProfile, activeProfileProxy } = useAuth();
-  const { address } = useSeizeConnectContext();
+  const {
+    connectedProfile,
+    activeProfileProxy,
+    fetchingProfile,
+    isAuthenticated,
+  } = useAuth();
+  const { address, hasValidWalletAuth } = useSeizeConnectContext();
   const { seizeSettings, isAnnouncementsWave } = useSeizeSettings();
   const {
     pinnedIds,
@@ -96,23 +109,41 @@ const useWavesList = () => {
   const announcementsWaveId = normalizeOptionalWaveId(
     seizeSettings.announcements_wave_id
   );
+  const hasValidWalletAuthorization = hasValidWalletAuth !== false;
+  const hasAuthenticatedProfile =
+    hasValidWalletAuthorization &&
+    (isAuthenticated ?? !!connectedProfile?.handle);
 
   // Track connected identity state - memoize to prevent re-renders
   const isConnectedIdentity = useMemo(() => {
-    return !!connectedProfile?.handle && !activeProfileProxy;
-  }, [connectedProfile?.handle, activeProfileProxy]);
+    return (
+      !!connectedProfile?.handle &&
+      !activeProfileProxy &&
+      hasAuthenticatedProfile
+    );
+  }, [connectedProfile?.handle, activeProfileProxy, hasAuthenticatedProfile]);
+  const isJoinedMode = following && isConnectedIdentity;
+  const isPendingAuthSwitch = Boolean(
+    address && (!hasValidWalletAuthorization || fetchingProfile)
+  );
   const viewerIdentityKey = useMemo(() => {
-    if (!address) {
+    if (!address || !hasValidWalletAuthorization || !hasAuthenticatedProfile) {
       return null;
     }
 
     const normalizedAddress = address.toLowerCase();
-    if (activeProfileProxy?.id != null) {
-      return `${normalizedAddress}:proxy:${activeProfileProxy.id}`;
+    const proxyId = activeProfileProxy?.id;
+    if (proxyId !== undefined) {
+      return `${normalizedAddress}:proxy:${proxyId}`;
     }
 
     return `${normalizedAddress}:primary`;
-  }, [address, activeProfileProxy?.id]);
+  }, [
+    address,
+    activeProfileProxy?.id,
+    hasAuthenticatedProfile,
+    hasValidWalletAuthorization,
+  ]);
 
   const nonPinnedFilter = isConnectedIdentity
     ? ApiWavesPinFilter.NotPinned
@@ -132,35 +163,31 @@ const useWavesList = () => {
     pinned: nonPinnedFilter,
     scoreSort: ApiWaveScoreSort.Quality,
     viewerIdentityKey,
-    refetchInterval: following
-      ? false
-      : SIDEBAR_WAVES_OVERVIEW_REFETCH_INTERVAL_MS,
+    refetchInterval: SIDEBAR_WAVES_OVERVIEW_REFETCH_INTERVAL_MS,
     refetchIntervalInBackground: false,
-    enabled: true,
+    enabled: !isPendingAuthSwitch,
   });
-  // Fetch quality-ranked waves for the broad discovery section and pagination.
+  // Fetch recent activity for the broad bottom section and pagination.
   const {
-    waves: allQualityWaves,
-    isFetching: isAllQualityWavesFetching,
-    isFetchingNextPage: isAllQualityWavesFetchingNextPage,
-    hasNextPage: hasAllQualityWavesNextPage,
-    fetchNextPage: fetchNextAllQualityWavesPage,
-    status: allQualityWavesStatus,
-    refetch: allQualityWavesRefetch,
+    waves: allActivityWaves,
+    isFetching: isAllActivityWavesFetching,
+    isFetchingNextPage: isAllActivityWavesFetchingNextPage,
+    hasNextPage: hasAllActivityWavesNextPage,
+    fetchNextPage: fetchNextAllActivityWavesPage,
+    status: allActivityWavesStatus,
+    refetch: allActivityWavesRefetch,
   } = useWavesV2({
-    overviewType: WAVE_SCORE_DISCOVERY_PARAMS.overviewType,
+    overviewType: WAVE_FOLLOWING_WAVES_PARAMS.initialWavesOverviewType,
     pageSize: WAVE_FOLLOWING_WAVES_PARAMS.limit,
     following: false,
     directMessage: false,
-    excludeFollowed: isConnectedIdentity ? true : undefined,
     pinned: nonPinnedFilter,
-    scoreSort: ApiWaveScoreSort.Quality,
     viewerIdentityKey,
-    refetchInterval: following
+    refetchInterval: isJoinedMode
       ? false
       : SIDEBAR_WAVES_OVERVIEW_REFETCH_INTERVAL_MS,
     refetchIntervalInBackground: false,
-    enabled: true,
+    enabled: !isJoinedMode && !isPendingAuthSwitch,
   });
   // Fetch followed waves by latest post activity for the known-wave sidebar.
   const {
@@ -177,16 +204,19 @@ const useWavesList = () => {
     following: isConnectedIdentity,
     directMessage: false,
     viewerIdentityKey,
-    refetchInterval: following
+    refetchInterval: isJoinedMode
       ? SIDEBAR_WAVES_OVERVIEW_REFETCH_INTERVAL_MS
       : false,
     refetchIntervalInBackground: false,
-    enabled: isConnectedIdentity,
+    enabled: isJoinedMode && !isPendingAuthSwitch,
   });
-  const mainWaves = useMemo<SidebarWaveWithDiscoverySection[]>(
-    () => [
-      ...followedActivityWaves,
-      // Keep the highly-rated slice before the broader all-quality list:
+  const mainWaves = useMemo<SidebarWaveWithDiscoverySection[]>(() => {
+    if (isPendingAuthSwitch) {
+      return [];
+    }
+
+    return [
+      // Keep the highly-rated slice before the broader activity list:
       // duplicate wave ids retain their first sidebarSection during merge.
       ...highlyRatedWaves
         .filter((wave) => !isKnownWaveForCurrentViewer(wave))
@@ -194,60 +224,75 @@ const useWavesList = () => {
         .map(
           (wave): SidebarWaveWithDiscoverySection => ({
             ...wave,
-            sidebarSection: "highly-rated",
+            sidebarSection: SIDEBAR_DISCOVERY_SECTION_HIGHLY_RATED,
           })
         ),
-      ...allQualityWaves.map(
-        (wave): SidebarWaveWithDiscoverySection => ({
-          ...wave,
-          sidebarSection: "all",
-        })
-      ),
-    ],
-    [followedActivityWaves, highlyRatedWaves, allQualityWaves]
-  );
-  const isMainWavesFetching =
-    isAllQualityWavesFetching ||
-    isHighlyRatedWavesFetching ||
-    isFollowedActivityWavesFetching;
-  const isMainWavesFetchingNextPage =
-    isAllQualityWavesFetchingNextPage ||
-    (following && isFollowedActivityWavesFetchingNextPage);
-  const hasMainWavesNextPage =
-    hasAllQualityWavesNextPage ||
-    (following && hasFollowedActivityWavesNextPage);
-  const fetchNextMainWavesPage = useCallback(() => {
-    if (!following) {
-      return fetchNextAllQualityWavesPage();
-    }
-
-    const nextPageRequests = [];
-    if (hasFollowedActivityWavesNextPage) {
-      nextPageRequests.push(fetchNextFollowedActivityWavesPage());
-    }
-    if (hasAllQualityWavesNextPage) {
-      nextPageRequests.push(fetchNextAllQualityWavesPage());
-    }
-
-    return Promise.all(nextPageRequests);
+      ...(isJoinedMode
+        ? followedActivityWaves
+        : allActivityWaves.map(
+            (wave): SidebarWaveWithDiscoverySection => ({
+              ...wave,
+              sidebarSection: SIDEBAR_DISCOVERY_SECTION_ALL,
+            })
+          )),
+    ];
   }, [
-    following,
-    fetchNextAllQualityWavesPage,
-    fetchNextFollowedActivityWavesPage,
-    hasAllQualityWavesNextPage,
-    hasFollowedActivityWavesNextPage,
+    allActivityWaves,
+    followedActivityWaves,
+    highlyRatedWaves,
+    isJoinedMode,
+    isPendingAuthSwitch,
   ]);
-  const mainWavesStatus =
-    following && followedActivityWavesStatus === "error"
-      ? followedActivityWavesStatus
-      : allQualityWavesStatus;
-  const mainWavesRefetch = useCallback(() => {
-    if (following) {
-      void followedActivityWavesRefetch();
+  const isMainWavesFetching = isPendingAuthSwitch
+    ? false
+    : (!isJoinedMode &&
+        (isAllActivityWavesFetching || isHighlyRatedWavesFetching)) ||
+      isFollowedActivityWavesFetching;
+  const isMainWavesFetchingNextPage = isPendingAuthSwitch
+    ? false
+    : isJoinedMode
+      ? isFollowedActivityWavesFetchingNextPage
+      : isAllActivityWavesFetchingNextPage;
+  const hasMainWavesNextPage = isPendingAuthSwitch
+    ? false
+    : isJoinedMode
+      ? hasFollowedActivityWavesNextPage
+      : hasAllActivityWavesNextPage;
+  const fetchNextMainWavesPage = useCallback(() => {
+    if (isPendingAuthSwitch) {
+      return noopAsyncWaveAction();
     }
 
-    return allQualityWavesRefetch();
-  }, [following, allQualityWavesRefetch, followedActivityWavesRefetch]);
+    if (isJoinedMode) {
+      return fetchNextFollowedActivityWavesPage();
+    }
+
+    return fetchNextAllActivityWavesPage();
+  }, [
+    isJoinedMode,
+    isPendingAuthSwitch,
+    fetchNextAllActivityWavesPage,
+    fetchNextFollowedActivityWavesPage,
+  ]);
+  const mainWavesStatus = isJoinedMode
+    ? followedActivityWavesStatus
+    : allActivityWavesStatus;
+  const mainWavesRefetch = useCallback(() => {
+    if (isPendingAuthSwitch) {
+      return noopAsyncWaveAction();
+    }
+
+    if (isJoinedMode) {
+      return followedActivityWavesRefetch();
+    }
+
+    return allActivityWavesRefetch();
+  }, [
+    isJoinedMode,
+    isPendingAuthSwitch,
+    allActivityWavesRefetch,
+    followedActivityWavesRefetch,
+  ]);
   const trackedAnnouncementWave = useMemo(
     () =>
       mainWaves.find((wave) => isAnnouncementsWave(wave.id)) ??
@@ -256,7 +301,7 @@ const useWavesList = () => {
     [mainWaves, serverPinnedWaves, isAnnouncementsWave]
   );
   const shouldFetchAnnouncementWave = Boolean(
-    announcementsWaveId && !trackedAnnouncementWave
+    announcementsWaveId && !trackedAnnouncementWave && !isPendingAuthSwitch
   );
   const {
     wave: fetchedAnnouncementWave,
@@ -315,6 +360,10 @@ const useWavesList = () => {
 
   // Use server-provided pinned waves
   const separatelyFetchedPinnedWaves = useMemo(() => {
+    if (isPendingAuthSwitch) {
+      return [];
+    }
+
     // Filter out pinned waves that are already in mainWaves to avoid duplicates
     return serverPinnedWaves.filter(
       (wave) =>
@@ -322,10 +371,19 @@ const useWavesList = () => {
         isExpectedRootSidebarWave(wave) &&
         !isAnnouncementsWave(wave.id)
     );
-  }, [serverPinnedWaves, mainWaveIds, isAnnouncementsWave]);
+  }, [
+    isPendingAuthSwitch,
+    serverPinnedWaves,
+    mainWaveIds,
+    isAnnouncementsWave,
+  ]);
 
   // Collect ALL pinned waves (both from mainWaves and server-provided)
   const allPinnedWaves = useMemo(() => {
+    if (isPendingAuthSwitch) {
+      return [];
+    }
+
     const result: EnhancedWave[] = [];
 
     // Add all server-provided pinned waves, filtering out DMs
@@ -340,13 +398,17 @@ const useWavesList = () => {
     });
 
     return result;
-  }, [serverPinnedWaves, isAnnouncementsWave]);
+  }, [isPendingAuthSwitch, serverPinnedWaves, isAnnouncementsWave]);
 
   // New drops counts are now managed externally
 
-  // Combine activity and discovery sources. Pinned/followed rows are
-  // activity-first; non-followed rows preserve the score-ranked backend order.
+  // Combine activity and discovery sources. Top sections are grouped later;
+  // regular bottom-list rows share one latest-activity order.
   const combinedWaves = useMemo(() => {
+    if (isPendingAuthSwitch) {
+      return [];
+    }
+
     const allWavesMap = new Map<string, EnhancedWave>();
     const pinnedWavesSet = new Set(pinnedIds);
     const allWavesArray: EnhancedWave[] = [];
@@ -379,7 +441,7 @@ const useWavesList = () => {
       allWavesMap.set(wave.id, {
         ...(existingWave ?? wave),
         ...wave,
-        subscribed: existingWave?.subscribed || wave.subscribed,
+        subscribed: existingWave?.subscribed === true || wave.subscribed,
         followedSubwavesCount: Math.max(
           existingWave?.followedSubwavesCount ?? 0,
           wave.followedSubwavesCount
@@ -409,8 +471,14 @@ const useWavesList = () => {
           getLatestKnownActivityTimestamp(b) -
           getLatestKnownActivityTimestamp(a)
       );
-    const activityOrderedFollowingWaves = nonAnnouncementWaves
-      .filter((wave) => !wave.isPinned && isKnownWaveForCurrentViewer(wave))
+    // Product rule: All is one recent-activity stream. Joined uses the same
+    // activity order, filtered by the followed-only query.
+    const activityOrderedRegularWaves = nonAnnouncementWaves
+      .filter(
+        (wave) =>
+          !wave.isPinned &&
+          wave.sidebarSection !== SIDEBAR_DISCOVERY_SECTION_HIGHLY_RATED
+      )
       .sort(
         (a, b) =>
           getLatestKnownActivityTimestamp(b) -
@@ -422,17 +490,10 @@ const useWavesList = () => {
         !isKnownWaveForCurrentViewer(wave) &&
         wave.sidebarSection === "highly-rated"
     );
-    const backendOrderedScoreWaves = nonAnnouncementWaves.filter(
-      (wave) =>
-        !wave.isPinned &&
-        !isKnownWaveForCurrentViewer(wave) &&
-        wave.sidebarSection !== "highly-rated"
-    );
     const sortedNonAnnouncementWaves = [
       ...highlyRatedDiscoveryWaves,
       ...sortedPinnedWaves,
-      ...activityOrderedFollowingWaves,
-      ...backendOrderedScoreWaves,
+      ...activityOrderedRegularWaves,
     ];
 
     if (announcementWave) {
@@ -451,6 +512,7 @@ const useWavesList = () => {
     pinnedIds,
     announcementWave,
     isAnnouncementsWave,
+    isPendingAuthSwitch,
   ]);
 
   const [loadedSubwaveParentIds, setLoadedSubwaveParentIds] = useState<
@@ -464,6 +526,10 @@ const useWavesList = () => {
 
   const loadSubwavesForParent = useCallback(
     (parentWaveId: string) => {
+      if (isPendingAuthSwitch) {
+        return;
+      }
+
       if (!rootWaveIds.has(parentWaveId)) {
         return;
       }
@@ -476,11 +542,15 @@ const useWavesList = () => {
         return [...previousParentIds, parentWaveId];
       });
     },
-    [rootWaveIds]
+    [isPendingAuthSwitch, rootWaveIds]
   );
 
   const prefetchSubwavesForParent = useCallback(
     (parentWaveId: string) => {
+      if (isPendingAuthSwitch) {
+        return;
+      }
+
       if (!rootWaveIds.has(parentWaveId)) {
         return;
       }
@@ -491,7 +561,7 @@ const useWavesList = () => {
         )
         .catch(() => undefined);
     },
-    [queryClient, rootWaveIds, viewerIdentityKey]
+    [isPendingAuthSwitch, queryClient, rootWaveIds, viewerIdentityKey]
   );
 
   const {
@@ -499,8 +569,8 @@ const useWavesList = () => {
     subwavesByParentId,
     refetch: refetchSubwaves,
   } = useWaveSubwavesMap({
-    parentWaveIds: loadedSubwaveParentIds,
-    viewerIdentityKey,
+    parentWaveIds: isPendingAuthSwitch ? [] : loadedSubwaveParentIds,
+    viewerIdentityKey: isPendingAuthSwitch ? null : viewerIdentityKey,
   });
   const loadingSubwaveParentIds = useMemo(
     () =>
@@ -513,28 +583,70 @@ const useWavesList = () => {
 
   // Function to refetch all waves (main, pinned, announcements, subwaves)
   const refetchAllWaves = useCallback(() => {
-    allQualityWavesRefetch();
+    if (isPendingAuthSwitch) {
+      return;
+    }
+
+    if (isJoinedMode) {
+      followedActivityWavesRefetch();
+    } else {
+      allActivityWavesRefetch();
+    }
     highlyRatedWavesRefetch();
-    followedActivityWavesRefetch();
     void refetchPinnedWaves();
     refetchSubwaves();
     if (shouldFetchAnnouncementWave) {
       void announcementRefetch();
     }
   }, [
-    allQualityWavesRefetch,
+    allActivityWavesRefetch,
     highlyRatedWavesRefetch,
     followedActivityWavesRefetch,
+    isJoinedMode,
+    isPendingAuthSwitch,
     refetchPinnedWaves,
     refetchSubwaves,
     announcementRefetch,
     shouldFetchAnnouncementWave,
   ]);
 
-  // Derived data should come directly from memoized inputs
+  const topSectionWaveIds = useMemo(() => {
+    const ids = new Set<string>();
+
+    combinedWaves.forEach((wave) => {
+      if (
+        isAnnouncementsWave(wave.id) ||
+        wave.isPinned ||
+        wave.sidebarSection === SIDEBAR_DISCOVERY_SECTION_HIGHLY_RATED
+      ) {
+        ids.add(wave.id);
+      }
+    });
+
+    return ids;
+  }, [combinedWaves, isAnnouncementsWave]);
+
+  // Derived data should come directly from memoized inputs.
   const allWaves = useMemo(
-    () => [...combinedWaves, ...subwaves],
-    [combinedWaves, subwaves]
+    () =>
+      isPendingAuthSwitch
+        ? []
+        : [
+            ...combinedWaves,
+            ...subwaves.filter(
+              (wave) =>
+                !isJoinedMode ||
+                wave.subscribed ||
+                topSectionWaveIds.has(wave.parentWaveId ?? "")
+            ),
+          ],
+    [
+      combinedWaves,
+      isJoinedMode,
+      isPendingAuthSwitch,
+      subwaves,
+      topSectionWaveIds,
+    ]
   );
 
   // New drops counting logic has been removed and will be managed by context
@@ -545,7 +657,7 @@ const useWavesList = () => {
 
   // Memoize the fetchNextPage function to ensure it doesn't change on every render
   const fetchNextPageStable = useCallback(() => {
-    return fetchNextMainWavesPage();
+    fetchNextMainWavesPage();
   }, [fetchNextMainWavesPage]);
 
   // Memoize the entire return object to prevent unnecessary re-renders in consumer components
@@ -573,8 +685,8 @@ const useWavesList = () => {
       announcementRefetch,
 
       // Pinned waves management functions
-      addPinnedWave: pinWave,
-      removePinnedWave: unpinWave,
+      addPinnedWave: isPendingAuthSwitch ? noopWaveAction : pinWave,
+      removePinnedWave: isPendingAuthSwitch ? noopWaveAction : unpinWave,
 
       // Additional data that might be useful
       mainWaves,
@@ -604,6 +716,7 @@ const useWavesList = () => {
       announcementRefetch,
       pinWave,
       unpinWave,
+      isPendingAuthSwitch,
       missingPinnedIds,
       mainWavesRefetch,
       refetchAllWaves,

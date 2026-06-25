@@ -82,11 +82,13 @@ export function shouldUseIframeFallbackTimeout(url: string): boolean {
 }
 
 function readTriedUrls(target: HTMLElement): string[] {
-  return target.dataset[DS_TRIED]?.split("|").filter(Boolean) ?? [];
+  return target.dataset?.[DS_TRIED]?.split("|").filter(Boolean) ?? [];
 }
 
 function writeTriedUrls(target: HTMLElement, urls: readonly string[]): void {
-  target.dataset[DS_TRIED] = dedupe(urls).join("|");
+  if (target.dataset) {
+    target.dataset[DS_TRIED] = dedupe(urls).join("|");
+  }
 }
 
 export function withArweaveFallback(
@@ -101,7 +103,7 @@ export function withArweaveFallback(
       return;
     }
 
-    const storedOriginal = target.dataset[DS_ORIGINAL];
+    const storedOriginal = target.dataset?.[DS_ORIGINAL];
     const originalSrc = storedOriginal ?? currentSrc;
     const original = classifyGatewayAssetUrl(originalSrc);
 
@@ -110,7 +112,7 @@ export function withArweaveFallback(
       return;
     }
 
-    if (!storedOriginal) {
+    if (!storedOriginal && target.dataset) {
       target.dataset[DS_ORIGINAL] = originalSrc;
     }
 

@@ -3,17 +3,17 @@
 import React, { useMemo, useState } from "react";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
-import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
-import type { ActiveDropState } from "@/types/dropInteractionTypes";
-import { ActiveDropAction } from "@/types/dropInteractionTypes";
+import WaveDropsAll from "../drops/wave-drops-all";
 import {
   CreateDropWaveWrapper,
   CreateDropWaveWrapperContext,
 } from "../CreateDropWaveWrapper";
+import type { ActiveDropState } from "@/types/dropInteractionTypes";
+import { ActiveDropAction } from "@/types/dropInteractionTypes";
 import PrivilegedDropCreator from "../PrivilegedDropCreator";
+import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
 import { DropMode } from "../dropComposer.types";
-import WaveDropsAll from "../drops/wave-drops-all";
 import { WaveDropLayerProvider } from "../drops/WaveDropLayerContext";
 import { useWaveEligibility } from "@/contexts/wave/WaveEligibilityContext";
 
@@ -35,10 +35,10 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   isVotingControlsLocked = false,
 }) => {
   const { isApp } = useDeviceInfo();
-  const { isVisible: isKeyboardVisible } = useAndroidKeyboard();
+  const { isVisible: isKeyboardVisible } = useNativeKeyboard();
   const { updateEligibility } = useWaveEligibility();
 
-  // Apply Android keyboard adjustments to the fixed input area
+  // Drop safe-area padding as soon as the native keyboard starts moving.
   const inputContainerStyle = useMemo(() => {
     return {
       paddingBottom: isKeyboardVisible
@@ -75,12 +75,13 @@ export const SingleWaveDropChat: React.FC<SingleWaveDropChatProps> = ({
   React.useEffect(() => {
     updateEligibility(wave.id, {
       authenticated_user_eligible_to_chat:
-        wave.chat.authenticated_user_eligible,
+        wave.chat?.authenticated_user_eligible ?? false,
       authenticated_user_eligible_to_vote:
-        wave.voting.authenticated_user_eligible,
+        wave.voting?.authenticated_user_eligible ?? false,
       authenticated_user_eligible_to_participate:
-        wave.participation.authenticated_user_eligible,
-      authenticated_user_admin: wave.wave.authenticated_user_eligible_for_admin,
+        wave.participation?.authenticated_user_eligible ?? false,
+      authenticated_user_admin:
+        wave.wave?.authenticated_user_eligible_for_admin ?? false,
     });
   }, [updateEligibility, wave]);
 

@@ -33,6 +33,7 @@ type ContextType = {
   onGroupChanged: (params: { groupId: string }) => void;
   onIdentityBulkRate: () => void;
   invalidateNotifications: () => void;
+  invalidateAuthSensitiveQueries: () => void;
 };
 
 const createTestSetup = () => {
@@ -217,12 +218,18 @@ it("sets initial waves overview page only once", () => {
     pages: [waves],
     pageParams: [undefined],
   });
+  expect(client.getQueryData([QueryKey.WAVE, { wave_id: "w1" }])).toEqual(
+    waves[0]
+  );
   const other = [{ id: "w2" }] as any;
   act(() => ctx.setWavesOverviewPage(other));
   expect(client.getQueryData(key)).toEqual({
     pages: [waves],
     pageParams: [undefined],
   });
+  expect(client.getQueryData([QueryKey.WAVE, { wave_id: "w2" }])).toEqual(
+    other[0]
+  );
 });
 
 test("wave follow change toggles and invalidates", () => {
@@ -245,8 +252,44 @@ test("wave follow change toggles and invalidates", () => {
 
 it("invalidateAll calls queryClient.invalidateQueries with no args", () => {
   const { client, ctx } = createTestSetup();
+  jest.spyOn(client, "removeQueries");
   act(() => ctx.invalidateAll());
+  expect(client.removeQueries).toHaveBeenCalledWith({
+    queryKey: [QueryKey.WAVE],
+  });
   expect(client.invalidateQueries).toHaveBeenCalledWith();
+});
+
+it("invalidates auth-sensitive queries without clearing unrelated cache", () => {
+  const { client, ctx } = createTestSetup();
+  client.setQueryData([QueryKey.PROFILE, "alice"], { handle: "alice" });
+  client.setQueryData([QueryKey.WAVES_V2, { viewer_identity: "0x1" }], []);
+  client.setQueryData(
+    [QueryKey.OFFICIAL_WAVES, { viewer_identity: "0x1" }],
+    []
+  );
+  client.setQueryData([QueryKey.GLOBAL_TDH_STATS], { total: 1 });
+
+  act(() => ctx.invalidateAuthSensitiveQueries());
+
+  expect(client.invalidateQueries).toHaveBeenCalledWith({
+    predicate: expect.any(Function),
+  });
+  const { predicate } = (client.invalidateQueries as jest.Mock).mock.calls.at(
+    -1
+  )![0] as {
+    predicate: (query: { queryKey: readonly unknown[] }) => boolean;
+  };
+  expect(predicate({ queryKey: [QueryKey.PROFILE, "alice"] })).toBe(true);
+  expect(
+    predicate({ queryKey: [QueryKey.WAVES_V2, { viewer_identity: "0x1" }] })
+  ).toBe(true);
+  expect(
+    predicate({
+      queryKey: [QueryKey.OFFICIAL_WAVES, { viewer_identity: "0x1" }],
+    })
+  ).toBe(true);
+  expect(predicate({ queryKey: [QueryKey.GLOBAL_TDH_STATS] })).toBe(false);
 });
 
 it("sets profile proxy and invalidates on modify", () => {

@@ -1,21 +1,19 @@
-import { render } from '@testing-library/react';
-import LogoIcon from '@/components/common/icons/LogoIcon';
+import { render } from "@testing-library/react";
+import LogoIcon from "@/components/common/icons/LogoIcon";
 
-describe('LogoIcon', () => {
-  it('renders svg with viewBox and custom class', () => {
+describe("LogoIcon", () => {
+  it("renders one current-color masked logo with a custom wrapper class", () => {
     const { container } = render(<LogoIcon className="brand" />);
-    const svg = container.querySelector('svg');
-    expect(svg).toBeInTheDocument();
-    expect(svg).toHaveAttribute('viewBox', '0 0 1920 1920');
-    expect(svg).toHaveClass('brand');
-  });
+    const wrapper = container.querySelector("span");
+    const images = container.querySelectorAll("img");
 
-  it('contains polygon and path elements', () => {
-    const { container } = render(<LogoIcon />);
-    const polygon = container.querySelector('polygon');
-    const paths = container.querySelectorAll('path');
-    expect(polygon).toBeInTheDocument();
-    expect(paths.length).toBeGreaterThan(1);
-    expect(paths[0]?.getAttribute('fill')).toBe('currentColor');
+    expect(wrapper).toHaveClass("brand");
+    expect(wrapper).toHaveClass("tw-bg-current");
+    expect(wrapper).toHaveAttribute("aria-hidden", "true");
+    expect(wrapper?.getAttribute("style")).toContain(
+      "mask-image: url('/6529.svg')"
+    );
+    expect(wrapper?.getAttribute("style")).not.toContain("6529-black.svg");
+    expect(images).toHaveLength(0);
   });
 });

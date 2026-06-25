@@ -114,6 +114,11 @@ All project commands must go through the repo-local `6529` wrapper.
 - New and touched user-facing copy, accessible names, dates, numbers, and
   locale-sensitive sorting should follow
   `ops/standards/frontend-i18n-localization.md`.
+- New and touched user-facing UI should follow
+  `ops/standards/frontend-design-ui-ux.md` for repo-specific visual
+  consistency, Tailwind-first styling migration, responsive layout, interaction
+  states, media behavior, and browser evidence.
+- Use `ops/skills/design-ui-ux/SKILL.md` for frontend design and UX review.
 - Use `ops/skills/wcag-22-aa/SKILL.md` for accessibility audits and fixes.
 - Use `ops/skills/i18n-localization/SKILL.md` for progressive localization
   work.
@@ -190,6 +195,16 @@ is available, use it; otherwise read the relevant files in
 
 - User-facing docs live under `ops/docs/`. Update them when visible behavior,
   routes, loading/empty/error states, or user workflows change.
+- When adding or changing user-facing routes, terminology, workflows, prominent
+  controls, empty states, or navigation that users may ask `@help6529` about,
+  update the 6529 Help Bot corpus in the same PR. The frontend-owned source is
+  `ops/help/help-index.json`, and `6529 run help-index:sync` validates it and
+  publishes `public/help-index.json` for the backend runtime to consume from the
+  deployed site. Keep the spec
+  `ops/docs/specs/2026-06-19-6529-help-bot-knowledge-index.md`, source records,
+  generated artifact, and any future `data-help-*` metadata aligned with the
+  changed UI. Do not rely on the backend or LLM to discover new frontend routes,
+  links, or controls at answer time.
 - Treat `ops/docs/` as curated product docs, not a complete source of truth.
   Compare docs against `app/**/page.tsx`, `app/**/route.ts`, components, API
   helpers, tests, and configs before making behavior claims.
@@ -199,6 +214,7 @@ is available, use it; otherwise read the relevant files in
   - `ops/skills/write-prs/SKILL.md` for PR descriptions, bot iteration, merge
     gates, and deploy gates.
   - `ops/skills/commit-docs-updater/SKILL.md` for user-facing docs updates.
+  - `ops/skills/design-ui-ux/SKILL.md` for frontend design and UX review.
   - `ops/skills/react-doctor/SKILL.md` for React, Next.js, hook, routing, or UI
     state changes.
   - `ops/skills/sonar-guardrails/SKILL.md` for TS/JS quality-sensitive edits.

@@ -14,12 +14,14 @@ jest.mock("next/server", () => ({
 }));
 
 type GetHandler = typeof import("../../../app/api/github-preview/route").GET;
+type PostHandler = typeof import("../../../app/api/github-preview/route").POST;
 
 let GET: GetHandler;
+let POST: PostHandler;
 
 async function loadRoute(): Promise<void> {
   jest.resetModules();
-  ({ GET } = await import("../../../app/api/github-preview/route"));
+  ({ GET, POST } = await import("../../../app/api/github-preview/route"));
 }
 
 describe("github-preview API route", () => {
@@ -46,11 +48,116 @@ describe("github-preview API route", () => {
       ),
     }) as any;
 
+  const batchRequestFor = (urls: readonly unknown[]) =>
+    ({
+      json: async () => ({ urls }),
+    }) as unknown as Request;
+
   const jsonResponse = (body: unknown, init?: ResponseInit) =>
     new Response(JSON.stringify(body), {
       headers: { "content-type": "application/json" },
       ...init,
     });
+
+  it("maps batched GitHub preview requests", async () => {
+    fetchMock
+      .mockResolvedValueOnce(
+        jsonResponse({
+          html_url: "https://github.com/o/r/issues/1",
+          title: "First issue",
+          state: "open",
+          state_reason: null,
+          assignees: [],
+        })
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          html_url: "https://github.com/o/r/issues/2",
+          title: "Second issue",
+          state: "closed",
+          state_reason: "completed",
+          assignees: [],
+        })
+      );
+
+    const response = await POST(
+      batchRequestFor([
+        "https://github.com/o/r/issues/1",
+        "https://github.com/o/r/issues/2",
+      ])
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      results: [
+        {
+          url: "https://github.com/o/r/issues/1",
+          preview: {
+            type: "github.issue",
+            title: "First issue",
+            state: "open",
+          },
+        },
+        {
+          url: "https://github.com/o/r/issues/2",
+          preview: {
+            type: "github.issue",
+            title: "Second issue",
+            state: "closed_completed",
+          },
+        },
+      ],
+      errors: [],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps invalid GitHub preview batch entries isolated", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        html_url: "https://github.com/o/r/issues/1",
+        title: "First issue",
+        state: "open",
+        state_reason: null,
+        assignees: [],
+      })
+    );
+
+    const response = await POST(
+      batchRequestFor([
+        "https://github.com/o/r/issues/1",
+        "https://github.com/o/r/settings",
+      ])
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      results: [
+        {
+          url: "https://github.com/o/r/issues/1",
+          preview: {
+            type: "github.issue",
+            title: "First issue",
+          },
+        },
+      ],
+      errors: [
+        {
+          url: "https://github.com/o/r/settings",
+          error: "Only github.com repository URLs are supported.",
+        },
+      ],
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects empty GitHub preview batches", async () => {
+    const response = await POST(batchRequestFor([]));
+
+    expect(response.status).toBe(400);
+    await expect(response.json()).resolves.toMatchObject({
+      error: "At least one GitHub URL is required.",
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
 
   it("maps open GitHub issues", async () => {
     fetchMock.mockResolvedValueOnce(
@@ -289,6 +396,121 @@ describe("github-preview API route", () => {
       lineCount: 2,
       lineStart: null,
       lineEnd: null,
+      excerpt: null,
+    });
+  });
+
+  it("keeps excerpts for extensionless GitHub text files", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        type: "file",
+        name: "LICENSE",
+        path: "LICENSE",
+        size: 24,
+        encoding: "base64",
+        content: Buffer.from("Permission is hereby granted\n").toString(
+          "base64"
+        ),
+        html_url: "https://github.com/o/r/blob/main/LICENSE",
+      })
+    );
+
+    const response = await GET(
+      requestFor("https://github.com/o/r/blob/main/LICENSE")
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      type: "github.file",
+      title: "LICENSE",
+      extension: null,
+      fileKind: "unknown",
+      isBinary: false,
+      lineCount: 2,
+      excerpt: ["Permission is hereby granted", ""],
+    });
+  });
+
+  it("suppresses excerpts for extensionless GitHub binary files", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        type: "file",
+        name: "ASSET",
+        path: "ASSET",
+        size: 4,
+        encoding: "base64",
+        content: Buffer.from([0, 1, 2, 3]).toString("base64"),
+        html_url: "https://github.com/o/r/blob/main/ASSET",
+      })
+    );
+
+    const response = await GET(
+      requestFor("https://github.com/o/r/blob/main/ASSET")
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      type: "github.file",
+      title: "ASSET",
+      extension: null,
+      fileKind: "unknown",
+      isBinary: true,
+      lineCount: null,
+      excerpt: null,
+    });
+  });
+
+  it("suppresses oversized decoded GitHub file excerpts", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        type: "file",
+        name: "large.txt",
+        path: "large.txt",
+        encoding: "base64",
+        content: Buffer.from("a".repeat(64 * 1024 + 1)).toString("base64"),
+        html_url: "https://github.com/o/r/blob/main/large.txt",
+      })
+    );
+
+    const response = await GET(
+      requestFor("https://github.com/o/r/blob/main/large.txt")
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      type: "github.file",
+      title: "large.txt",
+      extension: "txt",
+      fileKind: "text",
+      isBinary: false,
+      lineCount: null,
+      excerpt: null,
+    });
+  });
+
+  it("maps GitHub PDF files as metadata-only previews", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        type: "file",
+        name: "plan.pdf",
+        path: "docs/plan.pdf",
+        size: 4096,
+        encoding: "base64",
+        content: Buffer.from("%PDF-1.7\nbinary").toString("base64"),
+        html_url: "https://github.com/o/r/blob/main/docs/plan.pdf",
+      })
+    );
+
+    const response = await GET(
+      requestFor("https://github.com/o/r/blob/main/docs/plan.pdf")
+    );
+
+    await expect(response.json()).resolves.toMatchObject({
+      type: "github.file",
+      title: "plan.pdf",
+      path: "docs/plan.pdf",
+      extension: "pdf",
+      fileKind: "pdf",
+      mimeType: "application/pdf",
+      isBinary: true,
+      lineCount: null,
       excerpt: null,
     });
   });

@@ -79,6 +79,8 @@ function renderDropdown(options: any) {
     activeProfileProxy: null,
     setActiveProfileProxy: jest.fn(),
     receivedProfileProxies: [{ id: "proxy-1" }],
+    requestSessionUpgrade: options.requestSessionUpgrade || jest.fn(),
+    sessionUpgradeRequired: options.sessionUpgradeRequired ?? false,
     setToast: jest.fn(),
   } as any;
   (useChainSwitcher as jest.Mock).mockReturnValue({
@@ -140,6 +142,45 @@ describe("HeaderUserMenuDropdown", () => {
       expect(seizeDisconnect).toHaveBeenCalled();
       expect(onClose).toHaveBeenCalled();
     });
+  });
+
+  it("starts authentication upgrade when legacy session action is shown", async () => {
+    const requestSessionUpgrade = jest.fn().mockResolvedValue({
+      success: false,
+    });
+    const { onClose } = renderDropdown({
+      profile: profileBase,
+      address: "0xabc",
+      isConnected: true,
+      requestSessionUpgrade,
+      sessionUpgradeRequired: true,
+    });
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Upgrade Authentication" })
+    );
+
+    await waitFor(() => {
+      expect(requestSessionUpgrade).toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalled();
+    });
+  });
+
+  it("keeps manual authentication upgrade available while wallet is disconnected", () => {
+    renderDropdown({
+      profile: profileBase,
+      address: "0xabc",
+      isConnected: false,
+      sessionUpgradeRequired: true,
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Connect" })
+    ).toBeInTheDocument();
+    expect(screen.getByText("Connect Wallet")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Upgrade Authentication" })
+    ).toBeInTheDocument();
   });
 
   it("shows switch chain control when wallet is connected and multiple chains exist", () => {

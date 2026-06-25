@@ -10,6 +10,7 @@ const mockUseDownloader = jest.fn();
 const mockGetStagingAuth = jest.fn();
 const mockGetAuthJwt = jest.fn();
 const mockFetchAllPages = jest.fn();
+const mockDistributionAdminWallets = ["0x1"];
 
 jest.mock("react-use-downloader", () => ({
   __esModule: true,
@@ -29,6 +30,12 @@ jest.mock(
   "@/components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableSubscription",
   () => ({
     download: jest.fn(async () => ({ success: true, message: "ok" })),
+  })
+);
+
+jest.mock(
+  "@/components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableSubscription.utils",
+  () => ({
     isSubscriptionsAdmin: jest.fn(),
   })
 );
@@ -105,14 +112,14 @@ jest.mock(
 jest.mock("@/contexts/SeizeSettingsContext", () => ({
   useSeizeSettings: () => ({
     seizeSettings: {
-      distribution_admin_wallets: ["0x1"],
+      distribution_admin_wallets: mockDistributionAdminWallets,
     },
   }),
 }));
 
 const {
   isSubscriptionsAdmin,
-} = require("@/components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableSubscription");
+} = require("@/components/distribution-plan-tool/review-distribution-plan/table/ReviewDistributionPlanTableSubscription.utils");
 
 const authCtx = {
   connectedProfile: { wallets: [{ wallet: "0x1" }] },
@@ -396,7 +403,7 @@ test("resetSubscriptions posts data and shows toast directly", async () => {
     );
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "success",
-      message: "Subscriptions reset successfully.",
+      message: "Subscriptions reset.",
     });
   });
 });
@@ -433,7 +440,8 @@ test("finalizeDistribution posts data and shows toast directly", async () => {
     );
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "success",
-      message: "Normalized",
+      title: "Distribution normalized.",
+      description: "Normalized",
     });
   });
 });
@@ -483,7 +491,8 @@ test("upload artist airdrops posts csv data and shows success toast", async () =
     );
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "success",
-      message: "Artist uploaded",
+      title: "artist airdrops uploaded.",
+      description: "Artist uploaded",
     });
     expect(commonApiFetch).toHaveBeenCalled();
   });
@@ -519,7 +528,8 @@ test("upload team airdrops posts csv data and shows success toast", async () => 
   await waitFor(() => {
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "success",
-      message: "Team uploaded",
+      title: "team airdrops uploaded.",
+      description: "Team uploaded",
     });
     expect(commonApiPost).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -560,7 +570,9 @@ test("upload artist airdrops shows error toast on failure", async () => {
   await waitFor(() => {
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "error",
-      message: "Upload failed",
+      title: "Couldn't upload artist airdrops.",
+      description: "Please check the CSV and try again.",
+      details: "Upload failed",
     });
   });
 });
@@ -593,7 +605,9 @@ test("upload artist airdrops handles exceptions", async () => {
   await waitFor(() => {
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "error",
-      message: "Network error",
+      title: "Couldn't upload artist airdrops.",
+      description: "Please check the CSV and try again.",
+      details: "Network error. Please check your connection and try again.",
     });
   });
 });
@@ -639,7 +653,7 @@ test("downloads artist airdrops csv with the response filename", async () => {
   await user.click(downloadButton);
 
   await waitFor(() => {
-    expect(mockUseDownloader).toHaveBeenCalledWith();
+    expect(mockUseDownloader).toHaveBeenCalled();
     expect(mockDownload).toHaveBeenCalledWith(
       expect.stringContaining(
         "/api/distributions/0x33FD426905F149f8376e227d0C9D3340AaD17aF1/123/artist-airdrops"
@@ -766,7 +780,9 @@ test("shows an admin-facing error when the downloader reports one", async () => 
   await waitFor(() => {
     expect(authCtx.setToast).toHaveBeenCalledWith({
       type: "error",
-      message: "wallet is not authorized",
+      title: "Couldn't download the airdrops CSV.",
+      description: "Please try again.",
+      details: "wallet is not authorized",
     });
   });
 });

@@ -1,4 +1,5 @@
 "use client";
+
 import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
 import type {
   CreateDropConfig,
@@ -10,7 +11,6 @@ import type {
 } from "@/entities/IDrop";
 import type { ApiCreateDropRequest } from "@/generated/models/ApiCreateDropRequest";
 import { ApiAttachmentStatus } from "@/generated/models/ApiAttachmentStatus";
-import type { ApiCreateDropPart } from "@/generated/models/ApiCreateDropPart";
 import type { ApiDropMentionedUser } from "@/generated/models/ApiDropMentionedUser";
 import type { ApiMentionedWave } from "@/generated/models/ApiMentionedWave";
 import { ApiDropType } from "@/generated/models/ApiDropType";
@@ -98,6 +98,7 @@ import {
 import type { MissingRequirements } from "./utils/getMissingRequirements";
 import { getMissingRequirements } from "./utils/getMissingRequirements";
 import { getOptimisticDrop } from "./utils/getOptimisticDrop";
+import { toApiCreateDropPart } from "./utils/createDropRequestPart";
 import { buildDropSubmissionMetadata } from "./utils/buildDropSubmissionMetadata";
 import { getIdentitySubmissionMetadataErrors } from "./utils/identitySubmissionMetadataValidation";
 import {
@@ -414,6 +415,7 @@ export interface UploadingFile {
   file: File;
   isUploading: boolean;
   progress: number;
+  phase: "uploading" | "processing";
 }
 
 const generateMediaForPart = async (
@@ -422,14 +424,21 @@ const generateMediaForPart = async (
 ) => {
   setUploadingFiles((prev) => [
     ...prev,
-    { file: media, isUploading: true, progress: 0 },
+    { file: media, isUploading: true, progress: 0, phase: "uploading" },
   ]);
   return await multiPartUpload({
     file: media,
     path: "drop",
+    waitForReady: false,
     onProgress: (progress) =>
       setUploadingFiles((prev) =>
         prev.map((uf) => (uf.file === media ? { ...uf, progress } : uf))
+      ),
+    onProcessing: () =>
+      setUploadingFiles((prev) =>
+        prev.map((uf) =>
+          uf.file === media ? { ...uf, progress: 100, phase: "processing" } : uf
+        )
       ),
   }).finally(() => {
     setUploadingFiles((prev) => prev.filter((uf) => uf.file !== media));
@@ -442,7 +451,7 @@ const generateAttachmentForPart = async (
 ) => {
   setUploadingFiles((prev) => [
     ...prev,
-    { file: attachment, isUploading: true, progress: 0 },
+    { file: attachment, isUploading: true, progress: 0, phase: "uploading" },
   ]);
   return await multiPartAttachmentUpload({
     file: attachment,
@@ -509,16 +518,9 @@ const generateParts = async (
   }
 };
 
-const stripUploadedAttachments = (
+const toApiCreateDropParts = (
   parts: CreateDropRequestPart[]
-): ApiCreateDropPart[] =>
-  parts.map(({ uploaded_attachments, attachments, ...part }) => {
-    const requestPart: ApiCreateDropPart = { ...part };
-    if (attachments?.length) {
-      requestPart.attachments = attachments;
-    }
-    return requestPart;
-  });
+): ApiCreateDropRequest["parts"] => parts.map(toApiCreateDropPart);
 
 const CreateDropContent: React.FC<CreateDropContentProps> = ({
   activeDrop,
@@ -1269,7 +1271,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
 
     // Use direct signature if there are no terms to display
     if (!wave.participation.terms) {
-      const { success, signature } = await signDrop({
+      const { success, signature, signatureMessage } = await signDrop({
         drop: requestBody,
         termsOfService: null,
       });
@@ -1281,6 +1283,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       return {
         ...requestBody,
         signature,
+        ...(signatureMessage ? { signature_message: signatureMessage } : {}),
       };
     }
 
@@ -1290,6 +1293,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       const handleSigningComplete = (result: {
         success: boolean;
         signature?: string | undefined;
+        signatureMessage?: string | undefined;
       }) => {
         if (!result.success || !result.signature) {
           resolve(null);
@@ -1299,6 +1303,9 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         const updatedDropRequest = {
           ...requestBody,
           signature: result.signature,
+          ...(result.signatureMessage
+            ? { signature_message: result.signatureMessage }
+            : {}),
         };
         resolve(updatedDropRequest);
       };
@@ -1352,7 +1359,7 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
         setSubmitting(false);
         return;
       }
-      const parts = stripUploadedAttachments(generatedParts);
+      const parts = toApiCreateDropParts(generatedParts);
 
       const requestBody: ApiCreateDropRequest = {
         ...dropRequest,
@@ -1379,7 +1386,13 @@ const CreateDropContent: React.FC<CreateDropContentProps> = ({
       }
 
       const optimisticDrop = getOptimisticDrop(
-        updatedDropRequest,
+        {
+          ...updatedDropRequest,
+          parts: updatedDropRequest.parts.map((part, index) => ({
+            ...part,
+            media: generatedParts[index]?.media ?? part.media,
+          })),
+        },
         connectedProfile,
         wave,
         activeDrop,
