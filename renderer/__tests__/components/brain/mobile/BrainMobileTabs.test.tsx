@@ -199,7 +199,7 @@ describe("BrainMobileTabs", () => {
     expect(screen.getByText("FAQ")).toBeInTheDocument();
   });
 
-  it("renders Polls for active waves and switches to it", async () => {
+  it("renders Polls in the active wave tabs when the wave has polls", () => {
     render(
       <BrainMobileTabs
         activeView={BrainView.ABOUT}
@@ -209,15 +209,12 @@ describe("BrainMobileTabs", () => {
         showStreamBack={false}
         isApp={false}
         wave={createWave()}
+        hasPolls={true}
       />
     );
 
-    const polls = screen.getByRole("button", { name: /polls/i });
-    expect(polls).toBeInTheDocument();
-
-    await userEvent.click(polls);
-
-    expect(onViewChange).toHaveBeenCalledWith(BrainView.POLLS);
+    expect(screen.getByRole("button", { name: /polls/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /chat/i })).toBeInTheDocument();
   });
 
   it("renders My Votes for curation rank wave", () => {

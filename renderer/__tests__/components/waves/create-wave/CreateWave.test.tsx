@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import { useRouter } from "next/navigation";
+import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
 import React from "react";
 import { AuthContext } from "@/components/auth/Auth";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
@@ -36,7 +37,11 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/hooks/useCapacitor", () => ({
   __esModule: true,
-  default: jest.fn(() => ({ isIos: false, keyboardVisible: false })),
+  default: jest.fn(() => ({ isIos: false })),
+}));
+
+jest.mock("@/hooks/useNativeKeyboard", () => ({
+  useNativeKeyboard: jest.fn(() => ({ isVisible: false })),
 }));
 
 jest.mock("@/components/waves/create-wave/hooks/useWaveConfig", () => ({
@@ -563,7 +568,7 @@ describe("CreateWave", () => {
 
       await waitFor(() => {
         expect(mockAuthContext.setToast).toHaveBeenCalledWith({
-          message: "Please wait for image uploads to finish.",
+          message: "Wait for image uploads to finish.",
           type: "error",
         });
         expect(screen.getByTestId("create-wave-description")).toHaveAttribute(
@@ -609,7 +614,7 @@ describe("CreateWave", () => {
       });
 
       expect(mockAuthContext.setToast).not.toHaveBeenCalledWith({
-        message: "Please wait for image uploads to finish.",
+        message: "Wait for image uploads to finish.",
         type: "error",
       });
     });
@@ -1018,7 +1023,9 @@ describe("CreateWave", () => {
 
       await waitFor(() => {
         expect(mockAuthContext.setToast).toHaveBeenCalledWith({
-          message: errorMessage,
+          title: "Couldn't create this wave.",
+          description: "Please try again.",
+          details: `${errorMessage}.`,
           type: "error",
         });
         expect(mockGetDropSnapshot).toHaveBeenCalled();
@@ -1053,7 +1060,8 @@ describe("CreateWave", () => {
 
   it("applies iOS specific styling when on iOS with keyboard not visible", () => {
     const useCapacitor = require("@/hooks/useCapacitor").default;
-    useCapacitor.mockReturnValue({ isIos: true, keyboardVisible: false });
+    useCapacitor.mockReturnValue({ isIos: true });
+    (useNativeKeyboard as jest.Mock).mockReturnValue({ isVisible: false });
 
     renderCreateWave();
 
@@ -1064,7 +1072,8 @@ describe("CreateWave", () => {
 
   it("does not apply iOS styling when keyboard is visible", () => {
     const useCapacitor = require("@/hooks/useCapacitor").default;
-    useCapacitor.mockReturnValue({ isIos: true, keyboardVisible: true });
+    useCapacitor.mockReturnValue({ isIos: true });
+    (useNativeKeyboard as jest.Mock).mockReturnValue({ isVisible: true });
 
     renderCreateWave();
 

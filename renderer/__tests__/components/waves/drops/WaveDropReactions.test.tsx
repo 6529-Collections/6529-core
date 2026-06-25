@@ -239,7 +239,7 @@ describe("WaveDropReactions", () => {
 
     // Check that buttons render (should match emojiList length)
     const buttons = screen.getAllByRole("button");
-    expect(buttons.length).toBe(2);
+    expect(buttons).toHaveLength(2);
   });
 
   it("renders with emoji image when emoji found", () => {
@@ -851,7 +851,7 @@ describe("WaveDropReactions", () => {
 
     const button = screen.getByRole("button");
     expect(button).toBeDisabled();
-    expect(button).not.toHaveAttribute("data-tooltip-id");
+    expect(button).toHaveAttribute("data-tooltip-id", "reaction-test-drop-gm");
     expect(button).toHaveTextContent("4");
 
     fireEvent.click(button);

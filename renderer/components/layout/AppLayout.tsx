@@ -1,25 +1,26 @@
 "use client";
 
-import { useHeaderContext } from "@/contexts/HeaderContext";
-import { useSearch } from "@/contexts/SearchContext";
-import { useAndroidKeyboard } from "@/hooks/useAndroidKeyboard";
-import useCapacitor from "@/hooks/useCapacitor";
-import { useDeepLinkNavigation } from "@/hooks/useDeepLinkNavigation";
-import useDeviceInfo from "@/hooks/useDeviceInfo";
-import { selectEditingDropId } from "@/store/editSlice";
 import dynamic from "next/dynamic";
 import type { CSSProperties, ReactNode } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useMemo, useRef } from "react";
-import { useSelector } from "react-redux";
-import BrainMobileMessages from "../brain/mobile/BrainMobileMessages";
+import { usePathname, useSearchParams } from "next/navigation";
+import BottomNavigation from "../navigation/BottomNavigation";
+import { getActiveViewFromUrl } from "../navigation/ViewContext";
 import BrainMobileWaves from "../brain/mobile/BrainMobileWaves";
 import { useLayout } from "../brain/my-stream/layout/LayoutContext";
 import HeaderPlaceholder from "../header/HeaderPlaceholder";
-import BottomNavigation from "../navigation/BottomNavigation";
-import { getActiveViewFromUrl } from "../navigation/ViewContext";
+import { useHeaderContext } from "@/contexts/HeaderContext";
+import { useDeepLinkNavigation } from "@/hooks/useDeepLinkNavigation";
+import BrainMobileMessages from "../brain/mobile/BrainMobileMessages";
+import { useSelector } from "react-redux";
+import { selectEditingDropId } from "@/store/editSlice";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
 import PullToRefresh from "../providers/PullToRefresh";
-import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
+import {
+  getActiveWaveIdFromUrl,
+  hidesMobileBottomNavigation,
+} from "@/helpers/navigation.helpers";
 import { useMemesQuickVoteDialogController } from "@/hooks/useMemesQuickVoteDialogController";
 import MemesQuickVoteDialog from "../brain/left-sidebar/waves/memes-quick-vote/MemesQuickVoteDialog";
 
@@ -36,18 +37,39 @@ const STREAM_ROUTE_LOADING_BOTTOM_RESERVE =
   "--stream-route-loading-bottom-reserve";
 const STREAM_ROUTE_LOADING_HEADER_RESERVE =
   "--stream-route-loading-header-reserve";
+const BOTTOM_NAV_RESERVE = "104px";
 // Matches HeaderPlaceholder's default shell before LayoutContext measures it.
 const STREAM_ROUTE_LOADING_HEADER_FALLBACK_RESERVE = "100px";
 
 type StreamRouteLoadingReserveStyle = CSSProperties & {
-  readonly [STREAM_ROUTE_LOADING_BOTTOM_RESERVE]: "0px" | "85px";
+  readonly [STREAM_ROUTE_LOADING_BOTTOM_RESERVE]:
+    | "0px"
+    | typeof BOTTOM_NAV_RESERVE;
   readonly [STREAM_ROUTE_LOADING_HEADER_RESERVE]: string;
 };
 
 const streamRouteLoadingReserveVisibleStyle: StreamRouteLoadingReserveStyle = {
-  [STREAM_ROUTE_LOADING_BOTTOM_RESERVE]: "85px",
+  [STREAM_ROUTE_LOADING_BOTTOM_RESERVE]: BOTTOM_NAV_RESERVE,
   [STREAM_ROUTE_LOADING_HEADER_RESERVE]:
     STREAM_ROUTE_LOADING_HEADER_FALLBACK_RESERVE,
+};
+
+const contentOwnsBottomNavClearance = ({
+  activeView,
+  pathname,
+}: {
+  readonly activeView: string | null;
+  readonly pathname: string | null | undefined;
+}): boolean => {
+  if (activeView === "waves" || activeView === "messages") {
+    return true;
+  }
+
+  return (
+    pathname === "/waves" ||
+    pathname === "/messages" ||
+    pathname === "/notifications"
+  );
 };
 
 function WavesQuickVoteView() {
@@ -68,10 +90,11 @@ function AppLayoutFallback({ children }: Props) {
   return (
     <div
       className="tw-overflow-auto"
-      style={streamRouteLoadingReserveVisibleStyle}>
+      style={streamRouteLoadingReserveVisibleStyle}
+    >
       <HeaderPlaceholder />
       <main>{children}</main>
-      <div className="tw-h-[85px] tw-w-full" />
+      <div className="tw-h-[104px] tw-w-full" />
     </div>
   );
 }
@@ -80,7 +103,6 @@ function AppLayoutContent({ children }: Props) {
   useDeepLinkNavigation();
   const { registerRef, spaces } = useLayout();
   const { setHeaderRef } = useHeaderContext();
-  const { containerRef: searchContainerRef } = useSearch();
   const headerRef = useRef<HTMLDivElement | null>(null);
   const pathname = usePathname();
   // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense
@@ -91,27 +113,14 @@ function AppLayoutContent({ children }: Props) {
     activeWaveId: waveParam,
     searchParams,
   });
-  const viewParam = searchParams.get("view");
-  const hasWaveParam = Boolean(waveParam);
-  const isViewingWavesOrMessages =
-    viewParam === "waves" || viewParam === "messages";
-  const isWavesRoute = pathname === "/waves" || pathname.startsWith("/waves/");
-  const isMessagesRoute =
-    pathname === "/messages" || pathname.startsWith("/messages/");
-  const isStreamRoute =
-    isWavesRoute ||
-    isMessagesRoute ||
-    pathname === "/notifications" ||
-    (pathname === "/" && (hasWaveParam || isViewingWavesOrMessages));
+  const shouldHideBottomNavForRoute = hidesMobileBottomNavigation({
+    pathname,
+  });
   const editingDropId = useSelector(selectEditingDropId);
   const { isApp } = useDeviceInfo();
-  const { isVisible: isAndroidKeyboardVisible, isAndroid } =
-    useAndroidKeyboard();
-  const { isIos, keyboardVisible: isIosKeyboardVisible } = useCapacitor();
+  const { isVisible: isKeyboardVisible } = useNativeKeyboard();
   const isEditingOnMobile = isApp && editingDropId !== null;
-  const isKeyboardVisible =
-    (isAndroid && isAndroidKeyboardVisible) || (isIos && isIosKeyboardVisible);
-  const shouldHideBottomNav = isKeyboardVisible;
+  const shouldHideBottomNav = isKeyboardVisible || shouldHideBottomNavForRoute;
 
   const headerWrapperRef = useCallback(
     (node: HTMLDivElement | null) => {
@@ -124,16 +133,25 @@ function AppLayoutContent({ children }: Props) {
 
   const isNavVisible =
     !isSingleDropOpen && !isEditingOnMobile && !shouldHideBottomNav;
+  const shouldRenderBottomNav = !isSingleDropOpen && !isEditingOnMobile;
+  const shouldUseContentBottomClearance = contentOwnsBottomNavClearance({
+    activeView,
+    pathname,
+  });
   const routeLoadingHeaderReserve = spaces.measurementsComplete
     ? `${spaces.headerSpace}px`
     : STREAM_ROUTE_LOADING_HEADER_FALLBACK_RESERVE;
-  const streamRouteLoadingReserveStyle = useMemo<StreamRouteLoadingReserveStyle>(
-    () => ({
-      [STREAM_ROUTE_LOADING_BOTTOM_RESERVE]: isNavVisible ? "85px" : "0px",
-      [STREAM_ROUTE_LOADING_HEADER_RESERVE]: routeLoadingHeaderReserve,
-    }),
-    [isNavVisible, routeLoadingHeaderReserve]
-  );
+  const streamRouteLoadingReserveStyle =
+    useMemo<StreamRouteLoadingReserveStyle>(
+      () => ({
+        [STREAM_ROUTE_LOADING_BOTTOM_RESERVE]:
+          isNavVisible && !shouldUseContentBottomClearance
+            ? BOTTOM_NAV_RESERVE
+            : "0px",
+        [STREAM_ROUTE_LOADING_HEADER_RESERVE]: routeLoadingHeaderReserve,
+      }),
+      [isNavVisible, routeLoadingHeaderReserve, shouldUseContentBottomClearance]
+    );
   const safeAreaClass =
     !isNavVisible && !isKeyboardVisible
       ? "tw-pb-[env(safe-area-inset-bottom,0px)]"
@@ -145,22 +163,24 @@ function AppLayoutContent({ children }: Props) {
   } else if (activeView === "waves") {
     activeContent = <WavesQuickVoteView />;
   } else {
-    activeContent = <main ref={searchContainerRef}>{children}</main>;
+    activeContent = <main>{children}</main>;
   }
 
   return (
     <div
+      data-mobile-bottom-nav-scroll-target="true"
       className={`${safeAreaClass} ${"tw-overflow-auto"}`}
-      style={streamRouteLoadingReserveStyle}>
+      style={streamRouteLoadingReserveStyle}
+    >
       <PullToRefresh triggerZoneRef={headerRef} />
       <div ref={headerWrapperRef}>
         <TouchDeviceHeader />
       </div>
       {activeContent}
-      {!isSingleDropOpen && !isStreamRoute && (
-        <div className="tw-h-[85px] tw-w-full" />
+      {isNavVisible && !shouldUseContentBottomClearance && (
+        <div className="tw-h-[104px] tw-w-full" />
       )}
-      {!isSingleDropOpen && !isEditingOnMobile && (
+      {shouldRenderBottomNav && (
         <BottomNavigation hidden={shouldHideBottomNav} />
       )}
     </div>

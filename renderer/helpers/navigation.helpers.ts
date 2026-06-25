@@ -16,14 +16,31 @@ export const getMessagesBaseRoute = (_isApp: boolean): string => "/messages";
 export const getNotificationsRoute = (_isApp: boolean): string =>
   "/notifications";
 
+const MOBILE_BOTTOM_NAV_SCROLL_TARGET_ATTRIBUTE =
+  "data-mobile-bottom-nav-scroll-target";
+export const MOBILE_BOTTOM_NAV_SCROLL_TARGET_SELECTOR = `[${MOBILE_BOTTOM_NAV_SCROLL_TARGET_ATTRIBUTE}="true"]`;
+
+export const usesReverseMobileBottomNavigationScroll = ({
+  pathname,
+}: {
+  pathname: string | null | undefined;
+}): boolean => {
+  if (!pathname) {
+    return false;
+  }
+
+  return (
+    pathname === "/notifications" || pathname.startsWith("/notifications/")
+  );
+};
+
 interface SearchParamsLike {
   get: (key: string) => string | null;
 }
 
 export type RouteSearchParams = Record<string, string | string[] | undefined>;
 
-const WAVE_CREATE_SEGMENT = "create";
-const MESSAGE_CREATE_SEGMENT = "create";
+const CREATE_SEGMENT = "create";
 
 export const getWavePathRoute = (waveId: string): string =>
   `/waves/${encodeURIComponent(waveId)}`;
@@ -42,7 +59,7 @@ export const getWaveIdFromPathname = (
   if (
     wavesSegment !== "waves" ||
     !waveSegment ||
-    waveSegment === WAVE_CREATE_SEGMENT
+    waveSegment === CREATE_SEGMENT
   ) {
     return null;
   }
@@ -65,7 +82,7 @@ export const getMessageIdFromPathname = (
   if (
     messagesSegment !== "messages" ||
     !waveSegment ||
-    waveSegment === MESSAGE_CREATE_SEGMENT
+    waveSegment === CREATE_SEGMENT
   ) {
     return null;
   }
@@ -76,6 +93,14 @@ export const getMessageIdFromPathname = (
     return waveSegment;
   }
 };
+
+export const hidesMobileBottomNavigation = ({
+  pathname,
+}: {
+  pathname: string | null | undefined;
+}): boolean =>
+  getWaveIdFromPathname(pathname) !== null ||
+  getMessageIdFromPathname(pathname) !== null;
 
 export const getActiveWaveIdFromUrl = ({
   pathname,

@@ -17,12 +17,17 @@ import {
   faRightFromBracket,
   faShuffle,
   faShareNodes,
+  faShieldHalved,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { AnimatePresence, motion } from "framer-motion";
 import { useContext, useEffect, useState } from "react";
+import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { t } from "@/i18n/messages";
 import HeaderUserConnectedAccounts from "./connected/HeaderUserConnectedAccounts";
 import HeaderUserProxyDropdownItem from "./HeaderUserProxyDropdownItem";
+
+const HEADER_USER_MENU_LOCALE = DEFAULT_LOCALE;
 
 export default function HeaderUserMenuDropdown({
   isOpen,
@@ -54,6 +59,8 @@ export default function HeaderUserMenuDropdown({
     activeProfileProxy,
     setActiveProfileProxy,
     receivedProfileProxies,
+    requestSessionUpgrade,
+    sessionUpgradeRequired,
     setToast,
   } = useContext(AuthContext);
   const hasProxySection =
@@ -100,6 +107,10 @@ export default function HeaderUserMenuDropdown({
       cancelled = true;
     };
   }, []);
+  const upgradeAuthenticationLabel = t(
+    HEADER_USER_MENU_LOCALE,
+    "auth.sessionUpgrade.action"
+  );
 
   const onActivateProfileProxy = async (
     profileProxy: ApiProfileProxy | null
@@ -379,6 +390,34 @@ export default function HeaderUserMenuDropdown({
                           <span>Connect Wallet</span>
                         </button>
                       )}
+                    </li>
+                  )}
+                  {sessionUpgradeRequired && requestSessionUpgrade && (
+                    <li className="tw-h-full tw-px-2 tw-pt-2">
+                      <button
+                        onClick={() => {
+                          void runMenuAction({
+                            action: async () => {
+                              await requestSessionUpgrade();
+                            },
+                            pendingKey: "upgrade-auth",
+                            errorMessage:
+                              "Failed to start authentication upgrade. Please try again.",
+                          });
+                        }}
+                        disabled={pendingAction !== null}
+                        type="button"
+                        aria-label={upgradeAuthenticationLabel}
+                        title={upgradeAuthenticationLabel}
+                        className="tw-relative tw-flex tw-h-full tw-w-full tw-cursor-pointer tw-select-none tw-items-center tw-gap-x-3 tw-rounded-lg tw-border-none tw-bg-transparent tw-px-3 tw-py-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-700 hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+                      >
+                        <FontAwesomeIcon
+                          icon={faShieldHalved}
+                          height={20}
+                          width={20}
+                        />
+                        <span>{upgradeAuthenticationLabel}</span>
+                      </button>
                     </li>
                   )}
                   {(isConnected || isSeedWallet) && chains.length > 1 && (

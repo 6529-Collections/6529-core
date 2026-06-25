@@ -21,7 +21,7 @@ export default function AppSidebarUserInfo({
 }: AppSidebarUserInfoProps) {
   const {
     address,
-    isAuthenticated,
+    hasValidWalletAuth: isAuthenticated,
     isConnected,
     connectedAccountUnreadNotifications,
   } = useSeizeConnectContext();

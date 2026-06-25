@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import { getAuthJwt, WALLET_AUTH_COOKIE } from "../auth/auth.utils";
+import {
+  AUTH_TOKEN_CHANGED_EVENT,
+  getAuthJwt,
+  WALLET_AUTH_COOKIE,
+} from "../auth/auth.utils";
 import { useWebSocket } from "./useWebSocket";
 import { WebSocketStatus } from "./WebSocketTypes";
 
@@ -155,7 +159,8 @@ export function useWebSocketHealth() {
       webSocketStateRef.current;
     if (
       currentStatus === WebSocketStatus.CONNECTED ||
-      currentStatus === WebSocketStatus.CONNECTING
+      currentStatus === WebSocketStatus.CONNECTING ||
+      currentStatus === WebSocketStatus.AUTHENTICATING
     ) {
       currentConnect(currentToken);
     }
@@ -196,6 +201,11 @@ export function useWebSocketHealth() {
     if (typeof window === "undefined") {
       return;
     }
+
+    const handleAuthTokenChanged = () => {
+      performHealthCheck();
+    };
+    window.addEventListener(AUTH_TOKEN_CHANGED_EVENT, handleAuthTokenChanged);
 
     const cookieStore = (
       window as unknown as {
@@ -277,6 +287,10 @@ export function useWebSocketHealth() {
     }
 
     return () => {
+      window.removeEventListener(
+        AUTH_TOKEN_CHANGED_EVENT,
+        handleAuthTokenChanged
+      );
       removeCookieListener?.();
       closeBroadcastChannel?.();
     };

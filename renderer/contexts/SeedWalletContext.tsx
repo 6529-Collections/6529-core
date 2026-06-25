@@ -21,6 +21,10 @@ import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletReq
 
 export const SEED_WALLET_KEY = "seed-wallet-pass";
 
+const hasSeedWalletBridge = (): boolean =>
+  typeof window !== "undefined" &&
+  typeof window.api?.sendSync === "function";
+
 interface SeedWalletContextType {
   isSeedWallet: boolean;
   isFetched: boolean;
@@ -193,6 +197,11 @@ export const SeedWalletProvider: React.FC<{
       if (connectionState !== "initializing") {
         reset();
       }
+      return;
+    }
+
+    if (!hasSeedWalletBridge()) {
+      reset();
       return;
     }
 

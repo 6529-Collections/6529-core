@@ -222,6 +222,8 @@ function setupMocks(options: MockSetupOptions = {}) {
   scrollButtonProps = undefined;
   mockFetchNextPage.mockReset();
   mockFetchNextPage.mockResolvedValue(undefined);
+  mockWaitAndRevealDrop.mockReset();
+  mockWaitAndRevealDrop.mockResolvedValue(false);
 
   // Setup useVirtualizedWaveDrops mock
   const defaultWaveMessages: WaveMessagesMock = {
@@ -376,6 +378,7 @@ describe("WaveDropsAll", () => {
   beforeEach(() => {
     // Mock setTimeout for tests that need it
     jest.useFakeTimers();
+    mockScrollContainerRef.current = document.createElement("div");
     setupMocks();
   });
 
@@ -477,7 +480,6 @@ describe("WaveDropsAll", () => {
         waveId: "test-wave",
         dropId: "target-drop",
         activeDrop: mockActiveDrop,
-        initialDrop: 5,
         winningThreshold: 11,
         winningThresholdMinDurationMs: 120_000,
         isVotingClosed: true,
@@ -551,7 +553,7 @@ describe("WaveDropsAll", () => {
       expect(mockPush).toHaveBeenCalledWith("/waves/other-wave?serialNo=42");
     });
 
-    it("sets serial number for same wave quote navigation", () => {
+    it("sets serial number for same wave quote navigation", async () => {
       const mockDrop = createMockDrop({
         wave: {
           id: "current-wave",
@@ -573,7 +575,19 @@ describe("WaveDropsAll", () => {
       });
 
       expect(mockPush).not.toHaveBeenCalled();
-      // Serial number state change is internal - we test the behavior, not the state
+      await waitFor(() => {
+        expect(mockFetchNextPage).toHaveBeenCalledWith(
+          {
+            waveId: "current-wave",
+            type: "LIGHT",
+            targetSerialNo: 42,
+          },
+          null
+        );
+      });
+      await waitFor(() => {
+        expect(dropsProps.suspendLightDropHydration).toBe(false);
+      });
     });
   });
 
@@ -978,9 +992,43 @@ describe("WaveDropsAll", () => {
       renderComponent({ initialDrop: 10 });
 
       const targetElement = document.createElement("div");
-      targetElement.scrollIntoView = jest.fn();
+      const scrollTo = jest.fn();
+      mockScrollContainerRef.current.style.flexDirection = "column-reverse";
+      Object.defineProperty(mockScrollContainerRef.current, "clientHeight", {
+        configurable: true,
+        value: 400,
+      });
+      Object.defineProperty(mockScrollContainerRef.current, "scrollHeight", {
+        configurable: true,
+        value: 1000,
+      });
+      mockScrollContainerRef.current.scrollTop = 20;
+      mockScrollContainerRef.current.scrollTo = scrollTo;
+      Object.defineProperty(
+        mockScrollContainerRef.current,
+        "getBoundingClientRect",
+        {
+          configurable: true,
+          value: () => ({
+            top: 100,
+            bottom: 500,
+            height: 400,
+            left: 0,
+            right: 300,
+            width: 300,
+          }),
+        }
+      );
       Object.defineProperty(targetElement, "getBoundingClientRect", {
-        value: () => ({ top: 0, bottom: 1 }),
+        configurable: true,
+        value: () => ({
+          top: 150,
+          bottom: 210,
+          height: 60,
+          left: 0,
+          right: 300,
+          width: 300,
+        }),
       });
       dropsProps.targetDropRef.current = targetElement;
 
@@ -991,7 +1039,10 @@ describe("WaveDropsAll", () => {
       });
 
       await waitFor(() => {
-        expect(targetElement.scrollIntoView).toHaveBeenCalled();
+        expect(scrollTo).toHaveBeenCalledWith({
+          behavior: "smooth",
+          top: -100,
+        });
       });
       expect(dropsProps.suspendLightDropHydration).toBe(true);
 
@@ -1001,6 +1052,74 @@ describe("WaveDropsAll", () => {
 
       await waitFor(() => {
         expect(dropsProps.suspendLightDropHydration).toBe(false);
+      });
+    });
+
+    it("clamps target scroll to the top for normal scroll containers", async () => {
+      setupMocks({
+        waveMessages: {
+          drops: [createMockDrop({ id: "drop-50", serial_no: 50 })],
+          hasNextPage: true,
+          isLoading: false,
+          isLoadingNextPage: false,
+        },
+      });
+
+      mockFetchNextPage.mockResolvedValueOnce([]);
+      mockWaitAndRevealDrop.mockResolvedValueOnce(true);
+
+      renderComponent({ initialDrop: 10 });
+
+      const targetElement = document.createElement("div");
+      const scrollTo = jest.fn();
+      mockScrollContainerRef.current.style.flexDirection = "column";
+      Object.defineProperty(mockScrollContainerRef.current, "clientHeight", {
+        configurable: true,
+        value: 400,
+      });
+      Object.defineProperty(mockScrollContainerRef.current, "scrollHeight", {
+        configurable: true,
+        value: 1000,
+      });
+      mockScrollContainerRef.current.scrollTop = 20;
+      mockScrollContainerRef.current.scrollTo = scrollTo;
+      Object.defineProperty(
+        mockScrollContainerRef.current,
+        "getBoundingClientRect",
+        {
+          configurable: true,
+          value: () => ({
+            top: 100,
+            bottom: 500,
+            height: 400,
+            left: 0,
+            right: 300,
+            width: 300,
+          }),
+        }
+      );
+      Object.defineProperty(targetElement, "getBoundingClientRect", {
+        configurable: true,
+        value: () => ({
+          top: 150,
+          bottom: 210,
+          height: 60,
+          left: 0,
+          right: 300,
+          width: 300,
+        }),
+      });
+      dropsProps.targetDropRef.current = targetElement;
+
+      await waitFor(() => {
+        expect(mockWaitAndRevealDrop).toHaveBeenCalledWith(10);
+      });
+
+      await waitFor(() => {
+        expect(scrollTo).toHaveBeenCalledWith({
+          behavior: "smooth",
+          top: 0,
+        });
       });
     });
   });

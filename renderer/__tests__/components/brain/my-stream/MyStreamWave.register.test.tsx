@@ -57,6 +57,10 @@ const getDefaultMockWaveInfo = () => ({
 });
 
 jest.mock("@tanstack/react-query", () => ({
+  useQuery: jest.fn(() => ({
+    data: [],
+    isLoading: false,
+  })),
   useQueryClient: () => ({
     setQueryData: mockSetQueryData,
   }),
@@ -133,6 +137,10 @@ jest.mock("@/hooks/waves/useApprovalWaveStatus", () => ({
   useApprovalWaveStatus: () => ({
     isVotingControlsLocked: false,
   }),
+}));
+
+jest.mock("@/hooks/waves/useWaveMetadata", () => ({
+  useWaveOutcomeVisibility: () => true,
 }));
 
 jest.mock("@/hooks/useDeviceInfo", () => ({

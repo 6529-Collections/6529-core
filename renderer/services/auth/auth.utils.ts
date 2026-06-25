@@ -3,10 +3,13 @@ import { jwtDecode } from "jwt-decode";
 import { publicEnv } from "@/config/env";
 import { API_AUTH_COOKIE, MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import { safeLocalStorage } from "@/helpers/safeLocalStorage";
+import { removeNativeRefreshToken } from "./native-refresh-token-storage";
 
 export const WALLET_AUTH_COOKIE = "wallet-auth";
 export const WALLET_ACCOUNTS_UPDATED_EVENT = "6529-wallet-accounts-updated";
 export const PROFILE_SWITCHED_EVENT = "6529-profile-switched";
+export const AUTH_TOKEN_CHANGED_EVENT = "6529-auth-token-changed";
+export type AuthSessionVersion = "v2";
 
 const WALLET_ADDRESS_STORAGE_KEY = "6529-wallet-address";
 const WALLET_REFRESH_TOKEN_STORAGE_KEY = "6529-wallet-refresh-token";
@@ -16,11 +19,12 @@ const WALLET_ACTIVE_ADDRESS_STORAGE_KEY = "6529-wallet-active-address";
 
 export interface ConnectedWalletAccount {
   readonly address: string;
-  readonly refreshToken: string;
+  readonly refreshToken: string | null;
   readonly role: string | null;
   readonly jwt: string | null;
   readonly profileId: string | null;
   readonly profileHandle: string | null;
+  readonly authSessionVersion?: AuthSessionVersion | null;
 }
 
 const COOKIE_OPTIONS = {
@@ -89,9 +93,27 @@ const emitProfileSwitched = (): void => {
   }
 };
 
+const emitAuthTokenChanged = (): void => {
+  if (globalThis.window !== undefined) {
+    globalThis.dispatchEvent(new CustomEvent(AUTH_TOKEN_CHANGED_EVENT));
+  }
+};
+
+const emitAuthTokenChangedIfChanged = (
+  previousJwt: string | null,
+  nextJwt: string | null
+): void => {
+  if (previousJwt !== nextJwt) {
+    emitAuthTokenChanged();
+  }
+};
+
 const setWalletAuthCookie = (jwt: string | null): void => {
+  const previousJwt = Cookies.get(WALLET_AUTH_COOKIE) ?? null;
+
   if (!jwt) {
     Cookies.remove(WALLET_AUTH_COOKIE, COOKIE_OPTIONS);
+    emitAuthTokenChangedIfChanged(previousJwt, null);
     return;
   }
 
@@ -101,6 +123,7 @@ const setWalletAuthCookie = (jwt: string | null): void => {
     const expiresInSeconds = jwtExpiration - now;
     if (expiresInSeconds <= 0) {
       Cookies.remove(WALLET_AUTH_COOKIE, COOKIE_OPTIONS);
+      emitAuthTokenChangedIfChanged(previousJwt, null);
       return;
     }
     const expiresInDays = expiresInSeconds / 86400;
@@ -109,8 +132,10 @@ const setWalletAuthCookie = (jwt: string | null): void => {
       ...COOKIE_OPTIONS,
       expires: expiresInDays,
     });
+    emitAuthTokenChangedIfChanged(previousJwt, jwt);
   } catch {
     Cookies.remove(WALLET_AUTH_COOKIE, COOKIE_OPTIONS);
+    emitAuthTokenChangedIfChanged(previousJwt, null);
   }
 };
 
@@ -127,26 +152,25 @@ const hasRequiredAccountFields = (
   record: Partial<ConnectedWalletAccount>
 ): record is Partial<ConnectedWalletAccount> & {
   address: string;
-  refreshToken: string;
-} =>
-  typeof record.address === "string" &&
-  record.address.trim().length > 0 &&
-  typeof record.refreshToken === "string" &&
-  record.refreshToken.trim().length > 0;
+} => typeof record.address === "string" && record.address.trim().length > 0;
 
 const toStoredAccount = (
   record: Partial<ConnectedWalletAccount> & {
     address: string;
-    refreshToken: string;
   }
 ): ConnectedWalletAccount => ({
   address: record.address,
-  refreshToken: record.refreshToken,
+  refreshToken:
+    typeof record.refreshToken === "string" &&
+    record.refreshToken.trim().length > 0
+      ? record.refreshToken
+      : null,
   role: typeof record.role === "string" ? record.role : null,
   jwt: typeof record.jwt === "string" ? record.jwt : null,
   profileId: typeof record.profileId === "string" ? record.profileId : null,
   profileHandle:
     typeof record.profileHandle === "string" ? record.profileHandle : null,
+  authSessionVersion: record.authSessionVersion === "v2" ? "v2" : null,
 });
 
 const readAccountsFromStorage = (): ConnectedWalletAccount[] => {
@@ -213,10 +237,14 @@ const synchronizeLegacyStorage = (
   }
 
   safeLocalStorage.setItem(WALLET_ADDRESS_STORAGE_KEY, activeAccount.address);
-  safeLocalStorage.setItem(
-    WALLET_REFRESH_TOKEN_STORAGE_KEY,
-    activeAccount.refreshToken
-  );
+  if (activeAccount.refreshToken) {
+    safeLocalStorage.setItem(
+      WALLET_REFRESH_TOKEN_STORAGE_KEY,
+      activeAccount.refreshToken
+    );
+  } else {
+    safeLocalStorage.removeItem(WALLET_REFRESH_TOKEN_STORAGE_KEY);
+  }
 
   const addressRoleStorageKey = getAddressRoleStorageKey(activeAccount.address);
   if (activeAccount.role) {
@@ -243,6 +271,22 @@ const getActiveAccountFromAccounts = (
   return active ?? accounts[0] ?? null;
 };
 
+const hasActiveAddressChanged = (
+  previousActiveAddress: string | null,
+  nextActiveAddress: string | null
+): boolean => {
+  if (!previousActiveAddress) {
+    return false;
+  }
+  if (!nextActiveAddress) {
+    return true;
+  }
+  return (
+    normalizeAddress(previousActiveAddress) !==
+    normalizeAddress(nextActiveAddress)
+  );
+};
+
 const migrateLegacyStorageIfNeeded = (): void => {
   const hasAccountsStorage =
     safeLocalStorage.getItem(WALLET_ACCOUNTS_STORAGE_KEY) !== null;
@@ -264,6 +308,7 @@ const migrateLegacyStorageIfNeeded = (): void => {
     jwt: legacyJwt,
     profileId: null,
     profileHandle: null,
+    authSessionVersion: null,
   };
 
   writeAccountsToStorage([legacyAccount]);
@@ -300,11 +345,20 @@ export const getConnectedWalletAccounts = (): ConnectedWalletAccount[] => {
 };
 
 export const canStoreAnotherWalletAccount = (
-  address?: string | null
+  address?: string | null,
+  {
+    allowAdditionalAccounts = true,
+  }: { readonly allowAdditionalAccounts?: boolean } = {}
 ): boolean => {
   const accounts = getStoredAccounts();
 
   if (!address) {
+    if (accounts.length === 0) {
+      return true;
+    }
+    if (!allowAdditionalAccounts) {
+      return false;
+    }
     return accounts.length < MAX_CONNECTED_PROFILES;
   }
 
@@ -313,7 +367,13 @@ export const canStoreAnotherWalletAccount = (
     (account) => normalizeAddress(account.address) === normalizedAddress
   );
 
-  return alreadyExists || accounts.length < MAX_CONNECTED_PROFILES;
+  if (alreadyExists || accounts.length === 0) {
+    return true;
+  }
+  if (!allowAdditionalAccounts) {
+    return false;
+  }
+  return accounts.length < MAX_CONNECTED_PROFILES;
 };
 
 export const setActiveWalletAccount = (address: string): boolean => {
@@ -341,10 +401,14 @@ export const setActiveWalletAccount = (address: string): boolean => {
 export const setAuthJwt = (
   address: string,
   jwt: string,
-  refreshToken: string,
-  role?: string
+  refreshToken: string | null,
+  role?: string,
+  options: {
+    readonly authSessionVersion?: AuthSessionVersion | null;
+  } = {}
 ): boolean => {
   const storedAccounts = getStoredAccounts();
+  const previousActiveAddress = getActiveAddressFromStorage();
   const existingAccount =
     storedAccounts.find(
       (account) =>
@@ -353,11 +417,13 @@ export const setAuthJwt = (
 
   const nextAccount: ConnectedWalletAccount = {
     address,
-    refreshToken,
+    refreshToken: refreshToken ?? existingAccount?.refreshToken ?? null,
     role: role ?? null,
     jwt,
     profileId: existingAccount?.profileId ?? null,
     profileHandle: existingAccount?.profileHandle ?? null,
+    authSessionVersion:
+      options.authSessionVersion ?? existingAccount?.authSessionVersion ?? null,
   };
 
   const accountIndex = storedAccounts.findIndex(
@@ -380,6 +446,9 @@ export const setAuthJwt = (
   }
 
   emitWalletAccountsUpdated();
+  if (hasActiveAddressChanged(previousActiveAddress, address)) {
+    emitProfileSwitched();
+  }
   return true;
 };
 
@@ -391,12 +460,29 @@ export const getAuthJwt = () => {
   if (publicEnv.USE_DEV_AUTH === "true") {
     return publicEnv.DEV_MODE_AUTH_JWT ?? null;
   }
-  return Cookies.get(WALLET_AUTH_COOKIE) ?? null;
+  return (
+    Cookies.get(WALLET_AUTH_COOKIE) ??
+    getActiveAccountFromAccounts(getStoredAccounts())?.jwt ??
+    null
+  );
+};
+
+export const hasActiveSessionV2Auth = ({
+  address,
+}: {
+  readonly address: string;
+}): boolean => {
+  const activeAccount = getActiveAccountFromAccounts(getStoredAccounts());
+  return (
+    activeAccount?.authSessionVersion === "v2" &&
+    normalizeAddress(activeAccount.address) === normalizeAddress(address)
+  );
 };
 
 export const getRefreshToken = () => {
   const activeAccount = getActiveAccountFromAccounts(getStoredAccounts());
   if (activeAccount?.refreshToken) return activeAccount.refreshToken;
+  if (activeAccount) return null;
   return safeLocalStorage.getItem(WALLET_REFRESH_TOKEN_STORAGE_KEY) ?? null;
 };
 
@@ -415,24 +501,64 @@ export const getWalletRole = () => {
   return safeLocalStorage.getItem(WALLET_ROLE_STORAGE_KEY) ?? null;
 };
 
-export const clearAllWalletAuth = (): void => {
-  persistAccountsWithActive([], null);
-  emitWalletAccountsUpdated();
+const getNativeRefreshTokenCleanupAddresses = (
+  accounts: readonly ConnectedWalletAccount[]
+): string[] => {
+  const addresses = accounts.map((account) => account.address);
+  const legacyAddress = safeLocalStorage.getItem(WALLET_ADDRESS_STORAGE_KEY);
+  if (legacyAddress) {
+    addresses.push(legacyAddress);
+  }
+
+  const seen = new Set<string>();
+  return addresses.filter((address) => {
+    const normalizedAddress = normalizeAddress(address);
+    if (seen.has(normalizedAddress)) {
+      return false;
+    }
+    seen.add(normalizedAddress);
+    return true;
+  });
 };
 
-export const removeAuthJwt = () => {
+export const clearAllWalletAuth = async (): Promise<void> => {
+  const accounts = getStoredAccounts();
+  const previousActiveAddress = getActiveAddressFromStorage();
+  await Promise.all(
+    getNativeRefreshTokenCleanupAddresses(accounts).map((address) =>
+      removeNativeRefreshToken(address)
+    )
+  );
+  persistAccountsWithActive([], null);
+  emitWalletAccountsUpdated();
+  if (previousActiveAddress) {
+    emitProfileSwitched();
+  }
+};
+
+export const removeAuthJwt = async (): Promise<void> => {
   const accounts = getStoredAccounts();
   const activeAccount = getActiveAccountFromAccounts(accounts);
+  const previousActiveAddress =
+    activeAccount?.address ??
+    getActiveAddressFromStorage() ??
+    safeLocalStorage.getItem(WALLET_ADDRESS_STORAGE_KEY);
 
   if (!activeAccount) {
     const legacyAddress = safeLocalStorage.getItem(WALLET_ADDRESS_STORAGE_KEY);
     if (legacyAddress) {
+      await removeNativeRefreshToken(legacyAddress);
       safeLocalStorage.removeItem(getAddressRoleStorageKey(legacyAddress));
     }
     persistAccountsWithActive([], null);
     emitWalletAccountsUpdated();
+    if (previousActiveAddress) {
+      emitProfileSwitched();
+    }
     return;
   }
+
+  await removeNativeRefreshToken(activeAccount.address);
 
   const remainingAccounts = accounts.filter(
     (account) =>
@@ -445,6 +571,9 @@ export const removeAuthJwt = () => {
   const nextActiveAddress = remainingAccounts[0]?.address ?? null;
   persistAccountsWithActive(remainingAccounts, nextActiveAddress);
   emitWalletAccountsUpdated();
+  if (hasActiveAddressChanged(previousActiveAddress, nextActiveAddress)) {
+    emitProfileSwitched();
+  }
 };
 
 /**

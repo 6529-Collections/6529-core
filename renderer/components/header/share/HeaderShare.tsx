@@ -1,26 +1,292 @@
 "use client";
 
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { publicEnv } from "@/config/env";
-import { openInExternalBrowser } from "@/helpers";
+import { faCopy, faExternalLink } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { ShareIcon } from "@heroicons/react/24/outline";
+import yaml from "js-yaml";
+import Image from "next/image";
+import { usePathname, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Tooltip } from "react-tooltip";
+import { useAuth } from "@/components/auth/Auth";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 import useCapacitor from "@/hooks/useCapacitor";
 import { DeepLinkScope } from "@/hooks/useDeepLinkNavigation";
+import { useElectron } from "@/hooks/useElectron";
+import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { t } from "@/i18n/messages";
 import {
   getRefreshToken,
   getWalletAddress,
   getWalletRole,
 } from "@/services/auth/auth.utils";
-import { faCopy, faExternalLink } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { ShareIcon } from "@heroicons/react/24/outline";
-import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { Tooltip } from "react-tooltip";
+import {
+  createConnectionShare,
+  createLegacyDesktopConnectionShare,
+} from "@/services/auth/session-v2.utils";
+import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { ShareMobileApp } from "./HeaderShareMobileApps";
 
 const QRCode = require("qrcode");
+const HEADER_SHARE_LOCALE = DEFAULT_LOCALE;
+
+type NativeConnectionShare = Awaited<ReturnType<typeof createConnectionShare>>;
+
+type CachedConnectionShare = {
+  readonly addressKey: string;
+  readonly expiresAtMs: number;
+  readonly share: NativeConnectionShare;
+};
+
+type SetQrSource = (dataUrl: string) => void;
+type IsStaleGeneration = () => boolean | undefined;
+type SearchParamsLike = {
+  toString(): string;
+};
+type ConnectionShareStatus =
+  | "unauthenticated"
+  | "legacy-auth"
+  | "loading"
+  | "ready"
+  | "error";
+type TerminalConnectionShareStatus = Extract<
+  ConnectionShareStatus,
+  "legacy-auth" | "error"
+>;
+
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  return (
+    signal?.aborted === true ||
+    (typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      error.name === "AbortError")
+  );
+}
+
+function isSessionUpgradeRequiredError(error: unknown): boolean {
+  const message = getErrorMessage(error);
+  return message.toLowerCase().includes("session-v2");
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  return "";
+}
+
+function buildRouterPath(
+  pathname: string | null,
+  searchParams: SearchParamsLike | null
+): string {
+  let routerPath = pathname ?? "";
+  if (routerPath.endsWith("/")) {
+    routerPath = routerPath.slice(0, -1);
+  }
+
+  const searchParamsString = searchParams?.toString() ?? "";
+  if (searchParamsString) {
+    return `${routerPath}?${searchParamsString}`;
+  }
+
+  return routerPath;
+}
+
+function buildConnectionShareFailureKey({
+  addressKey,
+  routerPath,
+  target,
+}: {
+  readonly addressKey: string;
+  readonly routerPath: string;
+  readonly target: "mobile" | "desktop";
+}): string {
+  return `${target}:${addressKey}:${routerPath}`;
+}
+
+function getCachedConnectionShare(
+  cachedShare: CachedConnectionShare | null,
+  addressKey: string
+): NativeConnectionShare | null {
+  if (cachedShare?.addressKey === addressKey) {
+    const isReusable = cachedShare.expiresAtMs > Date.now() + 30_000;
+    if (isReusable) {
+      return cachedShare.share;
+    }
+  }
+
+  return null;
+}
+
+function buildNativeConnectionShareUrls({
+  share,
+  appScheme,
+}: {
+  readonly share: NativeConnectionShare;
+  readonly appScheme: string;
+}): {
+  readonly appUrl: string;
+} {
+  const shareParams = new URLSearchParams({
+    connection_share_code: share.connection_share_code,
+    address: share.address,
+  });
+
+  return {
+    appUrl: `${appScheme}://${DeepLinkScope.SHARE_CONNECTION}?${shareParams.toString()}`,
+  };
+}
+
+function buildLegacyDesktopConnectionSharePath({
+  token,
+  address,
+  role,
+}: {
+  readonly token: string;
+  readonly address: string;
+  readonly role: string | null;
+}): string {
+  const shareParams = new URLSearchParams({
+    token,
+    address,
+  });
+  if (role) {
+    shareParams.set("role", role);
+  }
+  return `/accept-connection-sharing?${shareParams.toString()}`;
+}
+
+function buildLegacyDesktopConnectionShareUrl({
+  coreScheme,
+  deepLinkPath,
+}: {
+  readonly coreScheme: string;
+  readonly deepLinkPath: string;
+}): string {
+  return `${coreScheme}://${DeepLinkScope.NAVIGATE}${deepLinkPath}`;
+}
+
+function generateQrCodeSource({
+  url,
+  setSource,
+  clearSource,
+  staleGeneration,
+  signal,
+  errorMessage,
+}: {
+  readonly url: string;
+  readonly setSource: SetQrSource;
+  readonly clearSource: () => void;
+  readonly staleGeneration: IsStaleGeneration;
+  readonly signal?: AbortSignal | undefined;
+  readonly errorMessage: string;
+}): void {
+  QRCode.toDataURL(url, { width: 500, margin: 0 })
+    .then((dataUrl: string) => {
+      if (staleGeneration()) {
+        return;
+      }
+      setSource(dataUrl);
+    })
+    .catch((error: unknown) => {
+      if (staleGeneration() || isAbortError(error, signal)) {
+        return;
+      }
+      console.error(errorMessage, error);
+      clearSource();
+    });
+}
+
+async function fetchCoreAppsVersions(): Promise<OSInfo[]> {
+  const fetchYml = async (url: string): Promise<LatestYml> => {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch ${url}`);
+    }
+
+    const text = await response.text();
+    return yaml.load(text) as LatestYml;
+  };
+
+  const enabledConfigs = CORE_OS_CONFIGS.filter((config) => config.enabled);
+  const results = await Promise.allSettled(
+    enabledConfigs.map((config) => fetchYml(config.url))
+  );
+
+  return results.flatMap((result, index) => {
+    const osConfig = enabledConfigs[index];
+    if (!osConfig) {
+      return [];
+    }
+
+    if (result.status === "fulfilled") {
+      return [{ ...osConfig, version: result.value.version }];
+    }
+
+    console.error(
+      `Failed to fetch or process ${osConfig.displayName}:`,
+      result.reason
+    );
+    return [];
+  });
+}
+
+interface OSInfo {
+  name: "windows" | "mac" | "linux";
+  url: string;
+  displayName: string;
+  downloadPath: string;
+  image: string;
+  enabled: boolean;
+  version?: string | undefined;
+}
+
+interface FileData {
+  url: string;
+  sha512: string;
+  size: number;
+}
+
+interface LatestYml {
+  version: string;
+  files: FileData[];
+}
+
+const CORE_OS_CONFIGS: OSInfo[] = [
+  {
+    name: "windows",
+    url: "https://6529bucket.s3.eu-west-1.amazonaws.com/6529-core-app/win/latest.yml",
+    displayName: "Windows",
+    downloadPath: "6529-core-app/win/links",
+    image: "/windows.png",
+    enabled: true,
+  },
+  {
+    name: "mac",
+    url: "https://6529bucket.s3.eu-west-1.amazonaws.com/6529-core-app/mac/latest-mac.yml",
+    displayName: "macOS",
+    downloadPath: "6529-core-app/mac/links",
+    image: "/macos.png",
+    enabled: true,
+  },
+  {
+    name: "linux",
+    url: "https://6529bucket.s3.eu-west-1.amazonaws.com/6529-core-app/linux/latest-linux.yml",
+    displayName: "Linux",
+    downloadPath: "6529-core-app/linux/links",
+    image: "/linux.png",
+    enabled: true,
+  },
+];
 
 const bodyScrollLock = (() => {
   let lockCount = 0;
@@ -61,6 +327,7 @@ enum Mode {
 enum SubMode {
   BROWSER,
   APP,
+  CORE,
 }
 
 const squareStyle = {
@@ -70,22 +337,21 @@ const squareStyle = {
   justifyContent: "center",
 };
 
-function getSubTabCount(activeTab: Mode): number {
-  if (activeTab === Mode.NAVIGATE || activeTab === Mode.SHARE) {
-    return 2;
+function getSubTabCount(activeTab: Mode, isElectron: boolean): number {
+  if (activeTab === Mode.NAVIGATE) {
+    return isElectron ? 2 : 3;
   }
-
-  return 1;
+  return isElectron ? 1 : 2;
 }
 
 function getSubTabLabel(activeTab: Mode): string {
   if (activeTab === Mode.APPS) {
-    return "Select Platform";
+    return t(HEADER_SHARE_LOCALE, "headerShare.menu.selectPlatform");
   }
   if (activeTab === Mode.SHARE) {
-    return "Open Link In";
+    return t(HEADER_SHARE_LOCALE, "headerShare.menu.openLinkIn");
   }
-  return "Open URL In";
+  return t(HEADER_SHARE_LOCALE, "headerShare.menu.openUrlIn");
 }
 
 function getFocusableElements(container: HTMLElement): HTMLElement[] {
@@ -122,8 +388,8 @@ export default function HeaderShare({
     <div className="tailwind-scope tw-relative tw-px-3">
       <button
         type="button"
-        aria-label="QR Code"
-        title="QR Code"
+        aria-label={t(HEADER_SHARE_LOCALE, "headerShare.trigger.ariaLabel")}
+        title={t(HEADER_SHARE_LOCALE, "headerShare.trigger.title")}
         onClick={() => setShowQRModal(true)}
         className={`tw-block tw-h-[2.875rem] tw-w-full tw-cursor-pointer tw-rounded-xl tw-border-none tw-bg-transparent tw-px-2 tw-text-left tw-text-base tw-font-medium tw-text-iron-400 tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 ${
           isCollapsed
@@ -147,7 +413,7 @@ export default function HeaderShare({
               isCollapsed ? "tw-w-0 tw-opacity-0" : "tw-flex-1 tw-opacity-100"
             }`}
           >
-            Share
+            {t(HEADER_SHARE_LOCALE, "headerShare.trigger.text")}
           </span>
         </div>
       </button>
@@ -165,15 +431,19 @@ export function HeaderQRModal({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const searchParamsString = searchParams?.toString() ?? "";
   const isMobile = useIsMobileDevice();
 
   const [shouldRender, setShouldRender] = useState(show);
   const [isVisible, setIsVisible] = useState(show);
 
-  const { isAuthenticated } = useSeizeConnectContext();
+  const { hasValidWalletAuth } = useSeizeConnectContext();
+  const { ensureActiveSessionV2WebSession, requestSessionUpgrade } = useAuth();
+  const activeWalletAddress = getWalletAddress();
+  const hasWalletAddress = Boolean(activeWalletAddress);
 
   const [activeTab, setActiveTab] = useState<Mode>(
-    isAuthenticated ? Mode.SHARE : Mode.NAVIGATE
+    hasValidWalletAuth || hasWalletAddress ? Mode.SHARE : Mode.NAVIGATE
   );
   const [activeSubTab, setActiveSubTab] = useState<SubMode>(SubMode.APP);
 
@@ -181,8 +451,17 @@ export function HeaderQRModal({
   const [navigateAppUrl, setNavigateAppUrl] = useState<string>("");
   const [shareConnectionAppUrl, setShareConnectionAppUrl] =
     useState<string>("");
-  const [shareConnectionBrowserUrl, setShareConnectionBrowserUrl] =
+  const [navigateCoreUrl, setNavigateCoreUrl] = useState<string>("");
+  const [shareConnectionCoreUrl, setShareConnectionCoreUrl] =
     useState<string>("");
+  const [mobileConnectionShareStatus, setMobileConnectionShareStatus] =
+    useState<ConnectionShareStatus>(
+      hasValidWalletAuth || hasWalletAddress ? "legacy-auth" : "unauthenticated"
+    );
+  const [desktopConnectionShareStatus, setDesktopConnectionShareStatus] =
+    useState<ConnectionShareStatus>(
+      hasValidWalletAuth || hasWalletAddress ? "legacy-auth" : "unauthenticated"
+    );
 
   const [navigateBrowserSrc, setNavigateBrowserSrc] = useState<string>("");
   const [navigateAppSrc, setNavigateAppSrc] = useState<string>("");
@@ -193,6 +472,12 @@ export function HeaderQRModal({
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
+  const connectionShareAbortRef = useRef<AbortController | null>(null);
+  const shareGenerationIdRef = useRef(0);
+  const cachedConnectionShareRef = useRef<CachedConnectionShare | null>(null);
+  const terminalConnectionShareFailuresRef = useRef<
+    Map<string, TerminalConnectionShareStatus>
+  >(new Map());
 
   const trapFocusInDialog = useCallback((event: KeyboardEvent) => {
     if (event.key !== "Tab") {
@@ -270,93 +555,334 @@ export function HeaderQRModal({
     [trapFocusInDialog]
   );
 
-  function generateSources(
-    refreshToken: string | null,
+  async function generateSources(
     walletAddress: string | null,
-    role: string | null
+    signal?: AbortSignal
   ) {
-    let routerPath = pathname ?? "";
-    if (routerPath.endsWith("/")) {
-      routerPath = routerPath.slice(0, -1);
-    }
+    const generationId = ++shareGenerationIdRef.current;
+    const isStaleGeneration = () =>
+      generationId !== shareGenerationIdRef.current || signal?.aborted;
 
-    const searchParamsString = searchParams?.toString() ?? "";
-    if (searchParamsString) {
-      routerPath += `?${searchParamsString}`;
-    }
+    setNavigateBrowserSrc("");
+    setNavigateAppSrc("");
+    setShareConnectionSrc("");
 
+    const routerPath = buildRouterPath(pathname, searchParams);
     const appScheme = publicEnv.MOBILE_APP_SCHEME ?? "mobile6529";
-    const baseEndpoint =
-      (publicEnv.BASE_ENDPOINT || window.location.origin).replace(/\/+$/, "") ||
-      window.location.origin;
+    const coreScheme = publicEnv.CORE_SCHEME ?? "core6529";
 
-    const browserUrl = `${baseEndpoint}${routerPath}`;
+    const browserUrl = `${globalThis.window.location.origin}${routerPath}`;
     const appUrl = `${appScheme}://${DeepLinkScope.NAVIGATE}${routerPath}`;
+    const coreUrl = `${coreScheme}://${DeepLinkScope.NAVIGATE}${routerPath}`;
 
     setNavigateBrowserUrl(browserUrl);
     setNavigateAppUrl(appUrl);
+    setNavigateCoreUrl(coreUrl);
 
-    let shareConnectionAppUrl = "";
-    let shareConnectionBrowserUrl = "";
+    const shareConnectionAppUrl = await generateNativeConnectionShareUrl({
+      appScheme,
+      isStaleGeneration,
+      signal,
+      walletAddress,
+      routerPath,
+    });
+    await generateLegacyDesktopConnectionShareUrl({
+      coreScheme,
+      isStaleGeneration,
+      signal,
+      walletAddress,
+      routerPath,
+    });
 
-    if (refreshToken && walletAddress) {
-      shareConnectionAppUrl = `${appScheme}://${DeepLinkScope.SHARE_CONNECTION}?token=${refreshToken}&address=${walletAddress}`;
-      const search = new URLSearchParams({
-        token: refreshToken,
-        address: walletAddress,
-      });
-      shareConnectionBrowserUrl = `${baseEndpoint}/accept-connection-sharing?${search.toString()}`;
-
-      if (role) {
-        shareConnectionAppUrl += `&role=${role}`;
-        search.set("role", role);
-        shareConnectionBrowserUrl = `${baseEndpoint}/accept-connection-sharing?${search.toString()}`;
-      }
-      setShareConnectionAppUrl(shareConnectionAppUrl);
-      setShareConnectionBrowserUrl(shareConnectionBrowserUrl);
-    } else {
-      setShareConnectionSrc("");
-      setShareConnectionBrowserUrl("");
+    if (isStaleGeneration()) {
+      return;
     }
 
-    QRCode.toDataURL(browserUrl, { width: 500, margin: 0 })
-      .then((dataUrl: string) => {
-        setNavigateBrowserSrc(dataUrl);
-      })
-      .catch((error: unknown) => {
-        console.error("Failed to generate browser QR code", error);
-        setNavigateBrowserSrc("");
-      });
+    generateQrCodeSource({
+      url: browserUrl,
+      setSource: setNavigateBrowserSrc,
+      clearSource: () => setNavigateBrowserSrc(""),
+      staleGeneration: isStaleGeneration,
+      signal,
+      errorMessage: "Failed to generate browser QR code",
+    });
 
-    QRCode.toDataURL(appUrl, { width: 500, margin: 0 })
-      .then((dataUrl: string) => {
-        setNavigateAppSrc(dataUrl);
-      })
-      .catch((error: unknown) => {
-        console.error("Failed to generate mobile app QR code", error);
-        setNavigateAppSrc("");
-      });
+    generateQrCodeSource({
+      url: appUrl,
+      setSource: setNavigateAppSrc,
+      clearSource: () => setNavigateAppSrc(""),
+      staleGeneration: isStaleGeneration,
+      signal,
+      errorMessage: "Failed to generate mobile app QR code",
+    });
 
     if (shareConnectionAppUrl) {
-      QRCode.toDataURL(shareConnectionAppUrl, { width: 500, margin: 0 })
-        .then((dataUrl: string) => {
-          setShareConnectionSrc(dataUrl);
-        })
-        .catch((error: unknown) => {
-          console.error("Failed to generate share connection QR code", error);
-          setShareConnectionSrc("");
-        });
+      generateQrCodeSource({
+        url: shareConnectionAppUrl,
+        setSource: setShareConnectionSrc,
+        clearSource: () => setShareConnectionSrc(""),
+        staleGeneration: isStaleGeneration,
+        signal,
+        errorMessage: "Failed to generate share connection QR code",
+      });
     }
   }
 
-  useEffect(() => {
-    if (show) {
-      generateSources(getRefreshToken(), getWalletAddress(), getWalletRole());
+  async function generateNativeConnectionShareUrl({
+    appScheme,
+    isStaleGeneration,
+    routerPath,
+    signal,
+    walletAddress,
+  }: {
+    readonly appScheme: string;
+    readonly isStaleGeneration: IsStaleGeneration;
+    readonly signal?: AbortSignal | undefined;
+    readonly walletAddress: string | null;
+    readonly routerPath: string;
+  }): Promise<string> {
+    if (!walletAddress) {
+      setUnavailableMobileConnectionShare("unauthenticated");
+      return "";
     }
-  }, [show]);
+
+    const addressKey = walletAddress.toLowerCase();
+    const failureKey = buildConnectionShareFailureKey({
+      addressKey,
+      routerPath,
+      target: "mobile",
+    });
+    const terminalFailure =
+      terminalConnectionShareFailuresRef.current.get(failureKey);
+    if (terminalFailure) {
+      setUnavailableMobileConnectionShare(terminalFailure);
+      return "";
+    }
+
+    try {
+      setMobileConnectionShareStatus("loading");
+      let hasActiveSession = false;
+      try {
+        if (ensureActiveSessionV2WebSession) {
+          hasActiveSession = await ensureActiveSessionV2WebSession(signal);
+        }
+      } catch (error: unknown) {
+        if (isStaleGeneration() || isAbortError(error, signal)) {
+          return "";
+        }
+
+        console.error("Failed to verify active web session", error);
+      }
+
+      if (isStaleGeneration() || signal?.aborted) {
+        return "";
+      }
+
+      if (!hasActiveSession) {
+        terminalConnectionShareFailuresRef.current.set(
+          failureKey,
+          "legacy-auth"
+        );
+        setUnavailableMobileConnectionShare("legacy-auth");
+        return "";
+      }
+
+      const cachedShare = getCachedConnectionShare(
+        cachedConnectionShareRef.current,
+        addressKey
+      );
+      const share = cachedShare ?? (await createConnectionShare({ signal }));
+
+      if (isStaleGeneration()) {
+        return "";
+      }
+
+      cacheConnectionShare(addressKey, share);
+      const shareUrls = buildNativeConnectionShareUrls({
+        share,
+        appScheme,
+      });
+
+      terminalConnectionShareFailuresRef.current.delete(failureKey);
+      setMobileConnectionShareStatus("ready");
+      setShareConnectionAppUrl(shareUrls.appUrl);
+      return shareUrls.appUrl;
+    } catch (error: unknown) {
+      if (isStaleGeneration() || isAbortError(error, signal)) {
+        return "";
+      }
+
+      console.error("Failed to create connection share", error);
+      const terminalStatus: TerminalConnectionShareStatus =
+        isSessionUpgradeRequiredError(error) ? "legacy-auth" : "error";
+      terminalConnectionShareFailuresRef.current.set(
+        failureKey,
+        terminalStatus
+      );
+      setUnavailableMobileConnectionShare(terminalStatus);
+      return "";
+    }
+  }
+
+  async function generateLegacyDesktopConnectionShareUrl({
+    coreScheme,
+    isStaleGeneration,
+    routerPath,
+    signal,
+    walletAddress,
+  }: {
+    readonly coreScheme: string;
+    readonly isStaleGeneration: IsStaleGeneration;
+    readonly signal?: AbortSignal | undefined;
+    readonly walletAddress: string | null;
+    readonly routerPath: string;
+  }): Promise<string> {
+    if (!walletAddress) {
+      setUnavailableDesktopConnectionShare("unauthenticated");
+      return "";
+    }
+
+    const legacyRefreshToken = getRefreshToken();
+    if (legacyRefreshToken) {
+      const legacyPath = buildLegacyDesktopConnectionSharePath({
+        token: legacyRefreshToken,
+        address: walletAddress,
+        role: getWalletRole(),
+      });
+      const coreUrl = buildLegacyDesktopConnectionShareUrl({
+        coreScheme,
+        deepLinkPath: legacyPath,
+      });
+      setDesktopConnectionShareStatus("ready");
+      setShareConnectionCoreUrl(coreUrl);
+      return coreUrl;
+    }
+
+    const addressKey = walletAddress.toLowerCase();
+    const failureKey = buildConnectionShareFailureKey({
+      addressKey,
+      routerPath,
+      target: "desktop",
+    });
+    const terminalFailure =
+      terminalConnectionShareFailuresRef.current.get(failureKey);
+    if (terminalFailure) {
+      setUnavailableDesktopConnectionShare(terminalFailure);
+      return "";
+    }
+
+    try {
+      setDesktopConnectionShareStatus("loading");
+      const share = await createLegacyDesktopConnectionShare({ signal });
+
+      if (isStaleGeneration()) {
+        return "";
+      }
+
+      const coreUrl = buildLegacyDesktopConnectionShareUrl({
+        coreScheme,
+        deepLinkPath: share.deep_link_path,
+      });
+
+      terminalConnectionShareFailuresRef.current.delete(failureKey);
+      setDesktopConnectionShareStatus("ready");
+      setShareConnectionCoreUrl(coreUrl);
+      return coreUrl;
+    } catch (error: unknown) {
+      if (isStaleGeneration() || isAbortError(error, signal)) {
+        return "";
+      }
+
+      console.error("Failed to create legacy desktop connection share", error);
+      const terminalStatus: TerminalConnectionShareStatus =
+        isSessionUpgradeRequiredError(error) ? "legacy-auth" : "error";
+      terminalConnectionShareFailuresRef.current.set(
+        failureKey,
+        terminalStatus
+      );
+      setUnavailableDesktopConnectionShare(terminalStatus);
+      return "";
+    }
+  }
+
+  function cacheConnectionShare(
+    addressKey: string,
+    share: NativeConnectionShare
+  ): void {
+    const expiresAtMs = Date.parse(share.expires_at);
+    if (Number.isFinite(expiresAtMs)) {
+      cachedConnectionShareRef.current = {
+        addressKey,
+        expiresAtMs,
+        share,
+      };
+    }
+  }
+
+  function setUnavailableMobileConnectionShare(
+    status: ConnectionShareStatus
+  ): void {
+    setMobileConnectionShareStatus(status);
+    setShareConnectionAppUrl("");
+    setShareConnectionSrc("");
+  }
+
+  function setUnavailableDesktopConnectionShare(
+    status: ConnectionShareStatus
+  ): void {
+    setDesktopConnectionShareStatus(status);
+    setShareConnectionCoreUrl("");
+  }
 
   useEffect(() => {
-    setActiveTab(isAuthenticated ? Mode.SHARE : Mode.NAVIGATE);
+    terminalConnectionShareFailuresRef.current.clear();
+  }, [activeWalletAddress, hasValidWalletAuth]);
+
+  useEffect(() => {
+    if (!show) {
+      shareGenerationIdRef.current += 1;
+      cachedConnectionShareRef.current = null;
+      terminalConnectionShareFailuresRef.current.clear();
+      connectionShareAbortRef.current?.abort();
+      connectionShareAbortRef.current = null;
+      const nextStatus: ConnectionShareStatus =
+        hasValidWalletAuth || hasWalletAddress
+          ? "legacy-auth"
+          : "unauthenticated";
+      setMobileConnectionShareStatus(nextStatus);
+      setDesktopConnectionShareStatus(nextStatus);
+      setShareConnectionAppUrl("");
+      setShareConnectionCoreUrl("");
+      setShareConnectionSrc("");
+      return;
+    }
+
+    connectionShareAbortRef.current?.abort();
+    const controller = new AbortController();
+    connectionShareAbortRef.current = controller;
+
+    void generateSources(activeWalletAddress, controller.signal);
+
+    return () => {
+      shareGenerationIdRef.current += 1;
+      controller.abort();
+      if (connectionShareAbortRef.current === controller) {
+        connectionShareAbortRef.current = null;
+      }
+    };
+  }, [
+    show,
+    hasValidWalletAuth,
+    hasWalletAddress,
+    activeWalletAddress,
+    pathname,
+    searchParamsString,
+  ]);
+
+  useEffect(() => {
+    setActiveTab(
+      hasValidWalletAuth || hasWalletAddress ? Mode.SHARE : Mode.NAVIGATE
+    );
     setActiveSubTab(SubMode.APP);
     if (show) return;
     const timer = setTimeout(() => {
@@ -365,7 +891,7 @@ export function HeaderQRModal({
       setShareConnectionSrc("");
     }, 150);
     return () => clearTimeout(timer);
-  }, [show, isAuthenticated]);
+  }, [show, hasValidWalletAuth, hasWalletAddress]);
 
   useEffect(() => {
     if (show) {
@@ -447,32 +973,30 @@ export function HeaderQRModal({
     );
   };
 
-  const renderBrowserLink = (url: string) => {
-    const isDisabled = !url;
-
+  const renderCoreLink = (url: string) => {
     return (
       <div className="tw-flex tw-items-center tw-gap-2" style={squareStyle}>
-        <div className="tw-flex tw-w-full tw-flex-col tw-items-center tw-gap-10 tw-px-4">
+        <a
+          href={url}
+          className="decoration-none tw-flex tw-flex-col tw-items-center tw-gap-8"
+        >
           <Image
             unoptimized
             priority
             loading="eager"
-            src="/6529io.png"
-            alt="6529"
-            width={256}
-            height={256}
-            className="unselectable tw-h-auto tw-w-[8.5rem] tw-rounded-2xl sm:tw-w-[10rem]"
+            src="/6529Core.png"
+            alt={t(HEADER_SHARE_LOCALE, "headerShare.core.alt")}
+            width={150}
+            height={150}
+            className="unselectable"
           />
-          <button
-            type="button"
-            disabled={isDisabled}
-            onClick={() => openInExternalBrowser(url)}
-            className="tw-inline-flex tw-items-center tw-justify-center tw-gap-2 tw-rounded-lg tw-border-0 tw-bg-iron-200 tw-px-8 tw-py-3 tw-text-iron-900 disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
-          >
+          <div className="tw-flex tw-w-full tw-items-center tw-justify-center tw-gap-2 tw-rounded-lg tw-bg-iron-200 tw-px-4 tw-py-3 tw-text-iron-900">
             <FontAwesomeIcon icon={faExternalLink} />
-            <span className="no-wrap">Open in Browser</span>
-          </button>
-        </div>
+            <div className="no-wrap">
+              {t(HEADER_SHARE_LOCALE, "headerShare.core.open")}
+            </div>
+          </div>
+        </a>
       </div>
     );
   };
@@ -482,23 +1006,44 @@ export function HeaderQRModal({
       return {
         content: renderQRCodeImage(
           navigateBrowserSrc,
-          "Browser Link - QR Code"
+          t(HEADER_SHARE_LOCALE, "headerShare.qr.browserAlt")
         ),
         url: navigateBrowserUrl,
       };
     }
 
+    if (activeSubTab === SubMode.CORE) {
+      return {
+        content: renderCoreLink(navigateCoreUrl),
+        url: navigateCoreUrl,
+      };
+    }
+
     return {
-      content: renderQRCodeImage(navigateAppSrc, "Mobile App Link - QR Code"),
+      content: renderQRCodeImage(
+        navigateAppSrc,
+        t(HEADER_SHARE_LOCALE, "headerShare.qr.mobileAlt")
+      ),
       url: navigateAppUrl,
     };
   };
 
   const getShareContent = () => {
-    if (activeSubTab === SubMode.BROWSER) {
+    const activeConnectionShareStatus =
+      activeSubTab === SubMode.CORE
+        ? desktopConnectionShareStatus
+        : mobileConnectionShareStatus;
+    if (activeConnectionShareStatus !== "ready") {
       return {
-        content: renderBrowserLink(shareConnectionBrowserUrl),
-        url: shareConnectionBrowserUrl,
+        content: renderConnectionShareNotice(activeConnectionShareStatus),
+        url: "",
+      };
+    }
+
+    if (activeSubTab === SubMode.CORE) {
+      return {
+        content: renderCoreLink(shareConnectionCoreUrl),
+        url: shareConnectionCoreUrl,
       };
     }
 
@@ -506,16 +1051,117 @@ export function HeaderQRModal({
       return {
         content: renderQRCodeImage(
           shareConnectionSrc,
-          "Share Connection - QR Code"
+          t(HEADER_SHARE_LOCALE, "headerShare.qr.shareConnectionAlt")
         ),
         url: shareConnectionAppUrl,
       };
     }
 
-    return { content: <span>Invalid submode for SHARE</span>, url: "" };
+    return {
+      content: (
+        <span>{t(HEADER_SHARE_LOCALE, "headerShare.invalidShareSubmode")}</span>
+      ),
+      url: "",
+    };
+  };
+
+  const renderConnectionShareNotice = (status: ConnectionShareStatus) => {
+    const isLegacyAuth = status === "legacy-auth";
+    const title = (() => {
+      if (isLegacyAuth) {
+        return t(
+          HEADER_SHARE_LOCALE,
+          "headerShare.connectionNotice.legacyTitle"
+        );
+      }
+      if (status === "loading") {
+        return t(
+          HEADER_SHARE_LOCALE,
+          "headerShare.connectionNotice.loadingTitle"
+        );
+      }
+      if (status === "error") {
+        return t(
+          HEADER_SHARE_LOCALE,
+          "headerShare.connectionNotice.errorTitle"
+        );
+      }
+      return t(
+        HEADER_SHARE_LOCALE,
+        "headerShare.connectionNotice.unauthenticatedTitle"
+      );
+    })();
+    const message = (() => {
+      if (isLegacyAuth) {
+        return t(
+          HEADER_SHARE_LOCALE,
+          "headerShare.connectionNotice.legacyMessage"
+        );
+      }
+      if (status === "loading") {
+        return t(
+          HEADER_SHARE_LOCALE,
+          "headerShare.connectionNotice.loadingMessage"
+        );
+      }
+      if (status === "error") {
+        return t(
+          HEADER_SHARE_LOCALE,
+          "headerShare.connectionNotice.errorMessage"
+        );
+      }
+      return t(
+        HEADER_SHARE_LOCALE,
+        "headerShare.connectionNotice.unauthenticatedMessage"
+      );
+    })();
+
+    return (
+      <div
+        className="tw-flex tw-h-full tw-w-full tw-flex-col tw-items-center tw-justify-center tw-gap-5 tw-rounded-xl tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-900/50 tw-p-8 tw-text-center"
+        style={squareStyle}
+      >
+        <div className="tw-flex tw-flex-col tw-gap-2">
+          <div className="tw-text-lg tw-font-semibold tw-text-iron-50">
+            {title}
+          </div>
+          <div className="tw-text-sm tw-leading-6 tw-text-iron-300">
+            {message}
+          </div>
+        </div>
+        {isLegacyAuth && (
+          <div className="tw-flex tw-w-full tw-gap-3">
+            <button
+              type="button"
+              className="tw-h-10 tw-flex-1 tw-rounded-lg tw-border tw-border-solid tw-border-iron-600 tw-bg-transparent tw-px-4 tw-text-sm tw-font-semibold tw-text-iron-200 hover:tw-bg-iron-800"
+              onClick={onClose}
+            >
+              {t(HEADER_SHARE_LOCALE, "headerShare.connectionNotice.cancel")}
+            </button>
+            <button
+              type="button"
+              className="tw-h-10 tw-flex-1 tw-rounded-lg tw-border-0 tw-bg-iron-100 tw-px-4 tw-text-sm tw-font-semibold tw-text-iron-950 hover:tw-bg-white"
+              onClick={() => {
+                onClose();
+                terminalConnectionShareFailuresRef.current.clear();
+                requestSessionUpgrade?.().catch((error: unknown) => {
+                  console.error("Failed to request session upgrade", error);
+                });
+              }}
+            >
+              {t(HEADER_SHARE_LOCALE, "headerShare.connectionNotice.update")}
+            </button>
+          </div>
+        )}
+      </div>
+    );
   };
 
   const getAppsContent = () => {
+    if (activeSubTab === SubMode.CORE) {
+      return { content: <CoreAppsDownload />, url: "" };
+    }
+
     return {
       content: (
         <div
@@ -562,7 +1208,7 @@ export function HeaderQRModal({
             </div>
             <button
               type="button"
-              aria-label="Copy URL"
+              aria-label={t(HEADER_SHARE_LOCALE, "headerShare.copy.ariaLabel")}
               className="tw-inline-flex tw-h-8 tw-w-8 tw-items-center tw-justify-center tw-rounded-md tw-border-0 tw-bg-transparent tw-text-iron-400 tw-transition-colors hover:tw-bg-iron-800 hover:tw-text-iron-100"
               data-tooltip-id="copy-url-tooltip"
               onClick={async () => {
@@ -589,7 +1235,11 @@ export function HeaderQRModal({
             <Tooltip
               id="copy-url-tooltip"
               place="top-end"
-              content={urlCopied ? "Copied!" : "Copy URL"}
+              content={
+                urlCopied
+                  ? t(HEADER_SHARE_LOCALE, "headerShare.copy.copied")
+                  : t(HEADER_SHARE_LOCALE, "headerShare.copy.default")
+              }
               openEvents={isMobile ? { click: true } : { mouseenter: true }}
               closeEvents={isMobile ? { click: true } : { mouseleave: true }}
               positionStrategy="fixed"
@@ -621,7 +1271,7 @@ export function HeaderQRModal({
     >
       <button
         type="button"
-        aria-label="Close share modal"
+        aria-label={t(HEADER_SHARE_LOCALE, "headerShare.modal.closeAriaLabel")}
         className="tw-absolute tw-inset-0 tw-border-0 tw-bg-transparent"
         onClick={onClose}
       />
@@ -640,10 +1290,9 @@ export function HeaderQRModal({
       >
         <div className="tw-flex tw-flex-col tw-gap-2">
           <h2 id="header-share-title" className="tw-sr-only">
-            Share
+            {t(HEADER_SHARE_LOCALE, "headerShare.modal.title")}
           </h2>
           <ModalMenu
-            isShareConnection={!!getRefreshToken()}
             activeTab={activeTab}
             activeSubTab={activeSubTab}
             onTabChange={(tab, subTab) => {
@@ -659,18 +1308,17 @@ export function HeaderQRModal({
 }
 
 function ModalMenu({
-  isShareConnection,
   activeTab,
   activeSubTab,
   onTabChange,
 }: {
-  readonly isShareConnection?: boolean | undefined;
   readonly activeTab: Mode;
   readonly activeSubTab: SubMode;
   readonly onTabChange: (tab: Mode, subTab: SubMode) => void;
 }) {
-  const topTabCount = isShareConnection ? 3 : 2;
-  const subTabCount = getSubTabCount(activeTab);
+  const isElectron = useElectron() ?? false;
+  const topTabCount = 3;
+  const subTabCount = getSubTabCount(activeTab, isElectron);
   const subTabLabel = getSubTabLabel(activeTab);
   const getMenuButtonClass = (active: boolean) => {
     const baseClassName =
@@ -687,7 +1335,7 @@ function ModalMenu({
     <div className="tw-flex tw-flex-col tw-gap-2">
       <div className="tw-flex tw-flex-col tw-gap-1">
         <div className="tw-px-1 tw-text-[11px] tw-font-bold tw-uppercase tw-tracking-[0.08em] tw-text-iron-500">
-          Share Type
+          {t(HEADER_SHARE_LOCALE, "headerShare.menu.shareType")}
         </div>
         <div
           className="tw-grid tw-gap-2"
@@ -695,23 +1343,21 @@ function ModalMenu({
             gridTemplateColumns: `repeat(${topTabCount}, minmax(0, 1fr))`,
           }}
         >
-          {isShareConnection && (
-            <button
-              type="button"
-              disabled={activeTab === Mode.SHARE}
-              className={getMenuButtonClass(activeTab === Mode.SHARE)}
-              onClick={() => onTabChange(Mode.SHARE, SubMode.APP)}
-            >
-              Connection
-            </button>
-          )}
+          <button
+            type="button"
+            disabled={activeTab === Mode.SHARE}
+            className={getMenuButtonClass(activeTab === Mode.SHARE)}
+            onClick={() => onTabChange(Mode.SHARE, SubMode.APP)}
+          >
+            {t(HEADER_SHARE_LOCALE, "headerShare.menu.connection")}
+          </button>
           <button
             type="button"
             disabled={activeTab === Mode.NAVIGATE}
             className={getMenuButtonClass(activeTab === Mode.NAVIGATE)}
             onClick={() => onTabChange(Mode.NAVIGATE, SubMode.APP)}
           >
-            Current URL
+            {t(HEADER_SHARE_LOCALE, "headerShare.menu.currentUrl")}
           </button>
           <button
             type="button"
@@ -719,7 +1365,7 @@ function ModalMenu({
             className={getMenuButtonClass(activeTab === Mode.APPS)}
             onClick={() => onTabChange(Mode.APPS, SubMode.APP)}
           >
-            6529 Apps
+            {t(HEADER_SHARE_LOCALE, "headerShare.menu.apps")}
           </button>
         </div>
       </div>
@@ -740,20 +1386,102 @@ function ModalMenu({
             className={getMenuButtonClass(activeSubTab === SubMode.APP)}
             onClick={() => onTabChange(activeTab, SubMode.APP)}
           >
-            <span>6529 Mobile</span>
+            <span>{t(HEADER_SHARE_LOCALE, "headerShare.menu.mobile")}</span>
           </button>
-          {(activeTab === Mode.NAVIGATE || activeTab === Mode.SHARE) && (
+          {activeTab === Mode.NAVIGATE && (
             <button
               type="button"
               disabled={activeSubTab === SubMode.BROWSER}
               className={getMenuButtonClass(activeSubTab === SubMode.BROWSER)}
               onClick={() => onTabChange(activeTab, SubMode.BROWSER)}
             >
-              <span>Browser</span>
+              <span>{t(HEADER_SHARE_LOCALE, "headerShare.menu.browser")}</span>
+            </button>
+          )}
+          {!isElectron && (
+            <button
+              type="button"
+              disabled={activeSubTab === SubMode.CORE}
+              className={getMenuButtonClass(activeSubTab === SubMode.CORE)}
+              onClick={() => onTabChange(activeTab, SubMode.CORE)}
+            >
+              <span>{t(HEADER_SHARE_LOCALE, "headerShare.menu.desktop")}</span>
             </button>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+function CoreAppsDownload() {
+  const { data: versions = [] } = useQuery({
+    queryKey: ["core-apps-versions"],
+    queryFn: fetchCoreAppsVersions,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  return (
+    <div style={squareStyle}>
+      <div className="tw-inline-flex tw-flex-col tw-gap-10">
+        {versions.map((version) => (
+          <CoreAppDownload
+            key={version.name}
+            platform={version.displayName}
+            icon={version.image}
+            title={version.displayName}
+            downloadPath={version.downloadPath}
+            version={version.version ?? ""}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CoreAppDownload({
+  platform,
+  icon,
+  title,
+  downloadPath,
+  version,
+}: {
+  readonly platform: string;
+  readonly icon: string;
+  readonly title: string;
+  readonly downloadPath: string;
+  readonly version: string;
+}) {
+  if (!version) {
+    return null;
+  }
+
+  const url = `https://d3lqz0a4bldqgf.cloudfront.net/${downloadPath}/${version}.html`;
+
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="decoration-none tw-flex tw-w-full tw-items-center tw-gap-4 tw-rounded-lg tw-border tw-border-solid tw-border-white tw-bg-black tw-px-5 tw-py-3 tw-transition-all tw-duration-300 tw-ease-out hover:tw-scale-[1.03]"
+    >
+      <div className="tw-rounded-full tw-bg-white tw-p-4">
+        <Image
+          unoptimized
+          priority
+          loading="eager"
+          src={icon}
+          alt={title}
+          width={40}
+          height={40}
+          className="unselectable"
+        />
+      </div>
+      <div className="tw-flex tw-w-full tw-items-center tw-gap-2">
+        <div className="no-wrap tw-text-lg tw-font-medium">
+          {platform} v{version}
+        </div>
+      </div>
+    </a>
   );
 }

@@ -28,8 +28,10 @@ jest.mock("next/dynamic", () => () => {
 jest.mock(
   "@/components/navigation/BottomNavigation",
   () =>
-    function BottomNavigation() {
-      return <div data-testid="bottom-nav" />;
+    function BottomNavigation({ hidden }: { readonly hidden?: boolean }) {
+      return (
+        <div data-testid="bottom-nav" data-hidden={`${Boolean(hidden)}`} />
+      );
     }
 );
 jest.mock(
@@ -83,6 +85,11 @@ jest.mock("@/hooks/useMemesQuickVoteDialogController", () => ({
 
     return {
       closeQuickVote: () => setIsQuickVoteOpen(false),
+      dialogState: {
+        isOpen: isQuickVoteOpen,
+        onClose: () => setIsQuickVoteOpen(false),
+        sessionId: quickVoteSessionId,
+      },
       isQuickVoteOpen,
       openQuickVote: () => {
         const sessionId =
@@ -175,7 +182,7 @@ describe("AppLayout", () => {
     const appWrapper = container.firstElementChild as HTMLElement;
 
     expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
-      "85px"
+      "104px"
     );
   });
 
@@ -186,6 +193,75 @@ describe("AppLayout", () => {
     const appWrapper = container.firstElementChild as HTMLElement;
 
     expect(screen.queryByTestId("bottom-nav")).not.toBeInTheDocument();
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
+  });
+
+  it("lets notification route content own floating bottom nav clearance", () => {
+    usePathname.mockReturnValue("/notifications");
+
+    const { container } = renderWithProvider(<AppLayout>child</AppLayout>);
+    const appWrapper = container.firstElementChild as HTMLElement;
+
+    expect(screen.getByTestId("bottom-nav")).toHaveAttribute(
+      "data-hidden",
+      "false"
+    );
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
+  });
+
+  it("lets waves and messages routes own floating bottom nav clearance", () => {
+    usePathname.mockReturnValue("/waves");
+
+    const { container, rerender } = renderWithProvider(
+      <AppLayout>child</AppLayout>
+    );
+    const appWrapper = container.firstElementChild as HTMLElement;
+
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
+
+    usePathname.mockReturnValue("/messages");
+    rerender(
+      <Provider store={store}>
+        <AppLayout>child</AppLayout>
+      </Provider>
+    );
+
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
+  });
+
+  it("slides the bottom nav away and clears spacing on wave detail routes", () => {
+    usePathname.mockReturnValue("/waves/wave-1");
+
+    const { container } = renderWithProvider(<AppLayout>child</AppLayout>);
+    const appWrapper = container.firstElementChild as HTMLElement;
+
+    expect(screen.getByTestId("bottom-nav")).toHaveAttribute(
+      "data-hidden",
+      "true"
+    );
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
+  });
+
+  it("slides the bottom nav away and clears spacing on message detail routes", () => {
+    usePathname.mockReturnValue("/messages/dm-1");
+
+    const { container } = renderWithProvider(<AppLayout>child</AppLayout>);
+    const appWrapper = container.firstElementChild as HTMLElement;
+
+    expect(screen.getByTestId("bottom-nav")).toHaveAttribute(
+      "data-hidden",
+      "true"
+    );
     expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
       "0px"
     );
@@ -223,8 +299,15 @@ describe("AppLayout", () => {
 
   it("renders waves or messages view based on the view query param", () => {
     getSearchParams.mockReturnValue(new URLSearchParams("view=waves"));
-    const { rerender } = renderWithProvider(<AppLayout>child</AppLayout>);
+    const { container, rerender } = renderWithProvider(
+      <AppLayout>child</AppLayout>
+    );
+    const appWrapper = container.firstElementChild as HTMLElement;
+
     expect(screen.getByTestId("waves")).toBeInTheDocument();
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
 
     getSearchParams.mockReturnValue(new URLSearchParams("view=messages"));
     rerender(
@@ -233,6 +316,9 @@ describe("AppLayout", () => {
       </Provider>
     );
     expect(screen.getByTestId("messages")).toBeInTheDocument();
+    expect(appWrapper.style.getPropertyValue(bottomReserveProperty)).toBe(
+      "0px"
+    );
   });
 
   it("uses root view params for app shell content instead of route children", () => {
