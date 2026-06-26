@@ -87,6 +87,13 @@ export interface ElectronStore {
   remove: (key: string) => Promise<void>;
 }
 
+export interface ElectronNativeAuth {
+  isAvailable: () => Promise<boolean>;
+  getRefreshToken: (key: string) => Promise<string | null>;
+  setRefreshToken: (key: string, refreshToken: string) => Promise<void>;
+  removeRefreshToken: (key: string) => Promise<void>;
+}
+
 export interface ElectronNotifications {
   showNotification: (
     id: number,

@@ -1,4 +1,4 @@
-import { setActiveWalletAccount, setAuthJwt } from "@/services/auth/auth.utils";
+import { setActiveWalletAccount } from "@/services/auth/auth.utils";
 import { createConnector } from "wagmi";
 import { mainnet, sepolia } from "viem/chains";
 
@@ -373,14 +373,6 @@ export function browserConnector(parameters: {
               accounts: validatedAccounts,
               chainId: validatedChainId,
             };
-            const auth = response.auth as
-              | {
-                  address?: string;
-                  token?: string;
-                  refreshToken?: string;
-                  role?: string | null;
-                }
-              | undefined;
             const responseActiveAddressLower =
               typeof response?.activeAddress === "string"
                 ? response.activeAddress.toLowerCase()
@@ -392,47 +384,6 @@ export function browserConnector(parameters: {
               )
                 ? (responseActiveAddressLower as `0x${string}`)
                 : validatedAccounts[0];
-            const authAddressLower =
-              typeof auth?.address === "string"
-                ? auth.address.toLowerCase()
-                : undefined;
-            const matchingAuthAccount =
-              typeof authAddressLower === "string"
-                ? validatedAccounts.find(
-                    (account) => account === authAddressLower
-                  )
-                : undefined;
-            const hasMatchingAuthAddress =
-              typeof matchingAuthAccount === "string";
-            const shouldPersistAuthForConnectedAccount =
-              hasMatchingAuthAddress &&
-              typeof primaryConnectedAccount === "string" &&
-              matchingAuthAccount === primaryConnectedAccount;
-
-            if (
-              shouldPersistAuthForConnectedAccount &&
-              typeof auth?.token === "string" &&
-              typeof auth?.refreshToken === "string"
-            ) {
-              setAuthJwt(
-                matchingAuthAccount,
-                auth.token,
-                auth.refreshToken,
-                auth.role ?? undefined
-              );
-            } else if (
-              typeof auth?.address === "string" &&
-              typeof auth?.token === "string" &&
-              typeof auth?.refreshToken === "string"
-            ) {
-              console.warn(
-                `[${this.name}] Ignoring browser auth payload with non-matching address`,
-                {
-                  authAddress: auth.address,
-                  connectedAccounts: validatedAccounts,
-                }
-              );
-            }
 
             const accountToActivate = primaryConnectedAccount;
             if (typeof accountToActivate === "string") {

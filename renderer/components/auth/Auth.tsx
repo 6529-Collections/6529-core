@@ -34,6 +34,7 @@ import type { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import type { ApiWave } from "@/generated/models/ApiWave";
+import { isElectron } from "@/helpers";
 import { safeLocalStorage } from "@/helpers/safeLocalStorage";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
@@ -456,7 +457,7 @@ const formatSessionUpgradeTimeLeft = (timeLeftMs: number): string => {
 const getSessionUpgradePromptMode = (
   canSignActiveWallet: boolean
 ): SessionUpgradePromptMode => {
-  if (canSignActiveWallet || getSessionClientType() === "web") {
+  if (canSignActiveWallet || getSessionClientType() === "web" || isElectron()) {
     return "sign";
   }
   return "reshare";
@@ -637,6 +638,8 @@ export default function Auth({
   );
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const isBrowserConnectorRoute =
+    pathname?.startsWith("/browser-connector") === true;
   const router = useRouter();
   const seizeSettingsContext = useSeizeSettingsOptional();
 
@@ -936,6 +939,14 @@ export default function Auth({
       return undefined;
     }
 
+    if (isBrowserConnectorRoute) {
+      abortCurrentAuthOperation();
+      setShowSignModal(false);
+      setAuthLoadingState("idle");
+      setSessionUpgradeRequired(false);
+      return undefined;
+    }
+
     // Clear previous operations when dependencies change
     abortCurrentAuthOperation();
 
@@ -1022,6 +1033,7 @@ export default function Auth({
     activeProfileProxy,
     connectionState,
     enableWalletAuthentication,
+    isBrowserConnectorRoute,
     isAddressAuthorized,
     isConnected,
     hasActiveWalletAddress,
@@ -1935,11 +1947,10 @@ export default function Auth({
   const isSessionUpgradePrompt = signModalReason === "session-upgrade";
   const isConnectionShareUpgradePrompt =
     isSessionUpgradePrompt && sessionUpgradePromptMode === "reshare";
-  const isDisconnectedWebSessionUpgradePrompt =
+  const isDisconnectedSessionUpgradePrompt =
     isSessionUpgradePrompt &&
     sessionUpgradePromptMode === "sign" &&
-    !canSignActiveWallet &&
-    getSessionClientType() === "web";
+    !canSignActiveWallet;
 
   // Computed modal visibility to prevent flickering during rapid state changes
   const shouldShowSignModal = useMemo(() => {
@@ -1949,12 +1960,12 @@ export default function Auth({
     return (
       showSignModal &&
       !shouldHideDuringValidation &&
-      (connectionState === "connected" || isDisconnectedWebSessionUpgradePrompt)
+      (connectionState === "connected" || isDisconnectedSessionUpgradePrompt)
     );
   }, [
     authLoadingState,
     connectionState,
-    isDisconnectedWebSessionUpgradePrompt,
+    isDisconnectedSessionUpgradePrompt,
     showSignModal,
     signModalReason,
   ]);
@@ -1986,7 +1997,7 @@ export default function Auth({
     if (isConnectionShareUpgradePrompt) {
       return t(AUTH_MODAL_LOCALE, "auth.signModal.connectionSharePrimary");
     }
-    if (isDisconnectedWebSessionUpgradePrompt) {
+    if (isDisconnectedSessionUpgradePrompt) {
       return t(AUTH_MODAL_LOCALE, "auth.signModal.disconnectedUpgradePrimary");
     }
     if (isSessionUpgradePrompt) {
@@ -2011,7 +2022,7 @@ export default function Auth({
       timeLeft: sessionUpgradeTimeLeftText,
     });
   })();
-  const signModalConfirmText = isDisconnectedWebSessionUpgradePrompt
+  const signModalConfirmText = isDisconnectedSessionUpgradePrompt
     ? t(AUTH_MODAL_LOCALE, "auth.signModal.connect")
     : t(AUTH_MODAL_LOCALE, "auth.signModal.sign");
   const reconnectActiveWalletForSessionUpgrade = async (): Promise<void> => {
@@ -2022,10 +2033,11 @@ export default function Auth({
       return;
     }
 
+    setShowSignModal(false);
     seizeConnect();
   };
   const onConfirmSignRequest = () => {
-    if (isDisconnectedWebSessionUpgradePrompt) {
+    if (isDisconnectedSessionUpgradePrompt) {
       void reconnectActiveWalletForSessionUpgrade();
       return;
     }
@@ -2101,7 +2113,7 @@ export default function Auth({
 
             <ul className={styles["signModalList"]}>
               <li>{signModalPrimaryListItem}</li>
-              {isDisconnectedWebSessionUpgradePrompt && (
+              {isDisconnectedSessionUpgradePrompt && (
                 <li>{signModalSharedConnectionListItem}</li>
               )}
               <li>{signModalSecondaryListItem}</li>

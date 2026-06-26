@@ -151,6 +151,18 @@ export const store = {
 
 contextBridge.exposeInMainWorld("store", store);
 
+export const nativeAuth = {
+  isAvailable: () => ipcRenderer.invoke("native-auth:is-available"),
+  getRefreshToken: (key: string) =>
+    ipcRenderer.invoke("native-auth:get-refresh-token", key),
+  setRefreshToken: (key: string, refreshToken: string) =>
+    ipcRenderer.invoke("native-auth:set-refresh-token", key, refreshToken),
+  removeRefreshToken: (key: string) =>
+    ipcRenderer.invoke("native-auth:remove-refresh-token", key),
+};
+
+contextBridge.exposeInMainWorld("nativeAuth", nativeAuth);
+
 export const notifications = {
   showNotification: (
     id: number,
@@ -273,6 +285,7 @@ export const localDb = {
 contextBridge.exposeInMainWorld("localDb", localDb);
 
 export type ElectronAPI = typeof api;
+export type ElectronNativeAuth = typeof nativeAuth;
 export type ElectronStore = typeof store;
 export type ElectronUpdater = typeof updater;
 export type ElectronSeedConnector = typeof seedConnector;

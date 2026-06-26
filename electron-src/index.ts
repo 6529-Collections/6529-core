@@ -4,6 +4,7 @@ import {
   IpcMainEvent,
   IpcMainInvokeEvent,
   protocol,
+  safeStorage,
   screen,
   shell,
 } from "electron";
@@ -109,6 +110,68 @@ const SPLASH_MIN_WIDTH = 680;
 const SPLASH_MIN_HEIGHT = 300;
 const SPLASH_LEFT_MIN_WIDTH_PX = 320;
 const SPLASH_SCREEN_RATIO = 0.5;
+const NATIVE_AUTH_REFRESH_TOKEN_KEY_PREFIX = "6529-native-refresh-token:";
+const NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION = 1;
+
+interface StoredNativeRefreshToken {
+  readonly version: typeof NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION;
+  readonly cipherTextBase64: string;
+}
+
+function assertNativeAuthRefreshTokenKey(key: string): void {
+  if (
+    typeof key !== "string" ||
+    !key.startsWith(NATIVE_AUTH_REFRESH_TOKEN_KEY_PREFIX)
+  ) {
+    throw new Error("Invalid native auth refresh token key");
+  }
+}
+
+function getEncryptedNativeRefreshToken(key: string): string | null {
+  assertNativeAuthRefreshTokenKey(key);
+  const storedValue = getValue(key);
+  if (
+    !storedValue ||
+    typeof storedValue !== "object" ||
+    storedValue.version !== NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION ||
+    typeof storedValue.cipherTextBase64 !== "string"
+  ) {
+    return null;
+  }
+
+  try {
+    return safeStorage.decryptString(
+      Buffer.from(storedValue.cipherTextBase64, "base64")
+    );
+  } catch (error) {
+    Logger.warn("Failed to decrypt native auth refresh token", error);
+    return null;
+  }
+}
+
+function setEncryptedNativeRefreshToken(
+  key: string,
+  refreshToken: string
+): void {
+  assertNativeAuthRefreshTokenKey(key);
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error("Native auth secure storage is unavailable");
+  }
+
+  const cipherTextBase64 = safeStorage
+    .encryptString(refreshToken)
+    .toString("base64");
+  const storedValue: StoredNativeRefreshToken = {
+    version: NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION,
+    cipherTextBase64,
+  };
+  setValue(key, storedValue);
+}
+
+function removeEncryptedNativeRefreshToken(key: string): void {
+  assertNativeAuthRefreshTokenKey(key);
+  removeValue(key);
+}
 
 function isLocalIpfsApiUrl(url: string): boolean {
   return url.startsWith(IPFS_SERVER.getApiEndpoint());
@@ -329,6 +392,12 @@ if (!gotTheLock) {
       mainWindow?.webContents.send(
         "navigate",
         `${urlObj.pathname}?${urlObj.searchParams.toString()}`,
+      );
+    } else if (urlObj.host === "share-connection") {
+      Logger.info("Handling share connection Deep Link");
+      mainWindow?.webContents.send(
+        "navigate",
+        `/accept-connection-sharing?${urlObj.searchParams.toString()}`,
       );
     } else {
       Logger.info("Unknown Deep Link", urlObj);
@@ -1064,6 +1133,28 @@ ipcMain.handle("store:set", (_event, key, value) => {
 
 ipcMain.handle("store:remove", (_event, key) => {
   removeValue(key);
+});
+
+ipcMain.handle("native-auth:is-available", () => {
+  return safeStorage.isEncryptionAvailable();
+});
+
+ipcMain.handle("native-auth:get-refresh-token", (_event, key: string) => {
+  if (!safeStorage.isEncryptionAvailable()) {
+    return null;
+  }
+  return getEncryptedNativeRefreshToken(key);
+});
+
+ipcMain.handle(
+  "native-auth:set-refresh-token",
+  (_event, key: string, refreshToken: string) => {
+    setEncryptedNativeRefreshToken(key, refreshToken);
+  }
+);
+
+ipcMain.handle("native-auth:remove-refresh-token", (_event, key: string) => {
+  removeEncryptedNativeRefreshToken(key);
 });
 
 ipcMain.on(

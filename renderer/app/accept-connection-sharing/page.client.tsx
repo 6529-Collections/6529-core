@@ -10,6 +10,7 @@ import { Spinner } from "@/components/dotLoader/DotLoader";
 import { useSetTitle } from "@/contexts/TitleContext";
 import type { ApiRedeemRefreshTokenRequest } from "@/generated/models/ApiRedeemRefreshTokenRequest";
 import type { ApiRedeemRefreshTokenResponse } from "@/generated/models/ApiRedeemRefreshTokenResponse";
+import { isElectron } from "@/helpers";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { useIdentity } from "@/hooks/useIdentity";
 import { formatInteger } from "@/i18n/format";
@@ -459,12 +460,14 @@ function AcceptConnectionSharing(
   const [acceptingConnection, setAcceptingConnection] = useState(false);
   const hasConnectionShareCode = connectionShareCode.trim().length > 0;
   const hasLegacyDesktopToken = token.trim().length > 0;
+  const supportsNativeConnectionShare =
+    Capacitor.isNativePlatform() || isElectron();
   const hasUnsupportedWebConnectionShare =
     hasConnectionShareCode &&
     !hasLegacyDesktopToken &&
-    !Capacitor.isNativePlatform();
+    !supportsNativeConnectionShare;
   const isConnectionShareFlow =
-    hasConnectionShareCode && Capacitor.isNativePlatform();
+    hasConnectionShareCode && supportsNativeConnectionShare;
   const isLegacyDesktopConnectionFlow =
     hasLegacyDesktopToken && address.trim().length > 0;
   const isIncomingConnectionAlreadyStored =

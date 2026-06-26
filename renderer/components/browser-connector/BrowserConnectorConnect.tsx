@@ -9,7 +9,6 @@ import {
   useChains,
   useSwitchChain,
 } from "wagmi";
-import { getConnectedWalletAccounts } from "../../services/auth/auth.utils";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import styles from "./BrowserConnector.module.scss";
@@ -37,48 +36,13 @@ export default function BrowserConnectorConnect(
 
   const [isRequestedChain, setIsRequestedChain] = useState(false);
 
-  const getAuthForConnectedAddress = useCallback(() => {
-    if (!liveAddress) {
-      return {
-        address: null,
-        token: null,
-        refreshToken: null,
-        role: null,
-      };
-    }
-
-    const normalizedLiveAddress = liveAddress.toLowerCase();
-    const matchedStoredAccount = getConnectedWalletAccounts().find(
-      (storedAccount) =>
-        storedAccount.address.toLowerCase() === normalizedLiveAddress
-    );
-
-    if (!matchedStoredAccount) {
-      return {
-        address: null,
-        token: null,
-        refreshToken: null,
-        role: null,
-      };
-    }
-
-    return {
-      address: matchedStoredAccount.address,
-      token: matchedStoredAccount.jwt,
-      refreshToken: matchedStoredAccount.refreshToken,
-      role: matchedStoredAccount.role,
-    };
-  }, [liveAddress]);
-
   const openApp = useCallback(() => {
     const normalizedLiveAddress =
       typeof liveAddress === "string" ? liveAddress.toLowerCase() : null;
-    const auth = getAuthForConnectedAddress();
     const connectionInfo = {
       accounts: normalizedLiveAddress ? [normalizedLiveAddress] : [],
       chainId: liveChainId ?? requestedChainId,
       activeAddress: normalizedLiveAddress,
-      auth,
     };
     const serializedInfo = JSON.stringify({
       requestId,
@@ -90,7 +54,6 @@ export default function BrowserConnectorConnect(
     window.location.href = deepLink;
     props.setCompleted(true);
   }, [
-    getAuthForConnectedAddress,
     liveAddress,
     liveChainId,
     props.scheme,

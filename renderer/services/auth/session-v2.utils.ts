@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { isElectron } from "@/helpers";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { setAuthJwt } from "./auth.utils";
@@ -73,7 +74,7 @@ interface RedeemConnectionShareResponse {
 }
 
 export function getSessionClientType(): AuthSessionClientType {
-  return Capacitor.isNativePlatform() ? "native" : "web";
+  return Capacitor.isNativePlatform() || isElectron() ? "native" : "web";
 }
 
 function isUnauthorizedApiError(error: unknown): boolean {
@@ -228,10 +229,14 @@ export async function persistSessionResponse(
       return false;
     }
 
-    await setNativeRefreshToken({
-      address: response.address,
-      refreshToken: response.native_refresh_token,
-    });
+    try {
+      await setNativeRefreshToken({
+        address: response.address,
+        refreshToken: response.native_refresh_token,
+      });
+    } catch {
+      return false;
+    }
     didPersistNativeRefreshToken = true;
   }
 

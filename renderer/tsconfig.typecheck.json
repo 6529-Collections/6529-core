@@ -13,6 +13,7 @@
     "generated/**",
     "__tests__/**",
     "__mocks__/**",
+    "out/**",
     "tests/**",
     "e2e/**",
     "**/*.test.ts",

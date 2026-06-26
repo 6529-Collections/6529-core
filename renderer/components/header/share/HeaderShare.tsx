@@ -145,6 +145,19 @@ function buildNativeConnectionShareUrls({
   };
 }
 
+function buildNativeConnectionSharePath({
+  share,
+}: {
+  readonly share: NativeConnectionShare;
+}): string {
+  const shareParams = new URLSearchParams({
+    connection_share_code: share.connection_share_code,
+    address: share.address,
+  });
+
+  return `/accept-connection-sharing?${shareParams.toString()}`;
+}
+
 function buildLegacyDesktopConnectionSharePath({
   token,
   address,
@@ -742,6 +755,69 @@ export function HeaderQRModal({
       return "";
     }
 
+    const addressKey = walletAddress.toLowerCase();
+    const failureKey = buildConnectionShareFailureKey({
+      addressKey,
+      routerPath,
+      target: "desktop",
+    });
+    const terminalFailure =
+      terminalConnectionShareFailuresRef.current.get(failureKey);
+    if (terminalFailure) {
+      setUnavailableDesktopConnectionShare(terminalFailure);
+      return "";
+    }
+
+    try {
+      setDesktopConnectionShareStatus("loading");
+      let hasActiveSession = false;
+      try {
+        if (ensureActiveSessionV2WebSession) {
+          hasActiveSession = await ensureActiveSessionV2WebSession(signal);
+        }
+      } catch (error: unknown) {
+        if (isStaleGeneration() || isAbortError(error, signal)) {
+          return "";
+        }
+
+        console.error("Failed to verify active desktop session", error);
+      }
+
+      if (isStaleGeneration() || signal?.aborted) {
+        return "";
+      }
+
+      if (hasActiveSession) {
+        const cachedShare = getCachedConnectionShare(
+          cachedConnectionShareRef.current,
+          addressKey
+        );
+        const share = cachedShare ?? (await createConnectionShare({ signal }));
+
+        if (isStaleGeneration()) {
+          return "";
+        }
+
+        cacheConnectionShare(addressKey, share);
+        const coreUrl = buildLegacyDesktopConnectionShareUrl({
+          coreScheme,
+          deepLinkPath:
+            share.deep_link_path || buildNativeConnectionSharePath({ share }),
+        });
+
+        terminalConnectionShareFailuresRef.current.delete(failureKey);
+        setDesktopConnectionShareStatus("ready");
+        setShareConnectionCoreUrl(coreUrl);
+        return coreUrl;
+      }
+    } catch (error: unknown) {
+      if (isStaleGeneration() || isAbortError(error, signal)) {
+        return "";
+      }
+
+      console.error("Failed to create desktop connection share", error);
+    }
+
     const legacyRefreshToken = getRefreshToken();
     if (legacyRefreshToken) {
       const legacyPath = buildLegacyDesktopConnectionSharePath({
@@ -756,19 +832,6 @@ export function HeaderQRModal({
       setDesktopConnectionShareStatus("ready");
       setShareConnectionCoreUrl(coreUrl);
       return coreUrl;
-    }
-
-    const addressKey = walletAddress.toLowerCase();
-    const failureKey = buildConnectionShareFailureKey({
-      addressKey,
-      routerPath,
-      target: "desktop",
-    });
-    const terminalFailure =
-      terminalConnectionShareFailuresRef.current.get(failureKey);
-    if (terminalFailure) {
-      setUnavailableDesktopConnectionShare(terminalFailure);
-      return "";
     }
 
     try {
