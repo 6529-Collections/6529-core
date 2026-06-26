@@ -18,6 +18,10 @@ type WaveTrustSignalsVariant =
   | "sidebar-inline"
   | "header-inline";
 type WaveTrustSignalsMode = "details" | "summary";
+interface WaveScoreSummaryHeader {
+  readonly title: string;
+  readonly meta?: ReactNode | undefined;
+}
 
 interface WaveTrustSignalsProps {
   readonly waveRep?: ApiWaveRepSummary | null | undefined;
@@ -302,7 +306,7 @@ const getChipLabelClasses = (variant: WaveTrustSignalsVariant): string => {
 
 const getIconClasses = (variant: WaveTrustSignalsVariant): string => {
   if (isInlineSidebarVariant(variant)) {
-    return "tw-size-3 tw-flex-shrink-0 tw-opacity-[0.55]";
+    return "tw-size-[13px] tw-flex-shrink-0 tw-opacity-[0.64]";
   }
 
   if (isInlineHeaderVariant(variant)) {
@@ -484,6 +488,7 @@ const buildRepDetails = ({
 
 function WaveScoreSummaryPopoverContent({
   learnMoreHref,
+  summaryHeader,
   visibilityScore,
   qualityScore,
   hotnessScore,
@@ -491,6 +496,7 @@ function WaveScoreSummaryPopoverContent({
   waveRep,
 }: {
   readonly learnMoreHref?: string | undefined;
+  readonly summaryHeader?: WaveScoreSummaryHeader | undefined;
   readonly visibilityScore: string;
   readonly qualityScore: string | null;
   readonly hotnessScore: string | null;
@@ -543,7 +549,24 @@ function WaveScoreSummaryPopoverContent({
   ];
 
   return (
-    <div className="tw-w-48 tw-bg-transparent tw-text-left tw-text-[11px] tw-leading-4 tw-text-iron-300">
+    <div
+      className={`${summaryHeader === undefined ? "tw-w-48" : "tw-w-64"} tw-bg-transparent tw-text-left tw-text-[11px] tw-leading-4 tw-text-iron-300`}
+    >
+      {summaryHeader !== undefined && (
+        <div className="tw-mb-2 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-white/10 tw-pb-2">
+          <div
+            className="tw-truncate tw-text-sm tw-font-semibold tw-leading-5 tw-text-white"
+            title={summaryHeader.title}
+          >
+            {summaryHeader.title}
+          </div>
+          {summaryHeader.meta !== undefined && (
+            <div className="tw-mt-0.5 tw-flex tw-items-center tw-gap-1.5 tw-text-[11px] tw-leading-4 tw-text-iron-400">
+              {summaryHeader.meta}
+            </div>
+          )}
+        </div>
+      )}
       <div className="tw-flex tw-items-baseline tw-justify-between tw-gap-3">
         <span className="tw-font-semibold tw-text-white">
           {t(WAVE_TRUST_LOCALE, "waves.score.summary.title")}
@@ -581,25 +604,34 @@ function WaveScoreSummaryPopoverContent({
   );
 }
 
-function WaveScoreSummaryHoverCard({
+export function WaveScoreSummaryHoverCard({
   children,
+  closeOnContentClick,
   learnMoreHref,
+  stopClickPropagation,
+  summaryHeader,
   triggerDisplay,
-  visibilityScore,
-  qualityScore,
-  hotnessScore,
-  repSortScore,
   waveRep,
+  waveScore,
 }: {
   readonly children: ReactElement;
+  readonly closeOnContentClick?: boolean | undefined;
   readonly learnMoreHref?: string | undefined;
+  readonly stopClickPropagation?: boolean | undefined;
+  readonly summaryHeader?: WaveScoreSummaryHeader | undefined;
   readonly triggerDisplay?: "contents" | "inline-flex" | undefined;
-  readonly visibilityScore: string;
-  readonly qualityScore: string | null;
-  readonly hotnessScore: string | null;
-  readonly repSortScore: string | null;
   readonly waveRep: ApiWaveRepSummary | null | undefined;
+  readonly waveScore: ApiWaveScore | null | undefined;
 }) {
+  const visibilityScore = formatScore(waveScore?.visibility_score);
+  const qualityScore = formatScore(waveScore?.quality_score);
+  const hotnessScore = formatScore(waveScore?.hotness_score);
+  const repSortScore = formatScore(waveScore?.rep_sort_score);
+
+  if (visibilityScore === null) {
+    return children;
+  }
+
   return (
     <HoverCard
       ariaLabel={t(WAVE_TRUST_LOCALE, "waves.score.summary.detailsAriaLabel")}
@@ -609,11 +641,14 @@ function WaveScoreSummaryHoverCard({
       hoverTransitionDelay={80}
       offset={8}
       openOnClick
+      closeOnContentClick={closeOnContentClick}
+      stopClickPropagation={stopClickPropagation}
       triggerDisplay={triggerDisplay}
       contentStyle={{ padding: "10px 12px" }}
       content={
         <WaveScoreSummaryPopoverContent
           learnMoreHref={learnMoreHref}
+          summaryHeader={summaryHeader}
           visibilityScore={visibilityScore}
           qualityScore={qualityScore}
           hotnessScore={hotnessScore}
@@ -759,11 +794,8 @@ export function WaveTrustSignals({
               triggerDisplay={
                 isInlineSidebarVariant(variant) ? "inline-flex" : undefined
               }
-              visibilityScore={visibilityScore}
-              qualityScore={qualityScore}
-              hotnessScore={hotnessScore}
-              repSortScore={repSortScore}
               waveRep={waveRep}
+              waveScore={waveScore}
             >
               <button
                 type="button"

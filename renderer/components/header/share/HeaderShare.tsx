@@ -7,7 +7,13 @@ import { ShareIcon } from "@heroicons/react/24/outline";
 import yaml from "js-yaml";
 import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Tooltip } from "react-tooltip";
 import { useAuth } from "@/components/auth/Auth";
@@ -55,6 +61,10 @@ type TerminalConnectionShareStatus = Extract<
   ConnectionShareStatus,
   "legacy-auth" | "error"
 >;
+type DisplayContent = {
+  readonly content: ReactNode;
+  readonly url: string;
+};
 
 function isAbortError(error: unknown, signal?: AbortSignal): boolean {
   return (
@@ -488,6 +498,7 @@ export function HeaderQRModal({
   const connectionShareAbortRef = useRef<AbortController | null>(null);
   const shareGenerationIdRef = useRef(0);
   const cachedConnectionShareRef = useRef<CachedConnectionShare | null>(null);
+  const visibleDisplayContentRef = useRef<DisplayContent | null>(null);
   const terminalConnectionShareFailuresRef = useRef<
     Map<string, TerminalConnectionShareStatus>
   >(new Map());
@@ -920,6 +931,7 @@ export function HeaderQRModal({
       return;
     }
 
+    visibleDisplayContentRef.current = null;
     connectionShareAbortRef.current?.abort();
     const controller = new AbortController();
     connectionShareAbortRef.current = controller;
@@ -964,7 +976,10 @@ export function HeaderQRModal({
     }
 
     setIsVisible(false);
-    const timeout = setTimeout(() => setShouldRender(false), 200);
+    const timeout = setTimeout(() => {
+      visibleDisplayContentRef.current = null;
+      setShouldRender(false);
+    }, 200);
     return () => clearTimeout(timeout);
   }, [show]);
 
@@ -1239,7 +1254,7 @@ export function HeaderQRModal({
     };
   };
 
-  const getDisplayContent = () => {
+  const getCurrentDisplayContent = (): DisplayContent => {
     if (activeTab === Mode.NAVIGATE) {
       return getNavigateContent();
     }
@@ -1249,6 +1264,18 @@ export function HeaderQRModal({
     }
 
     return getAppsContent();
+  };
+
+  const getDisplayContent = (): DisplayContent => {
+    if (!show && visibleDisplayContentRef.current) {
+      return visibleDisplayContentRef.current;
+    }
+
+    const displayContent = getCurrentDisplayContent();
+    if (show) {
+      visibleDisplayContentRef.current = displayContent;
+    }
+    return displayContent;
   };
 
   function printImage() {
