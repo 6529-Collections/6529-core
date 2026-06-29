@@ -48,6 +48,8 @@ jest.mock("@/hooks/useUnreadNotifications", () => ({
 
 jest.mock("@/services/auth/auth.utils", () => ({
   canStoreAnotherWalletAccount: jest.fn(() => true),
+  clearAgentLoginActiveAddress: jest.fn(),
+  getAgentLoginActiveAddress: jest.fn(() => null),
   getConnectedWalletAccounts: jest.fn(() => []),
   getWalletAddress: jest.fn(() => null),
   isAuthAddressAuthorized: jest.fn(
@@ -282,7 +284,9 @@ describe("SeizeConnectContext switch sync guard", () => {
       expect(mockUseConnectedAccountsUnreadNotifications).toHaveBeenCalledWith([
         inactiveAccount,
       ]);
-      expect(mockUseUnreadNotifications).toHaveBeenCalledWith("alice");
+      expect(mockUseUnreadNotifications).toHaveBeenCalledWith("alice", {
+        enabled: true,
+      });
     });
 
     const unreadMap = JSON.parse(
@@ -344,7 +348,9 @@ describe("SeizeConnectContext switch sync guard", () => {
         activeAccount,
         inactiveAccount,
       ]);
-      expect(mockUseUnreadNotifications).toHaveBeenCalledWith(null);
+      expect(mockUseUnreadNotifications).toHaveBeenCalledWith(null, {
+        enabled: false,
+      });
     });
 
     const unreadMap = JSON.parse(

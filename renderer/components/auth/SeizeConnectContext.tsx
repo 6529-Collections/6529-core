@@ -24,7 +24,9 @@ import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
 import { isElectron } from "@/helpers";
 import {
   canStoreAnotherWalletAccount,
+  clearAgentLoginActiveAddress,
   type ConnectedWalletAccount,
+  getAgentLoginActiveAddress,
   getConnectedWalletAccounts,
   getWalletAddress,
   isAuthAddressAuthorized,
@@ -494,7 +496,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       globalThis.window.location.hostname === "127.0.0.1" ||
       globalThis.window.location.hostname === "::1" ||
       globalThis.window.location.hostname.endsWith(".local"));
-  const impersonatedAddress =
+  const devAuthImpersonatedAddress =
     isDevLikeEnv &&
     isLocalHost &&
     publicEnv.USE_DEV_AUTH === "true" &&
@@ -502,6 +504,17 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     isAddress(publicEnv.DEV_MODE_WALLET_ADDRESS)
       ? getAddress(publicEnv.DEV_MODE_WALLET_ADDRESS)
       : undefined;
+  const canUseAgentLoginImpersonation =
+    isDevLikeEnv && isLocalHost && publicEnv.USE_DEV_AUTH !== "true";
+  const agentLoginActiveAddress = canUseAgentLoginImpersonation
+    ? getAgentLoginActiveAddress()
+    : null;
+  const agentLoginImpersonatedAddress =
+    agentLoginActiveAddress && isAddress(agentLoginActiveAddress)
+      ? getAddress(agentLoginActiveAddress)
+      : undefined;
+  const impersonatedAddress =
+    agentLoginImpersonatedAddress ?? devAuthImpersonatedAddress;
 
   const liveAccount = useMemo(() => {
     const wagmiStatus = wagmiAccount.status;
@@ -629,6 +642,23 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
     // Use debounced state update to prevent race conditions
     debounceTimeoutRef.current = setTimeout(() => {
+      if (
+        agentLoginImpersonatedAddress &&
+        liveAccount.address &&
+        liveAccount.isConnected &&
+        isAddress(liveAccount.address)
+      ) {
+        const checksummedConnectedAddress = getAddress(liveAccount.address);
+        clearAgentLoginActiveAddress();
+        const isAlreadyConnected =
+          walletState.status === "connected" &&
+          walletState.address === checksummedConnectedAddress;
+        if (!isAlreadyConnected) {
+          setConnected(checksummedConnectedAddress);
+        }
+        return;
+      }
+
       if (impersonatedAddress) {
         const isAlreadyConnected =
           walletState.status === "connected" &&
@@ -646,6 +676,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         isAddress(liveAccount.address)
       ) {
         const checksummedConnectedAddress = getAddress(liveAccount.address);
+        clearAgentLoginActiveAddress();
         const didSwitch = setActiveWalletAccount(checksummedConnectedAddress);
         if (didSwitch) {
           pendingAddFlowSwitchRef.current = false;
@@ -671,6 +702,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         isAddress(liveAccount.address)
       ) {
         const checksummedConnectedAddress = getAddress(liveAccount.address);
+        clearAgentLoginActiveAddress();
         const activeStoredAddress = getWalletAddress();
         const shouldSwitchStoredActiveAddress =
           !activeStoredAddress ||
@@ -700,6 +732,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         isAddress(liveAccount.address)
       ) {
         const checksummedConnectedAddress = getAddress(liveAccount.address);
+        clearAgentLoginActiveAddress();
         const isKnownStoredAccount = storedConnectedAccounts.some(
           (storedAccount) =>
             normalizeAddress(storedAccount.address) ===
@@ -798,6 +831,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         }
 
         const checksummedAddress = getAddress(liveAccount.address);
+        clearAgentLoginActiveAddress();
         const isAlreadyConnected =
           walletState.status === "connected" &&
           walletState.address === checksummedAddress;
@@ -836,6 +870,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     setConnected,
     setDisconnected,
     setConnecting,
+    agentLoginImpersonatedAddress,
     impersonatedAddress,
     isAddingConnectedAccount,
     refreshStoredConnectedAccounts,
@@ -1177,6 +1212,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
       // Normalize address to checksummed format for consistency
       const checksummedAddress = getAddress(address);
+      clearAgentLoginActiveAddress();
       setConnected(checksummedAddress);
       refreshStoredConnectedAccounts();
     },
@@ -1431,7 +1467,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     useConnectedAccountsUnreadNotifications(jwtPollingStoredConnectedAccounts);
 
   const { notifications: activeUnreadNotifications } = useUnreadNotifications(
-    activeStoredAccount?.profileHandle ?? null
+    hasValidWalletAuth ? (activeStoredAccount?.profileHandle ?? null) : null,
+    { enabled: hasValidWalletAuth }
   );
 
   const connectedAccountUnreadNotifications = useMemo(() => {
