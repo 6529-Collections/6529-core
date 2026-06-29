@@ -647,6 +647,7 @@ export default function Auth({
     address,
     hasValidWalletAuth: isAddressAuthorized,
     isConnected,
+    isDisconnecting,
     hasActiveWalletAddress,
     canSignActiveWallet,
     seizeConnect,
@@ -951,7 +952,7 @@ export default function Auth({
     abortCurrentAuthOperation();
 
     // Don't start validation during transitional states
-    if (connectionState === "connecting") {
+    if (connectionState === "connecting" || isDisconnecting) {
       return undefined;
     }
 
@@ -1034,6 +1035,7 @@ export default function Auth({
     connectionState,
     enableWalletAuthentication,
     isBrowserConnectorRoute,
+    isDisconnecting,
     isAddressAuthorized,
     isConnected,
     hasActiveWalletAddress,
@@ -1890,18 +1892,6 @@ export default function Auth({
     isAddressAuthorized,
   ]);
 
-  const { isTopModal, addModal, removeModal } = useModalState();
-  useEffect(() => {
-    if (showSignModal) {
-      addModal(AUTH_MODAL);
-    } else {
-      removeModal(AUTH_MODAL);
-    }
-    return () => {
-      removeModal(AUTH_MODAL);
-    };
-  }, [showSignModal, addModal, removeModal]);
-
   const onCancelSignRequest = useCallback(() => {
     if (signModalReason === "session-upgrade") {
       if (!sessionUpgradeCanDismiss) {
@@ -1959,16 +1949,30 @@ export default function Auth({
       signModalReason !== "session-upgrade";
     return (
       showSignModal &&
+      !isDisconnecting &&
       !shouldHideDuringValidation &&
       (connectionState === "connected" || isDisconnectedSessionUpgradePrompt)
     );
   }, [
     authLoadingState,
     connectionState,
+    isDisconnecting,
     isDisconnectedSessionUpgradePrompt,
     showSignModal,
     signModalReason,
   ]);
+
+  const { isTopModal, addModal, removeModal } = useModalState();
+  useEffect(() => {
+    if (shouldShowSignModal) {
+      addModal(AUTH_MODAL);
+    } else {
+      removeModal(AUTH_MODAL);
+    }
+    return () => {
+      removeModal(AUTH_MODAL);
+    };
+  }, [shouldShowSignModal, addModal, removeModal]);
 
   const sessionUpgradeTimeLeftText = useMemo(
     () => formatSessionUpgradeTimeLeft(sessionUpgradeTimeLeftMs),
@@ -2064,7 +2068,7 @@ export default function Auth({
         receivedProfileProxies,
         activeProfileProxy,
         showWaves,
-        sessionUpgradeRequired,
+        sessionUpgradeRequired: sessionUpgradeRequired && !isDisconnecting,
         connectionStatus: getProfileConnectedStatus({
           profile: connectedProfile ?? null,
           isProxy: !!activeProfileProxy,

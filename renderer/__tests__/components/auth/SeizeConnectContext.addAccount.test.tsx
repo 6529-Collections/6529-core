@@ -151,6 +151,19 @@ function LogoutButton() {
   );
 }
 
+function LogoutStateProbe() {
+  const { connectionState, isDisconnecting, seizeDisconnectAndLogout } =
+    useSeizeConnectContext();
+
+  return (
+    <>
+      <span data-testid="connection-state">{connectionState}</span>
+      <span data-testid="disconnecting">{String(isDisconnecting)}</span>
+      <button onClick={() => void seizeDisconnectAndLogout()}>Logout</button>
+    </>
+  );
+}
+
 function createPendingPromise<T>(): Promise<T> {
   return new Promise<T>(() => {
     // Intentionally pending for stale add-flow guard coverage.
@@ -367,6 +380,33 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockLogError).toHaveBeenCalledWith(
       "seizeDisconnectAndLogout.logoutSessionV2",
       revokeError
+    );
+  });
+
+  it("marks logout as disconnecting before auth cleanup completes", async () => {
+    const authUtils = require("@/services/auth/auth.utils");
+    authUtils.removeAuthJwt.mockImplementation(() => createPendingPromise<void>());
+
+    render(
+      <SeizeConnectProvider>
+        <LogoutStateProbe />
+      </SeizeConnectProvider>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("connection-state")).toHaveTextContent(
+        "connected"
+      )
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+      await Promise.resolve();
+    });
+
+    expect(screen.getByTestId("disconnecting")).toHaveTextContent("true");
+    expect(screen.getByTestId("connection-state")).toHaveTextContent(
+      "disconnected"
     );
   });
 

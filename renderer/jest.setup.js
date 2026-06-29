@@ -283,7 +283,6 @@ jest.mock("@testing-library/react", () => {
   const { SeizeSettingsProvider } = jest.requireActual(
     "@/contexts/SeizeSettingsContext"
   );
-  const { SeizeSettingsMode } = jest.requireActual("@/types/enums");
   const { WagmiProvider } = jest.requireActual("wagmi");
   const { createConfig } = jest.requireActual("@wagmi/core");
   const { http } = jest.requireActual("viem");
@@ -324,11 +323,7 @@ jest.mock("@testing-library/react", () => {
         React.createElement(
           QueryClientProvider,
           { client: queryClient },
-          React.createElement(
-            SeizeSettingsProvider,
-            { mode: SeizeSettingsMode.LOCAL },
-            wrappedChildren
-          )
+          React.createElement(SeizeSettingsProvider, null, wrappedChildren)
         )
       );
     };
