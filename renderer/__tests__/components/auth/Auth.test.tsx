@@ -2012,6 +2012,49 @@ describe("Auth component", () => {
       });
     });
 
+    it("uses session-v2 sign-in for explicit browser connector session upgrades", async () => {
+      const validAddress = "0x1111111111111111111111111111111111111111";
+      walletAddress = validAddress;
+      mockUsePathname.mockReturnValue("/browser-connector");
+      const sessionV2 = require("@/services/auth/session-v2.utils");
+      const sessionResponse = {
+        client_type: "web",
+        address: validAddress,
+        role: null,
+        access_token: "session-access-token",
+        access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      };
+      sessionV2.loginWithSessionV2.mockResolvedValue(sessionResponse);
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <SessionUpgradeProbe />
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      const user = userEvent.setup();
+      await user.click(screen.getByTestId("request-session-upgrade"));
+
+      await waitFor(() => {
+        expect(sessionV2.loginWithSessionV2).toHaveBeenCalledWith({
+          serverSignature: "server-signature",
+          clientSignature: "0xsignature",
+          signerAddress: validAddress,
+          role: null,
+        });
+      });
+      expect(sessionV2.persistSessionResponse).toHaveBeenCalledWith(
+        sessionResponse
+      );
+      expect(mockCommonApiPost).not.toHaveBeenCalledWith(
+        expect.objectContaining({ endpoint: "auth/login" })
+      );
+    });
+
     it("hides the session upgrade dismiss action while wallet confirmation is pending", async () => {
       const validAddress = "0x1111111111111111111111111111111111111111";
       walletAddress = validAddress;

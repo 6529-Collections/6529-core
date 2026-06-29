@@ -4,6 +4,7 @@ import {
 } from "@/services/auth/auth.utils";
 import {
   persistSessionResponse,
+  redeemConnectionShare,
   type SessionNativeResponse,
 } from "@/services/auth/session-v2.utils";
 import { createConnector } from "wagmi";
@@ -185,6 +186,45 @@ const parseNativeSessionAuthPayload = (
   };
 };
 
+const parseConnectionShareAuthPayload = (
+  auth: unknown
+): {
+  readonly connectionShareCode: string;
+  readonly address: `0x${string}`;
+} | null => {
+  if (typeof auth !== "object" || auth === null) {
+    return null;
+  }
+
+  const record = auth as {
+    readonly sessionVersion?: unknown;
+    readonly transferType?: unknown;
+    readonly connection_share_code?: unknown;
+    readonly address?: unknown;
+    readonly target_client_type?: unknown;
+  };
+
+  if (
+    record.sessionVersion !== "v2" ||
+    record.transferType !== "connection-share" ||
+    record.target_client_type !== "native" ||
+    !isNonEmptyString(record.connection_share_code) ||
+    !isNonEmptyString(record.address)
+  ) {
+    return null;
+  }
+
+  const normalizedAddress = record.address.toLowerCase();
+  if (!HEX_ADDRESS_REGEX.test(normalizedAddress)) {
+    return null;
+  }
+
+  return {
+    connectionShareCode: record.connection_share_code,
+    address: normalizedAddress as `0x${string}`,
+  };
+};
+
 const tryPersistLegacyAuthPayload = ({
   auth,
   primaryConnectedAccount,
@@ -315,13 +355,31 @@ const processBrowserConnectResponse = async ({
     validatedAccounts: validatedConnection.accounts,
   });
 
-  const nativeSessionAuth = parseNativeSessionAuthPayload(responseRecord.auth);
   if (requiresNativeSessionAuth) {
-    if (nativeSessionAuth?.address !== primaryConnectedAccount) {
+    const nativeSessionAuth = parseNativeSessionAuthPayload(responseRecord.auth);
+    const connectionShareAuth = parseConnectionShareAuthPayload(
+      responseRecord.auth
+    );
+    let nativeSessionToPersist = nativeSessionAuth;
+
+    if (!nativeSessionToPersist && connectionShareAuth) {
+      if (connectionShareAuth.address !== primaryConnectedAccount) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+      nativeSessionToPersist = await redeemConnectionShare(
+        connectionShareAuth.connectionShareCode
+      );
+    }
+
+    if (!nativeSessionToPersist) {
       throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
     }
 
-    const isPersisted = await persistSessionResponse(nativeSessionAuth);
+    if (nativeSessionToPersist.address.toLowerCase() !== primaryConnectedAccount) {
+      throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+    }
+
+    const isPersisted = await persistSessionResponse(nativeSessionToPersist);
     if (!isPersisted) {
       throw new Error("Couldn't save this browser connection. Please try again.");
     }

@@ -1,5 +1,8 @@
 import { setActiveWalletAccount } from "@/services/auth/auth.utils";
-import { persistSessionResponse } from "@/services/auth/session-v2.utils";
+import {
+  persistSessionResponse,
+  redeemConnectionShare,
+} from "@/services/auth/session-v2.utils";
 import { browserConnector } from "@/wagmiConfig/browserConnector";
 
 jest.mock("wagmi", () => ({
@@ -13,6 +16,7 @@ jest.mock("@/services/auth/auth.utils", () => ({
 
 jest.mock("@/services/auth/session-v2.utils", () => ({
   persistSessionResponse: jest.fn(() => Promise.resolve(true)),
+  redeemConnectionShare: jest.fn(),
 }));
 
 const ADDRESS = "0x00000000000000000000000000000000000000aa";
@@ -26,6 +30,15 @@ const nativeSessionAuth = {
   access_token_expires_at: "2026-06-10T00:00:00.000Z",
   native_refresh_token: "native-refresh-token",
   refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+};
+
+const connectionShareAuth = {
+  sessionVersion: "v2",
+  transferType: "connection-share",
+  connection_share_code: "share-code",
+  address: ADDRESS,
+  target_client_type: "native",
+  expires_at: "2026-06-10T00:00:00.000Z",
 };
 
 const flushPromises = async () => {
@@ -139,6 +152,45 @@ describe("browserConnector", () => {
       "seize-app-connection-browser",
       JSON.stringify({ accounts: [ADDRESS], chainId: 1 })
     );
+  });
+
+  it("redeems a browser connection-share payload before accepting the connection", async () => {
+    (redeemConnectionShare as jest.Mock).mockResolvedValueOnce({
+      client_type: "native",
+      address: ADDRESS,
+      role: null,
+      access_token: "redeemed-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "redeemed-native-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
+    const { connectPromise, requestId } = await startConnect();
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: connectionShareAuth,
+      },
+    });
+
+    await expect(connectPromise).resolves.toEqual({
+      accounts: [ADDRESS],
+      chainId: 1,
+    });
+    expect(redeemConnectionShare).toHaveBeenCalledWith("share-code");
+    expect(persistSessionResponse).toHaveBeenCalledWith({
+      client_type: "native",
+      address: ADDRESS,
+      role: null,
+      access_token: "redeemed-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "redeemed-native-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
+    expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
   });
 
   it("rejects a browser connect callback without matching native session-v2 auth", async () => {
