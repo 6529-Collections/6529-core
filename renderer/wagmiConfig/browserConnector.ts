@@ -1,4 +1,11 @@
-import { setActiveWalletAccount } from "@/services/auth/auth.utils";
+import {
+  setActiveWalletAccount,
+  setAuthJwt,
+} from "@/services/auth/auth.utils";
+import {
+  persistSessionResponse,
+  type SessionNativeResponse,
+} from "@/services/auth/session-v2.utils";
 import { createConnector } from "wagmi";
 import { mainnet, sepolia } from "viem/chains";
 
@@ -17,13 +24,40 @@ interface ConnectionObject {
   chainId: number;
 }
 
+interface BrowserConnectResponseRecord {
+  readonly accounts?: unknown;
+  readonly chainId?: unknown;
+  readonly activeAddress?: unknown;
+  readonly auth?: unknown;
+  readonly error?: unknown;
+}
+
+interface BrowserConnectResult {
+  readonly accounts: readonly `0x${string}`[];
+  readonly chainId: number;
+  readonly accountToActivate: `0x${string}`;
+}
+
+type BrowserConnectorConnectResponse = {
+  readonly accounts:
+    | readonly `0x${string}`[]
+    | readonly {
+        readonly address: `0x${string}`;
+        readonly capabilities: Record<string, unknown>;
+      }[];
+  readonly chainId: number;
+};
+
 const LEGACY_CONNECTION_STORE = "seize-app-connection";
 const getConnectionStoreKey = (connectorId: string) =>
   `seize-app-connection-${connectorId}`;
 const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
 const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
+const NATIVE_SESSION_AUTH_MODE = "session-v2-native";
 const INVALID_CONNECTION_PAYLOAD_ERROR =
   "Invalid connection payload: accounts must be array of 0x-prefixed 40-hex strings and chainId must be a positive integer.";
+const MISSING_NATIVE_SESSION_AUTH_ERROR =
+  "Native session-v2 authentication is required for this browser connection.";
 
 export const BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT =
   "6529-browser-connector-connection-changed";
@@ -99,6 +133,211 @@ const parseConnectionPayload = (
   return {
     accounts,
     chainId,
+  };
+};
+
+const isNonEmptyString = (value: unknown): value is string =>
+  typeof value === "string" && value.trim().length > 0;
+
+const parseNativeSessionAuthPayload = (
+  auth: unknown
+): SessionNativeResponse | null => {
+  if (typeof auth !== "object" || auth === null) {
+    return null;
+  }
+
+  const record = auth as {
+    readonly sessionVersion?: unknown;
+    readonly client_type?: unknown;
+    readonly address?: unknown;
+    readonly role?: unknown;
+    readonly access_token?: unknown;
+    readonly access_token_expires_at?: unknown;
+    readonly native_refresh_token?: unknown;
+    readonly refresh_token_expires_at?: unknown;
+  };
+
+  if (
+    record.sessionVersion !== "v2" ||
+    record.client_type !== "native" ||
+    !isNonEmptyString(record.address) ||
+    !isNonEmptyString(record.access_token) ||
+    !isNonEmptyString(record.access_token_expires_at) ||
+    !isNonEmptyString(record.native_refresh_token) ||
+    !isNonEmptyString(record.refresh_token_expires_at)
+  ) {
+    return null;
+  }
+
+  const normalizedAddress = record.address.toLowerCase();
+  if (!HEX_ADDRESS_REGEX.test(normalizedAddress)) {
+    return null;
+  }
+
+  return {
+    client_type: "native",
+    address: normalizedAddress,
+    role: typeof record.role === "string" ? record.role : null,
+    access_token: record.access_token,
+    access_token_expires_at: record.access_token_expires_at,
+    native_refresh_token: record.native_refresh_token,
+    refresh_token_expires_at: record.refresh_token_expires_at,
+  };
+};
+
+const tryPersistLegacyAuthPayload = ({
+  auth,
+  primaryConnectedAccount,
+  validatedAccounts,
+  connectorName,
+}: {
+  readonly auth: unknown;
+  readonly primaryConnectedAccount: `0x${string}`;
+  readonly validatedAccounts: readonly `0x${string}`[];
+  readonly connectorName: string;
+}): void => {
+  if (typeof auth !== "object" || auth === null) {
+    return;
+  }
+
+  const record = auth as {
+    readonly address?: unknown;
+    readonly token?: unknown;
+    readonly refreshToken?: unknown;
+    readonly role?: unknown;
+  };
+  const authAddressLower =
+    typeof record.address === "string" ? record.address.toLowerCase() : null;
+  const matchingAuthAccount =
+    authAddressLower &&
+    validatedAccounts.find((account) => account === authAddressLower);
+  const shouldPersistAuthForConnectedAccount =
+    typeof matchingAuthAccount === "string" &&
+    matchingAuthAccount === primaryConnectedAccount;
+
+  if (
+    shouldPersistAuthForConnectedAccount &&
+    typeof record.token === "string" &&
+    typeof record.refreshToken === "string"
+  ) {
+    setAuthJwt(
+      matchingAuthAccount,
+      record.token,
+      record.refreshToken,
+      typeof record.role === "string" ? record.role : undefined
+    );
+    return;
+  }
+
+  if (
+    typeof record.address === "string" &&
+    typeof record.token === "string" &&
+    typeof record.refreshToken === "string"
+  ) {
+    console.warn(
+      `[${connectorName}] Ignoring browser auth payload with non-matching address`,
+      {
+        authAddress: record.address,
+        connectedAccounts: validatedAccounts,
+      }
+    );
+  }
+};
+
+const toBrowserConnectorErrorMessage = (error: unknown): string => {
+  if (typeof error === "string") {
+    return error;
+  }
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+  if (typeof error === "number" || typeof error === "boolean") {
+    return String(error);
+  }
+  return "Browser connector returned an error.";
+};
+
+const getBrowserConnectResponseRecord = (
+  response: unknown
+): BrowserConnectResponseRecord => {
+  if (typeof response !== "object" || response === null) {
+    throw new Error("Invalid browser connector response");
+  }
+
+  const responseRecord = response as BrowserConnectResponseRecord;
+  if (responseRecord.error !== undefined && responseRecord.error !== null) {
+    throw new Error(toBrowserConnectorErrorMessage(responseRecord.error));
+  }
+
+  return responseRecord;
+};
+
+const getPrimaryConnectedAccount = ({
+  activeAddress,
+  validatedAccounts,
+}: {
+  readonly activeAddress: unknown;
+  readonly validatedAccounts: readonly `0x${string}`[];
+}): `0x${string}` => {
+  const firstValidatedAccount = validatedAccounts[0];
+  if (!firstValidatedAccount) {
+    throw new Error(INVALID_CONNECTION_PAYLOAD_ERROR);
+  }
+
+  const responseActiveAddressLower =
+    typeof activeAddress === "string" ? activeAddress.toLowerCase() : null;
+  return responseActiveAddressLower !== null &&
+    validatedAccounts.includes(responseActiveAddressLower as `0x${string}`)
+    ? (responseActiveAddressLower as `0x${string}`)
+    : firstValidatedAccount;
+};
+
+const processBrowserConnectResponse = async ({
+  response,
+  requiresNativeSessionAuth,
+  connectorName,
+}: {
+  readonly response: unknown;
+  readonly requiresNativeSessionAuth: boolean;
+  readonly connectorName: string;
+}): Promise<BrowserConnectResult> => {
+  const responseRecord = getBrowserConnectResponseRecord(response);
+  const validatedConnection = parseConnectionPayload(
+    responseRecord.accounts,
+    responseRecord.chainId
+  );
+  if (!validatedConnection) {
+    throw new Error(INVALID_CONNECTION_PAYLOAD_ERROR);
+  }
+
+  const primaryConnectedAccount = getPrimaryConnectedAccount({
+    activeAddress: responseRecord.activeAddress,
+    validatedAccounts: validatedConnection.accounts,
+  });
+
+  const nativeSessionAuth = parseNativeSessionAuthPayload(responseRecord.auth);
+  if (requiresNativeSessionAuth) {
+    if (nativeSessionAuth?.address !== primaryConnectedAccount) {
+      throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+    }
+
+    const isPersisted = await persistSessionResponse(nativeSessionAuth);
+    if (!isPersisted) {
+      throw new Error("Couldn't save this browser connection. Please try again.");
+    }
+  } else {
+    tryPersistLegacyAuthPayload({
+      auth: responseRecord.auth,
+      primaryConnectedAccount,
+      validatedAccounts: validatedConnection.accounts,
+      connectorName,
+    });
+  }
+
+  return {
+    accounts: validatedConnection.accounts,
+    chainId: validatedConnection.chainId,
+    accountToActivate: primaryConnectedAccount,
   };
 };
 
@@ -340,11 +579,21 @@ export function browserConnector(parameters: {
         } as any;
       }
 
-      return new Promise((resolve, reject) => {
+      return new Promise<BrowserConnectorConnectResponse>((resolve, reject) => {
         const requestId = generateRequestId();
         const t = Date.now();
         const chainId = opts?.chainId || connectionObject.chainId;
-        const url = `http://localhost:${port}/browser-connector?task=connect&scheme=${scheme}&requestId=${requestId}&t=${t}&chainId=${chainId}`;
+        const connectSearchParams = new URLSearchParams({
+          task: "connect",
+          scheme,
+          requestId,
+          t: String(t),
+          chainId: String(chainId),
+          authMode: NATIVE_SESSION_AUTH_MODE,
+        });
+        const requiresNativeSessionAuth =
+          connectSearchParams.get("authMode") === NATIVE_SESSION_AUTH_MODE;
+        const url = `http://localhost:${port}/browser-connector?${connectSearchParams.toString()}`;
         const timeoutId = setTimeout(() => {
           console.log(`[${this.name}] Deep link callback timed out`, requestId);
           deepLinkCallbacks.delete(requestId);
@@ -352,41 +601,24 @@ export function browserConnector(parameters: {
           reject(new Error("Connection request timed out"));
         }, 60000);
 
-        registerDeepLinkCallback(requestId, async (response: any) => {
+        registerDeepLinkCallback(requestId, (response: unknown) => {
           clearTimeout(timeoutId);
-          if (!response || response.error) {
-            reject(new Error(response?.error));
-          } else {
-            const validatedConnection = parseConnectionPayload(
-              response.accounts,
-              response.chainId
-            );
-            if (!validatedConnection) {
-              reject(new Error(INVALID_CONNECTION_PAYLOAD_ERROR));
-              return;
-            }
-            const {
-              accounts: validatedAccounts,
-              chainId: validatedChainId,
-            } = validatedConnection;
-            connectionObject = {
-              accounts: validatedAccounts,
-              chainId: validatedChainId,
-            };
-            const responseActiveAddressLower =
-              typeof response?.activeAddress === "string"
-                ? response.activeAddress.toLowerCase()
-                : null;
-            const primaryConnectedAccount =
-              responseActiveAddressLower &&
-              validatedAccounts.includes(
-                responseActiveAddressLower as `0x${string}`
-              )
-                ? (responseActiveAddressLower as `0x${string}`)
-                : validatedAccounts[0];
+          void (async () => {
+            try {
+              const {
+                accounts: validatedAccounts,
+                chainId: validatedChainId,
+                accountToActivate,
+              } = await processBrowserConnectResponse({
+                response,
+                requiresNativeSessionAuth,
+                connectorName: this.name,
+              });
+              connectionObject = {
+                accounts: [...validatedAccounts],
+                chainId: validatedChainId,
+              };
 
-            const accountToActivate = primaryConnectedAccount;
-            if (typeof accountToActivate === "string") {
               const didSwitch = setActiveWalletAccount(accountToActivate);
               if (!didSwitch) {
                 console.log(
@@ -394,36 +626,33 @@ export function browserConnector(parameters: {
                   accountToActivate
                 );
               }
-            }
-            await window.store.set(
-              connectionStoreKey,
-              JSON.stringify(connectionObject)
-            );
-            dispatchBrowserConnectorConnectionChanged(
-              accountToActivate ?? null
-            );
+              await window.store.set(
+                connectionStoreKey,
+                JSON.stringify(connectionObject)
+              );
+              dispatchBrowserConnectorConnectionChanged(accountToActivate);
 
-            if (opts?.withCapabilities) {
-              const accountsWithCaps = validatedAccounts.map((address) => ({
-                address,
-                capabilities: {} as Record<string, unknown>,
-              })) as unknown as readonly {
-                address: `0x${string}`;
-                capabilities: Record<string, unknown>;
-              }[];
+              if (opts?.withCapabilities) {
+                const accountsWithCaps = validatedAccounts.map((address) => ({
+                  address,
+                  capabilities: {} as Record<string, unknown>,
+                }));
+
+                resolve({
+                  accounts: accountsWithCaps,
+                  chainId: validatedChainId,
+                });
+                return;
+              }
 
               resolve({
-                accounts: accountsWithCaps as any,
+                accounts: validatedAccounts,
                 chainId: validatedChainId,
-              } as any);
-              return;
+              });
+            } catch (error) {
+              reject(error);
             }
-
-            resolve({
-              accounts: validatedAccounts as readonly `0x${string}`[],
-              chainId: validatedChainId,
-            } as any);
-          }
+          })();
         });
 
         parameters.openUrlFn(url);

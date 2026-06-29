@@ -10,7 +10,7 @@ import {
   setNativeRefreshToken,
 } from "./native-refresh-token-storage";
 
-type AuthSessionClientType = "web" | "native";
+export type AuthSessionClientType = "web" | "native";
 
 interface SessionLoginRequest {
   readonly client_type: AuthSessionClientType;
@@ -20,7 +20,7 @@ interface SessionLoginRequest {
   readonly role?: string | null;
 }
 
-interface SessionWebResponse {
+export interface SessionWebResponse {
   readonly address: string;
   readonly role: string | null;
   readonly access_token: string;
@@ -28,7 +28,7 @@ interface SessionWebResponse {
   readonly client_type: "web";
 }
 
-interface SessionNativeResponse {
+export interface SessionNativeResponse {
   readonly address: string;
   readonly role: string | null;
   readonly access_token: string;
@@ -110,8 +110,10 @@ async function rollbackUnpersistedSession(
 
 export async function getSessionNonce({
   signerAddress,
+  clientType = getSessionClientType(),
 }: {
   readonly signerAddress: string;
+  readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<ApiSessionNonceResponse> {
   return await commonApiFetch<
     ApiSessionNonceResponse,
@@ -124,7 +126,7 @@ export async function getSessionNonce({
     endpoint: "auth/session-nonce",
     params: {
       signer_address: signerAddress,
-      client_type: getSessionClientType(),
+      client_type: clientType,
       chain_id: "1",
     },
   });
@@ -135,17 +137,19 @@ export async function loginWithSessionV2({
   clientSignature,
   signerAddress,
   role,
+  clientType = getSessionClientType(),
 }: {
   readonly serverSignature: string;
   readonly clientSignature: string;
   readonly signerAddress: string;
   readonly role: string | null;
+  readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
   return await commonApiPost<SessionLoginRequest, SessionLoginResponse>({
     endpoint: "auth/session-login",
     body: {
-      client_type: getSessionClientType(),
+      client_type: clientType,
       server_signature: serverSignature,
       client_signature: clientSignature,
       client_address: signerAddress,

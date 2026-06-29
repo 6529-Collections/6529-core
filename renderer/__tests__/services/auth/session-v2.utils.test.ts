@@ -99,6 +99,27 @@ describe("session-v2.utils", () => {
     });
   });
 
+  it("allows browser connector pages to request native session nonces explicitly", async () => {
+    const nonceResponse = {
+      signable_message: "6529 Authentication\nDomain: native",
+      server_signature: "server-signature",
+    };
+    (commonApiFetch as jest.Mock).mockResolvedValueOnce(nonceResponse);
+
+    await expect(
+      getSessionNonce({ signerAddress: "0xabc", clientType: "native" })
+    ).resolves.toBe(nonceResponse);
+
+    expect(commonApiFetch).toHaveBeenCalledWith({
+      endpoint: "auth/session-nonce",
+      params: {
+        signer_address: "0xabc",
+        client_type: "native",
+        chain_id: "1",
+      },
+    });
+  });
+
   it("revokes a native session when auth persistence fails", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(
@@ -206,6 +227,40 @@ describe("session-v2.utils", () => {
         clientSignature: "client-signature",
         signerAddress: "0xabc",
         role: null,
+      })
+    ).resolves.toBe(sessionResponse);
+
+    expect(commonApiPost).toHaveBeenCalledWith({
+      endpoint: "auth/session-login",
+      body: {
+        client_type: "native",
+        server_signature: "server-signature",
+        client_signature: "client-signature",
+        client_address: "0xabc",
+      },
+      credentials: "include",
+    });
+  });
+
+  it("allows browser connector pages to request native session-login explicitly", async () => {
+    const sessionResponse = {
+      client_type: "native",
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "native-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    (commonApiPost as jest.Mock).mockResolvedValueOnce(sessionResponse);
+
+    await expect(
+      loginWithSessionV2({
+        serverSignature: "server-signature",
+        clientSignature: "client-signature",
+        signerAddress: "0xabc",
+        role: null,
+        clientType: "native",
       })
     ).resolves.toBe(sessionResponse);
 
