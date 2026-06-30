@@ -11,6 +11,7 @@ import {
   useSeizeConnectContext,
 } from "@/components/auth/SeizeConnectContext";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
+import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 
 const ACTIVE_ADDRESS = "0x00000000000000000000000000000000000000AA";
 
@@ -300,6 +301,38 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
   });
 
+  it("keeps the disconnect-then-connect flow for seed-wallet connectors", async () => {
+    mockWagmiAccount = {
+      connector: {
+        type: SEED_WALLET_CONNECTOR_TYPE,
+      },
+    };
+
+    render(
+      <SeizeConnectProvider>
+        <AddAccountButton />
+      </SeizeConnectProvider>
+    );
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Add account" }));
+    });
+
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+    expect(mockOpen).not.toHaveBeenCalled();
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(100);
+    });
+
+    expect(mockOpen).toHaveBeenCalledTimes(1);
+    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+  });
+
   it("opens connect directly when there is no live connected wallet and keeps add-account mode active", () => {
     mockAppKitAccount = {
       address: undefined,
@@ -385,7 +418,9 @@ describe("SeizeConnectProvider add-account flow", () => {
 
   it("marks logout as disconnecting before auth cleanup completes", async () => {
     const authUtils = require("@/services/auth/auth.utils");
-    authUtils.removeAuthJwt.mockImplementation(() => createPendingPromise<void>());
+    authUtils.removeAuthJwt.mockImplementation(() =>
+      createPendingPromise<void>()
+    );
 
     render(
       <SeizeConnectProvider>
@@ -407,6 +442,39 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(screen.getByTestId("disconnecting")).toHaveTextContent("true");
     expect(screen.getByTestId("connection-state")).toHaveTextContent(
       "disconnected"
+    );
+  });
+
+  it("ends logout disconnect state after restoring the next stored account", async () => {
+    const authUtils = require("@/services/auth/auth.utils");
+    authUtils.getWalletAddress.mockReturnValue(ACTIVE_ADDRESS);
+    authUtils.removeAuthJwt.mockImplementation(() => undefined);
+
+    render(
+      <SeizeConnectProvider>
+        <LogoutStateProbe />
+      </SeizeConnectProvider>
+    );
+
+    await waitFor(() =>
+      expect(screen.getByTestId("connection-state")).toHaveTextContent(
+        "connected"
+      )
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(authUtils.removeAuthJwt).toHaveBeenCalled());
+    await waitFor(() =>
+      expect(screen.getByTestId("connection-state")).toHaveTextContent(
+        "connected"
+      )
+    );
+    await waitFor(() =>
+      expect(screen.getByTestId("disconnecting")).toHaveTextContent("false")
     );
   });
 

@@ -54,6 +54,20 @@ export default function ConfirmSeedWalletLock(
   }, [props.show]);
 
   useEffect(() => {
+    if (!props.show || props.unlockedWallet) {
+      return;
+    }
+
+    const focusTimeout = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    return () => {
+      clearTimeout(focusTimeout);
+    };
+  }, [props.show, props.unlockedWallet]);
+
+  useEffect(() => {
     if (props.show) addModal(SEED_WALLET_LOCK_MODAL);
     else removeModal(SEED_WALLET_LOCK_MODAL);
     return () => removeModal(SEED_WALLET_LOCK_MODAL);

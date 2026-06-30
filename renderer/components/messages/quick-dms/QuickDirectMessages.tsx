@@ -79,6 +79,10 @@ const CHAT_PANEL_STYLE: React.CSSProperties = {
 };
 const QUICK_DM_POSITION_CLASS =
   "tailwind-scope tw-fixed tw-bottom-24 tw-right-6 tw-z-[70] xl:tw-bottom-6";
+// 6529 Core only: keep the open panel out of the Electron titlebar widget gutter
+// when refreshing this file from the frontend subtree.
+const QUICK_DM_OPEN_POSITION_CLASS =
+  "tailwind-scope tw-fixed tw-bottom-24 tw-right-28 tw-z-[70] xl:tw-bottom-6";
 const QUICK_DM_RELATIVE_TIME_OPTIONS = {
   numeric: "auto",
   style: "short",
@@ -906,7 +910,7 @@ export default function QuickDirectMessages() {
       ref={panelRef}
       role="dialog"
       tabIndex={-1}
-      className={QUICK_DM_POSITION_CLASS}
+      className={QUICK_DM_OPEN_POSITION_CLASS}
       aria-label={t(locale, "quickDm.regionAriaLabel")}
       onKeyDown={(event) => {
         if (event.key !== "Escape") {

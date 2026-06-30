@@ -84,6 +84,8 @@ export default function BrowserConnectorConnect(
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
   const { signMessageAsync } = useSignMessage();
   const nativeAuthAttemptKeyRef = useRef<string | null>(null);
+  const dismissedNativeAuthKeyRef = useRef<string | null>(null);
+  const nativeAuthAbortControllerRef = useRef<AbortController | null>(null);
 
   const requestId = searchParams.get("requestId");
   const chainId = searchParams.get("chainId");
@@ -116,27 +118,26 @@ export default function BrowserConnectorConnect(
   const requestedChainId = requestedChain.id;
   const requestedChainName = requestedChain.name;
 
-  const [isRequestedChain, setIsRequestedChain] = useState(false);
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [nativeAuthState, setNativeAuthState] = useState<NativeAuthState>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const isRequestedChain = liveChainId === requestedChainId;
 
-  const walletIntentError = useMemo(() => {
-    if (!normalizedLiveAddress) {
-      return null;
-    }
+  const walletIntentMessage = useMemo(() => {
     if (
       normalizedIntendedWalletAddress &&
       normalizedLiveAddress !== normalizedIntendedWalletAddress
     ) {
-      return "Switch to the requested wallet before continuing.";
+      return normalizedLiveAddress
+        ? `Switch to wallet ${normalizedIntendedWalletAddress} before continuing.`
+        : `Connect with wallet ${normalizedIntendedWalletAddress} before continuing.`;
     }
     if (
       normalizedOriginWalletAddress &&
       normalizedLiveAddress === normalizedOriginWalletAddress
     ) {
-      return "Switch to a different wallet before adding another account.";
+      return "You are already connected/authenticated with this wallet. Switch to a different wallet to add a new account.";
     }
     return null;
   }, [
@@ -144,6 +145,7 @@ export default function BrowserConnectorConnect(
     normalizedLiveAddress,
     normalizedOriginWalletAddress,
   ]);
+  const walletIntentError = walletIntentMessage;
   const isWalletIntentSatisfied = !walletIntentError;
 
   const nativeAuthKey =
@@ -345,32 +347,82 @@ export default function BrowserConnectorConnect(
     walletIntentError,
   ]);
 
-  useEffect(() => {
-    setIsRequestedChain(liveChainId === requestedChainId);
-  }, [liveChainId, requestedChainId]);
-
   const handleAuthModalSign = useCallback(async () => {
-    const payload = await prepareNativeSessionAuth({ force: true });
-    if (payload) {
-      setShowAuthModal(false);
+    nativeAuthAbortControllerRef.current?.abort();
+    const controller = new AbortController();
+    nativeAuthAbortControllerRef.current = controller;
+
+    try {
+      const payload = await prepareNativeSessionAuth({
+        force: true,
+        signal: controller.signal,
+      });
+      if (payload) {
+        setShowAuthModal(false);
+      }
+    } finally {
+      if (nativeAuthAbortControllerRef.current === controller) {
+        nativeAuthAbortControllerRef.current = null;
+      }
     }
   }, [prepareNativeSessionAuth]);
+
+  const handleAuthModalCancel = useCallback(async () => {
+    nativeAuthAbortControllerRef.current?.abort();
+    nativeAuthAbortControllerRef.current = null;
+    if (nativeAuthKey) {
+      dismissedNativeAuthKeyRef.current = nativeAuthKey;
+    }
+    nativeAuthAttemptKeyRef.current = null;
+    setNativeAuthState(null);
+    setAuthError(null);
+    setIsAuthenticating(false);
+    setShowAuthModal(false);
+
+    try {
+      await account.seizeDisconnect();
+    } catch (error) {
+      dismissedNativeAuthKeyRef.current = null;
+      setAuthError(
+        getErrorMessage(error, "Couldn't disconnect this browser wallet.")
+      );
+      setShowAuthModal(true);
+    }
+  }, [account, nativeAuthKey]);
 
   useEffect(() => {
     if (!requiresNativeSessionAuth || preparedNativeAuth) {
       setShowAuthModal(false);
       return;
     }
-    if (isLiveConnected && isRequestedChain && isWalletIntentSatisfied) {
+    if (
+      isLiveConnected &&
+      isRequestedChain &&
+      isWalletIntentSatisfied &&
+      dismissedNativeAuthKeyRef.current !== nativeAuthKey
+    ) {
       setShowAuthModal(true);
     }
   }, [
     isLiveConnected,
     isRequestedChain,
     isWalletIntentSatisfied,
+    nativeAuthKey,
     preparedNativeAuth,
     requiresNativeSessionAuth,
   ]);
+
+  useEffect(() => {
+    if (!nativeAuthKey) {
+      dismissedNativeAuthKeyRef.current = null;
+    }
+  }, [nativeAuthKey]);
+
+  useEffect(() => {
+    return () => {
+      nativeAuthAbortControllerRef.current?.abort();
+    };
+  }, []);
 
   const isOpenDesktopDisabled =
     isAuthenticating ||
@@ -379,18 +431,6 @@ export default function BrowserConnectorConnect(
     !isWalletIntentSatisfied ||
     (requiresNativeSessionAuth && !preparedNativeAuth);
 
-  const openDesktopLabel = (() => {
-    if (!requiresNativeSessionAuth) {
-      return "Open 6529 Desktop";
-    }
-    if (isAuthenticating) {
-      return "Signing...";
-    }
-    if (!preparedNativeAuth) {
-      return "Authentication Required";
-    }
-    return "Open 6529 Desktop";
-  })();
   const disabledClass = styles["disabled"] ?? "";
 
   return (
@@ -431,26 +471,10 @@ export default function BrowserConnectorConnect(
               </Container>
             </Col>
           )}
-          {normalizedIntendedWalletAddress && (
-            <Col xs={12} className="pt-3">
-              <span>Requested Address</span>
-              <div>
-                <code>{normalizedIntendedWalletAddress}</code>
-              </div>
-            </Col>
-          )}
-          {normalizedOriginWalletAddress && (
-            <Col xs={12} className="pt-3">
-              <span>Current Desktop Account</span>
-              <div>
-                <code>{normalizedOriginWalletAddress}</code>
-              </div>
-            </Col>
-          )}
-          {walletIntentError && (
+          {walletIntentMessage && (
             <Col xs={12} className="pt-3">
               <p className="mb-0 text-danger" role="alert">
-                {walletIntentError}
+                {walletIntentMessage}
               </p>
             </Col>
           )}
@@ -504,13 +528,8 @@ export default function BrowserConnectorConnect(
                     onClick={openApp}
                     className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                   >
-                    {openDesktopLabel}
+                    Open 6529 Desktop
                   </button>
-                  {requiresNativeSessionAuth && preparedNativeAuth && (
-                    <p className="pt-3 text-success">
-                      Auth is ready for 6529 Desktop.
-                    </p>
-                  )}
                   {authError && (
                     <p className="pt-3 text-danger" role="alert">
                       {authError}
@@ -524,7 +543,7 @@ export default function BrowserConnectorConnect(
       </Container>
       <Modal
         show={showAuthModal && requiresNativeSessionAuth && !preparedNativeAuth}
-        onHide={() => undefined}
+        onHide={() => void handleAuthModalCancel()}
         centered
         backdrop="static"
         keyboard={false}
@@ -553,6 +572,14 @@ export default function BrowserConnectorConnect(
         </Modal.Body>
         <Modal.Footer className={authModalStyles["signModalFooter"]}>
           <button
+            type="button"
+            onClick={() => void handleAuthModalCancel()}
+            className={authModalStyles["signModalCancelButton"]}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
             disabled={isAuthenticating}
             onClick={() => void handleAuthModalSign()}
             className={authModalStyles["signModalConfirmButton"]}

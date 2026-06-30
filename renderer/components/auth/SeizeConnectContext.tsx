@@ -192,6 +192,9 @@ interface SeizeConnectContextType {
   /** Opens wallet flow to add another authorized account */
   seizeAddConnectedAccount: () => void;
 
+  /** Whether an add-account wallet flow is currently active */
+  isAddingConnectedAccount: boolean;
+
   /** Whether another account can be added */
   canAddConnectedAccount: boolean;
 
@@ -1057,8 +1060,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     activeConnectorType === APP_WALLET_CONNECTOR_TYPE;
   const isActiveSeedWalletConnector =
     activeConnectorType === SEED_WALLET_CONNECTOR_TYPE;
-  const shouldBypassConnectedWalletAddFlow =
-    isActiveAppWalletConnector || isActiveSeedWalletConnector;
+  const shouldBypassConnectedWalletAddFlow = isActiveAppWalletConnector;
 
   const seizeConnectWithIntent = useCallback(
     (intent?: BrowserConnectorConnectIntent): void => {
@@ -1273,6 +1275,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           didDisconnectCompletely = true;
         }
       } catch (error: unknown) {
+        endDisconnectTransition();
         const authError = new AuthenticationError(
           "Failed to revoke authentication state after successful wallet disconnect",
           error
@@ -1282,6 +1285,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       if (!reconnect || !didDisconnectCompletely) {
+        endDisconnectTransition();
         return;
       }
 
@@ -1342,7 +1346,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       await clearAllAuthenticatedProfiles();
       refreshStoredConnectedAccounts();
       setDisconnected();
+      endDisconnectTransition();
     } catch (error: unknown) {
+      endDisconnectTransition();
       if (error instanceof AuthenticationError) {
         throw error;
       }
@@ -1464,7 +1470,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         : null);
     const addFlowOriginAddress = addFlowOriginAddressRef.current;
     const addFlowReturnedToOrigin =
-      !state.open &&
+      !isConnectUiOpen &&
       !!liveConnectedWallet &&
       !!addFlowOriginAddress &&
       normalizeAddress(liveConnectedWallet) ===
@@ -1473,7 +1479,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAddingConnectedAccountRef.current &&
       (!isAddingConnectedAccount ||
         addFlowReturnedToOrigin ||
-        (!state.open &&
+        (!isConnectUiOpen &&
           !retryConnectTimeoutRef.current &&
           !liveConnectedWallet &&
           liveAccount.status !== "connecting" &&
@@ -1572,9 +1578,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     disconnect,
     isAddingConnectedAccount,
     activeAddress,
+    isConnectUiOpen,
     openConnectForAdditionalAccount,
     shouldBypassConnectedWalletAddFlow,
-    state.open,
   ]);
 
   const connectedAccounts = useMemo(() => {
@@ -1694,6 +1700,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeAcceptConnection,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
+      isAddingConnectedAccount,
       seizeConnectOpen: isConnectUiOpen,
       isConnected: isActiveWalletConnected,
       isDisconnecting,
@@ -1725,6 +1732,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeAcceptConnection,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
+      isAddingConnectedAccount,
       isConnectUiOpen,
       isDisconnecting,
       liveAccount.isConnected,

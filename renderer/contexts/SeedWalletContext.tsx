@@ -44,7 +44,12 @@ const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
 export const SeedWalletProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const { address: activeAddress, connectionState } = useSeizeConnectContext();
+  const {
+    address: activeAddress,
+    connectionState,
+    isAddingConnectedAccount,
+    seizeConnectOpen,
+  } = useSeizeConnectContext();
   const { connector: activeConnector } = useAccount();
   const chainId = useChainId();
   const connectors = useConnectors();
@@ -268,7 +273,12 @@ export const SeedWalletProvider: React.FC<{
   }, [activeAddress, connectionState, lockWallet]);
 
   useEffect(() => {
-    if (!isSeedWallet || !activeAddress) {
+    if (
+      !isSeedWallet ||
+      !activeAddress ||
+      seizeConnectOpen ||
+      isAddingConnectedAccount
+    ) {
       lastConnectorSyncTargetRef.current = null;
       return;
     }
@@ -305,7 +315,9 @@ export const SeedWalletProvider: React.FC<{
     chainId,
     connect,
     connectors,
+    isAddingConnectedAccount,
     isSeedWallet,
+    seizeConnectOpen,
   ]);
 
   const isSeedWalletModalOpen =
