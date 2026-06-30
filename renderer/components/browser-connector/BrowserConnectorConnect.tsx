@@ -149,7 +149,7 @@ export default function BrowserConnectorConnect(
       const nonceResponse = await getSessionNonce({
         signerAddress: address,
         clientType: refreshTokenClientType,
-        includeAuthHeaders: false,
+        includeWalletAuthHeaders: false,
       });
 
       if (signal?.aborted) {

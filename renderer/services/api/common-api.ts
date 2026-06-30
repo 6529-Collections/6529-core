@@ -18,10 +18,12 @@ type StructuredApiError = Error & {
 const getHeaders = (
   headers?: Record<string, string>,
   contentType: boolean = true,
-  includeAuthHeaders: boolean = true
+  includeAuthHeaders: boolean = true,
+  includeStagingAuthHeaders: boolean = includeAuthHeaders,
+  includeWalletAuthHeaders: boolean = includeAuthHeaders
 ) => {
-  const apiAuth = includeAuthHeaders ? getStagingAuth() : null;
-  const walletAuth = includeAuthHeaders ? getAuthJwt() : null;
+  const apiAuth = includeStagingAuthHeaders ? getStagingAuth() : null;
+  const walletAuth = includeWalletAuthHeaders ? getAuthJwt() : null;
   return {
     ...(contentType ? { "Content-Type": "application/json" } : {}),
     ...(apiAuth ? { "x-6529-auth": apiAuth } : {}),
@@ -347,6 +349,8 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
   signal?: AbortSignal | undefined;
   errorMode?: ApiErrorMode | undefined;
   includeAuthHeaders?: boolean | undefined;
+  includeStagingAuthHeaders?: boolean | undefined;
+  includeWalletAuthHeaders?: boolean | undefined;
 }): Promise<T> => {
   const url = buildUrl(
     param.endpoint,
@@ -366,7 +370,9 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
     headers: getHeaders(
       param.headers,
       false,
-      param.includeAuthHeaders ?? true
+      param.includeAuthHeaders ?? true,
+      param.includeStagingAuthHeaders ?? param.includeAuthHeaders ?? true,
+      param.includeWalletAuthHeaders ?? param.includeAuthHeaders ?? true
     ),
     signal: param.signal,
     errorMode: param.errorMode ?? "legacy-string",

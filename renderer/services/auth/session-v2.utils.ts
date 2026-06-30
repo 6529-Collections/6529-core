@@ -127,14 +127,19 @@ export async function getSessionNonce({
   signerAddress,
   clientType = getSessionClientType(),
   includeAuthHeaders = true,
+  includeWalletAuthHeaders,
 }: {
   readonly signerAddress: string;
   readonly clientType?: AuthSessionClientType | undefined;
   readonly includeAuthHeaders?: boolean | undefined;
+  readonly includeWalletAuthHeaders?: boolean | undefined;
 }): Promise<ApiSessionNonceResponse> {
-  const authHeadersOption = includeAuthHeaders
-    ? {}
-    : { includeAuthHeaders: false };
+  const authHeadersOption = {
+    ...(includeAuthHeaders ? {} : { includeAuthHeaders: false }),
+    ...(includeWalletAuthHeaders === undefined
+      ? {}
+      : { includeWalletAuthHeaders }),
+  };
   return await commonApiFetch<
     ApiSessionNonceResponse,
     {

@@ -132,7 +132,7 @@ describe("session-v2.utils", () => {
     });
   });
 
-  it("allows browser connector pages to request native session nonces explicitly", async () => {
+  it("allows browser connector pages to request native session nonces without wallet auth", async () => {
     const nonceResponse = {
       signable_message: "6529 Authentication\nDomain: native",
       server_signature: "server-signature",
@@ -143,7 +143,7 @@ describe("session-v2.utils", () => {
       getSessionNonce({
         signerAddress: "0xabc",
         clientType: "native",
-        includeAuthHeaders: false,
+        includeWalletAuthHeaders: false,
       })
     ).resolves.toBe(nonceResponse);
 
@@ -154,7 +154,7 @@ describe("session-v2.utils", () => {
         client_type: "native",
         chain_id: "1",
       },
-      includeAuthHeaders: false,
+      includeWalletAuthHeaders: false,
     });
   });
 
