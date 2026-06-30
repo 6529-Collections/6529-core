@@ -343,6 +343,24 @@ const getManualSessionUpgradePromptStatus = (): SessionUpgradePromptStatus => ({
   timeLeftMs: 0,
 });
 
+const getToastTextPart = (value: unknown): string | null =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+const getAuthToastDedupeId = (toastInput: AppToastInput): string | undefined => {
+  const textParts = [
+    getToastTextPart(toastInput.title),
+    getToastTextPart(toastInput.message),
+    getToastTextPart(toastInput.description),
+    getToastTextPart(toastInput.details),
+  ].filter((part): part is string => part !== null);
+
+  if (textParts.length === 0) {
+    return undefined;
+  }
+
+  return `auth-toast:${toastInput.type}:${textParts.join(":")}`;
+};
+
 const getStoredLegacySessionUpgradeAddress = (): string | null => {
   const walletAddress = getWalletAddress();
   if (!walletAddress || !getAuthJwt()) {
@@ -1107,8 +1125,11 @@ export default function Auth({
     }
   };
 
-  const setToast = (toast: AppToastInput) => {
-    showAppToast(toast);
+  const setToast = (toastInput: AppToastInput) => {
+    showAppToast({
+      ...toastInput,
+      toastId: toastInput.toastId ?? getAuthToastDedupeId(toastInput),
+    });
   };
 
   const getSignature = async ({

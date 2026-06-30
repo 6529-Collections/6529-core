@@ -126,6 +126,12 @@ interface NativeSessionLoginRequest {
   readonly role?: string | null;
 }
 
+interface NativeSessionRefreshRequest {
+  readonly client_type?: "native" | "desktop";
+  readonly client_address: string;
+  readonly native_refresh_token: string;
+}
+
 interface NativeSessionLoginResponse {
   readonly client_type: "native" | "desktop";
   readonly address: string;
@@ -185,6 +191,24 @@ function isNativeSessionLoginRequest(
     (record.role === undefined ||
       record.role === null ||
       typeof record.role === "string")
+  );
+}
+
+function isNativeSessionRefreshRequest(
+  request: unknown,
+): request is NativeSessionRefreshRequest {
+  if (typeof request !== "object" || request === null) {
+    return false;
+  }
+  const record = request as Partial<NativeSessionRefreshRequest>;
+  return (
+    (record.client_type === undefined ||
+      record.client_type === "native" ||
+      record.client_type === "desktop") &&
+    typeof record.client_address === "string" &&
+    record.client_address.length > 0 &&
+    typeof record.native_refresh_token === "string" &&
+    record.native_refresh_token.length > 0
   );
 }
 
@@ -257,6 +281,57 @@ async function nativeSessionLogin(
   const expectedClientType = request.client_type ?? "desktop";
   if (responseBody.client_type !== expectedClientType) {
     throw new Error("Native session login response client type mismatch");
+  }
+  return responseBody;
+}
+
+async function nativeSessionRefresh(
+  request: NativeSessionRefreshRequest,
+): Promise<NativeSessionLoginResponse> {
+  const runtimeConfig = getPublicRuntimeConfig();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...getStagingApiHeaders(runtimeConfig),
+  };
+  const response = await fetch(
+    `${getApiEndpoint(runtimeConfig)}/api/auth/session-refresh`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        client_type: request.client_type ?? "desktop",
+        client_address: request.client_address,
+        native_refresh_token: request.native_refresh_token,
+      }),
+    },
+  );
+
+  const responseText = await response.text();
+  let responseBody: unknown = null;
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+  if (!response.ok) {
+    const error =
+      responseBody &&
+      typeof responseBody === "object" &&
+      "error" in responseBody &&
+      typeof responseBody.error === "string"
+        ? responseBody.error
+        : response.statusText || "Native session refresh failed";
+    throw new Error(error);
+  }
+
+  if (!isNativeSessionLoginResponse(responseBody)) {
+    throw new Error("Invalid native session refresh response");
+  }
+  const expectedClientType = request.client_type ?? "desktop";
+  if (responseBody.client_type !== expectedClientType) {
+    throw new Error("Native session refresh response client type mismatch");
   }
   return responseBody;
 }
@@ -1309,6 +1384,13 @@ ipcMain.handle("native-auth:session-login", (_event, request: unknown) => {
     throw new Error("Invalid native session login request");
   }
   return nativeSessionLogin(request);
+});
+
+ipcMain.handle("native-auth:session-refresh", (_event, request: unknown) => {
+  if (!isNativeSessionRefreshRequest(request)) {
+    throw new Error("Invalid native session refresh request");
+  }
+  return nativeSessionRefresh(request);
 });
 
 ipcMain.on(

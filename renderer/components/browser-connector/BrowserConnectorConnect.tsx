@@ -59,6 +59,15 @@ type NativeAuthState = {
   readonly payload: BrowserConnectorSignedNativeAuth;
 } | null;
 
+type WalletIntentNotice =
+  | {
+      readonly type: "already-connected";
+    }
+  | {
+      readonly type: "connect-requested" | "switch-requested";
+      readonly address: string;
+    };
+
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error && error.message ? error.message : fallback;
 
@@ -69,6 +78,45 @@ const normalizeQueryAddress = (value: string | null): string | null => {
   const normalized = value.toLowerCase();
   return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
 };
+
+function BrowserConnectorWalletIntentNotice({
+  notice,
+}: {
+  readonly notice: WalletIntentNotice;
+}) {
+  const title =
+    notice.type === "already-connected"
+      ? "This wallet is already connected."
+      : notice.type === "switch-requested"
+        ? "Switch wallets before continuing."
+        : "Connect the requested wallet.";
+  const body =
+    notice.type === "already-connected" ? (
+      "Use a different browser wallet to add another Desktop account."
+    ) : (
+      <>
+        Continue with{" "}
+        <code className="tw-rounded-md tw-bg-error/10 tw-px-1.5 tw-py-0.5 tw-font-mono tw-text-[0.9em] tw-text-error">
+          {notice.address}
+        </code>
+        .
+      </>
+    );
+
+  return (
+    <div
+      className="tw-rounded-lg tw-border tw-border-solid tw-border-error/25 tw-bg-error/10 tw-px-4 tw-py-3 tw-text-error"
+      role="alert"
+    >
+      <p className="tw-m-0 tw-text-sm tw-font-semibold tw-leading-5">
+        {title}
+      </p>
+      <p className="tw-m-0 tw-mt-1 tw-text-sm tw-leading-5 tw-text-error/90">
+        {body}
+      </p>
+    </div>
+  );
+}
 
 export default function BrowserConnectorConnect(
   props: Readonly<{
@@ -124,20 +172,21 @@ export default function BrowserConnectorConnect(
   const [showAuthModal, setShowAuthModal] = useState(false);
   const isRequestedChain = liveChainId === requestedChainId;
 
-  const walletIntentMessage = useMemo(() => {
+  const walletIntentNotice = useMemo<WalletIntentNotice | null>(() => {
     if (
       normalizedIntendedWalletAddress &&
       normalizedLiveAddress !== normalizedIntendedWalletAddress
     ) {
-      return normalizedLiveAddress
-        ? `Switch to wallet ${normalizedIntendedWalletAddress} before continuing.`
-        : `Connect with wallet ${normalizedIntendedWalletAddress} before continuing.`;
+      return {
+        type: normalizedLiveAddress ? "switch-requested" : "connect-requested",
+        address: normalizedIntendedWalletAddress,
+      };
     }
     if (
       normalizedOriginWalletAddress &&
       normalizedLiveAddress === normalizedOriginWalletAddress
     ) {
-      return "You are already connected/authenticated with this wallet. Switch to a different wallet to add a new account.";
+      return { type: "already-connected" };
     }
     return null;
   }, [
@@ -145,7 +194,9 @@ export default function BrowserConnectorConnect(
     normalizedLiveAddress,
     normalizedOriginWalletAddress,
   ]);
-  const walletIntentError = walletIntentMessage;
+  const walletIntentError = walletIntentNotice
+    ? "Connect the requested wallet before continuing."
+    : null;
   const isWalletIntentSatisfied = !walletIntentError;
 
   const nativeAuthKey =
@@ -458,6 +509,15 @@ export default function BrowserConnectorConnect(
                     </button>
                   </Col>
                 </Row>
+                {walletIntentNotice && (
+                  <Row className="pt-4">
+                    <Col xs={12}>
+                      <BrowserConnectorWalletIntentNotice
+                        notice={walletIntentNotice}
+                      />
+                    </Col>
+                  </Row>
+                )}
               </Container>
             </Col>
           ) : (
@@ -468,14 +528,16 @@ export default function BrowserConnectorConnect(
                     <HeaderUserConnect />
                   </Col>
                 </Row>
+                {walletIntentNotice && (
+                  <Row className="pt-4">
+                    <Col xs={12}>
+                      <BrowserConnectorWalletIntentNotice
+                        notice={walletIntentNotice}
+                      />
+                    </Col>
+                  </Row>
+                )}
               </Container>
-            </Col>
-          )}
-          {walletIntentMessage && (
-            <Col xs={12} className="pt-3">
-              <p className="mb-0 text-danger" role="alert">
-                {walletIntentMessage}
-              </p>
             </Col>
           )}
         </Row>

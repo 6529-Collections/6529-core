@@ -98,7 +98,11 @@ function isUnauthorizedApiError(error: unknown): boolean {
   }
 
   const statusError = error as ApiStatusError;
-  return statusError.status === 401 || statusError.response?.status === 401;
+  return (
+    statusError.status === 401 ||
+    statusError.response?.status === 401 ||
+    (error instanceof Error && /unauthorized/i.test(error.message))
+  );
 }
 
 function getSessionCredentialsMode(): RequestCredentials {
@@ -217,6 +221,18 @@ export async function refreshSessionV2({
       return null;
     }
     try {
+      if (
+        isElectron() &&
+        typeof window !== "undefined" &&
+        typeof window.nativeAuth.sessionRefresh === "function"
+      ) {
+        return await window.nativeAuth.sessionRefresh({
+          client_type: clientType,
+          client_address: address,
+          native_refresh_token: nativeRefreshToken,
+        });
+      }
+
       return await commonApiPost<
         {
           readonly client_type: RefreshTokenSessionClientType;

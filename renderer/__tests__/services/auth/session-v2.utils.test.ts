@@ -548,24 +548,23 @@ describe("session-v2.utils", () => {
       native_refresh_token: "rotated-desktop-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
     };
-    (commonApiPost as jest.Mock).mockResolvedValueOnce(sessionResponse);
+    const sessionRefresh = jest.fn().mockResolvedValueOnce(sessionResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionRefresh },
+    });
 
     await expect(refreshSessionV2({ address: "0xabc" })).resolves.toBe(
       sessionResponse
     );
 
     expect(getNativeRefreshToken).toHaveBeenCalledWith("0xabc", "desktop");
-    expect(commonApiPost).toHaveBeenCalledWith({
-      endpoint: "auth/session-refresh",
-      body: {
-        client_type: "desktop",
-        client_address: "0xabc",
-        native_refresh_token: "desktop-refresh-token",
-      },
-      signal: undefined,
-      credentials: "include",
-      errorMode: "structured",
+    expect(sessionRefresh).toHaveBeenCalledWith({
+      client_type: "desktop",
+      client_address: "0xabc",
+      native_refresh_token: "desktop-refresh-token",
     });
+    expect(commonApiPost).not.toHaveBeenCalled();
   });
 
   it("revokes an existing native session", async () => {

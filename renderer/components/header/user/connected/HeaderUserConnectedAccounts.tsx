@@ -9,6 +9,7 @@ import { useIdentity } from "@/hooks/useIdentity";
 
 interface ConnectedAccountItem {
   readonly address: string;
+  readonly displayName?: string | undefined;
   readonly isActive: boolean;
   readonly isConnected: boolean;
   readonly unreadNotificationsCount?: number | undefined;
@@ -42,6 +43,7 @@ function ConnectedAccountRow({
     (shouldShowFallbackPfp ? DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP : null);
   const label =
     profile?.handle ??
+    account.displayName ??
     `${account.address.slice(0, 6)}...${account.address.slice(-4)}`;
   const walletLabel = formatAddress(account.address);
   const unreadCount = account.unreadNotificationsCount ?? 0;

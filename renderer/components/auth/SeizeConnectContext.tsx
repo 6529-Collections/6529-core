@@ -1584,15 +1584,23 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
 
   const connectedAccounts = useMemo(() => {
+    const browserConnectorAddress =
+      browserConnectorConnectedAddress && isAddress(browserConnectorConnectedAddress)
+        ? getAddress(browserConnectorConnectedAddress)
+        : null;
+
     return storedConnectedAccounts.map((storedAccount) => {
       const isActive =
         !!activeAddress &&
         normalizeAddress(storedAccount.address) ===
           normalizeAddress(activeAddress);
       const isConnectedForAccount = !!(
-        liveConnectedAddress &&
-        normalizeAddress(storedAccount.address) ===
-          normalizeAddress(liveConnectedAddress)
+        (liveConnectedAddress &&
+          normalizeAddress(storedAccount.address) ===
+            normalizeAddress(liveConnectedAddress)) ||
+        (browserConnectorAddress &&
+          normalizeAddress(storedAccount.address) ===
+            normalizeAddress(browserConnectorAddress))
       );
 
       return {
@@ -1604,7 +1612,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         isConnected: isConnectedForAccount,
       };
     });
-  }, [activeAddress, liveConnectedAddress, storedConnectedAccounts]);
+  }, [
+    activeAddress,
+    browserConnectorConnectedAddress,
+    liveConnectedAddress,
+    storedConnectedAccounts,
+  ]);
 
   const activeStoredAccount = useMemo(() => {
     if (!activeAddress) {

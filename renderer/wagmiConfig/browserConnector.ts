@@ -8,6 +8,7 @@ import { getNativeRefreshToken } from "@/services/auth/native-refresh-token-stor
 import {
   persistSessionResponse,
   redeemConnectionShare,
+  refreshSessionV2,
   type RefreshTokenSessionClientType,
   type SessionNativeResponse,
 } from "@/services/auth/session-v2.utils";
@@ -543,7 +544,6 @@ const processBrowserConnectResponse = async ({
       responseRecord.auth
     );
     let nativeSessionToPersist = nativeSessionAuth;
-    let hasExistingNativeSession = false;
 
     if (
       nativeSessionToPersist &&
@@ -602,10 +602,21 @@ const processBrowserConnectResponse = async ({
       if (!nativeRefreshToken) {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
-      hasExistingNativeSession = true;
+
+      const refreshedNativeSession = await refreshSessionV2({
+        address: existingNativeSessionAuth.address,
+      });
+      if (
+        !refreshedNativeSession ||
+        refreshedNativeSession.client_type !==
+          existingNativeSessionAuth.targetClientType
+      ) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+      nativeSessionToPersist = refreshedNativeSession as SessionNativeResponse;
     }
 
-    if (!nativeSessionToPersist && !hasExistingNativeSession) {
+    if (!nativeSessionToPersist) {
       throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
     }
 

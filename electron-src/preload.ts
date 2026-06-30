@@ -166,6 +166,11 @@ export const nativeAuth = {
     readonly client_address: string;
     readonly role?: string | null;
   }) => ipcRenderer.invoke("native-auth:session-login", request),
+  sessionRefresh: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly client_address: string;
+    readonly native_refresh_token: string;
+  }) => ipcRenderer.invoke("native-auth:session-refresh", request),
 };
 
 contextBridge.exposeInMainWorld("nativeAuth", nativeAuth);

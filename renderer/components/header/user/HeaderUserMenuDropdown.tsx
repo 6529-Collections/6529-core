@@ -72,9 +72,9 @@ export default function HeaderUserMenuDropdown({
   const { chains, currentChainName, nextChainName, switchToNextChain } =
     useChainSwitcher();
   const showSeedWalletActions = isSeedWallet;
-  const [seedWalletAddresses, setSeedWalletAddresses] = useState<Set<string>>(
-    () => new Set()
-  );
+  const [seedWalletNamesByAddress, setSeedWalletNamesByAddress] = useState<
+    Map<string, string>
+  >(() => new Map());
 
   useEffect(() => {
     let cancelled = false;
@@ -87,16 +87,21 @@ export default function HeaderUserMenuDropdown({
         }
 
         if (response.error || !Array.isArray(response.data)) {
-          setSeedWalletAddresses(new Set());
+          setSeedWalletNamesByAddress(new Map());
           return;
         }
 
-        setSeedWalletAddresses(
-          new Set(response.data.map((wallet) => wallet.address.toLowerCase()))
+        setSeedWalletNamesByAddress(
+          new Map(
+            response.data.map((wallet) => [
+              wallet.address.toLowerCase(),
+              wallet.name,
+            ])
+          )
         );
       } catch {
         if (!cancelled) {
-          setSeedWalletAddresses(new Set());
+          setSeedWalletNamesByAddress(new Map());
         }
       }
     };
@@ -201,9 +206,12 @@ export default function HeaderUserMenuDropdown({
                       <HeaderUserConnectedAccounts
                         accounts={availableConnectedAccounts.map((account) => ({
                           ...account,
+                          displayName: seedWalletNamesByAddress.get(
+                            account.address.toLowerCase()
+                          ),
                           isConnected:
                             account.isConnected ||
-                            seedWalletAddresses.has(
+                            seedWalletNamesByAddress.has(
                               account.address.toLowerCase()
                             ),
                           unreadNotificationsCount:

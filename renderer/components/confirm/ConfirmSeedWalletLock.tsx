@@ -45,6 +45,16 @@ export default function ConfirmSeedWalletLock(
   const { showToast } = useToast();
   const { isTopModal, addModal, removeModal } = useModalState();
 
+  const focusPasswordInput = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+
+    input.focus({ preventScroll: true });
+    input.select();
+  }, []);
+
   useEffect(() => {
     if (!props.show) {
       setWalletPass("");
@@ -58,14 +68,17 @@ export default function ConfirmSeedWalletLock(
       return;
     }
 
-    const focusTimeout = setTimeout(() => {
-      inputRef.current?.focus();
-    }, 0);
+    const animationFrameId =
+      globalThis.requestAnimationFrame?.(focusPasswordInput) ?? null;
+    const focusTimeout = setTimeout(focusPasswordInput, 75);
 
     return () => {
+      if (animationFrameId !== null) {
+        globalThis.cancelAnimationFrame?.(animationFrameId);
+      }
       clearTimeout(focusTimeout);
     };
-  }, [props.show, props.unlockedWallet]);
+  }, [focusPasswordInput, props.show, props.unlockedWallet]);
 
   useEffect(() => {
     if (props.show) addModal(SEED_WALLET_LOCK_MODAL);
@@ -212,6 +225,7 @@ export default function ConfirmSeedWalletLock(
             placeholder="******"
             value={walletPass}
             className={confirmInputClass}
+            onFocus={(event) => event.currentTarget.select()}
             onChange={(e) => setWalletPass(e.target.value)}
             onKeyDown={handleKeyPress}
           />

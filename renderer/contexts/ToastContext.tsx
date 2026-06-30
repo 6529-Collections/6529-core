@@ -7,8 +7,8 @@ import {
   useContext,
   useMemo,
 } from "react";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { toast } from "react-toastify";
+import { showAppToast } from "@/components/utils/toast/AppToast";
 
 interface ToastContextType {
   showToast: (
@@ -43,7 +43,11 @@ export const ToastProvider = ({
     if (singleton) {
       toast.dismiss();
     }
-    toast(message, { type });
+    showAppToast({
+      message,
+      type,
+      ...(singleton ? { toastId: `legacy-toast:${type}:${message}` } : {}),
+    });
   };
 
   const contextValue = useMemo(() => ({ showToast }), []);
@@ -51,7 +55,6 @@ export const ToastProvider = ({
   return (
     <ToastContext.Provider value={contextValue}>
       {children}
-      <ToastContainer theme="dark" />
     </ToastContext.Provider>
   );
 };

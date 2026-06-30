@@ -7,6 +7,7 @@ import { getNativeRefreshToken } from "@/services/auth/native-refresh-token-stor
 import {
   persistSessionResponse,
   redeemConnectionShare,
+  refreshSessionV2,
 } from "@/services/auth/session-v2.utils";
 import {
   browserConnector,
@@ -32,6 +33,7 @@ jest.mock("@/services/auth/native-refresh-token-storage", () => ({
 jest.mock("@/services/auth/session-v2.utils", () => ({
   persistSessionResponse: jest.fn(() => Promise.resolve(true)),
   redeemConnectionShare: jest.fn(),
+  refreshSessionV2: jest.fn(),
 }));
 
 const ADDRESS = "0x00000000000000000000000000000000000000aa";
@@ -262,6 +264,15 @@ describe("browserConnector", () => {
     (getNativeRefreshToken as jest.Mock).mockResolvedValueOnce(
       "desktop-refresh-token"
     );
+    (refreshSessionV2 as jest.Mock).mockResolvedValueOnce({
+      client_type: "desktop",
+      address: ADDRESS,
+      role: null,
+      access_token: "refreshed-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "refreshed-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
     const { connectPromise, requestId } = await startConnect();
 
     walletConnectionListener?.(null, {
@@ -279,7 +290,16 @@ describe("browserConnector", () => {
       chainId: 1,
     });
     expect(getNativeRefreshToken).toHaveBeenCalledWith(ADDRESS, "desktop");
-    expect(persistSessionResponse).not.toHaveBeenCalled();
+    expect(refreshSessionV2).toHaveBeenCalledWith({ address: ADDRESS });
+    expect(persistSessionResponse).toHaveBeenCalledWith({
+      client_type: "desktop",
+      address: ADDRESS,
+      role: null,
+      access_token: "refreshed-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "refreshed-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
     expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
   });
 
@@ -301,6 +321,7 @@ describe("browserConnector", () => {
       "Desktop session-v2 authentication is required"
     );
     expect(getNativeRefreshToken).toHaveBeenCalledWith(ADDRESS, "desktop");
+    expect(refreshSessionV2).not.toHaveBeenCalled();
     expect(persistSessionResponse).not.toHaveBeenCalled();
     expect(setActiveWalletAccount).not.toHaveBeenCalled();
   });
