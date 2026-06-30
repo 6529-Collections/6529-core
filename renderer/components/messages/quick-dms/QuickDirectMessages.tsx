@@ -82,7 +82,7 @@ const QUICK_DM_POSITION_CLASS =
 // 6529 Core only: keep the open panel out of the Electron titlebar widget gutter
 // when refreshing this file from the frontend subtree.
 const QUICK_DM_OPEN_POSITION_CLASS =
-  "tailwind-scope tw-fixed tw-bottom-24 tw-right-28 tw-z-[70] xl:tw-bottom-6";
+  "tailwind-scope tw-fixed tw-bottom-24 tw-right-[50px] tw-z-[70] xl:tw-bottom-6";
 const QUICK_DM_RELATIVE_TIME_OPTIONS = {
   numeric: "auto",
   style: "short",
