@@ -18,7 +18,7 @@ export class ApiSessionLoginRequest {
     'client_address': string;
     'client_signature': string;
     /**
-    * Server-signed structured challenge token. /auth/session-login only accepts first_party_web challenges for web cookie sessions and native or desktop challenges for refresh-token sessions; external_client challenges use /auth/login bearer-token auth instead.
+    * Server-signed structured challenge token. /auth/session-login only accepts first_party_web challenges for web cookie sessions and matching native or desktop challenges for refresh-token sessions; external_client challenges use /auth/login bearer-token auth instead.
     */
     'server_signature': string;
     'role'?: string | null;

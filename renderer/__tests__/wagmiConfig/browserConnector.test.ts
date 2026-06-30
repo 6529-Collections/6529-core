@@ -1,4 +1,5 @@
 import {
+  getConnectedWalletAccounts,
   getWalletAddress,
   hasActiveSessionV2Auth,
   setActiveWalletAccount,
@@ -23,6 +24,7 @@ jest.mock("wagmi", () => ({
 }));
 
 jest.mock("@/services/auth/auth.utils", () => ({
+  getConnectedWalletAccounts: jest.fn(() => []),
   getWalletAddress: jest.fn(() => null),
   hasActiveSessionV2Auth: jest.fn(() => false),
   setActiveWalletAccount: jest.fn(() => true),
@@ -286,6 +288,17 @@ describe("browserConnector", () => {
   });
 
   it("includes pending wallet intent when opening the browser connect page", async () => {
+    (getConnectedWalletAccounts as jest.Mock).mockReturnValueOnce([
+      {
+        address: OTHER_ADDRESS,
+        refreshToken: null,
+        role: null,
+        jwt: "existing-jwt",
+        profileId: null,
+        profileHandle: null,
+        authSessionVersion: "v2",
+      },
+    ]);
     setBrowserConnectorConnectIntent({
       intendedWalletAddress: ADDRESS,
       originWalletAddress: OTHER_ADDRESS,
@@ -295,6 +308,7 @@ describe("browserConnector", () => {
 
     expect(url.searchParams.get("intendedWalletAddress")).toBe(ADDRESS);
     expect(url.searchParams.get("originWalletAddress")).toBe(OTHER_ADDRESS);
+    expect(url.searchParams.get("knownWalletAddresses")).toBe(OTHER_ADDRESS);
 
     walletConnectionListener?.(null, {
       requestId,

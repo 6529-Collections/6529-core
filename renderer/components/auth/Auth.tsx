@@ -58,6 +58,7 @@ import {
   getAuthJwt,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  isAuthJwtUsable,
   PROFILE_SWITCHED_EVENT,
   removeAuthJwt,
   setAuthJwt,
@@ -940,6 +941,23 @@ export default function Auth({
     }
 
     if (!isAddressAuthorized) {
+      const storedAuthAddress = getWalletAddress();
+      const storedAuthJwt = getAuthJwt();
+      const hasJustPersistedSessionV2Auth =
+        !!address &&
+        !!storedAuthAddress &&
+        storedAuthAddress.toLowerCase() === address.toLowerCase() &&
+        hasActiveSessionV2Auth({ address }) &&
+        isAuthJwtUsable(storedAuthJwt);
+
+      if (hasJustPersistedSessionV2Auth) {
+        setSessionUpgradeRequired(false);
+        setSessionUpgradeHasDeadline(false);
+        setSignModalReason("auth");
+        setShowSignModal(false);
+        return undefined;
+      }
+
       setSessionUpgradeRequired(false);
       if (isConnected) {
         setSignModalReason("auth");

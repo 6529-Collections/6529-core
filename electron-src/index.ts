@@ -137,10 +137,16 @@ type RefreshTokenClientType = "native" | "desktop";
 interface NativeConnectionShareRequest {
   readonly access_token?: string | null;
   readonly target_client_type?: RefreshTokenClientType;
+  readonly client_type?: RefreshTokenClientType;
+  readonly client_address?: string;
+  readonly native_refresh_token?: string;
 }
 
 interface NativeLegacyDesktopConnectionShareRequest {
   readonly access_token?: string | null;
+  readonly client_type?: RefreshTokenClientType;
+  readonly client_address?: string;
+  readonly native_refresh_token?: string;
 }
 
 interface NativeRedeemConnectionShareRequest {
@@ -327,6 +333,28 @@ function hasOptionalAccessToken(record: {
   );
 }
 
+function hasOptionalConnectionShareSourceProof(record: {
+  readonly client_type?: unknown;
+  readonly client_address?: unknown;
+  readonly native_refresh_token?: unknown;
+}): boolean {
+  const hasAnyProofField =
+    record.client_type !== undefined ||
+    record.client_address !== undefined ||
+    record.native_refresh_token !== undefined;
+  if (!hasAnyProofField) {
+    return true;
+  }
+
+  return (
+    isRefreshTokenClientType(record.client_type) &&
+    typeof record.client_address === "string" &&
+    record.client_address.length > 0 &&
+    typeof record.native_refresh_token === "string" &&
+    record.native_refresh_token.length > 0
+  );
+}
+
 function isNativeConnectionShareRequest(
   request: unknown,
 ): request is NativeConnectionShareRequest {
@@ -336,6 +364,7 @@ function isNativeConnectionShareRequest(
   const record = request as Partial<NativeConnectionShareRequest>;
   return (
     hasOptionalAccessToken(record) &&
+    hasOptionalConnectionShareSourceProof(record) &&
     (record.target_client_type === undefined ||
       isRefreshTokenClientType(record.target_client_type))
   );
@@ -347,8 +376,10 @@ function isNativeLegacyDesktopConnectionShareRequest(
   if (typeof request !== "object" || request === null) {
     return false;
   }
-  return hasOptionalAccessToken(
-    request as Partial<NativeLegacyDesktopConnectionShareRequest>,
+  const record = request as Partial<NativeLegacyDesktopConnectionShareRequest>;
+  return (
+    hasOptionalAccessToken(record) &&
+    hasOptionalConnectionShareSourceProof(record)
   );
 }
 
@@ -487,6 +518,13 @@ async function nativeCreateConnectionShare(
     accessToken: request.access_token,
     body: {
       target_client_type: targetClientType,
+      ...(request.client_type === undefined
+        ? {}
+        : {
+            client_type: request.client_type,
+            client_address: request.client_address,
+            native_refresh_token: request.native_refresh_token,
+          }),
     },
   });
   if (!isNativeConnectionShareResponse(responseBody)) {
@@ -501,7 +539,15 @@ async function nativeCreateLegacyDesktopConnectionShare(
   const responseBody = await postNativeAuthApi<unknown>({
     endpoint: "auth/connection-share/legacy-desktop",
     accessToken: request.access_token,
-    body: {},
+    body: {
+      ...(request.client_type === undefined
+        ? {}
+        : {
+            client_type: request.client_type,
+            client_address: request.client_address,
+            native_refresh_token: request.native_refresh_token,
+          }),
+    },
   });
   if (!isNativeLegacyDesktopConnectionShareResponse(responseBody)) {
     throw new Error("Invalid legacy desktop connection share response");

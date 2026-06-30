@@ -1,4 +1,5 @@
 import {
+  getConnectedWalletAccounts,
   getWalletAddress,
   hasActiveSessionV2Auth,
   setActiveWalletAccount,
@@ -98,6 +99,23 @@ const normalizeIntentAddress = (
   return HEX_ADDRESS_REGEX.test(normalizedAddress)
     ? (normalizedAddress as `0x${string}`)
     : null;
+};
+
+const getKnownDesktopAccountAddresses = (): readonly `0x${string}`[] => {
+  const knownAddresses: `0x${string}`[] = [];
+  const seen = new Set<string>();
+
+  for (const account of getConnectedWalletAccounts()) {
+    const normalizedAddress = normalizeIntentAddress(account.address);
+    if (!normalizedAddress || seen.has(normalizedAddress)) {
+      continue;
+    }
+
+    seen.add(normalizedAddress);
+    knownAddresses.push(normalizedAddress);
+  }
+
+  return knownAddresses;
 };
 
 export const clearBrowserConnectorConnectIntent = (): void => {
@@ -986,6 +1004,13 @@ export function browserConnector(parameters: {
             connectIntent.originWalletAddress
           );
         }
+        const knownWalletAddresses = getKnownDesktopAccountAddresses();
+        if (knownWalletAddresses.length > 0) {
+          connectSearchParams.set(
+            "knownWalletAddresses",
+            knownWalletAddresses.join(",")
+          );
+        }
         const requiredAuthClientType = getRefreshTokenClientTypeForAuthMode(
           connectSearchParams.get("authMode")
         );
@@ -1016,6 +1041,11 @@ export function browserConnector(parameters: {
               };
 
               const didSwitch = setActiveWalletAccount(accountToActivate);
+              if (!didSwitch && requiredAuthClientType) {
+                throw new Error(
+                  "Couldn't activate this authenticated browser wallet. Please try again."
+                );
+              }
               if (!didSwitch) {
                 console.log(
                   `[${this.name}] Connected account is not active yet (likely awaiting auth):`,

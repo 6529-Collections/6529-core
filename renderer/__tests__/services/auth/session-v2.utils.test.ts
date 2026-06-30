@@ -1,6 +1,10 @@
 import { Capacitor } from "@capacitor/core";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
-import { getAuthJwt, setAuthJwt } from "@/services/auth/auth.utils";
+import {
+  getAuthJwt,
+  getWalletAddress,
+  setAuthJwt,
+} from "@/services/auth/auth.utils";
 import {
   getNativeRefreshToken,
   isNativeSecureStorageAvailable,
@@ -16,6 +20,7 @@ import {
   persistSessionResponse,
   redeemConnectionShare,
   refreshSessionV2,
+  __resetSessionRefreshStateForTests,
   verifyActiveSessionV2WebSession,
 } from "@/services/auth/session-v2.utils";
 
@@ -36,6 +41,7 @@ jest.mock("@/services/api/common-api", () => ({
 
 jest.mock("@/services/auth/auth.utils", () => ({
   getAuthJwt: jest.fn(),
+  getWalletAddress: jest.fn(),
   setAuthJwt: jest.fn(),
 }));
 
@@ -48,6 +54,7 @@ jest.mock("@/services/auth/native-refresh-token-storage", () => ({
 
 describe("session-v2.utils", () => {
   beforeEach(() => {
+    __resetSessionRefreshStateForTests();
     jest.resetAllMocks();
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(false);
     (commonApiFetch as jest.Mock).mockResolvedValue(undefined);
@@ -55,6 +62,7 @@ describe("session-v2.utils", () => {
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(null);
     (isNativeSecureStorageAvailable as jest.Mock).mockReturnValue(true);
     (getAuthJwt as jest.Mock).mockReturnValue(null);
+    (getWalletAddress as jest.Mock).mockReturnValue(null);
     (setAuthJwt as jest.Mock).mockReturnValue(true);
     Object.defineProperty(window, "api", {
       configurable: true,
@@ -569,6 +577,40 @@ describe("session-v2.utils", () => {
     expect(commonApiPost).not.toHaveBeenCalled();
   });
 
+  it("deduplicates concurrent desktop refreshes for the same account", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    (getNativeRefreshToken as jest.Mock).mockResolvedValue(
+      "desktop-refresh-token"
+    );
+    const sessionResponse = {
+      client_type: "desktop",
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "rotated-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    const sessionRefresh = jest.fn().mockResolvedValue(sessionResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionRefresh },
+    });
+
+    await expect(
+      Promise.all([
+        refreshSessionV2({ address: "0xabc" }),
+        refreshSessionV2({ address: "0xABC" }),
+      ])
+    ).resolves.toEqual([sessionResponse, sessionResponse]);
+
+    expect(sessionRefresh).toHaveBeenCalledTimes(1);
+    expect(getNativeRefreshToken).toHaveBeenCalledTimes(1);
+  });
+
   it("revokes an existing native session", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(
@@ -720,6 +762,10 @@ describe("session-v2.utils", () => {
       value: { createConnectionShare: createConnectionShareNative },
     });
     (getAuthJwt as jest.Mock).mockReturnValue("wallet-access-token");
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+    (getNativeRefreshToken as jest.Mock).mockResolvedValue(
+      "desktop-refresh-token"
+    );
 
     await expect(
       createConnectionShare({ targetClientType: "desktop" })
@@ -728,6 +774,9 @@ describe("session-v2.utils", () => {
     expect(createConnectionShareNative).toHaveBeenCalledWith({
       access_token: "wallet-access-token",
       target_client_type: "desktop",
+      client_type: "desktop",
+      client_address: "0xabc",
+      native_refresh_token: "desktop-refresh-token",
     });
     expect(commonApiPost).not.toHaveBeenCalled();
   });
@@ -778,6 +827,10 @@ describe("session-v2.utils", () => {
       },
     });
     (getAuthJwt as jest.Mock).mockReturnValue("wallet-access-token");
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+    (getNativeRefreshToken as jest.Mock).mockResolvedValue(
+      "desktop-refresh-token"
+    );
 
     await expect(createLegacyDesktopConnectionShare({})).resolves.toBe(
       shareResponse
@@ -785,6 +838,9 @@ describe("session-v2.utils", () => {
 
     expect(createLegacyDesktopConnectionShareNative).toHaveBeenCalledWith({
       access_token: "wallet-access-token",
+      client_type: "desktop",
+      client_address: "0xabc",
+      native_refresh_token: "desktop-refresh-token",
     });
     expect(commonApiPost).not.toHaveBeenCalled();
   });

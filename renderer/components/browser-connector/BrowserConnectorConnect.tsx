@@ -79,6 +79,26 @@ const normalizeQueryAddress = (value: string | null): string | null => {
   return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
 };
 
+const normalizeQueryAddressList = (value: string | null): readonly string[] => {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    return [];
+  }
+
+  const addresses: string[] = [];
+  const seen = new Set<string>();
+  for (const item of value.split(",")) {
+    const normalized = normalizeQueryAddress(item.trim());
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+
+    seen.add(normalized);
+    addresses.push(normalized);
+  }
+
+  return addresses;
+};
+
 function BrowserConnectorWalletIntentNotice({
   notice,
 }: {
@@ -140,6 +160,7 @@ export default function BrowserConnectorConnect(
   const existingAuthAddress = searchParams.get("existingAuthAddress");
   const intendedWalletAddress = searchParams.get("intendedWalletAddress");
   const originWalletAddress = searchParams.get("originWalletAddress");
+  const knownWalletAddresses = searchParams.get("knownWalletAddresses");
   const refreshTokenClientType = getRefreshTokenClientTypeForAuthMode(
     searchParams.get("authMode")
   );
@@ -159,6 +180,10 @@ export default function BrowserConnectorConnect(
   const normalizedOriginWalletAddress = useMemo(
     () => normalizeQueryAddress(originWalletAddress),
     [originWalletAddress]
+  );
+  const normalizedKnownWalletAddresses = useMemo(
+    () => normalizeQueryAddressList(knownWalletAddresses),
+    [knownWalletAddresses]
   );
 
   const requestedChain =
@@ -188,14 +213,24 @@ export default function BrowserConnectorConnect(
     ) {
       return { type: "already-connected" };
     }
+    if (
+      !normalizedIntendedWalletAddress &&
+      normalizedLiveAddress &&
+      normalizedKnownWalletAddresses.includes(normalizedLiveAddress)
+    ) {
+      return { type: "already-connected" };
+    }
     return null;
   }, [
     normalizedIntendedWalletAddress,
+    normalizedKnownWalletAddresses,
     normalizedLiveAddress,
     normalizedOriginWalletAddress,
   ]);
   const walletIntentError = walletIntentNotice
-    ? "Connect the requested wallet before continuing."
+    ? walletIntentNotice.type === "already-connected"
+      ? "Switch to a different browser wallet before continuing."
+      : "Connect the requested wallet before continuing."
     : null;
   const isWalletIntentSatisfied = !walletIntentError;
 
