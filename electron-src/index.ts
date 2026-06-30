@@ -104,8 +104,6 @@ let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
 let splash: BrowserWindow | null = null;
 
-const SPLASH_API_URL = "https://api.6529.io/desktop/splash";
-
 const SPLASH_MAX_WIDTH = 960;
 const SPLASH_MAX_HEIGHT = 560;
 const SPLASH_MIN_WIDTH = 680;
@@ -155,6 +153,18 @@ function getApiEndpoint(runtimeConfig: Record<string, unknown>): string {
   return runtimeConfig.API_ENDPOINT.replace(/\/+$/, "");
 }
 
+function getStagingApiHeaders(
+  runtimeConfig: Record<string, unknown>,
+): Record<string, string> {
+  if (
+    typeof runtimeConfig.STAGING_API_KEY !== "string" ||
+    runtimeConfig.STAGING_API_KEY.length === 0
+  ) {
+    return {};
+  }
+  return { "x-6529-auth": runtimeConfig.STAGING_API_KEY };
+}
+
 function isNativeSessionLoginRequest(
   request: unknown,
 ): request is NativeSessionLoginRequest {
@@ -202,13 +212,8 @@ async function nativeSessionLogin(
   const runtimeConfig = getPublicRuntimeConfig();
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
+    ...getStagingApiHeaders(runtimeConfig),
   };
-  if (
-    typeof runtimeConfig.STAGING_API_KEY === "string" &&
-    runtimeConfig.STAGING_API_KEY.length > 0
-  ) {
-    headers["x-6529-auth"] = runtimeConfig.STAGING_API_KEY;
-  }
   const response = await fetch(
     `${getApiEndpoint(runtimeConfig)}/api/auth/session-login`,
     {
@@ -639,16 +644,18 @@ async function sendSplashCardIfReady() {
 const SPLASH_LEFT_PANEL_RATIO = 0.4;
 const SPLASH_FETCH_MAX_ATTEMPTS = 3;
 
-function fetchSplashCard(attempt = 1): Promise<SplashCard> {
-  return fetch(SPLASH_API_URL)
-    .then((res) => {
-      if (!res.ok) throw new Error(`Splash API ${res.status}`);
-      return res.json();
-    })
-    .catch((err) => {
-      if (attempt >= SPLASH_FETCH_MAX_ATTEMPTS) throw err;
-      return fetchSplashCard(attempt + 1);
+async function fetchSplashCard(attempt = 1): Promise<SplashCard> {
+  try {
+    const runtimeConfig = getPublicRuntimeConfig();
+    const res = await fetch(`${getApiEndpoint(runtimeConfig)}/desktop/splash`, {
+      headers: getStagingApiHeaders(runtimeConfig),
     });
+    if (!res.ok) throw new Error(`Splash API ${res.status}`);
+    return await res.json();
+  } catch (err) {
+    if (attempt >= SPLASH_FETCH_MAX_ATTEMPTS) throw err;
+    return fetchSplashCard(attempt + 1);
+  }
 }
 
 function getRightPanelWidth(totalWidth: number): number {
