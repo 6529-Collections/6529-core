@@ -123,9 +123,7 @@ type AuthContextType = {
   readonly showWaves: boolean;
   readonly sessionUpgradeRequired: boolean;
   readonly requestAuth: () => Promise<{ success: boolean }>;
-  readonly requestSessionUpgrade?: (
-    address?: string
-  ) => Promise<{ success: boolean }>;
+  readonly requestSessionUpgrade?: () => Promise<{ success: boolean }>;
   readonly ensureActiveSessionV2WebSession?: (
     abortSignal?: AbortSignal
   ) => Promise<boolean>;
@@ -1230,11 +1228,9 @@ export default function Auth({
   const requestSignIn = async ({
     signerAddress,
     role,
-    forceSessionV2 = false,
   }: {
     readonly signerAddress: string;
     readonly role: string | null;
-    readonly forceSessionV2?: boolean | undefined;
   }): Promise<{ success: boolean }> => {
     try {
       if (!canStoreAnotherWalletAccount(signerAddress)) {
@@ -1245,7 +1241,7 @@ export default function Auth({
         return { success: false };
       }
 
-      if (pathname.startsWith("/browser-connector") && !forceSessionV2) {
+      if (pathname.startsWith("/browser-connector")) {
         const nonceResponse = await getLegacyBrowserConnectorNonce({
           signerAddress,
         });
@@ -1676,11 +1672,8 @@ export default function Auth({
     }
   };
 
-  const requestSessionUpgrade = async (
-    requestedAddress?: string
-  ): Promise<{ success: boolean }> => {
-    const upgradeAddress =
-      requestedAddress ?? address ?? getStoredLegacySessionUpgradeAddress();
+  const requestSessionUpgrade = async (): Promise<{ success: boolean }> => {
+    const upgradeAddress = address ?? getStoredLegacySessionUpgradeAddress();
     if (!upgradeAddress) {
       setToast({
         message: t(AUTH_MODAL_LOCALE, "auth.signModal.connectWalletPrompt"),
@@ -1709,7 +1702,7 @@ export default function Auth({
         return { success: false };
       }
 
-      if (!canSignActiveWallet && !requestedAddress) {
+      if (!canSignActiveWallet) {
         // The prompt is visible, but no upgraded JWT exists until the user reconnects and signs.
         return { success: false };
       }
@@ -1720,7 +1713,6 @@ export default function Auth({
       const { success } = await requestSignIn({
         signerAddress: upgradeAddress,
         role,
-        forceSessionV2: true,
       });
 
       if (!success) {

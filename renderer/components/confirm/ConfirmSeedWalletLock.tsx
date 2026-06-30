@@ -21,6 +21,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
@@ -112,6 +113,12 @@ export default function ConfirmSeedWalletLock(
       }
       titleClassName="tw-m-0 tw-flex tw-items-center tw-gap-3 tw-text-lg tw-font-semibold"
       footerClassName={confirmModalFooterBetween}
+      {...(props.unlockedWallet
+        ? {}
+        : {
+            initialFocusRef:
+              inputRef as unknown as RefObject<HTMLElement | null>,
+          })}
       dialogClassName={
         !isTopModal(SEED_WALLET_LOCK_MODAL) ? "tw-blur-[5px]" : ""
       }

@@ -77,6 +77,7 @@ import {
 import { isDev } from "./utils/env";
 import {
   getHomeDir,
+  getEnvironment,
   getInfo,
   getLogDirectory,
   getMainLogsPath,
@@ -116,6 +117,142 @@ const NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION = 1;
 interface StoredNativeRefreshToken {
   readonly version: typeof NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION;
   readonly cipherTextBase64: string;
+}
+
+interface NativeSessionLoginRequest {
+  readonly client_type?: "native" | "desktop";
+  readonly server_signature: string;
+  readonly client_signature: string;
+  readonly client_address: string;
+  readonly role?: string | null;
+}
+
+interface NativeSessionLoginResponse {
+  readonly client_type: "native" | "desktop";
+  readonly address: string;
+  readonly role: string | null;
+  readonly access_token: string;
+  readonly access_token_expires_at: string;
+  readonly native_refresh_token: string;
+  readonly refresh_token_expires_at: string;
+}
+
+function getPublicRuntimeConfig(): Record<string, unknown> {
+  const runtimeConfigPath = path.join(
+    app.getAppPath(),
+    "main",
+    "config",
+    "__PUBLIC_RUNTIME.json",
+  );
+  return JSON.parse(fs.readFileSync(runtimeConfigPath, "utf-8"));
+}
+
+function getApiEndpoint(runtimeConfig: Record<string, unknown>): string {
+  if (typeof runtimeConfig.API_ENDPOINT !== "string") {
+    throw new Error("API endpoint is not configured");
+  }
+  return runtimeConfig.API_ENDPOINT.replace(/\/+$/, "");
+}
+
+function isNativeSessionLoginRequest(
+  request: unknown,
+): request is NativeSessionLoginRequest {
+  if (typeof request !== "object" || request === null) {
+    return false;
+  }
+  const record = request as Partial<NativeSessionLoginRequest>;
+  return (
+    (record.client_type === undefined ||
+      record.client_type === "native" ||
+      record.client_type === "desktop") &&
+    typeof record.server_signature === "string" &&
+    record.server_signature.length > 0 &&
+    typeof record.client_signature === "string" &&
+    record.client_signature.length > 0 &&
+    typeof record.client_address === "string" &&
+    record.client_address.length > 0 &&
+    (record.role === undefined ||
+      record.role === null ||
+      typeof record.role === "string")
+  );
+}
+
+function isNativeSessionLoginResponse(
+  response: unknown,
+): response is NativeSessionLoginResponse {
+  if (typeof response !== "object" || response === null) {
+    return false;
+  }
+  const record = response as Partial<NativeSessionLoginResponse>;
+  return (
+    (record.client_type === "native" || record.client_type === "desktop") &&
+    typeof record.address === "string" &&
+    (typeof record.role === "string" || record.role === null) &&
+    typeof record.access_token === "string" &&
+    typeof record.access_token_expires_at === "string" &&
+    typeof record.native_refresh_token === "string" &&
+    typeof record.refresh_token_expires_at === "string"
+  );
+}
+
+async function nativeSessionLogin(
+  request: NativeSessionLoginRequest,
+): Promise<NativeSessionLoginResponse> {
+  const runtimeConfig = getPublicRuntimeConfig();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+  if (
+    typeof runtimeConfig.STAGING_API_KEY === "string" &&
+    runtimeConfig.STAGING_API_KEY.length > 0
+  ) {
+    headers["x-6529-auth"] = runtimeConfig.STAGING_API_KEY;
+  }
+  const response = await fetch(
+    `${getApiEndpoint(runtimeConfig)}/api/auth/session-login`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        client_type: request.client_type ?? "desktop",
+        server_signature: request.server_signature,
+        client_signature: request.client_signature,
+        client_address: request.client_address,
+        ...(request.role === undefined || request.role === null
+          ? {}
+          : { role: request.role }),
+      }),
+    },
+  );
+
+  const responseText = await response.text();
+  let responseBody: unknown = null;
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+  if (!response.ok) {
+    const error =
+      responseBody &&
+      typeof responseBody === "object" &&
+      "error" in responseBody &&
+      typeof responseBody.error === "string"
+        ? responseBody.error
+        : response.statusText || "Native session login failed";
+    throw new Error(error);
+  }
+
+  if (!isNativeSessionLoginResponse(responseBody)) {
+    throw new Error("Invalid native session login response");
+  }
+  const expectedClientType = request.client_type ?? "desktop";
+  if (responseBody.client_type !== expectedClientType) {
+    throw new Error("Native session login response client type mismatch");
+  }
+  return responseBody;
 }
 
 function assertNativeAuthRefreshTokenKey(key: string): void {
@@ -571,6 +708,7 @@ function createSplash() {
       additionalArguments: [
         `--app-version=${app.getVersion()}`,
         `--has-saved-card=${splashCardData ? "true" : "false"}`,
+        `--app-environment=${getEnvironment()}`,
       ],
     },
   });
@@ -1155,6 +1293,13 @@ ipcMain.handle(
 
 ipcMain.handle("native-auth:remove-refresh-token", (_event, key: string) => {
   removeEncryptedNativeRefreshToken(key);
+});
+
+ipcMain.handle("native-auth:session-login", (_event, request: unknown) => {
+  if (!isNativeSessionLoginRequest(request)) {
+    throw new Error("Invalid native session login request");
+  }
+  return nativeSessionLogin(request);
 });
 
 ipcMain.on(

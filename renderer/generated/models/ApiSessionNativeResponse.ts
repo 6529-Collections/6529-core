@@ -79,6 +79,6 @@ export class ApiSessionNativeResponse {
 }
 
 export enum ApiSessionNativeResponseClientTypeEnum {
-    Native = 'native'
+    Native = 'native',
+    Desktop = 'desktop'
 }
-

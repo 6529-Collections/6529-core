@@ -1082,6 +1082,14 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     beginDisconnectTransition();
     try {
       await disconnect();
+      refreshStoredConnectedAccounts();
+      const storedWalletAddress = getWalletAddress();
+      if (storedWalletAddress && isAddress(storedWalletAddress)) {
+        setConnected(getAddress(storedWalletAddress));
+      } else {
+        setDisconnected();
+      }
+      endDisconnectTransition();
     } catch (error: unknown) {
       endDisconnectTransition();
       const walletError = createWalletError(
@@ -1098,6 +1106,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     disconnect,
     beginDisconnectTransition,
     endDisconnectTransition,
+    refreshStoredConnectedAccounts,
+    setConnected,
+    setDisconnected,
     isActiveWalletConnected,
   ]);
 

@@ -6,11 +6,16 @@ import { setAuthJwt } from "./auth.utils";
 import {
   getNativeRefreshToken,
   isNativeSecureStorageAvailable,
+  type NativeRefreshTokenClientType,
   removeNativeRefreshToken,
   setNativeRefreshToken,
 } from "./native-refresh-token-storage";
 
-export type AuthSessionClientType = "web" | "native";
+export type AuthSessionClientType = "web" | "native" | "desktop";
+export type RefreshTokenSessionClientType = Exclude<
+  AuthSessionClientType,
+  "web"
+>;
 
 interface SessionLoginRequest {
   readonly client_type: AuthSessionClientType;
@@ -33,7 +38,7 @@ export interface SessionNativeResponse {
   readonly role: string | null;
   readonly access_token: string;
   readonly access_token_expires_at: string;
-  readonly client_type: "native";
+  readonly client_type: RefreshTokenSessionClientType;
   readonly native_refresh_token: string;
   readonly refresh_token_expires_at: string;
 }
@@ -53,7 +58,7 @@ interface CreateConnectionShareResponse {
   readonly expires_at: string;
   readonly address: string;
   readonly role: string | null;
-  readonly target_client_type: "native";
+  readonly target_client_type: RefreshTokenSessionClientType;
   readonly deep_link_path: string;
 }
 
@@ -74,7 +79,16 @@ interface RedeemConnectionShareResponse {
 }
 
 export function getSessionClientType(): AuthSessionClientType {
-  return Capacitor.isNativePlatform() || isElectron() ? "native" : "web";
+  if (isElectron()) {
+    return "desktop";
+  }
+  return Capacitor.isNativePlatform() ? "native" : "web";
+}
+
+function toNativeRefreshTokenClientType(
+  clientType: RefreshTokenSessionClientType
+): NativeRefreshTokenClientType {
+  return clientType;
 }
 
 function isUnauthorizedApiError(error: unknown): boolean {
@@ -111,10 +125,15 @@ async function rollbackUnpersistedSession(
 export async function getSessionNonce({
   signerAddress,
   clientType = getSessionClientType(),
+  includeAuthHeaders = true,
 }: {
   readonly signerAddress: string;
   readonly clientType?: AuthSessionClientType | undefined;
+  readonly includeAuthHeaders?: boolean | undefined;
 }): Promise<ApiSessionNonceResponse> {
+  const authHeadersOption = includeAuthHeaders
+    ? {}
+    : { includeAuthHeaders: false };
   return await commonApiFetch<
     ApiSessionNonceResponse,
     {
@@ -129,6 +148,7 @@ export async function getSessionNonce({
       client_type: clientType,
       chain_id: "1",
     },
+    ...authHeadersOption,
   });
 }
 
@@ -146,6 +166,21 @@ export async function loginWithSessionV2({
   readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
+  if (
+    clientType !== "web" &&
+    isElectron() &&
+    typeof window !== "undefined" &&
+    typeof window.nativeAuth.sessionLogin === "function"
+  ) {
+    return await window.nativeAuth.sessionLogin({
+      server_signature: serverSignature,
+      client_signature: clientSignature,
+      client_address: signerAddress,
+      client_type: clientType,
+      ...roleBody,
+    });
+  }
+
   return await commonApiPost<SessionLoginRequest, SessionLoginResponse>({
     endpoint: "auth/session-login",
     body: {
@@ -167,15 +202,18 @@ export async function refreshSessionV2({
   readonly abortSignal?: AbortSignal | undefined;
 }): Promise<SessionRefreshResponse | null> {
   const clientType = getSessionClientType();
-  if (clientType === "native") {
-    const nativeRefreshToken = await getNativeRefreshToken(address);
+  if (clientType !== "web") {
+    const nativeRefreshToken = await getNativeRefreshToken(
+      address,
+      toNativeRefreshTokenClientType(clientType)
+    );
     if (!nativeRefreshToken) {
       return null;
     }
     try {
       return await commonApiPost<
         {
-          readonly client_type: "native";
+          readonly client_type: RefreshTokenSessionClientType;
           readonly client_address: string;
           readonly native_refresh_token: string;
         },
@@ -183,7 +221,7 @@ export async function refreshSessionV2({
       >({
         endpoint: "auth/session-refresh",
         body: {
-          client_type: "native",
+          client_type: clientType,
           client_address: address,
           native_refresh_token: nativeRefreshToken,
         },
@@ -228,7 +266,7 @@ export async function persistSessionResponse(
   response: SessionLoginResponse | SessionRefreshResponse
 ): Promise<boolean> {
   let didPersistNativeRefreshToken = false;
-  if (response.client_type === "native") {
+  if (response.client_type !== "web") {
     if (!isNativeSecureStorageAvailable()) {
       return false;
     }
@@ -237,6 +275,7 @@ export async function persistSessionResponse(
       await setNativeRefreshToken({
         address: response.address,
         refreshToken: response.native_refresh_token,
+        clientType: toNativeRefreshTokenClientType(response.client_type),
       });
     } catch {
       return false;
@@ -289,18 +328,20 @@ export async function verifyActiveSessionV2WebSession({
 
 export async function createConnectionShare({
   signal,
+  targetClientType = "native",
 }: {
   readonly signal?: AbortSignal | undefined;
+  readonly targetClientType?: RefreshTokenSessionClientType | undefined;
 }): Promise<CreateConnectionShareResponse> {
   return await commonApiPost<
     {
-      readonly target_client_type: "native";
+      readonly target_client_type: RefreshTokenSessionClientType;
     },
     CreateConnectionShareResponse
   >({
     endpoint: "auth/connection-share",
     body: {
-      target_client_type: "native",
+      target_client_type: targetClientType,
     },
     credentials: getSessionCredentialsMode(),
     signal,
@@ -331,18 +372,21 @@ export async function logoutSessionV2({
   readonly allSessions?: boolean | undefined;
 }): Promise<void> {
   const clientType = getSessionClientType();
-  if (clientType === "native") {
+  if (clientType !== "web") {
     if (!address) {
       return;
     }
-    const nativeRefreshToken = await getNativeRefreshToken(address);
+    const nativeRefreshToken = await getNativeRefreshToken(
+      address,
+      toNativeRefreshTokenClientType(clientType)
+    );
     if (!nativeRefreshToken) {
       return;
     }
     try {
       await commonApiPost<
         {
-          readonly client_type: "native";
+          readonly client_type: RefreshTokenSessionClientType;
           readonly client_address: string;
           readonly native_refresh_token: string;
           readonly all_sessions: boolean;
@@ -351,7 +395,7 @@ export async function logoutSessionV2({
       >({
         endpoint: "auth/session-logout",
         body: {
-          client_type: "native",
+          client_type: clientType,
           client_address: address,
           native_refresh_token: nativeRefreshToken,
           all_sessions: allSessions,
@@ -360,7 +404,10 @@ export async function logoutSessionV2({
         parseJson: false,
       });
     } finally {
-      await removeNativeRefreshToken(address);
+      await removeNativeRefreshToken(
+        address,
+        toNativeRefreshTokenClientType(clientType)
+      );
     }
     return;
   }
@@ -385,25 +432,26 @@ export async function logoutSessionV2({
 }
 
 export async function redeemConnectionShare(
-  connectionShareCode: string
+  connectionShareCode: string,
+  targetClientType: RefreshTokenSessionClientType = "native"
 ): Promise<SessionNativeResponse> {
   const response = await commonApiPost<
     {
       readonly connection_share_code: string;
-      readonly target_client_type: "native";
+      readonly target_client_type: RefreshTokenSessionClientType;
     },
     RedeemConnectionShareResponse
   >({
     endpoint: "auth/connection-share/redeem",
     body: {
       connection_share_code: connectionShareCode,
-      target_client_type: "native",
+      target_client_type: targetClientType,
     },
     credentials: getSessionCredentialsMode(),
   });
 
   return {
     ...response,
-    client_type: "native",
+    client_type: targetClientType,
   };
 }

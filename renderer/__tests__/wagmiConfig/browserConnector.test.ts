@@ -1,4 +1,9 @@
-import { setActiveWalletAccount } from "@/services/auth/auth.utils";
+import {
+  getWalletAddress,
+  hasActiveSessionV2Auth,
+  setActiveWalletAccount,
+} from "@/services/auth/auth.utils";
+import { getNativeRefreshToken } from "@/services/auth/native-refresh-token-storage";
 import {
   persistSessionResponse,
   redeemConnectionShare,
@@ -10,8 +15,14 @@ jest.mock("wagmi", () => ({
 }));
 
 jest.mock("@/services/auth/auth.utils", () => ({
+  getWalletAddress: jest.fn(() => null),
+  hasActiveSessionV2Auth: jest.fn(() => false),
   setActiveWalletAccount: jest.fn(() => true),
   setAuthJwt: jest.fn(),
+}));
+
+jest.mock("@/services/auth/native-refresh-token-storage", () => ({
+  getNativeRefreshToken: jest.fn(() => Promise.resolve(null)),
 }));
 
 jest.mock("@/services/auth/session-v2.utils", () => ({
@@ -20,15 +31,16 @@ jest.mock("@/services/auth/session-v2.utils", () => ({
 }));
 
 const ADDRESS = "0x00000000000000000000000000000000000000aa";
+const OTHER_ADDRESS = "0x00000000000000000000000000000000000000bb";
 
-const nativeSessionAuth = {
+const desktopSessionAuth = {
   sessionVersion: "v2",
-  client_type: "native",
+  client_type: "desktop",
   address: ADDRESS,
   role: null,
   access_token: "access-token",
   access_token_expires_at: "2026-06-10T00:00:00.000Z",
-  native_refresh_token: "native-refresh-token",
+  native_refresh_token: "desktop-refresh-token",
   refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
 };
 
@@ -37,11 +49,29 @@ const connectionShareAuth = {
   transferType: "connection-share",
   connection_share_code: "share-code",
   address: ADDRESS,
-  target_client_type: "native",
+  target_client_type: "desktop",
   expires_at: "2026-06-10T00:00:00.000Z",
 };
 
+const signedNativeChallengeAuth = {
+  sessionVersion: "v2",
+  transferType: "signed-native-challenge",
+  server_signature: "server-signature",
+  client_signature: "client-signature",
+  address: ADDRESS,
+  target_client_type: "desktop",
+};
+
+const existingNativeSessionAuth = {
+  sessionVersion: "v2",
+  transferType: "existing-native-session",
+  address: ADDRESS,
+  target_client_type: "desktop",
+};
+
 const flushPromises = async () => {
+  await Promise.resolve();
+  await Promise.resolve();
   await Promise.resolve();
   await Promise.resolve();
 };
@@ -56,6 +86,9 @@ describe("browserConnector", () => {
     set: jest.Mock;
     remove: jest.Mock;
   };
+  let nativeAuth: {
+    sessionLogin: jest.Mock;
+  };
 
   beforeEach(() => {
     jest.useFakeTimers();
@@ -67,10 +100,17 @@ describe("browserConnector", () => {
       set: jest.fn(() => Promise.resolve()),
       remove: jest.fn(() => Promise.resolve()),
     };
+    nativeAuth = {
+      sessionLogin: jest.fn(),
+    };
 
     Object.defineProperty(window, "store", {
       configurable: true,
       value: store,
+    });
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: nativeAuth,
     });
     Object.defineProperty(window, "api", {
       configurable: true,
@@ -88,7 +128,7 @@ describe("browserConnector", () => {
   });
 
   afterEach(() => {
-    jest.runOnlyPendingTimers();
+    jest.clearAllTimers();
     jest.useRealTimers();
   });
 
@@ -119,10 +159,10 @@ describe("browserConnector", () => {
     };
   };
 
-  it("requires native session-v2 auth when opening the browser connect page", async () => {
+  it("requires desktop session-v2 auth when opening the browser connect page", async () => {
     const { connectPromise, requestId, url } = await startConnect();
 
-    expect(url.searchParams.get("authMode")).toBe("session-v2-native");
+    expect(url.searchParams.get("authMode")).toBe("session-v2-desktop");
 
     walletConnectionListener?.(null, {
       requestId,
@@ -130,7 +170,7 @@ describe("browserConnector", () => {
         accounts: [ADDRESS],
         chainId: 1,
         activeAddress: ADDRESS,
-        auth: nativeSessionAuth,
+        auth: desktopSessionAuth,
       },
     });
 
@@ -139,12 +179,12 @@ describe("browserConnector", () => {
       chainId: 1,
     });
     expect(persistSessionResponse).toHaveBeenCalledWith({
-      client_type: "native",
+      client_type: "desktop",
       address: ADDRESS,
       role: null,
       access_token: "access-token",
       access_token_expires_at: "2026-06-10T00:00:00.000Z",
-      native_refresh_token: "native-refresh-token",
+      native_refresh_token: "desktop-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
     });
     expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
@@ -154,14 +194,90 @@ describe("browserConnector", () => {
     );
   });
 
+  it("includes an existing desktop auth address when the active account has session-v2 auth", async () => {
+    (getWalletAddress as jest.Mock).mockReturnValueOnce(ADDRESS);
+    (hasActiveSessionV2Auth as jest.Mock).mockReturnValueOnce(true);
+    (getNativeRefreshToken as jest.Mock).mockResolvedValueOnce(
+      "desktop-refresh-token"
+    );
+
+    const { connectPromise, requestId, url } = await startConnect();
+
+    expect(url.searchParams.get("existingAuthAddress")).toBe(ADDRESS);
+    expect(hasActiveSessionV2Auth).toHaveBeenCalledWith({ address: ADDRESS });
+    expect(getNativeRefreshToken).toHaveBeenCalledWith(ADDRESS, "desktop");
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: desktopSessionAuth,
+      },
+    });
+
+    await expect(connectPromise).resolves.toEqual({
+      accounts: [ADDRESS],
+      chainId: 1,
+    });
+  });
+
+  it("accepts an existing desktop session payload when a desktop refresh token is stored", async () => {
+    (getNativeRefreshToken as jest.Mock).mockResolvedValueOnce(
+      "desktop-refresh-token"
+    );
+    const { connectPromise, requestId } = await startConnect();
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: existingNativeSessionAuth,
+      },
+    });
+
+    await expect(connectPromise).resolves.toEqual({
+      accounts: [ADDRESS],
+      chainId: 1,
+    });
+    expect(getNativeRefreshToken).toHaveBeenCalledWith(ADDRESS, "desktop");
+    expect(persistSessionResponse).not.toHaveBeenCalled();
+    expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
+  });
+
+  it("rejects an existing desktop session payload when no desktop refresh token is stored", async () => {
+    (getNativeRefreshToken as jest.Mock).mockResolvedValueOnce(null);
+    const { connectPromise, requestId } = await startConnect();
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: existingNativeSessionAuth,
+      },
+    });
+
+    await expect(connectPromise).rejects.toThrow(
+      "Desktop session-v2 authentication is required"
+    );
+    expect(getNativeRefreshToken).toHaveBeenCalledWith(ADDRESS, "desktop");
+    expect(persistSessionResponse).not.toHaveBeenCalled();
+    expect(setActiveWalletAccount).not.toHaveBeenCalled();
+  });
+
   it("redeems a browser connection-share payload before accepting the connection", async () => {
     (redeemConnectionShare as jest.Mock).mockResolvedValueOnce({
-      client_type: "native",
+      client_type: "desktop",
       address: ADDRESS,
       role: null,
       access_token: "redeemed-access-token",
       access_token_expires_at: "2026-06-10T00:00:00.000Z",
-      native_refresh_token: "redeemed-native-refresh-token",
+      native_refresh_token: "redeemed-desktop-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
     });
     const { connectPromise, requestId } = await startConnect();
@@ -180,17 +296,97 @@ describe("browserConnector", () => {
       accounts: [ADDRESS],
       chainId: 1,
     });
-    expect(redeemConnectionShare).toHaveBeenCalledWith("share-code");
+    expect(redeemConnectionShare).toHaveBeenCalledWith("share-code", "desktop");
     expect(persistSessionResponse).toHaveBeenCalledWith({
-      client_type: "native",
+      client_type: "desktop",
       address: ADDRESS,
       role: null,
       access_token: "redeemed-access-token",
       access_token_expires_at: "2026-06-10T00:00:00.000Z",
-      native_refresh_token: "redeemed-native-refresh-token",
+      native_refresh_token: "redeemed-desktop-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
     });
     expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
+  });
+
+  it("logs in with a signed desktop challenge before accepting the connection", async () => {
+    nativeAuth.sessionLogin.mockResolvedValueOnce({
+      client_type: "desktop",
+      address: ADDRESS,
+      role: null,
+      access_token: "challenge-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "challenge-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
+    const { connectPromise, requestId } = await startConnect();
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: signedNativeChallengeAuth,
+      },
+    });
+
+    await expect(connectPromise).resolves.toEqual({
+      accounts: [ADDRESS],
+      chainId: 1,
+    });
+    expect(nativeAuth.sessionLogin).toHaveBeenCalledWith({
+      client_type: "desktop",
+      server_signature: "server-signature",
+      client_signature: "client-signature",
+      client_address: ADDRESS,
+    });
+    expect(persistSessionResponse).toHaveBeenCalledWith({
+      client_type: "desktop",
+      address: ADDRESS,
+      role: null,
+      access_token: "challenge-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "challenge-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
+    expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
+  });
+
+  it("rejects a signed native challenge when session-login returns another address", async () => {
+    nativeAuth.sessionLogin.mockResolvedValueOnce({
+      client_type: "desktop",
+      address: OTHER_ADDRESS,
+      role: null,
+      access_token: "challenge-access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "challenge-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    });
+    const { connectPromise, requestId } = await startConnect();
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: signedNativeChallengeAuth,
+      },
+    });
+
+    await expect(connectPromise).rejects.toThrow(
+      "Desktop session-v2 authentication is required"
+    );
+    expect(nativeAuth.sessionLogin).toHaveBeenCalledWith({
+      client_type: "desktop",
+      server_signature: "server-signature",
+      client_signature: "client-signature",
+      client_address: ADDRESS,
+    });
+    expect(persistSessionResponse).not.toHaveBeenCalled();
+    expect(setActiveWalletAccount).not.toHaveBeenCalled();
+    expect(store.set).not.toHaveBeenCalled();
   });
 
   it("rejects a browser connect callback without matching native session-v2 auth", async () => {
@@ -206,7 +402,7 @@ describe("browserConnector", () => {
     });
 
     await expect(connectPromise).rejects.toThrow(
-      "Native session-v2 authentication is required"
+      "Desktop session-v2 authentication is required"
     );
     expect(persistSessionResponse).not.toHaveBeenCalled();
     expect(setActiveWalletAccount).not.toHaveBeenCalled();

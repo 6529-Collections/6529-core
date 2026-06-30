@@ -17,10 +17,11 @@ type StructuredApiError = Error & {
 
 const getHeaders = (
   headers?: Record<string, string>,
-  contentType: boolean = true
+  contentType: boolean = true,
+  includeAuthHeaders: boolean = true
 ) => {
-  const apiAuth = getStagingAuth();
-  const walletAuth = getAuthJwt();
+  const apiAuth = includeAuthHeaders ? getStagingAuth() : null;
+  const walletAuth = includeAuthHeaders ? getAuthJwt() : null;
   return {
     ...(contentType ? { "Content-Type": "application/json" } : {}),
     ...(apiAuth ? { "x-6529-auth": apiAuth } : {}),
@@ -345,6 +346,7 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
   params?: U | undefined;
   signal?: AbortSignal | undefined;
   errorMode?: ApiErrorMode | undefined;
+  includeAuthHeaders?: boolean | undefined;
 }): Promise<T> => {
   const url = buildUrl(
     param.endpoint,
@@ -361,7 +363,11 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
   return executeApiRequest<T>({
     url,
     method: "GET",
-    headers: getHeaders(param.headers, false),
+    headers: getHeaders(
+      param.headers,
+      false,
+      param.includeAuthHeaders ?? true
+    ),
     signal: param.signal,
     errorMode: param.errorMode ?? "legacy-string",
   });

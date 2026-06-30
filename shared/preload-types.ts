@@ -92,6 +92,21 @@ export interface ElectronNativeAuth {
   getRefreshToken: (key: string) => Promise<string | null>;
   setRefreshToken: (key: string, refreshToken: string) => Promise<void>;
   removeRefreshToken: (key: string) => Promise<void>;
+  sessionLogin: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly server_signature: string;
+    readonly client_signature: string;
+    readonly client_address: string;
+    readonly role?: string | null;
+  }) => Promise<{
+    readonly client_type: "native" | "desktop";
+    readonly address: string;
+    readonly role: string | null;
+    readonly access_token: string;
+    readonly access_token_expires_at: string;
+    readonly native_refresh_token: string;
+    readonly refresh_token_expires_at: string;
+  }>;
 }
 
 export interface ElectronNotifications {

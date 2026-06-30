@@ -6,6 +6,8 @@ const NATIVE_REFRESH_TOKEN_KEY_PREFIX = "6529-native-refresh-token";
 
 const inMemoryNativeRefreshTokens = new Map<string, string>();
 
+export type NativeRefreshTokenClientType = "native" | "desktop";
+
 type ElectronNativeAuthBridge = {
   readonly isAvailable: () => Promise<boolean>;
   readonly getRefreshToken: (key: string) => Promise<string | null>;
@@ -23,14 +25,16 @@ export function isNativeSecureStorageAvailable(): boolean {
 export async function setNativeRefreshToken({
   address,
   refreshToken,
+  clientType = getNativeRefreshTokenClientType(),
 }: {
   readonly address: string;
   readonly refreshToken: string;
+  readonly clientType?: NativeRefreshTokenClientType | undefined;
 }): Promise<void> {
   if (!isNativeSecureStorageAvailable()) {
     return;
   }
-  const key = getNativeRefreshTokenKey(address);
+  const key = getNativeRefreshTokenKey(address, clientType);
   const electronNativeAuth = getElectronNativeAuthBridge();
   if (electronNativeAuth) {
     await electronNativeAuth.setRefreshToken(key, refreshToken);
@@ -43,12 +47,13 @@ export async function setNativeRefreshToken({
 }
 
 export async function getNativeRefreshToken(
-  address: string
+  address: string,
+  clientType: NativeRefreshTokenClientType = getNativeRefreshTokenClientType()
 ): Promise<string | null> {
   if (!isNativeSecureStorageAvailable()) {
     return null;
   }
-  const key = getNativeRefreshTokenKey(address);
+  const key = getNativeRefreshTokenKey(address, clientType);
   const cached = inMemoryNativeRefreshTokens.get(key);
   if (cached) {
     return cached;
@@ -75,8 +80,11 @@ export async function getNativeRefreshToken(
   }
 }
 
-export async function removeNativeRefreshToken(address: string): Promise<void> {
-  const key = getNativeRefreshTokenKey(address);
+export async function removeNativeRefreshToken(
+  address: string,
+  clientType: NativeRefreshTokenClientType = getNativeRefreshTokenClientType()
+): Promise<void> {
+  const key = getNativeRefreshTokenKey(address, clientType);
   inMemoryNativeRefreshTokens.delete(key);
   if (!isNativeSecureStorageAvailable()) {
     return;
@@ -94,8 +102,19 @@ export async function removeNativeRefreshToken(address: string): Promise<void> {
   }
 }
 
-function getNativeRefreshTokenKey(address: string): string {
-  return `${NATIVE_REFRESH_TOKEN_KEY_PREFIX}:${address.toLowerCase()}`;
+function getNativeRefreshTokenClientType(): NativeRefreshTokenClientType {
+  return isElectron() ? "desktop" : "native";
+}
+
+function getNativeRefreshTokenKey(
+  address: string,
+  clientType: NativeRefreshTokenClientType
+): string {
+  const addressKey = address.toLowerCase();
+  if (clientType === "desktop") {
+    return `${NATIVE_REFRESH_TOKEN_KEY_PREFIX}:desktop:${addressKey}`;
+  }
+  return `${NATIVE_REFRESH_TOKEN_KEY_PREFIX}:${addressKey}`;
 }
 
 function getElectronNativeAuthBridge(): ElectronNativeAuthBridge | null {

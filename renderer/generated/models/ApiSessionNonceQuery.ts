@@ -58,6 +58,6 @@ export class ApiSessionNonceQuery {
 
 export enum ApiSessionNonceQueryClientTypeEnum {
     Web = 'web',
-    Native = 'native'
+    Native = 'native',
+    Desktop = 'desktop'
 }
-

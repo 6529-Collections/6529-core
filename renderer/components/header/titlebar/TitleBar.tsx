@@ -29,6 +29,21 @@ function isMac() {
 
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 
+function getEnvironmentLabel(environment: unknown): string {
+  if (environment === "local") {
+    return "(Local)";
+  }
+  if (environment === "staging") {
+    return "(Staging)";
+  }
+  return "";
+}
+
+interface AppInfo {
+  readonly app_version?: unknown;
+  readonly environment?: unknown;
+}
+
 export default function TitleBar() {
   const router = useRouter();
   const pathname = usePathname();
@@ -51,6 +66,7 @@ export default function TitleBar() {
   }>();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [version, setVersion] = useState("");
+  const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -61,9 +77,11 @@ export default function TitleBar() {
 
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
-      if (newInfo.app_version) {
-        setVersion(`v${newInfo.app_version}`);
+      const appInfo = newInfo as AppInfo;
+      if (typeof appInfo.app_version === "string" && appInfo.app_version) {
+        setVersion(`v${appInfo.app_version}`);
       }
+      setEnvironmentLabel(getEnvironmentLabel(appInfo.environment));
       window.updater.checkUpdates();
     });
   }, []);
@@ -330,6 +348,30 @@ export default function TitleBar() {
     });
   };
 
+  const isMacPlatform = isMac();
+  let versionText = version || environmentLabel;
+  if (environmentLabel && version) {
+    versionText = isMacPlatform
+      ? `${environmentLabel} ${version}`
+      : `${version} ${environmentLabel}`;
+  }
+  const versionPositionClass = (() => {
+    if (isMacPlatform) {
+      return updateAvailable
+        ? (styles["versionMacUpdate"] ?? "")
+        : (styles["versionMac"] ?? "");
+    }
+    return updateAvailable
+      ? (styles["versionWinUpdate"] ?? "")
+      : (styles["versionWin"] ?? "");
+  })();
+  const infoPositionClass = isMacPlatform
+    ? (styles["infoMac"] ?? "")
+    : (styles["infoWin"] ?? "");
+  const versionClass = styles["version"] ?? "";
+  const infoClass = styles["info"] ?? "";
+  const disabledClass = styles["disabled"] ?? "";
+
   return (
     <>
       <div className={styles["spacer"]}></div>
@@ -430,23 +472,13 @@ export default function TitleBar() {
           />
         )}
       </span>
-      <span
-        className={`${styles["version"]} ${
-          isMac()
-            ? updateAvailable
-              ? styles["versionMacUpdate"]
-              : styles["versionMac"]
-            : updateAvailable
-              ? styles["versionWinUpdate"]
-              : styles["versionWin"]
-        }`}
-      >
-        {version}
+      <span className={`${versionClass} ${versionPositionClass}`}>
+        {versionText}
       </span>
       <TooltipButton
-        buttonStyles={`${styles["info"]} ${
-          isMac() ? styles["infoMac"] : styles["infoWin"]
-        } ${navigationLoading ? styles["disabled"] : ""}`}
+        buttonStyles={`${infoClass} ${infoPositionClass} ${
+          navigationLoading ? disabledClass : ""
+        }`}
         placement="left"
         onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}

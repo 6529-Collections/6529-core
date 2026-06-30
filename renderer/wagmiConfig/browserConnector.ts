@@ -1,10 +1,14 @@
 import {
+  getWalletAddress,
+  hasActiveSessionV2Auth,
   setActiveWalletAccount,
   setAuthJwt,
 } from "@/services/auth/auth.utils";
+import { getNativeRefreshToken } from "@/services/auth/native-refresh-token-storage";
 import {
   persistSessionResponse,
   redeemConnectionShare,
+  type RefreshTokenSessionClientType,
   type SessionNativeResponse,
 } from "@/services/auth/session-v2.utils";
 import { createConnector } from "wagmi";
@@ -54,11 +58,12 @@ const getConnectionStoreKey = (connectorId: string) =>
   `seize-app-connection-${connectorId}`;
 const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
 const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
-const NATIVE_SESSION_AUTH_MODE = "session-v2-native";
+const DESKTOP_SESSION_AUTH_MODE = "session-v2-desktop";
+const LEGACY_NATIVE_SESSION_AUTH_MODE = "session-v2-native";
 const INVALID_CONNECTION_PAYLOAD_ERROR =
   "Invalid connection payload: accounts must be array of 0x-prefixed 40-hex strings and chainId must be a positive integer.";
 const MISSING_NATIVE_SESSION_AUTH_ERROR =
-  "Native session-v2 authentication is required for this browser connection.";
+  "Desktop session-v2 authentication is required for this browser connection.";
 
 export const BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT =
   "6529-browser-connector-connection-changed";
@@ -140,6 +145,23 @@ const parseConnectionPayload = (
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
 
+const isRefreshTokenClientType = (
+  value: unknown
+): value is RefreshTokenSessionClientType =>
+  value === "native" || value === "desktop";
+
+const getRefreshTokenClientTypeForAuthMode = (
+  authMode: string | null
+): RefreshTokenSessionClientType | null => {
+  if (authMode === DESKTOP_SESSION_AUTH_MODE) {
+    return "desktop";
+  }
+  if (authMode === LEGACY_NATIVE_SESSION_AUTH_MODE) {
+    return "native";
+  }
+  return null;
+};
+
 const parseNativeSessionAuthPayload = (
   auth: unknown
 ): SessionNativeResponse | null => {
@@ -160,7 +182,7 @@ const parseNativeSessionAuthPayload = (
 
   if (
     record.sessionVersion !== "v2" ||
-    record.client_type !== "native" ||
+    !isRefreshTokenClientType(record.client_type) ||
     !isNonEmptyString(record.address) ||
     !isNonEmptyString(record.access_token) ||
     !isNonEmptyString(record.access_token_expires_at) ||
@@ -176,7 +198,7 @@ const parseNativeSessionAuthPayload = (
   }
 
   return {
-    client_type: "native",
+    client_type: record.client_type,
     address: normalizedAddress,
     role: typeof record.role === "string" ? record.role : null,
     access_token: record.access_token,
@@ -191,6 +213,7 @@ const parseConnectionShareAuthPayload = (
 ): {
   readonly connectionShareCode: string;
   readonly address: `0x${string}`;
+  readonly targetClientType: RefreshTokenSessionClientType;
 } | null => {
   if (typeof auth !== "object" || auth === null) {
     return null;
@@ -207,7 +230,7 @@ const parseConnectionShareAuthPayload = (
   if (
     record.sessionVersion !== "v2" ||
     record.transferType !== "connection-share" ||
-    record.target_client_type !== "native" ||
+    !isRefreshTokenClientType(record.target_client_type) ||
     !isNonEmptyString(record.connection_share_code) ||
     !isNonEmptyString(record.address)
   ) {
@@ -222,6 +245,89 @@ const parseConnectionShareAuthPayload = (
   return {
     connectionShareCode: record.connection_share_code,
     address: normalizedAddress as `0x${string}`,
+    targetClientType: record.target_client_type,
+  };
+};
+
+const parseSignedNativeChallengeAuthPayload = (
+  auth: unknown
+): {
+  readonly serverSignature: string;
+  readonly clientSignature: string;
+  readonly address: `0x${string}`;
+  readonly targetClientType: RefreshTokenSessionClientType;
+} | null => {
+  if (typeof auth !== "object" || auth === null) {
+    return null;
+  }
+
+  const record = auth as {
+    readonly sessionVersion?: unknown;
+    readonly transferType?: unknown;
+    readonly server_signature?: unknown;
+    readonly client_signature?: unknown;
+    readonly address?: unknown;
+    readonly target_client_type?: unknown;
+  };
+
+  if (
+    record.sessionVersion !== "v2" ||
+    record.transferType !== "signed-native-challenge" ||
+    !isRefreshTokenClientType(record.target_client_type) ||
+    !isNonEmptyString(record.server_signature) ||
+    !isNonEmptyString(record.client_signature) ||
+    !isNonEmptyString(record.address)
+  ) {
+    return null;
+  }
+
+  const normalizedAddress = record.address.toLowerCase();
+  if (!HEX_ADDRESS_REGEX.test(normalizedAddress)) {
+    return null;
+  }
+
+  return {
+    serverSignature: record.server_signature,
+    clientSignature: record.client_signature,
+    address: normalizedAddress as `0x${string}`,
+    targetClientType: record.target_client_type,
+  };
+};
+
+const parseExistingNativeSessionAuthPayload = (
+  auth: unknown
+): {
+  readonly address: `0x${string}`;
+  readonly targetClientType: RefreshTokenSessionClientType;
+} | null => {
+  if (typeof auth !== "object" || auth === null) {
+    return null;
+  }
+
+  const record = auth as {
+    readonly sessionVersion?: unknown;
+    readonly transferType?: unknown;
+    readonly address?: unknown;
+    readonly target_client_type?: unknown;
+  };
+
+  if (
+    record.sessionVersion !== "v2" ||
+    record.transferType !== "existing-native-session" ||
+    !isRefreshTokenClientType(record.target_client_type) ||
+    !isNonEmptyString(record.address)
+  ) {
+    return null;
+  }
+
+  const normalizedAddress = record.address.toLowerCase();
+  if (!HEX_ADDRESS_REGEX.test(normalizedAddress)) {
+    return null;
+  }
+
+  return {
+    address: normalizedAddress as `0x${string}`,
+    targetClientType: record.target_client_type,
   };
 };
 
@@ -334,11 +440,11 @@ const getPrimaryConnectedAccount = ({
 
 const processBrowserConnectResponse = async ({
   response,
-  requiresNativeSessionAuth,
+  requiredAuthClientType,
   connectorName,
 }: {
   readonly response: unknown;
-  readonly requiresNativeSessionAuth: boolean;
+  readonly requiredAuthClientType: RefreshTokenSessionClientType | null;
   readonly connectorName: string;
 }): Promise<BrowserConnectResult> => {
   const responseRecord = getBrowserConnectResponseRecord(response);
@@ -355,33 +461,101 @@ const processBrowserConnectResponse = async ({
     validatedAccounts: validatedConnection.accounts,
   });
 
-  if (requiresNativeSessionAuth) {
+  if (requiredAuthClientType) {
     const nativeSessionAuth = parseNativeSessionAuthPayload(responseRecord.auth);
     const connectionShareAuth = parseConnectionShareAuthPayload(
       responseRecord.auth
     );
+    const signedNativeChallengeAuth = parseSignedNativeChallengeAuthPayload(
+      responseRecord.auth
+    );
+    const existingNativeSessionAuth = parseExistingNativeSessionAuthPayload(
+      responseRecord.auth
+    );
     let nativeSessionToPersist = nativeSessionAuth;
+    let hasExistingNativeSession = false;
+
+    if (
+      nativeSessionToPersist &&
+      nativeSessionToPersist.client_type !== requiredAuthClientType
+    ) {
+      throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+    }
 
     if (!nativeSessionToPersist && connectionShareAuth) {
+      if (connectionShareAuth.targetClientType !== requiredAuthClientType) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
       if (connectionShareAuth.address !== primaryConnectedAccount) {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
       nativeSessionToPersist = await redeemConnectionShare(
-        connectionShareAuth.connectionShareCode
+        connectionShareAuth.connectionShareCode,
+        connectionShareAuth.targetClientType
       );
     }
 
-    if (!nativeSessionToPersist) {
+    if (!nativeSessionToPersist && signedNativeChallengeAuth) {
+      if (signedNativeChallengeAuth.targetClientType !== requiredAuthClientType) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+      if (signedNativeChallengeAuth.address !== primaryConnectedAccount) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+
+      const sessionResponse = await window.nativeAuth.sessionLogin({
+        client_type: signedNativeChallengeAuth.targetClientType,
+        server_signature: signedNativeChallengeAuth.serverSignature,
+        client_signature: signedNativeChallengeAuth.clientSignature,
+        client_address: signedNativeChallengeAuth.address,
+      });
+
+      nativeSessionToPersist = sessionResponse;
+    }
+
+    if (!nativeSessionToPersist && existingNativeSessionAuth) {
+      if (existingNativeSessionAuth.targetClientType !== requiredAuthClientType) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+      if (existingNativeSessionAuth.address !== primaryConnectedAccount) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+
+      const nativeRefreshToken = await getNativeRefreshToken(
+        existingNativeSessionAuth.address,
+        existingNativeSessionAuth.targetClientType
+      );
+      if (!nativeRefreshToken) {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+      hasExistingNativeSession = true;
+    }
+
+    if (!nativeSessionToPersist && !hasExistingNativeSession) {
       throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
     }
 
-    if (nativeSessionToPersist.address.toLowerCase() !== primaryConnectedAccount) {
+    if (
+      nativeSessionToPersist &&
+      nativeSessionToPersist.client_type !== requiredAuthClientType
+    ) {
       throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
     }
 
-    const isPersisted = await persistSessionResponse(nativeSessionToPersist);
-    if (!isPersisted) {
-      throw new Error("Couldn't save this browser connection. Please try again.");
+    if (
+      nativeSessionToPersist &&
+      nativeSessionToPersist.address.toLowerCase() !== primaryConnectedAccount
+    ) {
+      throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+    }
+
+    if (nativeSessionToPersist) {
+      const isPersisted = await persistSessionResponse(nativeSessionToPersist);
+      if (!isPersisted) {
+        throw new Error(
+          "Couldn't save this browser connection. Please try again."
+        );
+      }
     }
   } else {
     tryPersistLegacyAuthPayload({
@@ -543,6 +717,31 @@ export function browserConnector(parameters: {
     }
   };
 
+  const getExistingNativeSessionAddressForRequest =
+    async (): Promise<string | null> => {
+    const walletAddress = getWalletAddress();
+    const normalizedWalletAddress =
+      typeof walletAddress === "string" ? walletAddress.toLowerCase() : null;
+
+    if (
+      !normalizedWalletAddress ||
+      !HEX_ADDRESS_REGEX.test(normalizedWalletAddress) ||
+      !hasActiveSessionV2Auth({ address: normalizedWalletAddress })
+    ) {
+      return null;
+    }
+
+    const desktopRefreshToken = await getNativeRefreshToken(
+      normalizedWalletAddress,
+      "desktop"
+    );
+    if (!desktopRefreshToken) {
+      return null;
+    }
+
+    return normalizedWalletAddress;
+  };
+
   return createConnector((_config) => ({
     get icon() {
       return parameters.icon;
@@ -637,6 +836,9 @@ export function browserConnector(parameters: {
         } as any;
       }
 
+      const existingNativeSessionAddress =
+        await getExistingNativeSessionAddressForRequest();
+
       return new Promise<BrowserConnectorConnectResponse>((resolve, reject) => {
         const requestId = generateRequestId();
         const t = Date.now();
@@ -647,10 +849,17 @@ export function browserConnector(parameters: {
           requestId,
           t: String(t),
           chainId: String(chainId),
-          authMode: NATIVE_SESSION_AUTH_MODE,
+          authMode: DESKTOP_SESSION_AUTH_MODE,
         });
-        const requiresNativeSessionAuth =
-          connectSearchParams.get("authMode") === NATIVE_SESSION_AUTH_MODE;
+        if (existingNativeSessionAddress) {
+          connectSearchParams.set(
+            "existingAuthAddress",
+            existingNativeSessionAddress
+          );
+        }
+        const requiredAuthClientType = getRefreshTokenClientTypeForAuthMode(
+          connectSearchParams.get("authMode")
+        );
         const url = `http://localhost:${port}/browser-connector?${connectSearchParams.toString()}`;
         const timeoutId = setTimeout(() => {
           console.log(`[${this.name}] Deep link callback timed out`, requestId);
@@ -669,7 +878,7 @@ export function browserConnector(parameters: {
                 accountToActivate,
               } = await processBrowserConnectResponse({
                 response,
-                requiresNativeSessionAuth,
+                requiredAuthClientType,
                 connectorName: this.name,
               });
               connectionObject = {

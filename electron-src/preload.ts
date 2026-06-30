@@ -159,6 +159,13 @@ export const nativeAuth = {
     ipcRenderer.invoke("native-auth:set-refresh-token", key, refreshToken),
   removeRefreshToken: (key: string) =>
     ipcRenderer.invoke("native-auth:remove-refresh-token", key),
+  sessionLogin: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly server_signature: string;
+    readonly client_signature: string;
+    readonly client_address: string;
+    readonly role?: string | null;
+  }) => ipcRenderer.invoke("native-auth:session-login", request),
 };
 
 contextBridge.exposeInMainWorld("nativeAuth", nativeAuth);

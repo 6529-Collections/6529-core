@@ -7,14 +7,7 @@ import os from "os";
 
 export function getScheme() {
   let scheme = "";
-  let environment = "";
-  if (process.argv.includes("--dev")) {
-    environment = process.env.ENVIRONMENT as string;
-  } else {
-    const packageJsonPath = path.join(app.getAppPath(), "package.json");
-    const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
-    environment = packageJson.env.ENVIRONMENT;
-  }
+  const environment = getEnvironment();
 
   if (environment === "staging") {
     scheme = "stagingcore6529";
@@ -24,6 +17,16 @@ export function getScheme() {
     scheme = "localcore6529";
   }
   return scheme;
+}
+
+export function getEnvironment(): string {
+  if (process.argv.includes("--dev")) {
+    return process.env.ENVIRONMENT as string;
+  }
+
+  const packageJsonPath = path.join(app.getAppPath(), "package.json");
+  const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+  return packageJson.env.ENVIRONMENT;
 }
 
 export function getLogDirectory() {
@@ -40,10 +43,11 @@ export function getMainLogsPath() {
 
 export function getInfo() {
   const scheme = getScheme();
+  const environment = getEnvironment();
 
   return {
     home_dir: getHomeDir(),
-    environment: process.env.ENVIRONMENT,
+    environment,
     app_path: app.getAppPath(),
     scheme: scheme,
     schema: scheme ? app.isDefaultProtocolClient(scheme) : "Undefined",

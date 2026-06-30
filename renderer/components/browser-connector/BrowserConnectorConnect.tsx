@@ -2,36 +2,62 @@
 
 import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Col, Container, Row } from "react-bootstrap";
-import { useAccount, useChainId, useChains, useSwitchChain } from "wagmi";
+import { Col, Container, Modal, Row } from "react-bootstrap";
 import {
-  hasActiveSessionV2Auth,
-  setActiveWalletAccount,
-} from "@/services/auth/auth.utils";
+  useAccount,
+  useChainId,
+  useChains,
+  useSignMessage,
+  useSwitchChain,
+} from "wagmi";
 import {
-  createConnectionShare,
-  verifyActiveSessionV2WebSession,
+  getSessionNonce,
+  type RefreshTokenSessionClientType,
 } from "@/services/auth/session-v2.utils";
-import { useAuth } from "../auth/Auth";
+import authModalStyles from "../auth/Auth.module.scss";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import styles from "./BrowserConnector.module.scss";
 
-const NATIVE_SESSION_AUTH_MODE = "session-v2-native";
+const DESKTOP_SESSION_AUTH_MODE = "session-v2-desktop";
+const LEGACY_NATIVE_SESSION_AUTH_MODE = "session-v2-native";
 
-interface BrowserConnectorConnectionShareAuth {
-  readonly sessionVersion: "v2";
-  readonly transferType: "connection-share";
-  readonly connection_share_code: string;
-  readonly address: string;
-  readonly target_client_type: "native";
-  readonly expires_at: string;
+function getRefreshTokenClientTypeForAuthMode(
+  authMode: string | null
+): RefreshTokenSessionClientType | null {
+  if (authMode === DESKTOP_SESSION_AUTH_MODE) {
+    return "desktop";
+  }
+  if (authMode === LEGACY_NATIVE_SESSION_AUTH_MODE) {
+    return "native";
+  }
+  return null;
 }
+
+interface BrowserConnectorSignedNativeAuth {
+  readonly sessionVersion: "v2";
+  readonly transferType: "signed-native-challenge";
+  readonly address: string;
+  readonly server_signature: string;
+  readonly client_signature: string;
+  readonly target_client_type: RefreshTokenSessionClientType;
+}
+
+interface BrowserConnectorExistingNativeAuth {
+  readonly sessionVersion: "v2";
+  readonly transferType: "existing-native-session";
+  readonly address: string;
+  readonly target_client_type: RefreshTokenSessionClientType;
+}
+
+type BrowserConnectorNativeAuth =
+  | BrowserConnectorSignedNativeAuth
+  | BrowserConnectorExistingNativeAuth;
 
 type NativeAuthState =
   | {
       readonly key: string;
-      readonly payload: BrowserConnectorConnectionShareAuth;
+      readonly payload: BrowserConnectorSignedNativeAuth;
     }
   | null;
 
@@ -46,22 +72,31 @@ export default function BrowserConnectorConnect(
 ) {
   const searchParams = useSearchParams();
   const account = useSeizeConnectContext();
-  const { requestSessionUpgrade } = useAuth();
   const { address: liveAddress, isConnected: isLiveConnected } = useAccount();
   const liveChainId = useChainId();
   const chains = useChains();
   const { switchChain, isPending: isSwitchingChain } = useSwitchChain();
-  const requestSessionUpgradeRef = useRef(requestSessionUpgrade);
+  const { signMessageAsync } = useSignMessage();
   const nativeAuthAttemptKeyRef = useRef<string | null>(null);
 
   const requestId = searchParams.get("requestId");
   const chainId = searchParams.get("chainId");
-  const requiresNativeSessionAuth =
-    searchParams.get("authMode") === NATIVE_SESSION_AUTH_MODE;
+  const existingAuthAddress = searchParams.get("existingAuthAddress");
+  const refreshTokenClientType = getRefreshTokenClientTypeForAuthMode(
+    searchParams.get("authMode")
+  );
+  const requiresNativeSessionAuth = refreshTokenClientType !== null;
   const normalizedLiveAddress = useMemo(
     () => (typeof liveAddress === "string" ? liveAddress.toLowerCase() : null),
     [liveAddress]
   );
+  const normalizedExistingAuthAddress = useMemo(() => {
+    if (typeof existingAuthAddress !== "string") {
+      return null;
+    }
+    const normalized = existingAuthAddress.toLowerCase();
+    return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
+  }, [existingAuthAddress]);
 
   const requestedChain =
     chains.find((c) => c.id === parseInt(chainId as string)) ??
@@ -73,99 +108,72 @@ export default function BrowserConnectorConnect(
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [nativeAuthState, setNativeAuthState] = useState<NativeAuthState>(null);
-  const [authStatus, setAuthStatus] = useState<
-    "idle" | "checking" | "upgrading" | "ready" | "error"
-  >("idle");
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   const nativeAuthKey =
-    requestId && normalizedLiveAddress
-      ? `${requestId}:${normalizedLiveAddress}:${requestedChainId}`
+    requestId && normalizedLiveAddress && refreshTokenClientType
+      ? `${requestId}:${normalizedLiveAddress}:${requestedChainId}:${refreshTokenClientType}`
       : null;
-  const preparedNativeAuth =
-    nativeAuthState?.key === nativeAuthKey ? nativeAuthState.payload : null;
-
-  useEffect(() => {
-    requestSessionUpgradeRef.current = requestSessionUpgrade;
-  }, [requestSessionUpgrade]);
-
-  const verifyExistingWebSession = useCallback(
-    async (
-      address: string,
-      signal?: AbortSignal
-    ): Promise<boolean> => {
-      if (!hasActiveSessionV2Auth({ address })) {
-        return false;
-      }
-
-      setActiveWalletAccount(address);
-      return await verifyActiveSessionV2WebSession({
-        address,
-        abortSignal: signal,
-      });
-    },
-    []
+  const existingNativeAuth = useMemo<BrowserConnectorExistingNativeAuth | null>(
+    () =>
+      refreshTokenClientType &&
+      normalizedLiveAddress &&
+      normalizedExistingAuthAddress === normalizedLiveAddress
+        ? {
+            sessionVersion: "v2",
+            transferType: "existing-native-session",
+            address: normalizedLiveAddress,
+            target_client_type: refreshTokenClientType,
+          }
+        : null,
+    [
+      normalizedExistingAuthAddress,
+      normalizedLiveAddress,
+      refreshTokenClientType,
+      requiresNativeSessionAuth,
+    ]
   );
+  const preparedNativeAuth: BrowserConnectorNativeAuth | null =
+    nativeAuthState?.key === nativeAuthKey
+      ? nativeAuthState.payload
+      : existingNativeAuth;
 
-  const requestBrowserSessionUpgrade = useCallback(
+  const createNativeAuthPayload = useCallback(
     async (
       address: string,
       signal?: AbortSignal
-    ): Promise<boolean> => {
-      setAuthStatus("upgrading");
-      const upgradeResult = await requestSessionUpgradeRef.current?.(address);
-
-      if (signal?.aborted) {
-        return false;
+    ): Promise<BrowserConnectorSignedNativeAuth | null> => {
+      if (!refreshTokenClientType) {
+        return null;
       }
-
-      if (!upgradeResult?.success) {
-        throw new Error(
-          "Update auth in the browser before opening 6529 Desktop."
-        );
-      }
-
-      const hasActiveWebSession = await verifyActiveSessionV2WebSession({
-        address,
-        abortSignal: signal,
+      const nonceResponse = await getSessionNonce({
+        signerAddress: address,
+        clientType: refreshTokenClientType,
+        includeAuthHeaders: false,
       });
-
-      if (!hasActiveWebSession) {
-        throw new Error("Couldn't verify the upgraded browser session. Try again.");
-      }
-
-      return true;
-    },
-    []
-  );
-
-  const createDesktopAuthPayload = useCallback(
-    async (
-      address: string,
-      signal?: AbortSignal
-    ): Promise<BrowserConnectorConnectionShareAuth | null> => {
-      setAuthStatus("checking");
-      const share = await createConnectionShare({ signal });
 
       if (signal?.aborted) {
         return null;
       }
 
-      if (share.address.toLowerCase() !== address) {
-        throw new Error(
-          "Desktop auth was prepared for a different wallet. Try again."
-        );
+      const clientSignature = await signMessageAsync({
+        message: nonceResponse.signable_message,
+      });
+
+      if (signal?.aborted) {
+        return null;
       }
 
       return {
         sessionVersion: "v2",
-        transferType: "connection-share",
-        connection_share_code: share.connection_share_code,
-        address: share.address,
-        target_client_type: "native",
-        expires_at: share.expires_at,
+        transferType: "signed-native-challenge",
+        address,
+        server_signature: nonceResponse.server_signature,
+        client_signature: clientSignature,
+        target_client_type: refreshTokenClientType,
       };
     },
-    []
+    [refreshTokenClientType, signMessageAsync]
   );
 
   const prepareNativeSessionAuth = useCallback(
@@ -175,7 +183,7 @@ export default function BrowserConnectorConnect(
     }: {
       readonly force?: boolean | undefined;
       readonly signal?: AbortSignal | undefined;
-    } = {}): Promise<BrowserConnectorConnectionShareAuth | null> => {
+    } = {}): Promise<BrowserConnectorNativeAuth | null> => {
       if (!requiresNativeSessionAuth) {
         return null;
       }
@@ -201,31 +209,10 @@ export default function BrowserConnectorConnect(
       nativeAuthAttemptKeyRef.current = nativeAuthKey;
       setAuthError(null);
       setIsAuthenticating(true);
-      setAuthStatus("checking");
       setNativeAuthState(null);
 
       try {
-        let hasActiveWebSession = await verifyExistingWebSession(
-          normalizedLiveAddress,
-          signal
-        );
-
-        if (signal?.aborted) {
-          return null;
-        }
-
-        if (!hasActiveWebSession) {
-          hasActiveWebSession = await requestBrowserSessionUpgrade(
-            normalizedLiveAddress,
-            signal
-          );
-        }
-
-        if (signal?.aborted || !hasActiveWebSession) {
-          return null;
-        }
-
-        const payload = await createDesktopAuthPayload(
+        const payload = await createNativeAuthPayload(
           normalizedLiveAddress,
           signal
         );
@@ -235,14 +222,12 @@ export default function BrowserConnectorConnect(
         }
 
         setNativeAuthState({ key: nativeAuthKey, payload });
-        setAuthStatus("ready");
         return payload;
       } catch (error) {
         if (signal?.aborted) {
           return null;
         }
 
-        setAuthStatus("error");
         setAuthError(
           getErrorMessage(
             error,
@@ -257,15 +242,13 @@ export default function BrowserConnectorConnect(
       }
     },
     [
-      createDesktopAuthPayload,
+      createNativeAuthPayload,
       isRequestedChain,
       nativeAuthKey,
       normalizedLiveAddress,
       preparedNativeAuth,
-      requestBrowserSessionUpgrade,
       requestedChainName,
       requiresNativeSessionAuth,
-      verifyExistingWebSession,
     ]
   );
 
@@ -278,12 +261,11 @@ export default function BrowserConnectorConnect(
 
     let desktopAuthPayload: unknown = preparedNativeAuth;
     if (requiresNativeSessionAuth) {
-      const preparedPayload =
-        preparedNativeAuth ?? (await prepareNativeSessionAuth({ force: true }));
-      if (preparedPayload === null) {
+      if (!preparedNativeAuth) {
+        setShowAuthModal(true);
         return;
       }
-      desktopAuthPayload = preparedPayload;
+      desktopAuthPayload = preparedNativeAuth;
     }
 
     const connectionInfo = {
@@ -304,7 +286,6 @@ export default function BrowserConnectorConnect(
   }, [
     liveChainId,
     normalizedLiveAddress,
-    prepareNativeSessionAuth,
     preparedNativeAuth,
     props.scheme,
     props.setCompleted,
@@ -317,158 +298,185 @@ export default function BrowserConnectorConnect(
     setIsRequestedChain(liveChainId === requestedChainId);
   }, [liveChainId, requestedChainId]);
 
-  useEffect(() => {
-    if (
-      !requiresNativeSessionAuth ||
-      !isLiveConnected ||
-      !normalizedLiveAddress ||
-      !isRequestedChain ||
-      preparedNativeAuth
-    ) {
-      return;
+  const handleAuthModalSign = useCallback(async () => {
+    const payload = await prepareNativeSessionAuth({ force: true });
+    if (payload) {
+      setShowAuthModal(false);
     }
-
-    const abortController = new AbortController();
-    void prepareNativeSessionAuth({ signal: abortController.signal });
-
-    return () => {
-      abortController.abort();
-    };
-  }, [
-    isLiveConnected,
-    isRequestedChain,
-    normalizedLiveAddress,
-    prepareNativeSessionAuth,
-    preparedNativeAuth,
-    requiresNativeSessionAuth,
-  ]);
+  }, [prepareNativeSessionAuth]);
 
   const isOpenDesktopDisabled =
-    isAuthenticating ||
-    !isLiveConnected ||
-    !isRequestedChain ||
-    (requiresNativeSessionAuth && !preparedNativeAuth);
+    isAuthenticating || !isLiveConnected || !isRequestedChain;
 
   const openDesktopLabel = (() => {
     if (!requiresNativeSessionAuth) {
       return "Open 6529 Desktop";
     }
-    if (authStatus === "upgrading") {
-      return "Updating auth...";
-    }
     if (isAuthenticating) {
-      return "Preparing auth...";
+      return "Signing...";
+    }
+    if (!preparedNativeAuth) {
+      return "Upgrade Authentication";
     }
     return "Open 6529 Desktop";
   })();
+  const disabledClass = styles["disabled"] ?? "";
 
   return (
-    <Container>
-      <Row className="pb-3">
-        <Col xs={12}>
-          <span className={styles["circledNumber"]}>1</span>
-          <span>Connect your wallet</span>
-        </Col>
-        {isLiveConnected ? (
-          <Col xs={12} className="pt-3">
+    <>
+      <Container>
+        <Row className="pb-3">
+          <Col xs={12}>
+            <span className={styles["circledNumber"]}>1</span>
+            <span>Connect your wallet</span>
+          </Col>
+          {isLiveConnected ? (
+            <Col xs={12} className="pt-3">
+              <Container>
+                <Row>
+                  <Col xs={12}>Connected Address</Col>
+                  <Col xs={12}>
+                    <code>{liveAddress?.toLowerCase()}</code>
+                  </Col>
+                  <Col xs={12}>
+                    <button
+                      onClick={() => void account.seizeDisconnect()}
+                      className="mt-3 tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                    >
+                      Disconnect
+                    </button>
+                  </Col>
+                </Row>
+              </Container>
+            </Col>
+          ) : (
+            <Col xs={12} className="pt-3">
+              <Container>
+                <Row>
+                  <Col>
+                    <HeaderUserConnect />
+                  </Col>
+                </Row>
+              </Container>
+            </Col>
+          )}
+        </Row>
+        <hr />
+        <Row
+          className={`py-3 ${
+            isRequestedChain || !isLiveConnected ? disabledClass : ""
+          }`}
+        >
+          <Col xs={12}>
+            <span className={styles["circledNumber"]}>2</span>
+            <span>Switch to {requestedChainName}</span>
+          </Col>
+          <Col xs={12} className="pt-4">
             <Container>
               <Row>
-                <Col xs={12}>Connected Address</Col>
-                <Col xs={12}>
-                  <code>{liveAddress?.toLowerCase()}</code>
-                </Col>
-                <Col xs={12}>
+                <Col>
                   <button
-                    onClick={() => account.seizeDisconnectAndLogout()}
-                    className="mt-3 tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                    disabled={isSwitchingChain}
+                    onClick={() => switchChain({ chainId: requestedChainId })}
+                    className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                   >
-                    Disconnect
+                    {isSwitchingChain ? "Switching..." : "Switch"}
                   </button>
                 </Col>
               </Row>
             </Container>
           </Col>
-        ) : (
-          <Col xs={12} className="pt-3">
+        </Row>
+        <hr />
+        <Row
+          className={`pt-3 ${
+            !isLiveConnected || !isRequestedChain ? disabledClass : ""
+          }`}
+        >
+          <Col xs={12}>
+            <span className={styles["circledNumber"]}>3</span>
+            <span>Transfer Connection to 6529 Desktop</span>
+          </Col>
+          <Col xs={12} className="pt-4">
             <Container>
               <Row>
                 <Col>
-                  <HeaderUserConnect />
+                  <button
+                    disabled={isOpenDesktopDisabled}
+                    onClick={openApp}
+                    className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                  >
+                    {openDesktopLabel}
+                  </button>
+                  {requiresNativeSessionAuth && preparedNativeAuth && (
+                    <p className="pt-3 text-success">
+                      Auth is ready for 6529 Desktop.
+                    </p>
+                  )}
+                  {authError && (
+                    <>
+                      <p className="pt-3 text-danger" role="alert">
+                        {authError}
+                      </p>
+                      <button
+                        disabled={isAuthenticating}
+                        onClick={() => setShowAuthModal(true)}
+                        className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                      >
+                        Try again
+                      </button>
+                    </>
+                  )}
                 </Col>
               </Row>
             </Container>
           </Col>
-        )}
-      </Row>
-      <hr />
-      <Row
-        className={`pt-3 pb-3 ${isRequestedChain || !isLiveConnected ? styles["disabled"] : ""}`}
+        </Row>
+      </Container>
+      <Modal
+        show={showAuthModal}
+        onHide={() => !isAuthenticating && setShowAuthModal(false)}
+        centered
+        backdrop={isAuthenticating ? "static" : true}
+        keyboard={!isAuthenticating}
+        dialogClassName={authModalStyles["signModalDialog"] ?? ""}
+        contentClassName={authModalStyles["signModalSurface"] ?? ""}
       >
-        <Col xs={12}>
-          <span className={styles["circledNumber"]}>2</span>
-          <span>Switch to {requestedChainName}</span>
-        </Col>
-        <Col xs={12} className="pt-4">
-          <Container>
-            <Row>
-              <Col>
-                <button
-                  disabled={isSwitchingChain}
-                  onClick={() => switchChain({ chainId: requestedChainId })}
-                  className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
-                >
-                  {isSwitchingChain ? "Switching..." : "Switch"}
-                </button>
-              </Col>
-            </Row>
-          </Container>
-        </Col>
-      </Row>
-      <hr />
-      <Row
-        className={`pt-3 ${!isLiveConnected || !isRequestedChain ? styles["disabled"] : ""}`}
-      >
-        <Col xs={12}>
-          <span className={styles["circledNumber"]}>3</span>
-          <span>Transfer Connection to 6529 Desktop</span>
-        </Col>
-        <Col xs={12} className="pt-4">
-          <Container>
-            <Row>
-              <Col>
-                <button
-                  disabled={isOpenDesktopDisabled}
-                  onClick={openApp}
-                  className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
-                >
-                  {openDesktopLabel}
-                </button>
-                {requiresNativeSessionAuth && authStatus === "ready" && (
-                  <p className="pt-3 text-success">
-                    Auth is ready for 6529 Desktop.
-                  </p>
-                )}
-                {authError && (
-                  <>
-                    <p className="pt-3 text-danger" role="alert">
-                      {authError}
-                    </p>
-                    <button
-                      disabled={isAuthenticating}
-                      onClick={() =>
-                        void prepareNativeSessionAuth({ force: true })
-                      }
-                      className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
-                    >
-                      Try again
-                    </button>
-                  </>
-                )}
-              </Col>
-            </Row>
-          </Container>
-        </Col>
-      </Row>
-    </Container>
+        <Modal.Header
+          closeButton={!isAuthenticating}
+          className={authModalStyles["signModalHeader"]}
+        >
+          <Modal.Title className={authModalStyles["signModalTitle"]}>
+            Upgrade Authentication
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body className={authModalStyles["signModalBody"]}>
+          <p className={authModalStyles["signModalLead"]}>
+            6529 Desktop needs an updated desktop authentication signature for
+            this browser wallet connection.
+          </p>
+          <ul className={authModalStyles["signModalList"]}>
+            <li>Click Sign to start the authentication upgrade.</li>
+            <li>Confirm the request in your wallet.</li>
+          </ul>
+        </Modal.Body>
+        <Modal.Footer className={authModalStyles["signModalFooter"]}>
+          <button
+            disabled={isAuthenticating}
+            onClick={() => setShowAuthModal(false)}
+            className={authModalStyles["signModalCancelButton"]}
+          >
+            Cancel
+          </button>
+          <button
+            disabled={isAuthenticating}
+            onClick={() => void handleAuthModalSign()}
+            className={authModalStyles["signModalConfirmButton"]}
+          >
+            {isAuthenticating ? "Confirm in your wallet" : "Sign"}
+          </button>
+        </Modal.Footer>
+      </Modal>
+    </>
   );
 }

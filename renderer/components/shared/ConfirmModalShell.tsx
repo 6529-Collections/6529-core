@@ -213,6 +213,11 @@ export function ConfirmModalShell(props: {
             filter: brightness(1.28) saturate(1.16) !important;
             transform: translateY(-2px) scale(1.03) !important;
           }
+          input[data-confirm-focused="true"],
+          select[data-confirm-focused="true"],
+          textarea[data-confirm-focused="true"] {
+            transform: none !important;
+          }
         `}</style>
       </div>
     </div>

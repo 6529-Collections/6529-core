@@ -54,6 +54,14 @@ describe("session-v2.utils", () => {
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(null);
     (isNativeSecureStorageAvailable as jest.Mock).mockReturnValue(true);
     (setAuthJwt as jest.Mock).mockReturnValue(true);
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: undefined,
+    });
   });
 
   it("requests web session nonce with only session-v2 query params", async () => {
@@ -99,6 +107,31 @@ describe("session-v2.utils", () => {
     });
   });
 
+  it("requests desktop session nonce from Electron", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const nonceResponse = {
+      signable_message: "6529 Authentication\nDomain: desktop",
+      server_signature: "server-signature",
+    };
+    (commonApiFetch as jest.Mock).mockResolvedValueOnce(nonceResponse);
+
+    await expect(getSessionNonce({ signerAddress: "0xabc" })).resolves.toBe(
+      nonceResponse
+    );
+
+    expect(commonApiFetch).toHaveBeenCalledWith({
+      endpoint: "auth/session-nonce",
+      params: {
+        signer_address: "0xabc",
+        client_type: "desktop",
+        chain_id: "1",
+      },
+    });
+  });
+
   it("allows browser connector pages to request native session nonces explicitly", async () => {
     const nonceResponse = {
       signable_message: "6529 Authentication\nDomain: native",
@@ -107,7 +140,11 @@ describe("session-v2.utils", () => {
     (commonApiFetch as jest.Mock).mockResolvedValueOnce(nonceResponse);
 
     await expect(
-      getSessionNonce({ signerAddress: "0xabc", clientType: "native" })
+      getSessionNonce({
+        signerAddress: "0xabc",
+        clientType: "native",
+        includeAuthHeaders: false,
+      })
     ).resolves.toBe(nonceResponse);
 
     expect(commonApiFetch).toHaveBeenCalledWith({
@@ -117,6 +154,7 @@ describe("session-v2.utils", () => {
         client_type: "native",
         chain_id: "1",
       },
+      includeAuthHeaders: false,
     });
   });
 
@@ -142,6 +180,7 @@ describe("session-v2.utils", () => {
     expect(setNativeRefreshToken).toHaveBeenCalledWith({
       address: "0xabc",
       refreshToken: "native-refresh-token",
+      clientType: "native",
     });
     expect(commonApiPost).toHaveBeenCalledWith({
       endpoint: "auth/session-logout",
@@ -154,7 +193,7 @@ describe("session-v2.utils", () => {
       credentials: "include",
       parseJson: false,
     });
-    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc");
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
   });
 
   it("marks persisted web auth as session v2", async () => {
@@ -242,7 +281,11 @@ describe("session-v2.utils", () => {
     });
   });
 
-  it("allows browser connector pages to request native session-login explicitly", async () => {
+  it("uses the Electron native auth bridge for native session-login", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
     const sessionResponse = {
       client_type: "native",
       address: "0xabc",
@@ -252,7 +295,11 @@ describe("session-v2.utils", () => {
       native_refresh_token: "native-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
     };
-    (commonApiPost as jest.Mock).mockResolvedValueOnce(sessionResponse);
+    const sessionLogin = jest.fn().mockResolvedValueOnce(sessionResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionLogin },
+    });
 
     await expect(
       loginWithSessionV2({
@@ -264,16 +311,51 @@ describe("session-v2.utils", () => {
       })
     ).resolves.toBe(sessionResponse);
 
-    expect(commonApiPost).toHaveBeenCalledWith({
-      endpoint: "auth/session-login",
-      body: {
-        client_type: "native",
-        server_signature: "server-signature",
-        client_signature: "client-signature",
-        client_address: "0xabc",
-      },
-      credentials: "include",
+    expect(sessionLogin).toHaveBeenCalledWith({
+      server_signature: "server-signature",
+      client_signature: "client-signature",
+      client_address: "0xabc",
+      client_type: "native",
     });
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("uses desktop client type for Electron session-login by default", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const sessionResponse = {
+      client_type: "desktop",
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    const sessionLogin = jest.fn().mockResolvedValueOnce(sessionResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionLogin },
+    });
+
+    await expect(
+      loginWithSessionV2({
+        serverSignature: "server-signature",
+        clientSignature: "client-signature",
+        signerAddress: "0xabc",
+        role: null,
+      })
+    ).resolves.toBe(sessionResponse);
+
+    expect(sessionLogin).toHaveBeenCalledWith({
+      server_signature: "server-signature",
+      client_signature: "client-signature",
+      client_address: "0xabc",
+      client_type: "desktop",
+    });
+    expect(commonApiPost).not.toHaveBeenCalled();
   });
 
   it("revokes a web session cookie when auth persistence fails", async () => {
@@ -411,6 +493,44 @@ describe("session-v2.utils", () => {
       credentials: "include",
       errorMode: "structured",
     });
+    expect(getNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
+  });
+
+  it("refreshes desktop sessions with the desktop refresh token", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    (getNativeRefreshToken as jest.Mock).mockResolvedValue(
+      "desktop-refresh-token"
+    );
+    const sessionResponse = {
+      client_type: "desktop",
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "rotated-desktop-refresh-token",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    (commonApiPost as jest.Mock).mockResolvedValueOnce(sessionResponse);
+
+    await expect(refreshSessionV2({ address: "0xabc" })).resolves.toBe(
+      sessionResponse
+    );
+
+    expect(getNativeRefreshToken).toHaveBeenCalledWith("0xabc", "desktop");
+    expect(commonApiPost).toHaveBeenCalledWith({
+      endpoint: "auth/session-refresh",
+      body: {
+        client_type: "desktop",
+        client_address: "0xabc",
+        native_refresh_token: "desktop-refresh-token",
+      },
+      signal: undefined,
+      credentials: "include",
+      errorMode: "structured",
+    });
   });
 
   it("revokes an existing native session", async () => {
@@ -432,7 +552,7 @@ describe("session-v2.utils", () => {
       credentials: "include",
       parseJson: false,
     });
-    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc");
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
   });
 
   it("removes the native refresh token when native logout fails", async () => {
@@ -447,7 +567,32 @@ describe("session-v2.utils", () => {
       logoutSessionV2({ address: "0xabc", allSessions: true })
     ).rejects.toBe(logoutError);
 
-    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc");
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
+  });
+
+  it("revokes an existing desktop session", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    (getNativeRefreshToken as jest.Mock).mockResolvedValue(
+      "desktop-refresh-token"
+    );
+
+    await logoutSessionV2({ address: "0xabc", allSessions: true });
+
+    expect(commonApiPost).toHaveBeenCalledWith({
+      endpoint: "auth/session-logout",
+      body: {
+        client_type: "desktop",
+        client_address: "0xabc",
+        native_refresh_token: "desktop-refresh-token",
+        all_sessions: true,
+      },
+      credentials: "include",
+      parseJson: false,
+    });
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "desktop");
   });
 
   it("attempts web session logout with credentials", async () => {

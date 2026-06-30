@@ -44,6 +44,6 @@ export class ApiRedeemConnectionShareRequest {
 }
 
 export enum ApiRedeemConnectionShareRequestTargetClientTypeEnum {
-    Native = 'native'
+    Native = 'native',
+    Desktop = 'desktop'
 }
-
