@@ -45,7 +45,11 @@ function parseTransactionData(data: string) {
   return { selector: functionSelector, args: decodedArgs };
 }
 
-export default function ConfirmSeedWalletRequest() {
+export default function ConfirmSeedWalletRequest({
+  onShowChange,
+}: Readonly<{
+  onShowChange?: (show: boolean) => void;
+}> = {}) {
   const [show, setShow] = useState(false);
   const { isTopModal, addModal, removeModal } = useModalState();
   const seedWalletContext = useSeedWallet();
@@ -71,6 +75,11 @@ export default function ConfirmSeedWalletRequest() {
     else removeModal(SEED_WALLET_REQUEST_MODAL);
     return () => removeModal(SEED_WALLET_REQUEST_MODAL);
   }, [show, addModal, removeModal]);
+
+  useEffect(() => {
+    onShowChange?.(show);
+    return () => onShowChange?.(false);
+  }, [onShowChange, show]);
 
   const clear = () => {
     setSeedRequest(undefined);
@@ -138,7 +147,7 @@ export default function ConfirmSeedWalletRequest() {
           {request?.params?.map((param, index) => (
             <code
               key={param}
-              className="tw-block tw-pt-3 tw-pb-3 tw-break-all"
+              className="tw-block tw-break-all tw-pb-3 tw-pt-3"
               dangerouslySetInnerHTML={{ __html: getHtml(index, param) }}
             />
           ))}
@@ -146,21 +155,23 @@ export default function ConfirmSeedWalletRequest() {
       );
     } else if (request.method === "eth_sendTransaction") {
       const param = request?.params[0];
-      const parsedData = param?.data ? parseTransactionData(param.data) : undefined;
+      const parsedData = param?.data
+        ? parseTransactionData(param.data)
+        : undefined;
       return (
         <>
           {param?.value && (
             <>
               <span className="tw-block tw-pt-3">Value</span>
-              <code className="tw-block tw-pb-3 tw-break-all">
+              <code className="tw-block tw-break-all tw-pb-3">
                 {formatUnits(BigInt(param.value))}
               </code>
             </>
           )}
           <span className="tw-block tw-pt-3">From</span>
-          <code className="tw-block tw-pb-3 tw-break-all">{param?.from}</code>
+          <code className="tw-block tw-break-all tw-pb-3">{param?.from}</code>
           <span className="tw-block tw-pt-3">To</span>
-          <code className="tw-block tw-pb-3 tw-break-all">{param?.to}</code>
+          <code className="tw-block tw-break-all tw-pb-3">{param?.to}</code>
           {parsedData && param?.data && (
             <>
               <span className="tw-flex tw-items-center tw-justify-between tw-pt-3">
@@ -176,18 +187,18 @@ export default function ConfirmSeedWalletRequest() {
               {showParsed ? (
                 <>
                   <span className="tw-block tw-pt-3">Function Selector</span>
-                  <code className="tw-block tw-pb-1 tw-break-all">
+                  <code className="tw-block tw-break-all tw-pb-1">
                     {parsedData.selector}
                   </code>
-                  <span className="tw-block tw-pt-1 tw-pb-1">Arguments</span>
+                  <span className="tw-block tw-pb-1 tw-pt-1">Arguments</span>
                   {parsedData.args.map((arg, index) => (
-                    <code key={index} className="tw-block tw-pb-1 tw-break-all">
+                    <code key={index} className="tw-block tw-break-all tw-pb-1">
                       {index + 1}. {arg}
                     </code>
                   ))}
                 </>
               ) : (
-                <code className="tw-block tw-pt-3 tw-pb-3 tw-break-all">
+                <code className="tw-block tw-break-all tw-pb-3 tw-pt-3">
                   {param.data}
                 </code>
               )}
@@ -197,7 +208,7 @@ export default function ConfirmSeedWalletRequest() {
       );
     } else {
       return request?.params?.map((param, index) => (
-        <code key={index} className="tw-block tw-pt-3 tw-pb-3 tw-break-all">
+        <code key={index} className="tw-block tw-break-all tw-pb-3 tw-pt-3">
           {JSON.stringify(param)}
         </code>
       ));
@@ -257,7 +268,7 @@ export default function ConfirmSeedWalletRequest() {
         </>
       }
     >
-      <div className="tw-mt-2 tw-mb-2">
+      <div className="tw-mb-2 tw-mt-2">
         <span className="tw-flex tw-flex-col">
           <span>Method</span>
           <code className="tw-break-all">{seedRequest.method}</code>

@@ -22,8 +22,7 @@ import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletReq
 export const SEED_WALLET_KEY = "seed-wallet-pass";
 
 const hasSeedWalletBridge = (): boolean =>
-  typeof window !== "undefined" &&
-  typeof window.api?.sendSync === "function";
+  typeof window !== "undefined" && typeof window.api?.sendSync === "function";
 
 interface SeedWalletContextType {
   isSeedWallet: boolean;
@@ -35,6 +34,7 @@ interface SeedWalletContextType {
   ) => void;
   setShowPasswordModal: (show: boolean) => void;
   lockWallet: () => void;
+  isSeedWalletModalOpen: boolean;
 }
 
 const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
@@ -53,6 +53,7 @@ export const SeedWalletProvider: React.FC<{
   const [isFetched, setIsFetched] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   const [isSeedWallet, setIsSeedWallet] = useState<boolean>(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -234,7 +235,9 @@ export const SeedWalletProvider: React.FC<{
           return;
         }
 
-        if (!areEqualAddresses(connectedAddressRef.current, seedWallet.address)) {
+        if (
+          !areEqualAddresses(connectedAddressRef.current, seedWallet.address)
+        ) {
           lockWallet(false);
           setIsFetched(false);
           setConnectedAddress(seedWallet.address);
@@ -296,7 +299,17 @@ export const SeedWalletProvider: React.FC<{
       connector: seedWalletConnector,
       chainId,
     });
-  }, [activeAddress, activeConnector?.uid, chainId, connect, connectors, isSeedWallet]);
+  }, [
+    activeAddress,
+    activeConnector?.uid,
+    chainId,
+    connect,
+    connectors,
+    isSeedWallet,
+  ]);
+
+  const isSeedWalletModalOpen =
+    showPasswordModal || showRequestModal || !!pendingCallback;
 
   const value = {
     isSeedWallet,
@@ -305,6 +318,7 @@ export const SeedWalletProvider: React.FC<{
     handleRequest,
     setShowPasswordModal,
     lockWallet,
+    isSeedWalletModalOpen,
   };
 
   return (
@@ -340,7 +354,7 @@ export const SeedWalletProvider: React.FC<{
           onLock={lockWallet}
         />
       )}
-      <ConfirmSeedWalletRequest />
+      <ConfirmSeedWalletRequest onShowChange={setShowRequestModal} />
       {children}
     </SeedWalletContext.Provider>
   );

@@ -22,6 +22,7 @@ import {
 } from "@/components/utils/toast/AppToast";
 import { useModalState } from "@/contexts/ModalStateContext";
 import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { ProfileConnectedStatus } from "@/entities/IProfile";
 import {
   InvalidRoleStateError,
@@ -629,6 +630,7 @@ export default function Auth({
     isSafeWallet,
     connectionState,
   } = useSeizeConnectContext();
+  const { isSeedWalletModalOpen } = useSeedWallet();
 
   const {
     signMessage,
@@ -1890,6 +1892,7 @@ export default function Auth({
     return (
       showSignModal &&
       !isDisconnecting &&
+      !isSeedWalletModalOpen &&
       !shouldHideDuringValidation &&
       (connectionState === "connected" || isDisconnectedSessionUpgradePrompt)
     );
@@ -1898,6 +1901,7 @@ export default function Auth({
     connectionState,
     isDisconnecting,
     isDisconnectedSessionUpgradePrompt,
+    isSeedWalletModalOpen,
     showSignModal,
     signModalReason,
   ]);

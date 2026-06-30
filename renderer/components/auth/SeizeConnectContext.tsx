@@ -47,7 +47,12 @@ import {
 } from "@/src/utils/security-logger";
 import { isSafeWalletInfo } from "@/utils/wallet-detection";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
-import { BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT } from "@/wagmiConfig/browserConnector";
+import {
+  BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
+  clearBrowserConnectorConnectIntent,
+  setBrowserConnectorConnectIntent,
+  type BrowserConnectorConnectIntent,
+} from "@/wagmiConfig/browserConnector";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import { WalletErrorBoundary } from "./error-boundary";
 
@@ -479,8 +484,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   >(() => getConnectedWalletAccounts());
   const [isAddingConnectedAccount, setIsAddingConnectedAccount] =
     useState(false);
-  const [browserConnectorConnectedAddress, setBrowserConnectorConnectedAddress] =
-    useState<string | null>(null);
+  const [
+    browserConnectorConnectedAddress,
+    setBrowserConnectorConnectedAddress,
+  ] = useState<string | null>(null);
 
   // Use consolidated wallet state management
   const {
@@ -640,18 +647,17 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    const handleBrowserConnectorConnectionChanged = (
-      event: Event
-    ): void => {
-      const nextAddress = (
-        event as CustomEvent<{ address?: string | null }>
-      ).detail?.address;
+    const handleBrowserConnectorConnectionChanged = (event: Event): void => {
+      const nextAddress = (event as CustomEvent<{ address?: string | null }>)
+        .detail?.address;
 
       if (typeof nextAddress === "string" && isAddress(nextAddress)) {
+        refreshStoredConnectedAccounts();
         setBrowserConnectorConnectedAddress(getAddress(nextAddress));
         return;
       }
 
+      refreshStoredConnectedAccounts();
       setBrowserConnectorConnectedAddress(null);
     };
 
@@ -666,7 +672,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         handleBrowserConnectorConnectionChanged as EventListener
       );
     };
-  }, []);
+  }, [refreshStoredConnectedAccounts]);
 
   useEffect(() => {
     // Wait for initialization to complete before processing account changes
@@ -1037,8 +1043,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const liveConnectedAddress =
     impersonatedAddress ||
     (liveAccount.address &&
-      liveAccount.isConnected &&
-      isAddress(liveAccount.address)
+    liveAccount.isConnected &&
+    isAddress(liveAccount.address)
       ? getAddress(liveAccount.address)
       : undefined);
   const isActiveWalletConnected = !!(
@@ -1054,34 +1060,82 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const shouldBypassConnectedWalletAddFlow =
     isActiveAppWalletConnector || isActiveSeedWalletConnector;
 
-  const seizeConnect = useCallback((): void => {
-    try {
-      // Log connection attempt for security monitoring
-      logSecurityEvent(
-        SecurityEventType.WALLET_CONNECTION_ATTEMPT,
-        createConnectionEventContext("seizeConnect")
-      );
-
-      if (isElectron()) {
-        setShowConnectModal(true);
+  const seizeConnectWithIntent = useCallback(
+    (intent?: BrowserConnectorConnectIntent): void => {
+      if (intent) {
+        setBrowserConnectorConnectIntent(intent);
       } else {
-        open({ view: "Connect" });
+        clearBrowserConnectorConnectIntent();
       }
 
-      // Log successful modal opening
-      logSecurityEvent(
-        SecurityEventType.WALLET_MODAL_OPENED,
-        createConnectionEventContext("seizeConnect")
-      );
-    } catch (error) {
-      const connectionError = new WalletConnectionError(
-        "Failed to open wallet connection modal",
-        error
-      );
-      logError("seizeConnect", connectionError);
-      throw connectionError;
+      try {
+        // Log connection attempt for security monitoring
+        logSecurityEvent(
+          SecurityEventType.WALLET_CONNECTION_ATTEMPT,
+          createConnectionEventContext("seizeConnect")
+        );
+
+        if (isElectron()) {
+          setShowConnectModal(true);
+        } else {
+          open({ view: "Connect" });
+        }
+
+        // Log successful modal opening
+        logSecurityEvent(
+          SecurityEventType.WALLET_MODAL_OPENED,
+          createConnectionEventContext("seizeConnect")
+        );
+      } catch (error) {
+        clearBrowserConnectorConnectIntent();
+        const connectionError = new WalletConnectionError(
+          "Failed to open wallet connection modal",
+          error
+        );
+        logError("seizeConnect", connectionError);
+        throw connectionError;
+      }
+    },
+    [open, setShowConnectModal]
+  );
+
+  const seizeConnect = useCallback((): void => {
+    seizeConnectWithIntent();
+  }, [seizeConnectWithIntent]);
+
+  const getActiveConnectIntent = useCallback(():
+    | BrowserConnectorConnectIntent
+    | undefined => {
+    if (!activeAddress || !isAddress(activeAddress)) {
+      return undefined;
     }
-  }, [open, setShowConnectModal]);
+    return { intendedWalletAddress: getAddress(activeAddress) };
+  }, [activeAddress]);
+
+  const getAddAccountConnectIntent = useCallback(
+    (
+      originAddress: string | null
+    ): BrowserConnectorConnectIntent | undefined => {
+      const fallbackOrigin =
+        activeAddress && isAddress(activeAddress)
+          ? getAddress(activeAddress)
+          : null;
+      const walletAddress = originAddress ?? fallbackOrigin;
+      return walletAddress ? { originWalletAddress: walletAddress } : undefined;
+    },
+    [activeAddress]
+  );
+
+  const openConnectForActiveAccount = useCallback((): void => {
+    seizeConnectWithIntent(getActiveConnectIntent());
+  }, [getActiveConnectIntent, seizeConnectWithIntent]);
+
+  const openConnectForAdditionalAccount = useCallback(
+    (originAddress: string | null): void => {
+      seizeConnectWithIntent(getAddAccountConnectIntent(originAddress));
+    },
+    [getAddAccountConnectIntent, seizeConnectWithIntent]
+  );
 
   const seizeConnectFresh = useCallback(async (): Promise<void> => {
     const liveConnectedWallet =
@@ -1096,7 +1150,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isActiveAppWalletConnector ||
       isActiveSeedWalletConnector
     ) {
-      seizeConnect();
+      openConnectForActiveAccount();
       return;
     }
 
@@ -1120,14 +1174,14 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    seizeConnect();
+    openConnectForActiveAccount();
   }, [
     liveAccount.address,
     liveAccount.isConnected,
     disconnect,
     isActiveAppWalletConnector,
     isActiveSeedWalletConnector,
-    seizeConnect,
+    openConnectForActiveAccount,
   ]);
 
   const seizeDisconnect = useCallback(async (): Promise<void> => {
@@ -1403,6 +1457,11 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAddress(liveAccount.address)
         ? getAddress(liveAccount.address)
         : null;
+    const addFlowOriginWallet =
+      liveConnectedWallet ??
+      (activeAddress && isAddress(activeAddress)
+        ? getAddress(activeAddress)
+        : null);
     const addFlowOriginAddress = addFlowOriginAddressRef.current;
     const addFlowReturnedToOrigin =
       !state.open &&
@@ -1431,13 +1490,13 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (!liveConnectedWallet || shouldBypassConnectedWalletAddFlow) {
       isAddingConnectedAccountRef.current = true;
-      addFlowOriginAddressRef.current = liveConnectedWallet;
+      addFlowOriginAddressRef.current = addFlowOriginWallet;
       addFlowHasLeftOriginRef.current = false;
       pendingAddFlowSwitchRef.current = false;
       setIsAddingConnectedAccount(true);
 
       try {
-        seizeConnect();
+        openConnectForAdditionalAccount(addFlowOriginWallet);
       } catch (error: unknown) {
         clearAddConnectedAccountGuard();
         setIsAddingConnectedAccount(false);
@@ -1472,7 +1531,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
               return;
             }
             try {
-              seizeConnect();
+              openConnectForAdditionalAccount(liveConnectedWallet);
             } catch (error: unknown) {
               clearAddConnectedAccountGuard();
               setIsAddingConnectedAccount(false);
@@ -1512,8 +1571,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     canAddConnectedAccount,
     disconnect,
     isAddingConnectedAccount,
+    activeAddress,
+    openConnectForAdditionalAccount,
     shouldBypassConnectedWalletAddFlow,
-    seizeConnect,
     state.open,
   ]);
 

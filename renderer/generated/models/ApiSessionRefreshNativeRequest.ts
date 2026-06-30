@@ -54,3 +54,4 @@ export enum ApiSessionRefreshNativeRequestClientTypeEnum {
     Native = 'native',
     Desktop = 'desktop'
 }
+

@@ -58,6 +58,7 @@ const getConnectionStoreKey = (connectorId: string) =>
   `seize-app-connection-${connectorId}`;
 const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
 const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
+const PENDING_CONNECT_INTENT_TTL_MS = 120_000;
 const DESKTOP_SESSION_AUTH_MODE = "session-v2-desktop";
 const LEGACY_NATIVE_SESSION_AUTH_MODE = "session-v2-native";
 const INVALID_CONNECTION_PAYLOAD_ERROR =
@@ -65,8 +66,75 @@ const INVALID_CONNECTION_PAYLOAD_ERROR =
 const MISSING_NATIVE_SESSION_AUTH_ERROR =
   "Desktop session-v2 authentication is required for this browser connection.";
 
+export interface BrowserConnectorConnectIntent {
+  readonly intendedWalletAddress?: string | null | undefined;
+  readonly originWalletAddress?: string | null | undefined;
+}
+
+interface NormalizedBrowserConnectorConnectIntent {
+  readonly intendedWalletAddress?: `0x${string}` | undefined;
+  readonly originWalletAddress?: `0x${string}` | undefined;
+}
+
+let pendingConnectIntent: {
+  readonly createdAt: number;
+  readonly intent: NormalizedBrowserConnectorConnectIntent;
+} | null = null;
+
 export const BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT =
   "6529-browser-connector-connection-changed";
+
+const normalizeIntentAddress = (
+  address: string | null | undefined
+): `0x${string}` | null => {
+  if (typeof address !== "string") {
+    return null;
+  }
+  const normalizedAddress = address.toLowerCase();
+  return HEX_ADDRESS_REGEX.test(normalizedAddress)
+    ? (normalizedAddress as `0x${string}`)
+    : null;
+};
+
+export const clearBrowserConnectorConnectIntent = (): void => {
+  pendingConnectIntent = null;
+};
+
+export const setBrowserConnectorConnectIntent = (
+  intent: BrowserConnectorConnectIntent
+): void => {
+  const intendedWalletAddress = normalizeIntentAddress(
+    intent.intendedWalletAddress
+  );
+  const originWalletAddress = normalizeIntentAddress(
+    intent.originWalletAddress
+  );
+  if (!intendedWalletAddress && !originWalletAddress) {
+    clearBrowserConnectorConnectIntent();
+    return;
+  }
+
+  pendingConnectIntent = {
+    createdAt: Date.now(),
+    intent: {
+      ...(intendedWalletAddress ? { intendedWalletAddress } : {}),
+      ...(originWalletAddress ? { originWalletAddress } : {}),
+    },
+  };
+};
+
+const consumeBrowserConnectorConnectIntent =
+  (): NormalizedBrowserConnectorConnectIntent | null => {
+    if (!pendingConnectIntent) {
+      return null;
+    }
+    const { createdAt, intent } = pendingConnectIntent;
+    pendingConnectIntent = null;
+    if (Date.now() - createdAt > PENDING_CONNECT_INTENT_TTL_MS) {
+      return null;
+    }
+    return intent;
+  };
 
 const parsePositiveChainId = (chainId: unknown): number | null => {
   if (
@@ -462,7 +530,9 @@ const processBrowserConnectResponse = async ({
   });
 
   if (requiredAuthClientType) {
-    const nativeSessionAuth = parseNativeSessionAuthPayload(responseRecord.auth);
+    const nativeSessionAuth = parseNativeSessionAuthPayload(
+      responseRecord.auth
+    );
     const connectionShareAuth = parseConnectionShareAuthPayload(
       responseRecord.auth
     );
@@ -496,7 +566,9 @@ const processBrowserConnectResponse = async ({
     }
 
     if (!nativeSessionToPersist && signedNativeChallengeAuth) {
-      if (signedNativeChallengeAuth.targetClientType !== requiredAuthClientType) {
+      if (
+        signedNativeChallengeAuth.targetClientType !== requiredAuthClientType
+      ) {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
       if (signedNativeChallengeAuth.address !== primaryConnectedAccount) {
@@ -514,7 +586,9 @@ const processBrowserConnectResponse = async ({
     }
 
     if (!nativeSessionToPersist && existingNativeSessionAuth) {
-      if (existingNativeSessionAuth.targetClientType !== requiredAuthClientType) {
+      if (
+        existingNativeSessionAuth.targetClientType !== requiredAuthClientType
+      ) {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
       if (existingNativeSessionAuth.address !== primaryConnectedAccount) {
@@ -684,10 +758,7 @@ export function browserConnector(parameters: {
         deepLinkCallbacks.delete(requestId);
       } else {
         storePendingDeepLinkResponse(requestId, data.data ?? {});
-        console.log(
-          `[${name}] No callback found for requestId`,
-          requestId
-        );
+        console.log(`[${name}] No callback found for requestId`, requestId);
       }
     });
 
@@ -717,8 +788,9 @@ export function browserConnector(parameters: {
     }
   };
 
-  const getExistingNativeSessionAddressForRequest =
-    async (): Promise<string | null> => {
+  const getExistingNativeSessionAddressForRequest = async (): Promise<
+    string | null
+  > => {
     const walletAddress = getWalletAddress();
     const normalizedWalletAddress =
       typeof walletAddress === "string" ? walletAddress.toLowerCase() : null;
@@ -843,6 +915,7 @@ export function browserConnector(parameters: {
         const requestId = generateRequestId();
         const t = Date.now();
         const chainId = opts?.chainId || connectionObject.chainId;
+        const connectIntent = consumeBrowserConnectorConnectIntent();
         const connectSearchParams = new URLSearchParams({
           task: "connect",
           scheme,
@@ -855,6 +928,18 @@ export function browserConnector(parameters: {
           connectSearchParams.set(
             "existingAuthAddress",
             existingNativeSessionAddress
+          );
+        }
+        if (connectIntent?.intendedWalletAddress) {
+          connectSearchParams.set(
+            "intendedWalletAddress",
+            connectIntent.intendedWalletAddress
+          );
+        }
+        if (connectIntent?.originWalletAddress) {
+          connectSearchParams.set(
+            "originWalletAddress",
+            connectIntent.originWalletAddress
           );
         }
         const requiredAuthClientType = getRefreshTokenClientTypeForAuthMode(

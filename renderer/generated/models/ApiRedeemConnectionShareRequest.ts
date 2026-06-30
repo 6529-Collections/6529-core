@@ -47,3 +47,4 @@ export enum ApiRedeemConnectionShareRequestTargetClientTypeEnum {
     Native = 'native',
     Desktop = 'desktop'
 }
+

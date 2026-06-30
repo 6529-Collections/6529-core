@@ -9,7 +9,8 @@
       href="./Montserrat-VariableFont_wght.woff2"
       as="font"
       type="font/woff2"
-      crossorigin />
+      crossorigin
+    />
     <title>Launching 6529 Desktop</title>
     <style>
       @font-face {
@@ -179,7 +180,7 @@
         if (!name) {
           return "";
         }
-        return backendTarget === "test" ? "(" + name + " - Test)" : "(" + name + ")";
+        return name + " / " + (backendTarget === "test" ? "Test" : "Live");
       }
 
       function formatArtist(card) {
@@ -265,7 +266,7 @@
           document.getElementById("app-environment").textContent =
             getEnvironmentLabel(
               window.splashAPI.environment,
-              window.splashAPI.backendTarget
+              window.splashAPI.backendTarget,
             );
         }
       });

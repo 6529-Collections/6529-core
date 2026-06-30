@@ -54,15 +54,21 @@ type BrowserConnectorNativeAuth =
   | BrowserConnectorSignedNativeAuth
   | BrowserConnectorExistingNativeAuth;
 
-type NativeAuthState =
-  | {
-      readonly key: string;
-      readonly payload: BrowserConnectorSignedNativeAuth;
-    }
-  | null;
+type NativeAuthState = {
+  readonly key: string;
+  readonly payload: BrowserConnectorSignedNativeAuth;
+} | null;
 
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error && error.message ? error.message : fallback;
+
+const normalizeQueryAddress = (value: string | null): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.toLowerCase();
+  return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
+};
 
 export default function BrowserConnectorConnect(
   props: Readonly<{
@@ -82,6 +88,8 @@ export default function BrowserConnectorConnect(
   const requestId = searchParams.get("requestId");
   const chainId = searchParams.get("chainId");
   const existingAuthAddress = searchParams.get("existingAuthAddress");
+  const intendedWalletAddress = searchParams.get("intendedWalletAddress");
+  const originWalletAddress = searchParams.get("originWalletAddress");
   const refreshTokenClientType = getRefreshTokenClientTypeForAuthMode(
     searchParams.get("authMode")
   );
@@ -90,17 +98,21 @@ export default function BrowserConnectorConnect(
     () => (typeof liveAddress === "string" ? liveAddress.toLowerCase() : null),
     [liveAddress]
   );
-  const normalizedExistingAuthAddress = useMemo(() => {
-    if (typeof existingAuthAddress !== "string") {
-      return null;
-    }
-    const normalized = existingAuthAddress.toLowerCase();
-    return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
-  }, [existingAuthAddress]);
+  const normalizedExistingAuthAddress = useMemo(
+    () => normalizeQueryAddress(existingAuthAddress),
+    [existingAuthAddress]
+  );
+  const normalizedIntendedWalletAddress = useMemo(
+    () => normalizeQueryAddress(intendedWalletAddress),
+    [intendedWalletAddress]
+  );
+  const normalizedOriginWalletAddress = useMemo(
+    () => normalizeQueryAddress(originWalletAddress),
+    [originWalletAddress]
+  );
 
   const requestedChain =
-    chains.find((c) => c.id === parseInt(chainId as string)) ??
-    chains[0];
+    chains.find((c) => c.id === parseInt(chainId as string)) ?? chains[0];
   const requestedChainId = requestedChain.id;
   const requestedChainName = requestedChain.name;
 
@@ -109,6 +121,30 @@ export default function BrowserConnectorConnect(
   const [authError, setAuthError] = useState<string | null>(null);
   const [nativeAuthState, setNativeAuthState] = useState<NativeAuthState>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  const walletIntentError = useMemo(() => {
+    if (!normalizedLiveAddress) {
+      return null;
+    }
+    if (
+      normalizedIntendedWalletAddress &&
+      normalizedLiveAddress !== normalizedIntendedWalletAddress
+    ) {
+      return "Switch to the requested wallet before continuing.";
+    }
+    if (
+      normalizedOriginWalletAddress &&
+      normalizedLiveAddress === normalizedOriginWalletAddress
+    ) {
+      return "Switch to a different wallet before adding another account.";
+    }
+    return null;
+  }, [
+    normalizedIntendedWalletAddress,
+    normalizedLiveAddress,
+    normalizedOriginWalletAddress,
+  ]);
+  const isWalletIntentSatisfied = !walletIntentError;
 
   const nativeAuthKey =
     requestId && normalizedLiveAddress && refreshTokenClientType
@@ -193,6 +229,13 @@ export default function BrowserConnectorConnect(
         return null;
       }
 
+      if (!isWalletIntentSatisfied) {
+        setAuthError(
+          walletIntentError ?? "Connect the requested wallet before continuing."
+        );
+        return null;
+      }
+
       if (!isRequestedChain) {
         setAuthError(`Switch to ${requestedChainName} before continuing.`);
         return null;
@@ -229,10 +272,7 @@ export default function BrowserConnectorConnect(
         }
 
         setAuthError(
-          getErrorMessage(
-            error,
-            "Couldn't prepare desktop authentication. Try again."
-          )
+          getErrorMessage(error, "Couldn't prepare desktop authentication.")
         );
         return null;
       } finally {
@@ -244,11 +284,13 @@ export default function BrowserConnectorConnect(
     [
       createNativeAuthPayload,
       isRequestedChain,
+      isWalletIntentSatisfied,
       nativeAuthKey,
       normalizedLiveAddress,
       preparedNativeAuth,
       requestedChainName,
       requiresNativeSessionAuth,
+      walletIntentError,
     ]
   );
 
@@ -256,6 +298,13 @@ export default function BrowserConnectorConnect(
     setAuthError(null);
     if (!normalizedLiveAddress) {
       setAuthError("Connect your wallet before returning to 6529 Desktop.");
+      return;
+    }
+
+    if (!isWalletIntentSatisfied) {
+      setAuthError(
+        walletIntentError ?? "Connect the requested wallet before continuing."
+      );
       return;
     }
 
@@ -285,6 +334,7 @@ export default function BrowserConnectorConnect(
     props.setCompleted(true);
   }, [
     liveChainId,
+    isWalletIntentSatisfied,
     normalizedLiveAddress,
     preparedNativeAuth,
     props.scheme,
@@ -292,6 +342,7 @@ export default function BrowserConnectorConnect(
     requiresNativeSessionAuth,
     requestId,
     requestedChainId,
+    walletIntentError,
   ]);
 
   useEffect(() => {
@@ -305,8 +356,28 @@ export default function BrowserConnectorConnect(
     }
   }, [prepareNativeSessionAuth]);
 
+  useEffect(() => {
+    if (!requiresNativeSessionAuth || preparedNativeAuth) {
+      setShowAuthModal(false);
+      return;
+    }
+    if (isLiveConnected && isRequestedChain && isWalletIntentSatisfied) {
+      setShowAuthModal(true);
+    }
+  }, [
+    isLiveConnected,
+    isRequestedChain,
+    isWalletIntentSatisfied,
+    preparedNativeAuth,
+    requiresNativeSessionAuth,
+  ]);
+
   const isOpenDesktopDisabled =
-    isAuthenticating || !isLiveConnected || !isRequestedChain;
+    isAuthenticating ||
+    !isLiveConnected ||
+    !isRequestedChain ||
+    !isWalletIntentSatisfied ||
+    (requiresNativeSessionAuth && !preparedNativeAuth);
 
   const openDesktopLabel = (() => {
     if (!requiresNativeSessionAuth) {
@@ -316,7 +387,7 @@ export default function BrowserConnectorConnect(
       return "Signing...";
     }
     if (!preparedNativeAuth) {
-      return "Upgrade Authentication";
+      return "Authentication Required";
     }
     return "Open 6529 Desktop";
   })();
@@ -360,11 +431,36 @@ export default function BrowserConnectorConnect(
               </Container>
             </Col>
           )}
+          {normalizedIntendedWalletAddress && (
+            <Col xs={12} className="pt-3">
+              <span>Requested Address</span>
+              <div>
+                <code>{normalizedIntendedWalletAddress}</code>
+              </div>
+            </Col>
+          )}
+          {normalizedOriginWalletAddress && (
+            <Col xs={12} className="pt-3">
+              <span>Current Desktop Account</span>
+              <div>
+                <code>{normalizedOriginWalletAddress}</code>
+              </div>
+            </Col>
+          )}
+          {walletIntentError && (
+            <Col xs={12} className="pt-3">
+              <p className="mb-0 text-danger" role="alert">
+                {walletIntentError}
+              </p>
+            </Col>
+          )}
         </Row>
         <hr />
         <Row
           className={`py-3 ${
-            isRequestedChain || !isLiveConnected ? disabledClass : ""
+            isRequestedChain || !isLiveConnected || !isWalletIntentSatisfied
+              ? disabledClass
+              : ""
           }`}
         >
           <Col xs={12}>
@@ -376,7 +472,7 @@ export default function BrowserConnectorConnect(
               <Row>
                 <Col>
                   <button
-                    disabled={isSwitchingChain}
+                    disabled={isSwitchingChain || !isWalletIntentSatisfied}
                     onClick={() => switchChain({ chainId: requestedChainId })}
                     className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                   >
@@ -390,7 +486,9 @@ export default function BrowserConnectorConnect(
         <hr />
         <Row
           className={`pt-3 ${
-            !isLiveConnected || !isRequestedChain ? disabledClass : ""
+            !isLiveConnected || !isRequestedChain || !isWalletIntentSatisfied
+              ? disabledClass
+              : ""
           }`}
         >
           <Col xs={12}>
@@ -414,18 +512,9 @@ export default function BrowserConnectorConnect(
                     </p>
                   )}
                   {authError && (
-                    <>
-                      <p className="pt-3 text-danger" role="alert">
-                        {authError}
-                      </p>
-                      <button
-                        disabled={isAuthenticating}
-                        onClick={() => setShowAuthModal(true)}
-                        className="tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
-                      >
-                        Try again
-                      </button>
-                    </>
+                    <p className="pt-3 text-danger" role="alert">
+                      {authError}
+                    </p>
                   )}
                 </Col>
               </Row>
@@ -434,40 +523,35 @@ export default function BrowserConnectorConnect(
         </Row>
       </Container>
       <Modal
-        show={showAuthModal}
-        onHide={() => !isAuthenticating && setShowAuthModal(false)}
+        show={showAuthModal && requiresNativeSessionAuth && !preparedNativeAuth}
+        onHide={() => undefined}
         centered
-        backdrop={isAuthenticating ? "static" : true}
-        keyboard={!isAuthenticating}
+        backdrop="static"
+        keyboard={false}
         dialogClassName={authModalStyles["signModalDialog"] ?? ""}
         contentClassName={authModalStyles["signModalSurface"] ?? ""}
       >
-        <Modal.Header
-          closeButton={!isAuthenticating}
-          className={authModalStyles["signModalHeader"]}
-        >
+        <Modal.Header className={authModalStyles["signModalHeader"]}>
           <Modal.Title className={authModalStyles["signModalTitle"]}>
-            Upgrade Authentication
+            Authentication Required
           </Modal.Title>
         </Modal.Header>
         <Modal.Body className={authModalStyles["signModalBody"]}>
           <p className={authModalStyles["signModalLead"]}>
-            6529 Desktop needs an updated desktop authentication signature for
-            this browser wallet connection.
+            6529 Desktop needs a desktop authentication signature for this
+            browser wallet connection.
           </p>
           <ul className={authModalStyles["signModalList"]}>
-            <li>Click Sign to start the authentication upgrade.</li>
+            <li>Click Sign to start desktop authentication.</li>
             <li>Confirm the request in your wallet.</li>
           </ul>
+          {authError && (
+            <p className="pt-3 text-danger" role="alert">
+              {authError}
+            </p>
+          )}
         </Modal.Body>
         <Modal.Footer className={authModalStyles["signModalFooter"]}>
-          <button
-            disabled={isAuthenticating}
-            onClick={() => setShowAuthModal(false)}
-            className={authModalStyles["signModalCancelButton"]}
-          >
-            Cancel
-          </button>
           <button
             disabled={isAuthenticating}
             onClick={() => void handleAuthModalSign()}

@@ -43,7 +43,7 @@ function getEnvironmentLabel(
   if (!name) {
     return "";
   }
-  return backendTarget === "test" ? `(${name} - Test)` : `(${name})`;
+  return `${name} / ${backendTarget === "test" ? "Test" : "Live"}`;
 }
 
 interface AppInfo {
@@ -361,9 +361,7 @@ export default function TitleBar() {
   const isMacPlatform = isMac();
   let versionText = version || environmentLabel;
   if (environmentLabel && version) {
-    versionText = isMacPlatform
-      ? `${environmentLabel} ${version}`
-      : `${version} ${environmentLabel}`;
+    versionText = `${environmentLabel} / ${version}`;
   }
   const versionPositionClass = (() => {
     if (isMacPlatform) {

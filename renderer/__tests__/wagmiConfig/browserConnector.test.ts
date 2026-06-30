@@ -8,7 +8,11 @@ import {
   persistSessionResponse,
   redeemConnectionShare,
 } from "@/services/auth/session-v2.utils";
-import { browserConnector } from "@/wagmiConfig/browserConnector";
+import {
+  browserConnector,
+  clearBrowserConnectorConnectIntent,
+  setBrowserConnectorConnectIntent,
+} from "@/wagmiConfig/browserConnector";
 
 jest.mock("wagmi", () => ({
   createConnector: (factory: (config: unknown) => unknown) => factory({}),
@@ -128,6 +132,7 @@ describe("browserConnector", () => {
   });
 
   afterEach(() => {
+    clearBrowserConnectorConnectIntent();
     jest.clearAllTimers();
     jest.useRealTimers();
   });
@@ -139,7 +144,10 @@ describe("browserConnector", () => {
       icon: "browser.png",
       id: "browser",
     }) as {
-      connect: () => Promise<{ accounts: readonly `0x${string}`[]; chainId: number }>;
+      connect: () => Promise<{
+        accounts: readonly `0x${string}`[];
+        chainId: number;
+      }>;
     };
 
   const startConnect = async () => {
@@ -206,6 +214,33 @@ describe("browserConnector", () => {
     expect(url.searchParams.get("existingAuthAddress")).toBe(ADDRESS);
     expect(hasActiveSessionV2Auth).toHaveBeenCalledWith({ address: ADDRESS });
     expect(getNativeRefreshToken).toHaveBeenCalledWith(ADDRESS, "desktop");
+
+    walletConnectionListener?.(null, {
+      requestId,
+      data: {
+        accounts: [ADDRESS],
+        chainId: 1,
+        activeAddress: ADDRESS,
+        auth: desktopSessionAuth,
+      },
+    });
+
+    await expect(connectPromise).resolves.toEqual({
+      accounts: [ADDRESS],
+      chainId: 1,
+    });
+  });
+
+  it("includes pending wallet intent when opening the browser connect page", async () => {
+    setBrowserConnectorConnectIntent({
+      intendedWalletAddress: ADDRESS,
+      originWalletAddress: OTHER_ADDRESS,
+    });
+
+    const { connectPromise, requestId, url } = await startConnect();
+
+    expect(url.searchParams.get("intendedWalletAddress")).toBe(ADDRESS);
+    expect(url.searchParams.get("originWalletAddress")).toBe(OTHER_ADDRESS);
 
     walletConnectionListener?.(null, {
       requestId,

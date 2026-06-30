@@ -82,3 +82,4 @@ export enum ApiSessionNativeResponseClientTypeEnum {
     Native = 'native',
     Desktop = 'desktop'
 }
+

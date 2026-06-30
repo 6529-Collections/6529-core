@@ -61,3 +61,4 @@ export enum ApiSessionNonceQueryClientTypeEnum {
     Native = 'native',
     Desktop = 'desktop'
 }
+

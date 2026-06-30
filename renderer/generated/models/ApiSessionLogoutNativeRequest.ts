@@ -61,3 +61,4 @@ export enum ApiSessionLogoutNativeRequestClientTypeEnum {
     Native = 'native',
     Desktop = 'desktop'
 }
+
