@@ -124,9 +124,10 @@ type AuthContextType = {
   readonly sessionUpgradeRequired: boolean;
   readonly requestAuth: () => Promise<{ success: boolean }>;
   readonly requestSessionUpgrade?: () => Promise<{ success: boolean }>;
-  readonly ensureActiveSessionV2WebSession?: (
-    abortSignal?: AbortSignal
-  ) => Promise<boolean>;
+  readonly ensureActiveSessionV2WebSession?: (params?: {
+    readonly address?: string | undefined;
+    readonly abortSignal?: AbortSignal | undefined;
+  }) => Promise<boolean>;
   readonly setToast: (toast: AppToastInput) => void;
   readonly setActiveProfileProxy: (
     profileProxy: ApiProfileProxy | null
@@ -181,10 +182,6 @@ interface RunImmediateAuthValidationParams {
   readonly setShowSignModal: (show: boolean) => void;
   readonly invalidateAll: () => void;
   readonly reset: () => void;
-  readonly verifyActiveSessionV2WebSession: (
-    address: string,
-    abortSignal: AbortSignal
-  ) => Promise<boolean>;
   readonly authRolloutSettings: AuthRolloutSettings;
 }
 
@@ -496,7 +493,6 @@ const runImmediateAuthValidation = async ({
   setShowSignModal,
   invalidateAll,
   reset,
-  verifyActiveSessionV2WebSession,
   authRolloutSettings,
 }: RunImmediateAuthValidationParams): Promise<void> => {
   if (
@@ -536,29 +532,6 @@ const runImmediateAuthValidation = async ({
   };
 
   try {
-    if (
-      hasActiveSessionV2Auth({ address: currentAddress }) &&
-      getSessionClientType() === "web"
-    ) {
-      const hasActiveWebSession = await verifyActiveSessionV2WebSession(
-        currentAddress,
-        abortController.signal
-      );
-
-      if (
-        !hasActiveWebSession &&
-        isCurrentValidationOperation({
-          latestAddressRef,
-          activeValidationOperationIdRef,
-          currentAddress,
-          operationId,
-        })
-      ) {
-        markSessionUpgradeRequired();
-        return;
-      }
-    }
-
     const result = await measureMobileLaunchAsync(
       "auth_immediate_validation",
       () =>
@@ -870,62 +843,28 @@ export default function Auth({
       } catch (error) {
         if (!abortSignal?.aborted) {
           logErrorSecurely("session_v2_web_session_verification", error);
+          throw error;
         }
         return false;
-      }
-    },
-    []
-  );
-
-  const ensureActiveWebSessionForAddress = useCallback(
-    async (
-      walletAddress: string,
-      abortSignal?: AbortSignal
-    ): Promise<boolean> => {
-      if (!hasActiveSessionV2Auth({ address: walletAddress })) {
-        if (!abortSignal?.aborted) {
-          setSessionUpgradeRequired(true);
-          setSessionUpgradeHasDeadline(false);
-        }
-        return false;
-      }
-
-      try {
-        const hasActiveWebSession = await verifyActiveSessionV2WebSession({
-          address: walletAddress,
-          abortSignal,
-        });
-
-        if (abortSignal?.aborted) {
-          return true;
-        }
-
-        if (!hasActiveWebSession) {
-          setSessionUpgradeRequired(true);
-          setSessionUpgradeHasDeadline(false);
-          return false;
-        }
-
-        setSessionUpgradeRequired(false);
-        return true;
-      } catch (error) {
-        if (!abortSignal?.aborted) {
-          logErrorSecurely("session_v2_web_session_verification", error);
-        }
-        return true;
       }
     },
     []
   );
 
   const ensureActiveSessionV2WebSessionForActiveWallet = useCallback(
-    async (abortSignal?: AbortSignal): Promise<boolean> => {
-      const walletAddress = getWalletAddress() ?? address;
+    async (params?: {
+      readonly address?: string | undefined;
+      readonly abortSignal?: AbortSignal | undefined;
+    }): Promise<boolean> => {
+      const walletAddress = params?.address ?? getWalletAddress() ?? address;
       if (!walletAddress || !getAuthJwt()) {
         return false;
       }
 
-      return await verifyActiveWebSessionForAddress(walletAddress, abortSignal);
+      return await verifyActiveWebSessionForAddress(
+        walletAddress,
+        params?.abortSignal
+      );
     },
     [address, verifyActiveWebSessionForAddress]
   );
@@ -965,12 +904,15 @@ export default function Auth({
         return undefined;
       }
 
-      const controller = new AbortController();
-      void ensureActiveWebSessionForAddress(
-        storedAuthAddress,
-        controller.signal
+      // Passive disconnected validation must not call session-refresh: that
+      // endpoint rotates the web session cookie and can race during reload.
+      // Explicit actions, such as connection sharing, still verify server
+      // session state before proceeding.
+      setSessionUpgradeHasDeadline(false);
+      setSessionUpgradeRequired(
+        !hasActiveSessionV2Auth({ address: storedAuthAddress })
       );
-      return () => controller.abort();
+      return undefined;
     }
 
     if (!isAddressAuthorized) {
@@ -1021,7 +963,6 @@ export default function Auth({
       setShowSignModal,
       invalidateAll,
       reset,
-      verifyActiveSessionV2WebSession: ensureActiveWebSessionForAddress,
       authRolloutSettings,
     }).catch((error) => {
       logErrorSecurely("auth_immediate_validation_unhandled", error);
@@ -1041,7 +982,6 @@ export default function Auth({
     hasActiveWalletAddress,
     canSignActiveWallet,
     abortCurrentAuthOperation,
-    ensureActiveWebSessionForAddress,
     invalidateAll,
     reset,
     authRolloutSettings,
@@ -2047,9 +1987,7 @@ export default function Auth({
     }
     void requestAuth();
   };
-  const onSessionUpgradeLearnMore = (
-    event: MouseEvent<HTMLAnchorElement>
-  ) => {
+  const onSessionUpgradeLearnMore = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
     onCancelSignRequest();
     router.push("/about/tech/wallet-authentication");

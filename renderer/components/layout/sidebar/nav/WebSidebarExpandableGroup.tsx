@@ -1,11 +1,12 @@
 "use client";
 
-import { SidebarNavItem } from "@/components/navigation/navTypes";
+import type { SidebarNavItem } from "@/components/navigation/navTypes";
 import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
 import React, { useCallback, useMemo } from "react";
+import { isSidebarNavItemActive } from "./sidebarActive";
 
 interface WebSidebarExpandableGroupProps {
   readonly name: string;
@@ -22,13 +23,9 @@ function WebSidebarExpandableGroup({
   expanded,
   onToggle,
 }: WebSidebarExpandableGroupProps) {
-  // Memoized helper to check if link is active
-  const isActive = useCallback((href: string) => pathname === href, [pathname]);
-
-  // Memoized check if any item in group is active
   const hasActiveItem = useMemo(
-    () => items.some((item) => isActive(item.href)),
-    [items, isActive]
+    () => items.some((item) => isSidebarNavItemActive(item, pathname)),
+    [items, pathname]
   );
 
   // Memoized toggle handler
@@ -65,27 +62,7 @@ function WebSidebarExpandableGroup({
         <div className="tw-overflow-hidden">
           <div id={`group-${name}`} className="tw-mt-1">
             {items.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                target={item.isExternal ? "_blank" : undefined}
-                rel={item.isExternal ? "noopener noreferrer" : undefined}
-                className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-pl-3 tw-pr-3 tw-ml-[2.75rem] tw-h-11 tw-text-base tw-touch-action-manipulation ${
-                  isActive(item.href)
-                    ? "tw-text-white tw-bg-iron-900 desktop-hover:hover:tw-text-white desktop-hover:hover:tw-bg-iron-900 active:tw-text-white"
-                    : "tw-text-iron-400 tw-bg-transparent desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white active:tw-text-white"
-                }`}
-                aria-current={isActive(item.href) ? "page" : undefined}>
-                <span className="tw-flex tw-items-center tw-gap-2">
-                  <span>{item.name}</span>
-                  {item.isExternal && (
-                    <FontAwesomeIcon
-                      icon={faExternalLinkAlt}
-                      className="tw-h-3 tw-w-3 tw-flex-shrink-0"
-                    />
-                  )}
-                </span>
-              </Link>
+              <GroupLink key={item.name} item={item} pathname={pathname} />
             ))}
           </div>
         </div>
@@ -95,3 +72,37 @@ function WebSidebarExpandableGroup({
 }
 
 export default React.memo(WebSidebarExpandableGroup);
+
+function GroupLink({
+  item,
+  pathname,
+}: {
+  readonly item: SidebarNavItem;
+  readonly pathname: string | null;
+}) {
+  const active = isSidebarNavItemActive(item, pathname);
+
+  return (
+    <Link
+      href={item.href}
+      target={item.isExternal ? "_blank" : undefined}
+      rel={item.isExternal ? "noopener noreferrer" : undefined}
+      className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-pl-3 tw-pr-3 tw-ml-[2.75rem] tw-h-11 tw-text-base tw-touch-action-manipulation ${
+        active
+          ? "tw-text-white tw-bg-iron-900 desktop-hover:hover:tw-text-white desktop-hover:hover:tw-bg-iron-900 active:tw-text-white"
+          : "tw-text-iron-400 tw-bg-transparent desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white active:tw-text-white"
+      }`}
+      aria-current={active ? "page" : undefined}
+    >
+      <span className="tw-flex tw-items-center tw-gap-2">
+        <span>{item.name}</span>
+        {item.isExternal && (
+          <FontAwesomeIcon
+            icon={faExternalLinkAlt}
+            className="tw-h-3 tw-w-3 tw-flex-shrink-0"
+          />
+        )}
+      </span>
+    </Link>
+  );
+}
