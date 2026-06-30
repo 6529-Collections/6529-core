@@ -168,14 +168,18 @@
         document.getElementById("message").textContent = message;
       }
 
-      function getEnvironmentLabel(environment) {
+      function getEnvironmentLabel(environment, backendTarget) {
+        var name = "";
         if (environment === "local") {
-          return "(Local)";
+          name = "Local";
         }
         if (environment === "staging") {
-          return "(Staging)";
+          name = "Staging";
         }
-        return "";
+        if (!name) {
+          return "";
+        }
+        return backendTarget === "test" ? "(" + name + " - Test)" : "(" + name + ")";
       }
 
       function formatArtist(card) {
@@ -259,7 +263,10 @@
             : "";
           document.getElementById("app-title").textContent = "6529 Desktop";
           document.getElementById("app-environment").textContent =
-            getEnvironmentLabel(window.splashAPI.environment);
+            getEnvironmentLabel(
+              window.splashAPI.environment,
+              window.splashAPI.backendTarget
+            );
         }
       });
     </script>

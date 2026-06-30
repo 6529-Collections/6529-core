@@ -77,6 +77,7 @@ import {
 import { isDev } from "./utils/env";
 import {
   getHomeDir,
+  getBackendTarget,
   getEnvironment,
   getInfo,
   getLogDirectory,
@@ -709,6 +710,7 @@ function createSplash() {
         `--app-version=${app.getVersion()}`,
         `--has-saved-card=${splashCardData ? "true" : "false"}`,
         `--app-environment=${getEnvironment()}`,
+        `--backend-target=${getBackendTarget()}`,
       ],
     },
   });

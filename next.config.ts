@@ -318,6 +318,7 @@ function createSecurityHeaders(
 interface PublicEnv {
   API_ENDPOINT?: string;
   ALLOWLIST_API_ENDPOINT?: string;
+  BACKEND_TARGET?: "live" | "test";
   BASE_ENDPOINT?: string;
   ALCHEMY_API_KEY?: string;
   NEXTGEN_CHAIN_ID?: number;
@@ -499,6 +500,17 @@ const nextConfigFactory = (phase: string): NextConfig => {
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
     publicRuntime.VERSION = VERSION;
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
+    if (publicRuntime.BACKEND_TARGET === "test") {
+      const stagingApiKey = publicRuntime.STAGING_API_KEY?.trim();
+      if (!stagingApiKey) {
+        throw new Error(
+          "Test backend target requires STAGING_API_KEY. Add it to .env.local or export it before building.",
+        );
+      }
+      publicRuntime.STAGING_API_KEY = stagingApiKey;
+    } else {
+      publicRuntime.STAGING_API_KEY = undefined;
+    }
 
     const parsed = publicEnvSchema.safeParse(publicRuntime);
     if (!parsed.success) throw parsed.error;
@@ -514,6 +526,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         PUBLIC_RUNTIME: JSON.stringify(publicEnv),
         API_ENDPOINT: publicEnv.API_ENDPOINT,
         ALLOWLIST_API_ENDPOINT: publicEnv.ALLOWLIST_API_ENDPOINT,
+        BACKEND_TARGET: publicEnv.BACKEND_TARGET,
         BASE_ENDPOINT: publicEnv.BASE_ENDPOINT,
         ALCHEMY_API_KEY: publicEnv.ALCHEMY_API_KEY,
         VERSION,

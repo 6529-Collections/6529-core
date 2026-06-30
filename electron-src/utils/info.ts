@@ -5,6 +5,8 @@ import path, { dirname } from "path";
 import Logger from "electron-log";
 import os from "os";
 
+type BackendTarget = "live" | "test";
+
 export function getScheme() {
   let scheme = "";
   const environment = getEnvironment();
@@ -29,6 +31,30 @@ export function getEnvironment(): string {
   return packageJson.env.ENVIRONMENT;
 }
 
+export function getBackendTarget(): BackendTarget {
+  if (process.env.BACKEND_TARGET === "test") {
+    return "test";
+  }
+  if (process.env.BACKEND_TARGET === "live") {
+    return "live";
+  }
+
+  const runtimeConfigPath = path.join(
+    app.getAppPath(),
+    "main",
+    "config",
+    "__PUBLIC_RUNTIME.json",
+  );
+  try {
+    const runtimeConfig = JSON.parse(
+      fs.readFileSync(runtimeConfigPath, "utf-8"),
+    ) as { readonly BACKEND_TARGET?: unknown };
+    return runtimeConfig.BACKEND_TARGET === "test" ? "test" : "live";
+  } catch {
+    return "live";
+  }
+}
+
 export function getLogDirectory() {
   return dirname(getMainLogsPath());
 }
@@ -44,10 +70,12 @@ export function getMainLogsPath() {
 export function getInfo() {
   const scheme = getScheme();
   const environment = getEnvironment();
+  const backendTarget = getBackendTarget();
 
   return {
     home_dir: getHomeDir(),
     environment,
+    backend_target: backendTarget,
     app_path: app.getAppPath(),
     scheme: scheme,
     schema: scheme ? app.isDefaultProtocolClient(scheme) : "Undefined",

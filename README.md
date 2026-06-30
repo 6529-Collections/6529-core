@@ -106,8 +106,61 @@ npm bootstrap path for Windows signing or CloudFront invalidation jobs.
 
 ## Building and Publishing
 
-> ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.  
+> ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.
 > If you skip this step, the previous version may be overwritten and the `electron-updater` will not function correctly.
+
+### Desktop Backend Targets
+
+Desktop distribution scripts take an optional backend target argument:
+
+- default or `live`: use the live backend
+- `test`: use the staging/test backend
+
+The backend target is separate from the app environment (`local`, `staging`, or
+`production`). The app environment still controls the package config, protocol
+scheme, update channel, and splash/titlebar app label. The backend target only
+controls the API and WebSocket endpoints, plus the staging access header when
+building against Test.
+
+Live backend:
+
+```bash
+API_ENDPOINT=https://api.6529.io
+WS_ENDPOINT=wss://ws.6529.io
+```
+
+Test backend:
+
+```bash
+API_ENDPOINT=https://api.staging.6529.io
+WS_ENDPOINT=wss://ws.staging.6529.io
+```
+
+Examples:
+
+```bash
+6529 run dist-mac-local          # Local app, Live backend; label: (Local)
+6529 run dist-mac-local test     # Local app, Test backend; label: (Local - Test)
+6529 run dist-mac-staging        # Staging app, Live backend; label: (Staging)
+6529 run dist-mac-staging test   # Staging app, Test backend; label: (Staging - Test)
+6529 run dist-mac-production     # Production app, Live backend; no label suffix
+```
+
+Production app builds must not target the Test backend. Commands such as
+`6529 run dist-mac-production test` fail immediately before build work starts.
+The same optional `live`/`test` argument applies to the Windows, macOS, and
+Linux `dist-*` scripts.
+
+Test backend builds require a local staging access key:
+
+```bash
+# .env.local, never committed
+STAGING_API_KEY=your-staging-access-key
+```
+
+`.env.local` is gitignored. The key is baked only for `test` backend builds.
+Live backend builds intentionally omit `STAGING_API_KEY`, even if it exists in
+the local shell or `.env.local`.
 
 ### Rebuilding SQL
 

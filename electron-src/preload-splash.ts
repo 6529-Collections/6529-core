@@ -8,6 +8,11 @@ const environmentArg = process.argv.find((arg) =>
 );
 const appEnvironment = environmentArg ? environmentArg.split("=")[1] : "";
 
+const backendTargetArg = process.argv.find((arg) =>
+  arg.startsWith("--backend-target=")
+);
+const backendTarget = backendTargetArg ? backendTargetArg.split("=")[1] : "";
+
 const hasSavedCardArg = process.argv.find((arg) =>
   arg.startsWith("--has-saved-card=")
 );
@@ -18,6 +23,7 @@ const hasSavedCard = hasSavedCardArg
 export const splashAPI = {
   version: appVersion,
   environment: appEnvironment,
+  backendTarget,
   hasSavedCard,
   onUpdateMessage: (callback: any) =>
     ipcRenderer.on("update-message", callback),

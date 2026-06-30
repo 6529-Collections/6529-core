@@ -29,19 +29,27 @@ function isMac() {
 
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 
-function getEnvironmentLabel(environment: unknown): string {
+function getEnvironmentLabel(
+  environment: unknown,
+  backendTarget: unknown
+): string {
+  let name = "";
   if (environment === "local") {
-    return "(Local)";
+    name = "Local";
   }
   if (environment === "staging") {
-    return "(Staging)";
+    name = "Staging";
   }
-  return "";
+  if (!name) {
+    return "";
+  }
+  return backendTarget === "test" ? `(${name} - Test)` : `(${name})`;
 }
 
 interface AppInfo {
   readonly app_version?: unknown;
   readonly environment?: unknown;
+  readonly backend_target?: unknown;
 }
 
 export default function TitleBar() {
@@ -81,7 +89,9 @@ export default function TitleBar() {
       if (typeof appInfo.app_version === "string" && appInfo.app_version) {
         setVersion(`v${appInfo.app_version}`);
       }
-      setEnvironmentLabel(getEnvironmentLabel(appInfo.environment));
+      setEnvironmentLabel(
+        getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
+      );
       window.updater.checkUpdates();
     });
   }, []);
