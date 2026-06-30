@@ -2,6 +2,7 @@
 
 import { CookieConsentProvider } from "@/components/cookies/CookieConsentContext";
 import { EULAConsentProvider } from "@/components/eula/EULAConsentContext";
+import QuickDirectMessages from "@/components/messages/quick-dms/QuickDirectMessages";
 import { NotificationsProvider } from "@/components/notifications/NotificationsContext";
 import NewVersionToast from "@/components/utils/NewVersionToast";
 import { HeaderProvider } from "@/contexts/HeaderContext";
@@ -52,6 +53,7 @@ export default function AppRouteProviders({
                       </SearchProvider>
                     </HeaderProvider>
                   </TitleProvider>
+                  <QuickDirectMessages />
                 </MyStreamProvider>
               </LayoutProvider>
               <NewVersionToast />
