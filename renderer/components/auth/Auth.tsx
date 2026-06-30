@@ -648,7 +648,7 @@ export default function Auth({
     isSafeWallet,
     connectionState,
   } = useSeizeConnectContext();
-  const { isSeedWalletModalOpen } = useSeedWallet();
+  const { isSeedWallet, isSeedWalletModalOpen } = useSeedWallet();
 
   const {
     signMessage,
@@ -670,6 +670,10 @@ export default function Auth({
   const [sessionUpgradeRequired, setSessionUpgradeRequired] = useState(false);
   const [authStorageRevision, setAuthStorageRevision] = useState(0);
   const signModalReasonRef = useRef<SignModalReason>(signModalReason);
+  const seedWalletAutoAuthAddressRef = useRef<string | null>(null);
+  const requestAuthRef = useRef<() => Promise<{ success: boolean }>>(
+    async () => ({ success: false })
+  );
 
   const { profile: loadedProfile, isLoading: fetchingProfile } = useIdentity({
     handleOrWallet: address,
@@ -1634,6 +1638,51 @@ export default function Auth({
       setAuthLoadingState("idle");
     }
   };
+  requestAuthRef.current = requestAuth;
+
+  useEffect(() => {
+    const authAddress = address?.toLowerCase() ?? null;
+    if (!authAddress || !isSeedWallet) {
+      seedWalletAutoAuthAddressRef.current = null;
+      return;
+    }
+
+    if (
+      !enableWalletAuthentication ||
+      isBrowserConnectorRoute ||
+      isAddressAuthorized ||
+      !showSignModal ||
+      isSeedWalletModalOpen ||
+      signModalReason !== "auth" ||
+      authLoadingState !== "idle" ||
+      connectionState !== "connected"
+    ) {
+      return;
+    }
+
+    if (seedWalletAutoAuthAddressRef.current === authAddress) {
+      return;
+    }
+    seedWalletAutoAuthAddressRef.current = authAddress;
+    setShowSignModal(false);
+
+    void requestAuthRef.current().then(({ success }) => {
+      if (!success) {
+        seedWalletAutoAuthAddressRef.current = null;
+      }
+    });
+  }, [
+    address,
+    authLoadingState,
+    connectionState,
+    enableWalletAuthentication,
+    isAddressAuthorized,
+    isBrowserConnectorRoute,
+    isSeedWallet,
+    isSeedWalletModalOpen,
+    showSignModal,
+    signModalReason,
+  ]);
 
   const requestSessionUpgrade = async (): Promise<{ success: boolean }> => {
     const upgradeAddress = address ?? getStoredLegacySessionUpgradeAddress();

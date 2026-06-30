@@ -51,11 +51,14 @@ export function seedWalletConnector(parameters: {
 
     switch (method) {
       case "personal_sign":
-        const signature = await wallet.signMessage(hexToString(params?.[0]));
-        window.seedConnector.showToast({
-          type: "success",
-          message: "Message signed!",
-        });
+        const message = hexToString(params?.[0]);
+        const signature = await wallet.signMessage(message);
+        if (!message.startsWith("6529 Authentication\n")) {
+          window.seedConnector.showToast({
+            type: "success",
+            message: "Message signed!",
+          });
+        }
         return signature;
       case "eth_sendTransaction":
         console.log(`[${name}] Sending transaction`, params);

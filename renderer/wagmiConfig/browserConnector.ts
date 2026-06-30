@@ -4,7 +4,10 @@ import {
   setActiveWalletAccount,
   setAuthJwt,
 } from "@/services/auth/auth.utils";
-import { getNativeRefreshToken } from "@/services/auth/native-refresh-token-storage";
+import {
+  getNativeRefreshToken,
+  removeNativeRefreshToken,
+} from "@/services/auth/native-refresh-token-storage";
 import {
   persistSessionResponse,
   redeemConnectionShare,
@@ -819,6 +822,36 @@ export function browserConnector(parameters: {
       "desktop"
     );
     if (!desktopRefreshToken) {
+      return null;
+    }
+
+    try {
+      const refreshedNativeSession = await refreshSessionV2({
+        address: normalizedWalletAddress,
+      });
+      if (
+        !refreshedNativeSession ||
+        refreshedNativeSession.client_type !== "desktop" ||
+        refreshedNativeSession.address.toLowerCase() !==
+          normalizedWalletAddress
+      ) {
+        await removeNativeRefreshToken(normalizedWalletAddress, "desktop");
+        return null;
+      }
+
+      const isPersisted = await persistSessionResponse(
+        refreshedNativeSession as SessionNativeResponse
+      );
+      if (!isPersisted) {
+        await removeNativeRefreshToken(normalizedWalletAddress, "desktop");
+        return null;
+      }
+    } catch (error) {
+      await removeNativeRefreshToken(normalizedWalletAddress, "desktop");
+      console.warn(
+        "[Browser] Ignoring stale desktop session before browser connect",
+        error
+      );
       return null;
     }
 

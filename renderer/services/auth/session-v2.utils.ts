@@ -2,7 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { isElectron } from "@/helpers";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
-import { setAuthJwt } from "./auth.utils";
+import { getAuthJwt, setAuthJwt } from "./auth.utils";
 import {
   getNativeRefreshToken,
   isNativeSecureStorageAvailable,
@@ -101,7 +101,8 @@ function isUnauthorizedApiError(error: unknown): boolean {
   return (
     statusError.status === 401 ||
     statusError.response?.status === 401 ||
-    (error instanceof Error && /unauthorized/i.test(error.message))
+    (error instanceof Error &&
+      /unauthorized|invalid session/i.test(error.message))
   );
 }
 
@@ -357,6 +358,17 @@ export async function createConnectionShare({
   readonly signal?: AbortSignal | undefined;
   readonly targetClientType?: RefreshTokenSessionClientType | undefined;
 }): Promise<CreateConnectionShareResponse> {
+  if (
+    isElectron() &&
+    typeof window !== "undefined" &&
+    typeof window.nativeAuth?.createConnectionShare === "function"
+  ) {
+    return await window.nativeAuth.createConnectionShare({
+      access_token: getAuthJwt(),
+      target_client_type: targetClientType,
+    });
+  }
+
   return await commonApiPost<
     {
       readonly target_client_type: RefreshTokenSessionClientType;
@@ -377,6 +389,16 @@ export async function createLegacyDesktopConnectionShare({
 }: {
   readonly signal?: AbortSignal | undefined;
 }): Promise<CreateLegacyDesktopConnectionShareResponse> {
+  if (
+    isElectron() &&
+    typeof window !== "undefined" &&
+    typeof window.nativeAuth?.createLegacyDesktopConnectionShare === "function"
+  ) {
+    return await window.nativeAuth.createLegacyDesktopConnectionShare({
+      access_token: getAuthJwt(),
+    });
+  }
+
   return await commonApiPost<
     Record<string, never>,
     CreateLegacyDesktopConnectionShareResponse
@@ -408,25 +430,39 @@ export async function logoutSessionV2({
       return;
     }
     try {
-      await commonApiPost<
-        {
-          readonly client_type: RefreshTokenSessionClientType;
-          readonly client_address: string;
-          readonly native_refresh_token: string;
-          readonly all_sessions: boolean;
-        },
-        void
-      >({
-        endpoint: "auth/session-logout",
-        body: {
+      if (
+        isElectron() &&
+        typeof window !== "undefined" &&
+        typeof window.nativeAuth?.sessionLogout === "function"
+      ) {
+        await window.nativeAuth.sessionLogout({
+          access_token: getAuthJwt(),
           client_type: clientType,
           client_address: address,
           native_refresh_token: nativeRefreshToken,
           all_sessions: allSessions,
-        },
-        credentials: "include",
-        parseJson: false,
-      });
+        });
+      } else {
+        await commonApiPost<
+          {
+            readonly client_type: RefreshTokenSessionClientType;
+            readonly client_address: string;
+            readonly native_refresh_token: string;
+            readonly all_sessions: boolean;
+          },
+          void
+        >({
+          endpoint: "auth/session-logout",
+          body: {
+            client_type: clientType,
+            client_address: address,
+            native_refresh_token: nativeRefreshToken,
+            all_sessions: allSessions,
+          },
+          credentials: "include",
+          parseJson: false,
+        });
+      }
     } finally {
       await removeNativeRefreshToken(
         address,
@@ -459,6 +495,18 @@ export async function redeemConnectionShare(
   connectionShareCode: string,
   targetClientType: RefreshTokenSessionClientType = "native"
 ): Promise<SessionNativeResponse> {
+  if (
+    isElectron() &&
+    typeof window !== "undefined" &&
+    typeof window.nativeAuth?.redeemConnectionShare === "function"
+  ) {
+    return await window.nativeAuth.redeemConnectionShare({
+      access_token: getAuthJwt(),
+      connection_share_code: connectionShareCode,
+      target_client_type: targetClientType,
+    });
+  }
+
   const response = await commonApiPost<
     {
       readonly connection_share_code: string;

@@ -171,6 +171,26 @@ export const nativeAuth = {
     readonly client_address: string;
     readonly native_refresh_token: string;
   }) => ipcRenderer.invoke("native-auth:session-refresh", request),
+  createConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly target_client_type?: "native" | "desktop";
+  }) => ipcRenderer.invoke("native-auth:connection-share", request),
+  createLegacyDesktopConnectionShare: (request: {
+    readonly access_token?: string | null;
+  }) =>
+    ipcRenderer.invoke("native-auth:connection-share:legacy-desktop", request),
+  redeemConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly connection_share_code: string;
+    readonly target_client_type?: "native" | "desktop";
+  }) => ipcRenderer.invoke("native-auth:connection-share:redeem", request),
+  sessionLogout: (request: {
+    readonly access_token?: string | null;
+    readonly client_type?: "native" | "desktop";
+    readonly client_address: string;
+    readonly native_refresh_token: string;
+    readonly all_sessions: boolean;
+  }) => ipcRenderer.invoke("native-auth:session-logout", request),
 };
 
 contextBridge.exposeInMainWorld("nativeAuth", nativeAuth);

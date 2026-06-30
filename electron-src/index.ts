@@ -132,6 +132,28 @@ interface NativeSessionRefreshRequest {
   readonly native_refresh_token: string;
 }
 
+type RefreshTokenClientType = "native" | "desktop";
+
+interface NativeConnectionShareRequest {
+  readonly access_token?: string | null;
+  readonly target_client_type?: RefreshTokenClientType;
+}
+
+interface NativeLegacyDesktopConnectionShareRequest {
+  readonly access_token?: string | null;
+}
+
+interface NativeRedeemConnectionShareRequest {
+  readonly access_token?: string | null;
+  readonly connection_share_code: string;
+  readonly target_client_type?: RefreshTokenClientType;
+}
+
+interface NativeSessionLogoutRequest extends NativeSessionRefreshRequest {
+  readonly access_token?: string | null;
+  readonly all_sessions: boolean;
+}
+
 interface NativeSessionLoginResponse {
   readonly client_type: "native" | "desktop";
   readonly address: string;
@@ -140,6 +162,22 @@ interface NativeSessionLoginResponse {
   readonly access_token_expires_at: string;
   readonly native_refresh_token: string;
   readonly refresh_token_expires_at: string;
+}
+
+interface NativeConnectionShareResponse {
+  readonly connection_share_code: string;
+  readonly expires_at: string;
+  readonly address: string;
+  readonly role: string | null;
+  readonly target_client_type: RefreshTokenClientType;
+  readonly deep_link_path: string;
+}
+
+interface NativeLegacyDesktopConnectionShareResponse {
+  readonly refresh_token: string;
+  readonly address: string;
+  readonly role: string | null;
+  readonly deep_link_path: string;
 }
 
 function getPublicRuntimeConfig(): Record<string, unknown> {
@@ -169,6 +207,73 @@ function getStagingApiHeaders(
     return {};
   }
   return { "x-6529-auth": runtimeConfig.STAGING_API_KEY };
+}
+
+function getWalletAuthHeaders(accessToken: unknown): Record<string, string> {
+  if (typeof accessToken !== "string" || accessToken.trim().length === 0) {
+    return {};
+  }
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+function getApiError(responseBody: unknown, fallback: string): Error {
+  const error =
+    responseBody &&
+    typeof responseBody === "object" &&
+    "error" in responseBody &&
+    typeof responseBody.error === "string"
+      ? responseBody.error
+      : fallback;
+  return new Error(error);
+}
+
+async function postNativeAuthApi<T>({
+  endpoint,
+  body,
+  accessToken,
+  parseJson = true,
+}: {
+  readonly endpoint: string;
+  readonly body: Record<string, unknown>;
+  readonly accessToken?: string | null;
+  readonly parseJson?: boolean;
+}): Promise<T> {
+  const runtimeConfig = getPublicRuntimeConfig();
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    ...getStagingApiHeaders(runtimeConfig),
+    ...getWalletAuthHeaders(accessToken),
+  };
+  const response = await fetch(
+    `${getApiEndpoint(runtimeConfig)}/api/${endpoint}`,
+    {
+      method: "POST",
+      headers,
+      body: JSON.stringify(body),
+    },
+  );
+
+  const responseText = await response.text();
+  let responseBody: unknown = null;
+  if (responseText) {
+    try {
+      responseBody = JSON.parse(responseText);
+    } catch {
+      responseBody = responseText;
+    }
+  }
+  if (!response.ok) {
+    throw getApiError(
+      responseBody,
+      response.statusText || "Native auth API request failed",
+    );
+  }
+
+  return (parseJson ? responseBody : undefined) as T;
+}
+
+function isRefreshTokenClientType(value: unknown): value is RefreshTokenClientType {
+  return value === "native" || value === "desktop";
 }
 
 function isNativeSessionLoginRequest(
@@ -212,6 +317,69 @@ function isNativeSessionRefreshRequest(
   );
 }
 
+function hasOptionalAccessToken(record: {
+  readonly access_token?: unknown;
+}): boolean {
+  return (
+    record.access_token === undefined ||
+    record.access_token === null ||
+    typeof record.access_token === "string"
+  );
+}
+
+function isNativeConnectionShareRequest(
+  request: unknown,
+): request is NativeConnectionShareRequest {
+  if (typeof request !== "object" || request === null) {
+    return false;
+  }
+  const record = request as Partial<NativeConnectionShareRequest>;
+  return (
+    hasOptionalAccessToken(record) &&
+    (record.target_client_type === undefined ||
+      isRefreshTokenClientType(record.target_client_type))
+  );
+}
+
+function isNativeLegacyDesktopConnectionShareRequest(
+  request: unknown,
+): request is NativeLegacyDesktopConnectionShareRequest {
+  if (typeof request !== "object" || request === null) {
+    return false;
+  }
+  return hasOptionalAccessToken(
+    request as Partial<NativeLegacyDesktopConnectionShareRequest>,
+  );
+}
+
+function isNativeRedeemConnectionShareRequest(
+  request: unknown,
+): request is NativeRedeemConnectionShareRequest {
+  if (typeof request !== "object" || request === null) {
+    return false;
+  }
+  const record = request as Partial<NativeRedeemConnectionShareRequest>;
+  return (
+    hasOptionalAccessToken(record) &&
+    typeof record.connection_share_code === "string" &&
+    record.connection_share_code.length > 0 &&
+    (record.target_client_type === undefined ||
+      isRefreshTokenClientType(record.target_client_type))
+  );
+}
+
+function isNativeSessionLogoutRequest(
+  request: unknown,
+): request is NativeSessionLogoutRequest {
+  if (!isNativeSessionRefreshRequest(request)) {
+    return false;
+  }
+  const record = request as Partial<NativeSessionLogoutRequest>;
+  return (
+    hasOptionalAccessToken(record) && typeof record.all_sessions === "boolean"
+  );
+}
+
 function isNativeSessionLoginResponse(
   response: unknown,
 ): response is NativeSessionLoginResponse {
@@ -230,50 +398,53 @@ function isNativeSessionLoginResponse(
   );
 }
 
+function isNativeConnectionShareResponse(
+  response: unknown,
+): response is NativeConnectionShareResponse {
+  if (typeof response !== "object" || response === null) {
+    return false;
+  }
+  const record = response as Partial<NativeConnectionShareResponse>;
+  return (
+    typeof record.connection_share_code === "string" &&
+    typeof record.expires_at === "string" &&
+    typeof record.address === "string" &&
+    (typeof record.role === "string" || record.role === null) &&
+    isRefreshTokenClientType(record.target_client_type) &&
+    typeof record.deep_link_path === "string"
+  );
+}
+
+function isNativeLegacyDesktopConnectionShareResponse(
+  response: unknown,
+): response is NativeLegacyDesktopConnectionShareResponse {
+  if (typeof response !== "object" || response === null) {
+    return false;
+  }
+  const record = response as Partial<NativeLegacyDesktopConnectionShareResponse>;
+  return (
+    typeof record.refresh_token === "string" &&
+    typeof record.address === "string" &&
+    (typeof record.role === "string" || record.role === null) &&
+    typeof record.deep_link_path === "string"
+  );
+}
+
 async function nativeSessionLogin(
   request: NativeSessionLoginRequest,
 ): Promise<NativeSessionLoginResponse> {
-  const runtimeConfig = getPublicRuntimeConfig();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...getStagingApiHeaders(runtimeConfig),
-  };
-  const response = await fetch(
-    `${getApiEndpoint(runtimeConfig)}/api/auth/session-login`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        client_type: request.client_type ?? "desktop",
-        server_signature: request.server_signature,
-        client_signature: request.client_signature,
-        client_address: request.client_address,
-        ...(request.role === undefined || request.role === null
-          ? {}
-          : { role: request.role }),
-      }),
+  const responseBody = await postNativeAuthApi<unknown>({
+    endpoint: "auth/session-login",
+    body: {
+      client_type: request.client_type ?? "desktop",
+      server_signature: request.server_signature,
+      client_signature: request.client_signature,
+      client_address: request.client_address,
+      ...(request.role === undefined || request.role === null
+        ? {}
+        : { role: request.role }),
     },
-  );
-
-  const responseText = await response.text();
-  let responseBody: unknown = null;
-  if (responseText) {
-    try {
-      responseBody = JSON.parse(responseText);
-    } catch {
-      responseBody = responseText;
-    }
-  }
-  if (!response.ok) {
-    const error =
-      responseBody &&
-      typeof responseBody === "object" &&
-      "error" in responseBody &&
-      typeof responseBody.error === "string"
-        ? responseBody.error
-        : response.statusText || "Native session login failed";
-    throw new Error(error);
-  }
+  });
 
   if (!isNativeSessionLoginResponse(responseBody)) {
     throw new Error("Invalid native session login response");
@@ -288,43 +459,14 @@ async function nativeSessionLogin(
 async function nativeSessionRefresh(
   request: NativeSessionRefreshRequest,
 ): Promise<NativeSessionLoginResponse> {
-  const runtimeConfig = getPublicRuntimeConfig();
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...getStagingApiHeaders(runtimeConfig),
-  };
-  const response = await fetch(
-    `${getApiEndpoint(runtimeConfig)}/api/auth/session-refresh`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        client_type: request.client_type ?? "desktop",
-        client_address: request.client_address,
-        native_refresh_token: request.native_refresh_token,
-      }),
+  const responseBody = await postNativeAuthApi<unknown>({
+    endpoint: "auth/session-refresh",
+    body: {
+      client_type: request.client_type ?? "desktop",
+      client_address: request.client_address,
+      native_refresh_token: request.native_refresh_token,
     },
-  );
-
-  const responseText = await response.text();
-  let responseBody: unknown = null;
-  if (responseText) {
-    try {
-      responseBody = JSON.parse(responseText);
-    } catch {
-      responseBody = responseText;
-    }
-  }
-  if (!response.ok) {
-    const error =
-      responseBody &&
-      typeof responseBody === "object" &&
-      "error" in responseBody &&
-      typeof responseBody.error === "string"
-        ? responseBody.error
-        : response.statusText || "Native session refresh failed";
-    throw new Error(error);
-  }
+  });
 
   if (!isNativeSessionLoginResponse(responseBody)) {
     throw new Error("Invalid native session refresh response");
@@ -334,6 +476,74 @@ async function nativeSessionRefresh(
     throw new Error("Native session refresh response client type mismatch");
   }
   return responseBody;
+}
+
+async function nativeCreateConnectionShare(
+  request: NativeConnectionShareRequest,
+): Promise<NativeConnectionShareResponse> {
+  const targetClientType = request.target_client_type ?? "native";
+  const responseBody = await postNativeAuthApi<unknown>({
+    endpoint: "auth/connection-share",
+    accessToken: request.access_token,
+    body: {
+      target_client_type: targetClientType,
+    },
+  });
+  if (!isNativeConnectionShareResponse(responseBody)) {
+    throw new Error("Invalid native connection share response");
+  }
+  return responseBody;
+}
+
+async function nativeCreateLegacyDesktopConnectionShare(
+  request: NativeLegacyDesktopConnectionShareRequest,
+): Promise<NativeLegacyDesktopConnectionShareResponse> {
+  const responseBody = await postNativeAuthApi<unknown>({
+    endpoint: "auth/connection-share/legacy-desktop",
+    accessToken: request.access_token,
+    body: {},
+  });
+  if (!isNativeLegacyDesktopConnectionShareResponse(responseBody)) {
+    throw new Error("Invalid legacy desktop connection share response");
+  }
+  return responseBody;
+}
+
+async function nativeRedeemConnectionShare(
+  request: NativeRedeemConnectionShareRequest,
+): Promise<NativeSessionLoginResponse> {
+  const targetClientType = request.target_client_type ?? "native";
+  const responseBody = await postNativeAuthApi<unknown>({
+    endpoint: "auth/connection-share/redeem",
+    accessToken: request.access_token,
+    body: {
+      connection_share_code: request.connection_share_code,
+      target_client_type: targetClientType,
+    },
+  });
+  if (!isNativeSessionLoginResponse(responseBody)) {
+    throw new Error("Invalid native connection share redeem response");
+  }
+  if (responseBody.client_type !== targetClientType) {
+    throw new Error("Native connection share redeem client type mismatch");
+  }
+  return responseBody;
+}
+
+async function nativeSessionLogout(
+  request: NativeSessionLogoutRequest,
+): Promise<void> {
+  await postNativeAuthApi<void>({
+    endpoint: "auth/session-logout",
+    accessToken: request.access_token,
+    parseJson: false,
+    body: {
+      client_type: request.client_type ?? "desktop",
+      client_address: request.client_address,
+      native_refresh_token: request.native_refresh_token,
+      all_sessions: request.all_sessions,
+    },
+  });
 }
 
 function assertNativeAuthRefreshTokenKey(key: string): void {
@@ -1391,6 +1601,40 @@ ipcMain.handle("native-auth:session-refresh", (_event, request: unknown) => {
     throw new Error("Invalid native session refresh request");
   }
   return nativeSessionRefresh(request);
+});
+
+ipcMain.handle("native-auth:connection-share", (_event, request: unknown) => {
+  if (!isNativeConnectionShareRequest(request)) {
+    throw new Error("Invalid native connection share request");
+  }
+  return nativeCreateConnectionShare(request);
+});
+
+ipcMain.handle(
+  "native-auth:connection-share:legacy-desktop",
+  (_event, request: unknown) => {
+    if (!isNativeLegacyDesktopConnectionShareRequest(request)) {
+      throw new Error("Invalid legacy desktop connection share request");
+    }
+    return nativeCreateLegacyDesktopConnectionShare(request);
+  },
+);
+
+ipcMain.handle(
+  "native-auth:connection-share:redeem",
+  (_event, request: unknown) => {
+    if (!isNativeRedeemConnectionShareRequest(request)) {
+      throw new Error("Invalid native connection share redeem request");
+    }
+    return nativeRedeemConnectionShare(request);
+  },
+);
+
+ipcMain.handle("native-auth:session-logout", (_event, request: unknown) => {
+  if (!isNativeSessionLogoutRequest(request)) {
+    throw new Error("Invalid native session logout request");
+  }
+  return nativeSessionLogout(request);
 });
 
 ipcMain.on(

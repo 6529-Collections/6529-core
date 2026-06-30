@@ -71,12 +71,14 @@ export default function ConfirmSeedWalletLock(
     const animationFrameId =
       globalThis.requestAnimationFrame?.(focusPasswordInput) ?? null;
     const focusTimeout = setTimeout(focusPasswordInput, 75);
+    const settledFocusTimeout = setTimeout(focusPasswordInput, 175);
 
     return () => {
       if (animationFrameId !== null) {
         globalThis.cancelAnimationFrame?.(animationFrameId);
       }
       clearTimeout(focusTimeout);
+      clearTimeout(settledFocusTimeout);
     };
   }, [focusPasswordInput, props.show, props.unlockedWallet]);
 
@@ -110,7 +112,9 @@ export default function ConfirmSeedWalletLock(
         try {
           const isSuccess = await props.onUnlock(pass);
           if (isSuccess) {
-            showToast("Wallet Unlocked!", "success", true);
+            if (!props.pendingRequest) {
+              showToast("Wallet Unlocked!", "success", true);
+            }
             setWalletPass("");
           } else {
             showToast("Failed to unlock wallet", "error", true);
