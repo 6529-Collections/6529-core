@@ -19,6 +19,11 @@ export default function BrowserConnectorProvider(
   }>
 ) {
   const searchParams = useSearchParams();
+  const searchParamsSnapshot = searchParams?.toString() ?? "";
+  const requestParams = useMemo(
+    () => new URLSearchParams(searchParamsSnapshot),
+    [searchParamsSnapshot]
+  );
   const account = useSeizeConnectContext();
   const chainId = useChainId();
   const [methodParams, setMethodParams] = useState<any>(null);
@@ -46,9 +51,9 @@ export default function BrowserConnectorProvider(
   const intendedWalletAddress = useMemo(
     () =>
       normalizeBrowserConnectorAddress(
-        searchParams?.get("intendedWalletAddress")
+        requestParams.get("intendedWalletAddress")
       ),
-    [searchParams]
+    [requestParams]
   );
   const normalizedConnectedAddress = normalizeBrowserConnectorAddress(
     account.address
@@ -84,32 +89,46 @@ export default function BrowserConnectorProvider(
     normalizedConnectedAddress === expectedSignerAddress;
 
   useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const method = urlParams.get("method");
-    const params = JSON.parse(
-      decodeURIComponent(urlParams.get("params") ?? "[]")
-    );
-    const rId = urlParams.get("requestId");
-    if (!method || !params || !rId) {
+    const method = requestParams.get("method");
+    const encodedParams = requestParams.get("params");
+    const rId = requestParams.get("requestId");
+    if (!method || !encodedParams || !rId) {
       setMissingInfo(true);
-    } else {
-      setMethodParams({ method, params });
-      setRequestId(rId);
+      setMethodParams(null);
+      setRequestId(null);
+      setRequesterAddress(null);
+      return;
     }
 
-    let requester = null;
+    let params: any;
+    try {
+      params = JSON.parse(decodeURIComponent(encodedParams));
+    } catch {
+      setMissingInfo(true);
+      setMethodParams(null);
+      setRequestId(null);
+      setRequesterAddress(null);
+      return;
+    }
+
+    setMissingInfo(false);
+    setMethodParams({ method, params });
+    setRequestId(rId);
+
+    let requester: string | null = null;
     switch (method) {
       case "personal_sign": {
-        requester = params[1];
+        requester = typeof params?.[1] === "string" ? params[1] : null;
         break;
       }
       case "eth_sendTransaction": {
-        requester = params[0].from;
+        requester =
+          typeof params?.[0]?.from === "string" ? params[0].from : null;
         break;
       }
     }
     setRequesterAddress(requester);
-  }, []);
+  }, [requestParams]);
 
   function startRedirectCountdown(d: any) {
     const interval = setInterval(() => {

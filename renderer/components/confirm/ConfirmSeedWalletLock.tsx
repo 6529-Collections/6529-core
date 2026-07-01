@@ -44,6 +44,7 @@ export default function ConfirmSeedWalletLock(
   const [passHidden, setPassHidden] = useState(true);
   const { showToast } = useToast();
   const { isTopModal, addModal, removeModal } = useModalState();
+  const isCurrentTopModal = isTopModal(SEED_WALLET_LOCK_MODAL);
 
   const focusPasswordInput = useCallback(() => {
     const input = inputRef.current;
@@ -64,7 +65,13 @@ export default function ConfirmSeedWalletLock(
   }, [props.show]);
 
   useEffect(() => {
-    if (!props.show || props.unlockedWallet) {
+    if (props.show) addModal(SEED_WALLET_LOCK_MODAL);
+    else removeModal(SEED_WALLET_LOCK_MODAL);
+    return () => removeModal(SEED_WALLET_LOCK_MODAL);
+  }, [props.show, addModal, removeModal]);
+
+  useEffect(() => {
+    if (!props.show || props.unlockedWallet || !isCurrentTopModal) {
       return;
     }
 
@@ -80,13 +87,12 @@ export default function ConfirmSeedWalletLock(
       clearTimeout(focusTimeout);
       clearTimeout(settledFocusTimeout);
     };
-  }, [focusPasswordInput, props.show, props.unlockedWallet]);
-
-  useEffect(() => {
-    if (props.show) addModal(SEED_WALLET_LOCK_MODAL);
-    else removeModal(SEED_WALLET_LOCK_MODAL);
-    return () => removeModal(SEED_WALLET_LOCK_MODAL);
-  }, [props.show, addModal, removeModal]);
+  }, [
+    focusPasswordInput,
+    isCurrentTopModal,
+    props.show,
+    props.unlockedWallet,
+  ]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (
@@ -142,14 +148,14 @@ export default function ConfirmSeedWalletLock(
       }
       titleClassName="tw-m-0 tw-flex tw-items-center tw-gap-3 tw-text-lg tw-font-semibold"
       footerClassName={confirmModalFooterBetween}
-      {...(props.unlockedWallet
+      {...(props.unlockedWallet || !isCurrentTopModal
         ? {}
         : {
             initialFocusRef:
               inputRef as unknown as RefObject<HTMLElement | null>,
           })}
       dialogClassName={
-        !isTopModal(SEED_WALLET_LOCK_MODAL) ? "tw-blur-[5px]" : ""
+        !isCurrentTopModal ? "tw-blur-[5px]" : ""
       }
       footer={
         <>

@@ -38,6 +38,7 @@ export default function BrowserConnector({
       return;
     }
 
+    setExpired(false);
     const expiryTime = parseInt(t) + BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS;
 
     const calculateTimeLeft = () => {
