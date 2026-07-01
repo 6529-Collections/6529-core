@@ -75,16 +75,15 @@ export function getEnvironment(): string {
 
 export function getBackendTarget(): BackendTarget {
   const runtimeConfig = getPublicRuntimeConfig();
+  const isDevRun = process.argv.includes("--dev");
 
-  if (!process.argv.includes("--dev")) {
-    return runtimeConfig?.BACKEND_TARGET === "test" ? "test" : "live";
-  }
-
-  if (process.env.BACKEND_TARGET === "test") {
-    return "test";
-  }
-  if (process.env.BACKEND_TARGET === "live") {
-    return "live";
+  if (isDevRun) {
+    if (process.env.BACKEND_TARGET === "test") {
+      return "test";
+    }
+    if (process.env.BACKEND_TARGET === "live") {
+      return "live";
+    }
   }
 
   return runtimeConfig?.BACKEND_TARGET === "test" ? "test" : "live";

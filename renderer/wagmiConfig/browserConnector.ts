@@ -615,10 +615,9 @@ const processBrowserConnectResponse = async ({
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
 
-      const guardedNativeSessionLogin =
-        typeof window !== "undefined"
-          ? window.nativeAuth?.sessionLogin
-          : undefined;
+      const nativeAuthBridge =
+        typeof window === "undefined" ? undefined : window.nativeAuth;
+      const guardedNativeSessionLogin = nativeAuthBridge?.sessionLogin;
       if (typeof guardedNativeSessionLogin !== "function") {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
