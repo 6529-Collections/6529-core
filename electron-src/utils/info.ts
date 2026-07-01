@@ -73,9 +73,11 @@ export function getEnvironment(): string {
   return packageJson.env.ENVIRONMENT;
 }
 
-function getDevBackendTargetOverride(): BackendTarget | null {
+export function getBackendTarget(): BackendTarget {
+  const runtimeConfig = getPublicRuntimeConfig();
+
   if (!process.argv.includes("--dev")) {
-    return null;
+    return runtimeConfig?.BACKEND_TARGET === "test" ? "test" : "live";
   }
 
   if (process.env.BACKEND_TARGET === "test") {
@@ -85,16 +87,6 @@ function getDevBackendTargetOverride(): BackendTarget | null {
     return "live";
   }
 
-  return null;
-}
-
-export function getBackendTarget(): BackendTarget {
-  const devBackendTarget = getDevBackendTargetOverride();
-  if (devBackendTarget) {
-    return devBackendTarget;
-  }
-
-  const runtimeConfig = getPublicRuntimeConfig();
   return runtimeConfig?.BACKEND_TARGET === "test" ? "test" : "live";
 }
 

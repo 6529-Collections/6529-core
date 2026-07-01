@@ -372,9 +372,9 @@ export async function loginWithSessionV2({
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
   const guardedNativeSessionLogin =
-    typeof window === "undefined"
-      ? null
-      : (window.nativeAuth?.sessionLogin?.bind(window.nativeAuth) ?? null);
+    typeof window !== "undefined"
+      ? window.nativeAuth?.sessionLogin
+      : undefined;
   if (
     clientType !== "web" &&
     isElectron() &&
