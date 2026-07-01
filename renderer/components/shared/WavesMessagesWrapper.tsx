@@ -9,6 +9,7 @@ import { createBreakpoint } from "react-use";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { markDropCloseNavigation } from "@/helpers/drop-close-navigation.helpers";
 import type { ApiDrop } from "../../generated/models/ApiDrop";
+import { isElectron } from "../../helpers";
 import { DropSize } from "../../helpers/waves/drop.helpers";
 import { useSidebarState } from "../../hooks/useSidebarState";
 import { useAuth } from "../auth/Auth";
@@ -28,6 +29,7 @@ import {
 } from "@/services/api/drop-api";
 
 const useBreakpoint = createBreakpoint({ XL: 1400, LG: 1024, S: 0 });
+const ELECTRON_WEB_LAYOUT_TOP_OFFSET_PX = 30;
 
 interface WavesMessagesWrapperProps {
   readonly children: ReactNode;
@@ -46,7 +48,21 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
   const breakpoint = useBreakpoint();
 
   // Access layout context for pre-calculated styles
-  const { contentContainerStyle } = useLayout();
+  const { contentContainerStyle, spaces } = useLayout();
+  const wavesContentContainerStyle = useMemo<React.CSSProperties>(() => {
+    if (!isElectron() || spaces.headerSpace > 0) {
+      return contentContainerStyle;
+    }
+
+    const height = `calc(100dvh - ${ELECTRON_WEB_LAYOUT_TOP_OFFSET_PX}px - ${spaces.spacerSpace}px)`;
+
+    return {
+      ...contentContainerStyle,
+      display: "flex",
+      height,
+      maxHeight: height,
+    };
+  }, [contentContainerStyle, spaces.headerSpace, spaces.spacerSpace]);
 
   // Get global sidebar state
   const { isRightSidebarOpen, closeRightSidebar } = useSidebarState();
@@ -141,7 +157,7 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
           <div className="tw-relative tw-mx-auto tw-flex tw-min-h-0 tw-w-full tw-max-w-full tw-flex-grow">
             <div
               className="tw-relative tw-flex tw-min-h-0 tw-w-full tw-overflow-hidden"
-              style={contentContainerStyle}
+              style={wavesContentContainerStyle}
             >
               {shouldShowLeftSidebar && (
                 <WebBrainLeftSidebar

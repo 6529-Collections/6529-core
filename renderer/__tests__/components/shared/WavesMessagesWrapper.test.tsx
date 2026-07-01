@@ -56,7 +56,10 @@ jest.mock("@/components/auth/Auth", () => ({
 }));
 
 jest.mock("@/components/brain/my-stream/layout/LayoutContext", () => ({
-  useLayout: () => ({ contentContainerStyle: {} }),
+  useLayout: () => ({
+    contentContainerStyle: {},
+    spaces: { headerSpace: 0, spacerSpace: 0 },
+  }),
 }));
 
 jest.mock("@/contexts/wave/WaveChatScrollContext", () => ({
