@@ -186,6 +186,8 @@ interface NativeLegacyDesktopConnectionShareResponse {
   readonly deep_link_path: string;
 }
 
+const NATIVE_AUTH_API_TIMEOUT_MS = 30_000;
+
 function getPublicRuntimeConfig(): Record<string, unknown> {
   const runtimeConfigPath = path.join(
     app.getAppPath(),
@@ -250,32 +252,48 @@ async function postNativeAuthApi<T>({
     ...getStagingApiHeaders(runtimeConfig),
     ...getWalletAuthHeaders(accessToken),
   };
-  const response = await fetch(
-    `${getApiEndpoint(runtimeConfig)}/api/${endpoint}`,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify(body),
-    },
+  const controller = new AbortController();
+  const timeoutId = setTimeout(
+    () => controller.abort(),
+    NATIVE_AUTH_API_TIMEOUT_MS,
   );
 
-  const responseText = await response.text();
-  let responseBody: unknown = null;
-  if (responseText) {
-    try {
-      responseBody = JSON.parse(responseText);
-    } catch {
-      responseBody = responseText;
-    }
-  }
-  if (!response.ok) {
-    throw getApiError(
-      responseBody,
-      response.statusText || "Native auth API request failed",
+  try {
+    const response = await fetch(
+      `${getApiEndpoint(runtimeConfig)}/api/${endpoint}`,
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+        signal: controller.signal,
+      },
     );
-  }
 
-  return (parseJson ? responseBody : undefined) as T;
+    const responseText = await response.text();
+    let responseBody: unknown = null;
+    if (responseText) {
+      try {
+        responseBody = JSON.parse(responseText);
+      } catch {
+        responseBody = responseText;
+      }
+    }
+    if (!response.ok) {
+      throw getApiError(
+        responseBody,
+        response.statusText || "Native auth API request failed",
+      );
+    }
+
+    return (parseJson ? responseBody : undefined) as T;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      throw new Error("Native auth API request timed out");
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function isRefreshTokenClientType(value: unknown): value is RefreshTokenClientType {
@@ -529,6 +547,9 @@ async function nativeCreateConnectionShare(
   });
   if (!isNativeConnectionShareResponse(responseBody)) {
     throw new Error("Invalid native connection share response");
+  }
+  if (responseBody.target_client_type !== targetClientType) {
+    throw new Error("Native connection share response client type mismatch");
   }
   return responseBody;
 }

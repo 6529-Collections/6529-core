@@ -111,6 +111,7 @@ function getNativeRefreshTokenKey(
   clientType: NativeRefreshTokenClientType
 ): string {
   const addressKey = address.toLowerCase();
+  // Desktop and mobile/native sessions use separate refresh-token namespaces.
   if (clientType === "desktop") {
     return `${NATIVE_REFRESH_TOKEN_KEY_PREFIX}:desktop:${addressKey}`;
   }

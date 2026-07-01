@@ -1686,11 +1686,16 @@ export default function Auth({
     seedWalletAutoAuthAddressRef.current = authAddress;
     setShowSignModal(false);
 
-    void requestAuthRef.current().then(({ success }) => {
-      if (!success) {
+    void requestAuthRef
+      .current()
+      .then(({ success }) => {
+        if (!success) {
+          seedWalletAutoAuthAddressRef.current = null;
+        }
+      })
+      .catch(() => {
         seedWalletAutoAuthAddressRef.current = null;
-      }
-    });
+      });
   }, [
     address,
     authLoadingState,

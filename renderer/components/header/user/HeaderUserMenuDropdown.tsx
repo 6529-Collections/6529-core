@@ -106,10 +106,16 @@ export default function HeaderUserMenuDropdown({
       }
     };
 
-    fetchSeedWalletAddresses();
+    const handleSeedWalletsChange = () => {
+      void fetchSeedWalletAddresses();
+    };
+
+    void fetchSeedWalletAddresses();
+    window.api.onSeedWalletsChange(handleSeedWalletsChange);
 
     return () => {
       cancelled = true;
+      window.api.offSeedWalletsChange(handleSeedWalletsChange);
     };
   }, []);
   const upgradeAuthenticationLabel = t(

@@ -615,6 +615,10 @@ const processBrowserConnectResponse = async ({
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
 
+      if (typeof window.nativeAuth?.sessionLogin !== "function") {
+        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
+      }
+
       const sessionResponse = await window.nativeAuth.sessionLogin({
         client_type: signedNativeChallengeAuth.targetClientType,
         server_signature: signedNativeChallengeAuth.serverSignature,

@@ -33,17 +33,22 @@ function getEnvironmentLabel(
   environment: unknown,
   backendTarget: unknown
 ): string {
-  let name = "";
-  if (environment === "local") {
-    name = "Local";
-  }
-  if (environment === "staging") {
-    name = "Staging";
-  }
+  const name =
+    environment === "local"
+      ? "Local"
+      : environment === "staging"
+        ? "Staging"
+        : "";
   if (!name) {
     return "";
   }
-  return `${name} / ${backendTarget === "test" ? "Test" : "Live"}`;
+  if (backendTarget === "test") {
+    return `${name} / Test`;
+  }
+  if (backendTarget === "live") {
+    return `${name} / Live`;
+  }
+  return name;
 }
 
 interface AppInfo {

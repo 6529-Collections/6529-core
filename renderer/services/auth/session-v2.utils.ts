@@ -375,7 +375,7 @@ export async function loginWithSessionV2({
     clientType !== "web" &&
     isElectron() &&
     typeof window !== "undefined" &&
-    typeof window.nativeAuth.sessionLogin === "function"
+    typeof window.nativeAuth?.sessionLogin === "function"
   ) {
     const response = await window.nativeAuth.sessionLogin({
       server_signature: serverSignature,
@@ -424,7 +424,7 @@ async function executeSessionRefreshV2({
       if (
         isElectron() &&
         typeof window !== "undefined" &&
-        typeof window.nativeAuth.sessionRefresh === "function"
+        typeof window.nativeAuth?.sessionRefresh === "function"
       ) {
         return await window.nativeAuth.sessionRefresh({
           client_type: clientType,
@@ -820,7 +820,9 @@ export async function logoutSessionV2({
 
 export async function redeemConnectionShare(
   connectionShareCode: string,
-  targetClientType: RefreshTokenSessionClientType = "native"
+  targetClientType: RefreshTokenSessionClientType = isElectron()
+    ? "desktop"
+    : "native"
 ): Promise<SessionNativeResponse> {
   if (
     isElectron() &&

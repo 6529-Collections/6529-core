@@ -12,7 +12,7 @@ import {
 declare global {
   interface Window {
     api: ElectronAPI;
-    nativeAuth: ElectronNativeAuth;
+    nativeAuth?: ElectronNativeAuth;
     updater: ElectronUpdater;
     store: ElectronStore;
     seedConnector: ElectronSeedConnector;

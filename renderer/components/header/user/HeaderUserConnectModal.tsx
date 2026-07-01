@@ -6,6 +6,7 @@ import {
 } from "@/components/shared/ConfirmModalShell";
 import { isElectron } from "@/helpers";
 import { formatAddress } from "@/helpers/Helpers";
+import { clearBrowserConnectorConnectIntent } from "@/wagmiConfig/browserConnector";
 import { useAppKit } from "@reown/appkit/react";
 import Image from "next/image";
 import Link from "next/link";
@@ -45,6 +46,18 @@ export default function HeaderUserConnectModal({
   const seedConnectors = connectors.flat().filter((c) => c.type === "seed-wallet");
   const browserConnectors = connectors.flat().filter((c) => c.type === "browser");
 
+  const handleHide = () => {
+    clearBrowserConnectorConnectIntent();
+    onHide();
+  };
+
+  const handleConnectorSelected = (connector: Connector) => {
+    if (connector.type !== "browser") {
+      clearBrowserConnectorConnectIntent();
+    }
+    onHide();
+  };
+
   const renderConnectors = (list: Connector[], extraClass = "") => (
     <div
       className={`tw-flex tw-flex-wrap tw-items-center tw-justify-center tw-gap-2 ${extraClass}`.trim()}
@@ -53,7 +66,7 @@ export default function HeaderUserConnectModal({
         <ConnectorSelector
           key={c.id}
           connector={c}
-          selected={onHide}
+          selected={handleConnectorSelected}
         />
       ))}
     </div>
@@ -64,7 +77,7 @@ export default function HeaderUserConnectModal({
   const overlay = (
     <div
       className="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-bg-black/50"
-      onClick={onHide}
+      onClick={handleHide}
       role="dialog"
       aria-modal
     >
@@ -97,7 +110,7 @@ export default function HeaderUserConnectModal({
                         href="/core/core-wallets"
                         onClick={() => {
                           if (window.location.pathname === "/core/core-wallets") {
-                            onHide();
+                            handleHide();
                           }
                         }}
                         className="tw-cursor-pointer tw-text-primary-400 tw-underline hover:tw-text-primary-300"
@@ -172,7 +185,10 @@ function ConnectSection({
 }
 
 function ConnectorSelector(
-  props: Readonly<{ connector: Connector; selected: () => void }>
+  props: Readonly<{
+    connector: Connector;
+    selected: (connector: Connector) => void;
+  }>
 ) {
   const { connectAsync, error } = useConnect();
   const { open } = useAppKit();
@@ -190,7 +206,7 @@ function ConnectorSelector(
     } else {
       connectAsync({ connector: props.connector });
     }
-    props.selected();
+    props.selected(props.connector);
   };
 
   const imageSrc = getConnectorImage(props.connector);

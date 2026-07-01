@@ -16,7 +16,7 @@ import { SeedWalletRequest } from "@/shared/types";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers, formatUnits } from "ethers";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
@@ -63,6 +63,8 @@ export default function ConfirmSeedWalletRequest({
   const [showParsed, setShowParsed] = useState(false);
   const [seedRequest, setSeedRequest] = useState<SeedWalletRequest>();
   const hasMounted = useRef(false);
+  const onShowChangeRef = useRef(onShowChange);
+  const latestShowRef = useRef(show);
 
   const hasEnoughBalance = useMemo(() => {
     if (!seedRequest?.params[0]?.value || !balance.data) return true;
@@ -77,9 +79,21 @@ export default function ConfirmSeedWalletRequest({
   }, [show, addModal, removeModal]);
 
   useEffect(() => {
+    onShowChangeRef.current = onShowChange;
+  }, [onShowChange]);
+
+  useEffect(() => {
+    latestShowRef.current = show;
     onShowChange?.(show);
-    return () => onShowChange?.(false);
   }, [onShowChange, show]);
+
+  useEffect(() => {
+    return () => {
+      if (latestShowRef.current) {
+        onShowChangeRef.current?.(false);
+      }
+    };
+  }, []);
 
   const clear = () => {
     setSeedRequest(undefined);
@@ -128,15 +142,11 @@ export default function ConfirmSeedWalletRequest({
     };
   }, [seedWalletContext.isSeedWallet, showToast]);
 
-  function getHtml(index: number, param: string) {
-    let content = "";
+  function getPersonalSignParamLines(param: string): string[] {
     if (isValidEthAddress(param)) {
-      content = param;
-    } else {
-      const parsed = hexToString(param).replace(/^\n+/, "");
-      content = parsed.replaceAll("\n", "<br>");
+      return [param];
     }
-    return `${index + 1}: ${content}`;
+    return hexToString(param).replace(/^\n+/, "").split("\n");
   }
 
   function printParams(request: SeedWalletRequest) {
@@ -144,13 +154,23 @@ export default function ConfirmSeedWalletRequest({
       return (
         <>
           <span>Parameters</span>
-          {request?.params?.map((param, index) => (
-            <code
-              key={param}
-              className="tw-block tw-break-all tw-pb-3 tw-pt-3"
-              dangerouslySetInnerHTML={{ __html: getHtml(index, param) }}
-            />
-          ))}
+          {request?.params?.map((param, index) => {
+            const lines = getPersonalSignParamLines(param);
+            return (
+              <code
+                key={`${index}-${param}`}
+                className="tw-block tw-break-all tw-pb-3 tw-pt-3"
+              >
+                <span>{index + 1}: </span>
+                {lines.map((line, lineIndex) => (
+                  <Fragment key={`${lineIndex}-${line}`}>
+                    {lineIndex > 0 && <br />}
+                    {line}
+                  </Fragment>
+                ))}
+              </code>
+            );
+          })}
         </>
       );
     } else if (request.method === "eth_sendTransaction") {
