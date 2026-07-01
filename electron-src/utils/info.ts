@@ -53,19 +53,19 @@ export function getScheme() {
   let scheme = "";
   const environment = getEnvironment();
 
-  if (environment === "staging") {
+  if (environment === "dev" || environment === "local") {
+    scheme = CORE_SCHEMES.local;
+  } else if (environment === "staging") {
     scheme = CORE_SCHEMES.staging;
   } else if (environment === "production") {
     scheme = CORE_SCHEMES.production;
-  } else if (environment === "local") {
-    scheme = CORE_SCHEMES.local;
   }
   return scheme;
 }
 
 export function getEnvironment(): string {
   if (process.argv.includes("--dev")) {
-    return process.env.ENVIRONMENT as string;
+    return process.env.ENVIRONMENT ?? "dev";
   }
 
   const packageJsonPath = path.join(app.getAppPath(), "package.json");

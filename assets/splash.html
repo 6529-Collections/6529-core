@@ -74,7 +74,8 @@
         font-weight: 600;
         line-height: 1.15;
         letter-spacing: 0;
-        color: rgba(255, 255, 255, 0.72);
+        color: #36f5d2;
+        text-shadow: 0 0 16px rgba(54, 245, 210, 0.35);
       }
       .middle {
         margin-top: auto;
@@ -171,6 +172,9 @@
 
       function getEnvironmentLabel(environment, backendTarget) {
         var name = "";
+        if (environment === "dev") {
+          name = "Dev";
+        }
         if (environment === "local") {
           name = "Local";
         }

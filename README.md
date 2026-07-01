@@ -139,10 +139,12 @@ WS_ENDPOINT=wss://ws.staging.6529.io
 Examples:
 
 ```bash
-6529 run dist-mac-local          # Local app, Live backend; label: (Local)
-6529 run dist-mac-local test     # Local app, Test backend; label: (Local - Test)
-6529 run dist-mac-staging        # Staging app, Live backend; label: (Staging)
-6529 run dist-mac-staging test   # Staging app, Test backend; label: (Staging - Test)
+6529 run dev                     # Dev app, Live backend; label: Dev / Live
+6529 run dev test                # Dev app, Test backend; label: Dev / Test
+6529 run dist-mac-local          # Local app, Live backend; label: Local / Live
+6529 run dist-mac-local test     # Local app, Test backend; label: Local / Test
+6529 run dist-mac-staging        # Staging app, Live backend; label: Staging / Live
+6529 run dist-mac-staging test   # Staging app, Test backend; label: Staging / Test
 6529 run dist-mac-production     # Production app, Live backend; no label suffix
 ```
 

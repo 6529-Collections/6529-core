@@ -34,7 +34,9 @@ function getEnvironmentLabel(
   backendTarget: unknown
 ): string {
   const name =
-    environment === "local"
+    environment === "dev"
+      ? "Dev"
+      : environment === "local"
       ? "Local"
       : environment === "staging"
         ? "Staging"
@@ -364,10 +366,6 @@ export default function TitleBar() {
   };
 
   const isMacPlatform = isMac();
-  let versionText = version || environmentLabel;
-  if (environmentLabel && version) {
-    versionText = `${environmentLabel} / ${version}`;
-  }
   const versionPositionClass = (() => {
     if (isMacPlatform) {
       return updateAvailable
@@ -486,7 +484,15 @@ export default function TitleBar() {
         )}
       </span>
       <span className={`${versionClass} ${versionPositionClass}`}>
-        {versionText}
+        {environmentLabel && (
+          <span className={styles["environmentLabel"]}>
+            {environmentLabel}
+          </span>
+        )}
+        {environmentLabel && version && (
+          <span className={styles["versionSeparator"]}>/</span>
+        )}
+        {version}
       </span>
       <TooltipButton
         buttonStyles={`${infoClass} ${infoPositionClass} ${

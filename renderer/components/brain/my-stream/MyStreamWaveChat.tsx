@@ -16,7 +16,6 @@ import {
 } from "@/contexts/wave/UnreadDividerContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
-import { isElectron } from "@/helpers";
 import { getHomeRoute } from "@/helpers/navigation.helpers";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
@@ -221,21 +220,7 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
   }, [initialDropState, pathname, router, searchParams, viewMode]);
 
   const { waveViewStyle } = useLayout();
-  const effectiveWaveViewStyle = useMemo<React.CSSProperties>(() => {
-    if (waveViewStyleOverride) {
-      return waveViewStyleOverride;
-    }
-
-    if (!isElectron()) {
-      return waveViewStyle;
-    }
-
-    return {
-      ...waveViewStyle,
-      height: "100%",
-      maxHeight: "100%",
-    };
-  }, [waveViewStyle, waveViewStyleOverride]);
+  const effectiveWaveViewStyle = waveViewStyleOverride ?? waveViewStyle;
 
   const containerClassName = useMemo(() => {
     const baseStyles =

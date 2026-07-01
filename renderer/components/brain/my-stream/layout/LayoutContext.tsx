@@ -11,7 +11,10 @@ import React, {
 } from "react";
 import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
 import useCapacitor from "@/hooks/useCapacitor";
+import { isElectron } from "@/helpers";
 import type { ReactNode } from "react";
+
+const ELECTRON_TITLEBAR_HEIGHT_PX = 30;
 
 // Define the different spaces that need to be measured
 interface LayoutSpaces {
@@ -328,6 +331,9 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     calculateSpacesRef.current = calculateSpaces;
   }, [calculateSpaces]);
 
+  const electronTitlebarSpace =
+    isElectron() && spaces.headerSpace === 0 ? ELECTRON_TITLEBAR_HEIGHT_PX : 0;
+
   // Calculate the content container style based on header space
   const contentContainerStyle = useMemo(() => {
     if (!spaces.measurementsComplete) {
@@ -335,10 +341,15 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     }
 
     return {
-      height: `calc(100dvh - ${spaces.headerSpace}px - ${spaces.spacerSpace}px)`,
+      height: `calc(100dvh - ${spaces.headerSpace}px - ${spaces.spacerSpace}px - ${electronTitlebarSpace}px)`,
       display: "flex",
     };
-  }, [spaces.measurementsComplete, spaces.headerSpace, spaces.spacerSpace]);
+  }, [
+    electronTitlebarSpace,
+    spaces.measurementsComplete,
+    spaces.headerSpace,
+    spaces.spacerSpace,
+  ]);
 
   const isNavHiddenForKeyboard = isKeyboardVisible;
 
@@ -350,7 +361,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   const waveViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
 
-    const style = calculateHeightStyle(navAdjustedSpaces, 0);
+    const style = calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
 
     if (isAndroid) {
       return {
@@ -359,47 +370,50 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
       };
     }
     return style;
-  }, [navAdjustedSpaces, isAndroid]);
+  }, [electronTitlebarSpace, navAdjustedSpaces, isAndroid]);
 
   const leaderboardViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const winnersViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const salesViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const myVotesViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const outcomeViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const faqViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const notificationsViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle({ ...navAdjustedSpaces, mobileNavSpace: 0 }, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(
+      { ...navAdjustedSpaces, mobileNavSpace: 0 },
+      electronTitlebarSpace
+    );
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const myStreamFeedStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   // Homepage-specific feed style that excludes header/breadcrumb space
   const homepageFeedStyle = useMemo<React.CSSProperties>(() => {
@@ -410,8 +424,8 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
       headerSpace: 0, // No header in new homepage layout
       spacerSpace: 0, // No breadcrumb spacer in new homepage layout
     };
-    return calculateHeightStyle(homepageSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(homepageSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   // Small screen layout feed style (properly accounts for header)
   const smallScreenFeedStyle = useMemo<React.CSSProperties>(() => {
@@ -422,23 +436,27 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
       navAdjustedSpaces.tabsSpace +
       navAdjustedSpaces.spacerSpace +
       navAdjustedSpaces.mobileTabsSpace +
-      navAdjustedSpaces.mobileNavSpace;
+      navAdjustedSpaces.mobileNavSpace +
+      electronTitlebarSpace;
     const heightCalc = `calc(100dvh - ${totalOffset}px)`;
     return {
       height: heightCalc,
       maxHeight: heightCalc,
     };
-  }, [navAdjustedSpaces]);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const mobileWavesViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle({ ...navAdjustedSpaces, mobileNavSpace: 0 }, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(
+      { ...navAdjustedSpaces, mobileNavSpace: 0 },
+      electronTitlebarSpace
+    );
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const mobileAboutViewStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    return calculateHeightStyle(navAdjustedSpaces, 0);
-  }, [navAdjustedSpaces]);
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+  }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo<LayoutContextType>(
