@@ -91,12 +91,8 @@
 
 .environmentLabel {
   color: #36f5d2;
+  margin-right: 6px;
   text-shadow: 0 0 10px rgba(54, 245, 210, 0.45);
-}
-
-.versionSeparator {
-  color: variables.$font-color-h;
-  margin: 0 4px;
 }
 
 .versionMac {

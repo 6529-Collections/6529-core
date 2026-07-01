@@ -489,9 +489,6 @@ export default function TitleBar() {
             {environmentLabel}
           </span>
         )}
-        {environmentLabel && version && (
-          <span className={styles["versionSeparator"]}>/</span>
-        )}
         {version}
       </span>
       <TooltipButton
