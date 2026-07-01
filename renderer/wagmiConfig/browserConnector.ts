@@ -616,12 +616,12 @@ const processBrowserConnectResponse = async ({
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
 
-      const nativeSessionLogin = getNativeAuthSessionLogin();
-      if (typeof nativeSessionLogin !== "function") {
+      const guardedNativeSessionLogin = getNativeAuthSessionLogin();
+      if (typeof guardedNativeSessionLogin !== "function") {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
 
-      const sessionResponse = await nativeSessionLogin({
+      const sessionResponse = await guardedNativeSessionLogin({
         client_type: signedNativeChallengeAuth.targetClientType,
         server_signature: signedNativeChallengeAuth.serverSignature,
         client_signature: signedNativeChallengeAuth.clientSignature,

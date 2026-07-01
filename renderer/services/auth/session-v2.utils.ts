@@ -372,13 +372,13 @@ export async function loginWithSessionV2({
   readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
-  const nativeSessionLogin = getNativeAuthSessionLogin();
+  const guardedNativeSessionLogin = getNativeAuthSessionLogin();
   if (
     clientType !== "web" &&
     isElectron() &&
-    typeof nativeSessionLogin === "function"
+    typeof guardedNativeSessionLogin === "function"
   ) {
-    const response = await nativeSessionLogin({
+    const response = await guardedNativeSessionLogin({
       server_signature: serverSignature,
       client_signature: clientSignature,
       client_address: signerAddress,

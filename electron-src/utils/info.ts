@@ -74,7 +74,9 @@ export function getEnvironment(): string {
 }
 
 export function getBackendTarget(): BackendTarget {
-  if (process.argv.includes("--dev")) {
+  const allowEnvOverride = process.argv.includes("--dev");
+
+  if (allowEnvOverride) {
     if (process.env.BACKEND_TARGET === "test") {
       return "test";
     }

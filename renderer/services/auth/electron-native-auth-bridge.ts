@@ -8,11 +8,7 @@ export function getNativeAuthSessionLogin(): NativeSessionLogin | null {
   }
 
   const nativeAuth = window.nativeAuth;
-  if (!nativeAuth) {
-    return null;
-  }
-
-  const sessionLogin = nativeAuth["sessionLogin"];
+  const sessionLogin = nativeAuth?.sessionLogin;
   return typeof sessionLogin === "function"
     ? sessionLogin.bind(nativeAuth)
     : null;
