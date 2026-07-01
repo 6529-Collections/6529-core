@@ -480,6 +480,7 @@ export function HeaderQRModal({
   const { address: contextWalletAddress, hasValidWalletAuth } =
     useSeizeConnectContext();
   const { ensureActiveSessionV2WebSession, requestSessionUpgrade } = useAuth();
+  const isElectronApp = useElectron() ?? false;
   const activeWalletAddress = contextWalletAddress ?? getWalletAddress();
   const hasWalletAddress = Boolean(activeWalletAddress);
 
@@ -772,6 +773,15 @@ export function HeaderQRModal({
     readonly signal?: AbortSignal | undefined;
     readonly walletAddress: string;
   }): Promise<ConnectionShareSessionVerificationStatus> {
+    if (
+      isElectronApp &&
+      hasValidWalletAuth &&
+      hasActiveSessionV2Auth({ address: walletAddress }) &&
+      getWalletAddress()?.toLowerCase() === walletAddress.toLowerCase()
+    ) {
+      return "active";
+    }
+
     try {
       const hasActiveSession = ensureActiveSessionV2WebSession
         ? await ensureActiveSessionV2WebSession({
