@@ -7,16 +7,58 @@ import os from "os";
 
 type BackendTarget = "live" | "test";
 
+const CORE_SCHEMES = {
+  local: "localcore6529",
+  staging: "stagingcore6529",
+  production: "core6529",
+} as const;
+
+function normalizeCoreScheme(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase().replace(/:\/\/$/, "");
+  return Object.values(CORE_SCHEMES).includes(
+    normalized as (typeof CORE_SCHEMES)[keyof typeof CORE_SCHEMES]
+  )
+    ? normalized
+    : null;
+}
+
+function getPublicRuntimeConfig(): Record<string, unknown> | null {
+  const runtimeConfigPath = path.join(
+    app.getAppPath(),
+    "main",
+    "config",
+    "__PUBLIC_RUNTIME.json",
+  );
+  try {
+    return JSON.parse(fs.readFileSync(runtimeConfigPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    return null;
+  }
+}
+
 export function getScheme() {
+  const configuredScheme = normalizeCoreScheme(
+    process.env.CORE_SCHEME ?? getPublicRuntimeConfig()?.CORE_SCHEME
+  );
+  if (configuredScheme) {
+    return configuredScheme;
+  }
+
   let scheme = "";
   const environment = getEnvironment();
 
   if (environment === "staging") {
-    scheme = "stagingcore6529";
+    scheme = CORE_SCHEMES.staging;
   } else if (environment === "production") {
-    scheme = "core6529";
+    scheme = CORE_SCHEMES.production;
   } else if (environment === "local") {
-    scheme = "localcore6529";
+    scheme = CORE_SCHEMES.local;
   }
   return scheme;
 }
@@ -39,20 +81,8 @@ export function getBackendTarget(): BackendTarget {
     return "live";
   }
 
-  const runtimeConfigPath = path.join(
-    app.getAppPath(),
-    "main",
-    "config",
-    "__PUBLIC_RUNTIME.json",
-  );
-  try {
-    const runtimeConfig = JSON.parse(
-      fs.readFileSync(runtimeConfigPath, "utf-8"),
-    ) as { readonly BACKEND_TARGET?: unknown };
-    return runtimeConfig.BACKEND_TARGET === "test" ? "test" : "live";
-  } catch {
-    return "live";
-  }
+  const runtimeConfig = getPublicRuntimeConfig();
+  return runtimeConfig?.BACKEND_TARGET === "test" ? "test" : "live";
 }
 
 export function getLogDirectory() {

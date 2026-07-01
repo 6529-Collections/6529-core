@@ -347,6 +347,45 @@ interface PublicEnv {
   DROP_FORGE_TESTNET?: boolean;
 }
 
+const CORE_SCHEMES = {
+  local: "localcore6529",
+  staging: "stagingcore6529",
+  production: "core6529",
+} as const;
+
+type AppEnvironment = keyof typeof CORE_SCHEMES;
+
+function isAppEnvironment(value: unknown): value is AppEnvironment {
+  return (
+    value === "local" || value === "staging" || value === "production"
+  );
+}
+
+function normalizeCoreScheme(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const normalized = value.trim().toLowerCase().replace(/:\/\/$/, "");
+  return Object.values(CORE_SCHEMES).includes(
+    normalized as (typeof CORE_SCHEMES)[AppEnvironment]
+  )
+    ? normalized
+    : undefined;
+}
+
+function getCoreScheme({
+  appEnvironment,
+  fallbackScheme,
+}: {
+  readonly appEnvironment: unknown;
+  readonly fallbackScheme: unknown;
+}): string {
+  if (isAppEnvironment(appEnvironment)) {
+    return CORE_SCHEMES[appEnvironment];
+  }
+  return normalizeCoreScheme(fallbackScheme) ?? CORE_SCHEMES.production;
+}
+
 function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
   const localDebugBuild = resolveLocalDebugBuildFlagFromEnv();
 
@@ -500,6 +539,10 @@ const nextConfigFactory = (phase: string): NextConfig => {
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
     publicRuntime.VERSION = VERSION;
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
+    publicRuntime.CORE_SCHEME = getCoreScheme({
+      appEnvironment: process.env.APP_ENVIRONMENT,
+      fallbackScheme: publicRuntime.CORE_SCHEME,
+    });
     if (publicRuntime.BACKEND_TARGET === "test") {
       const stagingApiKey = publicRuntime.STAGING_API_KEY?.trim();
       if (!stagingApiKey) {

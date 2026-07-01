@@ -40,6 +40,9 @@ export const ToastProvider = ({
     type: "info" | "success" | "warning" | "error" = "info",
     singleton?: boolean
   ) => {
+    if (!message) {
+      return;
+    }
     if (singleton) {
       toast.dismiss();
     }

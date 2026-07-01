@@ -643,7 +643,7 @@ export default function Auth({
     isDisconnecting,
     hasActiveWalletAddress,
     canSignActiveWallet,
-    seizeConnect,
+    seizeConnectFresh,
     seizeDisconnect,
     seizeDisconnectAndLogout,
     isSafeWallet,
@@ -2063,14 +2063,11 @@ export default function Auth({
     : t(AUTH_MODAL_LOCALE, "auth.signModal.sign");
   const reconnectActiveWalletForSessionUpgrade = async (): Promise<void> => {
     try {
-      await seizeDisconnect();
+      setShowSignModal(false);
+      await seizeConnectFresh();
     } catch (error) {
-      logErrorSecurely("session_upgrade_disconnect_before_connect", error);
-      return;
+      logErrorSecurely("session_upgrade_connect_active_wallet", error);
     }
-
-    setShowSignModal(false);
-    seizeConnect();
   };
   const onConfirmSignRequest = () => {
     if (isDisconnectedSessionUpgradePrompt) {

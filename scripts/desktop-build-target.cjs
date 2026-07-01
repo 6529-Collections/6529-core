@@ -10,6 +10,11 @@ const LIVE_API_ENDPOINT = "https://api.6529.io";
 const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
+const CORE_SCHEMES = {
+  local: "localcore6529",
+  staging: "stagingcore6529",
+  production: "core6529",
+};
 
 const COMMANDS = {
   "dist-win-staging": {
@@ -141,6 +146,14 @@ function getBackendTarget(rawTarget) {
   throw new Error("Backend target must be either live or test.");
 }
 
+function getCoreScheme(appEnvironment) {
+  const coreScheme = CORE_SCHEMES[appEnvironment];
+  if (!coreScheme) {
+    throw new Error(`Unknown app environment "${appEnvironment}".`);
+  }
+  return coreScheme;
+}
+
 function getBuildEnvironment(commandConfig, backendTarget) {
   const stagingApiKey = process.env.STAGING_API_KEY ?? "";
   if (
@@ -176,6 +189,7 @@ function getBuildEnvironment(commandConfig, backendTarget) {
     ...endpointEnv,
     APP_ENVIRONMENT: commandConfig.appEnvironment,
     BACKEND_TARGET: backendTarget,
+    CORE_SCHEME: getCoreScheme(commandConfig.appEnvironment),
   };
 }
 

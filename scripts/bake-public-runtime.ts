@@ -10,8 +10,15 @@ const LIVE_API_ENDPOINT = "https://api.6529.io";
 const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
+const CORE_SCHEMES = {
+  local: "localcore6529",
+  staging: "stagingcore6529",
+  production: "core6529",
+} as const;
+const CORE_SCHEME_VALUES = Object.values(CORE_SCHEMES);
 
 type BackendTarget = "live" | "test";
+type AppEnvironment = keyof typeof CORE_SCHEMES;
 
 function computeVersion() {
   try {
@@ -32,6 +39,10 @@ function computeVersion() {
   const NEXT_LOCAL_DEBUG =
     (process.env.NEXT_LOCAL_DEBUG ?? "false").toLowerCase() === "true";
   const backendTarget = getBackendTarget(raw.BACKEND_TARGET);
+  const coreScheme = getCoreScheme({
+    appEnvironment: process.env.APP_ENVIRONMENT ?? raw.APP_ENVIRONMENT,
+    fallbackScheme: process.env.CORE_SCHEME ?? raw.CORE_SCHEME,
+  });
 
   if (
     process.env.APP_ENVIRONMENT === "production" &&
@@ -49,6 +60,7 @@ function computeVersion() {
     ...runtimeEndpointOverrides,
     VERSION,
     ASSETS_FROM_S3,
+    CORE_SCHEME: coreScheme,
     DROP_FORGE_TESTNET: NEXT_LOCAL_DEBUG
       ? true
       : raw.DROP_FORGE_TESTNET ?? false,
@@ -66,6 +78,37 @@ function getBackendTarget(fallbackTarget: unknown): BackendTarget {
     return rawTarget;
   }
   throw new Error("BACKEND_TARGET must be live or test");
+}
+
+function isAppEnvironment(value: unknown): value is AppEnvironment {
+  return (
+    value === "local" || value === "staging" || value === "production"
+  );
+}
+
+function normalizeCoreScheme(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase().replace(/:\/\/$/, "");
+  return CORE_SCHEME_VALUES.includes(
+    normalized as (typeof CORE_SCHEME_VALUES)[number]
+  )
+    ? normalized
+    : null;
+}
+
+function getCoreScheme({
+  appEnvironment,
+  fallbackScheme,
+}: {
+  readonly appEnvironment: unknown;
+  readonly fallbackScheme: unknown;
+}): string {
+  if (isAppEnvironment(appEnvironment)) {
+    return CORE_SCHEMES[appEnvironment];
+  }
+  return normalizeCoreScheme(fallbackScheme) ?? CORE_SCHEMES.production;
 }
 
 function getRuntimeEndpointOverrides(backendTarget: BackendTarget) {

@@ -18,6 +18,10 @@ import authModalStyles from "../auth/Auth.module.scss";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
 import styles from "./BrowserConnector.module.scss";
+import BrowserConnectorWalletIntentNotice, {
+  type BrowserConnectorWalletIntentNoticeType,
+} from "./BrowserConnectorWalletIntentNotice";
+import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
 
 const DESKTOP_SESSION_AUTH_MODE = "session-v2-desktop";
 const LEGACY_NATIVE_SESSION_AUTH_MODE = "session-v2-native";
@@ -59,24 +63,11 @@ type NativeAuthState = {
   readonly payload: BrowserConnectorSignedNativeAuth;
 } | null;
 
-type WalletIntentNotice =
-  | {
-      readonly type: "already-connected";
-    }
-  | {
-      readonly type: "connect-requested" | "switch-requested";
-      readonly address: string;
-    };
-
 const getErrorMessage = (error: unknown, fallback: string): string =>
   error instanceof Error && error.message ? error.message : fallback;
 
 const normalizeQueryAddress = (value: string | null): string | null => {
-  if (typeof value !== "string") {
-    return null;
-  }
-  const normalized = value.toLowerCase();
-  return /^0x[0-9a-f]{40}$/.test(normalized) ? normalized : null;
+  return normalizeBrowserConnectorAddress(value);
 };
 
 const normalizeQueryAddressList = (value: string | null): readonly string[] => {
@@ -99,48 +90,9 @@ const normalizeQueryAddressList = (value: string | null): readonly string[] => {
   return addresses;
 };
 
-function BrowserConnectorWalletIntentNotice({
-  notice,
-}: {
-  readonly notice: WalletIntentNotice;
-}) {
-  const title =
-    notice.type === "already-connected"
-      ? "This wallet is already connected."
-      : notice.type === "switch-requested"
-        ? "Switch wallets before continuing."
-        : "Connect the requested wallet.";
-  const body =
-    notice.type === "already-connected" ? (
-      "Use a different browser wallet to add another Desktop account."
-    ) : (
-      <>
-        Continue with{" "}
-        <code className="tw-rounded-md tw-bg-error/10 tw-px-1.5 tw-py-0.5 tw-font-mono tw-text-[0.9em] tw-text-error">
-          {notice.address}
-        </code>
-        .
-      </>
-    );
-
-  return (
-    <div
-      className="tw-rounded-lg tw-border tw-border-solid tw-border-error/25 tw-bg-error/10 tw-px-4 tw-py-3 tw-text-error"
-      role="alert"
-    >
-      <p className="tw-m-0 tw-text-sm tw-font-semibold tw-leading-5">
-        {title}
-      </p>
-      <p className="tw-m-0 tw-mt-1 tw-text-sm tw-leading-5 tw-text-error/90">
-        {body}
-      </p>
-    </div>
-  );
-}
-
 export default function BrowserConnectorConnect(
   props: Readonly<{
-    scheme?: string | null;
+    returnScheme: string;
     setCompleted: (value: boolean) => void;
   }>
 ) {
@@ -197,36 +149,37 @@ export default function BrowserConnectorConnect(
   const [showAuthModal, setShowAuthModal] = useState(false);
   const isRequestedChain = liveChainId === requestedChainId;
 
-  const walletIntentNotice = useMemo<WalletIntentNotice | null>(() => {
-    if (
-      normalizedIntendedWalletAddress &&
-      normalizedLiveAddress !== normalizedIntendedWalletAddress
-    ) {
-      return {
-        type: normalizedLiveAddress ? "switch-requested" : "connect-requested",
-        address: normalizedIntendedWalletAddress,
-      };
-    }
-    if (
-      normalizedOriginWalletAddress &&
-      normalizedLiveAddress === normalizedOriginWalletAddress
-    ) {
-      return { type: "already-connected" };
-    }
-    if (
-      !normalizedIntendedWalletAddress &&
-      normalizedLiveAddress &&
-      normalizedKnownWalletAddresses.includes(normalizedLiveAddress)
-    ) {
-      return { type: "already-connected" };
-    }
-    return null;
-  }, [
-    normalizedIntendedWalletAddress,
-    normalizedKnownWalletAddresses,
-    normalizedLiveAddress,
-    normalizedOriginWalletAddress,
-  ]);
+  const walletIntentNotice =
+    useMemo<BrowserConnectorWalletIntentNoticeType | null>(() => {
+      if (
+        normalizedIntendedWalletAddress &&
+        normalizedLiveAddress !== normalizedIntendedWalletAddress
+      ) {
+        return {
+          type: normalizedLiveAddress ? "switch-requested" : "connect-requested",
+          address: normalizedIntendedWalletAddress,
+        };
+      }
+      if (
+        normalizedOriginWalletAddress &&
+        normalizedLiveAddress === normalizedOriginWalletAddress
+      ) {
+        return { type: "already-connected" };
+      }
+      if (
+        !normalizedIntendedWalletAddress &&
+        normalizedLiveAddress &&
+        normalizedKnownWalletAddresses.includes(normalizedLiveAddress)
+      ) {
+        return { type: "already-connected" };
+      }
+      return null;
+    }, [
+      normalizedIntendedWalletAddress,
+      normalizedKnownWalletAddresses,
+      normalizedLiveAddress,
+      normalizedOriginWalletAddress,
+    ]);
   const walletIntentError = walletIntentNotice
     ? walletIntentNotice.type === "already-connected"
       ? "Switch to a different browser wallet before continuing."
@@ -415,7 +368,7 @@ export default function BrowserConnectorConnect(
       requestId,
       data: connectionInfo,
     });
-    const deepLink = `${props.scheme}://connector?data=${encodeURIComponent(
+    const deepLink = `${props.returnScheme}://connector?data=${encodeURIComponent(
       serializedInfo
     )}`;
     window.location.href = deepLink;
@@ -425,7 +378,7 @@ export default function BrowserConnectorConnect(
     isWalletIntentSatisfied,
     normalizedLiveAddress,
     preparedNativeAuth,
-    props.scheme,
+    props.returnScheme,
     props.setCompleted,
     requiresNativeSessionAuth,
     requestId,

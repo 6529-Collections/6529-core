@@ -16,6 +16,10 @@ import {
   type RefreshTokenSessionClientType,
   type SessionNativeResponse,
 } from "@/services/auth/session-v2.utils";
+import {
+  BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS,
+  normalizeBrowserConnectorAddress,
+} from "@/components/browser-connector/browserConnector.helpers";
 import { createConnector } from "wagmi";
 import { mainnet, sepolia } from "viem/chains";
 
@@ -62,7 +66,7 @@ const LEGACY_CONNECTION_STORE = "seize-app-connection";
 const getConnectionStoreKey = (connectorId: string) =>
   `seize-app-connection-${connectorId}`;
 const HEX_ADDRESS_REGEX = /^0x[0-9a-f]{40}$/;
-const PENDING_DEEP_LINK_RESPONSE_TTL_MS = 60_000;
+const PENDING_DEEP_LINK_RESPONSE_TTL_MS = BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS;
 const PENDING_CONNECT_INTENT_TTL_MS = 120_000;
 const DESKTOP_SESSION_AUTH_MODE = "session-v2-desktop";
 const LEGACY_NATIVE_SESSION_AUTH_MODE = "session-v2-native";
@@ -99,6 +103,20 @@ const normalizeIntentAddress = (
   return HEX_ADDRESS_REGEX.test(normalizedAddress)
     ? (normalizedAddress as `0x${string}`)
     : null;
+};
+
+const getProviderRequesterAddress = ({
+  method,
+  params,
+}: ProviderRequest): `0x${string}` | null => {
+  const requester =
+    method === "personal_sign"
+      ? params?.[1]
+      : method === "eth_sendTransaction"
+        ? params?.[0]?.from
+        : null;
+  const normalizedRequester = normalizeBrowserConnectorAddress(requester);
+  return normalizedRequester as `0x${string}` | null;
 };
 
 const getKnownDesktopAccountAddresses = (): readonly `0x${string}`[] => {
@@ -1020,7 +1038,7 @@ export function browserConnector(parameters: {
           deepLinkCallbacks.delete(requestId);
           clearPendingDeepLinkResponse(requestId);
           reject(new Error("Connection request timed out"));
-        }, 60000);
+        }, BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS);
 
         registerDeepLinkCallback(requestId, (response: unknown) => {
           clearTimeout(timeoutId);
@@ -1114,7 +1132,22 @@ export function browserConnector(parameters: {
             const requestId = generateRequestId();
             const encodedParams = encodeURIComponent(JSON.stringify(params));
             const t = Date.now();
-            const url = `http://localhost:${port}/browser-connector?task=provider&scheme=${scheme}&requestId=${requestId}&t=${t}&method=${method}&params=${encodedParams}`;
+            const providerSearchParams = new URLSearchParams({
+              task: "provider",
+              scheme,
+              requestId,
+              t: String(t),
+              method,
+              params: encodedParams,
+            });
+            const requesterAddress = getProviderRequesterAddress({
+              method,
+              params: params ?? [],
+            });
+            if (requesterAddress) {
+              providerSearchParams.set("intendedWalletAddress", requesterAddress);
+            }
+            const url = `http://localhost:${port}/browser-connector?${providerSearchParams.toString()}`;
             const timeoutId = setTimeout(() => {
               console.log(
                 `[${this.name}] Deep link callback timed out`,
@@ -1123,7 +1156,7 @@ export function browserConnector(parameters: {
               deepLinkCallbacks.delete(requestId);
               clearPendingDeepLinkResponse(requestId);
               reject(new Error("Provider request timed out"));
-            }, 60000);
+            }, BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS);
 
             registerDeepLinkCallback(requestId, (response: any) => {
               clearTimeout(timeoutId);

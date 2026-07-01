@@ -1,19 +1,24 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import { hexToString } from "viem";
 import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
-import { areEqualAddresses } from "../../helpers/Helpers";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import styles from "./BrowserConnector.module.scss";
+import BrowserConnectorWalletIntentNotice, {
+  type BrowserConnectorWalletIntentNoticeType,
+} from "./BrowserConnectorWalletIntentNotice";
+import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
 
 export default function BrowserConnectorProvider(
   props: Readonly<{
-    scheme?: string | null;
+    returnScheme: string;
     setCompleted: (value: boolean) => void;
   }>
 ) {
+  const searchParams = useSearchParams();
   const account = useSeizeConnectContext();
   const chainId = useChainId();
   const [methodParams, setMethodParams] = useState<any>(null);
@@ -38,6 +43,45 @@ export default function BrowserConnectorProvider(
   const [error, setError] = useState<string | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCancelled, setIsCancelled] = useState(false);
+  const intendedWalletAddress = useMemo(
+    () =>
+      normalizeBrowserConnectorAddress(
+        searchParams?.get("intendedWalletAddress")
+      ),
+    [searchParams]
+  );
+  const normalizedConnectedAddress = normalizeBrowserConnectorAddress(
+    account.address
+  );
+  const normalizedRequesterAddress =
+    normalizeBrowserConnectorAddress(requesterAddress);
+  const expectedSignerAddress =
+    intendedWalletAddress ?? normalizedRequesterAddress;
+  const hasRequesterMismatch =
+    !!intendedWalletAddress &&
+    !!normalizedRequesterAddress &&
+    intendedWalletAddress !== normalizedRequesterAddress;
+  const walletIntentNotice =
+    useMemo<BrowserConnectorWalletIntentNoticeType | null>(() => {
+      if (!expectedSignerAddress || hasRequesterMismatch) {
+        return null;
+      }
+      if (normalizedConnectedAddress === expectedSignerAddress) {
+        return null;
+      }
+      return {
+        type: normalizedConnectedAddress ? "switch-requested" : "connect-requested",
+        address: expectedSignerAddress,
+      };
+    }, [
+      expectedSignerAddress,
+      hasRequesterMismatch,
+      normalizedConnectedAddress,
+    ]);
+  const canSignProviderRequest =
+    !!expectedSignerAddress &&
+    !hasRequesterMismatch &&
+    normalizedConnectedAddress === expectedSignerAddress;
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -134,22 +178,36 @@ export default function BrowserConnectorProvider(
       requestId,
       data: d,
     });
-    const deepLink = `${props.scheme}://connector?data=${encodeURIComponent(
+    const deepLink = `${props.returnScheme}://connector?data=${encodeURIComponent(
       serializedInfo
     )}`;
     window.location.href = deepLink;
     props.setCompleted(true);
   }
 
-  if (!account.isConnected || missingInfo) {
-    let errorMessage = missingInfo
-      ? "Missing required information to process this transaction."
-      : "The account is not connected.";
+  if (missingInfo) {
     return (
       <Container>
         <Row>
           <Col>
-            <p>Error: {errorMessage}</p>
+            <p>Error: Missing required information to process this transaction.</p>
+            <p>Close this window, return to 6529 Desktop and retry.</p>
+          </Col>
+        </Row>
+      </Container>
+    );
+  }
+
+  if (!account.isConnected) {
+    return (
+      <Container>
+        <Row>
+          <Col>
+            {walletIntentNotice ? (
+              <BrowserConnectorWalletIntentNotice notice={walletIntentNotice} />
+            ) : (
+              <p>Error: The account is not connected.</p>
+            )}
             <p>Close this window, return to 6529 Desktop and retry.</p>
           </Col>
         </Row>
@@ -183,7 +241,7 @@ export default function BrowserConnectorProvider(
             <Row>
               {methodParams && (
                 <Col>
-                  {areEqualAddresses(account.address, requesterAddress) ? (
+                  {canSignProviderRequest ? (
                     <div className="tw-flex tw-gap-3">
                       {!isCancelled && (
                         <button
@@ -205,8 +263,19 @@ export default function BrowserConnectorProvider(
                     </div>
                   ) : (
                     <div className="pt-3 text-danger">
-                      Something is wrong...{" "}
-                      {requesterAddress ? (
+                      {hasRequesterMismatch ? (
+                        <>
+                          This request does not match the expected wallet:
+                          <br />
+                          <code className="text-danger">
+                            {intendedWalletAddress}
+                          </code>
+                        </>
+                      ) : walletIntentNotice ? (
+                        <BrowserConnectorWalletIntentNotice
+                          notice={walletIntentNotice}
+                        />
+                      ) : requesterAddress ? (
                         <>
                           This request is for address:
                           <br />

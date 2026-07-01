@@ -162,7 +162,7 @@ if (!process.env.PUBLIC_RUNTIME) {
     ALLOWLIST_API_ENDPOINT: "https://allowlist-api.test.6529.io",
     NEXTGEN_CHAIN_ID: 1,
     MOBILE_APP_SCHEME: "testmobile6529",
-    CORE_SCHEME: "testcore6529",
+    CORE_SCHEME: "core6529",
     IPFS_API_ENDPOINT: "https://api-ipfs.test.6529.io",
     IPFS_GATEWAY_ENDPOINT: "https://ipfs.test.6529.io",
     MEDIA_RESOLVER_ENDPOINT: "https://media.6529.io",
