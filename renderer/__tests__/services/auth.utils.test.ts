@@ -12,7 +12,9 @@ import {
   getStagingAuth,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  hasRecentBrowserConnectorSessionV2Auth,
   isAuthAddressAuthorized,
+  markRecentBrowserConnectorSessionV2Auth,
   PROFILE_SWITCHED_EVENT,
   removeAuthJwt,
   setAgentLoginActiveAddress,
@@ -621,5 +623,30 @@ describe("auth.utils", () => {
         profileHandle: "alice-updated",
       })
     );
+  });
+
+  it("tracks recent browser connector session auth by address for a short grace window", () => {
+    jest.spyOn(Date, "now").mockReturnValue(1_000);
+
+    markRecentBrowserConnectorSessionV2Auth("0xAaA");
+
+    expect(
+      hasRecentBrowserConnectorSessionV2Auth({
+        address: "0xaaa",
+        nowMs: 10_999,
+      })
+    ).toBe(true);
+    expect(
+      hasRecentBrowserConnectorSessionV2Auth({
+        address: "0xaaa",
+        nowMs: 11_001,
+      })
+    ).toBe(false);
+    expect(
+      hasRecentBrowserConnectorSessionV2Auth({
+        address: "0xbbb",
+        nowMs: 1_000,
+      })
+    ).toBe(false);
   });
 });

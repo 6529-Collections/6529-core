@@ -151,6 +151,50 @@ export const store = {
 
 contextBridge.exposeInMainWorld("store", store);
 
+export const nativeAuth = {
+  isAvailable: () => ipcRenderer.invoke("native-auth:is-available"),
+  removeRefreshToken: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly client_address: string;
+  }) => ipcRenderer.invoke("native-auth:remove-refresh-token", request),
+  sessionLogin: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly server_signature: string;
+    readonly client_signature: string;
+    readonly client_address: string;
+    readonly role?: string | null;
+  }) => ipcRenderer.invoke("native-auth:session-login", request),
+  sessionRefresh: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly client_address: string;
+  }) => ipcRenderer.invoke("native-auth:session-refresh", request),
+  createConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly target_client_type?: "native" | "desktop";
+    readonly client_type?: "native" | "desktop";
+    readonly client_address?: string;
+  }) => ipcRenderer.invoke("native-auth:connection-share", request),
+  createLegacyDesktopConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly client_type?: "native" | "desktop";
+    readonly client_address?: string;
+  }) =>
+    ipcRenderer.invoke("native-auth:connection-share:legacy-desktop", request),
+  redeemConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly connection_share_code: string;
+    readonly target_client_type?: "native" | "desktop";
+  }) => ipcRenderer.invoke("native-auth:connection-share:redeem", request),
+  sessionLogout: (request: {
+    readonly access_token?: string | null;
+    readonly client_type?: "native" | "desktop";
+    readonly client_address: string;
+    readonly all_sessions: boolean;
+  }) => ipcRenderer.invoke("native-auth:session-logout", request),
+};
+
+contextBridge.exposeInMainWorld("nativeAuth", nativeAuth);
+
 export const notifications = {
   showNotification: (
     id: number,
@@ -273,6 +317,7 @@ export const localDb = {
 contextBridge.exposeInMainWorld("localDb", localDb);
 
 export type ElectronAPI = typeof api;
+export type ElectronNativeAuth = typeof nativeAuth;
 export type ElectronStore = typeof store;
 export type ElectronUpdater = typeof updater;
 export type ElectronSeedConnector = typeof seedConnector;

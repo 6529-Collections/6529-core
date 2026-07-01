@@ -50,13 +50,15 @@ export function seedWalletConnector(parameters: {
     const wallet = new ethers.Wallet(privateKey);
 
     switch (method) {
-      case "personal_sign":
-        const signature = await wallet.signMessage(hexToString(params?.[0]));
+      case "personal_sign": {
+        const message = hexToString(params?.[0]);
+        const signature = await wallet.signMessage(message);
         window.seedConnector.showToast({
           type: "success",
-          message: "Message signed!",
+          message: "Message Signed!",
         });
         return signature;
+      }
       case "eth_sendTransaction":
         console.log(`[${name}] Sending transaction`, params);
 

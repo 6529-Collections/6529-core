@@ -24,7 +24,10 @@ export const ModalStateProvider: React.FC<{ children: React.ReactNode }> = ({
   const [openModals, setOpenModals] = useState<string[]>([]);
 
   const addModal = useCallback((modalName: string) => {
-    setOpenModals((prev) => [...prev, modalName]);
+    setOpenModals((prev) => [
+      ...prev.filter((name) => name !== modalName),
+      modalName,
+    ]);
   }, []);
 
   const removeModal = useCallback((modalName: string) => {

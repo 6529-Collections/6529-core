@@ -60,6 +60,29 @@ describe("commonApiFetch", () => {
       })
     );
   });
+
+  it("can suppress wallet auth while keeping staging auth", async () => {
+    (getStagingAuth as jest.Mock).mockReturnValue("stage");
+    (getAuthJwt as jest.Mock).mockReturnValue("jwt");
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: async () => ({ result: 1 }),
+    });
+
+    await commonApiFetch({
+      endpoint: "nonce",
+      includeWalletAuthHeaders: false,
+    });
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.test.6529.io/api/nonce",
+      expect.objectContaining({
+        headers: {
+          "x-6529-auth": "stage",
+        },
+      })
+    );
+  });
 });
 
 describe("commonApiPost", () => {

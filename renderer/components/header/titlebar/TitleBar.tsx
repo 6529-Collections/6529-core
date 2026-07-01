@@ -18,16 +18,56 @@ import {
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useContext, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button, Modal } from "react-bootstrap";
 import styles from "./TitleBar.module.scss";
 import TooltipButton from "./TooltipButton";
+import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
 
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
+const TITLEBAR_HEIGHT_STYLE = {
+  "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
+} as CSSProperties & Record<"--core-titlebar-height", string>;
+
+function getEnvironmentLabel(
+  environment: unknown,
+  backendTarget: unknown
+): string {
+  const name =
+    environment === "dev"
+      ? "Dev"
+      : environment === "local"
+      ? "Local"
+      : environment === "staging"
+        ? "Staging"
+        : "";
+  if (!name) {
+    return "";
+  }
+  if (backendTarget === "test") {
+    return `${name} / Test`;
+  }
+  if (backendTarget === "live") {
+    return `${name} / Live`;
+  }
+  return name;
+}
+
+interface AppInfo {
+  readonly app_version?: unknown;
+  readonly environment?: unknown;
+  readonly backend_target?: unknown;
+}
 
 export default function TitleBar() {
   const router = useRouter();
@@ -51,6 +91,7 @@ export default function TitleBar() {
   }>();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
   const [version, setVersion] = useState("");
+  const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
   const [contextMenu, setContextMenu] = useState<{
     x: number;
@@ -61,9 +102,13 @@ export default function TitleBar() {
 
   useEffect(() => {
     window.api.getInfo().then((newInfo) => {
-      if (newInfo.app_version) {
-        setVersion(`v${newInfo.app_version}`);
+      const appInfo = newInfo as AppInfo;
+      if (typeof appInfo.app_version === "string" && appInfo.app_version) {
+        setVersion(`v${appInfo.app_version}`);
       }
+      setEnvironmentLabel(
+        getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
+      );
       window.updater.checkUpdates();
     });
   }, []);
@@ -330,9 +375,31 @@ export default function TitleBar() {
     });
   };
 
+  const isMacPlatform = isMac();
+  const versionPositionClass = (() => {
+    if (isMacPlatform) {
+      return updateAvailable
+        ? (styles["versionMacUpdate"] ?? "")
+        : (styles["versionMac"] ?? "");
+    }
+    return updateAvailable
+      ? (styles["versionWinUpdate"] ?? "")
+      : (styles["versionWin"] ?? "");
+  })();
+  const infoPositionClass = isMacPlatform
+    ? (styles["infoMac"] ?? "")
+    : (styles["infoWin"] ?? "");
+  const versionClass = styles["version"] ?? "";
+  const infoClass = styles["info"] ?? "";
+  const disabledClass = styles["disabled"] ?? "";
+  const environmentLabelElement = environmentLabel ? (
+    <span className={styles["environmentLabel"]}>{environmentLabel}</span>
+  ) : null;
+  const versionElement = version ? <span>{version}</span> : null;
+
   return (
     <>
-      <div className={styles["spacer"]}></div>
+      <div className={styles["spacer"]} style={TITLEBAR_HEIGHT_STYLE}></div>
       <span className={styles["buttonWrapper"]}>
         <TooltipButton
           buttonStyles={`${styles["button"]} ${
@@ -431,22 +498,25 @@ export default function TitleBar() {
         )}
       </span>
       <span
-        className={`${styles["version"]} ${
-          isMac()
-            ? updateAvailable
-              ? styles["versionMacUpdate"]
-              : styles["versionMac"]
-            : updateAvailable
-              ? styles["versionWinUpdate"]
-              : styles["versionWin"]
-        }`}
+        className={`${versionClass} ${versionPositionClass}`}
+        style={TITLEBAR_HEIGHT_STYLE}
       >
-        {version}
+        {isMacPlatform ? (
+          <>
+            {environmentLabelElement}
+            {versionElement}
+          </>
+        ) : (
+          <>
+            {versionElement}
+            {environmentLabelElement}
+          </>
+        )}
       </span>
       <TooltipButton
-        buttonStyles={`${styles["info"]} ${
-          isMac() ? styles["infoMac"] : styles["infoWin"]
-        } ${navigationLoading ? styles["disabled"] : ""}`}
+        buttonStyles={`${infoClass} ${infoPositionClass} ${
+          navigationLoading ? disabledClass : ""
+        }`}
         placement="left"
         onClick={() => !navigationLoading && router.push("/core/core-info")}
         icon={faInfo}

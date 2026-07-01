@@ -22,6 +22,7 @@ import {
 } from "@/components/utils/toast/AppToast";
 import { useModalState } from "@/contexts/ModalStateContext";
 import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
+import { useSeedWallet } from "@/contexts/SeedWalletContext";
 import { ProfileConnectedStatus } from "@/entities/IProfile";
 import {
   InvalidRoleStateError,
@@ -34,6 +35,7 @@ import type { ApiNonceResponse } from "@/generated/models/ApiNonceResponse";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import type { ApiWave } from "@/generated/models/ApiWave";
+import { isElectron } from "@/helpers";
 import { safeLocalStorage } from "@/helpers/safeLocalStorage";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
@@ -56,6 +58,8 @@ import {
   getAuthJwt,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  hasRecentBrowserConnectorSessionV2Auth,
+  isAuthJwtUsable,
   PROFILE_SWITCHED_EVENT,
   removeAuthJwt,
   setAuthJwt,
@@ -341,6 +345,24 @@ const getManualSessionUpgradePromptStatus = (): SessionUpgradePromptStatus => ({
   timeLeftMs: 0,
 });
 
+const getToastTextPart = (value: unknown): string | null =>
+  typeof value === "string" && value.trim().length > 0 ? value.trim() : null;
+
+const getAuthToastDedupeId = (toastInput: AppToastInput): string | undefined => {
+  const textParts = [
+    getToastTextPart(toastInput.title),
+    getToastTextPart(toastInput.message),
+    getToastTextPart(toastInput.description),
+    getToastTextPart(toastInput.details),
+  ].filter((part): part is string => part !== null);
+
+  if (textParts.length === 0) {
+    return undefined;
+  }
+
+  return `auth-toast:${toastInput.type}:${textParts.join(":")}`;
+};
+
 const getStoredLegacySessionUpgradeAddress = (): string | null => {
   const walletAddress = getWalletAddress();
   if (!walletAddress || !getAuthJwt()) {
@@ -453,7 +475,7 @@ const formatSessionUpgradeTimeLeft = (timeLeftMs: number): string => {
 const getSessionUpgradePromptMode = (
   canSignActiveWallet: boolean
 ): SessionUpgradePromptMode => {
-  if (canSignActiveWallet || getSessionClientType() === "web") {
+  if (canSignActiveWallet || getSessionClientType() === "web" || isElectron()) {
     return "sign";
   }
   return "reshare";
@@ -610,6 +632,8 @@ export default function Auth({
   );
   const queryClient = useQueryClient();
   const pathname = usePathname();
+  const isBrowserConnectorRoute =
+    pathname?.startsWith("/browser-connector") === true;
   const router = useRouter();
   const seizeSettingsContext = useSeizeSettingsOptional();
 
@@ -617,14 +641,16 @@ export default function Auth({
     address,
     hasValidWalletAuth: isAddressAuthorized,
     isConnected,
+    isDisconnecting,
     hasActiveWalletAddress,
     canSignActiveWallet,
-    seizeConnect,
+    seizeConnectFresh,
     seizeDisconnect,
     seizeDisconnectAndLogout,
     isSafeWallet,
     connectionState,
   } = useSeizeConnectContext();
+  const { isSeedWallet, isSeedWalletModalOpen } = useSeedWallet();
 
   const {
     signMessage,
@@ -646,6 +672,12 @@ export default function Auth({
   const [sessionUpgradeRequired, setSessionUpgradeRequired] = useState(false);
   const [authStorageRevision, setAuthStorageRevision] = useState(0);
   const signModalReasonRef = useRef<SignModalReason>(signModalReason);
+  const seedWalletAutoAuthAddressRef = useRef<string | null>(null);
+  const isDisconnectingRef = useRef(false);
+  const requestAuthRef = useRef<() => Promise<{ success: boolean }>>(
+    async () => ({ success: false })
+  );
+  isDisconnectingRef.current = isDisconnecting;
 
   const { profile: loadedProfile, isLoading: fetchingProfile } = useIdentity({
     handleOrWallet: address,
@@ -811,6 +843,13 @@ export default function Auth({
   }, [signModalReason]);
 
   useEffect(() => {
+    if (isDisconnecting) {
+      seedWalletAutoAuthAddressRef.current = null;
+      setShowSignModal(false);
+    }
+  }, [isDisconnecting]);
+
+  useEffect(() => {
     if (!address || !connectedProfile?.id) {
       return;
     }
@@ -875,11 +914,19 @@ export default function Auth({
       return undefined;
     }
 
+    if (isBrowserConnectorRoute) {
+      abortCurrentAuthOperation();
+      setShowSignModal(false);
+      setAuthLoadingState("idle");
+      setSessionUpgradeRequired(false);
+      return undefined;
+    }
+
     // Clear previous operations when dependencies change
     abortCurrentAuthOperation();
 
     // Don't start validation during transitional states
-    if (connectionState === "connecting") {
+    if (connectionState === "connecting" || isDisconnecting) {
       return undefined;
     }
 
@@ -904,6 +951,24 @@ export default function Auth({
     }
 
     if (!isAddressAuthorized) {
+      const storedAuthAddress = getWalletAddress();
+      const storedAuthJwt = getAuthJwt();
+      const hasJustPersistedSessionV2Auth =
+        !!address &&
+        !!storedAuthAddress &&
+        storedAuthAddress.toLowerCase() === address.toLowerCase() &&
+        hasActiveSessionV2Auth({ address }) &&
+        (isAuthJwtUsable(storedAuthJwt) ||
+          hasRecentBrowserConnectorSessionV2Auth({ address }));
+
+      if (hasJustPersistedSessionV2Auth) {
+        setSessionUpgradeRequired(false);
+        setSessionUpgradeHasDeadline(false);
+        setSignModalReason("auth");
+        setShowSignModal(false);
+        return undefined;
+      }
+
       setSessionUpgradeRequired(false);
       if (isConnected) {
         setSignModalReason("auth");
@@ -963,6 +1028,8 @@ export default function Auth({
     activeProfileProxy,
     connectionState,
     enableWalletAuthentication,
+    isBrowserConnectorRoute,
+    isDisconnecting,
     isAddressAuthorized,
     isConnected,
     hasActiveWalletAddress,
@@ -1091,8 +1158,11 @@ export default function Auth({
     }
   };
 
-  const setToast = (toast: AppToastInput) => {
-    showAppToast(toast);
+  const setToast = (toastInput: AppToastInput) => {
+    showAppToast({
+      ...toastInput,
+      toastId: toastInput.toastId ?? getAuthToastDedupeId(toastInput),
+    });
   };
 
   const getSignature = async ({
@@ -1167,7 +1237,7 @@ export default function Auth({
         return { success: false };
       }
 
-      if (pathname?.startsWith("/browser-connector")) {
+      if (pathname.startsWith("/browser-connector")) {
         const nonceResponse = await getLegacyBrowserConnectorNonce({
           signerAddress,
         });
@@ -1175,6 +1245,9 @@ export default function Auth({
 
         const clientSignature = await getSignature({ message: nonce });
         if (clientSignature.userRejected) {
+          if (isDisconnectingRef.current) {
+            return { success: false };
+          }
           setToast({
             message: "Authentication was canceled in your wallet.",
             type: "error",
@@ -1225,6 +1298,9 @@ export default function Auth({
 
       const clientSignature = await getSignature({ message: signable_message });
       if (clientSignature.userRejected) {
+        if (isDisconnectingRef.current) {
+          return { success: false };
+        }
         setToast({
           message: "Authentication was canceled in your wallet.",
           type: "error",
@@ -1256,6 +1332,10 @@ export default function Auth({
 
       return { success: true };
     } catch (error) {
+      if (isDisconnectingRef.current) {
+        return { success: false };
+      }
+
       // Handle specific authentication nonce errors with detailed messages
       if (error instanceof InvalidSignerAddressError) {
         setToast({
@@ -1597,6 +1677,58 @@ export default function Auth({
       setAuthLoadingState("idle");
     }
   };
+  requestAuthRef.current = requestAuth;
+
+  useEffect(() => {
+    const authAddress = address?.toLowerCase() ?? null;
+    if (!authAddress || !isSeedWallet || isDisconnecting) {
+      seedWalletAutoAuthAddressRef.current = null;
+      return;
+    }
+
+    if (
+      !enableWalletAuthentication ||
+      isBrowserConnectorRoute ||
+      isAddressAuthorized ||
+      !showSignModal ||
+      isSeedWalletModalOpen ||
+      signModalReason !== "auth" ||
+      authLoadingState !== "idle" ||
+      connectionState !== "connected"
+    ) {
+      return;
+    }
+
+    if (seedWalletAutoAuthAddressRef.current === authAddress) {
+      return;
+    }
+    seedWalletAutoAuthAddressRef.current = authAddress;
+    setShowSignModal(false);
+
+    void requestAuthRef
+      .current()
+      .then(({ success }) => {
+        if (!success) {
+          seedWalletAutoAuthAddressRef.current = null;
+        }
+      })
+      .catch((error) => {
+        seedWalletAutoAuthAddressRef.current = null;
+        logErrorSecurely("seed_wallet_auto_auth", error);
+      });
+  }, [
+    address,
+    authLoadingState,
+    connectionState,
+    enableWalletAuthentication,
+    isAddressAuthorized,
+    isBrowserConnectorRoute,
+    isSeedWallet,
+    isDisconnecting,
+    isSeedWalletModalOpen,
+    showSignModal,
+    signModalReason,
+  ]);
 
   const requestSessionUpgrade = async (): Promise<{ success: boolean }> => {
     const upgradeAddress = address ?? getStoredLegacySessionUpgradeAddress();
@@ -1818,18 +1950,6 @@ export default function Auth({
     isAddressAuthorized,
   ]);
 
-  const { isTopModal, addModal, removeModal } = useModalState();
-  useEffect(() => {
-    if (showSignModal) {
-      addModal(AUTH_MODAL);
-    } else {
-      removeModal(AUTH_MODAL);
-    }
-    return () => {
-      removeModal(AUTH_MODAL);
-    };
-  }, [showSignModal, addModal, removeModal]);
-
   const onCancelSignRequest = useCallback(() => {
     if (signModalReason === "session-upgrade") {
       if (!sessionUpgradeCanDismiss) {
@@ -1875,11 +1995,10 @@ export default function Auth({
   const isSessionUpgradePrompt = signModalReason === "session-upgrade";
   const isConnectionShareUpgradePrompt =
     isSessionUpgradePrompt && sessionUpgradePromptMode === "reshare";
-  const isDisconnectedWebSessionUpgradePrompt =
+  const isDisconnectedSessionUpgradePrompt =
     isSessionUpgradePrompt &&
     sessionUpgradePromptMode === "sign" &&
-    !canSignActiveWallet &&
-    getSessionClientType() === "web";
+    !canSignActiveWallet;
 
   // Computed modal visibility to prevent flickering during rapid state changes
   const shouldShowSignModal = useMemo(() => {
@@ -1888,16 +2007,32 @@ export default function Auth({
       signModalReason !== "session-upgrade";
     return (
       showSignModal &&
+      !isDisconnecting &&
+      !isSeedWalletModalOpen &&
       !shouldHideDuringValidation &&
-      (connectionState === "connected" || isDisconnectedWebSessionUpgradePrompt)
+      (connectionState === "connected" || isDisconnectedSessionUpgradePrompt)
     );
   }, [
     authLoadingState,
     connectionState,
-    isDisconnectedWebSessionUpgradePrompt,
+    isDisconnecting,
+    isDisconnectedSessionUpgradePrompt,
+    isSeedWalletModalOpen,
     showSignModal,
     signModalReason,
   ]);
+
+  const { isTopModal, addModal, removeModal } = useModalState();
+  useEffect(() => {
+    if (shouldShowSignModal) {
+      addModal(AUTH_MODAL);
+    } else {
+      removeModal(AUTH_MODAL);
+    }
+    return () => {
+      removeModal(AUTH_MODAL);
+    };
+  }, [shouldShowSignModal, addModal, removeModal]);
 
   const sessionUpgradeTimeLeftText = useMemo(
     () => formatSessionUpgradeTimeLeft(sessionUpgradeTimeLeftMs),
@@ -1926,7 +2061,7 @@ export default function Auth({
     if (isConnectionShareUpgradePrompt) {
       return t(AUTH_MODAL_LOCALE, "auth.signModal.connectionSharePrimary");
     }
-    if (isDisconnectedWebSessionUpgradePrompt) {
+    if (isDisconnectedSessionUpgradePrompt) {
       return t(AUTH_MODAL_LOCALE, "auth.signModal.disconnectedUpgradePrimary");
     }
     if (isSessionUpgradePrompt) {
@@ -1951,21 +2086,19 @@ export default function Auth({
       timeLeft: sessionUpgradeTimeLeftText,
     });
   })();
-  const signModalConfirmText = isDisconnectedWebSessionUpgradePrompt
+  const signModalConfirmText = isDisconnectedSessionUpgradePrompt
     ? t(AUTH_MODAL_LOCALE, "auth.signModal.connect")
     : t(AUTH_MODAL_LOCALE, "auth.signModal.sign");
   const reconnectActiveWalletForSessionUpgrade = async (): Promise<void> => {
     try {
-      await seizeDisconnect();
+      setShowSignModal(false);
+      await seizeConnectFresh();
     } catch (error) {
-      logErrorSecurely("session_upgrade_disconnect_before_connect", error);
-      return;
+      logErrorSecurely("session_upgrade_connect_active_wallet", error);
     }
-
-    seizeConnect();
   };
   const onConfirmSignRequest = () => {
-    if (isDisconnectedWebSessionUpgradePrompt) {
+    if (isDisconnectedSessionUpgradePrompt) {
       void reconnectActiveWalletForSessionUpgrade();
       return;
     }
@@ -1990,7 +2123,7 @@ export default function Auth({
         receivedProfileProxies,
         activeProfileProxy,
         showWaves,
-        sessionUpgradeRequired,
+        sessionUpgradeRequired: sessionUpgradeRequired && !isDisconnecting,
         connectionStatus: getProfileConnectedStatus({
           profile: connectedProfile ?? null,
           isProxy: !!activeProfileProxy,
@@ -2039,7 +2172,7 @@ export default function Auth({
 
             <ul className={styles["signModalList"]}>
               <li>{signModalPrimaryListItem}</li>
-              {isDisconnectedWebSessionUpgradePrompt && (
+              {isDisconnectedSessionUpgradePrompt && (
                 <li>{signModalSharedConnectionListItem}</li>
               )}
               <li>{signModalSecondaryListItem}</li>

@@ -1,5 +1,6 @@
 "use client";
 
+import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
 import { useSearch } from "@/contexts/SearchContext";
 import type { CSSProperties, RefObject } from "react";
 import { type ReactNode, useMemo } from "react";
@@ -40,6 +41,10 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
       }) as CSSProperties,
     [sidebarWidth]
   );
+  const mainStyle = useMemo<CSSProperties>(
+    () => ({ paddingTop: CORE_TITLEBAR_HEIGHT_PX }),
+    []
+  );
 
   return (
     <div
@@ -64,7 +69,8 @@ const WebLayoutContent = ({ children, isSmall = false }: WebLayoutProps) => {
       </div>
       <main
         ref={searchContainerRef}
-        className="layout-main tw-min-w-0 tw-flex-1 tw-pt-[30px]"
+        className="layout-main tw-min-w-0 tw-flex-1"
+        style={mainStyle}
         data-mobile={isMobile}
         data-narrow={isNarrow}
         data-offcanvas={isOffcanvasOpen}

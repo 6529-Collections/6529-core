@@ -1,6 +1,7 @@
 export {};
 import {
   ElectronAPI,
+  ElectronNativeAuth,
   ElectronSeedConnector,
   ElectronStore,
   ElectronUpdater,
@@ -11,6 +12,7 @@ import {
 declare global {
   interface Window {
     api: ElectronAPI;
+    nativeAuth?: ElectronNativeAuth;
     updater: ElectronUpdater;
     store: ElectronStore;
     seedConnector: ElectronSeedConnector;

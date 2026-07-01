@@ -22,8 +22,7 @@ import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletReq
 export const SEED_WALLET_KEY = "seed-wallet-pass";
 
 const hasSeedWalletBridge = (): boolean =>
-  typeof window !== "undefined" &&
-  typeof window.api?.sendSync === "function";
+  typeof window !== "undefined" && typeof window.api?.sendSync === "function";
 
 interface SeedWalletContextType {
   isSeedWallet: boolean;
@@ -35,6 +34,7 @@ interface SeedWalletContextType {
   ) => void;
   setShowPasswordModal: (show: boolean) => void;
   lockWallet: () => void;
+  isSeedWalletModalOpen: boolean;
 }
 
 const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
@@ -44,7 +44,13 @@ const SeedWalletContext = createContext<SeedWalletContextType | undefined>(
 export const SeedWalletProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
-  const { address: activeAddress, connectionState } = useSeizeConnectContext();
+  const {
+    address: activeAddress,
+    connectionState,
+    isAddingConnectedAccount,
+    isDisconnecting,
+    seizeConnectOpen,
+  } = useSeizeConnectContext();
   const { connector: activeConnector } = useAccount();
   const chainId = useChainId();
   const connectors = useConnectors();
@@ -53,6 +59,7 @@ export const SeedWalletProvider: React.FC<{
   const [isFetched, setIsFetched] = useState(false);
 
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showRequestModal, setShowRequestModal] = useState(false);
 
   const [isSeedWallet, setIsSeedWallet] = useState<boolean>(false);
   const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
@@ -62,16 +69,23 @@ export const SeedWalletProvider: React.FC<{
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
   const [unlockedWallet, setUnlockedWallet] = useState<ethers.Wallet>();
   const lastConnectorSyncTargetRef = useRef<string | null>(null);
+  const isDisconnectingRef = useRef(false);
 
   const [pendingCallback, setPendingCallback] = useState<{
     callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void;
     request: SeedWalletRequest;
   }>();
+  isDisconnectingRef.current = isDisconnecting;
 
   const handleRequest = (
     callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void,
     request: SeedWalletRequest
   ) => {
+    if (isDisconnectingRef.current) {
+      window.seedConnector?.reject(request);
+      return;
+    }
+
     if (isFetched && unlockedWallet) {
       callback(unlockedWallet, request);
     } else {
@@ -129,6 +143,19 @@ export const SeedWalletProvider: React.FC<{
   useEffect(() => {
     connectedAddressRef.current = connectedAddress;
   }, [connectedAddress]);
+
+  useEffect(() => {
+    if (!isDisconnecting) {
+      return;
+    }
+
+    setShowPasswordModal(false);
+    setShowRequestModal(false);
+    if (pendingCallback) {
+      window.seedConnector?.reject(pendingCallback.request);
+      setPendingCallback(undefined);
+    }
+  }, [isDisconnecting, pendingCallback]);
 
   useEffect(() => {
     const handleDisconnect = () => {
@@ -234,7 +261,9 @@ export const SeedWalletProvider: React.FC<{
           return;
         }
 
-        if (!areEqualAddresses(connectedAddressRef.current, seedWallet.address)) {
+        if (
+          !areEqualAddresses(connectedAddressRef.current, seedWallet.address)
+        ) {
           lockWallet(false);
           setIsFetched(false);
           setConnectedAddress(seedWallet.address);
@@ -265,7 +294,13 @@ export const SeedWalletProvider: React.FC<{
   }, [activeAddress, connectionState, lockWallet]);
 
   useEffect(() => {
-    if (!isSeedWallet || !activeAddress) {
+    if (
+      !isSeedWallet ||
+      !activeAddress ||
+      seizeConnectOpen ||
+      isAddingConnectedAccount ||
+      isDisconnecting
+    ) {
       lastConnectorSyncTargetRef.current = null;
       return;
     }
@@ -296,7 +331,20 @@ export const SeedWalletProvider: React.FC<{
       connector: seedWalletConnector,
       chainId,
     });
-  }, [activeAddress, activeConnector?.uid, chainId, connect, connectors, isSeedWallet]);
+  }, [
+    activeAddress,
+    activeConnector?.uid,
+    chainId,
+    connect,
+    connectors,
+    isAddingConnectedAccount,
+    isDisconnecting,
+    isSeedWallet,
+    seizeConnectOpen,
+  ]);
+
+  const isSeedWalletModalOpen =
+    showPasswordModal || showRequestModal || !!pendingCallback;
 
   const value = {
     isSeedWallet,
@@ -305,6 +353,7 @@ export const SeedWalletProvider: React.FC<{
     handleRequest,
     setShowPasswordModal,
     lockWallet,
+    isSeedWalletModalOpen,
   };
 
   return (
@@ -313,7 +362,7 @@ export const SeedWalletProvider: React.FC<{
         <ConfirmSeedWalletLock
           name={lockedWallet.name}
           address={lockedWallet.address}
-          show={showPasswordModal}
+          show={showPasswordModal && !isDisconnecting}
           unlockedWallet={unlockedWallet}
           pendingRequest={pendingCallback?.request}
           onHide={() => {
@@ -340,7 +389,10 @@ export const SeedWalletProvider: React.FC<{
           onLock={lockWallet}
         />
       )}
-      <ConfirmSeedWalletRequest />
+      <ConfirmSeedWalletRequest
+        onShowChange={setShowRequestModal}
+        suppress={isDisconnecting}
+      />
       {children}
     </SeedWalletContext.Provider>
   );

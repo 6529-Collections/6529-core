@@ -66,6 +66,15 @@ const RENDERER_ROOT = fs.existsSync(path.join(__dirname, "renderer"))
   ? path.join(__dirname, "renderer")
   : __dirname;
 const NEXT_DIR = path.join(RENDERER_ROOT, ".next");
+const MAIN_CONFIG_DIR = path.join(__dirname, "main", "config");
+const MAIN_PUBLIC_RUNTIME_PATH = path.join(
+  MAIN_CONFIG_DIR,
+  "__PUBLIC_RUNTIME.json",
+);
+const MAIN_PRIVATE_RUNTIME_PATH = path.join(
+  MAIN_CONFIG_DIR,
+  "__PRIVATE_RUNTIME.json",
+);
 const SASS_LOAD_PATHS = [path.join(RENDERER_ROOT, "node_modules")];
 logOnce("NEXT_DIR", NEXT_DIR);
 
@@ -132,19 +141,30 @@ function persistBakedArtifacts(
   publicEnv: unknown,
   ASSETS_FROM_S3: boolean,
 ): void {
-  try {
-    fs.mkdirSync(NEXT_DIR, { recursive: true });
-    fs.writeFileSync(
-      path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
-      JSON.stringify(publicEnv),
-      "utf8",
-    );
-    fs.writeFileSync(
-      path.join(NEXT_DIR, "ASSETS_FROM_S3"),
-      ASSETS_FROM_S3 ? "true" : "false",
-      "utf8",
-    );
-  } catch {}
+  fs.mkdirSync(NEXT_DIR, { recursive: true });
+  fs.writeFileSync(
+    path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
+    JSON.stringify(publicEnv),
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(NEXT_DIR, "ASSETS_FROM_S3"),
+    ASSETS_FROM_S3 ? "true" : "false",
+    "utf8",
+  );
+}
+
+function persistPrivateRuntimeConfig(stagingApiKey: string | undefined): void {
+  fs.mkdirSync(MAIN_CONFIG_DIR, { recursive: true });
+  fs.writeFileSync(
+    MAIN_PRIVATE_RUNTIME_PATH,
+    JSON.stringify(
+      stagingApiKey ? { STAGING_API_KEY: stagingApiKey } : {},
+      null,
+      2,
+    ),
+    "utf8",
+  );
 }
 
 function loadBakedRuntimeConfig(VERSION: string): unknown {
@@ -154,7 +174,7 @@ function loadBakedRuntimeConfig(VERSION: string): unknown {
   } else {
     const candidates = [
       path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
-      path.join(__dirname, "main/config/__PUBLIC_RUNTIME.json"),
+      MAIN_PUBLIC_RUNTIME_PATH,
       path.join(__dirname, "config/public-runtime.json"),
     ];
     const p = candidates.find((candidate) => fs.existsSync(candidate));
@@ -318,6 +338,7 @@ function createSecurityHeaders(
 interface PublicEnv {
   API_ENDPOINT?: string;
   ALLOWLIST_API_ENDPOINT?: string;
+  BACKEND_TARGET?: "live" | "test";
   BASE_ENDPOINT?: string;
   ALCHEMY_API_KEY?: string;
   NEXTGEN_CHAIN_ID?: number;
@@ -344,6 +365,45 @@ interface PublicEnv {
   FARCASTER_WARPCAST_API_BASE?: string;
   FARCASTER_WARPCAST_API_KEY?: string;
   DROP_FORGE_TESTNET?: boolean;
+}
+
+const CORE_SCHEMES = {
+  local: "localcore6529",
+  staging: "stagingcore6529",
+  production: "core6529",
+} as const;
+
+type AppEnvironment = keyof typeof CORE_SCHEMES;
+
+function isAppEnvironment(value: unknown): value is AppEnvironment {
+  return (
+    value === "local" || value === "staging" || value === "production"
+  );
+}
+
+function normalizeCoreScheme(value: unknown): string | undefined {
+  if (typeof value !== "string") {
+    return undefined;
+  }
+  const normalized = value.trim().toLowerCase().replace(/:\/\/$/, "");
+  return Object.values(CORE_SCHEMES).includes(
+    normalized as (typeof CORE_SCHEMES)[AppEnvironment]
+  )
+    ? normalized
+    : undefined;
+}
+
+function getCoreScheme({
+  appEnvironment,
+  fallbackScheme,
+}: {
+  readonly appEnvironment: unknown;
+  readonly fallbackScheme: unknown;
+}): string {
+  if (isAppEnvironment(appEnvironment)) {
+    return CORE_SCHEMES[appEnvironment];
+  }
+  return normalizeCoreScheme(fallbackScheme) ?? CORE_SCHEMES.production;
 }
 
 function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
@@ -466,15 +526,11 @@ const nextConfigFactory = (phase: string): NextConfig => {
     dotenv.config({ path: `.env` });
 
     try {
-      const bakedMainPath = path.join(
-        __dirname,
-        "main/config/__PUBLIC_RUNTIME.json",
-      );
       const sourceJsonPath = path.join(__dirname, "config/public-runtime.json");
       let bakedSource: string | null = null;
-      if (fs.existsSync(bakedMainPath)) {
-        bakedSource = fs.readFileSync(bakedMainPath, "utf8");
-        logOnce("ENV fallback", `Loaded from ${bakedMainPath}`);
+      if (fs.existsSync(MAIN_PUBLIC_RUNTIME_PATH)) {
+        bakedSource = fs.readFileSync(MAIN_PUBLIC_RUNTIME_PATH, "utf8");
+        logOnce("ENV fallback", `Loaded from ${MAIN_PUBLIC_RUNTIME_PATH}`);
       } else if (fs.existsSync(sourceJsonPath)) {
         bakedSource = fs.readFileSync(sourceJsonPath, "utf8");
         logOnce("ENV fallback", `Loaded from ${sourceJsonPath}`);
@@ -499,6 +555,21 @@ const nextConfigFactory = (phase: string): NextConfig => {
     for (const key of Object.keys(shape)) publicRuntime[key] = process.env[key];
     publicRuntime.VERSION = VERSION;
     publicRuntime.ASSETS_FROM_S3 = String(ASSETS_FROM_S3);
+    publicRuntime.CORE_SCHEME = getCoreScheme({
+      appEnvironment: process.env.APP_ENVIRONMENT,
+      fallbackScheme: publicRuntime.CORE_SCHEME,
+    });
+    let privateStagingApiKey: string | undefined = undefined;
+    if (publicRuntime.BACKEND_TARGET === "test") {
+      privateStagingApiKey = process.env.STAGING_API_KEY?.trim();
+      if (!privateStagingApiKey) {
+        throw new Error(
+          "Test backend target requires STAGING_API_KEY. Add it to .env.local or export it before building.",
+        );
+      }
+    }
+    publicRuntime.STAGING_API_KEY = undefined;
+    persistPrivateRuntimeConfig(privateStagingApiKey);
 
     const parsed = publicEnvSchema.safeParse(publicRuntime);
     if (!parsed.success) throw parsed.error;
@@ -514,6 +585,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         PUBLIC_RUNTIME: JSON.stringify(publicEnv),
         API_ENDPOINT: publicEnv.API_ENDPOINT,
         ALLOWLIST_API_ENDPOINT: publicEnv.ALLOWLIST_API_ENDPOINT,
+        BACKEND_TARGET: publicEnv.BACKEND_TARGET,
         BASE_ENDPOINT: publicEnv.BASE_ENDPOINT,
         ALCHEMY_API_KEY: publicEnv.ALCHEMY_API_KEY,
         VERSION,
@@ -533,7 +605,6 @@ const nextConfigFactory = (phase: string): NextConfig => {
         DEV_MODE_WALLET_ADDRESS: publicEnv.DEV_MODE_WALLET_ADDRESS,
         DEV_MODE_AUTH_JWT: publicEnv.DEV_MODE_AUTH_JWT,
         USE_DEV_AUTH: publicEnv.USE_DEV_AUTH,
-        STAGING_API_KEY: publicEnv.STAGING_API_KEY,
         AWS_RUM_APP_ID: publicEnv.AWS_RUM_APP_ID,
         AWS_RUM_REGION: publicEnv.AWS_RUM_REGION,
         AWS_RUM_SAMPLE_RATE: publicEnv.AWS_RUM_SAMPLE_RATE,

@@ -93,6 +93,7 @@ jest.mock("@/services/auth/auth.utils", () => ({
   syncConnectedWalletProfile: jest.fn(),
   getAuthJwt: jest.fn(() => null),
   hasActiveSessionV2Auth: jest.fn(() => false),
+  hasRecentBrowserConnectorSessionV2Auth: jest.fn(() => false),
   AUTH_TOKEN_CHANGED_EVENT: "6529-auth-token-changed",
   PROFILE_SWITCHED_EVENT: "6529-profile-switched",
   WALLET_ACCOUNTS_UPDATED_EVENT: "6529-wallet-accounts-updated",
@@ -186,6 +187,14 @@ jest.mock("@/hooks/useIdentity", () => ({
   })),
 }));
 
+jest.mock("@/contexts/ModalStateContext", () => ({
+  useModalState: jest.fn(() => ({
+    addModal: jest.fn(),
+    removeModal: jest.fn(),
+    isTopModal: jest.fn(() => true),
+  })),
+}));
+
 // Mock TitleContext
 mockTitleContextModule();
 
@@ -205,6 +214,7 @@ jest.mock("@/contexts/SeizeSettingsContext", () => ({
 let walletAddress: string | null = "0x1";
 let connectionState: string = "connected";
 let canSignActiveWallet: boolean = true;
+let isDisconnecting: boolean = false;
 let connectedAccountsOverride:
   | readonly {
       readonly address: string;
@@ -243,6 +253,7 @@ jest.mock("@/components/auth/SeizeConnectContext", () => ({
         connectedAccounts,
       }),
       isConnected: !!walletAddress && canSignActiveWallet,
+      isDisconnecting,
       hasActiveWalletAddress: !!walletAddress,
       canSignActiveWallet,
       seizeConnect: mockSeizeConnect,
@@ -359,6 +370,7 @@ describe("Auth component", () => {
     walletAddress = "0x1";
     connectionState = "connected";
     canSignActiveWallet = true;
+    isDisconnecting = false;
     mockIsSigningPending = false;
     connectedAccountsOverride = null;
     mockAuthSettings = {
@@ -1500,6 +1512,29 @@ describe("Auth component", () => {
   });
 
   describe("Modal Behavior", () => {
+    it("does not reopen the sign modal while logout disconnect is settling", async () => {
+      walletAddress = "0x1111111111111111111111111111111111111111";
+      connectedAccountsOverride = [];
+      isDisconnecting = true;
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <div data-testid="auth-component">Auth Component</div>
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("auth-component")).toBeInTheDocument();
+      });
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+    });
+
     it("should show modal when sign modal state is true and connected", async () => {
       const mockValidateAuthImmediate =
         require("@/services/auth/immediate-validation.utils").validateAuthImmediate;

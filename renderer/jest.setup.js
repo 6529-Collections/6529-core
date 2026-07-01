@@ -162,7 +162,7 @@ if (!process.env.PUBLIC_RUNTIME) {
     ALLOWLIST_API_ENDPOINT: "https://allowlist-api.test.6529.io",
     NEXTGEN_CHAIN_ID: 1,
     MOBILE_APP_SCHEME: "testmobile6529",
-    CORE_SCHEME: "testcore6529",
+    CORE_SCHEME: "core6529",
     IPFS_API_ENDPOINT: "https://api-ipfs.test.6529.io",
     IPFS_GATEWAY_ENDPOINT: "https://ipfs.test.6529.io",
     MEDIA_RESOLVER_ENDPOINT: "https://media.6529.io",
@@ -283,7 +283,6 @@ jest.mock("@testing-library/react", () => {
   const { SeizeSettingsProvider } = jest.requireActual(
     "@/contexts/SeizeSettingsContext"
   );
-  const { SeizeSettingsMode } = jest.requireActual("@/types/enums");
   const { WagmiProvider } = jest.requireActual("wagmi");
   const { createConfig } = jest.requireActual("@wagmi/core");
   const { http } = jest.requireActual("viem");
@@ -324,11 +323,7 @@ jest.mock("@testing-library/react", () => {
         React.createElement(
           QueryClientProvider,
           { client: queryClient },
-          React.createElement(
-            SeizeSettingsProvider,
-            { mode: SeizeSettingsMode.LOCAL },
-            wrappedChildren
-          )
+          React.createElement(SeizeSettingsProvider, null, wrappedChildren)
         )
       );
     };

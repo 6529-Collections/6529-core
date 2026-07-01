@@ -87,6 +87,75 @@ export interface ElectronStore {
   remove: (key: string) => Promise<void>;
 }
 
+export type ElectronNativeAuthClientType = "native" | "desktop";
+
+export interface ElectronNativeAuthSessionResponse {
+  readonly client_type: ElectronNativeAuthClientType;
+  readonly address: string;
+  readonly role: string | null;
+  readonly access_token: string;
+  readonly access_token_expires_at: string;
+  readonly native_refresh_token: string;
+  readonly refresh_token_expires_at: string;
+}
+
+export interface ElectronNativeConnectionShareResponse {
+  readonly connection_share_code: string;
+  readonly expires_at: string;
+  readonly address: string;
+  readonly role: string | null;
+  readonly target_client_type: ElectronNativeAuthClientType;
+  readonly deep_link_path: string;
+}
+
+export interface ElectronNativeLegacyDesktopConnectionShareResponse {
+  readonly refresh_token: string;
+  readonly address: string;
+  readonly role: string | null;
+  readonly deep_link_path: string;
+}
+
+export interface ElectronNativeAuth {
+  isAvailable: () => Promise<boolean>;
+  removeRefreshToken: (request: {
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly client_address: string;
+  }) => Promise<void>;
+  sessionLogin: (request: {
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly server_signature: string;
+    readonly client_signature: string;
+    readonly client_address: string;
+    readonly role?: string | null;
+  }) => Promise<ElectronNativeAuthSessionResponse>;
+  sessionRefresh: (request: {
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly client_address: string;
+  }) => Promise<ElectronNativeAuthSessionResponse>;
+  createConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly target_client_type?: ElectronNativeAuthClientType;
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly client_address?: string;
+  }) => Promise<ElectronNativeConnectionShareResponse>;
+  createLegacyDesktopConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly client_address?: string;
+  }) => Promise<ElectronNativeLegacyDesktopConnectionShareResponse>;
+  redeemConnectionShare: (request: {
+    readonly access_token?: string | null;
+    readonly connection_share_code: string;
+    readonly target_client_type?: ElectronNativeAuthClientType;
+  }) => Promise<ElectronNativeAuthSessionResponse>;
+  sessionLogout: (request: {
+    readonly access_token?: string | null;
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly client_address: string;
+    readonly all_sessions: boolean;
+  }) => Promise<void>;
+}
+
 export interface ElectronNotifications {
   showNotification: (
     id: number,

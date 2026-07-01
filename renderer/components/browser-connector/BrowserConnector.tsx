@@ -7,6 +7,12 @@ import { useEffect, useState } from "react";
 import { Col, Container, Row } from "react-bootstrap";
 import BrowserConnectorConnect from "./BrowserConnectorConnect";
 import BrowserConnectorProvider from "./BrowserConnectorProvider";
+import {
+  BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS,
+  formatBrowserConnectorTimeLeft,
+  getCoreSchemeValidationError,
+  getExpectedCoreScheme,
+} from "./browserConnector.helpers";
 
 export default function BrowserConnector({
   image,
@@ -22,15 +28,18 @@ export default function BrowserConnector({
   const task = searchParams?.get("task");
   const scheme = searchParams?.get("scheme");
   const t = searchParams?.get("t");
+  const returnScheme = getExpectedCoreScheme();
+  const schemeValidationError = getCoreSchemeValidationError(scheme);
 
   useEffect(() => {
-    if (!t) {
+    if (!t || schemeValidationError) {
       setExpired(true);
       setTimeLeft(null);
       return;
     }
 
-    const expiryTime = parseInt(t) + 60 * 1000;
+    setExpired(false);
+    const expiryTime = parseInt(t) + BROWSER_CONNECTOR_REQUEST_TIMEOUT_MS;
 
     const calculateTimeLeft = () => {
       const now = Date.now();
@@ -51,7 +60,7 @@ export default function BrowserConnector({
     }, 1000);
 
     return () => clearInterval(intervalId);
-  }, [t]);
+  }, [schemeValidationError, t]);
 
   return (
     <Container fluid>
@@ -84,6 +93,14 @@ export default function BrowserConnector({
                 <h2 className="text-white">You're all set!</h2>
                 <p className="text-white">You can now close this window.</p>
               </div>
+            ) : schemeValidationError ? (
+              <div className="d-flex flex-column align-items-center justify-content-center">
+                <h2 className="text-white">Invalid desktop return target</h2>
+                <p className="text-white">{schemeValidationError}</p>
+                <p className="text-white">
+                  Close this window and retry from 6529 Desktop.
+                </p>
+              </div>
             ) : isExpired ? (
               <div className="d-flex flex-column align-items-center justify-content-center">
                 <h2 className="text-white">This page is expired</h2>
@@ -93,13 +110,13 @@ export default function BrowserConnector({
               <>
                 {task === "connect" && (
                   <BrowserConnectorConnect
-                    scheme={scheme}
+                    returnScheme={returnScheme}
                     setCompleted={setIsCompleted}
                   />
                 )}
                 {task === "provider" && (
                   <BrowserConnectorProvider
-                    scheme={scheme}
+                    returnScheme={returnScheme}
                     setCompleted={setIsCompleted}
                   />
                 )}
@@ -108,8 +125,8 @@ export default function BrowserConnector({
             <span className="font-color-h pb-2">
               {!isCompleted && timeLeft ? (
                 <>
-                  This page will expire in {(timeLeft / 1000).toFixed(0)}{" "}
-                  seconds
+                  This page will expire in{" "}
+                  {formatBrowserConnectorTimeLeft(timeLeft)}
                 </>
               ) : (
                 <></>

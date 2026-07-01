@@ -34,7 +34,10 @@ import type { QuickDmState } from "./QuickDirectMessagesUtils";
 
 const QUICK_DM_BASE_POSITION_CLASS =
   "tailwind-scope tw-fixed tw-right-6 tw-z-[70]";
-const QUICK_DM_PANEL_POSITION_CLASS = `${QUICK_DM_BASE_POSITION_CLASS} tw-bottom-24 xl:tw-bottom-6`;
+// 6529 Core only: keep the open panel out of the Electron titlebar widget gutter
+// when refreshing this file from the frontend subtree.
+const QUICK_DM_PANEL_POSITION_CLASS =
+  "tailwind-scope tw-fixed tw-right-[50px] tw-z-[70] tw-bottom-24 xl:tw-bottom-6";
 const QUICK_DM_LAUNCHER_BASE_POSITION_CLASS = `${QUICK_DM_BASE_POSITION_CLASS} tw-transition-[bottom] tw-duration-200 tw-ease-out motion-reduce:tw-transition-none`;
 const QUICK_DM_LAUNCHER_RESTING_POSITION_CLASS = "tw-bottom-24 xl:tw-bottom-6";
 const QUICK_DM_LAUNCHER_LIFTED_POSITION_CLASS = "tw-bottom-32 xl:tw-bottom-32";

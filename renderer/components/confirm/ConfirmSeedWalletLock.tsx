@@ -21,6 +21,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers } from "ethers";
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { RefObject } from "react";
 import { SEED_MIN_PASS_LENGTH } from "../core/core-wallet/SeedWalletModal";
 
 const SEED_WALLET_LOCK_MODAL = "ConfirmSeedWalletLockModal";
@@ -43,6 +44,17 @@ export default function ConfirmSeedWalletLock(
   const [passHidden, setPassHidden] = useState(true);
   const { showToast } = useToast();
   const { isTopModal, addModal, removeModal } = useModalState();
+  const isCurrentTopModal = isTopModal(SEED_WALLET_LOCK_MODAL);
+
+  const focusPasswordInput = useCallback(() => {
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+
+    input.focus({ preventScroll: true });
+    input.select();
+  }, []);
 
   useEffect(() => {
     if (!props.show) {
@@ -57,6 +69,30 @@ export default function ConfirmSeedWalletLock(
     else removeModal(SEED_WALLET_LOCK_MODAL);
     return () => removeModal(SEED_WALLET_LOCK_MODAL);
   }, [props.show, addModal, removeModal]);
+
+  useEffect(() => {
+    if (!props.show || props.unlockedWallet || !isCurrentTopModal) {
+      return;
+    }
+
+    const animationFrameId =
+      globalThis.requestAnimationFrame?.(focusPasswordInput) ?? null;
+    const focusTimeout = setTimeout(focusPasswordInput, 75);
+    const settledFocusTimeout = setTimeout(focusPasswordInput, 175);
+
+    return () => {
+      if (animationFrameId !== null) {
+        globalThis.cancelAnimationFrame?.(animationFrameId);
+      }
+      clearTimeout(focusTimeout);
+      clearTimeout(settledFocusTimeout);
+    };
+  }, [
+    focusPasswordInput,
+    isCurrentTopModal,
+    props.show,
+    props.unlockedWallet,
+  ]);
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (
@@ -112,8 +148,14 @@ export default function ConfirmSeedWalletLock(
       }
       titleClassName="tw-m-0 tw-flex tw-items-center tw-gap-3 tw-text-lg tw-font-semibold"
       footerClassName={confirmModalFooterBetween}
+      {...(props.unlockedWallet || !isCurrentTopModal
+        ? {}
+        : {
+            initialFocusRef:
+              inputRef as unknown as RefObject<HTMLElement | null>,
+          })}
       dialogClassName={
-        !isTopModal(SEED_WALLET_LOCK_MODAL) ? "tw-blur-[5px]" : ""
+        !isCurrentTopModal ? "tw-blur-[5px]" : ""
       }
       footer={
         <>
@@ -191,6 +233,7 @@ export default function ConfirmSeedWalletLock(
             placeholder="******"
             value={walletPass}
             className={confirmInputClass}
+            onFocus={(event) => event.currentTarget.select()}
             onChange={(e) => setWalletPass(e.target.value)}
             onKeyDown={handleKeyPress}
           />

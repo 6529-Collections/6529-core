@@ -16,7 +16,14 @@ import { SeedWalletRequest } from "@/shared/types";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers, formatUnits } from "ethers";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
@@ -45,7 +52,13 @@ function parseTransactionData(data: string) {
   return { selector: functionSelector, args: decodedArgs };
 }
 
-export default function ConfirmSeedWalletRequest() {
+export default function ConfirmSeedWalletRequest({
+  onShowChange,
+  suppress = false,
+}: Readonly<{
+  onShowChange?: (show: boolean) => void;
+  suppress?: boolean | undefined;
+}> = {}) {
   const [show, setShow] = useState(false);
   const { isTopModal, addModal, removeModal } = useModalState();
   const seedWalletContext = useSeedWallet();
@@ -59,6 +72,8 @@ export default function ConfirmSeedWalletRequest() {
   const [showParsed, setShowParsed] = useState(false);
   const [seedRequest, setSeedRequest] = useState<SeedWalletRequest>();
   const hasMounted = useRef(false);
+  const onShowChangeRef = useRef(onShowChange);
+  const latestShowRef = useRef(show);
 
   const hasEnoughBalance = useMemo(() => {
     if (!seedRequest?.params[0]?.value || !balance.data) return true;
@@ -72,10 +87,27 @@ export default function ConfirmSeedWalletRequest() {
     return () => removeModal(SEED_WALLET_REQUEST_MODAL);
   }, [show, addModal, removeModal]);
 
-  const clear = () => {
+  useEffect(() => {
+    onShowChangeRef.current = onShowChange;
+  }, [onShowChange]);
+
+  useEffect(() => {
+    latestShowRef.current = show;
+    onShowChange?.(show);
+  }, [onShowChange, show]);
+
+  useEffect(() => {
+    return () => {
+      if (latestShowRef.current) {
+        onShowChangeRef.current?.(false);
+      }
+    };
+  }, []);
+
+  const clear = useCallback(() => {
     setSeedRequest(undefined);
     setShow(false);
-  };
+  }, []);
 
   const onReject = (request: SeedWalletRequest) => {
     window.seedConnector.reject(request);
@@ -86,6 +118,15 @@ export default function ConfirmSeedWalletRequest() {
     window.seedConnector.confirm(request);
     clear();
   };
+
+  useEffect(() => {
+    if (!suppress || !seedRequest) {
+      return;
+    }
+
+    window.seedConnector.reject(seedRequest);
+    clear();
+  }, [clear, seedRequest, suppress]);
 
   const requestHandler = (
     wallet: ethers.Wallet | null,
@@ -119,15 +160,11 @@ export default function ConfirmSeedWalletRequest() {
     };
   }, [seedWalletContext.isSeedWallet, showToast]);
 
-  function getHtml(index: number, param: string) {
-    let content = "";
+  function getPersonalSignParamLines(param: string): string[] {
     if (isValidEthAddress(param)) {
-      content = param;
-    } else {
-      const parsed = hexToString(param).replace(/^\n+/, "");
-      content = parsed.replaceAll("\n", "<br>");
+      return [param];
     }
-    return `${index + 1}: ${content}`;
+    return hexToString(param).replace(/^\n+/, "").split("\n");
   }
 
   function printParams(request: SeedWalletRequest) {
@@ -135,32 +172,44 @@ export default function ConfirmSeedWalletRequest() {
       return (
         <>
           <span>Parameters</span>
-          {request?.params?.map((param, index) => (
-            <code
-              key={param}
-              className="tw-block tw-pt-3 tw-pb-3 tw-break-all"
-              dangerouslySetInnerHTML={{ __html: getHtml(index, param) }}
-            />
-          ))}
+          {request?.params?.map((param, index) => {
+            const lines = getPersonalSignParamLines(param);
+            return (
+              <code
+                key={`${index}-${param}`}
+                className="tw-block tw-break-all tw-pb-3 tw-pt-3"
+              >
+                <span>{index + 1}: </span>
+                {lines.map((line, lineIndex) => (
+                  <Fragment key={`${lineIndex}-${line}`}>
+                    {lineIndex > 0 && <br />}
+                    {line}
+                  </Fragment>
+                ))}
+              </code>
+            );
+          })}
         </>
       );
     } else if (request.method === "eth_sendTransaction") {
       const param = request?.params[0];
-      const parsedData = param?.data ? parseTransactionData(param.data) : undefined;
+      const parsedData = param?.data
+        ? parseTransactionData(param.data)
+        : undefined;
       return (
         <>
           {param?.value && (
             <>
               <span className="tw-block tw-pt-3">Value</span>
-              <code className="tw-block tw-pb-3 tw-break-all">
+              <code className="tw-block tw-break-all tw-pb-3">
                 {formatUnits(BigInt(param.value))}
               </code>
             </>
           )}
           <span className="tw-block tw-pt-3">From</span>
-          <code className="tw-block tw-pb-3 tw-break-all">{param?.from}</code>
+          <code className="tw-block tw-break-all tw-pb-3">{param?.from}</code>
           <span className="tw-block tw-pt-3">To</span>
-          <code className="tw-block tw-pb-3 tw-break-all">{param?.to}</code>
+          <code className="tw-block tw-break-all tw-pb-3">{param?.to}</code>
           {parsedData && param?.data && (
             <>
               <span className="tw-flex tw-items-center tw-justify-between tw-pt-3">
@@ -176,18 +225,18 @@ export default function ConfirmSeedWalletRequest() {
               {showParsed ? (
                 <>
                   <span className="tw-block tw-pt-3">Function Selector</span>
-                  <code className="tw-block tw-pb-1 tw-break-all">
+                  <code className="tw-block tw-break-all tw-pb-1">
                     {parsedData.selector}
                   </code>
-                  <span className="tw-block tw-pt-1 tw-pb-1">Arguments</span>
+                  <span className="tw-block tw-pb-1 tw-pt-1">Arguments</span>
                   {parsedData.args.map((arg, index) => (
-                    <code key={index} className="tw-block tw-pb-1 tw-break-all">
+                    <code key={index} className="tw-block tw-break-all tw-pb-1">
                       {index + 1}. {arg}
                     </code>
                   ))}
                 </>
               ) : (
-                <code className="tw-block tw-pt-3 tw-pb-3 tw-break-all">
+                <code className="tw-block tw-break-all tw-pb-3 tw-pt-3">
                   {param.data}
                 </code>
               )}
@@ -197,7 +246,7 @@ export default function ConfirmSeedWalletRequest() {
       );
     } else {
       return request?.params?.map((param, index) => (
-        <code key={index} className="tw-block tw-pt-3 tw-pb-3 tw-break-all">
+        <code key={index} className="tw-block tw-break-all tw-pb-3 tw-pt-3">
           {JSON.stringify(param)}
         </code>
       ));
@@ -257,7 +306,7 @@ export default function ConfirmSeedWalletRequest() {
         </>
       }
     >
-      <div className="tw-mt-2 tw-mb-2">
+      <div className="tw-mb-2 tw-mt-2">
         <span className="tw-flex tw-flex-col">
           <span>Method</span>
           <code className="tw-break-all">{seedRequest.method}</code>
