@@ -37,11 +37,6 @@ import {
 
 const useBreakpoint = createBreakpoint({ XL: 1400, LG: 1024, S: 0 });
 const ELECTRON_WEB_LAYOUT_TOP_OFFSET_FALLBACK_PX = 30;
-const CORE_WAVES_CONTENT_HEIGHT_VAR = "--core-waves-content-height";
-
-type WavesContentContainerStyle = React.CSSProperties & {
-  [CORE_WAVES_CONTENT_HEIGHT_VAR]?: string;
-};
 
 interface WavesMessagesWrapperProps {
   readonly children: ReactNode;
@@ -107,7 +102,7 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
     };
   }, [isDesktopElectron, measureWavesContainerTopOffset]);
 
-  const wavesContentContainerStyle = useMemo<WavesContentContainerStyle>(() => {
+  const wavesContentContainerStyle = useMemo<React.CSSProperties>(() => {
     if (!isDesktopElectron || spaces.headerSpace > 0) {
       return contentContainerStyle;
     }
@@ -121,7 +116,6 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
       display: "flex",
       height,
       maxHeight: height,
-      [CORE_WAVES_CONTENT_HEIGHT_VAR]: height,
     };
   }, [
     contentContainerStyle,

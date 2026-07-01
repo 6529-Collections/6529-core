@@ -74,7 +74,6 @@ interface WaveChatLeaveHandlerProps {
 }
 
 const MAX_UNSUPPORTED_FILE_NAMES_IN_TOAST = 3;
-const CORE_WAVES_CONTENT_HEIGHT = "var(--core-waves-content-height, 100%)";
 const noop = () => {};
 
 const WaveChatLeaveHandler: React.FC<WaveChatLeaveHandlerProps> = ({
@@ -233,8 +232,8 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
 
     return {
       ...waveViewStyle,
-      height: CORE_WAVES_CONTENT_HEIGHT,
-      maxHeight: CORE_WAVES_CONTENT_HEIGHT,
+      height: "100%",
+      maxHeight: "100%",
     };
   }, [waveViewStyle, waveViewStyleOverride]);
 
