@@ -32,6 +32,17 @@ const getHeaders = (
   };
 };
 
+const resolveWalletAuthHeadersOption = ({
+  includeAuthHeaders = true,
+  includeWalletAuth,
+  includeWalletAuthHeaders,
+}: {
+  readonly includeAuthHeaders?: boolean | undefined;
+  readonly includeWalletAuth?: boolean | undefined;
+  readonly includeWalletAuthHeaders?: boolean | undefined;
+}): boolean =>
+  includeWalletAuthHeaders ?? includeWalletAuth ?? includeAuthHeaders;
+
 const buildUrl = (
   endpoint: string,
   params?: Record<string, string>,
@@ -350,6 +361,7 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
   errorMode?: ApiErrorMode | undefined;
   includeAuthHeaders?: boolean | undefined;
   includeStagingAuthHeaders?: boolean | undefined;
+  includeWalletAuth?: boolean | undefined;
   includeWalletAuthHeaders?: boolean | undefined;
 }): Promise<T> => {
   const url = buildUrl(
@@ -372,7 +384,11 @@ export const commonApiFetch = async <T, U = Record<string, string>>(param: {
       false,
       param.includeAuthHeaders ?? true,
       param.includeStagingAuthHeaders ?? param.includeAuthHeaders ?? true,
-      param.includeWalletAuthHeaders ?? param.includeAuthHeaders ?? true
+      resolveWalletAuthHeadersOption({
+        includeAuthHeaders: param.includeAuthHeaders,
+        includeWalletAuth: param.includeWalletAuth,
+        includeWalletAuthHeaders: param.includeWalletAuthHeaders,
+      })
     ),
     signal: param.signal,
     errorMode: param.errorMode ?? "legacy-string",
@@ -416,6 +432,10 @@ export const commonApiFetchWithRetry = async <
   readonly headers?: Record<string, string> | undefined;
   readonly params?: U | undefined;
   readonly signal?: AbortSignal | undefined;
+  readonly includeAuthHeaders?: boolean | undefined;
+  readonly includeStagingAuthHeaders?: boolean | undefined;
+  readonly includeWalletAuth?: boolean | undefined;
+  readonly includeWalletAuthHeaders?: boolean | undefined;
   readonly retryOptions?: RetryOptions | undefined;
 }): Promise<T> => {
   const { retryOptions, ...fetchParams } = param;
@@ -506,6 +526,10 @@ export const commonApiPost = async <T, U, Z = Record<string, string>>(param: {
   errorMode?: ApiErrorMode | undefined;
   credentials?: RequestCredentials | undefined;
   parseJson?: boolean | undefined;
+  includeAuthHeaders?: boolean | undefined;
+  includeStagingAuthHeaders?: boolean | undefined;
+  includeWalletAuth?: boolean | undefined;
+  includeWalletAuthHeaders?: boolean | undefined;
 }): Promise<U> => {
   const url = buildUrl(
     param.endpoint,
@@ -515,7 +539,17 @@ export const commonApiPost = async <T, U, Z = Record<string, string>>(param: {
   return executeApiRequest<U>({
     url,
     method: "POST",
-    headers: getHeaders(param.headers, true),
+    headers: getHeaders(
+      param.headers,
+      true,
+      param.includeAuthHeaders ?? true,
+      param.includeStagingAuthHeaders ?? param.includeAuthHeaders ?? true,
+      resolveWalletAuthHeadersOption({
+        includeAuthHeaders: param.includeAuthHeaders,
+        includeWalletAuth: param.includeWalletAuth,
+        includeWalletAuthHeaders: param.includeWalletAuthHeaders,
+      })
+    ),
     body: JSON.stringify(param.body),
     signal: param.signal,
     parseJson: param.parseJson ?? true,

@@ -388,7 +388,10 @@ export async function loginWithSessionV2({
     return response;
   }
 
-  const response = await commonApiPost<SessionLoginRequest, SessionLoginResponse>({
+  const response = await commonApiPost<
+    SessionLoginRequest,
+    SessionLoginResponse
+  >({
     endpoint: "auth/session-login",
     body: {
       client_type: clientType,
@@ -450,6 +453,7 @@ async function executeSessionRefreshV2({
         signal: abortSignal,
         credentials: "include",
         errorMode: "structured",
+        includeWalletAuthHeaders: false,
       });
     } catch (error: unknown) {
       if (isUnauthorizedApiError(error)) {
@@ -475,6 +479,7 @@ async function executeSessionRefreshV2({
       signal: abortSignal,
       credentials: "include",
       errorMode: "structured",
+      includeWalletAuthHeaders: false,
     });
   } catch (error: unknown) {
     if (isUnauthorizedApiError(error)) {
@@ -611,11 +616,13 @@ export async function persistSessionResponse(
     throw error;
   }
 
-  if (!didPersistAuth) {
-    await rollbackUnpersistedSession(response, didPersistNativeRefreshToken);
+  if (didPersistAuth) {
+    clearSessionRefreshFailureForSession(response);
+    return true;
   }
 
-  return didPersistAuth;
+  await rollbackUnpersistedSession(response, didPersistNativeRefreshToken);
+  return false;
 }
 
 export async function verifyActiveSessionV2WebSession({
@@ -629,7 +636,10 @@ export async function verifyActiveSessionV2WebSession({
     address,
     abortSignal,
   });
-  if (!refreshedSession || refreshedSession.client_type !== getSessionClientType()) {
+  if (
+    !refreshedSession ||
+    refreshedSession.client_type !== getSessionClientType()
+  ) {
     return false;
   }
 

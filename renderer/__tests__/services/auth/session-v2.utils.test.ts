@@ -416,6 +416,7 @@ describe("session-v2.utils", () => {
       signal: undefined,
       credentials: "include",
       errorMode: "structured",
+      includeWalletAuthHeaders: false,
     });
   });
 
@@ -437,6 +438,7 @@ describe("session-v2.utils", () => {
       signal: undefined,
       credentials: "include",
       errorMode: "structured",
+      includeWalletAuthHeaders: false,
     });
   });
 
@@ -463,6 +465,7 @@ describe("session-v2.utils", () => {
       signal: undefined,
       credentials: "include",
       errorMode: "structured",
+      includeWalletAuthHeaders: false,
     });
     expect(setAuthJwt).toHaveBeenCalledWith(
       "0xabc",
@@ -537,6 +540,7 @@ describe("session-v2.utils", () => {
       signal: undefined,
       credentials: "include",
       errorMode: "structured",
+      includeWalletAuthHeaders: false,
     });
     expect(getNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
   });
