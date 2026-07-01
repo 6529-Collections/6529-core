@@ -1662,7 +1662,7 @@ export default function Auth({
 
   useEffect(() => {
     const authAddress = address?.toLowerCase() ?? null;
-    if (!authAddress || !isSeedWallet) {
+    if (!authAddress || !isSeedWallet || isDisconnecting) {
       seedWalletAutoAuthAddressRef.current = null;
       return;
     }
@@ -1704,6 +1704,7 @@ export default function Auth({
     isAddressAuthorized,
     isBrowserConnectorRoute,
     isSeedWallet,
+    isDisconnecting,
     isSeedWalletModalOpen,
     showSignModal,
     signModalReason,

@@ -4,12 +4,19 @@ import useCreateModalState from "@/hooks/useCreateModalState";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createBreakpoint } from "react-use";
 import { getActiveWaveIdFromUrl } from "@/helpers/navigation.helpers";
 import { markDropCloseNavigation } from "@/helpers/drop-close-navigation.helpers";
 import type { ApiDrop } from "../../generated/models/ApiDrop";
-import { isElectron } from "../../helpers";
+import { isElectron } from "@/helpers";
 import { DropSize } from "../../helpers/waves/drop.helpers";
 import { useSidebarState } from "../../hooks/useSidebarState";
 import { useAuth } from "../auth/Auth";
@@ -29,7 +36,7 @@ import {
 } from "@/services/api/drop-api";
 
 const useBreakpoint = createBreakpoint({ XL: 1400, LG: 1024, S: 0 });
-const ELECTRON_WEB_LAYOUT_TOP_OFFSET_PX = 30;
+const ELECTRON_WEB_LAYOUT_TOP_OFFSET_FALLBACK_PX = 30;
 
 interface WavesMessagesWrapperProps {
   readonly children: ReactNode;
@@ -49,12 +56,60 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
 
   // Access layout context for pre-calculated styles
   const { contentContainerStyle, spaces } = useLayout();
+  const isDesktopElectron = isElectron();
+  const wavesContainerRef = useRef<HTMLDivElement | null>(null);
+  const [wavesContainerTopOffset, setWavesContainerTopOffset] = useState(0);
+
+  const measureWavesContainerTopOffset = useCallback(() => {
+    const topOffset = wavesContainerRef.current?.getBoundingClientRect().top;
+    const nextTopOffset =
+      typeof topOffset === "number" && Number.isFinite(topOffset)
+        ? Math.max(0, Math.ceil(topOffset))
+        : 0;
+
+    setWavesContainerTopOffset((currentTopOffset) =>
+      currentTopOffset === nextTopOffset ? currentTopOffset : nextTopOffset
+    );
+  }, []);
+
+  const setWavesContainerRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      wavesContainerRef.current = node;
+
+      if (node && isDesktopElectron) {
+        measureWavesContainerTopOffset();
+      }
+    },
+    [isDesktopElectron, measureWavesContainerTopOffset]
+  );
+
+  useLayoutEffect(() => {
+    if (!isDesktopElectron) {
+      setWavesContainerTopOffset(0);
+      return;
+    }
+
+    measureWavesContainerTopOffset();
+
+    const animationFrame = window.requestAnimationFrame(
+      measureWavesContainerTopOffset
+    );
+    window.addEventListener("resize", measureWavesContainerTopOffset);
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener("resize", measureWavesContainerTopOffset);
+    };
+  }, [isDesktopElectron, measureWavesContainerTopOffset]);
+
   const wavesContentContainerStyle = useMemo<React.CSSProperties>(() => {
-    if (!isElectron() || spaces.headerSpace > 0) {
+    if (!isDesktopElectron || spaces.headerSpace > 0) {
       return contentContainerStyle;
     }
 
-    const height = `calc(100dvh - ${ELECTRON_WEB_LAYOUT_TOP_OFFSET_PX}px - ${spaces.spacerSpace}px)`;
+    const topOffset =
+      wavesContainerTopOffset || ELECTRON_WEB_LAYOUT_TOP_OFFSET_FALLBACK_PX;
+    const height = `calc(100dvh - ${topOffset}px - ${spaces.spacerSpace}px)`;
 
     return {
       ...contentContainerStyle,
@@ -62,7 +117,13 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
       height,
       maxHeight: height,
     };
-  }, [contentContainerStyle, spaces.headerSpace, spaces.spacerSpace]);
+  }, [
+    contentContainerStyle,
+    isDesktopElectron,
+    spaces.headerSpace,
+    spaces.spacerSpace,
+    wavesContainerTopOffset,
+  ]);
 
   // Get global sidebar state
   const { isRightSidebarOpen, closeRightSidebar } = useSidebarState();
@@ -156,6 +217,7 @@ const WavesMessagesWrapper: React.FC<WavesMessagesWrapperProps> = ({
         <div className="tw-relative tw-flex tw-min-h-0 tw-flex-grow">
           <div className="tw-relative tw-mx-auto tw-flex tw-min-h-0 tw-w-full tw-max-w-full tw-flex-grow">
             <div
+              ref={setWavesContainerRef}
               className="tw-relative tw-flex tw-min-h-0 tw-w-full tw-overflow-hidden"
               style={wavesContentContainerStyle}
             >

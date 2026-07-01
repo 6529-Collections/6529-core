@@ -1,8 +1,9 @@
 import WavesMessagesWrapper from "@/components/shared/WavesMessagesWrapper";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 
 let mockBreakpoint = "LG";
+let mockIsElectron = false;
 let mockWaveId: string | null = null;
 
 const mockChildMounted = jest.fn();
@@ -22,6 +23,10 @@ jest.mock("next/navigation", () => ({
 
 jest.mock("@/helpers/navigation.helpers", () => ({
   getActiveWaveIdFromUrl: () => mockWaveId,
+}));
+
+jest.mock("@/helpers", () => ({
+  isElectron: () => mockIsElectron,
 }));
 
 jest.mock("@tanstack/react-query", () => ({
@@ -107,6 +112,7 @@ function renderWrapper() {
 describe("WavesMessagesWrapper", () => {
   beforeEach(() => {
     mockBreakpoint = "LG";
+    mockIsElectron = false;
     mockWaveId = null;
     jest.clearAllMocks();
     mockUseQuery.mockReturnValue({ data: undefined, error: null });
@@ -142,5 +148,31 @@ describe("WavesMessagesWrapper", () => {
     expect(screen.getByTestId("main-content")).toBeInTheDocument();
     expect(screen.queryByTestId("left-sidebar")).not.toBeInTheDocument();
     expect(mockChildMounted).toHaveBeenCalledTimes(1);
+  });
+
+  it("sizes electron waves content from its measured viewport offset", async () => {
+    mockIsElectron = true;
+    jest.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
+      bottom: 900,
+      height: 856,
+      left: 0,
+      right: 1200,
+      toJSON: jest.fn(),
+      top: 44,
+      width: 1200,
+      x: 0,
+      y: 44,
+    });
+
+    renderWrapper();
+
+    const wavesShell = screen.getByTestId("left-sidebar").parentElement;
+    expect(wavesShell).not.toBeNull();
+    await waitFor(() => {
+      expect(wavesShell).toHaveStyle({
+        height: "calc(100dvh - 44px - 0px)",
+        maxHeight: "calc(100dvh - 44px - 0px)",
+      });
+    });
   });
 });

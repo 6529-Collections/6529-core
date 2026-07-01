@@ -48,6 +48,7 @@ export const SeedWalletProvider: React.FC<{
     address: activeAddress,
     connectionState,
     isAddingConnectedAccount,
+    isDisconnecting,
     seizeConnectOpen,
   } = useSeizeConnectContext();
   const { connector: activeConnector } = useAccount();
@@ -277,7 +278,8 @@ export const SeedWalletProvider: React.FC<{
       !isSeedWallet ||
       !activeAddress ||
       seizeConnectOpen ||
-      isAddingConnectedAccount
+      isAddingConnectedAccount ||
+      isDisconnecting
     ) {
       lastConnectorSyncTargetRef.current = null;
       return;
@@ -316,6 +318,7 @@ export const SeedWalletProvider: React.FC<{
     connect,
     connectors,
     isAddingConnectedAccount,
+    isDisconnecting,
     isSeedWallet,
     seizeConnectOpen,
   ]);
