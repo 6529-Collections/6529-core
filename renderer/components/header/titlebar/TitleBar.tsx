@@ -382,6 +382,10 @@ export default function TitleBar() {
   const versionClass = styles["version"] ?? "";
   const infoClass = styles["info"] ?? "";
   const disabledClass = styles["disabled"] ?? "";
+  const environmentLabelElement = environmentLabel ? (
+    <span className={styles["environmentLabel"]}>{environmentLabel}</span>
+  ) : null;
+  const versionElement = version ? <span>{version}</span> : null;
 
   return (
     <>
@@ -484,12 +488,17 @@ export default function TitleBar() {
         )}
       </span>
       <span className={`${versionClass} ${versionPositionClass}`}>
-        {environmentLabel && (
-          <span className={styles["environmentLabel"]}>
-            {environmentLabel}
-          </span>
+        {isMacPlatform ? (
+          <>
+            {environmentLabelElement}
+            {versionElement}
+          </>
+        ) : (
+          <>
+            {versionElement}
+            {environmentLabelElement}
+          </>
         )}
-        {version}
       </span>
       <TooltipButton
         buttonStyles={`${infoClass} ${infoPositionClass} ${
