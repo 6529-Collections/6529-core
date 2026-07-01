@@ -34,6 +34,10 @@ Object.defineProperty(HTMLVideoElement.prototype, "pause", {
   writable: true,
   value: jest.fn(),
 });
+Object.defineProperty(HTMLVideoElement.prototype, "canPlayType", {
+  writable: true,
+  value: jest.fn(() => ""),
+});
 
 function TestComponent(props: any) {
   const { videoRef, isLoading } = useHlsPlayer(props);
@@ -41,12 +45,47 @@ function TestComponent(props: any) {
 }
 
 describe("useHlsPlayer", () => {
+  beforeEach(() => {
+    (HTMLVideoElement.prototype.canPlayType as jest.Mock).mockReturnValue("");
+  });
+
   it("handles non-HLS video sources correctly", () => {
     const { getByTestId } = render(
       <TestComponent src="video.mp4" isHls={false} />
     );
     const video = getByTestId("vid") as HTMLVideoElement;
     expect(video.src).toContain("video.mp4");
+    expect(video.getAttribute("data-loading")).toBe("false");
+  });
+
+  it("uses native HLS when the browser can play m3u8 sources", () => {
+    (HTMLVideoElement.prototype.canPlayType as jest.Mock).mockReturnValue(
+      "probably"
+    );
+
+    const { getByTestId } = render(
+      <TestComponent src="video.m3u8" isHls fallbackSrc="fallback.mp4" />
+    );
+    const video = getByTestId("vid") as HTMLVideoElement;
+    expect(video.src).toContain("video.m3u8");
+    expect(video.getAttribute("data-loading")).toBe("false");
+  });
+
+  it("falls back when native HLS emits an error", () => {
+    (HTMLVideoElement.prototype.canPlayType as jest.Mock).mockReturnValue(
+      "probably"
+    );
+
+    const { getByTestId } = render(
+      <TestComponent src="video.m3u8" isHls fallbackSrc="fallback.mp4" />
+    );
+    const video = getByTestId("vid") as HTMLVideoElement;
+
+    act(() => {
+      video.dispatchEvent(new Event("error"));
+    });
+
+    expect(video.src).toContain("fallback.mp4");
     expect(video.getAttribute("data-loading")).toBe("false");
   });
 
@@ -74,6 +113,24 @@ describe("useHlsPlayer", () => {
     expect(video.getAttribute("data-loading")).toBe("false");
   });
 
+  it("does not attach a source while disabled", () => {
+    const { getByTestId } = render(
+      <TestComponent src="video.mp4" isHls={false} enabled={false} />
+    );
+    const video = getByTestId("vid") as HTMLVideoElement;
+    expect(video.src).toBe("");
+    expect(video.getAttribute("data-loading")).toBe("false");
+  });
+
+  it("does not assign unsafe non-HLS video sources", () => {
+    const { getByTestId } = render(
+      <TestComponent src="javascript:alert(1)" isHls={false} />
+    );
+    const video = getByTestId("vid") as HTMLVideoElement;
+    expect(video.src).toBe("");
+    expect(video.getAttribute("data-loading")).toBe("false");
+  });
+
   it("cleans up video on unmount", () => {
     const { getByTestId, unmount } = render(
       <TestComponent src="v.mp4" isHls={false} />
@@ -92,14 +149,5 @@ describe("useHlsPlayer", () => {
     rerender(<TestComponent src="b.mp4" isHls={false} />);
     const video = getByTestId("vid") as HTMLVideoElement;
     expect(video.src).toContain("b.mp4");
-  });
-
-  it("does not assign unsafe non-HLS video sources", () => {
-    const { getByTestId } = render(
-      <TestComponent src="javascript:alert(1)" isHls={false} />
-    );
-    const video = getByTestId("vid") as HTMLVideoElement;
-    expect(video.src).toBe("");
-    expect(video.getAttribute("data-loading")).toBe("false");
   });
 });
