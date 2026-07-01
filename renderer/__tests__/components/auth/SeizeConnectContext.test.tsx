@@ -1612,8 +1612,10 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
       expect(screen.getByTestId("disconnect-btn")).toBeInTheDocument();
     });
 
+    mockGetWalletAddress.mockClear();
     await userEvent.click(screen.getByTestId("disconnect-btn"));
     expect(mockDisconnect).toHaveBeenCalled();
+    expect(mockGetWalletAddress).not.toHaveBeenCalled();
   });
 
   it("should handle disconnect and logout", async () => {

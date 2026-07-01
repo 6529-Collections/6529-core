@@ -73,16 +73,25 @@ export function getEnvironment(): string {
   return packageJson.env.ENVIRONMENT;
 }
 
-export function getBackendTarget(): BackendTarget {
-  const allowEnvOverride = process.argv.includes("--dev");
+function getDevBackendTargetOverride(): BackendTarget | null {
+  if (!process.argv.includes("--dev")) {
+    return null;
+  }
 
-  if (allowEnvOverride) {
-    if (process.env.BACKEND_TARGET === "test") {
-      return "test";
-    }
-    if (process.env.BACKEND_TARGET === "live") {
-      return "live";
-    }
+  if (process.env.BACKEND_TARGET === "test") {
+    return "test";
+  }
+  if (process.env.BACKEND_TARGET === "live") {
+    return "live";
+  }
+
+  return null;
+}
+
+export function getBackendTarget(): BackendTarget {
+  const devBackendTarget = getDevBackendTargetOverride();
+  if (devBackendTarget) {
+    return devBackendTarget;
   }
 
   const runtimeConfig = getPublicRuntimeConfig();

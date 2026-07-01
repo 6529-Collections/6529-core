@@ -10,7 +10,6 @@ import {
   getNativeRefreshToken,
   removeNativeRefreshToken,
 } from "@/services/auth/native-refresh-token-storage";
-import { getNativeAuthSessionLogin } from "@/services/auth/electron-native-auth-bridge";
 import {
   persistSessionResponse,
   redeemConnectionShare,
@@ -616,7 +615,10 @@ const processBrowserConnectResponse = async ({
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
 
-      const guardedNativeSessionLogin = getNativeAuthSessionLogin();
+      const guardedNativeSessionLogin =
+        typeof window === "undefined"
+          ? null
+          : (window.nativeAuth?.sessionLogin?.bind(window.nativeAuth) ?? null);
       if (typeof guardedNativeSessionLogin !== "function") {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }

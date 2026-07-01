@@ -3,7 +3,6 @@ import { isElectron } from "@/helpers";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
 import { getAuthJwt, getWalletAddress, setAuthJwt } from "./auth.utils";
-import { getNativeAuthSessionLogin } from "./electron-native-auth-bridge";
 import {
   getNativeRefreshToken,
   isNativeSecureStorageAvailable,
@@ -372,7 +371,10 @@ export async function loginWithSessionV2({
   readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
-  const guardedNativeSessionLogin = getNativeAuthSessionLogin();
+  const guardedNativeSessionLogin =
+    typeof window === "undefined"
+      ? null
+      : (window.nativeAuth?.sessionLogin?.bind(window.nativeAuth) ?? null);
   if (
     clientType !== "web" &&
     isElectron() &&
