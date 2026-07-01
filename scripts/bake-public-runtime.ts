@@ -6,6 +6,12 @@ import path from "node:path";
 const ROOT = process.cwd();
 const SRC_JSON = path.join(ROOT, "config", "public-runtime.json");
 const DEST_JSON = path.join(ROOT, "main", "config", "__PUBLIC_RUNTIME.json");
+const PRIVATE_DEST_JSON = path.join(
+  ROOT,
+  "main",
+  "config",
+  "__PRIVATE_RUNTIME.json",
+);
 const LIVE_API_ENDPOINT = "https://api.6529.io";
 const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
@@ -57,7 +63,7 @@ function computeVersion() {
 
   const baked = {
     ...raw,
-    ...runtimeEndpointOverrides,
+    ...runtimeEndpointOverrides.publicRuntime,
     VERSION,
     ASSETS_FROM_S3,
     CORE_SCHEME: coreScheme,
@@ -65,11 +71,20 @@ function computeVersion() {
       ? true
       : raw.DROP_FORGE_TESTNET ?? false,
   };
+  delete baked.STAGING_API_KEY;
 
   fs.mkdirSync(path.dirname(DEST_JSON), { recursive: true });
   fs.writeFileSync(DEST_JSON, JSON.stringify(baked, null, 2), "utf8");
+  fs.writeFileSync(
+    PRIVATE_DEST_JSON,
+    JSON.stringify(runtimeEndpointOverrides.privateRuntime, null, 2),
+    "utf8",
+  );
 
   console.log(`[bake-public-runtime] wrote ${path.relative(ROOT, DEST_JSON)}`);
+  console.log(
+    `[bake-public-runtime] wrote ${path.relative(ROOT, PRIVATE_DEST_JSON)}`,
+  );
 })();
 
 function getBackendTarget(fallbackTarget: unknown): BackendTarget {
@@ -120,17 +135,23 @@ function getRuntimeEndpointOverrides(backendTarget: BackendTarget) {
       );
     }
     return {
-      API_ENDPOINT: TEST_API_ENDPOINT,
-      WS_ENDPOINT: TEST_WS_ENDPOINT,
-      BACKEND_TARGET: "test",
-      STAGING_API_KEY: stagingApiKey,
+      publicRuntime: {
+        API_ENDPOINT: TEST_API_ENDPOINT,
+        WS_ENDPOINT: TEST_WS_ENDPOINT,
+        BACKEND_TARGET: "test",
+      },
+      privateRuntime: {
+        STAGING_API_KEY: stagingApiKey,
+      },
     };
   }
 
   return {
-    API_ENDPOINT: LIVE_API_ENDPOINT,
-    WS_ENDPOINT: LIVE_WS_ENDPOINT,
-    BACKEND_TARGET: "live",
-    STAGING_API_KEY: undefined,
+    publicRuntime: {
+      API_ENDPOINT: LIVE_API_ENDPOINT,
+      WS_ENDPOINT: LIVE_WS_ENDPOINT,
+      BACKEND_TARGET: "live",
+    },
+    privateRuntime: {},
   };
 }

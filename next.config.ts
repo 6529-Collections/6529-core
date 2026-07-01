@@ -66,6 +66,15 @@ const RENDERER_ROOT = fs.existsSync(path.join(__dirname, "renderer"))
   ? path.join(__dirname, "renderer")
   : __dirname;
 const NEXT_DIR = path.join(RENDERER_ROOT, ".next");
+const MAIN_CONFIG_DIR = path.join(__dirname, "main", "config");
+const MAIN_PUBLIC_RUNTIME_PATH = path.join(
+  MAIN_CONFIG_DIR,
+  "__PUBLIC_RUNTIME.json",
+);
+const MAIN_PRIVATE_RUNTIME_PATH = path.join(
+  MAIN_CONFIG_DIR,
+  "__PRIVATE_RUNTIME.json",
+);
 const SASS_LOAD_PATHS = [path.join(RENDERER_ROOT, "node_modules")];
 logOnce("NEXT_DIR", NEXT_DIR);
 
@@ -147,6 +156,21 @@ function persistBakedArtifacts(
   } catch {}
 }
 
+function persistPrivateRuntimeConfig(stagingApiKey: string | undefined): void {
+  try {
+    fs.mkdirSync(MAIN_CONFIG_DIR, { recursive: true });
+    fs.writeFileSync(
+      MAIN_PRIVATE_RUNTIME_PATH,
+      JSON.stringify(
+        stagingApiKey ? { STAGING_API_KEY: stagingApiKey } : {},
+        null,
+        2,
+      ),
+      "utf8",
+    );
+  } catch {}
+}
+
 function loadBakedRuntimeConfig(VERSION: string): unknown {
   let baked = {};
   if (process.env.PUBLIC_RUNTIME) {
@@ -154,7 +178,7 @@ function loadBakedRuntimeConfig(VERSION: string): unknown {
   } else {
     const candidates = [
       path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
-      path.join(__dirname, "main/config/__PUBLIC_RUNTIME.json"),
+      MAIN_PUBLIC_RUNTIME_PATH,
       path.join(__dirname, "config/public-runtime.json"),
     ];
     const p = candidates.find((candidate) => fs.existsSync(candidate));
@@ -506,15 +530,11 @@ const nextConfigFactory = (phase: string): NextConfig => {
     dotenv.config({ path: `.env` });
 
     try {
-      const bakedMainPath = path.join(
-        __dirname,
-        "main/config/__PUBLIC_RUNTIME.json",
-      );
       const sourceJsonPath = path.join(__dirname, "config/public-runtime.json");
       let bakedSource: string | null = null;
-      if (fs.existsSync(bakedMainPath)) {
-        bakedSource = fs.readFileSync(bakedMainPath, "utf8");
-        logOnce("ENV fallback", `Loaded from ${bakedMainPath}`);
+      if (fs.existsSync(MAIN_PUBLIC_RUNTIME_PATH)) {
+        bakedSource = fs.readFileSync(MAIN_PUBLIC_RUNTIME_PATH, "utf8");
+        logOnce("ENV fallback", `Loaded from ${MAIN_PUBLIC_RUNTIME_PATH}`);
       } else if (fs.existsSync(sourceJsonPath)) {
         bakedSource = fs.readFileSync(sourceJsonPath, "utf8");
         logOnce("ENV fallback", `Loaded from ${sourceJsonPath}`);
@@ -543,17 +563,17 @@ const nextConfigFactory = (phase: string): NextConfig => {
       appEnvironment: process.env.APP_ENVIRONMENT,
       fallbackScheme: publicRuntime.CORE_SCHEME,
     });
+    let privateStagingApiKey: string | undefined = undefined;
     if (publicRuntime.BACKEND_TARGET === "test") {
-      const stagingApiKey = publicRuntime.STAGING_API_KEY?.trim();
-      if (!stagingApiKey) {
+      privateStagingApiKey = process.env.STAGING_API_KEY?.trim();
+      if (!privateStagingApiKey) {
         throw new Error(
           "Test backend target requires STAGING_API_KEY. Add it to .env.local or export it before building.",
         );
       }
-      publicRuntime.STAGING_API_KEY = stagingApiKey;
-    } else {
-      publicRuntime.STAGING_API_KEY = undefined;
     }
+    publicRuntime.STAGING_API_KEY = undefined;
+    persistPrivateRuntimeConfig(privateStagingApiKey);
 
     const parsed = publicEnvSchema.safeParse(publicRuntime);
     if (!parsed.success) throw parsed.error;
@@ -589,7 +609,6 @@ const nextConfigFactory = (phase: string): NextConfig => {
         DEV_MODE_WALLET_ADDRESS: publicEnv.DEV_MODE_WALLET_ADDRESS,
         DEV_MODE_AUTH_JWT: publicEnv.DEV_MODE_AUTH_JWT,
         USE_DEV_AUTH: publicEnv.USE_DEV_AUTH,
-        STAGING_API_KEY: publicEnv.STAGING_API_KEY,
         AWS_RUM_APP_ID: publicEnv.AWS_RUM_APP_ID,
         AWS_RUM_REGION: publicEnv.AWS_RUM_REGION,
         AWS_RUM_SAMPLE_RATE: publicEnv.AWS_RUM_SAMPLE_RATE,

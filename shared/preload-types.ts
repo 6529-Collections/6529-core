@@ -117,9 +117,10 @@ export interface ElectronNativeLegacyDesktopConnectionShareResponse {
 
 export interface ElectronNativeAuth {
   isAvailable: () => Promise<boolean>;
-  getRefreshToken: (key: string) => Promise<string | null>;
-  setRefreshToken: (key: string, refreshToken: string) => Promise<void>;
-  removeRefreshToken: (key: string) => Promise<void>;
+  removeRefreshToken: (request: {
+    readonly client_type?: ElectronNativeAuthClientType;
+    readonly client_address: string;
+  }) => Promise<void>;
   sessionLogin: (request: {
     readonly client_type?: ElectronNativeAuthClientType;
     readonly server_signature: string;
@@ -130,20 +131,17 @@ export interface ElectronNativeAuth {
   sessionRefresh: (request: {
     readonly client_type?: ElectronNativeAuthClientType;
     readonly client_address: string;
-    readonly native_refresh_token: string;
   }) => Promise<ElectronNativeAuthSessionResponse>;
   createConnectionShare: (request: {
     readonly access_token?: string | null;
     readonly target_client_type?: ElectronNativeAuthClientType;
     readonly client_type?: ElectronNativeAuthClientType;
     readonly client_address?: string;
-    readonly native_refresh_token?: string;
   }) => Promise<ElectronNativeConnectionShareResponse>;
   createLegacyDesktopConnectionShare: (request: {
     readonly access_token?: string | null;
     readonly client_type?: ElectronNativeAuthClientType;
     readonly client_address?: string;
-    readonly native_refresh_token?: string;
   }) => Promise<ElectronNativeLegacyDesktopConnectionShareResponse>;
   redeemConnectionShare: (request: {
     readonly access_token?: string | null;
@@ -154,7 +152,6 @@ export interface ElectronNativeAuth {
     readonly access_token?: string | null;
     readonly client_type?: ElectronNativeAuthClientType;
     readonly client_address: string;
-    readonly native_refresh_token: string;
     readonly all_sessions: boolean;
   }) => Promise<void>;
 }

@@ -159,8 +159,10 @@ STAGING_API_KEY=your-staging-access-key
 ```
 
 `.env.local` is gitignored. The key is baked only for `test` backend builds.
-Live backend builds intentionally omit `STAGING_API_KEY`, even if it exists in
-the local shell or `.env.local`.
+For desktop builds it is written to Electron's private main-process runtime
+config, not the renderer/public runtime bundle. Live backend builds
+intentionally omit `STAGING_API_KEY`, even if it exists in the local shell or
+`.env.local`.
 
 ### Rebuilding SQL
 

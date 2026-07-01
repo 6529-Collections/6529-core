@@ -10,12 +10,10 @@ export type NativeRefreshTokenClientType = "native" | "desktop";
 
 type ElectronNativeAuthBridge = {
   readonly isAvailable: () => Promise<boolean>;
-  readonly getRefreshToken: (key: string) => Promise<string | null>;
-  readonly setRefreshToken: (
-    key: string,
-    refreshToken: string
-  ) => Promise<void>;
-  readonly removeRefreshToken: (key: string) => Promise<void>;
+  readonly removeRefreshToken: (request: {
+    readonly client_type?: NativeRefreshTokenClientType | undefined;
+    readonly client_address: string;
+  }) => Promise<void>;
 };
 
 export function isNativeSecureStorageAvailable(): boolean {
@@ -37,8 +35,8 @@ export async function setNativeRefreshToken({
   const key = getNativeRefreshTokenKey(address, clientType);
   const electronNativeAuth = getElectronNativeAuthBridge();
   if (electronNativeAuth) {
-    await electronNativeAuth.setRefreshToken(key, refreshToken);
-    inMemoryNativeRefreshTokens.set(key, refreshToken);
+    // Electron stores native refresh tokens in the main process during
+    // login/refresh/redeem so they are never exposed to the renderer.
     return;
   }
 
@@ -61,12 +59,7 @@ export async function getNativeRefreshToken(
   try {
     const electronNativeAuth = getElectronNativeAuthBridge();
     if (electronNativeAuth) {
-      const result = await electronNativeAuth.getRefreshToken(key);
-      if (typeof result !== "string" || result.trim().length === 0) {
-        return null;
-      }
-      inMemoryNativeRefreshTokens.set(key, result);
-      return result;
+      return null;
     }
 
     const result = await SecureStoragePlugin.get({ key });
@@ -92,7 +85,10 @@ export async function removeNativeRefreshToken(
   try {
     const electronNativeAuth = getElectronNativeAuthBridge();
     if (electronNativeAuth) {
-      await electronNativeAuth.removeRefreshToken(key);
+      await electronNativeAuth.removeRefreshToken({
+        client_type: clientType,
+        client_address: address,
+      });
       return;
     }
 
@@ -128,8 +124,6 @@ function getElectronNativeAuthBridge(): ElectronNativeAuthBridge | null {
   }).nativeAuth;
   if (
     !nativeAuth ||
-    typeof nativeAuth.getRefreshToken !== "function" ||
-    typeof nativeAuth.setRefreshToken !== "function" ||
     typeof nativeAuth.removeRefreshToken !== "function"
   ) {
     return null;

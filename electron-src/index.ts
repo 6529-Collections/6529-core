@@ -112,6 +112,7 @@ const SPLASH_LEFT_MIN_WIDTH_PX = 320;
 const SPLASH_SCREEN_RATIO = 0.5;
 const NATIVE_AUTH_REFRESH_TOKEN_KEY_PREFIX = "6529-native-refresh-token:";
 const NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION = 1;
+const PRIVATE_RUNTIME_CONFIG_FILENAME = "__PRIVATE_RUNTIME.json";
 
 interface StoredNativeRefreshToken {
   readonly version: typeof NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION;
@@ -126,27 +127,24 @@ interface NativeSessionLoginRequest {
   readonly role?: string | null;
 }
 
-interface NativeSessionRefreshRequest {
-  readonly client_type?: "native" | "desktop";
-  readonly client_address: string;
-  readonly native_refresh_token: string;
-}
-
 type RefreshTokenClientType = "native" | "desktop";
+
+interface NativeSessionRefreshRequest {
+  readonly client_type?: RefreshTokenClientType;
+  readonly client_address: string;
+}
 
 interface NativeConnectionShareRequest {
   readonly access_token?: string | null;
   readonly target_client_type?: RefreshTokenClientType;
   readonly client_type?: RefreshTokenClientType;
   readonly client_address?: string;
-  readonly native_refresh_token?: string;
 }
 
 interface NativeLegacyDesktopConnectionShareRequest {
   readonly access_token?: string | null;
   readonly client_type?: RefreshTokenClientType;
   readonly client_address?: string;
-  readonly native_refresh_token?: string;
 }
 
 interface NativeRedeemConnectionShareRequest {
@@ -159,6 +157,8 @@ interface NativeSessionLogoutRequest extends NativeSessionRefreshRequest {
   readonly access_token?: string | null;
   readonly all_sessions: boolean;
 }
+
+interface NativeRemoveRefreshTokenRequest extends NativeSessionRefreshRequest {}
 
 interface NativeSessionLoginResponse {
   readonly client_type: "native" | "desktop";
@@ -198,6 +198,23 @@ function getPublicRuntimeConfig(): Record<string, unknown> {
   return JSON.parse(fs.readFileSync(runtimeConfigPath, "utf-8"));
 }
 
+function getPrivateRuntimeConfig(): Record<string, unknown> {
+  const runtimeConfigPath = path.join(
+    app.getAppPath(),
+    "main",
+    "config",
+    PRIVATE_RUNTIME_CONFIG_FILENAME,
+  );
+  try {
+    return JSON.parse(fs.readFileSync(runtimeConfigPath, "utf-8")) as Record<
+      string,
+      unknown
+    >;
+  } catch {
+    return {};
+  }
+}
+
 function getApiEndpoint(runtimeConfig: Record<string, unknown>): string {
   if (typeof runtimeConfig.API_ENDPOINT !== "string") {
     throw new Error("API endpoint is not configured");
@@ -208,13 +225,21 @@ function getApiEndpoint(runtimeConfig: Record<string, unknown>): string {
 function getStagingApiHeaders(
   runtimeConfig: Record<string, unknown>,
 ): Record<string, string> {
+  if (runtimeConfig.BACKEND_TARGET !== "test") {
+    return {};
+  }
+  const privateRuntimeConfig = getPrivateRuntimeConfig();
+  const stagingApiKey =
+    typeof privateRuntimeConfig.STAGING_API_KEY === "string"
+      ? privateRuntimeConfig.STAGING_API_KEY.trim()
+      : process.env.STAGING_API_KEY?.trim() ?? "";
   if (
-    typeof runtimeConfig.STAGING_API_KEY !== "string" ||
-    runtimeConfig.STAGING_API_KEY.length === 0
+    typeof stagingApiKey !== "string" ||
+    stagingApiKey.length === 0
   ) {
     return {};
   }
-  return { "x-6529-auth": runtimeConfig.STAGING_API_KEY };
+  return { "x-6529-auth": stagingApiKey };
 }
 
 function getWalletAuthHeaders(accessToken: unknown): Record<string, string> {
@@ -335,9 +360,7 @@ function isNativeSessionRefreshRequest(
       record.client_type === "native" ||
       record.client_type === "desktop") &&
     typeof record.client_address === "string" &&
-    record.client_address.length > 0 &&
-    typeof record.native_refresh_token === "string" &&
-    record.native_refresh_token.length > 0
+    record.client_address.length > 0
   );
 }
 
@@ -354,12 +377,9 @@ function hasOptionalAccessToken(record: {
 function hasOptionalConnectionShareSourceProof(record: {
   readonly client_type?: unknown;
   readonly client_address?: unknown;
-  readonly native_refresh_token?: unknown;
 }): boolean {
   const hasAnyProofField =
-    record.client_type !== undefined ||
-    record.client_address !== undefined ||
-    record.native_refresh_token !== undefined;
+    record.client_type !== undefined || record.client_address !== undefined;
   if (!hasAnyProofField) {
     return true;
   }
@@ -367,9 +387,7 @@ function hasOptionalConnectionShareSourceProof(record: {
   return (
     isRefreshTokenClientType(record.client_type) &&
     typeof record.client_address === "string" &&
-    record.client_address.length > 0 &&
-    typeof record.native_refresh_token === "string" &&
-    record.native_refresh_token.length > 0
+    record.client_address.length > 0
   );
 }
 
@@ -427,6 +445,12 @@ function isNativeSessionLogoutRequest(
   return (
     hasOptionalAccessToken(record) && typeof record.all_sessions === "boolean"
   );
+}
+
+function isNativeRemoveRefreshTokenRequest(
+  request: unknown,
+): request is NativeRemoveRefreshTokenRequest {
+  return isNativeSessionRefreshRequest(request);
 }
 
 function isNativeSessionLoginResponse(
@@ -502,47 +526,60 @@ async function nativeSessionLogin(
   if (responseBody.client_type !== expectedClientType) {
     throw new Error("Native session login response client type mismatch");
   }
-  return responseBody;
+  if (
+    responseBody.address.trim().toLowerCase() !==
+    request.client_address.trim().toLowerCase()
+  ) {
+    throw new Error("Native session login response address mismatch");
+  }
+  setNativeRefreshTokenForSession(responseBody);
+  return sanitizeNativeSessionResponse(responseBody);
 }
 
 async function nativeSessionRefresh(
   request: NativeSessionRefreshRequest,
 ): Promise<NativeSessionLoginResponse> {
+  const clientType = request.client_type ?? "desktop";
+  const nativeRefreshToken = getNativeRefreshTokenForRequest({
+    client_type: clientType,
+    client_address: request.client_address,
+  });
   const responseBody = await postNativeAuthApi<unknown>({
     endpoint: "auth/session-refresh",
     body: {
-      client_type: request.client_type ?? "desktop",
+      client_type: clientType,
       client_address: request.client_address,
-      native_refresh_token: request.native_refresh_token,
+      native_refresh_token: nativeRefreshToken,
     },
   });
 
   if (!isNativeSessionLoginResponse(responseBody)) {
     throw new Error("Invalid native session refresh response");
   }
-  const expectedClientType = request.client_type ?? "desktop";
-  if (responseBody.client_type !== expectedClientType) {
+  if (responseBody.client_type !== clientType) {
     throw new Error("Native session refresh response client type mismatch");
   }
-  return responseBody;
+  if (
+    responseBody.address.trim().toLowerCase() !==
+    request.client_address.trim().toLowerCase()
+  ) {
+    throw new Error("Native session refresh response address mismatch");
+  }
+  setNativeRefreshTokenForSession(responseBody);
+  return sanitizeNativeSessionResponse(responseBody);
 }
 
 async function nativeCreateConnectionShare(
   request: NativeConnectionShareRequest,
 ): Promise<NativeConnectionShareResponse> {
   const targetClientType = request.target_client_type ?? "native";
+  const sourceProof = getNativeConnectionShareSourceProof(request);
   const responseBody = await postNativeAuthApi<unknown>({
     endpoint: "auth/connection-share",
     accessToken: request.access_token,
     body: {
       target_client_type: targetClientType,
-      ...(request.client_type === undefined
-        ? {}
-        : {
-            client_type: request.client_type,
-            client_address: request.client_address,
-            native_refresh_token: request.native_refresh_token,
-          }),
+      ...sourceProof,
     },
   });
   if (!isNativeConnectionShareResponse(responseBody)) {
@@ -557,18 +594,11 @@ async function nativeCreateConnectionShare(
 async function nativeCreateLegacyDesktopConnectionShare(
   request: NativeLegacyDesktopConnectionShareRequest,
 ): Promise<NativeLegacyDesktopConnectionShareResponse> {
+  const sourceProof = getNativeConnectionShareSourceProof(request);
   const responseBody = await postNativeAuthApi<unknown>({
     endpoint: "auth/connection-share/legacy-desktop",
     accessToken: request.access_token,
-    body: {
-      ...(request.client_type === undefined
-        ? {}
-        : {
-            client_type: request.client_type,
-            client_address: request.client_address,
-            native_refresh_token: request.native_refresh_token,
-          }),
-    },
+    body: sourceProof,
   });
   if (!isNativeLegacyDesktopConnectionShareResponse(responseBody)) {
     throw new Error("Invalid legacy desktop connection share response");
@@ -594,23 +624,46 @@ async function nativeRedeemConnectionShare(
   if (responseBody.client_type !== targetClientType) {
     throw new Error("Native connection share redeem client type mismatch");
   }
-  return responseBody;
+  setNativeRefreshTokenForSession(responseBody);
+  return sanitizeNativeSessionResponse(responseBody);
 }
 
 async function nativeSessionLogout(
   request: NativeSessionLogoutRequest,
 ): Promise<void> {
+  const clientType = request.client_type ?? "desktop";
+  const nativeRefreshToken = getNativeRefreshTokenForRequest({
+    client_type: clientType,
+    client_address: request.client_address,
+  });
   await postNativeAuthApi<void>({
     endpoint: "auth/session-logout",
     accessToken: request.access_token,
     parseJson: false,
     body: {
-      client_type: request.client_type ?? "desktop",
+      client_type: clientType,
       client_address: request.client_address,
-      native_refresh_token: request.native_refresh_token,
+      native_refresh_token: nativeRefreshToken,
       all_sessions: request.all_sessions,
     },
   });
+}
+
+function getNativeAuthRefreshTokenKey({
+  address,
+  clientType,
+}: {
+  readonly address: string;
+  readonly clientType: RefreshTokenClientType;
+}): string {
+  const addressKey = address.trim().toLowerCase();
+  if (!addressKey) {
+    throw new Error("Invalid native auth refresh token address");
+  }
+  if (clientType === "desktop") {
+    return `${NATIVE_AUTH_REFRESH_TOKEN_KEY_PREFIX}desktop:${addressKey}`;
+  }
+  return `${NATIVE_AUTH_REFRESH_TOKEN_KEY_PREFIX}${addressKey}`;
 }
 
 function assertNativeAuthRefreshTokenKey(key: string): void {
@@ -666,6 +719,76 @@ function setEncryptedNativeRefreshToken(
 function removeEncryptedNativeRefreshToken(key: string): void {
   assertNativeAuthRefreshTokenKey(key);
   removeValue(key);
+}
+
+function getNativeRefreshTokenForRequest(
+  request: NativeSessionRefreshRequest,
+): string {
+  if (!safeStorage.isEncryptionAvailable()) {
+    throw new Error("Native auth secure storage is unavailable");
+  }
+  const key = getNativeAuthRefreshTokenKey({
+    address: request.client_address,
+    clientType: request.client_type ?? "desktop",
+  });
+  const nativeRefreshToken = getEncryptedNativeRefreshToken(key);
+  if (!nativeRefreshToken) {
+    throw new Error("Invalid session");
+  }
+  return nativeRefreshToken;
+}
+
+function setNativeRefreshTokenForSession(
+  response: NativeSessionLoginResponse,
+): void {
+  setEncryptedNativeRefreshToken(
+    getNativeAuthRefreshTokenKey({
+      address: response.address,
+      clientType: response.client_type,
+    }),
+    response.native_refresh_token,
+  );
+}
+
+function removeNativeRefreshTokenForRequest(
+  request: NativeRemoveRefreshTokenRequest,
+): void {
+  removeEncryptedNativeRefreshToken(
+    getNativeAuthRefreshTokenKey({
+      address: request.client_address,
+      clientType: request.client_type ?? "desktop",
+    }),
+  );
+}
+
+function sanitizeNativeSessionResponse(
+  response: NativeSessionLoginResponse,
+): NativeSessionLoginResponse {
+  return {
+    ...response,
+    native_refresh_token: "",
+  };
+}
+
+function getNativeConnectionShareSourceProof(
+  request:
+    | NativeConnectionShareRequest
+    | NativeLegacyDesktopConnectionShareRequest,
+): Record<string, string> {
+  if (request.client_type === undefined) {
+    return {};
+  }
+  if (typeof request.client_address !== "string") {
+    throw new Error("Invalid native connection share request");
+  }
+  return {
+    client_type: request.client_type,
+    client_address: request.client_address,
+    native_refresh_token: getNativeRefreshTokenForRequest({
+      client_type: request.client_type,
+      client_address: request.client_address,
+    }),
+  };
 }
 
 function isLocalIpfsApiUrl(url: string): boolean {
@@ -1638,22 +1761,11 @@ ipcMain.handle("native-auth:is-available", () => {
   return safeStorage.isEncryptionAvailable();
 });
 
-ipcMain.handle("native-auth:get-refresh-token", (_event, key: string) => {
-  if (!safeStorage.isEncryptionAvailable()) {
-    return null;
+ipcMain.handle("native-auth:remove-refresh-token", (_event, request: unknown) => {
+  if (!isNativeRemoveRefreshTokenRequest(request)) {
+    throw new Error("Invalid native refresh token removal request");
   }
-  return getEncryptedNativeRefreshToken(key);
-});
-
-ipcMain.handle(
-  "native-auth:set-refresh-token",
-  (_event, key: string, refreshToken: string) => {
-    setEncryptedNativeRefreshToken(key, refreshToken);
-  }
-);
-
-ipcMain.handle("native-auth:remove-refresh-token", (_event, key: string) => {
-  removeEncryptedNativeRefreshToken(key);
+  removeNativeRefreshTokenForRequest(request);
 });
 
 ipcMain.handle("native-auth:session-login", (_event, request: unknown) => {

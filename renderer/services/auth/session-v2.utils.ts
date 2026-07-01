@@ -96,7 +96,7 @@ interface RedeemConnectionShareResponse {
 interface NativeConnectionShareSourceProof {
   readonly client_type: RefreshTokenSessionClientType;
   readonly client_address: string;
-  readonly native_refresh_token: string;
+  readonly native_refresh_token?: string | undefined;
 }
 
 const SESSION_REFRESH_EMPTY_FAILURE_COOLDOWN_MS = 2_000;
@@ -413,13 +413,6 @@ async function executeSessionRefreshV2({
   readonly clientType: AuthSessionClientType;
 }): Promise<SessionRefreshResponse | null> {
   if (clientType !== "web") {
-    const nativeRefreshToken = await getNativeRefreshToken(
-      address,
-      toNativeRefreshTokenClientType(clientType)
-    );
-    if (!nativeRefreshToken) {
-      return null;
-    }
     try {
       if (
         isElectron() &&
@@ -429,8 +422,15 @@ async function executeSessionRefreshV2({
         return await window.nativeAuth.sessionRefresh({
           client_type: clientType,
           client_address: address,
-          native_refresh_token: nativeRefreshToken,
         });
+      }
+
+      const nativeRefreshToken = await getNativeRefreshToken(
+        address,
+        toNativeRefreshTokenClientType(clientType)
+      );
+      if (!nativeRefreshToken) {
+        return null;
       }
 
       return await commonApiPost<
@@ -581,16 +581,20 @@ export async function persistSessionResponse(
       return false;
     }
 
-    try {
-      await setNativeRefreshToken({
-        address: response.address,
-        refreshToken: response.native_refresh_token,
-        clientType: toNativeRefreshTokenClientType(response.client_type),
-      });
-    } catch {
-      return false;
+    if (isElectron()) {
+      didPersistNativeRefreshToken = true;
+    } else {
+      try {
+        await setNativeRefreshToken({
+          address: response.address,
+          refreshToken: response.native_refresh_token,
+          clientType: toNativeRefreshTokenClientType(response.client_type),
+        });
+      } catch {
+        return false;
+      }
+      didPersistNativeRefreshToken = true;
     }
-    didPersistNativeRefreshToken = true;
   }
 
   let didPersistAuth = false;
@@ -645,6 +649,13 @@ async function getNativeConnectionShareSourceProof(): Promise<NativeConnectionSh
     throw new Error(
       `Connection sharing requires an active ${clientType} session`
     );
+  }
+
+  if (isElectron()) {
+    return {
+      client_type: clientType,
+      client_address: address,
+    };
   }
 
   const nativeRefreshToken = await getNativeRefreshToken(
@@ -749,13 +760,6 @@ export async function logoutSessionV2({
     if (!address) {
       return;
     }
-    const nativeRefreshToken = await getNativeRefreshToken(
-      address,
-      toNativeRefreshTokenClientType(clientType)
-    );
-    if (!nativeRefreshToken) {
-      return;
-    }
     try {
       if (
         isElectron() &&
@@ -766,10 +770,16 @@ export async function logoutSessionV2({
           access_token: getAuthJwt(),
           client_type: clientType,
           client_address: address,
-          native_refresh_token: nativeRefreshToken,
           all_sessions: allSessions,
         });
       } else {
+        const nativeRefreshToken = await getNativeRefreshToken(
+          address,
+          toNativeRefreshTokenClientType(clientType)
+        );
+        if (!nativeRefreshToken) {
+          return;
+        }
         await commonApiPost<
           {
             readonly client_type: RefreshTokenSessionClientType;

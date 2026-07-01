@@ -153,12 +153,10 @@ contextBridge.exposeInMainWorld("store", store);
 
 export const nativeAuth = {
   isAvailable: () => ipcRenderer.invoke("native-auth:is-available"),
-  getRefreshToken: (key: string) =>
-    ipcRenderer.invoke("native-auth:get-refresh-token", key),
-  setRefreshToken: (key: string, refreshToken: string) =>
-    ipcRenderer.invoke("native-auth:set-refresh-token", key, refreshToken),
-  removeRefreshToken: (key: string) =>
-    ipcRenderer.invoke("native-auth:remove-refresh-token", key),
+  removeRefreshToken: (request: {
+    readonly client_type?: "native" | "desktop";
+    readonly client_address: string;
+  }) => ipcRenderer.invoke("native-auth:remove-refresh-token", request),
   sessionLogin: (request: {
     readonly client_type?: "native" | "desktop";
     readonly server_signature: string;
@@ -169,20 +167,17 @@ export const nativeAuth = {
   sessionRefresh: (request: {
     readonly client_type?: "native" | "desktop";
     readonly client_address: string;
-    readonly native_refresh_token: string;
   }) => ipcRenderer.invoke("native-auth:session-refresh", request),
   createConnectionShare: (request: {
     readonly access_token?: string | null;
     readonly target_client_type?: "native" | "desktop";
     readonly client_type?: "native" | "desktop";
     readonly client_address?: string;
-    readonly native_refresh_token?: string;
   }) => ipcRenderer.invoke("native-auth:connection-share", request),
   createLegacyDesktopConnectionShare: (request: {
     readonly access_token?: string | null;
     readonly client_type?: "native" | "desktop";
     readonly client_address?: string;
-    readonly native_refresh_token?: string;
   }) =>
     ipcRenderer.invoke("native-auth:connection-share:legacy-desktop", request),
   redeemConnectionShare: (request: {
@@ -194,7 +189,6 @@ export const nativeAuth = {
     readonly access_token?: string | null;
     readonly client_type?: "native" | "desktop";
     readonly client_address: string;
-    readonly native_refresh_token: string;
     readonly all_sessions: boolean;
   }) => ipcRenderer.invoke("native-auth:session-logout", request),
 };
