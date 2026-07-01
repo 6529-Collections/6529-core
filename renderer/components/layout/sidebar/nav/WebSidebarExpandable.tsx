@@ -1,11 +1,11 @@
 "use client";
 
-import type { SidebarSection } from "@/components/navigation/navTypes";
 import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
+import type { SidebarSection } from "@/components/navigation/navTypes";
 import Link from "next/link";
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import WebSidebarExpandableGroup from "./WebSidebarExpandableGroup";
 import WebSidebarNavItem from "./WebSidebarNavItem";
 import { isSidebarNavItemActive } from "./sidebarActive";
@@ -76,7 +76,7 @@ function WebSidebarExpandable({
         rightSlot={
           !collapsed && (
             <ChevronRightIcon
-              className={`tw-h-4 tw-w-4 tw-shrink-0 tw-ml-auto tw-transition-transform tw-duration-200 motion-reduce:tw-transition-none ${
+              className={`tw-ml-auto tw-h-4 tw-w-4 tw-shrink-0 tw-transition-transform tw-duration-200 motion-reduce:tw-transition-none ${
                 expanded ? "tw-rotate-90" : ""
               }`}
             />
@@ -88,20 +88,22 @@ function WebSidebarExpandable({
         <div
           className={`tw-grid tw-transition-[grid-template-rows] tw-duration-300 tw-ease-out motion-reduce:tw-transition-none ${
             expanded ? "tw-grid-rows-[1fr]" : "tw-grid-rows-[0fr]"
-          }`}>
+          }`}
+        >
           <div className="tw-overflow-hidden">
             <div
               id={panelId}
               aria-label={`${section.name} items`}
-              className="tw-relative tw-p-0 tw-m-0">
+              className="tw-relative tw-m-0 tw-p-0"
+            >
               <div
-                className={`tw-absolute tw-left-7 tw-top-0 tw-bottom-0 tw-w-px tw-bg-iron-800 tw-transition-opacity tw-duration-300 motion-reduce:tw-transition-none ${
+                className={`tw-absolute tw-bottom-0 tw-left-7 tw-top-0 tw-w-px tw-bg-iron-800 tw-transition-opacity tw-duration-300 motion-reduce:tw-transition-none ${
                   expanded ? "tw-opacity-100" : "tw-opacity-0"
                 }`}
                 aria-hidden="true"
               />
 
-              <ul className="tw-list-none tw-p-0 tw-m-0">
+              <ul className="tw-m-0 tw-list-none tw-p-0">
                 {section.items.map((item) => {
                   const active = isSidebarNavItemActive(item, pathname);
                   return (
@@ -112,12 +114,13 @@ function WebSidebarExpandable({
                         rel={
                           item.isExternal ? "noopener noreferrer" : undefined
                         }
-                        className={`tw-w-[calc(100%-2.75rem)] tw-flex tw-items-center tw-justify-between tw-no-underline tw-rounded-xl tw-border-none tw-transition-colors tw-duration-200 motion-reduce:tw-transition-none tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 tw-font-medium tw-justify-start tw-ml-[2.75rem] tw-pl-3 tw-pr-3 tw-h-11 tw-text-base tw-touch-action-manipulation ${
+                        className={`tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-h-11 tw-w-[calc(100%-2.75rem)] tw-cursor-pointer tw-items-center tw-justify-start tw-rounded-xl tw-border-none tw-pl-3 tw-pr-3 tw-text-base tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 motion-reduce:tw-transition-none ${
                           active
-                            ? "tw-text-white tw-bg-iron-900 desktop-hover:hover:tw-text-white desktop-hover:hover:tw-bg-iron-900 active:tw-text-white"
-                            : "tw-text-iron-400 tw-bg-transparent desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white active:tw-text-white"
+                            ? "tw-bg-iron-900 tw-text-white active:tw-text-white desktop-hover:hover:tw-bg-iron-900 desktop-hover:hover:tw-text-white"
+                            : "tw-bg-transparent tw-text-iron-400 active:tw-text-white desktop-hover:hover:tw-bg-transparent desktop-hover:hover:tw-text-white"
                         }`}
-                        aria-current={active ? "page" : undefined}>
+                        aria-current={active ? "page" : undefined}
+                      >
                         <span className="tw-flex tw-items-center tw-gap-2">
                           <span>{item.name}</span>
                           {item.isExternal && (

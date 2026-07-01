@@ -28,7 +28,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
-import { Accordion, Col, Container, Row } from "react-bootstrap";
+import { Col, Container, Row } from "../NextGenTailwindLayout";
+import { Accordion } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
 import styles from "../NextGen.module.scss";
 import {
