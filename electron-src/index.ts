@@ -660,6 +660,7 @@ function getNativeAuthRefreshTokenKey({
   if (!addressKey) {
     throw new Error("Invalid native auth refresh token address");
   }
+  // Desktop and mobile/native sessions use separate refresh-token namespaces.
   if (clientType === "desktop") {
     return `${NATIVE_AUTH_REFRESH_TOKEN_KEY_PREFIX}desktop:${addressKey}`;
   }
