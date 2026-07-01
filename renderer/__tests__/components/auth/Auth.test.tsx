@@ -93,6 +93,7 @@ jest.mock("@/services/auth/auth.utils", () => ({
   syncConnectedWalletProfile: jest.fn(),
   getAuthJwt: jest.fn(() => null),
   hasActiveSessionV2Auth: jest.fn(() => false),
+  hasRecentBrowserConnectorSessionV2Auth: jest.fn(() => false),
   AUTH_TOKEN_CHANGED_EVENT: "6529-auth-token-changed",
   PROFILE_SWITCHED_EVENT: "6529-profile-switched",
   WALLET_ACCOUNTS_UPDATED_EVENT: "6529-wallet-accounts-updated",

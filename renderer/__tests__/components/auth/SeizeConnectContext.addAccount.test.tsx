@@ -416,7 +416,7 @@ describe("SeizeConnectProvider add-account flow", () => {
     );
   });
 
-  it("marks logout as disconnecting before auth cleanup completes", async () => {
+  it("keeps the active account visible while logout cleanup is pending", async () => {
     const authUtils = require("@/services/auth/auth.utils");
     authUtils.removeAuthJwt.mockImplementation(() =>
       createPendingPromise<void>()
@@ -441,7 +441,7 @@ describe("SeizeConnectProvider add-account flow", () => {
 
     expect(screen.getByTestId("disconnecting")).toHaveTextContent("true");
     expect(screen.getByTestId("connection-state")).toHaveTextContent(
-      "disconnected"
+      "connected"
     );
   });
 

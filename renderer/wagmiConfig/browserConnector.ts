@@ -2,6 +2,7 @@ import {
   getConnectedWalletAccounts,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  markRecentBrowserConnectorSessionV2Auth,
   setActiveWalletAccount,
   setAuthJwt,
 } from "@/services/auth/auth.utils";
@@ -680,6 +681,7 @@ const processBrowserConnectResponse = async ({
           "Couldn't save this browser connection. Please try again."
         );
       }
+      markRecentBrowserConnectorSessionV2Auth(nativeSessionToPersist.address);
     }
   } else {
     tryPersistLegacyAuthPayload({

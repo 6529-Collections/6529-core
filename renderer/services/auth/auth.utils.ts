@@ -11,6 +11,8 @@ export const PROFILE_SWITCHED_EVENT = "6529-profile-switched";
 export const AUTH_TOKEN_CHANGED_EVENT = "6529-auth-token-changed";
 export type AuthSessionVersion = "v2";
 
+const RECENT_BROWSER_CONNECTOR_AUTH_GRACE_MS = 10_000;
+
 const WALLET_ADDRESS_STORAGE_KEY = "6529-wallet-address";
 const WALLET_REFRESH_TOKEN_STORAGE_KEY = "6529-wallet-refresh-token";
 const WALLET_ROLE_STORAGE_KEY = "6529-wallet-role";
@@ -70,6 +72,42 @@ const getAddressRoleStorageKey = (address: string): string => {
 };
 
 const normalizeAddress = (address: string): string => address.toLowerCase();
+
+let recentBrowserConnectorSessionV2Auth: {
+  readonly address: string;
+  readonly recordedAt: number;
+} | null = null;
+
+export const markRecentBrowserConnectorSessionV2Auth = (address: string): void => {
+  recentBrowserConnectorSessionV2Auth = {
+    address: normalizeAddress(address),
+    recordedAt: Date.now(),
+  };
+};
+
+export const hasRecentBrowserConnectorSessionV2Auth = ({
+  address,
+  nowMs = Date.now(),
+}: {
+  readonly address: string;
+  readonly nowMs?: number;
+}): boolean => {
+  if (!recentBrowserConnectorSessionV2Auth) {
+    return false;
+  }
+
+  if (
+    normalizeAddress(recentBrowserConnectorSessionV2Auth.address) !==
+    normalizeAddress(address)
+  ) {
+    return false;
+  }
+
+  return (
+    nowMs - recentBrowserConnectorSessionV2Auth.recordedAt <=
+    RECENT_BROWSER_CONNECTOR_AUTH_GRACE_MS
+  );
+};
 
 const clearAgentLoginMarkerIfAddressChanged = (
   activeAddress: string | null

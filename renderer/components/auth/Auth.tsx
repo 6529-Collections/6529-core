@@ -58,6 +58,7 @@ import {
   getAuthJwt,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  hasRecentBrowserConnectorSessionV2Auth,
   isAuthJwtUsable,
   PROFILE_SWITCHED_EVENT,
   removeAuthJwt,
@@ -948,7 +949,8 @@ export default function Auth({
         !!storedAuthAddress &&
         storedAuthAddress.toLowerCase() === address.toLowerCase() &&
         hasActiveSessionV2Auth({ address }) &&
-        isAuthJwtUsable(storedAuthJwt);
+        (isAuthJwtUsable(storedAuthJwt) ||
+          hasRecentBrowserConnectorSessionV2Auth({ address }));
 
       if (hasJustPersistedSessionV2Auth) {
         setSessionUpgradeRequired(false);

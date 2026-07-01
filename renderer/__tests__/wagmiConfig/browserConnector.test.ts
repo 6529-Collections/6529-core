@@ -2,6 +2,7 @@ import {
   getConnectedWalletAccounts,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  markRecentBrowserConnectorSessionV2Auth,
   setActiveWalletAccount,
 } from "@/services/auth/auth.utils";
 import {
@@ -27,6 +28,7 @@ jest.mock("@/services/auth/auth.utils", () => ({
   getConnectedWalletAccounts: jest.fn(() => []),
   getWalletAddress: jest.fn(() => null),
   hasActiveSessionV2Auth: jest.fn(() => false),
+  markRecentBrowserConnectorSessionV2Auth: jest.fn(),
   setActiveWalletAccount: jest.fn(() => true),
   setAuthJwt: jest.fn(),
 }));
@@ -202,6 +204,9 @@ describe("browserConnector", () => {
       native_refresh_token: "desktop-refresh-token",
       refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
     });
+    expect(markRecentBrowserConnectorSessionV2Auth).toHaveBeenCalledWith(
+      ADDRESS
+    );
     expect(setActiveWalletAccount).toHaveBeenCalledWith(ADDRESS);
     expect(store.set).toHaveBeenCalledWith(
       "seize-app-connection-browser",

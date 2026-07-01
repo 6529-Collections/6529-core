@@ -299,6 +299,7 @@ interface AddressValidationResult {
 const normalizeAddress = (address: string): string => address.toLowerCase();
 
 const ADD_FLOW_CANCEL_GRACE_MS: number = 30000;
+const ADD_FLOW_REOPEN_GRACE_MS: number = 3_000;
 const CONNECT_AFTER_DISCONNECT_DELAY_MS: number = 100;
 
 const validateStoredAddress = (
@@ -506,6 +507,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const addFlowOriginAddressRef = useRef<string | null>(null);
   const addFlowHasLeftOriginRef = useRef(false);
+  const addFlowStartedAtRef = useRef<number | null>(null);
   const pendingAddFlowSwitchRef = useRef(false);
   const retryConnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const disconnectTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -736,6 +738,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           setIsAddingConnectedAccount(false);
           addFlowOriginAddressRef.current = null;
           addFlowHasLeftOriginRef.current = false;
+          addFlowStartedAtRef.current = null;
           refreshStoredConnectedAccounts();
         }
 
@@ -935,6 +938,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAddingConnectedAccountRef.current = false;
       addFlowOriginAddressRef.current = null;
       addFlowHasLeftOriginRef.current = false;
+      addFlowStartedAtRef.current = null;
       if (retryConnectTimeoutRef.current) {
         clearTimeout(retryConnectTimeoutRef.current);
         retryConnectTimeoutRef.current = null;
@@ -982,6 +986,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsAddingConnectedAccount(false);
       addFlowOriginAddressRef.current = null;
       addFlowHasLeftOriginRef.current = false;
+      addFlowStartedAtRef.current = null;
       pendingAddFlowSwitchRef.current = false;
       return;
     }
@@ -997,6 +1002,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsAddingConnectedAccount(false);
       addFlowOriginAddressRef.current = null;
       addFlowHasLeftOriginRef.current = false;
+      addFlowStartedAtRef.current = null;
       pendingAddFlowSwitchRef.current = false;
       return;
     }
@@ -1023,6 +1029,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         setIsAddingConnectedAccount(false);
         addFlowOriginAddressRef.current = null;
         addFlowHasLeftOriginRef.current = false;
+        addFlowStartedAtRef.current = null;
         pendingAddFlowSwitchRef.current = false;
       }, ADD_FLOW_CANCEL_GRACE_MS);
     }
@@ -1145,6 +1152,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     isAddingConnectedAccountRef.current = false;
     addFlowOriginAddressRef.current = null;
     addFlowHasLeftOriginRef.current = false;
+    addFlowStartedAtRef.current = null;
     pendingAddFlowSwitchRef.current = false;
     setIsAddingConnectedAccount(false);
     if (retryConnectTimeoutRef.current) {
@@ -1458,6 +1466,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAddingConnectedAccountRef.current = false;
       addFlowOriginAddressRef.current = null;
       addFlowHasLeftOriginRef.current = false;
+      addFlowStartedAtRef.current = null;
       pendingAddFlowSwitchRef.current = false;
       if (retryConnectTimeoutRef.current) {
         clearTimeout(retryConnectTimeoutRef.current);
@@ -1487,10 +1496,20 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       !!addFlowOriginAddress &&
       normalizeAddress(liveConnectedWallet) ===
         normalizeAddress(addFlowOriginAddress);
+    const addFlowStartedAt = addFlowStartedAtRef.current;
+    const hasHiddenStaleAddConnectedAccountGuard =
+      isAddingConnectedAccountRef.current &&
+      !isConnectUiOpen &&
+      !retryConnectTimeoutRef.current &&
+      liveAccount.status !== "connecting" &&
+      liveAccount.status !== "reconnecting" &&
+      addFlowStartedAt !== null &&
+      Date.now() - addFlowStartedAt > ADD_FLOW_REOPEN_GRACE_MS;
     const hasStaleAddConnectedAccountGuard =
       isAddingConnectedAccountRef.current &&
       (!isAddingConnectedAccount ||
         addFlowReturnedToOrigin ||
+        hasHiddenStaleAddConnectedAccountGuard ||
         (!isConnectUiOpen &&
           !retryConnectTimeoutRef.current &&
           !liveConnectedWallet &&
@@ -1510,6 +1529,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAddingConnectedAccountRef.current = true;
       addFlowOriginAddressRef.current = addFlowOriginWallet;
       addFlowHasLeftOriginRef.current = false;
+      addFlowStartedAtRef.current = Date.now();
       pendingAddFlowSwitchRef.current = false;
       setIsAddingConnectedAccount(true);
 
@@ -1531,6 +1551,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     isAddingConnectedAccountRef.current = true;
     addFlowOriginAddressRef.current = liveConnectedWallet;
     addFlowHasLeftOriginRef.current = false;
+    addFlowStartedAtRef.current = Date.now();
     pendingAddFlowSwitchRef.current = true;
     setIsAddingConnectedAccount(true);
 
