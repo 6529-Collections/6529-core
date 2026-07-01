@@ -112,9 +112,7 @@ export default function ConfirmSeedWalletLock(
         try {
           const isSuccess = await props.onUnlock(pass);
           if (isSuccess) {
-            if (!props.pendingRequest) {
-              showToast("Wallet Unlocked!", "success", true);
-            }
+            showToast("Wallet Unlocked!", "success", true);
             setWalletPass("");
           } else {
             showToast("Failed to unlock wallet", "error", true);

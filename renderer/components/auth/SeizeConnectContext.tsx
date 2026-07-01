@@ -617,12 +617,11 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       clearTimeout(disconnectTransitionTimeoutRef.current);
     }
     setIsDisconnecting(true);
-    setDisconnected();
     disconnectTransitionTimeoutRef.current = setTimeout(() => {
       disconnectTransitionTimeoutRef.current = null;
       setIsDisconnecting(false);
     }, DISCONNECT_TRANSITION_GUARD_MS);
-  }, [setDisconnected]);
+  }, []);
 
   useEffect(() => {
     refreshStoredConnectedAccounts();
@@ -691,9 +690,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     // Use debounced state update to prevent race conditions
     debounceTimeoutRef.current = setTimeout(() => {
       if (isDisconnecting) {
-        if (walletState.status !== "disconnected") {
-          setDisconnected();
-        }
+        // Keep rendering the current account until the disconnect/logout
+        // operation picks the next stored account or clears all accounts.
         return;
       }
 
