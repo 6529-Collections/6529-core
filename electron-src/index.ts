@@ -233,11 +233,10 @@ function getStagingApiHeaders(
     typeof privateRuntimeConfig.STAGING_API_KEY === "string"
       ? privateRuntimeConfig.STAGING_API_KEY.trim()
       : process.env.STAGING_API_KEY?.trim() ?? "";
-  if (
-    typeof stagingApiKey !== "string" ||
-    stagingApiKey.length === 0
-  ) {
-    return {};
+  if (stagingApiKey.length === 0) {
+    throw new Error(
+      "Test backend target requires STAGING_API_KEY in private runtime config",
+    );
   }
   return { "x-6529-auth": stagingApiKey };
 }

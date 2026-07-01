@@ -510,6 +510,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const addFlowStartedAtRef = useRef<number | null>(null);
   const pendingAddFlowSwitchRef = useRef(false);
   const retryConnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const wasConnectUiOpenRef = useRef(false);
   const disconnectTransitionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAddingConnectedAccountRef = useRef(false);
   const isMountedRef = useRef(true);
@@ -589,6 +590,13 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const isConnectUiOpen = isElectron() ? showConnectModal : state.open;
+
+  useEffect(() => {
+    if (wasConnectUiOpenRef.current && !isConnectUiOpen) {
+      clearBrowserConnectorConnectIntent();
+    }
+    wasConnectUiOpenRef.current = isConnectUiOpen;
+  }, [isConnectUiOpen]);
 
   useEffect(() => {
     isMountedRef.current = true;

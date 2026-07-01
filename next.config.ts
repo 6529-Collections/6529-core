@@ -141,34 +141,30 @@ function persistBakedArtifacts(
   publicEnv: unknown,
   ASSETS_FROM_S3: boolean,
 ): void {
-  try {
-    fs.mkdirSync(NEXT_DIR, { recursive: true });
-    fs.writeFileSync(
-      path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
-      JSON.stringify(publicEnv),
-      "utf8",
-    );
-    fs.writeFileSync(
-      path.join(NEXT_DIR, "ASSETS_FROM_S3"),
-      ASSETS_FROM_S3 ? "true" : "false",
-      "utf8",
-    );
-  } catch {}
+  fs.mkdirSync(NEXT_DIR, { recursive: true });
+  fs.writeFileSync(
+    path.join(NEXT_DIR, "PUBLIC_RUNTIME.json"),
+    JSON.stringify(publicEnv),
+    "utf8",
+  );
+  fs.writeFileSync(
+    path.join(NEXT_DIR, "ASSETS_FROM_S3"),
+    ASSETS_FROM_S3 ? "true" : "false",
+    "utf8",
+  );
 }
 
 function persistPrivateRuntimeConfig(stagingApiKey: string | undefined): void {
-  try {
-    fs.mkdirSync(MAIN_CONFIG_DIR, { recursive: true });
-    fs.writeFileSync(
-      MAIN_PRIVATE_RUNTIME_PATH,
-      JSON.stringify(
-        stagingApiKey ? { STAGING_API_KEY: stagingApiKey } : {},
-        null,
-        2,
-      ),
-      "utf8",
-    );
-  } catch {}
+  fs.mkdirSync(MAIN_CONFIG_DIR, { recursive: true });
+  fs.writeFileSync(
+    MAIN_PRIVATE_RUNTIME_PATH,
+    JSON.stringify(
+      stagingApiKey ? { STAGING_API_KEY: stagingApiKey } : {},
+      null,
+      2,
+    ),
+    "utf8",
+  );
 }
 
 function loadBakedRuntimeConfig(VERSION: string): unknown {

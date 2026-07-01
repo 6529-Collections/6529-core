@@ -10631,6 +10631,7 @@ components:
             acceptable when this is true.
         session_v2_migration_deadline:
           type: string
+          format: date-time
           nullable: true
           description: >-
             Optional global deadline for frontend v1-auth to session-v2

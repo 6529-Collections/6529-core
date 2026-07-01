@@ -1693,8 +1693,9 @@ export default function Auth({
           seedWalletAutoAuthAddressRef.current = null;
         }
       })
-      .catch(() => {
+      .catch((error) => {
         seedWalletAutoAuthAddressRef.current = null;
+        logErrorSecurely("seed_wallet_auto_auth", error);
       });
   }, [
     address,
