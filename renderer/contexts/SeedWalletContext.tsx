@@ -69,16 +69,23 @@ export const SeedWalletProvider: React.FC<{
   const [lockedWallet, setLockedWallet] = useState<ISeedWallet>();
   const [unlockedWallet, setUnlockedWallet] = useState<ethers.Wallet>();
   const lastConnectorSyncTargetRef = useRef<string | null>(null);
+  const isDisconnectingRef = useRef(false);
 
   const [pendingCallback, setPendingCallback] = useState<{
     callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void;
     request: SeedWalletRequest;
   }>();
+  isDisconnectingRef.current = isDisconnecting;
 
   const handleRequest = (
     callback: (wallet: ethers.Wallet, request: SeedWalletRequest) => void,
     request: SeedWalletRequest
   ) => {
+    if (isDisconnectingRef.current) {
+      window.seedConnector?.reject(request);
+      return;
+    }
+
     if (isFetched && unlockedWallet) {
       callback(unlockedWallet, request);
     } else {
@@ -136,6 +143,19 @@ export const SeedWalletProvider: React.FC<{
   useEffect(() => {
     connectedAddressRef.current = connectedAddress;
   }, [connectedAddress]);
+
+  useEffect(() => {
+    if (!isDisconnecting) {
+      return;
+    }
+
+    setShowPasswordModal(false);
+    setShowRequestModal(false);
+    if (pendingCallback) {
+      window.seedConnector?.reject(pendingCallback.request);
+      setPendingCallback(undefined);
+    }
+  }, [isDisconnecting, pendingCallback]);
 
   useEffect(() => {
     const handleDisconnect = () => {
@@ -342,7 +362,7 @@ export const SeedWalletProvider: React.FC<{
         <ConfirmSeedWalletLock
           name={lockedWallet.name}
           address={lockedWallet.address}
-          show={showPasswordModal}
+          show={showPasswordModal && !isDisconnecting}
           unlockedWallet={unlockedWallet}
           pendingRequest={pendingCallback?.request}
           onHide={() => {
@@ -369,7 +389,10 @@ export const SeedWalletProvider: React.FC<{
           onLock={lockWallet}
         />
       )}
-      <ConfirmSeedWalletRequest onShowChange={setShowRequestModal} />
+      <ConfirmSeedWalletRequest
+        onShowChange={setShowRequestModal}
+        suppress={isDisconnecting}
+      />
       {children}
     </SeedWalletContext.Provider>
   );

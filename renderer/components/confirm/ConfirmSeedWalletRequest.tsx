@@ -16,7 +16,14 @@ import { SeedWalletRequest } from "@/shared/types";
 import { faExclamationTriangle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers, formatUnits } from "ethers";
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
@@ -47,8 +54,10 @@ function parseTransactionData(data: string) {
 
 export default function ConfirmSeedWalletRequest({
   onShowChange,
+  suppress = false,
 }: Readonly<{
   onShowChange?: (show: boolean) => void;
+  suppress?: boolean | undefined;
 }> = {}) {
   const [show, setShow] = useState(false);
   const { isTopModal, addModal, removeModal } = useModalState();
@@ -95,10 +104,10 @@ export default function ConfirmSeedWalletRequest({
     };
   }, []);
 
-  const clear = () => {
+  const clear = useCallback(() => {
     setSeedRequest(undefined);
     setShow(false);
-  };
+  }, []);
 
   const onReject = (request: SeedWalletRequest) => {
     window.seedConnector.reject(request);
@@ -109,6 +118,15 @@ export default function ConfirmSeedWalletRequest({
     window.seedConnector.confirm(request);
     clear();
   };
+
+  useEffect(() => {
+    if (!suppress || !seedRequest) {
+      return;
+    }
+
+    window.seedConnector.reject(seedRequest);
+    clear();
+  }, [clear, seedRequest, suppress]);
 
   const requestHandler = (
     wallet: ethers.Wallet | null,

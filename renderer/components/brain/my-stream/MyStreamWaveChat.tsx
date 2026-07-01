@@ -16,6 +16,7 @@ import {
 } from "@/contexts/wave/UnreadDividerContext";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiWave } from "@/generated/models/ApiWave";
+import { isElectron } from "@/helpers";
 import { getHomeRoute } from "@/helpers/navigation.helpers";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
@@ -73,6 +74,7 @@ interface WaveChatLeaveHandlerProps {
 }
 
 const MAX_UNSUPPORTED_FILE_NAMES_IN_TOAST = 3;
+const CORE_WAVES_CONTENT_HEIGHT = "var(--core-waves-content-height, 100%)";
 const noop = () => {};
 
 const WaveChatLeaveHandler: React.FC<WaveChatLeaveHandlerProps> = ({
@@ -220,7 +222,21 @@ const MyStreamWaveChat: React.FC<MyStreamWaveChatProps> = ({
   }, [initialDropState, pathname, router, searchParams, viewMode]);
 
   const { waveViewStyle } = useLayout();
-  const effectiveWaveViewStyle = waveViewStyleOverride ?? waveViewStyle;
+  const effectiveWaveViewStyle = useMemo<React.CSSProperties>(() => {
+    if (waveViewStyleOverride) {
+      return waveViewStyleOverride;
+    }
+
+    if (!isElectron()) {
+      return waveViewStyle;
+    }
+
+    return {
+      ...waveViewStyle,
+      height: CORE_WAVES_CONTENT_HEIGHT,
+      maxHeight: CORE_WAVES_CONTENT_HEIGHT,
+    };
+  }, [waveViewStyle, waveViewStyleOverride]);
 
   const containerClassName = useMemo(() => {
     const baseStyles =

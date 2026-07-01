@@ -673,9 +673,11 @@ export default function Auth({
   const [authStorageRevision, setAuthStorageRevision] = useState(0);
   const signModalReasonRef = useRef<SignModalReason>(signModalReason);
   const seedWalletAutoAuthAddressRef = useRef<string | null>(null);
+  const isDisconnectingRef = useRef(false);
   const requestAuthRef = useRef<() => Promise<{ success: boolean }>>(
     async () => ({ success: false })
   );
+  isDisconnectingRef.current = isDisconnecting;
 
   const { profile: loadedProfile, isLoading: fetchingProfile } = useIdentity({
     handleOrWallet: address,
@@ -839,6 +841,13 @@ export default function Auth({
   useEffect(() => {
     signModalReasonRef.current = signModalReason;
   }, [signModalReason]);
+
+  useEffect(() => {
+    if (isDisconnecting) {
+      seedWalletAutoAuthAddressRef.current = null;
+      setShowSignModal(false);
+    }
+  }, [isDisconnecting]);
 
   useEffect(() => {
     if (!address || !connectedProfile?.id) {
@@ -1236,6 +1245,9 @@ export default function Auth({
 
         const clientSignature = await getSignature({ message: nonce });
         if (clientSignature.userRejected) {
+          if (isDisconnectingRef.current) {
+            return { success: false };
+          }
           setToast({
             message: "Authentication was canceled in your wallet.",
             type: "error",
@@ -1286,6 +1298,9 @@ export default function Auth({
 
       const clientSignature = await getSignature({ message: signable_message });
       if (clientSignature.userRejected) {
+        if (isDisconnectingRef.current) {
+          return { success: false };
+        }
         setToast({
           message: "Authentication was canceled in your wallet.",
           type: "error",
@@ -1317,6 +1332,10 @@ export default function Auth({
 
       return { success: true };
     } catch (error) {
+      if (isDisconnectingRef.current) {
+        return { success: false };
+      }
+
       // Handle specific authentication nonce errors with detailed messages
       if (error instanceof InvalidSignerAddressError) {
         setToast({
