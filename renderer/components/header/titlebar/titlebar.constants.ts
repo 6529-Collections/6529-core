@@ -1,0 +1,1 @@
+export const CORE_TITLEBAR_HEIGHT_PX = 30;

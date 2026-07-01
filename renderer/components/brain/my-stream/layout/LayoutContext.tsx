@@ -9,12 +9,11 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
-import useCapacitor from "@/hooks/useCapacitor";
+import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
 import { isElectron } from "@/helpers";
+import useCapacitor from "@/hooks/useCapacitor";
+import { useNativeKeyboard } from "@/hooks/useNativeKeyboard";
 import type { ReactNode } from "react";
-
-const ELECTRON_TITLEBAR_HEIGHT_PX = 30;
 
 // Define the different spaces that need to be measured
 interface LayoutSpaces {
@@ -38,6 +37,9 @@ interface LayoutSpaces {
   // Available space for content
   contentSpace: number;
 
+  // Whether the standard page header is currently mounted
+  hasHeader: boolean;
+
   // Whether measurements have completed
   measurementsComplete: boolean;
 }
@@ -50,15 +52,16 @@ const spacesAreEqual = (a: LayoutSpaces, b: LayoutSpaces) =>
   a.mobileTabsSpace === b.mobileTabsSpace &&
   a.mobileNavSpace === b.mobileNavSpace &&
   a.contentSpace === b.contentSpace &&
+  a.hasHeader === b.hasHeader &&
   a.measurementsComplete === b.measurementsComplete;
 
 // Helper function to calculate height style
 const calculateHeightStyle = (
   spaces: LayoutSpaces,
-  capacitorSpace: number // Accept specific space value
+  extraSpace: number
 ): React.CSSProperties => {
   // Use dynamic viewport height to avoid extra space on mobile browsers
-  const heightCalc = `calc(100dvh - ${spaces.headerSpace}px - ${spaces.pinnedSpace}px - ${spaces.tabsSpace}px - ${spaces.spacerSpace}px - ${spaces.mobileTabsSpace}px - ${spaces.mobileNavSpace}px - ${capacitorSpace}px)`;
+  const heightCalc = `calc(100dvh - ${spaces.headerSpace}px - ${spaces.pinnedSpace}px - ${spaces.tabsSpace}px - ${spaces.spacerSpace}px - ${spaces.mobileTabsSpace}px - ${spaces.mobileNavSpace}px - ${extraSpace}px)`;
   return {
     height: heightCalc,
     maxHeight: heightCalc,
@@ -77,7 +80,7 @@ type LayoutRefType =
 
 type MeasuredLayoutSpaceKey = Exclude<
   keyof LayoutSpaces,
-  "contentSpace" | "measurementsComplete"
+  "contentSpace" | "hasHeader" | "measurementsComplete"
 >;
 
 const layoutMeasurementConfigs: readonly {
@@ -186,6 +189,7 @@ const defaultSpaces: LayoutSpaces = {
   mobileTabsSpace: 0,
   mobileNavSpace: 0,
   contentSpace: 0,
+  hasHeader: false,
   measurementsComplete: false,
 };
 
@@ -285,6 +289,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
     const nextSpaces: LayoutSpaces = {
       ...measuredSpaces,
       contentSpace: calculatedContentSpace,
+      hasHeader: refMap.current.header !== null,
       measurementsComplete: true,
     };
 
@@ -332,7 +337,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   }, [calculateSpaces]);
 
   const electronTitlebarSpace =
-    isElectron() && spaces.headerSpace === 0 ? ELECTRON_TITLEBAR_HEIGHT_PX : 0;
+    isElectron() && !spaces.hasHeader ? CORE_TITLEBAR_HEIGHT_PX : 0;
 
   // Calculate the content container style based on header space
   const contentContainerStyle = useMemo(() => {
@@ -430,19 +435,7 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   // Small screen layout feed style (properly accounts for header)
   const smallScreenFeedStyle = useMemo<React.CSSProperties>(() => {
     if (!navAdjustedSpaces.measurementsComplete) return {};
-    const totalOffset =
-      navAdjustedSpaces.headerSpace +
-      navAdjustedSpaces.pinnedSpace +
-      navAdjustedSpaces.tabsSpace +
-      navAdjustedSpaces.spacerSpace +
-      navAdjustedSpaces.mobileTabsSpace +
-      navAdjustedSpaces.mobileNavSpace +
-      electronTitlebarSpace;
-    const heightCalc = `calc(100dvh - ${totalOffset}px)`;
-    return {
-      height: heightCalc,
-      maxHeight: heightCalc,
-    };
+    return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
   }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const mobileWavesViewStyle = useMemo<React.CSSProperties>(() => {

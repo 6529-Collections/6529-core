@@ -18,16 +18,26 @@ import {
 import Cookies from "js-cookie";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useContext, useEffect, useRef, useState } from "react";
+import {
+  type CSSProperties,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Button, Modal } from "react-bootstrap";
 import styles from "./TitleBar.module.scss";
 import TooltipButton from "./TooltipButton";
+import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
 
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
+const TITLEBAR_HEIGHT_STYLE = {
+  "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
+} as CSSProperties & Record<"--core-titlebar-height", string>;
 
 function getEnvironmentLabel(
   environment: unknown,
@@ -389,7 +399,7 @@ export default function TitleBar() {
 
   return (
     <>
-      <div className={styles["spacer"]}></div>
+      <div className={styles["spacer"]} style={TITLEBAR_HEIGHT_STYLE}></div>
       <span className={styles["buttonWrapper"]}>
         <TooltipButton
           buttonStyles={`${styles["button"]} ${
@@ -487,7 +497,10 @@ export default function TitleBar() {
           />
         )}
       </span>
-      <span className={`${versionClass} ${versionPositionClass}`}>
+      <span
+        className={`${versionClass} ${versionPositionClass}`}
+        style={TITLEBAR_HEIGHT_STYLE}
+      >
         {isMacPlatform ? (
           <>
             {environmentLabelElement}
