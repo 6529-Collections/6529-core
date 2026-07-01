@@ -1108,10 +1108,14 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const getActiveConnectIntent = useCallback(():
     | BrowserConnectorConnectIntent
     | undefined => {
-    if (!activeAddress || !isAddress(activeAddress)) {
+    const walletAddress =
+      activeAddress && isAddress(activeAddress)
+        ? activeAddress
+        : getWalletAddress();
+    if (!walletAddress || !isAddress(walletAddress)) {
       return undefined;
     }
-    return { intendedWalletAddress: getAddress(activeAddress) };
+    return { intendedWalletAddress: getAddress(walletAddress) };
   }, [activeAddress]);
 
   const getAddAccountConnectIntent = useCallback(
@@ -1140,6 +1144,16 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const seizeConnectFresh = useCallback(async (): Promise<void> => {
+    isAddingConnectedAccountRef.current = false;
+    addFlowOriginAddressRef.current = null;
+    addFlowHasLeftOriginRef.current = false;
+    pendingAddFlowSwitchRef.current = false;
+    setIsAddingConnectedAccount(false);
+    if (retryConnectTimeoutRef.current) {
+      clearTimeout(retryConnectTimeoutRef.current);
+      retryConnectTimeoutRef.current = null;
+    }
+
     const liveConnectedWallet =
       liveAccount.address &&
       liveAccount.isConnected &&
