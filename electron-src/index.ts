@@ -119,6 +119,13 @@ interface StoredNativeRefreshToken {
   readonly cipherTextBase64: string;
 }
 
+interface CachedNativeRefreshToken {
+  readonly cipherTextBase64: string;
+  readonly refreshToken: string;
+}
+
+const nativeRefreshTokenCache = new Map<string, CachedNativeRefreshToken>();
+
 interface NativeSessionLoginRequest {
   readonly client_type?: "native" | "desktop";
   readonly server_signature: string;
@@ -675,23 +682,43 @@ function assertNativeAuthRefreshTokenKey(key: string): void {
   }
 }
 
+function isStoredNativeRefreshToken(
+  value: unknown
+): value is StoredNativeRefreshToken {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    "version" in value &&
+    value.version === NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION &&
+    "cipherTextBase64" in value &&
+    typeof value.cipherTextBase64 === "string"
+  );
+}
+
 function getEncryptedNativeRefreshToken(key: string): string | null {
   assertNativeAuthRefreshTokenKey(key);
   const storedValue = getValue(key);
-  if (
-    !storedValue ||
-    typeof storedValue !== "object" ||
-    storedValue.version !== NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION ||
-    typeof storedValue.cipherTextBase64 !== "string"
-  ) {
+  if (!isStoredNativeRefreshToken(storedValue)) {
+    nativeRefreshTokenCache.delete(key);
     return null;
   }
 
+  const cached = nativeRefreshTokenCache.get(key);
+  if (cached?.cipherTextBase64 === storedValue.cipherTextBase64) {
+    return cached.refreshToken;
+  }
+
   try {
-    return safeStorage.decryptString(
+    const refreshToken = safeStorage.decryptString(
       Buffer.from(storedValue.cipherTextBase64, "base64")
     );
+    nativeRefreshTokenCache.set(key, {
+      cipherTextBase64: storedValue.cipherTextBase64,
+      refreshToken,
+    });
+    return refreshToken;
   } catch (error) {
+    nativeRefreshTokenCache.delete(key);
     Logger.warn("Failed to decrypt native auth refresh token", error);
     return null;
   }
@@ -702,6 +729,16 @@ function setEncryptedNativeRefreshToken(
   refreshToken: string
 ): void {
   assertNativeAuthRefreshTokenKey(key);
+  const existingStoredValue = getValue(key);
+  const cached = nativeRefreshTokenCache.get(key);
+  if (
+    isStoredNativeRefreshToken(existingStoredValue) &&
+    cached?.cipherTextBase64 === existingStoredValue.cipherTextBase64 &&
+    cached.refreshToken === refreshToken
+  ) {
+    return;
+  }
+
   if (!safeStorage.isEncryptionAvailable()) {
     throw new Error("Native auth secure storage is unavailable");
   }
@@ -709,15 +746,17 @@ function setEncryptedNativeRefreshToken(
   const cipherTextBase64 = safeStorage
     .encryptString(refreshToken)
     .toString("base64");
-  const storedValue: StoredNativeRefreshToken = {
+  const nextStoredValue: StoredNativeRefreshToken = {
     version: NATIVE_AUTH_REFRESH_TOKEN_STORAGE_VERSION,
     cipherTextBase64,
   };
-  setValue(key, storedValue);
+  setValue(key, nextStoredValue);
+  nativeRefreshTokenCache.set(key, { cipherTextBase64, refreshToken });
 }
 
 function removeEncryptedNativeRefreshToken(key: string): void {
   assertNativeAuthRefreshTokenKey(key);
+  nativeRefreshTokenCache.delete(key);
   removeValue(key);
 }
 
