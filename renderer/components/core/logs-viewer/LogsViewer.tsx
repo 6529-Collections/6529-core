@@ -40,15 +40,17 @@ function LogsViewerTrigger({
     : isOpen
       ? "tw-bg-iron-900"
       : "tw-bg-black desktop-hover:hover:tw-bg-iron-900";
+  const chevronRotationClass = isOpen ? "tw-rotate-90" : "tw-rotate-0";
   return (
     <button
       type="button"
       style={summaryStyle ? undefined : { maxWidth: width }}
+      aria-expanded={isOpen}
       className={`tw-flex tw-cursor-pointer tw-items-center tw-gap-2 tw-text-left tw-text-inherit focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-inset focus-visible:tw-ring-iron-500 ${summaryStyle ? summaryClasses : defaultClasses} ${stateClasses}`}
       onClick={onSelect}
     >
       <ChevronRightIcon
-        className={`tw-size-4 tw-shrink-0 tw-text-inherit tw-transition-transform ${isOpen ? "tw-rotate-90" : ""}`}
+        className={`tw-size-4 tw-shrink-0 tw-text-inherit tw-transition-transform ${chevronRotationClass}`}
       />
       <span className="tw-truncate">{children}</span>
     </button>

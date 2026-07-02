@@ -1,11 +1,10 @@
 import AppInfo from "@/components/core/app-info/AppInfo";
 import { getAppMetadata } from "@/components/providers/metadata";
-import styles from "@/styles/Home.module.scss";
 import { Metadata } from "next";
 
 export default function AppInfoPage() {
   return (
-    <main className={styles["main"]}>
+    <main className="tw-min-h-screen">
       <div className="tw-relative tw-mx-auto tw-px-2 lg:tw-px-6 xl:tw-px-8">
         <AppInfo />
       </div>

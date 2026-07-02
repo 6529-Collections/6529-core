@@ -97,7 +97,7 @@ function RPCProviderCard({
               {!rpcProvider.deletable && (
                 <>
                   <span
-                    className="cursor-help"
+                    className="tw-cursor-help"
                     data-tooltip-id="default-rpc-provider-tooltip"
                   >
                     *
