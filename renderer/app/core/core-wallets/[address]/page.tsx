@@ -1,6 +1,5 @@
 import SeedWallet from "@/components/core/core-wallet/SeedWallet";
 import { getAppMetadata } from "@/components/providers/metadata";
-import styles from "@/styles/Home.module.scss";
 import { Metadata } from "next";
 
 export default async function SeedWalletPage({
@@ -11,7 +10,7 @@ export default async function SeedWalletPage({
   const { address } = await params;
 
   return (
-    <main className={styles["main"]}>
+    <main className="tw-min-h-screen">
       <div className="tw-relative tw-mx-auto tw-px-2 lg:tw-px-6 xl:tw-px-8">
         <SeedWallet address={address} />
       </div>
