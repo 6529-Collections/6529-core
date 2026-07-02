@@ -10,7 +10,7 @@ export default function SeedWalletCard(
   return (
     <Link
       href={`/core/core-wallets/${props.wallet.address}`}
-      className="group tw-block tw-no-underline tw-transition-transform tw-duration-300 desktop-hover:hover:tw-scale-[1.01]"
+      className="tw-group tw-block tw-no-underline tw-transition-transform tw-duration-300 desktop-hover:hover:tw-scale-[1.01]"
     >
       <div className="tw-rounded-xl tw-bg-iron-950 tw-px-4 tw-py-6 tw-ring-1 tw-ring-inset tw-ring-iron-800 tw-transition-all tw-duration-300 hover:tw-ring-iron-600">
         <div className="tw-flex tw-items-center tw-gap-2 tw-break-all">
