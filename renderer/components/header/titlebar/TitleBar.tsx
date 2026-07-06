@@ -25,8 +25,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { Button, Modal } from "react-bootstrap";
-import styles from "./TitleBar.module.scss";
+import styles from "./TitleBar.module.css";
 import TooltipButton from "./TooltipButton";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
@@ -529,35 +528,39 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
-      <Modal
-        show={showUpdateModal}
-        onHide={() => setShowUpdateModal(false)}
-        backdrop
-        keyboard={false}
-        centered
-      >
-        <div className={styles["updateModalHeader"]}>
-          <Modal.Title>Update Available</Modal.Title>
+      {showUpdateModal && (
+        <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[10000] tw-flex tw-items-center tw-justify-center tw-bg-black/50 tw-p-4">
+          <div className="tw-w-[min(28rem,calc(100vw-2rem))]">
+            <div className={styles["updateModalHeader"]}>
+              <h2 className="tw-m-0 tw-text-lg tw-font-semibold">
+                Update Available
+              </h2>
+            </div>
+            <div className={styles["updateModalContent"]}>
+              <p>Version {updateAvailable?.version} is available.</p>
+              <span>
+                Visit{" "}
+                <Link
+                  href={"/core/core-info"}
+                  onClick={() => setShowUpdateModal(false)}
+                >
+                  App Info
+                </Link>{" "}
+                page to update.
+              </span>
+            </div>
+            <div className={`${styles["updateModalContent"]} tw-flex tw-justify-end`}>
+              <button
+                type="button"
+                onClick={() => setShowUpdateModal(false)}
+                className="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-border tw-border-solid tw-border-iron-600 tw-bg-iron-800 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-white desktop-hover:hover:tw-bg-iron-700"
+              >
+                Close
+              </button>
+            </div>
+          </div>
         </div>
-        <Modal.Body className={styles["updateModalContent"]}>
-          <p>Version {updateAvailable?.version} is available.</p>
-          <span>
-            Visit{" "}
-            <Link
-              href={"/core/core-info"}
-              onClick={() => setShowUpdateModal(false)}
-            >
-              App Info
-            </Link>{" "}
-            page to update.
-          </span>
-        </Modal.Body>
-        <Modal.Footer className={styles["updateModalContent"]}>
-          <Button variant="secondary" onClick={() => setShowUpdateModal(false)}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      )}
     </>
   );
 }

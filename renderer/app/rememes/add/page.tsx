@@ -4,7 +4,7 @@ import {
   getLargeSocialCardMetadata,
 } from "@/components/providers/metadata";
 import RememeAddPage from "@/components/rememes/RememeAddPage";
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import type { Metadata } from "next";
 
 export default function ReMemesAddPage() {
@@ -18,7 +18,7 @@ export default function ReMemesAddPage() {
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata(
     getLargeSocialCardMetadata({
-      title: "ReMemes | Add",
+      title: "Add ReMemes | Collections",
       description: "Collections",
       ogImage: getCollectionSocialCardImagePath("rememes", {
         subtitle: "Submit a community remix or derivative",

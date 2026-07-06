@@ -4,7 +4,6 @@ import { LoginImage } from "@/app/access/page.client";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Col, Container, Row } from "react-bootstrap";
 import BrowserConnectorConnect from "./BrowserConnectorConnect";
 import BrowserConnectorProvider from "./BrowserConnectorProvider";
 import {
@@ -63,78 +62,69 @@ export default function BrowserConnector({
   }, [schemeValidationError, t]);
 
   return (
-    <Container fluid>
-      <Row
-        style={{
-          height: "100vh",
-        }}>
-        <Col
-          className="d-flex align-items-center justify-content-center"
-          style={{
-            backgroundColor: "#000",
-          }}>
+    <div className="tw-grid tw-min-h-screen tw-grid-cols-1 md:tw-grid-cols-2">
+      <div className="tw-flex tw-items-center tw-justify-center tw-bg-black">
           <LoginImage image={image} alt="connect" />
-        </Col>
-        <Col className="d-flex flex-column align-items-center justify-content-between">
-          <>
-            <Image
-              loading="eager"
-              priority
-              src="/6529.png"
-              alt="6529Seize"
-              width={60}
-              height={60}
-              style={{
-                marginTop: "25px",
-              }}
-            />
-            {isCompleted ? (
-              <div className="d-flex flex-column align-items-center justify-content-center">
-                <h2 className="text-white">You're all set!</h2>
-                <p className="text-white">You can now close this window.</p>
-              </div>
-            ) : schemeValidationError ? (
-              <div className="d-flex flex-column align-items-center justify-content-center">
-                <h2 className="text-white">Invalid desktop return target</h2>
-                <p className="text-white">{schemeValidationError}</p>
-                <p className="text-white">
-                  Close this window and retry from 6529 Desktop.
-                </p>
-              </div>
-            ) : isExpired ? (
-              <div className="d-flex flex-column align-items-center justify-content-center">
-                <h2 className="text-white">This page is expired</h2>
-                <p className="text-white">You can now close this window.</p>
-              </div>
-            ) : (
-              <>
-                {task === "connect" && (
-                  <BrowserConnectorConnect
-                    returnScheme={returnScheme}
-                    setCompleted={setIsCompleted}
-                  />
-                )}
-                {task === "provider" && (
-                  <BrowserConnectorProvider
-                    returnScheme={returnScheme}
-                    setCompleted={setIsCompleted}
-                  />
-                )}
-              </>
-            )}
-            <span className="font-color-h pb-2">
-              {!isCompleted && timeLeft ? (
-                <>
-                  This page will expire in{" "}
-                  {formatBrowserConnectorTimeLeft(timeLeft)}
-                </>
-              ) : (
-                <></>
+      </div>
+      <div className="tw-flex tw-min-h-screen tw-flex-col tw-items-center tw-justify-between tw-px-6">
+        <>
+          <Image
+            loading="eager"
+            priority
+            src="/6529.png"
+            alt="6529Seize"
+            width={60}
+            height={60}
+            style={{
+              marginTop: "25px",
+            }}
+          />
+          {isCompleted ? (
+            <div className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-text-center">
+              <h2 className="tw-text-white">You're all set!</h2>
+              <p className="tw-text-white">You can now close this window.</p>
+            </div>
+          ) : schemeValidationError ? (
+            <div className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-text-center">
+              <h2 className="tw-text-white">Invalid desktop return target</h2>
+              <p className="tw-text-white">{schemeValidationError}</p>
+              <p className="tw-text-white">
+                Close this window and retry from 6529 Desktop.
+              </p>
+            </div>
+          ) : isExpired ? (
+            <div className="tw-flex tw-flex-col tw-items-center tw-justify-center tw-text-center">
+              <h2 className="tw-text-white">This page is expired</h2>
+              <p className="tw-text-white">You can now close this window.</p>
+            </div>
+          ) : (
+            <>
+              {task === "connect" && (
+                <BrowserConnectorConnect
+                  returnScheme={returnScheme}
+                  setCompleted={setIsCompleted}
+                />
               )}
-            </span>
-          </>
-        </Col>
-      </Row>
-    </Container>
+              {task === "provider" && (
+                <BrowserConnectorProvider
+                  returnScheme={returnScheme}
+                  setCompleted={setIsCompleted}
+                />
+              )}
+            </>
+          )}
+          <span className="tw-pb-2 tw-text-iron-400">
+            {!isCompleted && timeLeft ? (
+              <>
+                This page will expire in{" "}
+                {formatBrowserConnectorTimeLeft(timeLeft)}
+              </>
+            ) : (
+              <></>
+            )}
+          </span>
+        </>
+      </div>
+    </div>
   );
 }

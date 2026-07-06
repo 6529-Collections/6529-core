@@ -45,5 +45,6 @@ export interface SidebarNavItem {
   name: string;
   href: string;
   isExternal?: boolean | undefined;
+  activePathPrefixes?: readonly string[] | undefined;
   activatesSection?: boolean | undefined;
 }

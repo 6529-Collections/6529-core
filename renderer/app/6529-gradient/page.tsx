@@ -7,7 +7,7 @@ import {
 import { publicEnv } from "@/config/env";
 import JsonLdScript from "@/lib/structured-data/json-ld";
 import { buildCollectionPageJsonLd } from "@/lib/structured-data/nft";
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import type { Metadata } from "next";
 
 export default function GradientsPage() {
@@ -29,7 +29,7 @@ export default function GradientsPage() {
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata(
     getLargeSocialCardMetadata({
-      title: "6529 Gradient",
+      title: "6529 Gradient | Collections",
       description: "Collections",
       ogImage: getCollectionSocialCardImagePath("6529-gradient"),
       ogImageAlt: "6529 Gradient collection social card",

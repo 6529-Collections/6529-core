@@ -1,7 +1,6 @@
 "use client";
 
 import { memo, useRef } from "react";
-import { Col, Row } from "../../NextGenTailwindLayout";
 import { A11y, Autoplay, Navigation } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { NextGenToken } from "@/entities/INextgen";
@@ -32,8 +31,8 @@ export default function TokenSlideshow({
   const { isInViewport, setSwiperInstance } =
     useSlideshowAutoplay(swiperContainerRef);
   return (
-    <Row>
-      <Col>
+    <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+      <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
         <div ref={swiperContainerRef}>
           <Swiper
             modules={[Navigation, A11y, Autoplay]}
@@ -58,14 +57,14 @@ export default function TokenSlideshow({
             {displayTokens.map((token, index) => (
               <SwiperSlide
                 key={`${token.id}-${index}`}
-                className="pt-4 pb-4 unselectable"
+                className="tw-pt-6 tw-pb-6 tw-select-none"
               >
-                <MemoizedTokenImage token={token} info_class="font-smaller" />
+                <MemoizedTokenImage token={token} info_class="tw-text-sm" />
               </SwiperSlide>
             ))}
           </Swiper>
         </div>
-      </Col>
-    </Row>
+      </div>
+    </div>
   );
 }

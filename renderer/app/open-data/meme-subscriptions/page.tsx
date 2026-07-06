@@ -1,4 +1,4 @@
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import CommunityDownloadsSubscriptions from "@/components/community-downloads/CommunityDownloadsSubscriptions";
 import { getAppMetadata } from "@/components/providers/metadata";
 import type { Metadata } from "next";
@@ -13,7 +13,7 @@ export default function MemeSubscriptions() {
 
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata({
-    title: "Meme Subscriptions",
+    title: "Meme Subscriptions | Open Data",
     description: "Open Data",
   });
 }

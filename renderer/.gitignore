@@ -108,7 +108,11 @@ eslint-rule-summary.csv
 .cursor
 .cursorignore
 CLAUDE.md
-.claude
+# Anchored on purpose: an unanchored `.claude` becomes a `**/.claude/**` ignore
+# inside knip, which silently drops every entry file knip resolves to an
+# absolute path when the checkout itself lives under .claude/worktrees/<wt>
+# (agent worktrees) — producing ~23 false unused-file/export findings.
+/.claude/
 .codex
 .gemini
 .windsurfrules
@@ -122,3 +126,13 @@ ops/skills/6529-agent-login/*.payload.json
 ops/skills/6529-agent-login/*storage-state*.json
 ops/skills/6529-agent-login/*agent-login*.json
 ops/skills/6529-agent-login/*agent-login*.js
+
+# Local scratch space and credential-shaped files, anywhere in the tree.
+# Added after a live bot token in tmp/ was committed and pushed inside a
+# rescue snapshot (2026-07-04 incident, see the repo-health-2026-07 run log).
+/tmp/
+*-auth.json
+*browser-auth*
+*storage-state*.json
+*.credentials.json
+*-session-token*

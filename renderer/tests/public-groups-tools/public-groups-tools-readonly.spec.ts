@@ -18,6 +18,18 @@ async function gotoReady(
   await expectNoHorizontalOverflow(page);
 }
 
+async function openGroupFilters(page: Page) {
+  const openButton = page.getByRole("button", { name: "Open group filters" });
+  if (
+    await openButton
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false)
+  ) {
+    await openButton.first().click();
+  }
+}
+
 async function expectAnyVisible(
   candidates: readonly Locator[],
   description: string
@@ -46,6 +58,34 @@ async function expectSubscriptionsSettled(page: Page) {
 }
 
 test.describe("Public groups, tools, and calendar read-only coverage @surface @medium @large @readonly", () => {
+  test("renders the Tools index with grouped utility links", async ({
+    page,
+  }) => {
+    await gotoReady(page, "/tools");
+
+    await expect(page).toHaveURL((url) => url.pathname === "/tools");
+    await expect(page).toHaveTitle("Tools");
+    await expect(
+      page.getByRole("heading", { level: 1, name: "6529 Tools" })
+    ).toBeVisible();
+    await expect(page.getByText("NFT Delegation")).toBeVisible();
+    await expect(page.getByText("The Memes Tools")).toBeVisible();
+    await expect(page.getByText("Builder Tools")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Open Data" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Open tool: API" })
+    ).toHaveAttribute("href", "/tools/api");
+    await expect(
+      page.getByRole("link", { name: "Open tool: 6529bot Usage" })
+    ).toHaveAttribute("href", "/open-data/6529bot");
+    await expect(
+      page.getByRole("link", { name: "Open tool: GDRC" })
+    ).toHaveCount(0);
+    await expectNoHorizontalOverflow(page);
+  });
+
   test("renders the public Groups browse surface without write controls", async ({
     page,
   }) => {
@@ -73,6 +113,66 @@ test.describe("Public groups, tools, and calendar read-only coverage @surface @m
         url.searchParams.get("group") === "6529"
       );
     });
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("activates and clears a network group filter through the active-group state", async ({
+    page,
+  }) => {
+    await gotoReady(page, "/network");
+
+    // Resolve a real group id from the app's own unfiltered groups request
+    // (fired when the filter panel opens) so the test stays portable across
+    // local, staging, and production data sets.
+    const groupsResponsePromise = page.waitForResponse(
+      (response) =>
+        response.request().method() === "GET" &&
+        /\/groups(\?|$)/.test(response.url()) &&
+        response.ok(),
+      { timeout: 30000 }
+    );
+    await openGroupFilters(page);
+    await expect(
+      page.getByLabel(/^(By )?Group [Nn]ame$/).first()
+    ).toBeVisible({ timeout: 30000 });
+    const groupsResponse = await groupsResponsePromise;
+    const groupsPayload = (await groupsResponse.json()) as
+      | { readonly id?: string; readonly name?: string }[]
+      | { readonly data?: { readonly id?: string; readonly name?: string }[] };
+    const groups = Array.isArray(groupsPayload)
+      ? groupsPayload
+      : (groupsPayload.data ?? []);
+    expect(groups.length, "Expected at least one public group").toBeGreaterThan(
+      0
+    );
+    const groupId = groups[0]?.id;
+    expect(typeof groupId).toBe("string");
+
+    // Deep-link the group: the URL param hydrates the active-group state.
+    await gotoReady(page, `/network?group=${groupId}`);
+    await expect(page).toHaveURL((url) =>
+      url.searchParams.get("group") === groupId
+    );
+    await openGroupFilters(page);
+
+    // The active-group block is required: "Members:" in the desktop sidebar,
+    // "Active filter" in the mobile sheet.
+    await expect(
+      page.getByText(/Members:|Active filter/).first()
+    ).toBeVisible({ timeout: 30000 });
+
+    // Clearing the group exercises the state transition back to null and
+    // must drop the URL param.
+    const clearButton = page
+      .getByRole("button", { name: /remove|clear group/i })
+      .first();
+    await expect(clearButton).toBeVisible({ timeout: 15000 });
+    await clearButton.click();
+    await expect(page).toHaveURL(
+      (url) => url.searchParams.get("group") === null,
+      { timeout: 15000 }
+    );
+
     await expectNoHorizontalOverflow(page);
   });
 

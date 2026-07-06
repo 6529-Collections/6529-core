@@ -3,7 +3,6 @@
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Dropdown } from "react-bootstrap";
 import type {
   NextGenCollection,
   NextgenAllowlist,
@@ -18,7 +17,7 @@ import {
   SearchModalDisplay,
   SearchWalletsDisplay,
 } from "@/components/searchModal/SearchModal";
-import styles from "@/components/nextGen/collections/NextGen.module.scss";
+import styles from "@/components/nextGen/collections/NextGen.module.css";
 import NextGenCollectionHeader from "../NextGenCollectionHeader";
 import { getJsonData } from "./NextGenMintWidget";
 
@@ -79,7 +78,7 @@ export default function NextgenCollectionMintingPlan(props: Readonly<Props>) {
     commonApiFetch<{
       count: number;
       page: number;
-      next: any;
+      next: unknown;
       data: NextgenAllowlist[];
     }>({
       endpoint: `nextgen/${props.collection.id}/allowlist_merkle/${
@@ -119,12 +118,10 @@ export default function NextgenCollectionMintingPlan(props: Readonly<Props>) {
     const startTime = Time.seconds(start);
     const endTime = Time.seconds(end);
     return (
-      <div
-        key={getRandomObjectId()}
-        className="tw-flex tw-flex-col tw-py-2">
+      <div key={getRandomObjectId()} className="tw-flex tw-flex-col tw-py-2">
         <div className={styles["phaseBox"]}>
           <span className="tw-flex tw-items-center tw-justify-center tw-pb-4">
-            <h4 className="font-color tw-mb-0">{phaseName}</h4>
+            <h4 className="tw-mb-0 tw-text-white">{phaseName}</h4>
           </span>
           <table className="tw-w-full">
             <tbody>
@@ -187,23 +184,35 @@ export default function NextgenCollectionMintingPlan(props: Readonly<Props>) {
       )}
       <div className="tw-pt-4" ref={allowlistScrollTarget}>
         <div className="tw-flex tw-items-center tw-justify-between">
-          <Dropdown className={styles["filterDropdown"]} drop={"down-centered"}>
-            <Dropdown.Toggle>
-              {selectedPhase?.phase ?? "All Phases"}
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item onClick={() => setSelectedPhase(undefined)}>
+          <label
+            className={`${styles["filterDropdown"]} tw-flex tw-items-center tw-gap-2`}
+          >
+            <span className="tw-sr-only">Phase</span>
+            <select
+              value={selectedPhase?.phase ?? ""}
+              onChange={(event) => {
+                const nextPhase = phases.find(
+                  (phase) => phase.phase === event.target.value
+                );
+                setSelectedPhase(nextPhase);
+              }}
+              className="tw-cursor-pointer tw-rounded-md tw-border-0 tw-bg-transparent tw-py-1 tw-pl-1 tw-pr-8 tw-text-lg tw-font-bold tw-text-white focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+              style={{ colorScheme: "dark" }}
+            >
+              <option value="" className="tw-bg-black tw-text-white">
                 All Phases
-              </Dropdown.Item>
+              </option>
               {phases.map((p) => (
-                <Dropdown.Item
+                <option
                   key={`filter-${p.phase}`}
-                  onClick={() => setSelectedPhase(p)}>
+                  value={p.phase}
+                  className="tw-bg-black tw-text-white"
+                >
                   {p.phase}
-                </Dropdown.Item>
+                </option>
               ))}
-            </Dropdown.Menu>
-          </Dropdown>
+            </select>
+          </label>
           <SearchWalletsDisplay
             searchWallets={searchWallets}
             setSearchWallets={setSearchWallets}
@@ -229,7 +238,8 @@ export default function NextgenCollectionMintingPlan(props: Readonly<Props>) {
                     href={`/${al.address}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="decoration-hover-underline">
+                    className="tw-no-underline hover:tw-underline"
+                  >
                     {al.wallet_display && `${al.wallet_display} - `}
                     {al.address}
                   </Link>

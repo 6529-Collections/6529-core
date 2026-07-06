@@ -1,8 +1,10 @@
 "use client";
 
+import clsx from "clsx";
 import Link from "next/link";
 import {
   type ReactNode,
+  type CSSProperties,
   useEffect,
   useMemo,
   useRef,
@@ -51,15 +53,17 @@ import type {
   ArweaveMetadata,
   ManifoldMintMetadata,
 } from "./manifold-mint-metadata";
-import type { Chain } from "viem";
+import type { Abi, Chain } from "viem";
+import WalletConnectBalance from "@/components/wallet-connect-balance/WalletConnectBalance";
 
 interface Props {
   title: string;
   contract: string;
   chain: Chain;
-  abi: any;
+  abi: Abi;
   mint_date: Time;
   mintMetadata: ManifoldMintMetadata;
+  standalone?: boolean;
 }
 
 interface MintMetadata {
@@ -244,12 +248,42 @@ function MetadataRow({
   );
 }
 
+function StandaloneMintPageTopBar() {
+  return (
+    <div className="tw-flex tw-w-full tw-flex-col tw-items-center tw-gap-4 md:tw-flex-row md:tw-items-center md:tw-justify-between md:tw-gap-6">
+      <div className="tw-flex tw-items-center tw-justify-center tw-gap-3">
+        <img src="/6529.svg" alt="6529" width={28} height={28} />
+        <span className="tw-text-xl tw-font-bold tw-text-white">
+          The Memes by 6529 - Mint Page
+        </span>
+      </div>
+      <div
+        className="tw-flex tw-justify-center md:tw-justify-end"
+        style={
+          {
+            "--apkt-tokens-core-backgroundAccentPrimary": "#406AFE",
+            "--apkt-tokens-core-backgroundAccentPrimary-base": "#406AFE",
+            "--apkt-tokens-theme-textInvert": "#FFFFFF",
+            "--apkt-tokens-theme-iconInverse": "#FFFFFF",
+            "--apkt-borderRadius-2": "10px",
+            "--apkt-borderRadius-3": "12px",
+          } as CSSProperties
+        }
+      >
+        <WalletConnectBalance />
+      </div>
+    </div>
+  );
+}
+
 function ArtistInfoStrip({
   handle,
   name,
+  standalone = false,
 }: {
   readonly handle: string;
   readonly name: string | undefined;
+  readonly standalone?: boolean;
 }) {
   const { profile } = useIdentity({
     handleOrWallet: handle,
@@ -258,6 +292,8 @@ function ArtistInfoStrip({
 
   const href = `/${handle}`;
   const displayName = profile?.handle ?? name ?? handle;
+  const standaloneDisplayName = name ?? profile?.handle ?? handle;
+  const standaloneHref = `https://6529.io/${profile?.handle ?? handle}`;
   const badgesProfile = useMemo(() => {
     if (!profile) {
       return null;
@@ -286,6 +322,22 @@ function ArtistInfoStrip({
       sub_classification: profile.sub_classification,
     };
   }, [profile]);
+
+  if (standalone) {
+    return (
+      <a
+        href={standaloneHref}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="tw-inline-flex tw-items-center tw-gap-3 tw-pb-4 tw-pt-1 tw-text-white tw-no-underline hover:tw-text-white"
+      >
+        <DropPfp pfpUrl={profile?.pfp} />
+        <span className="tw-text-lg tw-font-medium tw-leading-none">
+          {standaloneDisplayName}
+        </span>
+      </a>
+    );
+  }
 
   return (
     <UserProfileTooltipWrapper user={handle}>
@@ -328,15 +380,15 @@ export default function ManifoldMinting(props: Readonly<Props>) {
   const descriptionRef = useRef<HTMLDivElement>(null);
 
   const manifoldClaimState = useManifoldClaim({
-      chainId: props.chain.id,
-      contract: props.contract,
-      proxy: MANIFOLD_LAZY_CLAIM_CONTRACT,
-      abi: props.abi,
-      identifier: props.mintMetadata.tokenId,
-      onError: () => {
-        setIsError(true);
-      },
-    });
+    chainId: props.chain.id,
+    contract: props.contract,
+    proxy: MANIFOLD_LAZY_CLAIM_CONTRACT,
+    abi: props.abi,
+    identifier: props.mintMetadata.tokenId,
+    onError: () => {
+      setIsError(true);
+    },
+  });
   const manifoldClaim = manifoldClaimState?.claim;
   const isManifoldClaimFetching = manifoldClaimState?.isFetching ?? false;
 
@@ -344,6 +396,10 @@ export default function ManifoldMinting(props: Readonly<Props>) {
   const [mintForAddress, setMintForAddress] = useState<string | null>(null);
   const pageContainerClassName =
     "tw-mx-auto tw-w-full tw-max-w-7xl tw-px-4 md:tw-px-6";
+  const standalonePageContainerClassName = clsx(
+    pageContainerClassName,
+    props.standalone && "tw-pt-4"
+  );
 
   const instance = useMemo<MintMetadata | undefined>(() => {
     if (
@@ -408,8 +464,20 @@ export default function ManifoldMinting(props: Readonly<Props>) {
       return artistLabel;
     }
 
+    if (props.standalone) {
+      return (
+        <a
+          href={`https://6529.io/${artist.handle}`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          {artistLabel}
+        </a>
+      );
+    }
+
     return <Link href={`/${artist.handle}`}>{artistLabel}</Link>;
-  }, [artist]);
+  }, [artist, props.standalone]);
 
   useEffect(() => {
     if (instance) {
@@ -467,6 +535,18 @@ export default function ManifoldMinting(props: Readonly<Props>) {
 
   function printDistributionLink() {
     const contractPath = getPathForContract(props.contract);
+    if (props.standalone) {
+      return (
+        <a
+          href={`https://6529.io/${contractPath}/${props.mintMetadata.tokenId}/distribution`}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          Distribution Plan
+        </a>
+      );
+    }
+
     return (
       <Link
         href={`/${contractPath}/${props.mintMetadata.tokenId}/distribution`}
@@ -515,16 +595,22 @@ export default function ManifoldMinting(props: Readonly<Props>) {
     return (
       <div className="tw-order-2 tw-py-8 md:tw-order-1 md:tw-col-span-5">
         <div className="tw-flex tw-items-center tw-justify-between">
-          <Link
-            href={`/${getPathForContract(props.contract)}/${
-              props.mintMetadata.tokenId
-            }`}
-            className="tw-text-white hover:tw-text-white"
-          >
-            <div className="tw-mb-0 tw-text-xl tw-font-semibold tw-leading-tight">
+          {props.standalone ? (
+            <div className="tw-mb-0 tw-text-xl tw-font-semibold tw-leading-tight tw-text-white">
               {instance.asset.name ?? props.title}
             </div>
-          </Link>
+          ) : (
+            <Link
+              href={`/${getPathForContract(props.contract)}/${
+                props.mintMetadata.tokenId
+              }`}
+              className="tw-text-white hover:tw-text-white"
+            >
+              <div className="tw-mb-0 tw-text-xl tw-font-semibold tw-leading-tight">
+                {instance.asset.name ?? props.title}
+              </div>
+            </Link>
+          )}
         </div>
         <div className="tw-pb-3 tw-pt-1 tw-text-base tw-font-light tw-text-iron-200">
           <span>
@@ -532,7 +618,11 @@ export default function ManifoldMinting(props: Readonly<Props>) {
           </span>
         </div>
         {artist?.handle && (
-          <ArtistInfoStrip handle={artist.handle} name={artist.name ?? undefined} />
+          <ArtistInfoStrip
+            handle={artist.handle}
+            name={artist.name ?? undefined}
+            standalone={props.standalone ?? false}
+          />
         )}
         <div className="tw-text-base tw-text-iron-100">
           {printDescription(instance)}
@@ -592,7 +682,13 @@ export default function ManifoldMinting(props: Readonly<Props>) {
 
   const printContent = (content: ReactNode, padContent?: boolean) => {
     return (
-      <div className={pageContainerClassName}>
+      <div className={standalonePageContainerClassName}>
+        {props.standalone && (
+          <div>
+            <StandaloneMintPageTopBar />
+            <div className="tw-mt-4 tw-h-px tw-w-full tw-bg-white/20" />
+          </div>
+        )}
         {printTestnetIndicator()}
         {!instance && !nftImage && printTitle()}
         {padContent ? <div className="tw-pt-8">{content}</div> : content}

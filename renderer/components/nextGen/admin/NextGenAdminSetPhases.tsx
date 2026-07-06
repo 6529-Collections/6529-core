@@ -20,7 +20,7 @@ import {
 } from "../nextgen_helpers";
 import NextGenContractWriteStatus from "../NextGenContractWriteStatus";
 import { printAdminErrors } from "./NextGenAdmin";
-import styles from "./NextGenAdmin.module.scss";
+import styles from "./NextGenAdmin.module.css";
 import {
   Button,
   Col,
@@ -52,8 +52,8 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
   );
 
   const collectionIds = getCollectionIdsForAddress(
-    (globalAdmin.data as any) === true,
-    (functionAdmin.data as any) === true,
+    globalAdmin.data === true,
+    functionAdmin.data === true,
     collectionAdmin.data,
     parsedCollectionIndex
   );
@@ -163,12 +163,12 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
   }, [contractWrite.isSuccess || contractWrite.isError]);
 
   return (
-    <Container className="no-padding">
+    <Container className="!tw-p-0">
       <NextGenAdminHeadingRow
         close={props.close}
         title="Set Collection Minting Phases"
       />
-      <Row className="pt-3">
+      <Row className="tw-pt-4">
         <Col>
           <Form>
             <NextGenCollectionIdFormGroup
@@ -179,7 +179,7 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
                 setCollectionID(id);
               }}
             />
-            <Form.Group className="mb-3">
+            <Form.Group className="tw-mb-4">
               <Form.Label>Merkle Roots</Form.Label>
               <Form.Select
                 className={`${styles["formInput"]}`}
@@ -204,7 +204,7 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
               </Form.Select>
             </Form.Group>
             {selectedAllowlist && (
-              <Form.Group className="mb-3">
+              <Form.Group className="tw-mb-4">
                 <span className="tw-flex tw-items-center tw-gap-4">
                   <Form.Check
                     disabled
@@ -231,7 +231,7 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
             )}
             {selectedAllowlist && (
               <>
-                <Form.Group className="mb-3">
+                <Form.Group className="tw-mb-4">
                   <Form.Label>Allowlist Start Time</Form.Label>
                   <Form.Control
                     disabled
@@ -240,7 +240,7 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
                     value={selectedAllowlist?.start_time}
                   />
                 </Form.Group>
-                <Form.Group className="mb-3">
+                <Form.Group className="tw-mb-4">
                   <Form.Label>Allowlist End Time</Form.Label>
                   <Form.Control
                     disabled
@@ -251,27 +251,27 @@ export default function NextGenAdminSetPhases(props: Readonly<Props>) {
                 </Form.Group>
               </>
             )}
-            <Form.Group className="mb-3">
+            <Form.Group className="tw-mb-4">
               <Form.Label>Public Minting Start Time</Form.Label>
               <Form.Control
                 type="integer"
                 placeholder="Unix epoch time"
                 value={publicStartTime}
-                onChange={(e: any) => setPublicStartTime(e.target.value)}
+                onChange={(e) => setPublicStartTime(e.target.value)}
               />
             </Form.Group>
-            <Form.Group className="mb-3">
+            <Form.Group className="tw-mb-4">
               <Form.Label>Public Minting End Time</Form.Label>
               <Form.Control
                 type="integer"
                 placeholder="Unix epoch time"
                 value={publicEndTime}
-                onChange={(e: any) => setPublicEndTime(e.target.value)}
+                onChange={(e) => setPublicEndTime(e.target.value)}
               />
             </Form.Group>
             {!loading && errors.length > 0 && printAdminErrors(errors)}
             <Button
-              className={`mt-3 mb-3 seize-btn`}
+              className={`tw-mb-4 tw-mt-4 tw-rounded-none tw-border-0 tw-px-5 tw-py-1.5 tw-font-bold disabled:tw-cursor-not-allowed disabled:tw-opacity-60`}
               disabled={submitting || loading}
               onClick={() => submit()}
             >

@@ -15,6 +15,7 @@
       "scripts/**/*.{ts,js,cjs,mjs}",  // local CLIs used via package.json scripts
       "bin/**/*.mjs",                // repo-local Node CLIs launched from shell helpers
       "ops/skills/**/scripts/**/*.{js,cjs,mjs}", // repo-local skill CLIs invoked by SKILL.md instructions
+      "ops/workstreams/**/scripts/**/*.{js,cjs,mjs}", // campaign/workstream CLIs invoked per their plan docs
       "app/**/route.{ts,tsx}",         // Next App Router route handlers (if used)
       "eslint.config.single.mjs",
       "eslint.config.tight.mjs",
@@ -48,6 +49,9 @@
       "tests/**": ["files", "exports", "types"],
       ".deepsec/deepsec.config.ts": ["unlisted", "exports"],
       "generated/**": ["exports", "types", "enumMembers"], // ignore only these issue kinds
+      // Backend operation-code catalog; several codes are intentionally
+      // declared before the tool implements them (see inline comments).
+      "components/allowlist-tool/allowlist-tool.types.ts": ["enumMembers"],
       "components/brain/left-sidebar/waves/HighlyRatedWavesToggle.tsx": [
         "exports",
         "types"
@@ -79,10 +83,12 @@
       "stubs/empty.js"
     ],
     "ignoreBinaries": [
-      "coderabbit"
+      "coderabbit",
+      // Capacitor CLI, run via npx inside the 6529-core-mobile checkout in
+      // .github/workflows/device-farm-qa.yml — not a dependency of this repo.
+      "cap"
     ],
     "ignoreDependencies": [
-      "bootstrap",
       "pino-pretty",
       "babel-jest",
       "eslint-plugin-jsx-a11y",

@@ -1,4 +1,4 @@
-import { expect, test } from "../testHelpers";
+import { test, expect } from "../testHelpers";
 
 test.describe("Restricted Page", () => {
   test.beforeEach(async ({ page }, testInfo) => {
@@ -6,7 +6,7 @@ test.describe("Restricted Page", () => {
   });
 
   test("should load with correct title and input state", async ({ page }) => {
-    await expect(page).toHaveTitle("Restricted | 6529 Desktop");
+    await expect(page).toHaveTitle("Restricted");
 
     const input = page.locator('input[type="text"]');
     await expect(input).toBeVisible();

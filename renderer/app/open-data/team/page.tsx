@@ -1,4 +1,4 @@
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import CommunityDownloadsTeam from "@/components/community-downloads/CommunityDownloadsTeam";
 import { getAppMetadata } from "@/components/providers/metadata";
 import type { Metadata } from "next";
@@ -13,7 +13,7 @@ export default function TeamDownloads() {
 
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata({
-    title: "Team",
+    title: "Team | Open Data",
     description: "Open Data",
   });
 }

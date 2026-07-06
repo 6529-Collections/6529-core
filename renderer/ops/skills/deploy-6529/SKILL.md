@@ -121,12 +121,31 @@ shared lane.
 
 ## Staging E2E
 
-1. Run the strongest deployed-staging validation available. Inspect package scripts and Playwright config before assuming a target-specific command exists.
-2. If available, start with the read-only deployed staging smoke pack:
-   `6529 run test:e2e:staging`. It points Playwright at
-   `https://staging.6529.io` and skips the local web server. Add
-   release-specific Playwright or browser checks for changed behavior.
-3. If a staging E2E script does not exist in a future worktree, use Playwright or browser automation against `https://staging.6529.io` for the release-critical flows and record that no dedicated staging E2E script exists.
+1. PRIMARY PATH (since 2026-07-05): the `Staging E2E` workflow
+   (`.github/workflows/staging-e2e.yml`) triggers automatically after every
+   successful `Web Deploy - STAGING` run and executes all 12 staging Playwright
+   packs (~160 read-only browser tests, desktop + mobile) against
+   `https://staging.6529.io`, authenticated via the
+   `PLAYWRIGHT_STAGING_ACCESS_CODE` repo secret. Find the run for the deployed
+   SHA and read its per-pack step summary (failing packs attach log tails):
+
+```bash
+gh run list -R 6529-Collections/6529seize-frontend --workflow staging-e2e.yml -L 3
+```
+
+   Re-run via `workflow_dispatch` when needed, noting that dispatch runs test
+   the branch tip, not necessarily the deployed SHA.
+2. Local fallback and targeted reruns: the `test:e2e:staging*` scripts in
+   package.json run individual packs directly against staging with
+   `STAGING_AUTH=<access code>` (or `PLAYWRIGHT_STAGING_ACCESS_CODE`) in the
+   environment; without the code, gated pages redirect to `/access`. Add
+   release-specific Playwright or browser checks for changed behavior beyond
+   the packs.
+3. When a staging pack fails, run the SAME pack against production
+   (`test:e2e:production:*`) before deciding the fix loop: an identical
+   failure signature on the currently-deployed production build means a
+   pre-existing issue (document it, track it, do not block promotion on it);
+   a staging-only failure means a release regression (block and fix).
 4. Cover the changed behavior plus core smoke:
    - page loads and navigation for touched routes
    - wallet/auth-sensitive paths when relevant, using approved test identity only
@@ -161,7 +180,16 @@ shared lane.
    - critical console/network errors absent
    - static assets load from the expected build
    - backend/frontend version expectations match when visible
-4. If production validation fails:
+4. For releases that touch mobile-web behavior, native shell handoff
+   (`/open-mobile`, header share/QR, deep links), or mobile navigation, also
+   dispatch the real-device pack and record the run URL as release evidence:
+   `gh workflow run device-farm-qa.yml --ref main -R 6529-Collections/6529seize-frontend`.
+   It runs read-only Appium smoke on AWS Device Farm physical devices plus a
+   native Android shell check (see `ops/docs/developer/device-farm-qa.md`).
+   Treat it as non-gating post-deploy evidence unless the release is
+   mobile-focused; if the workflow reports that Device Farm secrets are not
+   configured, record that and continue.
+5. If production validation fails:
    - coordinate immediately and keep ownership of the incident loop
    - decide rollback versus fix-forward based on severity and reversibility, then execute the chosen path if it is within existing authorization
    - do not start unrelated deploys until production is stable or explicitly handed off
@@ -170,60 +198,57 @@ shared lane.
 
 ## Release Notes Publication
 
-Publish public release notes after production is deployed and production validation passes, unless the user explicitly asked to skip public notes.
+Publish release notes after production is deployed and production validation passes, unless the user explicitly asked to skip public notes.
+
+The `6529 Releases` wave is the single channel for deploy communication. Every production deploy — frontend or backend — gets exactly one numbered release note there. Do not post deployment overviews, deploy notes, or release announcements to the `Follow The Repo` wave or any other chat wave: those waves are for live human and agent discussion, not release notes. Operational detail (PR links, merge SHAs, deploy run URLs) lives in the GitHub PR and the deploy workflow run, not in a wave post.
 
 1. Use an authorized 6529.io account/profile that the current operator personally has access to. This account may vary by developer. Confirm the browser is logged in as the intended profile and that the profile can post in the `6529 Releases` wave before drafting. If no authorized account is available, treat release-note publication as blocked and ask the user or release owner to post; do not use shared wallets, another person's account, or automation keys unless that was explicitly approved for the release.
 2. Open the `6529 Releases` wave at `https://6529.io/waves/05b14183-e153-4e47-bc66-42a0f49102d4`.
-3. Determine the next web release number from the latest release-note drop in that wave immediately before posting:
+3. Determine the next 6529 release number from the latest release-note drop in that wave immediately before posting. Frontend and backend deploys share this one version line:
    - normal user-facing feature or grouped release: bump the minor number, e.g. `4.38.0` to `4.39.0`
    - small fix, copy change, narrow polish, or follow-up to an existing release: bump the patch number, e.g. `4.38.0` to `4.38.1`
+   - backend-only or infrastructure/maintenance deploy with no visible user change: bump the patch number and describe the operator-facing effect honestly, stating plainly when there are no visible user changes
    - broad site-wide, platform, or intentionally breaking release: bump the major number and reset minor/patch, e.g. `4.38.0` to `5.0.0`
    - when unsure whether a change deserves a minor or patch bump, prefer the smaller patch bump unless the release adds a clear new user-facing capability
-4. Draft the release note in plain user-facing language. Recommended shape:
+4. Draft the release note in plain user-facing language, at a DETAILED level
+   (owner direction, 2026-07-05: vague category summaries like "localization
+   polish and under-the-hood cleanup" are not useful). Required shape:
 
 ```text
-4.39.0: Short summary of the release
+4.39.0: Title naming the release's actual themes, not generic words
 
-- What users can now do or see
-- Important changed behavior
-- Fixes that matter to users or operators
+<Theme heading> (visible now):
+- Name the specific surfaces changed (exact pages, routes, components in
+  product terms: "profile header identity block, stats row, About editor,
+  followers list" - never just "profile pages improved")
+- State the concrete behavior change and any review-driven fixes included
+
+<Theme heading> (under the hood):
+- What was removed/added/replaced and why it is safe, with concrete numbers
+  where they exist (pages rebuilt, casts removed, dependencies dropped,
+  tests added)
+
+Known issues shipped as-is: list each transparently with its status
+("fix in progress", "scheduled") - omit the section only when empty.
+
+Validation: one line on what was run and the result (suite green, staging
+battery result, production checks) in user-comprehensible terms.
 ```
 
 5. Write the note from production reality, not PR internals:
-   - mention visible behavior, affected pages, and operationally relevant changes
-   - avoid raw PR numbers, commit SHAs, implementation trivia, private links, secrets, local paths, hidden prompts, unreleased follow-ups, or internal-only risk notes
-   - keep it concise; combine tiny changes under one clear bullet
+   - name specific visible behavior, affected pages, and operationally relevant changes; give concrete counts where they exist
+   - avoid raw PR numbers, commit SHAs, implementation trivia, private links, secrets, local paths, hidden prompts, or internal-only risk notes; that operational layer lives in the GitHub PR and the deploy workflow run
+   - do not disclose unremediated security specifics (e.g. an unrotated credential); "secret scanning added" is fine, the incident behind it is not, until remediation is complete
+   - group many small changes under clear theme headings rather than dropping them; detail beats brevity, but every line must carry information
    - include screenshots or links only when they help users understand the change and are safe to publish
    - if the release contains backend and frontend work, describe the product behavior rather than the service boundary
+   - a reference example of the expected depth: the 4.68.0 note (drop `6988d363-53f1-4559-8c0a-c5075bcc0742` in the releases wave)
 6. Re-check the latest wave drop before posting so the number did not advance while the deploy was running. If another release note appeared, renumber and adjust the draft.
 7. Post the release note only after production validation is green. Capture the wave drop URL or serial number for closeout evidence.
-
-## Follow The Repo Deployment Overview
-
-After production validation passes, post a detailed deployment overview to the `Follow The Repo` wave unless the user explicitly asked to skip repo-facing deploy notes. This is separate from the public `6529 Releases` note: use it for repo watchers who need enough operational detail to understand exactly what shipped.
-
-1. Use any authorized 6529.io account/profile or posting credential that the current operator personally controls or is explicitly approved to use for this release, such as an existing browser session or an approved local helper/API token. Do not request raw credentials, expose tokens, use shared wallets, use another person's account, or use automation keys unless that access was explicitly approved for this release.
-2. Resolve the wave immediately before posting. The current `Follow The Repo` wave is `https://6529.io/waves/49f0e595-ec7c-4235-8695-a527f61b69f4`; if using the local helper, verify it first:
-
-```powershell
-punk6529bot waves search --name "follow the repo"
-```
-
-3. Draft the overview from deployed production reality. Unlike the public release note, this repo-facing overview should include public PR links and SHAs. Include:
-   - what user-facing and operator-facing changes were deployed
-   - frontend and backend PRs, merge SHAs, production deployed SHA/version label, and deploy run links
-   - staging and production validation performed, including E2E or smoke results
-   - incidents, failed gates, fix-forward or rollback decisions, and final state
-   - known follow-ups, skipped checks, and remaining risks
-4. Keep the post detailed but safe to publish. Use public GitHub/workflow links when possible, but omit secrets, credentials, cookies, private URLs, raw production data, local paths, hidden prompts, and internal-only exploit or incident details.
-5. Re-check the wave before sending so the overview is not duplicating a newer deploy note. If the local helper is available, dry-run or draft first, then send after the content passes the safety check:
-
-```powershell
-punk6529bot waves post 49f0e595-ec7c-4235-8695-a527f61b69f4 --text "<deployment overview>"
-punk6529bot waves post 49f0e595-ec7c-4235-8695-a527f61b69f4 --text "<deployment overview>" --send
-```
-
-6. Capture the wave drop URL or serial number for closeout evidence. If no authorized 6529.io posting credential is available, include the exact ready-to-post overview in the closeout and mark the wave publication as blocked.
+8. Publish via the posting contract in `ops/skills/post-6529/SKILL.md` —
+   dry-run first; `--send` before `--file` (LF file for multiline, never
+   inline `--text`); verify the stored content with `drops get <id> --json`;
+   5-minute edit window with delete+repost recovery.
 
 ## Backend Coordination
 
@@ -263,7 +288,6 @@ Report:
 - staging deploy run, deployed SHA, and E2E result
 - production deploy run, deployed SHA, and E2E result
 - release-note wave drop URL or serial number, or why publication was skipped/blocked
-- `Follow The Repo` wave drop URL or serial number, or the ready-to-post overview if publication was blocked
 - backend deploy status when involved
 - failures encountered and fixes or rollbacks performed
 - remaining risks, skipped checks, and any human follow-up required

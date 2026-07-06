@@ -13,7 +13,7 @@ import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useDropUpdateMutation } from "@/hooks/drops/useDropUpdateMutation";
 import useDropActionInteractionMode from "@/hooks/useDropActionInteractionMode";
 import useLongPressClickSuppression from "@/hooks/useLongPressClickSuppression";
-import { selectEditingDropId, setEditingDropId } from "@/store/editSlice";
+import { useEditingDrop } from "@/contexts/EditingDropContext";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import {
   memo,
@@ -23,7 +23,6 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import { useDispatch, useSelector } from "react-redux";
 import type {
   DropIdentityMode,
   DropInteractionParams,
@@ -39,7 +38,11 @@ import WaveDropAuthorPfp from "./WaveDropAuthorPfp";
 import WaveDropContent from "./WaveDropContent";
 import WaveDropHeader from "./WaveDropHeader";
 import WaveDropMetadata from "./WaveDropMetadata";
-import WaveDropMobileMenu from "./WaveDropMobileMenu";
+import {
+  useWaveDropMobileMenu,
+  withWaveDropMobileMenuProvider,
+} from "./WaveDropMobileMenuContext";
+import { useWaveDropMobileMenuController } from "./useWaveDropMobileMenuController";
 import WaveDropRatings from "./WaveDropRatings";
 import WaveDropReactions from "./WaveDropReactions";
 import WaveDropReply from "./WaveDropReply";
@@ -71,9 +74,11 @@ const getPointerId = (event: React.PointerEvent<HTMLDivElement>): number =>
 const isPrimaryPointerButton = (
   event: React.PointerEvent<HTMLDivElement>
 ): boolean => {
-  const maybeButton = (event as React.PointerEvent<HTMLDivElement> & {
-    readonly button?: number | undefined;
-  }).button;
+  const maybeButton = (
+    event as React.PointerEvent<HTMLDivElement> & {
+      readonly button?: number | undefined;
+    }
+  ).button;
 
   return (
     maybeButton === undefined ||
@@ -505,15 +510,39 @@ const shouldShowGroupedDropTimestamp = ({
 const GroupedDropTimestamp = ({
   swipeOffset = 0,
   timestamp,
+  variant,
+  forceVisible = false,
 }: {
   readonly swipeOffset?: number;
   readonly timestamp: number;
+  readonly variant: "swipe" | "hover";
+  /** Pointer-driven row hover for browsers whose CSS :hover never fires. */
+  readonly forceVisible?: boolean;
 }) => {
+  // "swipe": revealed by the touch swipe gesture via inline opacity.
+  // "hover": desktop affordance — swiping would hijack text selection, so the
+  // timestamp reveals on row hover instead.
+  const isHoverVariant = variant === "hover";
+
   return (
     <div
-      className="tw-pointer-events-none tw-absolute tw-right-4 tw-top-1/2 tw-z-0 tw-flex tw-w-[9.25rem] -tw-translate-y-1/2 tw-justify-end tw-overflow-visible tw-text-right tw-transition-opacity tw-duration-150"
-      data-testid="grouped-drop-swipe-timestamp"
-      style={getGroupedTimestampOpacityStyle(swipeOffset)}
+      className={`tw-pointer-events-none tw-absolute tw-right-4 tw-top-1/2 tw-z-0 tw-flex tw-w-[9.25rem] -tw-translate-y-1/2 tw-justify-end tw-overflow-visible tw-text-right tw-transition-opacity tw-duration-150 ${
+        isHoverVariant
+          ? "tw-opacity-0 desktop-hover:group-hover:tw-opacity-100"
+          : ""
+      }`}
+      data-testid={
+        isHoverVariant
+          ? "grouped-drop-hover-timestamp"
+          : "grouped-drop-swipe-timestamp"
+      }
+      style={
+        isHoverVariant
+          ? forceVisible
+            ? { opacity: 1 }
+            : undefined
+          : getGroupedTimestampOpacityStyle(swipeOffset)
+      }
     >
       <WaveDropTime timestamp={timestamp} size="xs" variant="compactReveal" />
     </div>
@@ -623,6 +652,7 @@ const getContentBlock = ({
   embedDepth,
   maxEmbedDepth,
   groupedTimestampSwipeOffset,
+  isRowPointerHovered,
 }: {
   readonly shouldShowReplyHeader: boolean;
   readonly onReplyClick: (serialNo: number) => void;
@@ -667,6 +697,7 @@ const getContentBlock = ({
   readonly embedDepth?: number | undefined;
   readonly maxEmbedDepth?: number | undefined;
   readonly groupedTimestampSwipeOffset: number;
+  readonly isRowPointerHovered: boolean;
 }): React.ReactNode => (
   <>
     {shouldShowReplyHeader && replyTo && (
@@ -754,6 +785,7 @@ const getContentBlock = ({
           onReply={handleOnReply}
           onEdit={handleOnEdit}
           suppressed={hasActiveLinkCardActions}
+          forceVisible={isRowPointerHovered}
           style={getGroupedTimestampActionStyle(groupedTimestampSwipeOffset)}
         />
       )}
@@ -790,7 +822,7 @@ interface WaveDropProps {
   readonly maxEmbedDepth?: number | undefined;
 }
 
-const WaveDrop = ({
+const WaveDropInner = ({
   drop,
   previousDrop,
   nextDrop,
@@ -829,8 +861,7 @@ const WaveDrop = ({
   const [boostAnimation, setBoostAnimation] =
     useState<BoostAnimationState | null>(null);
   const dropRef = useRef<HTMLDivElement>(null);
-  const dispatch = useDispatch();
-  const editingDropId = useSelector(selectEditingDropId);
+  const { editingDropId, setEditingDropId } = useEditingDrop();
   const isEditing = editingDropId === drop.id;
   const longPressTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const touchStartPosition = useRef<{ x: number; y: number } | null>(null);
@@ -860,7 +891,37 @@ const WaveDrop = ({
 
   const { canUseDesktopHoverActions, canUseTouchActionSheet } =
     useDropActionInteractionMode();
+  const mobileMenu = useWaveDropMobileMenu();
   const allowLongPress = showInteractions && canUseTouchActionSheet;
+  // Pointer-driven row hover: some browsers (capability-lying convertibles)
+  // never activate CSS :hover although mouse pointer events flow, leaving the
+  // group-hover action reveal invisible. Track the cursor with pointer events
+  // instead; CSS :hover stays as the no-JS fallback. pointerover/out (with a
+  // containment check) rather than enter/leave so child crossings are cheap
+  // no-op state writes and jsdom can exercise the path.
+  const [isRowPointerHovered, setIsRowPointerHovered] = useState(false);
+  const handleRowPointerOver = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (getPointerType(event) === "mouse" && canUseDesktopHoverActions) {
+        setIsRowPointerHovered(true);
+      }
+    },
+    [canUseDesktopHoverActions]
+  );
+  const handleRowPointerOut = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (
+        getPointerType(event) === "mouse" &&
+        !(
+          event.relatedTarget instanceof Node &&
+          event.currentTarget.contains(event.relatedTarget)
+        )
+      ) {
+        setIsRowPointerHovered(false);
+      }
+    },
+    []
+  );
   const compact = useCompactMode();
   const hasActiveLinkCardActions = activeLinkCardActionIds.length > 0;
 
@@ -909,11 +970,16 @@ const WaveDrop = ({
     markNextClickForSuppression();
     // Cancel any active edit mode first
     if (editingDropId) {
-      dispatch(setEditingDropId(null));
+      setEditingDropId(null);
     }
     setLongPressTriggered(true);
     setIsSlideUp(true);
-  }, [allowLongPress, editingDropId, dispatch, markNextClickForSuppression]);
+  }, [
+    allowLongPress,
+    editingDropId,
+    setEditingDropId,
+    markNextClickForSuppression,
+  ]);
 
   const handleTouchStart = useCallback(
     (e: React.TouchEvent) => {
@@ -1033,6 +1099,10 @@ const WaveDrop = ({
     (event: React.PointerEvent<HTMLDivElement>) => {
       const pointerType = getPointerType(event);
       if (
+        // Pointer-driven timestamp swipe only belongs to touch-sheet mode
+        // (e.g. pen on a touch-first device). On desktop it would hijack
+        // drag-to-select — the timestamp reveals on hover there instead.
+        !canUseTouchActionSheet ||
         pointerType === "touch" ||
         !isPrimaryPointerButton(event) ||
         !showGroupedTimestamp ||
@@ -1050,7 +1120,7 @@ const WaveDrop = ({
       setTimestampSwipeOffset(0);
       setIsTimestampSwipeDragging(false);
     },
-    [isEditing, showGroupedTimestamp]
+    [canUseTouchActionSheet, isEditing, showGroupedTimestamp]
   );
 
   const handlePointerMove = useCallback(
@@ -1118,19 +1188,28 @@ const WaveDrop = ({
   const handleOnReply = useCallback(() => {
     // Cancel any active edit mode first
     if (editingDropId) {
-      dispatch(setEditingDropId(null));
+      setEditingDropId(null);
     }
+    mobileMenu?.close();
     setIsSlideUp(false);
     onReply({ drop, partId: drop.parts[activePartIndex]!.part_id });
-  }, [onReply, drop, activePartIndex, editingDropId, dispatch]);
+  }, [
+    onReply,
+    drop,
+    activePartIndex,
+    editingDropId,
+    setEditingDropId,
+    mobileMenu,
+  ]);
 
   const handleOnAddReaction = useCallback(() => {
     // Cancel any active edit mode first
     if (editingDropId) {
-      dispatch(setEditingDropId(null));
+      setEditingDropId(null);
     }
+    mobileMenu?.close();
     setIsSlideUp(false);
-  }, [editingDropId, dispatch]);
+  }, [editingDropId, setEditingDropId, mobileMenu]);
 
   const handleOpenTouchActions = useCallback(
     (e: React.MouseEvent<HTMLButtonElement>) => {
@@ -1154,9 +1233,10 @@ const WaveDrop = ({
   });
 
   const handleOnEdit = useCallback(() => {
+    mobileMenu?.close();
     setIsSlideUp(false); // Close mobile menu when entering edit mode
-    dispatch(setEditingDropId(drop.id));
-  }, [dispatch, drop.id]);
+    setEditingDropId(drop.id);
+  }, [setEditingDropId, drop.id, mobileMenu]);
 
   const handleEditSave = useCallback(
     (
@@ -1209,7 +1289,7 @@ const WaveDrop = ({
       };
 
       // Optimistically close the editor
-      dispatch(setEditingDropId(null));
+      setEditingDropId(null);
 
       // Execute the mutation
       dropUpdateMutation.mutate({
@@ -1218,12 +1298,12 @@ const WaveDrop = ({
         currentDrop: drop,
       });
     },
-    [drop, activePartIndex, dropUpdateMutation, dispatch]
+    [drop, activePartIndex, dropUpdateMutation, setEditingDropId]
   );
 
   const handleEditCancel = useCallback(() => {
-    dispatch(setEditingDropId(null));
-  }, [dispatch]);
+    setEditingDropId(null);
+  }, [setEditingDropId]);
 
   const handleBoostAnimationComplete = useCallback(() => {
     setBoostAnimation(null);
@@ -1279,8 +1359,14 @@ const WaveDrop = ({
     resetTimestampSwipe();
     setIsSlideUp(false);
     setLongPressTriggered(false);
+    mobileMenu?.close();
     clearSuppression();
-  }, [canUseTouchActionSheet, clearSuppression, resetTimestampSwipe]);
+  }, [
+    canUseTouchActionSheet,
+    clearSuppression,
+    mobileMenu,
+    resetTimestampSwipe,
+  ]);
 
   useEffect(() => {
     if (showGroupedTimestamp) {
@@ -1292,6 +1378,19 @@ const WaveDrop = ({
 
   // Derive effective menu state - menu can't be open while editing
   const effectiveIsSlideUp = isSlideUp && !isEditing && canUseTouchActionSheet;
+
+  useWaveDropMobileMenuController({
+    drop,
+    enabled: showInteractions,
+    isOpen: effectiveIsSlideUp,
+    longPressTriggered,
+    showReplyAndQuote,
+    onOpenChange: setIsSlideUp,
+    onReply: handleOnReply,
+    onAddReaction: handleOnAddReaction,
+    onEdit: handleOnEdit,
+    onBoostAnimation: handleMobileBoostAnimation,
+  });
 
   const dropClasses = getDropClasses(
     isActiveDrop,
@@ -1337,6 +1436,7 @@ const WaveDrop = ({
     embedDepth,
     maxEmbedDepth,
     groupedTimestampSwipeOffset: timestampSwipeOffset,
+    isRowPointerHovered,
   });
 
   const contentOffsetClass = inlineAuthorOnDesktop
@@ -1394,12 +1494,16 @@ const WaveDrop = ({
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerEnd}
         onPointerCancel={handlePointerEnd}
+        onPointerOver={handleRowPointerOver}
+        onPointerOut={handleRowPointerOut}
         onClickCapture={handleClickCapture}
       >
         {showGroupedTimestamp && (
           <GroupedDropTimestamp
             swipeOffset={timestampSwipeOffset}
             timestamp={drop.created_at}
+            variant={canUseTouchActionSheet ? "swipe" : "hover"}
+            forceVisible={isRowPointerHovered}
           />
         )}
         <div
@@ -1413,19 +1517,6 @@ const WaveDrop = ({
           {reactionsRow}
           {footerRow}
         </div>
-        {showInteractions && (
-          <WaveDropMobileMenu
-            drop={drop}
-            isOpen={effectiveIsSlideUp}
-            longPressTriggered={longPressTriggered}
-            showReplyAndQuote={showReplyAndQuote}
-            setOpen={setIsSlideUp}
-            onReply={handleOnReply}
-            onAddReaction={handleOnAddReaction}
-            onEdit={handleOnEdit}
-            onBoostAnimation={handleMobileBoostAnimation}
-          />
-        )}
         <DropBoostAnimation
           animation={boostAnimation}
           onComplete={handleBoostAnimationComplete}
@@ -1434,5 +1525,7 @@ const WaveDrop = ({
     </div>
   );
 };
+
+const WaveDrop = withWaveDropMobileMenuProvider(WaveDropInner);
 
 export default memo(WaveDrop);

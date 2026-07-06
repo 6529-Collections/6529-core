@@ -10,9 +10,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Fragment, useEffect, useState } from "react";
-import { Col, Container, Row } from "../NextGenTailwindLayout";
-import { Accordion, Dropdown, Form } from "react-bootstrap";
+import { Fragment, useEffect, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import type {
   NextGenCollection,
@@ -20,7 +18,6 @@ import type {
   TraitValues,
 } from "@/entities/INextgen";
 import { SortDirection } from "@/entities/ISort";
-import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { commonApiFetch } from "@/services/api/common-api";
 import DotLoader from "@/components/dotLoader/DotLoader";
@@ -29,7 +26,7 @@ import {
   NextGenTokenListedType,
   formatNameForUrl,
 } from "@/components/nextGen/nextgen_helpers";
-import styles from "../NextGen.module.scss";
+import styles from "../NextGen.module.css";
 import { NextgenRarityToggle } from "../nextgenToken/NextGenTokenProperties";
 import NextGenTokenList from "../NextGenTokenList";
 
@@ -41,11 +38,13 @@ interface Props {
 export default function NextGenCollectionArt(props: Readonly<Props>) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const sortMenuRef = useRef<HTMLDivElement>(null);
+  const initializedTraitFilterOpen = useRef(false);
 
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const screenSize = window.innerWidth;
+    const screenSize = globalThis.innerWidth;
     if (screenSize <= 750) {
       setShowFilters(false);
       setIsMobile(true);
@@ -74,6 +73,8 @@ export default function NextGenCollectionArt(props: Readonly<Props>) {
   const [showFilters, setShowFilters] = useState(true);
 
   const [listedType, setListedType] = useState(NextGenTokenListedType.ALL);
+  const [isSortMenuOpen, setIsSortMenuOpen] = useState(false);
+  const [openTraitFilters, setOpenTraitFilters] = useState<string[]>([]);
 
   function isRaritySort(s: NextGenListFilters) {
     return [
@@ -209,42 +210,120 @@ export default function NextGenCollectionArt(props: Readonly<Props>) {
     }
   }, [selectedTraitValues]);
 
-  function getDefaultActiveKeys() {
-    const activeKeys: string[] = [];
-    traits.forEach((t, index) => {
-      if (selectedTraitValues.some((st) => st.trait === t.trait)) {
-        activeKeys.push(index.toString());
+  useEffect(() => {
+    if (!routerLoaded || initializedTraitFilterOpen.current) {
+      return;
+    }
+
+    const selectedTraits = traits
+      .filter((trait) =>
+        selectedTraitValues.some((selected) => selected.trait === trait.trait)
+      )
+      .map((trait) => trait.trait);
+
+    if (selectedTraits.length > 0) {
+      setOpenTraitFilters(selectedTraits);
+    }
+
+    initializedTraitFilterOpen.current = true;
+  }, [routerLoaded, selectedTraitValues, traits]);
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (
+        sortMenuRef.current &&
+        event.target instanceof Node &&
+        !sortMenuRef.current.contains(event.target)
+      ) {
+        setIsSortMenuOpen(false);
       }
-    });
-    return activeKeys;
+    };
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsSortMenuOpen(false);
+      }
+    };
+
+    globalThis.addEventListener("mousedown", handlePointerDown);
+    globalThis.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      globalThis.removeEventListener("mousedown", handlePointerDown);
+      globalThis.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  function toggleTraitValue(trait: string, value: string) {
+    if (
+      selectedTraitValues.some(
+        (t) =>
+          areEqualAddresses(t.trait, trait) && areEqualAddresses(t.value, value)
+      )
+    ) {
+      setSelectedTraitValues(
+        selectedTraitValues.filter(
+          (t) =>
+            !(
+              areEqualAddresses(t.trait, trait) &&
+              areEqualAddresses(t.value, value)
+            )
+        )
+      );
+    } else {
+      setSelectedTraitValues([
+        ...selectedTraitValues,
+        {
+          trait,
+          value,
+        },
+      ]);
+    }
   }
 
+  function setTraitFilterOpen(trait: string, isOpen: boolean) {
+    setOpenTraitFilters((current) =>
+      isOpen
+        ? Array.from(new Set([...current, trait]))
+        : current.filter((currentTrait) => currentTrait !== trait)
+    );
+  }
+
+  const selectClassName =
+    "tw-cursor-pointer tw-rounded-md tw-border-0 tw-bg-transparent tw-py-1 tw-pl-1 tw-pr-8 tw-font-bold tw-text-white focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400";
+  const sortButtonClassName =
+    "tw-rounded-md tw-border-0 tw-bg-transparent tw-px-5 tw-py-1.5 tw-text-white hover:tw-text-iron-350 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400";
+  const sortMenuItemClassName =
+    "tw-w-full tw-rounded-md tw-border-0 tw-bg-transparent tw-px-3 tw-py-2 tw-text-left tw-text-sm tw-text-white tw-transition hover:tw-bg-iron-800 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400";
+  const sortMenuId = `nextgen-collection-art-sort-${props.collection.id}`;
+
   return (
-    <Container className="no-padding pt-2">
-      <Row>
-        <Col className="d-flex align-items-center justify-content-between no-wrap">
-          <h3 className="mb-0">
+    <div className="tw-mx-auto tw-w-full tw-px-3 tw-pt-2 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div className="tw-relative tw-flex tw-w-full tw-min-w-fit tw-shrink-0 tw-grow tw-basis-0 tw-items-center tw-justify-between tw-whitespace-nowrap tw-px-3">
+          <h3 className="tw-mb-0">
             The Art{" "}
             {totalResultsSet ? (
-              <span className="font-color-h font-smaller">
+              <span className="tw-text-sm tw-text-[#9a9a9a]">
                 (x{totalResults.toLocaleString()})
               </span>
             ) : (
               <DotLoader />
             )}
           </h3>
-        </Col>
-        <Col
-          className={`d-flex align-items-center ${
-            isMobile ? "pt-3 justify-content-between" : "justify-content-end"
-          }`}>
+        </div>
+        <div
+          className={`tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-items-center tw-px-3 ${
+            isMobile ? "tw-justify-between tw-pt-4" : "tw-justify-end"
+          }`}
+        >
           {props.show_view_all ? (
             <Link
               href={`/nextgen/collection/${formatNameForUrl(
                 props.collection.name
               )}/art`}
-              className={`d-flex align-items-center gap-2 decoration-none ${styles["viewAllTokens"]}`}>
-              <h5 className="mb-0 font-color d-flex align-items-center gap-2">
+              className={`tw-flex tw-items-center tw-gap-2 tw-no-underline ${styles["viewAllTokens"]}`}
+            >
+              <h5 className="tw-mb-0 tw-flex tw-items-center tw-gap-2 tw-text-white">
                 View All
                 <FontAwesomeIcon
                   icon={faArrowCircleRight}
@@ -254,16 +333,21 @@ export default function NextGenCollectionArt(props: Readonly<Props>) {
             </Link>
           ) : (
             <>
-              <FontAwesomeIcon
-                icon={showFilters ? faFilterCircleXmark : faFilter}
-                style={{
-                  cursor: "pointer",
-                  height: "22px",
-                  color: selectedTraitValues.length > 0 ? "#00dd00" : "white",
-                }}
+              <button
+                type="button"
                 onClick={() => setShowFilters(!showFilters)}
+                aria-label={`${showFilters ? "Hide" : "Show"} filters`}
+                className="tw-rounded-md tw-border-0 tw-bg-transparent !tw-p-0 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
                 data-tooltip-id={`nextgen-collection-art-filters-${props.collection.id}`}
-              />
+              >
+                <FontAwesomeIcon
+                  icon={showFilters ? faFilterCircleXmark : faFilter}
+                  style={{
+                    height: "22px",
+                    color: selectedTraitValues.length > 0 ? "#00dd00" : "white",
+                  }}
+                />
+              </button>
               <Tooltip
                 id={`nextgen-collection-art-filters-${props.collection.id}`}
                 style={{
@@ -272,209 +356,237 @@ export default function NextGenCollectionArt(props: Readonly<Props>) {
                   padding: "4px 8px",
                 }}
                 place="bottom"
-                delayShow={250}>
+                delayShow={250}
+              >
                 {`${showFilters ? "Hide" : "Show"} Filters${
                   selectedTraitValues.length > 0
                     ? ` (${selectedTraitValues.length} selected)`
                     : ""
                 }`}
               </Tooltip>
-              <Dropdown className={styles["rarityDropdown"]} drop="down-centered">
-                <Dropdown.Toggle>Listing Status: {listedType}</Dropdown.Toggle>
-                <Dropdown.Menu>
+              <label className="tw-flex tw-items-center tw-gap-2 tw-font-bold">
+                <span>Listing Status:</span>
+                <select
+                  value={listedType}
+                  onChange={(event) =>
+                    setListedType(event.target.value as NextGenTokenListedType)
+                  }
+                  className={selectClassName}
+                  style={{ colorScheme: "dark" }}
+                >
                   {Object.values(NextGenTokenListedType).map((lt) => (
-                    <Dropdown.Item
-                      key={getRandomObjectId()}
-                      onClick={() => setListedType(lt)}>
+                    <option
+                      key={`listed-type-${lt}`}
+                      value={lt}
+                      className="tw-bg-black tw-text-white"
+                    >
                       {lt}
-                    </Dropdown.Item>
+                    </option>
                   ))}
-                </Dropdown.Menu>
-              </Dropdown>
-              <Dropdown className={styles["rarityDropdown"]} drop="down-centered">
-                <Dropdown.Toggle>Sort: {sort}</Dropdown.Toggle>
-                <Dropdown.Menu>
-                  {Object.values(NextGenListFilters).map((lf) => (
-                    <Fragment key={getRandomObjectId()}>
-                      <Dropdown.Item
-                        key={getRandomObjectId()}
-                        onClick={() => setSort(lf)}>
-                        {lf}
-                      </Dropdown.Item>
-                      {(lf === NextGenListFilters.ID ||
-                        lf === NextGenListFilters.HIGHEST_SALE) && (
-                        <Dropdown.Divider />
-                      )}
-                    </Fragment>
-                  ))}
-                  <Dropdown.Item
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (isRaritySort(sort)) {
-                        setShowNormalised(!showNormalised);
-                      }
-                    }}
-                    className="px-2 d-flex align-items-center gap-2">
-                    <NextgenRarityToggle
-                      disabled={!isRaritySort(sort)}
-                      title={"Trait Normalization"}
-                      show={showNormalised}
-                    />
-                  </Dropdown.Item>
-                  <Dropdown.Item
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (isRaritySort(sort)) {
-                        setShowTraitCount(!showTraitCount);
-                      }
-                    }}
-                    className="px-2 d-flex align-items-center gap-2">
-                    <NextgenRarityToggle
-                      title={"Trait Count"}
-                      show={showTraitCount}
-                      disabled={!isRaritySort(sort)}
-                    />
-                  </Dropdown.Item>
-                </Dropdown.Menu>
-              </Dropdown>
+                </select>
+              </label>
+              <div className="tw-relative" ref={sortMenuRef}>
+                <button
+                  type="button"
+                  className={sortButtonClassName}
+                  aria-haspopup="true"
+                  aria-controls={isSortMenuOpen ? sortMenuId : undefined}
+                  aria-expanded={isSortMenuOpen}
+                  onClick={() => setIsSortMenuOpen((isOpen) => !isOpen)}
+                >
+                  Sort: {sort}
+                </button>
+                {isSortMenuOpen && (
+                  <div
+                    id={sortMenuId}
+                    className="tw-[margin-top:0.5rem] tw-absolute tw-right-0 tw-top-full tw-z-50 tw-min-w-[240px] tw-rounded-md tw-bg-iron-900 tw-p-1 tw-shadow-lg tw-ring-1 tw-ring-white/10"
+                  >
+                    <div>
+                      {Object.values(NextGenListFilters).map((lf) => (
+                        <Fragment key={`sort-filter-${lf}`}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSort(lf);
+                              setIsSortMenuOpen(false);
+                            }}
+                            className={sortMenuItemClassName}
+                          >
+                            {lf}
+                          </button>
+                          {(lf === NextGenListFilters.ID ||
+                            lf === NextGenListFilters.HIGHEST_SALE) && (
+                            <div className="tw-my-1 tw-h-px tw-bg-white/10" />
+                          )}
+                        </Fragment>
+                      ))}
+                    </div>
+                    <div className="tw-[margin-top:0.25rem] tw-space-y-2 tw-border-0 tw-border-t tw-border-solid tw-border-white/10 tw-px-2 tw-py-2">
+                      <span className="tw-flex tw-items-center tw-gap-2">
+                        <NextgenRarityToggle
+                          disabled={!isRaritySort(sort)}
+                          title={"Trait Normalization"}
+                          show={showNormalised}
+                          setShow={setShowNormalised}
+                        />
+                      </span>
+                      <span className="tw-flex tw-items-center tw-gap-2">
+                        <NextgenRarityToggle
+                          title={"Trait Count"}
+                          show={showTraitCount}
+                          disabled={!isRaritySort(sort)}
+                          setShow={setShowTraitCount}
+                        />
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </div>
               <span
-                className="d-flex align-items-center gap-2"
+                className="tw-flex tw-items-center tw-gap-2"
                 style={{
                   paddingLeft: "15px",
-                }}>
-                <FontAwesomeIcon
-                  icon={faChevronCircleUp}
-                  style={{
-                    cursor: "pointer",
-                    height: "22px",
-                    color: sortDir === SortDirection.ASC ? "white" : "#9a9a9a",
-                  }}
+                }}
+              >
+                <button
+                  type="button"
                   onClick={() => setSortDir(SortDirection.ASC)}
-                />
-                <FontAwesomeIcon
-                  icon={faChevronCircleDown}
-                  style={{
-                    cursor: "pointer",
-                    height: "22px",
-                    color: sortDir === SortDirection.DESC ? "white" : "#9a9a9a",
-                  }}
+                  aria-label="Sort ascending"
+                  aria-pressed={sortDir === SortDirection.ASC}
+                  className="tw-rounded-md tw-border-0 tw-bg-transparent !tw-p-0 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+                >
+                  <FontAwesomeIcon
+                    icon={faChevronCircleUp}
+                    style={{
+                      height: "22px",
+                      color:
+                        sortDir === SortDirection.ASC ? "white" : "#9a9a9a",
+                    }}
+                  />
+                </button>
+                <button
+                  type="button"
                   onClick={() => setSortDir(SortDirection.DESC)}
-                />
+                  aria-label="Sort descending"
+                  aria-pressed={sortDir === SortDirection.DESC}
+                  className="tw-rounded-md tw-border-0 tw-bg-transparent !tw-p-0 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+                >
+                  <FontAwesomeIcon
+                    icon={faChevronCircleDown}
+                    style={{
+                      height: "22px",
+                      color:
+                        sortDir === SortDirection.DESC ? "white" : "#9a9a9a",
+                    }}
+                  />
+                </button>
               </span>
             </>
           )}
-        </Col>
-      </Row>
+        </div>
+      </div>
       <hr />
-      <Row>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
         {!props.show_view_all && showFilters && (
-          <Col sm={12} md={3}>
-            <Container>
-              <Row>
-                <Col
-                  xs={12}
-                  className="no-padding d-flex justify-content-between align-items-center">
-                  <span className="d-flex flex-column">
-                    <span className="font-color-h font-bolder font-larger">
+          <div
+            className="tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3 min-[576px]:tw-w-full min-[576px]:tw-shrink-0 min-[576px]:tw-grow-0 min-[576px]:tw-basis-auto md:tw-w-1/4 md:tw-shrink-0 md:tw-grow-0 md:tw-basis-auto"
+            style={{ maxWidth: "100%" }}
+          >
+            <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+              <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+                <div
+                  className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-items-center tw-justify-between tw-px-3"
+                  style={{ maxWidth: "100%" }}
+                >
+                  <span className="tw-flex tw-flex-col">
+                    <span className="tw-text-lg tw-font-bold tw-text-[#9a9a9a]">
                       Traits
                     </span>
                     {selectedTraitValues.length > 0 && (
-                      <span className="font-color-h font-smaller">
+                      <span className="tw-text-sm tw-text-[#9a9a9a]">
                         ({selectedTraitValues.length} selected)
                       </span>
                     )}
                   </span>
                   {selectedTraitValues.length > 0 && (
                     <button
-                      className="btn-link font-cmaller cursor-pointer decoration-hover-underline"
-                      onClick={() => setSelectedTraitValues([])}>
+                      className="tw-cursor-pointer tw-border-0 tw-bg-transparent !tw-p-0 tw-text-inherit tw-underline"
+                      onClick={() => setSelectedTraitValues([])}
+                    >
                       Clear
                     </button>
                   )}
-                </Col>
-              </Row>
-              <Row>
-                <Col className="d-flex flex-column pt-2 no-padding">
+                </div>
+              </div>
+              <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+                <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-flex-col tw-px-3 tw-pt-2">
                   {routerLoaded &&
-                    traits.map((tr, index) => (
-                      <Accordion
-                        key={getRandomObjectId()}
-                        className={styles["traitsAccordion"]}
-                        defaultActiveKey={getDefaultActiveKeys()}>
-                        <Accordion.Item
-                          defaultChecked={true}
-                          className={styles["traitsAccordionItem"]}
-                          eventKey={index.toString()}>
-                          <Accordion.Button className="d-flex">
-                            <span>{tr.trait}</span>&nbsp;&nbsp;
-                            <span className="font-color-h">
-                              x{tr.values.length}
-                            </span>
-                          </Accordion.Button>
-                          {tr.value_counts.map((v) => (
-                            <Accordion.Body
-                              key={getRandomObjectId()}
-                              className={styles["traitsAccordionBody"]}>
-                              <Form.Check
-                                type="checkbox"
-                                label={
-                                  <>
-                                    {v.key}{" "}
-                                    <span className="font-color-h">
-                                      x{v.count}
-                                    </span>
-                                  </>
-                                }
-                                id={`trait-${v.key.replaceAll(" ", "-")}`}
-                                checked={selectedTraitValues.some(
-                                  (t) =>
-                                    areEqualAddresses(t.trait, tr.trait) &&
-                                    areEqualAddresses(t.value, v.key)
-                                )}
-                                className="pt-1 pb-1"
-                                onChange={() => {
-                                  if (
-                                    selectedTraitValues.some(
-                                      (t) =>
-                                        areEqualAddresses(t.trait, tr.trait) &&
-                                        areEqualAddresses(t.value, v.key)
-                                    )
-                                  ) {
-                                    setSelectedTraitValues(
-                                      selectedTraitValues.filter(
-                                        (t) =>
-                                          !(
-                                            areEqualAddresses(
-                                              t.trait,
-                                              tr.trait
-                                            ) &&
-                                            areEqualAddresses(t.value, v.key)
-                                          )
-                                      )
-                                    );
-                                  } else {
-                                    setSelectedTraitValues([
-                                      ...selectedTraitValues,
-                                      {
-                                        trait: tr.trait,
-                                        value: v.key,
-                                      },
-                                    ]);
+                    traits.map((tr) => (
+                      <details
+                        key={`trait-filter-${tr.trait}`}
+                        className={`${styles["traitsAccordion"]} ${styles["traitsAccordionItem"]}`}
+                        open={openTraitFilters.includes(tr.trait)}
+                        onToggle={(event) =>
+                          setTraitFilterOpen(tr.trait, event.currentTarget.open)
+                        }
+                      >
+                        <summary className="tw-cursor-pointer tw-bg-[rgb(34,34,34)] tw-py-2 tw-font-bold focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-primary-400">
+                          <span>{tr.trait}</span>&nbsp;&nbsp;
+                          <span className="tw-text-[#9a9a9a]">
+                            x{tr.values.length}
+                          </span>
+                        </summary>
+                        {tr.value_counts.map((v) => {
+                          const checked = selectedTraitValues.some(
+                            (t) =>
+                              areEqualAddresses(t.trait, tr.trait) &&
+                              areEqualAddresses(t.value, v.key)
+                          );
+                          const inputId = `trait-${tr.trait.replaceAll(
+                            " ",
+                            "-"
+                          )}-${v.key.replaceAll(" ", "-")}`;
+
+                          return (
+                            <div
+                              key={`trait-filter-${tr.trait}-${v.key}`}
+                              className={`${styles["traitsAccordionBody"]} tw-py-1`}
+                            >
+                              <label
+                                htmlFor={inputId}
+                                className="tw-flex tw-cursor-pointer tw-items-center tw-gap-2 tw-py-1"
+                              >
+                                <input
+                                  id={inputId}
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={() =>
+                                    toggleTraitValue(tr.trait, v.key)
                                   }
-                                }}
-                              />
-                            </Accordion.Body>
-                          ))}
-                        </Accordion.Item>
-                      </Accordion>
+                                  className="tw-h-4 tw-w-4 tw-cursor-pointer tw-rounded tw-border tw-border-solid tw-border-iron-500 tw-bg-transparent tw-accent-primary-400 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+                                />
+                                <span>
+                                  {v.key}{" "}
+                                  <span className="tw-text-[#9a9a9a]">
+                                    x{v.count}
+                                  </span>
+                                </span>
+                              </label>
+                            </div>
+                          );
+                        })}
+                      </details>
                     ))}
-                </Col>
-              </Row>
-            </Container>
-          </Col>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
         {(routerLoaded || totalResultsSet) && (
-          <Col sm={12} md={props.show_view_all || !showFilters ? 12 : 9}>
+          <div
+            className={`tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3 min-[576px]:tw-w-full min-[576px]:tw-shrink-0 min-[576px]:tw-grow-0 min-[576px]:tw-basis-auto md:tw-shrink-0 md:tw-grow-0 md:tw-basis-auto ${props.show_view_all || !showFilters ? "md:tw-w-full" : "md:tw-w-3/4"}`}
+            style={{ maxWidth: "100%" }}
+          >
             <NextGenTokenList
               limit={props.show_view_all ? 6 : undefined}
               collection={props.collection}
@@ -490,9 +602,9 @@ export default function NextGenCollectionArt(props: Readonly<Props>) {
               }}
               show_pagination={!props.show_view_all}
             />
-          </Col>
+          </div>
         )}
-      </Row>
-    </Container>
+      </div>
+    </div>
   );
 }

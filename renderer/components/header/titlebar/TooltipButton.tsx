@@ -4,7 +4,7 @@ import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { RefObject, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
-import styles from "./TitleBar.module.scss";
+import styles from "./TitleBar.module.css";
 
 type TooltipButtonProps = {
   buttonStyles: string;
@@ -68,7 +68,7 @@ const TooltipButton: React.FC<TooltipButtonProps> = ({
       <button
         ref={buttonRef as RefObject<HTMLButtonElement>}
         data-tooltip-id={tooltipId}
-        className={`${buttonStyles} d-flex`}
+        className={`${buttonStyles} tw-flex`}
         onClick={handleButtonClick}
         onContextMenu={onContextMenu}
         onMouseEnter={handleMouseEnter}

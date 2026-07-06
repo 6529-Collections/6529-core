@@ -1,6 +1,5 @@
-import { Col, Container, Row } from "react-bootstrap";
 import type { BaseNFT, NFTHistory } from "@/entities/INFT";
-import styles from "./Timeline.module.scss";
+import styles from "./Timeline.module.css";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { numberWithCommasFromString } from "@/helpers/Helpers";
 import TimelineMediaComponent, { MediaType } from "./TimelineMedia";
@@ -14,6 +13,13 @@ interface Props {
   steps: NFTHistory[];
   locale?: SupportedLocale;
 }
+
+const FLEX_ROW_CLASS_NAME = "-tw-mx-3 tw-flex tw-flex-wrap";
+const FLEX_COLUMN_CLASS_NAME =
+  "tw-relative tw-w-full tw-min-w-0 tw-max-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3";
+const FULL_WIDTH_COLUMN_CLASS_NAME =
+  "tw-relative tw-w-full tw-max-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3";
+const HALF_WIDTH_COLUMN_CLASS_NAME = `${FULL_WIDTH_COLUMN_CLASS_NAME} md:tw-w-1/2`;
 
 const TIMELINE_DATE_FORMAT = {
   day: "2-digit",
@@ -35,12 +41,10 @@ export default function Timeline(props: Readonly<Props>) {
   };
 
   const getType = () => {
-    if (props.nft.metadata.animation_details?.format === "HTML") {
+    const format = props.nft.metadata?.animation_details?.format;
+    if (format === "HTML") {
       return MediaType.HTML;
-    } else if (
-      props.nft.metadata.animation_details?.format === "MP4" ||
-      props.nft.metadata.animation_details?.format === "MOV"
-    ) {
+    } else if (format === "MP4" || format === "MOV") {
       return MediaType.VIDEO;
     } else {
       return MediaType.IMAGE;
@@ -66,18 +70,24 @@ export default function Timeline(props: Readonly<Props>) {
     return ["animation_url", "image_url"].includes(key);
   };
 
-  function printAttribute(label: string, value: any, fullWidth?: boolean) {
+  function printAttribute(label: string, value: string, fullWidth?: boolean) {
     const displayValue = String(numberWithCommasFromString(value));
 
     return (
-      <Col sm={12} md={fullWidth ? 12 : 6}>
+      <div
+        className={
+          fullWidth
+            ? FULL_WIDTH_COLUMN_CLASS_NAME
+            : HALF_WIDTH_COLUMN_CLASS_NAME
+        }
+      >
         <b>{label}:</b>{" "}
         <div className={styles["metadataValue"]}>{displayValue}</div>
-      </Col>
+      </div>
     );
   }
 
-  function printFromToFields(from: any, to: any) {
+  function printFromToFields(from: string, to: string) {
     if (from && to) {
       return (
         <>
@@ -94,18 +104,18 @@ export default function Timeline(props: Readonly<Props>) {
     return printAttribute(label, nonUndefined, true);
   }
 
-  function printLink(label: string, value: any) {
+  function printLink(label: string, value: string) {
     return (
-      <Col xs={12}>
+      <div className={FULL_WIDTH_COLUMN_CLASS_NAME}>
         <b>{label}:</b>{" "}
         <a href={value} target="_blank" rel="noopener noreferrer">
           {value}
         </a>
-      </Col>
+      </div>
     );
   }
 
-  function printFromToUrls(from: any, to: any) {
+  function printFromToUrls(from: string, to: string) {
     if (from && to) {
       return (
         <>
@@ -122,9 +132,11 @@ export default function Timeline(props: Readonly<Props>) {
     return printLink(label, nonUndefined);
   }
 
-  function printImage(label: string, value: any) {
+  function printImage(label: string, value: string) {
     return (
-      <Col className="d-flex align-items-start flex-column gap-1">
+      <div
+        className={`${FLEX_COLUMN_CLASS_NAME} tw-flex tw-flex-col tw-items-start tw-gap-1`}
+      >
         <b>{label}:</b>
         <TimelineMediaComponent
           type={MediaType.IMAGE}
@@ -132,11 +144,11 @@ export default function Timeline(props: Readonly<Props>) {
           label={label}
           locale={locale}
         />
-      </Col>
+      </div>
     );
   }
 
-  function printFromToImages(from: any, to: any) {
+  function printFromToImages(from: string, to: string) {
     if (from && to) {
       return (
         <>
@@ -153,9 +165,11 @@ export default function Timeline(props: Readonly<Props>) {
     return printImage(label, nonUndefined);
   }
 
-  function printAnimation(label: string, value: any) {
+  function printAnimation(label: string, value: string) {
     return (
-      <Col className="d-flex align-items-start flex-column gap-1">
+      <div
+        className={`${FLEX_COLUMN_CLASS_NAME} tw-flex tw-flex-col tw-items-start tw-gap-1`}
+      >
         <b>{label}:</b>
         <TimelineMediaComponent
           type={getType()}
@@ -163,11 +177,11 @@ export default function Timeline(props: Readonly<Props>) {
           label={label}
           locale={locale}
         />
-      </Col>
+      </div>
     );
   }
 
-  function printFromToAnimation(from: any, to: any) {
+  function printFromToAnimation(from: string, to: string) {
     if (from && to) {
       return (
         <>
@@ -184,7 +198,7 @@ export default function Timeline(props: Readonly<Props>) {
     return printAnimation(label, nonUndefined);
   }
 
-  function printContent(change: { key: string; from: any; to: any }) {
+  function printContent(change: { key: string; from: string; to: string }) {
     let content;
     if (isImage(change.key)) {
       content = printFromToImages(change.from, change.to);
@@ -222,20 +236,22 @@ export default function Timeline(props: Readonly<Props>) {
             }`}
           >
             <div className={styles["content"]}>
-              <h5 className="m-0 mb-3">
+              <h5 className="tw-m-0 tw-mb-4">
                 {getDateDisplay(step.transaction_date)}
               </h5>
-              <Container className="no-padding">
-                <Row className="pb-1">
-                  <Col className="d-flex justify-content-between align-items-center gap-4">
+              <div className="tw-mx-auto tw-w-full tw-p-0">
+                <div className={`${FLEX_ROW_CLASS_NAME} tw-pb-1`}>
+                  <div
+                    className={`${FLEX_COLUMN_CLASS_NAME} tw-flex tw-items-center tw-justify-between tw-gap-6`}
+                  >
                     <b>{step.description.event}</b>
-                    <span className="d-flex gap-4">
+                    <span className="tw-flex tw-gap-6">
                       <a
                         href={step.uri}
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={t(locale, "timeline.links.uriAriaLabel")}
-                        className="d-flex align-items-center justify-content-center gap-2 decoration-none"
+                        className="tw-flex tw-items-center tw-justify-center tw-gap-2 tw-no-underline"
                       >
                         {t(locale, "timeline.links.uri")}
                         <FontAwesomeIcon
@@ -249,7 +265,7 @@ export default function Timeline(props: Readonly<Props>) {
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label={t(locale, "timeline.links.txnAriaLabel")}
-                        className="d-flex align-items-center justify-content-center gap-2 decoration-none"
+                        className="tw-flex tw-items-center tw-justify-center tw-gap-2 tw-no-underline"
                       >
                         {t(locale, "timeline.links.txn")}
                         <FontAwesomeIcon
@@ -259,23 +275,29 @@ export default function Timeline(props: Readonly<Props>) {
                         />
                       </a>
                     </span>
-                  </Col>
-                </Row>
+                  </div>
+                </div>
                 {step.description.changes.length > 0 && (
                   <ul className={styles["changesUl"]}>
                     {step.description.changes.map((change) => (
                       <li key={`timeline-table-${change.key}`}>
-                        <Row className="pt-3 pb-1">
-                          <Col>
+                        <div
+                          className={`${FLEX_ROW_CLASS_NAME} tw-pb-1 tw-pt-4`}
+                        >
+                          <div className={FLEX_COLUMN_CLASS_NAME}>
                             <b>{getKeyDisplay(change.key)}</b>
-                          </Col>
-                        </Row>
-                        <Row className="pt-1 pb-3">{printContent(change)}</Row>
+                          </div>
+                        </div>
+                        <div
+                          className={`${FLEX_ROW_CLASS_NAME} tw-pb-4 tw-pt-1`}
+                        >
+                          {printContent(change)}
+                        </div>
                       </li>
                     ))}
                   </ul>
                 )}
-              </Container>
+              </div>
             </div>
           </div>
         );

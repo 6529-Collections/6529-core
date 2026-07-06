@@ -1,4 +1,4 @@
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import PrenodesStatus from "@/components/prenodes/PrenodesStatus";
 import { getAppMetadata } from "@/components/providers/metadata";
 
@@ -14,7 +14,7 @@ export default function PrenodesPage() {
 
 export const generateMetadata = () => {
   return getAppMetadata({
-    title: "Prenodes",
+    title: "Prenodes | Network",
     description: "Network",
   });
 };

@@ -20,11 +20,10 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMemo } from "react";
-import { Col, Container, Row } from "../NextGenTailwindLayout";
 import { Tooltip } from "react-tooltip";
 import { printViewButton } from "../collectionParts/NextGenCollection";
 import { NextGenBackToCollectionPageLink } from "../collectionParts/NextGenCollectionHeader";
-import styles from "../NextGen.module.scss";
+import styles from "../NextGen.module.css";
 import NextGenTokenAbout from "./NextGenTokenAbout";
 import NextGenTokenArt from "./NextGenTokenArt";
 import NextgenTokenRarity, {
@@ -61,7 +60,7 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
     }
 
     return (
-      <div className="mb-4">
+      <div className="tw-mb-6">
         <TransferSingle
           collectionType={CollectedCollectionType.NEXTGEN}
           contractType={ContractType.ERC721}
@@ -82,9 +81,9 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
 
   function printDetails() {
     return (
-      <Container className="pt-4">
-        <Row>
-          <Col className="d-flex gap-4">
+      <div className="tw-mx-auto tw-w-full tw-px-3 tw-pt-6 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+          <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-gap-6 tw-px-3">
             {printViewButton(
               props.view,
               NextgenCollectionView.ABOUT,
@@ -105,19 +104,30 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
               NextgenCollectionView.RARITY,
               props.setView
             )}
-          </Col>
-        </Row>
-        <Row className="pt-4 pb-4">
+          </div>
+        </div>
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pb-6 tw-pt-6">
           {props.view === NextgenCollectionView.ABOUT && (
             <>
-              <Col xs={12}>{isMdUp ? null : transferSingle}</Col>
-              <Col sm={12} md={6}>
+              <div
+                className="tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3"
+                style={{ maxWidth: "100%" }}
+              >
+                {isMdUp ? null : transferSingle}
+              </div>
+              <div
+                className="tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3 min-[576px]:tw-w-full min-[576px]:tw-shrink-0 min-[576px]:tw-grow-0 min-[576px]:tw-basis-auto md:tw-w-1/2 md:tw-shrink-0 md:tw-grow-0 md:tw-basis-auto"
+                style={{ maxWidth: "100%" }}
+              >
                 <NextGenTokenAbout
                   collection={props.collection}
                   token={props.token}
                 />
-              </Col>
-              <Col sm={12} md={6}>
+              </div>
+              <div
+                className="tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3 min-[576px]:tw-w-full min-[576px]:tw-shrink-0 min-[576px]:tw-grow-0 min-[576px]:tw-basis-auto md:tw-w-1/2 md:tw-shrink-0 md:tw-grow-0 md:tw-basis-auto"
+                style={{ maxWidth: "100%" }}
+              >
                 {isMdUp ? transferSingle : null}
                 <NextgenTokenTraits
                   collection={props.collection}
@@ -127,34 +137,34 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
                   )}
                   tokenCount={props.tokenCount}
                 />
-              </Col>
+              </div>
             </>
           )}
           {props.view === NextgenCollectionView.PROVENANCE && (
-            <Col className="pt-4 pb-4">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3 tw-pb-6 tw-pt-6">
               <NextGenTokenProvenance
                 token_id={props.token.id}
                 collection={props.collection}
               />
-            </Col>
+            </div>
           )}
           {props.view === NextgenCollectionView.DISPLAY_CENTER && (
-            <Col className="pt-4 pb-4">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3 tw-pb-6 tw-pt-6">
               <NextGenTokenRenderCenter token={props.token} />
-            </Col>
+            </div>
           )}
           {props.view === NextgenCollectionView.RARITY && (
-            <Col className="pt-4 pb-4">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3 tw-pb-6 tw-pt-6">
               <NextgenTokenRarity
                 collection={props.collection}
                 token={props.token}
                 traits={props.traits}
                 tokenCount={props.tokenCount}
               />
-            </Col>
+            </div>
           )}
-        </Row>
-      </Container>
+        </div>
+      </div>
     );
   }
 
@@ -255,15 +265,19 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
   function printToken() {
     return (
       <>
-        <Container fluid className={`${styles["tokenContainer"]} pt-4 pb-4`}>
-          <Row>
-            <Col>
-              <Container>
-                <Row className="pb-2">
-                  <Col className="d-flex align-items-center justify-content-between">
-                    <span className="d-flex flex-column">
-                      <span className="d-flex gap-3">
-                        <h1 className="mb-0 font-color">{props.token.name}</h1>
+        <div
+          className={`tw-w-full tw-max-w-none tw-px-3 ${styles["tokenContainer"]} tw-pb-6 tw-pt-6`}
+        >
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
+              <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+                <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pb-2">
+                  <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-items-center tw-justify-between tw-px-3">
+                    <span className="tw-flex tw-flex-col">
+                      <span className="tw-flex tw-gap-4">
+                        <h1 className="tw-mb-0 tw-text-white">
+                          {props.token.name}
+                        </h1>
                         {(props.token.burnt ||
                           isNullAddress(props.token.owner)) && (
                           <>
@@ -289,20 +303,20 @@ export default function NextGenTokenPage(props: Readonly<Props>) {
                         collection={props.collection}
                       />
                     </span>
-                    <span className="d-flex gap-2">
+                    <span className="tw-flex tw-gap-2">
                       {printPreviousToken()}
                       {printNextToken()}
                     </span>
-                  </Col>
-                </Row>
-              </Container>
+                  </div>
+                </div>
+              </div>
               <NextGenTokenArt
                 token={props.token}
                 collection={props.collection}
               />
-            </Col>
-          </Row>
-        </Container>
+            </div>
+          </div>
+        </div>
         {printDetails()}
       </>
     );

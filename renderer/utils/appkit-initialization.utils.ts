@@ -8,34 +8,45 @@ import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
 import type { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
 import { publicEnv } from "@/config/env";
 import { CW_PROJECT_ID } from "@/constants/constants";
+import { AdapterCacheError, AdapterError } from "@/errors/adapter";
 import { isElectron } from "@/helpers";
 import type { ISeedWallet } from "@/shared/types";
-import { AdapterCacheError, AdapterError } from "@/src/errors/adapter";
 import { isIndexedDBError, logErrorSecurely } from "@/utils/error-sanitizer";
 import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import type { AppKitNetwork } from "@reown/appkit-common";
 import type { Chain } from "viem";
-import { mainnet } from "viem/chains";
 
+// Configuration interface for AppKit initialization
 export interface AppKitInitializationConfig {
   wallets: AppWallet[];
   seedWallets?: ISeedWallet[] | undefined;
   adapterManager: AppKitAdapterManager;
   isCapacitor: boolean;
-  chains?: Chain[] | undefined;
+  chains: Chain[];
 }
 
+// Result interface
 interface AppKitInitializationResult {
   adapter: WagmiAdapter;
+  /**
+   * Optional to preserve backwards compatibility with mocks.
+   * When provided, callers can await it before opening AppKit UI.
+   */
   ready?: Promise<void> | undefined;
 }
 
-function debugLog(message: string, ...args: any[]): void {
+/**
+ * Debug logger helper to reduce conditional complexity
+ */
+function debugLog(message: string, ...args: unknown[]): void {
   if (publicEnv.NODE_ENV === "development") {
     console.warn(`[AppKitInitialization] ${message}`, ...args);
   }
 }
 
+/**
+ * Creates adapter with proper error handling
+ */
 function createAdapter(
   wallets: AppWallet[],
   seedWallets: ISeedWallet[],
@@ -44,9 +55,7 @@ function createAdapter(
   chains: Chain[]
 ): WagmiAdapter {
   debugLog(
-    `Initializing AppKit adapter (${isCapacitor ? "mobile" : "web"} - ${
-      isElectron() ? "6529 Desktop" : "6529 Desktop Web"
-    }) with`,
+    `Initializing AppKit adapter (${isCapacitor ? "mobile" : "web"}) with`,
     wallets.length,
     "AppWallets"
   );
@@ -86,28 +95,33 @@ function createAdapter(
   }
 }
 
+/**
+ * Initializes AppKit with wallets using a fail-fast approach with retry logic
+ * Extracted from WagmiSetup component for better maintainability and testability
+ */
 export function initializeAppKit(
   config: AppKitInitializationConfig
 ): AppKitInitializationResult {
-  const {
-    wallets,
-    adapterManager,
-    seedWallets = [],
-    isCapacitor,
-    chains = [mainnet],
-  } = config;
+  const { wallets, adapterManager, seedWallets = [], isCapacitor } = config;
 
   const newAdapter = createAdapter(
     wallets,
     seedWallets,
     adapterManager,
     isCapacitor,
-    chains
+    config.chains
   );
-  const appKitConfig = buildAppKitConfig(newAdapter, chains, isCapacitor);
+  const appKitConfig = buildAppKitConfig(
+    newAdapter,
+    config.chains,
+    isCapacitor
+  );
   const appKit = createAppKit(appKitConfig);
-  appKit.setEIP6963Enabled(false);
+  if (isElectron()) {
+    appKit.setEIP6963Enabled(false);
+  }
   const ready = appKit.ready();
+  // Prevent unhandled rejections if a caller chooses not to await `ready`.
   ready.catch((error) => {
     logErrorSecurely("[AppKitInitialization] AppKit ready() failed", error);
   });
@@ -118,6 +132,9 @@ export function initializeAppKit(
   };
 }
 
+/**
+ * Builds the AppKit configuration object
+ */
 function buildAppKitConfig(
   adapter: WagmiAdapter,
   chains: Chain[],
@@ -147,9 +164,9 @@ function buildAppKitConfig(
       "--w3m-font-family": "'Montserrat', sans-serif",
     },
     enableWalletGuide: false,
-    allWallets: isElectron() ? ("HIDE" as const) : ("SHOW" as const),
-    featuredWalletIds: isElectron() ? [] : ["metamask", "walletConnect"],
     enableCoinbase: !isCapacitor,
+    featuredWalletIds: isElectron() ? [] : ["metamask", "walletConnect"],
+    allWallets: isElectron() ? ("HIDE" as const) : ("SHOW" as const),
     features: {
       analytics: true,
       email: false,

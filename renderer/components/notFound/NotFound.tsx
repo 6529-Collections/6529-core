@@ -1,4 +1,3 @@
-import { Container, Row, Col } from "react-bootstrap";
 import Image from "next/image";
 
 interface Props {
@@ -11,30 +10,22 @@ interface Props {
 
 export default function NotFound(props: Readonly<Props>) {
   return (
-    <Container className="pt-5 text-center">
-      <Row>
-        <Col>
-          <h4 className="mb-0 float-none">{props.title}</h4>
-        </Col>
-      </Row>
-      <Row>
-        <Col>
-          <Image
-            width="0"
-            height="0"
-            style={{ height: "auto", width: "120px" }}
-            src="/SummerGlasses.svg"
-            alt="SummerGlasses"
-          />
-        </Col>
-      </Row>
+    <div className="tw-pt-5 tw-text-center">
+      <h4 className="tw-mb-0 tw-float-none">{props.title}</h4>
+      <div>
+        <Image
+          width="0"
+          height="0"
+          style={{ height: "auto", width: "120px" }}
+          src="/SummerGlasses.svg"
+          alt="SummerGlasses"
+        />
+      </div>
       {props.links.map((link) => (
-        <Row className="pt-3" key={`not-found-link-${link.href}`}>
-          <Col>
-            <a href={link.href}>{link.display}</a>
-          </Col>
-        </Row>
+        <div className="tw-pt-3" key={`not-found-link-${link.href}`}>
+          <a href={link.href}>{link.display}</a>
+        </div>
       ))}
-    </Container>
+    </div>
   );
 }

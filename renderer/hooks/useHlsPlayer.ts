@@ -211,7 +211,7 @@ export function useHlsPlayer({
       }
 
       const mod = await import("hls.js");
-      const HlsConstructor = mod.default; // typed import (no "as any")
+      const HlsConstructor = mod.default; // typed import, no unsafe cast
       if (!isCurrentSetup(setupVersion, videoEl)) {
         return;
       }

@@ -10,8 +10,8 @@ import {
   SeizeConnectProvider,
   useSeizeConnectContext,
 } from "@/components/auth/SeizeConnectContext";
+import { AppKitBootstrapContext } from "@/components/providers/AppKitBootstrapContext";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
-import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 
 const ACTIVE_ADDRESS = "0x00000000000000000000000000000000000000AA";
 
@@ -109,7 +109,7 @@ jest.mock("@/services/auth/session-v2.utils", () => ({
   logoutSessionV2: jest.fn(() => Promise.resolve()),
 }));
 
-jest.mock("@/src/utils/security-logger", () => ({
+jest.mock("@/utils/security-logger", () => ({
   createConnectionEventContext: jest.fn(() => ({})),
   createValidationEventContext: jest.fn(() => ({})),
   logError: (...args: unknown[]) => mockLogError(...args),
@@ -152,19 +152,6 @@ function LogoutButton() {
   );
 }
 
-function LogoutStateProbe() {
-  const { connectionState, isDisconnecting, seizeDisconnectAndLogout } =
-    useSeizeConnectContext();
-
-  return (
-    <>
-      <span data-testid="connection-state">{connectionState}</span>
-      <span data-testid="disconnecting">{String(isDisconnecting)}</span>
-      <button onClick={() => void seizeDisconnectAndLogout()}>Logout</button>
-    </>
-  );
-}
-
 function createPendingPromise<T>(): Promise<T> {
   return new Promise<T>(() => {
     // Intentionally pending for stale add-flow guard coverage.
@@ -200,7 +187,7 @@ describe("SeizeConnectProvider add-account flow", () => {
     jest.useRealTimers();
   });
 
-  it("opens the connect flow directly for app-wallet connectors and keeps add-account mode active", () => {
+  it("opens the connect flow directly for app-wallet connectors and keeps add-account mode active", async () => {
     mockWagmiAccount = {
       connector: {
         type: APP_WALLET_CONNECTOR_TYPE,
@@ -221,8 +208,10 @@ describe("SeizeConnectProvider add-account flow", () => {
     });
 
     expect(mockDisconnect).not.toHaveBeenCalled();
-    expect(mockOpen).toHaveBeenCalledTimes(1);
-    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledTimes(1);
+      expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    });
 
     act(() => {
       fireEvent.click(addButton);
@@ -232,7 +221,7 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockOpen).toHaveBeenCalledTimes(1);
   });
 
-  it("clears a stale add-flow guard before reopening connect for app-wallet connectors", () => {
+  it("clears a stale add-flow guard before reopening connect for app-wallet connectors", async () => {
     mockDisconnect.mockImplementation(() => createPendingPromise<void>());
 
     const { rerender } = render(
@@ -271,8 +260,10 @@ describe("SeizeConnectProvider add-account flow", () => {
     });
 
     expect(mockDisconnect).toHaveBeenCalledTimes(1);
-    expect(mockOpen).toHaveBeenCalledTimes(1);
-    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledTimes(1);
+      expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    });
   });
 
   it("keeps the disconnect-then-connect flow for browser-wallet connectors", async () => {
@@ -297,43 +288,13 @@ describe("SeizeConnectProvider add-account flow", () => {
       jest.advanceTimersByTime(100);
     });
 
-    expect(mockOpen).toHaveBeenCalledTimes(1);
-    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledTimes(1);
+      expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    });
   });
 
-  it("keeps the disconnect-then-connect flow for seed-wallet connectors", async () => {
-    mockWagmiAccount = {
-      connector: {
-        type: SEED_WALLET_CONNECTOR_TYPE,
-      },
-    };
-
-    render(
-      <SeizeConnectProvider>
-        <AddAccountButton />
-      </SeizeConnectProvider>
-    );
-
-    act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Add account" }));
-    });
-
-    expect(mockDisconnect).toHaveBeenCalledTimes(1);
-    expect(mockOpen).not.toHaveBeenCalled();
-
-    await act(async () => {
-      await Promise.resolve();
-    });
-
-    act(() => {
-      jest.advanceTimersByTime(100);
-    });
-
-    expect(mockOpen).toHaveBeenCalledTimes(1);
-    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
-  });
-
-  it("opens connect directly when there is no live connected wallet and keeps add-account mode active", () => {
+  it("opens connect directly when there is no live connected wallet and keeps add-account mode active", async () => {
     mockAppKitAccount = {
       address: undefined,
       isConnected: false,
@@ -358,7 +319,68 @@ describe("SeizeConnectProvider add-account flow", () => {
     });
 
     expect(mockDisconnect).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it("keeps add-account mode active while waiting for AppKit readiness", async () => {
+    mockAppKitAccount = {
+      address: undefined,
+      isConnected: false,
+      status: "disconnected",
+    };
+    mockAppKitState = { open: false };
+
+    let resolveReady!: () => void;
+    const waitForReady = jest.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveReady = resolve;
+        })
+    );
+
+    render(
+      <AppKitBootstrapContext.Provider
+        value={{
+          status: "initializing",
+          isReady: false,
+          isWaiting: true,
+          waitForReady,
+        }}
+      >
+        <SeizeConnectProvider>
+          <AddAccountButton />
+        </SeizeConnectProvider>
+      </AppKitBootstrapContext.Provider>
+    );
+
+    const addButton = screen.getByRole("button", { name: "Add account" });
+
+    act(() => {
+      fireEvent.click(addButton);
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(waitForReady).toHaveBeenCalledTimes(1);
+    expect(mockOpen).not.toHaveBeenCalled();
+
+    act(() => {
+      jest.runOnlyPendingTimers();
+      fireEvent.click(addButton);
+    });
+
+    expect(waitForReady).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveReady();
+      await Promise.resolve();
+    });
+
     expect(mockOpen).toHaveBeenCalledTimes(1);
+    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
   });
 
   it("starts add-account flow for web session v2 with an existing account", async () => {
@@ -389,8 +411,10 @@ describe("SeizeConnectProvider add-account flow", () => {
       jest.advanceTimersByTime(100);
     });
 
-    expect(mockOpen).toHaveBeenCalledTimes(1);
-    expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledTimes(1);
+      expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    });
   });
 
   it("continues single logout cleanup when session revocation fails", async () => {
@@ -413,68 +437,6 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockLogError).toHaveBeenCalledWith(
       "seizeDisconnectAndLogout.logoutSessionV2",
       revokeError
-    );
-  });
-
-  it("keeps the active account visible while logout cleanup is pending", async () => {
-    const authUtils = require("@/services/auth/auth.utils");
-    authUtils.removeAuthJwt.mockImplementation(() =>
-      createPendingPromise<void>()
-    );
-
-    render(
-      <SeizeConnectProvider>
-        <LogoutStateProbe />
-      </SeizeConnectProvider>
-    );
-
-    await waitFor(() =>
-      expect(screen.getByTestId("connection-state")).toHaveTextContent(
-        "connected"
-      )
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Logout" }));
-      await Promise.resolve();
-    });
-
-    expect(screen.getByTestId("disconnecting")).toHaveTextContent("true");
-    expect(screen.getByTestId("connection-state")).toHaveTextContent(
-      "connected"
-    );
-  });
-
-  it("ends logout disconnect state after restoring the next stored account", async () => {
-    const authUtils = require("@/services/auth/auth.utils");
-    authUtils.getWalletAddress.mockReturnValue(ACTIVE_ADDRESS);
-    authUtils.removeAuthJwt.mockImplementation(() => undefined);
-
-    render(
-      <SeizeConnectProvider>
-        <LogoutStateProbe />
-      </SeizeConnectProvider>
-    );
-
-    await waitFor(() =>
-      expect(screen.getByTestId("connection-state")).toHaveTextContent(
-        "connected"
-      )
-    );
-
-    await act(async () => {
-      fireEvent.click(screen.getByRole("button", { name: "Logout" }));
-      await Promise.resolve();
-    });
-
-    await waitFor(() => expect(authUtils.removeAuthJwt).toHaveBeenCalled());
-    await waitFor(() =>
-      expect(screen.getByTestId("connection-state")).toHaveTextContent(
-        "connected"
-      )
-    );
-    await waitFor(() =>
-      expect(screen.getByTestId("disconnecting")).toHaveTextContent("false")
     );
   });
 

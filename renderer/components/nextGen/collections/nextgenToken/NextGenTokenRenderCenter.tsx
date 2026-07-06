@@ -2,30 +2,29 @@
 
 import { NEXTGEN_CHAIN_ID } from "@/components/nextGen/nextgen_contracts";
 import { NEXTGEN_GENERATOR_BASE_URL } from "@/constants/constants";
-import { NextGenToken } from "@/entities/INextgen";
-import { openInExternalBrowser } from "@/helpers";
-import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
+import type { NextGenToken } from "@/entities/INextgen";
 import { numberWithCommas } from "@/helpers/Helpers";
 import { useState } from "react";
-import { Col, Container, Row } from "../NextGenTailwindLayout";
-import { Dropdown } from "react-bootstrap";
 import { mainnet } from "wagmi/chains";
-import styles from "./NextGenToken.module.scss";
+import styles from "./NextGenToken.module.css";
 import NextGenTokenDownload, { Resolution } from "./NextGenTokenDownload";
 
 export default function NextgenTokenRenderCenter(
   props: Readonly<{ token: NextGenToken }>
 ) {
   return (
-    <Container className="no-padding">
-      <Row>
-        <Col className="pb-3">
-          <h3 className="mb-0">Display Center</h3>
-        </Col>
-      </Row>
-      <Row>
-        <Col sm={12} md={6} className="pb-3 d-flex flex-wrap gap-2">
-          <span className="font-color-h">Rendered Versions:</span>
+    <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3 tw-pb-4">
+          <h3 className="tw-mb-0">Display Center</h3>
+        </div>
+      </div>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div
+          className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-flex-wrap tw-gap-2 tw-px-3 tw-pb-4 min-[576px]:tw-w-full min-[576px]:tw-shrink-0 min-[576px]:tw-grow-0 min-[576px]:tw-basis-auto md:tw-w-1/2 md:tw-shrink-0 md:tw-grow-0 md:tw-basis-auto"
+          style={{ maxWidth: "100%" }}
+        >
+          <span className="tw-text-[#9a9a9a]">Rendered Versions:</span>
           <NextGenTokenDownload
             token={props.token}
             resolution={Resolution["1K"]}
@@ -46,9 +45,12 @@ export default function NextgenTokenRenderCenter(
             token={props.token}
             resolution={Resolution["16K"]}
           />
-        </Col>
-        <Col sm={12} md={6} className="pb-3 d-flex flex-column gap-2">
-          <span className="font-color-h">For Thumbnail Use Only :</span>
+        </div>
+        <div
+          className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-flex-col tw-gap-2 tw-px-3 tw-pb-4 min-[576px]:tw-w-full min-[576px]:tw-shrink-0 min-[576px]:tw-grow-0 min-[576px]:tw-basis-auto md:tw-w-1/2 md:tw-shrink-0 md:tw-grow-0 md:tw-basis-auto"
+          style={{ maxWidth: "100%" }}
+        >
+          <span className="tw-text-[#9a9a9a]">For Thumbnail Use Only :</span>
           <NextGenTokenDownload
             token={props.token}
             resolution={Resolution["Thumbnail"]}
@@ -57,12 +59,12 @@ export default function NextgenTokenRenderCenter(
             token={props.token}
             resolution={Resolution["0.5K"]}
           />
-        </Col>
-      </Row>
-      <Row className="pt-3">
+        </div>
+      </div>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
         <CustomRender token={props.token} />
-      </Row>
-    </Container>
+      </div>
+    </div>
   );
 }
 
@@ -101,107 +103,105 @@ function CustomRender(props: Readonly<{ token: NextGenToken }>) {
     if (params.toString()) {
       url += `?${params.toString()}`;
     }
-    openInExternalBrowser(url);
+    window.open(url, "_blank");
   }
 
   return (
-    <Container
+    <div
+      className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]"
       style={{
         minHeight: "150px",
       }}
     >
-      <Row>
-        <Col>
-          <span className="font-color-h">Custom Render:</span>
-        </Col>
-      </Row>
-      <Row>
-        <Col className="d-flex flex-wrap gap-2">
-          <Dropdown
-            drop={"down-centered"}
-            className={`${styles["customRenderDropdown"]} d-flex align-items-center gap-2`}
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
+          <span className="tw-text-[#9a9a9a]">Custom Render:</span>
+        </div>
+      </div>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-flex-wrap tw-gap-2 tw-px-3">
+          <label
+            className={`${styles["customRenderDropdown"]} tw-flex tw-items-center tw-gap-2`}
           >
-            <span className="font-color-h">Render Type:</span>
-            <Dropdown.Toggle>{renderType}</Dropdown.Toggle>
-            <Dropdown.Menu>
+            <span className="tw-text-[#9a9a9a]">Render Type:</span>
+            <select
+              value={renderType}
+              onChange={(event) => {
+                setRenderType(event.target.value as RenderType);
+              }}
+              className="tw-cursor-pointer tw-rounded-md tw-border-0 tw-bg-transparent tw-py-1 tw-pl-1 tw-pr-8 tw-text-lg tw-font-bold tw-text-white focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+              style={{ colorScheme: "dark" }}
+            >
               {Object.values(RenderType).map((type) => (
-                <Dropdown.Item
-                  key={getRandomObjectId()}
-                  onClick={() => {
-                    setRenderType(type as RenderType);
-                  }}
+                <option
+                  key={type}
+                  value={type}
+                  className="tw-bg-black tw-text-white"
                 >
                   {type}
-                </Dropdown.Item>
+                </option>
               ))}
-            </Dropdown.Menu>
-          </Dropdown>
-          <Dropdown
-            drop={"down-centered"}
-            className={`${styles["customRenderDropdown"]} d-flex align-items-center gap-2`}
+            </select>
+          </label>
+          <label
+            className={`${styles["customRenderDropdown"]} tw-flex tw-items-center tw-gap-2`}
           >
-            <span className="font-color-h">Script Version:</span>
-            <Dropdown.Toggle>{scriptVersion}</Dropdown.Toggle>
-            <Dropdown.Menu>
+            <span className="tw-text-[#9a9a9a]">Script Version:</span>
+            <select
+              value={scriptVersion}
+              onChange={(event) => {
+                setScriptVersion(event.target.value as ScriptVersion);
+              }}
+              className="tw-cursor-pointer tw-rounded-md tw-border-0 tw-bg-transparent tw-py-1 tw-pl-1 tw-pr-8 tw-text-lg tw-font-bold tw-text-white focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
+              style={{ colorScheme: "dark" }}
+            >
               {Object.values(ScriptVersion).map((version) => (
-                <Dropdown.Item
-                  key={getRandomObjectId()}
-                  onClick={() => {
-                    setScriptVersion(version as ScriptVersion);
-                  }}
+                <option
+                  key={version}
+                  value={version}
+                  className="tw-bg-black tw-text-white"
                 >
                   {version}
-                </Dropdown.Item>
+                </option>
               ))}
-            </Dropdown.Menu>
-          </Dropdown>
-          <Dropdown
-            drop={"down-centered"}
-            className={`${styles["customRenderDropdown"]} d-flex align-items-center gap-2`}
+            </select>
+          </label>
+          <label
+            className={`${styles["customRenderDropdown"]} tw-flex tw-items-center tw-gap-2`}
           >
-            <span className="font-color-h">Height:</span>
-            <Dropdown.Toggle>
-              {height ? `${numberWithCommas(height)} px` : "Screen Size"}
-            </Dropdown.Toggle>
-            <Dropdown.Menu>
-              <Dropdown.Item
-                onClick={() => {
-                  setHeight(null);
+            <span className="tw-text-[#9a9a9a]">Height:</span>
+            <span className="tw-flex tw-items-center tw-gap-2">
+              <span className="tw-min-w-[88px] tw-text-left tw-text-lg tw-font-bold tw-text-white">
+                {height ? `${numberWithCommas(height)} px` : "Screen Size"}
+              </span>
+              <input
+                type="number"
+                min={1}
+                placeholder="enter height"
+                aria-label="Custom render height in pixels"
+                className={`${styles["customRenderInput"]} tw-rounded-md tw-border-0 tw-px-2 tw-py-1 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400`}
+                value={height ?? ""}
+                onChange={(e) => {
+                  const nextHeight = Number.parseInt(e.target.value, 10);
+                  setHeight(
+                    Number.isNaN(nextHeight) || nextHeight < 1
+                      ? null
+                      : nextHeight
+                  );
                 }}
-              >
-                Screen Size
-              </Dropdown.Item>
-              <Dropdown.Item
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-              >
-                <span className="d-flex gap-2">
-                  <span>Custom Height (pixels):</span>
-                  <input
-                    type="number"
-                    placeholder="enter height"
-                    className={styles["customRenderInput"]}
-                    value={height ?? ""}
-                    onChange={(e) => {
-                      setHeight(parseInt(e.target.value));
-                    }}
-                  />
-                </span>
-              </Dropdown.Item>
-            </Dropdown.Menu>
-          </Dropdown>
+              />
+            </span>
+          </label>
           <button
-            className={`pt-2 pb-2 seize-btn no-wrap ${styles["sceneBtn"]}`}
+            className={`tw-min-w-fit tw-whitespace-nowrap tw-rounded-none tw-border-0 tw-px-5 tw-py-2 tw-font-bold ${styles["sceneBtn"]}`}
             onClick={() => {
               go();
             }}
           >
             <span>GO!</span>
           </button>
-        </Col>
-      </Row>
-    </Container>
+        </div>
+      </div>
+    </div>
   );
 }

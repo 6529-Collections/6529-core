@@ -1,6 +1,4 @@
-import styles from "./NFTAttributes.module.scss";
 import type { IAttribute } from "@/entities/INFT";
-import clsx from "clsx";
 
 export default function NFTAttributes(
   props: Readonly<{
@@ -9,13 +7,20 @@ export default function NFTAttributes(
 ) {
   return (
     <div className="tw-grid tw-grid-cols-2 sm:tw-grid-cols-4 md:tw-grid-cols-6 lg:tw-grid-cols-6">
-      {props.attributes.map((a: any) => (
+      {props.attributes.map((a) => (
         <div key={a.trait_type} className="tw-py-2">
           <div className="tw-px-3">
-            <div className={clsx(styles["nftAttribute"], "tw-rounded-md")}>
-              <span>{a.trait_type}</span>
+            <div className="tw-overflow-hidden tw-text-ellipsis tw-whitespace-nowrap tw-rounded-md tw-border tw-border-solid tw-border-white tw-py-2 tw-text-center">
+              <span className="tw-whitespace-nowrap tw-text-[13px]">
+                {a.trait_type}
+              </span>
               <br />
-              <span title={a.value}>{a.value}</span>
+              <span
+                className="tw-whitespace-nowrap tw-text-[15px] tw-font-bold"
+                title={String(a.value)}
+              >
+                {a.value}
+              </span>
             </div>
           </div>
         </div>

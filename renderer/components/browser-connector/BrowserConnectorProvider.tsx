@@ -1,16 +1,82 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
-import { Col, Container, Row } from "react-bootstrap";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import { hexToString } from "viem";
 import { useChainId, useSendTransaction, useSignMessage } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
-import styles from "./BrowserConnector.module.scss";
+import styles from "./BrowserConnector.module.css";
 import BrowserConnectorWalletIntentNotice, {
   type BrowserConnectorWalletIntentNoticeType,
 } from "./BrowserConnectorWalletIntentNotice";
 import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
+
+const bootstrapUtilityClasses: Record<string, string> = {
+  "pt-2": "tw-pt-2",
+  "pt-3": "tw-pt-3",
+  "pt-4": "tw-pt-4",
+  "pb-3": "tw-pb-3",
+  "text-danger": "tw-text-red",
+  "bg-danger": "tw-bg-red",
+};
+
+function mapUtilityClasses(className = ""): string {
+  return className
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((classNamePart) => bootstrapUtilityClasses[classNamePart] ?? classNamePart)
+    .join(" ");
+}
+
+function Container({
+  children,
+  className,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+}) {
+  return <div className={mapUtilityClasses(className)}>{children}</div>;
+}
+
+function Row({
+  children,
+  className,
+  style,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+  readonly style?: CSSProperties | undefined;
+}) {
+  return (
+    <div className={`tw-flex tw-flex-wrap ${mapUtilityClasses(className)}`} style={style}>
+      {children}
+    </div>
+  );
+}
+
+function Col({
+  children,
+  className,
+  xs,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+  readonly xs?: number | undefined;
+}) {
+  return (
+    <div
+      className={`${xs === 12 ? "tw-w-full" : "tw-flex-1"} ${mapUtilityClasses(className)}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 export default function BrowserConnectorProvider(
   props: Readonly<{
@@ -265,7 +331,7 @@ export default function BrowserConnectorProvider(
                       {!isCancelled && (
                         <button
                           onClick={onSign}
-                          className="mt-3 tw-inline-flex tw-w-32 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                          className="tw-mt-3 tw-inline-flex tw-w-32 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                         >
                           {isSuccess ? "Signed" : "Sign"}
                         </button>
@@ -274,19 +340,19 @@ export default function BrowserConnectorProvider(
                       {!isSuccess && (
                         <button
                           onClick={onCancel}
-                          className="mt-3 bg-danger tw-inline-flex tw-w-32 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                          className="tw-mt-3 tw-inline-flex tw-w-32 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-red tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-red tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-red/80 hover:tw-ring-red/80 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                         >
                           {isCancelled ? "Cancelled" : "Cancel"}
                         </button>
                       )}
                     </div>
                   ) : (
-                    <div className="pt-3 text-danger">
+                    <div className="tw-pt-3 tw-text-red">
                       {hasRequesterMismatch ? (
                         <>
                           This request does not match the expected wallet:
                           <br />
-                          <code className="text-danger">
+                          <code className="tw-text-red">
                             {intendedWalletAddress}
                           </code>
                         </>
@@ -298,7 +364,7 @@ export default function BrowserConnectorProvider(
                         <>
                           This request is for address:
                           <br />
-                          <code className="text-danger">
+                          <code className="tw-text-red">
                             {requesterAddress.toLowerCase()}
                           </code>
                         </>

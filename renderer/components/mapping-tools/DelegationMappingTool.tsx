@@ -9,23 +9,22 @@ import { DELEGATION_ALL_ADDRESS, MEMES_CONTRACT } from "@/constants/constants";
 import type { Delegation } from "@/entities/IDelegation";
 import { areEqualAddresses } from "@/helpers/Helpers";
 import { fetchAllPages } from "@/services/6529api";
+import csvParser from "csv-parser";
 import { useEffect, useState } from "react";
 import {
   MappingToolSubmitButton,
   MappingToolUpload,
 } from "./MappingToolControls";
-import styles from "./MappingTool.module.scss";
-
-const csvParser = require("csv-parser");
+import styles from "./MappingTool.module.css";
 
 export default function DelegationMappingTool() {
-  const [file, setFile] = useState<any>();
+  const [file, setFile] = useState<File | undefined>();
   const [collection, setCollection] = useState<string>("0");
   const [useCase, setUseCase] = useState<number>(0);
   const [processing, setProcessing] = useState(false);
   const [delegations, setDelegations] = useState<Delegation[]>([]);
 
-  const [csvData, setCsvData] = useState<any[]>([]);
+  const [csvData, setCsvData] = useState<string[]>([]);
   function submit() {
     setProcessing(true);
   }
@@ -64,16 +63,16 @@ export default function DelegationMappingTool() {
 
         reader.onload = async () => {
           const data = reader.result;
-          const results: any[] = [];
+          const results: string[] = [];
 
           const parser = csvParser({ headers: true })
-            .on("data", (row: any) => {
-              results.push(row["_0"]);
+            .on("data", (row: Record<string, string>) => {
+              results.push(row["_0"]!);
             })
             .on("end", () => {
               setCsvData(results);
             })
-            .on("error", (err: any) => {
+            .on("error", (err: Error) => {
               console.error(err);
             });
 
@@ -81,7 +80,9 @@ export default function DelegationMappingTool() {
           parser.end();
         };
 
-        reader.readAsText(file);
+        if (file) {
+          reader.readAsText(file);
+        }
       });
     }
     if (processing) {
@@ -131,12 +132,12 @@ export default function DelegationMappingTool() {
   return (
     <div className={styles["toolArea"]} id="mapping-tool-form">
       <MappingToolUpload fileName={file?.name} onFileSelected={setFile} />
-      <div className="tw-flex tw-flex-wrap -tw-mx-3 tw-pt-4">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
         <label className="tw-w-full tw-px-3" htmlFor="delegation-collection">
           Select Collection
         </label>
       </div>
-      <div className="tw-flex tw-flex-wrap -tw-mx-3 tw-pt-2">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-2">
         <div className="tw-w-full tw-px-3">
           <select
             id="delegation-collection"
@@ -162,12 +163,12 @@ export default function DelegationMappingTool() {
           </select>
         </div>
       </div>
-      <div className="tw-flex tw-flex-wrap -tw-mx-3 tw-pt-4">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
         <label className="tw-w-full tw-px-3" htmlFor="delegation-use-case">
           Select Use Case
         </label>
       </div>
-      <div className="tw-flex tw-flex-wrap -tw-mx-3 tw-pt-2">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-2">
         <div className="tw-w-full tw-px-3">
           <select
             id="delegation-use-case"
@@ -194,7 +195,7 @@ export default function DelegationMappingTool() {
           </select>
         </div>
       </div>
-      <div className="tw-flex tw-flex-wrap -tw-mx-3 tw-pt-4">
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
         <div className="tw-w-full tw-px-3 tw-text-sm tw-text-iron-400">
           Note: If the selected collection or use case delegation is not found,
           the tool will automatically switch to using delegations for

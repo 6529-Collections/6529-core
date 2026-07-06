@@ -1,12 +1,16 @@
 import React from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { Provider } from "react-redux";
-import { configureStore } from "@reduxjs/toolkit";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { EditingDropProvider } from "@/contexts/EditingDropContext";
 import WaveDrop from "@/components/waves/drops/WaveDrop";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 import useHasTouchInput from "@/hooks/useHasTouchInput";
 import useIsTouchDevice from "@/hooks/useIsTouchDevice";
-import { editSlice } from "@/store/editSlice";
 import { ApiDropGroupMention } from "@/generated/models/ApiDropGroupMention";
 import { DropLocation } from "@/components/waves/drops/drop.types";
 
@@ -161,17 +165,8 @@ const setViewportWidth = (width: number) => {
   globalThis.window.dispatchEvent(new Event("resize"));
 };
 
-// Create a test store
-const createTestStore = () =>
-  configureStore({
-    reducer: {
-      edit: editSlice.reducer,
-    },
-  });
-
-const renderWithRedux = (component: React.ReactElement) => {
-  const store = createTestStore();
-  return render(<Provider store={store}>{component}</Provider>);
+const renderWithEditingDropProvider = (component: React.ReactElement) => {
+  return render(<EditingDropProvider>{component}</EditingDropProvider>);
 };
 
 const drop: any = {
@@ -235,7 +230,7 @@ describe("WaveDrop", () => {
   it("shows actions on desktop", () => {
     setHoverSupport(true);
 
-    const { getByTestId } = renderWithRedux(
+    const { getByTestId } = renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -260,7 +255,7 @@ describe("WaveDrop", () => {
     isTouchDeviceMock.mockReturnValue(false);
     setHoverSupport(true);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -286,14 +281,14 @@ describe("WaveDrop", () => {
     );
   });
 
-  it("keeps touch sheet entry for touch-only detection on a wide viewport without hover", () => {
+  it("keeps touch sheet entry for touch-only detection on a wide viewport without hover", async () => {
     isMobileMock.mockReturnValue(false);
     hasTouchInputMock.mockReturnValue(true);
     isTouchDeviceMock.mockReturnValue(true);
     setHoverSupport(false);
     setViewportWidth(1440);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -324,17 +319,19 @@ describe("WaveDrop", () => {
       });
     });
 
-    expect(mobileMenuProps.isOpen).toBe(true);
+    await waitFor(() => expect(mobileMenuProps?.isOpen).toBe(true));
   });
 
-  it("keeps touch entry in compact touch layouts even when hover is available", () => {
+  it("keeps hybrid touchscreen laptops on desktop interactions even in compact layouts", () => {
+    // Regression: a Windows touch laptop in a snapped/narrow window must NOT
+    // switch to the touch sheet — it still has hover input.
     isMobileMock.mockReturnValue(false);
     hasTouchInputMock.mockReturnValue(true);
     isTouchDeviceMock.mockReturnValue(false);
     setHoverSupport(true);
     setViewportWidth(800);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -351,23 +348,23 @@ describe("WaveDrop", () => {
       />
     );
 
-    expect(screen.queryByTestId("actions")).not.toBeInTheDocument();
+    expect(screen.getByTestId("actions")).toBeInTheDocument();
     expect(getLastMockProps(mockWaveDropHeader)).toEqual(
-      expect.objectContaining({ showActionsButton: true })
+      expect.objectContaining({ showActionsButton: false })
     );
     expect(getLastMockProps(mockWaveDropContent)).toEqual(
-      expect.objectContaining({ hasTouch: true })
+      expect.objectContaining({ hasTouch: false })
     );
   });
 
-  it("clears an open touch sheet when the layout switches to desktop hover mode", () => {
+  it("clears an open touch sheet when hover input appears at desktop width", async () => {
     isMobileMock.mockReturnValue(false);
     hasTouchInputMock.mockReturnValue(true);
-    isTouchDeviceMock.mockReturnValue(false);
-    setHoverSupport(true);
+    isTouchDeviceMock.mockReturnValue(true);
+    setHoverSupport(false);
     setViewportWidth(800);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -390,13 +387,15 @@ describe("WaveDrop", () => {
       });
     });
 
-    expect(mobileMenuProps.isOpen).toBe(true);
+    await waitFor(() => expect(mobileMenuProps?.isOpen).toBe(true));
 
     act(() => {
+      // e.g. iPad gaining a trackpad: hover appears and the viewport widens.
+      setHoverSupport(true);
       setViewportWidth(1440);
     });
 
-    expect(mobileMenuProps.isOpen).toBe(false);
+    await waitFor(() => expect(mobileMenuProps?.isOpen).toBe(false));
 
     act(() => {
       setViewportWidth(800);
@@ -411,7 +410,7 @@ describe("WaveDrop", () => {
     isTouchDeviceMock.mockReturnValue(false);
     setViewportWidth(390);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -441,7 +440,7 @@ describe("WaveDrop", () => {
     setHoverSupport(false);
     setViewportWidth(800);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -474,7 +473,7 @@ describe("WaveDrop", () => {
     setHoverSupport(false);
     setViewportWidth(800);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -509,7 +508,7 @@ describe("WaveDrop", () => {
     setViewportWidth(800);
     const onDropContentClick = jest.fn();
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -548,7 +547,7 @@ describe("WaveDrop", () => {
     setViewportWidth(800);
     const onDropContentClick = jest.fn();
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -590,7 +589,7 @@ describe("WaveDrop", () => {
       stableHash: "current-grouped",
     };
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={groupedDrop}
         previousDrop={previousGroupedDrop}
@@ -607,13 +606,68 @@ describe("WaveDrop", () => {
     );
 
     expect(screen.queryByTestId("header")).not.toBeInTheDocument();
+    // Desktop (no touch sheet): the timestamp reveals on hover, never via the
+    // pointer swipe that would hijack drag-to-select.
     expect(
-      screen.queryByTestId("grouped-drop-hover-timestamp")
+      screen.queryByTestId("grouped-drop-swipe-timestamp")
     ).not.toBeInTheDocument();
-    const timestamp = screen.getByTestId("grouped-drop-swipe-timestamp");
+    const timestamp = screen.getByTestId("grouped-drop-hover-timestamp");
     expect(timestamp).toBeInTheDocument();
     expect(timestamp).toHaveClass("tw-w-[9.25rem]");
+    expect(timestamp).toHaveClass("desktop-hover:group-hover:tw-opacity-100");
     expect(timestamp.querySelector("p")).toHaveClass("tw-whitespace-nowrap");
+  });
+
+  it("does not hijack mouse drags for the timestamp swipe on desktop", () => {
+    const previousGroupedDrop = {
+      ...drop,
+      id: "previous-grouped",
+      created_at: 1_700_000_000_000,
+      stableHash: "previous-grouped",
+    };
+    const groupedDrop = {
+      ...drop,
+      id: "current-grouped",
+      created_at: 1_700_000_040_000,
+      stableHash: "current-grouped",
+    };
+
+    renderWithEditingDropProvider(
+      <WaveDrop
+        drop={groupedDrop}
+        previousDrop={previousGroupedDrop}
+        nextDrop={null}
+        showWaveInfo={false}
+        activeDrop={null}
+        showReplyAndQuote={true}
+        location={DropLocation.WAVE}
+        dropViewDropId={null}
+        onReply={jest.fn()}
+        onReplyClick={jest.fn()}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    const swipeable = screen.getByTestId("grouped-drop-swipeable-content");
+    const dropRoot = swipeable.parentElement!;
+
+    // A leftward mouse drag (the shape of a text-selection gesture).
+    fireEvent.pointerDown(dropRoot, {
+      pointerId: 1,
+      pointerType: "mouse",
+      button: 0,
+      clientX: 220,
+      clientY: 40,
+    });
+    fireEvent.pointerMove(dropRoot, {
+      pointerId: 1,
+      pointerType: "mouse",
+      clientX: 48,
+      clientY: 44,
+    });
+
+    expect(swipeable.style.transform).toBe("");
+    fireEvent.pointerUp(dropRoot, { pointerId: 1, pointerType: "mouse" });
   });
 
   it("reveals a grouped message timestamp on left swipe without opening long press actions", () => {
@@ -637,7 +691,7 @@ describe("WaveDrop", () => {
       stableHash: "current-grouped",
     };
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={groupedDrop}
         previousDrop={previousGroupedDrop}
@@ -685,7 +739,7 @@ describe("WaveDrop", () => {
     act(() => {
       jest.advanceTimersByTime(600);
     });
-    expect(mobileMenuProps.isOpen).toBe(false);
+    expect(mobileMenuProps).toBeUndefined();
 
     fireEvent.touchEnd(dropRoot);
     fireEvent.click(content);
@@ -695,7 +749,7 @@ describe("WaveDrop", () => {
 
   it("hides actions on mobile", () => {
     isMobileMock.mockReturnValue(true);
-    const { queryByTestId } = renderWithRedux(
+    const { queryByTestId } = renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -718,7 +772,7 @@ describe("WaveDrop", () => {
     isMobileMock.mockReturnValue(false);
     setHoverSupport(true);
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}
@@ -742,6 +796,63 @@ describe("WaveDrop", () => {
     );
   });
 
+  it("reveals desktop actions from mouse pointer events without CSS :hover", () => {
+    // Capability-lying browsers never activate :hover although mouse pointer
+    // events flow — the row's pointerenter must force the action bar visible.
+    isMobileMock.mockReturnValue(false);
+    hasTouchInputMock.mockReturnValue(true);
+    isTouchDeviceMock.mockReturnValue(false);
+    setHoverSupport(true);
+    setViewportWidth(1440);
+
+    renderWithEditingDropProvider(
+      <WaveDrop
+        drop={drop}
+        previousDrop={null}
+        nextDrop={null}
+        showWaveInfo={false}
+        activeDrop={null}
+        showReplyAndQuote={true}
+        location={DropLocation.WAVE}
+        dropViewDropId={null}
+        onReply={jest.fn()}
+        onQuote={jest.fn()}
+        onReplyClick={jest.fn()}
+        onQuoteClick={jest.fn()}
+      />
+    );
+
+    expect(getLastMockProps(mockWaveDropActions)).toEqual(
+      expect.objectContaining({ forceVisible: false })
+    );
+
+    const dropRoot = screen.getByTestId("content").closest(
+      "[data-wave-drop-id]"
+    )!;
+    // React synthesizes onPointerEnter/Leave from pointerover/pointerout.
+    fireEvent.pointerOver(dropRoot, { pointerType: "mouse" });
+    expect(getLastMockProps(mockWaveDropActions)).toEqual(
+      expect.objectContaining({ forceVisible: true })
+    );
+
+    fireEvent.pointerOut(dropRoot, {
+      pointerType: "mouse",
+      relatedTarget: document.body,
+    });
+    expect(getLastMockProps(mockWaveDropActions)).toEqual(
+      expect.objectContaining({ forceVisible: false })
+    );
+
+    // Touch enter must not force the desktop reveal. jsdom drops pointerType
+    // from event init, so define it explicitly on a hand-built event.
+    const touchOver = new Event("pointerover", { bubbles: true });
+    Object.defineProperty(touchOver, "pointerType", { value: "touch" });
+    dropRoot.dispatchEvent(touchOver);
+    expect(getLastMockProps(mockWaveDropActions)).toEqual(
+      expect.objectContaining({ forceVisible: false })
+    );
+  });
+
   it("omits group mention metadata from edit update requests", () => {
     isMobileMock.mockReturnValue(false);
     mockEditMentionedGroups = [ApiDropGroupMention.All];
@@ -754,7 +865,7 @@ describe("WaveDrop", () => {
       ],
     };
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={stormDrop}
         previousDrop={null}
@@ -786,7 +897,7 @@ describe("WaveDrop", () => {
       maxEmbedDepth: 4,
     };
 
-    renderWithRedux(
+    renderWithEditingDropProvider(
       <WaveDrop
         drop={drop}
         previousDrop={null}

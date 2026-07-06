@@ -1,8 +1,15 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Col, Container, Modal, Row } from "react-bootstrap";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react";
 import {
   useAccount,
   useChainId,
@@ -14,10 +21,10 @@ import {
   getSessionNonce,
   type RefreshTokenSessionClientType,
 } from "@/services/auth/session-v2.utils";
-import authModalStyles from "../auth/Auth.module.scss";
+import authModalStyles from "../auth/Auth.module.css";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
-import styles from "./BrowserConnector.module.scss";
+import styles from "./BrowserConnector.module.css";
 import BrowserConnectorWalletIntentNotice, {
   type BrowserConnectorWalletIntentNoticeType,
 } from "./BrowserConnectorWalletIntentNotice";
@@ -25,6 +32,67 @@ import { normalizeBrowserConnectorAddress } from "./browserConnector.helpers";
 
 const DESKTOP_SESSION_AUTH_MODE = "session-v2-desktop";
 const LEGACY_NATIVE_SESSION_AUTH_MODE = "session-v2-native";
+
+const bootstrapUtilityClasses: Record<string, string> = {
+  "pt-3": "tw-pt-3",
+  "pt-4": "tw-pt-4",
+  "pb-3": "tw-pb-3",
+  "py-3": "tw-py-3",
+  "mt-3": "tw-mt-3",
+  "text-danger": "tw-text-red",
+};
+
+function mapUtilityClasses(className = ""): string {
+  return className
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((classNamePart) => bootstrapUtilityClasses[classNamePart] ?? classNamePart)
+    .join(" ");
+}
+
+function Container({
+  children,
+  className,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+}) {
+  return <div className={mapUtilityClasses(className)}>{children}</div>;
+}
+
+function Row({
+  children,
+  className,
+  style,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+  readonly style?: CSSProperties | undefined;
+}) {
+  return (
+    <div className={`tw-flex tw-flex-wrap ${mapUtilityClasses(className)}`} style={style}>
+      {children}
+    </div>
+  );
+}
+
+function Col({
+  children,
+  className,
+  xs,
+}: {
+  readonly children: ReactNode;
+  readonly className?: string | undefined;
+  readonly xs?: number | undefined;
+}) {
+  return (
+    <div
+      className={`${xs === 12 ? "tw-w-full" : "tw-flex-1"} ${mapUtilityClasses(className)}`}
+    >
+      {children}
+    </div>
+  );
+}
 
 function getRefreshTokenClientTypeForAuthMode(
   authMode: string | null
@@ -502,7 +570,7 @@ export default function BrowserConnectorConnect(
                             );
                           });
                       }}
-                      className="mt-3 tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
+                      className="tw-mt-3 tw-inline-flex tw-cursor-pointer tw-items-center tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-4 tw-py-2.5 tw-text-sm tw-font-semibold tw-leading-6 tw-text-white tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-primary-500 tw-transition tw-duration-300 tw-ease-out placeholder:tw-text-iron-300 hover:tw-bg-primary-600 hover:tw-ring-primary-600 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset"
                     >
                       Disconnect
                     </button>
@@ -592,7 +660,7 @@ export default function BrowserConnectorConnect(
                     Open 6529 Desktop
                   </button>
                   {authError && (
-                    <p className="pt-3 text-danger" role="alert">
+                    <p className="tw-pt-3 tw-text-red" role="alert">
                       {authError}
                     </p>
                   )}
@@ -602,53 +670,51 @@ export default function BrowserConnectorConnect(
           </Col>
         </Row>
       </Container>
-      <Modal
-        show={showAuthModal && requiresNativeSessionAuth && !preparedNativeAuth}
-        onHide={() => void handleAuthModalCancel()}
-        centered
-        backdrop="static"
-        keyboard={false}
-        dialogClassName={authModalStyles["signModalDialog"] ?? ""}
-        contentClassName={authModalStyles["signModalSurface"] ?? ""}
-      >
-        <Modal.Header className={authModalStyles["signModalHeader"]}>
-          <Modal.Title className={authModalStyles["signModalTitle"]}>
-            Authentication Required
-          </Modal.Title>
-        </Modal.Header>
-        <Modal.Body className={authModalStyles["signModalBody"]}>
-          <p className={authModalStyles["signModalLead"]}>
-            6529 Desktop needs a desktop authentication signature for this
-            browser wallet connection.
-          </p>
-          <ul className={authModalStyles["signModalList"]}>
-            <li>Click Sign to start desktop authentication.</li>
-            <li>Confirm the request in your wallet.</li>
-          </ul>
-          {authError && (
-            <p className="pt-3 text-danger" role="alert">
-              {authError}
-            </p>
-          )}
-        </Modal.Body>
-        <Modal.Footer className={authModalStyles["signModalFooter"]}>
-          <button
-            type="button"
-            onClick={() => void handleAuthModalCancel()}
-            className={authModalStyles["signModalCancelButton"]}
+      {showAuthModal && requiresNativeSessionAuth && !preparedNativeAuth && (
+        <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[10000] tw-flex tw-items-center tw-justify-center tw-bg-black/50 tw-p-4">
+          <div
+            className={`${authModalStyles["signModalSurface"] ?? ""} tw-max-h-[calc(100dvh-2rem)] tw-w-[min(32rem,calc(100vw-2rem))] tw-overflow-y-auto`}
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={isAuthenticating}
-            onClick={() => void handleAuthModalSign()}
-            className={authModalStyles["signModalConfirmButton"]}
-          >
-            {isAuthenticating ? "Confirm in your wallet" : "Sign"}
-          </button>
-        </Modal.Footer>
-      </Modal>
+            <div className={authModalStyles["signModalHeader"]}>
+              <h2 className={authModalStyles["signModalTitle"]}>
+                Authentication Required
+              </h2>
+            </div>
+            <div className={authModalStyles["signModalBody"]}>
+              <p className={authModalStyles["signModalLead"]}>
+                6529 Desktop needs a desktop authentication signature for this
+                browser wallet connection.
+              </p>
+              <ul className={authModalStyles["signModalList"]}>
+                <li>Click Sign to start desktop authentication.</li>
+                <li>Confirm the request in your wallet.</li>
+              </ul>
+              {authError && (
+                <p className="tw-pt-3 tw-text-red" role="alert">
+                  {authError}
+                </p>
+              )}
+            </div>
+            <div className={authModalStyles["signModalFooter"]}>
+              <button
+                type="button"
+                onClick={() => void handleAuthModalCancel()}
+                className={authModalStyles["signModalCancelButton"]}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isAuthenticating}
+                onClick={() => void handleAuthModalSign()}
+                className={authModalStyles["signModalConfirmButton"]}
+              >
+                {isAuthenticating ? "Confirm in your wallet" : "Sign"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
