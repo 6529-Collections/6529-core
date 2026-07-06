@@ -296,7 +296,16 @@ async function resolveEditionSizeFloor(
     return actualSupply;
   }
 
-  if (options.refreshEditionSizeFloor && options.provider) {
+  const existingFloor = await getExistingEditionSizeFloor(
+    db,
+    contractAddress,
+    tokenId,
+  );
+
+  if (
+    options.provider &&
+    (options.refreshEditionSizeFloor || existingFloor === null)
+  ) {
     const onChainFloor = await fetchMemeEditionSizeFloorFromClaim(
       options.provider,
       tokenId,
@@ -306,11 +315,6 @@ async function resolveEditionSizeFloor(
     }
   }
 
-  const existingFloor = await getExistingEditionSizeFloor(
-    db,
-    contractAddress,
-    tokenId,
-  );
   return existingFloor ?? actualSupply;
 }
 
