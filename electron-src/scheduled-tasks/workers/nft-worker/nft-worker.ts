@@ -47,6 +47,8 @@ interface GetEditionSizesOptions {
   backfillMissingEditionSizeFloor?: boolean;
 }
 
+const GRADIENT_SUPPLY = 101;
+
 // Keep this Electron worker aligned with the renderer Arweave fallback order.
 const ARWEAVE_GATEWAYS: readonly string[] = [
   "arweave.net",
@@ -232,7 +234,7 @@ export const getEditionSizes = async (
   let burnt = await getBurns(db, contractAddress, tokenId);
   let editionSize;
   if (areEqualAddresses(contractAddress, GRADIENT_CONTRACT)) {
-    editionSize = await getIndexedErc721Supply(db, contractAddress, tokenId);
+    editionSize = GRADIENT_SUPPLY;
   } else if (areEqualAddresses(contractAddress, NEXTGEN_CONTRACT)) {
     const collectionId = Math.round(tokenId / 10000000000);
     const viewTokensIndexMin =
@@ -261,27 +263,6 @@ export const getEditionSizes = async (
     burnt,
   };
 };
-
-async function getIndexedErc721Supply(
-  db: DataSource,
-  contractAddress: string,
-  tokenId: number,
-) {
-  const contract = contractAddress.toLowerCase();
-  const repo = db.getRepository(NFT);
-  const indexedCount = await repo.count({
-    where: {
-      contract,
-    },
-  });
-  const tokenAlreadyIndexed = await repo.exist({
-    where: {
-      contract,
-      id: tokenId,
-    },
-  });
-  return tokenAlreadyIndexed ? indexedCount : indexedCount + 1;
-}
 
 async function resolveEditionSizeFloor(
   db: DataSource,

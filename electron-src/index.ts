@@ -2021,7 +2021,7 @@ ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
   }
 });
 
-ipcMain.on(FULL_REFRESH_WORKER, (event, args: [string]) => {
+ipcMain.handle(FULL_REFRESH_WORKER, async (_event, args: [string]) => {
   const [namespace] = args;
   Logger.info(`[${namespace}] Full refresh worker`);
   const worker = scheduledWorkers.find(
@@ -2030,15 +2030,14 @@ ipcMain.on(FULL_REFRESH_WORKER, (event, args: [string]) => {
       worker.getNamespace() === namespace,
   ) as ResettableScheduledWorker | undefined;
   if (!worker) {
-    event.returnValue = {
+    return {
       error: true,
       data: "Worker not found",
     };
-  } else {
-    worker.fullRefresh().then((data) => {
-      event.returnValue = { error: !data.status, data: data.message };
-    });
   }
+
+  const data = await worker.fullRefresh();
+  return { error: !data.status, data: data.message };
 });
 
 ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, args: [string, number]) => {

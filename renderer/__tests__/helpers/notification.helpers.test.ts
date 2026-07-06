@@ -56,6 +56,15 @@ describe("generateNotificationData", () => {
     expect(data?.title).toBe("prxt0 reacted ✅");
   });
 
+  it("renders raw emoji character reactions as-is", () => {
+    const data = generateNotificationData(
+      createDropReactedNotification("✅"),
+      emptyEmojiResolvers
+    );
+
+    expect(data?.title).toBe("prxt0 reacted ✅");
+  });
+
   it("returns custom reaction emoji images as notification icons", () => {
     const data = generateNotificationData(
       createDropReactedNotification(":sgt_wink:"),

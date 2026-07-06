@@ -388,7 +388,10 @@ export class ResettableScheduledWorker extends ScheduledWorker {
     );
   }
 
-  public async reset() {
+  private async startResettableRun(
+    flag: "reset" | "refresh",
+    startedMessage: string
+  ) {
     if (this.worker || this.isRunning()) {
       return {
         status: false,
@@ -408,45 +411,22 @@ export class ResettableScheduledWorker extends ScheduledWorker {
       dbParams: getBaseDbParams(),
       blockRange: this.blockRange,
       maxConcurrentRequests: this.maxConcurrentRequests,
-      reset: true,
+      [flag]: true,
     } as ResettableWorkerData;
 
     this.startWorker(workerData);
 
     return {
       status: true,
-      message: `Reset started`,
+      message: startedMessage,
     };
   }
 
+  public async reset() {
+    return this.startResettableRun("reset", "Reset started");
+  }
+
   public async fullRefresh() {
-    if (this.worker || this.isRunning()) {
-      return {
-        status: false,
-        message: "Worker is already running",
-      };
-    }
-
-    if (!this.enabled) {
-      return {
-        status: false,
-        message: "Worker is disabled",
-      };
-    }
-
-    const workerData: ResettableWorkerData = {
-      rpcUrl: this.rpcUrl,
-      dbParams: getBaseDbParams(),
-      blockRange: this.blockRange,
-      maxConcurrentRequests: this.maxConcurrentRequests,
-      refresh: true,
-    } as ResettableWorkerData;
-
-    this.startWorker(workerData);
-
-    return {
-      status: true,
-      message: `Full refresh started`,
-    };
+    return this.startResettableRun("refresh", "Full refresh started");
   }
 }

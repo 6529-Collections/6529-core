@@ -85,7 +85,7 @@ export async function manualStartWorker(namespace: string) {
 }
 
 export async function fullRefreshWorker(namespace: string) {
-  const data = await window.api.sendSync(FULL_REFRESH_WORKER, namespace);
+  const data = await window.api.invoke(FULL_REFRESH_WORKER, namespace);
   return data;
 }
 
