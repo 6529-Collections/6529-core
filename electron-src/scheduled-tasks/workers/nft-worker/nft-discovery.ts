@@ -13,6 +13,7 @@ import {
   Contract,
   ContractType,
   getEditionSizes,
+  getMemeTokenIdsForEditionSizeFloorRefresh,
   getMintDate,
   getTokenUri,
   retrieveNftFromURI,
@@ -26,6 +27,7 @@ import {
   GRADIENT_ABI,
 } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT, NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
+import { areEqualAddresses } from "../../../../shared/helpers";
 import { Transaction } from "../../../db/entities/ITransaction";
 
 const data: ResettableWorkerData = workerData;
@@ -65,7 +67,7 @@ class NFTWorker extends CoreWorker {
     dbParams: DataSourceOptions,
     blockRange: number,
     maxConcurrentRequests: number,
-    reset?: boolean
+    reset?: boolean,
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       NFT,
@@ -164,7 +166,7 @@ class NFTWorker extends CoreWorker {
     const ethersContract = new ethers.Contract(
       contract.address,
       contract.abi,
-      this.getProvider()
+      this.getProvider(),
     );
 
     const printStatus = (...args: any[]) => {
@@ -215,12 +217,20 @@ class NFTWorker extends CoreWorker {
           this.getDb(),
           contract.address,
           ethersContract,
-          nextId
+          nextId,
+          {
+            provider: this.getProvider(),
+            refreshEditionSizeFloor: true,
+          },
         );
         printStatus(
           `NFT #${nextId} edition size: ${editionSizes.editionSize}${
             editionSizes.burnt > 0 ? ` (burns: ${editionSizes.burnt})` : ""
-          }`
+          }${
+            editionSizes.editionSizeFloor !== editionSizes.editionSize
+              ? ` (floor: ${editionSizes.editionSizeFloor})`
+              : ""
+          }`,
         );
 
         const newNft = await retrieveNftFromURI(
@@ -228,7 +238,7 @@ class NFTWorker extends CoreWorker {
           contract.address,
           nextId,
           uri,
-          editionSizes
+          editionSizes,
         );
         await persistNfts(this.getDb(), [newNft]);
         sendUpdate(`New NFT: #${nextId} - Completed`);
@@ -244,7 +254,7 @@ class NFTWorker extends CoreWorker {
     const ethersContract = new ethers.Contract(
       NEXTGEN_CONTRACT,
       NEXTGEN_ABI,
-      this.getProvider()
+      this.getProvider(),
     );
 
     const printStatus = (...args: any[]) => {
@@ -288,7 +298,7 @@ class NFTWorker extends CoreWorker {
       const uri = await getTokenUri(
         ContractType.ERC721,
         ethersContract,
-        nextId
+        nextId,
       );
 
       if (uri && uri != nextId) {
@@ -297,19 +307,23 @@ class NFTWorker extends CoreWorker {
 
         printStatus(`NFT #${nextId} found`);
         sendUpdate(
-          `New NFT: Collection ${collectionId} #${normalisedTokenId} - Processing`
+          `New NFT: Collection ${collectionId} #${normalisedTokenId} - Processing`,
         );
 
         const editionSizes = await getEditionSizes(
           this.getDb(),
           NEXTGEN_CONTRACT,
           ethersContract,
-          nextId
+          nextId,
+          {
+            provider: this.getProvider(),
+            refreshEditionSizeFloor: false,
+          },
         );
         printStatus(
           `NFT #${nextId} edition size: ${editionSizes.editionSize}${
             editionSizes.burnt > 0 ? ` (burnt)` : ""
-          }`
+          }`,
         );
 
         const newNft = await retrieveNftFromURI(
@@ -317,12 +331,12 @@ class NFTWorker extends CoreWorker {
           NEXTGEN_CONTRACT,
           nextId,
           uri,
-          editionSizes
+          editionSizes,
         );
 
         await persistNfts(this.getDb(), [newNft]);
         sendUpdate(
-          `New NFT: Collection ${collectionId} #${normalisedTokenId} - Completed`
+          `New NFT: Collection ${collectionId} #${normalisedTokenId} - Completed`,
         );
         nextId++;
       } else {
@@ -336,7 +350,7 @@ class NFTWorker extends CoreWorker {
     const ethersContract = new ethers.Contract(
       contract.address,
       contract.abi,
-      this.getProvider()
+      this.getProvider(),
     );
 
     const existingNfts = await this.getDb()
@@ -349,6 +363,11 @@ class NFTWorker extends CoreWorker {
           id: "ASC",
         },
       });
+    const refreshEditionSizeFloorTokenIds = new Set(
+      areEqualAddresses(contract.address, MEMES_CONTRACT)
+        ? getMemeTokenIdsForEditionSizeFloorRefresh(existingNfts)
+        : [],
+    );
 
     const updatedNfts: NFT[] = [];
     for (const nft of existingNfts) {
@@ -364,16 +383,21 @@ class NFTWorker extends CoreWorker {
         this.getDb(),
         contract.address,
         ethersContract,
-        nft.id
+        nft.id,
+        {
+          provider: this.getProvider(),
+          refreshEditionSizeFloor: refreshEditionSizeFloorTokenIds.has(nft.id),
+        },
       );
       const mintDate = await getMintDate(
         this.getDb(),
         contract.address,
-        nft.id
+        nft.id,
       );
 
       const isChanged =
         editionSizes.editionSize !== nft.edition_size ||
+        editionSizes.editionSizeFloor !== nft.edition_size_floor ||
         editionSizes.burnt !== nft.burns ||
         mintDate !== nft.mint_date;
 
@@ -390,7 +414,7 @@ class NFTWorker extends CoreWorker {
           contract.address,
           nft.id,
           uri,
-          editionSizes
+          editionSizes,
         );
         updatedNfts.push(updatedNft);
       }
@@ -440,5 +464,5 @@ new NFTWorker(
   data.dbParams,
   data.blockRange,
   data.maxConcurrentRequests,
-  data.reset
+  data.reset,
 );
