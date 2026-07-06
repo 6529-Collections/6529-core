@@ -57,6 +57,7 @@
     "dist-linux-staging": "node scripts/require-6529-command.cjs && node scripts/desktop-build-target.cjs dist-linux-staging",
     "dist-linux-production": "node scripts/require-6529-command.cjs && node scripts/desktop-build-target.cjs dist-linux-production",
     "type-check": "node scripts/require-6529-command.cjs && tsc -p ./renderer/tsconfig.typecheck.json && tsc -p ./electron-src/tsconfig.json",
+    "test:shared": "node scripts/require-6529-command.cjs && tsx --test \"shared/**/*.test.ts\"",
     "publish-links-staging": "node scripts/require-6529-command.cjs && tsx scripts/publish-links.ts --staging --skip-arweave",
     "publish-links-staging-arweave": "node scripts/require-6529-command.cjs && tsx scripts/publish-links.ts --staging",
     "publish-links-production": "node scripts/require-6529-command.cjs && tsx scripts/publish-links.ts --skip-arweave",

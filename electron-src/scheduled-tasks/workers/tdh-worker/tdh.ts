@@ -17,6 +17,10 @@ import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses, getDaysDiff } from "../../../../shared/helpers";
+import {
+  calculateHodlRate,
+  getCalculationEditionSize,
+} from "../../../../shared/memes-edition-size-floor";
 import * as numbers from "../../../../shared/numbers";
 import { Time } from "../../../../shared/time";
 import { ScheduledWorkerStatus } from "../../../../shared/types";
@@ -46,6 +50,17 @@ interface MemesSeason {
   boost: number;
 }
 
+function getNftCalculationKey(nft: Pick<NFT, "contract" | "id">): string {
+  return `${nft.contract.toLowerCase()}-${nft.id}`;
+}
+
+function getNftCalculationEditionSize(nft: NFT): number {
+  return getCalculationEditionSize({
+    actualSupply: nft.edition_size,
+    editionSizeFloor: nft.edition_size_floor,
+  });
+}
+
 export const ADDITIONAL_CARD_SET_BOOST = 0.05;
 export const ADDITIONAL_CARD_SET_RATIO = 0.6529;
 
@@ -61,7 +76,7 @@ function getBoostableSeasons(seasons: MemesSeason[]): MemesSeason[] {
 
 function getFullCollectionSetBoost(seasons: MemesSeason[]): number {
   return roundBoostValue(
-    getBoostableSeasons(seasons).reduce((sum, season) => sum + season.boost, 0)
+    getBoostableSeasons(seasons).reduce((sum, season) => sum + season.boost, 0),
   );
 }
 
@@ -73,18 +88,18 @@ function getAdditionalCardSetsBoost(additionalCardSets: number): number {
   return roundBoostValue(
     (ADDITIONAL_CARD_SET_BOOST *
       (1 - Math.pow(ADDITIONAL_CARD_SET_RATIO, additionalCardSets))) /
-      (1 - ADDITIONAL_CARD_SET_RATIO)
+      (1 - ADDITIONAL_CARD_SET_RATIO),
   );
 }
 
 function getAdditionalCardSetsBoostLimit(): number {
   return roundBoostValue(
-    ADDITIONAL_CARD_SET_BOOST / (1 - ADDITIONAL_CARD_SET_RATIO)
+    ADDITIONAL_CARD_SET_BOOST / (1 - ADDITIONAL_CARD_SET_RATIO),
   );
 }
 
 export function consolidateTransactions(
-  transactions: BaseTransaction[]
+  transactions: BaseTransaction[],
 ): BaseTransaction[] {
   const consolidatedTransactions: BaseTransaction[] = Object.values(
     transactions.reduce((acc: any, transaction) => {
@@ -95,7 +110,7 @@ export function consolidateTransactions(
       }
 
       return acc;
-    }, {})
+    }, {}),
   );
   return consolidatedTransactions;
 }
@@ -105,7 +120,7 @@ export function getDefaultBoost(seasons: MemesSeason[] = []): DefaultBoost {
   const boost: DefaultBoost = {
     memes_card_sets: {
       available: roundBoostValue(
-        fullCollectionSetBoost + getAdditionalCardSetsBoostLimit()
+        fullCollectionSetBoost + getAdditionalCardSetsBoostLimit(),
       ),
       available_info: [
         `${fullCollectionSetBoost} for Full Collection Set`,
@@ -161,7 +176,7 @@ export function createMemesData() {
 export const buildSeasons = (memes: NFT[]): MemesSeason[] => {
   const seasonIds = [
     ...new Set(
-      memes.map((m) => m.season).filter((s): s is number => s != null)
+      memes.map((m) => m.season).filter((s): s is number => s != null),
     ),
   ];
   return seasonIds.map((id) => {
@@ -181,11 +196,11 @@ export const calculateTDH = async (
   block: number,
   lastTDHCalc: Date,
   blockTimestamp: Time,
-  startingWallets?: string[]
+  startingWallets?: string[],
 ): Promise<{ block: number; merkleRoot: string }> => {
   logInfo(
     parentPort,
-    `[BLOCK ${block}] [TDH TIME ${lastTDHCalc.toLocaleString()}]`
+    `[BLOCK ${block}] [TDH TIME ${lastTDHCalc.toLocaleString()}]`,
   );
   if (startingWallets) {
     logInfo(parentPort, `[STARTING WALLETS ${startingWallets.length}]`);
@@ -205,13 +220,13 @@ export const calculateTDH = async (
   logInfo(parentPort, `[OWNERS ${owners.length}]`);
 
   const memeOwners = owners.filter((o) =>
-    areEqualAddresses(o.contract, MEMES_CONTRACT)
+    areEqualAddresses(o.contract, MEMES_CONTRACT),
   );
   const gradientOwners = owners.filter((o) =>
-    areEqualAddresses(o.contract, GRADIENT_CONTRACT)
+    areEqualAddresses(o.contract, GRADIENT_CONTRACT),
   );
   const nextgenOwners = owners.filter((o) =>
-    areEqualAddresses(o.contract, NEXTGEN_CONTRACT)
+    areEqualAddresses(o.contract, NEXTGEN_CONTRACT),
   );
 
   const nftRepository = db.getRepository(NFT);
@@ -235,7 +250,7 @@ export const calculateTDH = async (
     .filter(
       (m) =>
         m.mint_date &&
-        Time.seconds(m.mint_date).lte(Time.fromDate(lastTDHCalc).minusDays(1))
+        Time.seconds(m.mint_date).lte(Time.fromDate(lastTDHCalc).minusDays(1)),
     )
     .map((m) => {
       const tokenOwners = memeOwners.filter((o) => o.token_id === m.id);
@@ -243,7 +258,14 @@ export const calculateTDH = async (
       if (m.id === 8) {
         editionSize += MEME_8_EDITION_BURN_ADJUSTMENT;
       }
-      logInfo(parentPort, `[MEME ${m.id}] [EDITION SIZE ${editionSize}]`);
+      const calculationEditionSize = getCalculationEditionSize({
+        actualSupply: editionSize,
+        editionSizeFloor: m.edition_size_floor,
+      });
+      logInfo(
+        parentPort,
+        `[MEME ${m.id}] [EDITION SIZE ${editionSize}] [CALCULATION EDITION SIZE ${calculationEditionSize}]`,
+      );
       return { ...m, edition_size: editionSize };
     });
   memes.sort((a, b) => a.id - b.id);
@@ -252,21 +274,27 @@ export const calculateTDH = async (
 
   logInfo(
     parentPort,
-    `[MEMES] : [TOKENS ${memes.length}] : [OWNERS ${memeOwners.length}] : [SEASONS ${ADJUSTED_SEASONS.length}]`
+    `[MEMES] : [TOKENS ${memes.length}] : [OWNERS ${memeOwners.length}] : [SEASONS ${ADJUSTED_SEASONS.length}]`,
   );
   logInfo(
     parentPort,
-    `[GRADIENTS] : [TOKENS ${gradients.length}] : [OWNERS ${gradientOwners.length}]`
+    `[GRADIENTS] : [TOKENS ${gradients.length}] : [OWNERS ${gradientOwners.length}]`,
   );
   logInfo(
     parentPort,
-    `[NEXTGEN] : [TOKENS ${nextgen.length}] : [OWNERS ${nextgenOwners.length}]`
+    `[NEXTGEN] : [TOKENS ${nextgen.length}] : [OWNERS ${nextgenOwners.length}]`,
   );
 
   const ADJUSTED_NFTS = [...memes, ...gradients, ...nextgen];
-  const HODL_INDEX = ADJUSTED_NFTS.reduce(
-    (acc, m) => Math.max(acc, m.edition_size),
-    0
+  const CALCULATION_EDITION_SIZES = new Map(
+    ADJUSTED_NFTS.map((nft) => [
+      getNftCalculationKey(nft),
+      getNftCalculationEditionSize(nft),
+    ]),
+  );
+  const HODL_INDEX = Array.from(CALCULATION_EDITION_SIZES.values()).reduce(
+    (acc, calculationEditionSize) => Math.max(acc, calculationEditionSize),
+    0,
   );
   logInfo(parentPort, `[HODL_INDEX ${HODL_INDEX}]`);
 
@@ -279,7 +307,7 @@ export const calculateTDH = async (
     const consolidationAddresses: { wallet: string }[] =
       await fetchAllConsolidationAddresses(db);
     consolidationAddresses.forEach((w) =>
-      combinedAddresses.add(w.wallet.toLowerCase())
+      combinedAddresses.add(w.wallet.toLowerCase()),
     );
 
     owners.forEach((w) => combinedAddresses.add(w.address.toLowerCase()));
@@ -287,7 +315,7 @@ export const calculateTDH = async (
 
   logInfo(
     parentPort,
-    `[BLOCK ${block}] [WALLETS ${combinedAddresses.size}] [CALCULATING TDH - START]`
+    `[BLOCK ${block}] [WALLETS ${combinedAddresses.size}] [CALCULATING TDH - START]`,
   );
   sendStatusUpdate(parentPort, {
     update: {
@@ -330,20 +358,20 @@ export const calculateTDH = async (
             db,
             TDH_CONTRACTS,
             c,
-            block
+            block,
           );
           consolidationTransactions =
             consolidationTransactions.concat(transactions);
-        })
+        }),
       );
 
       consolidationTransactions = consolidateTransactions(
-        consolidationTransactions
+        consolidationTransactions,
       ).sort((a, b) => a.transaction_date - b.transaction_date);
 
       if (areEqualAddresses(wallet, NULL_ADDRESS)) {
         consolidationTransactions = consolidationTransactions.filter(
-          (t) => !areEqualAddresses(t.transaction, MEME_8_BURN_TRANSACTION)
+          (t) => !areEqualAddresses(t.transaction, MEME_8_BURN_TRANSACTION),
         );
       }
 
@@ -354,10 +382,13 @@ export const calculateTDH = async (
           (t) =>
             t.token_id == nft.id &&
             areEqualAddresses(t.contract, nft.contract) &&
-            !areEqualAddresses(t.from_address, t.to_address)
+            !areEqualAddresses(t.from_address, t.to_address),
         );
 
-        const hodlRate = HODL_INDEX / nft.edition_size;
+        const calculationEditionSize =
+          CALCULATION_EDITION_SIZES.get(getNftCalculationKey(nft)) ??
+          getNftCalculationEditionSize(nft);
+        const hodlRate = calculateHodlRate(HODL_INDEX, calculationEditionSize);
 
         const tokenTDH = getTokenTdh(
           lastTDHCalc,
@@ -365,7 +396,7 @@ export const calculateTDH = async (
           hodlRate,
           wallet,
           consolidations,
-          tokenConsolidatedTransactions
+          tokenConsolidatedTransactions,
         );
 
         if (tokenTDH) {
@@ -398,7 +429,7 @@ export const calculateTDH = async (
         memesCardSets = Math.min(
           ...[...walletMemes].map(function (o) {
             return o.balance;
-          })
+          }),
         );
       }
 
@@ -448,12 +479,12 @@ export const calculateTDH = async (
         allNextgenTDH.push(wn);
       });
       walletsTDH.push(tdh);
-    })
+    }),
   );
 
   logInfo(
     parentPort,
-    `[BLOCK ${block}] [WALLETS ${combinedAddresses.size}] [CALCULATING BOOSTS]`
+    `[BLOCK ${block}] [WALLETS ${combinedAddresses.size}] [CALCULATING BOOSTS]`,
   );
   sendStatusUpdate(parentPort, {
     update: {
@@ -470,30 +501,30 @@ export const calculateTDH = async (
     const allTdh = allCurrentTdh
       .filter(
         (t: TDH) =>
-          !startingWallets.some((sw) => areEqualAddresses(sw, t.wallet))
+          !startingWallets.some((sw) => areEqualAddresses(sw, t.wallet)),
       )
       .concat(boostedTdh);
     const allRankedTdh = await calculateRanks(
       allGradientsTDH,
       allNextgenTDH,
       allTdh,
-      ADJUSTED_NFTS
+      ADJUSTED_NFTS,
     );
     rankedTdh = allRankedTdh.filter((t: TDH) =>
-      startingWallets.some((sw) => areEqualAddresses(sw, t.wallet))
+      startingWallets.some((sw) => areEqualAddresses(sw, t.wallet)),
     );
   } else {
     rankedTdh = await calculateRanks(
       allGradientsTDH,
       allNextgenTDH,
       boostedTdh,
-      ADJUSTED_NFTS
+      ADJUSTED_NFTS,
     );
   }
 
   logInfo(
     parentPort,
-    `[BLOCK ${block}] [WALLETS ${rankedTdh.length}] [UPDATING DATABASE]`
+    `[BLOCK ${block}] [WALLETS ${rankedTdh.length}] [UPDATING DATABASE]`,
   );
   sendStatusUpdate(parentPort, {
     update: {
@@ -506,7 +537,7 @@ export const calculateTDH = async (
 
   logInfo(
     parentPort,
-    `[BLOCK ${block}] [WALLETS ${rankedTdh.length}] [DATABASE UPDATED]`
+    `[BLOCK ${block}] [WALLETS ${rankedTdh.length}] [DATABASE UPDATED]`,
   );
   sendStatusUpdate(parentPort, {
     update: {
@@ -529,14 +560,14 @@ export const calculateTDH = async (
 function hasSeasonSet(
   seasonId: number,
   seasons: MemesSeason[],
-  memes: TokenTDH[]
+  memes: TokenTDH[],
 ): boolean {
   const season = seasons.find((s) => s.id == seasonId);
   if (!season) {
     return false;
   }
   const seasonMemes = memes.filter(
-    (m) => m.id >= season.start_index && m.id <= season.end_index
+    (m) => m.id >= season.start_index && m.id <= season.end_index,
   );
 
   return seasonMemes.length === season.count;
@@ -544,7 +575,7 @@ function hasSeasonSet(
 
 function calculateMemesBoostsCardSets(
   cardSets: number,
-  seasons: MemesSeason[]
+  seasons: MemesSeason[],
 ) {
   let boost = 1;
   const breakdown = getDefaultBoost(seasons);
@@ -554,7 +585,7 @@ function calculateMemesBoostsCardSets(
   const additionalCardSets = Math.max(0, cardSets - 1);
   const additionalIncrement = getAdditionalCardSetsBoost(additionalCardSets);
   const roundedCombinedBoost = roundBoostValue(
-    fullSetBoost + additionalIncrement
+    fullSetBoost + additionalIncrement,
   );
 
   boost += roundedCombinedBoost;
@@ -566,7 +597,7 @@ function calculateMemesBoostsCardSets(
   } else if (additionalCardSets > 1) {
     const incStr = additionalIncrement.toString();
     acquiredInfo.push(
-      `${incStr} total for ${additionalCardSets} additional sets (${ADDITIONAL_CARD_SET_BOOST} * (1 - ${ADDITIONAL_CARD_SET_RATIO}^${additionalCardSets}) / (1 - ${ADDITIONAL_CARD_SET_RATIO}))`
+      `${incStr} total for ${additionalCardSets} additional sets (${ADDITIONAL_CARD_SET_BOOST} * (1 - ${ADDITIONAL_CARD_SET_RATIO}^${additionalCardSets}) / (1 - ${ADDITIONAL_CARD_SET_RATIO}))`,
     );
   }
   breakdown.memes_card_sets.acquired_info = acquiredInfo;
@@ -583,7 +614,7 @@ function calculateMemesBoostsSeasons(
     genesis: number;
     nakamoto: number;
   },
-  memes: TokenTDH[]
+  memes: TokenTDH[],
 ) {
   let boost = 1;
   const seasonsForBoost = getBoostableSeasons(seasons);
@@ -640,7 +671,7 @@ function calculateMemesBoosts(
     genesis: number;
     nakamoto: number;
   },
-  memes: TokenTDH[]
+  memes: TokenTDH[],
 ) {
   if (cardSets > 0) {
     return calculateMemesBoostsCardSets(cardSets, seasons);
@@ -657,7 +688,7 @@ export function calculateBoost(
     nakamoto: number;
   },
   memes: TokenTDH[],
-  gradients: any[]
+  gradients: any[],
 ) {
   const memesBoosts = calculateMemesBoosts(cardSets, seasons, s1Extra, memes);
 
@@ -691,12 +722,12 @@ function getTokenTdh(
   hodlRate: number,
   wallet: string,
   consolidations: string[],
-  tokenConsolidatedTransactions: Transaction[]
+  tokenConsolidatedTransactions: Transaction[],
 ): TokenTDH | null {
   const tokenDatesForWallet = getTokenDatesFromConsolidation(
     wallet,
     consolidations,
-    tokenConsolidatedTransactions
+    tokenConsolidatedTransactions,
   );
 
   let tdh__raw = 0;
@@ -731,7 +762,7 @@ function getTokenTdh(
 function getTokenDatesFromConsolidation(
   currentWallet: string,
   consolidations: string[],
-  consolidationTransactions: Transaction[]
+  consolidationTransactions: Transaction[],
 ) {
   const tokenDatesMap: { [wallet: string]: Date[] } = {};
 
@@ -748,12 +779,12 @@ function getTokenDatesFromConsolidation(
         "hi i am wallet",
         wallet,
         tokenDatesMap,
-        consolidationTransactions
+        consolidationTransactions,
       );
     }
     const removeDates = tokenDatesMap[wallet].splice(
       tokenDatesMap[wallet].length - count,
-      count
+      count,
     );
     return removeDates;
   }
@@ -769,16 +800,16 @@ function getTokenDatesFromConsolidation(
       consolidations.some(
         (c) =>
           !areEqualAddresses(c, currentWallet) &&
-          areEqualAddresses(c, a.from_address)
-      )
+          areEqualAddresses(c, a.from_address),
+      ),
     );
 
     const bInConsolidations = Number(
       consolidations.some(
         (c) =>
           !areEqualAddresses(c, currentWallet) &&
-          areEqualAddresses(c, b.from_address)
-      )
+          areEqualAddresses(c, b.from_address),
+      ),
     );
 
     if (aInConsolidations || bInConsolidations) {
@@ -806,7 +837,7 @@ function getTokenDatesFromConsolidation(
       if (!consolidations.some((c) => areEqualAddresses(c, from_address))) {
         addDates(
           to_address,
-          Array.from({ length: token_count }, () => trDate)
+          Array.from({ length: token_count }, () => trDate),
         );
       } else {
         const removedDates = removeDates(from_address, token_count);
@@ -825,7 +856,7 @@ function getTokenDatesFromConsolidation(
 
 export async function calculateBoosts(
   seasons: MemesSeason[],
-  walletsTDH: any[]
+  walletsTDH: any[],
 ) {
   const boostedTDH: any[] = [];
 
@@ -839,22 +870,22 @@ export async function calculateBoosts(
           nakamoto: w.nakamoto,
         },
         w.memes,
-        w.gradients
+        w.gradients,
       );
 
       const boost = boostBreakdown.total;
 
       const boostedMemesTdh = w.memes.reduce(
         (sum: number, m: TokenTDH) => sum + Math.round(m.tdh * boost),
-        0
+        0,
       );
       const boostedGradientsTdh = w.gradients.reduce(
         (sum: number, g: any) => sum + Math.round(g.tdh * boost),
-        0
+        0,
       );
       const boostedNextgenTdh = w.nextgen.reduce(
         (sum: number, n: any) => sum + Math.round(n.tdh * boost),
-        0
+        0,
       );
 
       const boostedTdh =
@@ -870,7 +901,7 @@ export async function calculateBoosts(
       w.boosted_nextgen_tdh = boostedNextgenTdh;
 
       boostedTDH.push(w);
-    })
+    }),
   );
 
   return boostedTDH;
@@ -880,7 +911,7 @@ export async function calculateRanks(
   allGradientsTDH: any[],
   allNextgenTDH: any[],
   boostedTDH: any[],
-  ADJUSTED_NFTS: any[]
+  ADJUSTED_NFTS: any[],
 ) {
   allGradientsTDH.sort((a, b) => b.tdh - a.tdh || a.id - b.id || -1);
   const rankedGradientsTdh = allGradientsTDH.map((a, index) => {
@@ -901,7 +932,7 @@ export async function calculateRanks(
           (areEqualAddresses(nft.contract, MEMES_CONTRACT) &&
             w.memes.some((m: any) => m.id == nft.id)) ||
           (areEqualAddresses(nft.contract, GRADIENT_CONTRACT) &&
-            w.gradients_tdh > 0)
+            w.gradients_tdh > 0),
       )
       .sort((a, b) => {
         const aNftBalance = areEqualAddresses(nft.contract, MEMES_CONTRACT)
@@ -954,7 +985,7 @@ export async function calculateRanks(
 
     if (areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
       const wallets = [...boostedTDH].filter((w) =>
-        w.memes.some((m: any) => m.id == nft.id)
+        w.memes.some((m: any) => m.id == nft.id),
       );
 
       wallets.sort((a, b) => {
@@ -1069,7 +1100,7 @@ export function getGenesisAndNaka(memes: TokenTDH[]) {
 
 export async function findLatestBlockBeforeTimestamp(
   provider: ethers.JsonRpcProvider,
-  targetTimestamp: number
+  targetTimestamp: number,
 ) {
   logInfo(parentPort, "Finding latest block before timestamp", targetTimestamp);
   const averageBlockTime = 12; // Approximate average block time in seconds
@@ -1081,7 +1112,7 @@ export async function findLatestBlockBeforeTimestamp(
   let startBlock = Math.max(
     0,
     latestBlock.number -
-      Math.floor((latestBlock.timestamp - targetTimestamp) / averageBlockTime)
+      Math.floor((latestBlock.timestamp - targetTimestamp) / averageBlockTime),
   );
   let endBlock = latestBlock.number;
 

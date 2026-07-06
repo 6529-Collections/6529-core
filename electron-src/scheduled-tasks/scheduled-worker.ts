@@ -25,6 +25,7 @@ export interface TransactionsWorkerData extends WorkerData {
 
 export interface ResettableWorkerData extends WorkerData {
   reset?: boolean;
+  refresh?: boolean;
 }
 
 export class ScheduledWorker {
@@ -387,7 +388,10 @@ export class ResettableScheduledWorker extends ScheduledWorker {
     );
   }
 
-  public async reset() {
+  private async startResettableRun(
+    flag: "reset" | "refresh",
+    startedMessage: string
+  ) {
     if (this.worker || this.isRunning()) {
       return {
         status: false,
@@ -407,14 +411,22 @@ export class ResettableScheduledWorker extends ScheduledWorker {
       dbParams: getBaseDbParams(),
       blockRange: this.blockRange,
       maxConcurrentRequests: this.maxConcurrentRequests,
-      reset: true,
+      [flag]: true,
     } as ResettableWorkerData;
 
     this.startWorker(workerData);
 
     return {
       status: true,
-      message: `Reset started`,
+      message: startedMessage,
     };
+  }
+
+  public async reset() {
+    return this.startResettableRun("reset", "Reset started");
+  }
+
+  public async fullRefresh() {
+    return this.startResettableRun("refresh", "Full refresh started");
   }
 }

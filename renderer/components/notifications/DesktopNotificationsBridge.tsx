@@ -96,7 +96,7 @@ export default function DesktopNotificationsBridge() {
   const router = useRouter();
   const pathname = usePathname();
   const { connectedProfile } = useAuth();
-  const { findNativeEmoji } = useEmoji();
+  const { findCustomEmoji, findNativeEmoji, loadEmojiData } = useEmoji();
   const {
     address,
     connectedAccounts,
@@ -129,6 +129,14 @@ export default function DesktopNotificationsBridge() {
       ),
     [connectedAccountUnreadNotifications]
   );
+
+  useEffect(() => {
+    if (!isElectron()) {
+      return;
+    }
+
+    void loadEmojiData();
+  }, [loadEmojiData]);
 
   useEffect(() => {
     if (!isElectron()) {
@@ -321,14 +329,18 @@ export default function DesktopNotificationsBridge() {
       const relatedPfp = notification.related_identity?.pfp;
       const notificationData = generateNotificationData(
         notification,
-        findNativeEmoji,
+        {
+          findNativeEmoji,
+          findCustomEmoji,
+        },
         accountHandle || null
       );
       if (!notificationData) {
         return;
       }
 
-      const icon = relatedPfp ? await resolveIpfsUrlAsync(relatedPfp) : "";
+      const iconSource = notificationData.iconUrl ?? relatedPfp;
+      const icon = iconSource ? await resolveIpfsUrlAsync(iconSource) : "";
       window.notifications.showNotification(
         notification.id,
         icon,
@@ -342,7 +354,7 @@ export default function DesktopNotificationsBridge() {
         }
       );
     },
-    [findNativeEmoji]
+    [findCustomEmoji, findNativeEmoji]
   );
 
   const pollNotifications = useCallback(async () => {

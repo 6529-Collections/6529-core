@@ -22,6 +22,7 @@ export const SET_RPC_PROVIDER_ACTIVE = "setRpcProviderActive";
 export const DEACTIVATE_RPC_PROVIDER = "deactivateRpcProvider";
 export const DELETE_RPC_PROVIDER = "deleteRpcProvider";
 export const MANUAL_START_WORKER = "manualStartWorker";
+export const FULL_REFRESH_WORKER = "fullRefreshWorker";
 export const RESET_TRANSACTIONS_TO_BLOCK = "resetTransactionsToBlock";
 export const RECALCULATE_TRANSACTIONS_OWNERS = "recalculateTransactionsOwners";
 export const RESET_WORKER = "resetWorker";

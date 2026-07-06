@@ -15,6 +15,7 @@ export interface ElectronAPI {
   on: (channel: string, callback: Function) => void;
   send: (channel: string, ...args: any[]) => void;
   sendSync: (channel: string, ...args: any[]) => any;
+  invoke: (channel: string, ...args: any[]) => Promise<any>;
   openExternal: (url: string) => void;
   openExternalChrome: (url: string) => void;
   openExternalFirefox: (url: string) => void;

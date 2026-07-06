@@ -13,6 +13,7 @@ import { registerIpcHandlers } from "./db.operations";
 import { ipcMain } from "electron";
 import { Transaction } from "./entities/ITransaction";
 import { CoreMigration } from "./entities/ICoreMigration";
+import { NFT } from "./entities/INFT";
 
 let AppDataSource: DataSource;
 
@@ -161,6 +162,7 @@ export const initDb = async () => {
         ConsolidatedTDH,
         Transaction,
         CoreMigration,
+        NFT,
       ],
       synchronize: true,
     });

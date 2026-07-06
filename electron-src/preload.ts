@@ -21,6 +21,9 @@ export const api = {
   sendSync: (channel: string, ...args: any[]): any => {
     return ipcRenderer.sendSync(channel, args);
   },
+  invoke: (channel: string, ...args: any[]): Promise<any> => {
+    return ipcRenderer.invoke(channel, args);
+  },
   openExternal: (url: string): void => {
     ipcRenderer.send("open-external", url);
   },

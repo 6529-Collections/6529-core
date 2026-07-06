@@ -5,6 +5,7 @@ import {
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
   DELETE_SEED_WALLET,
+  FULL_REFRESH_WORKER,
   GET_SEED_WALLET,
   GET_SEED_WALLETS,
   IMPORT_SEED_WALLET,
@@ -80,6 +81,11 @@ export async function deactivateRpcProvider(id: number) {
 
 export async function manualStartWorker(namespace: string) {
   const data = await window.api.sendSync(MANUAL_START_WORKER, namespace);
+  return data;
+}
+
+export async function fullRefreshWorker(namespace: string) {
+  const data = await window.api.invoke(FULL_REFRESH_WORKER, namespace);
   return data;
 }
 

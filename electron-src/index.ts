@@ -24,6 +24,7 @@ import {
   DEACTIVATE_RPC_PROVIDER,
   DELETE_RPC_PROVIDER,
   DELETE_SEED_WALLET,
+  FULL_REFRESH_WORKER,
   GET_SEED_WALLET,
   GET_SEED_WALLETS,
   IMPORT_SEED_WALLET,
@@ -2018,6 +2019,25 @@ ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
   } else {
     event.returnValue = { error: true, data: "Worker not found" };
   }
+});
+
+ipcMain.handle(FULL_REFRESH_WORKER, async (_event, args: [string]) => {
+  const [namespace] = args;
+  Logger.info(`[${namespace}] Full refresh worker`);
+  const worker = scheduledWorkers.find(
+    (worker) =>
+      worker instanceof ResettableScheduledWorker &&
+      worker.getNamespace() === namespace,
+  ) as ResettableScheduledWorker | undefined;
+  if (!worker) {
+    return {
+      error: true,
+      data: "Worker not found",
+    };
+  }
+
+  const data = await worker.fullRefresh();
+  return { error: !data.status, data: data.message };
 });
 
 ipcMain.on(RESET_TRANSACTIONS_TO_BLOCK, (event, args: [string, number]) => {

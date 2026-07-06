@@ -11,6 +11,7 @@ import {
 } from "@/components/shared/ConfirmModalShell";
 import { useToast } from "@/contexts/ToastContext";
 import {
+  fullRefreshWorker,
   manualStartWorker,
   recalculateTransactionsOwners,
   resetTransactionsToBlock,
@@ -245,6 +246,8 @@ export function WorkerCard({
   const [showResetToBlockConfirm, setShowResetToBlockConfirm] = useState(false);
   const [showRecalculateOwnersConfirm, setShowRecalculateOwnersConfirm] =
     useState(false);
+  const [showFullRefreshNFTsConfirm, setShowFullRefreshNFTsConfirm] =
+    useState(false);
   const [showResetWorkerConfirm, setShowResetWorkerConfirm] = useState(false);
   const [showResetNFTsConfirm, setShowResetNFTsConfirm] = useState(false);
   const [showRunNowConfirm, setShowRunNowConfirm] = useState(false);
@@ -296,6 +299,14 @@ export function WorkerCard({
         showToast(data.data, data.error ? "error" : "success");
       })
       .finally(() => setShowRunNowConfirm(false));
+  };
+
+  const triggerFullRefreshWorker = async () => {
+    fullRefreshWorker(task.namespace)
+      .then((data) => {
+        showToast(data.data, data.error ? "error" : "success");
+      })
+      .finally(() => setShowFullRefreshNFTsConfirm(false));
   };
 
   const triggerStopWorker = async () => {
@@ -373,6 +384,19 @@ export function WorkerCard({
                 Run Now
               </button>
             )}
+        {task.namespace === ScheduledWorkerNames.NFTS_WORKER &&
+          infoButton(
+            "full-refresh-nfts-tooltip",
+            <button
+              type="button"
+              className={btnLight}
+              data-tooltip-id="full-refresh-nfts-tooltip"
+              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              onClick={() => setShowFullRefreshNFTsConfirm(true)}
+            >
+              Full Refresh
+            </button>,
+          )}
         {task.resetable &&
           infoButton(
             "reset-worker-tooltip",
@@ -492,6 +516,13 @@ export function WorkerCard({
         onConfirm={triggerRecalculateTransactionsOwners}
         title="Recalculate Owners"
         message={`Roll back the transactions database by 5,000 block, then re-process all NFT transactions stored in the local database and recalculates ownership and balances for each owner, ensuring accurate and up-to-date data for every token based on the transaction history. Use this if discrepancies in ownership or balance are detected.`}
+      />
+      <Confirm
+        show={showFullRefreshNFTsConfirm}
+        onHide={() => setShowFullRefreshNFTsConfirm(false)}
+        onConfirm={triggerFullRefreshWorker}
+        title="Full Refresh NFTs"
+        message={`Refresh all indexed NFTs from chain and metadata without deleting local NFT data.`}
       />
       <Confirm
         show={showResetWorkerConfirm}

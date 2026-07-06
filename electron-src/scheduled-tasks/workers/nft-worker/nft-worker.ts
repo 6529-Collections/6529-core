@@ -8,11 +8,16 @@ import {
 } from "../../../../electron-constants";
 import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import {
+  MANIFOLD_LAZY_CLAIM_ABI,
+  MANIFOLD_LAZY_CLAIM_CONTRACT,
+} from "../../../../shared/abis/manifold";
+import {
   MEMELAB_CONTRACT,
   MEMES_CONTRACT,
 } from "../../../../shared/abis/memes";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses } from "../../../../shared/helpers";
+import { getMemeEditionSizeFloor } from "../../../../shared/memes-edition-size-floor";
 import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { Transaction } from "../../../db/entities/ITransaction";
@@ -29,6 +34,20 @@ export interface Contract {
   abi: any;
   type: ContractType;
 }
+
+export interface EditionSizes {
+  editionSize: number;
+  editionSizeFloor: number;
+  burnt: number;
+}
+
+interface GetEditionSizesOptions {
+  provider?: ethers.Provider;
+  refreshEditionSizeFloor?: boolean;
+  backfillMissingEditionSizeFloor?: boolean;
+}
+
+const GRADIENT_SUPPLY = 101;
 
 // Keep this Electron worker aligned with the renderer Arweave fallback order.
 const ARWEAVE_GATEWAYS: readonly string[] = [
@@ -128,7 +147,7 @@ export const retrieveNftFromURI = async (
   contract: string,
   tokenId: number,
   uri: string,
-  editionSizes: { editionSize: number; burnt: number },
+  editionSizes: EditionSizes,
 ): Promise<NFT> => {
   logInfo(
     parentPort,
@@ -155,6 +174,7 @@ export const retrieveNftFromURI = async (
     full_metadata: json,
     mint_date: mintDate,
     edition_size: editionSizes.editionSize,
+    edition_size_floor: editionSizes.editionSizeFloor,
     burns: editionSizes.burnt,
     name: json.name,
     description: json.description,
@@ -209,11 +229,12 @@ export const getEditionSizes = async (
   contractAddress: string,
   ethersContract: ethers.Contract,
   tokenId: number,
+  options: GetEditionSizesOptions = {},
 ) => {
   let burnt = await getBurns(db, contractAddress, tokenId);
   let editionSize;
   if (areEqualAddresses(contractAddress, GRADIENT_CONTRACT)) {
-    editionSize = 101;
+    editionSize = GRADIENT_SUPPLY;
   } else if (areEqualAddresses(contractAddress, NEXTGEN_CONTRACT)) {
     const collectionId = Math.round(tokenId / 10000000000);
     const viewTokensIndexMin =
@@ -228,12 +249,126 @@ export const getEditionSizes = async (
       burnt += MEME_8_EDITION_BURN_ADJUSTMENT;
     }
   }
+  const editionSizeFloor = await resolveEditionSizeFloor(
+    db,
+    contractAddress,
+    tokenId,
+    editionSize,
+    options,
+  );
 
   return {
     editionSize,
+    editionSizeFloor,
     burnt,
   };
 };
+
+async function resolveEditionSizeFloor(
+  db: DataSource,
+  contractAddress: string,
+  tokenId: number,
+  actualSupply: number,
+  options: GetEditionSizesOptions,
+) {
+  if (!areEqualAddresses(contractAddress, MEMES_CONTRACT)) {
+    return actualSupply;
+  }
+
+  const existingFloor = await getExistingEditionSizeFloor(
+    db,
+    contractAddress,
+    tokenId,
+  );
+
+  if (
+    options.provider &&
+    (options.refreshEditionSizeFloor ||
+      (options.backfillMissingEditionSizeFloor && existingFloor === null))
+  ) {
+    const onChainFloor = await fetchMemeEditionSizeFloorFromClaim(
+      options.provider,
+      tokenId,
+    );
+    if (onChainFloor !== null) {
+      return onChainFloor;
+    }
+  }
+
+  return existingFloor ?? actualSupply;
+}
+
+async function getExistingEditionSizeFloor(
+  db: DataSource,
+  contractAddress: string,
+  tokenId: number,
+) {
+  const existing = await db.getRepository(NFT).findOne({
+    select: {
+      edition_size_floor: true,
+    },
+    where: {
+      contract: contractAddress.toLowerCase(),
+      id: tokenId,
+    },
+  });
+  const existingFloor = existing?.edition_size_floor;
+  return typeof existingFloor === "number" &&
+    Number.isInteger(existingFloor) &&
+    existingFloor > 0
+    ? existingFloor
+    : null;
+}
+
+const MEMES_EDITION_SIZE_FLOOR_FETCH_TIMEOUT_MS = Time.seconds(10).toMillis();
+
+async function fetchMemeEditionSizeFloorFromClaim(
+  provider: ethers.Provider,
+  tokenId: number,
+) {
+  try {
+    const contract = new ethers.Contract(
+      MANIFOLD_LAZY_CLAIM_CONTRACT,
+      MANIFOLD_LAZY_CLAIM_ABI,
+      provider,
+    );
+    const claimResult = (await withTimeout(
+      contract.getClaimForToken(MEMES_CONTRACT, tokenId),
+      MEMES_EDITION_SIZE_FLOOR_FETCH_TIMEOUT_MS,
+      `Timed out fetching Manifold totalMax for Meme #${tokenId}`,
+    )) as { claim?: { totalMax?: unknown }; [index: number]: unknown };
+    const claim =
+      claimResult.claim ??
+      (claimResult[1] as { totalMax?: unknown } | null | undefined);
+    return getMemeEditionSizeFloor(claim?.totalMax);
+  } catch (error) {
+    logInfo(
+      parentPort,
+      `Failed to fetch Manifold totalMax for Meme #${tokenId}`,
+      error,
+    );
+    return null;
+  }
+}
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  timeoutMessage: string,
+): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_resolve, reject) => {
+    timeout = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeout !== undefined) {
+      clearTimeout(timeout);
+    }
+  }
+}
 
 export const getMints = async (
   db: DataSource,
