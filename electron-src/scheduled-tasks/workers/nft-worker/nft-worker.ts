@@ -17,10 +17,7 @@ import {
 } from "../../../../shared/abis/memes";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses } from "../../../../shared/helpers";
-import {
-  getMemeEditionSizeFloor,
-  getCalculationEditionSize,
-} from "../../../../shared/memes-edition-size-floor";
+import { getMemeEditionSizeFloor } from "../../../../shared/memes-edition-size-floor";
 import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { Transaction } from "../../../db/entities/ITransaction";
@@ -47,6 +44,7 @@ export interface EditionSizes {
 interface GetEditionSizesOptions {
   provider?: ethers.Provider;
   refreshEditionSizeFloor?: boolean;
+  backfillMissingEditionSizeFloor?: boolean;
 }
 
 // Keep this Electron worker aligned with the renderer Arweave fallback order.
@@ -304,7 +302,8 @@ async function resolveEditionSizeFloor(
 
   if (
     options.provider &&
-    (options.refreshEditionSizeFloor || existingFloor === null)
+    (options.refreshEditionSizeFloor ||
+      (options.backfillMissingEditionSizeFloor && existingFloor === null))
   ) {
     const onChainFloor = await fetchMemeEditionSizeFloorFromClaim(
       options.provider,
@@ -332,12 +331,12 @@ async function getExistingEditionSizeFloor(
       id: tokenId,
     },
   });
-  return (
-    getCalculationEditionSize({
-      actualSupply: 0,
-      editionSizeFloor: existing?.edition_size_floor,
-    }) || null
-  );
+  const existingFloor = existing?.edition_size_floor;
+  return typeof existingFloor === "number" &&
+    Number.isInteger(existingFloor) &&
+    existingFloor > 0
+    ? existingFloor
+    : null;
 }
 
 const MEMES_EDITION_SIZE_FLOOR_FETCH_TIMEOUT_MS = Time.seconds(10).toMillis();
@@ -388,36 +387,6 @@ async function withTimeout<T>(
       clearTimeout(timeout);
     }
   }
-}
-
-const MEMES_EDITION_SIZE_FLOOR_REFRESH_WINDOW_MS = Time.days(30).toMillis();
-
-export function getMemeTokenIdsForEditionSizeFloorRefresh(
-  nfts: Pick<NFT, "contract" | "id" | "mint_date">[],
-  nowMillis: number = Time.currentMillis(),
-): number[] {
-  const memes = nfts.filter((nft) =>
-    areEqualAddresses(nft.contract, MEMES_CONTRACT),
-  );
-  if (memes.length === 0) {
-    return [];
-  }
-
-  const refreshCutoff = nowMillis - MEMES_EDITION_SIZE_FLOOR_REFRESH_WINDOW_MS;
-  const latestMemeId = memes.reduce(
-    (latest, nft) => Math.max(latest, nft.id),
-    0,
-  );
-  const tokenIds = new Set<number>([latestMemeId]);
-
-  memes.forEach((nft) => {
-    const mintMillis = Number(nft.mint_date) * 1000;
-    if (Number.isFinite(mintMillis) && mintMillis >= refreshCutoff) {
-      tokenIds.add(nft.id);
-    }
-  });
-
-  return Array.from(tokenIds).sort((a, b) => a - b);
 }
 
 export const getMints = async (

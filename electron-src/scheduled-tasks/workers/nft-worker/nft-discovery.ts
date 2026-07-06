@@ -13,7 +13,6 @@ import {
   Contract,
   ContractType,
   getEditionSizes,
-  getMemeTokenIdsForEditionSizeFloorRefresh,
   getMintDate,
   getTokenUri,
   retrieveNftFromURI,
@@ -28,6 +27,9 @@ import {
 } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT, NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses } from "../../../../shared/helpers";
+import {
+  getMemeTokenIdsForEditionSizeFloorRefresh,
+} from "../../../../shared/memes-edition-size-floor";
 import { Transaction } from "../../../db/entities/ITransaction";
 
 const data: ResettableWorkerData = workerData;
@@ -61,6 +63,7 @@ export const NAMESPACE = "NFTS_WORKER >";
 
 class NFTWorker extends CoreWorker {
   private reset?: boolean;
+  private refresh?: boolean;
 
   constructor(
     rpcUrl: string,
@@ -68,12 +71,14 @@ class NFTWorker extends CoreWorker {
     blockRange: number,
     maxConcurrentRequests: number,
     reset?: boolean,
+    refresh?: boolean,
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       NFT,
       Transaction,
     ]);
     this.reset = reset;
+    this.refresh = refresh;
   }
 
   async sendStatusMessage() {
@@ -100,7 +105,10 @@ class NFTWorker extends CoreWorker {
 
     if (this.reset) {
       return await this.resetWork();
-    } else if (currentHour % 2 === 0 && currentMinute === 0) {
+    } else if (
+      this.refresh ||
+      (currentHour % 2 === 0 && currentMinute === 0)
+    ) {
       return await this.refreshWork();
     } else {
       return await this.normalWork();
@@ -220,7 +228,7 @@ class NFTWorker extends CoreWorker {
           nextId,
           {
             provider: this.getProvider(),
-            refreshEditionSizeFloor: true,
+            refreshEditionSizeFloor: false,
           },
         );
         printStatus(
@@ -387,6 +395,7 @@ class NFTWorker extends CoreWorker {
         {
           provider: this.getProvider(),
           refreshEditionSizeFloor: refreshEditionSizeFloorTokenIds.has(nft.id),
+          backfillMissingEditionSizeFloor: true,
         },
       );
       const mintDate = await getMintDate(
@@ -465,4 +474,5 @@ new NFTWorker(
   data.blockRange,
   data.maxConcurrentRequests,
   data.reset,
+  data.refresh,
 );

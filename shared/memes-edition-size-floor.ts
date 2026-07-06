@@ -1,8 +1,20 @@
+import { MEMES_CONTRACT } from "./abis/memes";
+import { areEqualAddresses } from "./helpers";
+import { Time } from "./time";
+
 export const MEMES_EDITION_SIZE_FLOOR_CAP = 310;
+export const MEMES_EDITION_SIZE_FLOOR_REFRESH_WINDOW_MS =
+  Time.days(30).toMillis();
 
 export interface CalculationEditionSizeInput {
   actualSupply: number;
   editionSizeFloor?: number | null;
+}
+
+export interface MemeEditionSizeFloorRefreshNft {
+  contract: string;
+  id: number;
+  mint_date?: number | null;
 }
 
 function normalizePositiveInteger(value: unknown): number | null {
@@ -54,4 +66,33 @@ export function calculateHodlRate(
 ): number {
   const rate = maxSupply / calculationEditionSize;
   return !Number.isFinite(rate) || rate < 1 ? 1 : rate;
+}
+
+export function getMemeTokenIdsForEditionSizeFloorRefresh(
+  nfts: MemeEditionSizeFloorRefreshNft[],
+  nowMillis: number = Time.currentMillis(),
+): number[] {
+  const memes = nfts.filter((nft) =>
+    areEqualAddresses(nft.contract, MEMES_CONTRACT),
+  );
+  if (memes.length === 0) {
+    return [];
+  }
+
+  const refreshCutoff =
+    nowMillis - MEMES_EDITION_SIZE_FLOOR_REFRESH_WINDOW_MS;
+  const latestMemeId = memes.reduce(
+    (latest, nft) => Math.max(latest, nft.id),
+    0,
+  );
+  const tokenIds = new Set<number>([latestMemeId]);
+
+  memes.forEach((nft) => {
+    const mintMillis = Number(nft.mint_date) * 1000;
+    if (Number.isFinite(mintMillis) && mintMillis >= refreshCutoff) {
+      tokenIds.add(nft.id);
+    }
+  });
+
+  return Array.from(tokenIds).sort((a, b) => a - b);
 }
