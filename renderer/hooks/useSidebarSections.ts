@@ -146,10 +146,10 @@ function buildSidebarSections(
   ipfsWebuiUrl: string
 ): SidebarSection[] {
   return [
-    getDesktopSection(ipfsWebuiUrl),
     getNftsSection(),
     getWavesSection(),
     getAboutSection(appWalletsSupported, hideSubscriptions),
+    getDesktopSection(ipfsWebuiUrl),
   ];
 }
 

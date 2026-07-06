@@ -286,8 +286,6 @@ const WebSidebarNav = React.forwardRef<
       aria-label="Desktop navigation"
     >
       <ul className="tw-m-0 tw-list-none tw-p-0">
-        {desktopSection && renderExpandableSection(desktopSection)}
-
         {nftsSection && renderExpandableSection(nftsSection)}
 
         {wavesSection && renderDirectSectionLink(wavesSection)}
@@ -304,6 +302,8 @@ const WebSidebarNav = React.forwardRef<
         </li>
 
         {aboutSection && renderExpandableSection(aboutSection)}
+
+        {desktopSection && renderExpandableSection(desktopSection)}
 
         {showDropForge && (
           <li>
