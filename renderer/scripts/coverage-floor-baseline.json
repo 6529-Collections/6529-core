@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "tolerance_points": 0.1,
+  "totals": {
+    "lines": 74.88,
+    "statements": 74.52,
+    "functions": 70.43,
+    "branches": 61.14
+  }
+}

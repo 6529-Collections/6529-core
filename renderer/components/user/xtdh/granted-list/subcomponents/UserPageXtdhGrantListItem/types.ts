@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-import type { TokenRange } from "@/components/nft-picker/NftPicker.types";
+import type { TokenRange } from "@/components/nft-picker/types";
 import type { ApiXTdhGrant } from "@/generated/models/ApiXTdhGrant";
 
 import type { ContractOverview, SupportedChain } from "@/types/nft";
@@ -10,6 +10,13 @@ import type { ApiXTdhGrantStatus } from "@/generated/models/ApiXTdhGrantStatus";
 export interface UserPageXtdhGrantListItemProps {
   readonly grant: ApiXTdhGrant;
   readonly isSelf: boolean;
+  readonly contractOverviewState?: GrantContractOverviewState | undefined;
+}
+
+export interface GrantContractOverviewState {
+  readonly contract: ContractOverview | null;
+  readonly isLoading: boolean;
+  readonly errorMessage?: string | null | undefined;
 }
 
 export interface GrantDetails {

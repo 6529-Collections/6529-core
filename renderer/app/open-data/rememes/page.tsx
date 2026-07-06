@@ -1,4 +1,4 @@
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import CommunityDownloadsRememes from "@/components/community-downloads/CommunityDownloadsRememes";
 import { getAppMetadata } from "@/components/providers/metadata";
 import type { Metadata } from "next";
@@ -13,7 +13,7 @@ export default function RememesDownloads() {
 
 export async function generateMetadata(): Promise<Metadata> {
   return getAppMetadata({
-    title: "Rememes",
+    title: "Rememes | Open Data",
     description: "Open Data",
   });
 }

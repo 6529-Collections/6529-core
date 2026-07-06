@@ -58,9 +58,11 @@ export enum QueryKey {
   IDENTITY_AVAILABLE_CREDIT = "IDENTITY_AVAILABLE_CREDIT",
   IDENTITY_ACTIVITY = "IDENTITY_ACTIVITY",
   IDENTITY_FOLLOWING_ACTIONS = "IDENTITY_FOLLOWING_ACTIONS",
+  IDENTITY_MUTE_STATE = "IDENTITY_MUTE_STATE",
   IDENTITY_FOLLOWERS = "IDENTITY_FOLLOWERS",
   IDENTITY_NOTIFICATIONS = "IDENTITY_NOTIFICATIONS",
   CONNECTED_ACCOUNT_UNREAD_NOTIFICATIONS = "CONNECTED_ACCOUNT_UNREAD_NOTIFICATIONS",
+  DM_DROPS_UNREAD = "DM_DROPS_UNREAD",
   IDENTITY_SEARCH = "IDENTITY_SEARCH",
   IDENTITY_FAVOURITE_WAVES = "IDENTITY_FAVOURITE_WAVES",
   WALLET_TDH_HISTORY = "WALLET_TDH_HISTORY",
@@ -264,8 +266,10 @@ const AUTH_SENSITIVE_QUERY_KEYS = [
   QueryKey.PROFILE_PROFILE_PROXIES,
   QueryKey.PROFILE_PROXY,
   QueryKey.IDENTITY_AVAILABLE_CREDIT,
+  QueryKey.IDENTITY_MUTE_STATE,
   QueryKey.IDENTITY_NOTIFICATIONS,
   QueryKey.CONNECTED_ACCOUNT_UNREAD_NOTIFICATIONS,
+  QueryKey.DM_DROPS_UNREAD,
   QueryKey.WAVES_OVERVIEW,
   QueryKey.WAVES_V2,
   QueryKey.WAVE_SUBWAVES,
@@ -982,6 +986,14 @@ const createReactQueryContextValue = (
     });
   };
 
+  const invalidateWavesV2 = () => {
+    queryClient
+      .invalidateQueries({
+        queryKey: [QueryKey.WAVES_V2],
+      })
+      .catch(() => undefined);
+  };
+
   const invalidateAllWaves = () => {
     queryClient.invalidateQueries({
       queryKey: [QueryKey.WAVES_OVERVIEW],
@@ -989,11 +1001,7 @@ const createReactQueryContextValue = (
     queryClient.invalidateQueries({
       queryKey: [QueryKey.WAVES_OVERVIEW_PUBLIC],
     });
-    queryClient
-      .invalidateQueries({
-        queryKey: [QueryKey.WAVES_V2],
-      })
-      .catch(() => undefined);
+    invalidateWavesV2();
     queryClient
       .invalidateQueries({
         queryKey: [QueryKey.WAVE_SUBWAVES],
@@ -1114,6 +1122,7 @@ const createReactQueryContextValue = (
         queryKey: [QueryKey.CONNECTED_ACCOUNT_UNREAD_NOTIFICATIONS],
       })
       .catch(() => undefined);
+    invalidateWavesV2();
   };
 
   const invalidateIdentityTdhStats = ({ identity }: { identity: string }) => {

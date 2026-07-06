@@ -15,6 +15,14 @@ import { useMyStreamOptional } from "./wave/MyStreamContext";
 
 type TitleContextType = {
   title: string;
+  // True when a page explicitly claimed the title (setTitle/wave data), as
+  // opposed to the provider's route-default placeholder. Only owned titles
+  // may overwrite the route's server metadata <title>.
+  isTitleOwned: boolean;
+  // Pathname the current title text was computed for. During a navigation
+  // there is a render window where the text still belongs to the previous
+  // route; consumers must not act on it for the new route until they match.
+  titlePathname: string | null;
   setTitle: (title: string) => void;
   notificationCount: number;
   setNotificationCount: (count: number) => void;
@@ -27,6 +35,7 @@ export const DEFAULT_TITLE = publicEnv.BASE_ENDPOINT?.includes("staging")
   ? "6529 Staging"
   : "6529.io";
 
+// Default titles for routes
 const getDefaultTitleForRoute = (pathname: string | null): string => {
   if (!pathname) return DEFAULT_TITLE;
   if (pathname === "/") return "6529.io";
@@ -47,6 +56,7 @@ const getDefaultTitleForRoute = (pathname: string | null): string => {
   if (pathname !== "/" && pathname.split("/").length === 2) {
     const segments = pathname.split("/");
     const firstSegment = segments[1];
+    // Check if it's not one of the known routes
     const knownRoutes = [
       "waves",
       "the-memes",
@@ -80,6 +90,13 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
   const [title, setTitle] = useState<string>(() =>
     getDefaultTitleForRoute(pathname)
   );
+  // Pathname the current title text was computed for.
+  const [titlePathname, setTitlePathname] = useState<string | null>(pathname);
+  // Pathname the explicit title was claimed for: ownership evaporates in the
+  // same render as a navigation, before any effect-based reset runs.
+  const [explicitTitlePathname, setExplicitTitlePathname] = useState<
+    string | null
+  >(null);
   const [notificationCount, setNotificationCount] = useState<number>(0);
   const [waveData, setWaveData] = useState<{
     name: string;
@@ -112,6 +129,8 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (pathnameChanged) {
       setTitle(getDefaultTitleForRoute(pathname));
+      setTitlePathname(pathname);
+      setExplicitTitlePathname(null);
       setWaveData(null);
       return;
     }
@@ -126,6 +145,8 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
       (!currentWaveInUrl || previousWaveInUrl !== currentWaveInUrl)
     ) {
       setTitle(getDefaultTitleForRoute(pathname));
+      setTitlePathname(pathname);
+      setExplicitTitlePathname(null);
       setWaveData(null);
     }
   }, [pathname, searchParams]);
@@ -133,9 +154,12 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
   const updateTitle = (newTitle: string) => {
     if (routeRef.current === pathname) {
       setTitle(newTitle);
+      setTitlePathname(pathname);
+      setExplicitTitlePathname(pathname);
     }
   };
 
+  // Compute the title based on current state
   const computedTitle = useMemo(() => {
     const waveTitle = (() => {
       if (!waveParam || !waveData) return null;
@@ -155,6 +179,11 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
     return title;
   }, [isWaveRoute, waveParam, waveData, title, notificationCount]);
 
+  const isTitleOwned =
+    (explicitTitlePathname !== null && explicitTitlePathname === pathname) ||
+    Boolean(isWaveRoute && waveParam && waveData);
+
+  // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => {
     let notificationText = "";
     if (notificationCount === 1) {
@@ -167,12 +196,14 @@ export const TitleProvider: React.FC<{ children: React.ReactNode }> = ({
       : computedTitle;
     return {
       title: finalTitle,
+      isTitleOwned,
+      titlePathname,
       setTitle: updateTitle,
       notificationCount,
       setNotificationCount,
       setWaveData,
     };
-  }, [computedTitle, notificationCount]);
+  }, [computedTitle, isTitleOwned, notificationCount, titlePathname]);
 
   return (
     <TitleContext.Provider value={contextValue}>
@@ -189,15 +220,18 @@ export const useTitle = () => {
   return context;
 };
 
+// Hook to set page title - use this in page components
 export const useSetTitle = (pageTitle: string) => {
   const { setTitle } = useTitle();
   const pathname = usePathname();
 
+  // Set title immediately on mount and when title changes
   useEffect(() => {
     setTitle(pageTitle);
   }, [pageTitle, setTitle, pathname]);
 };
 
+// Hook to set wave data for title
 export const useSetWaveData = (
   data: { name: string; newItemsCount: number } | null
 ) => {

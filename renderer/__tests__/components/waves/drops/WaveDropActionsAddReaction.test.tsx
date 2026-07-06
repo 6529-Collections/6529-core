@@ -17,6 +17,11 @@ const mobileWrapperDialogMock = jest.fn(
       </div>
     ) : null
 );
+const mockLoadCustomEmojis = jest.fn(() => Promise.resolve([]));
+const mockLoadNativeEmojis = jest.fn(() => Promise.resolve({}));
+const mockLoadEmojiData = jest.fn(() => Promise.resolve());
+const mockFindNativeEmoji = jest.fn();
+const mockFindCustomEmoji = jest.fn();
 
 jest.mock("@/contexts/wave/MyStreamContext", () => ({
   useMyStream: jest.fn(() => ({
@@ -75,8 +80,8 @@ jest.mock("@/components/mobile-wrapper-dialog/MobileWrapperDialog", () => ({
 
 jest.mock("@emoji-mart/react", () => ({
   __esModule: true,
-  default: ({ onEmojiSelect }: any) => (
-    <div data-testid="mock-picker">
+  default: ({ onEmojiSelect, autoFocus }: any) => (
+    <div data-testid="mock-picker" data-auto-focus={String(autoFocus)}>
       <button onClick={() => onEmojiSelect({ id: "smile" })}>
         Select Emoji
       </button>
@@ -90,11 +95,15 @@ jest.mock("@emoji-mart/data", () => ({
 jest.mock("@/contexts/EmojiContext", () => ({
   useEmoji: jest.fn(() => ({
     emojiMap: [],
+    emojiData: {},
     categories: [],
     categoryIcons: {},
     loading: false,
-    findNativeEmoji: jest.fn(),
-    findCustomEmoji: jest.fn(),
+    findNativeEmoji: mockFindNativeEmoji,
+    findCustomEmoji: mockFindCustomEmoji,
+    loadCustomEmojis: mockLoadCustomEmojis,
+    loadNativeEmojis: mockLoadNativeEmojis,
+    loadEmojiData: mockLoadEmojiData,
   })),
 }));
 
@@ -232,6 +241,30 @@ describe("WaveDropActionsAddReaction", () => {
 
     fireEvent.click(button);
     expect(await screen.findByTestId("mock-picker")).toBeInTheDocument();
+  });
+
+  it("auto-focuses the picker search input on desktop", async () => {
+    renderWithQueryClient(<WaveDropActionsAddReaction drop={mockDrop} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /add reaction/i }));
+
+    expect(await screen.findByTestId("mock-picker")).toHaveAttribute(
+      "data-auto-focus",
+      "true"
+    );
+  });
+
+  it("auto-focuses the picker search input on mobile", async () => {
+    renderWithQueryClient(
+      <WaveDropActionsAddReaction drop={mockDrop} isMobile={true} />
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /add reaction/i }));
+
+    expect(await screen.findByTestId("mock-picker")).toHaveAttribute(
+      "data-auto-focus",
+      "true"
+    );
   });
 
   it("forwards custom dialog z-index to the mobile wrapper", async () => {

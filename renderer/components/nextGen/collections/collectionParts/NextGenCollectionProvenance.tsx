@@ -19,10 +19,9 @@ import { faExternalLinkSquare } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
-import { Col, Container, Row } from "../NextGenTailwindLayout";
-import { Accordion } from "react-bootstrap";
-import styles from "../NextGen.module.scss";
+import styles from "../NextGen.module.css";
 import {
   getNextGenIconUrl,
   getNextGenImageUrl,
@@ -47,7 +46,7 @@ export default function NextGenCollectionProvenance(props: Readonly<Props>) {
     commonApiFetch<{
       count: number;
       page: number;
-      next: any;
+      next: unknown;
       data: NextGenLog[];
     }>({
       endpoint: `nextgen/collections/${props.collection.id}/logs?page_size=${PAGE_SIZE}&page=${mypage}`,
@@ -63,9 +62,12 @@ export default function NextGenCollectionProvenance(props: Readonly<Props>) {
   }, [page]);
 
   return (
-    <Container className="no-padding" ref={scrollTarget}>
-      <Row className="pt-2">
-        <Col>
+    <div
+      className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]"
+      ref={scrollTarget}
+    >
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-2">
+        <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
           {logs.map((log, index) => (
             <NextGenCollectionProvenanceRow
               collection={props.collection}
@@ -74,10 +76,10 @@ export default function NextGenCollectionProvenance(props: Readonly<Props>) {
               odd={index % 2 !== 0}
             />
           ))}
-        </Col>
-      </Row>
+        </div>
+      </div>
       {totalResults > PAGE_SIZE && logsLoaded && (
-        <Row className="text-center pt-4 pb-4">
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-py-6 tw-text-center">
           <Pagination
             page={page}
             pageSize={PAGE_SIZE}
@@ -91,9 +93,9 @@ export default function NextGenCollectionProvenance(props: Readonly<Props>) {
               }
             }}
           />
-        </Row>
+        </div>
       )}
-    </Container>
+    </div>
   );
 }
 
@@ -163,10 +165,10 @@ export function NextGenCollectionProvenanceRow(
           </>
         );
 
-        let fromTo: any;
+        let fromTo: ReactNode;
         if (isTransaction) {
           fromTo = (
-            <span className="d-flex gap-1">
+            <span className="tw-flex tw-gap-1">
               <span>
                 {areEqualAddresses(log.from_address, NULL_ADDRESS) ? (
                   "Minted"
@@ -229,8 +231,8 @@ export function NextGenCollectionProvenanceRow(
       const logSpan = <span>{log.log}</span>;
       if (log.log.startsWith("Script at index")) {
         return (
-          <span className="d-flex flex-column">
-            <span className="font-smaller font-color-h pb-2">
+          <span className="tw-flex tw-flex-col">
+            <span className="tw-pb-2 tw-text-sm tw-text-[#9a9a9a]">
               * The script of each collection is split into manageable chunks
               due to Ethereum&apos;s transaction size limits. Each chunk of the
               script is updated individually in a separate transaction.
@@ -244,82 +246,78 @@ export function NextGenCollectionProvenanceRow(
     return;
   }
 
-  return (
-    <Accordion
-      className={
-        props.odd
-          ? styles["collectionProvenanceAccordionOdd"]
-          : styles["collectionProvenanceAccordion"]
-      }
+  const rowClassName = props.odd
+    ? styles["collectionProvenanceAccordionOdd"]
+    : styles["collectionProvenanceAccordion"];
+  const rowBackgroundClassName = props.odd
+    ? "tw-bg-[rgb(34,34,34)]"
+    : "tw-bg-[rgb(30,30,30)]";
+  const bodyClassName = props.odd
+    ? styles["collectionProvenanceAccordionBodyOdd"]
+    : styles["collectionProvenanceAccordionBody"];
+  const headerContent = (
+    <div
+      className={`tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px] ${styles["collectionProvenanceAccordionButton"]}`}
     >
-      <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button
-          className={`d-flex justify-content-between ${
-            isTransaction
-              ? styles["collectionProvenanceAccordionButtonHideCaret"]
-              : ""
-          }`}
-        >
-          <Container className={styles["collectionProvenanceAccordionButton"]}>
-            <Row>
-              <Col>
-                <span className="d-flex align-items-center justify-content-between">
-                  <span className="d-flex align-items-center gap-4">
-                    <span className="no-wrap">
-                      {getDateDisplay(new Date(log.block_timestamp * 1000))}
-                    </span>
-                    <span className="d-flex align-items-center">
-                      {printParsedLog()}
-                    </span>
-                  </span>
-                  <span className="d-flex align-items-center gap-2">
-                    {isTransaction &&
-                      printGas(log.gas, log.gas_price, log.gas_price_gwei)}
-                    {isTransaction &&
-                      printRoyalties(
-                        log.value,
-                        log.royalties,
-                        log.from_address
-                      )}
-                    <Link
-                      href={getTransactionLink(
-                        NEXTGEN_CHAIN_ID,
-                        log.transaction
-                      )}
-                      onClick={(e) => e.stopPropagation()}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <FontAwesomeIcon
-                        style={{
-                          height: "25px",
-                          cursor: "pointer",
-                        }}
-                        icon={faExternalLinkSquare}
-                      ></FontAwesomeIcon>
-                    </Link>
-                  </span>
-                </span>
-              </Col>
-            </Row>
-          </Container>
-        </Accordion.Button>
-        {!isTransaction && (
-          <Accordion.Body
-            className={
-              props.odd
-                ? styles["collectionProvenanceAccordionBodyOdd"]
-                : styles["collectionProvenanceAccordionBody"]
-            }
-          >
-            <Container className="no-padding">
-              <Row className="pt-2 pb-2">
-                <Col>{printBody()}</Col>
-              </Row>
-            </Container>
-          </Accordion.Body>
-        )}
-      </Accordion.Item>
-    </Accordion>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
+          <span className="tw-flex tw-items-center tw-justify-between">
+            <span className="tw-flex tw-items-center tw-gap-6">
+              <span className="tw-min-w-fit tw-whitespace-nowrap">
+                {getDateDisplay(new Date(log.block_timestamp * 1000))}
+              </span>
+              <span className="tw-flex tw-items-center">
+                {printParsedLog()}
+              </span>
+            </span>
+            <span className="tw-flex tw-items-center tw-gap-2">
+              {isTransaction &&
+                printGas(log.gas, log.gas_price, log.gas_price_gwei)}
+              {isTransaction &&
+                printRoyalties(log.value, log.royalties, log.from_address)}
+              <Link
+                href={getTransactionLink(NEXTGEN_CHAIN_ID, log.transaction)}
+                onClick={(e) => e.stopPropagation()}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <FontAwesomeIcon
+                  style={{
+                    height: "25px",
+                    cursor: "pointer",
+                  }}
+                  icon={faExternalLinkSquare}
+                ></FontAwesomeIcon>
+              </Link>
+            </span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+
+  if (isTransaction) {
+    return (
+      <div className={`${rowClassName} ${rowBackgroundClassName}`}>
+        {headerContent}
+      </div>
+    );
+  }
+
+  return (
+    <details className={`${rowClassName} ${rowBackgroundClassName}`}>
+      <summary className="tw-cursor-pointer focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-primary-400">
+        {headerContent}
+      </summary>
+      <div className={bodyClassName}>
+        <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-py-2">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
+              {printBody()}
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
   );
 }

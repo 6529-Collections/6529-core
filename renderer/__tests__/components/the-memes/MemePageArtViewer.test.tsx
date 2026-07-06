@@ -21,45 +21,6 @@ const mockNFTImageBalance = jest.fn(
   )
 );
 
-jest.mock("react-bootstrap", () => {
-  const Carousel = ({
-    children,
-    activeIndex,
-  }: {
-    readonly children: React.ReactNode;
-    readonly activeIndex?: number | undefined;
-  }) => (
-    <div data-testid="carousel" data-active-index={activeIndex}>
-      {children}
-    </div>
-  );
-
-  Carousel.Item = ({
-    children,
-    className,
-  }: {
-    readonly children: React.ReactNode;
-    readonly className?: string | undefined;
-  }) => <div className={className}>{children}</div>;
-
-  return {
-    Carousel,
-    Col: ({
-      children,
-      xs: _xs,
-      ...props
-    }: React.ComponentProps<"div"> & { readonly xs?: number }) => (
-      <div {...props}>{children}</div>
-    ),
-    Container: ({ children, ...props }: React.ComponentProps<"div">) => (
-      <div {...props}>{children}</div>
-    ),
-    Row: ({ children, ...props }: React.ComponentProps<"div">) => (
-      <div {...props}>{children}</div>
-    ),
-  };
-});
-
 jest.mock("@/components/nft-image/NFTImage", () => ({
   __esModule: true,
   default: (...args: unknown[]) => mockNFTImage(...(args as [any])),
@@ -190,11 +151,11 @@ afterEach(() => {
 describe("MemePageArtViewer", () => {
   it("sizes carousel renderer wrappers without depending on Bootstrap Col", () => {
     const styles = readFileSync(
-      join(process.cwd(), "components/the-memes/TheMemes.module.scss"),
+      join(process.cwd(), "components/the-memes/TheMemes.module.css"),
       "utf8"
     );
 
-    expect(styles).toContain(".memesCarousel :global(.carousel-item > *)");
+    expect(styles).toContain(".memesCarousel [data-carousel-slide] > *");
     expect(styles).not.toContain(
       ".memesCarousel :global(.carousel-item > .col)"
     );

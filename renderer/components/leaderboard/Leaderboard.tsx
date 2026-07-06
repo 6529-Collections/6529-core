@@ -12,14 +12,14 @@ import { commonApiFetch } from "@/services/api/common-api";
 import { LeaderboardFocus } from "@/types/enums";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
-import { Dropdown } from "react-bootstrap";
+import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
 import DotLoader, { Spinner } from "../dotLoader/DotLoader";
 import {
   SearchModalDisplay,
   SearchWalletsDisplay,
 } from "../searchModal/SearchModal";
-import styles from "./Leaderboard.module.scss";
+import styles from "./Leaderboard.module.css";
 import LeaderboardCardsCollectedComponent from "./LeaderboardCardsCollected";
 import LeaderboardInteractionsComponent from "./LeaderboardInteractions";
 
@@ -39,6 +39,66 @@ export enum Collector {
   GRADIENTS = "Gradient",
   MEMELAB = "MemeLab",
   NEXTGEN = "NextGen",
+}
+
+function LeaderboardDropdown({
+  children,
+  disabled,
+  label,
+}: Readonly<{
+  children: ReactNode;
+  disabled?: boolean;
+  label: ReactNode;
+}>) {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    function handlePointerDown(event: PointerEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsOpen(false);
+      }
+    }
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+    };
+  }, [isOpen]);
+
+  return (
+    <span ref={dropdownRef} className={styles["contentDropdown"]}>
+      <button
+        type="button"
+        disabled={disabled}
+        aria-expanded={isOpen}
+        onClick={() => setIsOpen((open) => !open)}
+      >
+        {label}
+        <span aria-hidden="true" className={styles["dropdownCaret"]} />
+      </button>
+      {isOpen && (
+        <span
+          className={styles["contentDropdownMenu"]}
+          onClick={() => setIsOpen(false)}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") {
+              setIsOpen(false);
+            }
+          }}
+        >
+          {children}
+        </span>
+      )}
+    </span>
+  );
 }
 
 function getSelectedNetworkTdh(
@@ -130,8 +190,10 @@ export default function Leaderboard(
   }, [content, collector]);
 
   useEffect(() => {
-    fetchUrl(`${publicEnv.API_ENDPOINT}/api/blocks?page_size=${1}`)
-      .then((response: ApiBlocksPage) => {
+    fetchUrl<ApiBlocksPage>(
+      `${publicEnv.API_ENDPOINT}/api/blocks?page_size=${1}`
+    )
+      .then((response) => {
         if (response.data.length > 0) {
           const latestTDH = {
             block: response.data[0]?.block_number!,
@@ -167,26 +229,22 @@ export default function Leaderboard(
 
   function printCollectorsDropdown() {
     return (
-      <Dropdown className={styles["contentDropdown"]} drop={"down-centered"}>
-        <Dropdown.Toggle>
-          <span>Collectors: {collector}</span>
-          <span aria-hidden="true" className={styles["dropdownCaret"]} />
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          {Object.values(Collector).map((collector) => (
-            <Dropdown.Item
-              key={collector}
-              onClick={() => setCollector(collector)}
-            >
-              {[Collector.MEMES_SETS, Collector.GENESIS].includes(collector) ? (
-                <>&nbsp;&nbsp;{collector}</>
-              ) : (
-                collector
-              )}
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
-      </Dropdown>
+      <LeaderboardDropdown label={<span>Collectors: {collector}</span>}>
+        {Object.values(Collector).map((collector) => (
+          <button
+            type="button"
+            className={styles["contentDropdownItem"]}
+            key={collector}
+            onClick={() => setCollector(collector)}
+          >
+            {[Collector.MEMES_SETS, Collector.GENESIS].includes(collector) ? (
+              <>&nbsp;&nbsp;{collector}</>
+            ) : (
+              collector
+            )}
+          </button>
+        ))}
+      </LeaderboardDropdown>
     );
   }
 
@@ -260,49 +318,49 @@ export default function Leaderboard(
 
   function printCollectionsDropdown() {
     return (
-      <Dropdown className={styles["contentDropdown"]} drop={"down-centered"}>
-        <Dropdown.Toggle>
-          <span>Collection: {content}</span>
-          <span aria-hidden="true" className={styles["dropdownCaret"]} />
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          {Object.values(Content).map((content) => (
-            <Dropdown.Item key={content} onClick={() => setContent(content)}>
-              {content}
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
-      </Dropdown>
+      <LeaderboardDropdown label={<span>Collection: {content}</span>}>
+        {Object.values(Content).map((content) => (
+          <button
+            type="button"
+            key={content}
+            className={styles["contentDropdownItem"]}
+            onClick={() => setContent(content)}
+          >
+            {content}
+          </button>
+        ))}
+      </LeaderboardDropdown>
     );
   }
 
   function printSeasonsDropdown() {
     return (
-      <Dropdown className={styles["contentDropdown"]} drop={"down-centered"}>
-        <Dropdown.Toggle
-          disabled={
-            content != Content.MEMES &&
-            collector != Collector.MEMES &&
-            collector != Collector.MEMES_SETS
-          }
+      <LeaderboardDropdown
+        disabled={
+          content != Content.MEMES &&
+          collector != Collector.MEMES &&
+          collector != Collector.MEMES_SETS
+        }
+        label={<span>SZN: {selectedSeason > 0 ? selectedSeason : "All"}</span>}
+      >
+        <button
+          type="button"
+          className={styles["contentDropdownItem"]}
+          onClick={() => setSelectedSeason(0)}
         >
-          <span>SZN: {selectedSeason > 0 ? selectedSeason : "All"}</span>
-          <span aria-hidden="true" className={styles["dropdownCaret"]} />
-        </Dropdown.Toggle>
-        <Dropdown.Menu>
-          <Dropdown.Item onClick={() => setSelectedSeason(0)}>
-            All
-          </Dropdown.Item>
-          {seasons.map((season) => (
-            <Dropdown.Item
-              key={season.display}
-              onClick={() => setSelectedSeason(season.id)}
-            >
-              {season.display}
-            </Dropdown.Item>
-          ))}
-        </Dropdown.Menu>
-      </Dropdown>
+          All
+        </button>
+        {seasons.map((season) => (
+          <button
+            type="button"
+            key={season.display}
+            className={styles["contentDropdownItem"]}
+            onClick={() => setSelectedSeason(season.id)}
+          >
+            {season.display}
+          </button>
+        ))}
+      </LeaderboardDropdown>
     );
   }
 
@@ -362,7 +420,7 @@ export default function Leaderboard(
               ) : (
                 <>
                   {numberWithCommas(selectedNetworkTdhChange)}{" "}
-                  <span className="font-smaller">
+                  <span className="tw-text-sm">
                     ({selectedGlobalTdhRateChangeLabel})
                   </span>
                 </>

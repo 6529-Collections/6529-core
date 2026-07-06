@@ -1,10 +1,25 @@
 "use client";
 
+import { Capacitor } from "@capacitor/core";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { mainnet, sepolia } from "viem/chains";
+import { WagmiProvider } from "wagmi";
+import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
+import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
+import { useAuth } from "@/components/auth/Auth";
+import {
+  AppKitBootstrapContext,
+  type AppKitBootstrapContextValue,
+  type AppKitBootstrapStatus,
+} from "@/components/providers/AppKitBootstrapContext";
+import { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
+import type { AppToastInput } from "@/components/utils/toast/AppToast";
+import { publicEnv } from "@/config/env";
 import { getSeedWallets } from "@/electron";
 import { isElectron } from "@/helpers";
 import { useAppWalletPasswordModal } from "@/hooks/useAppWalletPasswordModal";
 import type { ISeedWallet } from "@/shared/types";
-import { AppKitValidationError } from "@/src/errors/appkit-initialization";
+import { AppKitValidationError } from "@/errors/appkit-initialization";
 import type { AppKitInitializationConfig } from "@/utils/appkit-initialization.utils";
 import { initializeAppKit } from "@/utils/appkit-initialization.utils";
 import {
@@ -12,38 +27,83 @@ import {
   sanitizeErrorForUser,
 } from "@/utils/error-sanitizer";
 import {
-  SEED_WALLET_CONNECTOR_TYPE,
-  seedWalletConnector,
-} from "@/wagmiConfig/seedWalletConnector";
+  markMobileLaunchStep,
+  measureMobileLaunchAsync,
+} from "@/utils/monitoring/mobileLaunchTiming";
 import { validateWalletSafely } from "@/utils/wallet-validation.utils";
 import {
   APP_WALLET_CONNECTOR_TYPE,
   createAppWalletConnector,
 } from "@/wagmiConfig/wagmiAppWalletConnector";
+import {
+  SEED_WALLET_CONNECTOR_TYPE,
+  seedWalletConnector,
+} from "@/wagmiConfig/seedWalletConnector";
 import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Chain } from "viem";
-import { mainnet, sepolia } from "viem/chains";
-import { WagmiProvider } from "wagmi";
-import type { AppWallet } from "@/components/app-wallets/AppWalletsContext";
-import { useAppWallets } from "@/components/app-wallets/AppWalletsContext";
-import { useAuth } from "@/components/auth/Auth";
-import { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
-import { publicEnv } from "@/config/env";
 
+type MutableRef<T> = {
+  current: T;
+};
+
+type SetupAppKitAdapter = (
+  wallets: AppWallet[],
+  seedWallets?: ISeedWallet[]
+) => Promise<void>;
+
+// Ceiling on how long connect-intent callers wait for AppKit readiness; a hung
+// WalletConnect relay must surface as a connect error, not a stuck busy state.
+const APPKIT_READY_WAIT_TIMEOUT_MS = 15_000;
+
+type InitializeAdapterInput = {
+  readonly currentAdapter: WagmiAdapter | null;
+  readonly isInitializingRef: MutableRef<boolean>;
+  readonly setupAppKitAdapter: SetupAppKitAdapter;
+};
+
+type InjectAppWalletConnectorsInput = {
+  readonly currentAdapter: WagmiAdapter | null;
+  readonly appWallets: readonly AppWallet[];
+  readonly appWalletPasswordModal: ReturnType<typeof useAppWalletPasswordModal>;
+  readonly processedWallets: MutableRef<Set<string>>;
+  readonly setToast: (toast: AppToastInput) => void;
+};
+
+type AppKitAdapterManagerPublicShape = Pick<
+  AppKitAdapterManager,
+  "cleanup" | "createAdapterWithCache" | "shouldRecreateAdapter"
+>;
+
+/**
+ * Installs a defensive wrapper around `window.ethereum` (EIP-1193 provider).
+ *
+ * Why this exists:
+ * - Some injected providers expose methods (e.g. `request`, `on`) that rely on `this`
+ *   being the provider object. If a consumer reads a method and calls it later, the
+ *   binding can be lost (often surfacing as "Illegal invocation" / broken requests).
+ * - Some providers can throw during property access (early initialization, unusual
+ *   getters). The proxy catches these reads to avoid crashing app initialization.
+ *
+ * What the proxy does:
+ * - Binds function properties to the underlying provider so `this` is preserved.
+ * - Returns `undefined` for properties whose access throws.
+ *
+ * This runs once per page load and only touches `window.ethereum`.
+ */
 function installSafeEthereumProxy(): void {
-  if (globalThis.window === undefined) return;
+  if (typeof window === "undefined") return;
 
   const w = globalThis as unknown as {
-    ethereum?: unknown | undefined;
+    ethereum?: unknown;
     __6529_safeEthereumProxyInstalled?: boolean | undefined;
   };
 
-  if (w.__6529_safeEthereumProxyInstalled) return;
+  if (w.__6529_safeEthereumProxyInstalled === true) return;
 
   const ethereum = w.ethereum;
   if (
-    !ethereum ||
+    ethereum === undefined ||
+    ethereum === null ||
     (typeof ethereum !== "object" && typeof ethereum !== "function")
   ) {
     w.__6529_safeEthereumProxyInstalled = true;
@@ -65,12 +125,17 @@ function installSafeEthereumProxy(): void {
 
   try {
     let hasLoggedProxyGetError = false;
-    const proxy = new Proxy(ethereum, {
-      get(target, prop) {
+    const ethereumTarget = ethereum;
+    const proxy = new Proxy(ethereumTarget, {
+      get(target, prop): unknown {
         try {
-          const value = Reflect.get(target, prop);
+          const value: unknown = Reflect.get(target, prop, target);
           if (typeof value === "function") {
-            return value.bind(target);
+            const method = value as (
+              this: unknown,
+              ...args: unknown[]
+            ) => unknown;
+            return method.bind(target);
           }
           return value;
         } catch (error) {
@@ -116,6 +181,140 @@ function canAssignProperty(descriptor: PropertyDescriptor): boolean {
   return descriptor.writable !== false;
 }
 
+function assertAppKitAdapterManager(value: unknown): AppKitAdapterManager {
+  if (!isAppKitAdapterManager(value)) {
+    throw new AppKitValidationError("Internal API failed");
+  }
+
+  return value;
+}
+
+function isAppKitAdapterManager(value: unknown): value is AppKitAdapterManager {
+  if (
+    value === null ||
+    (typeof value !== "object" && typeof value !== "function")
+  ) {
+    return false;
+  }
+
+  const candidate = value as Partial<
+    Record<keyof AppKitAdapterManagerPublicShape, unknown>
+  >;
+
+  return (
+    typeof candidate.cleanup === "function" &&
+    typeof candidate.createAdapterWithCache === "function" &&
+    typeof candidate.shouldRecreateAdapter === "function"
+  );
+}
+
+function initializeAdapterWhenNeeded({
+  currentAdapter,
+  isInitializingRef,
+  setupAppKitAdapter,
+}: InitializeAdapterInput): Promise<void> {
+  if (currentAdapter !== null || isInitializingRef.current) {
+    return Promise.resolve();
+  }
+
+  installSafeEthereumProxy();
+  return loadSeedWallets().then((seedWallets) =>
+    setupAppKitAdapter([], seedWallets)
+  );
+}
+
+function markAdapterReadyForLaunchTiming(
+  currentAdapter: WagmiAdapter | null
+): void {
+  if (currentAdapter === null) {
+    return;
+  }
+
+  markMobileLaunchStep("wagmi_children_unblocked");
+}
+
+function injectAppWalletConnectors({
+  currentAdapter,
+  appWallets,
+  appWalletPasswordModal,
+  processedWallets,
+  setToast,
+}: InjectAppWalletConnectorsInput): void {
+  if (currentAdapter === null) {
+    return;
+  }
+
+  // Check if wallets have actually changed to prevent unnecessary re-injection
+  const currentAddresses = new Set(appWallets.map((w) => w.address));
+  const addressesEqual =
+    processedWallets.current.size === currentAddresses.size &&
+    Array.from(processedWallets.current).every((addr) =>
+      currentAddresses.has(addr)
+    );
+
+  if (addressesEqual) {
+    return;
+  }
+
+  try {
+    // Create connectors for current wallets
+    const connectors = appWallets.flatMap((wallet) => {
+      try {
+        validateWalletSafely(wallet);
+        const connector = createAppWalletConnector(
+          Array.from(currentAdapter.wagmiConfig.chains),
+          { appWallet: wallet },
+          () =>
+            appWalletPasswordModal.requestPassword(
+              wallet.address,
+              wallet.address_hashed
+            )
+        );
+        const setupConnector =
+          currentAdapter.wagmiConfig._internal.connectors.setup(connector);
+        return [setupConnector];
+      } catch (error) {
+        logErrorSecurely(
+          "[WagmiSetup] Skipping invalid app-wallet connector",
+          error
+        );
+        return [];
+      }
+    });
+
+    // Get existing non-app-wallet connectors
+    const existingConnectors = currentAdapter.wagmiConfig.connectors.filter(
+      (c) => c.id !== APP_WALLET_CONNECTOR_TYPE
+    );
+
+    // Update connector state with fail-fast approach
+    currentAdapter.wagmiConfig._internal.connectors.setState([
+      ...connectors,
+      ...existingConnectors,
+    ]);
+
+    // Update processed wallets tracking
+    processedWallets.current = currentAddresses;
+  } catch (error) {
+    logErrorSecurely("[WagmiSetup] Connector injection failed", error);
+    const userMessage = sanitizeErrorForUser(error);
+    setToast({
+      message: userMessage,
+      type: "error",
+    });
+    // Don't throw here - let the component continue but notify the user
+  }
+}
+
+async function loadSeedWallets(): Promise<ISeedWallet[]> {
+  if (!isElectron()) {
+    return [];
+  }
+
+  const response = await getSeedWallets();
+  return Array.isArray(response.data) ? response.data : [];
+}
+
 export default function WagmiSetup({
   children,
 }: {
@@ -130,27 +329,74 @@ export default function WagmiSetup({
   const [currentAdapter, setCurrentAdapter] = useState<WagmiAdapter | null>(
     null
   );
-  const [isMounted, setIsMounted] = useState(false);
-  const processedWallets = useRef<Set<string>>(new Set());
-  const isCapacitor = false;
+  const [appKitBootstrapStatus, setAppKitBootstrapStatus] =
+    useState<AppKitBootstrapStatus>("initializing");
 
+  // Track processed wallets by address for efficient comparison
+  const processedWallets = useRef<Set<string>>(new Set());
+  const isInitializingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const appKitReadyPromiseRef = useRef<Promise<void> | null>(null);
+
+  // Memoize platform detection to avoid repeated calls
+  const isCapacitor = useMemo(() => {
+    const isNative = Capacitor.isNativePlatform();
+    markMobileLaunchStep("wagmi_capacitor_detected");
+    return isNative;
+  }, []);
+
+  // Use the same adapter manager for both mobile and web
+  // AppKit will automatically handle the appropriate connectors
   const adapterManager = useMemo(
     () => new AppKitAdapterManager(appWalletPasswordModal.requestPassword),
     [appWalletPasswordModal.requestPassword]
   );
 
   useEffect(() => {
-    setIsMounted(true);
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  const [isInitializing, setIsInitializing] = useState(false);
+  const waitForAppKitReady = useCallback(async () => {
+    const readyPromise = appKitReadyPromiseRef.current;
+    if (!readyPromise) {
+      return;
+    }
 
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<never>((_resolve, reject) => {
+      timeoutHandle = setTimeout(() => {
+        reject(
+          new Error(
+            "Timed out waiting for wallet connection services to become ready"
+          )
+        );
+      }, APPKIT_READY_WAIT_TIMEOUT_MS);
+    });
+
+    try {
+      await Promise.race([readyPromise, timeoutPromise]);
+    } finally {
+      clearTimeout(timeoutHandle);
+    }
+  }, []);
+
+  const appKitBootstrapValue = useMemo(
+    (): AppKitBootstrapContextValue => ({
+      status: appKitBootstrapStatus,
+      isReady: appKitBootstrapStatus === "ready",
+      isWaiting: appKitBootstrapStatus === "initializing",
+      waitForReady: waitForAppKitReady,
+    }),
+    [appKitBootstrapStatus, waitForAppKitReady]
+  );
+
+  // Create adapter with essential configuration only
   const initializeAppKitWithWallets = useCallback(
-    (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
-      if (!adapterManager) {
-        throw new AppKitValidationError("Internal API failed");
-      }
-
+    (wallets: AppWallet[], seedWallets: ISeedWallet[] = []) => {
       const chains: Chain[] = [mainnet];
       if (enableTestnet) {
         chains.push(sepolia);
@@ -159,7 +405,7 @@ export default function WagmiSetup({
       const config: AppKitInitializationConfig = {
         wallets,
         seedWallets,
-        adapterManager: adapterManager as AppKitAdapterManager,
+        adapterManager: assertAppKitAdapterManager(adapterManager),
         isCapacitor,
         chains,
       };
@@ -169,113 +415,108 @@ export default function WagmiSetup({
     [adapterManager, isCapacitor, enableTestnet]
   );
 
+  // Create the wagmi adapter fail-fast, then let AppKit finish readiness work
+  // without blocking the app shell.
   const setupAppKitAdapter = useCallback(
-    async (wallets: AppWallet[], seedWallets: ISeedWallet[]) => {
-      if (isInitializing) {
+    async (wallets: AppWallet[], seedWallets: ISeedWallet[] = []) => {
+      if (isInitializingRef.current) {
         throw new AppKitValidationError("Internal API failed");
       }
 
-      setIsInitializing(true);
+      isInitializingRef.current = true;
+      setAppKitBootstrapStatus("initializing");
+      appKitReadyPromiseRef.current = null;
 
       try {
-        const result = initializeAppKitWithWallets(wallets, seedWallets);
-        await (result.ready ?? Promise.resolve());
+        markMobileLaunchStep("wagmi_init_start");
+        const result = await measureMobileLaunchAsync("wagmi_appkit_init", () =>
+          initializeAppKitWithWallets(wallets, seedWallets)
+        );
+        markMobileLaunchStep("wagmi_adapter_created");
+
+        const readyPromise = measureMobileLaunchAsync(
+          "wagmi_adapter_ready",
+          async () => {
+            await (result.ready ?? Promise.resolve());
+          }
+        )
+          .then(() => {
+            markMobileLaunchStep("wagmi_ready");
+            if (isMountedRef.current) {
+              setAppKitBootstrapStatus("ready");
+            }
+            return undefined;
+          })
+          .catch((error) => {
+            if (isMountedRef.current) {
+              setAppKitBootstrapStatus("error");
+              setToast({
+                message: sanitizeErrorForUser(error),
+                type: "error",
+              });
+            }
+            logErrorSecurely(
+              "[WagmiSetup] AppKit ready failed after adapter mount",
+              error
+            );
+            throw error;
+          });
+
+        appKitReadyPromiseRef.current = readyPromise;
+        // Keep the stored promise rejectable for connect-intent callers while
+        // preventing background readiness work from surfacing an unhandled rejection.
+        void readyPromise.catch(() => undefined);
         setCurrentAdapter(result.adapter);
       } catch (error) {
+        if (isMountedRef.current) {
+          setAppKitBootstrapStatus("error");
+        }
         logErrorSecurely("[WagmiSetup] AppKit initialization failed", error);
         const userMessage = sanitizeErrorForUser(error);
         setToast({
           message: userMessage,
           type: "error",
         });
-        throw error;
+        throw error; // Adapter creation still fails fast because wagmi hooks need a provider.
       } finally {
-        setIsInitializing(false);
+        isInitializingRef.current = false;
       }
     },
-    [isInitializing, initializeAppKitWithWallets, setToast]
+    [initializeAppKitWithWallets, setToast]
   );
 
+  // Initialize adapter eagerly on mount with empty wallets
   useEffect(() => {
-    if (isMounted && !currentAdapter && !isInitializing) {
-      installSafeEthereumProxy();
-      (async () => {
-        const response = isElectron()
-          ? await getSeedWallets()
-          : { data: [] as ISeedWallet[] };
-        const seedWallets = Array.isArray(response.data) ? response.data : [];
-        setupAppKitAdapter([], seedWallets).catch(() => undefined);
-      })();
-    }
-  }, [isMounted, currentAdapter, isInitializing]);
+    void initializeAdapterWhenNeeded({
+      currentAdapter,
+      isInitializingRef,
+      setupAppKitAdapter,
+    }).catch(() => undefined);
+  }, [currentAdapter, setupAppKitAdapter]);
 
   useEffect(() => {
-    if (!currentAdapter) return;
+    markAdapterReadyForLaunchTiming(currentAdapter);
+  }, [currentAdapter]);
 
-    const currentAddresses = new Set(appWallets.map((w) => w.address));
-    const addressesEqual =
-      processedWallets.current.size === currentAddresses.size &&
-      Array.from(processedWallets.current).every((addr) =>
-        currentAddresses.has(addr)
-      );
-
-    if (addressesEqual) return;
-
-    try {
-      const connectors = appWallets
-        .flatMap((wallet) => {
-          try {
-            validateWalletSafely(wallet);
-            const connector = createAppWalletConnector(
-              Array.from(currentAdapter.wagmiConfig.chains),
-              { appWallet: wallet },
-              () =>
-                appWalletPasswordModal.requestPassword(
-                  wallet.address,
-                  wallet.address_hashed
-                )
-            );
-            const setupConnector =
-              currentAdapter.wagmiConfig._internal.connectors.setup(connector);
-            return setupConnector ? [setupConnector] : [];
-          } catch (error) {
-            logErrorSecurely(
-              `[WagmiSetup] Skipping invalid app-wallet connector ${wallet.address}`,
-              error
-            );
-            return [];
-          }
-        })
-        .filter((connector) => connector !== null);
-
-      const existingConnectors = currentAdapter.wagmiConfig.connectors.filter(
-        (c) => c.id !== APP_WALLET_CONNECTOR_TYPE
-      );
-
-      currentAdapter.wagmiConfig._internal.connectors.setState([
-        ...connectors,
-        ...existingConnectors,
-      ]);
-
-      processedWallets.current = currentAddresses;
-    } catch (error) {
-      logErrorSecurely("[WagmiSetup] Connector injection failed", error);
-      const userMessage = sanitizeErrorForUser(error);
-      setToast({
-        message: userMessage,
-        type: "error",
-      });
-    }
+  // Inject wallet connectors dynamically using hooks (simplified approach)
+  useEffect(() => {
+    injectAppWalletConnectors({
+      currentAdapter,
+      appWallets,
+      appWalletPasswordModal,
+      processedWallets,
+      setToast,
+    });
   }, [currentAdapter, appWallets, appWalletPasswordModal, setToast]);
 
   useEffect(() => {
-    const updateWagmiConfig = async () => {
-      if (!currentAdapter) return;
-      if (!isElectron()) return;
+    const updateSeedWalletConnectors = async () => {
+      if (currentAdapter === null || !isElectron()) {
+        return;
+      }
 
-      const response = await getSeedWallets();
-      const newSeedWallets = Array.isArray(response.data) ? response.data : [];
-      const newSeedConnectors = newSeedWallets.map((wallet) => {
+      const seedWallets = await loadSeedWallets();
+      const seedConnectors = seedWallets.map((wallet) => {
         const connector = seedWalletConnector({
           address: wallet.address,
           name: wallet.name,
@@ -284,30 +525,33 @@ export default function WagmiSetup({
       });
       const existingNonSeedConnectors =
         currentAdapter.wagmiConfig.connectors.filter(
-          (c) => c.type !== SEED_WALLET_CONNECTOR_TYPE
+          (connector) => connector.type !== SEED_WALLET_CONNECTOR_TYPE
         );
 
       currentAdapter.wagmiConfig._internal.connectors.setState([
         ...existingNonSeedConnectors,
-        ...newSeedConnectors,
+        ...seedConnectors,
       ]);
     };
 
-    window.api?.onSeedWalletsChange(updateWagmiConfig);
+    window.api?.onSeedWalletsChange(updateSeedWalletConnectors);
 
     return () => {
-      window.api?.offSeedWalletsChange(updateWagmiConfig);
+      window.api?.offSeedWalletsChange(updateSeedWalletConnectors);
     };
   }, [currentAdapter]);
 
-  if (!isMounted || !currentAdapter) {
+  // Show loading state until the wagmi adapter exists.
+  if (currentAdapter === null) {
     return null;
   }
 
   return (
-    <WagmiProvider config={currentAdapter.wagmiConfig}>
-      {children}
-      {appWalletPasswordModal.modal}
-    </WagmiProvider>
+    <AppKitBootstrapContext.Provider value={appKitBootstrapValue}>
+      <WagmiProvider config={currentAdapter.wagmiConfig}>
+        {children}
+        {appWalletPasswordModal.modal}
+      </WagmiProvider>
+    </AppKitBootstrapContext.Provider>
   );
 }

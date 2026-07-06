@@ -23,9 +23,16 @@ jest.mock("@lexical/react/LexicalComposerContext", () => ({
 }));
 jest.mock("@emoji-mart/react", () => ({
   __esModule: true,
-  default: ({ onEmojiSelect }: { onEmojiSelect: (emoji: any) => void }) => (
+  default: ({
+    onEmojiSelect,
+    autoFocus,
+  }: {
+    onEmojiSelect: (emoji: any) => void;
+    autoFocus?: boolean;
+  }) => (
     <button
       data-testid="picker"
+      data-auto-focus={String(autoFocus)}
       onClick={() => onEmojiSelect({ native: "😊", id: "smile" })}
     >
       Pick Emoji
@@ -69,11 +76,15 @@ describe("CreateDropEmojiPicker", () => {
     // Emoji context defaults (unused here)
     mockUseEmoji.mockReturnValue({
       emojiMap: [],
+      emojiData: {},
       categories: [],
       categoryIcons: {},
       loading: false,
       findNativeEmoji: jest.fn(),
       findCustomEmoji: jest.fn(),
+      loadCustomEmojis: jest.fn(() => Promise.resolve([])),
+      loadNativeEmojis: jest.fn(() => Promise.resolve({})),
+      loadEmojiData: jest.fn(() => Promise.resolve()),
     });
     // Default to desktop
     mockUseIsMobile.mockReturnValue(false);
@@ -104,6 +115,9 @@ describe("CreateDropEmojiPicker", () => {
     fireEvent.click(toggleButton);
     const picker = await screen.findByTestId("picker");
     expect(picker).toBeInTheDocument();
+
+    // Search input should be set to auto-focus
+    expect(picker).toHaveAttribute("data-auto-focus", "true");
 
     // The portal wrapper should have updated styles
     const wrapper = picker.parentElement!;
@@ -148,6 +162,33 @@ describe("CreateDropEmojiPicker", () => {
     expect(screen.queryByTestId("picker")).toBeNull();
   });
 
+  it("shows an unavailable status when native emoji data cannot load", async () => {
+    mockUseEmoji.mockReturnValue({
+      emojiMap: [],
+      emojiData: null,
+      categories: [],
+      categoryIcons: {},
+      loading: false,
+      findNativeEmoji: jest.fn(),
+      findCustomEmoji: jest.fn(),
+      loadCustomEmojis: jest.fn(() => Promise.resolve([])),
+      loadNativeEmojis: jest.fn(() => Promise.resolve(null)),
+      loadEmojiData: jest.fn(() => Promise.resolve()),
+    });
+
+    render(<CreateDropEmojiPicker />);
+    const toggleButton = screen.getByRole("button", { hidden: true });
+
+    fireEvent.click(toggleButton);
+
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent(
+        "Emoji picker is unavailable."
+      )
+    );
+    expect(screen.queryByTestId("picker")).toBeNull();
+  });
+
   it("closes an open picker when disabled and keeps it closed when re-enabled", async () => {
     const { rerender } = render(<CreateDropEmojiPicker />);
     const toggleButton = screen.getByRole("button", { hidden: true });
@@ -181,7 +222,8 @@ describe("CreateDropEmojiPicker", () => {
     expect(mobileDialog).toBeInTheDocument();
 
     // Emoji pick action
-    const picker = screen.getByTestId("picker");
+    const picker = await screen.findByTestId("picker");
+    expect(picker).toHaveAttribute("data-auto-focus", "true");
     fireEvent.click(picker);
     expect(fakeEditor.update).toHaveBeenCalled();
     await waitFor(() =>

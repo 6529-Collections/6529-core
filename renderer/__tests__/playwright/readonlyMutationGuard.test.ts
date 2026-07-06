@@ -122,10 +122,58 @@ describe("Playwright read-only mutation guard", () => {
     });
   });
 
+  it("allows first-party read-only alchemy proxy POST lookups", () => {
+    for (const url of [
+      "https://api.6529.io/alchemy-proxy/contracts",
+      "https://api.6529.io/alchemy-proxy/token-metadata",
+      "https://api.staging.6529.io/alchemy-proxy/contracts",
+      "https://api.staging.6529.io/alchemy-proxy/token-metadata",
+    ]) {
+      expect(
+        decideReadonlyRequest({
+          baseURL: "https://staging.6529.io",
+          method: "POST",
+          readonly: true,
+          url,
+        })
+      ).toMatchObject({
+        action: "allow",
+        reason: "first-party-readonly-api-proxy",
+      });
+    }
+
+    // Same read-proxy path on an unrelated host stays blocked.
+    expect(
+      decideReadonlyRequest({
+        baseURL: "https://staging.6529.io",
+        method: "POST",
+        readonly: true,
+        url: "https://example.com/alchemy-proxy/contracts",
+      })
+    ).toMatchObject({
+      action: "block",
+      reason: "non-allowlisted-mutation",
+    });
+
+    // Other POSTs on the first-party API host remain blocked.
+    expect(
+      decideReadonlyRequest({
+        baseURL: "https://staging.6529.io",
+        method: "POST",
+        readonly: true,
+        url: "https://api.staging.6529.io/drops",
+      })
+    ).toMatchObject({
+      action: "block",
+    });
+  });
+
   it("allows same-origin read-only route handler POST lookups", () => {
     for (const url of [
       "https://6529.io/api/open-graph",
       "https://6529.io/api/twitter/preview",
+      "https://6529.io/api/alchemy/contracts",
+      "https://6529.io/api/alchemy/token-metadata",
     ]) {
       expect(
         decideReadonlyRequest({
@@ -216,6 +264,18 @@ describe("Playwright read-only mutation guard", () => {
         method: "POST",
         readonly: true,
         url: "https://www.google.com/g/collect?v=2",
+      })
+    ).toMatchObject({
+      action: "abort",
+      reason: "ignored-external-sdk-endpoint",
+    });
+
+    expect(
+      decideReadonlyRequest({
+        baseURL: "https://staging.6529.io",
+        method: "POST",
+        readonly: true,
+        url: "https://region1.google-analytics.com/g/collect?v=2",
       })
     ).toMatchObject({
       action: "abort",

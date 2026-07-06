@@ -1,4 +1,4 @@
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 
 import {
   getAppMetadata,
@@ -57,7 +57,7 @@ export async function generateMetadata({
 
   return getAppMetadata(
     getLargeSocialCardMetadata({
-      title: "The Memes",
+      title: t(locale, "theMemes.documentTitle"),
       ogImage: getCollectionSocialCardImagePath("the-memes"),
       ogImageAlt: "The Memes collection social card",
       description: t(locale, "theMemes.description.collections"),

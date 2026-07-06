@@ -1,5 +1,8 @@
 "use client";
 
+import { usePathname } from "next/navigation";
+import { useEffect, useSyncExternalStore } from "react";
+import { ErrorBoundary } from "react-error-boundary";
 import FooterWrapper from "@/components/footer/FooterWrapper";
 import MobileLayout from "@/components/layout/MobileLayout";
 import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
@@ -10,74 +13,87 @@ import { useGlobalRefresh } from "@/contexts/RefreshContext";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import TitleBarWrapper from "@/TitleBarWrapper";
-import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
-import { useEffect, useState, type ComponentType } from "react";
-import { ErrorBoundary } from "react-error-boundary";
+import {
+  markMobileLaunchStep,
+  scheduleMobileLaunchFlush,
+} from "@/utils/monitoring/mobileLaunchTiming";
+import type { ComponentType, ReactNode } from "react";
+
+const getTouchTabletViewportSnapshot = (): boolean => {
+  if (typeof window === "undefined") {
+    return false;
+  }
+
+  return window.innerWidth < SIDEBAR_MOBILE_BREAKPOINT;
+};
+
+const getTouchTabletViewportServerSnapshot = (): boolean => false;
+
+const subscribeTouchTabletViewport = (
+  onStoreChange: () => void
+): (() => void) => {
+  if (typeof window === "undefined") {
+    return () => undefined;
+  }
+
+  const mediaQuery = window.matchMedia(
+    `(max-width: ${SIDEBAR_MOBILE_BREAKPOINT - 0.02}px)`
+  );
+
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => {
+    mediaQuery.removeEventListener("change", onStoreChange);
+  };
+};
 
 export default function LayoutWrapper({
   children,
 }: {
   readonly children: ReactNode;
 }) {
-  const { isApp, hasTouchScreen } = useDeviceInfo();
+  const { isApp, hasTouchScreen, isMobileDevice } = useDeviceInfo();
   const { refreshKey } = useGlobalRefresh();
   const isSmallScreen = useIsMobileScreen();
-  const [isTouchTabletViewport, setIsTouchTabletViewport] = useState(() => {
-    if (globalThis.window === undefined) {
-      return false;
-    }
-    return globalThis.window.innerWidth < SIDEBAR_MOBILE_BREAKPOINT;
-  });
+  const isTouchTabletViewport = useSyncExternalStore(
+    subscribeTouchTabletViewport,
+    getTouchTabletViewportSnapshot,
+    getTouchTabletViewportServerSnapshot
+  );
   const pathname = usePathname();
 
+  const isStandaloneRoute =
+    pathname.startsWith("/access") ||
+    pathname.startsWith("/restricted") ||
+    pathname.startsWith("/browser-connector");
+
   useEffect(() => {
-    if (!hasTouchScreen) {
-      setIsTouchTabletViewport(false);
-      return;
-    }
-
-    const browserWindow = globalThis.window;
-    if (browserWindow === undefined) {
-      setIsTouchTabletViewport(false);
-      return;
-    }
-
-    const mediaQuery = browserWindow.matchMedia(
-      `(max-width: ${SIDEBAR_MOBILE_BREAKPOINT - 0.02}px)`
-    );
-
-    setIsTouchTabletViewport(mediaQuery.matches);
-    const listener = (event: MediaQueryListEvent) => {
-      setIsTouchTabletViewport(event.matches);
+    const flushAfterPaint = () => {
+      markMobileLaunchStep("first_useful_app_shell");
+      scheduleMobileLaunchFlush("shell_paint", 5000);
     };
 
-    if (typeof mediaQuery.addEventListener === "function") {
-      mediaQuery.addEventListener("change", listener);
+    if (typeof globalThis.requestAnimationFrame === "function") {
+      const frameId = globalThis.requestAnimationFrame(flushAfterPaint);
       return () => {
-        mediaQuery.removeEventListener?.("change", listener);
+        globalThis.cancelAnimationFrame(frameId);
       };
     }
 
-    const previousOnChange = mediaQuery.onchange;
-    mediaQuery.onchange = listener;
+    const timeoutId = globalThis.setTimeout(flushAfterPaint, 0);
     return () => {
-      if (mediaQuery.onchange === listener) {
-        mediaQuery.onchange = previousOnChange ?? null;
-      }
+      globalThis.clearTimeout(timeoutId);
     };
-  }, [hasTouchScreen]);
-
-  const isStandaloneRoute =
-    pathname?.startsWith("/access") ||
-    pathname?.startsWith("/restricted") ||
-    pathname?.startsWith("/browser-connector");
+  }, [pathname]);
 
   let LayoutComponent: ComponentType<{ readonly children: ReactNode }> =
     WebLayout;
 
+  // hasTouchScreen covers touch-first hardware; isMobileDevice (UA-based)
+  // keeps phones on the small layout even when a mouse or trackpad is
+  // attached. Hybrid touch laptops match neither, so they stay on WebLayout.
   const isSmallLayout =
-    hasTouchScreen && (isSmallScreen || isTouchTabletViewport);
+    (hasTouchScreen || isMobileDevice) &&
+    (isSmallScreen || isTouchTabletViewport);
 
   if (isApp) {
     LayoutComponent = MobileLayout;

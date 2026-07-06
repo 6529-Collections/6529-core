@@ -12,7 +12,7 @@ import React, {
   useState,
 } from "react";
 
-interface WaveEligibility {
+export interface WaveEligibility {
   authenticated_user_eligible_to_chat: boolean;
   authenticated_user_chat_restriction?: ChatRestriction | null;
   authenticated_user_eligible_to_vote: boolean;

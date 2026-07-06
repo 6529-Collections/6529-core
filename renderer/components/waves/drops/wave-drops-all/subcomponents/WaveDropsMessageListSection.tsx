@@ -4,6 +4,7 @@ import { WaveDropsScrollControls } from "@/components/waves/drops/WaveDropsScrol
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import type { useVirtualizedWaveDrops } from "@/hooks/useVirtualizedWaveDrops";
+import type { BoostedDropsDisplayPreference } from "@/types/boosted-drops.types";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import type { RefObject, Ref } from "react";
 
@@ -18,6 +19,7 @@ interface WaveDropsMessageListSectionProps {
   readonly scrollContainerCallbackRef?: Ref<HTMLDivElement> | undefined;
   readonly bottomAnchorRef: RefObject<HTMLDivElement | null>;
   readonly bottomAnchorCallbackRef?: Ref<HTMLDivElement> | undefined;
+  readonly paginationThreshold: number;
   readonly onTopIntersection: () => void;
   readonly onReply: ({
     drop,
@@ -40,6 +42,9 @@ interface WaveDropsMessageListSectionProps {
   readonly unreadDividerSerialNo?: number | null | undefined;
   readonly unreadCount?: number | undefined;
   readonly boostedDrops?: ApiDrop[] | undefined;
+  readonly boostedDropsDisplayPreference?:
+    | BoostedDropsDisplayPreference
+    | undefined;
   readonly onBoostedDropClick?: ((serialNo: number) => void) | undefined;
   readonly onScrollToUnread?: ((serialNo: number) => void) | undefined;
   readonly onDismissUnread: () => void;
@@ -51,8 +56,6 @@ interface WaveDropsMessageListSectionProps {
   readonly isVotingControlsLocked?: boolean | undefined;
 }
 
-const MIN_DROPS_FOR_PAGINATION = 25;
-
 export const WaveDropsMessageListSection: React.FC<
   WaveDropsMessageListSectionProps
 > = ({
@@ -62,6 +65,7 @@ export const WaveDropsMessageListSection: React.FC<
   scrollContainerCallbackRef,
   bottomAnchorRef,
   bottomAnchorCallbackRef,
+  paginationThreshold,
   onTopIntersection,
   onReply,
   queueSerialTarget,
@@ -78,6 +82,7 @@ export const WaveDropsMessageListSection: React.FC<
   unreadDividerSerialNo,
   unreadCount,
   boostedDrops,
+  boostedDropsDisplayPreference,
   onBoostedDropClick,
   onScrollToUnread,
   onDismissUnread,
@@ -90,7 +95,7 @@ export const WaveDropsMessageListSection: React.FC<
 }) => {
   const hasNextPage =
     !!waveMessages?.hasNextPage &&
-    waveMessages.drops.length >= MIN_DROPS_FOR_PAGINATION;
+    waveMessages.drops.length >= paginationThreshold;
 
   const containerRef = scrollContainerCallbackRef ?? scrollContainerRef;
   const anchorRef = bottomAnchorCallbackRef ?? bottomAnchorRef;
@@ -120,6 +125,7 @@ export const WaveDropsMessageListSection: React.FC<
           onDropContentClick={onDropContentClick}
           unreadDividerSerialNo={unreadDividerSerialNo}
           boostedDrops={boostedDrops}
+          boostedDropsDisplayPreference={boostedDropsDisplayPreference}
           onBoostedDropClick={onBoostedDropClick}
           autoCollapseSerials={autoCollapseSerials}
           suspendLightDropHydration={suspendLightDropHydration}

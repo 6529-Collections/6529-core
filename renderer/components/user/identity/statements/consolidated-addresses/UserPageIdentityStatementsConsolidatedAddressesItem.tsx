@@ -16,6 +16,7 @@ import { openInExternalBrowser } from "@/helpers";
 import { getTransactionLink } from "@/helpers/Helpers";
 import { getToastErrorDetails } from "@/helpers/toast.helpers";
 import { TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
+import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import { ChevronDownIcon } from "@heroicons/react/24/outline";
 import { useEffect, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
@@ -111,10 +112,7 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
     };
   }, []);
 
-  const [isTouchScreen, setIsTouchScreen] = useState(false);
-  useEffect(() => {
-    setIsTouchScreen(window.matchMedia("(pointer: coarse)").matches);
-  }, []);
+  const isTouchScreen = useIsTouchDevice();
 
   const [assigningPrimary, setAssigningPrimary] = useState(false);
   const [statusMessage, setStatusMessage] = useState<any>();
@@ -126,8 +124,11 @@ export default function UserPageIdentityStatementsConsolidatedAddressesItem({
     hash: writeDelegation.data,
   });
 
-  function getError(e: any) {
-    return e.message.split("Request Arguments")[0];
+  function getError(e: unknown) {
+    const record = e as { message?: unknown } | null;
+    const message =
+      typeof record?.message === "string" ? record.message : "";
+    return message.split("Request Arguments")[0];
   }
 
   useEffect(() => {

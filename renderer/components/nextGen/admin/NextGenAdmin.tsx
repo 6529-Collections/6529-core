@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import styles from "./NextGenAdmin.module.scss";
+import styles from "./NextGenAdmin.module.css";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button, Col, Container, Row } from "./NextGenAdminShared";
 import {
@@ -94,7 +94,8 @@ export function printAdminErrors(errors: string[]) {
         {errors.map((error) => (
           <li
             key={`error-${error.replaceAll("", " ")}`}
-            className="tw-text-error">
+            className="tw-text-error"
+          >
             {error}
           </li>
         ))}
@@ -223,31 +224,40 @@ export default function NextGenAdmin() {
 
   function printLeftMenu() {
     return (
-      <Container className="no-padding">
-        <Row className="pt-2 pb-2">
+      <Container className="!tw-p-0">
+        <Row className="tw-pb-2 tw-pt-2">
           <Col
             className={
-              focus === Focus.GLOBAL ? styles["tabLeftActive"] : styles["tabLeft"]
+              focus === Focus.GLOBAL
+                ? styles["tabLeftActive"]
+                : styles["tabLeft"]
             }
-            onClick={() => setFocus(Focus.GLOBAL)}>
+            onClick={() => setFocus(Focus.GLOBAL)}
+          >
             <b>Global</b>
           </Col>
         </Row>
-        <Row className="pt-2 pb-2">
+        <Row className="tw-pb-2 tw-pt-2">
           <Col
             className={
-              focus === Focus.COLLECTION ? styles["tabLeftActive"] : styles["tabLeft"]
+              focus === Focus.COLLECTION
+                ? styles["tabLeftActive"]
+                : styles["tabLeft"]
             }
-            onClick={() => setFocus(Focus.COLLECTION)}>
+            onClick={() => setFocus(Focus.COLLECTION)}
+          >
             <b>Collection</b>
           </Col>
         </Row>
-        <Row className="pt-2 pb-2">
+        <Row className="tw-pb-2 tw-pt-2">
           <Col
             className={
-              focus === Focus.ARTIST ? styles["tabLeftActive"] : styles["tabLeft"]
+              focus === Focus.ARTIST
+                ? styles["tabLeftActive"]
+                : styles["tabLeft"]
             }
-            onClick={() => setFocus(Focus.ARTIST)}>
+            onClick={() => setFocus(Focus.ARTIST)}
+          >
             <b>Artist</b>
           </Col>
         </Row>
@@ -257,9 +267,9 @@ export default function NextGenAdmin() {
 
   function printAdminRestrictionMessage() {
     return (
-      <Container className="no-padding">
-        <Row className="pt-2">
-          <Col className="d-flex flex-column align-items-center gap-3">
+      <Container className="!tw-p-0">
+        <Row className="tw-pt-2">
+          <Col className="tw-flex tw-flex-col tw-items-center tw-gap-4">
             <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
               ONLY ADMIN WALLETS CAN USE THIS dAPP.
             </h4>
@@ -275,10 +285,11 @@ export default function NextGenAdmin() {
   function printCreateCollection() {
     return (
       (isGlobalAdmin() ||
-        (createCollectionFunctionAdmin.data as any) === true) && (
+        createCollectionFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.CREATE_COLLECTION)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.CREATE_COLLECTION)}
+        >
           Create Collection
         </Button>
       )
@@ -288,10 +299,11 @@ export default function NextGenAdmin() {
   function printAirdropTokens() {
     return (
       (isGlobalAdmin() ||
-        (airdropTokensFunctionAdmin.data as any) === true) && (
+        airdropTokensFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.AIRDROP_TOKENS)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.AIRDROP_TOKENS)}
+        >
           Airdrop Tokens
         </Button>
       )
@@ -301,10 +313,11 @@ export default function NextGenAdmin() {
   function printUpdateImagesAttributes() {
     return (
       (isGlobalAdmin() ||
-        (updateImagesAttributesFunctionAdmin.data as any) === true) && (
+        updateImagesAttributesFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.UPDATE_IMAGES_ATTRIBUTES)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.UPDATE_IMAGES_ATTRIBUTES)}
+        >
           Update Images and Attributes
         </Button>
       )
@@ -314,10 +327,11 @@ export default function NextGenAdmin() {
   function printSetFinalSupply() {
     return (
       (isGlobalAdmin() ||
-        (setFinalSupplyFunctionAdmin.data as any) === true) && (
+        setFinalSupplyFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.SET_FINAL_SUPPLY)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.SET_FINAL_SUPPLY)}
+        >
           Set Final Supply
         </Button>
       )
@@ -327,10 +341,11 @@ export default function NextGenAdmin() {
   function printInitBurn() {
     return (
       (isGlobalAdmin() ||
-        (initializeBurnFunctionAdmin.data as any) === true) && (
+        initializeBurnFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.INITIALIZE_BURN)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.INITIALIZE_BURN)}
+        >
           Initialize Burn
         </Button>
       )
@@ -340,12 +355,13 @@ export default function NextGenAdmin() {
   function printInitExternalBurnSwap() {
     return (
       (isGlobalAdmin() ||
-        (initializeExternalBurnSwapFunctionAdmin.data as any) === true) && (
+        initializeExternalBurnSwapFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
           onClick={() =>
             setGlobalFocus(GlobalFocus.INITIALIZE_EXTERNAL_BURN_SWAP)
-          }>
+          }
+        >
           Initialize External Burn/Swap
         </Button>
       )
@@ -355,10 +371,11 @@ export default function NextGenAdmin() {
   function printMintAuction() {
     return (
       (isGlobalAdmin() ||
-        (mintAndAuctionFunctionAdmin.data as any) === true) && (
+        mintAndAuctionFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.MINT_AND_AUCTION)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.MINT_AND_AUCTION)}
+        >
           Mint & Auction
         </Button>
       )
@@ -368,15 +385,15 @@ export default function NextGenAdmin() {
   function printAdminCollectionActions() {
     return (
       (isGlobalAdmin() ||
-        (createCollectionFunctionAdmin.data as any) === true ||
-        (airdropTokensFunctionAdmin.data as any) === true ||
-        (updateImagesAttributesFunctionAdmin.data as any) === true ||
-        (setFinalSupplyFunctionAdmin.data as any) === true ||
-        (initializeBurnFunctionAdmin.data as any) === true ||
-        (mintAndAuctionFunctionAdmin.data as any) === true ||
-        (initializeExternalBurnSwapFunctionAdmin.data as any) === true) && (
+        createCollectionFunctionAdmin.data === true ||
+        airdropTokensFunctionAdmin.data === true ||
+        updateImagesAttributesFunctionAdmin.data === true ||
+        setFinalSupplyFunctionAdmin.data === true ||
+        initializeBurnFunctionAdmin.data === true ||
+        mintAndAuctionFunctionAdmin.data === true ||
+        initializeExternalBurnSwapFunctionAdmin.data === true) && (
         <>
-          <Row className="pt-4">
+          <Row className="tw-pt-6">
             <Col xs={12}>
               <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                 COLLECTION ACTIONS
@@ -384,7 +401,8 @@ export default function NextGenAdmin() {
             </Col>
             <Col
               xs={12}
-              className="pt-2 d-flex flex-wrap align-items-center gap-3">
+              className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-2"
+            >
               {printCreateCollection()}
               {printAirdropTokens()}
               {printUpdateImagesAttributes()}
@@ -392,13 +410,14 @@ export default function NextGenAdmin() {
             </Col>
             <Col
               xs={12}
-              className="pt-3 d-flex flex-wrap align-items-center gap-3">
+              className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-4"
+            >
               {printInitBurn()}
               {printInitExternalBurnSwap()}
               {printMintAuction()}
             </Col>
           </Row>
-          <Row className="pt-3">
+          <Row className="tw-pt-4">
             <Col>
               {globalFocus === GlobalFocus.CREATE_COLLECTION && (
                 <NextGenAdminCreateCollection close={() => close()} />
@@ -430,12 +449,13 @@ export default function NextGenAdmin() {
 
   function printSetSplits() {
     return (
-      (isGlobalAdmin() || (setSplitsFunctionAdmin.data as any) === true) && (
+      (isGlobalAdmin() || setSplitsFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
           onClick={() =>
             setGlobalFocus(GlobalFocus.SET_PRIMARY_AND_SECONDARY_SPLITS)
-          }>
+          }
+        >
           Set Splits
         </Button>
       )
@@ -445,15 +465,15 @@ export default function NextGenAdmin() {
   function printProposePrimary() {
     return (
       (isGlobalAdmin() ||
-        (proposePrimaryAddressesAndPercentagesFunctionAdmin.data as any) ===
-          true) && (
+        proposePrimaryAddressesAndPercentagesFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
           onClick={() =>
             setGlobalFocus(
               GlobalFocus.PROPOSE_PRIMARY_ADDRESSES_AND_PERCENTAGES
             )
-          }>
+          }
+        >
           Propose Primary Addresses and Percentages
         </Button>
       )
@@ -463,15 +483,15 @@ export default function NextGenAdmin() {
   function printProposeSecondary() {
     return (
       (isGlobalAdmin() ||
-        (proposeSecondaryAddressesAndPercentagesFunctionAdmin.data as any) ===
-          true) && (
+        proposeSecondaryAddressesAndPercentagesFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
           onClick={() =>
             setGlobalFocus(
               GlobalFocus.PROPOSE_SECONDARY_ADDRESSES_AND_PERCENTAGES
             )
-          }>
+          }
+        >
           Propose Secondary Addresses and Percentages
         </Button>
       )
@@ -481,12 +501,13 @@ export default function NextGenAdmin() {
   function printAcceptAddressesAndPercentages() {
     return (
       (isGlobalAdmin() ||
-        (acceptAddressesAndPercentagesFunctionAdmin.data as any) === true) && (
+        acceptAddressesAndPercentagesFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
           onClick={() =>
             setGlobalFocus(GlobalFocus.ACCEPT_ADDRESSES_AND_PERCENTAGES)
-          }>
+          }
+        >
           Accept Addresses and Percentages
         </Button>
       )
@@ -495,10 +516,11 @@ export default function NextGenAdmin() {
 
   function printPayArtist() {
     return (
-      (isGlobalAdmin() || (payArtistFunctionAdmin.data as any) === true) && (
+      (isGlobalAdmin() || payArtistFunctionAdmin.data === true) && (
         <Button
-          className="seize-btn btn-white"
-          onClick={() => setGlobalFocus(GlobalFocus.PAY_ARTIST)}>
+          className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+          onClick={() => setGlobalFocus(GlobalFocus.PAY_ARTIST)}
+        >
           Pay Artist
         </Button>
       )
@@ -508,15 +530,13 @@ export default function NextGenAdmin() {
   function printPayActions() {
     return (
       (isGlobalAdmin() ||
-        (setSplitsFunctionAdmin.data as any) === true ||
-        (proposePrimaryAddressesAndPercentagesFunctionAdmin.data as any) ===
-          true ||
-        (proposeSecondaryAddressesAndPercentagesFunctionAdmin.data as any) ===
-          true ||
-        (acceptAddressesAndPercentagesFunctionAdmin.data as any) === true ||
-        (payArtistFunctionAdmin.data as any) === true) && (
+        setSplitsFunctionAdmin.data === true ||
+        proposePrimaryAddressesAndPercentagesFunctionAdmin.data === true ||
+        proposeSecondaryAddressesAndPercentagesFunctionAdmin.data === true ||
+        acceptAddressesAndPercentagesFunctionAdmin.data === true ||
+        payArtistFunctionAdmin.data === true) && (
         <>
-          <Row className="pt-4">
+          <Row className="tw-pt-6">
             <Col xs={12}>
               <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                 PAY
@@ -524,7 +544,8 @@ export default function NextGenAdmin() {
             </Col>
             <Col
               xs={12}
-              className="pt-3 d-flex flex-wrap align-items-center gap-3">
+              className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-4"
+            >
               {printSetSplits()}
               {printProposePrimary()}
               {printProposeSecondary()}
@@ -532,7 +553,7 @@ export default function NextGenAdmin() {
               {printPayArtist()}
             </Col>
           </Row>
-          <Row className="pt-3">
+          <Row className="tw-pt-4">
             <Col>
               {globalFocus === GlobalFocus.SET_PRIMARY_AND_SECONDARY_SPLITS && (
                 <NextGenAdminSetSplits close={() => close()} />
@@ -569,20 +590,18 @@ export default function NextGenAdmin() {
   function printGlobal() {
     if (
       !isGlobalAdmin() &&
-      (createCollectionFunctionAdmin.data as any) === false &&
-      (airdropTokensFunctionAdmin.data as any) === false &&
-      (setSplitsFunctionAdmin.data as any) === false &&
-      (updateImagesAttributesFunctionAdmin.data as any) === false &&
-      (setFinalSupplyFunctionAdmin.data as any) === false &&
-      (initializeBurnFunctionAdmin.data as any) === false &&
-      (proposePrimaryAddressesAndPercentagesFunctionAdmin.data as any) ===
-        false &&
-      (proposeSecondaryAddressesAndPercentagesFunctionAdmin.data as any) ===
-        false &&
-      (acceptAddressesAndPercentagesFunctionAdmin.data as any) === false &&
-      (payArtistFunctionAdmin.data as any) === false &&
-      (mintAndAuctionFunctionAdmin.data as any) === false &&
-      (initializeExternalBurnSwapFunctionAdmin.data as any) === false
+      createCollectionFunctionAdmin.data === false &&
+      airdropTokensFunctionAdmin.data === false &&
+      setSplitsFunctionAdmin.data === false &&
+      updateImagesAttributesFunctionAdmin.data === false &&
+      setFinalSupplyFunctionAdmin.data === false &&
+      initializeBurnFunctionAdmin.data === false &&
+      proposePrimaryAddressesAndPercentagesFunctionAdmin.data === false &&
+      proposeSecondaryAddressesAndPercentagesFunctionAdmin.data === false &&
+      acceptAddressesAndPercentagesFunctionAdmin.data === false &&
+      payArtistFunctionAdmin.data === false &&
+      mintAndAuctionFunctionAdmin.data === false &&
+      initializeExternalBurnSwapFunctionAdmin.data === false
     ) {
       return printAdminRestrictionMessage();
     }
@@ -593,7 +612,7 @@ export default function NextGenAdmin() {
         {printPayActions()}
         {isGlobalAdmin() && (
           <>
-            <Row className="pt-4">
+            <Row className="tw-pt-6">
               <Col xs={12}>
                 <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                   REGISTER / REVOKE ADMINS
@@ -601,31 +620,35 @@ export default function NextGenAdmin() {
               </Col>
               <Col
                 xs={12}
-                className="pt-2 d-flex flex-wrap align-items-center gap-3">
+                className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-2"
+              >
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setGlobalFocus(GlobalFocus.REGISTER_GLOBAL_ADMIN)
-                  }>
+                  }
+                >
                   Global Admins
                 </Button>
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setGlobalFocus(GlobalFocus.REGISTER_FUNCTION_ADMIN)
-                  }>
+                  }
+                >
                   Function Admins
                 </Button>
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setGlobalFocus(GlobalFocus.REGISTER_COLLECTION_ADMIN)
-                  }>
+                  }
+                >
                   Collection Admins
                 </Button>
               </Col>
             </Row>
-            <Row className="pt-3">
+            <Row className="tw-pt-4">
               <Col>
                 {globalFocus === GlobalFocus.REGISTER_GLOBAL_ADMIN && (
                   <NextGenAdminRegisterAdmin
@@ -650,9 +673,9 @@ export default function NextGenAdmin() {
           </>
         )}
         {(isGlobalAdmin() ||
-          (addRandomizerFunctionAdmin.data as any) === true) && (
+          addRandomizerFunctionAdmin.data === true) && (
           <>
-            <Row className="pt-4">
+            <Row className="tw-pt-6">
               <Col xs={12}>
                 <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                   CONTRACT ACTIONS
@@ -660,18 +683,20 @@ export default function NextGenAdmin() {
               </Col>
               <Col
                 xs={12}
-                className="pt-2 d-flex flex-wrap align-items-center gap-3">
+                className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-2"
+              >
                 {(isGlobalAdmin() ||
-                  (addRandomizerFunctionAdmin.data as any) === true) && (
+                  addRandomizerFunctionAdmin.data === true) && (
                   <Button
-                    className="seize-btn btn-white"
-                    onClick={() => setGlobalFocus(GlobalFocus.ADD_RANDOMIZER)}>
+                    className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+                    onClick={() => setGlobalFocus(GlobalFocus.ADD_RANDOMIZER)}
+                  >
                     Add Randomizer
                   </Button>
                 )}
               </Col>
             </Row>
-            <Row className="pt-3">
+            <Row className="tw-pt-4">
               <Col>
                 {globalFocus === GlobalFocus.ADD_RANDOMIZER && (
                   <NextGenAdminAddRandomizer close={() => close()} />
@@ -688,11 +713,11 @@ export default function NextGenAdmin() {
     return (
       (isGlobalAdmin() ||
         isWalletCollectionAdmin ||
-        (setDataFunctionAdmin.data as any) === true ||
-        (setCostsFunctionAdmin.data as any) === true ||
-        (setPhasesFunctionAdmin.data as any) === true) && (
+        setDataFunctionAdmin.data === true ||
+        setCostsFunctionAdmin.data === true ||
+        setPhasesFunctionAdmin.data === true) && (
         <>
-          <Row className="pt-4">
+          <Row className="tw-pt-6">
             <Col xs={12}>
               <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                 SET DATA
@@ -700,48 +725,53 @@ export default function NextGenAdmin() {
             </Col>
             <Col
               xs={12}
-              className="pt-2 d-flex flex-wrap align-items-center gap-3">
+              className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-2"
+            >
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (setDataFunctionAdmin.data as any) === true) && (
+                setDataFunctionAdmin.data === true) && (
                 <Button
-                  className="seize-btn btn-white"
-                  onClick={() => setCollectionFocus(CollectionFocus.SET_DATA)}>
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+                  onClick={() => setCollectionFocus(CollectionFocus.SET_DATA)}
+                >
                   Set Data
                 </Button>
               )}
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (setCostsFunctionAdmin.data as any) === true) && (
+                setCostsFunctionAdmin.data === true) && (
                 <Button
-                  className="seize-btn btn-white"
-                  onClick={() => setCollectionFocus(CollectionFocus.SET_COSTS)}>
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+                  onClick={() => setCollectionFocus(CollectionFocus.SET_COSTS)}
+                >
                   Set Costs
                 </Button>
               )}
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (setPhasesFunctionAdmin.data as any) === true) && (
+                setPhasesFunctionAdmin.data === true) && (
                 <>
                   <Button
-                    className="seize-btn btn-white"
+                    className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                     onClick={() =>
                       setCollectionFocus(CollectionFocus.UPLOAD_AL)
-                    }>
+                    }
+                  >
                     Upload Allowlist
                   </Button>
                   <Button
-                    className="seize-btn btn-white"
+                    className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                     onClick={() =>
                       setCollectionFocus(CollectionFocus.SET_PHASES)
-                    }>
+                    }
+                  >
                     Set Phases
                   </Button>
                 </>
               )}
             </Col>
           </Row>
-          <Row className="pt-3">
+          <Row className="tw-pt-4">
             <Col>
               {collectionFocus === CollectionFocus.SET_DATA && (
                 <NextGenAdminSetData close={() => close()} />
@@ -766,10 +796,10 @@ export default function NextGenAdmin() {
     return (
       (isGlobalAdmin() ||
         isWalletCollectionAdmin ||
-        (updateInfoFunctionAdmin.data as any) === true ||
-        (changeMetadataViewFunctionAdmin.data as any) === true) && (
+        updateInfoFunctionAdmin.data === true ||
+        changeMetadataViewFunctionAdmin.data === true) && (
         <>
-          <Row className="pt-4">
+          <Row className="tw-pt-6">
             <Col xs={12}>
               <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                 UPDATE COLLECTION
@@ -777,54 +807,59 @@ export default function NextGenAdmin() {
             </Col>
             <Col
               xs={12}
-              className="pt-2 d-flex flex-wrap align-items-center gap-3">
+              className="tw-flex tw-flex-wrap tw-items-center tw-gap-4 tw-pt-2"
+            >
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (updateInfoFunctionAdmin.data as any) === true) && (
+                updateInfoFunctionAdmin.data === true) && (
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setCollectionFocus(CollectionFocus.UPDATE_INFO)
-                  }>
+                  }
+                >
                   Update Info
                 </Button>
               )}
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (updateInfoFunctionAdmin.data as any) === true) && (
+                updateInfoFunctionAdmin.data === true) && (
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setCollectionFocus(CollectionFocus.UPDATE_BASE_URI)
-                  }>
+                  }
+                >
                   Update Base URI
                 </Button>
               )}
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (updateInfoFunctionAdmin.data as any) === true) && (
+                updateInfoFunctionAdmin.data === true) && (
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setCollectionFocus(CollectionFocus.UPDATE_SCRIPT_BY_INDEX)
-                  }>
+                  }
+                >
                   Update Script By Index
                 </Button>
               )}
               {(isGlobalAdmin() ||
                 isWalletCollectionAdmin ||
-                (changeMetadataViewFunctionAdmin.data as any) === true) && (
+                changeMetadataViewFunctionAdmin.data === true) && (
                 <Button
-                  className="seize-btn btn-white"
+                  className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
                   onClick={() =>
                     setCollectionFocus(CollectionFocus.CHANGE_METADATA_VIEW)
-                  }>
+                  }
+                >
                   Change Metadata View
                 </Button>
               )}
             </Col>
           </Row>
-          <Row className="pt-3">
+          <Row className="tw-pt-4">
             <Col>
               {collectionFocus === CollectionFocus.UPDATE_INFO && (
                 <NextGenAdminUpdateCollection
@@ -858,11 +893,11 @@ export default function NextGenAdmin() {
     if (
       !isGlobalAdmin() &&
       !isWalletCollectionAdmin &&
-      (setDataFunctionAdmin.data as any) === false &&
-      (setCostsFunctionAdmin.data as any) === false &&
-      (setPhasesFunctionAdmin.data as any) === false &&
-      (updateInfoFunctionAdmin.data as any) === false &&
-      (changeMetadataViewFunctionAdmin.data as any) === false
+      setDataFunctionAdmin.data === false &&
+      setCostsFunctionAdmin.data === false &&
+      setPhasesFunctionAdmin.data === false &&
+      updateInfoFunctionAdmin.data === false &&
+      changeMetadataViewFunctionAdmin.data === false
     ) {
       return printAdminRestrictionMessage();
     }
@@ -879,8 +914,8 @@ export default function NextGenAdmin() {
     if (!isArtist) {
       return (
         <Container>
-          <Row className="pt-2">
-            <Col className="d-flex flex-column align-items-center gap-3">
+          <Row className="tw-pt-2">
+            <Col className="tw-flex tw-flex-col tw-items-center tw-gap-4">
               <h4 className="tw-text-base tw-font-bold tw-text-white md:tw-text-lg">
                 ONLY COLLECTION ARTISTS CAN USE THIS SECTION.
               </h4>
@@ -898,38 +933,41 @@ export default function NextGenAdmin() {
             </h4>
           </Col>
         </Row>
-        <Row className="pt-2">
-          <Col className="d-flex align-items-center gap-3">
+        <Row className="tw-pt-2">
+          <Col className="tw-flex tw-items-center tw-gap-4">
             <Button
-              className="seize-btn btn-white"
-              onClick={() => setArtistFocus(ArtistFocus.SIGN_COLLECTION)}>
+              className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
+              onClick={() => setArtistFocus(ArtistFocus.SIGN_COLLECTION)}
+            >
               Sign Collection
             </Button>
           </Col>
         </Row>
-        <Row className="pt-3">
-          <Col className="d-flex align-items-center gap-3">
+        <Row className="tw-pt-4">
+          <Col className="tw-flex tw-items-center tw-gap-4">
             <Button
-              className="seize-btn btn-white"
+              className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
               onClick={() =>
                 setArtistFocus(
                   ArtistFocus.PROPOSE_PRIMARY_ADDRESSES_AND_PERCENTAGES
                 )
-              }>
+              }
+            >
               Propose Primary Addresses and Percentages
             </Button>
             <Button
-              className="seize-btn btn-white"
+              className="tw-rounded-none tw-border-0 tw-bg-white tw-px-5 tw-py-1.5 tw-font-bold tw-text-black hover:tw-bg-[rgb(215,215,215)] disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
               onClick={() =>
                 setArtistFocus(
                   ArtistFocus.PROPOSE_SECONDARY_ADDRESSES_AND_PERCENTAGES
                 )
-              }>
+              }
+            >
               Propose Secondary Addresses and Percentages
             </Button>
           </Col>
         </Row>
-        <Row className="pt-3">
+        <Row className="tw-pt-4">
           <Col>
             {artistFocus === ArtistFocus.SIGN_COLLECTION && (
               <NextGenAdminArtistSignCollection close={() => close()} />
@@ -970,19 +1008,17 @@ export default function NextGenAdmin() {
   }
 
   function isGlobalAdmin() {
-    return (globalAdmin.data as any) === true;
+    return globalAdmin.data === true;
   }
 
   return (
     <Container>
-      <Row className="pt-4">
+      <Row className="tw-pt-6">
         <Col>
-          <h1>
-            NextGen Admin
-          </h1>
+          <h1>NextGen Admin</h1>
         </Col>
       </Row>
-      <Row className="pt-3">
+      <Row className="tw-pt-4">
         <Col xs={12} sm={3} md={2}>
           {printLeftMenu()}
         </Col>

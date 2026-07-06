@@ -19,7 +19,7 @@ import {
 } from "react";
 
 import CommonDropdownItemsDefaultWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsDefaultWrapper";
-import useHasTouchInput from "@/hooks/useHasTouchInput";
+import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import useIsMobileDevice from "@/hooks/isMobileDevice";
 
 import { useLinkPreviewContext } from "./LinkPreviewContext";
@@ -145,7 +145,7 @@ export default function ChatItemHrefButtons({
   layout?: ChatItemHrefButtonsLayout | undefined;
 }) {
   const { previewToggle, onCardActionsActiveChange } = useLinkPreviewContext();
-  const hasTouchInput = useHasTouchInput();
+  const isTouchDevice = useIsTouchDevice();
   const isMobileDevice = useIsMobileDevice();
   const [copied, setCopied] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -166,7 +166,7 @@ export default function ChatItemHrefButtons({
   const showPreviewToggle = Boolean(previewToggle && !previewToggle.isHidden);
   const isOverlay = layout === "overlay";
   const showPersistentOverlayTrigger =
-    isOverlay && (hasTouchInput || isMobileDevice);
+    isOverlay && (isTouchDevice || isMobileDevice);
   const isPreviewToggleDisabled = Boolean(
     previewToggle && (previewToggle.isLoading || !previewToggle.canToggle)
   );

@@ -12,7 +12,7 @@ import {
   type RememesSearchParams,
 } from "@/components/rememes/rememesRouteParams";
 import { t } from "@/i18n/messages";
-import styles from "@/styles/Home.module.scss";
+import styles from "@/styles/Home.module.css";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
@@ -54,7 +54,7 @@ export async function generateMetadata({
 
   return getAppMetadata(
     getLargeSocialCardMetadata({
-      title: t(locale, "rememes.title"),
+      title: t(locale, "rememes.documentTitle"),
       description: t(locale, "rememes.description.collections"),
       ogImage: getCollectionSocialCardImagePath("rememes"),
       ogImageAlt: "ReMemes collection social card",

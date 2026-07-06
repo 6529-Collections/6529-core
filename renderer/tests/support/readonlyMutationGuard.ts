@@ -44,8 +44,21 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const STAGING_HOSTNAME = "staging.6529.io";
 const PRODUCTION_HOSTNAMES = new Set(["6529.io", "www.6529.io"]);
 const FIRST_PARTY_READONLY_ROUTE_HANDLER_PATHS = new Set([
+  "/api/alchemy/contracts",
+  "/api/alchemy/token-metadata",
   "/api/open-graph",
   "/api/twitter/preview",
+]);
+
+// First-party API endpoints that use POST purely to carry a read query
+// (e.g. batched contract-metadata lookups). Semantically reads, never writes.
+const FIRST_PARTY_READONLY_API_HOSTS = new Set([
+  "api.6529.io",
+  "api.staging.6529.io",
+]);
+const FIRST_PARTY_READONLY_API_POST_PATHS = new Set([
+  "/alchemy-proxy/contracts",
+  "/alchemy-proxy/token-metadata",
 ]);
 
 const IGNORED_EXTERNAL_MUTATION_HOSTS = [
@@ -55,6 +68,7 @@ const IGNORED_EXTERNAL_MUTATION_HOSTS = [
 ];
 const GOOGLE_COLLECT_HOSTS = new Set([
   "analytics.google.com",
+  "region1.google-analytics.com",
   "www.google-analytics.com",
   "www.google.com",
 ]);
@@ -220,6 +234,14 @@ function isFirstPartyReadonlyRouteHandler(
   );
 }
 
+function isFirstPartyReadonlyApiProxy(method: string, url: URL) {
+  return (
+    method === "POST" &&
+    FIRST_PARTY_READONLY_API_HOSTS.has(url.hostname) &&
+    FIRST_PARTY_READONLY_API_POST_PATHS.has(url.pathname)
+  );
+}
+
 function isNextDevInspectorEndpoint(url: URL, baseURL?: string) {
   return (
     isSameOrigin(url, baseURL) &&
@@ -364,6 +386,10 @@ export function decideReadonlyRequest({
 
   if (isFirstPartyReadonlyRouteHandler(upperMethod, parsed, baseURL)) {
     return { action: "allow", reason: "first-party-readonly-route-handler" };
+  }
+
+  if (isFirstPartyReadonlyApiProxy(upperMethod, parsed)) {
+    return { action: "allow", reason: "first-party-readonly-api-proxy" };
   }
 
   if (isNextDevInspectorEndpoint(parsed, baseURL)) {

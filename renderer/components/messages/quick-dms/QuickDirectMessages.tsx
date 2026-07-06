@@ -3,6 +3,10 @@
 import { useAuth } from "@/components/auth/Auth";
 import CreateDirectMessageModal from "@/components/waves/create-dm/CreateDirectMessageModal";
 import { useWaveDropsScrollControlsVisible } from "@/components/waves/drops/WaveDropsScrollControlsVisibility";
+import {
+  isAnyDockInsideRightEdgeClearance,
+  useWaveComposerDockElements,
+} from "@/components/waves/WaveComposerDockVisibility";
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/constants/sidebar";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
@@ -18,6 +22,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { useDebouncedCallback } from "use-debounce";
 import { QuickDmChat } from "./QuickDmChat";
 import { QuickDmListPanel } from "./QuickDmListPanel";
 import { QuickDmLoadingRows } from "./QuickDmPanelPieces";
@@ -41,6 +46,16 @@ const QUICK_DM_PANEL_POSITION_CLASS =
 const QUICK_DM_LAUNCHER_BASE_POSITION_CLASS = `${QUICK_DM_BASE_POSITION_CLASS} tw-transition-[bottom] tw-duration-200 tw-ease-out motion-reduce:tw-transition-none`;
 const QUICK_DM_LAUNCHER_RESTING_POSITION_CLASS = "tw-bottom-24 xl:tw-bottom-6";
 const QUICK_DM_LAUNCHER_LIFTED_POSITION_CLASS = "tw-bottom-32 xl:tw-bottom-32";
+// Right inset (tw-right-6) + launcher diameter (tw-size-14) + breathing room.
+// When a bottom-docked wave composer extends into that strip, any fixed
+// bottom-right spot would cover its Post button or the newest drop's hover
+// actions and swallow pointer clicks, so the launcher yields instead.
+const QUICK_DM_LAUNCHER_CLEARANCE_PX = 88;
+// Pointer-inert but still keyboard/screen-reader reachable: tabbing to the
+// suppressed launcher reveals it (at the lifted offset, clear of the
+// composer's Post button) so quick DMs never lose their entry point.
+const QUICK_DM_LAUNCHER_SUPPRESSED_CLASS =
+  "tw-pointer-events-none tw-opacity-0 focus-within:tw-pointer-events-auto focus-within:tw-opacity-100";
 
 const getDesktopViewportSnapshot = (): boolean => {
   if (typeof window === "undefined") {
@@ -79,8 +94,11 @@ export default function QuickDirectMessages() {
   const { connectedProfile, showWaves } = useAuth();
   const isDesktop = useIsQuickDmDesktop();
   const locale = useBrowserLocale();
-  const { directMessages, registerWave } = useMyStream();
+  const { directMessages, registerWave, requestDirectMessagesList } =
+    useMyStream();
   const shouldLiftLauncher = useWaveDropsScrollControlsVisible();
+  const dockedComposers = useWaveComposerDockElements();
+  const [isLauncherZoneCovered, setIsLauncherZoneCovered] = useState(false);
   const [state, setState] = useState<QuickDmState>(() => readStoredState());
   const [isCreateDirectMessageOpen, setIsCreateDirectMessageOpen] =
     useState(false);
@@ -114,6 +132,60 @@ export default function QuickDirectMessages() {
       ),
     [state.view, state.waveId, waves]
   );
+
+  useEffect(() => requestDirectMessagesList(), [requestDirectMessagesList]);
+
+  const measureLauncherZone = useCallback(() => {
+    if (typeof globalThis.window === "undefined") {
+      return;
+    }
+
+    setIsLauncherZoneCovered(
+      isAnyDockInsideRightEdgeClearance(
+        dockedComposers,
+        QUICK_DM_LAUNCHER_CLEARANCE_PX
+      )
+    );
+  }, [dockedComposers]);
+  const debouncedMeasureLauncherZone = useDebouncedCallback(
+    measureLauncherZone,
+    100
+  );
+
+  useEffect(() => {
+    // Hidden instances (mobile, logged out, waves disabled) render nothing,
+    // so they skip measuring and never attach observers.
+    if (!isVisible) {
+      return;
+    }
+
+    // Immediate measurement so dock changes take effect without a flash;
+    // resize streams below go through the debounced path.
+    measureLauncherZone();
+    if (dockedComposers.length === 0) {
+      return;
+    }
+
+    // Width changes (sidebar toggles, layout shifts) re-run the measurement;
+    // viewport resizes are caught by the window listener.
+    const observer = new ResizeObserver(debouncedMeasureLauncherZone);
+    dockedComposers.forEach((composer) => observer.observe(composer));
+    globalThis.window.addEventListener("resize", debouncedMeasureLauncherZone);
+
+    return () => {
+      observer.disconnect();
+      globalThis.window.removeEventListener(
+        "resize",
+        debouncedMeasureLauncherZone
+      );
+      debouncedMeasureLauncherZone.cancel();
+    };
+  }, [
+    dockedComposers,
+    isVisible,
+    measureLauncherZone,
+    debouncedMeasureLauncherZone,
+  ]);
 
   const setAndStoreState = useCallback((nextState: QuickDmState) => {
     setState(nextState);
@@ -247,10 +319,14 @@ export default function QuickDirectMessages() {
     : undefined;
 
   if (state.view === "closed") {
-    const launcherPositionClassName = `${QUICK_DM_LAUNCHER_BASE_POSITION_CLASS} ${
-      shouldLiftLauncher
+    // While the launcher zone is covered it reveals at the lifted offset on
+    // focus, clear of the docked composer's Post button.
+    const launcherOffsetClassName =
+      shouldLiftLauncher || isLauncherZoneCovered
         ? QUICK_DM_LAUNCHER_LIFTED_POSITION_CLASS
-        : QUICK_DM_LAUNCHER_RESTING_POSITION_CLASS
+        : QUICK_DM_LAUNCHER_RESTING_POSITION_CLASS;
+    const launcherPositionClassName = `${QUICK_DM_LAUNCHER_BASE_POSITION_CLASS} ${launcherOffsetClassName}${
+      isLauncherZoneCovered ? ` ${QUICK_DM_LAUNCHER_SUPPRESSED_CLASS}` : ""
     }`;
 
     return (
@@ -316,10 +392,12 @@ export default function QuickDirectMessages() {
           <QuickDmListPanel
             waves={waves}
             isFetching={directMessages.isFetching}
+            isFetchingNextPage={directMessages.isFetchingNextPage}
+            hasNextPage={directMessages.hasNextPage}
             locale={locale}
             onClose={close}
             onCreateDirectMessage={createDirectMessageAction}
-            onOpenAll={openAll}
+            onFetchNextPage={directMessages.fetchNextPage}
             onOpenChat={openChat}
             onRegisterWave={registerWave}
           />

@@ -15,6 +15,10 @@ jest.mock("@/components/cookies/CookieConsentContext", () => ({
   useOptionalCookieConsent: () => ({ country: "US" }),
 }));
 
+jest.mock("@/components/app-wallets/AppWalletsContext", () => ({
+  useAppWallets: () => ({ appWalletsSupported: false }),
+}));
+
 // Mock TitleContext
 jest.mock("@/contexts/TitleContext", () => ({
   useTitle: () => ({
@@ -53,11 +57,11 @@ describe("LevelsPage (App Router)", () => {
     const { generateMetadata } = require("@/app/network/levels/page");
     const metadata = await generateMetadata();
     expect(metadata).toMatchObject({
-      title: "Levels",
+      title: "Levels | Network",
       description: expect.stringContaining("Network"),
       twitter: { card: "summary" },
       openGraph: {
-        title: "Levels",
+        title: "Levels | Network",
         description: expect.stringContaining("Network"),
         images: ["https://test.6529.io/6529io.png"],
       },

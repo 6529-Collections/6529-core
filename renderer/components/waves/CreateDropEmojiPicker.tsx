@@ -1,16 +1,14 @@
 "use client";
 
-import { useEmoji } from "@/contexts/EmojiContext";
-import useIsMobileScreen from "@/hooks/isMobileScreen";
-import { useCreateDropEmojiPickerLayer } from "@/components/waves/CreateDropEmojiPickerLayerContext";
-import data from "@emoji-mart/data";
-import Picker from "@emoji-mart/react";
+import type { FC } from "react";
+import { useState, useRef, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $createTextNode, $insertNodes } from "lexical";
-import type { FC } from "react";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import MobileWrapperDialog from "../mobile-wrapper-dialog/MobileWrapperDialog";
+import useIsMobileScreen from "@/hooks/isMobileScreen";
+import { useCreateDropEmojiPickerLayer } from "./CreateDropEmojiPickerLayerContext";
+import LazyEmojiPicker, { type EmojiPickerSelection } from "./LazyEmojiPicker";
 
 interface CreateDropEmojiPickerProps {
   disabled?: boolean | undefined;
@@ -29,8 +27,6 @@ const CreateDropEmojiPickerContent: FC<CreateDropEmojiPickerContentProps> = ({
   const isMobile = useIsMobileScreen();
   const { desktopZIndex, mobileZIndexClassName } =
     useCreateDropEmojiPickerLayer();
-
-  const { emojiMap, categories, categoryIcons } = useEmoji();
 
   const [editor] = useLexicalComposerContext();
   const [showPicker, setShowPicker] = useState(false);
@@ -77,10 +73,7 @@ const CreateDropEmojiPickerContent: FC<CreateDropEmojiPickerContentProps> = ({
     setShowPicker(true);
   };
 
-  const addEmoji = (emoji: {
-    native?: string | undefined;
-    id?: string | undefined;
-  }) => {
+  const addEmoji = (emoji: EmojiPickerSelection) => {
     if (disabled) {
       setShowPicker(false);
       return;
@@ -171,14 +164,7 @@ const CreateDropEmojiPickerContent: FC<CreateDropEmojiPickerContentProps> = ({
               }}
               className="tw-rounded-lg tw-border tw-bg-iron-800 tw-p-[1px] tw-shadow-lg"
             >
-              <Picker
-                theme="dark"
-                data={data}
-                onEmojiSelect={addEmoji}
-                custom={emojiMap}
-                categories={categories}
-                categoryIcons={categoryIcons}
-              />
+              <LazyEmojiPicker onEmojiSelect={addEmoji} autoFocus />
             </div>,
             document.body
           )}
@@ -194,14 +180,7 @@ const CreateDropEmojiPickerContent: FC<CreateDropEmojiPickerContentProps> = ({
             className="tw-flex tw-h-full tw-w-full tw-items-center tw-justify-center"
             onTouchMove={(e) => e.stopPropagation()}
           >
-            <Picker
-              theme="dark"
-              data={data}
-              onEmojiSelect={addEmoji}
-              custom={emojiMap}
-              categories={categories}
-              categoryIcons={categoryIcons}
-            />
+            <LazyEmojiPicker onEmojiSelect={addEmoji} autoFocus />
           </div>
         </MobileWrapperDialog>
       )}

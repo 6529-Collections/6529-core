@@ -1,6 +1,5 @@
-import { selectActiveGroupId } from "@/store/groupSlice";
+import { useActiveGroup } from "@/contexts/ActiveGroupContext";
 import { forwardRef } from "react";
-import { useSelector } from "react-redux";
 
 type Props = {
   readonly open: boolean;
@@ -9,7 +8,7 @@ type Props = {
 
 const GroupsSidebarToggle = forwardRef<HTMLButtonElement, Props>(
   ({ open, setOpen }, ref) => {
-    const activeGroupId = useSelector(selectActiveGroupId);
+    const { activeGroupId } = useActiveGroup();
     const color =
       activeGroupId && !open
         ? "tw-text-primary-400 hover:tw-text-primary-300"

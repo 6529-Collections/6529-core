@@ -3,8 +3,7 @@ import { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { commonApiPostWithoutBodyAndResponse } from "@/services/api/common-api";
 import { WaveSubmissionExperience } from "@/helpers/waves/wave-submission-experience.helpers";
-import { editSlice } from "@/store/editSlice";
-import { configureStore } from "@reduxjs/toolkit";
+import { EditingDropProvider } from "@/contexts/EditingDropContext";
 import {
   act,
   fireEvent,
@@ -13,7 +12,6 @@ import {
   waitFor,
 } from "@testing-library/react";
 import React from "react";
-import { Provider } from "react-redux";
 
 const replaceMock = jest.fn();
 const searchParamsMock = { get: jest.fn(), toString: jest.fn() };
@@ -38,6 +36,48 @@ const setDocumentVisibilityState = (state: DocumentVisibilityState) => {
     get: () => documentVisibilityState,
   });
 };
+
+jest.mock("next/dynamic", () => ({
+  __esModule: true,
+  default: (loader: () => unknown) => {
+    const loaderSource = loader.toString();
+
+    if (loaderSource.includes("@/components/waves/gallery")) {
+      return require("@/components/waves/gallery").WaveGallery;
+    }
+
+    if (loaderSource.includes("@/components/waves/PrivilegedDropCreator")) {
+      return require("@/components/waves/PrivilegedDropCreator").default;
+    }
+
+    if (loaderSource.includes("./WaveChatSubmitDropModal")) {
+      return require("@/components/brain/my-stream/WaveChatSubmitDropModal")
+        .WaveChatSubmitDropModal;
+    }
+
+    if (
+      loaderSource.includes(
+        "@/components/waves/leaderboard/create/WaveDropCreate"
+      )
+    ) {
+      return require("@/components/waves/leaderboard/create/WaveDropCreate")
+        .WaveDropCreate;
+    }
+
+    if (
+      loaderSource.includes(
+        "@/components/waves/leaderboard/create/WaveLeaderboardCurationDropModal"
+      )
+    ) {
+      return require("@/components/waves/leaderboard/create/WaveLeaderboardCurationDropModal")
+        .WaveLeaderboardCurationDropModal;
+    }
+
+    throw new Error(
+      `Unexpected next/dynamic import in MyStreamWaveChat test: ${loaderSource}`
+    );
+  },
+}));
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ replace: replaceMock }),
@@ -189,8 +229,6 @@ const wave = {
 const mockOnDropClick = jest.fn();
 
 describe("MyStreamWaveChat", () => {
-  let store: any;
-
   beforeEach(() => {
     setDocumentVisibilityState("visible");
     capturedPropsHolder.current = {};
@@ -226,9 +264,6 @@ describe("MyStreamWaveChat", () => {
         typeof commonApiPostWithoutBodyAndResponse
       >
     ).mockClear();
-    store = configureStore({
-      reducer: { edit: editSlice.reducer },
-    });
   });
 
   const renderWithProvider = (component: React.ReactElement) => {
@@ -240,7 +275,7 @@ describe("MyStreamWaveChat", () => {
       <ReactQueryWrapperContext.Provider
         value={{ invalidateNotifications: invalidateNotificationsMock } as any}
       >
-        <Provider store={store}>{component}</Provider>
+        <EditingDropProvider>{component}</EditingDropProvider>
       </ReactQueryWrapperContext.Provider>
     );
   };
@@ -687,14 +722,14 @@ describe("MyStreamWaveChat", () => {
       <ReactQueryWrapperContext.Provider
         value={{ invalidateNotifications: invalidateNotificationsMock } as any}
       >
-        <Provider store={store}>
+        <EditingDropProvider>
           <MyStreamWaveChat
             wave={wave}
             firstUnreadSerialNo={null}
             viewMode="chat"
             onDropClick={mockOnDropClick}
           />
-        </Provider>
+        </EditingDropProvider>
       </ReactQueryWrapperContext.Provider>
     );
 

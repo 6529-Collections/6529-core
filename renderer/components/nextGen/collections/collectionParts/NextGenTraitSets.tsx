@@ -1,25 +1,5 @@
 "use client";
 
-import DotLoader from "@/components/dotLoader/DotLoader";
-import {
-  formatNameForUrl,
-  normalizeNextgenTokenID,
-} from "@/components/nextGen/nextgen_helpers";
-import Pagination from "@/components/pagination/Pagination";
-import {
-  SearchModalDisplay,
-  SearchWalletsDisplay,
-} from "@/components/searchModal/SearchModal";
-import UserCICAndLevel from "@/components/user/utils/UserCICAndLevel";
-import { DBResponse } from "@/entities/IDBResponse";
-import {
-  NextGenCollection,
-  NextgenTraitSet,
-  TraitValues,
-} from "@/entities/INextgen";
-import { getRandomObjectId } from "@/helpers/AllowlistToolHelpers";
-import { capitalizeEveryWord, formatAddress } from "@/helpers/Helpers";
-import { commonApiFetch } from "@/services/api/common-api";
 import {
   faArrowCircleRight,
   faCheckCircle,
@@ -28,10 +8,27 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Image from "next/image";
 import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
-import { Col, Container, Row } from "../NextGenTailwindLayout";
-import { Accordion } from "react-bootstrap";
 import { Tooltip } from "react-tooltip";
-import styles from "../NextGen.module.scss";
+import type { DBResponse } from "@/entities/IDBResponse";
+import type {
+  NextGenCollection,
+  NextgenTraitSet,
+  TraitValues,
+} from "@/entities/INextgen";
+import { capitalizeEveryWord, formatAddress } from "@/helpers/Helpers";
+import { commonApiFetch } from "@/services/api/common-api";
+import DotLoader from "@/components/dotLoader/DotLoader";
+import Pagination from "@/components/pagination/Pagination";
+import {
+  SearchModalDisplay,
+  SearchWalletsDisplay,
+} from "@/components/searchModal/SearchModal";
+import UserCICAndLevel from "@/components/user/utils/UserCICAndLevel";
+import {
+  formatNameForUrl,
+  normalizeNextgenTokenID,
+} from "@/components/nextGen/nextgen_helpers";
+import styles from "../NextGen.module.css";
 import {
   getNextGenIconUrl,
   getNextGenImageUrl,
@@ -128,12 +125,15 @@ export default function NextGenTraitSets(
 
   function printTraitPill(t: string) {
     return (
-      <Col
+      <div
         key={t}
-        xs={12 / (availableTraits.length + 1)}
-        className="no-padding">
+        className="tw-relative tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3"
+        style={{
+          maxWidth: "100%",
+          width: `${(12 / (availableTraits.length + 1) / 12) * 100}%`,
+        }}
+      >
         <button
-          key={getRandomObjectId()}
           className={`${styles["collectorSetPill"]} ${
             t === selectedTrait ? styles["collectorSetPillSelected"] : ""
           }`}
@@ -143,10 +143,11 @@ export default function NextGenTraitSets(
               setTotalResults(0);
             }
             setSelectedTrait(t);
-          }}>
+          }}
+        >
           {t}
         </button>
-      </Col>
+      </div>
     );
   }
 
@@ -154,20 +155,23 @@ export default function NextGenTraitSets(
     let content;
     if (!setsLoaded) {
       content = (
-        <Col
+        <div
+          className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3"
           style={{
             minHeight: "50vh",
-          }}>
+          }}
+        >
           <DotLoader />
-        </Col>
+        </div>
       );
     } else if (totalResults == 0) {
       content = (
-        <Col
-          className="d-flex flex-column gap-2"
+        <div
+          className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-flex-col tw-gap-2 tw-px-3"
           style={{
             minHeight: "50vh",
-          }}>
+          }}
+        >
           <span>None!</span>
           <span>
             <Image
@@ -184,46 +188,50 @@ export default function NextGenTraitSets(
               alt="None Balloon"
             />
           </span>
-        </Col>
+        </div>
       );
     } else {
       content = (
-        <Col
+        <div
+          className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3"
           style={{
             minHeight: "50vh",
-          }}>
+          }}
+        >
           {sets.map((s) => (
-            <UltimateOwner key={getRandomObjectId()} set={s} />
+            <UltimateOwner key={`ultimate-owner-${s.owner}`} set={s} />
           ))}
-        </Col>
+        </div>
       );
     }
-    return <Row className="pt-3">{content}</Row>;
+    return (
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">{content}</div>
+    );
   }
 
   return (
-    <Container className="no-padding pt-2 pb-5">
+    <div className="tw-mx-auto tw-w-full tw-px-3 tw-pb-12 tw-pt-2 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
       {!props.preview && (
-        <Row className="pb-4">
-          <Col>
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pb-6">
+          <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
             <NextGenCollectionHeader
               collection={props.collection}
               collection_link={true}
             />
-          </Col>
-        </Row>
+          </div>
+        </div>
       )}
-      <Row>
-        <Col className="d-flex align-items-center justify-content-between gap-3">
-          <h1 className="no-wrap">Trait Sets</h1>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+        <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-items-center tw-justify-between tw-gap-4 tw-px-3">
+          <h1 className="tw-min-w-fit tw-whitespace-nowrap">Trait Sets</h1>
           {props.preview && (
             <Link
               href={`/nextgen/collection/${formatNameForUrl(
                 props.collection.name
               )}/trait-sets`}
-              className={`d-flex align-items-center gap-2 decoration-none ${styles["viewAllTokens"]}`}
+              className={`tw-flex tw-items-center tw-gap-2 tw-no-underline ${styles["viewAllTokens"]}`}
             >
-              <h5 className="mb-0 font-color d-flex align-items-center gap-2">
+              <h5 className="tw-mb-0 tw-flex tw-items-center tw-gap-2 tw-text-white">
                 View All
                 <FontAwesomeIcon
                   icon={faArrowCircleRight}
@@ -239,21 +247,21 @@ export default function NextGenTraitSets(
               setShowSearchModal={setShowSearchModal}
             />
           )}
-        </Col>
-      </Row>
-      <Row className="pt-3">
-        <Col>
-          <Container>
-            <Row>
+        </div>
+      </div>
+      <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
+        <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
+          <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+            <div className="-tw-mx-3 tw-flex tw-flex-wrap">
               {availableTraits.map((trait) => printTraitPill(trait))}
               {printTraitPill(ULTIMATE)}
-            </Row>
-          </Container>
-        </Col>
-      </Row>
+            </div>
+          </div>
+        </div>
+      </div>
       {selectedTrait !== ULTIMATE && (
-        <Row className="pt-4">
-          <Col className="d-flex align-items-center justify-content-between">
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-6">
+          <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-items-center tw-justify-between tw-px-3">
             <span>
               {traitsLoaded ? (
                 <>
@@ -271,23 +279,31 @@ export default function NextGenTraitSets(
                 <>Collectors Count: {totalResults.toLocaleString()}</>
               )}
             </span>
-          </Col>
-        </Row>
+          </div>
+        </div>
       )}
       {selectedTrait === ULTIMATE && (
-        <Row className="pt-4">
-          <Col xs={12} className="font-larger font-bolder">
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-6">
+          <div
+            className="tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3 tw-text-lg tw-font-bold"
+            style={{ maxWidth: "100%" }}
+          >
             <u>{ULTIMATE} Set</u>
-          </Col>
-          <Col xs={12}>{`All ${availableTraits.join(", All ")} Types`}</Col>
-        </Row>
+          </div>
+          <div
+            className="tw-relative tw-w-full tw-shrink-0 tw-grow-0 tw-basis-auto tw-px-3"
+            style={{ maxWidth: "100%" }}
+          >{`All ${availableTraits.join(", All ")} Types`}</div>
+        </div>
       )}
       {selectedTrait !== ULTIMATE && (
-        <Row className="pt-3">
-          <Col
+        <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
+          <div
+            className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3"
             style={{
               minHeight: "50vh",
-            }}>
+            }}
+          >
             {!setsLoaded ? (
               <DotLoader />
             ) : (
@@ -301,8 +317,8 @@ export default function NextGenTraitSets(
                 />
               ))
             )}
-          </Col>
-        </Row>
+          </div>
+        </div>
       )}
       {selectedTrait !== ULTIMATE && setsLoaded && sets.length === 0 && (
         <>No results found</>
@@ -312,7 +328,7 @@ export default function NextGenTraitSets(
         totalResults > 0 &&
         totalResults / PAGE_SIZE > 1 &&
         setsLoaded && (
-          <Row className="text-center pt-2 pb-3">
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pb-4 tw-pt-2 tw-text-center">
             <Pagination
               page={page}
               pageSize={PAGE_SIZE}
@@ -321,7 +337,7 @@ export default function NextGenTraitSets(
                 setPage(newPage);
               }}
             />
-          </Row>
+          </div>
         )}
       {!props.preview ? (
         <SearchModalDisplay
@@ -332,15 +348,15 @@ export default function NextGenTraitSets(
         />
       ) : (
         setsLoaded && (
-          <Row className="pt-3">
-            <Col>
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-4">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
               <Link
                 href={`/nextgen/collection/${formatNameForUrl(
                   props.collection.name
                 )}/trait-sets`}
-                className={`d-flex align-items-center gap-2 decoration-none ${styles["viewAllTokens"]} justify-content-center`}
+                className={`tw-flex tw-items-center tw-justify-center tw-gap-2 tw-no-underline ${styles["viewAllTokens"]}`}
               >
-                <h5 className="mb-0 font-color d-flex align-items-center gap-2">
+                <h5 className="tw-mb-0 tw-flex tw-items-center tw-gap-2 tw-text-white">
                   View All Trait Sets
                   <FontAwesomeIcon
                     icon={faArrowCircleRight}
@@ -348,11 +364,11 @@ export default function NextGenTraitSets(
                   />
                 </h5>
               </Link>
-            </Col>
-          </Row>
+            </div>
+          </div>
         )
       )}
-    </Container>
+    </div>
   );
 }
 
@@ -368,30 +384,26 @@ function UltimateOwner(props: Readonly<{ set: NextgenTraitSet }>) {
     });
 
   return (
-    <Accordion className="pt-1 pb-1">
-      <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button
-          className={styles["collectorSetAccordionButtonUltimate"]}
-        >
-          <Container>
-            <Row>
-              <Col className="d-flex aling-items-center justify-content-between">
-                <span>
-                  <Owner set={set} />
-                </span>
-                <span className="d-flex gap-3">
-                  {keys.map((k) => (
-                    <span key={getRandomObjectId()}>
-                      <b>{k.key}</b> Sets: {k.count}
-                    </span>
-                  ))}
-                </span>
-              </Col>
-            </Row>
-          </Container>
-        </Accordion.Button>
-      </Accordion.Item>
-    </Accordion>
+    <div className="tw-py-1">
+      <div className={styles["collectorSetAccordionButtonUltimate"]}>
+        <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+            <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-justify-between tw-px-3">
+              <span>
+                <Owner set={set} />
+              </span>
+              <span className="tw-flex tw-gap-4">
+                {keys.map((k) => (
+                  <span key={`ultimate-owner-${set.owner}-${k.key}`}>
+                    <b>{k.key}</b> Sets: {k.count}
+                  </span>
+                ))}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -412,9 +424,10 @@ function Owner(props: Readonly<{ set: NextgenTraitSet }>) {
 
   return (
     <Link
-      className="d-flex gap-2 decoration-hover-underline"
+      className="tw-flex tw-gap-2 tw-no-underline hover:tw-underline"
       onClick={(e) => e.stopPropagation()}
-      href={`/${props.set.handle ?? props.set.owner}`}>
+      href={`/${props.set.handle ?? props.set.owner}`}
+    >
       <UserCICAndLevel level={props.set.level} /> {getOwnerDisplay()}
     </Link>
   );
@@ -434,142 +447,146 @@ function TraitSetAccordion(
   );
 
   return (
-    <Accordion className="pt-1 pb-1">
-      <Accordion.Item defaultChecked={true} eventKey={"0"}>
-        <Accordion.Button className="d-flex justify-content-between">
-          <Container>
-            <Row>
-              <Col className="d-flex aling-items-center gap-3">
-                <span>
-                  <b>{set.distinct_values_count}</b>
-                </span>
-                <span>-</span>
-                <span>
-                  <Owner set={set} />
-                </span>
-                {props.values.length > 0 && missingValues.length === 0 && (
-                  <>
+    <details className="tw-py-1">
+      <summary className="tw-cursor-pointer tw-py-2 focus:tw-outline-none focus-visible:tw-ring-1 focus-visible:tw-ring-primary-400">
+        <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap">
+            <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-gap-4 tw-px-3">
+              <span>
+                <b>{set.distinct_values_count}</b>
+              </span>
+              <span>-</span>
+              <span>
+                <Owner set={set} />
+              </span>
+              {props.values.length > 0 && missingValues.length === 0 && (
+                <>
+                  <FontAwesomeIcon
+                    style={{ height: "1.5em", color: "#00aa00" }}
+                    icon={faCheckCircle}
+                    data-tooltip-id={`complete-trait-${props.collection.id}-${props.trait}-${set.owner}`}
+                  ></FontAwesomeIcon>
+                  <Tooltip
+                    id={`complete-trait-${props.collection.id}-${props.trait}-${set.owner}`}
+                    style={{
+                      backgroundColor: "#1F2937",
+                      color: "white",
+                      padding: "4px 8px",
+                    }}
+                  >
+                    Complete <b>{props.trait}</b> trait set!
+                  </Tooltip>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </summary>
+      <div className={styles["collectorSetAccordionBody"]}>
+        <div className="tw-mx-auto tw-w-full tw-px-3 max-[1100px]:tw-max-w-[950px] min-[1101px]:tw-max-w-[960px] min-[1200px]:tw-max-w-[1050px] min-[1300px]:tw-max-w-[1150px] min-[1400px]:tw-max-w-[1250px] min-[1500px]:tw-max-w-[1280px]">
+          {props.values.length > 0 &&
+            props.set.token_values?.map((tv) => (
+              <div
+                className="-tw-mx-3 tw-flex tw-flex-wrap tw-py-4"
+                key={`accordion-${props.trait}-${tv.value}`}
+              >
+                <div className="tw-relative tw-flex tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-flex-wrap tw-items-center tw-gap-4 tw-px-3">
+                  <span className="tw-flex tw-items-center tw-gap-4">
                     <FontAwesomeIcon
                       style={{ height: "1.5em", color: "#00aa00" }}
                       icon={faCheckCircle}
-                      data-tooltip-id={`complete-trait-${props.collection.id}-${props.trait}-${set.owner}`}></FontAwesomeIcon>
-                    <Tooltip
-                      id={`complete-trait-${props.collection.id}-${props.trait}-${set.owner}`}
-                      style={{
-                        backgroundColor: "#1F2937",
-                        color: "white",
-                        padding: "4px 8px",
-                      }}>
-                      Complete <b>{props.trait}</b> trait set!
-                    </Tooltip>
-                  </>
-                )}
-              </Col>
-            </Row>
-          </Container>
-        </Accordion.Button>
-        <Accordion.Body className={styles["collectorSetAccordionBody"]}>
-          <Container>
-            {props.values.length > 0 &&
-              props.set.token_values?.map((tv) => (
-                <Row
-                  className="pt-3 pb-3"
-                  key={`accordion-${props.trait}-${tv.value}`}>
-                  <Col className="d-flex flex-wrap align-items-center gap-3">
-                    <span className="d-flex align-items-center gap-3">
-                      <FontAwesomeIcon
-                        style={{ height: "1.5em", color: "#00aa00" }}
-                        icon={faCheckCircle}></FontAwesomeIcon>
-                      <b>
-                        <Link
-                          href={`/nextgen/collection/${formatNameForUrl(
-                            props.collection.name
-                          )}/art?traits=${props.trait}:${tv.value}`}
-                          className="decoration-hover-underline"
-                          target="_blank"
-                          rel="noopener noreferrer">
-                          {tv.value}
-                        </Link>
-                      </b>
-                    </span>
-                    <span className="d-flex flex-wrap">
-                      {tv.tokens.map((t) => (
-                        <Link
-                          key={`accordion-${props.trait}-${tv.value}-${t}`}
-                          href={`/nextgen/token/${t}`}
-                          target="_blank"
-                          rel="noopener noreferrer">
-                          <>
-                            <Image
-                              unoptimized
-                              priority
-                              loading="eager"
-                              width={0}
-                              height={0}
-                              style={{
-                                height: "50px",
-                                width: "auto",
-                                marginLeft: "5px",
-                                marginRight: "5px",
-                              }}
-                              src={getNextGenIconUrl(t)}
-                              alt={`#${t.toString()}`}
-                              data-tooltip-id={`token-${t}`}
-                              onError={({ currentTarget }) => {
-                                if (
-                                  currentTarget.src === getNextGenIconUrl(t)
-                                ) {
-                                  currentTarget.src = getNextGenImageUrl(t);
-                                }
-                              }}
-                            />
-                            <Tooltip
-                              id={`token-${t}`}
-                              style={{
-                                backgroundColor: "#1F2937",
-                                color: "white",
-                                padding: "4px 8px",
-                              }}>
-                              {props.collection.name} #
-                              {normalizeNextgenTokenID(t).token_id}
-                            </Tooltip>
-                          </>
-                        </Link>
-                      ))}
-                    </span>
-                  </Col>
-                </Row>
-              ))}
-            <Row className="pt-4">
-              <Col>
-                {missingValues.length > 0 ? (
-                  <>
-                    Not Seized:{" "}
-                    {missingValues.map((mv, index) => (
-                      <Fragment key={mv}>
-                        <Link
-                          href={`/nextgen/collection/${formatNameForUrl(
-                            props.collection.name
-                          )}/art?traits=${props.trait}:${mv}`}
-                          className="decoration-hover-underline"
-                          target="_blank"
-                          rel="noopener noreferrer">
-                          {mv}
-                        </Link>
-                        {index < missingValues.length - 1 ? ", " : ""}
-                      </Fragment>
+                    ></FontAwesomeIcon>
+                    <b>
+                      <Link
+                        href={`/nextgen/collection/${formatNameForUrl(
+                          props.collection.name
+                        )}/art?traits=${props.trait}:${tv.value}`}
+                        className="tw-no-underline hover:tw-underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {tv.value}
+                      </Link>
+                    </b>
+                  </span>
+                  <span className="tw-flex tw-flex-wrap">
+                    {tv.tokens.map((t) => (
+                      <Link
+                        key={`accordion-${props.trait}-${tv.value}-${t}`}
+                        href={`/nextgen/token/${t}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <>
+                          <Image
+                            unoptimized
+                            priority
+                            loading="eager"
+                            width={0}
+                            height={0}
+                            style={{
+                              height: "50px",
+                              width: "auto",
+                              marginLeft: "5px",
+                              marginRight: "5px",
+                            }}
+                            src={getNextGenIconUrl(t)}
+                            alt={`#${t.toString()}`}
+                            data-tooltip-id={`token-${t}`}
+                            onError={({ currentTarget }) => {
+                              if (currentTarget.src === getNextGenIconUrl(t)) {
+                                currentTarget.src = getNextGenImageUrl(t);
+                              }
+                            }}
+                          />
+                          <Tooltip
+                            id={`token-${t}`}
+                            style={{
+                              backgroundColor: "#1F2937",
+                              color: "white",
+                              padding: "4px 8px",
+                            }}
+                          >
+                            {props.collection.name} #
+                            {normalizeNextgenTokenID(t).token_id}
+                          </Tooltip>
+                        </>
+                      </Link>
                     ))}
-                  </>
-                ) : (
-                  <>
-                    All values for <b>{props.trait}</b> trait Seized!
-                  </>
-                )}
-              </Col>
-            </Row>
-          </Container>
-        </Accordion.Body>
-      </Accordion.Item>
-    </Accordion>
+                  </span>
+                </div>
+              </div>
+            ))}
+          <div className="-tw-mx-3 tw-flex tw-flex-wrap tw-pt-6">
+            <div className="tw-relative tw-w-full tw-shrink-0 tw-grow tw-basis-0 tw-px-3">
+              {missingValues.length > 0 ? (
+                <>
+                  Not Seized:{" "}
+                  {missingValues.map((mv, index) => (
+                    <Fragment key={mv}>
+                      <Link
+                        href={`/nextgen/collection/${formatNameForUrl(
+                          props.collection.name
+                        )}/art?traits=${props.trait}:${mv}`}
+                        className="tw-no-underline hover:tw-underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {mv}
+                      </Link>
+                      {index < missingValues.length - 1 ? ", " : ""}
+                    </Fragment>
+                  ))}
+                </>
+              ) : (
+                <>
+                  All values for <b>{props.trait}</b> trait Seized!
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </details>
   );
 }

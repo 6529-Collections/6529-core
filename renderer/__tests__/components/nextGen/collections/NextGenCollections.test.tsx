@@ -11,8 +11,7 @@ jest.mock("@/services/6529api", () => ({
 jest.mock(
   "@/components/nextGen/collections/NextGenCollectionPreview",
   () =>
-    ({ collection }: any) =>
-      <div data-testid="preview">{collection.name}</div>
+    ({ collection }: any) => <div data-testid="preview">{collection.name}</div>
 );
 
 jest.mock("@/components/pagination/Pagination", () => (props: any) => (
@@ -20,20 +19,6 @@ jest.mock("@/components/pagination/Pagination", () => (props: any) => (
     <button onClick={() => props.setPage(props.page + 1)}>next</button>
   </div>
 ));
-
-jest.mock("react-bootstrap", () => {
-  const RB: any = {
-    Container: (p: any) => <div data-testid="container" {...p} />,
-    Row: (p: any) => <div data-testid="row" {...p} />,
-    Col: (p: any) => <div data-testid="col" {...p} />,
-  };
-  const Dropdown: any = (p: any) => <div data-testid="dropdown" {...p} />;
-  Dropdown.Toggle = (p: any) => <button {...p}>{p.children}</button>;
-  Dropdown.Menu = (p: any) => <div data-testid="menu" {...p} />;
-  Dropdown.Item = (p: any) => <button {...p} />;
-  RB.Dropdown = Dropdown;
-  return RB;
-});
 
 beforeEach(() => {
   fetchUrl.mockReset();
@@ -67,7 +52,10 @@ it("filters by status and resets page", async () => {
   render(<NextGenCollections />);
   await waitFor(() => expect(fetchUrl).toHaveBeenCalledTimes(2));
 
-  await userEvent.click(screen.getByRole("button", { name: "LIVE" }));
+  await userEvent.selectOptions(
+    screen.getByRole("combobox", { name: /status/i }),
+    "LIVE"
+  );
 
   await waitFor(() => expect(fetchUrl).toHaveBeenCalledTimes(3));
   expect(fetchUrl).toHaveBeenLastCalledWith(
