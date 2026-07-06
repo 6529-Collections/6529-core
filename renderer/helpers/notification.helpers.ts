@@ -15,31 +15,79 @@ interface NotificationData {
   title: string;
   body: string;
   redirectPath: string;
+  iconUrl?: string | null;
 }
 
 type FindNativeEmoji = (
   emojiId: string
 ) => { skins: { native: string }[] } | null;
 
+type FindCustomEmoji = (
+  emojiId: string
+) => { skins: { src: string }[] } | null;
+
+interface EmojiResolvers {
+  findNativeEmoji: FindNativeEmoji;
+  findCustomEmoji?: FindCustomEmoji;
+}
+
+interface ReactionPresentation {
+  text: string;
+  iconUrl?: string | null;
+}
+
+const nativeEmojiPattern =
+  /[\p{Emoji_Presentation}\p{Extended_Pictographic}\uFE0F]/u;
+
+const getReactionEmojiIdCandidates = (reaction: string): string[] => {
+  const rawId = reaction.trim().replaceAll(":", "");
+  const underscoreId = rawId.replaceAll("-", "_").replaceAll(" ", "_");
+  const hyphenId = rawId.replaceAll("_", "-").replaceAll(" ", "-");
+
+  return [...new Set([rawId, underscoreId, hyphenId].filter(Boolean))];
+};
+
 export function generateNotificationData(
   notification: ApiNotification,
-  findNativeEmoji: FindNativeEmoji,
+  emojiResolvers: EmojiResolvers,
   connectedProfileHandle?: string | null
 ): NotificationData | null {
   const handle = notification.related_identity?.handle ?? "Someone";
   const cause = notification.cause;
+  const { findNativeEmoji, findCustomEmoji } = emojiResolvers;
 
-  const getEmojiText = (reaction: string): string => {
-    const emojiId = reaction.replaceAll(":", "");
-    const nativeEmoji = findNativeEmoji(emojiId);
-    if (nativeEmoji) {
-      return nativeEmoji.skins[0]?.native ?? "";
+  const getReactionPresentation = (
+    reaction: string
+  ): ReactionPresentation => {
+    const trimmedReaction = reaction.trim();
+    if (nativeEmojiPattern.test(trimmedReaction)) {
+      return { text: trimmedReaction };
     }
+
+    for (const emojiId of getReactionEmojiIdCandidates(trimmedReaction)) {
+      const nativeEmoji = findNativeEmoji(emojiId);
+      const native = nativeEmoji?.skins[0]?.native;
+      if (native) {
+        return { text: native };
+      }
+
+      const emojified = emojify(`:${emojiId}:`);
+      if (emojified !== `:${emojiId}:`) {
+        return { text: emojified };
+      }
+
+      const customEmoji = findCustomEmoji?.(emojiId);
+      const customIconUrl = customEmoji?.skins[0]?.src;
+      if (customIconUrl) {
+        return { text: "", iconUrl: customIconUrl };
+      }
+    }
+
     const normalizedReaction = reaction
       .replaceAll(":", "")
       .replaceAll("-", " ")
       .replaceAll("_", " ");
-    return `'${normalizedReaction}'`;
+    return { text: `'${normalizedReaction}'` };
   };
 
   const getDropContent = (dropIndex: number = 0): string | null => {
@@ -161,12 +209,17 @@ export function generateNotificationData(
       if (!reaction) {
         return null;
       }
-      const emojiText = getEmojiText(reaction);
+      const reactionPresentation = getReactionPresentation(reaction);
       const dropContent = getDropContent();
       notificationData = {
-        title: `${handle} reacted ${emojiText}`,
+        title: `${handle} reacted${
+          reactionPresentation.text ? ` ${reactionPresentation.text}` : ""
+        }`,
         body: dropContent ?? "View drop",
         redirectPath: getWavesRedirect(),
+        ...(reactionPresentation.iconUrl !== undefined && {
+          iconUrl: reactionPresentation.iconUrl,
+        }),
       };
       break;
     }
@@ -235,5 +288,8 @@ export function generateNotificationData(
     title,
     body,
     redirectPath: notificationData.redirectPath,
+    ...(notificationData.iconUrl !== undefined && {
+      iconUrl: notificationData.iconUrl,
+    }),
   };
 }
