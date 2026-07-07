@@ -23,7 +23,7 @@ const CORE_SCHEMES = {
   production: "core6529",
 } as const;
 const CORE_SCHEME_VALUES = Object.values(CORE_SCHEMES);
-const PUBLIC_RUNTIME_ENV_OVERRIDES = ["TENOR_API_KEY", "GIPHY_API_KEY"] as const;
+const PUBLIC_RUNTIME_ENV_OVERRIDES = ["GIPHY_API_KEY"] as const;
 
 type BackendTarget = "live" | "test";
 type AppEnvironment = keyof typeof CORE_SCHEMES;

@@ -5,7 +5,6 @@
   "BASE_ENDPOINT": "https://6529.io",
   "WS_ENDPOINT": "wss://ws.6529.io",
   "BACKEND_TARGET": "live",
-  "TENOR_API_KEY": "",
   "GIPHY_API_KEY": "",
   "CORE_SCHEME": "core6529",
   "MOBILE_APP_SCHEME": "mobile6529",
