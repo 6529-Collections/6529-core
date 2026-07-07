@@ -135,7 +135,7 @@ function loadLocalEnv() {
   for (const envFile of [".env", ".env.local"]) {
     const envPath = path.join(ROOT, envFile);
     if (fs.existsSync(envPath)) {
-      dotenv.config({ path: envPath });
+      dotenv.config({ path: envPath, override: envFile === ".env.local" });
     }
   }
 }

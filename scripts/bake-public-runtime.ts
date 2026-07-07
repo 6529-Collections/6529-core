@@ -94,7 +94,7 @@ function computeVersion() {
 
 function loadLocalEnv() {
   dotenv.config({ path: path.join(ROOT, ".env") });
-  dotenv.config({ path: path.join(ROOT, ".env.local") });
+  dotenv.config({ path: path.join(ROOT, ".env.local"), override: true });
 }
 
 function getPublicRuntimeEnvOverrides() {
