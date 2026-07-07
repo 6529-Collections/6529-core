@@ -169,10 +169,12 @@ intentionally omit `STAGING_API_KEY`, even if it exists in the local shell or
 Public GIF provider keys are read from local environment variables and baked
 into the renderer runtime config for desktop builds. `config/public-runtime.json`
 keeps empty placeholders for these keys and remains the tracked fallback for
-non-secret public defaults. Keep real GIF key values in `.env.local`, never in
-`config/public-runtime.json`:
+non-secret public defaults. Keep real GIF key values in `.env`, never in
+`config/public-runtime.json`. Keep `.env.local` for machine-specific local-only
+values such as `STAGING_API_KEY`:
 
 ```bash
+# .env, never committed
 TENOR_API_KEY=your-tenor-api-key
 GIPHY_API_KEY=your-giphy-api-key
 ```

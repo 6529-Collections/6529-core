@@ -93,6 +93,7 @@ function computeVersion() {
 })();
 
 function loadLocalEnv() {
+  dotenv.config({ path: path.join(ROOT, ".env") });
   dotenv.config({ path: path.join(ROOT, ".env.local") });
 }
 
