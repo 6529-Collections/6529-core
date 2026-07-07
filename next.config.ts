@@ -345,6 +345,7 @@ interface PublicEnv {
   MOBILE_APP_SCHEME?: string;
   CORE_SCHEME?: string;
   TENOR_API_KEY?: string;
+  GIPHY_API_KEY?: string;
   MEDIA_RESOLVER_ENDPOINT?: string;
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
@@ -597,6 +598,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         MOBILE_APP_SCHEME: publicEnv.MOBILE_APP_SCHEME,
         CORE_SCHEME: publicEnv.CORE_SCHEME,
         TENOR_API_KEY: publicEnv.TENOR_API_KEY,
+        GIPHY_API_KEY: publicEnv.GIPHY_API_KEY,
         MEDIA_RESOLVER_ENDPOINT: publicEnv.MEDIA_RESOLVER_ENDPOINT,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,

@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
 import { execSync } from "node:child_process";
+import dotenv from "dotenv";
 import fs from "node:fs";
 import path from "node:path";
 
@@ -22,6 +23,7 @@ const CORE_SCHEMES = {
   production: "core6529",
 } as const;
 const CORE_SCHEME_VALUES = Object.values(CORE_SCHEMES);
+const PUBLIC_RUNTIME_ENV_OVERRIDES = ["TENOR_API_KEY", "GIPHY_API_KEY"] as const;
 
 type BackendTarget = "live" | "test";
 type AppEnvironment = keyof typeof CORE_SCHEMES;
@@ -35,6 +37,8 @@ function computeVersion() {
 }
 
 (function main() {
+  loadLocalEnv();
+
   if (!fs.existsSync(SRC_JSON)) {
     throw new Error(`Missing ${SRC_JSON}. Create it with your values.`);
   }
@@ -63,6 +67,7 @@ function computeVersion() {
 
   const baked = {
     ...raw,
+    ...getPublicRuntimeEnvOverrides(),
     ...runtimeEndpointOverrides.publicRuntime,
     VERSION,
     ASSETS_FROM_S3,
@@ -86,6 +91,24 @@ function computeVersion() {
     `[bake-public-runtime] wrote ${path.relative(ROOT, PRIVATE_DEST_JSON)}`,
   );
 })();
+
+function loadLocalEnv() {
+  dotenv.config({ path: path.join(ROOT, ".env.local") });
+}
+
+function getPublicRuntimeEnvOverrides() {
+  const overrides: Partial<
+    Record<(typeof PUBLIC_RUNTIME_ENV_OVERRIDES)[number], string>
+  > = {};
+
+  for (const key of PUBLIC_RUNTIME_ENV_OVERRIDES) {
+    if (process.env[key] !== undefined) {
+      overrides[key] = process.env[key] ?? "";
+    }
+  }
+
+  return overrides;
+}
 
 function getBackendTarget(fallbackTarget: unknown): BackendTarget {
   const rawTarget = process.env.BACKEND_TARGET ?? fallbackTarget ?? "live";

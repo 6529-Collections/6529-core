@@ -166,6 +166,17 @@ config, not the renderer/public runtime bundle. Live backend builds
 intentionally omit `STAGING_API_KEY`, even if it exists in the local shell or
 `.env.local`.
 
+Public GIF provider keys are read from local environment variables and baked
+into the renderer runtime config for desktop builds. `config/public-runtime.json`
+keeps empty placeholders for these keys and remains the tracked fallback for
+non-secret public defaults. Keep real GIF key values in `.env.local`, never in
+`config/public-runtime.json`:
+
+```bash
+TENOR_API_KEY=your-tenor-api-key
+GIPHY_API_KEY=your-giphy-api-key
+```
+
 ### Rebuilding SQL
 
 This project uses `better-sqlite3`

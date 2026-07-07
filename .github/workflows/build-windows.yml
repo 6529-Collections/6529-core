@@ -18,6 +18,8 @@ jobs:
     name: ${{ inputs.should_run && 'Build' || 'Build Skipped' }}
     runs-on: macos-latest
     env:
+      TENOR_API_KEY: ${{ secrets.TENOR_API_KEY }}
+      GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
       SEIZE_6529_COMMAND: "1"
       SEIZE_SECURE_INSTALL: "1"
 
