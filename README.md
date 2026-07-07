@@ -171,7 +171,8 @@ into the renderer runtime config for desktop builds. `config/public-runtime.json
 keeps empty placeholders for these keys and remains the tracked fallback for
 non-secret public defaults. Keep real GIF key values in `.env`, never in
 `config/public-runtime.json`. Keep `.env.local` for machine-specific local-only
-values such as `STAGING_API_KEY`:
+values such as `STAGING_API_KEY`. Both root `.env` and `.env.local` are
+gitignored:
 
 ```bash
 # .env, never committed

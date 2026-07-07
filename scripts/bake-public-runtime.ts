@@ -103,8 +103,9 @@ function getPublicRuntimeEnvOverrides() {
   > = {};
 
   for (const key of PUBLIC_RUNTIME_ENV_OVERRIDES) {
-    if (process.env[key] !== undefined) {
-      overrides[key] = process.env[key] ?? "";
+    const value = process.env[key]?.trim();
+    if (value) {
+      overrides[key] = value;
     }
   }
 
