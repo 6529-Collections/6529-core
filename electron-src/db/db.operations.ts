@@ -12,6 +12,14 @@ interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
   seasonOptions: number[];
 }
 
+interface FetchNftsPayload {
+  readonly page?: number;
+  readonly limit?: number;
+  readonly contractAddress?: string;
+  readonly search?: string;
+  readonly season?: number;
+}
+
 async function fetchTdhInfo() {
   const tdhMerkle = await getDb().getRepository(TDHMerkleRoot).findOneBy({
     id: 1,
@@ -30,7 +38,7 @@ async function fetchTdhInfo() {
   }
 
   Logger.info(
-    `TDH INFO: [BLOCK] ${tdhMerkle.block} [ROOT] ${tdhMerkle.merkle_root} [LAST CALCULATION] ${tdhMerkle.last_update} [TOTAL TDH] ${totalTDH}`
+    `TDH INFO: [BLOCK] ${tdhMerkle.block} [ROOT] ${tdhMerkle.merkle_root} [LAST CALCULATION] ${tdhMerkle.last_update} [TOTAL TDH] ${totalTDH}`,
   );
 
   return {
@@ -61,7 +69,7 @@ async function fetchTransactions(
   endDate?: number,
   page: number = 1,
   limit: number = 50,
-  contractAddress?: string
+  contractAddress?: string,
 ): Promise<PaginatedResponseLocal<Transaction>> {
   const transactionRepository = getDb().getRepository(Transaction);
 
@@ -102,7 +110,7 @@ async function fetchTransactions(
 }
 
 async function fetchNftSeasonOptions(
-  contractAddress?: string
+  contractAddress?: string,
 ): Promise<number[]> {
   const nftRepository = getDb().getRepository(NFT);
   const queryBuilder = nftRepository
@@ -130,7 +138,7 @@ async function fetchNfts(
   limit: number = 50,
   contractAddress?: string,
   search?: string,
-  season?: number
+  season?: number,
 ): Promise<PaginatedNftsResponseLocal> {
   const nftRepository = getDb().getRepository(NFT);
   const queryBuilder = nftRepository.createQueryBuilder("nft");
@@ -150,7 +158,7 @@ async function fetchNfts(
         }).orWhere("CAST(nft.id AS TEXT) LIKE :search", {
           search: `%${normalizedSearch}%`,
         });
-      })
+      }),
     );
   }
 
@@ -186,7 +194,7 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
     async (_event, key: string) => {
       const tdhInfo = await fetchTdhInfoForKey(key);
       return tdhInfo;
-    }
+    },
   );
   ipcMain.handle(
     IPC_DB_CHANNELS.GET_TRANSACTIONS,
@@ -196,22 +204,23 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
         endDate,
         page,
         limit,
-        contractAddress
+        contractAddress,
       );
       return transactions;
-    }
+    },
   );
   ipcMain.handle(
     IPC_DB_CHANNELS.GET_NFTS,
-    async (_event, { page, limit, contractAddress, search, season }) => {
+    async (_event, payload: FetchNftsPayload = {}) => {
+      const { page, limit, contractAddress, search, season } = payload;
       const nfts = await fetchNfts(
         page,
         limit,
         contractAddress,
         search,
-        season
+        season,
       );
       return nfts;
-    }
+    },
   );
 }
