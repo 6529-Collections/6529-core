@@ -92,7 +92,6 @@ jobs:
           CI_PIPELINES_TARGET_ENV: production
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - IPFS Signing failed ❌"
-          CI_PIPELINES_ENVIRONMENT: production
           CI_PIPELINES_SERVICE: desktop-ipfs-signing
         run: node scripts/notify-ci-wave.mjs
 
@@ -118,6 +117,5 @@ jobs:
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - IPFS Binaries Signed ✅"
           CI_PIPELINES_DESCRIPTION: "Signed IPFS binaries uploaded to S3"
-          CI_PIPELINES_ENVIRONMENT: production
           CI_PIPELINES_SERVICE: desktop-ipfs-signing
         run: node scripts/notify-ci-wave.mjs

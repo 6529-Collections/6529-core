@@ -75,12 +75,6 @@ jobs:
     # Run this notifier only for single-platform flows; Build All/Publish are handled by the publish job
     if: ${{ always() && (github.event.inputs.flow == 'MacOS' || github.event.inputs.flow == 'Windows' || github.event.inputs.flow == 'Linux' || github.event.inputs.flow == 'Sign Windows') }}
     steps:
-      - name: Check out notification scripts
-        uses: actions/checkout@v3
-        continue-on-error: true
-        with:
-          ref: ${{ github.ref_name }}
-
       - name: Determine required build status
         run: |
           SHOULD_FAIL=false
@@ -113,6 +107,18 @@ jobs:
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
+      - name: Check out notification scripts for build failure
+        if: env.SHOULD_FAIL == 'true'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node for build failure notification
+        if: env.SHOULD_FAIL == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Notify CI wave about build failure (single-platform flow)
         if: env.SHOULD_FAIL == 'true'
         continue-on-error: true
@@ -139,6 +145,18 @@ jobs:
           title: "6529 Desktop - Build Success ✅"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
+
+      - name: Check out notification scripts for build success
+        if: env.SHOULD_FAIL != 'true'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node for build success notification
+        if: env.SHOULD_FAIL != 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Notify CI wave about build success (single-platform flow)
         if: env.SHOULD_FAIL != 'true'
@@ -179,12 +197,6 @@ jobs:
 
           echo "SHOULD_FAIL=$SHOULD_FAIL" >> $GITHUB_ENV
 
-      - name: Check out notification scripts
-        uses: actions/checkout@v3
-        continue-on-error: true
-        with:
-          ref: ${{ github.ref_name }}
-
       - name: Notify required build failure
         if: env.SHOULD_FAIL == 'true'
         uses: sarisia/actions-status-discord@v1
@@ -197,6 +209,18 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Check out notification scripts for required build failure
+        if: env.SHOULD_FAIL == 'true'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up Node for required build failure notification
+        if: env.SHOULD_FAIL == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
 
       - name: Notify CI wave about required build failure
         if: env.SHOULD_FAIL == 'true'
