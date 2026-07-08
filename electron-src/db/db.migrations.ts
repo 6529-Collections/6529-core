@@ -154,7 +154,7 @@ async function updateNftEditionFields(
   dataSource: DataSource,
   nft: NFT,
   editionSize: number,
-  editionSizeFloor: number,
+  editionSizeFloor: number | null,
   burns: number
 ) {
   if (
@@ -246,10 +246,12 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
     }
 
     if (!hasLatestMeme || nft.id !== latestMemeId) {
-      const existingFloor = getPositiveEditionSize(nft.edition_size_floor);
+      const existingFloor = getEditionSizeFloorFromSupply(
+        nft.edition_size_floor
+      );
       const editionSizeFloor = repairBrokenPositiveFloors
         ? getEditionSizeFloorFromSupply(nft.edition_size)
-        : existingFloor || getEditionSizeFloorFromSupply(nft.edition_size);
+        : existingFloor ?? getEditionSizeFloorFromSupply(nft.edition_size);
       if (await updateEditionSizeFloor(dataSource, nft, editionSizeFloor)) {
         copiedFloors++;
       }
@@ -268,12 +270,15 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
           preserveExistingEditionSizeFloor: !repairBrokenPositiveFloors,
         }
       );
+      const editionSizeFloor =
+        getEditionSizeFloorFromSupply(editionSizes.editionSizeFloor) ??
+        getEditionSizeFloorFromSupply(editionSizes.editionSize);
       if (
         await updateNftEditionFields(
           dataSource,
           nft,
           editionSizes.editionSize,
-          editionSizes.editionSizeFloor,
+          editionSizeFloor,
           editionSizes.burnt
         )
       ) {
