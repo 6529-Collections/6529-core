@@ -73,7 +73,7 @@ describe("meme edition size floor helpers", () => {
   it("returns no refresh ids when there are no Memes", () => {
     assert.deepEqual(
       getMemeTokenIdsForEditionSizeFloorRefresh([
-        { contract: GRADIENT_CONTRACT, id: 1, mint_date: 1 },
+        { contract: GRADIENT_CONTRACT, id: 1 },
       ]),
       [],
     );

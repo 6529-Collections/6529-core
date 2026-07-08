@@ -398,13 +398,19 @@ export async function persistConsolidatedTDH(
 }
 
 export async function persistNFTs(db: DataSource, nfts: NFT[]) {
-  const distinctContracts = [...new Set(nfts.map((nft) => nft.contract))];
-  const nftsWithFloors = await preserveEditionSizeFloors(db, nfts);
+  const distinctContracts = [
+    ...new Set(nfts.map((nft) => nft.contract.toLowerCase())),
+  ];
   await db.transaction(async (manager) => {
     const nftRepo = manager.getRepository(NFT);
-    await nftRepo.delete({
-      contract: In(distinctContracts),
-    });
+    const nftsWithFloors = await preserveEditionSizeFloors(manager, nfts);
+    await nftRepo
+      .createQueryBuilder()
+      .delete()
+      .where("LOWER(contract) IN (:...contracts)", {
+        contracts: distinctContracts,
+      })
+      .execute();
     await batchSave(nftRepo, nftsWithFloors);
   });
 }

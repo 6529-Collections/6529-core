@@ -1,4 +1,4 @@
-import { DataSource, In } from "typeorm";
+import { DataSource, EntityManager } from "typeorm";
 import { NFT } from "../../db/entities/INFT";
 
 function getPositiveInteger(value: number | null | undefined): number | null {
@@ -15,24 +15,24 @@ function getNftKey(nft: Pick<NFT, "contract" | "id">) {
 }
 
 export async function preserveEditionSizeFloors(
-  db: DataSource,
+  db: DataSource | EntityManager,
   nfts: NFT[],
 ) {
   if (nfts.length === 0) {
     return nfts;
   }
 
-  const distinctContracts = [...new Set(nfts.map((nft) => nft.contract))];
-  const existingNfts = await db.getRepository(NFT).find({
-    select: {
-      contract: true,
-      id: true,
-      edition_size_floor: true,
-    },
-    where: {
-      contract: In(distinctContracts),
-    },
-  });
+  const distinctContracts = [
+    ...new Set(nfts.map((nft) => nft.contract.toLowerCase())),
+  ];
+  const existingNfts = await db
+    .getRepository(NFT)
+    .createQueryBuilder("nft")
+    .select(["nft.contract", "nft.id", "nft.edition_size_floor"])
+    .where("LOWER(nft.contract) IN (:...contracts)", {
+      contracts: distinctContracts,
+    })
+    .getMany();
   const existingFloors = new Map(
     existingNfts
       .map((nft) => [
@@ -47,12 +47,14 @@ export async function preserveEditionSizeFloors(
       return nft;
     }
 
+    const editionSizeFloor =
+      existingFloors.get(getNftKey(nft)) ??
+      getPositiveInteger(nft.edition_size) ??
+      null;
+
     return {
       ...nft,
-      edition_size_floor:
-        existingFloors.get(getNftKey(nft)) ??
-        getPositiveInteger(nft.edition_size) ??
-        0,
+      edition_size_floor: editionSizeFloor,
     };
   });
 }

@@ -111,8 +111,14 @@ async function runBlurRoyaltiesMigration(dataSource: DataSource) {
   Logger.info(loggerName, `Migration ${migrationName} completed.`);
 }
 
-function getPositiveEditionSize(editionSize: number): number {
-  return Number.isInteger(editionSize) && editionSize > 0 ? editionSize : 0;
+function getPositiveEditionSize(
+  editionSize: number | null | undefined
+): number {
+  return typeof editionSize === "number" &&
+    Number.isInteger(editionSize) &&
+    editionSize > 0
+    ? editionSize
+    : 0;
 }
 
 async function updateEditionSizeFloor(
@@ -176,6 +182,18 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   );
 
   const nftRepository = dataSource.getRepository(NFT);
+  const missingFloorCount = await nftRepository
+    .createQueryBuilder("nft")
+    .where(
+      "nft.edition_size_floor IS NULL OR nft.edition_size_floor <= 0"
+    )
+    .getCount();
+
+  if (migrationAlreadyRecorded && missingFloorCount === 0) {
+    Logger.info(loggerName, `Migration ${migrationName} already applied.`);
+    return;
+  }
+
   const nfts = await nftRepository.find({
     order: {
       contract: "ASC",
@@ -188,18 +206,6 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
       loggerName,
       `Migration ${migrationName} found no NFTs to scan; deferring.`
     );
-    return;
-  }
-
-  const missingFloorCount = await nftRepository
-    .createQueryBuilder("nft")
-    .where(
-      "nft.edition_size_floor IS NULL OR nft.edition_size_floor <= 0"
-    )
-    .getCount();
-
-  if (migrationAlreadyRecorded && missingFloorCount === 0) {
-    Logger.info(loggerName, `Migration ${migrationName} already applied.`);
     return;
   }
 
@@ -216,6 +222,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   const latestMemeId = nfts
     .filter((nft) => areEqualAddresses(nft.contract, MEMES_CONTRACT))
     .reduce((latest, nft) => Math.max(latest, nft.id), 0);
+  const hasLatestMeme = latestMemeId > 0;
   let copiedFloors = 0;
   let latestMemeRefreshes = 0;
   let nonMemeFloors = 0;
@@ -232,7 +239,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
       continue;
     }
 
-    if (nft.id !== latestMemeId) {
+    if (!hasLatestMeme || nft.id !== latestMemeId) {
       const existingFloor = getPositiveEditionSize(nft.edition_size_floor);
       const editionSizeFloor = repairBrokenPositiveFloors
         ? editionSize
