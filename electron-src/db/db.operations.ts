@@ -6,7 +6,7 @@ import Logger from "electron-log";
 import { Transaction } from "./entities/ITransaction";
 import { PaginatedResponseLocal } from "../../shared/types";
 import { NFT } from "./entities/INFT";
-import { Brackets } from "typeorm";
+import { Brackets, type SelectQueryBuilder } from "typeorm";
 
 interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
   seasonOptions: number[];
@@ -18,6 +18,75 @@ interface FetchNftsPayload {
   readonly contractAddress?: string;
   readonly search?: string;
   readonly season?: number;
+}
+
+const DEFAULT_NFT_PAGE = 1;
+const DEFAULT_NFT_PAGE_SIZE = 50;
+const MAX_NFT_PAGE_SIZE = 100;
+const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
+
+const coercePositiveInteger = (value: unknown, fallback: number): number => {
+  const numericValue =
+    typeof value === "number" || typeof value === "string"
+      ? Number(value)
+      : Number.NaN;
+
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.floor(numericValue));
+};
+
+const getSafeNftPagination = (
+  page: unknown,
+  limit: unknown,
+): { page: number; limit: number } => ({
+  page: coercePositiveInteger(page, DEFAULT_NFT_PAGE),
+  limit: Math.min(
+    coercePositiveInteger(limit, DEFAULT_NFT_PAGE_SIZE),
+    MAX_NFT_PAGE_SIZE,
+  ),
+});
+
+const escapeLikeSearch = (value: string): string =>
+  value.replace(/[\\%_]/g, (character) => `\\${character}`);
+
+function applyNftContractFilter(
+  queryBuilder: SelectQueryBuilder<NFT>,
+  contractAddress?: string,
+) {
+  if (!contractAddress) {
+    return;
+  }
+
+  queryBuilder.andWhere("nft.contract = :contractAddress", {
+    contractAddress: contractAddress.toLowerCase(),
+  });
+}
+
+function applyNftSearchFilter(
+  queryBuilder: SelectQueryBuilder<NFT>,
+  search?: string,
+) {
+  const normalizedSearch = search?.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return;
+  }
+
+  const escapedSearch = `%${escapeLikeSearch(normalizedSearch)}%`;
+  queryBuilder.andWhere(
+    new Brackets((qb) => {
+      qb.where(`LOWER(nft.name) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`, {
+        search: escapedSearch,
+      }).orWhere(
+        `CAST(nft.id AS TEXT) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`,
+        {
+          search: escapedSearch,
+        },
+      );
+    }),
+  );
 }
 
 async function fetchTdhInfo() {
@@ -111,6 +180,7 @@ async function fetchTransactions(
 
 async function fetchNftSeasonOptions(
   contractAddress?: string,
+  search?: string,
 ): Promise<number[]> {
   const nftRepository = getDb().getRepository(NFT);
   const queryBuilder = nftRepository
@@ -118,11 +188,8 @@ async function fetchNftSeasonOptions(
     .select("DISTINCT nft.season", "season")
     .where("nft.season >= 0");
 
-  if (contractAddress) {
-    queryBuilder.andWhere("nft.contract = :contractAddress", {
-      contractAddress: contractAddress.toLowerCase(),
-    });
-  }
+  applyNftContractFilter(queryBuilder, contractAddress);
+  applyNftSearchFilter(queryBuilder, search);
 
   const rows = await queryBuilder
     .orderBy("nft.season", "ASC")
@@ -142,44 +209,29 @@ async function fetchNfts(
 ): Promise<PaginatedNftsResponseLocal> {
   const nftRepository = getDb().getRepository(NFT);
   const queryBuilder = nftRepository.createQueryBuilder("nft");
+  const safePagination = getSafeNftPagination(page, limit);
 
-  if (contractAddress) {
-    queryBuilder.andWhere("nft.contract = :contractAddress", {
-      contractAddress: contractAddress.toLowerCase(),
-    });
-  }
-
-  const normalizedSearch = search?.trim().toLowerCase();
-  if (normalizedSearch) {
-    queryBuilder.andWhere(
-      new Brackets((qb) => {
-        qb.where("LOWER(nft.name) LIKE :search", {
-          search: `%${normalizedSearch}%`,
-        }).orWhere("CAST(nft.id AS TEXT) LIKE :search", {
-          search: `%${normalizedSearch}%`,
-        });
-      }),
-    );
-  }
+  applyNftContractFilter(queryBuilder, contractAddress);
+  applyNftSearchFilter(queryBuilder, search);
 
   if (Number.isInteger(season)) {
     queryBuilder.andWhere("nft.season = :season", { season });
   }
 
   queryBuilder
-    .skip((page - 1) * limit)
-    .take(limit)
+    .skip((safePagination.page - 1) * safePagination.limit)
+    .take(safePagination.limit)
     .orderBy("nft.mint_date", "DESC")
     .addOrderBy("nft.id", "DESC");
 
   const [results, total] = await queryBuilder.getManyAndCount();
-  const seasonOptions = await fetchNftSeasonOptions(contractAddress);
+  const seasonOptions = await fetchNftSeasonOptions(contractAddress, search);
 
   return {
     data: results,
     total,
-    page,
-    totalPages: Math.ceil(total / limit),
+    page: safePagination.page,
+    totalPages: Math.ceil(total / safePagination.limit),
     seasonOptions,
   };
 }
