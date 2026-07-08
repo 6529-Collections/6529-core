@@ -121,10 +121,17 @@ function getPositiveEditionSize(
     : 0;
 }
 
+function getEditionSizeFloorFromSupply(
+  editionSize: number | null | undefined
+): number | null {
+  const positiveEditionSize = getPositiveEditionSize(editionSize);
+  return positiveEditionSize > 0 ? positiveEditionSize : null;
+}
+
 async function updateEditionSizeFloor(
   dataSource: DataSource,
   nft: NFT,
-  editionSizeFloor: number
+  editionSizeFloor: number | null
 ) {
   if (nft.edition_size_floor === editionSizeFloor) {
     return false;
@@ -185,7 +192,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   const missingFloorCount = await nftRepository
     .createQueryBuilder("nft")
     .where(
-      "nft.edition_size_floor IS NULL OR nft.edition_size_floor <= 0"
+      "(nft.edition_size_floor IS NULL OR nft.edition_size_floor <= 0) AND nft.edition_size > 0"
     )
     .getCount();
 
@@ -229,10 +236,9 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   let failedRefreshes = 0;
 
   for (const nft of nfts) {
-    const editionSize = getPositiveEditionSize(nft.edition_size);
-
     if (!areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
-      if (await updateEditionSizeFloor(dataSource, nft, editionSize)) {
+      const editionSizeFloor = getEditionSizeFloorFromSupply(nft.edition_size);
+      if (await updateEditionSizeFloor(dataSource, nft, editionSizeFloor)) {
         copiedFloors++;
       }
       nonMemeFloors++;
@@ -242,8 +248,8 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
     if (!hasLatestMeme || nft.id !== latestMemeId) {
       const existingFloor = getPositiveEditionSize(nft.edition_size_floor);
       const editionSizeFloor = repairBrokenPositiveFloors
-        ? editionSize
-        : existingFloor || editionSize;
+        ? getEditionSizeFloorFromSupply(nft.edition_size)
+        : existingFloor || getEditionSizeFloorFromSupply(nft.edition_size);
       if (await updateEditionSizeFloor(dataSource, nft, editionSizeFloor)) {
         copiedFloors++;
       }
