@@ -75,6 +75,12 @@ jobs:
     # Run this notifier only for single-platform flows; Build All/Publish are handled by the publish job
     if: ${{ always() && (github.event.inputs.flow == 'MacOS' || github.event.inputs.flow == 'Windows' || github.event.inputs.flow == 'Linux' || github.event.inputs.flow == 'Sign Windows') }}
     steps:
+      - name: Check out notification scripts
+        uses: actions/checkout@v3
+        continue-on-error: true
+        with:
+          ref: ${{ github.ref_name }}
+
       - name: Determine required build status
         run: |
           SHOULD_FAIL=false
@@ -107,6 +113,21 @@ jobs:
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
+      - name: Notify CI wave about build failure (single-platform flow)
+        if: env.SHOULD_FAIL == 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify build success (single-platform flow)
         if: env.SHOULD_FAIL != 'true'
         uses: sarisia/actions-status-discord@v1
@@ -118,6 +139,21 @@ jobs:
           title: "6529 Desktop - Build Success ✅"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
+
+      - name: Notify CI wave about build success (single-platform flow)
+        if: env.SHOULD_FAIL != 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - Build Success ✅"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
 
   publish:
     if: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'Publish' }}
@@ -143,6 +179,12 @@ jobs:
 
           echo "SHOULD_FAIL=$SHOULD_FAIL" >> $GITHUB_ENV
 
+      - name: Check out notification scripts
+        uses: actions/checkout@v3
+        continue-on-error: true
+        with:
+          ref: ${{ github.ref_name }}
+
       - name: Notify required build failure
         if: env.SHOULD_FAIL == 'true'
         uses: sarisia/actions-status-discord@v1
@@ -155,6 +197,21 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Notify CI wave about required build failure
+        if: env.SHOULD_FAIL == 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
 
       - name: Check out
         if: env.SHOULD_FAIL != 'true'
@@ -212,6 +269,21 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
+      - name: Notify CI wave about S3 links published
+        if: success() && env.SHOULD_FAIL != 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - S3 links published ✅"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Publish Arweave Links
         if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         env:
@@ -235,6 +307,19 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
+      - name: Notify CI wave about final production build success
+        if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: production
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - Build complete 🚀"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify Publish Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
@@ -247,6 +332,21 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Notify CI wave about publish failure
+        if: failure()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Publish job failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
 
       - name: Summary
         if: always()
@@ -317,6 +417,21 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
+      - name: Notify CI wave about CloudFront invalidation success
+        if: success()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidated ✅"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
@@ -329,3 +444,18 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Notify CI wave about CloudFront invalidation failure
+        if: failure()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
+          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
+          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidation failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
