@@ -22,6 +22,7 @@ import { NFT } from "../../../db/entities/INFT";
 import { batchSave } from "../../worker-helpers";
 import { getMerkleRoot } from "./tdh-worker.merkle";
 import { Consolidation } from "../../../db/entities/IDelegation";
+import { preserveEditionSizeFloors } from "../nft-edition-size-floor-persistence";
 
 export async function fetchAllConsolidationAddresses(db: DataSource) {
   const sql = `SELECT wallet FROM (
@@ -398,11 +399,12 @@ export async function persistConsolidatedTDH(
 
 export async function persistNFTs(db: DataSource, nfts: NFT[]) {
   const distinctContracts = [...new Set(nfts.map((nft) => nft.contract))];
+  const nftsWithFloors = await preserveEditionSizeFloors(db, nfts);
   await db.transaction(async (manager) => {
     const nftRepo = manager.getRepository(NFT);
     await nftRepo.delete({
       contract: In(distinctContracts),
     });
-    await batchSave(nftRepo, nfts);
+    await batchSave(nftRepo, nftsWithFloors);
   });
 }

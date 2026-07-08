@@ -27,18 +27,34 @@ export async function runCoreMigrations(dataSource: DataSource) {
 
 async function hasMigrationRun(
   dataSource: DataSource,
-  migrationName: string
+  migrationName: string,
+  logIfApplied: boolean = true
 ) {
   const existing = await dataSource.getRepository(CoreMigration).findOne({
     where: { migration_name: migrationName },
   });
 
   if (existing) {
-    Logger.info(loggerName, `Migration ${migrationName} already applied.`);
+    if (logIfApplied) {
+      Logger.info(loggerName, `Migration ${migrationName} already applied.`);
+    }
     return true;
   }
 
   return false;
+}
+
+async function recordMigrationIfNeeded(
+  dataSource: DataSource,
+  migrationName: string
+) {
+  if (await hasMigrationRun(dataSource, migrationName, false)) {
+    return;
+  }
+
+  await dataSource.getRepository(CoreMigration).insert({
+    migration_name: migrationName,
+  });
 }
 
 async function runBlurRoyaltiesMigration(dataSource: DataSource) {
@@ -198,12 +214,11 @@ async function refreshNftEditionSizeFloor(
 
 async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   const migrationName = "nftEditionSizeFloorBackfill";
-
-  if (await hasMigrationRun(dataSource, migrationName)) {
-    return;
-  }
-
-  Logger.info(loggerName, `Running migration ${migrationName}...`);
+  const migrationAlreadyRecorded = await hasMigrationRun(
+    dataSource,
+    migrationName,
+    false
+  );
 
   const nftRepository = dataSource.getRepository(NFT);
   const nfts = await nftRepository.find({
@@ -213,7 +228,32 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
     },
   });
 
-  Logger.info(loggerName, `Found ${nfts.length} NFTs to scan`);
+  if (nfts.length === 0) {
+    Logger.info(
+      loggerName,
+      `Migration ${migrationName} found no NFTs to scan; deferring.`
+    );
+    return;
+  }
+
+  const missingFloorCount = await nftRepository
+    .createQueryBuilder("nft")
+    .where(
+      "nft.edition_size_floor IS NULL OR nft.edition_size_floor <= 0"
+    )
+    .getCount();
+
+  if (migrationAlreadyRecorded && missingFloorCount === 0) {
+    Logger.info(loggerName, `Migration ${migrationName} already applied.`);
+    return;
+  }
+
+  Logger.info(
+    loggerName,
+    `Running migration ${migrationName}...`,
+    `Found ${nfts.length} NFTs to scan.`,
+    `Missing floors: ${missingFloorCount}.`
+  );
 
   const provider = new JsonRpcProvider("https://rpc1.6529.io");
   let copiedFloors = 0;
@@ -263,9 +303,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   }
 
   if (failedRefreshes === 0) {
-    await dataSource.getRepository(CoreMigration).insert({
-      migration_name: migrationName,
-    });
+    await recordMigrationIfNeeded(dataSource, migrationName);
   }
 
   Logger.info(

@@ -1,6 +1,7 @@
 import { DataSource } from "typeorm";
 import { NFT } from "../../../db/entities/INFT";
 import { batchUpsert } from "../../worker-helpers";
+import { preserveEditionSizeFloors } from "../nft-edition-size-floor-persistence";
 
 export const persistNfts = async (
   db: DataSource,
@@ -13,7 +14,8 @@ export const persistNfts = async (
   while (attempt < maxRetries) {
     try {
       const nftsRepository = db.getRepository(NFT);
-      await batchUpsert(nftsRepository, nfts, ["id", "contract"]);
+      const nftsWithFloors = await preserveEditionSizeFloors(db, nfts);
+      await batchUpsert(nftsRepository, nftsWithFloors, ["id", "contract"]);
       return;
     } catch (error) {
       if (
