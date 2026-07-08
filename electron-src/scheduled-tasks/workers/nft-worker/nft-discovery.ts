@@ -298,6 +298,9 @@ class NFTWorker extends CoreWorker {
       editionSizes.editionSizeFloor === latestMeme.edition_size_floor &&
       editionSizes.burnt === latestMeme.burns
     ) {
+      printStatus(
+        `Latest Meme #${latestMeme.id} edition size already current: actual ${latestMeme.edition_size}, floor ${latestMeme.edition_size_floor}, burns ${latestMeme.burns}`,
+      );
       return;
     }
 
@@ -314,6 +317,9 @@ class NFTWorker extends CoreWorker {
           burns: editionSizes.burnt,
         },
       );
+    printStatus(
+      `Latest Meme #${latestMeme.id} edition size updated: actual ${latestMeme.edition_size} -> ${editionSizes.editionSize}, floor ${latestMeme.edition_size_floor} -> ${editionSizes.editionSizeFloor}, burns ${latestMeme.burns} -> ${editionSizes.burnt}`,
+    );
   }
 
   async processNextgen() {
