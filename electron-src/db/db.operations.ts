@@ -5,6 +5,12 @@ import { TDHMerkleRoot, ConsolidatedTDH } from "./entities/ITDH";
 import Logger from "electron-log";
 import { Transaction } from "./entities/ITransaction";
 import { PaginatedResponseLocal } from "../../shared/types";
+import { NFT } from "./entities/INFT";
+import { Brackets } from "typeorm";
+
+interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
+  seasonOptions: number[];
+}
 
 async function fetchTdhInfo() {
   const tdhMerkle = await getDb().getRepository(TDHMerkleRoot).findOneBy({
@@ -95,6 +101,81 @@ async function fetchTransactions(
   };
 }
 
+async function fetchNftSeasonOptions(
+  contractAddress?: string
+): Promise<number[]> {
+  const nftRepository = getDb().getRepository(NFT);
+  const queryBuilder = nftRepository
+    .createQueryBuilder("nft")
+    .select("DISTINCT nft.season", "season")
+    .where("nft.season >= 0");
+
+  if (contractAddress) {
+    queryBuilder.andWhere("nft.contract = :contractAddress", {
+      contractAddress: contractAddress.toLowerCase(),
+    });
+  }
+
+  const rows = await queryBuilder
+    .orderBy("nft.season", "ASC")
+    .getRawMany<{ season: number | string | null }>();
+
+  return rows
+    .map((row) => Number(row.season))
+    .filter((season) => Number.isInteger(season));
+}
+
+async function fetchNfts(
+  page: number = 1,
+  limit: number = 50,
+  contractAddress?: string,
+  search?: string,
+  season?: number
+): Promise<PaginatedNftsResponseLocal> {
+  const nftRepository = getDb().getRepository(NFT);
+  const queryBuilder = nftRepository.createQueryBuilder("nft");
+
+  if (contractAddress) {
+    queryBuilder.andWhere("nft.contract = :contractAddress", {
+      contractAddress: contractAddress.toLowerCase(),
+    });
+  }
+
+  const normalizedSearch = search?.trim().toLowerCase();
+  if (normalizedSearch) {
+    queryBuilder.andWhere(
+      new Brackets((qb) => {
+        qb.where("LOWER(nft.name) LIKE :search", {
+          search: `%${normalizedSearch}%`,
+        }).orWhere("CAST(nft.id AS TEXT) LIKE :search", {
+          search: `%${normalizedSearch}%`,
+        });
+      })
+    );
+  }
+
+  if (Number.isInteger(season)) {
+    queryBuilder.andWhere("nft.season = :season", { season });
+  }
+
+  queryBuilder
+    .skip((page - 1) * limit)
+    .take(limit)
+    .orderBy("nft.mint_date", "DESC")
+    .addOrderBy("nft.id", "DESC");
+
+  const [results, total] = await queryBuilder.getManyAndCount();
+  const seasonOptions = await fetchNftSeasonOptions(contractAddress);
+
+  return {
+    data: results,
+    total,
+    page,
+    totalPages: Math.ceil(total / limit),
+    seasonOptions,
+  };
+}
+
 export function registerIpcHandlers(ipcMain: IpcMain) {
   ipcMain.handle(IPC_DB_CHANNELS.GET_TDH_INFO, async (_event) => {
     const tdhInfo = await fetchTdhInfo();
@@ -118,6 +199,19 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
         contractAddress
       );
       return transactions;
+    }
+  );
+  ipcMain.handle(
+    IPC_DB_CHANNELS.GET_NFTS,
+    async (_event, { page, limit, contractAddress, search, season }) => {
+      const nfts = await fetchNfts(
+        page,
+        limit,
+        contractAddress,
+        search,
+        season
+      );
+      return nfts;
     }
   );
 }

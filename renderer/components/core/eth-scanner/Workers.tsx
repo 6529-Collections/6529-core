@@ -26,6 +26,7 @@ import {
 } from "@/shared/types";
 import { useState } from "react";
 import { Tooltip } from "react-tooltip";
+import NftLocalData from "./NftLocalData";
 import { RPCProvider } from "./RpcProviders";
 import TransactionsLocalData from "./TransactionsLocalData";
 
@@ -457,6 +458,13 @@ export function WorkerCard({
       extraActions.unshift({
         name: "Data",
         content: <TransactionsLocalData />,
+      });
+    }
+
+    if (task.namespace === ScheduledWorkerNames.NFTS_WORKER) {
+      extraActions.unshift({
+        name: "Data",
+        content: <NftLocalData />,
       });
     }
 
