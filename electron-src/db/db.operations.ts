@@ -7,6 +7,7 @@ import { Transaction } from "./entities/ITransaction";
 import { PaginatedResponseLocal } from "../../shared/types";
 import { NFT } from "./entities/INFT";
 import { Brackets, type SelectQueryBuilder } from "typeorm";
+import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
 
 interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
   seasonOptions: number[];
@@ -24,6 +25,7 @@ const DEFAULT_NFT_PAGE = 1;
 const DEFAULT_NFT_PAGE_SIZE = 50;
 const MAX_NFT_PAGE_SIZE = 100;
 const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
+const NEXTGEN_TOKEN_ID_MODULUS = 10_000_000_000;
 
 const coercePositiveInteger = (value: unknown, fallback: number): number => {
   const numericValue =
@@ -80,10 +82,24 @@ function applyNftSearchFilter(
       qb.where(`LOWER(nft.name) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`, {
         search: escapedSearch,
       }).orWhere(
-        `CAST(nft.id AS TEXT) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`,
-        {
-          search: escapedSearch,
-        },
+        new Brackets((idQb) => {
+          idQb
+            .where(
+              `nft.contract = :nextgenContract AND CAST((nft.id % :nextgenTokenIdModulus) AS TEXT) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`,
+              {
+                nextgenContract: NEXTGEN_CONTRACT.toLowerCase(),
+                nextgenTokenIdModulus: NEXTGEN_TOKEN_ID_MODULUS,
+                search: escapedSearch,
+              },
+            )
+            .orWhere(
+              `nft.contract != :nextgenContract AND CAST(nft.id AS TEXT) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`,
+              {
+                nextgenContract: NEXTGEN_CONTRACT.toLowerCase(),
+                search: escapedSearch,
+              },
+            );
+        }),
       );
     }),
   );

@@ -13,11 +13,7 @@ import { formatDate, formatInteger } from "@/i18n/format";
 import type { SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import type { PaginatedResponseLocal } from "@/shared/types";
-import {
-  faExternalLinkSquare,
-  faRefresh,
-  faXmark,
-} from "@fortawesome/free-solid-svg-icons";
+import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useCallback, useMemo, useState, useEffect } from "react";
@@ -114,7 +110,7 @@ const parseMintDate = (mintDate: LocalNft["mint_date"]): Date | null => {
   return isValidDate(date) ? date : null;
 };
 
-const getNftDisplayLabel = (
+const getNftSecondaryLabel = (
   nft: LocalNft | RenderableLocalNft,
   locale: SupportedLocale
 ): string => {
@@ -135,15 +131,19 @@ const getNftDisplayLabel = (
   }
   if (isContract(nft.contract, NEXTGEN_CONTRACT)) {
     const normalized = normalizeNextgenTokenID(nft.id);
-    return t(locale, "core.ethScanner.nftsData.display.nextgen", {
+    return t(locale, "core.ethScanner.nftsData.display.nextgenCollection", {
       collectionId: formatInteger(locale, normalized.collection_id),
-      tokenId: formatInteger(locale, normalized.token_id),
     });
   }
   return t(locale, "core.ethScanner.nftsData.display.unknown", {
     tokenId: formatInteger(locale, nft.id),
   });
 };
+
+const getNftPrimaryLabel = (
+  nft: LocalNft | RenderableLocalNft,
+  locale: SupportedLocale
+): string => nft.name.trim() || getNftSecondaryLabel(nft, locale);
 
 const getNftPath = (nft: LocalNft | RenderableLocalNft): string => {
   if (isContract(nft.contract, MEMES_CONTRACT)) {
@@ -164,16 +164,7 @@ const getNftPath = (nft: LocalNft | RenderableLocalNft): string => {
 const getSupplyDisplay = (
   nft: LocalNft | RenderableLocalNft,
   locale: SupportedLocale
-): string => {
-  const minted = formatInteger(locale, nft.edition_size);
-  if (!nft.burns) {
-    return t(locale, "core.ethScanner.nftsData.supply.minted", { minted });
-  }
-  return t(locale, "core.ethScanner.nftsData.supply.mintedBurned", {
-    minted,
-    burned: formatInteger(locale, nft.burns),
-  });
-};
+): string => formatInteger(locale, nft.edition_size);
 
 const getSeasonDisplay = (
   nft: LocalNft | RenderableLocalNft,
@@ -453,10 +444,7 @@ export default function NftLocalData() {
           </caption>
           <thead>
             <tr className="tw-border-b tw-border-iron-800 tw-text-left tw-text-xs tw-font-semibold tw-uppercase tw-tracking-normal tw-text-iron-400">
-              <th className="tw-w-px tw-whitespace-nowrap tw-px-2 tw-py-2">
-                {t(locale, "core.ethScanner.nftsData.table.image")}
-              </th>
-              <th className="tw-min-w-80 tw-px-2 tw-py-2">
+              <th className="tw-min-w-96 tw-px-2 tw-py-2">
                 {t(locale, "core.ethScanner.nftsData.table.nft")}
               </th>
               <th className="tw-whitespace-nowrap tw-px-2 tw-py-2">
@@ -473,15 +461,13 @@ export default function NftLocalData() {
               <th className="tw-whitespace-nowrap tw-px-2 tw-py-2">
                 {t(locale, "core.ethScanner.nftsData.table.supply")}
               </th>
-              <th className="tw-w-px tw-whitespace-nowrap tw-px-2 tw-py-2">
-                {t(locale, "core.ethScanner.nftsData.table.actions")}
-              </th>
             </tr>
           </thead>
           <tbody className="[&>tr:nth-child(even)]:tw-bg-transparent [&>tr:nth-child(odd)]:tw-bg-black [&>tr>td]:tw-p-2">
             {nfts?.data.length ? (
               nfts.data.map((nft) => {
-                const displayLabel = getNftDisplayLabel(nft, locale);
+                const primaryLabel = getNftPrimaryLabel(nft, locale);
+                const secondaryLabel = getNftSecondaryLabel(nft, locale);
                 const href = getNftPath(nft);
                 const imageSrc = nft.image_url
                   ? getScaledImageUri(nft.image_url, ImageScale.W_AUTO_H_50)
@@ -492,40 +478,45 @@ export default function NftLocalData() {
                     key={`${nft.contract}-${nft.id}`}
                     className="tw-leading-6"
                   >
-                    <td className="tw-whitespace-nowrap">
-                      {imageSrc ? (
-                        <img
-                          className="tw-h-12 tw-w-12 tw-rounded-md tw-bg-iron-800 tw-object-cover tw-ring-1 tw-ring-white/20"
-                          src={imageSrc}
-                          alt={t(
-                            locale,
-                            "core.ethScanner.nftsData.artwork.alt",
-                            { nft: displayLabel }
-                          )}
-                        />
-                      ) : (
-                        <div
-                          role="img"
-                          className="tw-h-12 tw-w-12 tw-rounded-md tw-bg-iron-800 tw-ring-1 tw-ring-white/20"
-                          aria-label={t(
-                            locale,
-                            "core.ethScanner.nftsData.artwork.unavailable",
-                            { nft: displayLabel }
-                          )}
-                        />
-                      )}
-                    </td>
-                    <td className="tw-min-w-80">
-                      <div className="tw-flex tw-flex-col tw-gap-0.5">
-                        <Link
-                          href={href}
-                          className="tw-w-fit tw-font-semibold tw-text-iron-100 tw-underline tw-transition-colors hover:tw-text-iron-300 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
-                        >
-                          {displayLabel}
-                        </Link>
-                        <span className="tw-max-w-xl tw-truncate tw-text-sm tw-text-iron-300">
-                          {nft.name}
-                        </span>
+                    <td className="tw-min-w-96">
+                      <div className="tw-flex tw-items-center tw-gap-3">
+                        {imageSrc ? (
+                          <img
+                            className="tw-h-12 tw-w-12 tw-flex-none tw-rounded-md tw-bg-iron-800 tw-object-cover tw-ring-1 tw-ring-white/20"
+                            src={imageSrc}
+                            alt={t(
+                              locale,
+                              "core.ethScanner.nftsData.artwork.alt",
+                              { nft: primaryLabel }
+                            )}
+                          />
+                        ) : (
+                          <div
+                            role="img"
+                            className="tw-h-12 tw-w-12 tw-flex-none tw-rounded-md tw-bg-iron-800 tw-ring-1 tw-ring-white/20"
+                            aria-label={t(
+                              locale,
+                              "core.ethScanner.nftsData.artwork.unavailable",
+                              { nft: primaryLabel }
+                            )}
+                          />
+                        )}
+                        <div className="tw-flex tw-min-w-0 tw-flex-col tw-gap-0.5">
+                          <Link
+                            href={href}
+                            aria-label={t(
+                              locale,
+                              "core.ethScanner.nftsData.actions.open",
+                              { nft: primaryLabel }
+                            )}
+                            className="tw-block tw-max-w-xl tw-truncate tw-font-semibold tw-text-iron-100 tw-underline tw-transition-colors hover:tw-text-iron-300 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
+                          >
+                            {primaryLabel}
+                          </Link>
+                          <span className="tw-max-w-xl tw-truncate tw-text-sm tw-text-iron-300">
+                            {secondaryLabel}
+                          </span>
+                        </div>
                       </div>
                     </td>
                     <td className="tw-whitespace-nowrap tw-text-iron-200">
@@ -550,35 +541,13 @@ export default function NftLocalData() {
                     <td className="tw-whitespace-nowrap tw-text-iron-200">
                       {getSupplyDisplay(nft, locale)}
                     </td>
-                    <td className="tw-whitespace-nowrap tw-text-right">
-                      <Link
-                        href={href}
-                        aria-label={t(
-                          locale,
-                          "core.ethScanner.nftsData.actions.open",
-                          { nft: displayLabel }
-                        )}
-                        title={t(
-                          locale,
-                          "core.ethScanner.nftsData.actions.open",
-                          { nft: displayLabel }
-                        )}
-                        className="tw-inline-flex tw-items-center tw-justify-center tw-rounded-lg tw-p-2 tw-text-iron-100 tw-transition-colors hover:tw-bg-iron-800 hover:tw-text-white focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
-                      >
-                        <FontAwesomeIcon
-                          icon={faExternalLinkSquare}
-                          className="tw-h-4 tw-w-4"
-                          aria-hidden="true"
-                        />
-                      </Link>
-                    </td>
                   </tr>
                 );
               })
             ) : (
               <tr>
                 <td
-                  colSpan={showSeasonColumn ? 7 : 6}
+                  colSpan={showSeasonColumn ? 5 : 4}
                   className="tw-py-6 tw-text-center tw-text-iron-400"
                 >
                   {isLoading ? (
