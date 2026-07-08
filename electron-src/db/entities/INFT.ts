@@ -51,8 +51,8 @@ export class NFT {
   @Column({ type: "int", default: 0 })
   edition_size!: number;
 
-  @Column({ type: "int", default: 0 })
-  edition_size_floor!: number;
+  @Column({ type: "int", nullable: true })
+  edition_size_floor!: number | null;
 
   @Column({ type: "int", default: 0 })
   burns!: number;

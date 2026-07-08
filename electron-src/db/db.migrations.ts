@@ -7,18 +7,11 @@ import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
 import { findTransactionValues } from "../scheduled-tasks/workers/transactions-worker/transaction-values";
 import { ethers, JsonRpcProvider } from "ethers";
 import { NFT } from "./entities/INFT";
-import {
-  Contract,
-  ContractType,
-  getEditionSizes,
-  getTokenUri,
-  retrieveNftFromURI,
-} from "../scheduled-tasks/workers/nft-worker/nft-worker";
+import { getEditionSizes } from "../scheduled-tasks/workers/nft-worker/nft-worker";
 import { MEMES_ABI, MEMES_CONTRACT } from "../../shared/abis/memes";
 import { areEqualAddresses } from "../../shared/helpers";
 
 const loggerName = "[DB MIGRATIONS]";
-const EDITION_SIZE_FLOOR_FULL_REFRESH_THRESHOLD = 300;
 
 export async function runCoreMigrations(dataSource: DataSource) {
   await runBlurRoyaltiesMigration(dataSource);
@@ -27,18 +20,34 @@ export async function runCoreMigrations(dataSource: DataSource) {
 
 async function hasMigrationRun(
   dataSource: DataSource,
-  migrationName: string
+  migrationName: string,
+  logIfApplied: boolean = true
 ) {
   const existing = await dataSource.getRepository(CoreMigration).findOne({
     where: { migration_name: migrationName },
   });
 
   if (existing) {
-    Logger.info(loggerName, `Migration ${migrationName} already applied.`);
+    if (logIfApplied) {
+      Logger.info(loggerName, `Migration ${migrationName} already applied.`);
+    }
     return true;
   }
 
   return false;
+}
+
+async function recordMigrationIfNeeded(
+  dataSource: DataSource,
+  migrationName: string
+) {
+  if (await hasMigrationRun(dataSource, migrationName, false)) {
+    return;
+  }
+
+  await dataSource.getRepository(CoreMigration).insert({
+    migration_name: migrationName,
+  });
 }
 
 async function runBlurRoyaltiesMigration(dataSource: DataSource) {
@@ -102,21 +111,27 @@ async function runBlurRoyaltiesMigration(dataSource: DataSource) {
   Logger.info(loggerName, `Migration ${migrationName} completed.`);
 }
 
-const MEMES_CONTRACT_OBJECT: Contract = {
-  name: "The Memes",
-  address: MEMES_CONTRACT,
-  abi: MEMES_ABI,
-  type: ContractType.ERC1155,
-};
+function getPositiveEditionSize(
+  editionSize: number | null | undefined
+): number {
+  return typeof editionSize === "number" &&
+    Number.isInteger(editionSize) &&
+    editionSize > 0
+    ? editionSize
+    : 0;
+}
 
-function getPositiveEditionSize(editionSize: number): number {
-  return Number.isInteger(editionSize) && editionSize > 0 ? editionSize : 0;
+function getEditionSizeFloorFromSupply(
+  editionSize: number | null | undefined
+): number | null {
+  const positiveEditionSize = getPositiveEditionSize(editionSize);
+  return positiveEditionSize > 0 ? positiveEditionSize : null;
 }
 
 async function updateEditionSizeFloor(
   dataSource: DataSource,
   nft: NFT,
-  editionSizeFloor: number
+  editionSizeFloor: number | null
 ) {
   if (nft.edition_size_floor === editionSizeFloor) {
     return false;
@@ -135,50 +150,19 @@ async function updateEditionSizeFloor(
   return true;
 }
 
-async function refreshNftEditionSizeFloor(
+async function updateNftEditionFields(
   dataSource: DataSource,
-  provider: ethers.JsonRpcProvider,
   nft: NFT,
-  contract: Contract
+  editionSize: number,
+  editionSizeFloor: number | null,
+  burns: number
 ) {
-  const ethersContract = new ethers.Contract(
-    contract.address,
-    contract.abi,
-    provider
-  );
-  const editionSizes = await getEditionSizes(
-    dataSource,
-    contract.address,
-    ethersContract,
-    nft.id,
-    {
-      provider,
-      refreshEditionSizeFloor: true,
-      backfillMissingEditionSizeFloor: true,
-    }
-  );
-
-  const tokenUri = await getTokenUri(contract.type, ethersContract, nft.id);
-  const metadataUri = tokenUri || nft.uri;
-
-  if (metadataUri) {
-    try {
-      const updatedNft = await retrieveNftFromURI(
-        dataSource,
-        contract.address,
-        nft.id,
-        metadataUri,
-        editionSizes
-      );
-      await dataSource.getRepository(NFT).save(updatedNft);
-      return "full";
-    } catch (error) {
-      Logger.warn(
-        loggerName,
-        `Failed to refresh metadata for ${contract.name} #${nft.id}; saving edition-size fields only.`,
-        error
-      );
-    }
+  if (
+    nft.edition_size === editionSize &&
+    nft.edition_size_floor === editionSizeFloor &&
+    nft.burns === burns
+  ) {
+    return false;
   }
 
   await dataSource.getRepository(NFT).update(
@@ -187,25 +171,36 @@ async function refreshNftEditionSizeFloor(
       id: nft.id,
     },
     {
-      edition_size: editionSizes.editionSize,
-      edition_size_floor: editionSizes.editionSizeFloor,
-      burns: editionSizes.burnt,
+      edition_size: editionSize,
+      edition_size_floor: editionSizeFloor,
+      burns,
     }
   );
 
-  return "fields";
+  return true;
 }
 
 async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
-  const migrationName = "nftEditionSizeFloorBackfill";
+  const migrationName = "nftEditionSizeFloorLatestMemeRepair";
+  const migrationAlreadyRecorded = await hasMigrationRun(
+    dataSource,
+    migrationName,
+    false
+  );
 
-  if (await hasMigrationRun(dataSource, migrationName)) {
+  const nftRepository = dataSource.getRepository(NFT);
+  const missingFloorCount = await nftRepository
+    .createQueryBuilder("nft")
+    .where(
+      "(nft.edition_size_floor IS NULL OR nft.edition_size_floor <= 0) AND nft.edition_size > 0"
+    )
+    .getCount();
+
+  if (migrationAlreadyRecorded && missingFloorCount === 0) {
+    Logger.info(loggerName, `Migration ${migrationName} already applied.`);
     return;
   }
 
-  Logger.info(loggerName, `Running migration ${migrationName}...`);
-
-  const nftRepository = dataSource.getRepository(NFT);
   const nfts = await nftRepository.find({
     order: {
       contract: "ASC",
@@ -213,44 +208,81 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
     },
   });
 
-  Logger.info(loggerName, `Found ${nfts.length} NFTs to scan`);
+  if (nfts.length === 0) {
+    Logger.info(
+      loggerName,
+      `Migration ${migrationName} found no NFTs to scan; deferring.`
+    );
+    return;
+  }
+
+  Logger.info(
+    loggerName,
+    `Running migration ${migrationName}...`,
+    `Found ${nfts.length} NFTs to scan.`,
+    `Missing floors: ${missingFloorCount}.`
+  );
 
   const provider = new JsonRpcProvider("https://rpc1.6529.io");
+  const memesContract = new ethers.Contract(MEMES_CONTRACT, MEMES_ABI, provider);
+  const repairBrokenPositiveFloors = !migrationAlreadyRecorded;
+  const latestMemeId = nfts
+    .filter((nft) => areEqualAddresses(nft.contract, MEMES_CONTRACT))
+    .reduce((latest, nft) => Math.max(latest, nft.id), 0);
+  const hasLatestMeme = latestMemeId > 0;
   let copiedFloors = 0;
-  let fullRefreshes = 0;
-  let fieldRefreshes = 0;
+  let latestMemeRefreshes = 0;
   let nonMemeFloors = 0;
   let failedRefreshes = 0;
 
   for (const nft of nfts) {
-    const editionSize = getPositiveEditionSize(nft.edition_size);
-
     if (!areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
-      if (await updateEditionSizeFloor(dataSource, nft, editionSize)) {
+      const editionSizeFloor = getEditionSizeFloorFromSupply(nft.edition_size);
+      if (await updateEditionSizeFloor(dataSource, nft, editionSizeFloor)) {
         copiedFloors++;
       }
       nonMemeFloors++;
       continue;
     }
 
-    if (editionSize >= EDITION_SIZE_FLOOR_FULL_REFRESH_THRESHOLD) {
-      if (await updateEditionSizeFloor(dataSource, nft, editionSize)) {
+    if (!hasLatestMeme || nft.id !== latestMemeId) {
+      const existingFloor = getEditionSizeFloorFromSupply(
+        nft.edition_size_floor
+      );
+      const editionSizeFloor = repairBrokenPositiveFloors
+        ? getEditionSizeFloorFromSupply(nft.edition_size)
+        : existingFloor ?? getEditionSizeFloorFromSupply(nft.edition_size);
+      if (await updateEditionSizeFloor(dataSource, nft, editionSizeFloor)) {
         copiedFloors++;
       }
       continue;
     }
 
     try {
-      const refreshResult = await refreshNftEditionSizeFloor(
+      const editionSizes = await getEditionSizes(
         dataSource,
-        provider,
-        nft,
-        MEMES_CONTRACT_OBJECT
+        MEMES_CONTRACT,
+        memesContract,
+        nft.id,
+        {
+          provider,
+          refreshEditionSizeFloor: true,
+          preserveExistingEditionSizeFloor: !repairBrokenPositiveFloors,
+        }
       );
-      if (refreshResult === "full") {
-        fullRefreshes++;
-      } else {
-        fieldRefreshes++;
+      const editionSizeFloor =
+        getEditionSizeFloorFromSupply(editionSizes.editionSizeFloor) ??
+        getEditionSizeFloorFromSupply(editionSizes.editionSize);
+      if (
+        await updateNftEditionFields(
+          dataSource,
+          nft,
+          editionSizes.editionSize,
+          editionSizeFloor,
+          editionSizes.burnt
+        )
+      ) {
+        latestMemeRefreshes++;
       }
     } catch (error) {
       failedRefreshes++;
@@ -263,9 +295,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   }
 
   if (failedRefreshes === 0) {
-    await dataSource.getRepository(CoreMigration).insert({
-      migration_name: migrationName,
-    });
+    await recordMigrationIfNeeded(dataSource, migrationName);
   }
 
   Logger.info(
@@ -274,8 +304,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
       ? `Migration ${migrationName} completed.`
       : `Migration ${migrationName} partially completed and will retry.`,
     `Copied floors: ${copiedFloors}.`,
-    `Full refreshes: ${fullRefreshes}.`,
-    `Field refreshes: ${fieldRefreshes}.`,
+    `Latest Meme refreshes: ${latestMemeRefreshes}.`,
     `Non-Meme rows normalized: ${nonMemeFloors}.`,
     `Failed refreshes: ${failedRefreshes}.`
   );
