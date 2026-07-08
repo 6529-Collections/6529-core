@@ -256,6 +256,64 @@ class NFTWorker extends CoreWorker {
         break;
       }
     }
+
+    if (areEqualAddresses(contract.address, MEMES_CONTRACT)) {
+      await this.refreshLatestMemeEditionSizeFloor(ethersContract, printStatus);
+    }
+  }
+
+  private async refreshLatestMemeEditionSizeFloor(
+    ethersContract: ethers.Contract,
+    printStatus: (...args: any[]) => void,
+  ) {
+    const latestMeme = await this.getDb()
+      .getRepository(NFT)
+      .findOne({
+        where: {
+          contract: MEMES_CONTRACT,
+        },
+        order: {
+          id: "DESC",
+        },
+      });
+
+    if (!latestMeme) {
+      return;
+    }
+
+    printStatus(`Refreshing latest Meme #${latestMeme.id} edition size floor`);
+    const editionSizes = await getEditionSizes(
+      this.getDb(),
+      MEMES_CONTRACT,
+      ethersContract,
+      latestMeme.id,
+      {
+        provider: this.getProvider(),
+        refreshEditionSizeFloor: true,
+      },
+    );
+
+    if (
+      editionSizes.editionSize === latestMeme.edition_size &&
+      editionSizes.editionSizeFloor === latestMeme.edition_size_floor &&
+      editionSizes.burnt === latestMeme.burns
+    ) {
+      return;
+    }
+
+    await this.getDb()
+      .getRepository(NFT)
+      .update(
+        {
+          contract: latestMeme.contract,
+          id: latestMeme.id,
+        },
+        {
+          edition_size: editionSizes.editionSize,
+          edition_size_floor: editionSizes.editionSizeFloor,
+          burns: editionSizes.burnt,
+        },
+      );
   }
 
   async processNextgen() {
@@ -395,7 +453,6 @@ class NFTWorker extends CoreWorker {
         {
           provider: this.getProvider(),
           refreshEditionSizeFloor: refreshEditionSizeFloorTokenIds.has(nft.id),
-          backfillMissingEditionSizeFloor: true,
         },
       );
       const mintDate = await getMintDate(

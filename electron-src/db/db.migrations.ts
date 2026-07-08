@@ -7,18 +7,11 @@ import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
 import { findTransactionValues } from "../scheduled-tasks/workers/transactions-worker/transaction-values";
 import { ethers, JsonRpcProvider } from "ethers";
 import { NFT } from "./entities/INFT";
-import {
-  Contract,
-  ContractType,
-  getEditionSizes,
-  getTokenUri,
-  retrieveNftFromURI,
-} from "../scheduled-tasks/workers/nft-worker/nft-worker";
+import { getEditionSizes } from "../scheduled-tasks/workers/nft-worker/nft-worker";
 import { MEMES_ABI, MEMES_CONTRACT } from "../../shared/abis/memes";
 import { areEqualAddresses } from "../../shared/helpers";
 
 const loggerName = "[DB MIGRATIONS]";
-const EDITION_SIZE_FLOOR_FULL_REFRESH_THRESHOLD = 300;
 
 export async function runCoreMigrations(dataSource: DataSource) {
   await runBlurRoyaltiesMigration(dataSource);
@@ -118,13 +111,6 @@ async function runBlurRoyaltiesMigration(dataSource: DataSource) {
   Logger.info(loggerName, `Migration ${migrationName} completed.`);
 }
 
-const MEMES_CONTRACT_OBJECT: Contract = {
-  name: "The Memes",
-  address: MEMES_CONTRACT,
-  abi: MEMES_ABI,
-  type: ContractType.ERC1155,
-};
-
 function getPositiveEditionSize(editionSize: number): number {
   return Number.isInteger(editionSize) && editionSize > 0 ? editionSize : 0;
 }
@@ -151,50 +137,19 @@ async function updateEditionSizeFloor(
   return true;
 }
 
-async function refreshNftEditionSizeFloor(
+async function updateNftEditionFields(
   dataSource: DataSource,
-  provider: ethers.JsonRpcProvider,
   nft: NFT,
-  contract: Contract
+  editionSize: number,
+  editionSizeFloor: number,
+  burns: number
 ) {
-  const ethersContract = new ethers.Contract(
-    contract.address,
-    contract.abi,
-    provider
-  );
-  const editionSizes = await getEditionSizes(
-    dataSource,
-    contract.address,
-    ethersContract,
-    nft.id,
-    {
-      provider,
-      refreshEditionSizeFloor: true,
-      backfillMissingEditionSizeFloor: true,
-    }
-  );
-
-  const tokenUri = await getTokenUri(contract.type, ethersContract, nft.id);
-  const metadataUri = tokenUri || nft.uri;
-
-  if (metadataUri) {
-    try {
-      const updatedNft = await retrieveNftFromURI(
-        dataSource,
-        contract.address,
-        nft.id,
-        metadataUri,
-        editionSizes
-      );
-      await dataSource.getRepository(NFT).save(updatedNft);
-      return "full";
-    } catch (error) {
-      Logger.warn(
-        loggerName,
-        `Failed to refresh metadata for ${contract.name} #${nft.id}; saving edition-size fields only.`,
-        error
-      );
-    }
+  if (
+    nft.edition_size === editionSize &&
+    nft.edition_size_floor === editionSizeFloor &&
+    nft.burns === burns
+  ) {
+    return false;
   }
 
   await dataSource.getRepository(NFT).update(
@@ -203,17 +158,17 @@ async function refreshNftEditionSizeFloor(
       id: nft.id,
     },
     {
-      edition_size: editionSizes.editionSize,
-      edition_size_floor: editionSizes.editionSizeFloor,
-      burns: editionSizes.burnt,
+      edition_size: editionSize,
+      edition_size_floor: editionSizeFloor,
+      burns,
     }
   );
 
-  return "fields";
+  return true;
 }
 
 async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
-  const migrationName = "nftEditionSizeFloorBackfill";
+  const migrationName = "nftEditionSizeFloorLatestMemeRepair";
   const migrationAlreadyRecorded = await hasMigrationRun(
     dataSource,
     migrationName,
@@ -256,9 +211,13 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
   );
 
   const provider = new JsonRpcProvider("https://rpc1.6529.io");
+  const memesContract = new ethers.Contract(MEMES_CONTRACT, MEMES_ABI, provider);
+  const repairBrokenPositiveFloors = !migrationAlreadyRecorded;
+  const latestMemeId = nfts
+    .filter((nft) => areEqualAddresses(nft.contract, MEMES_CONTRACT))
+    .reduce((latest, nft) => Math.max(latest, nft.id), 0);
   let copiedFloors = 0;
-  let fullRefreshes = 0;
-  let fieldRefreshes = 0;
+  let latestMemeRefreshes = 0;
   let nonMemeFloors = 0;
   let failedRefreshes = 0;
 
@@ -273,24 +232,39 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
       continue;
     }
 
-    if (editionSize >= EDITION_SIZE_FLOOR_FULL_REFRESH_THRESHOLD) {
-      if (await updateEditionSizeFloor(dataSource, nft, editionSize)) {
+    if (nft.id !== latestMemeId) {
+      const existingFloor = getPositiveEditionSize(nft.edition_size_floor);
+      const editionSizeFloor = repairBrokenPositiveFloors
+        ? editionSize
+        : existingFloor || editionSize;
+      if (await updateEditionSizeFloor(dataSource, nft, editionSizeFloor)) {
         copiedFloors++;
       }
       continue;
     }
 
     try {
-      const refreshResult = await refreshNftEditionSizeFloor(
+      const editionSizes = await getEditionSizes(
         dataSource,
-        provider,
-        nft,
-        MEMES_CONTRACT_OBJECT
+        MEMES_CONTRACT,
+        memesContract,
+        nft.id,
+        {
+          provider,
+          refreshEditionSizeFloor: true,
+          preserveExistingEditionSizeFloor: !repairBrokenPositiveFloors,
+        }
       );
-      if (refreshResult === "full") {
-        fullRefreshes++;
-      } else {
-        fieldRefreshes++;
+      if (
+        await updateNftEditionFields(
+          dataSource,
+          nft,
+          editionSizes.editionSize,
+          editionSizes.editionSizeFloor,
+          editionSizes.burnt
+        )
+      ) {
+        latestMemeRefreshes++;
       }
     } catch (error) {
       failedRefreshes++;
@@ -312,8 +286,7 @@ async function runNftEditionSizeFloorMigration(dataSource: DataSource) {
       ? `Migration ${migrationName} completed.`
       : `Migration ${migrationName} partially completed and will retry.`,
     `Copied floors: ${copiedFloors}.`,
-    `Full refreshes: ${fullRefreshes}.`,
-    `Field refreshes: ${fieldRefreshes}.`,
+    `Latest Meme refreshes: ${latestMemeRefreshes}.`,
     `Non-Meme rows normalized: ${nonMemeFloors}.`,
     `Failed refreshes: ${failedRefreshes}.`
   );

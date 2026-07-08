@@ -7,7 +7,6 @@ import {
   getCalculationEditionSize,
   getMemeEditionSizeFloor,
   getMemeTokenIdsForEditionSizeFloorRefresh,
-  MEMES_EDITION_SIZE_FLOOR_REFRESH_WINDOW_MS,
 } from "./memes-edition-size-floor";
 
 describe("meme edition size floor helpers", () => {
@@ -59,26 +58,15 @@ describe("meme edition size floor helpers", () => {
     assert.equal(calculateHodlRate(100, -1), 1);
   });
 
-  it("refreshes latest Meme and Memes minted inside the 30-day window", () => {
-    const nowMillis = Date.UTC(2026, 0, 31, 0, 0, 0);
-    const boundaryMintSeconds = Math.floor(
-      (nowMillis - MEMES_EDITION_SIZE_FLOOR_REFRESH_WINDOW_MS) / 1000,
-    );
-    const oldMintSeconds = boundaryMintSeconds - 1;
-    const recentMintSeconds = boundaryMintSeconds + 1;
-
+  it("refreshes only the latest Meme", () => {
     assert.deepEqual(
-      getMemeTokenIdsForEditionSizeFloorRefresh(
-        [
-          { contract: MEMES_CONTRACT, id: 1, mint_date: oldMintSeconds },
-          { contract: MEMES_CONTRACT, id: 2, mint_date: boundaryMintSeconds },
-          { contract: MEMES_CONTRACT, id: 3, mint_date: recentMintSeconds },
-          { contract: MEMES_CONTRACT, id: 5, mint_date: oldMintSeconds },
-          { contract: GRADIENT_CONTRACT, id: 999, mint_date: recentMintSeconds },
-        ],
-        nowMillis,
-      ),
-      [2, 3, 5],
+      getMemeTokenIdsForEditionSizeFloorRefresh([
+        { contract: MEMES_CONTRACT, id: 1 },
+        { contract: MEMES_CONTRACT, id: 2 },
+        { contract: MEMES_CONTRACT, id: 5 },
+        { contract: GRADIENT_CONTRACT, id: 999 },
+      ]),
+      [5],
     );
   });
 

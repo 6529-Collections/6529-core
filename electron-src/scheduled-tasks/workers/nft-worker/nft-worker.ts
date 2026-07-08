@@ -44,7 +44,7 @@ export interface EditionSizes {
 interface GetEditionSizesOptions {
   provider?: ethers.Provider;
   refreshEditionSizeFloor?: boolean;
-  backfillMissingEditionSizeFloor?: boolean;
+  preserveExistingEditionSizeFloor?: boolean;
 }
 
 const GRADIENT_SUPPLY = 101;
@@ -280,12 +280,10 @@ async function resolveEditionSizeFloor(
     contractAddress,
     tokenId,
   );
+  const preserveExistingFloor =
+    options.preserveExistingEditionSizeFloor ?? true;
 
-  if (
-    options.provider &&
-    (options.refreshEditionSizeFloor ||
-      (options.backfillMissingEditionSizeFloor && existingFloor === null))
-  ) {
+  if (options.provider && options.refreshEditionSizeFloor) {
     const onChainFloor = await fetchMemeEditionSizeFloorFromClaim(
       options.provider,
       tokenId,
@@ -295,7 +293,7 @@ async function resolveEditionSizeFloor(
     }
   }
 
-  return existingFloor ?? actualSupply;
+  return preserveExistingFloor ? existingFloor ?? actualSupply : actualSupply;
 }
 
 async function getExistingEditionSizeFloor(
