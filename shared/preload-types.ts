@@ -213,4 +213,12 @@ export interface ElectronLocalDB {
     limit?: number,
     contractAddress?: string
   ) => Promise<any>;
+  getNfts: (
+    page?: number,
+    limit?: number,
+    contractAddress?: string,
+    search?: string,
+    season?: number,
+    sortDirection?: string
+  ) => Promise<any>;
 }

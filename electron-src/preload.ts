@@ -315,6 +315,22 @@ export const localDb = {
       limit,
       contractAddress,
     }),
+  getNfts: (
+    page?: number,
+    limit?: number,
+    contractAddress?: string,
+    search?: string,
+    season?: number,
+    sortDirection?: string
+  ) =>
+    ipcRenderer.invoke("get-nfts", {
+      page,
+      limit,
+      contractAddress,
+      search,
+      season,
+      sortDirection,
+    }),
 };
 
 contextBridge.exposeInMainWorld("localDb", localDb);

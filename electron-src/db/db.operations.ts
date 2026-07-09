@@ -5,6 +5,116 @@ import { TDHMerkleRoot, ConsolidatedTDH } from "./entities/ITDH";
 import Logger from "electron-log";
 import { Transaction } from "./entities/ITransaction";
 import { PaginatedResponseLocal } from "../../shared/types";
+import { NFT } from "./entities/INFT";
+import { Brackets, type SelectQueryBuilder } from "typeorm";
+import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
+
+interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
+  seasonOptions: number[];
+}
+
+interface FetchNftsPayload {
+  readonly page?: number;
+  readonly limit?: number;
+  readonly contractAddress?: string;
+  readonly search?: string;
+  readonly season?: number;
+  readonly sortDirection?: string;
+}
+
+type NftSortDirection = "ASC" | "DESC";
+
+const DEFAULT_NFT_PAGE = 1;
+const DEFAULT_NFT_PAGE_SIZE = 50;
+const DEFAULT_NFT_SORT_DIRECTION: NftSortDirection = "DESC";
+const MAX_NFT_PAGE_SIZE = 100;
+const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
+const NEXTGEN_TOKEN_ID_MODULUS = 10_000_000_000;
+
+const coercePositiveInteger = (value: unknown, fallback: number): number => {
+  const numericValue =
+    typeof value === "number" || typeof value === "string"
+      ? Number(value)
+      : Number.NaN;
+
+  if (!Number.isFinite(numericValue)) {
+    return fallback;
+  }
+
+  return Math.max(1, Math.floor(numericValue));
+};
+
+const getSafeNftPagination = (
+  page: unknown,
+  limit: unknown,
+): { page: number; limit: number } => ({
+  page: coercePositiveInteger(page, DEFAULT_NFT_PAGE),
+  limit: Math.min(
+    coercePositiveInteger(limit, DEFAULT_NFT_PAGE_SIZE),
+    MAX_NFT_PAGE_SIZE,
+  ),
+});
+
+const escapeLikeSearch = (value: string): string =>
+  value.replace(/[\\%_]/g, (character) => `\\${character}`);
+
+const getSafeNftSortDirection = (
+  sortDirection?: string,
+): NftSortDirection =>
+  sortDirection?.toUpperCase() === "ASC"
+    ? "ASC"
+    : DEFAULT_NFT_SORT_DIRECTION;
+
+function applyNftContractFilter(
+  queryBuilder: SelectQueryBuilder<NFT>,
+  contractAddress?: string,
+) {
+  if (!contractAddress) {
+    return;
+  }
+
+  queryBuilder.andWhere("nft.contract = :contractAddress", {
+    contractAddress: contractAddress.toLowerCase(),
+  });
+}
+
+function applyNftSearchFilter(
+  queryBuilder: SelectQueryBuilder<NFT>,
+  search?: string,
+) {
+  const normalizedSearch = search?.trim().toLowerCase();
+  if (!normalizedSearch) {
+    return;
+  }
+
+  const escapedSearch = `%${escapeLikeSearch(normalizedSearch)}%`;
+  queryBuilder.andWhere(
+    new Brackets((qb) => {
+      qb.where(`LOWER(nft.name) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`, {
+        search: escapedSearch,
+      }).orWhere(
+        new Brackets((idQb) => {
+          idQb
+            .where(
+              `nft.contract = :nextgenContract AND CAST((nft.id % :nextgenTokenIdModulus) AS TEXT) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`,
+              {
+                nextgenContract: NEXTGEN_CONTRACT.toLowerCase(),
+                nextgenTokenIdModulus: NEXTGEN_TOKEN_ID_MODULUS,
+                search: escapedSearch,
+              },
+            )
+            .orWhere(
+              `nft.contract != :nextgenContract AND CAST(nft.id AS TEXT) LIKE :search ${NFT_LIKE_ESCAPE_CLAUSE}`,
+              {
+                nextgenContract: NEXTGEN_CONTRACT.toLowerCase(),
+                search: escapedSearch,
+              },
+            );
+        }),
+      );
+    }),
+  );
+}
 
 async function fetchTdhInfo() {
   const tdhMerkle = await getDb().getRepository(TDHMerkleRoot).findOneBy({
@@ -24,7 +134,7 @@ async function fetchTdhInfo() {
   }
 
   Logger.info(
-    `TDH INFO: [BLOCK] ${tdhMerkle.block} [ROOT] ${tdhMerkle.merkle_root} [LAST CALCULATION] ${tdhMerkle.last_update} [TOTAL TDH] ${totalTDH}`
+    `TDH INFO: [BLOCK] ${tdhMerkle.block} [ROOT] ${tdhMerkle.merkle_root} [LAST CALCULATION] ${tdhMerkle.last_update} [TOTAL TDH] ${totalTDH}`,
   );
 
   return {
@@ -55,7 +165,7 @@ async function fetchTransactions(
   endDate?: number,
   page: number = 1,
   limit: number = 50,
-  contractAddress?: string
+  contractAddress?: string,
 ): Promise<PaginatedResponseLocal<Transaction>> {
   const transactionRepository = getDb().getRepository(Transaction);
 
@@ -95,6 +205,66 @@ async function fetchTransactions(
   };
 }
 
+async function fetchNftSeasonOptions(
+  contractAddress?: string,
+  search?: string,
+): Promise<number[]> {
+  const nftRepository = getDb().getRepository(NFT);
+  const queryBuilder = nftRepository
+    .createQueryBuilder("nft")
+    .select("DISTINCT nft.season", "season")
+    .where("nft.season >= 0");
+
+  applyNftContractFilter(queryBuilder, contractAddress);
+  applyNftSearchFilter(queryBuilder, search);
+
+  const rows = await queryBuilder
+    .orderBy("nft.season", "ASC")
+    .getRawMany<{ season: number | string | null }>();
+
+  return rows
+    .map((row) => Number(row.season))
+    .filter((season) => Number.isInteger(season));
+}
+
+async function fetchNfts(
+  page: number = 1,
+  limit: number = 50,
+  contractAddress?: string,
+  search?: string,
+  season?: number,
+  sortDirection?: string,
+): Promise<PaginatedNftsResponseLocal> {
+  const nftRepository = getDb().getRepository(NFT);
+  const queryBuilder = nftRepository.createQueryBuilder("nft");
+  const safePagination = getSafeNftPagination(page, limit);
+  const safeSortDirection = getSafeNftSortDirection(sortDirection);
+
+  applyNftContractFilter(queryBuilder, contractAddress);
+  applyNftSearchFilter(queryBuilder, search);
+
+  if (Number.isInteger(season)) {
+    queryBuilder.andWhere("nft.season = :season", { season });
+  }
+
+  queryBuilder
+    .skip((safePagination.page - 1) * safePagination.limit)
+    .take(safePagination.limit)
+    .orderBy("nft.mint_date", safeSortDirection)
+    .addOrderBy("nft.id", safeSortDirection);
+
+  const [results, total] = await queryBuilder.getManyAndCount();
+  const seasonOptions = await fetchNftSeasonOptions(contractAddress, search);
+
+  return {
+    data: results,
+    total,
+    page: safePagination.page,
+    totalPages: Math.ceil(total / safePagination.limit),
+    seasonOptions,
+  };
+}
+
 export function registerIpcHandlers(ipcMain: IpcMain) {
   ipcMain.handle(IPC_DB_CHANNELS.GET_TDH_INFO, async (_event) => {
     const tdhInfo = await fetchTdhInfo();
@@ -105,7 +275,7 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
     async (_event, key: string) => {
       const tdhInfo = await fetchTdhInfoForKey(key);
       return tdhInfo;
-    }
+    },
   );
   ipcMain.handle(
     IPC_DB_CHANNELS.GET_TRANSACTIONS,
@@ -115,9 +285,25 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
         endDate,
         page,
         limit,
-        contractAddress
+        contractAddress,
       );
       return transactions;
-    }
+    },
+  );
+  ipcMain.handle(
+    IPC_DB_CHANNELS.GET_NFTS,
+    async (_event, payload: FetchNftsPayload = {}) => {
+      const { page, limit, contractAddress, search, season, sortDirection } =
+        payload;
+      const nfts = await fetchNfts(
+        page,
+        limit,
+        contractAddress,
+        search,
+        season,
+        sortDirection,
+      );
+      return nfts;
+    },
   );
 }

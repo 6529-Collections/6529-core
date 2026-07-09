@@ -848,6 +848,48 @@ const ATTACHMENT_MESSAGES = namespaceMessages("attachment", [
   ["safety.viewDetails", "View safety details"],
 ] as const);
 
+const CORE_NFT_LOCAL_DATA_MESSAGES = objectMessages(
+  "core.ethScanner.nftsData",
+  {
+    "filters.contract": "Contract",
+    "filters.search": "Search",
+    "filters.searchPlaceholder": "Name or token id",
+    "filters.season": "Season",
+    "filters.pageSize": "Page Size",
+    "filters.sortDirection": "Sort",
+    "contracts.all": "All Collections",
+    "contracts.memes": "The Memes",
+    "contracts.gradient": "6529 Gradient",
+    "contracts.nextgen": "NextGen",
+    "contracts.memelab": "Meme Lab",
+    "seasons.all": "All Seasons",
+    "season.value": "SZN {season}",
+    "actions.clearFilters": "Clear NFT filters",
+    "actions.refreshResults": "Refresh NFT results",
+    "actions.sortAscending": "Sort ascending",
+    "actions.sortDescending": "Sort descending",
+    "actions.open": "Open {nft}",
+    "artwork.alt": "{nft} artwork",
+    "artwork.unavailable": "{nft} artwork unavailable",
+    "summary.loading": "Loading NFT data",
+    "summary.total": "Total NFTs: {count}",
+    "table.caption": "NFT worker local data",
+    "table.nft": "NFT",
+    "table.mintDate": "Mint Date",
+    "table.season": "Season",
+    "table.tdh": "TDH",
+    "table.supply": "Supply",
+    empty: "No NFTs found",
+    "error.fetch": "Couldn't load local NFT data.",
+    "display.memes": "The Memes #{tokenId}",
+    "display.gradientCollection": "6529 Gradient",
+    "display.gradientToken": "Gradient #{tokenId}",
+    "display.memelab": "Meme Lab #{tokenId}",
+    "display.nextgenCollection": "NextGen Collection {collectionId}",
+    "display.unknown": "NFT #{tokenId}",
+  } as const
+);
+
 const COMMON_MESSAGES = objectMessages("common", {
   close: "Close",
 } as const);
@@ -1576,6 +1618,7 @@ export const EN_US_MESSAGES = {
   ...REP_CATEGORY_MESSAGES,
   ...MEDIA_VIDEO_MESSAGES,
   ...ATTACHMENT_MESSAGES,
+  ...CORE_NFT_LOCAL_DATA_MESSAGES,
   ...LINK_PREVIEW_MESSAGES,
   ...COMMON_MESSAGES,
   ...NEW_VERSION_TOAST_MESSAGES,
