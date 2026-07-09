@@ -5,7 +5,9 @@ description: Open and iterate a 6529-core Electron desktop update pull request a
 
 # Desktop PR Iteration
 
-Carry a desktop renderer update from local validation through a draft PR and keep ownership until checks and review bots are satisfied.
+Carry a desktop renderer update from local validation through a normal
+ready-for-review PR and keep ownership until checks and review bots are
+satisfied.
 
 ## Before Commit
 
@@ -25,9 +27,11 @@ Update desktop renderer to latest web
 
 Push `pull-web` to `origin`. If local history contains checkpoint commits, squash or amend before push when that keeps review cleaner and does not lose useful merge metadata. Preserve subtree merge commits that record imported web history.
 
-## Draft PR
+## Pull Request
 
-Open a draft PR from `pull-web` against `main` in `6529-Collections/6529-core`, or update the existing open `pull-web` PR.
+Open a normal ready-for-review PR from `pull-web` against `main` in
+`6529-Collections/6529-core`, or update the existing open `pull-web` PR. Use a
+draft PR only when the user explicitly asks for a draft PR in the current task.
 
 Include:
 
@@ -47,7 +51,8 @@ Include:
 - When coordinating in the 6529 Dev Daily Standup wave, post as `punk6529bot` with real 6529 mention metadata. A visible `@[handle]` in text is not enough; the drop payload also needs `mentioned_users` entries with `mentioned_profile_id` and `handle_in_content`.
 - The 6529bot responsiveness harness runs the repository root `./bin/6529 run dev` on Ubuntu and expects the renderer web app at `PORT=3001`. Preserve the narrow bot-server branch in `bin/6529` that delegates this path to `renderer/`; it detects either `REVIEWBOT_RESPONSIVENESS_OUTPUT_DIR` or the generated Playwright server env (`PORT_SEARCH_LIMIT=1`, localhost `BASE_ENDPOINT`, prod API/WS endpoints, `ASSETS_FROM_S3=true`). That branch must run root `build-next-config` before entering `renderer/`, so Next loads the generated root `next.config.mjs` instead of trying to compile `next.config.ts` during the bot dev server start. The normal desktop dev path should still start Electron.
 - CodeQL may flag imported renderer media sinks after a web pull. Keep URL handling real, not cosmetic: sanitize audio/video source URLs through an allowlist before assigning `src`, remove unnecessary clickable links for untrusted iframe banners, and route server-side preview fetches through `fetchPublicUrl` instead of raw `fetch` when the request URL depends on preview metadata or user-submitted URLs. Inline CodeQL suppressions may not be honored by the PR gate, so prefer a guard path that the scanner can see or an explicit repository-level security decision.
-- Stop after CI and bots are happy, leaving the PR as draft unless the user explicitly asks to mark ready or merge.
+- Stop after CI and bots are happy. Do not merge unless the user explicitly
+  asks to merge.
 
 ## Closeout
 

@@ -75,6 +75,17 @@ jobs:
     # Run this notifier only for single-platform flows; Build All/Publish are handled by the publish job
     if: ${{ always() && (github.event.inputs.flow == 'MacOS' || github.event.inputs.flow == 'Windows' || github.event.inputs.flow == 'Linux' || github.event.inputs.flow == 'Sign Windows') }}
     steps:
+      - name: Check out notification scripts
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+          persist-credentials: false
+
+      - name: Set up Node for notifications
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Determine required build status
         run: |
           SHOULD_FAIL=false
@@ -107,6 +118,20 @@ jobs:
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
+      - name: Notify CI wave about build failure (single-platform flow)
+        if: env.SHOULD_FAIL == 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify build success (single-platform flow)
         if: env.SHOULD_FAIL != 'true'
         uses: sarisia/actions-status-discord@v1
@@ -118,6 +143,20 @@ jobs:
           title: "6529 Desktop - Build Success ✅"
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
+
+      - name: Notify CI wave about build success (single-platform flow)
+        if: env.SHOULD_FAIL != 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - Build Success ✅"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
 
   publish:
     if: ${{ github.event.inputs.flow == 'Build All' || github.event.inputs.flow == 'Publish' }}
@@ -143,6 +182,23 @@ jobs:
 
           echo "SHOULD_FAIL=$SHOULD_FAIL" >> $GITHUB_ENV
 
+      - name: Check out
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
       - name: Notify required build failure
         if: env.SHOULD_FAIL == 'true'
         uses: sarisia/actions-status-discord@v1
@@ -156,25 +212,19 @@ jobs:
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
-      - name: Check out
-        if: env.SHOULD_FAIL != 'true'
-        uses: actions/checkout@v3
-        with:
-          ref: ${{ github.ref_name }}
-
-      - name: Set up pnpm
-        if: env.SHOULD_FAIL != 'true'
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.33.0
-          run_install: false
-
-      - name: Set up Node
-        if: env.SHOULD_FAIL != 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
+      - name: Notify CI wave about required build failure
+        if: env.SHOULD_FAIL == 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
 
       - name: Install dependencies
         if: env.SHOULD_FAIL != 'true'
@@ -212,6 +262,20 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
+      - name: Notify CI wave about S3 links published
+        if: success() && env.SHOULD_FAIL != 'true'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - S3 links published ✅"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Publish Arweave Links
         if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         env:
@@ -235,6 +299,20 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
+      - name: Notify CI wave about final production build success
+        if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: production
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - Build complete 🚀"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify Publish Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
@@ -247,6 +325,20 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Notify CI wave about publish failure
+        if: failure()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Publish job failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
 
       - name: Summary
         if: always()
@@ -317,6 +409,20 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
+      - name: Notify CI wave about CloudFront invalidation success
+        if: success()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidated ✅"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify Failure
         if: failure()
         uses: sarisia/actions-status-discord@v1
@@ -329,3 +435,17 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Notify CI wave about CloudFront invalidation failure
+        if: failure()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidation failed ❌"
+          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop
+        run: node scripts/notify-ci-wave.mjs

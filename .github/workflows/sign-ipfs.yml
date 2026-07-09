@@ -83,6 +83,19 @@ jobs:
           title: "6529 Desktop - IPFS Signing failed ❌"
           color: 0xff0000
 
+      - name: Notify CI wave about IPFS signing failure
+        if: failure()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: production
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - IPFS Signing failed ❌"
+          CI_PIPELINES_SERVICE: desktop-ipfs-signing
+        run: node scripts/notify-ci-wave.mjs
+
       - name: Notify Discord on success
         if: success()
         uses: sarisia/actions-status-discord@v1
@@ -94,3 +107,17 @@ jobs:
           title: "6529 Desktop - IPFS Binaries Signed ✅"
           description: "Signed IPFS binaries uploaded to S3"
           color: 0x00ff00
+
+      - name: Notify CI wave about IPFS signing success
+        if: success()
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: production
+          CI_PIPELINES_STATUS: success
+          CI_PIPELINES_TITLE: "6529 Desktop - IPFS Binaries Signed ✅"
+          CI_PIPELINES_DESCRIPTION: "Signed IPFS binaries uploaded to S3"
+          CI_PIPELINES_SERVICE: desktop-ipfs-signing
+        run: node scripts/notify-ci-wave.mjs
