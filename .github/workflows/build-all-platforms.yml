@@ -123,6 +123,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
@@ -148,6 +149,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - Build Success ✅"
@@ -215,6 +217,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
@@ -264,6 +267,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - S3 links published ✅"
@@ -300,6 +304,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: production
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - Build complete 🚀"
@@ -326,6 +331,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - Publish job failed ❌"
@@ -408,6 +414,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidated ✅"
@@ -434,6 +441,7 @@ jobs:
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidation failed ❌"
