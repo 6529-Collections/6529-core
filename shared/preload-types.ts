@@ -218,6 +218,7 @@ export interface ElectronLocalDB {
     limit?: number,
     contractAddress?: string,
     search?: string,
-    season?: number
+    season?: number,
+    sortDirection?: string
   ) => Promise<any>;
 }

@@ -320,7 +320,8 @@ export const localDb = {
     limit?: number,
     contractAddress?: string,
     search?: string,
-    season?: number
+    season?: number,
+    sortDirection?: string
   ) =>
     ipcRenderer.invoke("get-nfts", {
       page,
@@ -328,6 +329,7 @@ export const localDb = {
       contractAddress,
       search,
       season,
+      sortDirection,
     }),
 };
 

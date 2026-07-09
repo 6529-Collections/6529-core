@@ -13,7 +13,12 @@ import { formatDate, formatInteger } from "@/i18n/format";
 import type { SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import type { PaginatedResponseLocal } from "@/shared/types";
-import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronDown,
+  faChevronUp,
+  faRefresh,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useCallback, useMemo, useState, useEffect } from "react";
@@ -46,6 +51,8 @@ interface RenderablePaginatedNftsResponseLocal extends PaginatedResponseLocal<Re
   readonly seasonOptions: number[];
 }
 
+type NftSortDirection = "ASC" | "DESC";
+
 const CONTRACT_OPTIONS = [
   { labelKey: "core.ethScanner.nftsData.contracts.all", value: "" },
   {
@@ -66,12 +73,33 @@ const CONTRACT_OPTIONS = [
   },
 ] as const;
 
+const SORT_DIRECTION_OPTIONS = [
+  {
+    actionLabelKey: "core.ethScanner.nftsData.actions.sortAscending",
+    icon: faChevronUp,
+    tooltipId: "sort-nft-ascending-tooltip",
+    value: "ASC",
+  },
+  {
+    actionLabelKey: "core.ethScanner.nftsData.actions.sortDescending",
+    icon: faChevronDown,
+    tooltipId: "sort-nft-descending-tooltip",
+    value: "DESC",
+  },
+] as const satisfies ReadonlyArray<{
+  readonly actionLabelKey: string;
+  readonly icon: typeof faChevronUp;
+  readonly tooltipId: string;
+  readonly value: NftSortDirection;
+}>;
+
 const initialQueryParams = {
   contractAddress: "",
   search: "",
   season: "",
   page: 1,
   limit: 10,
+  sortDirection: "DESC" as NftSortDirection,
 };
 
 const normalizeAddress = (address: string): string => address.toLowerCase();
@@ -120,9 +148,7 @@ const getNftSecondaryLabel = (
     });
   }
   if (isContract(nft.contract, GRADIENT_CONTRACT)) {
-    return t(locale, "core.ethScanner.nftsData.display.gradient", {
-      tokenId: formatInteger(locale, nft.id),
-    });
+    return t(locale, "core.ethScanner.nftsData.display.gradientCollection");
   }
   if (isContract(nft.contract, MEMELAB_CONTRACT)) {
     return t(locale, "core.ethScanner.nftsData.display.memelab", {
@@ -143,7 +169,14 @@ const getNftSecondaryLabel = (
 const getNftPrimaryLabel = (
   nft: LocalNft | RenderableLocalNft,
   locale: SupportedLocale
-): string => nft.name.trim() || getNftSecondaryLabel(nft, locale);
+): string => {
+  if (isContract(nft.contract, GRADIENT_CONTRACT)) {
+    return t(locale, "core.ethScanner.nftsData.display.gradientToken", {
+      tokenId: formatInteger(locale, nft.id),
+    });
+  }
+  return nft.name.trim() || getNftSecondaryLabel(nft, locale);
+};
 
 const getNftPath = (nft: LocalNft | RenderableLocalNft): string => {
   if (isContract(nft.contract, MEMES_CONTRACT)) {
@@ -216,7 +249,8 @@ export default function NftLocalData() {
         queryParams.limit,
         queryParams.contractAddress,
         queryParams.search,
-        Number.isInteger(season) ? season : undefined
+        Number.isInteger(season) ? season : undefined,
+        queryParams.sortDirection
       )
       .then((response: PaginatedNftsResponseLocal) => {
         setHasLoadError(false);
@@ -244,7 +278,8 @@ export default function NftLocalData() {
       queryParams.search !== initialQueryParams.search ||
       queryParams.season !== initialQueryParams.season ||
       queryParams.page !== initialQueryParams.page ||
-      queryParams.limit !== initialQueryParams.limit,
+      queryParams.limit !== initialQueryParams.limit ||
+      queryParams.sortDirection !== initialQueryParams.sortDirection,
     [queryParams]
   );
 
@@ -348,6 +383,65 @@ export default function NftLocalData() {
             </select>
           </label>
 
+          <div className="tw-flex tw-flex-col tw-gap-1">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(locale, "core.ethScanner.nftsData.filters.sortDirection")}
+            </span>
+            <div
+              className="tw-flex tw-items-center tw-gap-2"
+              role="group"
+              aria-label={t(
+                locale,
+                "core.ethScanner.nftsData.filters.sortDirection"
+              )}
+            >
+              {SORT_DIRECTION_OPTIONS.map((option) => {
+                const active = queryParams.sortDirection === option.value;
+                return (
+                  <span key={option.value} className="tw-inline-flex">
+                    <button
+                      type="button"
+                      data-tooltip-id={option.tooltipId}
+                      aria-label={t(locale, option.actionLabelKey)}
+                      aria-pressed={active}
+                      onClick={() =>
+                        updateQueryParams({ sortDirection: option.value })
+                      }
+                      className={`tw-inline-flex tw-h-9 tw-w-9 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-p-0 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 ${
+                        active
+                          ? "tw-bg-iron-100 tw-text-black desktop-hover:hover:tw-bg-white"
+                          : "tw-bg-iron-700 tw-text-iron-100 desktop-hover:hover:tw-bg-iron-600"
+                      }`}
+                    >
+                      <FontAwesomeIcon
+                        icon={option.icon}
+                        className="tw-h-4 tw-w-4"
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <Tooltip
+                      id={option.tooltipId}
+                      style={{
+                        backgroundColor: "#1F2937",
+                        color: "white",
+                        padding: "4px 8px",
+                      }}
+                      delayShow={150}
+                      openEvents={{ mouseenter: true, focus: true }}
+                      closeEvents={{
+                        mouseleave: true,
+                        blur: true,
+                        click: true,
+                      }}
+                    >
+                      {t(locale, option.actionLabelKey)}
+                    </Tooltip>
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+
           {clearFiltersEnabled && (
             <>
               <button
@@ -443,22 +537,22 @@ export default function NftLocalData() {
             {t(locale, "core.ethScanner.nftsData.table.caption")}
           </caption>
           <thead>
-            <tr className="tw-border-b tw-border-iron-800 tw-text-left tw-text-xs tw-font-semibold tw-uppercase tw-tracking-normal tw-text-iron-400">
-              <th className="tw-min-w-96 tw-px-2 tw-py-2">
+            <tr className="tw-border-b tw-border-iron-800 tw-text-xs tw-font-semibold tw-uppercase tw-tracking-normal tw-text-iron-400">
+              <th className="tw-min-w-96 tw-px-2 tw-py-2 tw-text-left">
                 {t(locale, "core.ethScanner.nftsData.table.nft")}
               </th>
-              <th className="tw-whitespace-nowrap tw-px-2 tw-py-2">
+              <th className="tw-min-w-32 tw-whitespace-nowrap tw-px-2 tw-py-2 tw-text-center">
                 {t(locale, "core.ethScanner.nftsData.table.mintDate")}
               </th>
               {showSeasonColumn && (
-                <th className="tw-whitespace-nowrap tw-px-2 tw-py-2">
+                <th className="tw-min-w-28 tw-whitespace-nowrap tw-px-2 tw-py-2 tw-text-center">
                   {t(locale, "core.ethScanner.nftsData.table.season")}
                 </th>
               )}
-              <th className="tw-whitespace-nowrap tw-px-2 tw-py-2">
+              <th className="tw-min-w-28 tw-whitespace-nowrap tw-px-2 tw-py-2 tw-text-center">
                 {t(locale, "core.ethScanner.nftsData.table.tdh")}
               </th>
-              <th className="tw-whitespace-nowrap tw-px-2 tw-py-2">
+              <th className="tw-min-w-28 tw-whitespace-nowrap tw-px-2 tw-py-2 tw-text-center">
                 {t(locale, "core.ethScanner.nftsData.table.supply")}
               </th>
             </tr>
@@ -519,7 +613,7 @@ export default function NftLocalData() {
                         </div>
                       </div>
                     </td>
-                    <td className="tw-whitespace-nowrap tw-text-iron-200">
+                    <td className="tw-whitespace-nowrap tw-text-center tw-text-iron-200">
                       {nft.mint_date ? (
                         <time dateTime={nft.mint_date.toISOString()}>
                           {formatDate(locale, nft.mint_date)}
@@ -529,16 +623,16 @@ export default function NftLocalData() {
                       )}
                     </td>
                     {showSeasonColumn && (
-                      <td className="tw-whitespace-nowrap tw-text-iron-200">
+                      <td className="tw-whitespace-nowrap tw-text-center tw-text-iron-200">
                         {isContract(nft.contract, MEMES_CONTRACT)
                           ? getSeasonDisplay(nft, locale)
                           : "-"}
                       </td>
                     )}
-                    <td className="tw-whitespace-nowrap tw-text-iron-200">
+                    <td className="tw-whitespace-nowrap tw-text-center tw-text-iron-200">
                       {formatInteger(locale, nft.tdh)}
                     </td>
-                    <td className="tw-whitespace-nowrap tw-text-iron-200">
+                    <td className="tw-whitespace-nowrap tw-text-center tw-text-iron-200">
                       {getSupplyDisplay(nft, locale)}
                     </td>
                   </tr>

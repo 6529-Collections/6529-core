@@ -19,10 +19,14 @@ interface FetchNftsPayload {
   readonly contractAddress?: string;
   readonly search?: string;
   readonly season?: number;
+  readonly sortDirection?: string;
 }
+
+type NftSortDirection = "ASC" | "DESC";
 
 const DEFAULT_NFT_PAGE = 1;
 const DEFAULT_NFT_PAGE_SIZE = 50;
+const DEFAULT_NFT_SORT_DIRECTION: NftSortDirection = "DESC";
 const MAX_NFT_PAGE_SIZE = 100;
 const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
 const NEXTGEN_TOKEN_ID_MODULUS = 10_000_000_000;
@@ -53,6 +57,13 @@ const getSafeNftPagination = (
 
 const escapeLikeSearch = (value: string): string =>
   value.replace(/[\\%_]/g, (character) => `\\${character}`);
+
+const getSafeNftSortDirection = (
+  sortDirection?: string,
+): NftSortDirection =>
+  sortDirection?.toUpperCase() === "ASC"
+    ? "ASC"
+    : DEFAULT_NFT_SORT_DIRECTION;
 
 function applyNftContractFilter(
   queryBuilder: SelectQueryBuilder<NFT>,
@@ -222,10 +233,12 @@ async function fetchNfts(
   contractAddress?: string,
   search?: string,
   season?: number,
+  sortDirection?: string,
 ): Promise<PaginatedNftsResponseLocal> {
   const nftRepository = getDb().getRepository(NFT);
   const queryBuilder = nftRepository.createQueryBuilder("nft");
   const safePagination = getSafeNftPagination(page, limit);
+  const safeSortDirection = getSafeNftSortDirection(sortDirection);
 
   applyNftContractFilter(queryBuilder, contractAddress);
   applyNftSearchFilter(queryBuilder, search);
@@ -237,8 +250,8 @@ async function fetchNfts(
   queryBuilder
     .skip((safePagination.page - 1) * safePagination.limit)
     .take(safePagination.limit)
-    .orderBy("nft.mint_date", "DESC")
-    .addOrderBy("nft.id", "DESC");
+    .orderBy("nft.mint_date", safeSortDirection)
+    .addOrderBy("nft.id", safeSortDirection);
 
   const [results, total] = await queryBuilder.getManyAndCount();
   const seasonOptions = await fetchNftSeasonOptions(contractAddress, search);
@@ -280,13 +293,15 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
   ipcMain.handle(
     IPC_DB_CHANNELS.GET_NFTS,
     async (_event, payload: FetchNftsPayload = {}) => {
-      const { page, limit, contractAddress, search, season } = payload;
+      const { page, limit, contractAddress, search, season, sortDirection } =
+        payload;
       const nfts = await fetchNfts(
         page,
         limit,
         contractAddress,
         search,
         season,
+        sortDirection,
       );
       return nfts;
     },
