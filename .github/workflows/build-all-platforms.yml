@@ -121,10 +121,8 @@ jobs:
         if: env.SHOULD_FAIL == 'true'
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
@@ -148,10 +146,8 @@ jobs:
         if: env.SHOULD_FAIL != 'true'
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - Build Success ✅"
@@ -217,10 +213,8 @@ jobs:
         if: env.SHOULD_FAIL == 'true'
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
@@ -268,10 +262,8 @@ jobs:
         if: success() && env.SHOULD_FAIL != 'true'
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - S3 links published ✅"
@@ -306,8 +298,8 @@ jobs:
         if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: production
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - Build complete 🚀"
@@ -332,10 +324,8 @@ jobs:
         if: failure()
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - Publish job failed ❌"
@@ -416,10 +406,8 @@ jobs:
         if: success()
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidated ✅"
@@ -444,10 +432,8 @@ jobs:
         if: failure()
         continue-on-error: true
         env:
-          CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_STAGING }}
-          CI_PIPELINES_WAVE_WEBHOOK_URL_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_URL_PROD }}
-          CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD: ${{ secrets.CI_PIPELINES_WAVE_WEBHOOK_SECRET_PROD }}
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
           CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidation failed ❌"
