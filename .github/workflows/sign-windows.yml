@@ -107,3 +107,17 @@ jobs:
           description: "ENV: ${{ inputs.env }} - v${{ inputs.version }}"
           content: "<@&1162355330798325861>"
           color: 0xff0000
+
+      - name: Notify CI wave about Windows signing failure
+        if: ${{ inputs.should_run && failure() }}
+        continue-on-error: true
+        env:
+          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
+          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
+          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_TARGET_ENV: ${{ inputs.env }}
+          CI_PIPELINES_STATUS: failure
+          CI_PIPELINES_TITLE: "6529 Desktop - Windows Signing failed ❌"
+          CI_PIPELINES_DESCRIPTION: "ENV: ${{ inputs.env }} - v${{ inputs.version }}"
+          CI_PIPELINES_SERVICE: desktop-windows-signing
+        run: node scripts/notify-ci-wave.mjs
