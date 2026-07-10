@@ -529,27 +529,38 @@ export default function TitleBar() {
         show={showConfirm}
       />
       {showUpdateModal && (
-        <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[10000] tw-flex tw-items-center tw-justify-center tw-bg-black/50 tw-p-4">
-          <div className="tw-w-[min(28rem,calc(100vw-2rem))]">
+        <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[10000] tw-flex tw-items-center tw-justify-center tw-bg-black/60 tw-p-4">
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="desktop-update-modal-title"
+            className={`${styles["updateModalSurface"]} tw-w-[min(28rem,calc(100vw-2rem))]`}
+          >
             <div className={styles["updateModalHeader"]}>
-              <h2 className="tw-m-0 tw-text-lg tw-font-semibold">
+              <h2
+                id="desktop-update-modal-title"
+                className="tw-m-0 tw-text-lg tw-font-semibold"
+              >
                 Update Available
               </h2>
             </div>
-            <div className={styles["updateModalContent"]}>
-              <p>Version {updateAvailable?.version} is available.</p>
-              <span>
+            <div className={styles["updateModalBody"]}>
+              <p className="tw-m-0">
+                Version {updateAvailable?.version} is available.
+              </p>
+              <p className="tw-m-0">
                 Visit{" "}
                 <Link
                   href={"/core/core-info"}
                   onClick={() => setShowUpdateModal(false)}
+                  className={styles["updateModalLink"]}
                 >
                   App Info
                 </Link>{" "}
                 page to update.
-              </span>
+              </p>
             </div>
-            <div className={`${styles["updateModalContent"]} tw-flex tw-justify-end`}>
+            <div className={styles["updateModalFooter"]}>
               <button
                 type="button"
                 onClick={() => setShowUpdateModal(false)}
