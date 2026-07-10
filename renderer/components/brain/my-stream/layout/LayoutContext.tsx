@@ -55,13 +55,20 @@ const spacesAreEqual = (a: LayoutSpaces, b: LayoutSpaces) =>
   a.hasHeader === b.hasHeader &&
   a.measurementsComplete === b.measurementsComplete;
 
+const NATIVE_KEYBOARD_INSET = "var(--native-keyboard-inset-bottom, 0px)";
+const NATIVE_KEYBOARD_LAYOUT_TRANSITION_DURATION =
+  "var(--native-keyboard-layout-transition-duration, 0ms)";
+
+const formatCssLength = (value: number | string): string =>
+  typeof value === "number" ? `${value}px` : value;
+
 // Helper function to calculate height style
 const calculateHeightStyle = (
   spaces: LayoutSpaces,
-  extraSpace: number
+  bottomInset: number | string
 ): React.CSSProperties => {
   // Use dynamic viewport height to avoid extra space on mobile browsers
-  const heightCalc = `calc(100dvh - ${spaces.headerSpace}px - ${spaces.pinnedSpace}px - ${spaces.tabsSpace}px - ${spaces.spacerSpace}px - ${spaces.mobileTabsSpace}px - ${spaces.mobileNavSpace}px - ${extraSpace}px)`;
+  const heightCalc = `calc(100dvh - ${spaces.headerSpace}px - ${spaces.pinnedSpace}px - ${spaces.tabsSpace}px - ${spaces.spacerSpace}px - ${spaces.mobileTabsSpace}px - ${spaces.mobileNavSpace}px - ${formatCssLength(bottomInset)})`;
   return {
     height: heightCalc,
     maxHeight: heightCalc,
@@ -220,7 +227,7 @@ const LayoutContext = createContext<LayoutContextType>({
 export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { isAndroid } = useCapacitor();
+  const { isCapacitor } = useCapacitor();
   const { isVisible: isKeyboardVisible } = useNativeKeyboard();
 
   // Internal ref storage (source of truth)
@@ -362,16 +369,19 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   }, [spaces, isNavHiddenForKeyboard]);
 
   const waveViewStyle = useMemo<React.CSSProperties>(() => {
-    const style = calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
+    const style = calculateHeightStyle(
+      navAdjustedSpaces,
+      isCapacitor ? NATIVE_KEYBOARD_INSET : electronTitlebarSpace
+    );
 
-    if (isAndroid) {
+    if (isCapacitor) {
       return {
         ...style,
-        transition: "height 75ms ease-out, max-height 75ms ease-out",
+        transition: `height ${NATIVE_KEYBOARD_LAYOUT_TRANSITION_DURATION} ease-out, max-height ${NATIVE_KEYBOARD_LAYOUT_TRANSITION_DURATION} ease-out`,
       };
     }
     return style;
-  }, [electronTitlebarSpace, navAdjustedSpaces, isAndroid]);
+  }, [electronTitlebarSpace, navAdjustedSpaces, isCapacitor]);
 
   const leaderboardViewStyle = useMemo<React.CSSProperties>(() => {
     return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
