@@ -408,11 +408,19 @@ export const LayoutProvider: React.FC<{ children: ReactNode }> = ({
   }, [electronTitlebarSpace, navAdjustedSpaces]);
 
   const notificationsViewStyle = useMemo<React.CSSProperties>(() => {
-    return calculateHeightStyle(
+    const style = calculateHeightStyle(
       { ...navAdjustedSpaces, mobileNavSpace: 0 },
-      electronTitlebarSpace
+      isCapacitor ? NATIVE_KEYBOARD_INSET : electronTitlebarSpace
     );
-  }, [electronTitlebarSpace, navAdjustedSpaces]);
+
+    if (isCapacitor) {
+      return {
+        ...style,
+        transition: `height ${NATIVE_KEYBOARD_LAYOUT_TRANSITION_DURATION} ease-out, max-height ${NATIVE_KEYBOARD_LAYOUT_TRANSITION_DURATION} ease-out`,
+      };
+    }
+    return style;
+  }, [electronTitlebarSpace, navAdjustedSpaces, isCapacitor]);
 
   const myStreamFeedStyle = useMemo<React.CSSProperties>(() => {
     return calculateHeightStyle(navAdjustedSpaces, electronTitlebarSpace);
