@@ -6,11 +6,13 @@ import type { ApiWave } from "@/generated/models/ApiWave";
 import WaveApprovalThresholds from "@/components/waves/specs/WaveApprovalThresholds";
 import WaveApproveTabLabels from "@/components/waves/specs/WaveApproveTabLabels";
 import WaveBindingRules from "@/components/waves/specs/WaveBindingRules";
+import WaveChatStatus from "@/components/waves/specs/WaveChatStatus";
 import WaveCustomRules from "@/components/waves/specs/WaveCustomRules";
 import WaveDisableLinks from "@/components/waves/specs/WaveDisableLinks";
 import WaveGroup from "@/components/waves/specs/groups/group/WaveGroup";
 import { WaveGroupType } from "@/components/waves/specs/groups/group/WaveGroup.types";
 import WaveOutcomesVisibility from "@/components/waves/specs/WaveOutcomesVisibility";
+import WaveSubmissionButtonLabel from "@/components/waves/specs/WaveSubmissionButtonLabel";
 import WaveSlowMode from "@/components/waves/specs/WaveSlowMode";
 import WaveActiveCurationSection from "./curation/WaveActiveCurationSection";
 import BoostedDropsDisplayPreference from "@/components/waves/boosted-drops/BoostedDropsDisplayPreference";
@@ -48,7 +50,9 @@ export default function WaveSettingsSections({
     wave.wave.type === ApiWaveType.Rank ||
     wave.wave.type === ApiWaveType.Approve;
   const supportsAcceptanceRules = wave.wave.type !== ApiWaveType.Chat;
+  const showChatStatus = wave.wave.type !== ApiWaveType.Chat;
   const showChatSettings = wave.chat.enabled;
+  const showChatSection = showChatStatus || showChatSettings;
 
   return (
     <div className="tw-pb-4">
@@ -72,6 +76,7 @@ export default function WaveSettingsSections({
 
       {isDisplaySettingsWave && (
         <SettingsSection title="Display">
+          <WaveSubmissionButtonLabel wave={wave} />
           <WaveOutcomesVisibility wave={wave} />
         </SettingsSection>
       )}
@@ -88,10 +93,15 @@ export default function WaveSettingsSections({
         </>
       )}
 
-      {showChatSettings && (
+      {showChatSection && (
         <SettingsSection title="Chat">
-          <WaveSlowMode wave={wave} />
-          <WaveDisableLinks wave={wave} />
+          {showChatStatus && <WaveChatStatus wave={wave} />}
+          {showChatSettings && (
+            <>
+              <WaveSlowMode wave={wave} />
+              <WaveDisableLinks wave={wave} />
+            </>
+          )}
         </SettingsSection>
       )}
 

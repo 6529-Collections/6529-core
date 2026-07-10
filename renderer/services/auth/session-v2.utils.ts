@@ -1,21 +1,29 @@
 import { Capacitor } from "@capacitor/core";
-import { isElectron } from "@/helpers";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
-import { getAuthJwt, getWalletAddress, setAuthJwt } from "./auth.utils";
+import { getWalletAddress, setAuthJwt } from "./auth.utils";
 import {
   getNativeRefreshToken,
   isNativeSecureStorageAvailable,
-  type NativeRefreshTokenClientType,
   removeNativeRefreshToken,
   setNativeRefreshToken,
 } from "./native-refresh-token-storage";
+import {
+  getSessionRefreshTelemetryTimestamp,
+  isUnauthorizedSessionRefreshError,
+  recordSessionRefreshFailureOutcome,
+  recordSessionRefreshOutcome,
+  withSessionRefreshAbortTelemetry,
+} from "./session-refresh-telemetry.utils";
+import {
+  getRateLimitCooldownMs,
+  getSessionRefreshFailureCooldownMs,
+  isRateLimitError,
+  type SessionRefreshFailureCooldownType,
+} from "./session-refresh-rate-limit.utils";
 
 export type AuthSessionClientType = "web" | "native" | "desktop";
-export type RefreshTokenSessionClientType = Exclude<
-  AuthSessionClientType,
-  "web"
->;
+export type RefreshTokenSessionClientType = Exclude<AuthSessionClientType, "web">;
 
 interface SessionLoginRequest {
   readonly client_type: AuthSessionClientType;
@@ -25,7 +33,7 @@ interface SessionLoginRequest {
   readonly role?: string | null;
 }
 
-export interface SessionWebResponse {
+interface SessionWebResponse {
   readonly address: string;
   readonly role: string | null;
   readonly access_token: string;
@@ -45,26 +53,11 @@ export interface SessionNativeResponse {
 
 type SessionLoginResponse = SessionWebResponse | SessionNativeResponse;
 type SessionRefreshResponse = SessionWebResponse | SessionNativeResponse;
-type SessionRefreshFailureCooldown =
-  | {
-      readonly type: "empty";
-      readonly expiresAtMs: number;
-    }
-  | {
-      readonly type: "retry";
-      readonly expiresAtMs: number;
-    };
+type SessionRefreshFailureCooldown = { readonly type: SessionRefreshFailureCooldownType; readonly expiresAtMs: number };
 type SessionRefreshInFlight = {
   readonly controller: AbortController;
   readonly promise: Promise<SessionRefreshResponse | null>;
   activeConsumers: number;
-};
-
-type ApiStatusError = {
-  readonly status?: unknown;
-  readonly response?: {
-    readonly status?: unknown;
-  };
 };
 
 interface CreateConnectionShareResponse {
@@ -96,11 +89,9 @@ interface RedeemConnectionShareResponse {
 interface NativeConnectionShareSourceProof {
   readonly client_type: RefreshTokenSessionClientType;
   readonly client_address: string;
-  readonly native_refresh_token?: string | undefined;
+  readonly native_refresh_token: string;
 }
 
-const SESSION_REFRESH_EMPTY_FAILURE_COOLDOWN_MS = 2_000;
-const SESSION_REFRESH_RETRY_COOLDOWN_MS = 250;
 const sessionRefreshInFlight = new Map<string, SessionRefreshInFlight>();
 const sessionRefreshFailureCooldowns = new Map<
   string,
@@ -108,30 +99,7 @@ const sessionRefreshFailureCooldowns = new Map<
 >();
 
 export function getSessionClientType(): AuthSessionClientType {
-  if (isElectron()) {
-    return "desktop";
-  }
   return Capacitor.isNativePlatform() ? "native" : "web";
-}
-
-function toNativeRefreshTokenClientType(
-  clientType: RefreshTokenSessionClientType
-): NativeRefreshTokenClientType {
-  return clientType;
-}
-
-function isUnauthorizedApiError(error: unknown): boolean {
-  if (typeof error !== "object" || error === null) {
-    return false;
-  }
-
-  const statusError = error as ApiStatusError;
-  return (
-    statusError.status === 401 ||
-    statusError.response?.status === 401 ||
-    (error instanceof Error &&
-      /unauthorized|invalid session/i.test(error.message))
-  );
 }
 
 function getSessionRefreshKey({
@@ -172,15 +140,14 @@ function getActiveFailureCooldown(
 
 function rememberSessionRefreshFailure(
   key: string,
-  type: SessionRefreshFailureCooldown["type"]
+  type: SessionRefreshFailureCooldownType,
+  cooldownMsOverride?: number
 ): void {
   sessionRefreshFailureCooldowns.set(key, {
     type,
     expiresAtMs:
       Date.now() +
-      (type === "empty"
-        ? SESSION_REFRESH_EMPTY_FAILURE_COOLDOWN_MS
-        : SESSION_REFRESH_RETRY_COOLDOWN_MS),
+      getSessionRefreshFailureCooldownMs(type, cooldownMsOverride),
   });
 }
 
@@ -325,20 +292,12 @@ async function rollbackUnpersistedSession(
 export async function getSessionNonce({
   signerAddress,
   clientType = getSessionClientType(),
-  includeAuthHeaders = true,
-  includeWalletAuthHeaders,
+  includeWalletAuthHeaders = true,
 }: {
   readonly signerAddress: string;
   readonly clientType?: AuthSessionClientType | undefined;
-  readonly includeAuthHeaders?: boolean | undefined;
   readonly includeWalletAuthHeaders?: boolean | undefined;
 }): Promise<ApiSessionNonceResponse> {
-  const authHeadersOption = {
-    ...(includeAuthHeaders ? {} : { includeAuthHeaders: false }),
-    ...(includeWalletAuthHeaders === undefined
-      ? {}
-      : { includeWalletAuthHeaders }),
-  };
   return await commonApiFetch<
     ApiSessionNonceResponse,
     {
@@ -353,7 +312,7 @@ export async function getSessionNonce({
       client_type: clientType,
       chain_id: "1",
     },
-    ...authHeadersOption,
+    includeWalletAuth: includeWalletAuthHeaders,
   });
 }
 
@@ -362,41 +321,20 @@ export async function loginWithSessionV2({
   clientSignature,
   signerAddress,
   role,
-  clientType = getSessionClientType(),
 }: {
   readonly serverSignature: string;
   readonly clientSignature: string;
   readonly signerAddress: string;
   readonly role: string | null;
-  readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
-  const nativeAuthBridge =
-    typeof window === "undefined" ? undefined : window.nativeAuth;
-  const guardedNativeSessionLogin = nativeAuthBridge?.sessionLogin;
-  if (
-    clientType !== "web" &&
-    isElectron() &&
-    typeof guardedNativeSessionLogin === "function"
-  ) {
-    const response = await guardedNativeSessionLogin({
-      server_signature: serverSignature,
-      client_signature: clientSignature,
-      client_address: signerAddress,
-      client_type: clientType,
-      ...roleBody,
-    });
-    clearSessionRefreshFailureForSession(response);
-    return response;
-  }
-
   const response = await commonApiPost<
     SessionLoginRequest,
     SessionLoginResponse
   >({
     endpoint: "auth/session-login",
     body: {
-      client_type: clientType,
+      client_type: getSessionClientType(),
       server_signature: serverSignature,
       client_signature: clientSignature,
       client_address: signerAddress,
@@ -418,73 +356,92 @@ async function executeSessionRefreshV2({
   readonly clientType: AuthSessionClientType;
 }): Promise<SessionRefreshResponse | null> {
   if (clientType !== "web") {
-    try {
-      if (
-        isElectron() &&
-        typeof window !== "undefined" &&
-        typeof window.nativeAuth?.sessionRefresh === "function"
-      ) {
-        return await window.nativeAuth.sessionRefresh({
-          client_type: clientType,
-          client_address: address,
-        });
-      }
+    const nativeRefreshToken = await getNativeRefreshToken(address);
+    if (!nativeRefreshToken) {
+      recordSessionRefreshOutcome({
+        clientType,
+        outcome: "unauthorized",
+      });
+      return null;
+    }
 
-      const nativeRefreshToken = await getNativeRefreshToken(
-        address,
-        toNativeRefreshTokenClientType(clientType)
-      );
-      if (!nativeRefreshToken) {
-        return null;
-      }
+    return await executeSessionRefreshRequest({
+      clientType,
+      request: () =>
+        commonApiPost<
+          {
+            readonly client_type: RefreshTokenSessionClientType;
+            readonly client_address: string;
+            readonly native_refresh_token: string;
+          },
+          SessionNativeResponse
+        >({
+          endpoint: "auth/session-refresh",
+          body: {
+            client_type: clientType,
+            client_address: address,
+            native_refresh_token: nativeRefreshToken,
+          },
+          signal: abortSignal,
+          credentials: getSessionCredentialsMode(),
+          errorMode: "structured",
+          includeWalletAuth: false,
+        }),
+    });
+  }
 
-      return await commonApiPost<
+  return await executeSessionRefreshRequest({
+    clientType,
+    request: () =>
+      commonApiPost<
         {
-          readonly client_type: RefreshTokenSessionClientType;
+          readonly client_type: "web";
           readonly client_address: string;
-          readonly native_refresh_token: string;
         },
-        SessionNativeResponse
+        SessionWebResponse
       >({
         endpoint: "auth/session-refresh",
         body: {
-          client_type: clientType,
+          client_type: "web",
           client_address: address,
-          native_refresh_token: nativeRefreshToken,
         },
         signal: abortSignal,
-        credentials: "include",
+        credentials: getSessionCredentialsMode(),
         errorMode: "structured",
-        includeWalletAuthHeaders: false,
-      });
-    } catch (error: unknown) {
-      if (isUnauthorizedApiError(error)) {
-        return null;
-      }
-      throw error;
-    }
-  }
+        includeWalletAuth: false,
+      }),
+  });
+}
+
+async function executeSessionRefreshRequest<T extends SessionRefreshResponse>({
+  clientType,
+  request,
+}: {
+  readonly clientType: AuthSessionClientType;
+  readonly request: () => Promise<T>;
+}): Promise<T | null> {
+  const startedAtMs = getSessionRefreshTelemetryTimestamp();
+  recordSessionRefreshOutcome({
+    clientType,
+    outcome: "started",
+  });
 
   try {
-    return await commonApiPost<
-      {
-        readonly client_type: "web";
-        readonly client_address: string;
-      },
-      SessionWebResponse
-    >({
-      endpoint: "auth/session-refresh",
-      body: {
-        client_type: "web",
-        client_address: address,
-      },
-      signal: abortSignal,
-      credentials: "include",
-      errorMode: "structured",
-      includeWalletAuthHeaders: false,
+    const response = await request();
+    recordSessionRefreshOutcome({
+      clientType,
+      outcome: "success",
+      startedAtMs,
     });
+    return response;
   } catch (error: unknown) {
-    if (isUnauthorizedApiError(error)) {
+    recordSessionRefreshFailureOutcome({
+      clientType,
+      error,
+      startedAtMs,
+    });
+
+    if (isUnauthorizedSessionRefreshError(error)) {
       return null;
     }
     throw error;
@@ -498,19 +455,38 @@ export async function refreshSessionV2({
   readonly address: string;
   readonly abortSignal?: AbortSignal | undefined;
 }): Promise<SessionRefreshResponse | null> {
+  const clientType = getSessionClientType();
   if (abortSignal?.aborted) {
+    recordSessionRefreshOutcome({
+      clientType,
+      outcome: "aborted",
+    });
     throw createAbortError();
   }
 
-  const clientType = getSessionClientType();
   const key = getSessionRefreshKey({ address, clientType });
   const cooldown = getActiveFailureCooldown(key);
 
-  if (cooldown?.type === "empty") {
+  if (cooldown?.type === "empty" || cooldown?.type === "rate_limit") {
+    recordSessionRefreshOutcome({
+      clientType,
+      outcome:
+        cooldown.type === "empty"
+          ? "cooldown_used_empty"
+          : "cooldown_used_rate_limit",
+    });
     return null;
   }
   if (cooldown?.type === "retry") {
-    await waitForSessionRefreshRetryCooldown({ cooldown, abortSignal });
+    recordSessionRefreshOutcome({
+      clientType,
+      outcome: "cooldown_used_retry",
+    });
+    await withSessionRefreshAbortTelemetry({
+      clientType,
+      task: () =>
+        waitForSessionRefreshRetryCooldown({ cooldown, abortSignal }),
+    });
     if (sessionRefreshFailureCooldowns.get(key) === cooldown) {
       sessionRefreshFailureCooldowns.delete(key);
     }
@@ -524,10 +500,18 @@ export async function refreshSessionV2({
 
   if (existingEntry) {
     existingEntry.activeConsumers += 1;
-    return await withCallerAbort<SessionRefreshResponse | null>({
-      entry: existingEntry,
-      key,
-      abortSignal,
+    recordSessionRefreshOutcome({
+      clientType,
+      outcome: "deduped_in_flight",
+    });
+    return await withSessionRefreshAbortTelemetry({
+      clientType,
+      task: () =>
+        withCallerAbort<SessionRefreshResponse | null>({
+          entry: existingEntry,
+          key,
+          abortSignal,
+        }),
     });
   }
 
@@ -556,6 +540,14 @@ export async function refreshSessionV2({
       if (isAbortError(error)) {
         return;
       }
+      if (isRateLimitError(error)) {
+        rememberSessionRefreshFailure(
+          key,
+          "rate_limit",
+          getRateLimitCooldownMs()
+        );
+        return;
+      }
       rememberSessionRefreshFailure(key, "retry");
     } finally {
       if (sessionRefreshInFlight.get(key) === entry) {
@@ -564,10 +556,14 @@ export async function refreshSessionV2({
     }
   })();
 
-  return await withCallerAbort<SessionRefreshResponse | null>({
-    entry,
-    key,
-    abortSignal,
+  return await withSessionRefreshAbortTelemetry({
+    clientType,
+    task: () =>
+      withCallerAbort<SessionRefreshResponse | null>({
+        entry,
+        key,
+        abortSignal,
+      }),
   });
 }
 
@@ -588,20 +584,11 @@ export async function persistSessionResponse(
       return false;
     }
 
-    if (isElectron()) {
-      didPersistNativeRefreshToken = true;
-    } else {
-      try {
-        await setNativeRefreshToken({
-          address: response.address,
-          refreshToken: response.native_refresh_token,
-          clientType: toNativeRefreshTokenClientType(response.client_type),
-        });
-      } catch {
-        return false;
-      }
-      didPersistNativeRefreshToken = true;
-    }
+    await setNativeRefreshToken({
+      address: response.address,
+      refreshToken: response.native_refresh_token,
+    });
+    didPersistNativeRefreshToken = true;
   }
 
   let didPersistAuth = false;
@@ -634,14 +621,15 @@ export async function verifyActiveSessionV2WebSession({
   readonly address: string;
   readonly abortSignal?: AbortSignal | undefined;
 }): Promise<boolean> {
+  if (getSessionClientType() !== "web") {
+    return true;
+  }
+
   const refreshedSession = await refreshSessionV2({
     address,
     abortSignal,
   });
-  if (
-    !refreshedSession ||
-    refreshedSession.client_type !== getSessionClientType()
-  ) {
+  if (refreshedSession?.client_type !== "web") {
     return false;
   }
 
@@ -663,17 +651,7 @@ async function getNativeConnectionShareSourceProof(): Promise<NativeConnectionSh
     );
   }
 
-  if (isElectron()) {
-    return {
-      client_type: clientType,
-      client_address: address,
-    };
-  }
-
-  const nativeRefreshToken = await getNativeRefreshToken(
-    address,
-    toNativeRefreshTokenClientType(clientType)
-  );
+  const nativeRefreshToken = await getNativeRefreshToken(address);
   if (!nativeRefreshToken) {
     throw new Error(
       `Connection sharing requires an active ${clientType} session`
@@ -695,20 +673,14 @@ export async function createConnectionShare({
   readonly targetClientType?: RefreshTokenSessionClientType | undefined;
 }): Promise<CreateConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
-  if (
-    isElectron() &&
-    typeof window !== "undefined" &&
-    typeof window.nativeAuth?.createConnectionShare === "function"
-  ) {
-    if (!sourceProof) {
-      throw new Error("Connection sharing requires an active desktop session");
-    }
-    return await window.nativeAuth.createConnectionShare({
-      access_token: getAuthJwt(),
-      target_client_type: targetClientType,
-      ...sourceProof,
-    });
-  }
+  const body = sourceProof
+    ? {
+        target_client_type: targetClientType,
+        ...sourceProof,
+      }
+    : {
+        target_client_type: targetClientType,
+      };
 
   return await commonApiPost<
     {
@@ -720,10 +692,7 @@ export async function createConnectionShare({
     CreateConnectionShareResponse
   >({
     endpoint: "auth/connection-share",
-    body: {
-      target_client_type: targetClientType,
-      ...(sourceProof ?? {}),
-    },
+    body,
     credentials: getSessionCredentialsMode(),
     signal,
   });
@@ -735,20 +704,6 @@ export async function createLegacyDesktopConnectionShare({
   readonly signal?: AbortSignal | undefined;
 }): Promise<CreateLegacyDesktopConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
-  if (
-    isElectron() &&
-    typeof window !== "undefined" &&
-    typeof window.nativeAuth?.createLegacyDesktopConnectionShare === "function"
-  ) {
-    if (!sourceProof) {
-      throw new Error("Connection sharing requires an active desktop session");
-    }
-    return await window.nativeAuth.createLegacyDesktopConnectionShare({
-      access_token: getAuthJwt(),
-      ...sourceProof,
-    });
-  }
-
   return await commonApiPost<
     Partial<NativeConnectionShareSourceProof>,
     CreateLegacyDesktopConnectionShareResponse
@@ -772,51 +727,32 @@ export async function logoutSessionV2({
     if (!address) {
       return;
     }
+    const nativeRefreshToken = await getNativeRefreshToken(address);
+    if (!nativeRefreshToken) {
+      return;
+    }
     try {
-      if (
-        isElectron() &&
-        typeof window !== "undefined" &&
-        typeof window.nativeAuth?.sessionLogout === "function"
-      ) {
-        await window.nativeAuth.sessionLogout({
-          access_token: getAuthJwt(),
+      await commonApiPost<
+        {
+          readonly client_type: RefreshTokenSessionClientType;
+          readonly client_address: string;
+          readonly native_refresh_token: string;
+          readonly all_sessions: boolean;
+        },
+        void
+      >({
+        endpoint: "auth/session-logout",
+        body: {
           client_type: clientType,
           client_address: address,
+          native_refresh_token: nativeRefreshToken,
           all_sessions: allSessions,
-        });
-      } else {
-        const nativeRefreshToken = await getNativeRefreshToken(
-          address,
-          toNativeRefreshTokenClientType(clientType)
-        );
-        if (!nativeRefreshToken) {
-          return;
-        }
-        await commonApiPost<
-          {
-            readonly client_type: RefreshTokenSessionClientType;
-            readonly client_address: string;
-            readonly native_refresh_token: string;
-            readonly all_sessions: boolean;
-          },
-          void
-        >({
-          endpoint: "auth/session-logout",
-          body: {
-            client_type: clientType,
-            client_address: address,
-            native_refresh_token: nativeRefreshToken,
-            all_sessions: allSessions,
-          },
-          credentials: "include",
-          parseJson: false,
-        });
-      }
+        },
+        credentials: "include",
+        parseJson: false,
+      });
     } finally {
-      await removeNativeRefreshToken(
-        address,
-        toNativeRefreshTokenClientType(clientType)
-      );
+      await removeNativeRefreshToken(address);
     }
     return;
   }
@@ -842,22 +778,8 @@ export async function logoutSessionV2({
 
 export async function redeemConnectionShare(
   connectionShareCode: string,
-  targetClientType: RefreshTokenSessionClientType = isElectron()
-    ? "desktop"
-    : "native"
+  targetClientType: RefreshTokenSessionClientType = "native"
 ): Promise<SessionNativeResponse> {
-  if (
-    isElectron() &&
-    typeof window !== "undefined" &&
-    typeof window.nativeAuth?.redeemConnectionShare === "function"
-  ) {
-    return await window.nativeAuth.redeemConnectionShare({
-      access_token: getAuthJwt(),
-      connection_share_code: connectionShareCode,
-      target_client_type: targetClientType,
-    });
-  }
-
   const response = await commonApiPost<
     {
       readonly connection_share_code: string;
