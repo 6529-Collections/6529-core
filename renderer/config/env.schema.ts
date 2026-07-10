@@ -16,6 +16,7 @@ export const publicEnvSchema = z.object({
   NODE_ENV: z.enum(["development", "production", "test", "local"]).optional(),
   NEXT_RUNTIME: z.string().optional(),
   VERSION: z.string().optional(),
+  VERSION_BUILD_TIMESTAMP: z.string().optional(),
   ASSETS_FROM_S3: z.enum(["true", "false"]).optional(),
 
   /**
@@ -103,6 +104,10 @@ export const publicEnvSchema = z.object({
    * ────────────────
    */
   ENABLE_SECURITY_LOGGING: z.string().optional(),
+  ANNOUNCED_VERSION_ENDPOINT: z
+    .string()
+    .url("ANNOUNCED_VERSION_ENDPOINT must be a valid URL")
+    .optional(),
   DROP_FORGE_TESTNET: z
     .union([z.enum(["true", "false"]), z.boolean()])
     .transform((value) => value === "true" || value === true)
@@ -119,6 +124,8 @@ export const publicEnvSchema = z.object({
   NEXT_PUBLIC_FEATURE_AB_CARD: z.string().optional(),
   PROFILE_CMS_BUILDER_API_ENABLED: z.string().optional(),
   PROFILE_CMS_BUILDER_ENABLED: z.string().optional(),
+  PROFILE_CMS_RUNTIME_ENABLED: z.string().optional(),
+  PROFILE_CMS_RUNTIME_FIXTURE_PRIMARY: z.string().optional(),
   NEXT_PUBLIC_VITE_FEATURE_AB_CARD: z.string().optional(),
   VITE_FEATURE_AB_CARD: z.string().optional(),
 

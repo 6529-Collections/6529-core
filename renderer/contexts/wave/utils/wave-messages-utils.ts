@@ -11,6 +11,7 @@ import type { WaveMessagesUpdate } from "../hooks/types";
 
 interface FetchWaveMessagesOptions {
   readonly limit?: number | undefined;
+  readonly onFailure?: ((error: unknown) => void) | undefined;
 }
 
 type WaveDropsFeedWave = Awaited<
@@ -93,6 +94,14 @@ export async function fetchWaveMessages(
       `[WaveDataManager] Failed to fetch messages for ${waveId}:`,
       error
     );
+    try {
+      options.onFailure?.(error);
+    } catch (callbackError) {
+      console.error(
+        `[WaveDataManager] Failed to report fetch failure for ${waveId}:`,
+        callbackError
+      );
+    }
     return null;
   }
 }
@@ -309,19 +318,24 @@ export function mergeDrops(currentDrops: Drop[], newDrops: Drop[]): Drop[] {
       return b.serial_no - a.serial_no;
     }
 
-    const aIsTemp = a.id.startsWith("temp-");
-    const bIsTemp = b.id.startsWith("temp-");
-
-    if (aIsTemp || !bIsTemp) {
-      return (
-        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-      );
-    }
-
-    return b.serial_no - a.serial_no;
+    const createdAtDiff = getDropCreatedAtMillis(b) - getDropCreatedAtMillis(a);
+    return createdAtDiff || b.serial_no - a.serial_no;
   });
 
   return finalDrops;
+}
+
+function getDropCreatedAtMillis(drop: Drop): number {
+  if (drop.created_at === undefined || drop.created_at === null) {
+    return drop.serial_no;
+  }
+
+  const timestamp =
+    typeof drop.created_at === "number"
+      ? drop.created_at
+      : new Date(drop.created_at).getTime();
+
+  return Number.isFinite(timestamp) ? timestamp : drop.serial_no;
 }
 
 // Helper function to get the highest serial number from an array of drops

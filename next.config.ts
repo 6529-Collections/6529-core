@@ -358,6 +358,8 @@ interface PublicEnv {
   AWS_RUM_REGION?: string;
   AWS_RUM_SAMPLE_RATE?: string;
   ENABLE_SECURITY_LOGGING?: string;
+  VERSION_BUILD_TIMESTAMP?: string;
+  ANNOUNCED_VERSION_ENDPOINT?: string;
   VITE_FEATURE_AB_CARD?: string;
   FEATURE_AB_CARD?: string;
   PEPE_CACHE_TTL_MINUTES?: string;
@@ -589,6 +591,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         BASE_ENDPOINT: publicEnv.BASE_ENDPOINT,
         ALCHEMY_API_KEY: publicEnv.ALCHEMY_API_KEY,
         VERSION,
+        VERSION_BUILD_TIMESTAMP: publicEnv.VERSION_BUILD_TIMESTAMP,
         ASSETS_FROM_S3: String(ASSETS_FROM_S3),
         NEXTGEN_CHAIN_ID:
           publicEnv.NEXTGEN_CHAIN_ID === undefined
@@ -609,6 +612,7 @@ const nextConfigFactory = (phase: string): NextConfig => {
         AWS_RUM_REGION: publicEnv.AWS_RUM_REGION,
         AWS_RUM_SAMPLE_RATE: publicEnv.AWS_RUM_SAMPLE_RATE,
         ENABLE_SECURITY_LOGGING: publicEnv.ENABLE_SECURITY_LOGGING,
+        ANNOUNCED_VERSION_ENDPOINT: publicEnv.ANNOUNCED_VERSION_ENDPOINT,
         VITE_FEATURE_AB_CARD: publicEnv.VITE_FEATURE_AB_CARD,
         FEATURE_AB_CARD: publicEnv.FEATURE_AB_CARD,
         PEPE_CACHE_TTL_MINUTES: publicEnv.PEPE_CACHE_TTL_MINUTES,

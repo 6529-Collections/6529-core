@@ -40,6 +40,8 @@ function namespaceMessages<
 
 type MessageMap = Record<string, string>;
 
+const PLEASE_TRY_AGAIN = "Please try again.";
+
 type ObjectMessages<Prefix extends string, Entries extends MessageMap> = {
   readonly [Entry in keyof Entries as `${Prefix}.${Entry & string}`]: Entries[Entry];
 };
@@ -345,6 +347,34 @@ const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
   copyFailed: "Copy failed",
 } as const);
 
+const WAVE_POLL_MESSAGES = objectMessages("waves.poll", {
+  "actions.viewResults": "View results",
+  "actions.vote": "Vote",
+  "actions.changeVote": "Change vote",
+  "status.voted": "Voted",
+  "status.updated": "Updated",
+} as const);
+
+const WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES = objectMessages(
+  "waves.submissionButtonLabel",
+  {
+    counter: "{count}/{max}",
+    defaultCreateProposal: "Create Proposal",
+    defaultDrop: "Drop",
+    defaultDropArt: "Drop Art",
+    defaultSubmitDrop: "Submit drop",
+    editLabel: "Edit submission button label",
+    errorTooLong: "Label must be {max} characters or fewer.",
+    label: "Submission button label",
+    rowLabel: "Submission button",
+    toastAuthFailed:
+      "Couldn't authenticate. Reconnect your wallet and try again.",
+    toastRetry: PLEASE_TRY_AGAIN,
+    toastSaveFailedTitle: "Couldn't save this submission button label.",
+    useDefault: "Use default",
+  } as const
+);
+
 const USER_COLLECTED_STATS_WALLET_ACTIVITY_MESSAGES = objectMessages(
   "user.collected.stats.walletActivity",
   {
@@ -427,7 +457,7 @@ const USER_PROFILE_TABS_MESSAGES = objectMessages("user.profile.tabs", {
 const USER_PROFILE_HEADER_MESSAGES = objectMessages("user.profileHeader", {
   "name.edit": "Edit {name}'s profile name",
   "dm.createFailed.title": "Couldn't create this direct message.",
-  "dm.createFailed.description": "Please try again.",
+  "dm.createFailed.description": PLEASE_TRY_AGAIN,
   "name.profileEnabled": "Profile enabled: {date}",
   "pfp.alt": "{name}'s profile picture",
   "pfp.edit": "Edit {name}'s profile picture",
@@ -595,11 +625,11 @@ const WAVE_NOTIFICATION_SETTINGS_MESSAGES = namespaceMessages(
     ["mute.tooltip.disable", "Click to unmute this wave"],
     ["mute.error.muteTitle", "Couldn't mute this wave."],
     ["mute.error.unmuteTitle", "Couldn't unmute this wave."],
-    ["mute.error.description", "Please try again."],
+    ["mute.error.description", PLEASE_TRY_AGAIN],
     ["mute.error.fallbackMute", "Unable to mute wave"],
     ["mute.error.fallbackUnmute", "Unable to unmute wave"],
     ["preferences.error.updateTitle", "Couldn't update notification settings."],
-    ["preferences.error.description", "Please try again."],
+    ["preferences.error.description", PLEASE_TRY_AGAIN],
     [
       "preferences.error.enableAllMentions",
       "Unable to enable @ALL notifications",
@@ -633,13 +663,94 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
     "Warning: You are not included in this group. If it controls who can view the wave, you may not be able to access the wave after creating it.",
 } as const);
 
+const GROUP_NFT_OWNERSHIP_MESSAGES = objectMessages("groups.nftOwnership", {
+  "collection.gradients": "Gradients",
+  "collection.memelab": "Meme Lab",
+  "collection.memes": "Memes",
+  "collection.nextgen": "NextGen",
+  "matchMode.any": "Own any",
+  "matchMode.all": "Own all",
+  requirementLabel: "{collection} requirement",
+  tokenRequirementLabel: "{collection} token requirement",
+  description:
+    "Choose whether identities must own any selected token or all selected tokens.",
+  "card.tooltip": "Internal NFT ownership requirements for this group.",
+  "card.anyCollectionToken": "{collection}: any collection token",
+  "card.anySelected": "{collection}: any selected ({count})",
+  "card.allSelected": "{collection}: all selected ({count})",
+} as const);
+
 const WAVE_CHAT_MESSAGES = objectMessages("waves.chat", {
   fileUploadAreaAriaLabel: "Wave chat file upload area",
+  "replyTargetDeletedToast.title": "Reply removed.",
+  "replyTargetDeletedToast.description":
+    "The message you were replying to was deleted. Your draft is still here.",
+  "replyTargetUnavailableToast.title": "Reply not sent.",
+  "replyTargetUnavailableToast.descriptionRestored":
+    "The message you replied to is no longer available. Your draft was restored.",
+  "replyTargetUnavailableToast.descriptionKept":
+    "The message you replied to is no longer available. Your current draft was kept.",
+  "replyTargetUnavailableToast.detailsRestored":
+    "You can send it as a new message instead.",
+  "replyTargetUnavailableToast.detailsKept":
+    "Your current draft was not changed.",
+  "replyTargetUnavailableToast.actionReviewDraft": "Review draft",
+} as const);
+
+const WAVE_CHAT_SETTINGS_MESSAGES = objectMessages("waves.chatSettings", {
+  "access.anyone": "Anyone",
+  "access.anyoneWhenEnabled": "Anyone when enabled",
+  "access.label": "Chat access",
+  "groups.admin": "Admin",
+  "groups.drop": "Drop",
+  "groups.view": "View",
+  "groups.vote": "Vote",
+  "status.disabled": "Disabled",
+  "status.editLabel": "Edit chat status",
+  "status.enabled": "Enabled",
+  "status.enableHelp":
+    "The chat access group still controls who can chat when chat is enabled.",
+  "status.enableLabel": "Enable chat",
+  "status.label": "Chat status",
 } as const);
 
 const WAVE_LOADING_MESSAGES = objectMessages("waves", {
   loadingStatus: "Loading waves",
 } as const);
+
+const WAVE_DROPS_SEARCH_MODAL_MESSAGES = objectMessages(
+  "waves.drops.searchModal",
+  {
+    authorFallback: "unknown author",
+    clear: "Clear search",
+    clearShort: "Clear",
+    close: "Close search",
+    descriptionPrefix: "in",
+    "empty.description": "Try a different word or phrase.",
+    "empty.title": "No messages found",
+    "error.description": "Change the query or reopen search to try again.",
+    "error.title": "Couldn't load results",
+    "idle.description":
+      "Type at least {minLength} characters to search this wave.",
+    "idle.title": "Ready to search",
+    inputDescription:
+      "Type at least {minLength} characters to search messages in {waveName}.",
+    inputLabel: "Search messages in {waveName}",
+    loadMore: "Load more",
+    loadingMore: "Loading...",
+    "loading.description": "Looking through {waveName}.",
+    "loading.title": "Searching messages",
+    placeholder: "Search messages",
+    "result.open": "Open message {serialNo} by {author}",
+    "result.unavailable": "Message by {author} cannot be opened",
+    "results.count.one": "{count} result",
+    "results.count.other": "{count} results",
+    "results.queryPrefix": "for",
+    "results.status.one": '{count} result for "{query}"',
+    "results.status.other": '{count} results for "{query}"',
+    title: "Search messages",
+  } as const
+);
 
 const WAVE_GIF_PICKER_MESSAGES = objectMessages("waves.gifPicker", {
   dialogTitle: "GIF search",
@@ -892,6 +1003,35 @@ const CORE_NFT_LOCAL_DATA_MESSAGES = objectMessages(
 
 const COMMON_MESSAGES = objectMessages("common", {
   close: "Close",
+} as const);
+
+const HEADER_SEARCH_MESSAGES = objectMessages("headerSearch", {
+  "category.all": "All",
+  clear: "Clear search",
+  clearShort: "Clear",
+  close: "Close search",
+  "dialogTitle.site": "Search 6529.io",
+  "dialogTitle.wave": "Search this Wave",
+  error: "Something went wrong while searching. Please try again.",
+  goBack: "Go back",
+  idle: "Start typing to search 6529.io",
+  "idleWithCountdown.one":
+    "Start typing to search 6529.io ({count} more character)",
+  "idleWithCountdown.other":
+    "Start typing to search 6529.io ({count} more characters)",
+  "inputDescription.site":
+    "Type at least {minLength} characters to search 6529.io.",
+  "inputDescription.wave":
+    "Type at least {minLength} characters to search messages in this Wave.",
+  inputLabel: "Search",
+  loading: "Loading...",
+  "mode.site": "Site-wide",
+  "mode.wave": "In this Wave",
+  noResults: "No results found",
+  "placeholder.site": "Search 6529.io",
+  "placeholder.wave": "Search messages",
+  retry: "Try Again",
+  viewAllCategory: "View all {category}",
 } as const);
 
 export const EN_US_MESSAGES = {
@@ -1563,7 +1703,7 @@ export const EN_US_MESSAGES = {
     "Unmute notifications from this profile",
   "profile.mute.error.mute": "Couldn't mute this profile.",
   "profile.mute.error.unmute": "Couldn't unmute this profile.",
-  "profile.mute.error.description": "Please try again.",
+  "profile.mute.error.description": PLEASE_TRY_AGAIN,
   "profile.mute.status.muted": "Notifications from this profile are muted.",
   "profile.mute.status.unmuted":
     "Notifications from this profile are not muted.",
@@ -1598,11 +1738,14 @@ export const EN_US_MESSAGES = {
   ...NOTIFICATIONS_WAVE_CREATED_MESSAGES,
   ...NOTIFICATIONS_WAVE_FOLLOW_BUTTON_MESSAGES,
   ...WAVE_CHAT_MESSAGES,
+  ...WAVE_CHAT_SETTINGS_MESSAGES,
   ...WAVE_LOADING_MESSAGES,
+  ...WAVE_DROPS_SEARCH_MODAL_MESSAGES,
   ...WAVE_GIF_PICKER_MESSAGES,
   ...WAVE_HEADER_MESSAGES,
   ...WAVE_NOTIFICATION_SETTINGS_MESSAGES,
   ...WAVE_CREATE_GROUPS_MESSAGES,
+  ...GROUP_NFT_OWNERSHIP_MESSAGES,
   ...WAVE_EXPLORE_CARD_MESSAGES,
   ...WAVE_SCORE_SUMMARY_MESSAGES,
   ...WAVE_SCORE_DETAILS_MESSAGES,
@@ -1621,6 +1764,7 @@ export const EN_US_MESSAGES = {
   ...CORE_NFT_LOCAL_DATA_MESSAGES,
   ...LINK_PREVIEW_MESSAGES,
   ...COMMON_MESSAGES,
+  ...HEADER_SEARCH_MESSAGES,
   ...NEW_VERSION_TOAST_MESSAGES,
   ...NAVIGATION_MESSAGES,
   ...WAVE_SCORE_NAVIGATION_MESSAGES,
@@ -1629,6 +1773,8 @@ export const EN_US_MESSAGES = {
   ...DROP_REACTION_MESSAGES,
   ...WAVES_MOBILE_MESSAGES,
   ...WAVE_DROP_ACTIONS_MESSAGES,
+  ...WAVE_POLL_MESSAGES,
+  ...WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES,
 } as const;
 
 export type MessageKey = keyof typeof EN_US_MESSAGES;

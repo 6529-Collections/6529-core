@@ -19,6 +19,7 @@ import LexicalErrorBoundary from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { OnChangePlugin } from "@lexical/react/LexicalOnChangePlugin";
 import { MarkdownShortcutPlugin } from "@lexical/react/LexicalMarkdownShortcutPlugin";
+import { $convertFromMarkdownString } from "@lexical/markdown";
 
 import { TabIndentationPlugin } from "@lexical/react/LexicalTabIndentationPlugin";
 import { ListNode, ListItemNode } from "@lexical/list";
@@ -59,13 +60,21 @@ import useCapacitor from "@/hooks/useCapacitor";
 import EmojiPlugin from "../drops/create/lexical/plugins/emoji/EmojiPlugin";
 import { EmojiNode } from "../drops/create/lexical/nodes/EmojiNode";
 import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
+import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
+import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
+import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
+import { MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/MentionTransformer";
+import { WAVE_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/WaveMentionTransformer";
+import { GROUP_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/GroupMentionTransformer";
 import PlainTextPastePlugin from "@/components/drops/create/lexical/plugins/PlainTextPastePlugin";
 import EditLastDropArrowUpPlugin from "./EditLastDropArrowUpPlugin";
 import RootBlockGuardPlugin from "@/components/drops/create/lexical/plugins/RootBlockGuardPlugin";
 
 export interface CreateDropInputHandles {
   clearEditorState: () => void;
+  setMarkdown: (markdown: string) => void;
   focus: () => void;
+  blur: () => void;
 }
 
 // Create a custom command
@@ -90,6 +99,40 @@ function DisableEditPlugin({ disabled }: { disabled: boolean }) {
 
   return null;
 }
+
+interface SetMarkdownPluginHandles {
+  setMarkdown: (markdown: string) => void;
+}
+
+const SetMarkdownPlugin = forwardRef<
+  SetMarkdownPluginHandles,
+  { readonly canMentionAll: boolean }
+>(({ canMentionAll }, ref) => {
+  const [editor] = useLexicalComposerContext();
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      setMarkdown: (markdown: string) => {
+        editor.update(() => {
+          $convertFromMarkdownString(markdown, [
+            ...SAFE_MARKDOWN_TRANSFORMERS,
+            MENTION_TRANSFORMER,
+            ...(canMentionAll ? [GROUP_MENTION_TRANSFORMER] : []),
+            HASHTAG_TRANSFORMER,
+            WAVE_MENTION_TRANSFORMER,
+            IMAGE_TRANSFORMER,
+            EMOJI_TRANSFORMER,
+          ]);
+        });
+      },
+    }),
+    [canMentionAll, editor]
+  );
+
+  return null;
+});
+SetMarkdownPlugin.displayName = "SetMarkdownPlugin";
 
 const CreateDropInput = forwardRef<
   CreateDropInputHandles,
@@ -209,20 +252,22 @@ const CreateDropInput = forwardRef<
     }
 
     const clearEditorRef = useRef<ClearEditorPluginHandles | null>(null);
+    const setMarkdownRef = useRef<SetMarkdownPluginHandles | null>(null);
     const editorRef = useRef<HTMLDivElement>(null);
     const clearEditorState = () => {
       clearEditorRef.current?.clearEditorState();
     };
+    const getEditorElement = () =>
+      editorRef.current?.querySelector<HTMLElement>(
+        '[contenteditable="true"]'
+      ) ?? null;
 
     useImperativeHandle(ref, () => ({
       clearEditorState,
-      focus: () => {
-        (
-          editorRef.current?.querySelector(
-            '[contenteditable="true"]'
-          ) as HTMLElement
-        ).focus();
-      },
+      setMarkdown: (markdown: string) =>
+        setMarkdownRef.current?.setMarkdown(markdown),
+      focus: () => getEditorElement()?.focus(),
+      blur: () => getEditorElement()?.blur(),
     }));
 
     const mentionsPluginRef = useRef<NewMentionsPluginHandles | null>(null);
@@ -337,6 +382,10 @@ const CreateDropInput = forwardRef<
               <TabIndentationPlugin />
               <LinkPlugin validateUrl={validateUrl} />
               <ClearEditorPlugin ref={clearEditorRef} />
+              <SetMarkdownPlugin
+                ref={setMarkdownRef}
+                canMentionAll={canMentionAll}
+              />
               <DisableEditPlugin disabled={submitting} />
               <EnterKeyPlugin
                 handleSubmit={handleSubmit}

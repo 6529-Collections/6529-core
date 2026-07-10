@@ -48,7 +48,7 @@
         "expand"
       ],
       "facts": [
-        "The primary navigation concepts are NFTs, Waves, DMs, and About.",
+        "The primary navigation concepts are NFTs, Waves, DMs, Join 6529, and About.",
         "Home remains available through the 6529 logo link to /.",
         "The web sidebar Waves row opens /waves directly; Discover Waves remains secondary inside the Waves experience and searchable, while Network, Delegation, Tools, Open Data, and reference material live under About.",
         "Drop Forge appears as a standalone sidebar row after About only when the connected wallet can access /drop-forge.",
@@ -60,6 +60,7 @@
         "/the-memes",
         "/waves",
         "/messages",
+        "/join-6529",
         "/about",
         "/drop-forge",
         "/discover",
@@ -94,28 +95,32 @@
         "getting-started",
         "wallet",
         "profile",
-        "pfp",
         "waves",
-        "first",
-        "message"
+        "collecting",
+        "subscription"
       ],
       "facts": [
-        "The Join 6529 page lives at /join.",
-        "It is a state-aware onboarding guide that adapts to the user's current state across wallet connection, wallet auth, profile setup, profile image, public Waves, and first public message.",
-        "The profile-image step remains incomplete until an image is uploaded, but it does not block public Waves or messaging steps.",
-        "Create Wave links from the guide use the web create URL /waves?create=wave.",
-        "Join 6529 lives at /join but is not shown as a primary sidebar or app drawer menu item."
+        "The Join 6529 page lives at /join-6529.",
+        "/join redirects to /join-6529 for compatibility.",
+        "It is a state-aware onboarding hub that adapts to wallet connection, wallet auth, and profile setup.",
+        "The journey covers connecting a wallet, setting up a profile, joining a Wave, participating, and collecting.",
+        "The focus area links to The Memes Main Stage Wave, Waves, the current user's subscriptions route when available, delegation, and @help6529."
       ],
-      "canonical_path": "/join",
+      "canonical_path": "/join-6529",
       "related_paths": [
+        "/join",
         "/waves",
-        "/waves?create=wave",
+        "/waves/b6128077-ea78-4dd9-b381-52c4eadb2077?divider=1167698",
+        "/the-memes",
+        "/{user}/subscriptions",
         "/open-data/meme-subscriptions",
         "/delegation/delegation-center"
       ],
       "tags": ["join", "navigation", "getting-started", "waves"],
       "source_refs": [
+        "app/join-6529/page.tsx",
         "app/join/page.tsx",
+        "app/join/page.content.ts",
         "ops/docs/navigation/feature-join-6529-journey.md"
       ]
     },
@@ -1936,6 +1941,47 @@
       ]
     },
     {
+      "id": "waves.chat-status-settings",
+      "kind": "ui_affordance",
+      "title": "Wave chat status settings",
+      "aliases": [
+        "enable chat",
+        "disable chat",
+        "re-enable chat",
+        "chat disabled",
+        "who can chat",
+        "chat access"
+      ],
+      "keywords": [
+        "waves",
+        "chat",
+        "settings",
+        "enabled",
+        "disabled",
+        "access",
+        "group",
+        "anyone"
+      ],
+      "facts": [
+        "Wave chat has two separate settings for Rank and Approve waves: chat.enabled controls whether chat is on, and chat.scope controls who can chat when chat is enabled.",
+        "Chat waves require chat to stay enabled, so their Settings and Rules panels do not show a Chat status enable/disable row.",
+        "Rank and Approve wave Settings show Chat status as Enabled or Disabled, and wave admins can edit that row to enable or disable chat.",
+        "The Access row uses Chat access wording; `Anyone when enabled` means no chat access group is attached, not that chat is currently enabled.",
+        "The Rank and Approve Rules panels also show Chat status separately from Chat access, so disabled chat does not look like the same thing as an unrestricted chat access group.",
+        "When chat is disabled, slow mode and disable-links settings are hidden because they only apply when chat is enabled."
+      ],
+      "canonical_path": "/waves",
+      "related_paths": ["/waves?create=wave"],
+      "tags": ["waves", "chat", "settings", "groups"],
+      "source_refs": [
+        "components/waves/specs/WaveChatStatus.tsx",
+        "helpers/waves/wave-rules.helpers.ts",
+        "components/waves/specs/groups/group/WaveGroup.tsx",
+        "ops/docs/waves/chat/feature-chat-composer-availability.md",
+        "ops/docs/waves/sidebars/feature-right-sidebar-group-management.md"
+      ]
+    },
+    {
       "id": "waves.boosted-drops-display",
       "kind": "ui_affordance",
       "title": "Boosted drops display preference",
@@ -2102,10 +2148,16 @@
         "membership",
         "filters",
         "network",
-        "profile"
+        "profile",
+        "xtdh",
+        "grant"
       ],
       "facts": [
         "Group create/edit flows define group details and membership rules.",
+        "For selected internal NFTs such as Memes, Meme Lab, Gradients, and NextGen, group creators can require members to own any selected token or all selected tokens.",
+        "xTDH grant beneficiary group rules can use typed grant IDs or the grant picker.",
+        "For token-specific xTDH grants, group creators can require members to own any specified token or all specified tokens.",
+        "For full-collection xTDH grants, group membership requires ownership of at least one collection token.",
         "Group creation requires the relevant connected profile permissions.",
         "Groups can be used later in workflows such as wave access or participation settings."
       ],
@@ -3983,12 +4035,28 @@
       "id": "waves.content-tabs",
       "kind": "ui_affordance",
       "title": "Wave content tabs",
-      "aliases": ["wave tabs", "content tabs", "chat tabs", "gallery tab"],
-      "keywords": ["waves", "tabs", "content", "chat", "gallery"],
+      "aliases": [
+        "wave tabs",
+        "content tabs",
+        "chat tabs",
+        "gallery tab",
+        "polls tab",
+        "poll results"
+      ],
+      "keywords": [
+        "waves",
+        "tabs",
+        "content",
+        "chat",
+        "gallery",
+        "polls",
+        "results"
+      ],
       "facts": [
         "Wave content tabs organize the visible wave content area.",
         "Some waves can switch between chat and gallery-style views.",
-        "Available tabs depend on wave type, state, and content."
+        "Available tabs depend on wave type, state, and content.",
+        "Open unanswered polls can show a View results control so eligible readers can inspect counts and percentages before voting, then return to Vote while the poll is open."
       ],
       "canonical_path": "/waves",
       "related_paths": ["/waves"],
@@ -4833,7 +4901,7 @@
         "Individual Meme Card pages live at /the-memes/{id}.",
         "Use /the-memes/{id} for a specific Meme Card number such as Meme #1 or The Memes #1.",
         "Meme Card preview/data surfaces expose fields such as edition size, TDH rate, season, mint date, and supply when available.",
-        "Upcoming unresolved Meme Card pages show mint timing and subscription awareness for that card.",
+        "Upcoming unresolved Meme Card pages show mint timing and subscription awareness; positive card ids also show a Distribution Plan link for that card.",
         "The backend public data catalog can answer public aggregate or specific Meme Card lookup questions for TDH/HODL rate, edition size, and supply.",
         "Card tabs and focus links are documented for deep-linking into card page sections.",
         "Distribution details for a Meme Card use /the-memes/{id}/distribution."
@@ -4861,6 +4929,7 @@
       "keywords": ["memes", "distribution", "card", "holders", "route"],
       "facts": [
         "Meme Card distribution pages live at /the-memes/{id}/distribution.",
+        "Unpublished Meme Card distribution pages can show the upcoming mint panel plus a centered message that the Distribution Plan will be made available soon.",
         "Use distribution routes when users ask where card distribution details are shown.",
         "Meme Lab cards have a separate distribution route under /meme-lab/{id}/distribution."
       ],
