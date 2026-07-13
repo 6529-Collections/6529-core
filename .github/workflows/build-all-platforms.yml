@@ -113,8 +113,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "6529 Desktop - Build failed ❌"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop ${{ github.event.inputs.flow }} build failed ❌"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build failed. Open the run for the failing job and logs."
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
@@ -141,8 +141,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: success
-          title: "6529 Desktop - Build Success ✅"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop ${{ github.event.inputs.flow }} build completed ✅"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build completed successfully."
           color: 0x00ff00
 
       - name: Notify CI wave about build success (single-platform flow)
@@ -209,8 +209,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "6529 Desktop - Build failed ❌"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} could not be published because at least one required platform build failed."
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
@@ -223,7 +223,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop Build All failed ❌"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} failed ❌"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} could not be published because at least one required platform build failed."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -261,8 +261,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: success
-          title: "6529 Desktop - S3 links published ✅"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop ${{ github.event.inputs.flow }} S3 links published ☁️"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} S3 download links are available."
           color: 0x00bfff
 
       - name: Publish Arweave Links
@@ -284,8 +284,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: success
-          title: "6529 Desktop - Build complete 🚀"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop ${{ github.event.inputs.flow }} completed 🚀"
+          description: "Production v${{ github.event.inputs.version }} publish completed with S3 and Arweave links published and CloudFront invalidated."
           color: 0x00ff00
 
       # Send one wave update after every publish step has finished. Production
@@ -313,8 +313,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "6529 Desktop - Publish job failed ❌"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish failed. Open the run to see whether S3, Arweave, or CloudFront failed."
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
@@ -398,8 +398,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: success
-          title: "6529 Desktop - CloudFront invalidated ✅"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop CloudFront invalidation completed ✅"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront paths were invalidated successfully."
           color: 0x00bfff
 
       - name: Notify CI wave about CloudFront invalidation success
@@ -425,8 +425,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "6529 Desktop - CloudFront invalidation failed ❌"
-          description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          title: "Desktop CloudFront invalidation failed ❌"
+          description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront invalidation failed. Open the run for details."
           content: "<@&1162355330798325861>"
           color: 0xff0000
 

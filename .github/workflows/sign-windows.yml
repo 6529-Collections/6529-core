@@ -103,8 +103,8 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "6529 Desktop - Windows Signing failed ❌"
-          description: "ENV: ${{ inputs.env }} - v${{ inputs.version }}"
+          title: "Desktop Windows signing failed ❌"
+          description: "${{ inputs.env }} v${{ inputs.version }} signing or signed-artifact upload failed. Open the run for details."
           content: "<@&1162355330798325861>"
           color: 0xff0000
 
