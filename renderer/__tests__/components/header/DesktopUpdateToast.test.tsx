@@ -16,6 +16,9 @@ describe("DesktopUpdateToast", () => {
     expect(
       document.querySelector('img[src="/rocket-refresh.png"]')
     ).toBeInTheDocument();
+    expect(
+      document.querySelector('img[src="/emojis/sgt_saluting_face.webp"]')
+    ).toBeInTheDocument();
   });
 
   it("runs the view update action", () => {
