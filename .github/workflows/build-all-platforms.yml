@@ -284,7 +284,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: success
-          title: "Desktop ${{ github.event.inputs.flow }} completed 🚀"
+          title: "Desktop ${{ github.event.inputs.flow }} completed ✅"
           description: "Production v${{ github.event.inputs.version }} publish completed with S3 and Arweave links published and CloudFront invalidated."
           color: 0x00ff00
 
@@ -299,7 +299,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} completed 🚀"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} completed ✅"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish completed${{ github.event.inputs.env == 'Production' && ' with S3 and Arweave links published and CloudFront invalidated.' || ' with S3 links published.' }}"
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -339,7 +339,7 @@ jobs:
         with:
           script: |
             core.summary
-              .addHeading("6529 Desktop Build Complete 🚀")
+              .addHeading("6529 Desktop Build Complete ✅")
               .addTable([
                 ["FLOW", "${{ github.event.inputs.flow }}"],
                 ["Env", "${{ github.event.inputs.env }}"],
