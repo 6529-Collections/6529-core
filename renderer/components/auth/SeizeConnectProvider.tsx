@@ -12,6 +12,8 @@ import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { getNodeEnv, publicEnv } from "@/config/env";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
+import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
+import { isElectron } from "@/helpers";
 import {
   canStoreAnotherWalletAccount,
   clearAgentLoginActiveAddress,
@@ -103,6 +105,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const { disconnect } = useDisconnect();
   const { open } = useAppKit();
   const state = useAppKitState();
+  const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
+  const isConnectModalOpen = state.open || showConnectModal;
   const { isReady: isAppKitReady, waitForReady: waitForAppKitReady } =
     useAppKitBootstrap();
   const [storedConnectedAccounts, setStoredConnectedAccounts] = useState<
@@ -205,7 +209,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     setDisconnected,
     setIsAddingConnectedAccount,
     setIsConnectIntentWaitingForAppKit,
-    stateOpen: state.open,
+    stateOpen: isConnectModalOpen,
     storedConnectedAccounts,
     walletState,
   });
@@ -238,7 +242,13 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
 
-        await open({ view: "Connect" });
+        // Core groups native connectors in its Seed Wallet / Browser /
+        // Third-Party chooser; Reown's web modal flattens them into one list.
+        if (isElectron()) {
+          setShowConnectModal(true);
+        } else {
+          await open({ view: "Connect" });
+        }
 
         logSecurityEvent(
           SecurityEventType.WALLET_MODAL_OPENED,
@@ -261,6 +271,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAppKitReady,
       open,
       scheduleConnectIntentHandoffFallback,
+      setShowConnectModal,
       waitForAppKitReady,
     ]
   );
@@ -573,7 +584,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         : null;
     const addFlowOriginAddress = addFlowOriginAddressRef.current;
     const addFlowReturnedToOrigin =
-      !state.open &&
+      !isConnectModalOpen &&
       !isConnectIntentWaitingForAppKit &&
       !!liveConnectedWallet &&
       !!addFlowOriginAddress &&
@@ -583,7 +594,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isAddingConnectedAccountRef.current &&
       (!isAddingConnectedAccount ||
         addFlowReturnedToOrigin ||
-        (!state.open &&
+        (!isConnectModalOpen &&
           !isConnectIntentWaitingForAppKit &&
           !retryConnectTimeoutRef.current &&
           !liveConnectedWallet &&
@@ -658,8 +669,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     isActiveAppWalletConnector,
     isAddingConnectedAccount,
     isConnectIntentWaitingForAppKit,
+    isConnectModalOpen,
     openAddConnectedAccountModal,
-    state.open,
   ]);
 
   const connectedAccounts = useMemo(() => {
@@ -782,7 +793,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isAddingConnectedAccount,
-      seizeConnectOpen: state.open || isConnectIntentWaitingForAppKit,
+      seizeConnectOpen:
+        isConnectModalOpen || isConnectIntentWaitingForAppKit,
       isConnected: isActiveWalletConnected,
       isDisconnecting,
       canSignActiveWallet: isActiveWalletConnected,
@@ -817,7 +829,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isConnectIntentWaitingForAppKit,
-      state.open,
+      isConnectModalOpen,
       account.isConnected,
       walletState,
       hasInitializationError,

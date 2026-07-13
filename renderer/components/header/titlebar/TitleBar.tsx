@@ -16,7 +16,6 @@ import {
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import Cookies from "js-cookie";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
@@ -26,6 +25,7 @@ import {
   useState,
 } from "react";
 import styles from "./TitleBar.module.css";
+import DesktopUpdateToast from "./DesktopUpdateToast";
 import TooltipButton from "./TooltipButton";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
@@ -33,7 +33,14 @@ function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
 
-const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
+const DISABLE_UPDATE_TOAST_COOKIE = "disable_update_modal";
+const SHOW_UPDATE_TOAST_PREVIEW_PARAM = "showDesktopUpdateModal";
+const UPDATE_TOAST_PREVIEW_VERSION = "0.0.0-preview";
+const UPDATE_TOAST_PREVIEW_ENVIRONMENTS = new Set([
+  "dev",
+  "local",
+  "staging",
+]);
 const TITLEBAR_HEIGHT_STYLE = {
   "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
 } as CSSProperties & Record<"--core-titlebar-height", string>;
@@ -88,7 +95,8 @@ export default function TitleBar() {
   const [updateAvailable, setUpdateAvailable] = useState<{
     version: string;
   }>();
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showUpdaterUpdateToast, setShowUpdaterUpdateToast] = useState(false);
+  const [appEnvironment, setAppEnvironment] = useState<string>();
   const [version, setVersion] = useState("");
   const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
@@ -105,12 +113,20 @@ export default function TitleBar() {
       if (typeof appInfo.app_version === "string" && appInfo.app_version) {
         setVersion(`v${appInfo.app_version}`);
       }
+      if (typeof appInfo.environment === "string") {
+        setAppEnvironment(appInfo.environment);
+      }
       setEnvironmentLabel(
         getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
       );
       window.updater.checkUpdates();
     });
   }, []);
+
+  const showUpdateToastPreview =
+    appEnvironment !== undefined &&
+    UPDATE_TOAST_PREVIEW_ENVIRONMENTS.has(appEnvironment) &&
+    searchParams?.get(SHOW_UPDATE_TOAST_PREVIEW_PARAM) === "true";
 
   useEffect(() => {
     const updateNavState = () => {
@@ -125,10 +141,10 @@ export default function TitleBar() {
 
     const handleUpdateAvailable = (_event: any, info: any) => {
       setUpdateAvailable(info);
-      const disableUpdateModal = Cookies.get(DISABLE_UPDATE_MODAL_COOKIE);
-      if (!disableUpdateModal) {
-        setShowUpdateModal(true);
-        Cookies.set(DISABLE_UPDATE_MODAL_COOKIE, "true", { expires: 1 });
+      const disableUpdateToast = Cookies.get(DISABLE_UPDATE_TOAST_COOKIE);
+      if (!disableUpdateToast) {
+        setShowUpdaterUpdateToast(true);
+        Cookies.set(DISABLE_UPDATE_TOAST_COOKIE, "true", { expires: 1 });
       }
     };
 
@@ -528,39 +544,18 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
-      {showUpdateModal && (
-        <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[10000] tw-flex tw-items-center tw-justify-center tw-bg-black/50 tw-p-4">
-          <div className="tw-w-[min(28rem,calc(100vw-2rem))]">
-            <div className={styles["updateModalHeader"]}>
-              <h2 className="tw-m-0 tw-text-lg tw-font-semibold">
-                Update Available
-              </h2>
-            </div>
-            <div className={styles["updateModalContent"]}>
-              <p>Version {updateAvailable?.version} is available.</p>
-              <span>
-                Visit{" "}
-                <Link
-                  href={"/core/core-info"}
-                  onClick={() => setShowUpdateModal(false)}
-                >
-                  App Info
-                </Link>{" "}
-                page to update.
-              </span>
-            </div>
-            <div className={`${styles["updateModalContent"]} tw-flex tw-justify-end`}>
-              <button
-                type="button"
-                onClick={() => setShowUpdateModal(false)}
-                className="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-border tw-border-solid tw-border-iron-600 tw-bg-iron-800 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-white desktop-hover:hover:tw-bg-iron-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DesktopUpdateToast
+        open={showUpdaterUpdateToast || showUpdateToastPreview}
+        version={
+          showUpdateToastPreview
+            ? UPDATE_TOAST_PREVIEW_VERSION
+            : (updateAvailable?.version ?? UPDATE_TOAST_PREVIEW_VERSION)
+        }
+        onViewUpdate={() => {
+          setShowUpdaterUpdateToast(false);
+          router.push("/core/core-info");
+        }}
+      />
     </>
   );
 }

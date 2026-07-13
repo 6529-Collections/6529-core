@@ -231,24 +231,6 @@
   background-color: rgb(51, 51, 51);
 }
 
-.updateModalHeader {
-  padding: 1rem;
-  background-color: rgb(23, 22, 28);
-  color: #ffffff;
-  border: 1px solid rgb(55, 55, 61) !important;
-  border-radius: 0;
-}
-
-.updateModalContent {
-  background-color: rgb(23, 22, 28) !important;
-  color: #ffffff !important;
-  border-top: 0 !important;
-  border-bottom: 1px solid rgb(55, 55, 61) !important;
-  border-left: 1px solid rgb(55, 55, 61) !important;
-  border-right: 1px solid rgb(55, 55, 61) !important;
-  border-radius: 0 !important;
-}
-
 .contextMenu {
   background-color: rgb(23, 22, 28);
   border: 1px solid rgb(55, 55, 61);

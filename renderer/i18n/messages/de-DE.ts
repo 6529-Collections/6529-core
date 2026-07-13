@@ -376,6 +376,8 @@ export const DE_DE_MESSAGES = {
   "waves.gifPicker.unavailable.hint":
     "Du kannst stattdessen eine GIF-Datei hochladen.",
   "common.close": "Schliessen",
+  "desktopUpdateToast.versionAvailable": "Version {version} ist verfügbar.",
+  "desktopUpdateToast.viewUpdate": "Aktualisierung anzeigen",
   "memes.quickVote.leftThisRound": "{count} in dieser Runde übrig",
   "memes.quickVote.unrated": "{count} unbewertet",
   "memes.quickVote.summary": "{leftThisRound}, {unrated}",

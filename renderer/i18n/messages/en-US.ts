@@ -1725,6 +1725,8 @@ export const EN_US_MESSAGES = {
   "walletAddress.copy.walletAriaLabel": "Copy wallet address",
   "walletAddress.copy.tooltip": "Copy",
   "walletAddress.copy.copiedTooltip": "Copied",
+  "desktopUpdateToast.versionAvailable": "Version {version} is available.",
+  "desktopUpdateToast.viewUpdate": "View update",
   ...QR_SCANNER_MESSAGES,
   "drops.additionalActionBadge.label": "Additional Action",
   "drops.additionalActionBadge.tooltip":
