@@ -117,7 +117,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop Windows signing failed ❌"
+          CI_PIPELINES_TITLE: "Desktop Windows signing failed"
           CI_PIPELINES_DESCRIPTION: "${{ inputs.env }} v${{ inputs.version }} signing or signed-artifact upload failed. Open the run for details."
           CI_PIPELINES_SERVICE: desktop-windows-signing
           CI_PIPELINES_WORKFLOW: Sign Windows

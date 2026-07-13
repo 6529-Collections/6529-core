@@ -127,7 +127,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} build failed ❌"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} build failed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build failed. Open the run for the failing job and logs."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -154,7 +154,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} build completed ✅"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} build completed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build completed successfully."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -223,7 +223,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} failed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} could not be published because at least one required platform build failed."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -299,7 +299,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} completed ✅"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} completed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish completed${{ github.event.inputs.env == 'Production' && ' with S3 and Arweave links published and CloudFront invalidated.' || ' with S3 links published.' }}"
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -327,7 +327,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} failed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish failed. Open the run to see whether S3, Arweave, or CloudFront failed."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -411,7 +411,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "Desktop CloudFront invalidation completed ✅"
+          CI_PIPELINES_TITLE: "Desktop CloudFront invalidation completed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront paths were invalidated successfully."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
@@ -439,7 +439,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Desktop CloudFront invalidation failed ❌"
+          CI_PIPELINES_TITLE: "Desktop CloudFront invalidation failed"
           CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront invalidation failed. Open the run for details."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
