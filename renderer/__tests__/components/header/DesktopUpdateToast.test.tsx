@@ -7,7 +7,7 @@ jest.mock("@/hooks/useBrowserLocale", () => ({
 
 describe("DesktopUpdateToast", () => {
   it("renders the update version and action", () => {
-    render(
+    const { container } = render(
       <DesktopUpdateToast open version="0.3.11" onViewUpdate={jest.fn()} />
     );
 
@@ -21,9 +21,7 @@ describe("DesktopUpdateToast", () => {
     expect(
       document.querySelector('img[src="/rocket-refresh.png"]')
     ).toBeInTheDocument();
-    expect(
-      document.querySelector('img[src="/emojis/sgt_saluting_face.webp"]')
-    ).toBeInTheDocument();
+    expect(container.querySelector("svg")).toBeInTheDocument();
   });
 
   it("runs the view update action", () => {

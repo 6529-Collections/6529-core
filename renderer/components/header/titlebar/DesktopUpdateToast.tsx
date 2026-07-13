@@ -2,16 +2,9 @@
 
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
+import { faArrowRight } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { type JSX } from "react";
-
-const SGT_SALUTING_IMAGE = (
-  // react-doctor-disable-next-line react-doctor/nextjs-no-img-element Matches the frontend version toast's decorative emoji behavior.
-  <img
-    src="/emojis/sgt_saluting_face.webp"
-    alt=""
-    className="tw-size-[18px] tw-flex-shrink-0 tw-self-end tw-opacity-85"
-  />
-);
 
 const ROCKET_UPDATE_IMAGE = (
   // react-doctor-disable-next-line react-doctor/nextjs-no-img-element Matches the frontend version toast's decorative asset behavior.
@@ -57,9 +50,12 @@ export default function DesktopUpdateToast({
           <div className="tw-whitespace-nowrap tw-text-base tw-font-bold tw-leading-tight tw-text-[#f5f7f6]">
             {t(locale, "desktopUpdateToast.versionAvailable", { version })}
           </div>
-          <div className="tw-mt-0.5 tw-flex tw-items-center tw-gap-1 tw-text-sm tw-font-semibold tw-leading-none tw-text-[#b9c0c4]">
-            <span>{viewUpdateLabel} →</span>
-            {SGT_SALUTING_IMAGE}
+          <div className="tw-mt-1.5 tw-flex tw-items-center tw-gap-1.5 tw-text-sm tw-font-semibold tw-leading-none tw-text-[#b9c0c4]">
+            <span>{viewUpdateLabel}</span>
+            <FontAwesomeIcon
+              icon={faArrowRight}
+              className="tw-h-3 tw-w-3 tw-flex-shrink-0"
+            />
           </div>
         </div>
         <span className="tw-relative tw-z-10 tw-flex tw-h-14 tw-w-fit tw-flex-shrink-0 tw-items-center tw-justify-center">
