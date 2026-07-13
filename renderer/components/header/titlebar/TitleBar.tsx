@@ -36,6 +36,11 @@ function isMac() {
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 const SHOW_UPDATE_MODAL_PREVIEW_PARAM = "showDesktopUpdateModal";
 const UPDATE_TOAST_PREVIEW_VERSION = "0.0.0-preview";
+const UPDATE_TOAST_PREVIEW_ENVIRONMENTS = new Set([
+  "dev",
+  "local",
+  "staging",
+]);
 const TITLEBAR_HEIGHT_STYLE = {
   "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
 } as CSSProperties & Record<"--core-titlebar-height", string>;
@@ -90,7 +95,8 @@ export default function TitleBar() {
   const [updateAvailable, setUpdateAvailable] = useState<{
     version: string;
   }>();
-  const [showUpdateToast, setShowUpdateToast] = useState(false);
+  const [showUpdaterUpdateToast, setShowUpdaterUpdateToast] = useState(false);
+  const [appEnvironment, setAppEnvironment] = useState<string>();
   const [version, setVersion] = useState("");
   const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
@@ -107,6 +113,9 @@ export default function TitleBar() {
       if (typeof appInfo.app_version === "string" && appInfo.app_version) {
         setVersion(`v${appInfo.app_version}`);
       }
+      if (typeof appInfo.environment === "string") {
+        setAppEnvironment(appInfo.environment);
+      }
       setEnvironmentLabel(
         getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
       );
@@ -114,11 +123,10 @@ export default function TitleBar() {
     });
   }, []);
 
-  useEffect(() => {
-    if (searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true") {
-      setShowUpdateToast(true);
-    }
-  }, [searchParams]);
+  const showUpdateToastPreview =
+    appEnvironment !== undefined &&
+    UPDATE_TOAST_PREVIEW_ENVIRONMENTS.has(appEnvironment) &&
+    searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true";
 
   useEffect(() => {
     const updateNavState = () => {
@@ -135,7 +143,7 @@ export default function TitleBar() {
       setUpdateAvailable(info);
       const disableUpdateModal = Cookies.get(DISABLE_UPDATE_MODAL_COOKIE);
       if (!disableUpdateModal) {
-        setShowUpdateToast(true);
+        setShowUpdaterUpdateToast(true);
         Cookies.set(DISABLE_UPDATE_MODAL_COOKIE, "true", { expires: 1 });
       }
     };
@@ -537,10 +545,10 @@ export default function TitleBar() {
         show={showConfirm}
       />
       <DesktopUpdateToast
-        open={showUpdateToast}
+        open={showUpdaterUpdateToast || showUpdateToastPreview}
         version={updateAvailable?.version ?? UPDATE_TOAST_PREVIEW_VERSION}
         onViewUpdate={() => {
-          setShowUpdateToast(false);
+          setShowUpdaterUpdateToast(false);
           router.push("/core/core-info");
         }}
       />
