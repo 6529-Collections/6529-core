@@ -546,7 +546,11 @@ export default function TitleBar() {
       />
       <DesktopUpdateToast
         open={showUpdaterUpdateToast || showUpdateToastPreview}
-        version={updateAvailable?.version ?? UPDATE_TOAST_PREVIEW_VERSION}
+        version={
+          showUpdateToastPreview
+            ? UPDATE_TOAST_PREVIEW_VERSION
+            : (updateAvailable?.version ?? UPDATE_TOAST_PREVIEW_VERSION)
+        }
         onViewUpdate={() => {
           setShowUpdaterUpdateToast(false);
           router.push("/core/core-info");

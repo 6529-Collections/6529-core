@@ -1,12 +1,17 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import DesktopUpdateToast from "@/components/header/titlebar/DesktopUpdateToast";
 
+jest.mock("@/hooks/useBrowserLocale", () => ({
+  useBrowserLocale: () => "en-US",
+}));
+
 describe("DesktopUpdateToast", () => {
   it("renders the update version and action", () => {
     render(
       <DesktopUpdateToast open version="0.3.11" onViewUpdate={jest.fn()} />
     );
 
+    expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
     expect(screen.getByText("Version 0.3.11 is available.")).toBeInTheDocument();
     expect(
       screen.getByRole("button", {

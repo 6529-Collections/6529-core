@@ -40,7 +40,12 @@ export default function DesktopUpdateToast({
   const viewUpdateLabel = t(locale, "desktopUpdateToast.viewUpdate");
 
   return (
-    <div className="tailwind-scope tw-pointer-events-none tw-fixed tw-bottom-7 tw-right-7 tw-z-[10000] tw-w-[420px]">
+    <div
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      className="tailwind-scope tw-pointer-events-none tw-fixed tw-bottom-7 tw-right-7 tw-z-[10000] tw-w-[420px]"
+    >
       <button
         type="button"
         aria-label={viewUpdateLabel}
