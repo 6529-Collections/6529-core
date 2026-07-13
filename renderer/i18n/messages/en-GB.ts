@@ -368,11 +368,8 @@ export const EN_GB_MESSAGES = {
   "waves.poll.status.voted": "Voted",
   "waves.poll.status.updated": "Updated",
   "common.close": "Close",
-  "desktopUpdateModal.title": "Update Available",
-  "desktopUpdateModal.versionAvailable": "Version {version} is available.",
-  "desktopUpdateModal.appInfoAction":
-    "Open App Info to install the update.",
-  "desktopUpdateModal.close": "Close",
+  "desktopUpdateToast.versionAvailable": "Version {version} is available.",
+  "desktopUpdateToast.viewUpdate": "View update",
   "memes.quickVote.leftThisRound": "{count} left this round",
   "memes.quickVote.unrated": "{count} unrated",
   "memes.quickVote.summary": "{leftThisRound}, {unrated}",

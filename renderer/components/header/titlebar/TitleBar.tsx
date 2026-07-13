@@ -25,7 +25,7 @@ import {
   useState,
 } from "react";
 import styles from "./TitleBar.module.css";
-import DesktopUpdateModal from "./DesktopUpdateModal";
+import DesktopUpdateToast from "./DesktopUpdateToast";
 import TooltipButton from "./TooltipButton";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
@@ -35,7 +35,7 @@ function isMac() {
 
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
 const SHOW_UPDATE_MODAL_PREVIEW_PARAM = "showDesktopUpdateModal";
-const UPDATE_MODAL_PREVIEW_VERSION = "0.0.0-preview";
+const UPDATE_TOAST_PREVIEW_VERSION = "0.0.0-preview";
 const TITLEBAR_HEIGHT_STYLE = {
   "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
 } as CSSProperties & Record<"--core-titlebar-height", string>;
@@ -90,7 +90,7 @@ export default function TitleBar() {
   const [updateAvailable, setUpdateAvailable] = useState<{
     version: string;
   }>();
-  const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [showUpdateToast, setShowUpdateToast] = useState(false);
   const [version, setVersion] = useState("");
   const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
@@ -116,7 +116,7 @@ export default function TitleBar() {
 
   useEffect(() => {
     if (searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true") {
-      setShowUpdateModal(true);
+      setShowUpdateToast(true);
     }
   }, [searchParams]);
 
@@ -135,7 +135,7 @@ export default function TitleBar() {
       setUpdateAvailable(info);
       const disableUpdateModal = Cookies.get(DISABLE_UPDATE_MODAL_COOKIE);
       if (!disableUpdateModal) {
-        setShowUpdateModal(true);
+        setShowUpdateToast(true);
         Cookies.set(DISABLE_UPDATE_MODAL_COOKIE, "true", { expires: 1 });
       }
     };
@@ -536,10 +536,13 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
-      <DesktopUpdateModal
-        open={showUpdateModal}
-        version={updateAvailable?.version ?? UPDATE_MODAL_PREVIEW_VERSION}
-        onClose={() => setShowUpdateModal(false)}
+      <DesktopUpdateToast
+        open={showUpdateToast}
+        version={updateAvailable?.version ?? UPDATE_TOAST_PREVIEW_VERSION}
+        onViewUpdate={() => {
+          setShowUpdateToast(false);
+          router.push("/core/core-info");
+        }}
       />
     </>
   );

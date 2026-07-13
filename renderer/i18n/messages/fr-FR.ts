@@ -383,12 +383,9 @@ export const FR_FR_MESSAGES = {
   "waves.gifPicker.unavailable.hint":
     "Vous pouvez televerser un fichier GIF a la place.",
   "common.close": "Fermer",
-  "desktopUpdateModal.title": "Mise à jour disponible",
-  "desktopUpdateModal.versionAvailable":
+  "desktopUpdateToast.versionAvailable":
     "La version {version} est disponible.",
-  "desktopUpdateModal.appInfoAction":
-    "Ouvrir les informations de l’application pour installer la mise à jour.",
-  "desktopUpdateModal.close": "Fermer",
+  "desktopUpdateToast.viewUpdate": "Voir la mise à jour",
   "memes.quickVote.leftThisRound": "{count} restant ce tour",
   "memes.quickVote.unrated": "{count} non notés",
   "memes.quickVote.summary": "{leftThisRound}, {unrated}",

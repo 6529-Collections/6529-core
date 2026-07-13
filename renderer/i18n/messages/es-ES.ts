@@ -376,12 +376,9 @@ export const ES_ES_MESSAGES = {
   "waves.gifPicker.unavailable.hint":
     "Puedes subir un archivo GIF en su lugar.",
   "common.close": "Cerrar",
-  "desktopUpdateModal.title": "Actualización disponible",
-  "desktopUpdateModal.versionAvailable":
+  "desktopUpdateToast.versionAvailable":
     "La versión {version} está disponible.",
-  "desktopUpdateModal.appInfoAction":
-    "Abre Información de la aplicación para instalar la actualización.",
-  "desktopUpdateModal.close": "Cerrar",
+  "desktopUpdateToast.viewUpdate": "Ver actualización",
   "memes.quickVote.leftThisRound": "{count} restantes esta ronda",
   "memes.quickVote.unrated": "{count} sin valorar",
   "memes.quickVote.summary": "{leftThisRound}, {unrated}",
