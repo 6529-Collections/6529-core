@@ -92,8 +92,10 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: production
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "6529 Desktop - IPFS Signing failed ❌"
+          CI_PIPELINES_TITLE: "Desktop IPFS signing failed ❌"
+          CI_PIPELINES_DESCRIPTION: "Signing or uploading the Windows IPFS binaries failed. Open the run for the failing step and logs."
           CI_PIPELINES_SERVICE: desktop-ipfs-signing
+          CI_PIPELINES_WORKFLOW: Sign IPFS Binaries
         run: node scripts/notify-ci-wave.mjs
 
       - name: Notify Discord on success
@@ -117,7 +119,8 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: production
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "6529 Desktop - IPFS Binaries Signed ✅"
-          CI_PIPELINES_DESCRIPTION: "Signed IPFS binaries uploaded to S3"
+          CI_PIPELINES_TITLE: "Desktop IPFS signing completed ✅"
+          CI_PIPELINES_DESCRIPTION: "Signed Windows IPFS binaries were uploaded to S3 successfully."
           CI_PIPELINES_SERVICE: desktop-ipfs-signing
+          CI_PIPELINES_WORKFLOW: Sign IPFS Binaries
         run: node scripts/notify-ci-wave.mjs

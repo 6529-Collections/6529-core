@@ -127,9 +127,10 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} build failed ❌"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build failed. Open the run for the failing job and logs."
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
 
       - name: Notify build success (single-platform flow)
@@ -153,9 +154,10 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "6529 Desktop - Build Success ✅"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} build completed ✅"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build completed successfully."
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
 
   publish:
@@ -221,9 +223,10 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "6529 Desktop - Build failed ❌"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop Build All failed ❌"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} could not be published because at least one required platform build failed."
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
 
       - name: Install dependencies
@@ -262,20 +265,6 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00bfff
 
-      - name: Notify CI wave about S3 links published
-        if: success() && env.SHOULD_FAIL != 'true'
-        continue-on-error: true
-        env:
-          CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
-          CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
-          CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
-          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
-          CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "6529 Desktop - S3 links published ✅"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
-          CI_PIPELINES_SERVICE: desktop
-        run: node scripts/notify-ci-wave.mjs
-
       - name: Publish Arweave Links
         if: env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
         env:
@@ -299,18 +288,21 @@ jobs:
           description: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
           color: 0x00ff00
 
-      - name: Notify CI wave about final production build success
-        if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.env == 'Production'
+      # Send one wave update after every publish step has finished. Production
+      # includes Arweave and CloudFront; staging finishes after publishing S3 links.
+      - name: Notify CI wave about completed publish
+        if: success() && env.SHOULD_FAIL != 'true'
         continue-on-error: true
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
-          CI_PIPELINES_TARGET_ENV: production
+          CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "6529 Desktop - Build complete 🚀"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} completed 🚀"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish completed${{ github.event.inputs.env == 'Production' && ' with S3 and Arweave links published and CloudFront invalidated.' || ' with S3 links published.' }}"
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
 
       - name: Notify Publish Failure
@@ -335,9 +327,10 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "6529 Desktop - Publish job failed ❌"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish failed. Open the run to see whether S3, Arweave, or CloudFront failed."
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
 
       - name: Summary
@@ -418,9 +411,10 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidated ✅"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop CloudFront invalidation completed ✅"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront paths were invalidated successfully."
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
 
       - name: Notify Failure
@@ -445,7 +439,8 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "6529 Desktop - CloudFront invalidation failed ❌"
-          CI_PIPELINES_DESCRIPTION: "FLOW: ${{ github.event.inputs.flow }} / ENV: ${{ github.event.inputs.env }} - v${{ github.event.inputs.version }}"
+          CI_PIPELINES_TITLE: "Desktop CloudFront invalidation failed ❌"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront invalidation failed. Open the run for details."
           CI_PIPELINES_SERVICE: desktop
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
