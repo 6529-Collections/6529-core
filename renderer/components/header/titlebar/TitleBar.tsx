@@ -33,8 +33,8 @@ function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
 
-const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
-const SHOW_UPDATE_MODAL_PREVIEW_PARAM = "showDesktopUpdateModal";
+const DISABLE_UPDATE_TOAST_COOKIE = "disable_update_modal";
+const SHOW_UPDATE_TOAST_PREVIEW_PARAM = "showDesktopUpdateModal";
 const UPDATE_TOAST_PREVIEW_VERSION = "0.0.0-preview";
 const UPDATE_TOAST_PREVIEW_ENVIRONMENTS = new Set([
   "dev",
@@ -126,7 +126,7 @@ export default function TitleBar() {
   const showUpdateToastPreview =
     appEnvironment !== undefined &&
     UPDATE_TOAST_PREVIEW_ENVIRONMENTS.has(appEnvironment) &&
-    searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true";
+    searchParams?.get(SHOW_UPDATE_TOAST_PREVIEW_PARAM) === "true";
 
   useEffect(() => {
     const updateNavState = () => {
@@ -141,10 +141,10 @@ export default function TitleBar() {
 
     const handleUpdateAvailable = (_event: any, info: any) => {
       setUpdateAvailable(info);
-      const disableUpdateModal = Cookies.get(DISABLE_UPDATE_MODAL_COOKIE);
-      if (!disableUpdateModal) {
+      const disableUpdateToast = Cookies.get(DISABLE_UPDATE_TOAST_COOKIE);
+      if (!disableUpdateToast) {
         setShowUpdaterUpdateToast(true);
-        Cookies.set(DISABLE_UPDATE_MODAL_COOKIE, "true", { expires: 1 });
+        Cookies.set(DISABLE_UPDATE_TOAST_COOKIE, "true", { expires: 1 });
       }
     };
 
