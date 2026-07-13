@@ -91,8 +91,6 @@ export default function TitleBar() {
     version: string;
   }>();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
-  const [updateModalPreviewAllowed, setUpdateModalPreviewAllowed] =
-    useState(false);
   const [version, setVersion] = useState("");
   const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
@@ -112,23 +110,15 @@ export default function TitleBar() {
       setEnvironmentLabel(
         getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
       );
-      setUpdateModalPreviewAllowed(
-        appInfo.environment === "dev" ||
-          appInfo.environment === "local" ||
-          appInfo.environment === "staging"
-      );
       window.updater.checkUpdates();
     });
   }, []);
 
   useEffect(() => {
-    if (
-      updateModalPreviewAllowed &&
-      searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true"
-    ) {
+    if (searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true") {
       setShowUpdateModal(true);
     }
-  }, [searchParams, updateModalPreviewAllowed]);
+  }, [searchParams]);
 
   useEffect(() => {
     const updateNavState = () => {
