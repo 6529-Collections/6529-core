@@ -16,7 +16,6 @@ import {
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import Cookies from "js-cookie";
-import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
@@ -26,6 +25,7 @@ import {
   useState,
 } from "react";
 import styles from "./TitleBar.module.css";
+import DesktopUpdateModal from "./DesktopUpdateModal";
 import TooltipButton from "./TooltipButton";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
@@ -34,6 +34,8 @@ function isMac() {
 }
 
 const DISABLE_UPDATE_MODAL_COOKIE = "disable_update_modal";
+const SHOW_UPDATE_MODAL_PREVIEW_PARAM = "showDesktopUpdateModal";
+const UPDATE_MODAL_PREVIEW_VERSION = "0.0.0-preview";
 const TITLEBAR_HEIGHT_STYLE = {
   "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
 } as CSSProperties & Record<"--core-titlebar-height", string>;
@@ -89,6 +91,8 @@ export default function TitleBar() {
     version: string;
   }>();
   const [showUpdateModal, setShowUpdateModal] = useState(false);
+  const [updateModalPreviewAllowed, setUpdateModalPreviewAllowed] =
+    useState(false);
   const [version, setVersion] = useState("");
   const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
@@ -108,9 +112,23 @@ export default function TitleBar() {
       setEnvironmentLabel(
         getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
       );
+      setUpdateModalPreviewAllowed(
+        appInfo.environment === "dev" ||
+          appInfo.environment === "local" ||
+          appInfo.environment === "staging"
+      );
       window.updater.checkUpdates();
     });
   }, []);
+
+  useEffect(() => {
+    if (
+      updateModalPreviewAllowed &&
+      searchParams?.get(SHOW_UPDATE_MODAL_PREVIEW_PARAM) === "true"
+    ) {
+      setShowUpdateModal(true);
+    }
+  }, [searchParams, updateModalPreviewAllowed]);
 
   useEffect(() => {
     const updateNavState = () => {
@@ -528,50 +546,11 @@ export default function TitleBar() {
         onRunBackground={handleRunBackground}
         show={showConfirm}
       />
-      {showUpdateModal && (
-        <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[10000] tw-flex tw-items-center tw-justify-center tw-bg-black/60 tw-p-4">
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="desktop-update-modal-title"
-            className={`${styles["updateModalSurface"]} tw-w-[min(28rem,calc(100vw-2rem))]`}
-          >
-            <div className={styles["updateModalHeader"]}>
-              <h2
-                id="desktop-update-modal-title"
-                className="tw-m-0 tw-text-lg tw-font-semibold"
-              >
-                Update Available
-              </h2>
-            </div>
-            <div className={styles["updateModalBody"]}>
-              <p className="tw-m-0">
-                Version {updateAvailable?.version} is available.
-              </p>
-              <p className="tw-m-0">
-                Visit{" "}
-                <Link
-                  href={"/core/core-info"}
-                  onClick={() => setShowUpdateModal(false)}
-                  className={styles["updateModalLink"]}
-                >
-                  App Info
-                </Link>{" "}
-                page to update.
-              </p>
-            </div>
-            <div className={styles["updateModalFooter"]}>
-              <button
-                type="button"
-                onClick={() => setShowUpdateModal(false)}
-                className="tw-inline-flex tw-items-center tw-justify-center tw-rounded-md tw-border tw-border-solid tw-border-iron-600 tw-bg-iron-800 tw-px-4 tw-py-2 tw-text-sm tw-font-medium tw-text-white desktop-hover:hover:tw-bg-iron-700"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DesktopUpdateModal
+        open={showUpdateModal}
+        version={updateAvailable?.version ?? UPDATE_MODAL_PREVIEW_VERSION}
+        onClose={() => setShowUpdateModal(false)}
+      />
     </>
   );
 }
