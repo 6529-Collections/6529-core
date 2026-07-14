@@ -300,7 +300,7 @@ jobs:
           CI_PIPELINES_TARGET_ENV: ${{ github.event.inputs.env }}
           CI_PIPELINES_STATUS: success
           CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} completed"
-          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish completed${{ github.event.inputs.env == 'Production' && ' with S3 and Arweave links published and CloudFront invalidated.' || ' with S3 links published.' }}"
+          CI_PIPELINES_DESCRIPTION: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} ${{ github.event.inputs.env == 'Production' && 'Arweave links published' || 'S3 links published' }}"
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
         run: node scripts/notify-ci-wave.mjs
