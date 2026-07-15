@@ -113,7 +113,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "Desktop ${{ github.event.inputs.flow }} build failed ❌"
+          title: "Desktop ${{ github.event.inputs.flow }} build failed 🚨"
           description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} build failed. Open the run for the failing job and logs."
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -209,7 +209,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          title: "Desktop ${{ github.event.inputs.flow }} failed 🚨"
           description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} could not be published because at least one required platform build failed."
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -313,7 +313,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "Desktop ${{ github.event.inputs.flow }} failed ❌"
+          title: "Desktop ${{ github.event.inputs.flow }} failed 🚨"
           description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} publish failed. Open the run to see whether S3, Arweave, or CloudFront failed."
           content: "<@&1162355330798325861>"
           color: 0xff0000
@@ -425,7 +425,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "Desktop CloudFront invalidation failed ❌"
+          title: "Desktop CloudFront invalidation failed 🚨"
           description: "${{ github.event.inputs.env }} v${{ github.event.inputs.version }} CloudFront invalidation failed. Open the run for details."
           content: "<@&1162355330798325861>"
           color: 0xff0000

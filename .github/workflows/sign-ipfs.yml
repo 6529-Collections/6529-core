@@ -80,7 +80,7 @@ jobs:
           DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
         with:
           status: failure
-          title: "Desktop IPFS signing failed ❌"
+          title: "Desktop IPFS signing failed 🚨"
           description: "Signing or uploading the Windows IPFS binaries failed. Open the run for the failing step and logs."
           color: 0xff0000
 
