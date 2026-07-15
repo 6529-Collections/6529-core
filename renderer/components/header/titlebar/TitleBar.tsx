@@ -34,6 +34,7 @@ function isMac() {
 }
 
 const DISABLE_UPDATE_TOAST_COOKIE = "disable_update_modal";
+const UPDATE_TOAST_SUPPRESSION_DAYS = 4 / 24;
 const SHOW_UPDATE_TOAST_PREVIEW_PARAM = "showDesktopUpdateModal";
 const UPDATE_TOAST_PREVIEW_VERSION = "0.0.0-preview";
 const UPDATE_TOAST_PREVIEW_ENVIRONMENTS = new Set([
@@ -144,7 +145,9 @@ export default function TitleBar() {
       const disableUpdateToast = Cookies.get(DISABLE_UPDATE_TOAST_COOKIE);
       if (!disableUpdateToast) {
         setShowUpdaterUpdateToast(true);
-        Cookies.set(DISABLE_UPDATE_TOAST_COOKIE, "true", { expires: 1 });
+        Cookies.set(DISABLE_UPDATE_TOAST_COOKIE, "true", {
+          expires: UPDATE_TOAST_SUPPRESSION_DAYS,
+        });
       }
     };
 
