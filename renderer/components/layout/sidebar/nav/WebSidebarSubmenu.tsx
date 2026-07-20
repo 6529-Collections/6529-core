@@ -17,6 +17,8 @@ import type {
   SidebarNavItem,
   SidebarSection,
 } from "@/components/navigation/navTypes";
+import { CORE_TITLEBAR_HEIGHT_PX } from "@/components/header/titlebar/titlebar.constants";
+import { isElectron } from "@/helpers";
 import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
@@ -218,6 +220,8 @@ function WebSidebarSubmenu({
       const menuRect = containerRef.current.getBoundingClientRect();
       const viewportHeight = browserWindow.innerHeight || 0;
       const padding = 16;
+      const topPadding =
+        padding + (isElectron() ? CORE_TITLEBAR_HEIGHT_PX : 0);
 
       const anchorCenter =
         anchorTop !== undefined && anchorHeight !== undefined
@@ -226,7 +230,7 @@ function WebSidebarSubmenu({
 
       let top = anchorCenter - menuRect.height / 2;
       top = Math.max(
-        padding,
+        topPadding,
         Math.min(top, viewportHeight - menuRect.height - padding)
       );
 

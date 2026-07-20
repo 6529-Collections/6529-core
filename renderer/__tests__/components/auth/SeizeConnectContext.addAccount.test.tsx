@@ -19,6 +19,8 @@ const mockOpen = jest.fn();
 const mockDisconnect = jest.fn();
 const mockLogError = jest.fn();
 const mockLogSecurityEvent = jest.fn();
+const mockClearBrowserConnectorConnectIntent = jest.fn();
+const mockSetBrowserConnectorConnectIntent = jest.fn();
 
 let mockAppKitAccount: {
   address?: string;
@@ -50,6 +52,15 @@ jest.mock("@reown/appkit/react", () => ({
 
 jest.mock("wagmi", () => ({
   useAccount: () => mockWagmiAccount,
+}));
+
+jest.mock("@/wagmiConfig/browserConnector", () => ({
+  BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT:
+    "6529-browser-connector-connection-changed",
+  clearBrowserConnectorConnectIntent: () =>
+    mockClearBrowserConnectorConnectIntent(),
+  setBrowserConnectorConnectIntent: (intent: unknown) =>
+    mockSetBrowserConnectorConnectIntent(intent),
 }));
 
 jest.mock("@/config/env", () => ({
@@ -134,6 +145,14 @@ function AddAccountButton() {
   return <button onClick={seizeAddConnectedAccount}>Add account</button>;
 }
 
+function ReconnectButton() {
+  const { seizeConnectFresh } = useSeizeConnectContext();
+
+  return (
+    <button onClick={() => void seizeConnectFresh()}>Reconnect account</button>
+  );
+}
+
 function LogoutAllButton() {
   const { seizeDisconnectAndLogoutAll } = useSeizeConnectContext();
 
@@ -185,6 +204,34 @@ describe("SeizeConnectProvider add-account flow", () => {
       jest.runOnlyPendingTimers();
     });
     jest.useRealTimers();
+  });
+
+  it("marks an authenticated disconnected wallet as the intended reconnect account", async () => {
+    mockAppKitAccount = {
+      address: undefined,
+      isConnected: false,
+      status: "disconnected",
+    };
+    mockWagmiAccount = {};
+
+    render(
+      <SeizeConnectProvider>
+        <ReconnectButton />
+      </SeizeConnectProvider>
+    );
+
+    act(() => {
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reconnect account" })
+      );
+    });
+
+    await waitFor(() => {
+      expect(mockSetBrowserConnectorConnectIntent).toHaveBeenCalledWith({
+        intendedWalletAddress: ACTIVE_ADDRESS,
+      });
+      expect(mockOpen).toHaveBeenCalledWith({ view: "Connect" });
+    });
   });
 
   it("opens the connect flow directly for app-wallet connectors and keeps add-account mode active", async () => {
@@ -321,6 +368,9 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockDisconnect).not.toHaveBeenCalled();
     await waitFor(() => {
       expect(mockOpen).toHaveBeenCalledTimes(1);
+      expect(mockSetBrowserConnectorConnectIntent).toHaveBeenCalledWith({
+        originWalletAddress: ACTIVE_ADDRESS,
+      });
     });
   });
 

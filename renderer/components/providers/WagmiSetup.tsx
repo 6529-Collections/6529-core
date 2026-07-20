@@ -1,6 +1,7 @@
 "use client";
 
 import { Capacitor } from "@capacitor/core";
+import { connect as connectWagmi } from "@wagmi/core";
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
 import { mainnet, sepolia } from "viem/chains";
 import { WagmiProvider } from "wagmi";
@@ -81,6 +82,7 @@ const INTERNAL_API_FAILED_MESSAGE = "Internal API failed";
 const APPKIT_READY_WAIT_TIMEOUT_MS = 15_000;
 const APPKIT_READY_TIMEOUT_MESSAGE =
   "Timed out waiting for wallet connection services to become ready";
+const DESKTOP_BROWSER_CONNECTOR_TYPE = "browser";
 
 const EMPTY_FAST_PATH_SNAPSHOT: WagmiAppKitFastPathSnapshot = Object.freeze({
   adapter: null,
@@ -520,6 +522,38 @@ async function loadSeedWallets(): Promise<ISeedWallet[]> {
   return Array.isArray(response.data) ? response.data : [];
 }
 
+async function restorePersistedDesktopBrowserConnection(
+  adapter: WagmiAdapter
+): Promise<void> {
+  if (!isElectron() || adapter.wagmiConfig.state.status === "connected") {
+    return;
+  }
+
+  const browserConnectors = adapter.wagmiConfig.connectors.filter(
+    (connector) => connector.type === DESKTOP_BROWSER_CONNECTOR_TYPE
+  );
+
+  for (const connector of browserConnectors) {
+    try {
+      // Browser connectors hydrate their Electron-store connection record from
+      // getProvider(). Only call connect after that record proves authorized,
+      // so startup restoration can never open an external browser window.
+      await connector.getProvider();
+      if (!(await connector.isAuthorized())) {
+        continue;
+      }
+
+      await connectWagmi(adapter.wagmiConfig, { connector });
+      return;
+    } catch (error) {
+      logErrorSecurely(
+        `[WagmiSetup] Failed to restore ${connector.name} browser connection`,
+        error
+      );
+    }
+  }
+}
+
 export default function WagmiSetup({
   children,
 }: {
@@ -730,6 +764,29 @@ export default function WagmiSetup({
       clearTimeout(timeoutHandle);
     };
   }, [currentAdapter, startAppKitInitialization]);
+
+  // AppKit's deferred bootstrap can run after Wagmi's mount reconnect. Restore
+  // the persisted Desktop browser connector once AppKit exists, and once more
+  // after readiness settles, so that bootstrap cannot downgrade a restored
+  // wallet from connected to authorized-only.
+  useEffect(() => {
+    if (currentAdapter === null || !fastPathSnapshot.isCreated) {
+      return;
+    }
+
+    let cancelled = false;
+    const timeoutHandle = setTimeout(() => {
+      if (cancelled) {
+        return;
+      }
+      void restorePersistedDesktopBrowserConnection(currentAdapter);
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutHandle);
+    };
+  }, [currentAdapter, fastPathSnapshot.isCreated, fastPathSnapshot.status]);
 
   useEffect(() => {
     const updateSeedWalletConnectors = async () => {

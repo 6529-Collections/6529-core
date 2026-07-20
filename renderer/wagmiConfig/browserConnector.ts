@@ -512,6 +512,37 @@ const toBrowserConnectorErrorMessage = (error: unknown): string => {
   return "Browser connector returned an error.";
 };
 
+const refreshPersistedNativeSession = async ({
+  address,
+  clientType,
+}: {
+  readonly address: `0x${string}`;
+  readonly clientType: RefreshTokenSessionClientType;
+}): Promise<SessionNativeResponse | null> => {
+  const guardedNativeSessionRefresh =
+    typeof window === "undefined"
+      ? undefined
+      : window.nativeAuth?.sessionRefresh;
+  if (typeof guardedNativeSessionRefresh === "function") {
+    return await guardedNativeSessionRefresh({
+      client_type: clientType,
+      client_address: address,
+    });
+  }
+
+  // Mobile/native fallback. Electron refresh tokens intentionally never leave
+  // the main process, so Desktop must use the bridge above.
+  const nativeRefreshToken = await getNativeRefreshToken(address, clientType);
+  if (!nativeRefreshToken) {
+    return null;
+  }
+
+  const refreshedSession = await refreshSessionV2({ address });
+  return refreshedSession?.client_type === clientType
+    ? (refreshedSession as SessionNativeResponse)
+    : null;
+};
+
 const getBrowserConnectResponseRecord = (
   response: unknown
 ): BrowserConnectResponseRecord => {
@@ -642,16 +673,9 @@ const processBrowserConnectResponse = async ({
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
 
-      const nativeRefreshToken = await getNativeRefreshToken(
-        existingNativeSessionAuth.address,
-        existingNativeSessionAuth.targetClientType
-      );
-      if (!nativeRefreshToken) {
-        throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
-      }
-
-      const refreshedNativeSession = await refreshSessionV2({
+      const refreshedNativeSession = await refreshPersistedNativeSession({
         address: existingNativeSessionAuth.address,
+        clientType: existingNativeSessionAuth.targetClientType,
       });
       if (
         !refreshedNativeSession ||
@@ -660,7 +684,7 @@ const processBrowserConnectResponse = async ({
       ) {
         throw new Error(MISSING_NATIVE_SESSION_AUTH_ERROR);
       }
-      nativeSessionToPersist = refreshedNativeSession as SessionNativeResponse;
+      nativeSessionToPersist = refreshedNativeSession;
     }
 
     if (!nativeSessionToPersist) {
@@ -862,17 +886,10 @@ export function browserConnector(parameters: {
       return null;
     }
 
-    const desktopRefreshToken = await getNativeRefreshToken(
-      normalizedWalletAddress,
-      "desktop"
-    );
-    if (!desktopRefreshToken) {
-      return null;
-    }
-
     try {
-      const refreshedNativeSession = await refreshSessionV2({
-        address: normalizedWalletAddress,
+      const refreshedNativeSession = await refreshPersistedNativeSession({
+        address: normalizedWalletAddress as `0x${string}`,
+        clientType: "desktop",
       });
       if (
         !refreshedNativeSession ||
@@ -885,7 +902,7 @@ export function browserConnector(parameters: {
       }
 
       const isPersisted = await persistSessionResponse(
-        refreshedNativeSession as SessionNativeResponse
+        refreshedNativeSession
       );
       if (!isPersisted) {
         await removeNativeRefreshToken(normalizedWalletAddress, "desktop");

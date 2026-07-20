@@ -1,10 +1,14 @@
 import WebSidebarSubmenu from "@/components/layout/sidebar/nav/WebSidebarSubmenu";
 import type { SidebarSection } from "@/components/navigation/navTypes";
+import { isElectron } from "@/helpers";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 jest.mock("react-dom", () => ({
   ...jest.requireActual("react-dom"),
   createPortal: (node: React.ReactNode) => node,
+}));
+jest.mock("@/helpers", () => ({
+  isElectron: jest.fn(() => false),
 }));
 
 const TestIcon = () => null;
@@ -34,6 +38,10 @@ const section: SidebarSection = {
 };
 
 describe("WebSidebarSubmenu", () => {
+  beforeEach(() => {
+    (isElectron as jest.Mock).mockReturnValue(false);
+  });
+
   it("renders subsection groups with nested items", () => {
     render(
       <WebSidebarSubmenu
@@ -122,6 +130,24 @@ describe("WebSidebarSubmenu", () => {
     );
 
     expect(firstLink).toHaveFocus();
+  });
+
+  it("keeps the Desktop flyout below the Electron title bar", () => {
+    (isElectron as jest.Mock).mockReturnValue(true);
+
+    render(
+      <WebSidebarSubmenu
+        section={section}
+        pathname="/open-data/team"
+        onClose={jest.fn()}
+        anchorTop={0}
+        anchorHeight={40}
+      />
+    );
+
+    expect(
+      screen.getByRole("navigation", { name: "Tools sub-navigation" })
+    ).toHaveStyle({ top: "46px" });
   });
 
   it("moves focus to the next sidebar control when tabbing out", () => {

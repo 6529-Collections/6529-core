@@ -6,6 +6,18 @@ import * as authUtils from "@/services/auth/auth.utils";
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 
+let mockWagmiAccount: {
+  readonly address?: string | undefined;
+  readonly isConnected?: boolean | undefined;
+  readonly status?:
+    | "connected"
+    | "connecting"
+    | "reconnecting"
+    | "disconnected"
+    | undefined;
+  readonly connector?: { readonly type?: string | undefined } | undefined;
+};
+
 jest.mock("@reown/appkit/react", () => ({
   useAppKit: jest.fn(() => ({
     open: jest.fn(),
@@ -32,7 +44,7 @@ jest.mock("viem", () => ({
 }));
 
 jest.mock("wagmi", () => ({
-  useAccount: jest.fn(() => ({})),
+  useAccount: () => mockWagmiAccount,
 }));
 
 jest.mock("@/hooks/useConnectedAccountsUnreadNotifications", () => ({
@@ -85,6 +97,11 @@ const AddressProbe: React.FC = () => {
   return <div data-testid="active-address">{address ?? "undefined"}</div>;
 };
 
+const ConnectionProbe: React.FC = () => {
+  const { isConnected } = useSeizeConnectContext();
+  return <div data-testid="is-connected">{String(isConnected)}</div>;
+};
+
 const UnreadProbe: React.FC = () => {
   const { connectedAccountUnreadNotifications } = useSeizeConnectContext();
   return (
@@ -110,6 +127,7 @@ const buildStoredAccount = (
 describe("SeizeConnectContext switch sync guard", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWagmiAccount = {};
     require("@/hooks/useConnectedAccountsUnreadNotifications").useConnectedAccountsUnreadNotifications.mockReturnValue(
       {}
     );
@@ -119,6 +137,44 @@ describe("SeizeConnectContext switch sync guard", () => {
         haveUnreadNotifications: false,
       }
     );
+  });
+
+  it("prefers Wagmi's restored browser connection after renderer reload", async () => {
+    const { useAppKitAccount } = require("@reown/appkit/react");
+    const mockGetWalletAddress =
+      authUtils.getWalletAddress as jest.MockedFunction<
+        typeof authUtils.getWalletAddress
+      >;
+    const mockGetConnectedWalletAccounts =
+      authUtils.getConnectedWalletAccounts as jest.MockedFunction<
+        typeof authUtils.getConnectedWalletAccounts
+      >;
+
+    (useAppKitAccount as jest.Mock).mockReturnValue({
+      address: undefined,
+      isConnected: false,
+      status: "disconnected",
+    });
+    mockWagmiAccount = {
+      address: addressA,
+      isConnected: true,
+      status: "connected",
+      connector: { type: "browser" },
+    };
+    mockGetWalletAddress.mockReturnValue(addressA);
+    mockGetConnectedWalletAccounts.mockReturnValue([
+      buildStoredAccount(addressA),
+    ]);
+
+    render(
+      <SeizeConnectProvider>
+        <ConnectionProbe />
+      </SeizeConnectProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("is-connected")).toHaveTextContent("true");
+    });
   });
 
   it("prefers stored active account while provider still reports previous known account", async () => {

@@ -12,6 +12,9 @@ import { createAppWalletConnector } from "@/wagmiConfig/wagmiAppWalletConnector"
 import { act, render, waitFor } from "@testing-library/react";
 import React from "react";
 
+const mockConnectWagmi = jest.fn();
+const mockIsElectron = jest.fn(() => false);
+
 const resetWagmiAppKitFastPathForTests = (): void => {
   Reflect.deleteProperty(
     globalThis,
@@ -49,6 +52,12 @@ jest.mock("@capacitor/core", () => ({
   Capacitor: {
     isNativePlatform: jest.fn(() => false),
   },
+}));
+jest.mock("@wagmi/core", () => ({
+  connect: (...args: unknown[]) => mockConnectWagmi(...args),
+}));
+jest.mock("@/helpers", () => ({
+  isElectron: () => mockIsElectron(),
 }));
 jest.mock("@/utils/appkit-initialization.utils", () => ({
   createAppKitAdapter: jest.fn(),
@@ -179,6 +188,8 @@ describe("WagmiSetup Security Tests", () => {
     mockPasswordRequestDelegates.length = 0;
     jest.clearAllMocks();
     jest.useFakeTimers();
+    mockIsElectron.mockReturnValue(false);
+    mockConnectWagmi.mockResolvedValue(undefined);
     restoreEthereumState();
 
     // Add unhandled rejection handler for expected errors
@@ -743,6 +754,52 @@ describe("WagmiSetup Security Tests", () => {
       });
 
       expect(mockInitializeAppKit).toHaveBeenCalledTimes(1);
+    });
+
+    it("restores a persisted Desktop browser connection after AppKit starts", async () => {
+      mockIsElectron.mockReturnValue(true);
+      const browserConnector = {
+        id: "chrome",
+        name: "Chrome",
+        type: "browser",
+        getProvider: jest.fn().mockResolvedValue({}),
+        isAuthorized: jest.fn().mockResolvedValue(true),
+      };
+      const adapter = {
+        wagmiConfig: {
+          chains: [],
+          client: {},
+          connectors: [browserConnector],
+          state: { status: "disconnected" },
+          _internal: {
+            connectors: {
+              setup: mockConnectorSetup,
+              setState: mockConnectorSetState,
+            },
+          },
+        },
+      };
+      mockCreateAppKitAdapter.mockReturnValue(adapter);
+      mockInitializeAppKit.mockReturnValue({ adapter });
+
+      render(
+        <WagmiSetup>
+          <div>Test</div>
+        </WagmiSetup>
+      );
+
+      await act(async () => {
+        await jest.runOnlyPendingTimersAsync();
+        await jest.runOnlyPendingTimersAsync();
+      });
+
+      await waitFor(() => {
+        expect(browserConnector.getProvider).toHaveBeenCalled();
+        expect(browserConnector.isAuthorized).toHaveBeenCalled();
+        expect(mockConnectWagmi).toHaveBeenCalledWith(adapter.wagmiConfig, {
+          connector: browserConnector,
+        });
+      });
     });
 
     it("initializes the adapter and AppKit once in Strict Mode", async () => {

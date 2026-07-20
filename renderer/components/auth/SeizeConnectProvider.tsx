@@ -38,6 +38,12 @@ import {
 } from "@/utils/security-logger";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
 import {
+  BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
+  clearBrowserConnectorConnectIntent,
+  setBrowserConnectorConnectIntent,
+  type BrowserConnectorConnectIntent,
+} from "@/wagmiConfig/browserConnector";
+import {
   AppKitModalBridge,
   createAppKitModalBridgeStore,
   useAppKitModalBridgeState,
@@ -103,7 +109,7 @@ const isLocalDevelopmentHost = (hostname: string): boolean =>
 export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const account = useAppKitAccount();
+  const appKitAccount = useAppKitAccount();
   const wagmiAccount = useAccount();
   const { disconnect } = useDisconnect();
   const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
@@ -122,6 +128,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   >(() => getConnectedWalletAccounts());
   const [isAddingConnectedAccount, setIsAddingConnectedAccount] =
     useState(false);
+  const [
+    browserConnectorConnectedAddress,
+    setBrowserConnectorConnectedAddress,
+  ] = useState<string | null>(null);
   const [isDisconnecting, setIsDisconnecting] = useState(false);
   const [isConnectIntentWaitingForAppKit, setIsConnectIntentWaitingForAppKit] =
     useState(false);
@@ -169,9 +179,79 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const impersonatedAddress =
     agentLoginImpersonatedAddress ?? devAuthImpersonatedAddress;
 
+  const liveAccount = useMemo(() => {
+    const wagmiStatus = wagmiAccount.status;
+    const shouldPreferWagmiAccount =
+      typeof wagmiAccount.address === "string" ||
+      wagmiAccount.isConnected ||
+      wagmiStatus === "connecting" ||
+      wagmiStatus === "reconnecting" ||
+      wagmiStatus === "connected";
+
+    if (shouldPreferWagmiAccount) {
+      return {
+        address: wagmiAccount.address,
+        isConnected: wagmiAccount.isConnected,
+        status: wagmiStatus,
+      };
+    }
+
+    if (browserConnectorConnectedAddress) {
+      return {
+        address: browserConnectorConnectedAddress,
+        isConnected: true,
+        status: "connected" as const,
+      };
+    }
+
+    return {
+      address: appKitAccount.address,
+      isConnected: appKitAccount.isConnected,
+      status: appKitAccount.status,
+    };
+  }, [
+    appKitAccount.address,
+    appKitAccount.isConnected,
+    appKitAccount.status,
+    browserConnectorConnectedAddress,
+    wagmiAccount.address,
+    wagmiAccount.isConnected,
+    wagmiAccount.status,
+  ]);
+
   const refreshStoredConnectedAccounts = useCallback(() => {
     setStoredConnectedAccounts(getConnectedWalletAccounts());
   }, []);
+
+  useEffect(() => {
+    if (globalThis.window === undefined) {
+      return;
+    }
+
+    const handleBrowserConnectorConnectionChanged = (event: Event): void => {
+      const nextAddress = (event as CustomEvent<{ address?: string | null }>)
+        .detail?.address;
+
+      refreshStoredConnectedAccounts();
+      setBrowserConnectorConnectedAddress(
+        typeof nextAddress === "string" && isAddress(nextAddress)
+          ? getAddress(nextAddress)
+          : null
+      );
+    };
+
+    globalThis.window.addEventListener(
+      BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
+      handleBrowserConnectorConnectionChanged as EventListener
+    );
+
+    return () => {
+      globalThis.window.removeEventListener(
+        BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
+        handleBrowserConnectorConnectionChanged as EventListener
+      );
+    };
+  }, [refreshStoredConnectedAccounts]);
 
   const clearConnectIntentHandoffTimeout = useCallback((): void => {
     if (connectIntentHandoffTimeoutRef.current) {
@@ -215,7 +295,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [clearConnectIntentHandoffTimeout]);
 
   useSeizeConnectProviderEffects({
-    account,
+    account: liveAccount,
     addFlowOriginAddressRef,
     agentLoginImpersonatedAddress,
     clearConnectIntentHandoffTimeout,
@@ -242,8 +322,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const activeAddress = impersonatedAddress ?? connectedAddress;
   const liveConnectedAddress =
     impersonatedAddress ||
-    (account.address && account.isConnected && isAddress(account.address)
-      ? getAddress(account.address)
+    (liveAccount.address &&
+    liveAccount.isConnected &&
+    isAddress(liveAccount.address)
+      ? getAddress(liveAccount.address)
       : undefined);
   const isActiveWalletConnected = !!(
     activeAddress &&
@@ -303,14 +385,28 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   );
 
   const seizeConnectOrThrow = useCallback(
-    async (source: string): Promise<void> => {
+    async (
+      source: string,
+      intent?: BrowserConnectorConnectIntent
+    ): Promise<void> => {
+      if (intent) {
+        setBrowserConnectorConnectIntent(intent);
+      } else {
+        clearBrowserConnectorConnectIntent();
+      }
+
       // Log connection attempt for security monitoring
       logSecurityEvent(
         SecurityEventType.WALLET_CONNECTION_ATTEMPT,
         createConnectionEventContext(source)
       );
 
-      await openConnectModal(source);
+      try {
+        await openConnectModal(source);
+      } catch (error) {
+        clearBrowserConnectorConnectIntent();
+        throw error;
+      }
     },
     [openConnectModal]
   );
@@ -333,14 +429,53 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     []
   );
 
+  const getActiveConnectIntent = useCallback(():
+    | BrowserConnectorConnectIntent
+    | undefined => {
+    const walletAddress =
+      activeAddress && isAddress(activeAddress)
+        ? activeAddress
+        : getWalletAddress();
+    if (!walletAddress || !isAddress(walletAddress)) {
+      return undefined;
+    }
+
+    return { intendedWalletAddress: getAddress(walletAddress) };
+  }, [activeAddress]);
+
+  const getAddAccountConnectIntent = useCallback(
+    (
+      originAddress: string | null
+    ): BrowserConnectorConnectIntent | undefined => {
+      const fallbackOrigin =
+        activeAddress && isAddress(activeAddress)
+          ? getAddress(activeAddress)
+          : null;
+      const walletAddress = originAddress ?? fallbackOrigin;
+      return walletAddress ? { originWalletAddress: walletAddress } : undefined;
+    },
+    [activeAddress]
+  );
+
   const seizeConnectFresh = useCallback(async (): Promise<void> => {
+    isAddingConnectedAccountRef.current = false;
+    addFlowOriginAddressRef.current = null;
+    setIsAddingConnectedAccount(false);
+    if (retryConnectTimeoutRef.current) {
+      clearTimeout(retryConnectTimeoutRef.current);
+      retryConnectTimeoutRef.current = null;
+    }
+
     const liveConnectedWallet =
-      account.address && account.isConnected && isAddress(account.address)
-        ? getAddress(account.address)
+      liveAccount.address &&
+      liveAccount.isConnected &&
+      isAddress(liveAccount.address)
+        ? getAddress(liveAccount.address)
         : null;
+    const connectIntent = getActiveConnectIntent();
 
     if (!liveConnectedWallet || isActiveAppWalletConnector) {
-      await seizeConnectOrThrow("seizeConnectFresh");
+      await seizeConnectOrThrow("seizeConnectFresh", connectIntent);
       return;
     }
 
@@ -364,20 +499,21 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    await seizeConnectOrThrow("seizeConnectFresh");
+    await seizeConnectOrThrow("seizeConnectFresh", connectIntent);
   }, [
-    account.address,
-    account.isConnected,
+    liveAccount.address,
+    liveAccount.isConnected,
     disconnect,
+    getActiveConnectIntent,
     isActiveAppWalletConnector,
     seizeConnectOrThrow,
   ]);
 
   const seizeDisconnect = useCallback(async (): Promise<void> => {
     const hasLiveProviderConnection = !!(
-      account.address &&
-      account.isConnected &&
-      isAddress(account.address)
+      liveAccount.address &&
+      liveAccount.isConnected &&
+      isAddress(liveAccount.address)
     );
 
     if (!hasLiveProviderConnection && !isActiveWalletConnected) {
@@ -399,8 +535,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       setIsDisconnecting(false);
     }
   }, [
-    account.address,
-    account.isConnected,
+    liveAccount.address,
+    liveAccount.isConnected,
     disconnect,
     isActiveWalletConnected,
   ]);
@@ -576,8 +712,14 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     storedConnectedAccounts.length < MAX_CONNECTED_PROFILES;
 
   const openAddConnectedAccountModal = useCallback(
-    (clearAddConnectedAccountGuard: () => void): void => {
-      seizeConnectOrThrow("seizeAddConnectedAccount").catch(
+    (
+      clearAddConnectedAccountGuard: () => void,
+      originAddress: string | null
+    ): void => {
+      seizeConnectOrThrow(
+        "seizeAddConnectedAccount",
+        getAddAccountConnectIntent(originAddress)
+      ).catch(
         (error: unknown) => {
           handleAddConnectedAccountConnectFailure(
             clearAddConnectedAccountGuard,
@@ -586,7 +728,11 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       );
     },
-    [handleAddConnectedAccountConnectFailure, seizeConnectOrThrow]
+    [
+      getAddAccountConnectIntent,
+      handleAddConnectedAccountConnectFailure,
+      seizeConnectOrThrow,
+    ]
   );
 
   const seizeAddConnectedAccount = useCallback((): void => {
@@ -604,9 +750,16 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     }
 
     const liveConnectedWallet =
-      account.address && account.isConnected && isAddress(account.address)
-        ? getAddress(account.address)
+      liveAccount.address &&
+      liveAccount.isConnected &&
+      isAddress(liveAccount.address)
+        ? getAddress(liveAccount.address)
         : null;
+    const addFlowOriginWallet =
+      liveConnectedWallet ??
+      (activeAddress && isAddress(activeAddress)
+        ? getAddress(activeAddress)
+        : null);
     const addFlowOriginAddress = addFlowOriginAddressRef.current;
     const addFlowReturnedToOrigin =
       !isConnectModalOpen &&
@@ -623,8 +776,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           !isConnectIntentWaitingForAppKit &&
           !retryConnectTimeoutRef.current &&
           !liveConnectedWallet &&
-          account.status !== "connecting" &&
-          account.status !== "reconnecting"));
+          liveAccount.status !== "connecting" &&
+          liveAccount.status !== "reconnecting"));
 
     if (hasStaleAddConnectedAccountGuard) {
       clearAddConnectedAccountGuard();
@@ -637,10 +790,13 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
     if (!liveConnectedWallet || isActiveAppWalletConnector) {
       isAddingConnectedAccountRef.current = true;
-      addFlowOriginAddressRef.current = liveConnectedWallet;
+      addFlowOriginAddressRef.current = addFlowOriginWallet;
       setIsAddingConnectedAccount(true);
 
-      openAddConnectedAccountModal(clearAddConnectedAccountGuard);
+      openAddConnectedAccountModal(
+        clearAddConnectedAccountGuard,
+        addFlowOriginWallet
+      );
       return;
     }
 
@@ -662,7 +818,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
               clearAddConnectedAccountGuard();
               return;
             }
-            openAddConnectedAccountModal(clearAddConnectedAccountGuard);
+            openAddConnectedAccountModal(
+              clearAddConnectedAccountGuard,
+              liveConnectedWallet
+            );
           }, CONNECT_AFTER_DISCONNECT_DELAY_MS);
         })
         .catch((error: unknown) => {
@@ -686,9 +845,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       logError("seizeAddConnectedAccount", walletError);
     }
   }, [
-    account.address,
-    account.isConnected,
-    account.status,
+    activeAddress,
+    liveAccount.address,
+    liveAccount.isConnected,
+    liveAccount.status,
     canAddConnectedAccount,
     disconnect,
     isActiveAppWalletConnector,
@@ -699,15 +859,24 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
 
   const connectedAccounts = useMemo(() => {
+    const browserConnectorAddress =
+      browserConnectorConnectedAddress &&
+      isAddress(browserConnectorConnectedAddress)
+        ? getAddress(browserConnectorConnectedAddress)
+        : null;
+
     return storedConnectedAccounts.map((storedAccount) => {
       const isActive =
         !!activeAddress &&
         normalizeAddress(storedAccount.address) ===
           normalizeAddress(activeAddress);
       const isConnectedForAccount = !!(
-        liveConnectedAddress &&
-        normalizeAddress(storedAccount.address) ===
-          normalizeAddress(liveConnectedAddress)
+        (liveConnectedAddress &&
+          normalizeAddress(storedAccount.address) ===
+            normalizeAddress(liveConnectedAddress)) ||
+        (browserConnectorAddress &&
+          normalizeAddress(storedAccount.address) ===
+            normalizeAddress(browserConnectorAddress))
       );
 
       return {
@@ -719,7 +888,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         isConnected: isConnectedForAccount,
       };
     });
-  }, [activeAddress, liveConnectedAddress, storedConnectedAccounts]);
+  }, [
+    activeAddress,
+    browserConnectorConnectedAddress,
+    liveConnectedAddress,
+    storedConnectedAccounts,
+  ]);
 
   const activeStoredAccount = useMemo(() => {
     if (!activeAddress) {
@@ -862,7 +1036,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeAddConnectedAccount,
       isConnectIntentWaitingForAppKit,
       isConnectModalOpen,
-      account.isConnected,
+      liveAccount.isConnected,
       walletState,
       hasInitializationError,
       initializationError,
