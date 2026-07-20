@@ -14,9 +14,12 @@ import {
   TIMELINE_MESSAGES,
 } from "@/i18n/messages/collection-detail";
 import aboutMessages from "@/i18n/messages/about.en-US.json";
+import homeNewcomerMessages from "@/i18n/messages/homeNewcomer.en-US.json";
 import join6529Messages from "@/i18n/messages/join6529.en-US.json";
 import toolsMessages from "@/i18n/messages/tools.en-US.json";
+import wavesRightPanelMessages from "@/i18n/messages/wavesRightPanel.en-US.json";
 import { QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { EN_US_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import profileCmsArtDisplayMessages from "@/i18n/messages/profileCmsArtDisplay.en-US.json";
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 
@@ -219,6 +222,25 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "wave.loadingMore": "Loading...",
 } as const);
 
+// Rep-category validation copy. Kept as its own group with unquoted keys
+// (not merged into the big REP block above) so its lines don't extend that
+// block's quoted-key run — which the duplication detector matches against
+// the parallel key blocks in the locale dictionaries.
+const REP_CATEGORY_VALIDATION_MESSAGES = objectMessages(
+  "rep.categories.validation",
+  {
+    errorTitle: "That category name won't work",
+    tooShort: "Use at least {min} characters.",
+    tooLong: "It's {length} characters long — the maximum is {max}.",
+    leadingDash: "A category can't start with a dash.",
+    disallowedChars:
+      "These characters can't be used: {chars}. Stick to letters, numbers, spaces, dashes and , . ? ! ' ( )",
+    aiFilterDetails:
+      "Rep isn't meant for insults or doxxing, so proposed categories run through an AI filter. If you think it got yours wrong, hop into Brain on 6529.io and let us know — or try rephrasing what you want to say.",
+    closeErrorLabel: "Dismiss error",
+  } as const
+);
+
 const USER_COLLECTED_STATS_ACTIVITY_MESSAGES = objectMessages(
   "user.collected.stats.activityOverview",
   {
@@ -283,6 +305,8 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "primary.join6529": "Join 6529",
   "primary.about": "About",
   "primary.home": "Home",
+  "sidebar.submenuLabel": "{section} sub-navigation",
+  "sidebar.panelLabel": "{section} items",
   "account.notifications": "Notifications",
   "section.main": "Main",
   "section.utility": "Utility",
@@ -293,6 +317,34 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "subsection.networkData": "Network & Reputation",
   "subsection.nftReportingTools": "Collections & Minting",
   "subsection.developerOpenData": "Data & Developer Tools",
+} as const);
+
+const TITLE_CONTEXT_MESSAGES = objectMessages("titleContext", {
+  "routes.waves": "Waves | Brain",
+  "routes.notifications": "Notifications | Brain",
+  "routes.messages": "Messages | Brain",
+  "routes.memeCalendar": "Memes Minting Calendar",
+  "routes.theMemes": "The Memes | Collections",
+  "routes.memeLab": "Meme Lab | Collections",
+  "routes.network": "Network",
+  "routes.gradient": "6529 Gradient | Collections",
+  "routes.nextGen": "NextGen | Collections",
+  "routes.rememes": "Rememes | Collections",
+  "routes.openData": "Open Data | Tools",
+  "routes.discovery": "Discovery",
+  "routes.profile": "Profile | 6529.io",
+  "wave.default": "{waveName} | Brain",
+  "wave.newMessages.one": "({count} new message) {waveName} | Brain",
+  "wave.newMessages.other": "({count} new messages) {waveName} | Brain",
+  "notifications.one": "({count} notification) {title}",
+  "notifications.other": "({count} notifications) {title}",
+} as const);
+
+const WAVE_NAVIGATION_MESSAGES = objectMessages("wave.navigation", {
+  waveSections: "Wave sections",
+  appSections: "App sections",
+  loadingSections: "Loading wave sections",
+  fallbackCuration: "Curation",
 } as const);
 
 const WAVE_SCORE_NAVIGATION_MESSAGES = objectMessages("waveScore.navigation", {
@@ -323,6 +375,9 @@ const MEMES_WAVE_FOOTER_MESSAGES = objectMessages("memes.waveFooter", {
 } as const);
 
 const DROP_REACTION_MESSAGES = objectMessages("drops.reactions", {
+  capabilityDisabled: "Reactions are disabled for this wave.",
+  requestTimedOut:
+    "The reaction request timed out. Refreshing the latest reaction state; wait before trying again.",
   "rateLimit.retryAfter.moment":
     "You are reacting too quickly. Try again in a moment.",
   "rateLimit.retryAfter.seconds.one":
@@ -340,11 +395,69 @@ const WAVES_MOBILE_MESSAGES = objectMessages("waves.mobile", {
   "profileFeed.subtitle": "Featured drops from profile waves",
 } as const);
 
+const WAVE_LEADERBOARD_MESSAGES = objectMessages("waves.leaderboard", {
+  listLabel: "Leaderboard drops",
+  loadingEarlier: "Loading earlier drops",
+  previousLoadError:
+    "Earlier drops could not be loaded. Use the retry button to try again.",
+  retryEarlier: "Retry loading earlier drops",
+  loadingMore: "Loading more drops",
+  nextLoadError:
+    "More drops could not be loaded. Use the retry button to try again.",
+  retryMore: "Retry loading more drops",
+  loadMore: "Load more drops",
+  loadingMoreButton: "Loading more…",
+} as const);
+
 const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
   copyText: "Copy text",
   copyLink: "Copy link",
   copied: "Copied!",
   copyFailed: "Copy failed",
+} as const);
+
+const WAVE_COMPETITION_BADGE_MESSAGES = objectMessages(
+  "waves.competitionBadges",
+  {
+    participantTooltip: "View this participant’s competition entries in {wave}",
+    winnerTooltip: "View this winner’s competition entries in {wave}",
+    title: "{profile}'s competition entries",
+    profileFallback: "This member",
+    "tabs.active": "Active entries",
+    "tabs.winners": "Winning entries",
+    loading: "Loading competition entries…",
+    error: "Couldn’t load competition entries.",
+    emptyActive: "No active entries are available.",
+    emptyWinners: "No winning entries are available.",
+    retry: "Retry",
+    loadMore: "Load more entries",
+    loadingMore: "Loading more entries…",
+    close: "Close competition entries",
+    openEntry: "Open competition entry {title}",
+    untitled: "Untitled entry",
+    winner: "Winner",
+    rating: "{rating} total",
+  } as const
+);
+
+const WAVE_VOTE_RATIONALE_MESSAGES = objectMessages("waves.voteRationale", {
+  explain: "Explain",
+  explainAriaLabel: "Reply with vote rationale",
+  fieldLabel: "Optional rationale reply",
+  fieldDescription:
+    "Editing this text turns on Vote with reply until you choose the switch setting yourself.",
+  switchLabel: "Vote with reply",
+  stateOn: "On",
+  stateOff: "Off",
+  emptyBlockReason: "Add rationale text or turn Vote with reply off.",
+  submitLabel: "Vote + reply",
+  postErrorTitle: "Vote saved, but couldn't post your rationale reply.",
+  postErrorRetry: "Please try posting the reply again.",
+  postErrorEmpty: "Add rationale text and try posting the reply again.",
+  postErrorNoTarget: "The voted drop has no reply target.",
+  prefixTotal: "Vote rationale ({voteTotal} at time of posting):\n\n",
+  prefixTotalAndChange:
+    "Vote rationale ({voteTotal} total, {voteChange} change at time of posting):\n\n",
 } as const);
 
 const WAVE_POLL_MESSAGES = objectMessages("waves.poll", {
@@ -456,6 +569,7 @@ const USER_PROFILE_TABS_MESSAGES = objectMessages("user.profile.tabs", {
 
 const USER_PROFILE_HEADER_MESSAGES = objectMessages("user.profileHeader", {
   "name.edit": "Edit {name}'s profile name",
+  "classification.edit": "Edit {name}'s classification",
   "dm.createFailed.title": "Couldn't create this direct message.",
   "dm.createFailed.description": PLEASE_TRY_AGAIN,
   "name.profileEnabled": "Profile enabled: {date}",
@@ -490,6 +604,10 @@ const USER_PROFILE_HEADER_MESSAGES = objectMessages("user.profileHeader", {
   "aboutEdit.errors.doxxing.title": "Error: Doxxing of Another Person",
   "aboutEdit.errors.doxxing.value":
     "Your About text was not accepted because our automated checks flagged it for potentially doxxing another user of the system. We have a strong cultural value around respecting pseudonymity, so we'd appreciate it if you adjusted your text.",
+} as const);
+
+const USER_CIC_TYPE_MESSAGES = objectMessages("user.cicType", {
+  details: "Network ID Check details",
 } as const);
 
 const FOLLOWERS_MESSAGES = objectMessages("followers", {
@@ -596,8 +714,8 @@ const NOTIFICATIONS_WAVE_FOLLOW_BUTTON_MESSAGES = objectMessages(
 
 const WAVE_HEADER_MESSAGES = objectMessages("waves.header", {
   createdLabel: "Created {relativeTime} · {date}",
-  "postsCount.one": "{count} Post",
-  "postsCount.other": "{count} Posts",
+  "postLabel.one": "Post",
+  "postLabel.other": "Posts",
 } as const);
 
 const WAVE_NOTIFICATION_SETTINGS_MESSAGES = namespaceMessages(
@@ -663,6 +781,48 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
     "Warning: You are not included in this group. If it controls who can view the wave, you may not be able to access the wave after creating it.",
 } as const);
 
+const WAVE_CREATE_RANK_MODE_MESSAGES = objectMessages(
+  "waves.create.rank.mode",
+  {
+    legend: "Ranking mode",
+    "announceWinners.title": "Announce Winners",
+    "announceWinners.description":
+      "Winners are announced on a schedule you'll set on the Dates step — a fixed timeline that ends the wave, or repeating cycles.",
+    "perpetualRanking.title": "Perpetual Ranking",
+    "perpetualRanking.description":
+      "Rankings update continuously with no winners and no end date — a live, always-on leaderboard.",
+  } as const
+);
+
+const WAVE_CREATE_DROPS_MESSAGES = objectMessages("waves.create.drops", {
+  identityDuplicatesRequireWinners:
+    "Perpetual ranking waves never announce winners, so identities can't be resubmitted “after a win”. Choose a different re-submission rule.",
+} as const);
+
+const WAVE_CREATE_OUTCOMES_MESSAGES = objectMessages("waves.create.outcomes", {
+  title: "Outcomes",
+  showOutcomes: "Show outcomes",
+  "perpetual.title": "Outcome is leaderboard position",
+  "perpetual.description":
+    "This wave ranks continuously — no winners are announced and the wave never ends, so there are no outcome awards to configure or show. The outcomes tab stays hidden; the live leaderboard is the outcome.",
+} as const);
+
+const WAVE_LEADERBOARD_PHASE_MESSAGES = objectMessages(
+  "waves.leaderboard.phase",
+  {
+    votingOngoing: "Voting ongoing",
+    droppingOngoing: "Dropping open",
+    noEndDate: "No end date",
+  } as const
+);
+
+const WAVE_RULES_SCHEDULE_MESSAGES = objectMessages("waves.rules.schedule", {
+  perpetualRankType: "Rank — Perpetual Ranking",
+  outcomesNotAvailable: "Not available (perpetual wave)",
+  "winnerAnnouncements.label": "Winner announcements",
+  "winnerAnnouncements.none": "None (ongoing ranking, no end date)",
+} as const);
+
 const GROUP_NFT_OWNERSHIP_MESSAGES = objectMessages("groups.nftOwnership", {
   "collection.gradients": "Gradients",
   "collection.memelab": "Meme Lab",
@@ -695,6 +855,38 @@ const WAVE_CHAT_MESSAGES = objectMessages("waves.chat", {
   "replyTargetUnavailableToast.detailsKept":
     "Your current draft was not changed.",
   "replyTargetUnavailableToast.actionReviewDraft": "Review draft",
+} as const);
+
+const WAVE_STORM_COMPOSER_MESSAGES = objectMessages("waves.stormComposer", {
+  draftTitle: "Storm draft",
+  privateDraftHint: "Only you can see this until you post it.",
+  partsCountOne: "{count} part",
+  partsCountOther: "{count} parts",
+  discard: "Discard",
+  discardConfirmation: "Discard every saved part and the part you are writing?",
+  keepDraft: "Keep draft",
+  discardDraft: "Discard draft",
+  part: "Part {number}",
+  mediaOnlyPart: "Media-only part",
+  edit: "Edit",
+  editPart: "Edit part {number}",
+  finishCurrentPartBeforeEditing:
+    "Add or clear the current part before editing another part",
+  editing: "Editing",
+  movePartEarlier: "Move part {number} earlier",
+  movePartLater: "Move part {number} later",
+  moveEarlier: "Move earlier",
+  moveLater: "Move later",
+  remove: "Remove",
+  removePart: "Remove part {number}",
+  nextPart: "Next: Part {number}",
+  editingPart: "Editing Part {number}",
+  cancelEdit: "Cancel edit",
+  writePart: "Write part {number}",
+  breakIntoStorm: "Break into storm",
+  addPart: "Add part",
+  saveChanges: "Save changes",
+  postStorm: "Post storm",
 } as const);
 
 const WAVE_CHAT_SETTINGS_MESSAGES = objectMessages("waves.chatSettings", {
@@ -730,6 +922,8 @@ const WAVE_DROPS_SEARCH_MODAL_MESSAGES = objectMessages(
     "empty.title": "No messages found",
     "error.description": "Change the query or reopen search to try again.",
     "error.title": "Couldn't load results",
+    "error.retry": "Try again",
+    "error.retrying": "Trying again...",
     "idle.description":
       "Type at least {minLength} characters to search this wave.",
     "idle.title": "Ready to search",
@@ -742,12 +936,15 @@ const WAVE_DROPS_SEARCH_MODAL_MESSAGES = objectMessages(
     "loading.title": "Searching messages",
     placeholder: "Search messages",
     "result.open": "Open message {serialNo} by {author}",
+    "result.mediaOnly": "Message with media or an attachment",
+    "result.serial": "Message #{serialNo}",
     "result.unavailable": "Message by {author} cannot be opened",
     "results.count.one": "{count} result",
     "results.count.other": "{count} results",
     "results.queryPrefix": "for",
     "results.status.one": '{count} result for "{query}"',
     "results.status.other": '{count} results for "{query}"',
+    searchAll: "Search all 6529",
     title: "Search messages",
   } as const
 );
@@ -845,10 +1042,7 @@ const WAVE_REP_DETAILS_MESSAGES = objectMessages("waves.rep.details", {
   "categories.title": "Categories",
   "categories.loading": "Loading",
   "categories.all": "All",
-  "categories.active": "Category",
-  "categories.activeAriaLabel": "Choose active Wave REP category",
-  "categories.browse": "Show all categories",
-  "categories.searchPlaceholder": "Search categories",
+  "categories.searchPlaceholder": "Search categories…",
   "categories.searchAriaLabel": "Search Wave REP categories",
   "categories.noMatches": "No matching categories",
   "categories.allAriaLabel":
@@ -860,6 +1054,7 @@ const WAVE_REP_DETAILS_MESSAGES = objectMessages("waves.rep.details", {
   "categories.loadMoreError": "Could not load more categories.",
   "categories.loadingMore": "Loading categories",
   "categories.loadMore": "Load more categories",
+  "categories.searchMore": "Search more categories",
   "view.ariaLabel": "Wave REP detail view",
   "view.contributors": "Contributors",
   "view.activity": "Activity",
@@ -867,8 +1062,6 @@ const WAVE_REP_DETAILS_MESSAGES = objectMessages("waves.rep.details", {
   "contributors.heading.category": "Contributors in {category}",
   "contributors.description.all": "{contributors}",
   "contributors.description.category": "{contributors}, {rep}",
-  "contributors.categoryFilter": "Category: {category}",
-  "contributors.categoryFilterAll": "All",
   "contributors.error": "Could not load contributors.",
   "contributors.empty.all": "No Wave REP yet.",
   "contributors.empty.category": "No contributors in {category} yet.",
@@ -1005,14 +1198,176 @@ const COMMON_MESSAGES = objectMessages("common", {
   close: "Close",
 } as const);
 
+const IDENTITY_FILTER_MESSAGES = objectMessages("identityFilter", {
+  add: "Add",
+  addAriaLabel: "Add identity filter",
+  apply: "Done",
+  clearAll: "Clear all",
+  description:
+    "Add handles, ENS names, or wallet addresses. Results update as filters change.",
+  duplicate: "That identity is already included.",
+  empty: "No identity filters added. Showing everyone.",
+  inputLabel: "Handle, ENS name, or wallet address",
+  open: "Filter by identity",
+  placeholder: "Handle, ENS, or wallet address",
+  remove: "Remove {identity} from filters",
+  "selected.one": "{count} identity selected",
+  "selected.other": "{count} identities selected",
+  title: "Filter by identity",
+} as const);
+
+const XTDH_COLLECTION_MESSAGES = objectMessages("xtdh.collections", {
+  "search.emptyDescription":
+    "Try another collection name or clear the search to see all collections.",
+  "search.emptyTitle": "No collections found for “{query}”",
+} as const);
+
+const COLLECTION_DELEGATION_MESSAGES = objectMessages("delegation.collection", {
+  "readError.message": "Unable to load delegation records for {collection}.",
+  "readError.retry": "Try Again",
+  "scope.all":
+    "Records here apply across every supported delegation collection.",
+  "scope.memes": "Records here apply only to The Memes collection.",
+  "scope.memeLab": "Records here apply only to Meme Lab.",
+  "scope.gradient": "Records here apply only to 6529 Gradient.",
+  "scope.selected": "Records here apply to the selected collection scope.",
+  "navigation.back": "Back to Delegation Center",
+  "connect.title": "Connect Wallet to Manage {collection}",
+  "connect.description":
+    "Connect the wallet whose outgoing and incoming records you want to review.",
+  "connect.button": "Connect Wallet",
+  "network.switch": "Switch to {network}",
+  "network.ethereumMainnet": "Ethereum Mainnet",
+  "network.sepolia": "Sepolia Network",
+  "sections.delegations.title": "Delegations",
+  "sections.delegations.description":
+    "Delegations let another wallet use NFT utility for this collection scope without moving the NFT.",
+  "sections.delegations.outgoing": "Outgoing Delegations",
+  "sections.delegations.incoming": "Incoming Delegations",
+  "sections.managers.title": "Delegation Managers",
+  "sections.managers.description":
+    "Manager rights let another wallet maintain delegations or consolidations for this collection scope.",
+  "sections.managers.outgoing": "Outgoing Manager Rights",
+  "sections.managers.incoming": "Incoming Manager Rights",
+  "sections.consolidations.title": "Consolidations",
+  "sections.consolidations.description":
+    "Consolidations link wallets you control so 6529 can treat them together for collection metrics.",
+  "sections.consolidations.outgoing": "Outgoing Consolidations",
+  "sections.consolidations.incoming": "Incoming Consolidations",
+  "scopeLabel.delegations": "delegations",
+  "scopeLabel.managers": "Delegation Managers",
+  "scopeLabel.consolidations": "consolidations",
+  "direction.outgoing": "outgoing",
+  "direction.incoming": "incoming",
+  "records.empty": "No {direction} {scope} found for {collection}",
+  "records.fetching": "Fetching {direction} {scope} for {collection}",
+  "row.allTokens": "all tokens",
+  "row.tokenId": " - token ID: {tokens}",
+  "row.status.active": "consolidation active",
+  "row.status.incomplete": "consolidation incomplete",
+  "row.status.unavailable": "consolidation status unavailable",
+  "row.consolidationMissing": "{label} consolidation missing",
+  "row.label.incoming": "Incoming",
+  "row.label.outgoing": "Outgoing",
+  "outgoing.selectBulk": "Select {wallet} for bulk revoke",
+  "outgoing.editAriaLabel": "Edit delegation for {wallet}",
+  "outgoing.edit": "Edit",
+  "outgoing.revokeAriaLabel": "Revoke delegation for {wallet}",
+  "outgoing.revoke": "Revoke",
+  "outgoing.selected": "Selected: {count}",
+  "outgoing.selectedMax": "{count} (max)",
+  "outgoing.batchRevoke": "Batch Revoke",
+  "incoming.selectOriginal": "Select {wallet} as original delegator",
+  "incoming.actionsDescription":
+    "Select a delegator above, then choose an action to perform on their behalf.",
+  "incoming.registerDelegation": "Register Delegation",
+  "incoming.registerManager": "Register Delegation Manager",
+  "incoming.registerConsolidation": "Register Consolidation",
+  "incoming.assignPrimary": "Assign Primary Address",
+  "incoming.revoke": "Revoke",
+  "transaction.pending": "Transaction pending",
+  "toast.revokingDelegation": "Revoking Delegation",
+  "toast.revokingDelegationFailed": "Revoking Delegation Failed",
+  "toast.revokingDelegationsFailed": "Revoking Delegations Failed",
+  "toast.batchRevoking": "Batch Revoking Delegations",
+  "toast.revokeStartFailed": "Failed to start revoking delegation.",
+  "toast.batchRevokeStartFailed": "Failed to start revoking delegations.",
+  "toast.confirmationFailed":
+    "Transaction failed while waiting for confirmation.",
+  "toast.lockingWallet": "Locking Wallet",
+  "toast.unlockingWallet": "Unlocking Wallet",
+  "toast.lockFailed": "{title} Failed",
+  "toast.walletLockStartFailed": "Failed to start wallet lock update.",
+  "toast.useCaseLockStartFailed": "Failed to start use-case lock update.",
+  "toast.lockingUseCase":
+    "Locking Wallet on Use Case\n#{useCase} {useCaseName}",
+  "toast.unlockingUseCase":
+    "Unlocking Wallet on Use Case\n#{useCase} {useCaseName}",
+  "locks.title": "Locks",
+  "locks.tooltip":
+    "Locks only block incoming delegations for this collection scope. They do not revoke outgoing records.",
+  "locks.description":
+    "Locks block incoming delegations for this collection scope. They do not stop delegations you already made to other wallets.",
+  "locks.wallet.lock": "Lock Wallet",
+  "locks.wallet.unlock": "Unlock Wallet",
+  "locks.useCase.ariaLabel": "Lock or unlock use case",
+  "locks.useCase.placeholder": "Lock/Unlock Use Case",
+  "locks.useCase.lock": "Lock Use Case",
+  "locks.useCase.unlock": "Unlock Use Case",
+  "locks.useCase.unavailable":
+    "This use case is unavailable. Select another use case and try again.",
+  "locks.note.label": "Note:",
+  "locks.useCase.globalNotePrefix": "Unlock use case in",
+  "locks.allCollections": "All Collections",
+  "locks.option.locked": "#{useCase} - {name} - LOCKED{globalMarker}",
+  "locks.option.unlocked": "#{useCase} - {name} - UNLOCKED",
+  "locks.note.local": "Unlock Wallet to lock/unlock specific use cases",
+  "locks.note.globalPrefix": "Unlock Wallet on",
+  "locks.note.globalSuffix":
+    "to lock/unlock specific collections and use cases",
+  "walletChecker.never": "Never",
+  "walletChecker.all": "All",
+  "walletChecker.delegations.title": "Delegations ({count})",
+  "walletChecker.managers.title": "Delegation Managers ({count})",
+  "walletChecker.consolidations.title": "Consolidations ({count})",
+  "walletChecker.columns.from": "From",
+  "walletChecker.columns.to": "To",
+  "walletChecker.columns.collection": "Collection",
+  "walletChecker.columns.useCase": "Use Case",
+  "walletChecker.columns.tokens": "Tokens",
+  "walletChecker.columns.expiry": "Expiry",
+  "walletChecker.delegations.empty": "No delegations found",
+  "walletChecker.managers.empty": "No delegation managers found",
+  "walletChecker.consolidations.empty": "No consolidations found",
+  "walletChecker.activeDelegation": "Active Minting Delegation for The Memes",
+  "walletChecker.activeConsolidation": "Active Consolidation",
+  "walletChecker.labels.to": "To:",
+  "walletChecker.labels.collection": "Collection:",
+  "walletChecker.labels.useCase": "Use Case:",
+  "walletChecker.labels.expiry": "Expiry:",
+  "walletChecker.incompleteConsolidation": "Incomplete Consolidation",
+  "walletChecker.recommendedActions": "Recommended Actions:",
+  "walletChecker.registerConsolidation":
+    "Register Consolidation from {from} to {to}",
+} as const);
+
 const HEADER_SEARCH_MESSAGES = objectMessages("headerSearch", {
   "category.all": "All",
+  "category.nfts": "NFTs",
+  "category.pages": "Pages",
+  "category.profiles": "Profiles",
+  "category.waves": "Waves",
+  "category.error": "Some results could not be loaded",
+  "category.loading": "Loading {category} results",
   clear: "Clear search",
   clearShort: "Clear",
   close: "Close search",
-  "dialogTitle.site": "Search 6529.io",
+  "dialogTitle.site": "Search 6529",
   "dialogTitle.wave": "Search this Wave",
+  "dialogDescription.site": "Find pages, NFTs, profiles, and Waves.",
   error: "Something went wrong while searching. Please try again.",
+  "error.partial.one": "{category} results could not be loaded.",
+  "error.partial.other": "Some result types could not be loaded: {categories}.",
   goBack: "Go back",
   idle: "Start typing to search 6529.io",
   "idleWithCountdown.one":
@@ -1023,18 +1378,37 @@ const HEADER_SEARCH_MESSAGES = objectMessages("headerSearch", {
     "Type at least {minLength} characters to search 6529.io.",
   "inputDescription.wave":
     "Type at least {minLength} characters to search messages in this Wave.",
-  inputLabel: "Search",
-  loading: "Loading...",
+  inputLabel: "Search 6529",
+  loading: "Searching...",
+  loadingFor: 'Searching for "{query}"',
   "mode.site": "Site-wide",
   "mode.wave": "In this Wave",
   noResults: "No results found",
+  noResultsFor: 'No matches in {category} for "{query}"',
+  noResultsHint:
+    "Check the spelling, try fewer words, or choose another result type.",
   "placeholder.site": "Search 6529.io",
   "placeholder.wave": "Search messages",
   retry: "Try Again",
+  "results.count.one": "{count} result",
+  "results.count.other": "{count} results",
+  "results.queryPrefix": "for",
+  "results.panelLabel": "{category} results",
+  "results.status.one": '{count} result for "{query}"',
+  "results.status.other": '{count} results for "{query}"',
+  "recent.description": "Pick up where you left off.",
+  "recent.title": "Recent searches",
+  scopeLabel: "Result type",
+  "scope.allResults": "all results",
+  "status.keyboardHint":
+    "Use arrow keys to move through results and Enter to open.",
   viewAllCategory: "View all {category}",
 } as const);
 
 export const EN_US_MESSAGES = {
+  ...IDENTITY_FILTER_MESSAGES,
+  ...XTDH_COLLECTION_MESSAGES,
+  ...COLLECTION_DELEGATION_MESSAGES,
   ...join6529Messages,
   "auth.sessionUpgrade.action": "Upgrade Authentication",
   "auth.signModal.connectionUpdateRequired": "Connection Update Required",
@@ -1115,12 +1489,10 @@ export const EN_US_MESSAGES = {
   "headerShare.modal.title": "Share",
   "headerShare.modal.closeAriaLabel": "Close share modal",
   "headerShare.menu.shareType": "Share Type",
-  "headerShare.menu.selectPlatform": "Select Platform",
   "headerShare.menu.openLinkIn": "Open Link In",
   "headerShare.menu.openUrlIn": "Open URL In",
   "headerShare.menu.connection": "Connection",
   "headerShare.menu.currentUrl": "Current URL",
-  "headerShare.menu.apps": "6529 Apps",
   "headerShare.menu.mobile": "6529 Mobile",
   "headerShare.menu.browser": "Browser",
   "headerShare.menu.desktop": "6529 Desktop",
@@ -1188,6 +1560,7 @@ export const EN_US_MESSAGES = {
   "home.boostedDrop.removeBoost": "Remove boost",
   "home.boostedDrop.removeBoostFromDrop": "Remove boost from drop by {author}",
   "home.boostedDrop.viewAuthor": "View {author}'s profile",
+  ...homeNewcomerMessages,
   "home.mintSubscriptions.balanceLabel": "Balance",
   "home.mintSubscriptions.infoLinkAriaLabel":
     "Learn more about The Memes subscriptions",
@@ -1219,8 +1592,15 @@ export const EN_US_MESSAGES = {
     "You are not subscribed for this drop.",
   "home.mintSubscriptions.tooltip.proxy":
     "Manage subscriptions from your own profile, not a proxy session.",
+  "home.nextMint.status": "Next mint",
+  "home.nextMint.noImage": "No image",
+  "home.nextMint.untitled": "Untitled",
+  "home.nextMint.anonymous": "Anonymous",
+  "home.nextMint.stats.wave": "Wave",
+  "home.nextMint.stats.submitted": "Submitted",
+  "home.nextMint.stats.rating": "Rating",
   "waveChat.boostedDrops.display.description":
-    "Choose how inserted boosted-drop cards appear in wave chat on this device.",
+    "How boosted-drop cards show in chat.",
   "waveChat.boostedDrops.display.expanded": "Expanded",
   "waveChat.boostedDrops.display.hidden": "Hidden",
   "waveChat.boostedDrops.display.compact": "Compact",
@@ -1264,6 +1644,10 @@ export const EN_US_MESSAGES = {
   "theMemes.detail.backLink.ariaLabel": "Back to The Memes",
   "theMemes.detail.heading.card": "Card {tokenId}",
   "theMemes.detail.heading.ariaLabel": "Card {tokenId} - {name}",
+  "theMemes.detail.loadError.message":
+    "We couldn't load this card. Please try again.",
+  "theMemes.detail.loadError.retry": "Try again",
+  "theMemes.detail.mainStageSubmission.title": "Main Stage Submission",
   "theMemes.detail.sections.ariaLabel": "Meme page sections",
   "theMemes.detail.history.ariaLabel": "Meme history sections",
   "theMemes.detail.tabs.overview": "Overview",
@@ -1707,6 +2091,9 @@ export const EN_US_MESSAGES = {
   "profile.mute.status.muted": "Notifications from this profile are muted.",
   "profile.mute.status.unmuted":
     "Notifications from this profile are not muted.",
+  "profile.subscriptions.mintingToday.label": "Minting Today",
+  "profile.subscriptions.mintingToday.tooltip":
+    "No changes allowed on minting day",
   "drop.media.alt": "Drop media",
   "drop.media.processing": "Processing image",
   "drop.media.processingGeneric": "Processing media",
@@ -1733,13 +2120,16 @@ export const EN_US_MESSAGES = {
     "The creator marked this submission as promising an extra action beyond the artwork, such as an event, donation, physical item, airdrop, or future deliverable.",
   ...USER_PROFILE_TABS_MESSAGES,
   ...USER_PROFILE_HEADER_MESSAGES,
+  ...USER_CIC_TYPE_MESSAGES,
   ...FOLLOWERS_MESSAGES,
   ...WAVES_SIDEBAR_MESSAGES,
+  ...wavesRightPanelMessages,
   ...QUICK_DM_MESSAGES,
   ...NOTIFICATIONS_FOLLOW_BUTTON_MESSAGES,
   ...NOTIFICATIONS_WAVE_CREATED_MESSAGES,
   ...NOTIFICATIONS_WAVE_FOLLOW_BUTTON_MESSAGES,
   ...WAVE_CHAT_MESSAGES,
+  ...WAVE_STORM_COMPOSER_MESSAGES,
   ...WAVE_CHAT_SETTINGS_MESSAGES,
   ...WAVE_LOADING_MESSAGES,
   ...WAVE_DROPS_SEARCH_MODAL_MESSAGES,
@@ -1747,6 +2137,11 @@ export const EN_US_MESSAGES = {
   ...WAVE_HEADER_MESSAGES,
   ...WAVE_NOTIFICATION_SETTINGS_MESSAGES,
   ...WAVE_CREATE_GROUPS_MESSAGES,
+  ...WAVE_CREATE_RANK_MODE_MESSAGES,
+  ...WAVE_CREATE_DROPS_MESSAGES,
+  ...WAVE_CREATE_OUTCOMES_MESSAGES,
+  ...WAVE_LEADERBOARD_PHASE_MESSAGES,
+  ...WAVE_RULES_SCHEDULE_MESSAGES,
   ...GROUP_NFT_OWNERSHIP_MESSAGES,
   ...WAVE_EXPLORE_CARD_MESSAGES,
   ...WAVE_SCORE_SUMMARY_MESSAGES,
@@ -1761,20 +2156,27 @@ export const EN_US_MESSAGES = {
   ...ABOUT_TECH_MESSAGES,
   ...REMEMES_DETAIL_MESSAGES,
   ...REP_CATEGORY_MESSAGES,
+  ...REP_CATEGORY_VALIDATION_MESSAGES,
   ...MEDIA_VIDEO_MESSAGES,
   ...ATTACHMENT_MESSAGES,
   ...CORE_NFT_LOCAL_DATA_MESSAGES,
   ...LINK_PREVIEW_MESSAGES,
   ...COMMON_MESSAGES,
+  ...EN_US_PAGINATION_MESSAGES,
   ...HEADER_SEARCH_MESSAGES,
   ...NEW_VERSION_TOAST_MESSAGES,
   ...NAVIGATION_MESSAGES,
+  ...TITLE_CONTEXT_MESSAGES,
+  ...WAVE_NAVIGATION_MESSAGES,
   ...WAVE_SCORE_NAVIGATION_MESSAGES,
   ...MEMES_QUICK_VOTE_MESSAGES,
   ...MEMES_WAVE_FOOTER_MESSAGES,
   ...DROP_REACTION_MESSAGES,
   ...WAVES_MOBILE_MESSAGES,
+  ...WAVE_LEADERBOARD_MESSAGES,
   ...WAVE_DROP_ACTIONS_MESSAGES,
+  ...WAVE_COMPETITION_BADGE_MESSAGES,
+  ...WAVE_VOTE_RATIONALE_MESSAGES,
   ...WAVE_POLL_MESSAGES,
   ...WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES,
 } as const;

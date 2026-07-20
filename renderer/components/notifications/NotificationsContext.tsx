@@ -3,6 +3,7 @@
 import { Device, type DeviceInfo } from "@capacitor/device";
 import {
   PushNotifications,
+  type PermissionStatus,
   type PushNotificationSchema,
 } from "@capacitor/push-notifications";
 import * as Sentry from "@sentry/nextjs";
@@ -27,6 +28,7 @@ import {
   getAuthJwt,
   isAuthJwtUsable,
 } from "@/services/auth/auth.utils";
+import { extractErrorStatusCode as extractSharedErrorStatusCode } from "@/utils/errorStatus";
 import { useAuth } from "../auth/Auth";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import { getStableDeviceId } from "./stable-device-id";
@@ -75,6 +77,10 @@ const PUSH_REGISTRATION_BASE_DELAY_MS = 500;
 const PUSH_REGISTRATION_MAX_DELAY_MS = 4000;
 const PUSH_REGISTRATION_JITTER_FACTOR = 0.2;
 const PUSH_REGISTRATION_MAX_RETRY_AFTER_MS = 10000;
+// Capacitor omits the native domain/code, so keep this limited to the exact
+// production signature instead of suppressing similar helper failures.
+const IOS_PUSH_PERMISSION_HELPER_APPLICATION_ERROR_MESSAGE =
+  "Couldn’t communicate with a helper application.";
 
 const DELEGATE_ERROR_PATTERNS = [
   "capacitorDidRegisterForRemoteNotifications",
@@ -90,7 +96,21 @@ const TRANSIENT_ERROR_PATTERNS = [
   "network connection was lost",
   "network request failed",
   "network error",
+  "server with the specified hostname could not be found",
+  "too many server requests",
+  "timed out",
   "timeout",
+];
+const PERMANENT_PUSH_REGISTRATION_ERROR_PATTERNS = [
+  "permission denied",
+  "permission not granted",
+  "not authorized",
+  "unauthorized",
+  "invalid configuration",
+  "configuration is invalid",
+  "invalid token",
+  "invalid device token",
+  "token is invalid",
 ];
 const LOW_VALUE_PUSH_REGISTRATION_ERROR_PATTERNS = [
   "com.google.iid error -25291",
@@ -180,45 +200,8 @@ const toErrorMessage = (
   return fallbackMessage;
 };
 
-const parseStatusCode = (status: unknown): number | null => {
-  if (typeof status === "number" && Number.isFinite(status)) {
-    return status;
-  }
-  if (typeof status === "string") {
-    const parsed = Number.parseInt(status, 10);
-    return Number.isNaN(parsed) ? null : parsed;
-  }
-  return null;
-};
-
-const extractErrorStatusCode = (error: unknown): number | null => {
-  if (error === null || error === undefined || typeof error !== "object") {
-    return null;
-  }
-  const typedError = error as {
-    status?: unknown;
-    code?: unknown;
-    response?: {
-      status?: unknown;
-    };
-    cause?: {
-      status?: unknown;
-      code?: unknown;
-      response?: {
-        status?: unknown;
-      };
-    };
-  };
-
-  return (
-    parseStatusCode(typedError.status) ??
-    parseStatusCode(typedError.response?.status) ??
-    parseStatusCode(typedError.code) ??
-    parseStatusCode(typedError.cause?.status) ??
-    parseStatusCode(typedError.cause?.response?.status) ??
-    parseStatusCode(typedError.cause?.code)
-  );
-};
+const extractErrorStatusCode = (error: unknown): number | null =>
+  extractSharedErrorStatusCode(error, { allowPartialStringStatus: true });
 
 const parseRetryAfterHeaderValue = (value: string): number | null => {
   const seconds = Number.parseFloat(value);
@@ -330,6 +313,15 @@ const isUnauthorizedPushRegistrationError = (error: unknown): boolean =>
   extractErrorStatusCode(error) === 401;
 
 const isTransientPushRegistrationError = (error: unknown): boolean => {
+  const normalizedMessage = toErrorMessage(error).toLowerCase();
+  const isExplicitlyPermanent =
+    PERMANENT_PUSH_REGISTRATION_ERROR_PATTERNS.some((pattern) =>
+      normalizedMessage.includes(pattern)
+    );
+  if (isExplicitlyPermanent) {
+    return false;
+  }
+
   if (isRateLimitError(error)) {
     return true;
   }
@@ -339,7 +331,6 @@ const isTransientPushRegistrationError = (error: unknown): boolean => {
     return statusCode === 408 || (statusCode >= 500 && statusCode < 600);
   }
 
-  const normalizedMessage = toErrorMessage(error).toLowerCase();
   return TRANSIENT_ERROR_PATTERNS.some((pattern) =>
     normalizedMessage.includes(pattern)
   );
@@ -425,6 +416,44 @@ const toCaptureExceptionInput = (
     return error;
   }
   return new Error(toErrorMessage(error, fallbackMessage));
+};
+
+const isIosPushPermissionHelperApplicationError = (error: unknown): boolean =>
+  toErrorMessage(error) ===
+  IOS_PUSH_PERMISSION_HELPER_APPLICATION_ERROR_MESSAGE;
+
+const requestPushNotificationPermissions = async (
+  isIos: boolean
+): Promise<PermissionStatus> => {
+  try {
+    return await PushNotifications.requestPermissions();
+  } catch (error: unknown) {
+    if (!isIos || !isIosPushPermissionHelperApplicationError(error)) {
+      throw error;
+    }
+
+    const permissionStatus = await PushNotifications.requestPermissions();
+    const errorExtra = createErrorTelemetryExtra(error);
+    const retryData = {
+      component: "NotificationsProvider",
+      operation: "requestPermissions",
+      retryable: true,
+      retry_succeeded: true,
+      permission_status: permissionStatus.receive,
+      ...errorExtra,
+    };
+    console.warn(
+      "iOS push permission request completed after native error retry",
+      retryData
+    );
+    Sentry.addBreadcrumb({
+      category: "notifications",
+      level: "warning",
+      message: "Push permission request completed after native error retry.",
+      data: retryData,
+    });
+    return permissionStatus;
+  }
 };
 
 const getUsableProfileId = (profile?: ApiIdentity): string | null => {
@@ -1196,7 +1225,7 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
           }
         );
 
-        const permStatus = await PushNotifications.requestPermissions();
+        const permStatus = await requestPushNotificationPermissions(isIos);
 
         if (permStatus.receive === "granted") {
           if (isIos) {

@@ -17,15 +17,23 @@ export {
 } from "./sentry-client-filters/network";
 export {
   shouldFilterAnonymousUnsafeEvalCspError,
+  shouldFilterAppleWebKitSortedTrackListTypeError,
   shouldFilterByFilenameExceptions,
   shouldFilterGifPickerTenorCategoriesError,
   shouldFilterInjectedWasmCspUnsafeEval,
   shouldFilterReactDomInsertBeforeNotFoundError,
   shouldFilterReactDomRemoveChildNotFoundError,
   shouldFilterSentryRouteParameterizationError,
+  shouldFilterTwitterCurrentInsetReferenceError,
   shouldFilterTwitterConfigReferenceError,
 } from "./sentry-client-filters/errors";
-export { shouldFilterBrowserExtensionMessagingConnectionError } from "./sentry-client-filters/extension-messaging";
+export {
+  shouldFilterBrowserExtensionMessagingConnectionError,
+  shouldFilterBrowserExtensionSendMessageError,
+} from "./sentry-client-filters/extension-messaging";
+export {
+  shouldFilterPoperBlockerOrphanFetchRejection,
+} from "./sentry-client-filters/extension-fetch";
 export {
   shouldFilterCoinbaseWalletLinkWebSocket1006,
   shouldFilterDisconnectedWalletProviderRejection,

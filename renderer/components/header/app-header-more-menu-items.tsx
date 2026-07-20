@@ -1,13 +1,13 @@
-import { faShare } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   ChatBubbleLeftIcon,
   CheckIcon,
   LinkIcon,
+  ShareIcon,
   Squares2X2Icon,
 } from "@heroicons/react/24/outline";
 import type { ReactNode } from "react";
 import type { CompactMenuItem } from "@/components/compact-menu";
+import ShareArrowIcon from "@/components/common/icons/ShareArrowIcon";
 import type { useWaveShareCopyAction } from "@/hooks/waves/useWaveShareCopyAction";
 
 export type HeaderMoreMenuItem = CompactMenuItem & {
@@ -37,7 +37,7 @@ const getWaveLinkActionIcon = ({
   } else if (waveLinkActionFeedbackState === "idle") {
     waveLinkActionIconColor = "tw-text-iron-300";
   }
-  const iconSizeClassName = direct ? "tw-h-6 tw-w-6" : "tw-h-4 tw-w-4";
+  const iconSizeClassName = direct ? "tw-size-5" : "tw-size-4";
   const iconClassName = `${iconSizeClassName} ${waveLinkActionIconColor}`;
 
   if (waveLinkActionFeedbackState !== "idle") {
@@ -45,7 +45,11 @@ const getWaveLinkActionIcon = ({
   }
 
   if (waveLinkActionMode === "share") {
-    return <FontAwesomeIcon icon={faShare} className={iconClassName} />;
+    return direct ? (
+      <ShareArrowIcon className={iconClassName} />
+    ) : (
+      <ShareIcon className={iconClassName} />
+    );
   }
 
   return <LinkIcon className={iconClassName} />;

@@ -47,12 +47,17 @@ rolls back if the request fails.
 - Quick-react options come from local emoji history. If history is empty, quick
   react falls back to `:+1:`.
 - Touch move inside the mobile emoji picker stays inside the picker dialog.
+- Reactions added or removed by other people appear live while the wave or
+  direct-message thread is open.
 - Repeated clap taps in a short burst are merged into one rating request.
 - Rating values are clamped to each drop's allowed min/max range.
 
 ## Edge Cases
 
 - Temporary drops (`temp-*`) cannot be reacted to and do not show rating actions.
+- Reaction controls are disabled while a proxy profile is active.
+- Reaction controls are disabled when the current wave does not allow chatting
+  and reactions.
 - Light placeholder drops do not render reaction or rating controls.
 - Chat drops do not show clap rating controls.
 - Memes-wave participatory drops hide clap rating controls.
@@ -64,8 +69,10 @@ rolls back if the request fails.
 
 ## Failure and Recovery
 
-- If add/remove reaction fails, optimistic reaction state rolls back and users
-  can retry immediately.
+- If add/remove reaction fails, optimistic reaction state rolls back and the app
+  refreshes the canonical drop state.
+- If a reaction request times out, wait for that refresh and check the current
+  reaction before trying again; the app does not automatically retry the write.
 - If rating submit fails, optimistic rating state rolls back and users can retry.
 - Failures surface as toast errors while users stay in the same thread.
 

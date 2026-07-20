@@ -3542,6 +3542,41 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiMemesExtendedDataPage"
+  /meme-cards/{meme_card_id}/drop:
+    get:
+      tags:
+        - Memes
+      summary: Get the Main Stage drop mapped to a Meme card
+      description: >-
+        Returns the explicit one-to-one mapping between a minted Meme card and
+        the winning Memes Main Stage submission that produced it.
+      operationId: getMemeCardDropMapping
+      security: []
+      x-6529-router:
+        enabled: true
+        auth: none
+        handler:
+          import: "@/api/memes/meme-card-drop-mappings.handlers"
+          name: handleGetMemeCardDropMapping
+      parameters:
+        - name: meme_card_id
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiMemeCardDropMapping"
+        "400":
+          description: Invalid Meme card ID
+        "404":
+          description: No Main Stage drop mapping exists for this Meme card
   /memes-mint-stats:
     get:
       tags:
@@ -9460,6 +9495,70 @@ paths:
           description: User cannot manage wave metadata
         "404":
           description: Wave metadata not found
+  /v2/waves/{id}/competition-drops:
+    get:
+      tags:
+        - WavesV2
+      summary: Get one author's competition drops in a wave
+      description: >-
+        Lazily returns full participatory or winner drops for one author after
+        a wave-scoped competition badge is opened.
+      operationId: getWaveCompetitionDropsV2
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/waves-v2.handlers"
+          name: handleGetWaveCompetitionDropsV2
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: author_id
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: drop_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum:
+              - PARTICIPATORY
+              - WINNER
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDropV2PageWithoutCount"
+        "400":
+          description: Invalid competition drop query params
+        "404":
+          description: Wave not found or not visible
   /v2/waves/{id}/drops:
     get:
       tags:
@@ -9825,6 +9924,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiDropsLeaderboardPageV2"
+  /v2/waves/{waveId}/mention-search:
+    get:
+      tags:
+        - WavesV2
+      summary: Search wave-eligible profiles for user mentions
+      description: >-
+        Returns profiles whose handles start with the requested value and who
+        are eligible to read the requested wave. Results are ranked by profile
+        level and exclude the authenticated acting profile.
+      operationId: searchWaveMentions
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/wave-mention-search.handler"
+          name: handleSearchWaveMentions
+      parameters:
+        - name: waveId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: handle
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 3
+            maxLength: 15
+            pattern: ^\w{3,15}$
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiWaveMentionSearchResult"
+        "400":
+          description: Invalid search request
+        "404":
+          description: Wave not found or not visible to the caller
   /v2/waves/{waveId}/search:
     get:
       tags:
@@ -14633,6 +14784,8 @@ components:
           $ref: "#/components/schemas/ApiIdentityOverviewContextProfileContext"
         badges:
           $ref: "#/components/schemas/ApiIdentityOverviewBadges"
+        wave_participation:
+          $ref: "#/components/schemas/ApiIdentityWaveParticipation"
     ApiIdentityOverviewBadges:
       type: object
       required:
@@ -14658,6 +14811,16 @@ components:
         - subscribed
       properties:
         subscribed:
+          type: boolean
+    ApiIdentityWaveParticipation:
+      type: object
+      required:
+        - is_participant
+        - is_winner
+      properties:
+        is_participant:
+          type: boolean
+        is_winner:
           type: boolean
     ApiIdentitySubscriptionActions:
       type: object
@@ -14836,6 +14999,18 @@ components:
         - model/gltf-binary
         - video/quicktime
         - image/webp
+    ApiMemeCardDropMapping:
+      type: object
+      required:
+        - meme_card_id
+        - drop_id
+      properties:
+        meme_card_id:
+          type: integer
+          format: int64
+          minimum: 1
+        drop_id:
+          type: string
     ApiMemesExtendedData:
       type: object
       description: >-
@@ -17964,6 +18139,14 @@ components:
             unless the submission has won.
           type: integer
           format: int64
+        meme_card_id:
+          description: >-
+            The Memes card ID assigned to this winning Main Stage submission.
+            Omitted for active submissions, winners outside the configured Main
+            Stage wave, and legacy winners whose relationship is unavailable.
+          type: integer
+          format: int64
+          minimum: 1
     ApiSubmissionDropStatus:
       type: string
       enum:
@@ -18968,6 +19151,24 @@ components:
         contents:
           type: object
           additionalProperties: true
+    ApiWaveMentionSearchResult:
+      type: object
+      required:
+        - id
+        - handle
+        - display
+        - pfp
+      properties:
+        id:
+          type: string
+        handle:
+          type: string
+        display:
+          type: string
+          nullable: true
+        pfp:
+          type: string
+          nullable: true
     ApiWaveMetadata:
       type: object
       required:
@@ -19293,6 +19494,12 @@ components:
         first_unread_drop_serial_no:
           type: integer
           format: int64
+        subwave_unread_drops:
+          type: integer
+          format: int64
+          description: >-
+            Unread drops across all visible subwaves, independent of whether
+            the authenticated profile follows each subwave.
         followed_subwaves_count:
           type: integer
           format: int64

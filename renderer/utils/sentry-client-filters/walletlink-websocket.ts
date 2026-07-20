@@ -3,6 +3,11 @@ import {
   coinbaseWalletLinkWebSocketCloseFunction,
   coinbaseWalletLinkWebSocketFile,
   coinbaseWalletLinkWebSocket1006MessagePrefix,
+  coinbaseWalletRequestRelayCloseFunction,
+  coinbaseWalletRequestRelayColumn,
+  coinbaseWalletRequestRelayLine,
+  coinbaseWalletRequestRelayPath,
+  coinbaseWalletRequestRelayQualifiedCloseFunction,
   coinbaseWalletSdkPathTokens,
   nextStaticFramePathToken,
   walletWebSocketAppKitBootstrapBreadcrumbTokens,
@@ -50,6 +55,31 @@ export function isCoinbaseWalletLinkWebSocketPath(
 function isCoinbaseWalletLinkWebSocketFrame(frame: SentryStackFrame): boolean {
   return [frame.filename, frame.abs_path].some(
     isCoinbaseWalletLinkWebSocketPath
+  );
+}
+
+function isCoinbaseWalletRequestRelayFrame(frame: SentryStackFrame): boolean {
+  const hasObservedCloseFunction =
+    frame.function === coinbaseWalletRequestRelayCloseFunction ||
+    frame.function === coinbaseWalletRequestRelayQualifiedCloseFunction;
+  if (
+    !hasObservedCloseFunction ||
+    frame.lineno !== coinbaseWalletRequestRelayLine ||
+    frame.colno !== coinbaseWalletRequestRelayColumn
+  ) {
+    return false;
+  }
+
+  return frame.filename === coinbaseWalletRequestRelayPath;
+}
+
+export function hasCoinbaseWalletRequestRelayFrame(
+  frames: SentryStackFrame[] | undefined
+): boolean {
+  return (
+    Array.isArray(frames) &&
+    frames.length === 1 &&
+    isCoinbaseWalletRequestRelayFrame(frames[0]!)
   );
 }
 
@@ -101,6 +131,7 @@ function hasAppOwnedWalletLinkWebSocketInAppFrame(
       (frame) =>
         frame.in_app === true &&
         !isCoinbaseWalletLinkWebSocketFrame(frame) &&
+        !isCoinbaseWalletRequestRelayFrame(frame) &&
         !isCoinbaseWalletLinkWebSocketCloseFrame(frame) &&
         !isRawNextStaticFrame(frame)
     )
@@ -256,6 +287,7 @@ export function hasThirdPartyWalletLinkWebSocket1006Evidence(
 ): boolean {
   return (
     hasCoinbaseWalletLinkWebSocketFrame(value?.stacktrace?.frames) ||
+    hasCoinbaseWalletRequestRelayFrame(value?.stacktrace?.frames) ||
     hasCoinbaseWalletLinkWebSocketStack(hint) ||
     hasCoinbaseWalletLinkWebSocketSerializedStack(event) ||
     hasThirdPartyWalletAppKitBreadcrumbSignature(event)

@@ -35,6 +35,8 @@ export const coinbaseWalletLinkWebSocketFile = "WalletLinkWebSocket.js";
 export const coinbaseWalletLinkWebSocketCloseFunction = "webSocket.onclose";
 export const browserUnhandledRejectionMechanism =
   "auto.browser.global_handlers.onunhandledrejection";
+export const browserGlobalHandlerOnErrorMechanism =
+  "auto.browser.global_handlers.onerror";
 export const coinbaseWalletLinkWebSocket1006MessagePrefix =
   "websocket error 1006";
 export const walletWebSocketBreadcrumbAppKitTokens = [
@@ -85,9 +87,12 @@ export const noisyThirdPartyTelemetryTargets = new Set([
   "cca-lite.coinbase.com/metrics",
   "region1.google-analytics.com/g/collect",
 ]);
-// Coinbase wallet telemetry can arrive as a wrapped network error with only a
-// bare path target; keep this exact so first-party API paths still survive.
-export const noisyThirdPartyTelemetryNetworkPaths = new Set(["/metrics"]);
+// Third-party telemetry can arrive as a wrapped network error with only a bare
+// path target; keep these exact so first-party API paths still survive.
+export const noisyThirdPartyTelemetryNetworkPaths = new Set([
+  "/g/collect",
+  "/metrics",
+]);
 export const objectCapturedPromiseRejectionMessage =
   "Object captured as promise rejection with keys: code, message, stack";
 export const objectCapturedPromiseRejectionMessages = new Set([
@@ -161,6 +166,8 @@ export const REACT_DOM_INSERT_BEFORE_RUNTIME_FUNCTIONS = new Set([
   "recursivelyTraverseMutationEffects",
 ]);
 export const WAVES_ROUTE_PATH = "/waves";
+export const GRADIENT_ROUTE_PATH = "/6529-gradient";
+export const USER_PROFILE_ROUTE_TRANSACTION = "/:user";
 export const gifPickerTenorUndefinedTagsMessage =
   "undefined is not an object (evaluating 'e.tags')";
 export const gifPickerReactPackageToken = "gif-picker-react";
@@ -177,6 +184,10 @@ export const sentryRouteParameterizationMessage =
 export const sentryRouteParameterizationPathToken =
   "client/routing/parameterization.ts";
 export const sentryPackagePathTokens = ["@sentry/nextjs", "@sentry+nextjs"];
+export const twitterInjectedWaveDocumentPathPattern =
+  /^app:\/\/\/waves\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+export const twitterCurrentInsetReferenceErrorMessage =
+  "Can't find variable: currentInset";
 export const metaMaskMobileContextTokens = [
   "metamaskmobile",
   "metamask mobile",
@@ -214,7 +225,25 @@ export const walletConnectStaleSessionFunctions = new Set([
 ]);
 export const extensionMessagingConnectionFailureMessage =
   "Could not establish connection. Receiving end does not exist.";
+export const extensionMessagingContentScriptPaths = new Set([
+  "app:///content-scripts/content.js",
+]);
 export const injectedScriptBundlePathToken = "injectedscript.bundle.js";
+export const injectedScriptSendMessageError =
+  "Cannot read properties of undefined (reading 'sendMessage')";
+export const webkitExtensionMessagingTabNotFoundMessage =
+  "Invalid call to runtime.sendMessage(). Tab not found.";
+export const sentryBrowserHelperPathToken = "/helpers.ts";
+export const sentryBrowserPackagePathTokens = [
+  "@sentry/browser",
+  "@sentry+browser",
+];
+export const coinbaseWalletRequestRelayPath = "app:///requestRelay.js";
+export const coinbaseWalletRequestRelayCloseFunction = "i.onclose";
+export const coinbaseWalletRequestRelayQualifiedCloseFunction =
+  "__webpack_modules__.67891.t.WalletLinkWebSocket.connect.i.onclose";
+export const coinbaseWalletRequestRelayLine = 2;
+export const coinbaseWalletRequestRelayColumn = 248957;
 export const URL_IS_FIRST_PARTY_KEY = "url.is_first_party";
 export const URL_IS_FIRST_PARTY_API_KEY = "url.is_first_party_api";
 export const FNV_OFFSET_BASIS = 2166136261;

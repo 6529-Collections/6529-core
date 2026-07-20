@@ -14,6 +14,7 @@ const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_MEDIA_RESOLVER_ENDPOINT = "https://media.6529.io";
+const PRODUCTION_ASSET_HOSTNAME = "dnclu2fna0b2b.cloudfront.net";
 const ARWEAVE_GATEWAY_HOSTS = [
   "arweave.net",
   "ardrive.net",
@@ -122,7 +123,7 @@ function getAssetPrefix(assetsFromS3: boolean, version: string): string {
   if (!assetsFromS3) {
     return "";
   }
-  return `https://dnclu2fna0b2b.cloudfront.net/web_build/${version}`;
+  return `https://${PRODUCTION_ASSET_HOSTNAME}/web_build/${version}`;
 }
 
 function resolveAssetsFlagFromEnv(): boolean {
@@ -428,6 +429,8 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
       remotePatterns: [
         { protocol: "https", hostname: "6529.io" },
         { protocol: "http", hostname: "6529.io" },
+        { protocol: "https", hostname: "seize.io" },
+        { protocol: "http", hostname: "seize.io" },
         { protocol: "https", hostname: "staging.6529.io" },
         { protocol: "http", hostname: "staging.6529.io" },
         {

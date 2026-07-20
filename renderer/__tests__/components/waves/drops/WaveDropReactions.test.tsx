@@ -102,6 +102,15 @@ const mockUseEmoji = useEmoji as jest.Mock;
 const mockUseAuth = useAuth as jest.Mock;
 const { fetchDropByIdBatched } = require("@/services/api/drop-api");
 const setToastMock = jest.fn();
+const mockGetEligibility = jest.fn();
+const mockUpdateEligibility = jest.fn();
+
+jest.mock("@/contexts/wave/WaveEligibilityContext", () => ({
+  useWaveEligibility: jest.fn(() => ({
+    getEligibility: mockGetEligibility,
+    updateEligibility: mockUpdateEligibility,
+  })),
+}));
 const createStructuredReactionError = ({
   body,
   headers,
@@ -167,7 +176,7 @@ const createEmojiContextValue = (
 
 const createMockDrop = (overrides: Record<string, unknown> = {}) => ({
   id: "test-drop",
-  wave: { id: "test-wave" },
+  wave: { id: "test-wave", authenticated_user_eligible_to_chat: true },
   reactions: [],
   ...overrides,
 });
@@ -205,8 +214,10 @@ describe("WaveDropReactions", () => {
     mockQueryCacheFindAll.mockReset();
     mockQueryCacheFindAll.mockReturnValue([]);
     mockSetQueryData.mockReset();
+    mockGetEligibility.mockReturnValue(null);
     mockUseAuth.mockReturnValue({
       connectedProfile: { id: "profile-1", handle: "alice" },
+      activeProfileProxy: null,
       setToast: setToastMock,
     });
     getMyStreamMock().mockReturnValue({
@@ -385,6 +396,44 @@ describe("WaveDropReactions", () => {
       endpoint: "drops/test-drop/reaction",
       errorMode: "structured",
     });
+  });
+
+  it("disables reaction chips when the current wave capability is disabled", () => {
+    mockGetEligibility.mockReturnValue({
+      authenticated_user_eligible_to_chat: false,
+    });
+    mockUseEmoji.mockReturnValue(
+      createEmojiContextValue(
+        [
+          {
+            category: "people",
+            emojis: [{ id: "gm", skins: [{ src: "/gm.png" }] }],
+          },
+        ],
+        () => null
+      )
+    );
+
+    render(
+      <WaveDropReactions
+        drop={
+          createMockDrop({
+            reactions: [
+              {
+                reaction: ":gm:",
+                profiles: [{ handle: "test-handle-1", id: "1" }],
+              },
+            ],
+          }) as any
+        }
+      />
+    );
+
+    const button = screen.getByRole("button");
+    expect(button).toBeDisabled();
+    fireEvent.click(button);
+    expect(commonApi.commonApiPost).not.toHaveBeenCalled();
+    expect(commonApi.commonApiDelete).not.toHaveBeenCalled();
   });
 
   it("updates cached notification drops when removing a chip reaction", async () => {
@@ -940,7 +989,12 @@ describe("WaveDropReactions", () => {
     expect(screen.queryByText("Reactions")).not.toBeInTheDocument();
   });
 
-  it("shows 'and X more' in tooltip when more than 3 profiles", async () => {
+  it("renders reaction pills as non-interactive in proxy mode", () => {
+    mockUseAuth.mockReturnValue({
+      connectedProfile: { id: "profile-1", handle: "alice" },
+      activeProfileProxy: { id: "proxy-1" },
+      setToast: setToastMock,
+    });
     mockUseEmoji.mockReturnValue(
       createEmojiContextValue(
         [
@@ -954,6 +1008,43 @@ describe("WaveDropReactions", () => {
     );
 
     render(
+      <WaveDropReactions
+        drop={
+          createMockDrop({
+            reactions: [
+              {
+                reaction: ":gm:",
+                profiles: [{ handle: "user1", id: "1" }],
+              },
+            ],
+          }) as any
+        }
+      />
+    );
+
+    const button = screen.getByRole("button");
+    expect(button).toBeDisabled();
+
+    fireEvent.click(button);
+
+    expect(commonApi.commonApiPost).not.toHaveBeenCalled();
+    expect(commonApi.commonApiDelete).not.toHaveBeenCalled();
+  });
+
+  it("shows 'and X more' in tooltip when more than 3 profiles", async () => {
+    mockUseEmoji.mockReturnValue(
+      createEmojiContextValue(
+        [
+          {
+            category: "people",
+            emojis: [{ id: "gm", skins: [{ src: "/gm.png" }] }],
+          },
+        ],
+        () => null
+      )
+    );
+
+    const { container } = render(
       <WaveDropReactions
         drop={
           createMockDrop({
@@ -978,8 +1069,10 @@ describe("WaveDropReactions", () => {
     fireEvent.mouseEnter(reactionButton);
 
     await waitFor(() => {
-      const moreButton = screen.queryByText(/and 2 others/);
+      const moreButton = screen.getByText(/and 2 others/);
       expect(moreButton).toBeInTheDocument();
+      expect(moreButton.closest("body")).toBe(document.body);
+      expect(container.contains(moreButton)).toBe(false);
     });
   });
 

@@ -125,6 +125,9 @@ describe("NotificationsContext initialization", () => {
   beforeEach(() => {
     mockIsActive = true;
     const { PushNotifications } = require("@capacitor/push-notifications");
+    const {
+      getStableDeviceId,
+    } = require("@/components/notifications/stable-device-id");
     const sentry = require("@sentry/nextjs");
     jest.clearAllMocks();
     mockSeizeConnectContext.address = "0xaaa";
@@ -139,7 +142,13 @@ describe("NotificationsContext initialization", () => {
     ];
     PushNotifications.removeAllListeners.mockClear();
     PushNotifications.addListener.mockClear();
+    PushNotifications.requestPermissions.mockReset();
+    PushNotifications.requestPermissions.mockResolvedValue({
+      receive: "granted",
+    });
     PushNotifications.register.mockClear();
+    getStableDeviceId.mockReset();
+    getStableDeviceId.mockResolvedValue("test-device-id");
     sentry.captureException.mockClear();
     sentry.addBreadcrumb.mockClear();
   });
@@ -208,6 +217,186 @@ describe("NotificationsContext initialization", () => {
     });
 
     expect(PushNotifications.register).not.toHaveBeenCalled();
+  });
+
+  it("records a denied permission response after retrying the exact iOS helper error", async () => {
+    const { PushNotifications } = require("@capacitor/push-notifications");
+    const sentry = require("@sentry/nextjs");
+    const helperApplicationError = new Error(
+      "Couldn’t communicate with a helper application."
+    );
+
+    PushNotifications.requestPermissions
+      .mockRejectedValueOnce(helperApplicationError)
+      .mockResolvedValueOnce({ receive: "denied" });
+
+    renderHook(() => useNotificationsContext(), { wrapper });
+
+    await waitFor(() => {
+      expect(sentry.addBreadcrumb).toHaveBeenCalledWith({
+        category: "notifications",
+        level: "warning",
+        message:
+          "Push permission request completed after native error retry.",
+        data: {
+          component: "NotificationsProvider",
+          operation: "requestPermissions",
+          retryable: true,
+          retry_succeeded: true,
+          permission_status: "denied",
+          error_name: "Error",
+          error_message: "Couldn’t communicate with a helper application.",
+        },
+      });
+    });
+
+    expect(PushNotifications.requestPermissions).toHaveBeenCalledTimes(2);
+    expect(sentry.addBreadcrumb).toHaveBeenCalledTimes(1);
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(PushNotifications.register).not.toHaveBeenCalled();
+  });
+
+  it("continues registration when the exact iOS helper error retry grants permission", async () => {
+    const { PushNotifications } = require("@capacitor/push-notifications");
+    const sentry = require("@sentry/nextjs");
+    const helperApplicationError = new Error(
+      "Couldn’t communicate with a helper application."
+    );
+
+    PushNotifications.requestPermissions
+      .mockRejectedValueOnce(helperApplicationError)
+      .mockResolvedValueOnce({ receive: "granted" });
+
+    renderHook(() => useNotificationsContext(), { wrapper });
+
+    await waitFor(
+      () => {
+        expect(PushNotifications.register).toHaveBeenCalledTimes(1);
+      },
+      { timeout: 2000 }
+    );
+
+    expect(PushNotifications.requestPermissions).toHaveBeenCalledTimes(2);
+    expect(sentry.addBreadcrumb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          "Push permission request completed after native error retry.",
+        data: expect.objectContaining({
+          retry_succeeded: true,
+          permission_status: "granted",
+        }),
+      })
+    );
+    expect(sentry.captureException).not.toHaveBeenCalled();
+  });
+
+  it("captures a persistent iOS push permission helper error", async () => {
+    const { PushNotifications } = require("@capacitor/push-notifications");
+    const sentry = require("@sentry/nextjs");
+    const initialError = new Error(
+      "Couldn’t communicate with a helper application."
+    );
+    const retryError = new Error(
+      "Couldn’t communicate with a helper application."
+    );
+
+    PushNotifications.requestPermissions
+      .mockRejectedValueOnce(initialError)
+      .mockRejectedValue(retryError);
+
+    renderHook(() => useNotificationsContext(), { wrapper });
+
+    await waitFor(() => {
+      expect(sentry.captureException).toHaveBeenCalledWith(
+        retryError,
+        expect.objectContaining({
+          tags: {
+            component: "NotificationsProvider",
+            operation: "initializeNotifications",
+          },
+        })
+      );
+    });
+
+    expect(PushNotifications.requestPermissions).toHaveBeenCalledTimes(2);
+    expect(sentry.addBreadcrumb).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          "Push permission request completed after native error retry.",
+      })
+    );
+  });
+
+  it("captures the helper-application error from another initialization step", async () => {
+    const { PushNotifications } = require("@capacitor/push-notifications");
+    const {
+      getStableDeviceId,
+    } = require("@/components/notifications/stable-device-id");
+    const sentry = require("@sentry/nextjs");
+    const secureStorageError = new Error(
+      "Couldn’t communicate with a helper application."
+    );
+
+    getStableDeviceId.mockRejectedValue(secureStorageError);
+
+    renderHook(() => useNotificationsContext(), { wrapper });
+
+    await waitFor(() => {
+      expect(sentry.captureException).toHaveBeenCalledWith(
+        secureStorageError,
+        expect.objectContaining({
+          tags: {
+            component: "NotificationsProvider",
+            operation: "initializeNotifications",
+          },
+        })
+      );
+    });
+
+    expect(PushNotifications.requestPermissions).not.toHaveBeenCalled();
+    expect(sentry.addBreadcrumb).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          "Push permission request completed after native error retry.",
+      })
+    );
+  });
+
+  it.each([
+    "Couldn't communicate with a helper application.",
+    "Couldn’t communicate with a helper application. Retry later.",
+  ])("captures push permission helper-error near-miss %s", async (errorMessage) => {
+    const { PushNotifications } = require("@capacitor/push-notifications");
+    const sentry = require("@sentry/nextjs");
+    const nearMiss = new Error(errorMessage);
+
+    PushNotifications.requestPermissions.mockRejectedValueOnce(nearMiss);
+
+    renderHook(() => useNotificationsContext(), { wrapper });
+
+    await waitFor(() => {
+      expect(sentry.captureException).toHaveBeenCalledWith(
+        nearMiss,
+        expect.objectContaining({
+          tags: {
+            component: "NotificationsProvider",
+            operation: "initializeNotifications",
+          },
+          extra: expect.objectContaining({
+            error_name: "Error",
+            error_message: errorMessage,
+          }),
+        })
+      );
+    });
+
+    expect(sentry.addBreadcrumb).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        message:
+          "Push permission request completed after native error retry.",
+      })
+    );
+    expect(PushNotifications.requestPermissions).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -578,6 +767,71 @@ describe("push registration behavior", () => {
     );
   });
 
+  it("bounds retries for a persistent observed timeout and captures the final failure", async () => {
+    const { commonApiPost } = require("@/services/api/common-api");
+    const sentry = require("@sentry/nextjs");
+    const timeoutError = new Error("The request timed out.");
+
+    commonApiPost.mockRejectedValue(timeoutError);
+    const { registrationCallback } = await setupRegistrationCallback();
+
+    const setTimeoutSpy = jest
+      .spyOn(globalThis, "setTimeout")
+      .mockImplementation(((handler: TimerHandler) => {
+        if (typeof handler === "function") {
+          handler();
+        }
+        return 0 as unknown as NodeJS.Timeout;
+      }) as typeof globalThis.setTimeout);
+
+    try {
+      await act(async () => {
+        await registrationCallback({ value: "test-token" });
+      });
+    } finally {
+      setTimeoutSpy.mockRestore();
+    }
+
+    expect(commonApiPost).toHaveBeenCalledTimes(3);
+    expect(sentry.addBreadcrumb).toHaveBeenCalledTimes(2);
+    expect(sentry.addBreadcrumb).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        message: "Push registration attempt failed. Retrying.",
+        data: expect.objectContaining({
+          attempt: 1,
+          max_attempts: 3,
+          error_message: "The request timed out.",
+        }),
+      })
+    );
+    expect(sentry.addBreadcrumb).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        message: "Push registration attempt failed. Retrying.",
+        data: expect.objectContaining({
+          attempt: 2,
+          max_attempts: 3,
+          error_message: "The request timed out.",
+        }),
+      })
+    );
+    expect(sentry.captureException).toHaveBeenCalledWith(
+      timeoutError,
+      expect.objectContaining({
+        tags: expect.objectContaining({
+          component: "NotificationsProvider",
+          operation: "registerPushNotification",
+        }),
+        extra: expect.objectContaining({
+          attempt: 3,
+          max_attempts: 3,
+          error_message: "The request timed out.",
+        }),
+      })
+    );
+  });
+
   it("skips duplicate registration for identical fingerprint", async () => {
     const { commonApiPost } = require("@/services/api/common-api");
     const sentry = require("@sentry/nextjs");
@@ -627,6 +881,102 @@ describe("push registration behavior", () => {
       })
     );
   });
+
+  it("records Firebase request backoff as a transient native registration error", async () => {
+    const sentry = require("@sentry/nextjs");
+    const errorMessage =
+      "The operation couldn’t be completed. Too many server requests.";
+    const nativeError = { error: errorMessage };
+    const { registrationErrorCallback } = await setupRegistrationCallback();
+
+    act(() => {
+      registrationErrorCallback(nativeError);
+    });
+
+    expect(sentry.captureException).not.toHaveBeenCalled();
+    expect(sentry.addBreadcrumb).toHaveBeenCalledWith(
+      expect.objectContaining({
+        level: "warning",
+        message: "Push registration transient error.",
+        data: expect.objectContaining({
+          component: "NotificationsProvider",
+          operation: "pushRegistrationError",
+          retryable: true,
+          error_message: errorMessage,
+        }),
+      })
+    );
+  });
+
+  it.each([
+    "The request timed out.",
+    "A server with the specified hostname could not be found.",
+  ])(
+    "records observed transient native registration error %s as a warning breadcrumb",
+    async (errorMessage) => {
+      const sentry = require("@sentry/nextjs");
+      const nativeError = new Error(errorMessage);
+      const { registrationErrorCallback } = await setupRegistrationCallback();
+
+      act(() => {
+        registrationErrorCallback(nativeError);
+      });
+
+      expect(sentry.captureException).not.toHaveBeenCalled();
+      expect(sentry.addBreadcrumb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          level: "warning",
+          message: "Push registration transient error.",
+          data: expect.objectContaining({
+            component: "NotificationsProvider",
+            operation: "pushRegistrationError",
+            retryable: true,
+            error_name: "Error",
+            error_message: errorMessage,
+          }),
+        })
+      );
+    }
+  );
+
+  it.each([
+    "Network error: push notification permission denied.",
+    "Network request failed: unauthorized.",
+    "The request timed out because the device token is invalid.",
+    "A server with the specified hostname could not be found because the push configuration is invalid.",
+    "Too many server requests because the push configuration is invalid.",
+  ])(
+    "captures permanent native registration near-miss %s",
+    async (errorMessage) => {
+      const sentry = require("@sentry/nextjs");
+      const nativeError = new Error(errorMessage);
+      const { registrationErrorCallback } = await setupRegistrationCallback();
+
+      act(() => {
+        registrationErrorCallback(nativeError);
+      });
+
+      expect(sentry.addBreadcrumb).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: "Push registration transient error.",
+        })
+      );
+      expect(sentry.captureException).toHaveBeenCalledWith(
+        nativeError,
+        expect.objectContaining({
+          tags: expect.objectContaining({
+            component: "NotificationsProvider",
+            operation: "pushRegistrationError",
+          }),
+          extra: expect.objectContaining({
+            retryable: false,
+            error_name: "Error",
+            error_message: errorMessage,
+          }),
+        })
+      );
+    }
+  );
 
   it.each(["-25291", "-25299"])(
     "records known low-value native registration error %s as an info breadcrumb",

@@ -113,6 +113,7 @@ describe("DropsList", () => {
         onQuoteClick={jest.fn()}
         onDropContentClick={jest.fn()}
         dropViewDropId={null}
+        virtualScrollRootMargin="1200px 0px"
       />
     );
 
@@ -120,6 +121,41 @@ describe("DropsList", () => {
     expect(screen.getAllByTestId("highlight")).toHaveLength(2);
     expect(dropProps).toHaveLength(1);
     expect(lightProps).toHaveLength(1);
+    expect(wrapperProps).toEqual([
+      expect.objectContaining({ rootMargin: "1200px 0px" }),
+      expect.objectContaining({ rootMargin: "1200px 0px" }),
+    ]);
+  });
+
+  it("hydrates historical light drops after serial scrolling settles", () => {
+    const props = {
+      scrollContainerRef: { current: null },
+      drops: [
+        {
+          stableKey: "historical-light",
+          serial_no: 2,
+          type: DropSize.LIGHT,
+          waveId: "w",
+        },
+      ] as any,
+      showWaveInfo: false,
+      activeDrop: null,
+      showReplyAndQuote: false,
+      onReply: jest.fn(),
+      onReplyClick: jest.fn(),
+      serialNo: null,
+      targetDropRef: null,
+      parentContainerRef: undefined,
+      onQuoteClick: jest.fn(),
+      onDropContentClick: jest.fn(),
+      dropViewDropId: null,
+      suspendLightDropHydration: false,
+    };
+
+    render(<DropsList {...props} />);
+
+    expect(wrapperProps).toHaveLength(1);
+    expect(wrapperProps[0].suspendLightDropHydration).toBe(false);
   });
 
   it("passes approve wave state to full drops", () => {

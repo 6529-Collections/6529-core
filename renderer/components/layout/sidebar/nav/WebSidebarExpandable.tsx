@@ -4,8 +4,10 @@ import { faExternalLinkAlt } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ChevronRightIcon } from "@heroicons/react/24/outline";
 import type { SidebarSection } from "@/components/navigation/navTypes";
+import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { t } from "@/i18n/messages";
 import Link from "next/link";
-import React, { useState, useMemo, useCallback, useEffect } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import WebSidebarExpandableGroup from "./WebSidebarExpandableGroup";
 import WebSidebarNavItem from "./WebSidebarNavItem";
 import { isSidebarNavItemActive } from "./sidebarActive";
@@ -14,6 +16,15 @@ interface WebSidebarExpandableProps {
   readonly section: SidebarSection;
   readonly expanded: boolean;
   readonly onToggle: (e?: React.MouseEvent) => void;
+  readonly onPointerEnter?:
+    | React.PointerEventHandler<HTMLButtonElement>
+    | undefined;
+  readonly onPointerLeave?:
+    | React.PointerEventHandler<HTMLButtonElement>
+    | undefined;
+  readonly onKeyDown?:
+    | React.KeyboardEventHandler<HTMLButtonElement>
+    | undefined;
   readonly collapsed: boolean;
   readonly pathname: string | null;
   readonly "data-section"?: string | undefined;
@@ -23,6 +34,9 @@ function WebSidebarExpandable({
   section,
   expanded,
   onToggle,
+  onPointerEnter,
+  onPointerLeave,
+  onKeyDown,
   collapsed,
   pathname,
   "data-section": dataSection,
@@ -32,19 +46,31 @@ function WebSidebarExpandable({
       sub.items.some((item) => isSidebarNavItemActive(item, pathname))
     )?.name ?? null;
 
-  const [expandedSubsection, setExpandedSubsection] = useState<string | null>(
-    () => activeSubsection
-  );
+  const [subsectionSelection, setSubsectionSelection] = useState<{
+    readonly pathname: string | null;
+    readonly activeSubsection: string | null;
+    readonly selectedSubsection: string | null;
+  }>(() => ({
+    pathname,
+    activeSubsection,
+    selectedSubsection: activeSubsection,
+  }));
 
-  useEffect(() => {
-    setExpandedSubsection(activeSubsection);
-  }, [activeSubsection, pathname]);
+  const expandedSubsection =
+    subsectionSelection.pathname === pathname &&
+    subsectionSelection.activeSubsection === activeSubsection
+      ? subsectionSelection.selectedSubsection
+      : activeSubsection;
 
   const handleSubsectionToggle = useCallback(
     (subsectionName: string, isNowExpanded: boolean) => {
-      setExpandedSubsection(isNowExpanded ? subsectionName : null);
+      setSubsectionSelection({
+        pathname,
+        activeSubsection,
+        selectedSubsection: isNowExpanded ? subsectionName : null,
+      });
     },
-    []
+    [activeSubsection, pathname]
   );
 
   const hasActiveItem = useMemo(() => {
@@ -61,17 +87,21 @@ function WebSidebarExpandable({
   }, [section.items, section.subsections, pathname]);
 
   const panelId = `section-${section.key}`;
+  const flyoutId = `sidebar-flyout-${section.key}`;
 
   return (
     <>
       <WebSidebarNavItem
         onClick={(e) => onToggle(e)}
+        onPointerEnter={onPointerEnter}
+        onPointerLeave={onPointerLeave}
+        onKeyDown={onKeyDown}
         icon={section.icon}
         label={section.name}
         active={hasActiveItem}
         collapsed={collapsed}
         ariaExpanded={expanded}
-        ariaControls={panelId}
+        ariaControls={collapsed ? flyoutId : panelId}
         data-section={dataSection}
         rightSlot={
           !collapsed && (
@@ -93,7 +123,10 @@ function WebSidebarExpandable({
           <div className="tw-overflow-hidden">
             <div
               id={panelId}
-              aria-label={`${section.name} items`}
+              role="group"
+              aria-label={t(DEFAULT_LOCALE, "navigation.sidebar.panelLabel", {
+                section: section.name,
+              })}
               className="tw-relative tw-m-0 tw-p-0"
             >
               <div

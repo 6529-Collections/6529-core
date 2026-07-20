@@ -1,7 +1,11 @@
 "use client";
 
-import { Bars3Icon, EllipsisHorizontalIcon } from "@heroicons/react/24/outline";
-import { PlusIcon } from "@heroicons/react/24/solid";
+import {
+  Bars3Icon,
+  EllipsisHorizontalIcon,
+  LockClosedIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
 import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
@@ -49,6 +53,8 @@ import {
   type HeaderWavePreview,
   useHeaderActiveWave,
 } from "./app-header-wave-preview";
+import WaveHeaderRestrictionButton from "@/components/waves/header/WaveHeaderRestrictionButton";
+import MainStageNominationPopover from "@/components/brain/my-stream/tabs/MainStageNominationPopover";
 
 const COLLECTION_TITLES: Record<string, string> = {
   "the-memes": "The Memes",
@@ -57,6 +63,8 @@ const COLLECTION_TITLES: Record<string, string> = {
   nextgen: "NextGen",
 };
 const PROFILE_DOUBLE_ACTIVATE_DELAY_MS = 280;
+const HEADER_RESTRICTION_BUTTON_CLASS =
+  "tw-size-9 tw-min-w-9 tw-rounded-lg tw-border-0 tw-bg-black tw-p-0 tw-text-iron-300 tw-shadow-sm desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-50";
 
 interface HeaderConnectedAccount {
   readonly address: string;
@@ -248,7 +256,7 @@ const HeaderTitleContent = ({
   }
 
   const wavePicture = (
-    <div className="tw-size-10 tw-flex-shrink-0 tw-overflow-hidden tw-rounded-full tw-ring-1 tw-ring-white/30">
+    <div className="tw-size-9 tw-flex-shrink-0 tw-overflow-hidden tw-rounded-full tw-ring-1 tw-ring-white/30">
       <WavePicture
         name={displayWave.name}
         picture={displayWave.picture}
@@ -278,7 +286,7 @@ const HeaderTitleContent = ({
           {activeWave !== null && !isDm && previewText !== null ? (
             <WaveDescriptionPopover
               wave={activeWave}
-              align="center"
+              align="left"
               ariaLabel="Show wave description"
               triggerClassName="tw-flex tw-min-w-0 tw-flex-col tw-items-start tw-border-0 tw-bg-transparent tw-p-0 tw-text-left"
             >
@@ -311,20 +319,50 @@ const HeaderDropActionButton = ({
 
   const title = action.restrictionMessage ?? action.label;
 
+  if (!action.canOpen) {
+    if (action.restrictionKind === "memes-nomination") {
+      return (
+        <MainStageNominationPopover>
+          <button
+            type="button"
+            aria-label={action.label}
+            aria-haspopup="dialog"
+            className={clsx(
+              "tw-flex tw-cursor-pointer tw-items-center tw-justify-center tw-transition tw-duration-150 tw-ease-out focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400",
+              HEADER_RESTRICTION_BUTTON_CLASS
+            )}
+          >
+            <LockClosedIcon className="tw-size-5 tw-flex-shrink-0" />
+            <span className="tw-sr-only">{action.compactLabel}</span>
+          </button>
+        </MainStageNominationPopover>
+      );
+    }
+
+    return (
+      <WaveHeaderRestrictionButton
+        label={action.label}
+        reason={title}
+        className={HEADER_RESTRICTION_BUTTON_CLASS}
+      >
+        <LockClosedIcon className="tw-size-5 tw-flex-shrink-0" />
+        <span className="tw-sr-only">{action.compactLabel}</span>
+      </WaveHeaderRestrictionButton>
+    );
+  }
+
   return (
     <PrimaryButton
       loading={false}
-      disabled={!action.canOpen}
+      disabled={false}
       onClicked={action.onOpen}
       padding="tw-p-0 sm:tw-px-2.5 sm:tw-py-2"
       title={title}
       ariaLabel={action.label}
-      className="tw-h-10 tw-min-w-10 sm:tw-h-auto sm:tw-min-w-0"
+      className="tw-size-9 tw-min-w-9 tw-p-0"
     >
-      <PlusIcon className="tw-h-4 tw-w-4 tw-flex-shrink-0 sm:-tw-ml-1" />
-      <span className="tw-sr-only sm:tw-not-sr-only sm:tw-inline">
-        {action.compactLabel}
-      </span>
+      <PlusIcon className="tw-size-5 tw-flex-shrink-0" />
+      <span className="tw-sr-only">{action.compactLabel}</span>
     </PrimaryButton>
   );
 };
@@ -369,7 +407,7 @@ const HeaderMoreMenu = ({
         disabled={onlyItem.disabled}
         aria-busy={onlyItem.directActionActive ? "true" : undefined}
         className={clsx(
-          "tw-flex tw-h-10 tw-w-10 tw-flex-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-shadow-sm tw-transition tw-duration-300 tw-ease-out focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 disabled:tw-cursor-not-allowed disabled:tw-opacity-50",
+          "tw-flex tw-size-9 tw-flex-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-shadow-sm tw-transition tw-duration-300 tw-ease-out focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 disabled:tw-cursor-not-allowed disabled:tw-opacity-50",
           onlyItem.directActionActive
             ? "tw-scale-95 tw-bg-iron-800 tw-text-iron-50 tw-ring-1 tw-ring-primary-400"
             : "tw-bg-black tw-text-iron-300 hover:tw-text-iron-50"
@@ -385,11 +423,11 @@ const HeaderMoreMenu = ({
       aria-label="More header actions"
       className="tw-flex-shrink-0"
       unstyledTrigger
-      triggerClassName="tw-flex tw-h-10 tw-w-10 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-black tw-text-iron-300 tw-shadow-sm tw-transition tw-duration-300 tw-ease-out hover:tw-text-iron-50 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
+      triggerClassName="tw-flex tw-size-9 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-black tw-text-iron-300 tw-shadow-sm tw-transition tw-duration-300 tw-ease-out hover:tw-text-iron-50 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
       trigger={
         <>
           <span className="tw-sr-only">More header actions</span>
-          <EllipsisHorizontalIcon className="tw-h-6 tw-w-6 tw-flex-shrink-0" />
+          <EllipsisHorizontalIcon className="tw-size-5 tw-flex-shrink-0" />
         </>
       }
       items={items}
@@ -687,7 +725,12 @@ export default function AppHeader() {
             </button>
           )}
         </div>
-        <div className="tw-flex tw-min-w-0 tw-flex-1 tw-items-center tw-justify-center tw-gap-2">
+        <div
+          className={clsx(
+            "tw-flex tw-min-w-0 tw-flex-1 tw-items-center tw-gap-2",
+            isInsideWave ? "tw-justify-start" : "tw-justify-center"
+          )}
+        >
           <HeaderTitleContent
             displayWave={headerWavePreview}
             activeWave={activeWave}
@@ -697,7 +740,7 @@ export default function AppHeader() {
             finalTitle={finalTitle}
           />
         </div>
-        <div className="tw-flex tw-flex-shrink-0 tw-items-center tw-justify-end tw-gap-x-1">
+        <div className="tw-flex tw-flex-shrink-0 tw-items-center tw-justify-end tw-gap-x-0.5">
           <HeaderDropActionButton action={headerDropAction} />
           {isHomeRoute && <NetworkHealthCTA className="md:tw-hidden" />}
           <div className="tw-flex-shrink-0">

@@ -25,6 +25,8 @@ interface HighlightDropWrapperProps {
   readonly visibilityThreshold?: number | undefined;
   readonly id?: string | undefined;
   readonly waveDropId?: string | undefined;
+  /** Emitted as data-drop-serial-no so scroll-position capture can identify rows. */
+  readonly serialNo?: number | undefined;
 }
 
 const MAX_VISIBILITY_WAIT_MS = 4000;
@@ -44,6 +46,7 @@ const HighlightDropWrapper = forwardRef<
       visibilityThreshold = 0.6,
       id,
       waveDropId,
+      serialNo,
     },
     forwardedRef
   ) => {
@@ -254,6 +257,7 @@ const HighlightDropWrapper = forwardRef<
         className={classes}
         style={transitionStyle}
         data-wave-drop-id={waveDropId}
+        data-drop-serial-no={serialNo}
       >
         {children}
       </div>
