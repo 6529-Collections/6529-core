@@ -28,15 +28,27 @@ type ProductImpactStatusBucket =
   | "unknown";
 
 type ProductImpactSeverity = "info" | "warning";
+type ProductImpactSentryDelivery =
+  | "always"
+  | "never"
+  | "sample_initial_success";
 
-type ProductImpactEventName =
-  | "Auth Session Refresh Product Impact"
-  | "Auth Session Refresh Succeeded"
-  | "Auth Validation Cancelled"
-  | "Wave Feed Load Cancelled"
-  | "Wave Feed Load Failed"
-  | "Wave Feed Load Started"
-  | "Wave Feed Load Succeeded";
+type ProductImpactLogOptions = {
+  readonly sentryDelivery?: ProductImpactSentryDelivery;
+  readonly sentryOnlyProperties?: ProductImpactProperties;
+};
+
+export const PRODUCT_IMPACT_EVENT_NAMES = [
+  "Auth Session Refresh Product Impact",
+  "Auth Session Refresh Succeeded",
+  "Auth Validation Cancelled",
+  "Wave Feed Load Cancelled",
+  "Wave Feed Load Failed",
+  "Wave Feed Load Started",
+  "Wave Feed Load Succeeded",
+] as const;
+
+type ProductImpactEventName = (typeof PRODUCT_IMPACT_EVENT_NAMES)[number];
 
 type ProductImpactProperties = AnalyticsProperties & {
   readonly endpoint_family?: "auth_session_refresh" | "wave_drops_feed";
@@ -50,7 +62,8 @@ type WaveFeedLoadSource =
   | "background_sync"
   | "cache"
   | "initial_visible"
-  | "native_initial_backfill";
+  | "native_initial_backfill"
+  | "server_initial";
 
 interface WaveFeedTelemetryBase {
   readonly durationMs?: number | undefined;
@@ -75,6 +88,8 @@ interface AuthRefreshTelemetryBase {
 }
 
 interface AuthRefreshImpactTelemetry extends AuthRefreshTelemetryBase {
+  /** Internal-only scope used to suppress repeat logs for one auth session. */
+  readonly dedupeScope?: string | undefined;
   readonly outcome:
     | "failed_without_prompt"
     | "logout_required"
@@ -84,6 +99,16 @@ interface AuthRefreshImpactTelemetry extends AuthRefreshTelemetryBase {
 }
 
 const TELEMETRY_VERSION = 1;
+const WAVE_FEED_INITIAL_SUCCESS_SENTRY_SAMPLE_RATE = 0.05;
+const UINT32_SAMPLE_SPACE = 2 ** 32;
+
+function getTelemetrySampleValue(): number {
+  const sample = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(sample);
+  return (sample[0] ?? 0) / UINT32_SAMPLE_SPACE;
+}
+const DEFAULT_AUTH_REFRESH_IMPACT_DEDUPE_SCOPE = "default";
+const authRefreshImpactDedupeKeysByScope = new Map<string, Set<string>>();
 
 const ABORT_ERROR_MESSAGES = [
   "aborterror",
@@ -335,6 +360,14 @@ function getDurationBucket(durationMs: number | undefined): string | undefined {
   return "over_10s";
 }
 
+function getRawDurationMs(durationMs: number | undefined): number | undefined {
+  if (durationMs === undefined || !Number.isFinite(durationMs)) {
+    return undefined;
+  }
+
+  return Math.max(0, Math.round(durationMs));
+}
+
 function buildBaseProperties(
   properties: ProductImpactProperties
 ): ProductImpactProperties {
@@ -350,18 +383,84 @@ function buildBaseProperties(
 function logProductImpactEvent(
   eventName: ProductImpactEventName,
   properties: ProductImpactProperties,
-  severity: ProductImpactSeverity
+  severity: ProductImpactSeverity,
+  options: ProductImpactLogOptions = {}
 ): void {
   const payload = buildBaseProperties(properties);
-  trackAnalyticsEvent(eventName, payload);
 
-  const sentryLogName = eventName.toLowerCase().replaceAll(" ", "_");
-  if (severity === "warning") {
-    Sentry.logger.warn(sentryLogName, payload);
-    return;
+  try {
+    trackAnalyticsEvent(eventName, payload);
+  } catch {
+    // Product behavior must not depend on Mixpanel availability.
   }
 
-  Sentry.logger.info(sentryLogName, payload);
+  try {
+    const sentryDelivery = options.sentryDelivery ?? "always";
+    if (sentryDelivery === "never") {
+      return;
+    }
+    if (
+      sentryDelivery === "sample_initial_success" &&
+      getTelemetrySampleValue() >= WAVE_FEED_INITIAL_SUCCESS_SENTRY_SAMPLE_RATE
+    ) {
+      return;
+    }
+
+    const sentryPayload = {
+      ...payload,
+      ...options.sentryOnlyProperties,
+    };
+    const sentryLogName = eventName.toLowerCase().replaceAll(" ", "_");
+    if (severity === "warning") {
+      Sentry.logger.warn(sentryLogName, sentryPayload);
+      return;
+    }
+
+    Sentry.logger.info(sentryLogName, sentryPayload);
+  } catch {
+    // Product behavior must not depend on Sentry availability.
+  }
+}
+
+const getAuthRefreshImpactDedupeScope = (
+  dedupeScope: string | undefined
+): string => dedupeScope ?? DEFAULT_AUTH_REFRESH_IMPACT_DEDUPE_SCOPE;
+
+const getAuthRefreshImpactDedupeKey = (
+  telemetry: AuthRefreshImpactTelemetry
+): string =>
+  [
+    telemetry.clientType,
+    telemetry.hadLocalJwt,
+    telemetry.outcome,
+    telemetry.refreshOutcome,
+    telemetry.requiresReauth,
+  ].join(":");
+
+const shouldTrackAuthRefreshImpact = (
+  telemetry: AuthRefreshImpactTelemetry
+): boolean => {
+  const scope = getAuthRefreshImpactDedupeScope(telemetry.dedupeScope);
+  const dedupeKey = getAuthRefreshImpactDedupeKey(telemetry);
+  const existingKeys = authRefreshImpactDedupeKeysByScope.get(scope);
+  if (existingKeys?.has(dedupeKey)) {
+    return false;
+  }
+
+  if (existingKeys) {
+    existingKeys.add(dedupeKey);
+  } else {
+    authRefreshImpactDedupeKeysByScope.set(scope, new Set([dedupeKey]));
+  }
+  return true;
+};
+
+export function resetAuthSessionRefreshProductImpactDedupe(
+  dedupeScope?: string
+): void {
+  authRefreshImpactDedupeKeysByScope.delete(
+    getAuthRefreshImpactDedupeScope(dedupeScope)
+  );
 }
 
 function getWaveBaseProperties(
@@ -376,6 +475,10 @@ function getWaveBaseProperties(
   };
 }
 
+function isInitialWaveFeedLoadSource(loadSource: WaveFeedLoadSource): boolean {
+  return loadSource === "initial_visible" || loadSource === "server_initial";
+}
+
 export function trackWaveFeedLoadStarted(
   telemetry: WaveFeedTelemetryBase
 ): void {
@@ -385,7 +488,8 @@ export function trackWaveFeedLoadStarted(
       ...getWaveBaseProperties(telemetry),
       product_failure: false,
     },
-    "info"
+    "info",
+    { sentryDelivery: "never" }
   );
 }
 
@@ -401,7 +505,16 @@ export function trackWaveFeedLoadSucceeded(
       product_failure: false,
       status_bucket: "2xx",
     },
-    "info"
+    "info",
+    {
+      sentryDelivery: isInitialWaveFeedLoadSource(telemetry.loadSource)
+        ? "sample_initial_success"
+        : "never",
+      sentryOnlyProperties: {
+        duration_ms: getRawDurationMs(telemetry.durationMs),
+        sentry_sample_rate: WAVE_FEED_INITIAL_SUCCESS_SENTRY_SAMPLE_RATE,
+      },
+    }
   );
 }
 
@@ -416,7 +529,8 @@ export function trackWaveFeedLoadCancelled(
       product_failure: false,
       status_bucket: "aborted",
     },
-    "info"
+    "info",
+    { sentryDelivery: "never" }
   );
 }
 
@@ -473,6 +587,10 @@ export function trackAuthSessionRefreshSucceeded(
 export function trackAuthSessionRefreshProductImpact(
   telemetry: AuthRefreshImpactTelemetry
 ): void {
+  if (!shouldTrackAuthRefreshImpact(telemetry)) {
+    return;
+  }
+
   logProductImpactEvent(
     "Auth Session Refresh Product Impact",
     {

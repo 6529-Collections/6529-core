@@ -1,7 +1,9 @@
 import { ES_ES_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { ES_ES_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { ES_ES_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { ES_ES_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { ES_ES_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
+import stormComposerEsMessages from "@/i18n/messages/stormComposer.es-ES.json";
 import type { MessageKey } from "@/i18n/messages/en-US";
 
 export const ES_ES_MESSAGES = {
@@ -29,6 +31,9 @@ export const ES_ES_MESSAGES = {
   "attachment.safety.sha256": "SHA-256",
   "attachment.safety.size": "Tamaño {size}",
   "attachment.safety.viewDetails": "Ver detalles de seguridad",
+  "linkPreview.collection.maximumEdition": "Edición máxima",
+  "linkPreview.collection.minted": "Acuñados",
+  "linkPreview.collection.mintingLive": "Acuñación activa",
   "linkPreview.file.externalSource": "Fuente externa",
   "linkPreview.file.fact.mime": "MIME",
   "linkPreview.file.fact.size": "Tamaño",
@@ -363,6 +368,7 @@ export const ES_ES_MESSAGES = {
   ...ES_ES_NEW_VERSION_TOAST_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Área de carga de archivos del chat de wave",
+  ...stormComposerEsMessages,
   "waves.loadingStatus": "Cargando waves",
   "waves.gifPicker.dialogTitle": "Busqueda de GIF",
   "waves.gifPicker.searchPlaceholder": "Buscar GIF",
@@ -379,6 +385,7 @@ export const ES_ES_MESSAGES = {
   "desktopUpdateToast.versionAvailable":
     "La versión {version} está disponible.",
   "desktopUpdateToast.viewUpdate": "Ver actualización",
+  ...ES_ES_PAGINATION_MESSAGES,
   "memes.quickVote.leftThisRound": "{count} restantes esta ronda",
   "memes.quickVote.unrated": "{count} sin valorar",
   "memes.quickVote.summary": "{leftThisRound}, {unrated}",
@@ -394,6 +401,17 @@ export const ES_ES_MESSAGES = {
   ...ES_ES_DROP_REACTION_MESSAGES,
   "waves.mobile.profileFeed.title": "Feed de Profile Waves",
   "waves.mobile.profileFeed.subtitle": "Drops destacados de profile waves",
+  "waves.leaderboard.listLabel": "Drops de la clasificación",
+  "waves.leaderboard.loadingEarlier": "Cargando drops anteriores",
+  "waves.leaderboard.previousLoadError":
+    "No se pudieron cargar los drops anteriores. Selecciona Reintentar para volver a intentarlo.",
+  "waves.leaderboard.retryEarlier": "Reintentar la carga de drops anteriores",
+  "waves.leaderboard.loadingMore": "Cargando más drops",
+  "waves.leaderboard.nextLoadError":
+    "No se pudieron cargar más drops. Selecciona Reintentar para volver a intentarlo.",
+  "waves.leaderboard.retryMore": "Reintentar la carga de más drops",
+  "waves.leaderboard.loadMore": "Cargar más drops",
+  "waves.leaderboard.loadingMoreButton": "Cargando…",
   "waves.poll.actions.viewResults": "Ver resultados",
   "waves.poll.actions.vote": "Votar",
   "waves.poll.actions.changeVote": "Cambiar voto",

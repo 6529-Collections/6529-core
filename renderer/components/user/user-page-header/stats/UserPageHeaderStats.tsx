@@ -1,9 +1,11 @@
 "use client";
 
-import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { useState } from "react";
+import type { ApiIdentity } from "@/generated/models/ApiIdentity";
+import UserStatsRow, {
+  UserStatsRowSize,
+} from "../../utils/stats/UserStatsRow";
 import UserPageFollowersModal from "../../followers/UserPageFollowersModal";
-import UserStatsRow from "../../utils/stats/UserStatsRow";
 import UserPageHeaderStatsTDHConsensus from "./UserPageHeaderStatsTDHConsensus";
 
 const SAFE_ROUTE_SEGMENT_PATTERN = /^[a-zA-Z0-9._-]+$/;
@@ -51,6 +53,7 @@ export default function UserPageHeaderStats({
         cic={profile.cic}
         followersCount={followersCount}
         onFollowersClick={() => setIsFollowersModalOpen(true)}
+        size={UserStatsRowSize.MEDIUM}
       />
       <UserPageFollowersModal
         profileId={profile.id}

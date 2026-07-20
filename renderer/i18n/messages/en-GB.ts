@@ -1,5 +1,6 @@
 import { EN_GB_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { EN_GB_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { EN_GB_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES as EN_GB_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import type { MessageKey } from "@/i18n/messages/en-US";
 
@@ -24,6 +25,9 @@ export const EN_GB_MESSAGES = {
   "attachment.safety.sha256": "SHA-256",
   "attachment.safety.size": "Size {size}",
   "attachment.safety.viewDetails": "View safety details",
+  "linkPreview.collection.maximumEdition": "Maximum edition",
+  "linkPreview.collection.minted": "Minted",
+  "linkPreview.collection.mintingLive": "Minting Live",
   "linkPreview.file.externalSource": "External source",
   "linkPreview.file.fact.mime": "MIME",
   "linkPreview.file.fact.size": "Size",
@@ -370,6 +374,7 @@ export const EN_GB_MESSAGES = {
   "common.close": "Close",
   "desktopUpdateToast.versionAvailable": "Version {version} is available.",
   "desktopUpdateToast.viewUpdate": "View update",
+  ...EN_GB_PAGINATION_MESSAGES,
   "memes.quickVote.leftThisRound": "{count} left this round",
   "memes.quickVote.unrated": "{count} unrated",
   "memes.quickVote.summary": "{leftThisRound}, {unrated}",

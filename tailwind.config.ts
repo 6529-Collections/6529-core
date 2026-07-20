@@ -106,6 +106,26 @@ export default {
             opacity: "1",
           },
         },
+        "sidebar-flyout-in": {
+          "0%": {
+            opacity: "0",
+            transform: "translate3d(-4px, 0, 0)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translate3d(0, 0, 0)",
+          },
+        },
+        "sidebar-account-menu-in": {
+          "0%": {
+            opacity: "0",
+            transform: "translate3d(0, 4px, 0)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translate3d(0, 0, 0)",
+          },
+        },
         slideUp: {
           "0%": {
             opacity: "0",
@@ -145,6 +165,66 @@ export default {
           "0%": { opacity: "0.8" },
           "100%": { opacity: "0.4" },
         },
+        "heart-beat-soft": {
+          "0%, 100%": {
+            transform: "scale(1)",
+            opacity: "0.86",
+          },
+          "18%": {
+            transform: "scale(1.08)",
+            opacity: "1",
+          },
+          "32%": {
+            transform: "scale(1.01)",
+            opacity: "0.94",
+          },
+          "52%": {
+            transform: "scale(1.05)",
+            opacity: "0.98",
+          },
+        },
+        "spin-y": {
+          "0%": {
+            transform: "translateZ(0) rotateY(0deg)",
+          },
+          "100%": {
+            transform: "translateZ(0) rotateY(360deg)",
+          },
+        },
+        "poll-result-fill": {
+          "0%": {
+            transform: "scaleX(0)",
+          },
+          "100%": {
+            transform: "scaleX(var(--poll-result-fill-scale))",
+          },
+        },
+        "poll-result-stats-in": {
+          "0%": {
+            opacity: "0",
+            transform: "translateX(1rem)",
+          },
+          "100%": {
+            opacity: "1",
+            transform: "translateX(0)",
+          },
+        },
+        "boosted-preview-marquee": {
+          "0%, 12%": {
+            transform: "translate3d(0, 0, 0)",
+          },
+          "88%, 100%": {
+            transform: "translate3d(-50%, 0, 0)",
+          },
+        },
+        "hero-float": {
+          "0%, 100%": {
+            transform: "translate3d(0, 0, 0) rotate(var(--hero-rotate))",
+          },
+          "50%": {
+            transform: "translate3d(0, -12px, 0) rotate(var(--hero-rotate))",
+          },
+        },
       },
       animation: {
         "loading-bar": "loading-bar 1.5s infinite",
@@ -153,12 +233,23 @@ export default {
         "gradient-x": "gradient-x 3s ease infinite",
         "spin-slow": "spin 15s linear infinite",
         fadeIn: "fadeIn 0.3s ease-out forwards",
+        "sidebar-flyout-in":
+          "sidebar-flyout-in 160ms cubic-bezier(0.22, 1, 0.36, 1) both",
+        "sidebar-account-menu-in":
+          "sidebar-account-menu-in 160ms cubic-bezier(0.22, 1, 0.36, 1) both",
         slideUp: "slideUp 0.3s ease-out forwards",
         slideDown: "slideDown 0.3s ease-out forwards",
         shake: "shake 0.3s ease-in-out",
         "gallery-reveal":
           "gallery-reveal 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards",
         "fade-in-out": "fade-in-out 2s ease-in-out infinite alternate",
+        "heart-beat-soft": "heart-beat-soft 2.8s ease-in-out infinite",
+        "spin-y": "spin-y 4s linear infinite",
+        "poll-result-fill": "poll-result-fill 0.7s ease-out forwards",
+        "poll-result-stats-in": "poll-result-stats-in 0.5s ease-out forwards",
+        "boosted-preview-marquee":
+          "boosted-preview-marquee 14s linear infinite",
+        "hero-float": "hero-float 6s ease-in-out infinite",
       },
       backgroundSize: {
         "gradient-pos": "200% 200%",
@@ -173,9 +264,17 @@ export default {
     scrollbar({ nocompatible: true }),
     containerQueries,
     plugin(({ addVariant }) => {
-      // Use any-* queries so hybrid devices (touchscreen + trackpad/mouse) still
-      // get hover styles even if the primary pointer is coarse.
-      addVariant("desktop-hover", "@media (any-hover: hover)");
+      // body[data-fine-pointer] is behavioral evidence of a mouse/trackpad
+      // set by helpers/touch-first.helpers.ts — it overrides browsers that
+      // mis-report hover/pointer capabilities.
+      addVariant("desktop-hover", [
+        "@media (any-hover: hover)",
+        "body[data-fine-pointer] &",
+      ]);
+      addVariant(
+        "touch-only",
+        "@media (any-hover: none) and (any-pointer: coarse) { body:not([data-fine-pointer]) & }"
+      );
     }),
   ],
 } satisfies Config;

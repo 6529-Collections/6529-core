@@ -4,6 +4,11 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.drop-markdown-ordered-list-paren > li::marker {
+  content: counter(list-item) ") ";
+}
+
 @layer components {
   .layout-root {
     min-height: 100dvh;
@@ -64,6 +69,7 @@
   /* Android keyboard height adjustments */
   :root {
     --android-keyboard-height: 0px;
+    --layout-viewport-height: 100dvh;
     --native-keyboard-inset-bottom: 0px;
     --native-keyboard-layout-transition-duration: 0ms;
     --native-keyboard-composer-bottom-padding: max(
@@ -73,7 +79,9 @@
     --pull-to-refresh-fixed-overlay-offset: 0px;
     --pull-to-refresh-fixed-overlay-transition-duration: 0ms;
   }
-  :root[data-native-keyboard-visible="true"] {
+  :root[data-native-keyboard-visible="true"]:not(
+      [data-layout-viewport-locked="true"]
+    ) {
     --native-keyboard-composer-bottom-padding: 0px;
   }
   [data-pull-to-refresh-transform-root="true"]
@@ -272,7 +280,11 @@ button {
   font-family: inherit;
 }
 
-button:not(:disabled):not([class*="tw-cursor-"]) {
+/* Variant cursor utilities (for example disabled:tw-cursor-not-allowed) do not
+   override the enabled pointer state. Preserve only explicit base overrides. */
+button:not(:disabled):not([class^="tw-cursor-"]):not(
+    [class*=" tw-cursor-"]
+  ) {
   cursor: pointer;
 }
 

@@ -52,6 +52,7 @@ import {
   hasAppOwnedWalletLinkWebSocket1006Evidence,
   hasBrowserUnhandledRejectionMechanism,
   hasCoinbaseWalletLinkWebSocketFrame,
+  hasCoinbaseWalletRequestRelayFrame,
   hasCoinbaseWalletLinkWebSocketSerializedStack,
   hasCoinbaseWalletLinkWebSocketStack,
   hasRawNextStaticInAppFrame,
@@ -60,6 +61,8 @@ import {
   hasWalletLinkWebSocketUnhandledRejectionSignature,
   isCoinbaseWalletLinkWebSocket1006Message,
 } from "./walletlink-websocket";
+
+const rabbyRainbowKitRawChunkPathPrefix = "app:///_next/static/chunks/";
 
 function matchesStackPattern(
   value: string | undefined,
@@ -83,6 +86,52 @@ function hasRabbyMobileUserRejectedStack(
 ): boolean {
   return [serializedStack, getHintExceptionStack(hint)].some((stack) =>
     matchesStackPattern(stack, rabbyMobileUserRejectedStackPattern)
+  );
+}
+
+function isObservedRabbyRainbowKitRawChunkFrame(
+  frame: SentryStackFrame | undefined
+): boolean {
+  if (frame?.in_app !== true || frame.function !== "n") {
+    return false;
+  }
+
+  const paths = [frame.filename, frame.abs_path].filter(
+    (path): path is string => typeof path === "string" && path.length > 0
+  );
+  return (
+    paths.length > 0 &&
+    paths.every(
+      (path) =>
+        path.startsWith(rabbyRainbowKitRawChunkPathPrefix) &&
+        path.endsWith(".js")
+    )
+  );
+}
+
+function isObservedRabbyRainbowKitNativePromiseFrame(
+  frame: SentryStackFrame | undefined
+): boolean {
+  const paths = [frame?.filename, frame?.abs_path].filter(
+    (path): path is string => typeof path === "string" && path.length > 0
+  );
+  return (
+    frame?.in_app === true &&
+    frame.function === "Promise" &&
+    paths.length > 0 &&
+    paths.every((path) => path === "[native code]")
+  );
+}
+
+function hasObservedRabbyRainbowKitRawFrames(
+  frames: SentryStackFrame[] | undefined
+): boolean {
+  // beforeSend receives this exact two-frame shape before Sentry symbolicates it.
+  return (
+    Array.isArray(frames) &&
+    frames.length === 2 &&
+    isObservedRabbyRainbowKitRawChunkFrame(frames[0]) &&
+    isObservedRabbyRainbowKitNativePromiseFrame(frames[1])
   );
 }
 
@@ -415,6 +464,13 @@ export function shouldFilterRabbyMobileRainbowKitNotFoundError(
   hint?: SentryEventHint
 ): boolean {
   const value = event.exception?.values?.[0];
+  if (
+    value?.type !== "Error" ||
+    !hasBrowserUnhandledRejectionMechanism(value)
+  ) {
+    return false;
+  }
+
   const messageCandidates = [
     value?.value,
     event.message,
@@ -430,11 +486,8 @@ export function shouldFilterRabbyMobileRainbowKitNotFoundError(
     return false;
   }
 
-  if (!hasRabbyMobileContext(event)) {
-    return false;
-  }
-
-  return !hasLikelyAppOwnedFrame(value?.stacktrace?.frames);
+  const frames = value.stacktrace?.frames;
+  return hasObservedRabbyRainbowKitRawFrames(frames);
 }
 
 export function shouldFilterCoinbaseWalletLinkWebSocket1006(
@@ -467,6 +520,17 @@ export function shouldFilterCoinbaseWalletLinkWebSocket1006(
   );
   if (hasAppOwnedEvidence) {
     return false;
+  }
+
+  const hasCoinbaseRequestRelaySignature =
+    hasCoinbaseWalletRequestRelayFrame(value?.stacktrace?.frames);
+  if (hasCoinbaseRequestRelaySignature) {
+    return (
+      event.exception?.values?.length === 1 &&
+      hasBrowserUnhandledRejectionMechanism(value) &&
+      typeof value?.value === "string" &&
+      isCoinbaseWalletLinkWebSocket1006Message(value.value)
+    );
   }
 
   const hasExplicitCoinbaseWalletLinkStack =

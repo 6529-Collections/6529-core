@@ -1,4 +1,5 @@
 import {
+  browserGlobalHandlerOnErrorMechanism,
   browserUnhandledRejectionMechanism,
   filenameExceptions,
   gifPickerTenorFailureMessage,
@@ -10,6 +11,8 @@ import {
   sentryRouteParameterizationMechanismType,
   sentryRouteParameterizationMessage,
   tenorCategoriesPath,
+  twitterCurrentInsetReferenceErrorMessage,
+  twitterInjectedWaveDocumentPathPattern,
   webViewUserAgentTokens,
   routeParameterizationContextKeys,
   routeParameterizationTagKeys,
@@ -23,6 +26,7 @@ import {
   getBreadcrumbMessages,
   getBreadcrumbValues,
   getContextString,
+  getFramePaths,
   getHintExceptionMessage,
   getRequestHeaderString,
   getRequestPathname,
@@ -52,12 +56,19 @@ import {
   hasInjectedWasmCspFrameSignature,
   hasLikelyAppOwnedFrame,
   hasNativeJsonStringifyFrame,
-  hasOnlyAppUriFrames,
   hasReactDomNotFoundErrorSignature,
   hasSentryRouteParameterizationFrame,
+  isSentryRouteParameterizationFrame,
 } from "./app-frame-utils";
 
 const sentryBrowserPathTokens = ["@sentry/browser", "@sentry+browser"];
+const anonymousUnsafeEvalRawChunkPathPattern =
+  /^app:\/\/\/_next\/static\/chunks\/[a-z0-9._~-]+\.js$/i;
+const anonymousUnsafeEvalRawWrapperLineNumbers = new Set([3, 7]);
+const twitterUserAgentPattern =
+  /(?:^|[\s;(])twitter(?:android| for iphone)?\//i;
+const twitterConfigAddEventListenerMechanism =
+  "auto.browser.browserapierrors.addEventListener";
 
 function shouldFilterFilenameExceptions(
   frames: SentryStackFrame[] | undefined
@@ -201,6 +212,16 @@ function matchesContextToken(value: string, tokens: string[]): boolean {
   return tokens.some((token) => normalized.includes(token));
 }
 
+function isIosWebViewUserAgent(value: string): boolean {
+  const normalized = value.toLowerCase();
+  return (
+    /\b(?:iphone|ipad|ipod)\b/.test(normalized) &&
+    normalized.includes("applewebkit/") &&
+    normalized.includes("mobile/") &&
+    !normalized.includes("safari/")
+  );
+}
+
 export function hasMetaMaskMobileWebViewContext(
   event: SentryClientEvent
 ): boolean {
@@ -223,10 +244,15 @@ export function hasMetaMaskMobileWebViewContext(
 function hasMobileSafariWebViewContext(event: SentryClientEvent): boolean {
   const contextValues = getRouteParameterizationContextValues(event);
   const userAgentValues = getRouteParameterizationUserAgentValues(event);
-  const values = [...contextValues, ...userAgentValues];
-
-  return values.some((value) =>
-    matchesContextToken(value, mobileSafariWebViewContextTokens)
+  return (
+    contextValues.some((value) =>
+      matchesContextToken(value, mobileSafariWebViewContextTokens)
+    ) ||
+    userAgentValues.some(
+      (value) =>
+        matchesContextToken(value, mobileSafariWebViewContextTokens) ||
+        isIosWebViewUserAgent(value)
+    )
   );
 }
 
@@ -315,27 +341,106 @@ function hasAnonymousUnsafeEvalCspFrameSignature(
   );
 }
 
+function hasOnlyAnonymousFramePaths(frame: SentryStackFrame): boolean {
+  const paths = getFramePaths(frame);
+  return (
+    paths.length > 0 && paths.every((path) => path.trim() === "<anonymous>")
+  );
+}
+
+function isAnonymousUnsafeEvalRawWrapperFrame(
+  frame: SentryStackFrame | undefined
+): boolean {
+  if (!frame) {
+    return false;
+  }
+
+  const paths = getFramePaths(frame);
+  return (
+    frame.function?.trim() === "n" &&
+    frame.lineno !== undefined &&
+    anonymousUnsafeEvalRawWrapperLineNumbers.has(frame.lineno) &&
+    frame.colno === 4853 &&
+    paths.length > 0 &&
+    paths.every((path) =>
+      anonymousUnsafeEvalRawChunkPathPattern.test(path.trim())
+    )
+  );
+}
+
+function isAnonymousUnsafeEvalRawAnonymousFrame(
+  frame: SentryStackFrame | undefined,
+  functionName: string
+): boolean {
+  return (
+    !!frame &&
+    frame.function?.trim() === functionName &&
+    frame.lineno === 234 &&
+    frame.colno === 30 &&
+    hasOnlyAnonymousFramePaths(frame)
+  );
+}
+
+function isAnonymousUnsafeEvalRawEvalFrame(
+  frame: SentryStackFrame | undefined
+): boolean {
+  return (
+    !!frame &&
+    frame.function?.trim() === "eval" &&
+    frame.lineno === undefined &&
+    frame.colno === undefined &&
+    hasOnlyAnonymousFramePaths(frame)
+  );
+}
+
+function hasAnonymousUnsafeEvalRawFrameSignature(
+  frames: SentryStackFrame[] | undefined
+): frames is SentryStackFrame[] {
+  // beforeSend receives this Sentry wrapper before source-map processing.
+  return (
+    Array.isArray(frames) &&
+    frames.length === 4 &&
+    isAnonymousUnsafeEvalRawWrapperFrame(frames[0]) &&
+    isAnonymousUnsafeEvalRawAnonymousFrame(frames[1], "next") &&
+    isAnonymousUnsafeEvalRawAnonymousFrame(frames[2], "predicate") &&
+    isAnonymousUnsafeEvalRawEvalFrame(frames[3])
+  );
+}
+
 function hasAnonymousUnsafeEvalCspAppEvidence(
   event: SentryClientEvent,
+  frames: SentryStackFrame[] | undefined,
+  ignoreRawWrapperStack: boolean,
   hint?: SentryEventHint
 ): boolean {
   const value = event.exception?.values?.[0];
-  const frames = value?.stacktrace?.frames;
+  let sourceEvidenceValue = value;
+  if (value && frames !== value.stacktrace?.frames) {
+    sourceEvidenceValue = {
+      ...value,
+      stacktrace: { frames },
+    };
+  }
+
+  // The hint repeats the raw wrapper URL; source-level app paths remain checked.
+  const stackSignatureHint = ignoreRawWrapperStack ? undefined : hint;
 
   if (
-    hasAppOwnedNonExtensionSignature(frames, hint) ||
-    hasAppOwnedSourceEvidence(event, value, hint)
+    hasAppOwnedNonExtensionSignature(frames, stackSignatureHint) ||
+    hasAppOwnedSourceEvidence(event, sourceEvidenceValue, hint)
   ) {
     return true;
   }
 
-  return getStackSignatureValues(frames, hint).some((candidate) => {
-    const normalizedCandidate = candidate.toLowerCase();
-    return (
-      normalizedCandidate.includes("/_next/static/") ||
-      normalizedCandidate.includes("webpack-internal:///(app-")
-    );
-  });
+  return getStackSignatureValues(frames, stackSignatureHint).some(
+    (candidate) => {
+      const normalizedCandidate = candidate.toLowerCase();
+      return (
+        normalizedCandidate.includes("/_next/static/") ||
+        normalizedCandidate.includes("webpack-internal:///(app-")
+      );
+    }
+  );
 }
 
 export function isTwitterBrowser(event: SentryClientEvent): boolean {
@@ -350,7 +455,97 @@ export function isTwitterBrowser(event: SentryClientEvent): boolean {
   }
 
   const browserTag = event.tags?.["browser"];
-  return typeof browserTag === "string" && browserTag.startsWith("Twitter");
+  if (
+    typeof browserTag === "string" &&
+    (browserTag === "Twitter" || browserTag.startsWith("Twitter "))
+  ) {
+    return true;
+  }
+
+  const userAgentValues = [
+    getRequestHeaderString(event, "user-agent"),
+    getRuntimeUserAgentString(),
+  ];
+  return userAgentValues.some(
+    (value) => typeof value === "string" && twitterUserAgentPattern.test(value)
+  );
+}
+
+function isTwitterInjectedWaveDocumentFrame(frame: SentryStackFrame): boolean {
+  const paths = getFramePaths(frame);
+  return (
+    paths.length > 0 &&
+    paths.every((path) => twitterInjectedWaveDocumentPathPattern.test(path))
+  );
+}
+
+function hasOnlyTwitterInjectedWaveDocumentFrames(
+  frames: SentryStackFrame[] | undefined
+): boolean {
+  return (
+    Array.isArray(frames) &&
+    frames.some(isTwitterInjectedWaveDocumentFrame) &&
+    frames.every(
+      (frame) =>
+        isTwitterInjectedWaveDocumentFrame(frame) ||
+        isSentryRouteParameterizationFrame(frame)
+    )
+  );
+}
+
+function isTwitterConfigRawWrapperFrame(
+  frame: SentryStackFrame | undefined
+): boolean {
+  if (!frame) {
+    return false;
+  }
+
+  const paths = getFramePaths(frame);
+  return (
+    frame.function?.trim() === "n" &&
+    frame.lineno !== undefined &&
+    anonymousUnsafeEvalRawWrapperLineNumbers.has(frame.lineno) &&
+    frame.colno === 4858 &&
+    paths.length > 0 &&
+    paths.every((path) =>
+      anonymousUnsafeEvalRawChunkPathPattern.test(path.trim())
+    )
+  );
+}
+
+function isTwitterConfigRawInjectedFrame(
+  frame: SentryStackFrame | undefined,
+  functionName: string | undefined,
+  lineNumber: number,
+  columnNumber: number
+): boolean {
+  return (
+    !!frame &&
+    frame.function?.trim() === functionName &&
+    frame.lineno === lineNumber &&
+    frame.colno === columnNumber &&
+    isTwitterInjectedWaveDocumentFrame(frame)
+  );
+}
+
+function hasTwitterConfigRawFrameSignature(
+  frames: SentryStackFrame[] | undefined
+): boolean {
+  // beforeSend receives this Sentry wrapper before source-map processing.
+  // Keep the cohort-backed coordinates exact so signature drift fails open.
+  return (
+    Array.isArray(frames) &&
+    frames.length === 4 &&
+    isTwitterConfigRawWrapperFrame(frames[0]) &&
+    isTwitterConfigRawInjectedFrame(frames[1], undefined, 464, 28) &&
+    isTwitterConfigRawInjectedFrame(
+      frames[2],
+      "updateFooterPositions",
+      449,
+      18
+    ) &&
+    isTwitterConfigRawInjectedFrame(frames[3], "updateGapFiller", 311, 46)
+  );
 }
 
 export function shouldFilterByFilenameExceptions(
@@ -365,7 +560,12 @@ export function shouldFilterByFilenameExceptions(
 export function shouldFilterTwitterConfigReferenceError(
   event: SentryClientEvent
 ): boolean {
-  const value = event.exception?.values?.[0];
+  const values = event.exception?.values;
+  if (values?.length !== 1) {
+    return false;
+  }
+
+  const value = values[0];
   if (value?.type !== "ReferenceError") {
     return false;
   }
@@ -378,7 +578,38 @@ export function shouldFilterTwitterConfigReferenceError(
     return false;
   }
 
-  return hasOnlyAppUriFrames(value.stacktrace?.frames);
+  const frames = value.stacktrace?.frames;
+  if (hasOnlyTwitterInjectedWaveDocumentFrames(frames)) {
+    return true;
+  }
+
+  return (
+    value.mechanism?.type === twitterConfigAddEventListenerMechanism &&
+    value.mechanism.handled === false &&
+    hasTwitterConfigRawFrameSignature(frames)
+  );
+}
+
+export function shouldFilterTwitterCurrentInsetReferenceError(
+  event: SentryClientEvent
+): boolean {
+  const value = event.exception?.values?.[0];
+  if (
+    value?.type !== "ReferenceError" ||
+    value.value !== twitterCurrentInsetReferenceErrorMessage
+  ) {
+    return false;
+  }
+
+  if (
+    value.mechanism?.type !== browserGlobalHandlerOnErrorMechanism ||
+    value.mechanism.handled !== false ||
+    !isTwitterBrowser(event)
+  ) {
+    return false;
+  }
+
+  return hasOnlyTwitterInjectedWaveDocumentFrames(value.stacktrace?.frames);
 }
 
 export function shouldFilterReactDomInsertBeforeNotFoundError(
@@ -462,15 +693,52 @@ export function shouldFilterSentryRouteParameterizationError(
   }
 
   const frames = value.stacktrace?.frames;
-  if (hasLikelyAppOwnedFrame(frames) || !hasNativeJsonStringifyFrame(frames)) {
+  const framesWithoutSentryRouteParameterization = frames?.filter(
+    (frame) => !isSentryRouteParameterizationFrame(frame)
+  );
+  if (
+    hasLikelyAppOwnedFrame(framesWithoutSentryRouteParameterization) ||
+    !hasNativeJsonStringifyFrame(frames)
+  ) {
     return false;
   }
 
   return (
-    (hasRouteParameterizationRouteEvidence(event) ||
-      hasSentryRouteParameterizationFrame(frames)) &&
+    (hasSentryRouteParameterizationFrame(frames) ||
+      hasRouteParameterizationRouteEvidence(event)) &&
     (hasMetaMaskMobileWebViewContext(event) ||
       hasMobileSafariWebViewContext(event))
+  );
+}
+
+export function shouldFilterAppleWebKitSortedTrackListTypeError(
+  event: SentryClientEvent
+): boolean {
+  const values = event.exception?.values;
+  if (!Array.isArray(values) || values.length !== 1) {
+    return false;
+  }
+
+  const [value] = values;
+  if (
+    value?.type !== "TypeError" ||
+    value.value !== "Type error" ||
+    value.mechanism?.type !== browserGlobalHandlerOnErrorMechanism ||
+    value.mechanism.handled !== false
+  ) {
+    return false;
+  }
+
+  const frames = value.stacktrace?.frames;
+  if (!Array.isArray(frames) || frames.length !== 1) {
+    return false;
+  }
+
+  const [frame] = frames;
+  return (
+    frame?.filename === "[native code]" &&
+    (frame.abs_path === undefined || frame.abs_path === "[native code]") &&
+    frame.function === "sortedTrackListForMenu"
   );
 }
 
@@ -507,9 +775,23 @@ export function shouldFilterAnonymousUnsafeEvalCspError(
     return false;
   }
 
-  if (!hasAnonymousUnsafeEvalCspFrameSignature(value.stacktrace?.frames)) {
+  const frames = value.stacktrace?.frames;
+  const hasRawFrameSignature = hasAnonymousUnsafeEvalRawFrameSignature(frames);
+  if (
+    !hasRawFrameSignature &&
+    !hasAnonymousUnsafeEvalCspFrameSignature(frames)
+  ) {
     return false;
   }
 
-  return !hasAnonymousUnsafeEvalCspAppEvidence(event, hint);
+  // The exact raw signature accounts for all four browser frames. Sentry marks
+  // them in_app before source-map processing, so use only independent source
+  // evidence to decide whether an application failure is present.
+  const appEvidenceFrames = hasRawFrameSignature ? [] : frames;
+  return !hasAnonymousUnsafeEvalCspAppEvidence(
+    event,
+    appEvidenceFrames,
+    hasRawFrameSignature,
+    hint
+  );
 }

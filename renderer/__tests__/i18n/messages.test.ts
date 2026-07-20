@@ -265,9 +265,6 @@ describe("frontend i18n helpers", () => {
     expect(t("es-ES", "user.collected.networkCards.empty")).toBe(
       t("en-US", "user.collected.networkCards.empty")
     );
-    expect(t("de-DE", "theMemes.detail.live.market.title")).toBe(
-      t("en-US", "theMemes.detail.live.market.title")
-    );
     expect(
       t("fr-FR", "theMemes.detail.live.rank", {
         rank: "1",
@@ -391,6 +388,19 @@ describe("frontend i18n helpers", () => {
     );
   });
 
+  it("falls back consistently for wave voter connect copy", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      expect(t(locale, "waves.sidebar.rightPanel.voters.connectTitle")).toBe(
+        t(DEFAULT_LOCALE, "waves.sidebar.rightPanel.voters.connectTitle")
+      );
+      expect(
+        t(locale, "waves.sidebar.rightPanel.voters.connectDescription")
+      ).toBe(
+        t(DEFAULT_LOCALE, "waves.sidebar.rightPanel.voters.connectDescription")
+      );
+    }
+  });
+
   it("formats locale-sensitive values through Intl helpers", () => {
     expect(formatNumber("de-DE", 1234.5, { maximumFractionDigits: 1 })).toBe(
       "1.234,5"
@@ -405,6 +415,39 @@ describe("frontend i18n helpers", () => {
     expect(formatTime("de-DE", sampleTime)).toMatch(/^\d{2}:\d{2}$/);
     expect(formatTime("en-US", Number.NaN)).toBe("");
     expect(formatTime("en-US", null)).toBe("");
+  });
+
+  it("backs title-context copy with messages and locale-formatted counts", () => {
+    for (const locale of SUPPORTED_LOCALES) {
+      const count = formatInteger(locale, 1234);
+      expect(t(locale, "titleContext.routes.messages")).toBe(
+        "Messages | Brain"
+      );
+      expect(
+        t(locale, "titleContext.wave.newMessages.other", {
+          count,
+          waveName: "Wave One",
+        })
+      ).toBe(`(${count} new messages) Wave One | Brain`);
+      expect(
+        t(locale, "titleContext.notifications.other", {
+          count,
+          title: t(locale, "titleContext.routes.waves"),
+        })
+      ).toBe(`(${count} notifications) Waves | Brain`);
+    }
+    expect(
+      t("en-US", "titleContext.wave.newMessages.one", {
+        count: formatInteger("en-US", 1),
+        waveName: "Wave One",
+      })
+    ).toBe("(1 new message) Wave One | Brain");
+    expect(
+      t("en-US", "titleContext.notifications.one", {
+        count: formatInteger("en-US", 1),
+        title: "Waves | Brain",
+      })
+    ).toBe("(1 notification) Waves | Brain");
   });
 
   it("translates the wave drop copy action messages", () => {

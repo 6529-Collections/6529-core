@@ -1,8 +1,12 @@
 "use client";
 
 import { publicEnv } from "@/config/env";
+import { AwsRumExpectedAbortPlugin } from "@/utils/monitoring/awsRumExpectedAbort";
+import { createAwsRumPrivacyPlugin } from "@/utils/monitoring/awsRumPrivacy";
+import { getAwsRumPageId } from "@/utils/monitoring/mobileLaunchTimingSanitizers";
 import type { AwsRum as AwsRumInstance, AwsRumConfig } from "aws-rum-web";
-import { useEffect } from "react";
+import { usePathname } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 const AWS_RUM_HTTP_URLS_TO_EXCLUDE: readonly RegExp[] = [
   // Per-telemetry config replaces aws-rum-web defaults, so keep AWS service noise explicit.
@@ -29,6 +33,11 @@ interface AwsRumProviderProps {
 export default function AwsRumProvider({
   children,
 }: Readonly<AwsRumProviderProps>) {
+  const pathname = usePathname();
+  const latestPathnameRef = useRef(pathname);
+  const awsRumRef = useRef<AwsRumInstance | undefined>(undefined);
+  const lastRecordedPageIdRef = useRef<string | undefined>(undefined);
+
   useEffect(() => {
     // Skip initialization in development mode to avoid noise
     if (publicEnv.NODE_ENV === "development") {
@@ -60,23 +69,35 @@ export default function AwsRumProvider({
           return;
         }
 
-        const { AwsRum } = await import("aws-rum-web");
+        const {
+          AwsRum,
+          FetchPlugin,
+          JsErrorPlugin,
+          NavigationPlugin,
+          ResourcePlugin,
+          WebVitalsPlugin,
+          XhrPlugin,
+        } = await import("aws-rum-web");
 
         if (cancelled) {
           return;
         }
 
+        const initialPageId = getAwsRumPageId(latestPathnameRef.current);
+        const httpPluginConfig = {
+          urlsToExclude: [...AWS_RUM_HTTP_URLS_TO_EXCLUDE],
+        };
         const config: AwsRumConfig = {
           sessionSampleRate: SAMPLE_RATE,
-          telemetries: [
-            "performance",
-            "errors",
-            [
-              "http",
-              {
-                urlsToExclude: [...AWS_RUM_HTTP_URLS_TO_EXCLUDE],
-              },
-            ],
+          telemetries: [],
+          eventPluginsToLoad: [
+            createAwsRumPrivacyPlugin(initialPageId),
+            new NavigationPlugin(),
+            new ResourcePlugin(),
+            new WebVitalsPlugin(),
+            new JsErrorPlugin(),
+            new AwsRumExpectedAbortPlugin(new XhrPlugin(httpPluginConfig)),
+            new AwsRumExpectedAbortPlugin(new FetchPlugin(httpPluginConfig)),
           ],
           allowCookies: true,
           enableXRay: false,
@@ -85,7 +106,7 @@ export default function AwsRumProvider({
           sessionEventLimit: 200,
           batchLimit: 10,
           dispatchInterval: 5000,
-          disableAutoPageView: false,
+          disableAutoPageView: true,
           retries: 2,
           useBeacon: true,
           releaseId: APPLICATION_VERSION,
@@ -98,8 +119,10 @@ export default function AwsRumProvider({
           APPLICATION_REGION,
           config
         );
+        awsRumRef.current = awsRum;
         // Optional: Store the instance globally for manual tracking if needed
         window.awsRum = awsRum;
+        lastRecordedPageIdRef.current = initialPageId;
       } catch (error) {
         // Silently handle errors to prevent breaking the application
         console.warn("AWS RUM: Failed to initialize", error);
@@ -112,11 +135,31 @@ export default function AwsRumProvider({
       cancelled = true;
       awsRum?.disable();
 
+      if (awsRumRef.current === awsRum) {
+        awsRumRef.current = undefined;
+        lastRecordedPageIdRef.current = undefined;
+      }
+
       if (window.awsRum === awsRum) {
         delete window.awsRum;
       }
     };
   }, []);
+
+  useEffect(() => {
+    latestPathnameRef.current = pathname;
+
+    const awsRum = awsRumRef.current;
+    if (!awsRum) {
+      return;
+    }
+
+    lastRecordedPageIdRef.current = recordAwsRumPageView(
+      awsRum,
+      pathname,
+      lastRecordedPageIdRef.current
+    );
+  }, [pathname]);
 
   return <>{children}</>;
 }
@@ -127,6 +170,25 @@ const envValueOrFallback = (
 ): string => (value === undefined || value === "" ? fallback : value);
 
 const DEFAULT_SAMPLE_RATE = 0.2;
+
+const recordAwsRumPageView = (
+  awsRum: AwsRumInstance,
+  pathname: string,
+  lastRecordedPageId: string | undefined
+): string | undefined => {
+  const pageId = getAwsRumPageId(pathname);
+  if (pageId === lastRecordedPageId) {
+    return lastRecordedPageId;
+  }
+
+  try {
+    awsRum.recordPageView(pageId);
+    return pageId;
+  } catch {
+    console.warn("AWS RUM: Failed to record page view");
+    return lastRecordedPageId;
+  }
+};
 
 const parseSampleRate = (sampleRate: string | undefined): number => {
   const parsedSampleRate = Number.parseFloat(

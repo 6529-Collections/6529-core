@@ -33,6 +33,8 @@ import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { useWaveEligibility } from "@/contexts/wave/WaveEligibilityContext";
 import { createBreakpoint } from "react-use";
 import { getHomeRoute, getWaveHomeRoute } from "@/helpers/navigation.helpers";
+import { formatNumberWithCommas } from "@/helpers/Helpers";
+import { MEMES_NOMINEE_REQUIRED_REP } from "@/helpers/waves/memes-nomination";
 import { useWaveViewMode } from "@/hooks/useWaveViewMode";
 import { SubmissionStatus, useWave } from "@/hooks/useWave";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
@@ -81,7 +83,11 @@ const getChatSubmitDropRestrictionMessage = ({
 
 type MemesHeaderDropActionState = Pick<
   HeaderWaveDropAction,
-  "canOpen" | "label" | "compactLabel" | "restrictionMessage"
+  | "canOpen"
+  | "label"
+  | "compactLabel"
+  | "restrictionMessage"
+  | "restrictionKind"
 >;
 
 interface MemesHeaderParticipationState {
@@ -158,7 +164,8 @@ const getMemesHeaderDropActionState = ({
       canOpen: false,
       label: "How to Submit",
       compactLabel: "Submit",
-      restrictionMessage: "You are not eligible to submit to this wave",
+      restrictionMessage: `Reach ${formatNumberWithCommas(MEMES_NOMINEE_REQUIRED_REP)} MemesNominee REP to become eligible to submit work.`,
+      restrictionKind: "memes-nomination",
     };
   }
 
@@ -200,7 +207,12 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({ waveId }) => {
   const queryClient = useQueryClient();
   const { connectedProfile, activeProfileProxy } = useAuth();
   const { setWaveDropAction } = useHeaderContext();
-  const { waves, directMessages, registerWave } = useMyStream();
+  const {
+    waves,
+    directMessages,
+    registerWave,
+    serverFeedSeed: { completeInitialRegistration },
+  } = useMyStream();
   const { updateEligibility } = useWaveEligibility();
   const { data: wave } = useWaveData({
     waveId,
@@ -221,7 +233,8 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({ waveId }) => {
 
   useEffect(() => {
     registerWave(waveId, true);
-  }, [registerWave, waveId]);
+    completeInitialRegistration(waveId);
+  }, [completeInitialRegistration, registerWave, waveId]);
 
   useEffect(() => {
     if (!metadataWaveId) {
@@ -259,11 +272,22 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({ waveId }) => {
   }, [waves.list, directMessages.list, waveId]);
 
   const newDropsCount = enhancedData.newDropsCount;
+  const currentWaveId = wave?.id ?? null;
+  const currentWaveName = wave?.name ?? null;
 
   // Update wave data in title context
-  useSetWaveData(
-    wave ? { name: wave.name, newItemsCount: newDropsCount } : null
+  const waveTitleData = useMemo(
+    () =>
+      currentWaveId === waveId && currentWaveName !== null
+        ? {
+            id: currentWaveId,
+            name: currentWaveName,
+            newItemsCount: newDropsCount,
+          }
+        : null,
+    [currentWaveId, currentWaveName, newDropsCount, waveId]
   );
+  useSetWaveData(waveTitleData);
 
   // Create a stable key for proper remounting
   const stableWaveKey = `wave-${waveId}`;
@@ -490,6 +514,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({ waveId }) => {
         label: memesHeaderDropActionState.label,
         compactLabel: memesHeaderDropActionState.compactLabel,
         restrictionMessage: memesHeaderDropActionState.restrictionMessage,
+        restrictionKind: memesHeaderDropActionState.restrictionKind,
         onOpen: openAppMemesSubmit,
       };
     }

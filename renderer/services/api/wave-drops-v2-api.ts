@@ -3,7 +3,6 @@ import type { ApiDropAndWave } from "@/generated/models/ApiDropAndWave";
 import type { ApiDropsLeaderboardPage } from "@/generated/models/ApiDropsLeaderboardPage";
 import type { ApiDropsLeaderboardPageV2 } from "@/generated/models/ApiDropsLeaderboardPageV2";
 import type { ApiDropMetadataResponse } from "@/generated/models/ApiDropMetadataResponse";
-import type { ApiDropWithoutWave } from "@/generated/models/ApiDropWithoutWave";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
 import type { ApiDropPartV2 } from "@/generated/models/ApiDropPartV2";
 import type { ApiDropPoll } from "@/generated/models/ApiDropPoll";
@@ -14,19 +13,17 @@ import type { ApiDropRater } from "@/generated/models/ApiDropRater";
 import type { ApiDropReaction } from "@/generated/models/ApiDropReaction";
 import type { ApiDropReactionV2 } from "@/generated/models/ApiDropReactionV2";
 import type { ApiDropSearchStrategy } from "@/generated/models/ApiDropSearchStrategy";
-import { ApiDropType } from "@/generated/models/ApiDropType";
+import type { ApiDropType } from "@/generated/models/ApiDropType";
 import type { ApiDropV2 } from "@/generated/models/ApiDropV2";
 import type { ApiDropV2Page } from "@/generated/models/ApiDropV2Page";
 import type { ApiDropV2PageWithoutCount } from "@/generated/models/ApiDropV2PageWithoutCount";
 import type { ApiDropVotersPage } from "@/generated/models/ApiDropVotersPage";
 import type { ApiDropWithoutWavesPageWithoutCount } from "@/generated/models/ApiDropWithoutWavesPageWithoutCount";
-import { ApiSubmissionDropStatus } from "@/generated/models/ApiSubmissionDropStatus";
 import type { ApiWaveDropsFeed } from "@/generated/models/ApiWaveDropsFeed";
 import type { ApiWaveMin } from "@/generated/models/ApiWaveMin";
 import type { ApiWaveDropsFeedV2 } from "@/generated/models/ApiWaveDropsFeedV2";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import type { ApiWavePoll } from "@/generated/models/ApiWavePoll";
-import { ApiDropMainType } from "@/generated/models/ApiDropMainType";
 import type { ApiPageSortDirection } from "@/generated/models/ApiPageSortDirection";
 import {
   commonApiFetch,
@@ -45,10 +42,17 @@ import {
   mapReplyToDrop,
   normalizeWaveMin,
 } from "@/services/api/drop-v2-mappers";
-
-type DropApprovalTiming = {
-  readonly over_threshold_since_ms?: number | null;
-};
+import {
+  getDropApprovalTiming,
+  getDropEndpointId,
+  getDropType,
+  getWinningContext,
+  rethrowAbortFetchError,
+} from "@/services/api/wave-drops-v2-helpers";
+import type {
+  ApiDropV2View,
+  ApiDropWithoutWaveV2View,
+} from "@/services/api/drop-v2-view.types";
 
 const DEFAULT_RETRY_OPTIONS = {
   maxRetries: 2,
@@ -65,6 +69,8 @@ interface FetchWaveDropsV2Props {
   readonly dropType?: ApiDropType | undefined;
   readonly signal?: AbortSignal | undefined;
   readonly headers?: Record<string, string> | undefined;
+  readonly includeFullMetadata?: boolean | undefined;
+  readonly includeTopRaters?: boolean | undefined;
   readonly withRetry?: boolean | undefined;
 }
 
@@ -108,6 +114,25 @@ interface FetchWaveDropsSearchV2Props {
   readonly signal?: AbortSignal | undefined;
 }
 
+interface FetchWaveCompetitionDropsV2Props {
+  readonly wave: ApiWave | ApiWaveMin;
+  readonly authorId: string;
+  readonly dropType: ApiDropType.Participatory | ApiDropType.Winner;
+  readonly page: number;
+  readonly pageSize: number;
+  readonly signal?: AbortSignal | undefined;
+}
+
+type WaveCompetitionDrop = ApiDrop & {
+  readonly voting_open: boolean;
+};
+
+interface WaveCompetitionDropsPage {
+  readonly data: WaveCompetitionDrop[];
+  readonly page: number;
+  readonly next: boolean;
+}
+
 export type WavePollsState = "OPEN" | "CLOSED";
 export type WavePollsSort = "created_at" | "closing_time";
 export type ApiWavePollDropRow = Partial<ApiWavePoll> & {
@@ -140,47 +165,21 @@ export type ApiWaveDropsV2PageFeed = ApiWaveDropsFeed & {
   readonly next: boolean;
 };
 
-const getDropEndpointId = (dropId: string): string =>
-  encodeURIComponent(dropId);
-
-const isAbortFetchError = (error: unknown): boolean => {
-  if (error instanceof DOMException && error.name === "AbortError") {
-    return true;
-  }
-
-  if (error instanceof Error && error.name === "AbortError") {
-    return true;
-  }
-
-  const maybeAbortError = error as
-    | { readonly code?: unknown; readonly name?: unknown }
-    | null
-    | undefined;
-
-  return (
-    maybeAbortError?.name === "AbortError" ||
-    maybeAbortError?.code === "ERR_CANCELED"
-  );
-};
-
-const rethrowAbortFetchError = (error: unknown) => {
-  if (isAbortFetchError(error)) {
-    throw error;
-  }
-};
-
 const fetchDropPartV2 = async ({
   dropId,
+  headers,
   partNo,
   signal,
 }: {
   readonly dropId: string;
+  readonly headers?: Record<string, string> | undefined;
   readonly partNo: number;
   readonly signal?: AbortSignal | undefined;
 }): Promise<ApiDropPartV2 | null> => {
   try {
     return await commonApiFetch<ApiDropPartV2>({
       endpoint: `v2/drops/${getDropEndpointId(dropId)}/parts/${partNo}`,
+      headers,
       signal,
     });
   } catch (error) {
@@ -191,7 +190,8 @@ const fetchDropPartV2 = async ({
 
 const hydrateDropParts = async (
   drop: ApiDropV2,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  headers?: Record<string, string>
 ): Promise<ApiDropPart[]> => {
   const basePart = createBasePart(drop);
   const partsCount = Math.max(1, drop.parts_count || 1);
@@ -203,7 +203,7 @@ const hydrateDropParts = async (
   const fetchedParts = await Promise.all(
     Array.from({ length: partsCount - 1 }, (_, index) => {
       const partNo = index + 2;
-      return fetchDropPartV2({ dropId: drop.id, partNo, signal });
+      return fetchDropPartV2({ dropId: drop.id, headers, partNo, signal });
     })
   );
 
@@ -255,16 +255,19 @@ const mergeMetadata = (
 
 export const fetchDropMetadataByIdV2 = async ({
   dropId,
+  headers,
   priorityMetadata = [],
   signal,
 }: {
   readonly dropId: string;
+  readonly headers?: Record<string, string> | undefined;
   readonly priorityMetadata?: readonly ApiDropMetadataResponse[] | undefined;
   readonly signal?: AbortSignal | undefined;
 }): Promise<ApiDropMetadataResponse[]> => {
   try {
     const metadata = await commonApiFetch<ApiDropMetadataResponse[]>({
       endpoint: `v2/drops/${getDropEndpointId(getNormalizedDropId(dropId))}/metadata`,
+      headers,
       signal,
     });
     return mergeMetadata(priorityMetadata, metadata);
@@ -277,7 +280,8 @@ export const fetchDropMetadataByIdV2 = async ({
 const fetchDropMetadataV2 = async (
   drop: ApiDropV2,
   signal?: AbortSignal,
-  includeFullMetadata = true
+  includeFullMetadata = true,
+  headers?: Record<string, string>
 ): Promise<ApiDropMetadataResponse[]> => {
   const priorityMetadata = mapPriorityMetadataV2ToDropMetadata(drop);
 
@@ -287,6 +291,7 @@ const fetchDropMetadataV2 = async (
 
   return fetchDropMetadataByIdV2({
     dropId: drop.id,
+    headers,
     priorityMetadata,
     signal,
   });
@@ -294,7 +299,8 @@ const fetchDropMetadataV2 = async (
 
 const fetchTopRatersV2 = async (
   drop: ApiDropV2,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  headers?: Record<string, string>
 ): Promise<ApiDropRater[]> => {
   const votersCount = drop.submission_context?.voting.voters_count ?? 0;
   if (votersCount <= 0) {
@@ -304,6 +310,7 @@ const fetchTopRatersV2 = async (
   try {
     const voters = await commonApiFetch<ApiDropVotersPage>({
       endpoint: `v2/drops/${getDropEndpointId(drop.id)}/votes`,
+      headers,
       params: {
         page_size: "5",
         page: "1",
@@ -322,59 +329,27 @@ const fetchTopRatersV2 = async (
   }
 };
 
-const getDropType = (drop: ApiDropV2): ApiDropType => {
-  if (drop.drop_type === ApiDropMainType.Chat) {
-    return ApiDropType.Chat;
-  }
-
-  if (drop.submission_context?.status === ApiSubmissionDropStatus.Winner) {
-    return ApiDropType.Winner;
-  }
-
-  return ApiDropType.Participatory;
-};
-
-const getWinningContext = (drop: ApiDropV2) => {
-  const voting = drop.submission_context?.voting;
-  if (drop.submission_context?.status !== ApiSubmissionDropStatus.Winner) {
-    return undefined;
-  }
-
-  return {
-    place: voting?.place ?? 0,
-    awards: [],
-    decision_time: 0,
-    sale_time: null,
-    sale_price: null,
-    sale_price_currency: null,
-  };
-};
-
-const getDropApprovalTiming = (drop: ApiDropV2): DropApprovalTiming => {
-  const overThresholdSinceMs = drop.submission_context?.over_threshold_since_ms;
-
-  return typeof overThresholdSinceMs === "number"
-    ? { over_threshold_since_ms: overThresholdSinceMs }
-    : {};
-};
-
 const hydrateDropV2 = async ({
   drop,
+  headers,
   wave,
   signal,
   includeFullMetadata = true,
   includeTopRaters = true,
 }: {
   readonly drop: ApiDropV2;
+  readonly headers?: Record<string, string> | undefined;
   readonly wave: ApiWaveMin;
   readonly signal?: AbortSignal | undefined;
   readonly includeFullMetadata?: boolean | undefined;
   readonly includeTopRaters?: boolean | undefined;
-}): Promise<ApiDrop> => {
+}): Promise<ApiDropV2View> => {
   const [parts, metadata, topRaters] = await Promise.all([
-    hydrateDropParts(drop, signal),
-    fetchDropMetadataV2(drop, signal, includeFullMetadata),
-    includeTopRaters ? fetchTopRatersV2(drop, signal) : Promise.resolve([]),
+    hydrateDropParts(drop, signal, headers),
+    fetchDropMetadataV2(drop, signal, includeFullMetadata, headers),
+    includeTopRaters
+      ? fetchTopRatersV2(drop, signal, headers)
+      : Promise.resolve([]),
   ]);
   const voting = drop.submission_context?.voting;
   const dropType = getDropType(drop);
@@ -387,6 +362,9 @@ const hydrateDropV2 = async ({
     drop_type: dropType,
     rank: voting?.place ?? null,
     ...(winningContext ? { winning_context: winningContext } : {}),
+    ...(drop.submission_context
+      ? { submission_context: drop.submission_context }
+      : {}),
     ...getDropApprovalTiming(drop),
     wave,
     ...(replyTo ? { reply_to: replyTo } : {}),
@@ -426,7 +404,7 @@ export const mapLeaderboardDropV2 = ({
 }: {
   readonly drop: ApiDropV2;
   readonly wave: ApiWaveMin;
-}): ApiDropWithoutWave => {
+}): ApiDropWithoutWaveV2View => {
   const voting = drop.submission_context?.voting;
   const dropType = getDropType(drop);
   const winningContext = getWinningContext(drop);
@@ -438,6 +416,9 @@ export const mapLeaderboardDropV2 = ({
     drop_type: dropType,
     rank: voting?.place ?? null,
     ...(winningContext ? { winning_context: winningContext } : {}),
+    ...(drop.submission_context
+      ? { submission_context: drop.submission_context }
+      : {}),
     ...getDropApprovalTiming(drop),
     ...(replyTo ? { reply_to: replyTo } : {}),
     author: mapIdentityOverviewToProfileMin(drop.author),
@@ -472,12 +453,14 @@ export const mapLeaderboardDropV2 = ({
 
 const hydrateDropsV2 = async ({
   drops,
+  headers,
   wave,
   signal,
   includeFullMetadata = false,
   includeTopRaters = false,
 }: {
   readonly drops: ApiDropV2[];
+  readonly headers?: Record<string, string> | undefined;
   readonly wave: ApiWaveMin;
   readonly signal?: AbortSignal | undefined;
   readonly includeFullMetadata?: boolean | undefined;
@@ -487,6 +470,7 @@ const hydrateDropsV2 = async ({
     drops.map((drop) =>
       hydrateDropV2({
         drop,
+        headers,
         wave,
         signal,
         includeFullMetadata,
@@ -567,6 +551,8 @@ export async function fetchWaveDropsFeedV2({
   dropType,
   signal,
   headers,
+  includeFullMetadata = false,
+  includeTopRaters = false,
   withRetry = false,
 }: FetchWaveDropsV2Props): Promise<ApiWaveDropsFeed> {
   const params: Record<string, string> = {
@@ -602,8 +588,11 @@ export async function fetchWaveDropsFeedV2({
   const wave = mapApiWaveOverviewToApiWaveMin(data.wave);
   const drops = await hydrateDropsV2({
     drops: data.drops,
+    headers,
     wave,
     signal,
+    includeFullMetadata,
+    includeTopRaters,
   });
 
   return {
@@ -656,6 +645,45 @@ export async function fetchWaveDropsSearchV2({
     data: response.data.map((drop) =>
       mapLeaderboardDropV2({ drop, wave: waveMin })
     ),
+    page: response.page,
+    next: response.next,
+  };
+}
+
+export async function fetchWaveCompetitionDropsV2({
+  wave,
+  authorId,
+  dropType,
+  page,
+  pageSize,
+  signal,
+}: FetchWaveCompetitionDropsV2Props): Promise<WaveCompetitionDropsPage> {
+  const waveMin = normalizeWaveMin(wave);
+  const response = await commonApiFetch<ApiDropV2PageWithoutCount>({
+    endpoint: `v2/waves/${encodeURIComponent(waveMin.id)}/competition-drops`,
+    params: {
+      author_id: authorId,
+      drop_type: dropType,
+      page: page.toString(),
+      page_size: pageSize.toString(),
+    },
+    signal,
+  });
+  const data = await Promise.all(
+    response.data.map(async (drop) => ({
+      ...(await hydrateDropV2({
+        drop,
+        wave: waveMin,
+        signal,
+        includeFullMetadata: false,
+        includeTopRaters: false,
+      })),
+      voting_open: drop.submission_context?.voting?.is_open === true,
+    }))
+  );
+
+  return {
+    data,
     page: response.page,
     next: response.next,
   };

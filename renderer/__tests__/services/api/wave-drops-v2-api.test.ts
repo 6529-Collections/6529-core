@@ -1,4 +1,5 @@
 import { ApiDropMainType } from "@/generated/models/ApiDropMainType";
+import { ApiDropType } from "@/generated/models/ApiDropType";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import type { ApiDropV2 } from "@/generated/models/ApiDropV2";
 import { ApiProfileClassification } from "@/generated/models/ApiProfileClassification";
@@ -14,6 +15,7 @@ import {
   fetchDropV2ById,
   fetchGlobalBoostedDropsV2,
   fetchWaveDropsFeedV2,
+  fetchWaveCompetitionDropsV2,
   mapLeaderboardDropV2,
   voteDropPollV2,
 } from "@/services/api/wave-drops-v2-api";
@@ -193,13 +195,61 @@ describe("fetchWaveDropsFeedV2", () => {
     ]);
   });
 
-  it("preserves V2 author badges without fabricating legacy artwork ids", async () => {
+  it("loads full competition drops only from the lazy author endpoint", async () => {
+    commonApiFetchMock.mockResolvedValueOnce({
+      data: [
+        {
+          ...createDrop(1),
+          drop_type: ApiDropMainType.Participatory,
+          submission_context: {
+            voting: {
+              is_open: false,
+            },
+          },
+        },
+      ],
+      page: 1,
+      next: false,
+    });
+
+    const result = await fetchWaveCompetitionDropsV2({
+      wave: { id: "wave-1", name: "Cool Comp" } as ApiWaveMin,
+      authorId: "author-1",
+      dropType: ApiDropType.Participatory,
+      page: 1,
+      pageSize: 50,
+    });
+
+    expect(commonApiFetchMock).toHaveBeenCalledWith({
+      endpoint: "v2/waves/wave-1/competition-drops",
+      params: {
+        author_id: "author-1",
+        drop_type: ApiDropType.Participatory,
+        page: "1",
+        page_size: "50",
+      },
+      signal: undefined,
+    });
+    expect(result).toEqual(
+      expect.objectContaining({
+        data: [expect.objectContaining({ id: "drop-1", voting_open: false })],
+        page: 1,
+        next: false,
+      })
+    );
+  });
+
+  it("preserves V2 author badges and wave participation without fabricating legacy artwork ids", async () => {
     const badges = {
       artist_of_main_stage_submissions: 1,
       artist_of_memes: 1,
       profile_wave_id: "profile-wave-1",
       profile_wave_name: "Profile Wave",
       profile_wave_pfp: "https://example.com/wave.png",
+    };
+    const waveParticipation = {
+      is_participant: true,
+      is_winner: true,
     };
 
     commonApiFetchMock.mockResolvedValueOnce({
@@ -210,6 +260,7 @@ describe("fetchWaveDropsFeedV2", () => {
           author: {
             ...identity,
             badges,
+            wave_participation: waveParticipation,
           },
         },
       ],
@@ -228,6 +279,7 @@ describe("fetchWaveDropsFeedV2", () => {
         is_wave_creator: true,
         profile_wave_id: "profile-wave-1",
         winner_main_stage_drop_ids: [],
+        wave_participation: waveParticipation,
       })
     );
   });
@@ -422,6 +474,28 @@ describe("fetchWaveDropsFeedV2", () => {
     );
   });
 
+  it("preserves a Main Stage Meme card ID in the V2 submission context", () => {
+    const drop = mapLeaderboardDropV2({
+      drop: createEnrichableDrop({
+        submission_context: {
+          ...createEnrichableDrop().submission_context,
+          status: ApiSubmissionDropStatus.Winner,
+          meme_card_id: 521,
+        },
+      }) as unknown as ApiDropV2,
+      wave: {
+        id: "wave-1",
+        name: "Wave 1",
+        picture: null,
+        voting_credit_type: "TDH",
+      } as unknown as ApiWaveMin,
+    });
+
+    expect(drop.submission_context).toEqual(
+      expect.objectContaining({ meme_card_id: 521 })
+    );
+  });
+
   it("maps V2 submission voting totals into leaderboard legacy vote fields", () => {
     const drop = mapLeaderboardDropV2({
       drop: createEnrichableDrop() as unknown as ApiDropV2,
@@ -476,6 +550,71 @@ describe("fetchWaveDropsFeedV2", () => {
       "Part 1",
       "Part 2",
     ]);
+  });
+
+  it("forwards the same server headers to the feed and every nested hydration request", async () => {
+    const safeServerHeaders = { "x-safe-server-context": "present" };
+    const fullMetadata = [{ data_key: "artist", data_value: "Alice" }];
+    commonApiFetchMock.mockImplementation(async ({ endpoint }) => {
+      if (endpoint === "v2/waves/wave-1/drops") {
+        return {
+          wave,
+          drops: [createEnrichableDrop({ parts_count: 2 })],
+        } as never;
+      }
+      if (endpoint === "v2/drops/drop-1/parts/2") {
+        return {
+          part_no: 2,
+          content: "Part 2",
+          media: [],
+          attachments: [],
+          quoted_drop: null,
+        } as never;
+      }
+      if (endpoint === "v2/drops/drop-1/metadata") {
+        return fullMetadata as never;
+      }
+      if (endpoint === "v2/drops/drop-1/votes") {
+        return {
+          data: [{ voter: identity, vote: 5 }],
+          count: 1,
+          page: 1,
+          next: false,
+        } as never;
+      }
+      throw new Error(`Unexpected test endpoint: ${endpoint}`);
+    });
+
+    const result = await fetchWaveDropsFeedV2({
+      waveId: "wave-1",
+      limit: 20,
+      headers: safeServerHeaders,
+      includeFullMetadata: true,
+      includeTopRaters: true,
+    });
+
+    expect(commonApiFetchMock).toHaveBeenCalledTimes(4);
+    expect(
+      commonApiFetchMock.mock.calls.map(([request]) => request.endpoint)
+    ).toEqual(
+      expect.arrayContaining([
+        "v2/waves/wave-1/drops",
+        "v2/drops/drop-1/parts/2",
+        "v2/drops/drop-1/metadata",
+        "v2/drops/drop-1/votes",
+      ])
+    );
+    for (const [request] of commonApiFetchMock.mock.calls) {
+      expect(request.headers).toEqual(safeServerHeaders);
+    }
+    expect(result.drops[0]).toEqual(
+      expect.objectContaining({
+        metadata: [...priorityMetadata, ...fullMetadata],
+        top_raters: [expect.objectContaining({ rating: 5 })],
+      })
+    );
+    expect(JSON.stringify(result)).not.toContain("x-safe-server-context");
+    expect(JSON.stringify(result)).not.toContain("present");
   });
 
   it("rethrows abort errors from additional part fetches", async () => {

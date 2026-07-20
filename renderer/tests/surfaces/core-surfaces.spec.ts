@@ -16,9 +16,9 @@ const NAVIGATION_TIMEOUT_MS = 15000;
 const WAVE_SCORE_RESULT = /Wave Score.*About.*Network & Reputation/i;
 const WAVE_SCORE_HEADING = "Wave score transparency";
 const REQUIRED_DELEGATION_ACTIONS = [
-  "Register Delegation",
-  "Register Consolidation",
-  "Register Delegation Manager",
+  "Delegation",
+  "Consolidation",
+  "Delegation Manager",
 ];
 
 async function gotoReady(page: Page, path: string) {
@@ -38,7 +38,7 @@ async function openWaveScoreFromSearch(page: Page, searchButton: Locator) {
   const searchInput = page.locator("#header-search-input");
   await expect(searchInput).toBeVisible();
   await searchInput.fill("wave score");
-  const result = page.getByRole("link", { name: WAVE_SCORE_RESULT }).first();
+  const result = page.getByRole("option", { name: WAVE_SCORE_RESULT }).first();
   await expect(result).toBeVisible();
   await result.click();
   await expectWaveScorePage(page);
@@ -221,12 +221,12 @@ test.describe("Core app surface coverage @surface @medium @large", () => {
 
     await expect(
       page.getByRole("navigation", { name: "Breadcrumb" })
-    ).toBeVisible();
+    ).toHaveCount(0);
     await expect(
       page.getByRole("heading", { name: "How to Register a Delegation?" })
     ).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "Back to Delegation FAQ" })
+      page.getByRole("link", { name: "All FAQ topics" })
     ).toHaveAttribute("href", "/delegation/delegation-faq");
     await expect(
       page.getByRole("navigation", {
