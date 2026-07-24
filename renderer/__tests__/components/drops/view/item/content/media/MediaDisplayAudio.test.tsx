@@ -9,7 +9,12 @@ test("renders placeholder when controls hidden", () => {
 test("renders audio element when controls shown", () => {
   const { container } = render(<MediaDisplayAudio src="a.mp3" showControls />);
   const audioEl = container.querySelector("audio");
+
   expect(audioEl).toBeInTheDocument();
+  expect(audioEl).toHaveAttribute("controls");
+  expect(audioEl).toHaveAttribute("preload", "metadata");
+  expect(audioEl).toHaveClass("tw-w-full");
+  expect(audioEl).not.toHaveClass("tw-max-h-10");
   expect(audioEl?.querySelector("source")?.getAttribute("src")).toContain(
     "/a.mp3"
   );

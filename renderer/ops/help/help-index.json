@@ -295,6 +295,51 @@
       "source_refs": ["components/about/AboutFAQ.tsx"]
     },
     {
+      "id": "about.the-memes",
+      "kind": "route",
+      "title": "About The Memes",
+      "aliases": [
+        "about the memes",
+        "what are the memes",
+        "the memes collection",
+        "why memes matter",
+        "memes are intersubjective myths",
+        "open metaverse memes",
+        "cc0 meme cards"
+      ],
+      "keywords": [
+        "memes",
+        "meme cards",
+        "collection",
+        "art",
+        "decentralization",
+        "cc0",
+        "public domain",
+        "open metaverse",
+        "remix",
+        "rememe"
+      ],
+      "facts": [
+        "The About The Memes page lives at /about/the-memes.",
+        "The page explains why memes coordinate societies and how The Memes uses art NFTs to spread the message of decentralization.",
+        "The Memes are large-edition CC0 public-domain NFTs intended to be shared, remixed, rememed, and reinterpreted.",
+        "The page presents The Memes collection artwork as a single combined image.",
+        "Its Learn More section links to the full collection at /the-memes, the network at /network, the FAQ at /about/faq, Memes-Chat, and minting information at /about/minting."
+      ],
+      "canonical_path": "/about/the-memes",
+      "related_paths": [
+        "/the-memes",
+        "/network",
+        "/about/faq",
+        "/about/minting"
+      ],
+      "tags": ["about", "memes", "collection", "cc0", "open-metaverse"],
+      "source_refs": [
+        "app/about/[section]/page.tsx",
+        "components/about/AboutMemes.tsx"
+      ]
+    },
+    {
       "id": "about.terms-of-service",
       "kind": "route",
       "title": "Terms of Service",
@@ -442,12 +487,16 @@
         "The Memes minting website is /the-memes/mint; there is no other official minting website for The Memes.",
         "The page says Meme Cards are minted when the art for the next Meme Card is ready, currently about three times per week, though frequency and timing can vary.",
         "The page says The Memes generally use an allowlist model to avoid gas wars and bot wars and to give a broad range of people a chance to mint.",
+        "The page has horizontal section navigation for its summary, minting philosophy, allowlist background and current practices, provability, improvements, tools, and technical issues.",
         "Users should follow @6529collections for current mint dates and times."
       ],
       "canonical_path": "/about/minting",
       "related_paths": ["/the-memes/mint", "/the-memes", "/about/the-memes"],
       "tags": ["about", "memes", "minting"],
-      "source_refs": ["components/about/AboutMinting.tsx"]
+      "source_refs": [
+        "components/about/AboutMinting.tsx",
+        "components/about/AboutMintingReference.tsx"
+      ]
     },
     {
       "id": "about.license",
@@ -972,6 +1021,7 @@
         "Category A is the complete Meme Card set boost, with diminishing additional-set boosts.",
         "Category B covers season, genesis, and nakamoto set boosts.",
         "Category C is the Gradient boost, up to 5 Gradients.",
+        "The current TDH guide presents the Category A or Category B comparison before Category C, then groups formulas, examples, season boosts, limits, and related destinations for quick reference.",
         "TDH is calculated daily at 00:00 UTC and is used throughout the network: profiles, leaderboards, Levels, groups, Network views, Waves voting and eligibility, and public data."
       ],
       "canonical_path": "/network/tdh",
@@ -1751,6 +1801,7 @@
         "Inline identity groups warn when the connected creator is excluded, because excluding yourself from a view group can prevent you from opening the created wave.",
         "All wave types include a Rules step; Rank and Approve waves also include Dates, Drops, Voting, and Outcomes steps.",
         "The Rules step previews automatic rules generated from wave setup and lets creators add optional custom creator rules.",
+        "In Description, individual @ mention suggestions follow the draft wave's Who can view group; private drafts suggest only eligible profiles.",
         "The docs for wave creation live under ops/docs/waves/create; on web, use /waves?create=wave to open create-wave mode."
       ],
       "canonical_path": "/waves?create=wave",
@@ -1760,7 +1811,8 @@
         "ops/docs/waves/create/README.md",
         "ops/docs/waves/create/feature-overview-step.md",
         "ops/docs/waves/create/feature-groups-step.md",
-        "ops/docs/waves/create/feature-rules-step.md"
+        "ops/docs/waves/create/feature-rules-step.md",
+        "ops/docs/waves/create/feature-description-step.md"
       ]
     },
     {
@@ -3240,12 +3292,16 @@
       "facts": [
         "Meme Lab is a collection area separate from The Memes.",
         "Meme Lab has collection, individual card, and distribution routes.",
+        "The /about/meme-lab overview explains the experimental CC0 artist contract.",
         "Use /meme-lab when users ask where Meme Lab cards live."
       ],
       "canonical_path": "/meme-lab",
-      "related_paths": ["/the-memes"],
+      "related_paths": ["/the-memes", "/about/meme-lab"],
       "tags": ["collections", "meme-lab"],
-      "source_refs": ["ops/docs/media/README.md"]
+      "source_refs": [
+        "components/about/AboutMemeLab.tsx",
+        "ops/docs/media/README.md"
+      ]
     },
     {
       "id": "nextgen.overview",
@@ -3865,6 +3921,9 @@
         "network identity check",
         "rate nic",
         "rep dialog",
+        "grant rep",
+        "rep category spelling",
+        "memesnominee rep",
         "activity log"
       ],
       "keywords": [
@@ -3884,6 +3943,8 @@
         "NIC is the 6529 network identity trust signal shown on profile identity surfaces.",
         "App copy refers to NIC as Network Identity Credits in the FAQ and Network Identity Check in the profile identity header.",
         "The Identity tab surfaces profile identity, REP behavior, NIC ratings, NIC statements, and activity log behavior where available.",
+        "Grant REP keeps its compact category pills and existing search and selection behavior, including similarly named categories remaining separate and selectable.",
+        "The exact MemesNominee category pill is marked as counting toward the 50,000 REP submission requirement and is surfaced first when the typed value differs only by capitalization, spacing, punctuation, or Unicode width; search guidance stays neutral until a category is selected, selecting exact MemesNominee confirms the requirement in green, and selecting a subdued look-alike shows an amber note explaining that it remains a separate category.",
         "Owner and permission rules affect which identity actions are visible."
       ],
       "canonical_path": "/{user}",
@@ -4032,6 +4093,7 @@
         "The Collected tab lives at /{user}/collected.",
         "It shows collected NFT context, owner balances, stats summary, and transfer-mode behavior where available.",
         "The expandable Details panel can show holdings totals, wallet activity, distributions, TDH history, and boost breakdown.",
+        "Wide tables in Details scroll horizontally on narrow screens while their first label column stays visible.",
         "Native view covers The Memes, Gradients, NextGen, and Meme Lab holdings; Network view covers xTDH token holdings by contract.",
         "Use collection route records for collection-level browsing and profile collected for a user's holdings."
       ],
@@ -4041,7 +4103,8 @@
       "source_refs": [
         "app/[user]/collected/page.tsx",
         "ops/docs/profiles/tabs/feature-collected-tab.md",
-        "components/user/collected/stats/useCollectedStatsData.ts"
+        "components/user/collected/stats/useCollectedStatsData.ts",
+        "components/user/stats/UserPageStatsTableShared.tsx"
       ]
     },
     {
@@ -5517,7 +5580,8 @@
       "facts": [
         "NextGen mint and distribution-plan behavior is documented under NextGen docs.",
         "Mint routes live under /nextgen/collection/{collection}/mint.",
-        "Distribution plan routes live under /nextgen/collection/{collection}/distribution-plan."
+        "Distribution plan routes live under /nextgen/collection/{collection}/distribution-plan.",
+        "The distribution-plan allowlist shows a loading state while entries are fetched and a no-match state when active filters return no entries."
       ],
       "canonical_path": "/nextgen/collection/{collection}/mint",
       "related_paths": [
@@ -5540,7 +5604,11 @@
       "facts": [
         "NextGen token pages live at /nextgen/token/{token}.",
         "Token media rendering behavior is documented under NextGen docs.",
-        "Use collection pages for collection-level art browsing and token pages for token-specific media."
+        "Use collection pages for collection-level art browsing and token pages for token-specific media.",
+        "Token download options show Loading while availability is checked, a file size when available, and Coming Soon only when an output is missing.",
+        "Token lightbox and blackbox viewers fill the viewport, center the artwork, and lock page scrolling until closed.",
+        "Token and collection provenance sections show explicit loading and no-entry states.",
+        "When indexed token data is unavailable, the on-chain fallback keeps the standard token-page frame and shows fetching, not-found, or indexing-in-progress status."
       ],
       "canonical_path": "/nextgen/token/{token}",
       "related_paths": ["/nextgen/collection/{collection}"],
@@ -6009,12 +6077,14 @@
       "facts": [
         "The 6529 Gradient collection route lives at /6529-gradient.",
         "Individual Gradient detail routes use /6529-gradient/{id}.",
+        "The /about/6529-gradient overview explains the grayscale design system, animated #50, museum-held pieces, and community purpose.",
         "Use this route when users ask where to view the 6529 Gradient collection."
       ],
       "canonical_path": "/6529-gradient",
-      "related_paths": ["/6529-gradient/{id}"],
+      "related_paths": ["/6529-gradient/{id}", "/about/6529-gradient"],
       "tags": ["gradient", "collection"],
       "source_refs": [
+        "components/about/AboutGradients.tsx",
         "app/6529-gradient/page.tsx",
         "app/6529-gradient/[id]/page.tsx"
       ]

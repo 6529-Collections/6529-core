@@ -26,9 +26,17 @@ const { lookup } = require("node:dns/promises") as {
 const originalFetch = global.fetch;
 const mockFetch = jest.fn();
 
-const createMockFetchResponse = (status: number, body: string, url: string) => {
+const createMockFetchResponse = (
+  status: number,
+  body: string,
+  url: string,
+  contentLength?: number
+) => {
   const headerMap = new Map<string, string>();
   headerMap.set("content-type", "text/html");
+  if (contentLength !== undefined) {
+    headerMap.set("content-length", String(contentLength));
+  }
   return {
     status,
     ok: status >= 200 && status < 300,
@@ -42,6 +50,7 @@ const createMockFetchResponse = (status: number, body: string, url: string) => {
 
 beforeEach(() => {
   lookup.mockReset();
+  lookup.mockResolvedValue([{ address: "142.250.72.14", family: 4 }]);
   mockFetch.mockReset();
   mockUndiciFetch.mockReset();
   global.fetch = mockFetch as unknown as typeof fetch;
@@ -234,7 +243,6 @@ describe("open-graph route helpers", () => {
     const previewHtml =
       "<html><head><title>Preview Title</title></head><body></body></html>";
 
-    lookup.mockResolvedValue([{ address: "142.250.191.14", family: 4 }]);
     mockUndiciFetch.mockResolvedValueOnce(
       Promise.resolve(
         createMockFetchResponse(
@@ -263,15 +271,16 @@ describe("open-graph route helpers", () => {
       },
     });
 
-    expect(mockFetch).not.toHaveBeenCalled();
     expect(mockUndiciFetch).toHaveBeenCalledWith(
       "https://docs.google.com/document/d/abc/preview",
       expect.objectContaining({
         headers: expect.any(Headers),
+        redirect: "manual",
       })
     );
     const headers = mockUndiciFetch.mock.calls[0]?.[1]?.headers as Headers;
     expect(headers.get("user-agent")).toContain("6529seize-link-preview");
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("avoids fetching previews for non-canonical Google Docs identifiers", async () => {
@@ -294,8 +303,35 @@ describe("open-graph route helpers", () => {
     });
   });
 
+  it("rejects oversized bodyless Google previews before buffering", async () => {
+    mockUndiciFetch.mockResolvedValueOnce(
+      createMockFetchResponse(
+        200,
+        "<html><head><title>Oversized</title></head></html>",
+        "https://docs.google.com/document/d/abc/preview",
+        64 * 1024 + 1
+      )
+    );
+
+    const resolvedUrl = new URL("https://docs.google.com/document/d/abc/edit");
+    const result = await buildGoogleWorkspaceResponse(
+      resolvedUrl,
+      "<html><head><title>Fallback</title></head></html>",
+      resolvedUrl
+    );
+
+    expect(result).toMatchObject({
+      type: "google.docs",
+      availability: "restricted",
+      title: "Untitled Doc",
+    });
+    expect(mockUndiciFetch).toHaveBeenCalledWith(
+      "https://docs.google.com/document/d/abc/preview",
+      expect.any(Object)
+    );
+  });
+
   it("builds a Google Sheets preview and marks restricted access on failure", async () => {
-    lookup.mockResolvedValue([{ address: "142.250.191.14", family: 4 }]);
     mockUndiciFetch.mockResolvedValueOnce(
       Promise.resolve(
         createMockFetchResponse(

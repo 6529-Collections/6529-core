@@ -16,6 +16,8 @@ import {
 import aboutMessages from "@/i18n/messages/about.en-US.json";
 import homeNewcomerMessages from "@/i18n/messages/homeNewcomer.en-US.json";
 import join6529Messages from "@/i18n/messages/join6529.en-US.json";
+import networkMetricsMessages from "@/i18n/messages/networkMetrics.en-US.json";
+import networkTdhMessages from "@/i18n/messages/networkTdh.en-US.json";
 import toolsMessages from "@/i18n/messages/tools.en-US.json";
 import wavesRightPanelMessages from "@/i18n/messages/wavesRightPanel.en-US.json";
 import { QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
@@ -123,17 +125,20 @@ const USER_COLLECTED_STATS_DETAILS_MESSAGES = objectMessages(
     "collected.title": "Collected",
     overview: "Overview",
     "tables.overviewCaption": "Collected holdings summary by collection",
+    "tables.column.metric": "Metric",
     "tables.column.total": "Total",
     "tables.column.memes": "Memes",
     "tables.column.nextGen": "NextGen",
     "tables.column.gradient": "Gradient",
     "tables.column.memeLab": "Meme Lab",
+    "tables.column.season": "Season",
     "rows.cards": "Cards",
     "rows.rank": "Rank",
     "rows.tdh": "TDH",
     "rows.noTdh": "* No TDH",
     memesBySeason: "Memes Breakdown By Season",
     "tables.memesBySeasonCaption": "Collected Memes breakdown by season",
+    "tables.memesBySeasonEmpty": "No Meme holdings by season yet.",
     "tables.column.unique": "Unique",
     "tables.column.sets": "Sets",
     seasonLabel: "Season {seasonNumber}",
@@ -180,6 +185,24 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "search.placeholder": "Type a category name",
   "search.resultsLabel": "REP category search results",
   "helpBotReserved.error": "{category} is managed by help6529.",
+  "grant.searchPlaceholder": "Category to grant REP for",
+  "grant.minimumCharacters": "Type at least {min} characters.",
+  "grant.maximumCharacters": "Type at most {max} characters.",
+  "grant.searching": "Finding existing categories...",
+  "grant.submissionBadge": "Counts for submissions",
+  "grant.submissionHint":
+    "Memes submissions require {amount} REP in {category}.",
+  "grant.submissionLookalikeInfo":
+    '"{category}" is a separate category. Only {submissionCategory} counts for submissions.',
+  "grant.availableRep": "Your available REP: {amount}",
+  "grant.assignedRep": "Your REP assigned to {name}: {amount}",
+  "grant.actions.grant": "Grant REP",
+  "grant.actions.cancel": "Cancel",
+  "grant.toast.updated": "REP updated.",
+  "grant.toast.updateFailed": "Couldn't update this REP rating.",
+  "grant.toast.tryAgain": "Please try again.",
+  "grant.toast.loginRequired": "Log in to continue.",
+  "grant.errors.generic": "Couldn't complete this request. Please try again.",
   "suggested.loading": "Loading active REP categories",
   "suggested.error": "Could not load active REP categories.",
   "suggested.empty": "No active REP categories found yet.",
@@ -187,6 +210,8 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "suggested.ratings": "Ratings",
   "suggested.title": "Active REP categories",
   "suggested.description": "Categories with the most profile REP activity.",
+  "activity.direction": "gave REP to",
+  "activity.value": "{value} REP",
   "wave.tabs.waves": "Waves",
   "wave.tabs.contributors": "Contributors",
   "wave.sort.repDesc": "REP impact high",
@@ -347,6 +372,14 @@ const WAVE_NAVIGATION_MESSAGES = objectMessages("wave.navigation", {
   fallbackCuration: "Curation",
 } as const);
 
+const MY_STREAM_CURATION_MESSAGES = objectMessages("waves.myStream.curation", {
+  remove: "Remove",
+  removing: "Removing",
+  removeAriaLabel: "Remove drop from this curation",
+  removingAriaLabel: "Removing drop from this curation",
+  removeTitle: "Remove from curation",
+} as const);
+
 const WAVE_SCORE_NAVIGATION_MESSAGES = objectMessages("waveScore.navigation", {
   "back.wave": "Back to wave",
   "back.previous": "Back to previous page",
@@ -460,6 +493,24 @@ const WAVE_VOTE_RATIONALE_MESSAGES = objectMessages("waves.voteRationale", {
     "Vote rationale ({voteTotal} total, {voteChange} change at time of posting):\n\n",
 } as const);
 
+const WAVE_VOTE_MODE_MESSAGES = objectMessages("waves.voteMode", {
+  groupLabel: "Vote input mode",
+  slider: "Slider",
+  numeric: "Numeric",
+  switchTitle: "Switch mode",
+  switchToNumeric: "Switch to numeric",
+  switchToSlider: "Switch to slider",
+  switchToNumericAriaLabel: "Switch to numeric input",
+  switchToSliderAriaLabel: "Switch to slider input",
+} as const);
+
+const WAVE_VOTE_MESSAGES = objectMessages("waves.vote", {
+  controlsLegend: "Vote controls",
+  modalTitle: "Vote for this artwork",
+  decreaseLabel: "Decrease vote",
+  increaseLabel: "Increase vote",
+} as const);
+
 const WAVE_POLL_MESSAGES = objectMessages("waves.poll", {
   "actions.viewResults": "View results",
   "actions.vote": "Vote",
@@ -496,6 +547,13 @@ const USER_COLLECTED_STATS_WALLET_ACTIVITY_MESSAGES = objectMessages(
     filterOptionsLabel: "Wallet activity filter options",
     optionAriaLabel: "Show {filter} wallet activity",
     tableCaption: "Wallet activity transactions",
+    etherscanLinkLabel: "Go to Etherscan",
+    gasLabel: "Gas",
+    gasGweiLabel: "GWEI",
+    gasInformationLabel: "Gas Information",
+    gasPriceLabel: "Gas Price",
+    royaltiesInformationLabel: "Royalties information",
+    royaltiesValue: "Royalties: {amount}ETH ({percentage}%)",
     "filters.all": "All",
     "filters.airdrops": "Airdrops",
     "filters.mints": "Mints",
@@ -1410,6 +1468,35 @@ export const EN_US_MESSAGES = {
   ...XTDH_COLLECTION_MESSAGES,
   ...COLLECTION_DELEGATION_MESSAGES,
   ...join6529Messages,
+  "nextgen.brand": "NextGen",
+  "nextgen.navigation.featured": "Featured",
+  "nextgen.navigation.collections": "Collections",
+  "nextgen.navigation.artists": "Artists",
+  "nextgen.navigation.about": "About",
+  "nextgen.navigation.featuredAriaLabel": "NextGen featured",
+  "nextgen.navigation.sectionsAriaLabel": "NextGen sections",
+  "nextgen.home.byArtist": "by {artist}",
+  "nextgen.home.exploreCollection": "Explore Collection",
+  "nextgen.home.summary":
+    "NextGen is an on-chain generative art NFT contract. It is also a tool to support the ambitious aspirations of the 6529 community in the areas of art experimentation and decentralized social organization.",
+  "nextgen.home.learnMore": "Learn More",
+  "nextgen.home.exploreNamedCollection": "Explore {collectionName}",
+  "nextgen.home.featuredArtist": "Featured Artist",
+  "nextgen.home.distributionPlan": "Distribution Plan",
+  "nextgen.about.title": "About NextGen",
+  "nextgen.about.sections.overallApproach": "Overall Approach",
+  "nextgen.about.sections.nativeAllowlists": "Native Allowlists",
+  "nextgen.about.sections.nativeDelegation": "Native Delegation",
+  "nextgen.about.sections.personalization":
+    "Personalization, Customization and Collector Provenance",
+  "nextgen.about.sections.extraOnChain": "Extra On-Chain™",
+  "nextgen.about.sections.artistProvenance": "Artist Provenance",
+  "nextgen.about.sections.randomization": "Multiple Randomization Methods",
+  "nextgen.about.sections.phases": "Phases / Periodicity",
+  "nextgen.about.sections.mintingSales": "Minting Sales Models",
+  "nextgen.about.sections.libraries": "On-Chain Libraries",
+  "nextgen.about.sections.moreInformation": "More Information",
+  "nextgen.about.sections.collectionsModel": "NextGen Collections Model",
   "auth.sessionUpgrade.action": "Upgrade Authentication",
   "auth.signModal.connectionUpdateRequired": "Connection Update Required",
   "auth.signModal.upgradeAuthentication": "Upgrade Authentication",
@@ -2152,6 +2239,8 @@ export const EN_US_MESSAGES = {
   ...PROFILE_ACTIVITY_RATE_MESSAGES,
   ...USER_RATE_MESSAGES,
   ...aboutMessages,
+  ...networkMetricsMessages,
+  ...networkTdhMessages,
   ...toolsMessages,
   ...ABOUT_TECH_MESSAGES,
   ...REMEMES_DETAIL_MESSAGES,
@@ -2168,6 +2257,7 @@ export const EN_US_MESSAGES = {
   ...NAVIGATION_MESSAGES,
   ...TITLE_CONTEXT_MESSAGES,
   ...WAVE_NAVIGATION_MESSAGES,
+  ...MY_STREAM_CURATION_MESSAGES,
   ...WAVE_SCORE_NAVIGATION_MESSAGES,
   ...MEMES_QUICK_VOTE_MESSAGES,
   ...MEMES_WAVE_FOOTER_MESSAGES,
@@ -2177,6 +2267,8 @@ export const EN_US_MESSAGES = {
   ...WAVE_DROP_ACTIONS_MESSAGES,
   ...WAVE_COMPETITION_BADGE_MESSAGES,
   ...WAVE_VOTE_RATIONALE_MESSAGES,
+  ...WAVE_VOTE_MODE_MESSAGES,
+  ...WAVE_VOTE_MESSAGES,
   ...WAVE_POLL_MESSAGES,
   ...WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES,
 } as const;
