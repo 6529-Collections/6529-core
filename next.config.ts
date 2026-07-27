@@ -33,6 +33,10 @@ const IPFS_FALLBACK_GATEWAY_HOSTS = [
   "*.ipfs.dweb.link",
   "*.ipfs.cf-ipfs.com",
 ];
+const PUBLIC_REVIEW_TRACE_EXCLUDES = [
+  "renderer/content/public-reviews/**/*",
+  "renderer/public/review-data/**/*",
+];
 const ARWEAVE_GATEWAY_CSP_SOURCES = ARWEAVE_GATEWAY_HOSTS.flatMap(
   (hostname) => [`https://${hostname}`, `https://*.${hostname}`],
 );
@@ -237,6 +241,12 @@ function getConfiguredConnectSource(
   }
 }
 
+function getConfiguredIpfsGatewaySource(
+  ipfsGatewayEndpoint: string | undefined,
+): string {
+  return getConfiguredConnectSource(ipfsGatewayEndpoint);
+}
+
 function getMediaResolverSource(resolverEndpoint: string | undefined): string {
   if (!resolverEndpoint) {
     return DEFAULT_MEDIA_RESOLVER_ENDPOINT;
@@ -265,6 +275,7 @@ interface SecurityHeaderOptions {
 
 function createSecurityHeaders(
   apiEndpoint: string = "",
+  ipfsGatewayEndpoint: string | undefined = "",
   mediaResolverEndpoint: string | undefined = "",
   options: SecurityHeaderOptions = {},
 ): Array<{ key: string; value: string }> {
@@ -283,6 +294,8 @@ function createSecurityHeaders(
     "https://127.0.0.1:*",
     "https://localhost:*",
   ];
+  const configuredIpfsGatewaySource =
+    getConfiguredIpfsGatewaySource(ipfsGatewayEndpoint);
   const mediaResolverSource = getMediaResolverSource(mediaResolverEndpoint);
   const mediaSrc = joinSources([
     "'self'",
@@ -291,6 +304,7 @@ function createSecurityHeaders(
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
     mediaResolverSource,
+    configuredIpfsGatewaySource,
     arweaveGatewaySources,
     ...IPFS_FALLBACK_MEDIA_SOURCES,
     "https://*.twimg.com",
@@ -301,6 +315,7 @@ function createSecurityHeaders(
     "'self'",
     ...localGatewaySources,
     mediaResolverSource,
+    configuredIpfsGatewaySource,
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",
@@ -346,6 +361,9 @@ interface PublicEnv {
   MOBILE_APP_SCHEME?: string;
   CORE_SCHEME?: string;
   GIPHY_API_KEY?: string;
+  IPFS_API_ENDPOINT?: string;
+  IPFS_GATEWAY_ENDPOINT?: string;
+  IPFS_MFS_PATH?: string;
   MEDIA_RESOLVER_ENDPOINT?: string;
   WS_ENDPOINT?: string;
   DEV_MODE_MEMES_WAVE_ID?: string;
@@ -474,12 +492,16 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     logging: {
       incomingRequests: false,
     },
+    outputFileTracingExcludes: {
+      "/*": PUBLIC_REVIEW_TRACE_EXCLUDES,
+    },
     async headers() {
       return [
         {
           source: "/:path*",
           headers: createSecurityHeaders(
             publicEnv.API_ENDPOINT,
+            publicEnv.IPFS_GATEWAY_ENDPOINT,
             publicEnv.MEDIA_RESOLVER_ENDPOINT,
             {
               allowInsecureLocalhostConnectSrc:
@@ -603,6 +625,9 @@ const nextConfigFactory = (phase: string): NextConfig => {
         MOBILE_APP_SCHEME: publicEnv.MOBILE_APP_SCHEME,
         CORE_SCHEME: publicEnv.CORE_SCHEME,
         GIPHY_API_KEY: publicEnv.GIPHY_API_KEY,
+        IPFS_API_ENDPOINT: publicEnv.IPFS_API_ENDPOINT,
+        IPFS_GATEWAY_ENDPOINT: publicEnv.IPFS_GATEWAY_ENDPOINT,
+        IPFS_MFS_PATH: publicEnv.IPFS_MFS_PATH,
         MEDIA_RESOLVER_ENDPOINT: publicEnv.MEDIA_RESOLVER_ENDPOINT,
         WS_ENDPOINT: publicEnv.WS_ENDPOINT,
         DEV_MODE_MEMES_WAVE_ID: publicEnv.DEV_MODE_MEMES_WAVE_ID,

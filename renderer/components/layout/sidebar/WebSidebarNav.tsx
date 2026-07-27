@@ -88,6 +88,7 @@ const WebSidebarNav = React.forwardRef<
     appWalletsSupported,
     capacitor.isIos,
     country,
+    undefined,
     ipfsUrls?.webui ?? ""
   );
   const sectionMap = useSectionMap(sections);

@@ -11,6 +11,17 @@ function isLocalhostHostname(hostname: string): boolean {
   );
 }
 
+// RFC1918 private ranges, so a dev server exposed on the LAN (e.g. testing
+// from a phone) can reach a local API over plain http. Only consulted under
+// the same dev-only flag as the localhost carve-out.
+function isPrivateLanHostname(hostname: string): boolean {
+  return (
+    /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+    /^192\.168\.\d{1,3}\.\d{1,3}$/.test(hostname) ||
+    /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/.test(hostname)
+  );
+}
+
 function getConfiguredConnectSource(
   endpoint: string | undefined,
   allowInsecureLocalhost: boolean = false
@@ -28,7 +39,8 @@ function getConfiguredConnectSource(
     if (
       allowInsecureLocalhost &&
       (parsedUrl.protocol === "http:" || parsedUrl.protocol === "ws:") &&
-      isLocalhostHostname(parsedUrl.hostname)
+      (isLocalhostHostname(parsedUrl.hostname) ||
+        isPrivateLanHostname(parsedUrl.hostname))
     ) {
       return parsedUrl.origin;
     }
@@ -37,6 +49,12 @@ function getConfiguredConnectSource(
   } catch {
     return "";
   }
+}
+
+function getConfiguredIpfsGatewaySource(
+  ipfsGatewayEndpoint: string | undefined
+): string {
+  return getConfiguredConnectSource(ipfsGatewayEndpoint);
 }
 
 function joinSources(sources: Array<string | false | undefined>): string {
@@ -58,6 +76,7 @@ interface SecurityHeaderOptions {
 
 export function createSecurityHeaders(
   apiEndpoint: string | undefined = "",
+  ipfsGatewayEndpoint: string | undefined = "",
   mediaResolverEndpoint: string | undefined = "",
   options: SecurityHeaderOptions = {}
 ) {
@@ -78,6 +97,8 @@ export function createSecurityHeaders(
   ];
   const ipfsGatewaySources = IPFS_GATEWAY_CSP_SOURCES.join(" ");
   const mediaResolverSource = getMediaResolverSource(mediaResolverEndpoint);
+  const configuredIpfsGatewaySource =
+    getConfiguredIpfsGatewaySource(ipfsGatewayEndpoint);
   const connectSrc = [
     "'self'",
     "blob:",
@@ -98,6 +119,7 @@ export function createSecurityHeaders(
     mediaResolverSource,
     ...arweaveGatewaySources,
     ipfsGatewaySources,
+    configuredIpfsGatewaySource,
     "https://rpc.walletconnect.com/v1/",
     "https://sts.us-east-1.amazonaws.com",
     "https://sts.us-west-2.amazonaws.com",
@@ -131,6 +153,7 @@ export function createSecurityHeaders(
     ...localGatewaySources,
     mediaResolverSource,
     ipfsGatewaySources,
+    configuredIpfsGatewaySource,
     "https://media.generator.seize.io",
     "https://media.generator.6529.io",
     "https://generator.seize.io",
