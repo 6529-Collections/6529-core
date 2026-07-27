@@ -27,31 +27,14 @@ interface ScheduledWorkerConfig {
 const WORKER_CONFLICTS: Partial<
   Record<ScheduledWorkerNames, ScheduledWorkerNames[]>
 > = {
-  [ScheduledWorkerNames.TRANSACTIONS_WORKER]: [
-    ScheduledWorkerNames.NFTS_WORKER,
-    ScheduledWorkerNames.TDH_WORKER,
-  ],
   [ScheduledWorkerNames.NFT_DELEGATION_WORKER]: [
     ScheduledWorkerNames.TDH_WORKER,
   ],
-  [ScheduledWorkerNames.NFTS_WORKER]: [
-    ScheduledWorkerNames.TRANSACTIONS_WORKER,
-    ScheduledWorkerNames.TDH_WORKER,
-  ],
+  [ScheduledWorkerNames.NFTS_WORKER]: [ScheduledWorkerNames.TDH_WORKER],
   [ScheduledWorkerNames.TDH_WORKER]: [
-    ScheduledWorkerNames.TRANSACTIONS_WORKER,
     ScheduledWorkerNames.NFT_DELEGATION_WORKER,
     ScheduledWorkerNames.NFTS_WORKER,
   ],
-};
-
-const WORKER_START_PRIORITY: Record<ScheduledWorkerNames, number> = {
-  // Waiting workers only block lower-priority conflicts. This preserves TDH
-  // priority without allowing two pending workers to block each other.
-  [ScheduledWorkerNames.TDH_WORKER]: 0,
-  [ScheduledWorkerNames.TRANSACTIONS_WORKER]: 1,
-  [ScheduledWorkerNames.NFT_DELEGATION_WORKER]: 2,
-  [ScheduledWorkerNames.NFTS_WORKER]: 3,
 };
 
 const getCronExpressionMinutes = (intervalMinutes: number) => {
@@ -169,25 +152,33 @@ export function startSchedulers(
     const workerName =
       scheduledWorker.getNamespace() as ScheduledWorkerNames;
     const conflictNames = WORKER_CONFLICTS[workerName] ?? [];
+    if (conflictNames.length === 0) {
+      continue;
+    }
     scheduledWorker.setStartGuard(() => {
       const conflict = scheduledWorkers.find(
         (candidate) => {
           const candidateName =
             candidate.getNamespace() as ScheduledWorkerNames;
-          return (
-            conflictNames.includes(candidateName) &&
-            (candidate.isRunning() ||
-              (candidate.isWaitingForScheduledStart() &&
-                WORKER_START_PRIORITY[candidateName] <
-                  WORKER_START_PRIORITY[workerName]))
-          );
+          return conflictNames.includes(candidateName) && candidate.isRunning();
         },
       );
       return conflict
-        ? `${scheduledWorker.getDisplay()} worker is waiting for ${conflict.getDisplay()} worker`
+        ? `${conflict.getDisplay()} worker is running`
         : null;
     });
   }
+
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) =>
+      worker.getNamespace() === ScheduledWorkerNames.TRANSACTIONS_WORKER,
+  ) as TransactionsScheduledWorker | undefined;
+  const tdhWorker = scheduledWorkers.find(
+    (worker) => worker.getNamespace() === ScheduledWorkerNames.TDH_WORKER,
+  );
+  transactionsWorker?.setMutationGuard(() =>
+    tdhWorker?.isRunning() ? "TDH worker is running" : null,
+  );
 
   for (const scheduledWorker of scheduledWorkers) {
     if (scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER) {

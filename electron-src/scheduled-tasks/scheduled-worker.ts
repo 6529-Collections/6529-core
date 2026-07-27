@@ -10,7 +10,6 @@ import {
   ScheduledWorkerStatus,
   TransactionsWorkerScope,
 } from "../../shared/types";
-import { Time } from "../../shared/time";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -48,7 +47,6 @@ export class ScheduledWorker {
   protected maxConcurrentRequests: number;
   protected logger: WorkerLogger;
   private task: cron.ScheduledTask | null = null;
-  private scheduledRetry: ReturnType<typeof setTimeout> | null = null;
   private startGuard: WorkerStartGuard | null = null;
   protected worker: Worker | null = null;
 
@@ -132,13 +130,10 @@ export class ScheduledWorker {
 
     const blockedReason = this.startGuard?.();
     if (blockedReason) {
-      this.logger.log("info", `Scheduled start waiting: ${blockedReason}`);
-      if (!this.scheduledRetry) {
-        this.scheduledRetry = setTimeout(() => {
-          this.scheduledRetry = null;
-          this.startScheduledWorker();
-        }, Time.seconds(30).toMillis());
-      }
+      this.logger.log(
+        "info",
+        `Scheduled ${this.display} start skipped because ${blockedReason}`,
+      );
       return;
     }
 
@@ -149,18 +144,25 @@ export class ScheduledWorker {
     this.startGuard = startGuard;
   }
 
-  public isWaitingForScheduledStart(): boolean {
-    return this.scheduledRetry !== null;
-  }
-
-  protected getStartBlockReason(): string | null {
+  protected getWorkerUnavailableReason(): string | null {
     if (this.worker || this.isRunning()) {
       return `${this.display} worker is already running`;
     }
     if (!this.enabled) {
       return `${this.display} worker is disabled`;
     }
-    return this.startGuard?.() ?? null;
+    return null;
+  }
+
+  protected getStartBlockReason(): string | null {
+    const unavailableReason = this.getWorkerUnavailableReason();
+    if (unavailableReason) {
+      return unavailableReason;
+    }
+    const blockedReason = this.startGuard?.();
+    return blockedReason
+      ? `${this.display} worker cannot start while ${blockedReason}. Try again after it finishes.`
+      : null;
   }
 
   public manualStart(): WorkerStartResult {
@@ -285,10 +287,6 @@ export class ScheduledWorker {
 
   public async terminate() {
     this.task?.stop();
-    if (this.scheduledRetry) {
-      clearTimeout(this.scheduledRetry);
-      this.scheduledRetry = null;
-    }
     return await this.manualStop();
   }
 
@@ -314,6 +312,8 @@ export class ScheduledWorker {
 }
 
 export class TransactionsScheduledWorker extends ScheduledWorker {
+  private mutationGuard: WorkerStartGuard | null = null;
+
   constructor(
     rpcUrl: string | null,
     namespace: string,
@@ -348,8 +348,23 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     );
   }
 
+  public setMutationGuard(mutationGuard: WorkerStartGuard) {
+    this.mutationGuard = mutationGuard;
+  }
+
+  private getMutationBlockReason(): string | null {
+    const unavailableReason = this.getWorkerUnavailableReason();
+    if (unavailableReason) {
+      return unavailableReason;
+    }
+    const blockedReason = this.mutationGuard?.();
+    return blockedReason
+      ? `Transactions maintenance cannot start while ${blockedReason}. Try again after it finishes.`
+      : null;
+  }
+
   public async resetToBlock(block: number) {
-    const blockedReason = this.getStartBlockReason();
+    const blockedReason = this.getMutationBlockReason();
     if (blockedReason) {
       return {
         status: false,
@@ -375,7 +390,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
   }
 
   public async recalculateTransactionsOwners() {
-    const blockedReason = this.getStartBlockReason();
+    const blockedReason = this.getMutationBlockReason();
     if (blockedReason) {
       return {
         status: false,
