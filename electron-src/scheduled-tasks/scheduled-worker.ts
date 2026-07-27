@@ -10,6 +10,11 @@ import {
   ScheduledWorkerStatus,
   TransactionsWorkerScope,
 } from "../../shared/types";
+import { getTransactionMutationBlockReason } from "./transaction-mutation-guard";
+import type {
+  TransactionMutationAction,
+  WorkerStartGuard,
+} from "./transaction-mutation-guard";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -32,8 +37,6 @@ export interface WorkerStartResult {
   status: boolean;
   message: string;
 }
-
-type WorkerStartGuard = () => string | null;
 
 export class ScheduledWorker {
   protected rpcUrl: string | null;
@@ -352,19 +355,18 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     this.mutationGuard = mutationGuard;
   }
 
-  private getMutationBlockReason(): string | null {
-    const unavailableReason = this.getWorkerUnavailableReason();
-    if (unavailableReason) {
-      return unavailableReason;
-    }
-    const blockedReason = this.mutationGuard?.();
-    return blockedReason
-      ? `Transactions maintenance cannot start while ${blockedReason}. Try again after it finishes.`
-      : null;
+  private getMutationBlockReason(
+    action: TransactionMutationAction,
+  ): string | null {
+    return getTransactionMutationBlockReason(
+      action,
+      this.getWorkerUnavailableReason(),
+      this.mutationGuard,
+    );
   }
 
   public async resetToBlock(block: number) {
-    const blockedReason = this.getMutationBlockReason();
+    const blockedReason = this.getMutationBlockReason("reset");
     if (blockedReason) {
       return {
         status: false,
@@ -390,7 +392,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
   }
 
   public async recalculateTransactionsOwners() {
-    const blockedReason = this.getMutationBlockReason();
+    const blockedReason = this.getMutationBlockReason("recalculate-owners");
     if (blockedReason) {
       return {
         status: false,

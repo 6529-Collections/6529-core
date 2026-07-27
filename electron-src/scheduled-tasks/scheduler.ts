@@ -9,6 +9,7 @@ import {
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
 } from "../../shared/types";
+import { createTdhTransactionMutationGuard } from "./transaction-mutation-guard";
 
 const DEFAULT_BLOCK_RANGE = 500;
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
@@ -149,23 +150,17 @@ export function startSchedulers(
   }
 
   for (const scheduledWorker of scheduledWorkers) {
-    const workerName =
-      scheduledWorker.getNamespace() as ScheduledWorkerNames;
+    const workerName = scheduledWorker.getNamespace() as ScheduledWorkerNames;
     const conflictNames = WORKER_CONFLICTS[workerName] ?? [];
     if (conflictNames.length === 0) {
       continue;
     }
     scheduledWorker.setStartGuard(() => {
-      const conflict = scheduledWorkers.find(
-        (candidate) => {
-          const candidateName =
-            candidate.getNamespace() as ScheduledWorkerNames;
-          return conflictNames.includes(candidateName) && candidate.isRunning();
-        },
-      );
-      return conflict
-        ? `${conflict.getDisplay()} worker is running`
-        : null;
+      const conflict = scheduledWorkers.find((candidate) => {
+        const candidateName = candidate.getNamespace() as ScheduledWorkerNames;
+        return conflictNames.includes(candidateName) && candidate.isRunning();
+      });
+      return conflict ? `${conflict.getDisplay()} worker is running` : null;
     });
   }
 
@@ -176,8 +171,8 @@ export function startSchedulers(
   const tdhWorker = scheduledWorkers.find(
     (worker) => worker.getNamespace() === ScheduledWorkerNames.TDH_WORKER,
   );
-  transactionsWorker?.setMutationGuard(() =>
-    tdhWorker?.isRunning() ? "TDH worker is running" : null,
+  transactionsWorker?.setMutationGuard(
+    createTdhTransactionMutationGuard(() => tdhWorker?.isRunning() ?? false),
   );
 
   for (const scheduledWorker of scheduledWorkers) {
