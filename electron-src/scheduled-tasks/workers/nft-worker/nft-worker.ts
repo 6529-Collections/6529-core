@@ -143,11 +143,11 @@ const fetchMetadataWithArweaveFallback = async (uri: string): Promise<any> => {
 };
 
 export const retrieveNftFromURI = async (
-  db: DataSource,
   contract: string,
   tokenId: number,
   uri: string,
   editionSizes: EditionSizes,
+  mintDate: number,
 ): Promise<NFT> => {
   logInfo(
     parentPort,
@@ -155,8 +155,6 @@ export const retrieveNftFromURI = async (
   );
 
   const json = await fetchMetadataWithArweaveFallback(uri);
-
-  const mintDate = await getMintDate(db, contract, tokenId);
 
   const season =
     json.attributes.find((m: any) => m.trait_type === "Type - Season")?.value ??
@@ -420,5 +418,5 @@ export const getMintDate = async (
     order: { block: "ASC" },
   });
 
-  return firstTransaction?.transaction_date ?? Time.now().toSeconds();
+  return firstTransaction?.transaction_date ?? null;
 };

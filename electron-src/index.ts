@@ -2008,14 +2008,14 @@ ipcMain.on(DELETE_RPC_PROVIDER, (event, id: number) => {
     });
 });
 
-ipcMain.on(MANUAL_START_WORKER, (event, namespace: string) => {
+ipcMain.on(MANUAL_START_WORKER, (event, args: [string]) => {
+  const [namespace] = args;
   const worker = scheduledWorkers.find(
-    (worker) => worker.getNamespace() === namespace[0],
+    (worker) => worker.getNamespace() === namespace,
   );
-  let status: boolean;
   if (worker) {
-    status = worker.manualStart();
-    event.returnValue = { error: !status };
+    const data = worker.manualStart();
+    event.returnValue = { error: !data.status, data: data.message };
   } else {
     event.returnValue = { error: true, data: "Worker not found" };
   }

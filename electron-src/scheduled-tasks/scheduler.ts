@@ -9,6 +9,7 @@ import {
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
 } from "../../shared/types";
+import { createTdhTransactionMutationGuard } from "./transaction-mutation-guard";
 
 const DEFAULT_BLOCK_RANGE = 500;
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
@@ -23,6 +24,19 @@ interface ScheduledWorkerConfig {
   blockRange?: number;
   maxConcurrentRequests?: number;
 }
+
+const WORKER_CONFLICTS: Partial<
+  Record<ScheduledWorkerNames, ScheduledWorkerNames[]>
+> = {
+  [ScheduledWorkerNames.NFT_DELEGATION_WORKER]: [
+    ScheduledWorkerNames.TDH_WORKER,
+  ],
+  [ScheduledWorkerNames.NFTS_WORKER]: [ScheduledWorkerNames.TDH_WORKER],
+  [ScheduledWorkerNames.TDH_WORKER]: [
+    ScheduledWorkerNames.NFT_DELEGATION_WORKER,
+    ScheduledWorkerNames.NFTS_WORKER,
+  ],
+};
 
 const getCronExpressionMinutes = (intervalMinutes: number) => {
   return `*/${intervalMinutes} * * * *`;
@@ -72,8 +86,8 @@ export function startSchedulers(
     status: ScheduledWorkerStatus,
     message: string,
     action?: string,
-    statusPercentage?: number
-  ) => void
+    statusPercentage?: number,
+  ) => void,
 ) {
   if (!logDirectory) {
     throw new Error("Log directory is required");
@@ -98,7 +112,7 @@ export function startSchedulers(
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
-        worker.filePath
+        worker.filePath,
       );
     } else if (
       worker.name === ScheduledWorkerNames.NFT_DELEGATION_WORKER ||
@@ -115,7 +129,7 @@ export function startSchedulers(
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
-        worker.filePath
+        worker.filePath,
       );
     } else {
       scheduledWorker = new ScheduledWorker(
@@ -129,15 +143,48 @@ export function startSchedulers(
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
-        worker.filePath
+        worker.filePath,
       );
-    }
-    if (worker.enabled && worker.name !== ScheduledWorkerNames.TDH_WORKER) {
-      Logger.log(`Starting ${worker.name}`);
-      scheduledWorker.manualStart();
     }
     scheduledWorkers.push(scheduledWorker);
   }
+
+  for (const scheduledWorker of scheduledWorkers) {
+    const workerName = scheduledWorker.getNamespace() as ScheduledWorkerNames;
+    const conflictNames = WORKER_CONFLICTS[workerName] ?? [];
+    if (conflictNames.length === 0) {
+      continue;
+    }
+    scheduledWorker.setStartGuard(() => {
+      const conflict = scheduledWorkers.find((candidate) => {
+        const candidateName = candidate.getNamespace() as ScheduledWorkerNames;
+        return conflictNames.includes(candidateName) && candidate.isRunning();
+      });
+      return conflict ? `${conflict.getDisplay()} worker is running` : null;
+    });
+  }
+
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) =>
+      worker.getNamespace() === ScheduledWorkerNames.TRANSACTIONS_WORKER,
+  ) as TransactionsScheduledWorker | undefined;
+  const tdhWorker = scheduledWorkers.find(
+    (worker) => worker.getNamespace() === ScheduledWorkerNames.TDH_WORKER,
+  );
+  transactionsWorker?.setMutationGuard(
+    createTdhTransactionMutationGuard(() => tdhWorker?.isRunning() ?? false),
+  );
+
+  for (const scheduledWorker of scheduledWorkers) {
+    if (
+      scheduledWorker.isEnabled() &&
+      scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER
+    ) {
+      Logger.log(`Starting ${scheduledWorker.getNamespace()}`);
+      scheduledWorker.manualStart();
+    }
+  }
+
   Logger.log("All Tasks scheduled.");
   return scheduledWorkers;
 }

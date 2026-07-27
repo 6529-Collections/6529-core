@@ -221,6 +221,19 @@ class NFTWorker extends CoreWorker {
         printStatus(`NFT #${nextId} found`);
         sendUpdate(`New NFT: #${nextId} - Processing`);
 
+        const mintDate = await getMintDate(
+          this.getDb(),
+          contract.address,
+          nextId,
+        );
+        if (mintDate === null) {
+          printStatus(
+            `NFT #${nextId} is waiting for its transaction to be indexed`,
+          );
+          sendUpdate(`New NFT: #${nextId} - Waiting for transaction sync`);
+          break;
+        }
+
         const editionSizes = await getEditionSizes(
           this.getDb(),
           contract.address,
@@ -242,11 +255,11 @@ class NFTWorker extends CoreWorker {
         );
 
         const newNft = await retrieveNftFromURI(
-          this.getDb(),
           contract.address,
           nextId,
           uri,
           editionSizes,
+          mintDate,
         );
         await persistNfts(this.getDb(), [newNft]);
         sendUpdate(`New NFT: #${nextId} - Completed`);
@@ -382,6 +395,21 @@ class NFTWorker extends CoreWorker {
           `New NFT: Collection ${collectionId} #${normalisedTokenId} - Processing`,
         );
 
+        const mintDate = await getMintDate(
+          this.getDb(),
+          NEXTGEN_CONTRACT,
+          nextId,
+        );
+        if (mintDate === null) {
+          printStatus(
+            `NFT #${nextId} is waiting for its transaction to be indexed`,
+          );
+          sendUpdate(
+            `New NFT: Collection ${collectionId} #${normalisedTokenId} - Waiting for transaction sync`,
+          );
+          break;
+        }
+
         const editionSizes = await getEditionSizes(
           this.getDb(),
           NEXTGEN_CONTRACT,
@@ -399,11 +427,11 @@ class NFTWorker extends CoreWorker {
         );
 
         const newNft = await retrieveNftFromURI(
-          this.getDb(),
           NEXTGEN_CONTRACT,
           nextId,
           uri,
           editionSizes,
+          mintDate,
         );
 
         await persistNfts(this.getDb(), [newNft]);
@@ -450,6 +478,19 @@ class NFTWorker extends CoreWorker {
           action: "- Reading from chain",
         },
       });
+      const mintDate = await getMintDate(
+        this.getDb(),
+        contract.address,
+        nft.id,
+      );
+      const resolvedMintDate = mintDate ?? nft.mint_date;
+      if (mintDate === null) {
+        logInfo(
+          parentPort,
+          `[${contract.name} Refresh] NFT #${nft.id} has no indexed transaction; preserving its existing mint date while refreshing chain data`,
+        );
+      }
+
       const uri = await getTokenUri(contract.type, ethersContract, nft.id);
       const editionSizes = await getEditionSizes(
         this.getDb(),
@@ -461,17 +502,11 @@ class NFTWorker extends CoreWorker {
           refreshEditionSizeFloor: refreshEditionSizeFloorTokenIds.has(nft.id),
         },
       );
-      const mintDate = await getMintDate(
-        this.getDb(),
-        contract.address,
-        nft.id,
-      );
-
       const isChanged =
         editionSizes.editionSize !== nft.edition_size ||
         editionSizes.editionSizeFloor !== nft.edition_size_floor ||
         editionSizes.burnt !== nft.burns ||
-        mintDate !== nft.mint_date;
+        resolvedMintDate !== nft.mint_date;
 
       if ((uri && uri != nft.uri) || isChanged) {
         sendStatusUpdate(parentPort, {
@@ -482,12 +517,13 @@ class NFTWorker extends CoreWorker {
           },
         });
         const updatedNft = await retrieveNftFromURI(
-          this.getDb(),
           contract.address,
           nft.id,
           uri,
           editionSizes,
+          resolvedMintDate,
         );
+        updatedNft.tdh = nft.tdh;
         updatedNfts.push(updatedNft);
       }
     }
