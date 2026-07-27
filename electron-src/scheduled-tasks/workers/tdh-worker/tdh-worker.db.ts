@@ -19,7 +19,7 @@ import {
 } from "../../../db/entities/ITDH";
 import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
-import { batchSave } from "../../worker-helpers";
+import { batchSave, batchUpsert } from "../../worker-helpers";
 import { getMerkleRoot } from "./tdh-worker.merkle";
 import { Consolidation } from "../../../db/entities/IDelegation";
 import { preserveEditionSizeFloors } from "../nft-edition-size-floor-persistence";
@@ -398,19 +398,11 @@ export async function persistConsolidatedTDH(
 }
 
 export async function persistNFTs(db: DataSource, nfts: NFT[]) {
-  const distinctContracts = [
-    ...new Set(nfts.map((nft) => nft.contract.toLowerCase())),
-  ];
   await db.transaction(async (manager) => {
     const nftRepo = manager.getRepository(NFT);
     const nftsWithFloors = await preserveEditionSizeFloors(manager, nfts);
-    await nftRepo
-      .createQueryBuilder()
-      .delete()
-      .where("LOWER(contract) IN (:...contracts)", {
-        contracts: distinctContracts,
-      })
-      .execute();
-    await batchSave(nftRepo, nftsWithFloors);
+    // TDH passes an eligibility subset, not the authoritative NFT inventory.
+    // NFTs are append-only, and (id, contract) is the entity's composite key.
+    await batchUpsert(nftRepo, nftsWithFloors, ["id", "contract"]);
   });
 }
