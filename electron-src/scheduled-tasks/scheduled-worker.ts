@@ -10,6 +10,7 @@ import {
   ScheduledWorkerStatus,
   TransactionsWorkerScope,
 } from "../../shared/types";
+import { Time } from "../../shared/time";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -28,6 +29,13 @@ export interface ResettableWorkerData extends WorkerData {
   refresh?: boolean;
 }
 
+export interface WorkerStartResult {
+  status: boolean;
+  message: string;
+}
+
+type WorkerStartGuard = () => string | null;
+
 export class ScheduledWorker {
   protected rpcUrl: string | null;
   protected namespace: string;
@@ -40,6 +48,8 @@ export class ScheduledWorker {
   protected maxConcurrentRequests: number;
   protected logger: WorkerLogger;
   private task: cron.ScheduledTask | null = null;
+  private scheduledRetry: ReturnType<typeof setTimeout> | null = null;
+  private startGuard: WorkerStartGuard | null = null;
   protected worker: Worker | null = null;
 
   protected update: CoreWorkerMessageUpdate = {
@@ -53,7 +63,7 @@ export class ScheduledWorker {
     status: ScheduledWorkerStatus,
     message: string,
     action?: string,
-    statusPercentage?: number
+    statusPercentage?: number,
   ) => void;
 
   constructor(
@@ -71,9 +81,9 @@ export class ScheduledWorker {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      statusPercentage?: number
+      statusPercentage?: number,
     ) => void,
-    filePath?: string
+    filePath?: string,
   ) {
     this.rpcUrl = rpcUrl;
     this.namespace = namespace;
@@ -99,7 +109,7 @@ export class ScheduledWorker {
     this.postWorkerUpdate(
       this.namespace,
       this.update.status,
-      this.update.message
+      this.update.message,
     );
   }
 
@@ -107,20 +117,65 @@ export class ScheduledWorker {
     return cron.schedule(
       this.cronExpression,
       () => {
-        this.startWorker();
+        this.startScheduledWorker();
       },
       {
         timezone: "Etc/UTC",
-      }
+      },
     );
   }
 
-  public manualStart() {
-    if (this.worker || !this.enabled || this.isRunning()) {
-      return false;
+  private startScheduledWorker() {
+    if (this.worker || !this.enabled) {
+      return;
+    }
+
+    const blockedReason = this.startGuard?.();
+    if (blockedReason) {
+      this.logger.log("info", `Scheduled start waiting: ${blockedReason}`);
+      if (!this.scheduledRetry) {
+        this.scheduledRetry = setTimeout(() => {
+          this.scheduledRetry = null;
+          this.startScheduledWorker();
+        }, Time.seconds(30).toMillis());
+      }
+      return;
+    }
+
+    this.startWorker();
+  }
+
+  public setStartGuard(startGuard: WorkerStartGuard) {
+    this.startGuard = startGuard;
+  }
+
+  public isWaitingForScheduledStart(): boolean {
+    return this.scheduledRetry !== null;
+  }
+
+  protected getStartBlockReason(): string | null {
+    if (this.worker || this.isRunning()) {
+      return `${this.display} worker is already running`;
+    }
+    if (!this.enabled) {
+      return `${this.display} worker is disabled`;
+    }
+    return this.startGuard?.() ?? null;
+  }
+
+  public manualStart(): WorkerStartResult {
+    const blockedReason = this.getStartBlockReason();
+    if (blockedReason) {
+      return {
+        status: false,
+        message: blockedReason,
+      };
     }
     this.startWorker();
-    return true;
+    return {
+      status: true,
+      message: `${this.display} worker started`,
+    };
   }
 
   protected startWorker(workerData?: WorkerData | TransactionsWorkerData) {
@@ -140,7 +195,7 @@ export class ScheduledWorker {
     this.logger.log("info", `Starting task\n\n---------- New Run ----------\n`);
 
     Logger.log(
-      `[${this.namespace}] Starting scheduled task execution at ${this.filePath}`
+      `[${this.namespace}] Starting scheduled task execution at ${this.filePath}`,
     );
 
     // Path to the compiled worker script
@@ -157,7 +212,7 @@ export class ScheduledWorker {
           Logger.error(
             `[${this.namespace}]`,
             message.log.args[0],
-            message.log.args[1]
+            message.log.args[1],
           );
         }
         this.logger.log(message.log.level, ...message.log.args);
@@ -168,7 +223,7 @@ export class ScheduledWorker {
           this.update.status,
           this.update.message,
           this.update.action,
-          this.update.statusPercentage
+          this.update.statusPercentage,
         );
       }
     });
@@ -230,6 +285,10 @@ export class ScheduledWorker {
 
   public async terminate() {
     this.task?.stop();
+    if (this.scheduledRetry) {
+      clearTimeout(this.scheduledRetry);
+      this.scheduledRetry = null;
+    }
     return await this.manualStop();
   }
 
@@ -244,7 +303,7 @@ export class ScheduledWorker {
       this.update.status,
       this.update.message,
       "",
-      this.update.statusPercentage
+      this.update.statusPercentage,
     );
 
     return {
@@ -270,9 +329,9 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      statusPercentage?: number
+      statusPercentage?: number,
     ) => void,
-    filePath?: string
+    filePath?: string,
   ) {
     super(
       rpcUrl,
@@ -285,22 +344,16 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       maxConcurrentRequests,
       logDirectory,
       postWorkerUpdate,
-      filePath
+      filePath,
     );
   }
 
   public async resetToBlock(block: number) {
-    if (this.worker || this.isRunning()) {
+    const blockedReason = this.getStartBlockReason();
+    if (blockedReason) {
       return {
         status: false,
-        message: "Transactions worker is already running",
-      };
-    }
-
-    if (!this.enabled) {
-      return {
-        status: false,
-        message: "Worker is disabled",
+        message: blockedReason,
       };
     }
 
@@ -322,17 +375,11 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
   }
 
   public async recalculateTransactionsOwners() {
-    if (this.worker || this.isRunning()) {
+    const blockedReason = this.getStartBlockReason();
+    if (blockedReason) {
       return {
         status: false,
-        message: "Transactions worker is already running",
-      };
-    }
-
-    if (!this.enabled) {
-      return {
-        status: false,
-        message: "Worker is disabled",
+        message: blockedReason,
       };
     }
 
@@ -369,9 +416,9 @@ export class ResettableScheduledWorker extends ScheduledWorker {
       status: ScheduledWorkerStatus,
       message: string,
       action?: string,
-      statusPercentage?: number
+      statusPercentage?: number,
     ) => void,
-    filePath?: string
+    filePath?: string,
   ) {
     super(
       rpcUrl,
@@ -384,25 +431,19 @@ export class ResettableScheduledWorker extends ScheduledWorker {
       maxConcurrentRequests,
       logDirectory,
       postWorkerUpdate,
-      filePath
+      filePath,
     );
   }
 
   private async startResettableRun(
     flag: "reset" | "refresh",
-    startedMessage: string
+    startedMessage: string,
   ) {
-    if (this.worker || this.isRunning()) {
+    const blockedReason = this.getStartBlockReason();
+    if (blockedReason) {
       return {
         status: false,
-        message: "Worker is already running",
-      };
-    }
-
-    if (!this.enabled) {
-      return {
-        status: false,
-        message: "Worker is disabled",
+        message: blockedReason,
       };
     }
 

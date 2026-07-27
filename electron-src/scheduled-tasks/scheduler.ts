@@ -24,6 +24,27 @@ interface ScheduledWorkerConfig {
   maxConcurrentRequests?: number;
 }
 
+const WORKER_CONFLICTS: Partial<
+  Record<ScheduledWorkerNames, ScheduledWorkerNames[]>
+> = {
+  [ScheduledWorkerNames.TRANSACTIONS_WORKER]: [
+    ScheduledWorkerNames.NFTS_WORKER,
+    ScheduledWorkerNames.TDH_WORKER,
+  ],
+  [ScheduledWorkerNames.NFT_DELEGATION_WORKER]: [
+    ScheduledWorkerNames.TDH_WORKER,
+  ],
+  [ScheduledWorkerNames.NFTS_WORKER]: [
+    ScheduledWorkerNames.TRANSACTIONS_WORKER,
+    ScheduledWorkerNames.TDH_WORKER,
+  ],
+  [ScheduledWorkerNames.TDH_WORKER]: [
+    ScheduledWorkerNames.TRANSACTIONS_WORKER,
+    ScheduledWorkerNames.NFT_DELEGATION_WORKER,
+    ScheduledWorkerNames.NFTS_WORKER,
+  ],
+};
+
 const getCronExpressionMinutes = (intervalMinutes: number) => {
   return `*/${intervalMinutes} * * * *`;
 };
@@ -72,8 +93,8 @@ export function startSchedulers(
     status: ScheduledWorkerStatus,
     message: string,
     action?: string,
-    statusPercentage?: number
-  ) => void
+    statusPercentage?: number,
+  ) => void,
 ) {
   if (!logDirectory) {
     throw new Error("Log directory is required");
@@ -98,7 +119,7 @@ export function startSchedulers(
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
-        worker.filePath
+        worker.filePath,
       );
     } else if (
       worker.name === ScheduledWorkerNames.NFT_DELEGATION_WORKER ||
@@ -115,7 +136,7 @@ export function startSchedulers(
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
-        worker.filePath
+        worker.filePath,
       );
     } else {
       scheduledWorker = new ScheduledWorker(
@@ -129,15 +150,38 @@ export function startSchedulers(
         worker.maxConcurrentRequests ?? DEFAULT_MAX_CONCURRENT_REQUESTS,
         logDirectory,
         postWorkerUpdate,
-        worker.filePath
+        worker.filePath,
       );
-    }
-    if (worker.enabled && worker.name !== ScheduledWorkerNames.TDH_WORKER) {
-      Logger.log(`Starting ${worker.name}`);
-      scheduledWorker.manualStart();
     }
     scheduledWorkers.push(scheduledWorker);
   }
+
+  for (const scheduledWorker of scheduledWorkers) {
+    const conflictNames =
+      WORKER_CONFLICTS[
+        scheduledWorker.getNamespace() as ScheduledWorkerNames
+      ] ?? [];
+    scheduledWorker.setStartGuard(() => {
+      const conflict = scheduledWorkers.find(
+        (candidate) =>
+          conflictNames.includes(
+            candidate.getNamespace() as ScheduledWorkerNames,
+          ) &&
+          (candidate.isRunning() || candidate.isWaitingForScheduledStart()),
+      );
+      return conflict
+        ? `${scheduledWorker.getDisplay()} worker is waiting for ${conflict.getDisplay()} worker`
+        : null;
+    });
+  }
+
+  for (const scheduledWorker of scheduledWorkers) {
+    if (scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER) {
+      Logger.log(`Starting ${scheduledWorker.getNamespace()}`);
+      scheduledWorker.manualStart();
+    }
+  }
+
   Logger.log("All Tasks scheduled.");
   return scheduledWorkers;
 }

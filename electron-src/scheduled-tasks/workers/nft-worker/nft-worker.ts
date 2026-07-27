@@ -420,5 +420,11 @@ export const getMintDate = async (
     order: { block: "ASC" },
   });
 
-  return firstTransaction?.transaction_date ?? Time.now().toSeconds();
+  if (!firstTransaction) {
+    throw new Error(
+      `Missing mint transaction for NFT ${contract.toLowerCase()} #${tokenId}`,
+    );
+  }
+
+  return firstTransaction.transaction_date;
 };
