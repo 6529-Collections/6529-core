@@ -401,6 +401,8 @@ export async function persistNFTs(db: DataSource, nfts: NFT[]) {
   await db.transaction(async (manager) => {
     const nftRepo = manager.getRepository(NFT);
     const nftsWithFloors = await preserveEditionSizeFloors(manager, nfts);
+    // TDH passes an eligibility subset, not the authoritative NFT inventory.
+    // NFTs are append-only, and (id, contract) is the entity's composite key.
     await batchUpsert(nftRepo, nftsWithFloors, ["id", "contract"]);
   });
 }

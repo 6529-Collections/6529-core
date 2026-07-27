@@ -45,6 +45,15 @@ const WORKER_CONFLICTS: Partial<
   ],
 };
 
+const WORKER_START_PRIORITY: Record<ScheduledWorkerNames, number> = {
+  // Waiting workers only block lower-priority conflicts. This preserves TDH
+  // priority without allowing two pending workers to block each other.
+  [ScheduledWorkerNames.TDH_WORKER]: 0,
+  [ScheduledWorkerNames.TRANSACTIONS_WORKER]: 1,
+  [ScheduledWorkerNames.NFT_DELEGATION_WORKER]: 2,
+  [ScheduledWorkerNames.NFTS_WORKER]: 3,
+};
+
 const getCronExpressionMinutes = (intervalMinutes: number) => {
   return `*/${intervalMinutes} * * * *`;
 };
@@ -157,17 +166,22 @@ export function startSchedulers(
   }
 
   for (const scheduledWorker of scheduledWorkers) {
-    const conflictNames =
-      WORKER_CONFLICTS[
-        scheduledWorker.getNamespace() as ScheduledWorkerNames
-      ] ?? [];
+    const workerName =
+      scheduledWorker.getNamespace() as ScheduledWorkerNames;
+    const conflictNames = WORKER_CONFLICTS[workerName] ?? [];
     scheduledWorker.setStartGuard(() => {
       const conflict = scheduledWorkers.find(
-        (candidate) =>
-          conflictNames.includes(
-            candidate.getNamespace() as ScheduledWorkerNames,
-          ) &&
-          (candidate.isRunning() || candidate.isWaitingForScheduledStart()),
+        (candidate) => {
+          const candidateName =
+            candidate.getNamespace() as ScheduledWorkerNames;
+          return (
+            conflictNames.includes(candidateName) &&
+            (candidate.isRunning() ||
+              (candidate.isWaitingForScheduledStart() &&
+                WORKER_START_PRIORITY[candidateName] <
+                  WORKER_START_PRIORITY[workerName]))
+          );
+        },
       );
       return conflict
         ? `${scheduledWorker.getDisplay()} worker is waiting for ${conflict.getDisplay()} worker`
