@@ -407,7 +407,7 @@ class NFTWorker extends CoreWorker {
           sendUpdate(
             `New NFT: Collection ${collectionId} #${normalisedTokenId} - Waiting for transaction sync`,
           );
-          return;
+          break;
         }
 
         const editionSizes = await getEditionSizes(
@@ -483,12 +483,12 @@ class NFTWorker extends CoreWorker {
         contract.address,
         nft.id,
       );
+      const resolvedMintDate = mintDate ?? nft.mint_date;
       if (mintDate === null) {
         logInfo(
           parentPort,
-          `[${contract.name} Refresh] NFT #${nft.id} is waiting for transaction sync; preserving existing data`,
+          `[${contract.name} Refresh] NFT #${nft.id} has no indexed transaction; preserving its existing mint date while refreshing chain data`,
         );
-        continue;
       }
 
       const uri = await getTokenUri(contract.type, ethersContract, nft.id);
@@ -506,7 +506,7 @@ class NFTWorker extends CoreWorker {
         editionSizes.editionSize !== nft.edition_size ||
         editionSizes.editionSizeFloor !== nft.edition_size_floor ||
         editionSizes.burnt !== nft.burns ||
-        mintDate !== nft.mint_date;
+        resolvedMintDate !== nft.mint_date;
 
       if ((uri && uri != nft.uri) || isChanged) {
         sendStatusUpdate(parentPort, {
@@ -521,7 +521,7 @@ class NFTWorker extends CoreWorker {
           nft.id,
           uri,
           editionSizes,
-          mintDate,
+          resolvedMintDate,
         );
         updatedNfts.push(updatedNft);
       }
