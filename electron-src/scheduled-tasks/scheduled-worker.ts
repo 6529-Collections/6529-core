@@ -214,11 +214,7 @@ export class ScheduledWorker {
     this.worker.on("message", (message: CoreWorkerMessage) => {
       if (message.log) {
         if (message.log.level === "error") {
-          Logger.error(
-            `[${this.namespace}]`,
-            message.log.args[0],
-            message.log.args[1],
-          );
+          Logger.error(`[${this.namespace}]`, ...message.log.args);
         }
         this.logger.log(message.log.level, ...message.log.args);
       } else if (message.update) {
@@ -252,6 +248,10 @@ export class ScheduledWorker {
 
   public getDisplay(): string {
     return this.display;
+  }
+
+  public isEnabled(): boolean {
+    return this.enabled;
   }
 
   public getLogger(): WorkerLogger {

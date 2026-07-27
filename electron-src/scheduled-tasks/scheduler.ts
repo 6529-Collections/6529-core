@@ -176,7 +176,10 @@ export function startSchedulers(
   );
 
   for (const scheduledWorker of scheduledWorkers) {
-    if (scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER) {
+    if (
+      scheduledWorker.isEnabled() &&
+      scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER
+    ) {
       Logger.log(`Starting ${scheduledWorker.getNamespace()}`);
       scheduledWorker.manualStart();
     }

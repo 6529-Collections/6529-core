@@ -523,6 +523,7 @@ class NFTWorker extends CoreWorker {
           editionSizes,
           resolvedMintDate,
         );
+        updatedNft.tdh = nft.tdh;
         updatedNfts.push(updatedNft);
       }
     }
