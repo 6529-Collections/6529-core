@@ -12,7 +12,7 @@ import {
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { publicEnv } from "@/config/env";
-import { isPublicReviewEnabled } from "@/config/publicReviews";
+import { isStreamReviewPubliclyAvailable } from "@/lib/public-review/streamReviewRoutes";
 import { DocumentTextIcon } from "@heroicons/react/24/outline";
 import { useMemo, type ComponentType } from "react";
 
@@ -177,7 +177,9 @@ export function useSidebarSections(
   appWalletsSupported: boolean,
   isIos: boolean,
   country: string | null,
-  publicReviewsEnabled = isPublicReviewEnabled(publicEnv.BASE_ENDPOINT),
+  publicReviewsEnabled = isStreamReviewPubliclyAvailable(
+    publicEnv.BASE_ENDPOINT
+  ),
   ipfsWebuiUrl = ""
 ): SidebarSection[] {
   const hideSubscriptions = shouldHideSubscriptions({
