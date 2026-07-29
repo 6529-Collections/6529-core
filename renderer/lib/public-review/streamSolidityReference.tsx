@@ -45,16 +45,15 @@ import type {
   SolidityDeclarationKind,
   SolidityDefinitionIndexEntry,
   SolidityReferenceManifest,
-  SolidityReferenceReviewIdentity,
   SolidityTopLevelDeclaration,
 } from "@/lib/public-review/solidityReferenceTypes";
 import {
   getStreamReviewFeedbackHref,
-  getStreamReviewVersion,
   isStreamReviewVersionPubliclyAvailable,
   STREAM_REVIEW_DEFINITION,
   STREAM_REVIEW_SLUG,
 } from "@/lib/public-review/streamReviewDefinition";
+import { STREAM_SOLIDITY_REFERENCE_IDENTITY } from "@/lib/public-review/streamSolidityReferenceIdentity.server";
 import type {
   PublicReviewCodeSelection,
   PublicReviewDiscussionDestination,
@@ -66,38 +65,6 @@ export interface StreamSolidityReferenceRouteParams {
   readonly review: string;
   readonly version?: string | undefined;
 }
-
-const activeStreamReviewVersion = getStreamReviewVersion();
-if (!activeStreamReviewVersion) {
-  throw new Error("The active Stream review version is unavailable.");
-}
-
-const publiclyAvailableStreamReviewVersions =
-  STREAM_REVIEW_DEFINITION.versions.filter((candidate) =>
-    isStreamReviewVersionPubliclyAvailable(candidate.version)
-  );
-const referenceActiveStreamReviewVersion =
-  publiclyAvailableStreamReviewVersions.find(
-    (candidate) => candidate.version === STREAM_REVIEW_DEFINITION.activeVersion
-  ) ??
-  publiclyAvailableStreamReviewVersions.at(-1) ??
-  activeStreamReviewVersion;
-
-const STREAM_SOLIDITY_REFERENCE_IDENTITY: SolidityReferenceReviewIdentity = {
-  activeSourceCommit: referenceActiveStreamReviewVersion.source.commit,
-  activeVersion: referenceActiveStreamReviewVersion.version,
-  availableVersions: publiclyAvailableStreamReviewVersions.map(
-    (candidate) => candidate.version
-  ),
-  reviewId: STREAM_REVIEW_SLUG,
-  sourceCommits: Object.fromEntries(
-    STREAM_REVIEW_DEFINITION.versions.map((candidate) => [
-      candidate.version,
-      candidate.source.commit,
-    ])
-  ),
-  sourceRepository: activeStreamReviewVersion.source.repository,
-};
 
 let defaultReader: SolidityReferenceReader | undefined;
 

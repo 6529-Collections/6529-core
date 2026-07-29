@@ -17,7 +17,7 @@ const PROFILES = new Set(["production", "staging"]);
 const PUBLIC_REVIEW_CONFIG_DIRECTORY = "config/public-reviews";
 const PUBLIC_REVIEW_DATA_DIRECTORY = "public/review-data";
 const PUBLIC_REVIEW_EDITORIAL_DIRECTORY = "content/public-reviews";
-const PUBLIC_REVIEW_PUBLICATION_SCHEMA = "public-review.publication.v2";
+const PUBLIC_REVIEW_PUBLICATION_SCHEMA = "public-review.publication.v3";
 const PUBLIC_REVIEW_LIFECYCLE_STATES = new Set([
   "DRAFT",
   "SCHEDULED",
@@ -241,7 +241,8 @@ function getPublicReviewPublicationConfigs(repoRoot) {
               version !== null &&
               typeof version === "object" &&
               SAFE_VERSION_PATTERN.test(version.version) &&
-              PUBLIC_REVIEW_LIFECYCLE_STATES.has(version.lifecycleState)
+              PUBLIC_REVIEW_LIFECYCLE_STATES.has(version.lifecycleState) &&
+              SOURCE_PIN_PATTERN.test(version.sourceCommit)
           ) &&
           new Set(config.versions.map((version) => version.version)).size ===
             config.versions.length,
@@ -322,14 +323,14 @@ function getPublicReviewPublicationPlans(repoRoot) {
           ) === JSON.stringify(retainedVersions),
         `${publication.reviewId} source review index drifted from publication config.`
       );
-
-      const activePublication = publication.versions.find(
-        (version) => version.version === reference.config.reviewVersion
-      );
       invariant(
-        activePublication?.lifecycleState === publication.lifecycleState,
-        `${publication.reviewId} active publication lifecycle drifted.`
+        sourceIndex.versions.every(
+          (entry, index) =>
+            entry.commit === publication.versions[index].sourceCommit
+        ),
+        `${publication.reviewId} source review index commits drifted from trusted publication identities.`
       );
+
       const publishedVersions = new Set(
         publication.versions
           .filter((version) =>
@@ -344,6 +345,29 @@ function getPublicReviewPublicationPlans(repoRoot) {
         : [...retainedVersions]
             .reverse()
             .find((version) => publishedVersions.has(version));
+      const sourceActivePublication = publication.versions.find(
+        (version) => version.version === reference.config.reviewVersion
+      );
+      invariant(
+        sourceActivePublication &&
+          sourceActivePublication.sourceCommit ===
+            reference.config.source.commit,
+        `${publication.reviewId} source-active publication identity drifted from source config.`
+      );
+      if (sourceActivePublication.lifecycleState !== "DRAFT") {
+        invariant(
+          sourceActivePublication.lifecycleState === publication.lifecycleState,
+          `${publication.reviewId} active publication lifecycle drifted.`
+        );
+      } else if (publication.lifecycleState !== "DRAFT") {
+        const fallbackPublication = publication.versions.find(
+          (version) => version.version === indexActiveVersion
+        );
+        invariant(
+          fallbackPublication?.lifecycleState === publication.lifecycleState,
+          `${publication.reviewId} fallback publication lifecycle drifted.`
+        );
+      }
 
       return [
         publication.reviewId,
@@ -363,9 +387,7 @@ function getPublishedReviewIds(repoRoot) {
   return new Set(
     [...getPublicReviewPublicationPlans(repoRoot).entries()]
       .filter(([, plan]) =>
-        PUBLIC_REVIEW_PUBLIC_ROUTE_STATES.has(
-          plan.publication.lifecycleState
-        )
+        PUBLIC_REVIEW_PUBLIC_ROUTE_STATES.has(plan.publication.lifecycleState)
       )
       .map(([reviewId]) => reviewId)
   );
@@ -790,9 +812,7 @@ function assertCanonicalReviewEvidence({
     config.reviewId
   );
   return index.versions
-    .filter((entry) =>
-      publicationPlan.publishedVersions.has(entry.version)
-    )
+    .filter((entry) => publicationPlan.publishedVersions.has(entry.version))
     .map((entry) => {
       invariant(
         SAFE_VERSION_PATTERN.test(entry.version) &&
@@ -801,11 +821,7 @@ function assertCanonicalReviewEvidence({
           SHA256_URN_PATTERN.test(entry.bundleSha256),
         `${config.reviewId}@${entry.version} review index entry is invalid.`
       );
-      const versionRoot = path.join(
-        reviewRoot,
-        "versions",
-        entry.version
-      );
+      const versionRoot = path.join(reviewRoot, "versions", entry.version);
       const bundlePath = path.join(versionRoot, config.output.bundleFile);
       const expectedBundlePath = `/review-data/${config.reviewId}/versions/${entry.version}/${config.output.bundleFile}`;
       invariant(
@@ -959,10 +975,7 @@ function assertStagingEvidence(
     }) ===
       directoryIdentity(bundlePublicReviewRoot, {
         ignore: (relativePath) =>
-          isReviewIndexPath(
-            `review-data/${relativePath}`,
-            publicationPlans
-          ),
+          isReviewIndexPath(`review-data/${relativePath}`, publicationPlans),
       }),
     "Staging public-review data does not exactly match the trusted source tree."
   );
@@ -1087,12 +1100,7 @@ function assertProfileBundle({
 }) {
   invariant(PROFILES.has(profile), `Unsupported artifact profile: ${profile}`);
   invariant(fs.statSync(bundleRoot).isDirectory(), "Bundle root is missing.");
-  assertPublicCopyIdentity(
-    repoRoot,
-    bundleRoot,
-    profile,
-    publicationPlans
-  );
+  assertPublicCopyIdentity(repoRoot, bundleRoot, profile, publicationPlans);
 
   if (profile === "production") {
     assertProductionAbsence(bundleRoot);
