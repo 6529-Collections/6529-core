@@ -1325,6 +1325,7 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
 );
 
 const COMMON_MESSAGES = objectMessages("common", {
+  clearFilters: "Clear filters",
   close: "Close",
 } as const);
 

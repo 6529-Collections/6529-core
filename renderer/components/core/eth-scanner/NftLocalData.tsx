@@ -17,7 +17,6 @@ import {
   faChevronDown,
   faChevronUp,
   faRefresh,
-  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
@@ -444,37 +443,17 @@ export default function NftLocalData() {
           </div>
 
           {clearFiltersEnabled && (
-            <>
-              <button
-                type="button"
-                data-tooltip-id="clear-nft-filters-tooltip"
-                aria-label={t(
-                  locale,
-                  "core.ethScanner.nftsData.actions.clearFilters"
-                )}
-                onClick={() => setQueryParams(initialQueryParams)}
-                className="tw-inline-flex tw-h-10 tw-w-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-0 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
-              >
-                <FontAwesomeIcon
-                  icon={faXmark}
-                  className="tw-h-4 tw-w-4"
-                  aria-hidden="true"
-                />
-              </button>
-              <Tooltip
-                id="clear-nft-filters-tooltip"
-                style={{
-                  backgroundColor: "#1F2937",
-                  color: "white",
-                  padding: "4px 8px",
-                }}
-                delayShow={150}
-                openEvents={{ mouseenter: true, focus: true }}
-                closeEvents={{ mouseleave: true, blur: true, click: true }}
-              >
-                {t(locale, "core.ethScanner.nftsData.actions.clearFilters")}
-              </Tooltip>
-            </>
+            <button
+              type="button"
+              aria-label={t(
+                locale,
+                "core.ethScanner.nftsData.actions.clearFilters"
+              )}
+              onClick={() => setQueryParams(initialQueryParams)}
+              className="tw-inline-flex tw-h-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border tw-border-solid tw-border-white/10 tw-bg-transparent tw-px-3 tw-text-sm tw-font-medium tw-text-iron-300 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-border-white/20 desktop-hover:hover:tw-bg-white/[0.06] desktop-hover:hover:tw-text-white"
+            >
+              {t(locale, "common.clearFilters")}
+            </button>
           )}
         </div>
         <div className="tw-flex tw-items-center tw-gap-2">
