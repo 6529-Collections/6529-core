@@ -306,7 +306,8 @@ export const localDb = {
     endDate?: number,
     page?: number,
     limit?: number,
-    contractAddress?: string
+    contractAddress?: string,
+    sortDirection?: string
   ) =>
     ipcRenderer.invoke("get-transactions", {
       startDate,
@@ -314,6 +315,7 @@ export const localDb = {
       page,
       limit,
       contractAddress,
+      sortDirection,
     }),
   getNfts: (
     page?: number,

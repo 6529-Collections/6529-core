@@ -7,14 +7,46 @@ import {
   NEXTGEN_CONTRACT,
 } from "@/constants/constants";
 import { Transaction } from "@/entities/ITransaction";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { formatInteger } from "@/i18n/format";
+import { t } from "@/i18n/messages";
 import { PaginatedResponseLocal } from "@/shared/types";
-import { faRefresh, faXmark } from "@fortawesome/free-solid-svg-icons";
+import {
+  faChevronDown,
+  faChevronUp,
+  faRefresh,
+  faXmark,
+} from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
+
+type TransactionSortDirection = "ASC" | "DESC";
+
+const SORT_DIRECTION_OPTIONS = [
+  {
+    actionLabelKey:
+      "core.ethScanner.transactionsData.actions.sortAscending",
+    icon: faChevronUp,
+    tooltipId: "sort-transactions-ascending-tooltip",
+    value: "ASC",
+  },
+  {
+    actionLabelKey:
+      "core.ethScanner.transactionsData.actions.sortDescending",
+    icon: faChevronDown,
+    tooltipId: "sort-transactions-descending-tooltip",
+    value: "DESC",
+  },
+] as const satisfies ReadonlyArray<{
+  readonly actionLabelKey: string;
+  readonly icon: typeof faChevronUp;
+  readonly tooltipId: string;
+  readonly value: TransactionSortDirection;
+}>;
 
 const initialQueryParams = {
   contractAddress: "",
@@ -22,18 +54,27 @@ const initialQueryParams = {
   endDate: undefined as string | undefined,
   page: 1,
   limit: 10,
+  sortDirection: "DESC" as TransactionSortDirection,
 };
 
 export default function TransactionsLocalData() {
+  const locale = useBrowserLocale();
   const [transactions, setTransactions] =
     useState<PaginatedResponseLocal<Transaction>>();
   const [queryParams, setQueryParams] = useState(initialQueryParams);
 
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchTransactions = () => {
+  const fetchTransactions = useCallback(() => {
     setIsLoading(true);
-    const { startDate, endDate, page, limit, contractAddress } = queryParams;
+    const {
+      startDate,
+      endDate,
+      page,
+      limit,
+      contractAddress,
+      sortDirection,
+    } = queryParams;
 
     window.localDb
       .getTransactions(
@@ -41,7 +82,8 @@ export default function TransactionsLocalData() {
         Number((Number(endDate) / 1000).toFixed(0)),
         page,
         limit,
-        contractAddress
+        contractAddress,
+        sortDirection
       )
       .then((transactions) => {
         transactions.data.forEach((t: Transaction) => {
@@ -54,25 +96,45 @@ export default function TransactionsLocalData() {
       .finally(() => {
         setIsLoading(false);
       });
-  };
+  }, [queryParams]);
 
   useEffect(() => {
     fetchTransactions();
-  }, [queryParams]);
+  }, [fetchTransactions]);
 
-  const updateQueryParams = (key: keyof typeof queryParams, value: any) => {
-    setQueryParams((prev) => ({ ...prev, [key]: value }));
+  const updateQueryParams = (
+    updates: Partial<typeof queryParams>,
+    resetPage = true
+  ) => {
+    setQueryParams((prev) => ({
+      ...prev,
+      ...updates,
+      page: resetPage ? 1 : (updates.page ?? prev.page),
+    }));
   };
 
-  const clearFiltersEnabled =
-    JSON.stringify(queryParams) !== JSON.stringify(initialQueryParams);
+  const clearFiltersEnabled = useMemo(
+    () =>
+      queryParams.contractAddress !== initialQueryParams.contractAddress ||
+      queryParams.startDate !== initialQueryParams.startDate ||
+      queryParams.endDate !== initialQueryParams.endDate ||
+      queryParams.page !== initialQueryParams.page ||
+      queryParams.limit !== initialQueryParams.limit ||
+      queryParams.sortDirection !== initialQueryParams.sortDirection,
+    [queryParams]
+  );
 
   return (
     <div className="tw-mt-4">
       <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-4">
-        <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-4">
-          <div className="tw-flex tw-items-center tw-gap-2">
-            <span>Start Date:</span>
+        <div className="tw-flex tw-flex-wrap tw-items-end tw-gap-4">
+          <label className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(
+                locale,
+                "core.ethScanner.transactionsData.filters.startDate"
+              )}
+            </span>
             <input
               type="date"
               value={
@@ -80,24 +142,25 @@ export default function TransactionsLocalData() {
                   ? new Date(Number(queryParams.startDate) + 86400000)
                       .toISOString()
                       .split("T")[0]
-                  : undefined
+                  : ""
               }
               onChange={(e) =>
-                updateQueryParams(
-                  "startDate",
-                  e.target.value
+                updateQueryParams({
+                  startDate: e.target.value
                     ? new Date(new Date(e.target.value).setHours(0, 0, 0, 0))
                         .getTime()
                         .toString()
-                    : undefined
-                )
+                    : undefined,
+                })
               }
-              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
-              placeholder="Start Date"
+              className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             />
-          </div>
-          <div className="tw-flex tw-items-center tw-gap-2">
-            <span>End Date:</span>
+          </label>
+
+          <label className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(locale, "core.ethScanner.transactionsData.filters.endDate")}
+            </span>
             <input
               type="date"
               value={
@@ -105,74 +168,181 @@ export default function TransactionsLocalData() {
                   ? new Date(Number(queryParams.endDate))
                       .toISOString()
                       .split("T")[0]
-                  : undefined
+                  : ""
               }
               onChange={(e) =>
-                updateQueryParams(
-                  "endDate",
-                  e.target.value
+                updateQueryParams({
+                  endDate: e.target.value
                     ? new Date(
                         new Date(e.target.value).setHours(23, 59, 59, 999)
                       )
                         .getTime()
                         .toString()
-                    : undefined
-                )
+                    : undefined,
+                })
               }
-              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
-              placeholder="End Date"
+              className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             />
-          </div>
-          <div className="tw-flex tw-items-center tw-gap-2">
-            <span>Page Size:</span>
+          </label>
+
+          <label className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(locale, "core.ethScanner.transactionsData.filters.pageSize")}
+            </span>
             <select
               value={queryParams.limit}
               onChange={(e) =>
-                updateQueryParams("limit", Number(e.target.value))
+                updateQueryParams({ limit: Number(e.target.value) })
               }
-              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+              className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={50}>50</option>
             </select>
-          </div>
-          <div className="tw-flex tw-items-center tw-gap-2">
+          </label>
+
+          <label className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(locale, "core.ethScanner.transactionsData.filters.contract")}
+            </span>
             <select
               value={queryParams.contractAddress}
               onChange={(e) =>
-                updateQueryParams("contractAddress", e.target.value)
+                updateQueryParams({ contractAddress: e.target.value })
               }
-              className="tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+              className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             >
-              <option value={""}>All Contracts</option>
-              <option value={MEMES_CONTRACT}>The Memes</option>
-              <option value={GRADIENT_CONTRACT}>6529 Gradient</option>
-              <option value={NEXTGEN_CONTRACT}>NextGen</option>
-              <option value={MEMELAB_CONTRACT}>Meme Lab</option>
+              <option value="">
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.contracts.all"
+                )}
+              </option>
+              <option value={MEMES_CONTRACT}>
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.contracts.memes"
+                )}
+              </option>
+              <option value={GRADIENT_CONTRACT}>
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.contracts.gradient"
+                )}
+              </option>
+              <option value={NEXTGEN_CONTRACT}>
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.contracts.nextgen"
+                )}
+              </option>
+              <option value={MEMELAB_CONTRACT}>
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.contracts.memelab"
+                )}
+              </option>
             </select>
+          </label>
+
+          <div className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(
+                locale,
+                "core.ethScanner.transactionsData.filters.sortDirection"
+              )}
+            </span>
+            <div
+              className="tw-flex tw-items-center tw-gap-2"
+              role="group"
+              aria-label={t(
+                locale,
+                "core.ethScanner.transactionsData.filters.sortDirection"
+              )}
+            >
+              {SORT_DIRECTION_OPTIONS.map((option) => {
+                const active = queryParams.sortDirection === option.value;
+                return (
+                  <span key={option.value} className="tw-inline-flex">
+                    <button
+                      type="button"
+                      data-tooltip-id={option.tooltipId}
+                      aria-label={t(locale, option.actionLabelKey)}
+                      aria-pressed={active}
+                      onClick={() =>
+                        updateQueryParams({ sortDirection: option.value })
+                      }
+                      className={`tw-inline-flex tw-h-12 tw-w-12 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-p-0 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 ${
+                        active
+                          ? "tw-bg-iron-100 tw-text-black desktop-hover:hover:tw-bg-white"
+                          : "tw-bg-iron-700 tw-text-iron-100 desktop-hover:hover:tw-bg-iron-600"
+                      }`}
+                    >
+                      <FontAwesomeIcon
+                        icon={option.icon}
+                        className="tw-h-4 tw-w-4"
+                        aria-hidden="true"
+                      />
+                    </button>
+                    <Tooltip
+                      id={option.tooltipId}
+                      style={{
+                        backgroundColor: "#1F2937",
+                        color: "white",
+                        padding: "4px 8px",
+                      }}
+                      delayShow={150}
+                      openEvents={{ mouseenter: true, focus: true }}
+                      closeEvents={{
+                        mouseleave: true,
+                        blur: true,
+                        click: true,
+                      }}
+                    >
+                      {t(locale, option.actionLabelKey)}
+                    </Tooltip>
+                  </span>
+                );
+              })}
+            </div>
           </div>
+
           {clearFiltersEnabled && (
             <>
               <button
                 type="button"
-                data-tooltip-id="clear-filters-tooltip"
+                data-tooltip-id="clear-transaction-filters-tooltip"
+                aria-label={t(
+                  locale,
+                  "core.ethScanner.transactionsData.actions.clearFilters"
+                )}
                 onClick={() => {
                   setQueryParams(initialQueryParams);
                 }}
-                className="tw-inline-flex tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-2 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
+                className="tw-inline-flex tw-h-12 tw-w-12 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-0 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
               >
-                <FontAwesomeIcon icon={faXmark} className="tw-h-4 tw-w-4" />
+                <FontAwesomeIcon
+                  icon={faXmark}
+                  className="tw-h-4 tw-w-4"
+                  aria-hidden="true"
+                />
               </button>
               <Tooltip
-                id="clear-filters-tooltip"
+                id="clear-transaction-filters-tooltip"
                 style={{
                   backgroundColor: "#1F2937",
                   color: "white",
                   padding: "4px 8px",
                 }}
+                delayShow={150}
+                openEvents={{ mouseenter: true, focus: true }}
+                closeEvents={{ mouseleave: true, blur: true, click: true }}
               >
-                Clear Filters
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.actions.clearFilters"
+                )}
               </Tooltip>
             </>
           )}
@@ -180,29 +350,63 @@ export default function TransactionsLocalData() {
         <div className="tw-flex tw-items-center tw-gap-2">
           <button
             type="button"
-            data-tooltip-id="refresh-results-tooltip"
+            data-tooltip-id="refresh-transaction-results-tooltip"
+            aria-label={t(
+              locale,
+              "core.ethScanner.transactionsData.actions.refreshResults"
+            )}
             onClick={fetchTransactions}
-            className="tw-inline-flex tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-2 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
+            className="tw-inline-flex tw-h-12 tw-w-12 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-white tw-p-0 tw-text-black tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-100"
           >
-            <FontAwesomeIcon icon={faRefresh} className="tw-h-4 tw-w-4" />
+            <FontAwesomeIcon
+              icon={faRefresh}
+              className="tw-h-4 tw-w-4"
+              aria-hidden="true"
+            />
           </button>
           <Tooltip
-            id="refresh-results-tooltip"
+            id="refresh-transaction-results-tooltip"
             style={{
               backgroundColor: "#1F2937",
               color: "white",
               padding: "4px 8px",
             }}
+            delayShow={150}
+            openEvents={{ mouseenter: true, focus: true }}
+            closeEvents={{ mouseleave: true, blur: true, click: true }}
           >
-            Refresh Results
+            {t(
+              locale,
+              "core.ethScanner.transactionsData.actions.refreshResults"
+            )}
           </Tooltip>
         </div>
       </div>
 
       <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-center tw-gap-4">
-        <div className="tw-text-xl tw-font-semibold">
-          Total Transactions:{" "}
-          {isLoading ? <DotLoader /> : transactions?.total.toLocaleString()}
+        <div
+          className="tw-text-xl tw-font-semibold"
+          aria-live="polite"
+          aria-busy={isLoading}
+        >
+          {t(locale, "core.ethScanner.transactionsData.summary.total", {
+            count: transactions
+              ? formatInteger(locale, transactions.total)
+              : "-",
+          })}
+          {isLoading && (
+            <span className="tw-ml-2 tw-inline-flex tw-align-middle">
+              <span className="tw-sr-only">
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.summary.loading"
+                )}
+              </span>
+              <span aria-hidden="true">
+                <DotLoader />
+              </span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -226,7 +430,7 @@ export default function TransactionsLocalData() {
             pageSize={queryParams.limit}
             totalResults={transactions?.total}
             setPage={function (newPage: number) {
-              updateQueryParams("page", newPage);
+              updateQueryParams({ page: newPage }, false);
             }}
           />
         </div>

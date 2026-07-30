@@ -1302,6 +1302,28 @@ const CORE_NFT_LOCAL_DATA_MESSAGES = objectMessages(
   } as const
 );
 
+const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
+  "core.ethScanner.transactionsData",
+  {
+    "filters.startDate": "Start Date",
+    "filters.endDate": "End Date",
+    "filters.pageSize": "Page Size",
+    "filters.contract": "Contract",
+    "filters.sortDirection": "Sort",
+    "contracts.all": "All Contracts",
+    "contracts.memes": "The Memes",
+    "contracts.gradient": "6529 Gradient",
+    "contracts.nextgen": "NextGen",
+    "contracts.memelab": "Meme Lab",
+    "actions.clearFilters": "Clear transaction filters",
+    "actions.refreshResults": "Refresh transaction results",
+    "actions.sortAscending": "Sort oldest first",
+    "actions.sortDescending": "Sort newest first",
+    "summary.loading": "Loading transaction data",
+    "summary.total": "Total Transactions: {count}",
+  } as const
+);
+
 const COMMON_MESSAGES = objectMessages("common", {
   close: "Close",
 } as const);
@@ -2416,6 +2438,7 @@ export const EN_US_MESSAGES = {
   ...MEDIA_VIDEO_MESSAGES,
   ...ATTACHMENT_MESSAGES,
   ...CORE_NFT_LOCAL_DATA_MESSAGES,
+  ...CORE_TRANSACTION_LOCAL_DATA_MESSAGES,
   ...LINK_PREVIEW_MESSAGES,
   ...COMMON_MESSAGES,
   ...EN_US_PAGINATION_MESSAGES,

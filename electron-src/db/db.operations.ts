@@ -23,10 +23,12 @@ interface FetchNftsPayload {
 }
 
 type NftSortDirection = "ASC" | "DESC";
+type TransactionSortDirection = "ASC" | "DESC";
 
 const DEFAULT_NFT_PAGE = 1;
 const DEFAULT_NFT_PAGE_SIZE = 50;
 const DEFAULT_NFT_SORT_DIRECTION: NftSortDirection = "DESC";
+const DEFAULT_TRANSACTION_SORT_DIRECTION: TransactionSortDirection = "DESC";
 const MAX_NFT_PAGE_SIZE = 100;
 const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
 const NEXTGEN_TOKEN_ID_MODULUS = 10_000_000_000;
@@ -64,6 +66,13 @@ const getSafeNftSortDirection = (
   sortDirection?.toUpperCase() === "ASC"
     ? "ASC"
     : DEFAULT_NFT_SORT_DIRECTION;
+
+const getSafeTransactionSortDirection = (
+  sortDirection?: string,
+): TransactionSortDirection =>
+  sortDirection?.toUpperCase() === "ASC"
+    ? "ASC"
+    : DEFAULT_TRANSACTION_SORT_DIRECTION;
 
 function applyNftContractFilter(
   queryBuilder: SelectQueryBuilder<NFT>,
@@ -166,8 +175,10 @@ async function fetchTransactions(
   page: number = 1,
   limit: number = 50,
   contractAddress?: string,
+  sortDirection?: string,
 ): Promise<PaginatedResponseLocal<Transaction>> {
   const transactionRepository = getDb().getRepository(Transaction);
+  const safeSortDirection = getSafeTransactionSortDirection(sortDirection);
 
   const queryBuilder = transactionRepository.createQueryBuilder("transaction");
 
@@ -192,7 +203,9 @@ async function fetchTransactions(
   queryBuilder
     .skip((page - 1) * limit)
     .take(limit)
-    .orderBy("transaction.transaction_date", "DESC");
+    .orderBy("transaction.transaction_date", safeSortDirection)
+    .addOrderBy("transaction.block", safeSortDirection)
+    .addOrderBy("transaction.transaction", safeSortDirection);
 
   // Execute query
   const [results, total] = await queryBuilder.getManyAndCount();
@@ -279,13 +292,17 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
   );
   ipcMain.handle(
     IPC_DB_CHANNELS.GET_TRANSACTIONS,
-    async (_event, { startDate, endDate, page, limit, contractAddress }) => {
+    async (
+      _event,
+      { startDate, endDate, page, limit, contractAddress, sortDirection },
+    ) => {
       const transactions = await fetchTransactions(
         startDate,
         endDate,
         page,
         limit,
         contractAddress,
+        sortDirection,
       );
       return transactions;
     },
