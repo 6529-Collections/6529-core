@@ -305,7 +305,7 @@ export default function NftLocalData() {
 
   return (
     <div className="tw-mt-4">
-      <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-center tw-justify-between tw-gap-4">
+      <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-end tw-justify-between tw-gap-4">
         <div className="tw-flex tw-flex-wrap tw-items-end tw-gap-4">
           <label className="tw-flex tw-flex-col tw-gap-2">
             <span className="tw-text-sm tw-font-medium tw-text-iron-300">
@@ -314,7 +314,7 @@ export default function NftLocalData() {
             <select
               value={queryParams.contractAddress}
               onChange={(e) => onContractChange(e.target.value)}
-              className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+              className="tw-h-10 tw-w-fit tw-rounded-lg tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             >
               {contractOptions.map((option) => (
                 <option key={option.value || "all"} value={option.value}>
@@ -334,7 +334,7 @@ export default function NftLocalData() {
               onChange={(e) =>
                 updateQueryParams({ search: e.target.value.trimStart() })
               }
-              className="tw-h-12 tw-w-64 tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+              className="tw-h-10 tw-w-64 tw-rounded-lg tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
               placeholder={t(
                 locale,
                 "core.ethScanner.nftsData.filters.searchPlaceholder"
@@ -350,7 +350,7 @@ export default function NftLocalData() {
               <select
                 value={queryParams.season}
                 onChange={(e) => updateQueryParams({ season: e.target.value })}
-                className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+                className="tw-h-10 tw-w-fit tw-rounded-lg tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
               >
                 <option value="">
                   {t(locale, "core.ethScanner.nftsData.seasons.all")}
@@ -375,7 +375,7 @@ export default function NftLocalData() {
               onChange={(e) =>
                 updateQueryParams({ limit: Number(e.target.value) })
               }
-              className="tw-h-12 tw-w-fit tw-rounded-xl tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+              className="tw-h-10 tw-w-fit tw-rounded-lg tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
             >
               <option value={10}>10</option>
               <option value={20}>20</option>
@@ -404,13 +404,14 @@ export default function NftLocalData() {
                       data-tooltip-id={option.tooltipId}
                       aria-label={t(locale, option.actionLabelKey)}
                       aria-pressed={active}
+                      disabled={active}
                       onClick={() =>
                         updateQueryParams({ sortDirection: option.value })
                       }
-                      className={`tw-inline-flex tw-h-12 tw-w-12 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-p-0 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 ${
+                      className={`tw-inline-flex tw-h-10 tw-w-10 tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-p-0 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 ${
                         active
-                          ? "tw-bg-iron-100 tw-text-black desktop-hover:hover:tw-bg-white"
-                          : "tw-bg-iron-700 tw-text-iron-100 desktop-hover:hover:tw-bg-iron-600"
+                          ? "tw-cursor-default tw-bg-iron-100 tw-text-black"
+                          : "tw-cursor-pointer tw-bg-iron-700 tw-text-iron-100 desktop-hover:hover:tw-bg-iron-600"
                       }`}
                     >
                       <FontAwesomeIcon
@@ -452,7 +453,7 @@ export default function NftLocalData() {
                   "core.ethScanner.nftsData.actions.clearFilters"
                 )}
                 onClick={() => setQueryParams(initialQueryParams)}
-                className="tw-inline-flex tw-h-12 tw-w-12 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-0 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
+                className="tw-inline-flex tw-h-10 tw-w-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-0 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
               >
                 <FontAwesomeIcon
                   icon={faXmark}
@@ -485,7 +486,7 @@ export default function NftLocalData() {
               "core.ethScanner.nftsData.actions.refreshResults"
             )}
             onClick={fetchNfts}
-            className="tw-inline-flex tw-h-12 tw-w-12 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-iron-800 tw-p-0 tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700"
+            className="tw-inline-flex tw-h-10 tw-w-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-white tw-p-0 tw-text-black tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-200"
           >
             <FontAwesomeIcon
               icon={faRefresh}
