@@ -112,6 +112,40 @@ in `en-US` only and falls back to English for all supported locales. Localized
 editorial versions are follow-up work; the English-only state must remain
 visible in future language controls.
 
+## Help Bot Knowledge Pack
+
+Each retained Stream version also owns a generated Help Bot knowledge pack
+under
+`ops/public-review-knowledge/6529-stream/versions/{version}/knowledge/`. The
+pack is derived offline from that version's editorial manifest, generated
+Solidity reference, readiness evidence, risk register, and pinned source
+commit. Staging packaging projects only published versions into
+`/review-data/6529-stream/versions/{version}/knowledge/`; this keeps the
+generated source corpus outside the protected reference-snapshot tree while
+preserving the existing review-data runtime namespace. It contains:
+
+- a checksummed manifest binding the review version, commit, reference bundle,
+  editorial corpus, publication status, record inventory, and shard paths
+- a compact search catalog for deterministic symbol/selector/topic lookup and
+  weighted conceptual retrieval
+- bounded content shards containing the selected editorial, technical, status,
+  risk, and release evidence supplied to the answering backend
+
+The exhaustive records do not enter the generic `/help-index.json`; that index
+keeps only concise Stream routing and summary records. The backend first reads
+the published review index, validates the active knowledge identity, searches
+the compact catalog, and fetches only the shards needed for a bounded evidence
+packet.
+
+`./bin/6529 run public-review:generate` regenerates the active knowledge pack
+after the Solidity reference. `./bin/6529 run public-review:check` verifies
+deterministic bytes, exact coverage, checksums, and version identity. Staging
+packaging validates the pack against the same publication entry and reference
+bundle used by the pages. There is no separate Help Bot publication flag:
+public versions include matching knowledge, excluded or `DRAFT` versions
+include none, and the current production profile contains neither review
+evidence nor knowledge.
+
 ## Lifecycle Capabilities
 
 The reusable review module supports `DRAFT`, `SCHEDULED`, `PUBLIC_REVIEW`,
@@ -163,6 +197,11 @@ page. Reviewers can load older feedback in additional 50-message pages or open
 the full ledger for cross-page filters and exports. Closing and reopening the
 rail preserves an in-progress draft.
 
+Technical-reference feedback uses the same page-scoped projection. Overview
+comments stay on the technical overview, while definition, declaration,
+function, event, interface, and source comments additionally match their exact
+immutable source identity instead of appearing on every page of the same type.
+
 Editorial feedback can target one stable page section. Technical feedback can
 target an exact source range. The client computes the selected snippet checksum
 before enabling submission; changing the selected code invalidates any existing
@@ -178,7 +217,9 @@ For Solidity feedback, start and end line fields are the keyboard selection
 controls and the source itself is one focusable scroll region. Changing the
 range keeps the written draft in place while the new snippet checksum is
 computed; preview and posting remain disabled until that exact reference is
-ready.
+ready. **Preview Wave message** sits with the posting action, renders the
+formatted Wave Markdown, and moves focus to the preview so it remains visible
+outside the scrollable technical-detail fields.
 
 Submitting uses an immutable snapshot of the draft and its attached context.
 If the reviewer edits the draft or changes its page, section, or source range
@@ -200,6 +241,9 @@ by the client-supplied submission UUID inside the drop metadata. Metadata for a
 If a drop supplies a section ID, that section must appear in the page's explicit
 section allow-list; pages without a section allow-list accept no section IDs.
 Invalid structured entries are omitted and reported as ledger warnings.
+Exclusion details identify the affected Wave drop and the metadata validation
+reason. Metadata field order is not significant; the projection validates the
+four required unique keys by name.
 
 The form and ledger are reusable public-review modules. Review-specific
 configuration supplies the immutable manifest, page and section allowlists,
@@ -214,7 +258,9 @@ server-resolved discussion destination.
 - If a page URL is unknown, use the overview contents rather than guessing a
   slug.
 - If an on-page link misses its heading, report the page and heading text; the
-  anchor is derived from the maintained Markdown.
+  review retries hash scrolling after streamed content mounts, so refreshed and
+  directly opened `#heading` URLs should land on the same target as an in-page
+  click.
 - If the displayed source differs from a code link, stop relying on the page
   and report the mismatch. All review evidence must refer to one source
   snapshot.
