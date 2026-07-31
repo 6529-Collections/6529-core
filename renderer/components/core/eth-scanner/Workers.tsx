@@ -29,6 +29,7 @@ import { Tooltip } from "react-tooltip";
 import NftLocalData from "./NftLocalData";
 import { RPCProvider } from "./RpcProviders";
 import TransactionsLocalData from "./TransactionsLocalData";
+import WorkerActionButton from "./WorkerActionButton";
 
 export interface Task {
   namespace: string;
@@ -339,22 +340,18 @@ export function WorkerCard({
       </>
     );
 
-    const btnLight =
-      "tw-cursor-pointer tw-rounded-lg tw-border-0 tw-bg-white tw-px-3 tw-py-1.5 tw-text-sm tw-font-medium tw-text-black focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 disabled:tw-opacity-50 desktop-hover:hover:tw-bg-iron-100";
     if (task.namespace === ScheduledWorkerNames.TDH_WORKER) {
       return (
         <div className="tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-gap-3">
           {infoButton(
             "recalculate-tdh-now-tooltip",
-            <button
-              type="button"
-              className={btnLight}
+            <WorkerActionButton
               data-tooltip-id="recalculate-tdh-now-tooltip"
               onClick={() => setShowRunNowConfirm(true)}
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
             >
               Recalculate TDH Now
-            </button>
+            </WorkerActionButton>
           )}
         </div>
       );
@@ -365,45 +362,37 @@ export function WorkerCard({
         {task.status?.status === ScheduledWorkerStatus.RUNNING
           ? infoButton(
               "stop-worker-tooltip",
-              <button
-                type="button"
-                className={btnLight}
+              <WorkerActionButton
                 data-tooltip-id="stop-worker-tooltip"
                 onClick={() => setShowStopWorkerConfirm(true)}
               >
                 Stop
-              </button>
+              </WorkerActionButton>
             )
           : infoButton(
               "run-now-tooltip",
-              <button
-                type="button"
-                className={btnLight}
+              <WorkerActionButton
                 data-tooltip-id="run-now-tooltip"
                 onClick={() => setShowRunNowConfirm(true)}
               >
                 Run Now
-              </button>
+              </WorkerActionButton>
             )}
         {task.namespace === ScheduledWorkerNames.NFTS_WORKER &&
           infoButton(
             "full-refresh-nfts-tooltip",
-            <button
-              type="button"
-              className={btnLight}
+            <WorkerActionButton
               data-tooltip-id="full-refresh-nfts-tooltip"
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => setShowFullRefreshNFTsConfirm(true)}
             >
               Full Refresh
-            </button>,
+            </WorkerActionButton>,
           )}
         {task.resetable &&
           infoButton(
             "reset-worker-tooltip",
-            <button
-              type="button"
-              className={btnLight}
+            <WorkerActionButton
               data-tooltip-id="reset-worker-tooltip"
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => {
@@ -415,32 +404,28 @@ export function WorkerCard({
               }}
             >
               Reset
-            </button>
+            </WorkerActionButton>
           )}
         {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
           infoButton(
             "recalculate-owners-tooltip",
-            <button
-              type="button"
-              className={btnLight}
+            <WorkerActionButton
               data-tooltip-id="recalculate-owners-tooltip"
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => setShowRecalculateOwnersConfirm(true)}
             >
               Recalculate Owners
-            </button>
+            </WorkerActionButton>
           )}
         {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
           infoButton(
             "reset-to-block-tooltip",
-            <button
-              type="button"
-              className={btnLight}
+            <WorkerActionButton
               data-tooltip-id="reset-to-block-tooltip"
               onClick={() => setShowResetToBlockConfirm(true)}
             >
               Reset
-            </button>
+            </WorkerActionButton>
           )}
       </div>
     );
