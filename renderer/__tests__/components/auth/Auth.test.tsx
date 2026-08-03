@@ -2329,7 +2329,7 @@ describe("Auth component", () => {
       ).not.toBeInTheDocument();
     });
 
-    it("treats Escape as cancel for a dismissible auth prompt", async () => {
+    it("handles dialog cancellation for a dismissible auth prompt", async () => {
       walletAddress = "0x1111111111111111111111111111111111111111";
       connectedAccountsOverride = [];
 

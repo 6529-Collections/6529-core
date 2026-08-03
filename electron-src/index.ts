@@ -55,6 +55,7 @@ import { runCoreMigrations } from "./db/db.migrations";
 import { RPCProvider } from "./db/entities/IRpcProvider";
 import IPFSServer from "./ipfs/ipfs.server";
 import { menuTemplate } from "./menu";
+import { sanitizeNativeSessionResponse } from "./native-auth-session";
 import {
   ResettableScheduledWorker,
   ScheduledWorker,
@@ -802,15 +803,6 @@ function removeNativeRefreshTokenForRequest(
       clientType: request.client_type ?? "desktop",
     }),
   );
-}
-
-function sanitizeNativeSessionResponse(
-  response: NativeSessionLoginResponse,
-): NativeSessionLoginResponse {
-  return {
-    ...response,
-    native_refresh_token: "",
-  };
 }
 
 function getNativeConnectionShareSourceProof(
@@ -1642,8 +1634,6 @@ function runInBackground(): void {
   Logger.info("Running in background");
 
   if (mainWindow) {
-    mainWindow.webContents.removeAllListeners();
-
     for (const logFile of logWindowsMap.keys()) {
       closeLogs(logFile);
       logWindowsMap.delete(logFile);
@@ -1662,9 +1652,24 @@ function runInBackground(): void {
       await createWindow();
     });
 
-    isMainWindowCloseAuthorized = true;
-    mainWindow?.destroy();
-    mainWindow = null;
+    destroyMainWindow();
+  }
+}
+
+function destroyMainWindow(): void {
+  const windowToDestroy = mainWindow;
+  if (!windowToDestroy) {
+    return;
+  }
+
+  isMainWindowCloseAuthorized = true;
+  try {
+    windowToDestroy.webContents.removeAllListeners();
+    windowToDestroy.destroy();
+    if (mainWindow === windowToDestroy) {
+      mainWindow = null;
+    }
+  } finally {
     isMainWindowCloseAuthorized = false;
   }
 }
@@ -1681,14 +1686,22 @@ async function quitApplication(): Promise<void> {
     });
   }
 
-  isMainWindowCloseAuthorized = true;
-  mainWindow?.webContents.removeAllListeners();
-  mainWindow?.destroy();
-  mainWindow = null;
-  await stopSchedulers(scheduledWorkers);
-  await IPFS_SERVER.shutdown();
-  Logger.info("Quitting app\n---------- End of Session ----------\n\n");
-  app.quit();
+  destroyMainWindow();
+  try {
+    try {
+      await stopSchedulers(scheduledWorkers);
+    } catch (error: unknown) {
+      Logger.error("Failed to stop schedulers while quitting", error);
+    }
+    try {
+      await IPFS_SERVER.shutdown();
+    } catch (error: unknown) {
+      Logger.error("Failed to stop IPFS while quitting", error);
+    }
+  } finally {
+    Logger.info("Quitting app\n---------- End of Session ----------\n\n");
+    app.quit();
+  }
 }
 
 function requestMainWindowCloseConfirmation(): void {

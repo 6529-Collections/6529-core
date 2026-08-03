@@ -93,7 +93,7 @@ export interface ElectronNativeAuthSessionResponse {
   readonly role: string | null;
   readonly access_token: string;
   readonly access_token_expires_at: string;
-  readonly native_refresh_token: string;
+  readonly native_refresh_token: "";
   readonly refresh_token_expires_at: string;
 }
 

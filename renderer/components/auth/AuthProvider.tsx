@@ -128,6 +128,7 @@ export default function Auth({
   const [sessionUpgradeRequired, setSessionUpgradeRequired] = useState(false);
   const [authStorageRevision, setAuthStorageRevision] = useState(0);
   const signModalReasonRef = useRef<SignModalReason>(signModalReason);
+  const normalizedAddress = address?.trim().toLowerCase() ?? null;
 
   const { profile: loadedProfile, isLoading: fetchingProfile } = useIdentity({
     handleOrWallet: address,
@@ -414,7 +415,7 @@ export default function Auth({
 
     if (!isAddressAuthorized) {
       setSessionUpgradeRequired(false);
-      if (dismissedAuthPromptAddress === address.trim().toLowerCase()) {
+      if (dismissedAuthPromptAddress === normalizedAddress) {
         setShowSignModal(false);
         return undefined;
       }
@@ -508,10 +509,10 @@ export default function Auth({
     authStorageRevision,
     dismissedAuthPromptAddress,
     isDisconnecting,
+    normalizedAddress,
   ]);
 
   useEffect(() => {
-    const normalizedAddress = address?.trim().toLowerCase() ?? null;
     if (connectionState !== "connected" || !normalizedAddress) {
       setDismissedAuthPromptAddress(null);
       return;
@@ -522,7 +523,7 @@ export default function Auth({
         ? null
         : dismissedAddress
     );
-  }, [address, connectionState]);
+  }, [connectionState, normalizedAddress]);
 
   const setToast = useCallback((toast: AppToastInput) => {
     showAppToast(toast);
@@ -684,7 +685,7 @@ export default function Auth({
       return;
     }
 
-    setDismissedAuthPromptAddress(address?.trim().toLowerCase() ?? null);
+    setDismissedAuthPromptAddress(normalizedAddress);
     setShowSignModal(false);
 
     if (!isAddressAuthorized) {
@@ -701,6 +702,7 @@ export default function Auth({
     address,
     authRolloutSettings,
     isAddressAuthorized,
+    normalizedAddress,
     seizeDisconnect,
     seizeDisconnectAndLogout,
     sessionUpgradeCanDismiss,
@@ -726,7 +728,7 @@ export default function Auth({
     const isDismissedAuthPrompt =
       signModalReason !== "session-upgrade" &&
       dismissedAuthPromptAddress !== null &&
-      dismissedAuthPromptAddress === address?.trim().toLowerCase();
+      dismissedAuthPromptAddress === normalizedAddress;
     return (
       showSignModal &&
       !isDisconnecting &&
@@ -736,11 +738,11 @@ export default function Auth({
     );
   }, [
     authLoadingState,
-    address,
     connectionState,
     dismissedAuthPromptAddress,
     isDisconnectedWebSessionUpgradePrompt,
     isDisconnecting,
+    normalizedAddress,
     showSignModal,
     signModalReason,
   ]);

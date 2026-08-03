@@ -124,7 +124,78 @@ function getSessionRefreshKey({
 }
 
 function createAbortError(): DOMException {
-  return new DOMException("Session refresh aborted", "AbortError");
+  return new DOMException("Authentication request aborted", "AbortError");
+}
+
+type ElectronNativeAuthBridge = NonNullable<Window["nativeAuth"]>;
+
+function requireDesktopAuthBridgeMethod<
+  K extends keyof ElectronNativeAuthBridge,
+>(method: K, unavailableMessage: string): ElectronNativeAuthBridge[K] {
+  const bridgeMethod =
+    typeof window === "undefined" ? undefined : window.nativeAuth?.[method];
+  if (typeof bridgeMethod !== "function") {
+    throw new Error(unavailableMessage);
+  }
+  return bridgeMethod as ElectronNativeAuthBridge[K];
+}
+
+async function runDesktopBridgeRequestWithAbort<T>({
+  abortSignal,
+  request,
+}: {
+  readonly abortSignal?: AbortSignal | undefined;
+  readonly request: () => Promise<T>;
+}): Promise<T> {
+  if (!abortSignal) {
+    return await request();
+  }
+  if (abortSignal.aborted) {
+    throw createAbortError();
+  }
+
+  return await new Promise<T>((resolve, reject) => {
+    let settled = false;
+    const cleanup = () => abortSignal.removeEventListener("abort", onAbort);
+    const onAbort = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(createAbortError());
+    };
+
+    abortSignal.addEventListener("abort", onAbort, { once: true });
+    let requestPromise: Promise<T>;
+    try {
+      requestPromise = request();
+    } catch (error: unknown) {
+      settled = true;
+      cleanup();
+      reject(error);
+      return;
+    }
+
+    void requestPromise.then(
+      (response) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        resolve(response);
+      },
+      (error: unknown) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        cleanup();
+        reject(error);
+      }
+    );
+  });
 }
 
 const isAbortError = (error: unknown): boolean =>
@@ -341,14 +412,12 @@ export async function loginWithSessionV2({
   readonly clientType?: AuthSessionClientType | undefined;
 }): Promise<SessionLoginResponse> {
   const roleBody = role === null ? {} : { role };
-  const nativeAuthBridge =
-    typeof window === "undefined" ? undefined : window.nativeAuth;
-  const guardedNativeSessionLogin = nativeAuthBridge?.sessionLogin;
   if (clientType !== "web" && isElectron()) {
-    if (typeof guardedNativeSessionLogin !== "function") {
-      throw new Error("Desktop session login bridge is unavailable");
-    }
-    const response = await guardedNativeSessionLogin({
+    const sessionLogin = requireDesktopAuthBridgeMethod(
+      "sessionLogin",
+      "Desktop session login bridge is unavailable"
+    );
+    const response = await sessionLogin({
       client_type: clientType,
       server_signature: serverSignature,
       client_signature: clientSignature,
@@ -387,20 +456,21 @@ async function executeSessionRefreshV2({
   readonly clientType: AuthSessionClientType;
 }): Promise<SessionRefreshResponse | null> {
   if (clientType !== "web") {
-    const guardedNativeSessionRefresh =
-      isElectron() && typeof window !== "undefined"
-        ? window.nativeAuth?.sessionRefresh
-        : undefined;
     if (isElectron()) {
-      if (typeof guardedNativeSessionRefresh !== "function") {
-        throw new Error("Desktop session refresh bridge is unavailable");
-      }
+      const sessionRefresh = requireDesktopAuthBridgeMethod(
+        "sessionRefresh",
+        "Desktop session refresh bridge is unavailable"
+      );
       return await executeSessionRefreshRequest({
         clientType,
         request: () =>
-          guardedNativeSessionRefresh({
-            client_type: clientType,
-            client_address: address,
+          runDesktopBridgeRequestWithAbort({
+            abortSignal,
+            request: () =>
+              sessionRefresh({
+                client_type: clientType,
+                client_address: address,
+              }),
           }),
       });
     }
@@ -738,21 +808,22 @@ export async function createConnectionShare({
   readonly targetClientType?: RefreshTokenSessionClientType | undefined;
 }): Promise<CreateConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
-  const guardedCreateConnectionShare =
-    isElectron() && typeof window !== "undefined"
-      ? window.nativeAuth?.createConnectionShare
-      : undefined;
   if (isElectron()) {
-    if (typeof guardedCreateConnectionShare !== "function") {
-      throw new Error("Desktop connection-share bridge is unavailable");
-    }
+    const createDesktopConnectionShare = requireDesktopAuthBridgeMethod(
+      "createConnectionShare",
+      "Desktop connection-share bridge is unavailable"
+    );
     if (!sourceProof) {
       throw new Error("Connection sharing requires an active desktop session");
     }
-    return await guardedCreateConnectionShare({
-      access_token: getAuthJwt(),
-      target_client_type: targetClientType,
-      ...sourceProof,
+    return await runDesktopBridgeRequestWithAbort({
+      abortSignal: signal,
+      request: () =>
+        createDesktopConnectionShare({
+          access_token: getAuthJwt(),
+          target_client_type: targetClientType,
+          ...sourceProof,
+        }),
     });
   }
 
@@ -787,22 +858,22 @@ export async function createLegacyDesktopConnectionShare({
   readonly signal?: AbortSignal | undefined;
 }): Promise<CreateLegacyDesktopConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
-  const guardedCreateLegacyDesktopConnectionShare =
-    isElectron() && typeof window !== "undefined"
-      ? window.nativeAuth?.createLegacyDesktopConnectionShare
-      : undefined;
   if (isElectron()) {
-    if (typeof guardedCreateLegacyDesktopConnectionShare !== "function") {
-      throw new Error(
+    const createLegacyDesktopConnectionShare =
+      requireDesktopAuthBridgeMethod(
+        "createLegacyDesktopConnectionShare",
         "Desktop legacy connection-share bridge is unavailable"
       );
-    }
     if (!sourceProof) {
       throw new Error("Connection sharing requires an active desktop session");
     }
-    return await guardedCreateLegacyDesktopConnectionShare({
-      access_token: getAuthJwt(),
-      ...sourceProof,
+    return await runDesktopBridgeRequestWithAbort({
+      abortSignal: signal,
+      request: () =>
+        createLegacyDesktopConnectionShare({
+          access_token: getAuthJwt(),
+          ...sourceProof,
+        }),
     });
   }
 
@@ -830,15 +901,12 @@ export async function logoutSessionV2({
       return;
     }
     try {
-      const guardedNativeSessionLogout =
-        isElectron() && typeof window !== "undefined"
-          ? window.nativeAuth?.sessionLogout
-          : undefined;
       if (isElectron()) {
-        if (typeof guardedNativeSessionLogout !== "function") {
-          throw new Error("Desktop session logout bridge is unavailable");
-        }
-        await guardedNativeSessionLogout({
+        const sessionLogout = requireDesktopAuthBridgeMethod(
+          "sessionLogout",
+          "Desktop session logout bridge is unavailable"
+        );
+        await sessionLogout({
           access_token: getAuthJwt(),
           client_type: clientType,
           client_address: address,
@@ -906,15 +974,12 @@ export async function redeemConnectionShare(
     ? "desktop"
     : "native"
 ): Promise<SessionNativeResponse> {
-  const guardedRedeemConnectionShare =
-    isElectron() && typeof window !== "undefined"
-      ? window.nativeAuth?.redeemConnectionShare
-      : undefined;
   if (isElectron()) {
-    if (typeof guardedRedeemConnectionShare !== "function") {
-      throw new Error("Desktop connection redeem bridge is unavailable");
-    }
-    return await guardedRedeemConnectionShare({
+    const redeemDesktopConnectionShare = requireDesktopAuthBridgeMethod(
+      "redeemConnectionShare",
+      "Desktop connection redeem bridge is unavailable"
+    );
+    return await redeemDesktopConnectionShare({
       access_token: getAuthJwt(),
       connection_share_code: connectionShareCode,
       target_client_type: targetClientType,

@@ -1131,6 +1131,60 @@ describe("session-v2.utils", () => {
     ]);
   });
 
+  it("fails closed when the Electron session-refresh bridge is unavailable", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+
+    await expect(refreshSessionV2({ address: "0xabc" })).rejects.toThrow(
+      "Desktop session refresh bridge is unavailable"
+    );
+
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("rejects an aborted Electron session refresh without returning its late response", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const sessionResponse = {
+      client_type: "desktop" as const,
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    let resolveSessionRefresh!: (response: typeof sessionResponse) => void;
+    const sessionRefresh = jest.fn(
+      () =>
+        new Promise<typeof sessionResponse>((resolve) => {
+          resolveSessionRefresh = resolve;
+        })
+    );
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionRefresh },
+    });
+    const abortController = new AbortController();
+
+    const refreshPromise = refreshSessionV2({
+      address: "0xabc",
+      abortSignal: abortController.signal,
+    });
+    expect(sessionRefresh).toHaveBeenCalledTimes(1);
+    abortController.abort();
+
+    await expect(refreshPromise).rejects.toMatchObject({ name: "AbortError" });
+    resolveSessionRefresh(sessionResponse);
+    await Promise.resolve();
+
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
   it("counts missing native refresh tokens as unauthorized without a backend request", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(null);
@@ -1229,6 +1283,19 @@ describe("session-v2.utils", () => {
     ).rejects.toBe(logoutError);
 
     expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
+  });
+
+  it("fails closed when the Electron session-logout bridge is unavailable", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+
+    await expect(logoutSessionV2({ address: "0xabc" })).rejects.toThrow(
+      "Desktop session logout bridge is unavailable"
+    );
+
+    expect(commonApiPost).not.toHaveBeenCalled();
   });
 
   it("revokes desktop sessions through the Electron bridge", async () => {
@@ -1359,6 +1426,62 @@ describe("session-v2.utils", () => {
     expect(commonApiPost).not.toHaveBeenCalled();
   });
 
+  it("fails closed when the Electron connection-share bridge is unavailable", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+
+    await expect(createConnectionShare({})).rejects.toThrow(
+      "Desktop connection-share bridge is unavailable"
+    );
+
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("rejects an aborted Electron connection share without returning its late code", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const shareResponse = {
+      connection_share_code: "share-code",
+      expires_at: "2026-06-10T00:00:00.000Z",
+      address: "0xabc",
+      role: null,
+      target_client_type: "native" as const,
+      deep_link_path:
+        "/accept-connection-sharing?connection_share_code=share-code",
+    };
+    let resolveConnectionShare!: (response: typeof shareResponse) => void;
+    const createConnectionShareNative = jest.fn(
+      () =>
+        new Promise<typeof shareResponse>((resolve) => {
+          resolveConnectionShare = resolve;
+        })
+    );
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { createConnectionShare: createConnectionShareNative },
+    });
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+    const abortController = new AbortController();
+
+    const sharePromise = createConnectionShare({
+      signal: abortController.signal,
+    });
+    await Promise.resolve();
+    expect(createConnectionShareNative).toHaveBeenCalledTimes(1);
+    abortController.abort();
+
+    await expect(sharePromise).rejects.toMatchObject({ name: "AbortError" });
+    resolveConnectionShare(shareResponse);
+    await Promise.resolve();
+
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
   it("creates a native connection share with native source-session proof", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
@@ -1449,6 +1572,63 @@ describe("session-v2.utils", () => {
       client_address: "0xabc",
     });
     expect(getNativeRefreshToken).not.toHaveBeenCalled();
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the Electron legacy-share bridge is unavailable", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+
+    await expect(createLegacyDesktopConnectionShare({})).rejects.toThrow(
+      "Desktop legacy connection-share bridge is unavailable"
+    );
+
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("rejects an aborted Electron legacy share without returning its late token", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const shareResponse = {
+      refresh_token: "legacy-refresh-token",
+      address: "0xabc",
+      role: null,
+      deep_link_path:
+        "/accept-connection-sharing?token=legacy-refresh-token&address=0xabc",
+    };
+    let resolveLegacyShare!: (response: typeof shareResponse) => void;
+    const createLegacyDesktopConnectionShareNative = jest.fn(
+      () =>
+        new Promise<typeof shareResponse>((resolve) => {
+          resolveLegacyShare = resolve;
+        })
+    );
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: {
+        createLegacyDesktopConnectionShare:
+          createLegacyDesktopConnectionShareNative,
+      },
+    });
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+    const abortController = new AbortController();
+
+    const sharePromise = createLegacyDesktopConnectionShare({
+      signal: abortController.signal,
+    });
+    await Promise.resolve();
+    expect(createLegacyDesktopConnectionShareNative).toHaveBeenCalledTimes(1);
+    abortController.abort();
+
+    await expect(sharePromise).rejects.toMatchObject({ name: "AbortError" });
+    resolveLegacyShare(shareResponse);
+    await Promise.resolve();
+
     expect(commonApiPost).not.toHaveBeenCalled();
   });
 
@@ -1546,6 +1726,19 @@ describe("session-v2.utils", () => {
       connection_share_code: "share-code",
       target_client_type: "desktop",
     });
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the Electron connection-redeem bridge is unavailable", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+
+    await expect(redeemConnectionShare("share-code")).rejects.toThrow(
+      "Desktop connection redeem bridge is unavailable"
+    );
+
     expect(commonApiPost).not.toHaveBeenCalled();
   });
 
