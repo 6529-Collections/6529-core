@@ -95,6 +95,7 @@ const WebSidebarNav = React.forwardRef<
   const desktopSection = sectionMap.get("6529-desktop");
   const nftsSection = sectionMap.get("nfts");
   const wavesSection = sectionMap.get("waves");
+  const museumSection = sectionMap.get("museum");
   const aboutSection = sectionMap.get("about");
 
   const clearHoverOpenTimer = useCallback(() => {
@@ -425,6 +426,8 @@ const WebSidebarNav = React.forwardRef<
         {nftsSection && renderExpandableSection(nftsSection)}
 
         {wavesSection && renderDirectSectionLink(wavesSection)}
+
+        {museumSection && renderDirectSectionLink(museumSection)}
 
         <li>
           <WebSidebarNavItem

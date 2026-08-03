@@ -48,6 +48,68 @@
       ]
     },
     {
+      "id": "museum.network",
+      "kind": "route",
+      "title": "6529 Network Museum",
+      "aliases": [
+        "museum",
+        "network museum",
+        "museum collection",
+        "Keys and Gates"
+      ],
+      "keywords": [
+        "museum",
+        "collection",
+        "accession",
+        "governance",
+        "Keys and Gates",
+        "Casey Reas",
+        "provenance",
+        "methodology"
+      ],
+      "facts": [
+        "The 6529 Network Museum is an art-led public museum experience at /museum/network.",
+        "Collection means accessioned holdings: visitors can browse artworks at /museum/network/collection and open an artwork dossier at /museum/network/collection/[object-id].",
+        "Artist, project, and gift routes connect the art to onsite curatorial writing, provenance, rights, and collection care without making raw records the primary experience.",
+        "The Museum adapter resolves canonical 6529-Collections/6529networkmuseum main to one exact commit, validates the release inventory, and activates the complete public publication atomically.",
+        "The governed Gift into Public Trust narrative and all five Casey Reas project essays are readable onsite from the same atomic publication snapshot.",
+        "Casey Reas: Sources and chronology is published at /museum/network/stories/source-and-chronology as a public research record spanning canonical accession facts through the collection's required omissions; the complete canonical source manuscript remains linked on GitHub.",
+        "Casey Reas: seven works is an accepted and accessioned gift; Keys and Gates remains a separate program whose selected_unminted works are not Museum holdings.",
+        "Official Art Blocks still and live URLs are labeled upstream presentation sources; the site does not claim retained Museum media or IIIF completion until governed assets are published.",
+        "The public release is the source of truth for current status; the website does not infer accession, rights, ownership, or preservation completion from a transfer or selected outcome."
+      ],
+      "canonical_path": "/museum/network",
+      "related_paths": [
+        "/museum/network/collection",
+        "/museum/network/collection/6529NM.2026.001.01",
+        "/museum/network/artists",
+        "/museum/network/artists/casey-reas",
+        "/museum/network/projects/century",
+        "/museum/network/projects/pre-process",
+        "/museum/network/projects/phototaxis",
+        "/museum/network/projects/923-empty-rooms",
+        "/museum/network/projects/ex-nihilo-cosmos",
+        "/museum/network/gifts/6529NM.2026.001",
+        "/museum/network/programs",
+        "/museum/network/stories",
+        "/museum/network/stories/source-and-chronology",
+        "/museum/network/about",
+        "/museum"
+      ],
+      "tags": ["museum", "art", "collection", "artists", "provenance"],
+      "source_refs": [
+        "app/museum/network/page.tsx",
+        "app/museum/network/collection/page.tsx",
+        "components/museum/MuseumArtworkViewer.tsx",
+        "components/museum/MuseumGiftPage.tsx",
+        "components/museum/MuseumMarkdown.tsx",
+        "app/museum/network/stories/source-and-chronology/page.tsx",
+        "lib/museum/publication/legacyCasey.ts",
+        "lib/museum/publication/runtime.ts",
+        "__tests__/lib/museum/publication/runtime.test.ts"
+      ]
+    },
+    {
       "id": "navigation.sidebar",
       "kind": "ui_affordance",
       "title": "Sidebar navigation",
@@ -61,7 +123,8 @@
         "expand"
       ],
       "facts": [
-        "The primary navigation concepts are NFTs, Waves, DMs, Join 6529, and About.",
+        "The primary navigation concepts are NFTs, Waves, Museum, DMs, Join 6529, and About.",
+        "Museum is a standalone sidebar row linking to /museum/network; historical /museum gallery routes remain available from the Museum entry point.",
         "Home remains available through the 6529 logo link to /.",
         "The web sidebar Waves row opens /waves directly; Discover Waves remains secondary inside the Waves experience and searchable, while Network, Delegation, Tools, Open Data, and reference material live under About.",
         "Drop Forge appears as a standalone sidebar row after About only when the connected wallet can access /drop-forge.",
@@ -73,6 +136,7 @@
       "related_paths": [
         "/the-memes",
         "/waves",
+        "/museum/network",
         "/messages",
         "/join-6529",
         "/about",
@@ -107,16 +171,16 @@
         "artist",
         "audit",
         "security",
-        "pre-audit",
-        "not deployed"
+        "audit planned",
+        "development status"
       ],
       "facts": [
         "The 6529 Stream public review is published at /reviews/6529-stream in local development, shared staging, and production while its lifecycle permits public routes.",
-        "The review presents Stream as an attempt to build the most complete, artist-centered contract system for serious one-of-one digital art, while retaining support for editions where an artist chooses them.",
-        "The overview explains which artistic and protocol guarantees each major mechanism protects and which responsibilities a superficially simpler design would abandon or move into websites, databases, custodians, marketplaces, or unwritten recovery processes.",
-        "Stream is not deployed and is pre-audit; Current Implementation and Readiness is the authoritative page for connected paths, source-only foundations, accepted targets, proposals, evidence, known limitations, and release blockers.",
-        "Fourteen editorial pages explain artwork lifecycle, artist controls, roles, curation and TDH authorization, minting, sales, revenue, randomness, metadata, freezing, governance, current implementation and readiness, and community review.",
-        "Every page shows the review version, exact source link, page navigation, on-page contents, and a collapsible feedback rail; detailed evidence and release status are centralized on Current Implementation and Readiness.",
+        "The review explains how Stream supports serious one-of-one digital art and artist-chosen editions.",
+        "The overview explains how each major mechanism protects artist consent, artwork identity, sales, preservation, and long-term operation.",
+        "The current Overview includes a separately dated, source-pinned development update covering recent work, work in progress, launch requirements, and the latest evidence counts. Daily figures come from that update.",
+        "Fourteen editorial pages explain artwork lifecycle, artist controls, responsibilities, curation and TDH authorization, minting, sales, revenue, randomness, metadata, freezing, contract changes, current development, and community review.",
+        "Every page shows the review version, exact source link, page navigation, on-page contents, and a collapsible feedback rail; snapshot evidence is collected on Where Development Stands.",
         "Review, Technical reference, and Public feedback are the three consistent top-level review areas shown below the status banner; page comments and sending feedback remain separate page actions.",
         "Active and historical routes read immutable versioned editorial content and validate its manifest before rendering.",
         "Each immutable version has its own lifecycle, deployment status, and audit status: superseded versions can remain readable as REVIEW_CLOSED, stop accepting submissions, link back to the current review, and avoid inheriting newer deployment or audit claims.",
@@ -150,6 +214,8 @@
       "source_refs": [
         "app/reviews/[review]/page.tsx",
         "components/public-review/PublicReviewShell.tsx",
+        "components/public-review/StreamReviewDevelopmentStatus.tsx",
+        "config/public-reviews/6529-stream.development-status.json",
         "ops/docs/public-reviews/README.md"
       ]
     },
@@ -187,7 +253,7 @@
         "Ledger entries are identified and deduplicated by immutable Wave drop ID rather than the client-supplied submission UUID.",
         "Ledger metadata for a 50-drop page is hydrated in batches of no more than eight concurrent requests.",
         "A feedback section is accepted only when that exact section is explicitly allowed for the selected page; pages without a section allow-list accept no section IDs.",
-        "Immutable review-version routes have their own version-filtered feedback ledger and exact source-commit banner; review versions 2026-07-26.1 and 2026-07-27.1 are retained with feedback closed while 2026-07-30.1 is the active writing revision.",
+        "Immutable review-version routes have their own version-filtered feedback ledger and exact source-commit banner; review versions 2026-07-26.1, 2026-07-27.1, and 2026-07-30.1 are retained with feedback closed while 2026-08-01.1 is the active writing revision.",
         "Every Stream editorial page includes a visible authorship note explaining that bots wrote the review under punk6529's mission and standards.",
         "Ledger code links open the immutable in-site versioned source and also provide the pinned GitHub source."
       ],
@@ -197,6 +263,7 @@
         "/reviews/6529-stream/community-review",
         "/reviews/6529-stream/security-testing-and-known-limitations",
         "/reviews/6529-stream/reference",
+        "/reviews/6529-stream/versions/2026-08-01.1/feedback",
         "/reviews/6529-stream/versions/2026-07-30.1/feedback",
         "/reviews/6529-stream/versions/2026-07-27.1/feedback",
         "/reviews/6529-stream/versions/2026-07-26.1/feedback"

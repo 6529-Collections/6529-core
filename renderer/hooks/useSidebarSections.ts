@@ -13,7 +13,10 @@ import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { publicEnv } from "@/config/env";
 import { isStreamReviewPubliclyAvailable } from "@/lib/public-review/streamReviewRoutes";
-import { DocumentTextIcon } from "@heroicons/react/24/outline";
+import {
+  BuildingLibraryIcon,
+  DocumentTextIcon,
+} from "@heroicons/react/24/outline";
 import { useMemo, type ComponentType } from "react";
 
 type SidebarSubsection = NonNullable<SidebarSection["subsections"]>[number];
@@ -74,6 +77,22 @@ function getWavesSection(): SidebarSection {
       {
         name: t(DEFAULT_LOCALE, "navigation.waves.discover"),
         href: "/discover",
+      },
+    ],
+    subsections: [],
+  };
+}
+
+function getMuseumSection(): SidebarSection {
+  return {
+    key: "museum",
+    name: t(DEFAULT_LOCALE, "navigation.primary.museum"),
+    icon: BuildingLibraryIcon,
+    items: [
+      {
+        name: t(DEFAULT_LOCALE, "navigation.primary.museum"),
+        href: "/museum/network",
+        activePathPrefixes: ["/museum/network/"],
       },
     ],
     subsections: [],
@@ -168,6 +187,7 @@ function buildSidebarSections(
   return [
     getNftsSection(publicReviewsEnabled),
     getWavesSection(),
+    getMuseumSection(),
     getAboutSection(appWalletsSupported, hideSubscriptions),
     getDesktopSection(ipfsWebuiUrl),
   ];
