@@ -72,6 +72,7 @@ After pulling frontend changes (or on a fresh clone), run:
 - merge `main` into `pull-web`
 - run `6529 pull-web`
 - resolve conflicts
+- keep the root package version and related version metadata identical to current `main`; never bump the desktop version on `pull-web`
 - run `6529 install`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - merge any relevant `renderer/next.config.ts` changes into root `next.config.ts`
@@ -108,6 +109,12 @@ npm bootstrap path for Windows signing or CloudFront invalidation jobs.
 
 > ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.
 > If you skip this step, the previous version may be overwritten and the `electron-updater` will not function correctly.
+
+Perform that version update only on an explicitly requested release branch
+created from `main` and named for the version. Release from that branch, then
+merge it back to `main`. Never update the desktop version as part of a
+`pull-web` renderer sync; `pull-web` must retain the version from current
+`main`.
 
 ### Desktop Backend Targets
 
