@@ -2295,6 +2295,70 @@ describe("Auth component", () => {
       expect(mockSeizeDisconnectAndLogout).toHaveBeenCalled();
     });
 
+    it("keeps an unauthorized auth prompt dismissed while disconnect settles", async () => {
+      walletAddress = "0x1111111111111111111111111111111111111111";
+      connectedAccountsOverride = [];
+      const disconnectDeferred = createDeferredPromise<void>();
+      mockSeizeDisconnect.mockReturnValueOnce(disconnectDeferred.promise);
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <div data-testid="auth-component">Auth Component</div>
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByText("Cancel"));
+
+      expect(mockSeizeDisconnect).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        disconnectDeferred.resolve();
+        await disconnectDeferred.promise;
+      });
+
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+    });
+
+    it("treats Escape as cancel for a dismissible auth prompt", async () => {
+      walletAddress = "0x1111111111111111111111111111111111111111";
+      connectedAccountsOverride = [];
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <div data-testid="auth-component">Auth Component</div>
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      const modalTitle = await screen.findByText("Sign Authentication Request");
+      const dialog = modalTitle.closest("dialog");
+      if (!dialog) {
+        throw new Error("Expected authentication dialog");
+      }
+
+      fireEvent(dialog, new Event("cancel", { cancelable: true }));
+
+      await waitFor(() => {
+        expect(mockSeizeDisconnect).toHaveBeenCalledTimes(1);
+      });
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+    });
+
     it("keeps v1 session upgrade silent when backend rollout settings are absent", async () => {
       const validAddress = "0x1111111111111111111111111111111111111111";
       walletAddress = validAddress;

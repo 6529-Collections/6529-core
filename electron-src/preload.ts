@@ -45,13 +45,6 @@ export const api = {
   extractCrashReport: (fileName: string) => {
     ipcRenderer.send("extract-crash-report", fileName);
   },
-  onAppClose: (callback: any) => ipcRenderer.on("app-close", callback),
-  runBackground: () => {
-    ipcRenderer.send("run-background");
-  },
-  quit: () => {
-    ipcRenderer.send("quit");
-  },
   goBack: () => ipcRenderer.send("nav-back"),
   goForward: () => ipcRenderer.send("nav-forward"),
   getNavigationState: () => ipcRenderer.invoke("get-nav-state"),

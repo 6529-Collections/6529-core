@@ -1,6 +1,6 @@
 ---
 name: sync-desktop-renderer
-description: Sync the 6529 web frontend into the 6529-core Electron renderer subtree, preserve desktop-only behavior, resolve pull-web conflicts, update duplicated desktop config, and bump the desktop version. Use when Codex is asked to bring the Electron desktop app up to date with recent or current 6529.io frontend changes.
+description: Sync the 6529 web frontend into the 6529-core Electron renderer subtree, preserve desktop-only behavior, resolve pull-web conflicts, and update duplicated desktop config. Use when Codex is asked to bring the Electron desktop app up to date with recent or current 6529.io frontend changes.
 ---
 
 # Sync Desktop Renderer
@@ -23,7 +23,8 @@ $env:SEIZE_6529_COMMAND='1'; pnpm run pull-web
 ```
 
 - If a merge is left open, finish resolving and commit before pulling another web delta.
-- Always bump root `package.json` for a desktop release candidate. The desktop updater release files are version keyed, and the README warns that skipping the bump can overwrite a previous release.
+- Run `pull-web` only from the long-lived `pull-web` branch. The command now fails closed on any other branch.
+- Never change the desktop version during a renderer sync. Version changes belong on an explicitly requested release branch created from `main`.
 
 ## Conflict Policy
 
@@ -31,7 +32,8 @@ Take upstream web code for normal frontend features, pages, tests, services, sty
 
 Preserve or reapply desktop-specific behavior in these areas:
 
-- `renderer/components/auth/Auth.tsx`: Electron auth modal flow and any local sign/deep-link handling.
+- `renderer/services/auth/session-v2.utils.ts`: Electron must use `client_type=desktop` and route native-session login, refresh, logout, and connection sharing through `window.nativeAuth` so refresh tokens stay in the main process.
+- `renderer/components/auth/AuthProvider.tsx`, `renderer/components/auth/AuthSignModal.tsx`: auth cancellation must immediately dismiss the prompt, remain dismissed while disconnect settles, and support the native dialog Escape/cancel event.
 - `renderer/components/header/share/HeaderQRScanner.tsx`: desktop QR behavior, avoiding mobile-only scanner assumptions.
 - `renderer/components/eula/EULAConsentContext.tsx`: Electron/local consent behavior.
 - `renderer/components/ipfs/IPFSContext.tsx`: Electron bridge/local IPFS support.
@@ -67,6 +69,7 @@ After conflict resolution:
 git diff --name-only --diff-filter=U
 rg -n "^(<<<<<<<|>>>>>>>)" next.config.ts package.json renderer -S
 git status --short --branch
+$env:SEIZE_6529_COMMAND='1'; pnpm run guard:desktop-renderer-contract
 ```
 
 Use `codex-diff-check`, not raw `git diff --check`, for whitespace checks on this Windows worktree.

@@ -54,6 +54,13 @@ Run the following command to fetch new changes from branch `main` of `6529seize-
 6529 pull-web
 ```
 
+The command refuses to run outside the long-lived `pull-web` branch and checks
+the desktop renderer contract after the subtree import. In particular, Electron
+wallet sessions must remain `client_type=desktop`, use the secure main-process
+`nativeAuth` bridge, and retain working Cancel/Escape behavior in the auth
+prompt. Restore those desktop adaptations if the guard fails; do not remove or
+weaken the guard.
+
 ⚠️ Note: there might be conflicts that need resolving
 
 #### Packages
@@ -76,6 +83,7 @@ After pulling frontend changes (or on a fresh clone), run:
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - merge any relevant `renderer/next.config.ts` changes into root `next.config.ts`
 - ensure `renderer/next.config.ts` is removed; this repo uses the root Next config overlay
+- run `6529 run guard:desktop-renderer-contract`
 
 ### Running locally - dev
 
@@ -103,6 +111,11 @@ The `6529` shim is repo-scoped. After bootstrap it is only injected while your c
 
 CI and GitHub Actions now use the same root pnpm flow. There is no separate
 npm bootstrap path for Windows signing or CloudFront invalidation jobs.
+
+Normal desktop builds run the Core-owned Electron test suite before compiling
+the renderer. That suite includes a contract test outside `renderer/`, so a
+future frontend subtree sync cannot silently remove desktop authentication or
+modal-escape behavior.
 
 ## Building and Publishing
 

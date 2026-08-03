@@ -11,7 +11,7 @@ import {
 import contextMenu from "electron-context-menu";
 import localShortcut from "electron-localshortcut";
 import Logger from "electron-log";
-import { app, BrowserWindow, Menu, Notification } from "electron/main";
+import { app, BrowserWindow, dialog, Menu, Notification } from "electron/main";
 import fs from "fs";
 import { getPort } from "get-port-please";
 import path from "node:path";
@@ -86,6 +86,7 @@ import {
   getScheme,
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
+import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
 
 contextMenu({
   showInspectElement: false,
@@ -100,6 +101,8 @@ crashReporter.start({
 });
 
 let mainWindow: BrowserWindow | null = null;
+let closeConfirmationPromise: Promise<void> | null = null;
+let isMainWindowCloseAuthorized = false;
 let scheduledWorkers: ScheduledWorker[] = [];
 let rpcProviders: RPCProvider[] = [];
 const logWindowsMap = new Map<string, BrowserWindow>();
@@ -1369,11 +1372,15 @@ async function createWindow() {
         app.quit();
         Logger.info("Restarting app\n---------- End of Session ----------\n\n");
       }
-    } else {
-      e.preventDefault();
-      mainWindow?.focus();
-      mainWindow?.webContents.send("app-close");
+      return;
     }
+    if (isMainWindowCloseAuthorized) {
+      return;
+    }
+
+    e.preventDefault();
+    mainWindow?.focus();
+    requestMainWindowCloseConfirmation();
   });
 
   process.on("uncaughtException", (error) => {
@@ -1631,7 +1638,7 @@ ipcMain.on("extract-crash-report", (event, fileName) => {
   extractCrashReport(fileName);
 });
 
-ipcMain.on("run-background", () => {
+function runInBackground(): void {
   Logger.info("Running in background");
 
   if (mainWindow) {
@@ -1655,13 +1662,14 @@ ipcMain.on("run-background", () => {
       await createWindow();
     });
 
-    mainWindow?.close();
+    isMainWindowCloseAuthorized = true;
     mainWindow?.destroy();
     mainWindow = null;
+    isMainWindowCloseAuthorized = false;
   }
-});
+}
 
-ipcMain.on("quit", async () => {
+async function quitApplication(): Promise<void> {
   if (mainWindow) {
     const bounds = mainWindow.getBounds();
     setValue("window-state", {
@@ -1673,15 +1681,48 @@ ipcMain.on("quit", async () => {
     });
   }
 
+  isMainWindowCloseAuthorized = true;
   mainWindow?.webContents.removeAllListeners();
-  mainWindow?.close();
   mainWindow?.destroy();
   mainWindow = null;
   await stopSchedulers(scheduledWorkers);
   await IPFS_SERVER.shutdown();
   Logger.info("Quitting app\n---------- End of Session ----------\n\n");
   app.quit();
-});
+}
+
+function requestMainWindowCloseConfirmation(): void {
+  if (!mainWindow || closeConfirmationPromise) {
+    return;
+  }
+
+  const ownerWindow = mainWindow;
+  closeConfirmationPromise = (async () => {
+    const result = await dialog.showMessageBox(
+      ownerWindow,
+      APP_CLOSE_DIALOG_OPTIONS,
+    );
+
+    if (mainWindow !== ownerWindow) {
+      return;
+    }
+
+    const action = getAppCloseAction(result.response);
+    if (action === "quit") {
+      await quitApplication();
+      return;
+    }
+    if (action === "run-background") {
+      runInBackground();
+    }
+  })()
+    .catch((error: unknown) => {
+      Logger.error("Failed to show close confirmation", error);
+    })
+    .finally(() => {
+      closeConfirmationPromise = null;
+    });
+}
 
 function updateNavigationState() {
   const navState = {

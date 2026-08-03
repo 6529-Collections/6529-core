@@ -1,7 +1,11 @@
 import { Capacitor } from "@capacitor/core";
 import * as Sentry from "@sentry/nextjs";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
-import { getWalletAddress, setAuthJwt } from "@/services/auth/auth.utils";
+import {
+  getAuthJwt,
+  getWalletAddress,
+  setAuthJwt,
+} from "@/services/auth/auth.utils";
 import {
   getNativeRefreshToken,
   isNativeSecureStorageAvailable,
@@ -37,6 +41,7 @@ jest.mock("@/services/api/common-api", () => ({
 }));
 
 jest.mock("@/services/auth/auth.utils", () => ({
+  getAuthJwt: jest.fn(),
   getWalletAddress: jest.fn(),
   setAuthJwt: jest.fn(),
 }));
@@ -154,8 +159,17 @@ describe("session-v2.utils", () => {
     (commonApiPost as jest.Mock).mockResolvedValue(undefined);
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(null);
     (isNativeSecureStorageAvailable as jest.Mock).mockReturnValue(true);
+    (getAuthJwt as jest.Mock).mockReturnValue(null);
     (getWalletAddress as jest.Mock).mockReturnValue(null);
     (setAuthJwt as jest.Mock).mockReturnValue(true);
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: undefined,
+    });
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: undefined,
+    });
   });
 
   it("requests web session nonce with only session-v2 query params", async () => {
@@ -201,6 +215,32 @@ describe("session-v2.utils", () => {
     });
   });
 
+  it("requests desktop session nonce from Electron", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const nonceResponse = {
+      signable_message: "6529 Authentication\nDomain: desktop",
+      server_signature: "server-signature",
+    };
+    (commonApiFetch as jest.Mock).mockResolvedValueOnce(nonceResponse);
+
+    await expect(getSessionNonce({ signerAddress: "0xabc" })).resolves.toBe(
+      nonceResponse
+    );
+
+    expect(commonApiFetch).toHaveBeenCalledWith({
+      endpoint: "auth/session-nonce",
+      params: {
+        signer_address: "0xabc",
+        client_type: "desktop",
+        chain_id: "1",
+      },
+      includeWalletAuth: true,
+    });
+  });
+
   it("revokes a native session when auth persistence fails", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(
@@ -223,6 +263,7 @@ describe("session-v2.utils", () => {
     expect(setNativeRefreshToken).toHaveBeenCalledWith({
       address: "0xabc",
       refreshToken: "native-refresh-token",
+      clientType: "native",
     });
     expect(commonApiPost).toHaveBeenCalledWith({
       endpoint: "auth/session-logout",
@@ -235,7 +276,7 @@ describe("session-v2.utils", () => {
       credentials: "include",
       parseJson: false,
     });
-    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc");
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
   });
 
   it("persists desktop refresh-token session responses", async () => {
@@ -254,7 +295,36 @@ describe("session-v2.utils", () => {
     expect(setNativeRefreshToken).toHaveBeenCalledWith({
       address: "0xabc",
       refreshToken: "desktop-refresh-token",
+      clientType: "desktop",
     });
+    expect(setAuthJwt).toHaveBeenCalledWith(
+      "0xabc",
+      "access-token",
+      null,
+      undefined,
+      { authSessionVersion: "v2" }
+    );
+  });
+
+  it("keeps Electron refresh tokens in the main process", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+
+    await expect(
+      persistSessionResponse({
+        client_type: "desktop",
+        address: "0xabc",
+        role: null,
+        access_token: "access-token",
+        access_token_expires_at: "2026-06-10T00:00:00.000Z",
+        native_refresh_token: "",
+        refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+      })
+    ).resolves.toBe(true);
+
+    expect(setNativeRefreshToken).not.toHaveBeenCalled();
     expect(setAuthJwt).toHaveBeenCalledWith(
       "0xabc",
       "access-token",
@@ -347,6 +417,62 @@ describe("session-v2.utils", () => {
       },
       credentials: "include",
     });
+  });
+
+  it("uses the Electron bridge and desktop client type for session-login", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const sessionResponse = {
+      client_type: "desktop" as const,
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    const sessionLogin = jest.fn().mockResolvedValueOnce(sessionResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionLogin },
+    });
+
+    await expect(
+      loginWithSessionV2({
+        serverSignature: "server-signature",
+        clientSignature: "client-signature",
+        signerAddress: "0xabc",
+        role: null,
+      })
+    ).resolves.toBe(sessionResponse);
+
+    expect(sessionLogin).toHaveBeenCalledWith({
+      client_type: "desktop",
+      server_signature: "server-signature",
+      client_signature: "client-signature",
+      client_address: "0xabc",
+    });
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
+  it("fails closed when the Electron session-login bridge is unavailable", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+
+    await expect(
+      loginWithSessionV2({
+        serverSignature: "server-signature",
+        clientSignature: "client-signature",
+        signerAddress: "0xabc",
+        role: null,
+      })
+    ).rejects.toThrow("Desktop session login bridge is unavailable");
+
+    expect(commonApiPost).not.toHaveBeenCalled();
   });
 
   it("revokes a web session cookie when auth persistence fails", async () => {
@@ -963,6 +1089,48 @@ describe("session-v2.utils", () => {
     expectNoSensitiveRefreshTelemetry(getSessionRefreshInfoTelemetry());
   });
 
+  it("refreshes desktop sessions through the Electron bridge", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const sessionResponse = {
+      client_type: "desktop" as const,
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    const sessionRefresh = jest.fn().mockResolvedValueOnce(sessionResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionRefresh },
+    });
+
+    await expect(refreshSessionV2({ address: "0xabc" })).resolves.toBe(
+      sessionResponse
+    );
+
+    expect(sessionRefresh).toHaveBeenCalledWith({
+      client_type: "desktop",
+      client_address: "0xabc",
+    });
+    expect(getNativeRefreshToken).not.toHaveBeenCalled();
+    expect(commonApiPost).not.toHaveBeenCalled();
+    expect(getSessionRefreshInfoTelemetry()).toEqual([
+      expect.objectContaining({
+        client_type: "desktop",
+        auth_refresh_outcome: "started",
+      }),
+      expect.objectContaining({
+        client_type: "desktop",
+        auth_refresh_outcome: "success",
+      }),
+    ]);
+  });
+
   it("counts missing native refresh tokens as unauthorized without a backend request", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getNativeRefreshToken as jest.Mock).mockResolvedValue(null);
@@ -1045,7 +1213,7 @@ describe("session-v2.utils", () => {
       credentials: "include",
       parseJson: false,
     });
-    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc");
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
   });
 
   it("removes the native refresh token when native logout fails", async () => {
@@ -1060,7 +1228,32 @@ describe("session-v2.utils", () => {
       logoutSessionV2({ address: "0xabc", allSessions: true })
     ).rejects.toBe(logoutError);
 
-    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc");
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "native");
+  });
+
+  it("revokes desktop sessions through the Electron bridge", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const sessionLogout = jest.fn().mockResolvedValueOnce(undefined);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { sessionLogout },
+    });
+    (getAuthJwt as jest.Mock).mockReturnValue("wallet-access-token");
+
+    await logoutSessionV2({ address: "0xabc", allSessions: true });
+
+    expect(sessionLogout).toHaveBeenCalledWith({
+      access_token: "wallet-access-token",
+      client_type: "desktop",
+      client_address: "0xabc",
+      all_sessions: true,
+    });
+    expect(getNativeRefreshToken).not.toHaveBeenCalled();
+    expect(commonApiPost).not.toHaveBeenCalled();
+    expect(removeNativeRefreshToken).toHaveBeenCalledWith("0xabc", "desktop");
   });
 
   it("attempts web session logout with credentials", async () => {
@@ -1128,6 +1321,44 @@ describe("session-v2.utils", () => {
     });
   });
 
+  it("creates desktop connection shares through the Electron bridge", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const shareResponse = {
+      connection_share_code: "share-code",
+      expires_at: "2026-06-10T00:00:00.000Z",
+      address: "0xabc",
+      role: null,
+      target_client_type: "desktop" as const,
+      deep_link_path:
+        "/accept-connection-sharing?connection_share_code=share-code",
+    };
+    const createConnectionShareNative = jest
+      .fn()
+      .mockResolvedValueOnce(shareResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { createConnectionShare: createConnectionShareNative },
+    });
+    (getAuthJwt as jest.Mock).mockReturnValue("wallet-access-token");
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+
+    await expect(
+      createConnectionShare({ targetClientType: "desktop" })
+    ).resolves.toBe(shareResponse);
+
+    expect(createConnectionShareNative).toHaveBeenCalledWith({
+      access_token: "wallet-access-token",
+      target_client_type: "desktop",
+      client_type: "desktop",
+      client_address: "0xabc",
+    });
+    expect(getNativeRefreshToken).not.toHaveBeenCalled();
+    expect(commonApiPost).not.toHaveBeenCalled();
+  });
+
   it("creates a native connection share with native source-session proof", async () => {
     (Capacitor.isNativePlatform as jest.Mock).mockReturnValue(true);
     (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
@@ -1181,6 +1412,44 @@ describe("session-v2.utils", () => {
       credentials: "include",
       signal: abortController.signal,
     });
+  });
+
+  it("creates legacy desktop shares through the Electron bridge", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const shareResponse = {
+      refresh_token: "legacy-refresh-token",
+      address: "0xabc",
+      role: null,
+      deep_link_path:
+        "/accept-connection-sharing?token=legacy-refresh-token&address=0xabc",
+    };
+    const createLegacyDesktopConnectionShareNative = jest
+      .fn()
+      .mockResolvedValueOnce(shareResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: {
+        createLegacyDesktopConnectionShare:
+          createLegacyDesktopConnectionShareNative,
+      },
+    });
+    (getAuthJwt as jest.Mock).mockReturnValue("wallet-access-token");
+    (getWalletAddress as jest.Mock).mockReturnValue("0xabc");
+
+    await expect(createLegacyDesktopConnectionShare({})).resolves.toBe(
+      shareResponse
+    );
+
+    expect(createLegacyDesktopConnectionShareNative).toHaveBeenCalledWith({
+      access_token: "wallet-access-token",
+      client_type: "desktop",
+      client_address: "0xabc",
+    });
+    expect(getNativeRefreshToken).not.toHaveBeenCalled();
+    expect(commonApiPost).not.toHaveBeenCalled();
   });
 
   it("redeems a connection share as a native session", async () => {
@@ -1243,6 +1512,41 @@ describe("session-v2.utils", () => {
       },
       credentials: "include",
     });
+  });
+
+  it("redeems desktop connection shares through the Electron bridge", async () => {
+    Object.defineProperty(window, "api", {
+      configurable: true,
+      value: {},
+    });
+    const redeemedResponse = {
+      client_type: "desktop" as const,
+      address: "0xabc",
+      role: null,
+      access_token: "access-token",
+      access_token_expires_at: "2026-06-10T00:00:00.000Z",
+      native_refresh_token: "",
+      refresh_token_expires_at: "2026-07-10T00:00:00.000Z",
+    };
+    const redeemConnectionShareNative = jest
+      .fn()
+      .mockResolvedValueOnce(redeemedResponse);
+    Object.defineProperty(window, "nativeAuth", {
+      configurable: true,
+      value: { redeemConnectionShare: redeemConnectionShareNative },
+    });
+    (getAuthJwt as jest.Mock).mockReturnValue("wallet-access-token");
+
+    await expect(redeemConnectionShare("share-code")).resolves.toBe(
+      redeemedResponse
+    );
+
+    expect(redeemConnectionShareNative).toHaveBeenCalledWith({
+      access_token: "wallet-access-token",
+      connection_share_code: "share-code",
+      target_client_type: "desktop",
+    });
+    expect(commonApiPost).not.toHaveBeenCalled();
   });
 
   it("preserves a redeemed connection share client type returned by the backend", async () => {

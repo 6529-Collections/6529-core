@@ -102,6 +102,7 @@ export default function Auth({
     seizeDisconnectAndLogout,
     isSafeWallet,
     connectionState,
+    isDisconnecting,
   } = useSeizeConnectContext();
 
   const {
@@ -112,6 +113,9 @@ export default function Auth({
     signatureType: isSafeWallet ? "contract" : "eoa",
   });
   const [showSignModal, setShowSignModal] = useState(false);
+  const [dismissedAuthPromptAddress, setDismissedAuthPromptAddress] = useState<
+    string | null
+  >(null);
   const [signModalReason, setSignModalReason] =
     useState<SignModalReason>("auth");
   const [sessionUpgradePromptMode, setSessionUpgradePromptMode] =
@@ -378,6 +382,11 @@ export default function Auth({
     // Clear previous operations when dependencies change
     abortCurrentAuthOperation();
 
+    if (isDisconnecting) {
+      setShowSignModal(false);
+      return undefined;
+    }
+
     // Don't start validation during transitional states
     if (connectionState === "connecting") {
       return undefined;
@@ -405,6 +414,10 @@ export default function Auth({
 
     if (!isAddressAuthorized) {
       setSessionUpgradeRequired(false);
+      if (dismissedAuthPromptAddress === address.trim().toLowerCase()) {
+        setShowSignModal(false);
+        return undefined;
+      }
       if (isConnected) {
         authPromptTrackingReasonRef.current = "wallet_not_authorized";
         setSignModalReason("auth");
@@ -493,7 +506,23 @@ export default function Auth({
     resetSessionUpgradeExpiryDedupe,
     authRolloutSettings,
     authStorageRevision,
+    dismissedAuthPromptAddress,
+    isDisconnecting,
   ]);
+
+  useEffect(() => {
+    const normalizedAddress = address?.trim().toLowerCase() ?? null;
+    if (connectionState !== "connected" || !normalizedAddress) {
+      setDismissedAuthPromptAddress(null);
+      return;
+    }
+
+    setDismissedAuthPromptAddress((dismissedAddress) =>
+      dismissedAddress && dismissedAddress !== normalizedAddress
+        ? null
+        : dismissedAddress
+    );
+  }, [address, connectionState]);
 
   const setToast = useCallback((toast: AppToastInput) => {
     showAppToast(toast);
@@ -655,6 +684,7 @@ export default function Auth({
       return;
     }
 
+    setDismissedAuthPromptAddress(address?.trim().toLowerCase() ?? null);
     setShowSignModal(false);
 
     if (!isAddressAuthorized) {
@@ -693,15 +723,24 @@ export default function Auth({
     const shouldHideDuringValidation =
       authLoadingState === "validating" &&
       signModalReason !== "session-upgrade";
+    const isDismissedAuthPrompt =
+      signModalReason !== "session-upgrade" &&
+      dismissedAuthPromptAddress !== null &&
+      dismissedAuthPromptAddress === address?.trim().toLowerCase();
     return (
       showSignModal &&
+      !isDisconnecting &&
+      !isDismissedAuthPrompt &&
       !shouldHideDuringValidation &&
       (connectionState === "connected" || isDisconnectedWebSessionUpgradePrompt)
     );
   }, [
     authLoadingState,
+    address,
     connectionState,
+    dismissedAuthPromptAddress,
     isDisconnectedWebSessionUpgradePrompt,
+    isDisconnecting,
     showSignModal,
     signModalReason,
   ]);

@@ -12,7 +12,8 @@ satisfied.
 ## Before Commit
 
 - Confirm the renderer sync PR uses the repository's `pull-web` branch when updating the bundled frontend. Do not move renderer subtree imports onto an ad hoc `codex/` branch unless the repo owner explicitly asks for that.
-- Confirm the desktop version bump is included.
+- Confirm a renderer sync does not change the desktop version. Version changes belong only to an explicitly requested release branch created from `main`.
+- Run the Core-owned desktop renderer contract guard and restore any desktop adaptation it reports instead of weakening the guard.
 - Confirm local evidence is ready: current web SHA, install result, checks, Windows build/package result, and artifact path or blocker.
 - Stage only intended files. A renderer subtree sync can be large; inspect the summary and any root files carefully.
 - Use `codex-diff-check` on Windows.
@@ -36,7 +37,8 @@ draft PR only when the user explicitly asks for a draft PR in the current task.
 Include:
 
 - imported frontend SHA and date checked
-- desktop package version bump
+- confirmation that the desktop package version remains aligned with `main`
+- desktop renderer contract decisions preserved
 - desktop-specific conflict decisions preserved
 - local validation commands and results
 - Windows package artifact path under `dist/`, or the exact packaging blocker

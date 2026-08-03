@@ -109,6 +109,9 @@ export function AuthSignModal({
   const signModalConfirmText = isDisconnectedWebSessionUpgradePrompt
     ? t(AUTH_MODAL_LOCALE, "auth.signModal.connect")
     : t(AUTH_MODAL_LOCALE, "auth.signModal.sign");
+  const canDismissSignModal =
+    !isSignRequestInProgress &&
+    (!isSessionUpgradePrompt || sessionUpgradeCanDismiss);
 
   useEffect(() => {
     if (!enableWalletAuthentication || typeof document === "undefined") {
@@ -164,7 +167,12 @@ export function AuthSignModal({
       aria-modal="true"
       aria-labelledby={signModalTitleId}
       className="tailwind-scope tw-m-auto tw-max-h-[calc(100dvh-2rem)] tw-w-[min(32rem,calc(100vw-2rem))] tw-max-w-[min(32rem,calc(100vw-2rem))] tw-overflow-y-auto tw-border-none tw-bg-transparent tw-p-0 tw-text-left backdrop:tw-bg-black/50"
-      onCancel={(event) => event.preventDefault()}
+      onCancel={(event) => {
+        event.preventDefault();
+        if (canDismissSignModal) {
+          onCancelSignRequest();
+        }
+      }}
       tabIndex={-1}
     >
       <div className={styles["signModalSurface"]}>
@@ -195,18 +203,17 @@ export function AuthSignModal({
           )}
         </div>
         <div className={styles["signModalFooter"]}>
-          {!isSignRequestInProgress &&
-            (!isSessionUpgradePrompt || sessionUpgradeCanDismiss) && (
-              <button
-                type="button"
-                className={styles["signModalCancelButton"]}
-                onClick={onCancelSignRequest}
-              >
-                {isSessionUpgradePrompt && sessionUpgradeHasDeadline
-                  ? t(AUTH_MODAL_LOCALE, "auth.signModal.remindLater")
-                  : t(AUTH_MODAL_LOCALE, "auth.signModal.cancel")}
-              </button>
-            )}
+          {canDismissSignModal && (
+            <button
+              type="button"
+              className={styles["signModalCancelButton"]}
+              onClick={onCancelSignRequest}
+            >
+              {isSessionUpgradePrompt && sessionUpgradeHasDeadline
+                ? t(AUTH_MODAL_LOCALE, "auth.signModal.remindLater")
+                : t(AUTH_MODAL_LOCALE, "auth.signModal.cancel")}
+            </button>
+          )}
           {!isConnectionShareUpgradePrompt && (
             <button
               type="button"

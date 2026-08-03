@@ -23,9 +23,6 @@ export interface ElectronAPI {
   showFile: (fileName: string) => void;
   openLogs: (name: string, logFile: string) => void;
   extractCrashReport: (fileName: string) => void;
-  onAppClose: (callback: any) => void;
-  runBackground: () => void;
-  quit: () => void;
   goBack: () => void;
   goForward: () => void;
   getNavigationState: () => Promise<any>;

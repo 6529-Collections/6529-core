@@ -1,6 +1,5 @@
 "use client";
 
-import ConfirmClose from "@/components/confirm/ConfirmClose";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { publicEnv } from "@/config/env";
 import { useGlobalRefresh } from "@/contexts/RefreshContext";
@@ -88,7 +87,6 @@ export default function TitleBar() {
   const prevPathnameRef = useRef(pathname);
   const prevSearchParamsRef = useRef(searchParams?.toString() || "");
 
-  const [showConfirm, setShowConfirm] = useState(false);
   const [canGoBack, setCanGoBack] = useState(false);
   const [canGoForward, setCanGoForward] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
@@ -335,12 +333,6 @@ export default function TitleBar() {
   };
 
   useEffect(() => {
-    window.api.onAppClose(() => {
-      setShowConfirm(true);
-    });
-  }, []);
-
-  useEffect(() => {
     if (!isContentRefreshingRef.current) {
       return;
     }
@@ -352,20 +344,6 @@ export default function TitleBar() {
 
     return () => clearTimeout(timeoutId);
   }, [refreshKey]);
-
-  const handleRunBackground = () => {
-    window.api.runBackground();
-    setShowConfirm(false);
-  };
-
-  const handleQuit = () => {
-    window.api.quit();
-    setShowConfirm(false);
-  };
-
-  const handleCancelClose = () => {
-    setShowConfirm(false);
-  };
 
   const getLinkPath = () => {
     let path = window.location.pathname;
@@ -540,12 +518,6 @@ export default function TitleBar() {
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}
-      />
-      <ConfirmClose
-        onQuit={handleQuit}
-        onCancel={handleCancelClose}
-        onRunBackground={handleRunBackground}
-        show={showConfirm}
       />
       <DesktopUpdateToast
         open={showUpdaterUpdateToast || showUpdateToastPreview}
