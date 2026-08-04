@@ -22,3 +22,9 @@ the isolated browser connector must fail until those desktop adaptations are
 restored. The same suite behaviorally checks modal ordering, signature
 invalidation, address validation, supported-chain enforcement, address-bound
 Core connector persistence, and bounded shutdown cleanup.
+
+Electron regression tests may import renderer-owned pure modules, but those
+test-only imports must never enter the packaged main-process compilation.
+`electron-src/tsconfig.build.json` preserves the `main/electron-src` output
+layout while excluding tests; both platform build scripts and the desktop
+contract guard require that boundary.

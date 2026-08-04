@@ -1,4 +1,4 @@
-import { getAddress, isAddress } from "viem";
+import { getAddress, isAddress } from "ethers";
 import { mainnet, sepolia } from "viem/chains";
 
 export interface SeedWalletConnectionState {
@@ -36,7 +36,7 @@ function normalizeSeedWalletAddress(address: string): `0x${string}` {
   if (!isAddress(address)) {
     throw new Error("Invalid Core wallet address");
   }
-  return getAddress(address);
+  return getAddress(address) as `0x${string}`;
 }
 
 export function createSeedWalletConnectionState(

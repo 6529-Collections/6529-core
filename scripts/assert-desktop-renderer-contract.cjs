@@ -447,6 +447,33 @@ function assertContract(condition, relativePath, message) {
   }
 }
 
+const packageJsonPath = "package.json";
+const packageJson = JSON.parse(
+  fs.readFileSync(path.join(repositoryRoot, packageJsonPath), "utf8"),
+);
+const electronBuildTsconfigPath = "electron-src/tsconfig.build.json";
+const electronBuildTsconfig = JSON.parse(
+  fs.readFileSync(path.join(repositoryRoot, electronBuildTsconfigPath), "utf8"),
+);
+const electronBuildExcludes = electronBuildTsconfig.exclude ?? [];
+assertContract(
+  packageJson.scripts?.["build-electron"]?.includes(
+    "tsc -p electron-src/tsconfig.build.json",
+  ) &&
+    packageJson.scripts?.["build-electron-win"]?.includes(
+      "tsc -p electron-src/tsconfig.build.json",
+    ),
+  packageJsonPath,
+  "Electron production builds must use the test-excluding build tsconfig",
+);
+assertContract(
+  electronBuildTsconfig.compilerOptions?.rootDir === ".." &&
+    electronBuildExcludes.includes("**/*.test.ts") &&
+    electronBuildExcludes.includes("**/*.test.tsx"),
+  electronBuildTsconfigPath,
+  "Electron production compilation must preserve output paths and exclude tests",
+);
+
 const sessionUtilsPath = "renderer/services/auth/session-v2.utils.ts";
 const sessionUtils = parseSource(sessionUtilsPath);
 const clientTypeFunction = findFunction(sessionUtils, "getSessionClientType");
