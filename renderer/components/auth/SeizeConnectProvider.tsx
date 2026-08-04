@@ -9,7 +9,7 @@ import React, {
   useState,
 } from "react";
 import { getAddress, isAddress } from "viem";
-import { useAccount } from "wagmi";
+import { useAccount, useConnectors } from "wagmi";
 import { getNodeEnv, publicEnv } from "@/config/env";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
 import {
@@ -115,6 +115,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const appKitAccount = useAppKitAccount();
   const wagmiAccount = useAccount();
+  const wagmiConnectors = useConnectors();
   const { disconnect } = useDisconnect();
   const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
   const {
@@ -337,14 +338,43 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     normalizeAddress(activeAddress) === normalizeAddress(liveConnectedAddress)
   );
   const activeConnectorType = wagmiAccount.connector?.type;
+  // Prefer the live provider identity when storage and Wagmi are briefly out
+  // of sync; fall back to the authenticated address during reconnect.
+  const connectorIdentityAddress = liveConnectedAddress ?? activeAddress;
+  const hasMatchingSeedWalletConnector = !!(
+    connectorIdentityAddress &&
+    wagmiConnectors.some(
+      (connector) =>
+        connector.type === SEED_WALLET_CONNECTOR_TYPE &&
+        isAddress(connector.id) &&
+        normalizeAddress(connector.id) ===
+          normalizeAddress(connectorIdentityAddress)
+    )
+  );
   const isActiveLocalWalletConnector =
     activeConnectorType === APP_WALLET_CONNECTOR_TYPE ||
-    activeConnectorType === SEED_WALLET_CONNECTOR_TYPE;
+    activeConnectorType === SEED_WALLET_CONNECTOR_TYPE ||
+    hasMatchingSeedWalletConnector;
 
   const openConnectModal = useCallback(
     async (source: string): Promise<void> => {
       try {
         clearConnectIntentHandoffTimeout();
+
+        // Electron renders its own connector chooser and does not need AppKit's
+        // modal runtime to be ready. Opening it synchronously avoids a transient
+        // AppKit bootstrap state turning an Add click into a silent no-op.
+        if (isElectron()) {
+          setIsConnectIntentWaitingForAppKit(false);
+          setShowConnectModal(true);
+          logSecurityEvent(
+            SecurityEventType.WALLET_MODAL_OPENED,
+            createConnectionEventContext(source)
+          );
+          scheduleConnectIntentHandoffFallback();
+          return;
+        }
+
         setIsConnectIntentWaitingForAppKit(true);
         if (!isAppKitReady) {
           await waitForAppKitReady();
@@ -354,14 +384,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
 
-        // Core groups native connectors in its Seed Wallet / Browser /
-        // Third-Party chooser; Reown's web modal flattens them into one list.
-        if (isElectron()) {
-          setShowConnectModal(true);
-        } else {
-          const openAppKit = await appKitModalBridgeStore.waitForOpen();
-          await openAppKit({ view: "Connect" });
-        }
+        const openAppKit = await appKitModalBridgeStore.waitForOpen();
+        await openAppKit({ view: "Connect" });
 
         logSecurityEvent(
           SecurityEventType.WALLET_MODAL_OPENED,

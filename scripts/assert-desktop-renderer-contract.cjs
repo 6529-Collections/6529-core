@@ -676,6 +676,18 @@ const authProviderPath = "renderer/components/auth/AuthProvider.tsx";
 const authProvider = parseSource(authProviderPath);
 const authFunction = findFunction(authProvider, "Auth");
 const cancelSignRequest = findVariable(authProvider, "onCancelSignRequest");
+const activeWalletStorageWritebackGuard = authFunction
+  ? findDescendant(
+      authFunction,
+      (node) =>
+        ts.isIfStatement(node) &&
+        callsIdentifier(node.thenStatement, "setActiveWalletAccount") &&
+        callsIdentifier(
+          node.expression,
+          "hasRecentBrowserConnectorSessionV2Auth",
+        ),
+    )
+  : undefined;
 assertContract(
   authFunction &&
     Boolean(
@@ -701,6 +713,11 @@ assertContract(
     callsIdentifier(cancelSignRequest, "abortCurrentAuthOperation"),
   authProviderPath,
   "Auth cancellation must invalidate the active signature before disconnecting",
+);
+assertContract(
+  Boolean(activeWalletStorageWritebackGuard),
+  authProviderPath,
+  "stale provider state must not overwrite a newly persisted browser-connector account",
 );
 
 const authModalPath = "renderer/components/auth/AuthSignModal.tsx";
@@ -888,6 +905,35 @@ const activeLocalWalletConnector = findVariable(
   connectProvider,
   "isActiveLocalWalletConnector",
 );
+const matchingSeedWalletConnector = findVariable(
+  connectProvider,
+  "hasMatchingSeedWalletConnector",
+);
+const openConnectModal = findVariable(connectProvider, "openConnectModal");
+const electronChooserDirectOpenGuard = openConnectModal
+  ? findDescendant(
+      openConnectModal,
+      (node) =>
+        ts.isIfStatement(node) &&
+        callsIdentifier(node.expression, "isElectron") &&
+        callsIdentifier(node.thenStatement, "setShowConnectModal") &&
+        !callsIdentifier(node.thenStatement, "waitForAppKitReady") &&
+        Boolean(
+          findDescendant(node.thenStatement, (child) =>
+            ts.isReturnStatement(child),
+          ),
+        ),
+    )
+  : undefined;
+const appKitReadinessWait = openConnectModal
+  ? findDescendant(
+      openConnectModal,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "waitForAppKitReady",
+    )
+  : undefined;
 const seizeAddConnectedAccount = findVariable(
   connectProvider,
   "seizeAddConnectedAccount",
@@ -925,9 +971,30 @@ assertContract(
           ts.isIdentifier(node) && node.text === "SEED_WALLET_CONNECTOR_TYPE",
       ),
     ) &&
+    matchingSeedWalletConnector &&
+    Boolean(
+      findDescendant(
+        matchingSeedWalletConnector.initializer,
+        (node) => ts.isIdentifier(node) && node.text === "wagmiConnectors",
+      ),
+    ) &&
+    Boolean(
+      findDescendant(
+        matchingSeedWalletConnector.initializer,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "connectorIdentityAddress",
+      ),
+    ) &&
     Boolean(localConnectorDirectOpenGuard),
   "renderer/components/auth/SeizeConnectProvider.tsx",
   "Add profile must open directly for both app-wallet and Core seed-wallet connectors",
+);
+assertContract(
+  electronChooserDirectOpenGuard &&
+    appKitReadinessWait &&
+    electronChooserDirectOpenGuard.getStart() < appKitReadinessWait.getStart(),
+  "renderer/components/auth/SeizeConnectProvider.tsx",
+  "Electron connector chooser must open before and independently of AppKit readiness",
 );
 
 const connectorModalPath =

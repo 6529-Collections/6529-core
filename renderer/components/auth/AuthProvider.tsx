@@ -26,6 +26,7 @@ import {
   getAuthJwt,
   getWalletAddress,
   hasActiveSessionV2Auth,
+  hasRecentBrowserConnectorSessionV2Auth,
   PROFILE_SWITCHED_EVENT,
   setActiveWalletAccount,
   syncConnectedWalletProfile,
@@ -437,7 +438,10 @@ export default function Auth({
     const activeStoredAddress = getWalletAddress();
     if (
       activeStoredAddress &&
-      activeStoredAddress.toLowerCase() !== address.toLowerCase()
+      activeStoredAddress.toLowerCase() !== address.toLowerCase() &&
+      !hasRecentBrowserConnectorSessionV2Auth({
+        address: activeStoredAddress,
+      })
     ) {
       setActiveWalletAccount(address);
     }
