@@ -57,8 +57,11 @@ Run the following command to fetch new changes from branch `main` of `6529seize-
 The command refuses to run outside the long-lived `pull-web` branch and checks
 the desktop renderer contract after the subtree import. In particular, Electron
 wallet sessions must remain `client_type=desktop`, use the secure main-process
-`nativeAuth` bridge, and retain working Cancel/Escape behavior in the auth
-prompt. The `/browser-connector` transfer page must also remain isolated from
+`nativeAuth` bridge, and retain working Cancel/Escape behavior while a signature
+is pending. Authentication must stay below Core wallet unlock/request prompts,
+cancelled signatures must not commit later, and a Core connector must never
+reuse another wallet's stored address. The `/browser-connector` transfer page
+must also remain isolated from
 app-global Quick Direct Messages, cookie consent/analytics, version notices,
 and automatic wallet-auth prompts. Restore those desktop adaptations if the
 guard fails; do not remove or weaken the guard.
@@ -117,8 +120,9 @@ npm bootstrap path for Windows signing or CloudFront invalidation jobs.
 Normal desktop builds run the Core-owned Electron test suite before compiling
 the renderer. That suite includes a contract test outside `renderer/`, so a
 future frontend subtree sync cannot silently remove desktop authentication or
-modal-escape behavior, or reintroduce global application UI on the isolated
-browser connector.
+modal-escape behavior, hide Core wallet prompts behind authentication, accept a
+late cancelled signature, cross-wire Core wallet addresses, or reintroduce
+global application UI on the isolated browser connector.
 
 ## Building and Publishing
 

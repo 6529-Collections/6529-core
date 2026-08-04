@@ -453,6 +453,7 @@ assertContract(
 const authProviderPath = "renderer/components/auth/AuthProvider.tsx";
 const authProvider = parseSource(authProviderPath);
 const authFunction = findFunction(authProvider, "Auth");
+const cancelSignRequest = findVariable(authProvider, "onCancelSignRequest");
 assertContract(
   authFunction &&
     Boolean(
@@ -472,28 +473,119 @@ assertContract(
   authProviderPath,
   "Auth must preserve explicit dismissal while disconnect settles",
 );
+assertContract(
+  cancelSignRequest &&
+    callsIdentifier(cancelSignRequest, "resetSigning") &&
+    callsIdentifier(cancelSignRequest, "abortCurrentAuthOperation"),
+  authProviderPath,
+  "Auth cancellation must invalidate the active signature before disconnecting",
+);
 
 const authModalPath = "renderer/components/auth/AuthSignModal.tsx";
 const authModal = parseSource(authModalPath);
 const authModalFunction = findFunction(authModal, "AuthSignModal");
-const cancelAttribute = authModalFunction
+const canDismissSignModal = findVariable(authModal, "canDismissSignModal");
+const backdropDismissAttribute = authModalFunction
   ? findDescendant(
       authModalFunction,
-      (node) => ts.isJsxAttribute(node) && node.name.text === "onCancel",
+      (node) => ts.isJsxAttribute(node) && node.name.text === "onBackdropClick",
     )
   : undefined;
 assertContract(
   authModalFunction &&
+    hasJsxElement(authModalFunction, "ConfirmModalShell") &&
+    !hasJsxElement(authModalFunction, "dialog") &&
+    jsxAttributeUsesIdentifier(
+      authModalFunction,
+      "ConfirmModalShell",
+      "overlayClassName",
+      "AUTHENTICATION_MODAL_OVERLAY_CLASS",
+    ) &&
+    canDismissSignModal &&
+    !findDescendant(
+      canDismissSignModal.initializer,
+      (node) =>
+        ts.isIdentifier(node) && node.text === "isSignRequestInProgress",
+    ) &&
+    backdropDismissAttribute &&
     Boolean(
       findDescendant(
-        authModalFunction,
-        (node) => ts.isIdentifier(node) && node.text === "canDismissSignModal",
+        backdropDismissAttribute,
+        (node) => ts.isIdentifier(node) && node.text === "onCancelSignRequest",
+      ),
+    ),
+  authModalPath,
+  "AuthSignModal must remain below wallet prompts and stay cancellable while signing",
+);
+
+const confirmModalPath = "renderer/components/shared/ConfirmModalShell.tsx";
+const confirmModal = parseSource(confirmModalPath);
+const confirmModalFunction = findFunction(confirmModal, "ConfirmModalShell");
+assertContract(
+  confirmModalFunction &&
+    Boolean(
+      findDescendant(
+        confirmModalFunction,
+        (node) =>
+          ts.isIdentifier(node) &&
+          node.text === "WALLET_REQUEST_MODAL_OVERLAY_CLASS",
+      ),
+    ),
+  confirmModalPath,
+  "shared wallet prompts must retain the wallet-request modal layer",
+);
+
+const secureSignPath = "renderer/hooks/useSecureSign.ts";
+const secureSign = parseSource(secureSignPath);
+const secureSignFunction = findVariable(secureSign, "useSecureSign");
+assertContract(
+  secureSignFunction &&
+    Boolean(
+      findDescendant(
+        secureSignFunction,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "SigningOperationGuard",
       ),
     ) &&
-    cancelAttribute &&
-    callsIdentifier(cancelAttribute, "onCancelSignRequest"),
-  authModalPath,
-  "AuthSignModal onCancel must invoke the guarded cancellation path",
+    Boolean(
+      findDescendant(
+        secureSignFunction,
+        (node) => ts.isIdentifier(node) && node.text === "invalidate",
+      ),
+    ) &&
+    Boolean(
+      findDescendant(
+        secureSignFunction,
+        (node) => ts.isIdentifier(node) && node.text === "isCurrent",
+      ),
+    ),
+  secureSignPath,
+  "secure signing must invalidate cancelled operations",
+);
+
+const connectProvider = parseSource(
+  authProviderPath.replace("AuthProvider.tsx", "SeizeConnectProvider.tsx"),
+);
+const seizeDisconnect = findVariable(connectProvider, "seizeDisconnect");
+assertContract(
+  seizeDisconnect &&
+    callsIdentifier(seizeDisconnect, "restoreStoredWalletState"),
+  "renderer/components/auth/SeizeConnectProvider.tsx",
+  "wallet cancellation must restore the last authenticated profile state",
+);
+
+const seedConnectorPath = "renderer/wagmiConfig/seedWalletConnector.ts";
+const seedConnector = parseSource(seedConnectorPath);
+const seedConnectorFunction = findFunction(
+  seedConnector,
+  "seedWalletConnector",
+);
+assertContract(
+  seedConnectorFunction &&
+    callsIdentifier(seedConnectorFunction, "parseSeedWalletConnectionState") &&
+    callsIdentifier(seedConnectorFunction, "rejectAllPendingRequests"),
+  seedConnectorPath,
+  "Core wallet connectors must stay address-bound and reject pending work on disconnect",
 );
 
 const routeFeaturesPath =

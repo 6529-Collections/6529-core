@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useCallback, useRef, useState } from "react";
 import { useAppKitAccount } from "@reown/appkit/react";
 import { useSignMessage } from "wagmi";
 import { UserRejectedRequestError } from "viem";
+import { SigningOperationGuard } from "./signing-operation";
 
 /**
  * Enhanced mobile-compatible signing errors
@@ -54,6 +55,7 @@ class ProviderValidationError extends Error {
 interface SignatureResult {
   signature: string | null;
   userRejected: boolean;
+  cancelled?: boolean | undefined;
   error?:
     | MobileSigningError
     | ConnectionMismatchError
@@ -176,13 +178,16 @@ export const useSecureSign = (
   const { address: connectedAddress, isConnected } = useAppKitAccount();
   const wagmiSignMessage = useSignMessage();
   const signatureType: SignatureType = options?.signatureType ?? "eoa";
+  const signingOperationRef = useRef(new SigningOperationGuard());
 
   const reset = useCallback(() => {
+    signingOperationRef.current.invalidate();
     setIsSigningPending(false);
   }, []);
 
   const signMessage = useCallback(
     async (message: string): Promise<SignatureResult> => {
+      const operationId = signingOperationRef.current.begin();
       setIsSigningPending(true);
 
       try {
@@ -193,15 +198,30 @@ export const useSecureSign = (
         validateSigningContext(isConnected, connectedAddress);
 
         // Execute the signature operation using Wagmi
-        return await executeWagmiSignature(
+        const result = await executeWagmiSignature(
           wagmiSignMessage,
           message,
           signatureType
         );
+        return signingOperationRef.current.isCurrent(operationId)
+          ? result
+          : {
+              signature: null,
+              userRejected: false,
+              cancelled: true,
+            };
       } catch (error: unknown) {
-        return classifySigningError(error);
+        return signingOperationRef.current.isCurrent(operationId)
+          ? classifySigningError(error)
+          : {
+              signature: null,
+              userRejected: false,
+              cancelled: true,
+            };
       } finally {
-        setIsSigningPending(false);
+        if (signingOperationRef.current.isCurrent(operationId)) {
+          setIsSigningPending(false);
+        }
       }
     },
     [connectedAddress, isConnected, signatureType, wagmiSignMessage]

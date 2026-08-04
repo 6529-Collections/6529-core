@@ -13,6 +13,9 @@ Desktop renderer invariants are enforced outside the imported subtree by
 `electron-src/desktop-renderer-contract.test.ts`. The guard runs after
 `pull-web`, during type-checking, and in the Electron suite that precedes every
 normal desktop build. A sync that removes secure desktop wallet auth or the
-auth-prompt escape path, or mounts global application UI/telemetry on the
-isolated browser connector, must fail until those desktop adaptations are
-restored.
+auth-prompt escape path, places authentication above Core wallet unlock/request
+prompts, permits late signatures after cancellation, lets one Core connector
+reuse another wallet's address, or mounts global application UI/telemetry on
+the isolated browser connector must fail until those desktop adaptations are
+restored. The same suite behaviorally checks modal ordering, signature
+invalidation, and address-bound Core connector persistence.

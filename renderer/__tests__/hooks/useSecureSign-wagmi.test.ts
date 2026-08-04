@@ -247,5 +247,37 @@ describe("useSecureSign with Wagmi", () => {
 
       expect(result.current.isSigningPending).toBe(false);
     });
+
+    it("discards a signature that arrives after reset", async () => {
+      let resolveSignature!: (signature: string) => void;
+      const pendingSignature = new Promise<string>((resolve) => {
+        resolveSignature = resolve;
+      });
+      mockUseSignMessage.mockReturnValue({
+        signMessageAsync: jest.fn(() => pendingSignature),
+      } as any);
+      const { result } = renderHook(() => useSecureSign());
+
+      let signResultPromise!: ReturnType<typeof result.current.signMessage>;
+      act(() => {
+        signResultPromise = result.current.signMessage("test message");
+      });
+      act(() => {
+        result.current.reset();
+      });
+      resolveSignature(validSignature);
+
+      let signResult!: Awaited<typeof signResultPromise>;
+      await act(async () => {
+        signResult = await signResultPromise;
+      });
+
+      expect(signResult).toEqual({
+        signature: null,
+        userRejected: false,
+        cancelled: true,
+      });
+      expect(result.current.isSigningPending).toBe(false);
+    });
   });
 });

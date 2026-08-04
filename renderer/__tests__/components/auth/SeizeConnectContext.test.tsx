@@ -1889,11 +1889,17 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
     });
 
     const DisconnectTestComponent: React.FC = () => {
-      const { seizeDisconnect } = useSeizeConnectContext();
+      const { address, seizeDisconnect } = useSeizeConnectContext();
       return (
-        <button onClick={() => seizeDisconnect()} data-testid="disconnect-btn">
-          Disconnect
-        </button>
+        <>
+          <button
+            onClick={() => seizeDisconnect()}
+            data-testid="disconnect-btn"
+          >
+            Disconnect
+          </button>
+          <span data-testid="address">{address}</span>
+        </>
       );
     };
 
@@ -1910,7 +1916,10 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
     mockGetWalletAddress.mockClear();
     await userEvent.click(screen.getByTestId("disconnect-btn"));
     expect(mockDisconnect).toHaveBeenCalled();
-    expect(mockGetWalletAddress).not.toHaveBeenCalled();
+    expect(mockGetWalletAddress).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(screen.getByTestId("address")).toHaveTextContent(validAddress);
+    });
   });
 
   it("should handle disconnect and logout", async () => {

@@ -668,6 +668,9 @@ export default function Auth({
   ]);
 
   const onCancelSignRequest = useCallback(() => {
+    resetSigning();
+    abortCurrentAuthOperation();
+
     if (signModalReason === "session-upgrade") {
       if (!sessionUpgradeCanDismiss) {
         return;
@@ -701,10 +704,12 @@ export default function Auth({
   }, [
     address,
     authRolloutSettings,
+    abortCurrentAuthOperation,
     isAddressAuthorized,
     normalizedAddress,
     seizeDisconnect,
     seizeDisconnectAndLogout,
+    resetSigning,
     sessionUpgradeCanDismiss,
     signModalReason,
   ]);

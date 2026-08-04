@@ -4,6 +4,12 @@ import { ethers } from "ethers";
 import { createConnector } from "wagmi";
 import { UserRejectedRequestError } from "viem";
 import { mainnet, sepolia } from "viem/chains";
+import {
+  createSeedWalletConnectionState,
+  EMPTY_SEED_WALLET_CONNECTION,
+  parseSeedWalletConnectionState,
+  type SeedWalletConnectionState,
+} from "./seedWalletConnectionState";
 
 export const SEED_WALLET_CONNECTOR_TYPE = "seed-wallet";
 
@@ -12,29 +18,48 @@ interface ProviderRequest {
   params: any[];
 }
 
-interface ConnectionObject {
-  accounts: `0x${string}`[];
-  chainId: number;
-}
-
 const CONNECTION_STORE = "seize-app-connection-seed-wallet";
+
+interface PendingCallback {
+  readonly callback: (request: SeedWalletRequest | Error) => void;
+  readonly timeoutId: ReturnType<typeof setTimeout>;
+}
 
 export function seedWalletConnector(parameters: {
   address: string;
   name: string;
 }) {
-  const pendingCallbacks: Map<
-    string,
-    (request: SeedWalletRequest | Error) => void
-  > = new Map();
+  const pendingCallbacks = new Map<string, PendingCallback>();
 
   let provider: ethers.Provider;
   let initialized = false;
 
-  let connectionObject: ConnectionObject = {
-    accounts: [],
-    chainId: 1,
-  };
+  let connectionObject: SeedWalletConnectionState =
+    EMPTY_SEED_WALLET_CONNECTION;
+
+  function settlePendingRequest(
+    requestId: string,
+    result: SeedWalletRequest | Error
+  ): boolean {
+    const pending = pendingCallbacks.get(requestId);
+    if (!pending) {
+      return false;
+    }
+
+    clearTimeout(pending.timeoutId);
+    pendingCallbacks.delete(requestId);
+    pending.callback(result);
+    return true;
+  }
+
+  function rejectAllPendingRequests(): void {
+    for (const requestId of pendingCallbacks.keys()) {
+      settlePendingRequest(
+        requestId,
+        new UserRejectedRequestError(new Error("Wallet disconnected"))
+      );
+    }
+  }
 
   async function handlePendingRequest(name: string, data: SeedWalletRequest) {
     const { method, privateKey, params } = data;
@@ -88,16 +113,12 @@ export function seedWalletConnector(parameters: {
     if (!window || initialized) return;
 
     const storedConnection = await window.store.get(CONNECTION_STORE);
-    if (storedConnection) {
-      connectionObject = JSON.parse(storedConnection);
-    }
+    connectionObject =
+      parseSeedWalletConnectionState(storedConnection, parameters.address) ??
+      EMPTY_SEED_WALLET_CONNECTION;
 
     window.seedConnector.onConfirm((_event: any, data: SeedWalletRequest) => {
-      const callback = pendingCallbacks.get(data.requestId);
-      if (callback) {
-        callback(data);
-        pendingCallbacks.delete(data.requestId);
-      } else {
+      if (!settlePendingRequest(data.requestId, data)) {
         console.log(
           `[${name}] No callback found for requestId (confirmed)`,
           data.requestId
@@ -106,11 +127,13 @@ export function seedWalletConnector(parameters: {
     });
 
     window.seedConnector.onReject((_event: any, data: SeedWalletRequest) => {
-      const callback = pendingCallbacks.get(data.requestId);
-      if (callback) {
+      if (
+        settlePendingRequest(
+          data.requestId,
+          new UserRejectedRequestError(new Error("Request rejected"))
+        )
+      ) {
         console.log(`[${name}] Request rejected`, data);
-        callback(new UserRejectedRequestError(new Error("Request rejected")));
-        pendingCallbacks.delete(data.requestId);
       } else {
         console.log(
           `[${name}] No callback found for requestId (rejected)`,
@@ -153,10 +176,18 @@ export function seedWalletConnector(parameters: {
       console.log(`[${this.name}] Seed Wallet Connect method called`, opts);
       await init(this.name);
 
+      const storedConnection = await window.store.get(CONNECTION_STORE);
+      connectionObject =
+        parseSeedWalletConnectionState(storedConnection, parameters.address) ??
+        EMPTY_SEED_WALLET_CONNECTION;
+
       // If we already have a connection, honor the requested chainId (if any) and return
       if (connectionObject.accounts.length > 0) {
         if (opts?.chainId && opts.chainId !== connectionObject.chainId) {
-          connectionObject.chainId = opts.chainId;
+          connectionObject = {
+            ...connectionObject,
+            chainId: opts.chainId,
+          };
           await window.store.set(
             CONNECTION_STORE,
             JSON.stringify(connectionObject)
@@ -191,10 +222,10 @@ export function seedWalletConnector(parameters: {
       }
 
       // Establish new connection
-      connectionObject = {
-        accounts: [parameters.address as `0x${string}`],
-        chainId: opts?.chainId ?? 1,
-      };
+      connectionObject = createSeedWalletConnectionState(
+        parameters.address,
+        opts?.chainId ?? 1
+      );
 
       await window.store.set(
         CONNECTION_STORE,
@@ -222,11 +253,14 @@ export function seedWalletConnector(parameters: {
       } as any;
     },
     async disconnect() {
-      connectionObject = {
-        accounts: [],
-        chainId: 1,
-      };
-      await window.store.remove(CONNECTION_STORE);
+      rejectAllPendingRequests();
+      connectionObject = EMPTY_SEED_WALLET_CONNECTION;
+      const storedConnection = await window.store.get(CONNECTION_STORE);
+      if (
+        parseSeedWalletConnectionState(storedConnection, parameters.address)
+      ) {
+        await window.store.remove(CONNECTION_STORE);
+      }
       window.seedConnector.disconnect();
     },
     async getAccounts() {
@@ -254,35 +288,49 @@ export function seedWalletConnector(parameters: {
               params,
             };
 
-            window.seedConnector.initRequest(request);
-            pendingCallbacks.set(
-              requestId,
-              (request: SeedWalletRequest | Error) => {
-                if (request instanceof Error) {
-                  reject(request);
-                  return;
-                }
-                try {
-                  const response = handlePendingRequest(this.name, request);
-                  resolve(response);
-                } catch (error: any) {
-                  window.seedConnector.showToast({
-                    type: "error",
-                    message: error.message,
-                  });
-                  reject(new Error(error.message));
-                }
-              }
-            );
-
-            setTimeout(() => {
+            const timeoutId = setTimeout(() => {
               console.log(
                 `[${this.name}] Pending callback timed out`,
                 requestId
               );
-              pendingCallbacks.delete(requestId);
-              reject(new Error("Provider request timed out"));
+              settlePendingRequest(
+                requestId,
+                new Error("Provider request timed out")
+              );
             }, 60000);
+            pendingCallbacks.set(requestId, {
+              timeoutId,
+              callback: (request: SeedWalletRequest | Error) => {
+                if (request instanceof Error) {
+                  reject(request);
+                  return;
+                }
+                void handlePendingRequest(this.name, request)
+                  .then(resolve)
+                  .catch((error: unknown) => {
+                    const message =
+                      error instanceof Error
+                        ? error.message
+                        : "Wallet request failed";
+                    window.seedConnector.showToast({
+                      type: "error",
+                      message,
+                    });
+                    reject(new Error(message));
+                  });
+              },
+            });
+
+            try {
+              window.seedConnector.initRequest(request);
+            } catch (error: unknown) {
+              settlePendingRequest(
+                requestId,
+                error instanceof Error
+                  ? error
+                  : new Error("Unable to open wallet request")
+              );
+            }
           });
         },
       };
@@ -293,7 +341,10 @@ export function seedWalletConnector(parameters: {
     async switchChain(params: { chainId: number }) {
       console.log(`[${this.name}] Switch Chain method called`, params.chainId);
       const myChain = params.chainId === sepolia.id ? sepolia : mainnet;
-      connectionObject.chainId = myChain.id;
+      connectionObject = {
+        ...connectionObject,
+        chainId: myChain.id,
+      };
       await window.store.set(
         CONNECTION_STORE,
         JSON.stringify(connectionObject)
