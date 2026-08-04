@@ -15,8 +15,8 @@ import "@/styles/globals.css";
 import DynamicHeadTitle from "@/components/dynamic-head/DynamicHeadTitle";
 import AwsRumProvider from "@/components/monitoring/AwsRumProvider";
 import MobileLaunchTimingReporter from "@/components/monitoring/MobileLaunchTimingReporter";
+import AppRouteProviders from "@/components/providers/AppRouteProviders";
 import LayoutWrapper from "@/components/providers/LayoutWrapper";
-import Providers from "@/components/providers/Providers";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
 import type { Viewport } from "next";
@@ -54,10 +54,10 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <MobileLaunchTimingReporter />
         <AwsRumProvider>
-          <Providers>
+          <AppRouteProviders>
             <DynamicHeadTitle />
             <LayoutWrapper>{children}</LayoutWrapper>
-          </Providers>
+          </AppRouteProviders>
         </AwsRumProvider>
       </body>
     </html>

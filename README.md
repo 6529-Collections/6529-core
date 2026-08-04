@@ -58,8 +58,10 @@ The command refuses to run outside the long-lived `pull-web` branch and checks
 the desktop renderer contract after the subtree import. In particular, Electron
 wallet sessions must remain `client_type=desktop`, use the secure main-process
 `nativeAuth` bridge, and retain working Cancel/Escape behavior in the auth
-prompt. Restore those desktop adaptations if the guard fails; do not remove or
-weaken the guard.
+prompt. The `/browser-connector` transfer page must also remain isolated from
+app-global Quick Direct Messages, cookie consent/analytics, version notices,
+and automatic wallet-auth prompts. Restore those desktop adaptations if the
+guard fails; do not remove or weaken the guard.
 
 ⚠️ Note: there might be conflicts that need resolving
 
@@ -115,7 +117,8 @@ npm bootstrap path for Windows signing or CloudFront invalidation jobs.
 Normal desktop builds run the Core-owned Electron test suite before compiling
 the renderer. That suite includes a contract test outside `renderer/`, so a
 future frontend subtree sync cannot silently remove desktop authentication or
-modal-escape behavior.
+modal-escape behavior, or reintroduce global application UI on the isolated
+browser connector.
 
 ## Building and Publishing
 

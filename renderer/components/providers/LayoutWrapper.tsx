@@ -8,6 +8,7 @@ import MobileLayout from "@/components/layout/MobileLayout";
 import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
 import WebLayout from "@/components/layout/WebLayout";
 import LayoutErrorFallback from "@/components/providers/LayoutErrorFallback";
+import { isBrowserConnectorRoute } from "@/components/providers/app-route-provider-features";
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/constants/sidebar";
 import { useGlobalRefresh } from "@/contexts/RefreshContext";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
@@ -64,7 +65,7 @@ export default function LayoutWrapper({
   const isStandaloneRoute =
     pathname.startsWith("/access") ||
     pathname.startsWith("/restricted") ||
-    pathname.startsWith("/browser-connector");
+    isBrowserConnectorRoute(pathname);
 
   useEffect(() => {
     const flushAfterPaint = () => {

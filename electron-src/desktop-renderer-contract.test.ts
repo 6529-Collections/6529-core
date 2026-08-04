@@ -4,7 +4,7 @@ import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 
 describe("desktop renderer contract", () => {
-  it("preserves secure desktop auth and an escapable auth prompt", () => {
+  it("preserves secure auth, modal escape, and connector isolation", () => {
     const repositoryRoot = path.resolve(__dirname, "..");
     const result = spawnSync(
       process.execPath,

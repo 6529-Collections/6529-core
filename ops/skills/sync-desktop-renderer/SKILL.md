@@ -34,6 +34,7 @@ Preserve or reapply desktop-specific behavior in these areas:
 
 - `renderer/services/auth/session-v2.utils.ts`: Electron must use `client_type=desktop` and route native-session login, refresh, logout, and connection sharing through `window.nativeAuth` so refresh tokens stay in the main process.
 - `renderer/components/auth/AuthProvider.tsx`, `renderer/components/auth/AuthSignModal.tsx`: auth cancellation must immediately dismiss the prompt, remain dismissed while disconnect settles, and support the native dialog Escape/cancel event.
+- `renderer/app/layout.tsx`, `renderer/components/providers/AppRouteProviders.tsx`, `renderer/components/providers/app-route-provider-features.ts`, `renderer/components/monitoring/AwsRumProvider.tsx`: `/browser-connector` must retain the wallet infrastructure needed for connection transfer while disabling app-global wallet-auth prompts, Quick Direct Messages, cookie consent/Mixpanel, version toasts, and AWS RUM.
 - `renderer/components/header/share/HeaderQRScanner.tsx`: desktop QR behavior, avoiding mobile-only scanner assumptions.
 - `renderer/components/eula/EULAConsentContext.tsx`: Electron/local consent behavior.
 - `renderer/components/ipfs/IPFSContext.tsx`: Electron bridge/local IPFS support.

@@ -49,6 +49,200 @@ function findFunction(sourceFile, functionName) {
   );
 }
 
+function findVariable(sourceFile, variableName) {
+  return findDescendant(
+    sourceFile,
+    (node) =>
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === variableName,
+  );
+}
+
+function unwrapExpression(expression) {
+  let current = expression;
+  while (
+    current &&
+    (ts.isAsExpression(current) ||
+      ts.isSatisfiesExpression(current) ||
+      ts.isParenthesizedExpression(current))
+  ) {
+    current = current.expression;
+  }
+  return current;
+}
+
+function hasBooleanObjectProperties(sourceFile, variableName, expected) {
+  const declaration = findVariable(sourceFile, variableName);
+  const initializer = declaration && unwrapExpression(declaration.initializer);
+  if (!initializer || !ts.isObjectLiteralExpression(initializer)) {
+    return false;
+  }
+
+  return Object.entries(expected).every(([propertyName, value]) =>
+    initializer.properties.some((property) => {
+      if (!ts.isPropertyAssignment(property)) {
+        return false;
+      }
+      const name = property.name;
+      const hasExpectedName =
+        (ts.isIdentifier(name) || ts.isStringLiteral(name)) &&
+        name.text === propertyName;
+      return (
+        hasExpectedName &&
+        property.initializer.kind ===
+          (value ? ts.SyntaxKind.TrueKeyword : ts.SyntaxKind.FalseKeyword)
+      );
+    }),
+  );
+}
+
+function hasJsxElement(node, elementName) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isJsxOpeningElement(candidate) &&
+        !ts.isJsxSelfClosingElement(candidate)
+      ) {
+        return false;
+      }
+      return (
+        ts.isIdentifier(candidate.tagName) &&
+        candidate.tagName.text === elementName
+      );
+    }),
+  );
+}
+
+function jsxElementSpreadsIdentifier(node, elementName, identifier) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isJsxOpeningElement(candidate) &&
+        !ts.isJsxSelfClosingElement(candidate)
+      ) {
+        return false;
+      }
+      if (
+        !ts.isIdentifier(candidate.tagName) ||
+        candidate.tagName.text !== elementName
+      ) {
+        return false;
+      }
+      return candidate.attributes.properties.some(
+        (property) =>
+          ts.isJsxSpreadAttribute(property) &&
+          ts.isIdentifier(property.expression) &&
+          property.expression.text === identifier,
+      );
+    }),
+  );
+}
+
+function jsxAttributeUsesIdentifier(
+  node,
+  elementName,
+  attributeName,
+  identifier,
+  negated = false,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isJsxOpeningElement(candidate) &&
+        !ts.isJsxSelfClosingElement(candidate)
+      ) {
+        return false;
+      }
+      if (
+        !ts.isIdentifier(candidate.tagName) ||
+        candidate.tagName.text !== elementName
+      ) {
+        return false;
+      }
+      const attribute = candidate.attributes.properties.find(
+        (property) =>
+          ts.isJsxAttribute(property) && property.name.text === attributeName,
+      );
+      if (
+        !attribute ||
+        !ts.isJsxAttribute(attribute) ||
+        !attribute.initializer ||
+        !ts.isJsxExpression(attribute.initializer) ||
+        !attribute.initializer.expression
+      ) {
+        return false;
+      }
+      const expression = attribute.initializer.expression;
+      if (negated) {
+        return (
+          ts.isPrefixUnaryExpression(expression) &&
+          expression.operator === ts.SyntaxKind.ExclamationToken &&
+          ts.isIdentifier(expression.operand) &&
+          expression.operand.text === identifier
+        );
+      }
+      return ts.isIdentifier(expression) && expression.text === identifier;
+    }),
+  );
+}
+
+function jsxElementIsGatedByIdentifier(node, elementName, identifier) {
+  const element = findDescendant(
+    node,
+    (candidate) =>
+      (ts.isJsxOpeningElement(candidate) ||
+        ts.isJsxSelfClosingElement(candidate)) &&
+      ts.isIdentifier(candidate.tagName) &&
+      candidate.tagName.text === elementName,
+  );
+  if (!element) {
+    return false;
+  }
+
+  for (
+    let current = element.parent;
+    current && current !== node;
+    current = current.parent
+  ) {
+    if (
+      ts.isConditionalExpression(current) &&
+      ts.isIdentifier(current.condition) &&
+      current.condition.text === identifier
+    ) {
+      return true;
+    }
+    if (
+      ts.isBinaryExpression(current) &&
+      current.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken &&
+      ts.isIdentifier(current.left) &&
+      current.left.text === identifier
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function countGuardReturns(node, identifier) {
+  let count = 0;
+  const visit = (candidate) => {
+    if (
+      ts.isIfStatement(candidate) &&
+      ts.isIdentifier(candidate.expression) &&
+      candidate.expression.text === identifier &&
+      findDescendant(candidate.thenStatement, (child) =>
+        ts.isReturnStatement(child),
+      )
+    ) {
+      count += 1;
+    }
+    ts.forEachChild(candidate, visit);
+  };
+  visit(node);
+  return count;
+}
+
 function callsIdentifier(node, identifier) {
   return Boolean(
     findDescendant(
@@ -300,6 +494,96 @@ assertContract(
     callsIdentifier(cancelAttribute, "onCancelSignRequest"),
   authModalPath,
   "AuthSignModal onCancel must invoke the guarded cancellation path",
+);
+
+const routeFeaturesPath =
+  "renderer/components/providers/app-route-provider-features.ts";
+const routeFeatures = parseSource(routeFeaturesPath);
+const browserConnectorFeatures = {
+  enableVersionCheck: false,
+  enableWalletAuthentication: false,
+  enableCookieConsent: false,
+  enableMyStream: false,
+};
+assertContract(
+  hasBooleanObjectProperties(
+    routeFeatures,
+    "BROWSER_CONNECTOR_PROVIDER_FEATURES",
+    browserConnectorFeatures,
+  ),
+  routeFeaturesPath,
+  "browser connector must disable version, wallet-auth, cookie-consent, and My Stream global UI",
+);
+
+const appRouteProvidersPath =
+  "renderer/components/providers/AppRouteProviders.tsx";
+const appRouteProviders = parseSource(appRouteProvidersPath);
+const appRouteProvidersFunction = findFunction(
+  appRouteProviders,
+  "AppRouteProviders",
+);
+assertContract(
+  appRouteProvidersFunction &&
+    callsIdentifier(appRouteProvidersFunction, "getAppRouteProviderFeatures") &&
+    jsxElementSpreadsIdentifier(
+      appRouteProvidersFunction,
+      "Providers",
+      "providerFeatures",
+    ),
+  appRouteProvidersPath,
+  "AppRouteProviders must apply the route feature contract to Providers",
+);
+
+const providersPath = "renderer/components/providers/Providers.tsx";
+const providers = parseSource(providersPath);
+const providersFunction = findFunction(providers, "Providers");
+assertContract(
+  providersFunction &&
+    jsxAttributeUsesIdentifier(
+      providersFunction,
+      "Auth",
+      "enableWalletAuthentication",
+      "enableWalletAuthentication",
+    ) &&
+    jsxAttributeUsesIdentifier(
+      providersFunction,
+      "CookieConsentProvider",
+      "disabled",
+      "enableCookieConsent",
+      true,
+    ) &&
+    jsxElementIsGatedByIdentifier(
+      providersFunction,
+      "QuickDirectMessagesGate",
+      "enableMyStream",
+    ) &&
+    jsxElementIsGatedByIdentifier(
+      providersFunction,
+      "NewVersionToast",
+      "enableVersionCheck",
+    ),
+  providersPath,
+  "Providers must keep every app-global UI surface behind its connector feature flag",
+);
+
+const rootLayoutPath = "renderer/app/layout.tsx";
+const rootLayout = parseSource(rootLayoutPath);
+const rootLayoutFunction = findFunction(rootLayout, "RootLayout");
+assertContract(
+  rootLayoutFunction && hasJsxElement(rootLayoutFunction, "AppRouteProviders"),
+  rootLayoutPath,
+  "RootLayout must route all pages through AppRouteProviders",
+);
+
+const awsRumPath = "renderer/components/monitoring/AwsRumProvider.tsx";
+const awsRum = parseSource(awsRumPath);
+const awsRumFunction = findFunction(awsRum, "AwsRumProvider");
+assertContract(
+  awsRumFunction &&
+    callsIdentifier(awsRumFunction, "isBrowserConnectorRoute") &&
+    countGuardReturns(awsRumFunction, "isBrowserConnector") >= 2,
+  awsRumPath,
+  "AWS RUM must remain disabled on the browser connector route",
 );
 
 if (failures.length > 0) {
