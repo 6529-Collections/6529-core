@@ -295,17 +295,79 @@ function callsIdentifier(node, identifier) {
   );
 }
 
-function callsProperty(node, receiver, method) {
+function isPropertyCall(node, receiver, method) {
+  return (
+    ts.isCallExpression(node) &&
+    ts.isPropertyAccessExpression(node.expression) &&
+    ts.isIdentifier(node.expression.expression) &&
+    node.expression.expression.text === receiver &&
+    node.expression.name.text === method
+  );
+}
+
+function hasBoundedShutdownSequence(node) {
   return Boolean(
-    findDescendant(
-      node,
-      (candidate) =>
-        ts.isCallExpression(candidate) &&
-        ts.isPropertyAccessExpression(candidate.expression) &&
-        ts.isIdentifier(candidate.expression.expression) &&
-        candidate.expression.expression.text === receiver &&
-        candidate.expression.name.text === method,
-    ),
+    findDescendant(node, (candidate) => {
+      if (!ts.isTryStatement(candidate) || !candidate.finallyBlock) {
+        return false;
+      }
+
+      const awaitedAllSettled = findDescendant(
+        candidate.tryBlock,
+        (child) =>
+          ts.isAwaitExpression(child) &&
+          isPropertyCall(child.expression, "Promise", "allSettled"),
+      );
+      if (
+        !awaitedAllSettled ||
+        !ts.isAwaitExpression(awaitedAllSettled) ||
+        !ts.isCallExpression(awaitedAllSettled.expression)
+      ) {
+        return false;
+      }
+
+      const operations = awaitedAllSettled.expression.arguments[0];
+      if (!operations || !ts.isArrayLiteralExpression(operations)) {
+        return false;
+      }
+
+      const timeoutWrappedOperations = operations.elements.filter(
+        (element) =>
+          ts.isCallExpression(element) &&
+          ts.isIdentifier(element.expression) &&
+          element.expression.text === "runShutdownStepWithTimeout" &&
+          element.arguments[1] !== undefined,
+      );
+      const schedulerShutdown = timeoutWrappedOperations.find((operation) =>
+        findDescendant(
+          operation.arguments[1],
+          (child) =>
+            ts.isCallExpression(child) &&
+            ts.isIdentifier(child.expression) &&
+            child.expression.text === "stopSchedulers" &&
+            child.arguments.length === 1 &&
+            ts.isIdentifier(child.arguments[0]) &&
+            child.arguments[0].text === "scheduledWorkers",
+        ),
+      );
+      const ipfsShutdown = timeoutWrappedOperations.find((operation) =>
+        findDescendant(operation.arguments[1], (child) =>
+          isPropertyCall(child, "IPFS_SERVER", "shutdown"),
+        ),
+      );
+      const quitsInFinally = Boolean(
+        findDescendant(candidate.finallyBlock, (child) =>
+          isPropertyCall(child, "app", "quit"),
+        ),
+      );
+
+      return (
+        schedulerShutdown !== undefined &&
+        ipfsShutdown !== undefined &&
+        schedulerShutdown !== ipfsShutdown &&
+        quitsInFinally
+      );
+    }),
   );
 }
 
@@ -441,12 +503,9 @@ const mainPath = "electron-src/index.ts";
 const mainSource = parseSource(mainPath);
 const quitApplication = findFunction(mainSource, "quitApplication");
 assertContract(
-  quitApplication &&
-    callsIdentifier(quitApplication, "runShutdownStepWithTimeout") &&
-    callsProperty(quitApplication, "Promise", "allSettled") &&
-    callsProperty(quitApplication, "app", "quit"),
+  quitApplication && hasBoundedShutdownSequence(quitApplication),
   mainPath,
-  "app shutdown must bound cleanup in parallel before quitting",
+  "app shutdown must await timeout-wrapped scheduler and IPFS cleanup before quitting",
 );
 for (const channel of ipcChannels) {
   assertContract(
