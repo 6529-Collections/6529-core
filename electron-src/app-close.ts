@@ -8,7 +8,7 @@ export const APP_CLOSE_DIALOG_OPTIONS = {
   message: "Close 6529 Desktop?",
   detail: "Quit completely or keep desktop services running in the background.",
   buttons: ["Quit", "Run in Background", "Cancel"],
-  defaultId: 2,
+  defaultId: 0,
   cancelId: 2,
   noLink: true,
 } satisfies MessageBoxOptions;
