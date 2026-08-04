@@ -791,7 +791,59 @@ assertContract(
       "SEED_WALLET_REQUEST_FIXED_SECTION_CLASS",
     ),
   seedWalletRequestPath,
-  "Core wallet requests must retain a large fixed shell with a scrolling body and fixed actions",
+  "Core wallet requests must retain the shared responsive shell with a scrolling body and fixed actions",
+);
+
+const coreWalletModalLayoutPath =
+  "renderer/components/shared/core-wallet-modal-layout.ts";
+const coreWalletModalLayout = parseSource(coreWalletModalLayoutPath);
+const coreWalletModalSizeClass = findVariable(
+  coreWalletModalLayout,
+  "CORE_WALLET_MODAL_SIZE_CLASS",
+);
+const coreWalletModalSizeInitializer =
+  coreWalletModalSizeClass &&
+  unwrapExpression(coreWalletModalSizeClass.initializer);
+const connectorModalLayoutPath =
+  "renderer/components/header/user/connector-modal-layout.ts";
+const connectorModalLayout = parseSource(connectorModalLayoutPath);
+const connectorModalDialogClass = findVariable(
+  connectorModalLayout,
+  "CONNECTOR_MODAL_DIALOG_CLASS",
+);
+const seedWalletRequestLayoutPath =
+  "renderer/components/confirm/seed-wallet-request-layout.ts";
+const seedWalletRequestLayout = parseSource(seedWalletRequestLayoutPath);
+const seedWalletRequestDialogClass = findVariable(
+  seedWalletRequestLayout,
+  "SEED_WALLET_REQUEST_DIALOG_CLASS",
+);
+assertContract(
+  coreWalletModalSizeInitializer &&
+    ts.isStringLiteral(coreWalletModalSizeInitializer) &&
+    coreWalletModalSizeInitializer.text.includes("!tw-w-[calc(100vw-2rem)]") &&
+    coreWalletModalSizeInitializer.text.includes("!tw-max-w-[40rem]") &&
+    coreWalletModalSizeInitializer.text.includes(
+      "!tw-max-h-[min(78dvh,40rem)]",
+    ) &&
+    connectorModalDialogClass &&
+    Boolean(
+      findDescendant(
+        connectorModalDialogClass.initializer,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "CORE_WALLET_MODAL_SIZE_CLASS",
+      ),
+    ) &&
+    seedWalletRequestDialogClass &&
+    Boolean(
+      findDescendant(
+        seedWalletRequestDialogClass.initializer,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "CORE_WALLET_MODAL_SIZE_CLASS",
+      ),
+    ),
+  coreWalletModalLayoutPath,
+  "Core wallet chooser and request prompt must share the responsive 40rem size envelope",
 );
 
 const secureSignPath = "renderer/hooks/useSecureSign.ts";
@@ -900,6 +952,12 @@ assertContract(
       "div",
       "className",
       "CONNECTOR_MODAL_DIALOG_CLASS",
+    ) &&
+    jsxAttributeContainsIdentifier(
+      connectorModalFunction,
+      "div",
+      "className",
+      "CONNECTOR_MODAL_BODY_CLASS",
     ) &&
     connectorSelectorFunction &&
     callsIdentifier(connectorSelectorFunction, "getSeedWalletSelectionState") &&

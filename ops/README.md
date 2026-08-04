@@ -20,7 +20,8 @@ address or an unsupported chain, prevents a Core wallet from opening Add
 Profile, removes the compact Core-wallet active/switch states, narrows the
 connector chooser, mounts that chooser outside the connection context it
 consumes, makes the route error fallback depend on an application provider,
-shrinks the Core request prompt or lets its actions scroll away, or mounts
+lets the Core chooser/request prompts diverge from their shared responsive
+size envelope or lets request actions scroll away, or mounts
 global application UI/telemetry on the isolated browser connector must fail
 until those desktop adaptations are restored. The same suite behaviorally
 checks modal ordering, signature invalidation, address validation,

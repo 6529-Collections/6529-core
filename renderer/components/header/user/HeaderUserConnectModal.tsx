@@ -16,7 +16,10 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Connector, useConnect, useConnectors } from "wagmi";
-import { CONNECTOR_MODAL_DIALOG_CLASS } from "./connector-modal-layout";
+import {
+  CONNECTOR_MODAL_BODY_CLASS,
+  CONNECTOR_MODAL_DIALOG_CLASS,
+} from "./connector-modal-layout";
 import { getSeedWalletSelectionState } from "./seed-wallet-selection-state";
 
 const CONNECTOR_MODAL_LOCALE = DEFAULT_LOCALE;
@@ -83,12 +86,12 @@ export default function HeaderUserConnectModal({
         className={CONNECTOR_MODAL_DIALOG_CLASS}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={confirmModalHeader}>
+        <div className={`${confirmModalHeader} tw-shrink-0`}>
           <h2 className="tw-m-0 tw-text-lg tw-font-semibold">
             Choose Connector
           </h2>
         </div>
-        <div className={`${confirmModalBody} tw-border-b-0`}>
+        <div className={`${confirmModalBody} ${CONNECTOR_MODAL_BODY_CLASS}`}>
           {isBrowser ? (
             <ConnectorList
               connectors={otherConnectors}

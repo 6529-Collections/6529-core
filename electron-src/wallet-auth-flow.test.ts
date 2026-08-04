@@ -16,8 +16,12 @@ import {
   SEED_WALLET_MAINNET_CHAIN_ID,
   SEED_WALLET_SEPOLIA_CHAIN_ID,
 } from "../renderer/wagmiConfig/seedWalletConnectionState";
-import { CONNECTOR_MODAL_DIALOG_CLASS } from "../renderer/components/header/user/connector-modal-layout";
+import {
+  CONNECTOR_MODAL_BODY_CLASS,
+  CONNECTOR_MODAL_DIALOG_CLASS,
+} from "../renderer/components/header/user/connector-modal-layout";
 import { getSeedWalletSelectionState } from "../renderer/components/header/user/seed-wallet-selection-state";
+import { CORE_WALLET_MODAL_SIZE_CLASS } from "../renderer/components/shared/core-wallet-modal-layout";
 import {
   SEED_WALLET_REQUEST_BODY_CLASS,
   SEED_WALLET_REQUEST_DIALOG_CLASS,
@@ -139,17 +143,24 @@ describe("desktop wallet authentication flow", () => {
     );
   });
 
-  it("keeps the connector chooser wide without increasing wallet row height", () => {
-    assert.match(CONNECTOR_MODAL_DIALOG_CLASS, /tw-max-w-2xl/);
-    assert.match(CONNECTOR_MODAL_DIALOG_CLASS, /tw-w-\[calc\(100vw-2rem\)\]/);
+  it("keeps Core wallet modals in the same responsive size envelope", () => {
+    assert.match(CORE_WALLET_MODAL_SIZE_CLASS, /!tw-max-w-\[40rem\]/);
+    assert.match(
+      CORE_WALLET_MODAL_SIZE_CLASS,
+      /!tw-max-h-\[min\(78dvh,40rem\)\]/,
+    );
+    assert.match(CORE_WALLET_MODAL_SIZE_CLASS, /!tw-w-\[calc\(100vw-2rem\)\]/);
+    assert.ok(
+      CONNECTOR_MODAL_DIALOG_CLASS.includes(CORE_WALLET_MODAL_SIZE_CLASS),
+    );
+    assert.ok(
+      SEED_WALLET_REQUEST_DIALOG_CLASS.includes(CORE_WALLET_MODAL_SIZE_CLASS),
+    );
+    assert.match(CONNECTOR_MODAL_BODY_CLASS, /tw-overflow-y-auto/);
+    assert.doesNotMatch(SEED_WALLET_REQUEST_DIALOG_CLASS, /tw-h-\[/);
   });
 
-  it("keeps the Core wallet request large with fixed actions and a scrolling body", () => {
-    assert.match(SEED_WALLET_REQUEST_DIALOG_CLASS, /tw-max-w-4xl/);
-    assert.match(
-      SEED_WALLET_REQUEST_DIALOG_CLASS,
-      /tw-h-\[min\(85dvh,760px\)\]/,
-    );
+  it("keeps Core wallet request actions fixed while its body scrolls", () => {
     assert.match(SEED_WALLET_REQUEST_DIALOG_CLASS, /!tw-overflow-hidden/);
     assert.match(SEED_WALLET_REQUEST_BODY_CLASS, /tw-flex-1/);
     assert.match(SEED_WALLET_REQUEST_BODY_CLASS, /tw-overflow-y-auto/);
