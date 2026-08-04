@@ -14,10 +14,11 @@ satisfied.
 - Confirm the renderer sync PR uses the repository's `pull-web` branch when updating the bundled frontend. Do not move renderer subtree imports onto an ad hoc `codex/` branch unless the repo owner explicitly asks for that.
 - Confirm a renderer sync does not change the desktop version. Version changes belong only to an explicitly requested release branch created from `main`.
 - Run the Core-owned desktop renderer contract guard and restore any desktop adaptation it reports instead of weakening the guard.
-- Confirm Add opens the Electron connector chooser without waiting for AppKit,
-  including while current connector metadata is reconciling, and confirm a
-  newly persisted browser account cannot be overwritten by a stale Core
-  address before Wagmi switches.
+- Confirm Add only opens the Electron connector chooser: it must not wait for
+  AppKit, disconnect the current provider, or switch/activate any account.
+  Confirm explicit active-account storage remains authoritative while connector
+  metadata reconciles, including an active browser wallet with stale Core
+  state still reported by Wagmi.
 - Confirm local evidence is ready: current web SHA, install result, checks, Windows build/package result, and artifact path or blocker.
 - Stage only intended files. A renderer subtree sync can be large; inspect the summary and any root files carefully.
 - Use `codex-diff-check` on Windows.

@@ -27,6 +27,9 @@ import {
   SEED_WALLET_REQUEST_DIALOG_CLASS,
   SEED_WALLET_REQUEST_FIXED_SECTION_CLASS,
 } from "../renderer/components/confirm/seed-wallet-request-layout";
+import {
+  selectLiveWalletAccount,
+} from "../renderer/components/auth/selectLiveWalletAccount";
 
 describe("desktop wallet authentication flow", () => {
   it("keeps Core wallet unlock and request prompts above authentication", () => {
@@ -165,5 +168,52 @@ describe("desktop wallet authentication flow", () => {
     assert.match(SEED_WALLET_REQUEST_BODY_CLASS, /tw-flex-1/);
     assert.match(SEED_WALLET_REQUEST_BODY_CLASS, /tw-overflow-y-auto/);
     assert.equal(SEED_WALLET_REQUEST_FIXED_SECTION_CLASS, "tw-shrink-0");
+  });
+
+  it("keeps the active browser wallet authoritative over a stale Core connector", () => {
+    const coreAddress = "0x1111111111111111111111111111111111111111";
+    const browserAddress = "0x2222222222222222222222222222222222222222";
+
+    assert.deepEqual(
+      selectLiveWalletAccount({
+        activeStoredAddress: browserAddress,
+        browserConnectorConnectedAddress: browserAddress,
+        wagmiAccount: {
+          address: coreAddress,
+          isConnected: true,
+          status: "connected",
+        },
+        appKitAccount: {
+          address: coreAddress,
+          isConnected: true,
+          status: "connected",
+        },
+      }),
+      {
+        address: browserAddress,
+        isConnected: true,
+        status: "connected",
+      },
+    );
+  });
+
+  it("does not let an inactive browser connector override the active Core wallet", () => {
+    const coreAddress = "0x1111111111111111111111111111111111111111";
+    const browserAddress = "0x2222222222222222222222222222222222222222";
+    const coreSnapshot = {
+      address: coreAddress,
+      isConnected: true,
+      status: "connected",
+    };
+
+    assert.equal(
+      selectLiveWalletAccount({
+        activeStoredAddress: coreAddress,
+        browserConnectorConnectedAddress: browserAddress,
+        wagmiAccount: coreSnapshot,
+        appKitAccount: {},
+      }),
+      coreSnapshot,
+    );
   });
 });

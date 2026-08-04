@@ -62,6 +62,7 @@ import {
   WalletDisconnectionError,
 } from "./seizeConnectErrors";
 import { useSeizeConnectProviderEffects } from "./seizeConnectEffects";
+import { selectLiveWalletAccount } from "./selectLiveWalletAccount";
 import type { SeizeConnectContextType } from "./seizeConnectTypes";
 import {
   CONNECT_AFTER_DISCONNECT_DELAY_MS,
@@ -184,45 +185,34 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const impersonatedAddress =
     agentLoginImpersonatedAddress ?? devAuthImpersonatedAddress;
 
-  const liveAccount = useMemo(() => {
-    const wagmiStatus = wagmiAccount.status;
-    const shouldPreferWagmiAccount =
-      typeof wagmiAccount.address === "string" ||
-      wagmiAccount.isConnected ||
-      wagmiStatus === "connecting" ||
-      wagmiStatus === "reconnecting" ||
-      wagmiStatus === "connected";
-
-    if (shouldPreferWagmiAccount) {
-      return {
-        address: wagmiAccount.address,
-        isConnected: wagmiAccount.isConnected,
-        status: wagmiStatus,
-      };
-    }
-
-    if (browserConnectorConnectedAddress) {
-      return {
-        address: browserConnectorConnectedAddress,
-        isConnected: true,
-        status: "connected" as const,
-      };
-    }
-
-    return {
-      address: appKitAccount.address,
-      isConnected: appKitAccount.isConnected,
-      status: appKitAccount.status,
-    };
-  }, [
-    appKitAccount.address,
-    appKitAccount.isConnected,
-    appKitAccount.status,
-    browserConnectorConnectedAddress,
-    wagmiAccount.address,
-    wagmiAccount.isConnected,
-    wagmiAccount.status,
-  ]);
+  const activeStoredAddress = getWalletAddress();
+  const liveAccount = useMemo(
+    () =>
+      selectLiveWalletAccount({
+        activeStoredAddress,
+        appKitAccount: {
+          address: appKitAccount.address,
+          isConnected: appKitAccount.isConnected,
+          status: appKitAccount.status,
+        },
+        browserConnectorConnectedAddress,
+        wagmiAccount: {
+          address: wagmiAccount.address,
+          isConnected: wagmiAccount.isConnected,
+          status: wagmiAccount.status,
+        },
+      }),
+    [
+      activeStoredAddress,
+      appKitAccount.address,
+      appKitAccount.isConnected,
+      appKitAccount.status,
+      browserConnectorConnectedAddress,
+      wagmiAccount.address,
+      wagmiAccount.isConnected,
+      wagmiAccount.status,
+    ]
+  );
 
   const refreshStoredConnectedAccounts = useCallback(() => {
     setStoredConnectedAccounts(getConnectedWalletAccounts());
@@ -238,11 +228,20 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         .detail?.address;
 
       refreshStoredConnectedAccounts();
-      setBrowserConnectorConnectedAddress(
+      const checksummedAddress =
         typeof nextAddress === "string" && isAddress(nextAddress)
           ? getAddress(nextAddress)
-          : null
-      );
+          : null;
+      setBrowserConnectorConnectedAddress(checksummedAddress);
+
+      const storedAddress = getWalletAddress();
+      if (
+        checksummedAddress &&
+        storedAddress &&
+        normalizeAddress(checksummedAddress) === normalizeAddress(storedAddress)
+      ) {
+        setConnected(checksummedAddress);
+      }
     };
 
     globalThis.window.addEventListener(
@@ -256,7 +255,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         handleBrowserConnectorConnectionChanged as EventListener
       );
     };
-  }, [refreshStoredConnectedAccounts]);
+  }, [refreshStoredConnectedAccounts, setConnected]);
 
   const clearConnectIntentHandoffTimeout = useCallback((): void => {
     if (connectIntentHandoffTimeoutRef.current) {
@@ -792,6 +791,21 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     if (!canAddConnectedAccount || !canStoreAnotherWalletAccount()) {
+      return;
+    }
+
+    // The desktop chooser can coexist with every connector. Opening Add must
+    // never disconnect or activate a wallet before the user selects one.
+    if (isElectron()) {
+      clearAddConnectedAccountGuard();
+      setIsAddingConnectedAccount(false);
+      const storedOrigin = getWalletAddress();
+      openAddConnectedAccountModal(
+        clearAddConnectedAccountGuard,
+        storedOrigin && isAddress(storedOrigin)
+          ? getAddress(storedOrigin)
+          : null
+      );
       return;
     }
 

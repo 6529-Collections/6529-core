@@ -17,6 +17,7 @@ import {
 } from "@/components/utils/toast/AppToast";
 import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import { isElectron } from "@/helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -26,7 +27,6 @@ import {
   getAuthJwt,
   getWalletAddress,
   hasActiveSessionV2Auth,
-  hasRecentBrowserConnectorSessionV2Auth,
   PROFILE_SWITCHED_EVENT,
   setActiveWalletAccount,
   syncConnectedWalletProfile,
@@ -435,13 +435,13 @@ export default function Auth({
       setShowSignModal(false);
     }
 
+    // In Electron the active profile is explicit state owned by connector
+    // selection/authentication. A stale live connector must never overwrite it.
     const activeStoredAddress = getWalletAddress();
     if (
+      !isElectron() &&
       activeStoredAddress &&
-      activeStoredAddress.toLowerCase() !== address.toLowerCase() &&
-      !hasRecentBrowserConnectorSessionV2Auth({
-        address: activeStoredAddress,
-      })
+      activeStoredAddress.toLowerCase() !== address.toLowerCase()
     ) {
       setActiveWalletAccount(address);
     }

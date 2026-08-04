@@ -682,9 +682,15 @@ const activeWalletStorageWritebackGuard = authFunction
       (node) =>
         ts.isIfStatement(node) &&
         callsIdentifier(node.thenStatement, "setActiveWalletAccount") &&
-        callsIdentifier(
-          node.expression,
-          "hasRecentBrowserConnectorSessionV2Auth",
+        callsIdentifier(node.expression, "isElectron") &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (conditionNode) =>
+              ts.isPrefixUnaryExpression(conditionNode) &&
+              conditionNode.operator === ts.SyntaxKind.ExclamationToken &&
+              callsIdentifier(conditionNode.operand, "isElectron"),
+          ),
         ),
     )
   : undefined;
@@ -717,7 +723,7 @@ assertContract(
 assertContract(
   Boolean(activeWalletStorageWritebackGuard),
   authProviderPath,
-  "stale provider state must not overwrite a newly persisted browser-connector account",
+  "passive auth validation must never change the active wallet account in Electron",
 );
 
 const authModalPath = "renderer/components/auth/AuthSignModal.tsx";
@@ -909,6 +915,7 @@ const matchingSeedWalletConnector = findVariable(
   connectProvider,
   "hasMatchingSeedWalletConnector",
 );
+const selectedLiveWalletAccount = findVariable(connectProvider, "liveAccount");
 const openConnectModal = findVariable(connectProvider, "openConnectModal");
 const electronChooserDirectOpenGuard = openConnectModal
   ? findDescendant(
@@ -938,6 +945,24 @@ const seizeAddConnectedAccount = findVariable(
   connectProvider,
   "seizeAddConnectedAccount",
 );
+const electronAddDirectOpenGuard = seizeAddConnectedAccount
+  ? findDescendant(
+      seizeAddConnectedAccount,
+      (node) =>
+        ts.isIfStatement(node) &&
+        callsIdentifier(node.expression, "isElectron") &&
+        callsIdentifier(node.thenStatement, "openAddConnectedAccountModal") &&
+        callsIdentifier(node.thenStatement, "getWalletAddress") &&
+        !callsIdentifier(node.thenStatement, "disconnect") &&
+        !callsIdentifier(node.thenStatement, "setActiveWalletAccount") &&
+        !callsIdentifier(node.thenStatement, "setConnected") &&
+        Boolean(
+          findDescendant(node.thenStatement, (child) =>
+            ts.isReturnStatement(child),
+          ),
+        ),
+    )
+  : undefined;
 const localConnectorDirectOpenGuard = seizeAddConnectedAccount
   ? findDescendant(
       seizeAddConnectedAccount,
@@ -988,6 +1013,20 @@ assertContract(
     Boolean(localConnectorDirectOpenGuard),
   "renderer/components/auth/SeizeConnectProvider.tsx",
   "Add profile must open directly for both app-wallet and Core seed-wallet connectors",
+);
+assertContract(
+  selectedLiveWalletAccount &&
+    callsIdentifier(
+      selectedLiveWalletAccount.initializer,
+      "selectLiveWalletAccount",
+    ),
+  "renderer/components/auth/SeizeConnectProvider.tsx",
+  "live wallet selection must preserve the explicitly active browser connector over stale Wagmi state",
+);
+assertContract(
+  Boolean(electronAddDirectOpenGuard),
+  "renderer/components/auth/SeizeConnectProvider.tsx",
+  "Electron Add must only open the chooser and must not disconnect or activate a wallet",
 );
 assertContract(
   electronChooserDirectOpenGuard &&
