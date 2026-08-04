@@ -13,7 +13,16 @@ import {
   createSeedWalletConnectionState,
   parseSeedWalletConnectionState,
   requireSupportedSeedWalletChainId,
+  SEED_WALLET_MAINNET_CHAIN_ID,
+  SEED_WALLET_SEPOLIA_CHAIN_ID,
 } from "../renderer/wagmiConfig/seedWalletConnectionState";
+import { CONNECTOR_MODAL_DIALOG_CLASS } from "../renderer/components/header/user/connector-modal-layout";
+import { getSeedWalletSelectionState } from "../renderer/components/header/user/seed-wallet-selection-state";
+import {
+  SEED_WALLET_REQUEST_BODY_CLASS,
+  SEED_WALLET_REQUEST_DIALOG_CLASS,
+  SEED_WALLET_REQUEST_FIXED_SECTION_CLASS,
+} from "../renderer/components/confirm/seed-wallet-request-layout";
 
 describe("desktop wallet authentication flow", () => {
   it("keeps Core wallet unlock and request prompts above authentication", () => {
@@ -65,6 +74,11 @@ describe("desktop wallet authentication flow", () => {
     );
   });
 
+  it("keeps the pure Core wallet chain contract aligned to Ethereum networks", () => {
+    assert.equal(SEED_WALLET_MAINNET_CHAIN_ID, 1);
+    assert.equal(SEED_WALLET_SEPOLIA_CHAIN_ID, 11_155_111);
+  });
+
   it("invalidates an in-flight signature before a later result can commit", () => {
     const operations = new SigningOperationGuard();
     const cancelledOperation = operations.begin();
@@ -91,5 +105,54 @@ describe("desktop wallet authentication flow", () => {
       parseSeedWalletConnectionState(serializedConnection, secondAddress),
       null,
     );
+  });
+
+  it("distinguishes active, connected, and available Core wallets", () => {
+    const activeAddress = "0x1111111111111111111111111111111111111111";
+    const connectedAddress = "0x2222222222222222222222222222222222222222";
+    const availableAddress = "0x3333333333333333333333333333333333333333";
+    const connectedAccountAddresses = [activeAddress, connectedAddress];
+
+    assert.equal(
+      getSeedWalletSelectionState({
+        connectorAddress: activeAddress.toUpperCase(),
+        activeAddress,
+        connectedAccountAddresses,
+      }),
+      "active",
+    );
+    assert.equal(
+      getSeedWalletSelectionState({
+        connectorAddress: connectedAddress,
+        activeAddress,
+        connectedAccountAddresses,
+      }),
+      "connected",
+    );
+    assert.equal(
+      getSeedWalletSelectionState({
+        connectorAddress: availableAddress,
+        activeAddress,
+        connectedAccountAddresses,
+      }),
+      "available",
+    );
+  });
+
+  it("keeps the connector chooser wide without increasing wallet row height", () => {
+    assert.match(CONNECTOR_MODAL_DIALOG_CLASS, /tw-max-w-2xl/);
+    assert.match(CONNECTOR_MODAL_DIALOG_CLASS, /tw-w-\[calc\(100vw-2rem\)\]/);
+  });
+
+  it("keeps the Core wallet request large with fixed actions and a scrolling body", () => {
+    assert.match(SEED_WALLET_REQUEST_DIALOG_CLASS, /tw-max-w-4xl/);
+    assert.match(
+      SEED_WALLET_REQUEST_DIALOG_CLASS,
+      /tw-h-\[min\(85dvh,760px\)\]/,
+    );
+    assert.match(SEED_WALLET_REQUEST_DIALOG_CLASS, /!tw-overflow-hidden/);
+    assert.match(SEED_WALLET_REQUEST_BODY_CLASS, /tw-flex-1/);
+    assert.match(SEED_WALLET_REQUEST_BODY_CLASS, /tw-overflow-y-auto/);
+    assert.equal(SEED_WALLET_REQUEST_FIXED_SECTION_CLASS, "tw-shrink-0");
   });
 });

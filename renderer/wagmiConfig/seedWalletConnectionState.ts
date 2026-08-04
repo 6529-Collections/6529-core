@@ -1,5 +1,7 @@
 import { getAddress, isAddress } from "ethers";
-import { mainnet, sepolia } from "viem/chains";
+
+export const SEED_WALLET_MAINNET_CHAIN_ID = 1;
+export const SEED_WALLET_SEPOLIA_CHAIN_ID = 11_155_111;
 
 export interface SeedWalletConnectionState {
   readonly accounts: `0x${string}`[];
@@ -8,12 +10,12 @@ export interface SeedWalletConnectionState {
 
 export const EMPTY_SEED_WALLET_CONNECTION: SeedWalletConnectionState = {
   accounts: [],
-  chainId: mainnet.id,
+  chainId: SEED_WALLET_MAINNET_CHAIN_ID,
 };
 
 export const SUPPORTED_SEED_WALLET_CHAIN_IDS = [
-  mainnet.id,
-  sepolia.id,
+  SEED_WALLET_MAINNET_CHAIN_ID,
+  SEED_WALLET_SEPOLIA_CHAIN_ID,
 ] as const;
 
 export type SupportedSeedWalletChainId =

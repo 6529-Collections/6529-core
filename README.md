@@ -60,7 +60,10 @@ wallet sessions must remain `client_type=desktop`, use the secure main-process
 `nativeAuth` bridge, and retain working Cancel/Escape behavior while a signature
 is pending. Authentication must stay below Core wallet unlock/request prompts,
 cancelled signatures must not commit later, and a Core connector must never
-reuse another wallet's stored address. The `/browser-connector` transfer page
+reuse another wallet's stored address. The Core connector chooser must remain
+wide enough for compact active/switch wallet states, and Core request prompts
+must retain their larger fixed-shell/scrolling-body layout. The
+`/browser-connector` transfer page
 must also remain isolated from
 app-global Quick Direct Messages, cookie consent/analytics, version notices,
 and automatic wallet-auth prompts. Restore those desktop adaptations if the
@@ -122,7 +125,9 @@ the renderer. That suite includes a contract test outside `renderer/`, so a
 future frontend subtree sync cannot silently remove desktop authentication or
 modal-escape behavior, hide Core wallet prompts behind authentication, accept a
 late cancelled signature, cross-wire Core wallet addresses, or reintroduce
-global application UI on the isolated browser connector.
+global application UI on the isolated browser connector. It also preserves the
+wider connector chooser, compact Core wallet active/switch states, and enlarged
+request prompt with fixed actions.
 
 ## Building and Publishing
 

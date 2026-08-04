@@ -6,6 +6,7 @@ import {
   confirmBtnPrimaryWithIcon,
   confirmBtnSecondarySmall,
   confirmModalFooterBetween,
+  confirmModalHeader,
 } from "@/components/shared/ConfirmModalShell";
 import { useModalState } from "@/contexts/ModalStateContext";
 import { useSeedWallet } from "@/contexts/SeedWalletContext";
@@ -27,8 +28,29 @@ import {
 import { sepolia } from "viem/chains";
 import { useBalance, useChainId } from "wagmi";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
+import {
+  SEED_WALLET_REQUEST_BODY_CLASS,
+  SEED_WALLET_REQUEST_DIALOG_CLASS,
+  SEED_WALLET_REQUEST_FIXED_SECTION_CLASS,
+} from "./seed-wallet-request-layout";
 
 const SEED_WALLET_REQUEST_MODAL = "SeedWalletRequestModal";
+
+function withStableKeys<T>(items: readonly T[]) {
+  const occurrences = new Map<string, number>();
+
+  return items.map((item) => {
+    const serializedItem =
+      typeof item === "string" ? item : (JSON.stringify(item) ?? String(item));
+    const occurrence = (occurrences.get(serializedItem) ?? 0) + 1;
+    occurrences.set(serializedItem, occurrence);
+
+    return {
+      item,
+      key: `${serializedItem}:${occurrence}`,
+    };
+  });
+}
 
 function parseTransactionData(data: string) {
   if (!data) return undefined;
@@ -172,23 +194,27 @@ export default function ConfirmSeedWalletRequest({
       return (
         <>
           <span>Parameters</span>
-          {request?.params?.map((param, index) => {
-            const lines = getPersonalSignParamLines(param);
-            return (
-              <code
-                key={`${index}-${param}`}
-                className="tw-block tw-break-all tw-pb-3 tw-pt-3"
-              >
-                <span>{index + 1}: </span>
-                {lines.map((line, lineIndex) => (
-                  <Fragment key={`${lineIndex}-${line}`}>
-                    {lineIndex > 0 && <br />}
-                    {line}
-                  </Fragment>
-                ))}
-              </code>
-            );
-          })}
+          {withStableKeys(request?.params ?? []).map(
+            ({ item: param, key }, index) => {
+              const lines = getPersonalSignParamLines(param);
+              return (
+                <code
+                  key={key}
+                  className="tw-block tw-break-all tw-pb-3 tw-pt-3"
+                >
+                  <span>{index + 1}: </span>
+                  {withStableKeys(lines).map(
+                    ({ item: line, key }, lineIndex) => (
+                      <Fragment key={key}>
+                        {lineIndex > 0 && <br />}
+                        {line}
+                      </Fragment>
+                    )
+                  )}
+                </code>
+              );
+            }
+          )}
         </>
       );
     } else if (request.method === "eth_sendTransaction") {
@@ -229,11 +255,13 @@ export default function ConfirmSeedWalletRequest({
                     {parsedData.selector}
                   </code>
                   <span className="tw-block tw-pb-1 tw-pt-1">Arguments</span>
-                  {parsedData.args.map((arg, index) => (
-                    <code key={index} className="tw-block tw-break-all tw-pb-1">
-                      {index + 1}. {arg}
-                    </code>
-                  ))}
+                  {withStableKeys(parsedData.args).map(
+                    ({ item: arg, key }, index) => (
+                      <code key={key} className="tw-block tw-break-all tw-pb-1">
+                        {index + 1}. {arg}
+                      </code>
+                    )
+                  )}
                 </>
               ) : (
                 <code className="tw-block tw-break-all tw-pb-3 tw-pt-3">
@@ -245,11 +273,13 @@ export default function ConfirmSeedWalletRequest({
         </>
       );
     } else {
-      return request?.params?.map((param, index) => (
-        <code key={index} className="tw-block tw-break-all tw-pb-3 tw-pt-3">
-          {JSON.stringify(param)}
-        </code>
-      ));
+      return withStableKeys(request?.params ?? []).map(
+        ({ item: param, key }) => (
+          <code key={key} className="tw-block tw-break-all tw-pb-3 tw-pt-3">
+            {JSON.stringify(param)}
+          </code>
+        )
+      );
     }
   }
 
@@ -259,9 +289,10 @@ export default function ConfirmSeedWalletRequest({
     <ConfirmModalShell
       show={!!seedRequest}
       title="Confirm Seed Wallet Request"
-      footerClassName={confirmModalFooterBetween}
-      dialogClassName={`tw-max-w-2xl ${!isTopModal(SEED_WALLET_REQUEST_MODAL) ? "tw-blur-[5px]" : ""}`.trim()}
-      bodyClassName="tw-max-h-[250px] tw-overflow-y-auto"
+      headerClassName={`${confirmModalHeader} ${SEED_WALLET_REQUEST_FIXED_SECTION_CLASS}`}
+      footerClassName={`${confirmModalFooterBetween} ${SEED_WALLET_REQUEST_FIXED_SECTION_CLASS}`}
+      dialogClassName={`${SEED_WALLET_REQUEST_DIALOG_CLASS} ${!isTopModal(SEED_WALLET_REQUEST_MODAL) ? "tw-blur-[5px]" : ""}`.trim()}
+      bodyClassName={SEED_WALLET_REQUEST_BODY_CLASS}
       footer={
         <>
           <span className="tw-flex tw-flex-col tw-gap-2">

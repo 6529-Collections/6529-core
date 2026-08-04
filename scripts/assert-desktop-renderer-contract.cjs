@@ -187,6 +187,44 @@ function jsxAttributeUsesIdentifier(
   );
 }
 
+function jsxAttributeContainsIdentifier(
+  node,
+  elementName,
+  attributeName,
+  identifier,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isJsxOpeningElement(candidate) &&
+        !ts.isJsxSelfClosingElement(candidate)
+      ) {
+        return false;
+      }
+      if (
+        !ts.isIdentifier(candidate.tagName) ||
+        candidate.tagName.text !== elementName
+      ) {
+        return false;
+      }
+      const attribute = candidate.attributes.properties.find(
+        (property) =>
+          ts.isJsxAttribute(property) && property.name.text === attributeName,
+      );
+      if (!attribute || !ts.isJsxAttribute(attribute)) {
+        return false;
+      }
+      return Boolean(
+        findDescendant(
+          attribute,
+          (descendant) =>
+            ts.isIdentifier(descendant) && descendant.text === identifier,
+        ),
+      );
+    }),
+  );
+}
+
 function allJsxElementsUseIdentifier(
   node,
   elementName,
@@ -423,6 +461,18 @@ function hasIpcCall(sourceFile, receiver, method, channel) {
         channelArgument.text === channel
       );
     }),
+  );
+}
+
+function importsModulePrefix(sourceFile, modulePrefix) {
+  return Boolean(
+    findDescendant(
+      sourceFile,
+      (candidate) =>
+        ts.isImportDeclaration(candidate) &&
+        ts.isStringLiteral(candidate.moduleSpecifier) &&
+        candidate.moduleSpecifier.text.startsWith(modulePrefix),
+    ),
   );
 }
 
@@ -684,6 +734,43 @@ assertContract(
   "shared wallet prompts must retain the wallet-request modal layer",
 );
 
+const seedWalletRequestPath =
+  "renderer/components/confirm/ConfirmSeedWalletRequest.tsx";
+const seedWalletRequest = parseSource(seedWalletRequestPath);
+const seedWalletRequestFunction = findFunction(
+  seedWalletRequest,
+  "ConfirmSeedWalletRequest",
+);
+assertContract(
+  seedWalletRequestFunction &&
+    jsxAttributeContainsIdentifier(
+      seedWalletRequestFunction,
+      "ConfirmModalShell",
+      "dialogClassName",
+      "SEED_WALLET_REQUEST_DIALOG_CLASS",
+    ) &&
+    jsxAttributeContainsIdentifier(
+      seedWalletRequestFunction,
+      "ConfirmModalShell",
+      "bodyClassName",
+      "SEED_WALLET_REQUEST_BODY_CLASS",
+    ) &&
+    jsxAttributeContainsIdentifier(
+      seedWalletRequestFunction,
+      "ConfirmModalShell",
+      "headerClassName",
+      "SEED_WALLET_REQUEST_FIXED_SECTION_CLASS",
+    ) &&
+    jsxAttributeContainsIdentifier(
+      seedWalletRequestFunction,
+      "ConfirmModalShell",
+      "footerClassName",
+      "SEED_WALLET_REQUEST_FIXED_SECTION_CLASS",
+    ),
+  seedWalletRequestPath,
+  "Core wallet requests must retain a large fixed shell with a scrolling body and fixed actions",
+);
+
 const secureSignPath = "renderer/hooks/useSecureSign.ts";
 const secureSign = parseSource(secureSignPath);
 const secureSignFunction = findVariable(secureSign, "useSecureSign");
@@ -768,6 +855,38 @@ assertContract(
   "Add profile must open directly for both app-wallet and Core seed-wallet connectors",
 );
 
+const connectorModalPath =
+  "renderer/components/header/user/HeaderUserConnectModal.tsx";
+const connectorModal = parseSource(connectorModalPath);
+const connectorModalFunction = findFunction(
+  connectorModal,
+  "HeaderUserConnectModal",
+);
+const connectorSelectorFunction = findFunction(
+  connectorModal,
+  "ConnectorSelector",
+);
+assertContract(
+  connectorModalFunction &&
+    jsxAttributeUsesIdentifier(
+      connectorModalFunction,
+      "div",
+      "className",
+      "CONNECTOR_MODAL_DIALOG_CLASS",
+    ) &&
+    connectorSelectorFunction &&
+    callsIdentifier(connectorSelectorFunction, "getSeedWalletSelectionState") &&
+    callsIdentifier(connectorSelectorFunction, "seizeSwitchConnectedAccount") &&
+    jsxAttributeUsesIdentifier(
+      connectorSelectorFunction,
+      "button",
+      "disabled",
+      "isActive",
+    ),
+  connectorModalPath,
+  "Core wallet chooser must stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+);
+
 const seedConnectorPath = "renderer/wagmiConfig/seedWalletConnector.ts";
 const seedConnector = parseSource(seedConnectorPath);
 const seedConnectorFunction = findFunction(
@@ -781,6 +900,15 @@ assertContract(
     callsIdentifier(seedConnectorFunction, "requireSupportedSeedWalletChainId"),
   seedConnectorPath,
   "Core wallet connectors must stay address-bound, chain-bound, and reject pending work on disconnect",
+);
+const seedConnectionStatePath =
+  "renderer/wagmiConfig/seedWalletConnectionState.ts";
+const seedConnectionState = parseSource(seedConnectionStatePath);
+assertContract(
+  !importsModulePrefix(seedConnectionState, "viem") &&
+    !importsModulePrefix(seedConnectionState, "ox"),
+  seedConnectionStatePath,
+  "Electron-tested Core wallet state must remain dependency-light and must not import viem or ox source",
 );
 
 const rpcProviderModalPath =
