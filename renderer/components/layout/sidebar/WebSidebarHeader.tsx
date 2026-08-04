@@ -3,7 +3,6 @@
 import { ChevronDoubleLeftIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
-import EnvironmentBadge from "@/components/common/EnvironmentBadge";
 
 interface WebSidebarHeaderProps {
   readonly collapsed: boolean;
@@ -29,13 +28,6 @@ function WebSidebarHeader({ collapsed, onToggle }: WebSidebarHeaderProps) {
             height={40}
           />
         </Link>
-      </div>
-      <div
-        className={`tw-flex tw-pb-2 empty:tw-hidden ${
-          collapsed ? "tw-justify-center" : "tw-ml-3 tw-justify-start"
-        }`}
-      >
-        <EnvironmentBadge compact />
       </div>
       <button
         type="button"

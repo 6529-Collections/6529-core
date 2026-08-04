@@ -248,6 +248,37 @@ function jsxAttributeContainsIdentifier(
   );
 }
 
+function jsxAttributeHasStringValue(
+  node,
+  elementName,
+  attributeName,
+  expectedValue,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        (!ts.isJsxOpeningElement(candidate) &&
+          !ts.isJsxSelfClosingElement(candidate)) ||
+        !ts.isIdentifier(candidate.tagName) ||
+        candidate.tagName.text !== elementName
+      ) {
+        return false;
+      }
+      const attribute = candidate.attributes.properties.find(
+        (property) =>
+          ts.isJsxAttribute(property) && property.name.text === attributeName,
+      );
+      return (
+        attribute !== undefined &&
+        ts.isJsxAttribute(attribute) &&
+        attribute.initializer !== undefined &&
+        ts.isStringLiteral(attribute.initializer) &&
+        attribute.initializer.text === expectedValue
+      );
+    }),
+  );
+}
+
 function allJsxElementsUseIdentifier(
   node,
   elementName,
@@ -1255,6 +1286,29 @@ assertContract(
   rootLayoutPath,
   "RootLayout must route all pages through AppRouteProviders",
 );
+assertContract(
+  rootLayoutFunction &&
+    !hasJsxElement(rootLayoutFunction, "RuntimeFavicon") &&
+    !jsxAttributeHasStringValue(rootLayoutFunction, "link", "rel", "icon"),
+  rootLayoutPath,
+  "Core renderer must not mount favicon management or favicon links",
+);
+
+for (const headerPath of [
+  "renderer/components/header/AppSidebarHeader.tsx",
+  "renderer/components/layout/SmallScreenHeader.tsx",
+  "renderer/components/layout/sidebar/WebSidebarHeader.tsx",
+]) {
+  const header = parseSource(headerPath);
+  assertContract(
+    !importsModulePrefix(
+      header,
+      "@/components/common/EnvironmentBadge",
+    ) && !hasJsxElement(header, "EnvironmentBadge"),
+    headerPath,
+    "Core headers must use the native titlebar as the only environment indicator",
+  );
+}
 
 const awsRumPath = "renderer/components/monitoring/AwsRumProvider.tsx";
 const awsRum = parseSource(awsRumPath);

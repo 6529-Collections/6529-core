@@ -2,7 +2,6 @@
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
-import EnvironmentBadge from "@/components/common/EnvironmentBadge";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import AppSidebarUserInfo from "./AppSidebarUserInfo";
 import type { FC } from "react";
@@ -17,7 +16,6 @@ const AppSidebarHeader: FC<AppSidebarHeaderProps> = ({ onClose }) => {
   return (
     <div className="tw-px-6 tw-pb-4 tw-pt-2">
       <div className="tw-flex tw-items-center">
-        <EnvironmentBadge />
         <button
           type="button"
           onClick={onClose}

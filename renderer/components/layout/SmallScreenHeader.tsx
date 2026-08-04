@@ -2,7 +2,6 @@
 
 import NetworkHealthCTA from "@/components/header/NetworkHealthCTA";
 import HeaderSearchButton from "@/components/header/header-search/HeaderSearchButton";
-import EnvironmentBadge from "@/components/common/EnvironmentBadge";
 import { Bars3Icon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import Link from "next/link";
@@ -36,7 +35,6 @@ export default function SmallScreenHeader({
               height={40}
             />
           </Link>
-          <EnvironmentBadge compact />
         </div>
         <div className="tw-flex tw-items-center tw-gap-3">
           {isHomeRoute && <NetworkHealthCTA />}

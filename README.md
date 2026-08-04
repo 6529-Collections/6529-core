@@ -73,6 +73,11 @@ app-global Quick Direct Messages, cookie consent/analytics, version notices,
 and automatic wallet-auth prompts. Restore those desktop adaptations if the
 guard fails; do not remove or weaken the guard.
 
+The Core renderer does not mount the web frontend's environment badges or
+favicon manager in any app mode. Desktop environment/backend information is
+shown by the native titlebar instead, so do not add a second badge below the
+logo or favicon links to the renderer layout during conflict resolution.
+
 ⚠️ Note: there might be conflicts that need resolving
 
 #### Packages
