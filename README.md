@@ -54,6 +54,25 @@ Run the following command to fetch new changes from branch `main` of `6529seize-
 6529 pull-web
 ```
 
+The command refuses to run outside the long-lived `pull-web` branch and checks
+the desktop renderer contract after the subtree import. In particular, Electron
+wallet sessions must remain `client_type=desktop`, use the secure main-process
+`nativeAuth` bridge, and retain working Cancel/Escape behavior while a signature
+is pending. Authentication must stay below Core wallet unlock/request prompts,
+cancelled signatures must not commit later, and a Core connector must never
+reuse another wallet's stored address. The Core connector chooser must remain
+wide enough for compact active/switch wallet states, must render inside the
+connection context those states consume, and must share the Core request
+prompt's responsive `40rem` maximum width and `min(78dvh, 40rem)` maximum
+height. Neither modal uses a fixed height; long bodies scroll internally while
+request actions remain fixed. Route error fallback UI must remain independent
+of application providers. The
+`/browser-connector` transfer page
+must also remain isolated from
+app-global Quick Direct Messages, cookie consent/analytics, version notices,
+and automatic wallet-auth prompts. Restore those desktop adaptations if the
+guard fails; do not remove or weaken the guard.
+
 ⚠️ Note: there might be conflicts that need resolving
 
 #### Packages
@@ -77,6 +96,7 @@ After pulling frontend changes (or on a fresh clone), run:
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - merge any relevant `renderer/next.config.ts` changes into root `next.config.ts`
 - ensure `renderer/next.config.ts` is removed; this repo uses the root Next config overlay
+- run `6529 run guard:desktop-renderer-contract`
 
 ### Running locally - dev
 
@@ -104,6 +124,16 @@ The `6529` shim is repo-scoped. After bootstrap it is only injected while your c
 
 CI and GitHub Actions now use the same root pnpm flow. There is no separate
 npm bootstrap path for Windows signing or CloudFront invalidation jobs.
+
+Normal desktop builds run the Core-owned Electron test suite before compiling
+the renderer. That suite includes a contract test outside `renderer/`, so a
+future frontend subtree sync cannot silently remove desktop authentication or
+modal-escape behavior, hide Core wallet prompts behind authentication, accept a
+late cancelled signature, cross-wire Core wallet addresses, or reintroduce
+global application UI on the isolated browser connector. It also preserves the
+shared responsive chooser/request envelope, its required connection-context
+nesting, a provider-independent route error fallback, compact Core wallet
+active/switch states, and fixed request actions.
 
 ## Building and Publishing
 

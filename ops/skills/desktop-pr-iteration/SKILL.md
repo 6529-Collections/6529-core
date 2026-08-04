@@ -15,6 +15,12 @@ satisfied.
 - Confirm root desktop version metadata exactly matches current `main`. A
   `pull-web` PR must never contain a version bump; restore any version drift
   from `main` before committing or pushing.
+- Run the Core-owned desktop renderer contract guard and restore any desktop adaptation it reports instead of weakening the guard.
+- Confirm Add only opens the Electron connector chooser: it must not wait for
+  AppKit, disconnect the current provider, or switch/activate any account.
+  Confirm explicit active-account storage remains authoritative while connector
+  metadata reconciles, including an active browser wallet with stale Core
+  state still reported by Wagmi.
 - Confirm local evidence is ready: current web SHA, install result, checks, Windows build/package result, and artifact path or blocker.
 - Stage only intended files. A renderer subtree sync can be large; inspect the summary and any root files carefully.
 - Use `codex-diff-check` on Windows.
@@ -39,6 +45,7 @@ Include:
 
 - imported frontend SHA and date checked
 - confirmation that desktop version metadata is unchanged from current `main`
+- desktop renderer contract decisions preserved
 - desktop-specific conflict decisions preserved
 - local validation commands and results
 - Windows package artifact path under `dist/`, or the exact packaging blocker

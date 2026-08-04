@@ -1691,6 +1691,12 @@ export const EN_US_MESSAGES = {
   "auth.signModal.remindLater": "Remind me later",
   "auth.signModal.cancel": "Cancel",
   "auth.signModal.confirmInWallet": "Confirm in your wallet",
+  "header.connector.seedWallet.active": "Connected · Active",
+  "header.connector.seedWallet.switch": "Connected · Switch",
+  "header.connector.seedWallet.activeAria":
+    "{walletName}, connected and active",
+  "header.connector.seedWallet.switchAria":
+    "{walletName}, connected. Switch to this wallet",
   "acceptConnection.title": "Accept Connection Sharing",
   "acceptConnection.sharedConnectionFallback": "Shared connection",
   "acceptConnection.home": "Take me home",

@@ -15,8 +15,8 @@ import "@/styles/globals.css";
 import DynamicHeadTitle from "@/components/dynamic-head/DynamicHeadTitle";
 import AwsRumProvider from "@/components/monitoring/AwsRumProvider";
 import MobileLaunchTimingReporter from "@/components/monitoring/MobileLaunchTimingReporter";
+import AppRouteProviders from "@/components/providers/AppRouteProviders";
 import LayoutWrapper from "@/components/providers/LayoutWrapper";
-import Providers from "@/components/providers/Providers";
 import RuntimeFavicon from "@/components/providers/RuntimeFavicon";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { getProductionAppEnvironment } from "@/config/appEnvironment";
@@ -72,10 +72,10 @@ export default function RootLayout({
         <RuntimeFavicon />
         <MobileLaunchTimingReporter />
         <AwsRumProvider>
-          <Providers>
+          <AppRouteProviders>
             <DynamicHeadTitle />
             <LayoutWrapper>{children}</LayoutWrapper>
-          </Providers>
+          </AppRouteProviders>
         </AwsRumProvider>
       </body>
     </html>

@@ -51,6 +51,7 @@ import {
 type SignMessage = (message: string) => Promise<{
   readonly signature: string | null;
   readonly userRejected: boolean;
+  readonly cancelled?: boolean | undefined;
   readonly error?: unknown;
 }>;
 
@@ -215,6 +216,7 @@ export function createAuthRequestActions({
   }): Promise<{
     signature: string | null;
     userRejected: boolean;
+    cancelled: boolean;
     failureToastShown: boolean;
   }> => {
     try {
@@ -250,6 +252,7 @@ export function createAuthRequestActions({
       return {
         signature: result.signature,
         userRejected: result.userRejected,
+        cancelled: result.cancelled === true,
         failureToastShown,
       };
     } catch (error) {
@@ -263,6 +266,7 @@ export function createAuthRequestActions({
       return {
         signature: null,
         userRejected: false,
+        cancelled: false,
         failureToastShown: true,
       };
     }
@@ -274,7 +278,7 @@ export function createAuthRequestActions({
   }: {
     readonly signerAddress: string;
     readonly role: string | null;
-  }): Promise<{ success: boolean }> => {
+  }): Promise<{ success: boolean; cancelled?: boolean | undefined }> => {
     try {
       if (!canStoreAnotherWalletAccount(signerAddress)) {
         setToast({
@@ -288,6 +292,9 @@ export function createAuthRequestActions({
       const { signable_message, server_signature } = nonceResponse;
 
       const clientSignature = await getSignature({ message: signable_message });
+      if (clientSignature.cancelled) {
+        return { success: false, cancelled: true };
+      }
       if (clientSignature.userRejected) {
         setToast({
           message: "Authentication was canceled in your wallet.",
@@ -367,13 +374,16 @@ export function createAuthRequestActions({
   const authenticateUnauthorizedWallet = async (
     walletAddress: string
   ): Promise<boolean> => {
-    const { success } = await requestSignIn({
+    const { success, cancelled } = await requestSignIn({
       signerAddress: walletAddress,
       role: null,
     });
 
     if (!success) {
       setShowSignModal(false);
+      if (cancelled) {
+        return false;
+      }
       try {
         await seizeDisconnect();
       } catch (error) {
@@ -525,12 +535,16 @@ export function createAuthRequestActions({
         return false;
       }
 
-      const { success } = await requestSignIn({
+      const { success, cancelled } = await requestSignIn({
         signerAddress: walletAddress,
         role,
       });
 
       if (!success) {
+        if (cancelled) {
+          setShowSignModal(false);
+          return false;
+        }
         return await handleAuthorizedWalletSignInFailure(
           validationResult.requiresSessionUpgrade
         );
@@ -606,12 +620,16 @@ export function createAuthRequestActions({
       const role = activeProfileProxy
         ? validateRoleForAuthentication(activeProfileProxy)
         : null;
-      const { success } = await requestSignIn({
+      const { success, cancelled } = await requestSignIn({
         signerAddress: upgradeAddress,
         role,
       });
 
       if (!success) {
+        if (cancelled) {
+          setShowSignModal(false);
+          return { success: false };
+        }
         return { success: await handleAuthorizedWalletSignInFailure(true) };
       }
 

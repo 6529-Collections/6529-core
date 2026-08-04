@@ -9,9 +9,12 @@ import React, {
   useState,
 } from "react";
 import { getAddress, isAddress } from "viem";
-import { useAccount } from "wagmi";
+import { useAccount, useConnectors } from "wagmi";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
-import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
+import {
+  SeizeConnectModal,
+  useSeizeConnectModal,
+} from "@/contexts/SeizeConnectModalContext";
 import { isElectron } from "@/helpers";
 import {
   canStoreAnotherWalletAccount,
@@ -35,6 +38,7 @@ import {
   logSecurityEvent,
 } from "@/utils/security-logger";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
+import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import {
   BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
   clearBrowserConnectorConnectIntent,
@@ -56,6 +60,7 @@ import {
   WalletDisconnectionError,
 } from "./seizeConnectErrors";
 import { useSeizeConnectProviderEffects } from "./seizeConnectEffects";
+import { selectLiveWalletAccount } from "./selectLiveWalletAccount";
 import type { SeizeConnectContextType } from "./seizeConnectTypes";
 import {
   CONNECT_AFTER_DISCONNECT_DELAY_MS,
@@ -70,6 +75,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const appKitAccount = useAppKitAccount();
   const wagmiAccount = useAccount();
+  const wagmiConnectors = useConnectors();
   const { disconnect } = useDisconnect();
   const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
   const {
@@ -115,45 +121,34 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const { agentLoginImpersonatedAddress, impersonatedAddress } =
     getSeizeConnectImpersonation();
 
-  const liveAccount = useMemo(() => {
-    const wagmiStatus = wagmiAccount.status;
-    const shouldPreferWagmiAccount =
-      typeof wagmiAccount.address === "string" ||
-      wagmiAccount.isConnected ||
-      wagmiStatus === "connecting" ||
-      wagmiStatus === "reconnecting" ||
-      wagmiStatus === "connected";
-
-    if (shouldPreferWagmiAccount) {
-      return {
-        address: wagmiAccount.address,
-        isConnected: wagmiAccount.isConnected,
-        status: wagmiStatus,
-      };
-    }
-
-    if (browserConnectorConnectedAddress) {
-      return {
-        address: browserConnectorConnectedAddress,
-        isConnected: true,
-        status: "connected" as const,
-      };
-    }
-
-    return {
-      address: appKitAccount.address,
-      isConnected: appKitAccount.isConnected,
-      status: appKitAccount.status,
-    };
-  }, [
-    appKitAccount.address,
-    appKitAccount.isConnected,
-    appKitAccount.status,
-    browserConnectorConnectedAddress,
-    wagmiAccount.address,
-    wagmiAccount.isConnected,
-    wagmiAccount.status,
-  ]);
+  const activeStoredAddress = getWalletAddress();
+  const liveAccount = useMemo(
+    () =>
+      selectLiveWalletAccount({
+        activeStoredAddress,
+        appKitAccount: {
+          address: appKitAccount.address,
+          isConnected: appKitAccount.isConnected,
+          status: appKitAccount.status,
+        },
+        browserConnectorConnectedAddress,
+        wagmiAccount: {
+          address: wagmiAccount.address,
+          isConnected: wagmiAccount.isConnected,
+          status: wagmiAccount.status,
+        },
+      }),
+    [
+      activeStoredAddress,
+      appKitAccount.address,
+      appKitAccount.isConnected,
+      appKitAccount.status,
+      browserConnectorConnectedAddress,
+      wagmiAccount.address,
+      wagmiAccount.isConnected,
+      wagmiAccount.status,
+    ]
+  );
 
   const refreshStoredConnectedAccounts = useCallback(() => {
     setStoredConnectedAccounts(getConnectedWalletAccounts());
@@ -169,11 +164,20 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         .detail?.address;
 
       refreshStoredConnectedAccounts();
-      setBrowserConnectorConnectedAddress(
+      const checksummedAddress =
         typeof nextAddress === "string" && isAddress(nextAddress)
           ? getAddress(nextAddress)
-          : null
-      );
+          : null;
+      setBrowserConnectorConnectedAddress(checksummedAddress);
+
+      const storedAddress = getWalletAddress();
+      if (
+        checksummedAddress &&
+        storedAddress &&
+        normalizeAddress(checksummedAddress) === normalizeAddress(storedAddress)
+      ) {
+        setConnected(checksummedAddress);
+      }
     };
 
     globalThis.window.addEventListener(
@@ -187,7 +191,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         handleBrowserConnectorConnectionChanged as EventListener
       );
     };
-  }, [refreshStoredConnectedAccounts]);
+  }, [refreshStoredConnectedAccounts, setConnected]);
 
   const clearConnectIntentHandoffTimeout = useCallback((): void => {
     if (connectIntentHandoffTimeoutRef.current) {
@@ -269,13 +273,43 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     normalizeAddress(activeAddress) === normalizeAddress(liveConnectedAddress)
   );
   const activeConnectorType = wagmiAccount.connector?.type;
-  const isActiveAppWalletConnector =
-    activeConnectorType === APP_WALLET_CONNECTOR_TYPE;
+  // Prefer the live provider identity when storage and Wagmi are briefly out
+  // of sync; fall back to the authenticated address during reconnect.
+  const connectorIdentityAddress = liveConnectedAddress ?? activeAddress;
+  const hasMatchingSeedWalletConnector = !!(
+    connectorIdentityAddress &&
+    wagmiConnectors.some(
+      (connector) =>
+        connector.type === SEED_WALLET_CONNECTOR_TYPE &&
+        isAddress(connector.id) &&
+        normalizeAddress(connector.id) ===
+          normalizeAddress(connectorIdentityAddress)
+    )
+  );
+  const isActiveLocalWalletConnector =
+    activeConnectorType === APP_WALLET_CONNECTOR_TYPE ||
+    activeConnectorType === SEED_WALLET_CONNECTOR_TYPE ||
+    hasMatchingSeedWalletConnector;
 
   const openConnectModal = useCallback(
     async (source: string): Promise<void> => {
       try {
         clearConnectIntentHandoffTimeout();
+
+        // Electron renders its own connector chooser and does not need AppKit's
+        // modal runtime to be ready. Opening it synchronously avoids a transient
+        // AppKit bootstrap state turning an Add click into a silent no-op.
+        if (isElectron()) {
+          setIsConnectIntentWaitingForAppKit(false);
+          setShowConnectModal(true);
+          logSecurityEvent(
+            SecurityEventType.WALLET_MODAL_OPENED,
+            createConnectionEventContext(source)
+          );
+          scheduleConnectIntentHandoffFallback();
+          return;
+        }
+
         setIsConnectIntentWaitingForAppKit(true);
         if (!isAppKitReady) {
           await waitForAppKitReady();
@@ -285,14 +319,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           return;
         }
 
-        // Core groups native connectors in its Seed Wallet / Browser /
-        // Third-Party chooser; Reown's web modal flattens them into one list.
-        if (isElectron()) {
-          setShowConnectModal(true);
-        } else {
-          const openAppKit = await appKitModalBridgeStore.waitForOpen();
-          await openAppKit({ view: "Connect" });
-        }
+        const openAppKit = await appKitModalBridgeStore.waitForOpen();
+        await openAppKit({ view: "Connect" });
 
         logSecurityEvent(
           SecurityEventType.WALLET_MODAL_OPENED,
@@ -410,7 +438,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         : null;
     const connectIntent = getActiveConnectIntent();
 
-    if (!liveConnectedWallet || isActiveAppWalletConnector) {
+    if (!liveConnectedWallet || isActiveLocalWalletConnector) {
       await seizeConnectOrThrow("seizeConnectFresh", connectIntent);
       return;
     }
@@ -441,9 +469,19 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.isConnected,
     disconnect,
     getActiveConnectIntent,
-    isActiveAppWalletConnector,
+    isActiveLocalWalletConnector,
     seizeConnectOrThrow,
   ]);
+
+  const restoreStoredWalletState = useCallback((): void => {
+    refreshStoredConnectedAccounts();
+    const storedAddress = getWalletAddress();
+    if (storedAddress && isAddress(storedAddress)) {
+      setConnected(getAddress(storedAddress));
+      return;
+    }
+    setDisconnected();
+  }, [refreshStoredConnectedAccounts, setConnected, setDisconnected]);
 
   const seizeDisconnect = useCallback(async (): Promise<void> => {
     const hasLiveProviderConnection = !!(
@@ -453,12 +491,20 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     );
 
     if (!hasLiveProviderConnection && !isActiveWalletConnected) {
+      isAddingConnectedAccountRef.current = false;
+      addFlowOriginAddressRef.current = null;
+      setIsAddingConnectedAccount(false);
+      restoreStoredWalletState();
       return;
     }
 
     setIsDisconnecting(true);
     try {
       await disconnect();
+      isAddingConnectedAccountRef.current = false;
+      addFlowOriginAddressRef.current = null;
+      setIsAddingConnectedAccount(false);
+      restoreStoredWalletState();
     } catch (error: unknown) {
       const walletError = createWalletError(
         WalletDisconnectionError,
@@ -475,56 +521,57 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.isConnected,
     disconnect,
     isActiveWalletConnected,
+    restoreStoredWalletState,
   ]);
 
   const seizeDisconnectAndLogout = useCallback(async (): Promise<void> => {
     setIsDisconnecting(true);
     try {
-    // CRITICAL: Wallet disconnect MUST succeed before auth cleanup
-    try {
-      await disconnect();
-    } catch (error: unknown) {
-      const walletError = createWalletError(
-        WalletDisconnectionError,
-        "disconnect wallet during logout",
-        error
-      );
-      logError("seizeDisconnectAndLogout", walletError);
-
-      // SECURITY: Throw AuthenticationError to prevent auth bypass
-      throw new AuthenticationError(
-        "Cannot complete logout: wallet disconnection failed. User may still have active wallet connection.",
-        walletError
-      );
-    }
-
-    try {
+      // CRITICAL: Wallet disconnect MUST succeed before auth cleanup
       try {
-        await logoutSessionV2({ address: getWalletAddress() });
+        await disconnect();
       } catch (error: unknown) {
-        const revokeError =
-          error instanceof Error
-            ? error
-            : new Error("Failed to revoke session during logout");
-        logError("seizeDisconnectAndLogout.logoutSessionV2", revokeError);
-      }
-      await removeAuthJwt();
-      refreshStoredConnectedAccounts();
+        const walletError = createWalletError(
+          WalletDisconnectionError,
+          "disconnect wallet during logout",
+          error
+        );
+        logError("seizeDisconnectAndLogout", walletError);
 
-      const nextActiveAddress = getWalletAddress();
-      if (nextActiveAddress && isAddress(nextActiveAddress)) {
-        setConnected(getAddress(nextActiveAddress));
-      } else {
-        setDisconnected();
+        // SECURITY: Throw AuthenticationError to prevent auth bypass
+        throw new AuthenticationError(
+          "Cannot complete logout: wallet disconnection failed. User may still have active wallet connection.",
+          walletError
+        );
       }
-    } catch (error: unknown) {
-      const authError = new AuthenticationError(
-        "Failed to revoke authentication state after successful wallet disconnect",
-        error
-      );
-      logError("seizeDisconnectAndLogout", authError);
-      throw authError;
-    }
+
+      try {
+        try {
+          await logoutSessionV2({ address: getWalletAddress() });
+        } catch (error: unknown) {
+          const revokeError =
+            error instanceof Error
+              ? error
+              : new Error("Failed to revoke session during logout");
+          logError("seizeDisconnectAndLogout.logoutSessionV2", revokeError);
+        }
+        await removeAuthJwt();
+        refreshStoredConnectedAccounts();
+
+        const nextActiveAddress = getWalletAddress();
+        if (nextActiveAddress && isAddress(nextActiveAddress)) {
+          setConnected(getAddress(nextActiveAddress));
+        } else {
+          setDisconnected();
+        }
+      } catch (error: unknown) {
+        const authError = new AuthenticationError(
+          "Failed to revoke authentication state after successful wallet disconnect",
+          error
+        );
+        logError("seizeDisconnectAndLogout", authError);
+        throw authError;
+      }
     } finally {
       setIsDisconnecting(false);
     }
@@ -538,38 +585,38 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const seizeDisconnectAndLogoutAll = useCallback(async (): Promise<void> => {
     setIsDisconnecting(true);
     try {
-    try {
-      await disconnect();
-    } catch (error: unknown) {
-      const walletError = createWalletError(
-        WalletDisconnectionError,
-        "disconnect wallet during logout all profiles",
-        error
-      );
-      logError("seizeDisconnectAndLogoutAll", walletError);
+      try {
+        await disconnect();
+      } catch (error: unknown) {
+        const walletError = createWalletError(
+          WalletDisconnectionError,
+          "disconnect wallet during logout all profiles",
+          error
+        );
+        logError("seizeDisconnectAndLogoutAll", walletError);
 
-      throw new AuthenticationError(
-        "Cannot complete sign out: wallet disconnection failed. User may still have active wallet connection.",
-        walletError
-      );
-    }
-
-    try {
-      await clearAllAuthenticatedProfiles();
-      refreshStoredConnectedAccounts();
-      setDisconnected();
-    } catch (error: unknown) {
-      if (error instanceof AuthenticationError) {
-        throw error;
+        throw new AuthenticationError(
+          "Cannot complete sign out: wallet disconnection failed. User may still have active wallet connection.",
+          walletError
+        );
       }
 
-      const authError = new AuthenticationError(
-        "Failed to clear all authenticated profiles after successful wallet disconnect",
-        error
-      );
-      logError("seizeDisconnectAndLogoutAll", authError);
-      throw authError;
-    }
+      try {
+        await clearAllAuthenticatedProfiles();
+        refreshStoredConnectedAccounts();
+        setDisconnected();
+      } catch (error: unknown) {
+        if (error instanceof AuthenticationError) {
+          throw error;
+        }
+
+        const authError = new AuthenticationError(
+          "Failed to clear all authenticated profiles after successful wallet disconnect",
+          error
+        );
+        logError("seizeDisconnectAndLogoutAll", authError);
+        throw authError;
+      }
     } finally {
       setIsDisconnecting(false);
     }
@@ -655,14 +702,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeConnectOrThrow(
         "seizeAddConnectedAccount",
         getAddAccountConnectIntent(originAddress)
-      ).catch(
-        (error: unknown) => {
-          handleAddConnectedAccountConnectFailure(
-            clearAddConnectedAccountGuard,
-            error
-          );
-        }
-      );
+      ).catch((error: unknown) => {
+        handleAddConnectedAccountConnectFailure(
+          clearAddConnectedAccountGuard,
+          error
+        );
+      });
     },
     [
       getAddAccountConnectIntent,
@@ -682,6 +727,21 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     };
 
     if (!canAddConnectedAccount || !canStoreAnotherWalletAccount()) {
+      return;
+    }
+
+    // The desktop chooser can coexist with every connector. Opening Add must
+    // never disconnect or activate a wallet before the user selects one.
+    if (isElectron()) {
+      clearAddConnectedAccountGuard();
+      setIsAddingConnectedAccount(false);
+      const storedOrigin = getWalletAddress();
+      openAddConnectedAccountModal(
+        clearAddConnectedAccountGuard,
+        storedOrigin && isAddress(storedOrigin)
+          ? getAddress(storedOrigin)
+          : null
+      );
       return;
     }
 
@@ -724,7 +784,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    if (!liveConnectedWallet || isActiveAppWalletConnector) {
+    if (!liveConnectedWallet || isActiveLocalWalletConnector) {
       isAddingConnectedAccountRef.current = true;
       addFlowOriginAddressRef.current = addFlowOriginWallet;
       setIsAddingConnectedAccount(true);
@@ -787,7 +847,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.status,
     canAddConnectedAccount,
     disconnect,
-    isActiveAppWalletConnector,
+    isActiveLocalWalletConnector,
     isAddingConnectedAccount,
     isConnectIntentWaitingForAppKit,
     isConnectModalOpen,
@@ -935,8 +995,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isAddingConnectedAccount,
-      seizeConnectOpen:
-        isConnectModalOpen || isConnectIntentWaitingForAppKit,
+      seizeConnectOpen: isConnectModalOpen || isConnectIntentWaitingForAppKit,
       isConnected: isActiveWalletConnected,
       isDisconnecting,
       canSignActiveWallet: isActiveWalletConnected,
@@ -985,6 +1044,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     <WalletErrorBoundary>
       <SeizeConnectContext.Provider value={contextValue}>
         {children}
+        <SeizeConnectModal />
         {isAppKitCreated && (
           <AppKitModalBridge store={appKitModalBridgeStore} />
         )}

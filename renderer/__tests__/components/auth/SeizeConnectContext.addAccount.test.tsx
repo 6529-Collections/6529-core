@@ -12,6 +12,7 @@ import {
 } from "@/components/auth/SeizeConnectContext";
 import { AppKitBootstrapContext } from "@/components/providers/AppKitBootstrapContext";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
+import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 
 const ACTIVE_ADDRESS = "0x00000000000000000000000000000000000000AA";
 
@@ -266,6 +267,31 @@ describe("SeizeConnectProvider add-account flow", () => {
 
     expect(mockDisconnect).not.toHaveBeenCalled();
     expect(mockOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("opens the connect flow directly for Core seed-wallet connectors", async () => {
+    mockWagmiAccount = {
+      connector: {
+        type: SEED_WALLET_CONNECTOR_TYPE,
+      },
+    };
+    mockAppKitState = { open: true };
+
+    render(
+      <SeizeConnectProvider>
+        <AddAccountButton />
+      </SeizeConnectProvider>
+    );
+
+    act(() => {
+      fireEvent.click(screen.getByRole("button", { name: "Add account" }));
+    });
+
+    expect(mockDisconnect).not.toHaveBeenCalled();
+    await waitFor(() => {
+      expect(mockOpen).toHaveBeenCalledTimes(1);
+      expect(mockOpen).toHaveBeenLastCalledWith({ view: "Connect" });
+    });
   });
 
   it("clears a stale add-flow guard before reopening connect for app-wallet connectors", async () => {

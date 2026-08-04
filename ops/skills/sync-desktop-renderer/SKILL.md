@@ -23,6 +23,8 @@ $env:SEIZE_6529_COMMAND='1'; pnpm run pull-web
 ```
 
 - If a merge is left open, finish resolving and commit before pulling another web delta.
+- Run `pull-web` only from the long-lived `pull-web` branch. The command fails
+  closed on any other branch.
 - Never change the desktop version during a `pull-web` sync. Before committing,
   compare root `package.json` and related version metadata with current `main`
   and restore any version drift from `main`.
@@ -38,7 +40,14 @@ Take upstream web code for normal frontend features, pages, tests, services, sty
 
 Preserve or reapply desktop-specific behavior in these areas:
 
-- `renderer/components/auth/Auth.tsx`: Electron auth modal flow and any local sign/deep-link handling.
+- `renderer/services/auth/session-v2.utils.ts`: Electron must use `client_type=desktop` and route native-session login, refresh, logout, and connection sharing through `window.nativeAuth` so refresh tokens stay in the main process.
+- `renderer/components/auth/AuthProvider.tsx`, `renderer/components/auth/AuthSignModal.tsx`, `renderer/components/shared/ConfirmModalShell.tsx`, `renderer/components/shared/modal-layers.ts`, `renderer/components/core/eth-scanner/RpcProviderModal.tsx`, `renderer/components/core/eth-scanner/Workers.tsx`: auth cancellation must remain available while signing, invalidate the in-flight signature, dismiss immediately, and remain dismissed while disconnect settles. The auth prompt must use the shared renderer shell below the Core wallet unlock/request layer; never make it a native HTML `<dialog>`, because Chromium top-layer dialogs hide nested Core wallet prompts. Unrelated administration dialogs must explicitly use the non-wallet layer below authentication rather than inheriting the wallet-request fallback.
+- `renderer/wagmiConfig/seedWalletConnector.ts`, `renderer/wagmiConfig/seedWalletConnectionState.ts`, `renderer/components/auth/SeizeConnectProvider.tsx`: each Core seed-wallet connector must accept persisted connection state only for its own valid address and the shared supported-chain set, register request callbacks before dispatch, and reject pending requests on disconnect. Requested, persisted, switched, and provider chain selection must use that one chain contract so an unsupported chain can never be reported while mainnet RPC is used. Keep the Electron-tested connection-state module free of `viem`, `ox`, and other frontend dependency source. Adding a profile from either a Core seed-wallet or app-wallet connector must open the connector chooser immediately without first disconnecting the local wallet.
+- `renderer/components/shared/core-wallet-modal-layout.ts`, `renderer/contexts/SeizeConnectModalContext.tsx`, `renderer/components/auth/SeizeConnectProvider.tsx`, `renderer/components/header/user/HeaderUserConnectModal.tsx`, `renderer/components/header/user/connector-modal-layout.ts`, `renderer/components/header/user/seed-wallet-selection-state.ts`: keep the connector chooser and Core request prompt on the same responsive envelope (`40rem` maximum width, `min(78dvh, 40rem)` maximum height), without a fixed height or taller wallet rows. Show `Connected · Active` on the disabled active Core wallet and `Connected · Switch` on another authenticated wallet; switching must reuse the authenticated account instead of starting a new connection. Keep chooser state outside `SeizeConnectProvider`, but mount the chooser UI inside `SeizeConnectContext.Provider` before wallet rows read active-account state.
+- `renderer/components/confirm/ConfirmSeedWalletRequest.tsx`, `renderer/components/confirm/seed-wallet-request-layout.ts`: keep only the Core request body scrolling while its header and actions remain fixed inside the shared responsive envelope.
+- `renderer/components/auth/SeizeConnectProvider.tsx`: cancelling or failing a new-wallet connection must restore the last authenticated profile state after the provider disconnects.
+- `renderer/app/layout.tsx`, `renderer/components/providers/AppRouteProviders.tsx`, `renderer/components/providers/app-route-provider-features.ts`, `renderer/components/monitoring/AwsRumProvider.tsx`: `/browser-connector` must retain the wallet infrastructure needed for connection transfer while disabling app-global wallet-auth prompts, Quick Direct Messages, cookie consent/Mixpanel, version toasts, and AWS RUM.
+- `renderer/components/error/Error.tsx`: the route error fallback must stay independent of `TitleProvider` and other application providers so it can render the original failure when provider initialization throws.
 - `renderer/components/header/share/HeaderQRScanner.tsx`: desktop QR behavior, avoiding mobile-only scanner assumptions.
 - `renderer/components/eula/EULAConsentContext.tsx`: Electron/local consent behavior.
 - `renderer/components/ipfs/IPFSContext.tsx`: Electron bridge/local IPFS support.
@@ -74,6 +83,7 @@ After conflict resolution:
 git diff --name-only --diff-filter=U
 rg -n "^(<<<<<<<|>>>>>>>)" next.config.ts package.json renderer -S
 git status --short --branch
+$env:SEIZE_6529_COMMAND='1'; pnpm run guard:desktop-renderer-contract
 ```
 
 Use `codex-diff-check`, not raw `git diff --check`, for whitespace checks on this Windows worktree.

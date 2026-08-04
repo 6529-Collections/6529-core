@@ -15,6 +15,17 @@ const SeizeConnectModalContext = createContext<SeizeConnectModalContextType>({
 
 export const useSeizeConnectModal = () => useContext(SeizeConnectModalContext);
 
+export const SeizeConnectModal = () => {
+  const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
+
+  return (
+    <HeaderUserConnectModal
+      show={showConnectModal}
+      onHide={() => setShowConnectModal(false)}
+    />
+  );
+};
+
 export const SeizeConnectModalProvider: React.FC<{
   children: React.ReactNode;
 }> = ({ children }) => {
@@ -27,10 +38,6 @@ export const SeizeConnectModalProvider: React.FC<{
         setShowConnectModal,
       }}>
       {children}
-      <HeaderUserConnectModal
-        show={showConnectModal}
-        onHide={() => setShowConnectModal(false)}
-      />
     </SeizeConnectModalContext.Provider>
   );
 };

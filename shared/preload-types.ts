@@ -23,9 +23,6 @@ export interface ElectronAPI {
   showFile: (fileName: string) => void;
   openLogs: (name: string, logFile: string) => void;
   extractCrashReport: (fileName: string) => void;
-  onAppClose: (callback: any) => void;
-  runBackground: () => void;
-  quit: () => void;
   goBack: () => void;
   goForward: () => void;
   getNavigationState: () => Promise<any>;
@@ -96,7 +93,7 @@ export interface ElectronNativeAuthSessionResponse {
   readonly role: string | null;
   readonly access_token: string;
   readonly access_token_expires_at: string;
-  readonly native_refresh_token: string;
+  readonly native_refresh_token: "";
   readonly refresh_token_expires_at: string;
 }
 
