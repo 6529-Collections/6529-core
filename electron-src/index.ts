@@ -88,6 +88,7 @@ import {
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
+import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
   showInspectElement: false,
@@ -1688,15 +1689,20 @@ async function quitApplication(): Promise<void> {
 
   destroyMainWindow();
   try {
-    try {
-      await stopSchedulers(scheduledWorkers);
-    } catch (error: unknown) {
-      Logger.error("Failed to stop schedulers while quitting", error);
+    const [schedulersResult, ipfsResult] = await Promise.allSettled([
+      runShutdownStepWithTimeout("Stopping scheduled workers", () =>
+        stopSchedulers(scheduledWorkers),
+      ),
+      runShutdownStepWithTimeout("Stopping IPFS", () => IPFS_SERVER.shutdown()),
+    ]);
+    if (schedulersResult.status === "rejected") {
+      Logger.error(
+        "Failed to stop schedulers while quitting",
+        schedulersResult.reason,
+      );
     }
-    try {
-      await IPFS_SERVER.shutdown();
-    } catch (error: unknown) {
-      Logger.error("Failed to stop IPFS while quitting", error);
+    if (ipfsResult.status === "rejected") {
+      Logger.error("Failed to stop IPFS while quitting", ipfsResult.reason);
     }
   } finally {
     Logger.info("Quitting app\n---------- End of Session ----------\n\n");

@@ -13,6 +13,7 @@ interface ConfirmProps {
   onConfirm: () => void;
   title: string;
   message: string;
+  overlayClassName?: string | undefined;
 }
 
 const Confirm: React.FC<ConfirmProps> = ({
@@ -21,10 +22,12 @@ const Confirm: React.FC<ConfirmProps> = ({
   onConfirm,
   title,
   message,
+  overlayClassName,
 }) => (
   <ConfirmModalShell
     show={show}
     title={title}
+    overlayClassName={overlayClassName}
     onBackdropClick={onHide}
     footer={
       <>

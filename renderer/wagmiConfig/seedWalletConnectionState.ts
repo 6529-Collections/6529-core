@@ -1,3 +1,6 @@
+import { getAddress, isAddress } from "viem";
+import { mainnet, sepolia } from "viem/chains";
+
 export interface SeedWalletConnectionState {
   readonly accounts: `0x${string}`[];
   readonly chainId: number;
@@ -5,16 +8,44 @@ export interface SeedWalletConnectionState {
 
 export const EMPTY_SEED_WALLET_CONNECTION: SeedWalletConnectionState = {
   accounts: [],
-  chainId: 1,
+  chainId: mainnet.id,
 };
+
+export const SUPPORTED_SEED_WALLET_CHAIN_IDS = [
+  mainnet.id,
+  sepolia.id,
+] as const;
+
+export type SupportedSeedWalletChainId =
+  (typeof SUPPORTED_SEED_WALLET_CHAIN_IDS)[number];
+
+export function requireSupportedSeedWalletChainId(
+  chainId: number
+): SupportedSeedWalletChainId {
+  if (
+    !SUPPORTED_SEED_WALLET_CHAIN_IDS.includes(
+      chainId as SupportedSeedWalletChainId
+    )
+  ) {
+    throw new Error(`Unsupported Core wallet chain ID: ${chainId}`);
+  }
+  return chainId as SupportedSeedWalletChainId;
+}
+
+function normalizeSeedWalletAddress(address: string): `0x${string}` {
+  if (!isAddress(address)) {
+    throw new Error("Invalid Core wallet address");
+  }
+  return getAddress(address);
+}
 
 export function createSeedWalletConnectionState(
   address: string,
   chainId: number
 ): SeedWalletConnectionState {
   return {
-    accounts: [address as `0x${string}`],
-    chainId,
+    accounts: [normalizeSeedWalletAddress(address)],
+    chainId: requireSupportedSeedWalletChainId(chainId),
   };
 }
 
@@ -35,15 +66,20 @@ export function parseSeedWalletConnectionState(
       !Array.isArray(candidate.accounts) ||
       candidate.accounts.length !== 1 ||
       typeof candidate.accounts[0] !== "string" ||
-      candidate.accounts[0].toLowerCase() !== connectorAddress.toLowerCase() ||
-      !Number.isInteger(candidate.chainId) ||
-      Number(candidate.chainId) <= 0
+      !Number.isInteger(candidate.chainId)
     ) {
       return null;
     }
 
+    const candidateAddress = normalizeSeedWalletAddress(candidate.accounts[0]);
+    const normalizedConnectorAddress =
+      normalizeSeedWalletAddress(connectorAddress);
+    if (candidateAddress !== normalizedConnectorAddress) {
+      return null;
+    }
+
     return createSeedWalletConnectionState(
-      candidate.accounts[0],
+      candidateAddress,
       Number(candidate.chainId)
     );
   } catch {

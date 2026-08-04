@@ -187,6 +187,46 @@ function jsxAttributeUsesIdentifier(
   );
 }
 
+function allJsxElementsUseIdentifier(
+  node,
+  elementName,
+  attributeName,
+  identifier,
+) {
+  let elementCount = 0;
+  let matchingElementCount = 0;
+
+  function visit(candidate) {
+    if (
+      (ts.isJsxOpeningElement(candidate) ||
+        ts.isJsxSelfClosingElement(candidate)) &&
+      ts.isIdentifier(candidate.tagName) &&
+      candidate.tagName.text === elementName
+    ) {
+      elementCount += 1;
+      const attribute = candidate.attributes.properties.find(
+        (property) =>
+          ts.isJsxAttribute(property) && property.name.text === attributeName,
+      );
+      if (
+        attribute &&
+        ts.isJsxAttribute(attribute) &&
+        attribute.initializer &&
+        ts.isJsxExpression(attribute.initializer) &&
+        attribute.initializer.expression &&
+        ts.isIdentifier(attribute.initializer.expression) &&
+        attribute.initializer.expression.text === identifier
+      ) {
+        matchingElementCount += 1;
+      }
+    }
+    ts.forEachChild(candidate, visit);
+  }
+
+  visit(node);
+  return elementCount > 0 && matchingElementCount === elementCount;
+}
+
 function jsxElementIsGatedByIdentifier(node, elementName, identifier) {
   const element = findDescendant(
     node,
@@ -251,6 +291,20 @@ function callsIdentifier(node, identifier) {
         ts.isCallExpression(candidate) &&
         ts.isIdentifier(candidate.expression) &&
         candidate.expression.text === identifier,
+    ),
+  );
+}
+
+function callsProperty(node, receiver, method) {
+  return Boolean(
+    findDescendant(
+      node,
+      (candidate) =>
+        ts.isCallExpression(candidate) &&
+        ts.isPropertyAccessExpression(candidate.expression) &&
+        ts.isIdentifier(candidate.expression.expression) &&
+        candidate.expression.expression.text === receiver &&
+        candidate.expression.name.text === method,
     ),
   );
 }
@@ -385,6 +439,15 @@ const preloadPath = "electron-src/preload.ts";
 const preloadSource = parseSource(preloadPath);
 const mainPath = "electron-src/index.ts";
 const mainSource = parseSource(mainPath);
+const quitApplication = findFunction(mainSource, "quitApplication");
+assertContract(
+  quitApplication &&
+    callsIdentifier(quitApplication, "runShutdownStepWithTimeout") &&
+    callsProperty(quitApplication, "Promise", "allSettled") &&
+    callsProperty(quitApplication, "app", "quit"),
+  mainPath,
+  "app shutdown must bound cleanup in parallel before quitting",
+);
 for (const channel of ipcChannels) {
   assertContract(
     hasIpcCall(preloadSource, "ipcRenderer", "invoke", channel),
@@ -628,9 +691,48 @@ const seedConnectorFunction = findFunction(
 assertContract(
   seedConnectorFunction &&
     callsIdentifier(seedConnectorFunction, "parseSeedWalletConnectionState") &&
-    callsIdentifier(seedConnectorFunction, "rejectAllPendingRequests"),
+    callsIdentifier(seedConnectorFunction, "rejectAllPendingRequests") &&
+    callsIdentifier(seedConnectorFunction, "requireSupportedSeedWalletChainId"),
   seedConnectorPath,
-  "Core wallet connectors must stay address-bound and reject pending work on disconnect",
+  "Core wallet connectors must stay address-bound, chain-bound, and reject pending work on disconnect",
+);
+
+const rpcProviderModalPath =
+  "renderer/components/core/eth-scanner/RpcProviderModal.tsx";
+const rpcProviderModal = parseSource(rpcProviderModalPath);
+const addRpcProviderModal = findFunction(
+  rpcProviderModal,
+  "AddRpcProviderModal",
+);
+assertContract(
+  addRpcProviderModal &&
+    allJsxElementsUseIdentifier(
+      addRpcProviderModal,
+      "ConfirmModalShell",
+      "overlayClassName",
+      "NON_WALLET_MODAL_OVERLAY_CLASS",
+    ),
+  rpcProviderModalPath,
+  "RPC provider dialogs must remain below authentication and wallet prompts",
+);
+
+const workersPath = "renderer/components/core/eth-scanner/Workers.tsx";
+const workers = parseSource(workersPath);
+assertContract(
+  allJsxElementsUseIdentifier(
+    workers,
+    "Confirm",
+    "overlayClassName",
+    "NON_WALLET_MODAL_OVERLAY_CLASS",
+  ) &&
+    allJsxElementsUseIdentifier(
+      workers,
+      "ConfirmModalShell",
+      "overlayClassName",
+      "NON_WALLET_MODAL_OVERLAY_CLASS",
+    ),
+  workersPath,
+  "worker administration dialogs must remain below authentication and wallet prompts",
 );
 
 const routeFeaturesPath =

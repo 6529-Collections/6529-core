@@ -8,6 +8,7 @@ import {
   confirmInputClass,
   confirmModalFooterBetween,
 } from "@/components/shared/ConfirmModalShell";
+import { NON_WALLET_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
 import { faCheckCircle } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ethers } from "ethers";
@@ -108,6 +109,7 @@ export function AddRpcProviderModal(
     <ConfirmModalShell
       show={props.show}
       title="Add RPC Provider"
+      overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
       onBackdropClick={() => handleHide(false)}
       footerClassName={confirmModalFooterBetween}
       footer={

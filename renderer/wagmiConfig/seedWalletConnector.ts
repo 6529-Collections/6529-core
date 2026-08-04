@@ -8,6 +8,7 @@ import {
   createSeedWalletConnectionState,
   EMPTY_SEED_WALLET_CONNECTION,
   parseSeedWalletConnectionState,
+  requireSupportedSeedWalletChainId,
   type SeedWalletConnectionState,
 } from "./seedWalletConnectionState";
 
@@ -102,9 +103,10 @@ export function seedWalletConnector(parameters: {
   }
 
   function updateProvider() {
-    if (connectionObject.chainId === sepolia.id) {
+    const chainId = requireSupportedSeedWalletChainId(connectionObject.chainId);
+    if (chainId === sepolia.id) {
       provider = new ethers.JsonRpcProvider(sepolia.rpcUrls.default.http[0]);
-    } else {
+    } else if (chainId === mainnet.id) {
       provider = new ethers.JsonRpcProvider("https://rpc1.6529.io");
     }
   }
@@ -174,6 +176,10 @@ export function seedWalletConnector(parameters: {
       withCapabilities?: boolean;
     }) {
       console.log(`[${this.name}] Seed Wallet Connect method called`, opts);
+      const requestedChainId =
+        opts?.chainId === undefined
+          ? undefined
+          : requireSupportedSeedWalletChainId(opts.chainId);
       await init(this.name);
 
       const storedConnection = await window.store.get(CONNECTION_STORE);
@@ -183,10 +189,13 @@ export function seedWalletConnector(parameters: {
 
       // If we already have a connection, honor the requested chainId (if any) and return
       if (connectionObject.accounts.length > 0) {
-        if (opts?.chainId && opts.chainId !== connectionObject.chainId) {
+        if (
+          requestedChainId !== undefined &&
+          requestedChainId !== connectionObject.chainId
+        ) {
           connectionObject = {
             ...connectionObject,
-            chainId: opts.chainId,
+            chainId: requestedChainId,
           };
           await window.store.set(
             CONNECTION_STORE,
@@ -224,7 +233,7 @@ export function seedWalletConnector(parameters: {
       // Establish new connection
       connectionObject = createSeedWalletConnectionState(
         parameters.address,
-        opts?.chainId ?? 1
+        requestedChainId ?? mainnet.id
       );
 
       await window.store.set(
@@ -340,7 +349,8 @@ export function seedWalletConnector(parameters: {
     },
     async switchChain(params: { chainId: number }) {
       console.log(`[${this.name}] Switch Chain method called`, params.chainId);
-      const myChain = params.chainId === sepolia.id ? sepolia : mainnet;
+      const chainId = requireSupportedSeedWalletChainId(params.chainId);
+      const myChain = chainId === sepolia.id ? sepolia : mainnet;
       connectionObject = {
         ...connectionObject,
         chainId: myChain.id,
