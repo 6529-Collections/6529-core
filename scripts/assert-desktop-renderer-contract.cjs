@@ -114,6 +114,29 @@ function hasJsxElement(node, elementName) {
   );
 }
 
+function hasJsxElementWithinMemberElement(
+  node,
+  objectName,
+  memberName,
+  childElementName,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (!ts.isJsxElement(candidate)) {
+        return false;
+      }
+      const tagName = candidate.openingElement.tagName;
+      return (
+        ts.isPropertyAccessExpression(tagName) &&
+        ts.isIdentifier(tagName.expression) &&
+        tagName.expression.text === objectName &&
+        tagName.name.text === memberName &&
+        hasJsxElement(candidate, childElementName)
+      );
+    }),
+  );
+}
+
 function jsxElementSpreadsIdentifier(node, elementName, identifier) {
   return Boolean(
     findDescendant(node, (candidate) => {
@@ -867,7 +890,11 @@ const connectorSelectorFunction = findFunction(
   "ConnectorSelector",
 );
 assertContract(
-  connectorModalFunction &&
+  importsModulePrefix(
+    connectorModal,
+    "@/components/auth/seizeConnectContextValue",
+  ) &&
+    connectorModalFunction &&
     jsxAttributeUsesIdentifier(
       connectorModalFunction,
       "div",
@@ -885,6 +912,43 @@ assertContract(
     ),
   connectorModalPath,
   "Core wallet chooser must stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+);
+
+const seizeConnectModalContextPath =
+  "renderer/contexts/SeizeConnectModalContext.tsx";
+const seizeConnectModalContext = parseSource(seizeConnectModalContextPath);
+const seizeConnectModal = findVariable(
+  seizeConnectModalContext,
+  "SeizeConnectModal",
+);
+const seizeConnectModalProvider = findVariable(
+  seizeConnectModalContext,
+  "SeizeConnectModalProvider",
+);
+assertContract(
+  seizeConnectModal &&
+    hasJsxElement(seizeConnectModal, "HeaderUserConnectModal") &&
+    seizeConnectModalProvider &&
+    !hasJsxElement(seizeConnectModalProvider, "HeaderUserConnectModal") &&
+    hasJsxElementWithinMemberElement(
+      connectProvider,
+      "SeizeConnectContext",
+      "Provider",
+      "SeizeConnectModal",
+    ),
+  seizeConnectModalContextPath,
+  "connector chooser must render inside SeizeConnectContext so Core wallet rows can consume connection state",
+);
+
+const errorComponentPath = "renderer/components/error/Error.tsx";
+const errorComponent = parseSource(errorComponentPath);
+const errorComponentFunction = findFunction(errorComponent, "ErrorComponent");
+assertContract(
+  errorComponentFunction &&
+    !importsModulePrefix(errorComponent, "@/contexts/TitleContext") &&
+    !callsIdentifier(errorComponentFunction, "useTitle"),
+  errorComponentPath,
+  "route error fallback must render without TitleProvider",
 );
 
 const seedConnectorPath = "renderer/wagmiConfig/seedWalletConnector.ts";

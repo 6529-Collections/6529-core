@@ -12,7 +12,10 @@ import { getAddress, isAddress } from "viem";
 import { useAccount } from "wagmi";
 import { getNodeEnv, publicEnv } from "@/config/env";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
-import { useSeizeConnectModal } from "@/contexts/SeizeConnectModalContext";
+import {
+  SeizeConnectModal,
+  useSeizeConnectModal,
+} from "@/contexts/SeizeConnectModalContext";
 import { isElectron } from "@/helpers";
 import {
   canStoreAnotherWalletAccount,
@@ -1067,6 +1070,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     <WalletErrorBoundary>
       <SeizeConnectContext.Provider value={contextValue}>
         {children}
+        <SeizeConnectModal />
         {isAppKitCreated && (
           <AppKitModalBridge store={appKitModalBridgeStore} />
         )}

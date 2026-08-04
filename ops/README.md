@@ -18,13 +18,14 @@ prompts or unrelated administration dialogs above authentication, permits late
 signatures after cancellation, lets one Core connector reuse another wallet's
 address or an unsupported chain, prevents a Core wallet from opening Add
 Profile, removes the compact Core-wallet active/switch states, narrows the
-connector chooser, shrinks the Core request prompt or lets its actions scroll
-away, or mounts global application UI/telemetry on the isolated browser
-connector must fail until those desktop adaptations are restored. The same
-suite behaviorally checks modal ordering, signature invalidation, address
-validation, supported-chain enforcement, address-bound Core connector
-persistence, wallet selection state, request layout, and bounded shutdown
-cleanup.
+connector chooser, mounts that chooser outside the connection context it
+consumes, makes the route error fallback depend on an application provider,
+shrinks the Core request prompt or lets its actions scroll away, or mounts
+global application UI/telemetry on the isolated browser connector must fail
+until those desktop adaptations are restored. The same suite behaviorally
+checks modal ordering, signature invalidation, address validation,
+supported-chain enforcement, address-bound Core connector persistence, wallet
+selection state, request layout, and bounded shutdown cleanup.
 
 Electron regression tests may import renderer-owned pure modules, but those
 test-only imports must never enter the packaged main-process compilation.

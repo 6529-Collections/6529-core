@@ -4,7 +4,7 @@ import {
   confirmModalBody,
   confirmModalHeader,
 } from "@/components/shared/ConfirmModalShell";
-import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
+import { useSeizeConnectContext } from "@/components/auth/seizeConnectContextValue";
 import { isElectron } from "@/helpers";
 import { formatAddress } from "@/helpers/Helpers";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
