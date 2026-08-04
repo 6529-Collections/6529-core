@@ -1,6 +1,5 @@
 "use client";
 
-import { useTitle } from "@/contexts/TitleContext";
 import {
   faChevronDown,
   faChevronUp,
@@ -24,7 +23,6 @@ export default function ErrorComponent({
   digest,
   onReset,
 }: ErrorComponentProps = {}) {
-  const { setTitle } = useTitle();
   const searchParams = useSearchParams();
   const [isStacktraceExpanded, setIsStacktraceExpanded] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
@@ -32,8 +30,8 @@ export default function ErrorComponent({
   const [, copyToClipboard] = useCopyToClipboard();
 
   useEffect(() => {
-    setTitle("6529 Error");
-  }, [setTitle]);
+    document.title = "6529 Error";
+  }, []);
 
   const stackTraceFromQuery = useMemo(() => {
     return searchParams?.get("stack") ?? "";

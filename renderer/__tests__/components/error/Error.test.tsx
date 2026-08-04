@@ -2,16 +2,8 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import ErrorComponent from "@/components/error/Error";
 
-const setTitleMock = jest.fn();
 const copyToClipboardMock = jest.fn();
 let mockSearchParams: URLSearchParams;
-
-jest.mock("@/contexts/TitleContext", () => ({
-  __esModule: true,
-  useTitle: () => ({
-    setTitle: setTitleMock,
-  }),
-}));
 
 jest.mock("next/navigation", () => ({
   __esModule: true,
@@ -43,9 +35,9 @@ describe("ErrorComponent", () => {
   beforeEach(() => {
     jest.clearAllTimers();
     jest.useFakeTimers();
-    setTitleMock.mockClear();
     copyToClipboardMock.mockClear();
     mockSearchParams = new URLSearchParams();
+    document.title = "6529.io";
   });
 
   afterEach(() => {
@@ -56,7 +48,7 @@ describe("ErrorComponent", () => {
   it("sets the error page title and shows contact email", () => {
     render(<ErrorComponent />);
 
-    expect(setTitleMock).toHaveBeenCalledWith("6529 Error");
+    expect(document.title).toBe("6529 Error");
 
     const supportLink = screen.getByRole("link", { name: "support@6529.io" });
     expect(supportLink).toHaveAttribute("href", "mailto:support@6529.io");

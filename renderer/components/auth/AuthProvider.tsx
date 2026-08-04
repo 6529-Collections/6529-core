@@ -17,6 +17,7 @@ import {
 } from "@/components/utils/toast/AppToast";
 import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
+import { isElectron } from "@/helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
 import { useIdentity } from "@/hooks/useIdentity";
@@ -102,6 +103,7 @@ export default function Auth({
     seizeDisconnectAndLogout,
     isSafeWallet,
     connectionState,
+    isDisconnecting,
   } = useSeizeConnectContext();
 
   const {
@@ -112,6 +114,9 @@ export default function Auth({
     signatureType: isSafeWallet ? "contract" : "eoa",
   });
   const [showSignModal, setShowSignModal] = useState(false);
+  const [dismissedAuthPromptAddress, setDismissedAuthPromptAddress] = useState<
+    string | null
+  >(null);
   const [signModalReason, setSignModalReason] =
     useState<SignModalReason>("auth");
   const [sessionUpgradePromptMode, setSessionUpgradePromptMode] =
@@ -124,6 +129,7 @@ export default function Auth({
   const [sessionUpgradeRequired, setSessionUpgradeRequired] = useState(false);
   const [authStorageRevision, setAuthStorageRevision] = useState(0);
   const signModalReasonRef = useRef<SignModalReason>(signModalReason);
+  const normalizedAddress = address?.trim().toLowerCase() ?? null;
 
   const { profile: loadedProfile, isLoading: fetchingProfile } = useIdentity({
     handleOrWallet: address,
@@ -378,6 +384,11 @@ export default function Auth({
     // Clear previous operations when dependencies change
     abortCurrentAuthOperation();
 
+    if (isDisconnecting) {
+      setShowSignModal(false);
+      return undefined;
+    }
+
     // Don't start validation during transitional states
     if (connectionState === "connecting") {
       return undefined;
@@ -405,6 +416,10 @@ export default function Auth({
 
     if (!isAddressAuthorized) {
       setSessionUpgradeRequired(false);
+      if (dismissedAuthPromptAddress === normalizedAddress) {
+        setShowSignModal(false);
+        return undefined;
+      }
       if (isConnected) {
         authPromptTrackingReasonRef.current = "wallet_not_authorized";
         setSignModalReason("auth");
@@ -420,8 +435,11 @@ export default function Auth({
       setShowSignModal(false);
     }
 
+    // In Electron the active profile is explicit state owned by connector
+    // selection/authentication. A stale live connector must never overwrite it.
     const activeStoredAddress = getWalletAddress();
     if (
+      !isElectron() &&
       activeStoredAddress &&
       activeStoredAddress.toLowerCase() !== address.toLowerCase()
     ) {
@@ -493,7 +511,23 @@ export default function Auth({
     resetSessionUpgradeExpiryDedupe,
     authRolloutSettings,
     authStorageRevision,
+    dismissedAuthPromptAddress,
+    isDisconnecting,
+    normalizedAddress,
   ]);
+
+  useEffect(() => {
+    if (connectionState !== "connected" || !normalizedAddress) {
+      setDismissedAuthPromptAddress(null);
+      return;
+    }
+
+    setDismissedAuthPromptAddress((dismissedAddress) =>
+      dismissedAddress && dismissedAddress !== normalizedAddress
+        ? null
+        : dismissedAddress
+    );
+  }, [connectionState, normalizedAddress]);
 
   const setToast = useCallback((toast: AppToastInput) => {
     showAppToast(toast);
@@ -638,6 +672,9 @@ export default function Auth({
   ]);
 
   const onCancelSignRequest = useCallback(() => {
+    resetSigning();
+    abortCurrentAuthOperation();
+
     if (signModalReason === "session-upgrade") {
       if (!sessionUpgradeCanDismiss) {
         return;
@@ -655,6 +692,7 @@ export default function Auth({
       return;
     }
 
+    setDismissedAuthPromptAddress(normalizedAddress);
     setShowSignModal(false);
 
     if (!isAddressAuthorized) {
@@ -670,9 +708,12 @@ export default function Auth({
   }, [
     address,
     authRolloutSettings,
+    abortCurrentAuthOperation,
     isAddressAuthorized,
+    normalizedAddress,
     seizeDisconnect,
     seizeDisconnectAndLogout,
+    resetSigning,
     sessionUpgradeCanDismiss,
     signModalReason,
   ]);
@@ -693,15 +734,24 @@ export default function Auth({
     const shouldHideDuringValidation =
       authLoadingState === "validating" &&
       signModalReason !== "session-upgrade";
+    const isDismissedAuthPrompt =
+      signModalReason !== "session-upgrade" &&
+      dismissedAuthPromptAddress !== null &&
+      dismissedAuthPromptAddress === normalizedAddress;
     return (
       showSignModal &&
+      !isDisconnecting &&
+      !isDismissedAuthPrompt &&
       !shouldHideDuringValidation &&
       (connectionState === "connected" || isDisconnectedWebSessionUpgradePrompt)
     );
   }, [
     authLoadingState,
     connectionState,
+    dismissedAuthPromptAddress,
     isDisconnectedWebSessionUpgradePrompt,
+    isDisconnecting,
+    normalizedAddress,
     showSignModal,
     signModalReason,
   ]);

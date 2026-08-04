@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import type { KeyboardEvent, ReactNode, RefObject } from "react";
 import { createPortal } from "react-dom";
+import { WALLET_REQUEST_MODAL_OVERLAY_CLASS } from "./modal-layers";
 
 export const confirmModalHeader =
   "tw-p-4 tw-bg-iron-950 tw-text-iron-100 tw-rounded-t tw-border-0 tw-border-b tw-border-solid tw-border-iron-800";
@@ -69,15 +70,16 @@ const setActiveFocusElement = (
 export function ConfirmModalShell(props: {
   show: boolean;
   title: ReactNode;
-  children?: ReactNode;
+  children?: ReactNode | undefined;
   footer: ReactNode;
-  initialFocusRef?: RefObject<HTMLElement | null>;
-  onBackdropClick?: () => void;
-  overlayClassName?: string;
-  dialogClassName?: string;
-  bodyClassName?: string;
-  footerClassName?: string;
-  titleClassName?: string;
+  initialFocusRef?: RefObject<HTMLElement | null> | undefined;
+  onBackdropClick?: (() => void) | undefined;
+  overlayClassName?: string | undefined;
+  dialogClassName?: string | undefined;
+  bodyClassName?: string | undefined;
+  footerClassName?: string | undefined;
+  headerClassName?: string | undefined;
+  titleClassName?: string | undefined;
 }) {
   const {
     show,
@@ -90,21 +92,33 @@ export function ConfirmModalShell(props: {
     dialogClassName = "",
     bodyClassName = "",
     footerClassName = confirmModalFooter,
+    headerClassName = confirmModalHeader,
     titleClassName = "tw-m-0 tw-text-lg tw-font-semibold",
   } = props;
   const dialogRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const previouslyFocusedElementRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (!show) {
       return;
     }
 
+    previouslyFocusedElementRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     const focusableElements = getFocusableElements(dialogRef.current);
     const defaultFocusElement =
       initialFocusRef?.current ?? focusableElements.at(-1);
 
     defaultFocusElement?.focus();
     setActiveFocusElement(dialogRef.current, defaultFocusElement ?? null);
+
+    return () => {
+      previouslyFocusedElementRef.current?.focus();
+      previouslyFocusedElementRef.current = null;
+    };
   }, [initialFocusRef, show]);
 
   useEffect(() => {
@@ -167,14 +181,15 @@ export function ConfirmModalShell(props: {
   if (!show) return null;
   const overlayZClass = overlayClassName.includes("tw-z-")
     ? ""
-    : "tw-z-[10010]";
+    : WALLET_REQUEST_MODAL_OVERLAY_CLASS;
 
   const overlay = (
     <div
       className={`tw-fixed tw-inset-0 ${overlayZClass} tw-flex tw-items-center tw-justify-center tw-bg-black/50 ${overlayClassName}`.trim()}
       onClick={onBackdropClick}
       role="dialog"
-      aria-modal
+      aria-modal="true"
+      aria-labelledby={titleId}
     >
       <div
         ref={dialogRef}
@@ -182,8 +197,10 @@ export function ConfirmModalShell(props: {
         onClick={(e) => e.stopPropagation()}
         onKeyDown={handleDialogKeyDown}
       >
-        <div className={confirmModalHeader}>
-          <h2 className={titleClassName}>{title}</h2>
+        <div className={headerClassName}>
+          <h2 id={titleId} className={titleClassName}>
+            {title}
+          </h2>
         </div>
         {children != null && (
           <div

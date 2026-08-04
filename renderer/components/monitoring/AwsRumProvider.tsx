@@ -1,5 +1,6 @@
 "use client";
 
+import { isBrowserConnectorRoute } from "@/components/providers/app-route-provider-features";
 import { publicEnv } from "@/config/env";
 import { AwsRumExpectedAbortPlugin } from "@/utils/monitoring/awsRumExpectedAbort";
 import { createAwsRumPrivacyPlugin } from "@/utils/monitoring/awsRumPrivacy";
@@ -34,11 +35,18 @@ export default function AwsRumProvider({
   children,
 }: Readonly<AwsRumProviderProps>) {
   const pathname = usePathname();
+  const isBrowserConnector = isBrowserConnectorRoute(pathname);
   const latestPathnameRef = useRef(pathname);
   const awsRumRef = useRef<AwsRumInstance | undefined>(undefined);
   const lastRecordedPageIdRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
+    // The connector is a short-lived local transfer surface. It must not
+    // initialize site telemetry or create performance-monitoring cookies.
+    if (isBrowserConnector) {
+      return;
+    }
+
     // Skip initialization in development mode to avoid noise
     if (publicEnv.NODE_ENV === "development") {
       console.warn("AWS RUM: Skipped initialization in development mode");
@@ -144,10 +152,14 @@ export default function AwsRumProvider({
         delete window.awsRum;
       }
     };
-  }, []);
+  }, [isBrowserConnector]);
 
   useEffect(() => {
     latestPathnameRef.current = pathname;
+
+    if (isBrowserConnector) {
+      return;
+    }
 
     const awsRum = awsRumRef.current;
     if (!awsRum) {
@@ -159,7 +171,7 @@ export default function AwsRumProvider({
       pathname,
       lastRecordedPageIdRef.current
     );
-  }, [pathname]);
+  }, [isBrowserConnector, pathname]);
 
   return <>{children}</>;
 }

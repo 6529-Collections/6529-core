@@ -9,6 +9,7 @@ import {
   confirmBtnSecondary,
   confirmInputClass,
 } from "@/components/shared/ConfirmModalShell";
+import { NON_WALLET_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
 import { useToast } from "@/contexts/ToastContext";
 import {
   fullRefreshWorker,
@@ -354,7 +355,7 @@ export function WorkerCard({
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
             >
               Recalculate TDH Now
-            </button>
+            </button>,
           )}
         </div>
       );
@@ -396,7 +397,7 @@ export function WorkerCard({
               onClick={() => setShowFullRefreshNFTsConfirm(true)}
             >
               Full Refresh
-            </button>,
+            </button>
           )}
         {task.resetable &&
           infoButton(
@@ -519,6 +520,7 @@ export function WorkerCard({
         />
       )}
       <Confirm
+        overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showRecalculateOwnersConfirm}
         onHide={() => setShowRecalculateOwnersConfirm(false)}
         onConfirm={triggerRecalculateTransactionsOwners}
@@ -526,6 +528,7 @@ export function WorkerCard({
         message={`Roll back the transactions database by 5,000 block, then re-process all NFT transactions stored in the local database and recalculates ownership and balances for each owner, ensuring accurate and up-to-date data for every token based on the transaction history. Use this if discrepancies in ownership or balance are detected.`}
       />
       <Confirm
+        overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showFullRefreshNFTsConfirm}
         onHide={() => setShowFullRefreshNFTsConfirm(false)}
         onConfirm={triggerFullRefreshWorker}
@@ -533,6 +536,7 @@ export function WorkerCard({
         message={`Refresh all indexed NFTs from chain and metadata without deleting local NFT data.`}
       />
       <Confirm
+        overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showResetWorkerConfirm}
         onHide={() => setShowResetWorkerConfirm(false)}
         onConfirm={triggerResetWorker}
@@ -540,6 +544,7 @@ export function WorkerCard({
         message={`Reset all data to the start block. This will delete all transactions from the database. Subsequent sync processes will start syncing from the beginning.`}
       />
       <Confirm
+        overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showResetNFTsConfirm}
         onHide={() => setShowResetNFTsConfirm(false)}
         onConfirm={triggerResetWorker}
@@ -547,6 +552,7 @@ export function WorkerCard({
         message={`This will delete all NFTs in your database and start syncing from the beginning.`}
       />
       <Confirm
+        overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showRunNowConfirm}
         onHide={() => setShowRunNowConfirm(false)}
         onConfirm={triggerStartWorker}
@@ -562,6 +568,7 @@ export function WorkerCard({
         }
       />
       <Confirm
+        overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showStopWorkerConfirm}
         onHide={() => setShowStopWorkerConfirm(false)}
         onConfirm={triggerStopWorker}
@@ -592,6 +599,7 @@ function ResetToBlockConfirm({
 
   return (
     <ConfirmModalShell
+      overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
       show={show}
       title="Reset to block"
       onBackdropClick={handleBackdrop}

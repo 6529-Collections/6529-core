@@ -178,9 +178,7 @@ jest.mock("@/services/auth/immediate-validation.utils", () => ({
 
 jest.mock("@/services/analytics/productImpactTelemetry", () => ({
   resetAuthSessionRefreshProductImpactDedupe: (
-    ...args: Parameters<
-      typeof mockResetAuthSessionRefreshProductImpactDedupe
-    >
+    ...args: Parameters<typeof mockResetAuthSessionRefreshProductImpactDedupe>
   ) => mockResetAuthSessionRefreshProductImpactDedupe(...args),
   trackAuthSessionRefreshProductImpact: (
     ...args: Parameters<typeof mockTrackAuthSessionRefreshProductImpact>
@@ -2101,8 +2099,7 @@ describe("Auth component", () => {
         );
       });
       const firstTerminalScope =
-        mockTrackAuthSessionRefreshProductImpact.mock.calls[0]?.[0]
-          .dedupeScope;
+        mockTrackAuthSessionRefreshProductImpact.mock.calls[0]?.[0].dedupeScope;
       expect(firstTerminalScope).toEqual(expect.any(String));
 
       currentJwt = "session-b-jwt";
@@ -2293,6 +2290,96 @@ describe("Auth component", () => {
 
       // Should call disconnect function
       expect(mockSeizeDisconnectAndLogout).toHaveBeenCalled();
+    });
+
+    it("keeps an unauthorized auth prompt dismissed while disconnect settles", async () => {
+      walletAddress = "0x1111111111111111111111111111111111111111";
+      connectedAccountsOverride = [];
+      const disconnectDeferred = createDeferredPromise<void>();
+      mockSeizeDisconnect.mockReturnValueOnce(disconnectDeferred.promise);
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <div data-testid="auth-component">Auth Component</div>
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByText("Cancel"));
+
+      expect(mockSeizeDisconnect).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+
+      await act(async () => {
+        disconnectDeferred.resolve();
+        await disconnectDeferred.promise;
+      });
+
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+    });
+
+    it("handles Escape cancellation without using a top-layer dialog", async () => {
+      walletAddress = "0x1111111111111111111111111111111111111111";
+      connectedAccountsOverride = [];
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <div data-testid="auth-component">Auth Component</div>
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      const modalTitle = await screen.findByText("Sign Authentication Request");
+      const dialog = modalTitle.closest('[role="dialog"]');
+      if (!dialog) {
+        throw new Error("Expected authentication dialog");
+      }
+      expect(document.querySelector("dialog")).not.toBeInTheDocument();
+
+      fireEvent.keyDown(screen.getByText("Sign"), { key: "Escape" });
+
+      await waitFor(() => {
+        expect(mockSeizeDisconnect).toHaveBeenCalledTimes(1);
+      });
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
+    });
+
+    it("keeps Cancel available while a wallet signature is pending", async () => {
+      walletAddress = "0x1111111111111111111111111111111111111111";
+      connectedAccountsOverride = [];
+      mockIsSigningPending = true;
+
+      render(
+        <ReactQueryWrapperContext.Provider
+          value={{ invalidateAll: jest.fn() } as any}
+        >
+          <Auth>
+            <div data-testid="auth-component">Auth Component</div>
+          </Auth>
+        </ReactQueryWrapperContext.Provider>
+      );
+
+      const user = userEvent.setup();
+      await user.click(await screen.findByText("Cancel"));
+
+      expect(mockReset).toHaveBeenCalledTimes(1);
+      expect(mockSeizeDisconnect).toHaveBeenCalledTimes(1);
+      expect(
+        screen.queryByText("Sign Authentication Request")
+      ).not.toBeInTheDocument();
     });
 
     it("keeps v1 session upgrade silent when backend rollout settings are absent", async () => {
@@ -2741,7 +2828,7 @@ describe("Auth component", () => {
       });
     });
 
-    it("hides the session upgrade dismiss action while wallet confirmation is pending", async () => {
+    it("keeps a dismissible session upgrade cancellable while signing is pending", async () => {
       const validAddress = "0x1111111111111111111111111111111111111111";
       walletAddress = validAddress;
       mockIsSigningPending = true;
@@ -2771,7 +2858,7 @@ describe("Auth component", () => {
         expect(screen.getByText("Upgrade Authentication")).toBeInTheDocument();
       });
 
-      expect(screen.queryByText("Remind me later")).not.toBeInTheDocument();
+      expect(screen.getByText("Remind me later")).toBeInTheDocument();
       expect(screen.getByText(/Confirm in your wallet/i)).toBeInTheDocument();
     });
 
