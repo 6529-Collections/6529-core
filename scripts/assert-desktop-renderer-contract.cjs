@@ -573,6 +573,51 @@ assertContract(
   "renderer/components/auth/SeizeConnectProvider.tsx",
   "wallet cancellation must restore the last authenticated profile state",
 );
+const activeLocalWalletConnector = findVariable(
+  connectProvider,
+  "isActiveLocalWalletConnector",
+);
+const seizeAddConnectedAccount = findVariable(
+  connectProvider,
+  "seizeAddConnectedAccount",
+);
+const localConnectorDirectOpenGuard = seizeAddConnectedAccount
+  ? findDescendant(
+      seizeAddConnectedAccount,
+      (node) =>
+        ts.isIfStatement(node) &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (conditionNode) =>
+              ts.isIdentifier(conditionNode) &&
+              conditionNode.text === "isActiveLocalWalletConnector",
+          ),
+        ) &&
+        callsIdentifier(node.thenStatement, "openAddConnectedAccountModal") &&
+        !callsIdentifier(node.thenStatement, "disconnect"),
+    )
+  : undefined;
+assertContract(
+  activeLocalWalletConnector &&
+    Boolean(
+      findDescendant(
+        activeLocalWalletConnector.initializer,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "APP_WALLET_CONNECTOR_TYPE",
+      ),
+    ) &&
+    Boolean(
+      findDescendant(
+        activeLocalWalletConnector.initializer,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "SEED_WALLET_CONNECTOR_TYPE",
+      ),
+    ) &&
+    Boolean(localConnectorDirectOpenGuard),
+  "renderer/components/auth/SeizeConnectProvider.tsx",
+  "Add profile must open directly for both app-wallet and Core seed-wallet connectors",
+);
 
 const seedConnectorPath = "renderer/wagmiConfig/seedWalletConnector.ts";
 const seedConnector = parseSource(seedConnectorPath);

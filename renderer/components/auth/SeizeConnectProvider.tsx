@@ -37,6 +37,7 @@ import {
   logSecurityEvent,
 } from "@/utils/security-logger";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
+import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import {
   BROWSER_CONNECTOR_CONNECTION_CHANGED_EVENT,
   clearBrowserConnectorConnectIntent,
@@ -333,8 +334,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     normalizeAddress(activeAddress) === normalizeAddress(liveConnectedAddress)
   );
   const activeConnectorType = wagmiAccount.connector?.type;
-  const isActiveAppWalletConnector =
-    activeConnectorType === APP_WALLET_CONNECTOR_TYPE;
+  const isActiveLocalWalletConnector =
+    activeConnectorType === APP_WALLET_CONNECTOR_TYPE ||
+    activeConnectorType === SEED_WALLET_CONNECTOR_TYPE;
 
   const openConnectModal = useCallback(
     async (source: string): Promise<void> => {
@@ -474,7 +476,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         : null;
     const connectIntent = getActiveConnectIntent();
 
-    if (!liveConnectedWallet || isActiveAppWalletConnector) {
+    if (!liveConnectedWallet || isActiveLocalWalletConnector) {
       await seizeConnectOrThrow("seizeConnectFresh", connectIntent);
       return;
     }
@@ -505,7 +507,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.isConnected,
     disconnect,
     getActiveConnectIntent,
-    isActiveAppWalletConnector,
+    isActiveLocalWalletConnector,
     seizeConnectOrThrow,
   ]);
 
@@ -805,7 +807,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       return;
     }
 
-    if (!liveConnectedWallet || isActiveAppWalletConnector) {
+    if (!liveConnectedWallet || isActiveLocalWalletConnector) {
       isAddingConnectedAccountRef.current = true;
       addFlowOriginAddressRef.current = addFlowOriginWallet;
       setIsAddingConnectedAccount(true);
@@ -868,7 +870,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.status,
     canAddConnectedAccount,
     disconnect,
-    isActiveAppWalletConnector,
+    isActiveLocalWalletConnector,
     isAddingConnectedAccount,
     isConnectIntentWaitingForAppKit,
     isConnectModalOpen,
