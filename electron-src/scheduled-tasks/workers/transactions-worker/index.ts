@@ -44,7 +44,9 @@ import { TransactionsWorkerData } from "../../scheduled-worker";
 import {
   classifyReceiptTransaction,
   diffTransactions,
+  getTransactionIdentity,
   getTransactionTokenKeys,
+  hasSameChainData,
   isRpcLogRangeLimitError,
 } from "./transaction-reconciliation";
 
@@ -378,13 +380,13 @@ export class TransactionsWorker extends CoreWorker {
         diff.unchanged.length + verifiedOrphans.existing.length;
       totals.missing += diff.missing.length;
       totals.inconsistent +=
-        diff.inconsistent.length + verifiedOrphans.relocated.length;
+        diff.inconsistent.length + verifiedOrphans.repairs.length;
       totals.orphaned += verifiedOrphans.orphaned.length;
 
       const rawRepairs = [
         ...diff.missing,
         ...diff.inconsistent.map(({ chain }) => chain),
-        ...verifiedOrphans.relocated,
+        ...verifiedOrphans.repairs,
       ];
       const affectedTokens = getTransactionTokenKeys([
         ...rawRepairs,
@@ -447,11 +449,11 @@ export class TransactionsWorker extends CoreWorker {
     latestIndexedBlock: number
   ): Promise<{
     orphaned: Transaction[];
-    relocated: Transaction[];
+    repairs: Transaction[];
     existing: Transaction[];
   }> {
     if (orphaned.length === 0) {
-      return { orphaned: [], relocated: [], existing: [] };
+      return { orphaned: [], repairs: [], existing: [] };
     }
 
     const orphanedByHash = new Map<string, Transaction[]>();
@@ -470,7 +472,7 @@ export class TransactionsWorker extends CoreWorker {
       ),
     );
     const confirmedOrphans: Transaction[] = [];
-    const relocated: Transaction[] = [];
+    const repairs: Transaction[] = [];
     const existing: Transaction[] = [];
     for (const [index, [hash, localTransactions]] of entries.entries()) {
       const canonicalTransactions = canonicalByHash[index];
@@ -492,15 +494,23 @@ export class TransactionsWorker extends CoreWorker {
             confirmedOrphans.push(localTransaction);
             break;
           case "omitted":
+            // classifyReceiptTransaction only returns a canonical transfer
+            // with the same five-column primary-key identity. If getLogs
+            // omitted that transfer, the existing row is either already
+            // correct or can be safely replaced by an upsert of that same
+            // identity; it is never a separate orphan that needs deletion.
             if (
-              diffTransactions(
-                [classification.canonical],
-                [localTransaction],
-              ).unchanged.length > 0
+              getTransactionIdentity(classification.canonical) !==
+              getTransactionIdentity(localTransaction)
             ) {
+              throw new Error(
+                `Canonical transaction ${hash} did not preserve its local identity`
+              );
+            }
+            if (hasSameChainData(localTransaction, classification.canonical)) {
               existing.push(localTransaction);
             } else {
-              relocated.push(classification.canonical);
+              repairs.push(classification.canonical);
             }
             break;
           case "beyond-checkpoint":
@@ -508,13 +518,16 @@ export class TransactionsWorker extends CoreWorker {
               `Canonical transaction ${hash} is beyond the reconciliation checkpoint at block ${classification.canonical.block}`
             );
           case "relocated":
-            relocated.push(classification.canonical);
+            // A relocation also preserves the transaction primary key. The
+            // canonical upsert updates the sole local row rather than adding
+            // a second transfer.
+            repairs.push(classification.canonical);
             break;
         }
       }
     }
 
-    return { orphaned: confirmedOrphans, relocated, existing };
+    return { orphaned: confirmedOrphans, repairs, existing };
   }
 
   private async getCanonicalReceiptTransactions(

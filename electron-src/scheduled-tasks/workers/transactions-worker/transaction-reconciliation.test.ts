@@ -4,6 +4,7 @@ import type { Transaction } from "../../../db/entities/ITransaction";
 import {
   classifyReceiptTransaction,
   diffTransactions,
+  excludeOrphansRepairedByIdentity,
   getTransactionIdentity,
   getTransactionTokenKeys,
   hasTransactionRepairs,
@@ -72,6 +73,20 @@ describe("transaction reconciliation diff", () => {
         { contract: "0xcontract", tokenId: 1 },
         { contract: "0xcontract", tokenId: 2 },
       ],
+    );
+  });
+
+  it("never deletes an orphan identity that a canonical repair replaces", () => {
+    const stale = transaction({ block: 100, token_count: 1 });
+    const canonical = transaction({ block: 101, token_count: 2 });
+    const unrelatedOrphan = transaction({ transaction: "0xorphan" });
+
+    assert.deepEqual(
+      excludeOrphansRepairedByIdentity(
+        [stale, unrelatedOrphan],
+        [canonical]
+      ),
+      [unrelatedOrphan]
     );
   });
 
@@ -160,6 +175,14 @@ describe("transaction reconciliation diff", () => {
     );
     assert.equal(
       isRpcLogRangeLimitError(new Error("network unavailable")),
+      false
+    );
+    assert.equal(
+      isRpcLogRangeLimitError(new Error("Too Many Requests")),
+      false
+    );
+    assert.equal(
+      isRpcLogRangeLimitError(new Error("too many concurrent requests")),
       false
     );
   });

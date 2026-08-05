@@ -17,6 +17,13 @@ export function createTdhTransactionMutationGuard(
   return () => (isTdhRunning() ? "TDH worker is running" : null);
 }
 
+export function canStartScheduledWorker(
+  workerActive: boolean,
+  enabled: boolean
+): boolean {
+  return !workerActive && enabled;
+}
+
 export function getTransactionMutationBlockReason(
   action: TransactionMutationAction,
   unavailableReason: string | null,

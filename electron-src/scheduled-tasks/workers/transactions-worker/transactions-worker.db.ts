@@ -7,6 +7,7 @@ import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
 import { batchUpsert, logInfo } from "../../worker-helpers";
 import {
+  excludeOrphansRepairedByIdentity,
   retryOnSqliteLock,
   TRANSACTION_IDENTITY_COLUMNS,
   type TransactionTokenKey,
@@ -212,8 +213,16 @@ export async function applyTransactionReconciliation(
       // retry always starts from the last committed owner/transaction state.
       await db.transaction(async (manager) => {
         const transactionRepository = manager.getRepository(Transaction);
+        // A receipt-derived repair has the same composite primary key as the
+        // local row it replaces. Never also delete that identity: the upsert
+        // below updates the one row in place and makes delete/upsert ordering
+        // irrelevant even if callers provide overlapping inputs.
+        const transactionsToDelete = excludeOrphansRepairedByIdentity(
+          orphaned,
+          repairs
+        );
 
-        for (const orphanedTransaction of orphaned) {
+        for (const orphanedTransaction of transactionsToDelete) {
           await transactionRepository.delete(
             getTransactionDeleteCriteria(orphanedTransaction)
           );

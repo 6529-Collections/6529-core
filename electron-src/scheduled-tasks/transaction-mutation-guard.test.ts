@@ -1,12 +1,19 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import {
+  canStartScheduledWorker,
   createTdhTransactionMutationGuard,
   getTransactionMutationBlockReason,
 } from "./transaction-mutation-guard";
 import type { TransactionMutationAction } from "./transaction-mutation-guard";
 
 describe("transaction mutation guard", () => {
+  it("blocks a scheduled base run while a scoped worker holds the slot", () => {
+    assert.equal(canStartScheduledWorker(true, true), false);
+    assert.equal(canStartScheduledWorker(false, true), true);
+    assert.equal(canStartScheduledWorker(false, false), false);
+  });
+
   const actions: Array<{
     action: TransactionMutationAction;
     label: string;

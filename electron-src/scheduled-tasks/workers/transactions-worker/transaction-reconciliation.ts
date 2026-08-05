@@ -56,7 +56,10 @@ export function getTransactionTokenKeys(
   return Array.from(tokens.values());
 }
 
-function hasSameChainData(local: Transaction, chain: Transaction): boolean {
+export function hasSameChainData(
+  local: Transaction,
+  chain: Transaction
+): boolean {
   // Value, gas, proceeds, royalties, and USD fields are enrichment data, not
   // canonical Transfer-log facts. Reconciliation refreshes them only when a
   // canonical field below requires the transaction to be repaired.
@@ -64,6 +67,17 @@ function hasSameChainData(local: Transaction, chain: Transaction): boolean {
     Number(local.block) === Number(chain.block) &&
     Number(local.transaction_date) === Number(chain.transaction_date) &&
     Number(local.token_count) === Number(chain.token_count)
+  );
+}
+
+export function excludeOrphansRepairedByIdentity(
+  orphaned: Transaction[],
+  repairs: Transaction[]
+): Transaction[] {
+  const repairedIdentities = new Set(repairs.map(getTransactionIdentity));
+  return orphaned.filter(
+    (transaction) =>
+      !repairedIdentities.has(getTransactionIdentity(transaction))
   );
 }
 
@@ -127,7 +141,7 @@ export function isRpcLogRangeLimitError(error: unknown): boolean {
   ]
     .filter(Boolean)
     .join(" ");
-  return /too many|more than [\d,]+ results|response size|result limit|query returned|block range.{0,40}limit|limit.{0,40}block range/i.test(
+  return /too many (?:results|logs|records)|more than [\d,]+ results|response size|result limit|query returned more than|block range.{0,40}limit|limit.{0,40}block range/i.test(
     message
   );
 }

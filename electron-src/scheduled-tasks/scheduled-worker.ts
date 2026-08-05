@@ -10,7 +10,10 @@ import {
   ScheduledWorkerStatus,
   TransactionsWorkerScope,
 } from "../../shared/types";
-import { getTransactionMutationBlockReason } from "./transaction-mutation-guard";
+import {
+  canStartScheduledWorker,
+  getTransactionMutationBlockReason,
+} from "./transaction-mutation-guard";
 import type {
   TransactionMutationAction,
   WorkerStartGuard,
@@ -130,7 +133,7 @@ export class ScheduledWorker {
   private startScheduledWorker() {
     // Scheduled base runs and manual scoped runs share this worker slot. This
     // serializes reconciliation/reset/ownership mutations against base sync.
-    if (this.worker || !this.enabled) {
+    if (!canStartScheduledWorker(!!this.worker, this.enabled)) {
       return;
     }
 
