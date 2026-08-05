@@ -43,6 +43,12 @@ export function getTransactionIdentity(transaction: Transaction): string {
     .join(":");
 }
 
+function getTransactionDatabaseIdentity(transaction: Transaction): string {
+  return TRANSACTION_IDENTITY_COLUMNS.map((column) => transaction[column])
+    .map((value) => value.toString())
+    .join(":");
+}
+
 export function getTransactionTokenIdentity(transaction: Transaction): string {
   return `${transaction.contract.toLowerCase()}:${transaction.token_id}`;
 }
@@ -78,10 +84,12 @@ export function excludeOrphansRepairedByIdentity(
   orphaned: Transaction[],
   repairs: Transaction[]
 ): Transaction[] {
-  const repairedIdentities = new Set(repairs.map(getTransactionIdentity));
+  const repairedIdentities = new Set(
+    repairs.map(getTransactionDatabaseIdentity)
+  );
   return orphaned.filter(
     (transaction) =>
-      !repairedIdentities.has(getTransactionIdentity(transaction))
+      !repairedIdentities.has(getTransactionDatabaseIdentity(transaction))
   );
 }
 
@@ -185,51 +193,6 @@ export async function fetchRpcValueWithConfirmedAbsence<T>(
     throw lastError;
   }
   throw new Error("RPC value lookup was inconclusive");
-}
-
-export async function confirmReceiptlessOrphan(
-  hash: string,
-  recordedBlocks: number[],
-  fetchBlockTransactionHashes: (
-    block: number,
-  ) => Promise<readonly string[] | null>,
-  fetchTransaction: () => Promise<unknown | null>,
-  maxAttempts: number = 3,
-  wait?: (delayMs: number) => Promise<unknown>,
-): Promise<void> {
-  const normalizedHash = hash.toLowerCase();
-  const uniqueBlocks = Array.from(new Set(recordedBlocks));
-
-  for (const block of uniqueBlocks) {
-    const blockLookup = await fetchRpcValueWithConfirmedAbsence(
-      () => fetchBlockTransactionHashes(block),
-      maxAttempts,
-      wait,
-    );
-    if (blockLookup.status === "absent") {
-      throw new Error(
-        `Unable to verify canonical block ${block} for transaction ${hash}`,
-      );
-    }
-    if (
-      blockLookup.value.some(
-        (transactionHash) => transactionHash.toLowerCase() === normalizedHash,
-      )
-    ) {
-      throw new Error(
-        `Canonical block ${block} still contains transaction ${hash}`,
-      );
-    }
-  }
-
-  const transactionLookup = await fetchRpcValueWithConfirmedAbsence(
-    fetchTransaction,
-    maxAttempts,
-    wait,
-  );
-  if (transactionLookup.status === "present") {
-    throw new Error(`Canonical transaction ${hash} is still available`);
-  }
 }
 
 export function isRetryableSqliteLockError(error: unknown): boolean {

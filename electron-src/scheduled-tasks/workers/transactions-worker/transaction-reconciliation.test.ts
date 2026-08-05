@@ -3,7 +3,6 @@ import { describe, it } from "node:test";
 import type { Transaction } from "../../../db/entities/ITransaction";
 import {
   classifyReceiptTransaction,
-  confirmReceiptlessOrphan,
   diffTransactions,
   excludeOrphansRepairedByIdentity,
   fetchRpcValueWithConfirmedAbsence,
@@ -89,6 +88,16 @@ describe("transaction reconciliation diff", () => {
         [canonical]
       ),
       [unrelatedOrphan]
+    );
+  });
+
+  it("deletes a case-different database identity before inserting its canonical repair", () => {
+    const stale = transaction({ transaction: "0xABC" });
+    const canonical = transaction({ transaction: "0xabc" });
+
+    assert.deepEqual(
+      excludeOrphansRepairedByIdentity([stale], [canonical]),
+      [stale]
     );
   });
 
@@ -229,71 +238,6 @@ describe("transaction reconciliation diff", () => {
         async () => {},
       ),
       rpcError,
-    );
-  });
-
-  it("confirms a receipt-less orphan from block membership and transaction absence", async () => {
-    let blockLookups = 0;
-    let transactionLookups = 0;
-
-    await confirmReceiptlessOrphan(
-      "0xorphan",
-      [100, 100],
-      async () => {
-        blockLookups++;
-        return ["0xother"];
-      },
-      async () => {
-        transactionLookups++;
-        return null;
-      },
-      3,
-      async () => {},
-    );
-
-    assert.equal(blockLookups, 1);
-    assert.equal(transactionLookups, 3);
-  });
-
-  it("preserves a receipt-less transaction still present in its recorded block", async () => {
-    await assert.rejects(
-      confirmReceiptlessOrphan(
-        "0xVALID",
-        [100],
-        async () => ["0xvalid"],
-        async () => null,
-        3,
-        async () => {},
-      ),
-      /Canonical block 100 still contains transaction 0xVALID/,
-    );
-  });
-
-  it("does not delete when canonical block data is unavailable", async () => {
-    await assert.rejects(
-      confirmReceiptlessOrphan(
-        "0xhash",
-        [100],
-        async () => null,
-        async () => null,
-        3,
-        async () => {},
-      ),
-      /Unable to verify canonical block 100/,
-    );
-  });
-
-  it("does not delete when the canonical transaction is still available", async () => {
-    await assert.rejects(
-      confirmReceiptlessOrphan(
-        "0xhash",
-        [100],
-        async () => ["0xother"],
-        async () => ({ hash: "0xhash" }),
-        3,
-        async () => {},
-      ),
-      /Canonical transaction 0xhash is still available/,
     );
   });
 

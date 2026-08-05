@@ -306,13 +306,14 @@ export function WorkerCard({
   };
 
   const triggerReconcileTransactions = async (fromBlock: number) => {
-    reconcileTransactions(fromBlock)
-      .then((data) => {
-        showToast(data.data, data.error ? "error" : "success");
-      })
-      .finally(() => {
-        setShowReconcileTransactionsConfirm(false);
-      });
+    try {
+      const data = await reconcileTransactions(fromBlock);
+      showToast(data.data, data.error ? "error" : "success");
+    } catch {
+      showToast(t(locale, "core.transactions.reconcile.error"), "error");
+    } finally {
+      setShowReconcileTransactionsConfirm(false);
+    }
   };
 
   const triggerResetWorker = async () => {

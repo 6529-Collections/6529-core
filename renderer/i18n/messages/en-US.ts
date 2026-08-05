@@ -1204,6 +1204,7 @@ const CORE_TRANSACTION_MESSAGES = objectMessages("core.transactions", {
   "reconcile.title": "Reconcile Transactions",
   "reconcile.cancel": "Cancel",
   "reconcile.confirm": "Reconcile",
+  "reconcile.error": "Unable to start transaction reconciliation.",
   "reconcile.body":
     "Compare Ethereum transfer logs with the local transaction index. Only missing, inconsistent, or orphaned records will be repaired. Ownership will be rebuilt for affected tokens, and TDH will be marked for recalculation when repairs are made.",
   "reconcile.rangeLegend": "Reconciliation range",

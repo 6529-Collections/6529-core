@@ -43,7 +43,6 @@ import {
 import { TransactionsWorkerData } from "../../scheduled-worker";
 import {
   classifyReceiptTransaction,
-  confirmReceiptlessOrphan,
   diffTransactions,
   fetchRpcValueWithConfirmedAbsence,
   getTransactionIdentity,
@@ -364,8 +363,11 @@ export class TransactionsWorker extends CoreWorker {
         }
         throw error;
       }
+      const currentBlockRange = this.getBlockRange();
       this.setBlockRange(
-        rangeHasLogs ? Math.min(this.getBlockRange(), 250) : 1000
+        rangeHasLogs
+          ? Math.min(currentBlockRange, 250)
+          : Math.min(currentBlockRange * 2, 1000)
       );
 
       sendUpdate("Comparing Local History");
@@ -485,28 +487,12 @@ export class TransactionsWorker extends CoreWorker {
       const canonicalReceipt = canonicalByHash[index];
 
       if (canonicalReceipt.status === "absent") {
-        // Some RPC providers return null for historical receipts they cannot
-        // serve. Require two additional canonical signals before deleting a
-        // local row: its recorded block must exclude the hash, and the
-        // transaction lookup must also be consistently absent.
-        await confirmReceiptlessOrphan(
-          hash,
-          localTransactions.map((transaction) => transaction.block),
-          async (blockNumber) => {
-            const block = await this.getBottleneck().schedule(() =>
-              this.getProvider().getBlock(blockNumber),
-            );
-            return block?.transactions ?? null;
-          },
-          () =>
-            this.getBottleneck().schedule(() =>
-              this.getProvider().getTransaction(hash),
-            ),
-          3,
-          sleep,
+        // A null receipt can mean either a genuinely absent transaction or an
+        // RPC provider that cannot serve historical data. It is never strong
+        // enough evidence to delete local history.
+        throw new Error(
+          `Unable to verify local transaction ${hash}: its canonical receipt is unavailable`,
         );
-        confirmedOrphans.push(...localTransactions);
-        continue;
       }
 
       if (canonicalReceipt.transactions.length === 0) {

@@ -161,8 +161,17 @@ export async function rebuildTransactionOwnersForTokens(
 ) {
   const transactionRepository = db.getRepository(Transaction);
   const ownerRepository = db.getRepository(NFTOwner);
+  const uniqueAffectedTokens = new Map(
+    affectedTokens.map((affectedToken) => [
+      `${affectedToken.contract.toLowerCase()}:${affectedToken.tokenId}`,
+      {
+        contract: affectedToken.contract.toLowerCase(),
+        tokenId: affectedToken.tokenId,
+      },
+    ])
+  );
 
-  for (const affectedToken of affectedTokens) {
+  for (const affectedToken of uniqueAffectedTokens.values()) {
     const transactions = await transactionRepository.find({
       where: {
         contract: affectedToken.contract,
