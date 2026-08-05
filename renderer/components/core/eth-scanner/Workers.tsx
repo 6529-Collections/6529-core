@@ -195,7 +195,7 @@ export function WorkerCard({
       return (
         <span
           role="status"
-          className="tw-block tw-max-w-[48rem] tw-whitespace-normal tw-break-words tw-text-right tw-text-sm tw-font-light tw-text-iron-400"
+          className="tw-block tw-w-full tw-whitespace-normal tw-break-words tw-text-left tw-text-sm tw-font-light tw-text-iron-400"
         >
           {task.status.message}
         </span>
@@ -228,8 +228,8 @@ export function WorkerCard({
     }
 
     return (
-      <span>
-        <div className="tw-flex tw-items-center tw-justify-end tw-gap-2">
+      <div className="tw-w-full">
+        <div className="tw-flex tw-items-center tw-justify-start tw-gap-2">
           {progressNowLabel !== undefined && (
             <span className="tw-font-light tw-text-iron-400">
               {(Math.floor(progressNowLabel * 100) / 100).toLocaleString(
@@ -249,11 +249,11 @@ export function WorkerCard({
             />
           </div>
         </div>
-        <div className="tw-mt-1 tw-flex tw-text-right tw-text-sm tw-font-light tw-text-iron-400">
+        <div className="tw-mt-1 tw-flex tw-flex-wrap tw-text-left tw-text-sm tw-font-light tw-text-iron-400">
           <span>{task.status?.message}</span>
           {printProgress()}
         </div>
-      </span>
+      </div>
     );
   };
 
@@ -518,7 +518,7 @@ export function WorkerCard({
     <div className="tw-pb-4">
       <div className="tw-rounded-xl tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800">
         <div
-          className={`tw-flex tw-flex-wrap tw-gap-2 tw-pb-2 ${isMobile ? "tw-flex-col tw-items-center" : "tw-flex-row tw-items-start tw-justify-between"}`}
+          className={`tw-flex tw-gap-2 ${isMobile ? "tw-flex-col tw-items-center" : "tw-flex-row tw-items-start"}`}
         >
           <div
             className={`tw-flex tw-flex-col tw-gap-1 ${isMobile ? "tw-items-center" : "tw-items-start"}`}
@@ -540,11 +540,11 @@ export function WorkerCard({
               </span>
             ) : null}
           </div>
-          <div
-            className={`tw-flex tw-min-w-0 tw-max-w-full tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-items-center" : "tw-items-end"}`}
-          >
-            {printStatus()}
-          </div>
+        </div>
+        <div
+          className={`tw-flex tw-min-h-[3.5rem] tw-w-full tw-min-w-0 tw-items-center tw-pb-2 tw-pt-2 ${isMobile ? "tw-justify-center" : "tw-justify-start"}`}
+        >
+          {printStatus()}
         </div>
         <div className="tw-mt-3">
           <LogsViewer
