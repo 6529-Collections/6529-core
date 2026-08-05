@@ -17,6 +17,15 @@ export function createTdhTransactionMutationGuard(
   return () => (isTdhRunning() ? "TDH worker is running" : null);
 }
 
+export function createTransactionMutationTdhGuard(
+  isTransactionMutationRunning: () => boolean,
+): WorkerStartGuard {
+  return () =>
+    isTransactionMutationRunning()
+      ? "Transactions worker is changing transaction history"
+      : null;
+}
+
 export function canStartScheduledWorker(
   workerActive: boolean,
   enabled: boolean

@@ -44,6 +44,7 @@ import { TransactionsWorkerData } from "../../scheduled-worker";
 import {
   classifyReceiptTransaction,
   diffTransactions,
+  fetchReceiptWithConfirmedAbsence,
   getTransactionIdentity,
   getTransactionTokenKeys,
   hasSameChainData,
@@ -53,6 +54,11 @@ import {
 const data: TransactionsWorkerData = workerData;
 
 export const NAMESPACE = "TRANSACTIONS_WORKER >";
+
+interface CanonicalReceiptResult {
+  status: "present" | "absent";
+  transactions: Transaction[];
+}
 
 function getInterface(contract: string) {
   switch (contract) {
@@ -475,12 +481,20 @@ export class TransactionsWorker extends CoreWorker {
     const repairs: Transaction[] = [];
     const existing: Transaction[] = [];
     for (const [index, [hash, localTransactions]] of entries.entries()) {
-      const canonicalTransactions = canonicalByHash[index];
+      const canonicalReceipt = canonicalByHash[index];
+
+      if (
+        canonicalReceipt.status === "absent" ||
+        canonicalReceipt.transactions.length === 0
+      ) {
+        confirmedOrphans.push(...localTransactions);
+        continue;
+      }
 
       for (const localTransaction of localTransactions) {
         const classification = classifyReceiptTransaction(
           localTransaction,
-          canonicalTransactions,
+          canonicalReceipt.transactions,
           rangeFromBlock,
           rangeToBlock,
           latestIndexedBlock
@@ -534,51 +548,53 @@ export class TransactionsWorker extends CoreWorker {
     hash: string,
     contracts: { contract: string; iface: Interface }[],
     maxAttempts: number = 3,
-  ): Promise<Transaction[]> {
-    let lastError: unknown;
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        const receipt = await this.getBottleneck().schedule(() =>
-          this.getProvider().getTransactionReceipt(hash),
-        );
-        if (!receipt) {
-          throw new Error("receipt is unavailable");
-        }
-
-        const canonicalTransactions: Transaction[] = [];
-        for (const contract of contracts) {
-          const logs = receipt.logs.filter(
-            (log) =>
-              log.address.toLowerCase() === contract.contract.toLowerCase() &&
-              [
-                this.transferTopic,
-                this.transferSingleTopic,
-                this.transferBatchTopic,
-              ].includes(log.topics[0]),
+  ): Promise<CanonicalReceiptResult> {
+    let receiptResult;
+    try {
+      receiptResult = await fetchReceiptWithConfirmedAbsence(
+        async () => {
+          const receipt = await this.getBottleneck().schedule(() =>
+            this.getProvider().getTransactionReceipt(hash),
           );
-          if (logs.length > 0) {
-            canonicalTransactions.push(
-              ...(await this.decodeLogs(logs, contract, true)),
-            );
+          if (!receipt) {
+            return null;
           }
-        }
-        if (canonicalTransactions.length === 0) {
-          throw new Error("receipt contained no decodable transfer logs");
-        }
-        return canonicalTransactions;
-      } catch (error) {
-        lastError = error;
-        if (attempt < maxAttempts) {
-          await sleep(250 * attempt);
-        }
-      }
+
+          const canonicalTransactions: Transaction[] = [];
+          for (const contract of contracts) {
+            const logs = receipt.logs.filter(
+              (log) =>
+                log.address.toLowerCase() ===
+                  contract.contract.toLowerCase() &&
+                [
+                  this.transferTopic,
+                  this.transferSingleTopic,
+                  this.transferBatchTopic,
+                ].includes(log.topics[0]),
+            );
+            if (logs.length > 0) {
+              canonicalTransactions.push(
+                ...(await this.decodeLogs(logs, contract, true)),
+              );
+            }
+          }
+          return canonicalTransactions;
+        },
+        maxAttempts,
+        sleep,
+      );
+    } catch (error) {
+      const reason =
+        error instanceof Error ? error.message : "unknown RPC error";
+      throw new Error(
+        `Unable to verify local transaction ${hash} after ${maxAttempts} attempts: ${reason}`,
+      );
     }
 
-    const reason =
-      lastError instanceof Error ? lastError.message : "unknown RPC error";
-    throw new Error(
-      `Unable to verify local transaction ${hash} after ${maxAttempts} attempts: ${reason}`,
-    );
+    if (receiptResult.status === "absent") {
+      return { status: "absent", transactions: [] };
+    }
+    return { status: "present", transactions: receiptResult.receipt };
   }
 
   private async getAllTransactions(

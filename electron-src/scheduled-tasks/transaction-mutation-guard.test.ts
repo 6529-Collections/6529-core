@@ -3,6 +3,7 @@ import { describe, it } from "node:test";
 import {
   canStartScheduledWorker,
   createTdhTransactionMutationGuard,
+  createTransactionMutationTdhGuard,
   getTransactionMutationBlockReason,
 } from "./transaction-mutation-guard";
 import type { TransactionMutationAction } from "./transaction-mutation-guard";
@@ -52,5 +53,20 @@ describe("transaction mutation guard", () => {
       ),
       "Transactions worker is already running",
     );
+  });
+
+  it("blocks TDH while transaction history is being changed", () => {
+    let isTransactionMutationRunning = true;
+    const guard = createTransactionMutationTdhGuard(
+      () => isTransactionMutationRunning,
+    );
+
+    assert.equal(
+      guard(),
+      "Transactions worker is changing transaction history",
+    );
+
+    isTransactionMutationRunning = false;
+    assert.equal(guard(), null);
   });
 });

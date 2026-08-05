@@ -243,10 +243,13 @@ export class ScheduledWorker {
     this.worker.on("exit", (code) => {
       this.logger.log("info", `Worker exited with code ${code}`);
       Logger.log(`[${this.namespace}]`, `Worker exited with code ${code}`);
+      this.onWorkerExit();
       this.worker?.removeAllListeners();
       this.worker = null;
     });
   }
+
+  protected onWorkerExit() {}
 
   public getNamespace(): string {
     return this.namespace;
@@ -322,6 +325,7 @@ export class ScheduledWorker {
 
 export class TransactionsScheduledWorker extends ScheduledWorker {
   private mutationGuard: WorkerStartGuard | null = null;
+  private mutationRunning = false;
 
   constructor(
     rpcUrl: string | null,
@@ -361,6 +365,24 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     this.mutationGuard = mutationGuard;
   }
 
+  public isMutationRunning(): boolean {
+    return this.mutationRunning;
+  }
+
+  protected override onWorkerExit() {
+    this.mutationRunning = false;
+  }
+
+  private startMutationWorker(workerData: TransactionsWorkerData) {
+    this.mutationRunning = true;
+    try {
+      this.startWorker(workerData);
+    } catch (error) {
+      this.mutationRunning = false;
+      throw error;
+    }
+  }
+
   private getMutationBlockReason(
     action: TransactionMutationAction,
   ): string | null {
@@ -389,7 +411,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       block,
     } as TransactionsWorkerData;
 
-    this.startWorker(workerData);
+    this.startMutationWorker(workerData);
 
     return {
       status: true,
@@ -414,7 +436,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       scope: TransactionsWorkerScope.RECALCULATE_OWNERS,
     } as TransactionsWorkerData;
 
-    this.startWorker(workerData);
+    this.startMutationWorker(workerData);
 
     return {
       status: true,
@@ -446,7 +468,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       checkpointBlock,
     } as TransactionsWorkerData;
 
-    this.startWorker(workerData);
+    this.startMutationWorker(workerData);
 
     return {
       status: true,

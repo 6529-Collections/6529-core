@@ -18,6 +18,10 @@ export interface TransactionTokenKey {
   tokenId: number;
 }
 
+export type ConfirmedReceipt<T> =
+  | { status: "present"; receipt: T }
+  | { status: "absent" };
+
 export interface TransactionReconciliationDiff {
   unchanged: Transaction[];
   missing: Transaction[];
@@ -144,6 +148,40 @@ export function isRpcLogRangeLimitError(error: unknown): boolean {
   return /too many (?:results|logs|records)|more than [\d,]+ results|response size|result limit|query returned more than|block range.{0,40}limit|limit.{0,40}block range/i.test(
     message
   );
+}
+
+export async function fetchReceiptWithConfirmedAbsence<T>(
+  fetchReceipt: () => Promise<T | null>,
+  maxAttempts: number = 3,
+  wait: (delayMs: number) => Promise<unknown> = (delayMs) =>
+    new Promise((resolve) => setTimeout(resolve, delayMs)),
+): Promise<ConfirmedReceipt<T>> {
+  let confirmedAbsences = 0;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const receipt = await fetchReceipt();
+      if (receipt !== null) {
+        return { status: "present", receipt };
+      }
+      confirmedAbsences++;
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (attempt < maxAttempts) {
+      await wait(250 * attempt);
+    }
+  }
+
+  if (confirmedAbsences === maxAttempts) {
+    return { status: "absent" };
+  }
+  if (lastError) {
+    throw lastError;
+  }
+  throw new Error("Receipt lookup was inconclusive");
 }
 
 export function isRetryableSqliteLockError(error: unknown): boolean {

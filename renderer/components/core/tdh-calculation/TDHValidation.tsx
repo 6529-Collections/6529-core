@@ -169,23 +169,35 @@ export default function TDHValidation({
 function CopyIcon({ text, small = false }: { text: string; small?: boolean }) {
   const [isCopied, setIsCopied] = useState(false);
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 500);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setIsCopied(true);
+      setTimeout(() => setIsCopied(false), 500);
+    } catch {
+      setIsCopied(false);
+    }
   };
 
   return (
     <>
-      <FontAwesomeIcon
-        className={`${small ? "tw-ml-1" : "tw-ml-2"} tw-shrink-0 tw-cursor-pointer tw-select-none`}
-        icon={faCopy}
-        height={small ? 11 : 14}
-        color={isCopied ? "green" : "white"}
+      <button
+        type="button"
+        aria-label="Copy value"
+        title="Copy value"
+        className={`${small ? "tw-ml-1" : "tw-ml-2"} tw-flex tw-shrink-0 tw-items-center tw-border-0 tw-bg-transparent tw-p-0 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
         onClick={handleCopy}
-      />
+      >
+        <FontAwesomeIcon
+          aria-hidden="true"
+          icon={faCopy}
+          height={small ? 11 : 14}
+          color={isCopied ? "green" : "white"}
+        />
+      </button>
       {isCopied && (
         <span
+          role="status"
           className={`${small ? "tw-ml-1 tw-text-xs" : "tw-ml-2 tw-text-sm"} tw-font-light tw-text-emerald-400`}
         >
           Copied!

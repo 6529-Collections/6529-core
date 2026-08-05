@@ -149,7 +149,6 @@ export async function recalculateTransactionOwners(
     const ownerRepository = transaction.getRepository(NFTOwner);
     await ownerRepository.clear();
     await persistOwners(transaction, ownerDeltas);
-    await setTdhRecalculationNeeded(transaction, true);
   });
 
   logInfo(parentPort, "All transactions owners recalculated");

@@ -9,7 +9,10 @@ import {
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
 } from "../../shared/types";
-import { createTdhTransactionMutationGuard } from "./transaction-mutation-guard";
+import {
+  createTdhTransactionMutationGuard,
+  createTransactionMutationTdhGuard,
+} from "./transaction-mutation-guard";
 
 const DEFAULT_BLOCK_RANGE = 500;
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
@@ -149,6 +152,17 @@ export function startSchedulers(
     scheduledWorkers.push(scheduledWorker);
   }
 
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) =>
+      worker.getNamespace() === ScheduledWorkerNames.TRANSACTIONS_WORKER,
+  ) as TransactionsScheduledWorker | undefined;
+  const tdhWorker = scheduledWorkers.find(
+    (worker) => worker.getNamespace() === ScheduledWorkerNames.TDH_WORKER,
+  );
+  const transactionMutationTdhGuard = createTransactionMutationTdhGuard(
+    () => transactionsWorker?.isMutationRunning() ?? false,
+  );
+
   for (const scheduledWorker of scheduledWorkers) {
     const workerName = scheduledWorker.getNamespace() as ScheduledWorkerNames;
     const conflictNames = WORKER_CONFLICTS[workerName] ?? [];
@@ -160,17 +174,16 @@ export function startSchedulers(
         const candidateName = candidate.getNamespace() as ScheduledWorkerNames;
         return conflictNames.includes(candidateName) && candidate.isRunning();
       });
-      return conflict ? `${conflict.getDisplay()} worker is running` : null;
+      if (conflict) {
+        return `${conflict.getDisplay()} worker is running`;
+      }
+      if (workerName === ScheduledWorkerNames.TDH_WORKER) {
+        return transactionMutationTdhGuard();
+      }
+      return null;
     });
   }
 
-  const transactionsWorker = scheduledWorkers.find(
-    (worker) =>
-      worker.getNamespace() === ScheduledWorkerNames.TRANSACTIONS_WORKER,
-  ) as TransactionsScheduledWorker | undefined;
-  const tdhWorker = scheduledWorkers.find(
-    (worker) => worker.getNamespace() === ScheduledWorkerNames.TDH_WORKER,
-  );
   transactionsWorker?.setMutationGuard(
     createTdhTransactionMutationGuard(() => tdhWorker?.isRunning() ?? false),
   );

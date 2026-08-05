@@ -174,6 +174,9 @@ export function WorkerCard({
   readonly customStatus?: string | undefined;
 }) {
   const locale = useBrowserLocale();
+  const isWorkerActive =
+    task.status?.status === ScheduledWorkerStatus.STARTING ||
+    task.status?.status === ScheduledWorkerStatus.RUNNING;
   const printStatus = () => {
     if (!task.cronExpression) {
       return <span>Always running</span>;
@@ -244,7 +247,7 @@ export function WorkerCard({
           )}
           <div className="tw-h-4 tw-w-[20vw] tw-min-w-0 tw-overflow-hidden tw-rounded-full tw-bg-iron-800">
             <div
-              className={`tw-h-full ${progressBg} ${task.status?.status === ScheduledWorkerStatus.RUNNING ? "tw-animate-pulse" : ""}`}
+              className={`tw-h-full ${progressBg} ${isWorkerActive ? "tw-animate-pulse" : ""}`}
               style={{ width: `${progressNowValue}%` }}
             />
           </div>
@@ -380,7 +383,7 @@ export function WorkerCard({
               className={btnLight}
               data-tooltip-id="recalculate-tdh-now-tooltip"
               onClick={() => setShowRunNowConfirm(true)}
-              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              disabled={isWorkerActive}
             >
               Recalculate TDH Now
             </button>
@@ -391,7 +394,7 @@ export function WorkerCard({
 
     return (
       <div className="tw-mt-3 tw-flex tw-flex-wrap tw-items-center tw-gap-3">
-        {task.status?.status === ScheduledWorkerStatus.RUNNING
+        {isWorkerActive
           ? infoButton(
               "stop-worker-tooltip",
               <button
@@ -421,7 +424,7 @@ export function WorkerCard({
               type="button"
               className={btnLight}
               data-tooltip-id="full-refresh-nfts-tooltip"
-              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              disabled={isWorkerActive}
               onClick={() => setShowFullRefreshNFTsConfirm(true)}
             >
               Full Refresh
@@ -434,7 +437,7 @@ export function WorkerCard({
               type="button"
               className={btnLight}
               data-tooltip-id="reset-worker-tooltip"
-              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              disabled={isWorkerActive}
               onClick={() => {
                 if (task.namespace === ScheduledWorkerNames.NFTS_WORKER) {
                   setShowResetNFTsConfirm(true);
@@ -453,7 +456,7 @@ export function WorkerCard({
               type="button"
               className={btnLight}
               data-tooltip-id="reconcile-transactions-tooltip"
-              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              disabled={isWorkerActive}
               onClick={() => setShowReconcileTransactionsConfirm(true)}
             >
               {t(locale, "core.transactions.actions.reconcile")}
@@ -466,7 +469,7 @@ export function WorkerCard({
               type="button"
               className={btnLight}
               data-tooltip-id="recalculate-owners-tooltip"
-              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              disabled={isWorkerActive}
               onClick={() => setShowRecalculateOwnersConfirm(true)}
             >
               {t(locale, "core.transactions.actions.rebuildOwnership")}
@@ -479,7 +482,7 @@ export function WorkerCard({
               type="button"
               className={btnLight}
               data-tooltip-id="reset-to-block-tooltip"
-              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              disabled={isWorkerActive}
               onClick={() => setShowResetToBlockConfirm(true)}
             >
               {t(locale, "core.transactions.actions.resetToBlock")}
@@ -527,7 +530,7 @@ export function WorkerCard({
               <span className="tw-text-lg tw-font-semibold tw-text-white">
                 {task.display}
               </span>
-              {task.status?.status === ScheduledWorkerStatus.RUNNING ? (
+              {isWorkerActive ? (
                 <CircleLoader />
               ) : null}
             </div>

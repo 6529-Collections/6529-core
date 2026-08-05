@@ -5,6 +5,7 @@ import {
   classifyReceiptTransaction,
   diffTransactions,
   excludeOrphansRepairedByIdentity,
+  fetchReceiptWithConfirmedAbsence,
   getTransactionIdentity,
   getTransactionTokenKeys,
   hasTransactionRepairs,
@@ -184,6 +185,49 @@ describe("transaction reconciliation diff", () => {
     assert.equal(
       isRpcLogRangeLimitError(new Error("too many concurrent requests")),
       false
+    );
+  });
+
+  it("confirms a missing receipt only after every lookup returns null", async () => {
+    let attempts = 0;
+    const absent = await fetchReceiptWithConfirmedAbsence(
+      async () => {
+        attempts++;
+        return null;
+      },
+      3,
+      async () => {},
+    );
+
+    assert.deepEqual(absent, { status: "absent" });
+    assert.equal(attempts, 3);
+
+    const receipt = { hash: "0xcanonical" };
+    let responses = 0;
+    const present = await fetchReceiptWithConfirmedAbsence(
+      async () => (++responses === 1 ? null : receipt),
+      3,
+      async () => {},
+    );
+    assert.deepEqual(present, { status: "present", receipt });
+  });
+
+  it("does not treat RPC failures as proof that a receipt is absent", async () => {
+    const rpcError = new Error("network unavailable");
+    let attempt = 0;
+    await assert.rejects(
+      fetchReceiptWithConfirmedAbsence(
+        async () => {
+          attempt++;
+          if (attempt === 2) {
+            throw rpcError;
+          }
+          return null;
+        },
+        3,
+        async () => {},
+      ),
+      rpcError,
     );
   });
 
