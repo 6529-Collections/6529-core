@@ -43,6 +43,19 @@ export function getTransactionTokenIdentity(transaction: Transaction): string {
   return `${transaction.contract.toLowerCase()}:${transaction.token_id}`;
 }
 
+export function getTransactionTokenKeys(
+  transactions: Transaction[],
+): TransactionTokenKey[] {
+  const tokens = new Map<string, TransactionTokenKey>();
+  for (const transaction of transactions) {
+    tokens.set(getTransactionTokenIdentity(transaction), {
+      contract: transaction.contract.toLowerCase(),
+      tokenId: Number(transaction.token_id),
+    });
+  }
+  return Array.from(tokens.values());
+}
+
 function hasSameChainData(local: Transaction, chain: Transaction): boolean {
   // Value, gas, proceeds, royalties, and USD fields are enrichment data, not
   // canonical Transfer-log facts. Reconciliation refreshes them only when a

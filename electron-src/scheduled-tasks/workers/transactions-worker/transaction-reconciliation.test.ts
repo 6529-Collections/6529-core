@@ -5,6 +5,7 @@ import {
   classifyReceiptTransaction,
   diffTransactions,
   getTransactionIdentity,
+  getTransactionTokenKeys,
   hasTransactionRepairs,
   isRpcLogRangeLimitError,
   isRetryableSqliteLockError,
@@ -58,6 +59,20 @@ describe("transaction reconciliation diff", () => {
 
     assert.equal(getTransactionIdentity(chain), getTransactionIdentity(local));
     assert.equal(diffTransactions([chain], [local]).unchanged.length, 1);
+  });
+
+  it("deduplicates affected contract and token pairs", () => {
+    assert.deepEqual(
+      getTransactionTokenKeys([
+        transaction({ contract: "0xCONTRACT", token_id: 1 }),
+        transaction({ transaction: "0xother", token_id: 1 }),
+        transaction({ transaction: "0xthird", token_id: 2 }),
+      ]),
+      [
+        { contract: "0xcontract", tokenId: 1 },
+        { contract: "0xcontract", tokenId: 2 },
+      ],
+    );
   });
 
   it("classifies missing, inconsistent, and orphaned transactions", () => {

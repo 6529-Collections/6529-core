@@ -26,6 +26,7 @@ export interface WorkerData {
 export interface TransactionsWorkerData extends WorkerData {
   scope?: TransactionsWorkerScope;
   block?: number;
+  checkpointBlock?: number;
 }
 
 export interface ResettableWorkerData extends WorkerData {
@@ -127,6 +128,8 @@ export class ScheduledWorker {
   }
 
   private startScheduledWorker() {
+    // Scheduled base runs and manual scoped runs share this worker slot. This
+    // serializes reconciliation/reset/ownership mutations against base sync.
     if (this.worker || !this.enabled) {
       return;
     }
@@ -416,7 +419,12 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     };
   }
 
-  public async reconcileTransactions(fromBlock: number) {
+  public async reconcileTransactions(
+    fromBlock: number,
+    checkpointBlock: number,
+  ) {
+    // getMutationBlockReason checks this ScheduledWorker's active worker before
+    // the TDH guard, so reconciliation cannot overlap its scheduled base run.
     const blockedReason = this.getMutationBlockReason("reconcile");
     if (blockedReason) {
       return {
@@ -432,13 +440,14 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       maxConcurrentRequests: this.maxConcurrentRequests,
       scope: TransactionsWorkerScope.RECONCILE,
       block: fromBlock,
+      checkpointBlock,
     } as TransactionsWorkerData;
 
     this.startWorker(workerData);
 
     return {
       status: true,
-      message: `Transaction reconciliation from block ${fromBlock} started`,
+      message: `Transaction reconciliation from block ${fromBlock} through checkpoint ${checkpointBlock} started`,
     };
   }
 }

@@ -44,7 +44,7 @@ import { TransactionsWorkerData } from "../../scheduled-worker";
 import {
   classifyReceiptTransaction,
   diffTransactions,
-  hasTransactionRepairs,
+  getTransactionTokenKeys,
   isRpcLogRangeLimitError,
 } from "./transaction-reconciliation";
 
@@ -78,6 +78,7 @@ export class TransactionsWorker extends CoreWorker {
 
   private scope?: TransactionsWorkerScope;
   private block?: number;
+  private checkpointBlock?: number;
 
   constructor(
     rpcUrl: string,
@@ -85,7 +86,8 @@ export class TransactionsWorker extends CoreWorker {
     blockRange: number,
     maxConcurrentRequests: number,
     scope?: TransactionsWorkerScope,
-    block?: number
+    block?: number,
+    checkpointBlock?: number,
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       Transaction,
@@ -94,6 +96,7 @@ export class TransactionsWorker extends CoreWorker {
     ]);
     this.scope = scope;
     this.block = block;
+    this.checkpointBlock = checkpointBlock;
   }
 
   private async resetToBlock(block: number) {
@@ -212,10 +215,12 @@ export class TransactionsWorker extends CoreWorker {
     } else if (this.scope === TransactionsWorkerScope.RECALCULATE_OWNERS) {
       await this.recalculateOwners();
     } else if (this.scope === TransactionsWorkerScope.RECONCILE) {
-      if (this.block === undefined) {
-        throw new Error("Starting block is required for reconciliation");
+      if (this.block === undefined || this.checkpointBlock === undefined) {
+        throw new Error(
+          "Starting block and checkpoint are required for reconciliation",
+        );
       }
-      await this.reconcileTransactions(this.block);
+      await this.reconcileTransactions(this.block, this.checkpointBlock);
     } else {
       await this.baseWork();
     }
@@ -242,21 +247,32 @@ export class TransactionsWorker extends CoreWorker {
     ];
   }
 
-  private async reconcileTransactions(fromBlock: number) {
-    const latestBlock = await getLatestTransactionsBlock(this.getDb().manager);
+  private async reconcileTransactions(
+    fromBlock: number,
+    checkpointBlock: number,
+  ) {
+    const currentLatestBlock = await getLatestTransactionsBlock(
+      this.getDb().manager,
+    );
     if (!Number.isInteger(fromBlock) || fromBlock < TRANSACTIONS_START_BLOCK) {
       throw new Error(
         `Reconciliation block must be at least ${TRANSACTIONS_START_BLOCK}`
       );
     }
-    if (latestBlock === 0) {
+    if (currentLatestBlock === 0) {
       throw new Error("Transactions must be synced before reconciliation");
     }
-    if (fromBlock > latestBlock) {
+    if (fromBlock > checkpointBlock) {
       throw new Error(
-        `Reconciliation block cannot exceed the local transaction block ${latestBlock}`
+        `Reconciliation block cannot exceed the local transaction block ${checkpointBlock}`,
       );
     }
+    if (currentLatestBlock < checkpointBlock) {
+      throw new Error(
+        `Transaction checkpoint changed before reconciliation started (expected at least ${checkpointBlock}, found ${currentLatestBlock})`,
+      );
+    }
+    const latestBlock = checkpointBlock;
 
     const totals = {
       scanned: 0,
@@ -358,19 +374,24 @@ export class TransactionsWorker extends CoreWorker {
         latestBlock
       );
       totals.scanned += chainTransactions.length;
-      totals.unchanged += diff.unchanged.length;
+      totals.unchanged +=
+        diff.unchanged.length + verifiedOrphans.existing.length;
       totals.missing += diff.missing.length;
       totals.inconsistent +=
         diff.inconsistent.length + verifiedOrphans.relocated.length;
       totals.orphaned += verifiedOrphans.orphaned.length;
 
-      if (hasTransactionRepairs(diff)) {
+      const rawRepairs = [
+        ...diff.missing,
+        ...diff.inconsistent.map(({ chain }) => chain),
+        ...verifiedOrphans.relocated,
+      ];
+      const affectedTokens = getTransactionTokenKeys([
+        ...rawRepairs,
+        ...verifiedOrphans.orphaned,
+      ]);
+      if (rawRepairs.length > 0 || verifiedOrphans.orphaned.length > 0) {
         sendUpdate("Repairing Transactions");
-        const rawRepairs = [
-          ...diff.missing,
-          ...diff.inconsistent.map(({ chain }) => chain),
-          ...verifiedOrphans.relocated,
-        ];
         const repairs =
           rawRepairs.length > 0
             ? await findTransactionValues(
@@ -385,10 +406,10 @@ export class TransactionsWorker extends CoreWorker {
           this.getDb(),
           repairs,
           verifiedOrphans.orphaned,
-          diff.affectedTokens,
+          affectedTokens,
           latestBlock
         );
-        for (const affectedToken of diff.affectedTokens) {
+        for (const affectedToken of affectedTokens) {
           affectedTokenIdentities.add(
             `${affectedToken.contract}:${affectedToken.tokenId}`
           );
@@ -424,9 +445,13 @@ export class TransactionsWorker extends CoreWorker {
     rangeFromBlock: number,
     rangeToBlock: number,
     latestIndexedBlock: number
-  ): Promise<{ orphaned: Transaction[]; relocated: Transaction[] }> {
+  ): Promise<{
+    orphaned: Transaction[];
+    relocated: Transaction[];
+    existing: Transaction[];
+  }> {
     if (orphaned.length === 0) {
-      return { orphaned: [], relocated: [] };
+      return { orphaned: [], relocated: [], existing: [] };
     }
 
     const orphanedByHash = new Map<string, Transaction[]>();
@@ -439,40 +464,16 @@ export class TransactionsWorker extends CoreWorker {
     }
 
     const entries = Array.from(orphanedByHash.entries());
-    const receipts = await Promise.all(
+    const canonicalByHash = await Promise.all(
       entries.map(([hash]) =>
-        this.getBottleneck().schedule(() =>
-          this.getProvider().getTransactionReceipt(hash)
-        )
-      )
+        this.getCanonicalReceiptTransactions(hash, contracts),
+      ),
     );
     const confirmedOrphans: Transaction[] = [];
     const relocated: Transaction[] = [];
+    const existing: Transaction[] = [];
     for (const [index, [hash, localTransactions]] of entries.entries()) {
-      const receipt = receipts[index];
-      if (!receipt) {
-        throw new Error(
-          `Unable to verify local transaction ${hash}: its receipt is unavailable`
-        );
-      }
-
-      const canonicalTransactions: Transaction[] = [];
-      for (const contract of contracts) {
-        const logs = receipt.logs.filter(
-          (log) =>
-            log.address.toLowerCase() === contract.contract.toLowerCase() &&
-            [
-              this.transferTopic,
-              this.transferSingleTopic,
-              this.transferBatchTopic,
-            ].includes(log.topics[0])
-        );
-        if (logs.length > 0) {
-          canonicalTransactions.push(
-            ...(await this.decodeLogs(logs, contract, true))
-          );
-        }
-      }
+      const canonicalTransactions = canonicalByHash[index];
 
       for (const localTransaction of localTransactions) {
         const classification = classifyReceiptTransaction(
@@ -491,9 +492,17 @@ export class TransactionsWorker extends CoreWorker {
             confirmedOrphans.push(localTransaction);
             break;
           case "omitted":
-            throw new Error(
-              `RPC log response omitted canonical transaction ${hash} in block ${classification.canonical.block}`
-            );
+            if (
+              diffTransactions(
+                [classification.canonical],
+                [localTransaction],
+              ).unchanged.length > 0
+            ) {
+              existing.push(localTransaction);
+            } else {
+              relocated.push(classification.canonical);
+            }
+            break;
           case "beyond-checkpoint":
             throw new Error(
               `Canonical transaction ${hash} is beyond the reconciliation checkpoint at block ${classification.canonical.block}`
@@ -505,7 +514,58 @@ export class TransactionsWorker extends CoreWorker {
       }
     }
 
-    return { orphaned: confirmedOrphans, relocated };
+    return { orphaned: confirmedOrphans, relocated, existing };
+  }
+
+  private async getCanonicalReceiptTransactions(
+    hash: string,
+    contracts: { contract: string; iface: Interface }[],
+    maxAttempts: number = 3,
+  ): Promise<Transaction[]> {
+    let lastError: unknown;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const receipt = await this.getBottleneck().schedule(() =>
+          this.getProvider().getTransactionReceipt(hash),
+        );
+        if (!receipt) {
+          throw new Error("receipt is unavailable");
+        }
+
+        const canonicalTransactions: Transaction[] = [];
+        for (const contract of contracts) {
+          const logs = receipt.logs.filter(
+            (log) =>
+              log.address.toLowerCase() === contract.contract.toLowerCase() &&
+              [
+                this.transferTopic,
+                this.transferSingleTopic,
+                this.transferBatchTopic,
+              ].includes(log.topics[0]),
+          );
+          if (logs.length > 0) {
+            canonicalTransactions.push(
+              ...(await this.decodeLogs(logs, contract, true)),
+            );
+          }
+        }
+        if (canonicalTransactions.length === 0) {
+          throw new Error("receipt contained no decodable transfer logs");
+        }
+        return canonicalTransactions;
+      } catch (error) {
+        lastError = error;
+        if (attempt < maxAttempts) {
+          await sleep(250 * attempt);
+        }
+      }
+    }
+
+    const reason =
+      lastError instanceof Error ? lastError.message : "unknown RPC error";
+    throw new Error(
+      `Unable to verify local transaction ${hash} after ${maxAttempts} attempts: ${reason}`,
+    );
   }
 
   private async getAllTransactions(
@@ -1050,5 +1110,6 @@ new TransactionsWorker(
   data.blockRange,
   data.maxConcurrentRequests,
   data.scope,
-  data.block
+  data.block,
+  data.checkpointBlock,
 );

@@ -2152,7 +2152,7 @@ ipcMain.handle(RECONCILE_TRANSACTIONS, async (_event, args: [number]) => {
   const transactionBlock = await getDb()
     .getRepository(TransactionBlock)
     .findOne({ where: { id: 1 } });
-  if (!transactionBlock?.block) {
+  if (!transactionBlock) {
     return {
       error: true,
       data: "Transactions must be synced before reconciliation",
@@ -2171,7 +2171,10 @@ ipcMain.handle(RECONCILE_TRANSACTIONS, async (_event, args: [number]) => {
     return { error: true, data: "Transactions worker not found" };
   }
 
-  const data = await transactionsWorker.reconcileTransactions(fromBlock);
+  const data = await transactionsWorker.reconcileTransactions(
+    fromBlock,
+    transactionBlock.block,
+  );
   return { error: !data.status, data: data.message };
 });
 
