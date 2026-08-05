@@ -22,7 +22,6 @@ import {
 } from "@/electron";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
-import { formatInteger } from "@/i18n/format";
 import { t } from "@/i18n/messages";
 import {
   ScheduledWorkerNames,
@@ -192,6 +191,17 @@ export function WorkerCard({
       }
     }
 
+    if (task.status?.status === ScheduledWorkerStatus.COMPLETED) {
+      return (
+        <span
+          role="status"
+          className="tw-block tw-max-w-[48rem] tw-whitespace-normal tw-break-words tw-text-right tw-text-sm tw-font-light tw-text-iron-400"
+        >
+          {task.status.message}
+        </span>
+      );
+    }
+
     const printProgress = () => {
       let p = <></>;
 
@@ -208,11 +218,9 @@ export function WorkerCard({
     };
 
     const progressBg =
-      task.status?.status === ScheduledWorkerStatus.COMPLETED
-        ? "tw-bg-emerald-500"
-        : task.status?.status === ScheduledWorkerStatus.ERROR
-          ? "tw-bg-red-500"
-          : "tw-bg-primary-500";
+      task.status?.status === ScheduledWorkerStatus.ERROR
+        ? "tw-bg-red-500"
+        : "tw-bg-primary-500";
     const progressNowValue = task.status?.statusPercentage ?? 100;
     let progressNowLabel;
     if (task.status?.statusPercentage !== undefined) {
@@ -471,6 +479,7 @@ export function WorkerCard({
               type="button"
               className={btnLight}
               data-tooltip-id="reset-to-block-tooltip"
+              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => setShowResetToBlockConfirm(true)}
             >
               {t(locale, "core.transactions.actions.resetToBlock")}
@@ -532,7 +541,7 @@ export function WorkerCard({
             ) : null}
           </div>
           <div
-            className={`tw-flex tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-items-center" : "tw-items-end"}`}
+            className={`tw-flex tw-min-w-0 tw-max-w-full tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-items-center" : "tw-items-end"}`}
           >
             {printStatus()}
           </div>
@@ -679,7 +688,7 @@ function ReconcileTransactionsConfirm({
         {t(locale, "core.transactions.reconcile.body")}
       </p>
       <fieldset className="tw-m-0 tw-flex tw-flex-col tw-gap-3 tw-border-0 tw-p-0">
-        <legend className="tw-mb-2 tw-p-0 tw-text-sm tw-text-iron-400">
+        <legend className="tw-sr-only">
           {t(locale, "core.transactions.reconcile.rangeLegend")}
         </legend>
         <label className="tw-flex tw-cursor-pointer tw-items-center tw-gap-2">
@@ -713,7 +722,7 @@ function ReconcileTransactionsConfirm({
           />
           <span>
             {t(locale, "core.transactions.reconcile.fullHistory", {
-              block: formatInteger(locale, minBlock),
+              block: minBlock,
             })}
           </span>
         </label>

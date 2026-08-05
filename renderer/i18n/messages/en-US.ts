@@ -1196,9 +1196,9 @@ const CORE_NFT_LOCAL_DATA_MESSAGES = objectMessages(
 
 const CORE_TRANSACTION_MESSAGES = objectMessages("core.transactions", {
   "actions.reconcile": "Reconcile",
-  "actions.rebuildOwnership": "Rebuild All Ownership",
+  "actions.rebuildOwnership": "Rebuild Ownership",
   "actions.resetToBlock": "Reset to Block",
-  "ownershipRebuild.title": "Rebuild All Ownership",
+  "ownershipRebuild.title": "Rebuild Ownership",
   "ownershipRebuild.body":
     "Rebuild every locally indexed NFT ownership balance from the existing transaction history without changing transaction records or the sync checkpoint. Use this only when transaction history is believed to be correct but ownership balances are inconsistent.",
   "reconcile.title": "Reconcile Transactions",
