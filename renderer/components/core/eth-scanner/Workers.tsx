@@ -21,6 +21,9 @@ import {
   stopWorker,
 } from "@/electron";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { formatInteger } from "@/i18n/format";
+import { t } from "@/i18n/messages";
 import {
   ScheduledWorkerNames,
   ScheduledWorkerStatus,
@@ -171,6 +174,7 @@ export function WorkerCard({
   readonly task: Task;
   readonly customStatus?: string | undefined;
 }) {
+  const locale = useBrowserLocale();
   const printStatus = () => {
     if (!task.cronExpression) {
       return <span>Always running</span>;
@@ -182,7 +186,7 @@ export function WorkerCard({
 
     if (task.status?.status === ScheduledWorkerStatus.IDLE) {
       if (customStatus) {
-        return <span>{customStatus}</span>;
+        return <span role="status">{customStatus}</span>;
       } else {
         return <span>Idle</span>;
       }
@@ -444,7 +448,7 @@ export function WorkerCard({
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => setShowReconcileTransactionsConfirm(true)}
             >
-              Reconcile
+              {t(locale, "core.transactions.actions.reconcile")}
             </button>
           )}
         {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
@@ -457,7 +461,7 @@ export function WorkerCard({
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => setShowRecalculateOwnersConfirm(true)}
             >
-              Rebuild All Ownership
+              {t(locale, "core.transactions.actions.rebuildOwnership")}
             </button>
           )}
         {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
@@ -469,7 +473,7 @@ export function WorkerCard({
               data-tooltip-id="reset-to-block-tooltip"
               onClick={() => setShowResetToBlockConfirm(true)}
             >
-              Reset to Block
+              {t(locale, "core.transactions.actions.resetToBlock")}
             </button>
           )}
       </div>
@@ -561,8 +565,8 @@ export function WorkerCard({
         show={showRecalculateOwnersConfirm}
         onHide={() => setShowRecalculateOwnersConfirm(false)}
         onConfirm={triggerRecalculateTransactionsOwners}
-        title="Rebuild All Ownership"
-        message={`Rebuild every locally indexed NFT ownership balance from the existing transaction history without changing transaction records or the sync checkpoint. Use this only when transaction history is believed to be correct but ownership balances are inconsistent.`}
+        title={t(locale, "core.transactions.ownershipRebuild.title")}
+        message={t(locale, "core.transactions.ownershipRebuild.body")}
       />
       <Confirm
         overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
@@ -627,6 +631,7 @@ function ReconcileTransactionsConfirm({
   onHide: () => void;
   onConfirm: (block: number) => void;
 }) {
+  const locale = useBrowserLocale();
   const [mode, setMode] = useState<"from-block" | "full-history">("from-block");
   const [block, setBlock] = useState("");
 
@@ -644,7 +649,7 @@ function ReconcileTransactionsConfirm({
     <ConfirmModalShell
       overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
       show={show}
-      title="Reconcile Transactions"
+      title={t(locale, "core.transactions.reconcile.title")}
       onBackdropClick={resetAndHide}
       footer={
         <>
@@ -653,7 +658,7 @@ function ReconcileTransactionsConfirm({
             onClick={resetAndHide}
             className={confirmBtnSecondary}
           >
-            Cancel
+            {t(locale, "core.transactions.reconcile.cancel")}
           </button>
           <button
             type="button"
@@ -665,18 +670,18 @@ function ReconcileTransactionsConfirm({
             disabled={!canConfirm}
             className={confirmBtnPrimary}
           >
-            Reconcile
+            {t(locale, "core.transactions.reconcile.confirm")}
           </button>
         </>
       }
     >
       <p className="tw-mb-4 tw-mt-0">
-        Compare Ethereum transfer logs with the local transaction index. Only
-        missing, inconsistent, or orphaned records will be repaired. Ownership
-        will be rebuilt for affected tokens, and TDH will be marked for
-        recalculation when repairs are made.
+        {t(locale, "core.transactions.reconcile.body")}
       </p>
-      <div className="tw-flex tw-flex-col tw-gap-3">
+      <fieldset className="tw-m-0 tw-flex tw-flex-col tw-gap-3 tw-border-0 tw-p-0">
+        <legend className="tw-mb-2 tw-p-0 tw-text-sm tw-text-iron-400">
+          {t(locale, "core.transactions.reconcile.rangeLegend")}
+        </legend>
         <label className="tw-flex tw-cursor-pointer tw-items-center tw-gap-2">
           <input
             type="radio"
@@ -684,13 +689,16 @@ function ReconcileTransactionsConfirm({
             checked={mode === "from-block"}
             onChange={() => setMode("from-block")}
           />
-          <span>Reconcile from a specific block</span>
+          <span>{t(locale, "core.transactions.reconcile.fromBlock")}</span>
         </label>
         <input
           type="number"
           min={minBlock}
-          placeholder="Enter block number"
-          aria-label="Reconciliation starting block"
+          placeholder={t(
+            locale,
+            "core.transactions.reconcile.blockPlaceholder"
+          )}
+          aria-label={t(locale, "core.transactions.reconcile.blockAriaLabel")}
           value={block}
           disabled={mode !== "from-block"}
           className={confirmInputClass}
@@ -704,13 +712,14 @@ function ReconcileTransactionsConfirm({
             onChange={() => setMode("full-history")}
           />
           <span>
-            Reconcile full history from block {minBlock.toLocaleString()}
+            {t(locale, "core.transactions.reconcile.fullHistory", {
+              block: formatInteger(locale, minBlock),
+            })}
           </span>
         </label>
-      </div>
+      </fieldset>
       <p className="tw-mb-0 tw-mt-4 tw-text-sm tw-text-iron-400">
-        The run stops at the local transaction checkpoint captured when it
-        starts. Full history may take a significant amount of time.
+        {t(locale, "core.transactions.reconcile.note")}
       </p>
     </ConfirmModalShell>
   );

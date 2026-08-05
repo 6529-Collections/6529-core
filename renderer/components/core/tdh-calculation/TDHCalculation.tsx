@@ -1,6 +1,9 @@
 "use client";
 
 import DotLoader from "@/components/dotLoader/DotLoader";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { formatDate } from "@/i18n/format";
+import { t } from "@/i18n/messages";
 import { ScheduledWorkerNames, ScheduledWorkerStatus } from "@/shared/types";
 import { useEffect, useState } from "react";
 import { Task, TDHInfo, WorkerCard } from "../eth-scanner/Workers";
@@ -85,6 +88,7 @@ function TDHValidationShimmer() {
 }
 
 export default function TDHCalculation() {
+  const locale = useBrowserLocale();
   const [fetchingTask, setFetchingTask] = useState(true);
   const [tdhTask, setTdhTask] = useState<Task>();
 
@@ -136,7 +140,8 @@ export default function TDHCalculation() {
 
       if (
         status === ScheduledWorkerStatus.COMPLETED &&
-        namespace === ScheduledWorkerNames.TDH_WORKER
+        (namespace === ScheduledWorkerNames.TDH_WORKER ||
+          namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER)
       ) {
         fetchTdhInfo();
       }
@@ -177,10 +182,11 @@ export default function TDHCalculation() {
         ) : (
           <>
             {tdhInfo?.needsRecalculation && (
-              <div className="tw-mt-6 tw-rounded-lg tw-border tw-border-amber-500/50 tw-bg-amber-500/10 tw-p-4 tw-text-amber-200">
-                Transaction history was repaired or reset after this TDH result
-                was calculated. Recalculate TDH before treating the values
-                below as current.
+              <div
+                role="alert"
+                className="tw-mt-6 tw-rounded-lg tw-border tw-border-amber-500/50 tw-bg-amber-500/10 tw-p-4 tw-text-amber-200"
+              >
+                {t(locale, "core.tdh.recalculationWarning")}
               </div>
             )}
             <div className="tw-pt-6">
@@ -198,11 +204,14 @@ export default function TDHCalculation() {
               task={tdhTask}
               customStatus={
                 tdhInfo?.needsRecalculation
-                  ? "Transaction history changed — recalculation required"
+                  ? t(locale, "core.tdh.recalculationRequired")
                   : tdhInfo &&
-                    `Last Calculation: ${new Date(
-                      tdhInfo.lastCalculation * 1000
-                    ).toLocaleString()}`
+                    t(locale, "core.tdh.lastCalculation", {
+                      date: formatDate(locale, tdhInfo.lastCalculation * 1000, {
+                        dateStyle: "medium",
+                        timeStyle: "short",
+                      }),
+                    })
               }
             />
           </div>

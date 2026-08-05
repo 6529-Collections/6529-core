@@ -1,5 +1,13 @@
 import type { Transaction } from "../../../db/entities/ITransaction";
 
+export const TRANSACTION_IDENTITY_COLUMNS = [
+  "transaction",
+  "contract",
+  "from_address",
+  "to_address",
+  "token_id",
+] as const satisfies readonly (keyof Transaction)[];
+
 export interface TransactionMismatch {
   local: Transaction;
   chain: Transaction;
@@ -18,14 +26,15 @@ export interface TransactionReconciliationDiff {
   affectedTokens: TransactionTokenKey[];
 }
 
+export type ReceiptTransactionClassification =
+  | { status: "inconclusive" }
+  | { status: "orphaned" }
+  | { status: "omitted"; canonical: Transaction }
+  | { status: "beyond-checkpoint"; canonical: Transaction }
+  | { status: "relocated"; canonical: Transaction };
+
 export function getTransactionIdentity(transaction: Transaction): string {
-  return [
-    transaction.transaction,
-    transaction.contract,
-    transaction.from_address,
-    transaction.to_address,
-    transaction.token_id,
-  ]
+  return TRANSACTION_IDENTITY_COLUMNS.map((column) => transaction[column])
     .map((value) => value.toString().toLowerCase())
     .join(":");
 }
@@ -35,11 +44,121 @@ export function getTransactionTokenIdentity(transaction: Transaction): string {
 }
 
 function hasSameChainData(local: Transaction, chain: Transaction): boolean {
+  // Value, gas, proceeds, royalties, and USD fields are enrichment data, not
+  // canonical Transfer-log facts. Reconciliation refreshes them only when a
+  // canonical field below requires the transaction to be repaired.
   return (
     Number(local.block) === Number(chain.block) &&
     Number(local.transaction_date) === Number(chain.transaction_date) &&
     Number(local.token_count) === Number(chain.token_count)
   );
+}
+
+export function classifyReceiptTransaction(
+  localTransaction: Transaction,
+  canonicalTransactions: Transaction[],
+  rangeFromBlock: number,
+  rangeToBlock: number,
+  latestIndexedBlock: number
+): ReceiptTransactionClassification {
+  if (canonicalTransactions.length === 0) {
+    return { status: "inconclusive" };
+  }
+
+  const canonical = canonicalTransactions.find(
+    (transaction) =>
+      getTransactionIdentity(transaction) ===
+      getTransactionIdentity(localTransaction)
+  );
+  if (!canonical) {
+    return { status: "orphaned" };
+  }
+  if (
+    canonical.block >= rangeFromBlock &&
+    canonical.block <= rangeToBlock
+  ) {
+    return { status: "omitted", canonical };
+  }
+  if (canonical.block > latestIndexedBlock) {
+    return { status: "beyond-checkpoint", canonical };
+  }
+  return { status: "relocated", canonical };
+}
+
+export function isRpcLogRangeLimitError(error: unknown): boolean {
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const rpcError = error as {
+    code?: number | string;
+    message?: string;
+    shortMessage?: string;
+    error?: { code?: number | string; message?: string };
+    info?: { error?: { code?: number | string; message?: string } };
+  };
+  const codes = [
+    rpcError.code,
+    rpcError.error?.code,
+    rpcError.info?.error?.code,
+  ];
+  if (codes.some((code) => Number(code) === -32005)) {
+    return true;
+  }
+
+  const message = [
+    rpcError.message,
+    rpcError.shortMessage,
+    rpcError.error?.message,
+    rpcError.info?.error?.message,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return /too many|more than [\d,]+ results|response size|result limit|query returned|block range.{0,40}limit|limit.{0,40}block range/i.test(
+    message
+  );
+}
+
+export function isRetryableSqliteLockError(error: unknown): boolean {
+  if (
+    error &&
+    typeof error === "object" &&
+    String((error as { code?: unknown }).code ?? "")
+      .toUpperCase()
+      .startsWith("SQLITE_BUSY")
+  ) {
+    return true;
+  }
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /SQLITE_BUSY|database is locked|database table is locked/i.test(
+    message
+  );
+}
+
+export async function retryOnSqliteLock(
+  operation: () => Promise<void>,
+  maxRetries: number,
+  delayMs: number,
+  operationName: string
+): Promise<void> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await operation();
+      return;
+    } catch (error) {
+      if (!isRetryableSqliteLockError(error)) {
+        throw error;
+      }
+      if (attempt === maxRetries) {
+        throw new Error(
+          `${operationName} failed after ${maxRetries} retries due to database lock.`
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+
+  throw new Error(`${operationName} did not complete.`);
 }
 
 export function diffTransactions(

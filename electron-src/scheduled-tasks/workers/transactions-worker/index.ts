@@ -42,9 +42,10 @@ import {
 } from "../../../../shared/types";
 import { TransactionsWorkerData } from "../../scheduled-worker";
 import {
+  classifyReceiptTransaction,
   diffTransactions,
-  getTransactionIdentity,
   hasTransactionRepairs,
+  isRpcLogRangeLimitError,
 } from "./transaction-reconciliation";
 
 const data: TransactionsWorkerData = workerData;
@@ -280,13 +281,15 @@ export class TransactionsWorker extends CoreWorker {
         latestBlock
       );
       const rangeSize = Math.max(latestBlock - fromBlock + 1, 1);
-      const statusPercentage =
-        ((currentFromBlock - fromBlock) / rangeSize) * 100;
+      const statusPercentage = Math.min(
+        100,
+        Math.max(0, ((currentFromBlock - fromBlock) / rangeSize) * 100)
+      );
       const sendUpdate = (action: string) => {
         sendStatusUpdate(parentPort, {
           update: {
             status: ScheduledWorkerStatus.RUNNING,
-            message: `Reconciling Blocks [${currentFromBlock} - ${latestBlock}]`,
+            message: `Reconciling Blocks [${currentFromBlock} - ${nextToBlock}]`,
             action,
             statusPercentage,
           },
@@ -295,25 +298,50 @@ export class TransactionsWorker extends CoreWorker {
 
       sendUpdate("Getting Logs");
       const chainTransactions: Transaction[] = [];
-      for (const contract of contracts) {
-        const logs = await this.getProvider().getLogs({
-          address: contract.contract,
-          fromBlock: currentFromBlock,
-          toBlock: nextToBlock,
-          topics: [
-            [
-              this.transferTopic,
-              this.transferSingleTopic,
-              this.transferBatchTopic,
+      let rangeHasLogs = false;
+      try {
+        for (const contract of contracts) {
+          const logs = await this.getProvider().getLogs({
+            address: contract.contract,
+            fromBlock: currentFromBlock,
+            toBlock: nextToBlock,
+            topics: [
+              [
+                this.transferTopic,
+                this.transferSingleTopic,
+                this.transferBatchTopic,
+              ],
             ],
-          ],
-        });
-        if (logs.length > 0) {
-          chainTransactions.push(
-            ...(await this.decodeLogs(logs, contract, true))
-          );
+          });
+          if (logs.length > 0) {
+            rangeHasLogs = true;
+            chainTransactions.push(
+              ...(await this.decodeLogs(logs, contract, true))
+            );
+          }
         }
+      } catch (error) {
+        const currentBlockRange = this.getBlockRange();
+        const reducedBlockRange = Math.max(
+          25,
+          Math.min(250, Math.floor(currentBlockRange / 2))
+        );
+        if (
+          reducedBlockRange < currentBlockRange &&
+          isRpcLogRangeLimitError(error)
+        ) {
+          this.setBlockRange(reducedBlockRange);
+          logWarn(
+            parentPort,
+            `RPC log limit reached for blocks [${currentFromBlock} - ${nextToBlock}]; retrying with block range ${reducedBlockRange}`
+          );
+          continue;
+        }
+        throw error;
       }
+      this.setBlockRange(
+        rangeHasLogs ? Math.min(this.getBlockRange(), 250) : 1000
+      );
 
       sendUpdate("Comparing Local History");
       const localTransactions = await getTransactionsInBlockRange(
@@ -410,13 +438,22 @@ export class TransactionsWorker extends CoreWorker {
       ]);
     }
 
+    const entries = Array.from(orphanedByHash.entries());
+    const receipts = await Promise.all(
+      entries.map(([hash]) =>
+        this.getBottleneck().schedule(() =>
+          this.getProvider().getTransactionReceipt(hash)
+        )
+      )
+    );
     const confirmedOrphans: Transaction[] = [];
     const relocated: Transaction[] = [];
-    for (const [hash, localTransactions] of orphanedByHash) {
-      const receipt = await this.getProvider().getTransactionReceipt(hash);
+    for (const [index, [hash, localTransactions]] of entries.entries()) {
+      const receipt = receipts[index];
       if (!receipt) {
-        confirmedOrphans.push(...localTransactions);
-        continue;
+        throw new Error(
+          `Unable to verify local transaction ${hash}: its receipt is unavailable`
+        );
       }
 
       const canonicalTransactions: Transaction[] = [];
@@ -438,28 +475,33 @@ export class TransactionsWorker extends CoreWorker {
       }
 
       for (const localTransaction of localTransactions) {
-        const canonicalTransaction = canonicalTransactions.find(
-          (transaction) =>
-            getTransactionIdentity(transaction) ===
-            getTransactionIdentity(localTransaction)
+        const classification = classifyReceiptTransaction(
+          localTransaction,
+          canonicalTransactions,
+          rangeFromBlock,
+          rangeToBlock,
+          latestIndexedBlock
         );
-        if (!canonicalTransaction) {
-          confirmedOrphans.push(localTransaction);
-          continue;
+        switch (classification.status) {
+          case "inconclusive":
+            throw new Error(
+              `Unable to verify local transaction ${hash}: its receipt contained no decodable transfer logs`
+            );
+          case "orphaned":
+            confirmedOrphans.push(localTransaction);
+            break;
+          case "omitted":
+            throw new Error(
+              `RPC log response omitted canonical transaction ${hash} in block ${classification.canonical.block}`
+            );
+          case "beyond-checkpoint":
+            throw new Error(
+              `Canonical transaction ${hash} is beyond the reconciliation checkpoint at block ${classification.canonical.block}`
+            );
+          case "relocated":
+            relocated.push(classification.canonical);
+            break;
         }
-        if (
-          canonicalTransaction.block >= rangeFromBlock &&
-          canonicalTransaction.block <= rangeToBlock
-        ) {
-          throw new Error(
-            `RPC log response omitted canonical transaction ${hash} in block ${canonicalTransaction.block}`
-          );
-        }
-        if (canonicalTransaction.block > latestIndexedBlock) {
-          confirmedOrphans.push(localTransaction);
-          continue;
-        }
-        relocated.push(canonicalTransaction);
       }
     }
 
@@ -676,6 +718,11 @@ export class TransactionsWorker extends CoreWorker {
               blockNumber
             ).then((blockTimestamp) => Math.round(blockTimestamp.toSeconds()));
         blockTimestamps.set(blockNumber, timestamp);
+        void timestamp.catch(() => {
+          if (blockTimestamps.get(blockNumber) === timestamp) {
+            blockTimestamps.delete(blockNumber);
+          }
+        });
       }
       return timestamp;
     };

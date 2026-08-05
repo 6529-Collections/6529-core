@@ -2,9 +2,13 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import type { Transaction } from "../../../db/entities/ITransaction";
 import {
+  classifyReceiptTransaction,
   diffTransactions,
   getTransactionIdentity,
   hasTransactionRepairs,
+  isRpcLogRangeLimitError,
+  isRetryableSqliteLockError,
+  retryOnSqliteLock,
 } from "./transaction-reconciliation";
 
 function transaction(overrides: Partial<Transaction> = {}): Transaction {
@@ -89,5 +93,108 @@ describe("transaction reconciliation diff", () => {
       { contract: "0xcontract", tokenId: 3 },
     ]);
     assert.equal(hasTransactionRepairs(result), true);
+  });
+
+  it("treats receipts without decodable transfers as inconclusive", () => {
+    assert.deepEqual(
+      classifyReceiptTransaction(transaction(), [], 100, 200, 500),
+      { status: "inconclusive" }
+    );
+  });
+
+  it("distinguishes true orphans from omitted and relocated transfers", () => {
+    const local = transaction();
+    const otherTransfer = transaction({ token_id: 2 });
+
+    assert.deepEqual(
+      classifyReceiptTransaction(local, [otherTransfer], 100, 200, 500),
+      { status: "orphaned" }
+    );
+
+    const omitted = transaction({ block: 150 });
+    assert.deepEqual(
+      classifyReceiptTransaction(local, [omitted], 100, 200, 500),
+      { status: "omitted", canonical: omitted }
+    );
+
+    const relocated = transaction({ block: 90 });
+    assert.deepEqual(
+      classifyReceiptTransaction(local, [relocated], 100, 200, 500),
+      { status: "relocated", canonical: relocated }
+    );
+
+    const beyondCheckpoint = transaction({ block: 501 });
+    assert.deepEqual(
+      classifyReceiptTransaction(local, [beyondCheckpoint], 100, 200, 500),
+      { status: "beyond-checkpoint", canonical: beyondCheckpoint }
+    );
+  });
+
+  it("recognizes provider log-result limit errors", () => {
+    assert.equal(
+      isRpcLogRangeLimitError({
+        info: { error: { code: -32005, message: "query limit" } },
+      }),
+      true
+    );
+    assert.equal(
+      isRpcLogRangeLimitError(
+        new Error("Log response size exceeded the provider result limit")
+      ),
+      true
+    );
+    assert.equal(
+      isRpcLogRangeLimitError(new Error("network unavailable")),
+      false
+    );
+  });
+
+  it("retries SQLite lock failures without retrying unrelated errors", async () => {
+    let attempts = 0;
+    await retryOnSqliteLock(
+      async () => {
+        attempts++;
+        if (attempts === 1) {
+          throw new Error("SQLITE_BUSY: database table is locked");
+        }
+      },
+      2,
+      0,
+      "Test operation"
+    );
+    assert.equal(attempts, 2);
+    assert.equal(
+      isRetryableSqliteLockError(new Error("database is locked")),
+      true
+    );
+    assert.equal(isRetryableSqliteLockError({ code: "SQLITE_BUSY" }), true);
+
+    const unrelatedError = new Error("disk I/O error");
+    await assert.rejects(
+      retryOnSqliteLock(
+        async () => {
+          throw unrelatedError;
+        },
+        2,
+        0,
+        "Test operation"
+      ),
+      unrelatedError
+    );
+
+    let exhaustedAttempts = 0;
+    await assert.rejects(
+      retryOnSqliteLock(
+        async () => {
+          exhaustedAttempts++;
+          throw new Error("database is locked");
+        },
+        2,
+        0,
+        "Test operation"
+      ),
+      /Test operation failed after 2 retries/
+    );
+    assert.equal(exhaustedAttempts, 2);
   });
 });

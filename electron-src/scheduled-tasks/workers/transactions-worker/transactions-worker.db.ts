@@ -6,7 +6,11 @@ import {
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
 import { batchUpsert, logInfo } from "../../worker-helpers";
-import type { TransactionTokenKey } from "./transaction-reconciliation";
+import {
+  retryOnSqliteLock,
+  TRANSACTION_IDENTITY_COLUMNS,
+  type TransactionTokenKey,
+} from "./transaction-reconciliation";
 
 export async function getLatestTransactionsBlock(
   db: EntityManager
@@ -88,22 +92,18 @@ export async function persistTransactionsAndOwners(
   maxRetries: number = 5,
   delayMs: number = 100
 ) {
-  let attempt = 0;
-
-  while (attempt < maxRetries) {
-    try {
+  await retryOnSqliteLock(
+    async () => {
       await db.transaction(async (transaction) => {
         const transactionRepository = transaction.getRepository(Transaction);
         const transactionBlockRepository =
           transaction.getRepository(TransactionBlock);
 
-        await batchUpsert<Transaction>(transactionRepository, transactions, [
-          "transaction",
-          "contract",
-          "from_address",
-          "to_address",
-          "token_id",
-        ]);
+        await batchUpsert<Transaction>(
+          transactionRepository,
+          transactions,
+          [...TRANSACTION_IDENTITY_COLUMNS]
+        );
 
         await persistOwners(transaction, ownerDeltas);
 
@@ -116,24 +116,11 @@ export async function persistTransactionsAndOwners(
           ["id"]
         );
       });
-      return;
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("database is locked")
-      ) {
-        attempt++;
-        if (attempt >= maxRetries) {
-          throw new Error(
-            `Updating Database failed after ${maxRetries} retries due to database lock.`
-          );
-        }
-        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
-      } else {
-        throw error;
-      }
-    }
-  }
+    },
+    maxRetries,
+    delayMs,
+    "Updating Database"
+  );
 }
 
 export async function recalculateTransactionOwners(
@@ -161,6 +148,7 @@ export async function recalculateTransactionOwners(
     const ownerRepository = transaction.getRepository(NFTOwner);
     await ownerRepository.clear();
     await persistOwners(transaction, ownerDeltas);
+    await setTdhRecalculationNeeded(transaction, true);
   });
 
   logInfo(parentPort, "All transactions owners recalculated");
@@ -193,13 +181,12 @@ export async function rebuildTransactionOwnersForTokens(
 }
 
 function getTransactionDeleteCriteria(transaction: Transaction) {
-  return {
-    transaction: transaction.transaction,
-    contract: transaction.contract,
-    from_address: transaction.from_address,
-    to_address: transaction.to_address,
-    token_id: transaction.token_id,
-  };
+  return Object.fromEntries(
+    TRANSACTION_IDENTITY_COLUMNS.map((column) => [
+      column,
+      transaction[column],
+    ])
+  ) as Pick<Transaction, (typeof TRANSACTION_IDENTITY_COLUMNS)[number]>;
 }
 
 export async function applyTransactionReconciliation(
@@ -219,9 +206,10 @@ export async function applyTransactionReconciliation(
     return;
   }
 
-  let attempt = 0;
-  while (attempt < maxRetries) {
-    try {
+  await retryOnSqliteLock(
+    async () => {
+      // TypeORM rolls the transaction back before this promise rejects, so a
+      // retry always starts from the last committed owner/transaction state.
       await db.transaction(async (manager) => {
         const transactionRepository = manager.getRepository(Transaction);
 
@@ -231,13 +219,11 @@ export async function applyTransactionReconciliation(
           );
         }
 
-        await batchUpsert<Transaction>(transactionRepository, repairs, [
-          "transaction",
-          "contract",
-          "from_address",
-          "to_address",
-          "token_id",
-        ]);
+        await batchUpsert<Transaction>(
+          transactionRepository,
+          repairs,
+          [...TRANSACTION_IDENTITY_COLUMNS]
+        );
 
         await rebuildTransactionOwnersForTokens(
           manager,
@@ -246,24 +232,11 @@ export async function applyTransactionReconciliation(
         );
         await setTdhRecalculationNeeded(manager, true);
       });
-      return;
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("database is locked")
-      ) {
-        attempt++;
-        if (attempt >= maxRetries) {
-          throw new Error(
-            `Transaction reconciliation failed after ${maxRetries} retries due to database lock.`
-          );
-        }
-        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
-      } else {
-        throw error;
-      }
-    }
-  }
+    },
+    maxRetries,
+    delayMs,
+    "Transaction reconciliation"
+  );
 }
 
 export async function extractOwnersFromDeltas(
