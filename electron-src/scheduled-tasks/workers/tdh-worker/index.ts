@@ -27,7 +27,10 @@ import {
   NFTDelegationBlock,
 } from "../../../db/entities/IDelegation";
 import { NFT } from "../../../db/entities/INFT";
-import { getLatestTransactionsBlock } from "../transactions-worker/transactions-worker.db";
+import {
+  getLatestTransactionsBlock,
+  setTdhRecalculationNeeded,
+} from "../transactions-worker/transactions-worker.db";
 import { Contract, ContractType, getTokenUri } from "../nft-worker/nft-worker";
 import { GRADIENT_ABI } from "../../../../shared/abis/gradient";
 import { MEMES_ABI } from "../../../../shared/abis/memes";
@@ -75,6 +78,7 @@ class TDHWorker extends CoreWorker {
     const block = blockBefore.number;
     await this.validateBlock(block);
     const tdhResult = await this.updateTDH(block, lastTDHCalc);
+    await setTdhRecalculationNeeded(this.getDb().manager, false);
 
     logInfo(parentPort, "Finished");
 

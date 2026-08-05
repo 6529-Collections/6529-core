@@ -12,7 +12,8 @@ describe("transaction mutation guard", () => {
     label: string;
   }> = [
     { action: "reset", label: "Transaction reset" },
-    { action: "recalculate-owners", label: "Owner recalculation" },
+    { action: "recalculate-owners", label: "Ownership rebuild" },
+    { action: "reconcile", label: "Transaction reconciliation" },
   ];
 
   for (const { action, label } of actions) {

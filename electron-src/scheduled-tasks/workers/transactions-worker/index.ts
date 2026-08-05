@@ -7,7 +7,9 @@ import {
 } from "../../../../shared/abis/memes";
 import { Time } from "../../../../shared/time";
 import {
+  applyTransactionReconciliation,
   getLatestTransactionsBlock,
+  getTransactionsInBlockRange,
   OwnerDeltaError,
   persistTransactionsAndOwners,
   recalculateTransactionOwners,
@@ -39,6 +41,11 @@ import {
   TransactionsWorkerScope,
 } from "../../../../shared/types";
 import { TransactionsWorkerData } from "../../scheduled-worker";
+import {
+  diffTransactions,
+  getTransactionIdentity,
+  hasTransactionRepairs,
+} from "./transaction-reconciliation";
 
 const data: TransactionsWorkerData = workerData;
 
@@ -116,38 +123,23 @@ export class TransactionsWorker extends CoreWorker {
   }
 
   private async recalculateOwners() {
-    const latestBlockDb = await getLatestTransactionsBlock(
-      this.getDb().manager
-    );
-    const resetBlock =
-      latestBlockDb > TRANSACTIONS_START_BLOCK
-        ? latestBlockDb - 5000
-        : latestBlockDb;
-
-    const latestBlockChain = await this.getProvider().getBlockNumber();
-    const statusPercentage =
-      ((resetBlock - TRANSACTIONS_START_BLOCK) /
-        (latestBlockChain - TRANSACTIONS_START_BLOCK)) *
-      100;
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.RUNNING,
-        message: `Recalculating owners...`,
-        statusPercentage,
+        message: "Rebuilding all transaction ownership...",
+        statusPercentage: 0,
       },
     });
-    logInfo(parentPort, "Recalculating owners...");
+    logInfo(parentPort, "Rebuilding all transaction ownership...");
 
-    logInfo(parentPort, "Resetting to block", resetBlock);
+    await recalculateTransactionOwners(this.getDb().manager, parentPort);
 
-    await this.resetToBlockInternal(resetBlock);
-
-    logInfo(parentPort, "Owner recalculation completed");
+    logInfo(parentPort, "Ownership rebuild completed");
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
-        message: "Owner recalculation completed",
-        statusPercentage,
+        message: "Ownership rebuild completed",
+        statusPercentage: 100,
       },
     });
   }
@@ -170,6 +162,7 @@ export class TransactionsWorker extends CoreWorker {
           id: 1,
           block,
           timestamp: Math.round(blockTimestamp.toSeconds()),
+          tdh_needs_recalculation: true,
         },
         ["id"]
       );
@@ -203,28 +196,7 @@ export class TransactionsWorker extends CoreWorker {
     const toBlock = await this.getProvider().getBlockNumber();
     logInfo(parentPort, "Latest block on chain:", toBlock);
 
-    await this.getAllTransactions(
-      [
-        {
-          contract: MEMES_CONTRACT,
-          iface: new ethers.Interface(MEMES_ABI),
-        },
-        {
-          contract: GRADIENT_CONTRACT,
-          iface: new ethers.Interface(GRADIENT_ABI),
-        },
-        {
-          contract: NEXTGEN_CONTRACT,
-          iface: new ethers.Interface(NEXTGEN_ABI),
-        },
-        {
-          contract: MEMELAB_CONTRACT,
-          iface: new ethers.Interface(MEMES_ABI),
-        },
-      ],
-      fromBlock + 1,
-      toBlock
-    );
+    await this.getAllTransactions(this.getContracts(), fromBlock + 1, toBlock);
 
     logInfo(parentPort, "Finished successfully");
   }
@@ -238,9 +210,260 @@ export class TransactionsWorker extends CoreWorker {
       }
     } else if (this.scope === TransactionsWorkerScope.RECALCULATE_OWNERS) {
       await this.recalculateOwners();
+    } else if (this.scope === TransactionsWorkerScope.RECONCILE) {
+      if (this.block === undefined) {
+        throw new Error("Starting block is required for reconciliation");
+      }
+      await this.reconcileTransactions(this.block);
     } else {
       await this.baseWork();
     }
+  }
+
+  private getContracts(): { contract: string; iface: Interface }[] {
+    return [
+      {
+        contract: MEMES_CONTRACT,
+        iface: new ethers.Interface(MEMES_ABI),
+      },
+      {
+        contract: GRADIENT_CONTRACT,
+        iface: new ethers.Interface(GRADIENT_ABI),
+      },
+      {
+        contract: NEXTGEN_CONTRACT,
+        iface: new ethers.Interface(NEXTGEN_ABI),
+      },
+      {
+        contract: MEMELAB_CONTRACT,
+        iface: new ethers.Interface(MEMES_ABI),
+      },
+    ];
+  }
+
+  private async reconcileTransactions(fromBlock: number) {
+    const latestBlock = await getLatestTransactionsBlock(this.getDb().manager);
+    if (!Number.isInteger(fromBlock) || fromBlock < TRANSACTIONS_START_BLOCK) {
+      throw new Error(
+        `Reconciliation block must be at least ${TRANSACTIONS_START_BLOCK}`
+      );
+    }
+    if (latestBlock === 0) {
+      throw new Error("Transactions must be synced before reconciliation");
+    }
+    if (fromBlock > latestBlock) {
+      throw new Error(
+        `Reconciliation block cannot exceed the local transaction block ${latestBlock}`
+      );
+    }
+
+    const totals = {
+      scanned: 0,
+      unchanged: 0,
+      missing: 0,
+      inconsistent: 0,
+      orphaned: 0,
+    };
+    const affectedTokenIdentities = new Set<string>();
+    const contracts = this.getContracts();
+    let currentFromBlock = fromBlock;
+
+    logInfo(
+      parentPort,
+      "Reconciling transaction blocks",
+      `[${fromBlock} - ${latestBlock}]`
+    );
+
+    while (currentFromBlock <= latestBlock) {
+      const nextToBlock = Math.min(
+        currentFromBlock + this.getBlockRange(),
+        latestBlock
+      );
+      const rangeSize = Math.max(latestBlock - fromBlock + 1, 1);
+      const statusPercentage =
+        ((currentFromBlock - fromBlock) / rangeSize) * 100;
+      const sendUpdate = (action: string) => {
+        sendStatusUpdate(parentPort, {
+          update: {
+            status: ScheduledWorkerStatus.RUNNING,
+            message: `Reconciling Blocks [${currentFromBlock} - ${latestBlock}]`,
+            action,
+            statusPercentage,
+          },
+        });
+      };
+
+      sendUpdate("Getting Logs");
+      const chainTransactions: Transaction[] = [];
+      for (const contract of contracts) {
+        const logs = await this.getProvider().getLogs({
+          address: contract.contract,
+          fromBlock: currentFromBlock,
+          toBlock: nextToBlock,
+          topics: [
+            [
+              this.transferTopic,
+              this.transferSingleTopic,
+              this.transferBatchTopic,
+            ],
+          ],
+        });
+        if (logs.length > 0) {
+          chainTransactions.push(
+            ...(await this.decodeLogs(logs, contract, true))
+          );
+        }
+      }
+
+      sendUpdate("Comparing Local History");
+      const localTransactions = await getTransactionsInBlockRange(
+        this.getDb().manager,
+        currentFromBlock,
+        nextToBlock
+      );
+      const diff = diffTransactions(chainTransactions, localTransactions);
+      const verifiedOrphans = await this.verifyOrphanedTransactions(
+        diff.orphaned,
+        contracts,
+        currentFromBlock,
+        nextToBlock,
+        latestBlock
+      );
+      totals.scanned += chainTransactions.length;
+      totals.unchanged += diff.unchanged.length;
+      totals.missing += diff.missing.length;
+      totals.inconsistent +=
+        diff.inconsistent.length + verifiedOrphans.relocated.length;
+      totals.orphaned += verifiedOrphans.orphaned.length;
+
+      if (hasTransactionRepairs(diff)) {
+        sendUpdate("Repairing Transactions");
+        const rawRepairs = [
+          ...diff.missing,
+          ...diff.inconsistent.map(({ chain }) => chain),
+          ...verifiedOrphans.relocated,
+        ];
+        const repairs =
+          rawRepairs.length > 0
+            ? await findTransactionValues(
+                this.getProvider(),
+                rawRepairs,
+                (...args) => logInfo(parentPort, ...args)
+              )
+            : [];
+
+        sendUpdate("Rebuilding Affected Ownership");
+        await applyTransactionReconciliation(
+          this.getDb(),
+          repairs,
+          verifiedOrphans.orphaned,
+          diff.affectedTokens,
+          latestBlock
+        );
+        for (const affectedToken of diff.affectedTokens) {
+          affectedTokenIdentities.add(
+            `${affectedToken.contract}:${affectedToken.tokenId}`
+          );
+        }
+      }
+
+      currentFromBlock = nextToBlock + 1;
+      await sleep(250);
+    }
+
+    const repairCount = totals.missing + totals.inconsistent + totals.orphaned;
+    const summary =
+      `Scanned ${totals.scanned.toLocaleString()} | ` +
+      `Correct ${totals.unchanged.toLocaleString()} | ` +
+      `Added ${totals.missing.toLocaleString()} | ` +
+      `Updated ${totals.inconsistent.toLocaleString()} | ` +
+      `Removed ${totals.orphaned.toLocaleString()} | ` +
+      `Ownership tokens rebuilt ${affectedTokenIdentities.size.toLocaleString()}`;
+    logInfo(parentPort, "Reconciliation completed", summary);
+    sendStatusUpdate(parentPort, {
+      update: {
+        status: ScheduledWorkerStatus.COMPLETED,
+        message:
+          repairCount > 0 ? `${summary} | TDH recalculation required` : summary,
+        statusPercentage: 100,
+      },
+    });
+  }
+
+  private async verifyOrphanedTransactions(
+    orphaned: Transaction[],
+    contracts: { contract: string; iface: Interface }[],
+    rangeFromBlock: number,
+    rangeToBlock: number,
+    latestIndexedBlock: number
+  ): Promise<{ orphaned: Transaction[]; relocated: Transaction[] }> {
+    if (orphaned.length === 0) {
+      return { orphaned: [], relocated: [] };
+    }
+
+    const orphanedByHash = new Map<string, Transaction[]>();
+    for (const transaction of orphaned) {
+      const hash = transaction.transaction.toLowerCase();
+      orphanedByHash.set(hash, [
+        ...(orphanedByHash.get(hash) ?? []),
+        transaction,
+      ]);
+    }
+
+    const confirmedOrphans: Transaction[] = [];
+    const relocated: Transaction[] = [];
+    for (const [hash, localTransactions] of orphanedByHash) {
+      const receipt = await this.getProvider().getTransactionReceipt(hash);
+      if (!receipt) {
+        confirmedOrphans.push(...localTransactions);
+        continue;
+      }
+
+      const canonicalTransactions: Transaction[] = [];
+      for (const contract of contracts) {
+        const logs = receipt.logs.filter(
+          (log) =>
+            log.address.toLowerCase() === contract.contract.toLowerCase() &&
+            [
+              this.transferTopic,
+              this.transferSingleTopic,
+              this.transferBatchTopic,
+            ].includes(log.topics[0])
+        );
+        if (logs.length > 0) {
+          canonicalTransactions.push(
+            ...(await this.decodeLogs(logs, contract, true))
+          );
+        }
+      }
+
+      for (const localTransaction of localTransactions) {
+        const canonicalTransaction = canonicalTransactions.find(
+          (transaction) =>
+            getTransactionIdentity(transaction) ===
+            getTransactionIdentity(localTransaction)
+        );
+        if (!canonicalTransaction) {
+          confirmedOrphans.push(localTransaction);
+          continue;
+        }
+        if (
+          canonicalTransaction.block >= rangeFromBlock &&
+          canonicalTransaction.block <= rangeToBlock
+        ) {
+          throw new Error(
+            `RPC log response omitted canonical transaction ${hash} in block ${canonicalTransaction.block}`
+          );
+        }
+        if (canonicalTransaction.block > latestIndexedBlock) {
+          confirmedOrphans.push(localTransaction);
+          continue;
+        }
+        relocated.push(canonicalTransaction);
+      }
+    }
+
+    return { orphaned: confirmedOrphans, relocated };
   }
 
   private async getAllTransactions(
@@ -427,9 +650,35 @@ export class TransactionsWorker extends CoreWorker {
 
   private async decodeLogs(
     logs: Log[],
-    contract: { contract: string; iface: Interface }
+    contract: { contract: string; iface: Interface },
+    requireCanonicalTimestamp: boolean = false
   ): Promise<Transaction[]> {
     const transactionRecords: { [key: string]: Transaction } = {};
+    const blockTimestamps = new Map<number, Promise<number>>();
+    const getTransactionTimestamp = (blockNumber: number) => {
+      let timestamp = blockTimestamps.get(blockNumber);
+      if (!timestamp) {
+        timestamp = requireCanonicalTimestamp
+          ? this.getProvider()
+              .getBlock(blockNumber)
+              .then((block) => {
+                if (!block) {
+                  throw new Error(
+                    `Unable to verify timestamp for block ${blockNumber}`
+                  );
+                }
+                return block.timestamp;
+              })
+          : getBlockTimestamp(
+              parentPort,
+              this.getProvider(),
+              NAMESPACE,
+              blockNumber
+            ).then((blockTimestamp) => Math.round(blockTimestamp.toSeconds()));
+        blockTimestamps.set(blockNumber, timestamp);
+      }
+      return timestamp;
+    };
 
     const decodedLogPromises = logs.map((log) => {
       return this.getBottleneck().schedule(async () => {
@@ -445,10 +694,7 @@ export class TransactionsWorker extends CoreWorker {
               decoded.to
             }-${decoded.id.toString()}`;
 
-            const transactionDate = await getBlockTimestamp(
-              parentPort,
-              this.getProvider(),
-              NAMESPACE,
+            const transactionDate = await getTransactionTimestamp(
               log.blockNumber
             );
 
@@ -460,7 +706,7 @@ export class TransactionsWorker extends CoreWorker {
               transactionRecords[key] = {
                 transaction: log.transactionHash.toLowerCase(),
                 block: log.blockNumber,
-                transaction_date: Math.round(transactionDate.toSeconds()),
+                transaction_date: transactionDate,
                 from_address: decoded.from.toLowerCase(),
                 to_address: decoded.to.toLowerCase(),
                 contract: contract.contract.toLowerCase(),
@@ -482,6 +728,9 @@ export class TransactionsWorker extends CoreWorker {
                 transactionRecords[key].token_count + decodedValue;
             }
           } catch (error) {
+            if (requireCanonicalTimestamp) {
+              throw error;
+            }
             logWarn(parentPort, "Failed to decode TransferSingle log:", error);
           }
         } else if (log.topics[0] === this.transferBatchTopic) {
@@ -492,10 +741,7 @@ export class TransactionsWorker extends CoreWorker {
               log.topics
             );
 
-            const transactionDate = await getBlockTimestamp(
-              parentPort,
-              this.getProvider(),
-              NAMESPACE,
+            const transactionDate = await getTransactionTimestamp(
               log.blockNumber
             );
 
@@ -512,7 +758,7 @@ export class TransactionsWorker extends CoreWorker {
                 transactionRecords[key] = {
                   transaction: log.transactionHash.toLowerCase(),
                   block: log.blockNumber,
-                  transaction_date: Math.round(transactionDate.toSeconds()),
+                  transaction_date: transactionDate,
                   from_address: decoded.from.toLowerCase(),
                   to_address: decoded.to.toLowerCase(),
                   contract: contract.contract.toLowerCase(),
@@ -535,6 +781,9 @@ export class TransactionsWorker extends CoreWorker {
               }
             }
           } catch (error) {
+            if (requireCanonicalTimestamp) {
+              throw error;
+            }
             logWarn(
               parentPort,
               NAMESPACE,
@@ -551,10 +800,7 @@ export class TransactionsWorker extends CoreWorker {
               log.topics
             );
 
-            const transactionDate = await getBlockTimestamp(
-              parentPort,
-              this.getProvider(),
-              NAMESPACE,
+            const transactionDate = await getTransactionTimestamp(
               log.blockNumber
             );
 
@@ -571,7 +817,7 @@ export class TransactionsWorker extends CoreWorker {
               transactionRecords[key] = {
                 transaction: log.transactionHash.toLowerCase(),
                 block: log.blockNumber,
-                transaction_date: Math.round(transactionDate.toSeconds()),
+                transaction_date: transactionDate,
                 from_address: decoded[0].toLowerCase(),
                 to_address: decoded[1].toLowerCase(),
                 contract: contract.contract.toLowerCase(),
@@ -593,6 +839,9 @@ export class TransactionsWorker extends CoreWorker {
                 transactionRecords[key].token_count + tokenCount;
             }
           } catch (error) {
+            if (requireCanonicalTimestamp) {
+              throw error;
+            }
             logWarn(parentPort, "Failed to decode Transfer log:", error);
           }
         }
@@ -695,9 +944,8 @@ export class TransactionsWorker extends CoreWorker {
         decodedTransactions.sort((a, b) => b.block - a.block);
 
         for (const decodedTransaction of decodedTransactions) {
-          const transactionExists = await this.checkTransactionExists(
-            decodedTransaction
-          );
+          const transactionExists =
+            await this.checkTransactionExists(decodedTransaction);
 
           if (!transactionExists) {
             const transactionsWithValues = await findTransactionValues(

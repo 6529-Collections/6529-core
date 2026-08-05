@@ -30,6 +30,7 @@ import {
   IMPORT_SEED_WALLET,
   MANUAL_START_WORKER,
   RECALCULATE_TRANSACTIONS_OWNERS,
+  RECONCILE_TRANSACTIONS,
   RESET_TRANSACTIONS_TO_BLOCK,
   RESET_WORKER,
   SET_RPC_PROVIDER_ACTIVE,
@@ -2132,6 +2133,20 @@ ipcMain.on(RECALCULATE_TRANSACTIONS_OWNERS, (event) => {
       event.returnValue = { error: !data.status, data: data.message };
     });
   }
+});
+
+ipcMain.handle(RECONCILE_TRANSACTIONS, async (_event, args: [number]) => {
+  const [fromBlock] = args;
+  Logger.info(`Reconciling transactions from block ${fromBlock}`);
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) => worker instanceof TransactionsScheduledWorker,
+  ) as TransactionsScheduledWorker | undefined;
+  if (!transactionsWorker) {
+    return { error: true, data: "Transactions worker not found" };
+  }
+
+  const data = await transactionsWorker.reconcileTransactions(fromBlock);
+  return { error: !data.status, data: data.message };
 });
 
 ipcMain.on(RESET_WORKER, (event, args: [string]) => {

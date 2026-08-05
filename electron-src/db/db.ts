@@ -11,7 +11,7 @@ import { RPCProvider } from "./entities/IRpcProvider";
 import { ConsolidatedTDH, TDHMerkleRoot } from "./entities/ITDH";
 import { registerIpcHandlers } from "./db.operations";
 import { ipcMain } from "electron";
-import { Transaction } from "./entities/ITransaction";
+import { Transaction, TransactionBlock } from "./entities/ITransaction";
 import { CoreMigration } from "./entities/ICoreMigration";
 import { NFT } from "./entities/INFT";
 
@@ -161,6 +161,7 @@ export const initDb = async () => {
         TDHMerkleRoot,
         ConsolidatedTDH,
         Transaction,
+        TransactionBlock,
         CoreMigration,
         NFT,
       ],

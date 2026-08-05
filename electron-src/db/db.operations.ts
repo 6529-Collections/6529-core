@@ -3,7 +3,7 @@ import { IPC_DB_CHANNELS } from "../preload-db";
 import { getDb } from "./db";
 import { TDHMerkleRoot, ConsolidatedTDH } from "./entities/ITDH";
 import Logger from "electron-log";
-import { Transaction } from "./entities/ITransaction";
+import { Transaction, TransactionBlock } from "./entities/ITransaction";
 import { PaginatedResponseLocal } from "../../shared/types";
 import { NFT } from "./entities/INFT";
 import { Brackets, type SelectQueryBuilder } from "typeorm";
@@ -133,6 +133,10 @@ async function fetchTdhInfo() {
     return undefined;
   }
 
+  const transactionBlock = await getDb()
+    .getRepository(TransactionBlock)
+    .findOneBy({ id: 1 });
+
   Logger.info(
     `TDH INFO: [BLOCK] ${tdhMerkle.block} [ROOT] ${tdhMerkle.merkle_root} [LAST CALCULATION] ${tdhMerkle.last_update} [TOTAL TDH] ${totalTDH}`,
   );
@@ -143,6 +147,7 @@ async function fetchTdhInfo() {
     merkleRoot: tdhMerkle.merkle_root,
     lastCalculation: tdhMerkle.last_update,
     totalTDH,
+    needsRecalculation: transactionBlock?.tdh_needs_recalculation ?? false,
   };
 }
 

@@ -175,9 +175,18 @@ export default function TDHCalculation() {
             <TDHValidationShimmer />
           </div>
         ) : (
-          <div className="tw-pt-6">
-            <TDHValidation localInfo={tdhInfo} />
-          </div>
+          <>
+            {tdhInfo?.needsRecalculation && (
+              <div className="tw-mt-6 tw-rounded-lg tw-border tw-border-amber-500/50 tw-bg-amber-500/10 tw-p-4 tw-text-amber-200">
+                Transaction history was repaired or reset after this TDH result
+                was calculated. Recalculate TDH before treating the values
+                below as current.
+              </div>
+            )}
+            <div className="tw-pt-6">
+              <TDHValidation localInfo={tdhInfo} />
+            </div>
+          </>
         )}
         {fetchingTask ? (
           <div className="tw-pt-4">
@@ -188,10 +197,12 @@ export default function TDHCalculation() {
             <WorkerCard
               task={tdhTask}
               customStatus={
-                tdhInfo &&
-                `Last Calculation: ${new Date(
-                  tdhInfo.lastCalculation * 1000
-                ).toLocaleString()}`
+                tdhInfo?.needsRecalculation
+                  ? "Transaction history changed — recalculation required"
+                  : tdhInfo &&
+                    `Last Calculation: ${new Date(
+                      tdhInfo.lastCalculation * 1000
+                    ).toLocaleString()}`
               }
             />
           </div>

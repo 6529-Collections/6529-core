@@ -15,6 +15,7 @@ import {
   fullRefreshWorker,
   manualStartWorker,
   recalculateTransactionsOwners,
+  reconcileTransactions,
   resetTransactionsToBlock,
   resetWorker,
   stopWorker,
@@ -52,6 +53,7 @@ export interface TDHInfo {
   merkleRoot: string;
   lastCalculation: number;
   totalTDH: number;
+  needsRecalculation: boolean;
 }
 
 const cronToHumanReadable = (cronExpression: string): string => {
@@ -248,6 +250,10 @@ export function WorkerCard({
   const [showResetToBlockConfirm, setShowResetToBlockConfirm] = useState(false);
   const [showRecalculateOwnersConfirm, setShowRecalculateOwnersConfirm] =
     useState(false);
+  const [
+    showReconcileTransactionsConfirm,
+    setShowReconcileTransactionsConfirm,
+  ] = useState(false);
   const [showFullRefreshNFTsConfirm, setShowFullRefreshNFTsConfirm] =
     useState(false);
   const [showResetWorkerConfirm, setShowResetWorkerConfirm] = useState(false);
@@ -281,6 +287,16 @@ export function WorkerCard({
       })
       .finally(() => {
         setShowRecalculateOwnersConfirm(false);
+      });
+  };
+
+  const triggerReconcileTransactions = async (fromBlock: number) => {
+    reconcileTransactions(fromBlock)
+      .then((data) => {
+        showToast(data.data, data.error ? "error" : "success");
+      })
+      .finally(() => {
+        setShowReconcileTransactionsConfirm(false);
       });
   };
 
@@ -355,7 +371,7 @@ export function WorkerCard({
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
             >
               Recalculate TDH Now
-            </button>,
+            </button>
           )}
         </div>
       );
@@ -420,6 +436,19 @@ export function WorkerCard({
           )}
         {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
           infoButton(
+            "reconcile-transactions-tooltip",
+            <button
+              type="button"
+              className={btnLight}
+              data-tooltip-id="reconcile-transactions-tooltip"
+              disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
+              onClick={() => setShowReconcileTransactionsConfirm(true)}
+            >
+              Reconcile
+            </button>
+          )}
+        {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
+          infoButton(
             "recalculate-owners-tooltip",
             <button
               type="button"
@@ -428,7 +457,7 @@ export function WorkerCard({
               disabled={task.status?.status === ScheduledWorkerStatus.RUNNING}
               onClick={() => setShowRecalculateOwnersConfirm(true)}
             >
-              Recalculate Owners
+              Rebuild All Ownership
             </button>
           )}
         {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER &&
@@ -440,7 +469,7 @@ export function WorkerCard({
               data-tooltip-id="reset-to-block-tooltip"
               onClick={() => setShowResetToBlockConfirm(true)}
             >
-              Reset
+              Reset to Block
             </button>
           )}
       </div>
@@ -512,20 +541,28 @@ export function WorkerCard({
         </div>
       </div>
       {task.namespace === ScheduledWorkerNames.TRANSACTIONS_WORKER && (
-        <ResetToBlockConfirm
-          show={showResetToBlockConfirm}
-          minBlock={TRANSACTIONS_START_BLOCK}
-          onHide={() => setShowResetToBlockConfirm(false)}
-          onConfirm={(block) => triggerResetToBlock(block)}
-        />
+        <>
+          <ReconcileTransactionsConfirm
+            show={showReconcileTransactionsConfirm}
+            minBlock={TRANSACTIONS_START_BLOCK}
+            onHide={() => setShowReconcileTransactionsConfirm(false)}
+            onConfirm={(block) => triggerReconcileTransactions(block)}
+          />
+          <ResetToBlockConfirm
+            show={showResetToBlockConfirm}
+            minBlock={TRANSACTIONS_START_BLOCK}
+            onHide={() => setShowResetToBlockConfirm(false)}
+            onConfirm={(block) => triggerResetToBlock(block)}
+          />
+        </>
       )}
       <Confirm
         overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
         show={showRecalculateOwnersConfirm}
         onHide={() => setShowRecalculateOwnersConfirm(false)}
         onConfirm={triggerRecalculateTransactionsOwners}
-        title="Recalculate Owners"
-        message={`Roll back the transactions database by 5,000 block, then re-process all NFT transactions stored in the local database and recalculates ownership and balances for each owner, ensuring accurate and up-to-date data for every token based on the transaction history. Use this if discrepancies in ownership or balance are detected.`}
+        title="Rebuild All Ownership"
+        message={`Rebuild every locally indexed NFT ownership balance from the existing transaction history without changing transaction records or the sync checkpoint. Use this only when transaction history is believed to be correct but ownership balances are inconsistent.`}
       />
       <Confirm
         overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
@@ -576,6 +613,106 @@ export function WorkerCard({
         message={`Stop the current execution of this worker. The worker will be paused and will not run again until the next scheduled run.`}
       />
     </div>
+  );
+}
+
+function ReconcileTransactionsConfirm({
+  show,
+  minBlock,
+  onHide,
+  onConfirm,
+}: {
+  show: boolean;
+  minBlock: number;
+  onHide: () => void;
+  onConfirm: (block: number) => void;
+}) {
+  const [mode, setMode] = useState<"from-block" | "full-history">("from-block");
+  const [block, setBlock] = useState("");
+
+  const resetAndHide = () => {
+    setMode("from-block");
+    setBlock("");
+    onHide();
+  };
+  const selectedBlock = mode === "full-history" ? minBlock : Number(block);
+  const canConfirm =
+    mode === "full-history" ||
+    (!!block && Number.isInteger(selectedBlock) && selectedBlock >= minBlock);
+
+  return (
+    <ConfirmModalShell
+      overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
+      show={show}
+      title="Reconcile Transactions"
+      onBackdropClick={resetAndHide}
+      footer={
+        <>
+          <button
+            type="button"
+            onClick={resetAndHide}
+            className={confirmBtnSecondary}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              onConfirm(selectedBlock);
+              setMode("from-block");
+              setBlock("");
+            }}
+            disabled={!canConfirm}
+            className={confirmBtnPrimary}
+          >
+            Reconcile
+          </button>
+        </>
+      }
+    >
+      <p className="tw-mb-4 tw-mt-0">
+        Compare Ethereum transfer logs with the local transaction index. Only
+        missing, inconsistent, or orphaned records will be repaired. Ownership
+        will be rebuilt for affected tokens, and TDH will be marked for
+        recalculation when repairs are made.
+      </p>
+      <div className="tw-flex tw-flex-col tw-gap-3">
+        <label className="tw-flex tw-cursor-pointer tw-items-center tw-gap-2">
+          <input
+            type="radio"
+            name="transaction-reconciliation-mode"
+            checked={mode === "from-block"}
+            onChange={() => setMode("from-block")}
+          />
+          <span>Reconcile from a specific block</span>
+        </label>
+        <input
+          type="number"
+          min={minBlock}
+          placeholder="Enter block number"
+          aria-label="Reconciliation starting block"
+          value={block}
+          disabled={mode !== "from-block"}
+          className={confirmInputClass}
+          onChange={(event) => setBlock(event.target.value)}
+        />
+        <label className="tw-flex tw-cursor-pointer tw-items-center tw-gap-2">
+          <input
+            type="radio"
+            name="transaction-reconciliation-mode"
+            checked={mode === "full-history"}
+            onChange={() => setMode("full-history")}
+          />
+          <span>
+            Reconcile full history from block {minBlock.toLocaleString()}
+          </span>
+        </label>
+      </div>
+      <p className="tw-mb-0 tw-mt-4 tw-text-sm tw-text-iron-400">
+        The run stops at the local transaction checkpoint captured when it
+        starts. Full history may take a significant amount of time.
+      </p>
+    </ConfirmModalShell>
   );
 }
 

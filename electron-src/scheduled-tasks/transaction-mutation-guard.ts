@@ -1,10 +1,14 @@
 export type WorkerStartGuard = () => string | null;
 
-export type TransactionMutationAction = "reset" | "recalculate-owners";
+export type TransactionMutationAction =
+  | "reset"
+  | "recalculate-owners"
+  | "reconcile";
 
 const TRANSACTION_MUTATION_LABELS: Record<TransactionMutationAction, string> = {
   reset: "Transaction reset",
-  "recalculate-owners": "Owner recalculation",
+  "recalculate-owners": "Ownership rebuild",
+  reconcile: "Transaction reconciliation",
 };
 
 export function createTdhTransactionMutationGuard(

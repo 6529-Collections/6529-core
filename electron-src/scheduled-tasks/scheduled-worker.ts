@@ -412,7 +412,33 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
 
     return {
       status: true,
-      message: "Owner recalculation started",
+      message: "Ownership rebuild started",
+    };
+  }
+
+  public async reconcileTransactions(fromBlock: number) {
+    const blockedReason = this.getMutationBlockReason("reconcile");
+    if (blockedReason) {
+      return {
+        status: false,
+        message: blockedReason,
+      };
+    }
+
+    const workerData: TransactionsWorkerData = {
+      rpcUrl: this.rpcUrl,
+      dbParams: getBaseDbParams(),
+      blockRange: this.blockRange,
+      maxConcurrentRequests: this.maxConcurrentRequests,
+      scope: TransactionsWorkerScope.RECONCILE,
+      block: fromBlock,
+    } as TransactionsWorkerData;
+
+    this.startWorker(workerData);
+
+    return {
+      status: true,
+      message: `Transaction reconciliation from block ${fromBlock} started`,
     };
   }
 }

@@ -83,4 +83,7 @@ export class BaseTransaction {
 export class Transaction extends BaseTransaction {}
 
 @Entity(TRANSACTIONS_BLOCKS_TABLE)
-export class TransactionBlock extends SingletonBlockEntity {}
+export class TransactionBlock extends SingletonBlockEntity {
+  @Column({ type: "boolean", default: false })
+  tdh_needs_recalculation!: boolean;
+}
