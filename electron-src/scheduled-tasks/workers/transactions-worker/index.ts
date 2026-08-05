@@ -43,8 +43,9 @@ import {
 import { TransactionsWorkerData } from "../../scheduled-worker";
 import {
   classifyReceiptTransaction,
+  confirmReceiptlessOrphan,
   diffTransactions,
-  fetchReceiptWithConfirmedAbsence,
+  fetchRpcValueWithConfirmedAbsence,
   getTransactionIdentity,
   getTransactionTokenKeys,
   hasSameChainData,
@@ -483,10 +484,32 @@ export class TransactionsWorker extends CoreWorker {
     for (const [index, [hash, localTransactions]] of entries.entries()) {
       const canonicalReceipt = canonicalByHash[index];
 
-      if (
-        canonicalReceipt.status === "absent" ||
-        canonicalReceipt.transactions.length === 0
-      ) {
+      if (canonicalReceipt.status === "absent") {
+        // Some RPC providers return null for historical receipts they cannot
+        // serve. Require two additional canonical signals before deleting a
+        // local row: its recorded block must exclude the hash, and the
+        // transaction lookup must also be consistently absent.
+        await confirmReceiptlessOrphan(
+          hash,
+          localTransactions.map((transaction) => transaction.block),
+          async (blockNumber) => {
+            const block = await this.getBottleneck().schedule(() =>
+              this.getProvider().getBlock(blockNumber),
+            );
+            return block?.transactions ?? null;
+          },
+          () =>
+            this.getBottleneck().schedule(() =>
+              this.getProvider().getTransaction(hash),
+            ),
+          3,
+          sleep,
+        );
+        confirmedOrphans.push(...localTransactions);
+        continue;
+      }
+
+      if (canonicalReceipt.transactions.length === 0) {
         confirmedOrphans.push(...localTransactions);
         continue;
       }
@@ -551,7 +574,7 @@ export class TransactionsWorker extends CoreWorker {
   ): Promise<CanonicalReceiptResult> {
     let receiptResult;
     try {
-      receiptResult = await fetchReceiptWithConfirmedAbsence(
+      receiptResult = await fetchRpcValueWithConfirmedAbsence(
         async () => {
           const receipt = await this.getBottleneck().schedule(() =>
             this.getProvider().getTransactionReceipt(hash),
@@ -594,7 +617,7 @@ export class TransactionsWorker extends CoreWorker {
     if (receiptResult.status === "absent") {
       return { status: "absent", transactions: [] };
     }
-    return { status: "present", transactions: receiptResult.receipt };
+    return { status: "present", transactions: receiptResult.value };
   }
 
   private async getAllTransactions(

@@ -3,9 +3,10 @@ import { describe, it } from "node:test";
 import type { Transaction } from "../../../db/entities/ITransaction";
 import {
   classifyReceiptTransaction,
+  confirmReceiptlessOrphan,
   diffTransactions,
   excludeOrphansRepairedByIdentity,
-  fetchReceiptWithConfirmedAbsence,
+  fetchRpcValueWithConfirmedAbsence,
   getTransactionIdentity,
   getTransactionTokenKeys,
   hasTransactionRepairs,
@@ -190,7 +191,7 @@ describe("transaction reconciliation diff", () => {
 
   it("confirms a missing receipt only after every lookup returns null", async () => {
     let attempts = 0;
-    const absent = await fetchReceiptWithConfirmedAbsence(
+    const absent = await fetchRpcValueWithConfirmedAbsence(
       async () => {
         attempts++;
         return null;
@@ -204,19 +205,19 @@ describe("transaction reconciliation diff", () => {
 
     const receipt = { hash: "0xcanonical" };
     let responses = 0;
-    const present = await fetchReceiptWithConfirmedAbsence(
+    const present = await fetchRpcValueWithConfirmedAbsence(
       async () => (++responses === 1 ? null : receipt),
       3,
       async () => {},
     );
-    assert.deepEqual(present, { status: "present", receipt });
+    assert.deepEqual(present, { status: "present", value: receipt });
   });
 
   it("does not treat RPC failures as proof that a receipt is absent", async () => {
     const rpcError = new Error("network unavailable");
     let attempt = 0;
     await assert.rejects(
-      fetchReceiptWithConfirmedAbsence(
+      fetchRpcValueWithConfirmedAbsence(
         async () => {
           attempt++;
           if (attempt === 2) {
@@ -228,6 +229,71 @@ describe("transaction reconciliation diff", () => {
         async () => {},
       ),
       rpcError,
+    );
+  });
+
+  it("confirms a receipt-less orphan from block membership and transaction absence", async () => {
+    let blockLookups = 0;
+    let transactionLookups = 0;
+
+    await confirmReceiptlessOrphan(
+      "0xorphan",
+      [100, 100],
+      async () => {
+        blockLookups++;
+        return ["0xother"];
+      },
+      async () => {
+        transactionLookups++;
+        return null;
+      },
+      3,
+      async () => {},
+    );
+
+    assert.equal(blockLookups, 1);
+    assert.equal(transactionLookups, 3);
+  });
+
+  it("preserves a receipt-less transaction still present in its recorded block", async () => {
+    await assert.rejects(
+      confirmReceiptlessOrphan(
+        "0xVALID",
+        [100],
+        async () => ["0xvalid"],
+        async () => null,
+        3,
+        async () => {},
+      ),
+      /Canonical block 100 still contains transaction 0xVALID/,
+    );
+  });
+
+  it("does not delete when canonical block data is unavailable", async () => {
+    await assert.rejects(
+      confirmReceiptlessOrphan(
+        "0xhash",
+        [100],
+        async () => null,
+        async () => null,
+        3,
+        async () => {},
+      ),
+      /Unable to verify canonical block 100/,
+    );
+  });
+
+  it("does not delete when the canonical transaction is still available", async () => {
+    await assert.rejects(
+      confirmReceiptlessOrphan(
+        "0xhash",
+        [100],
+        async () => ["0xother"],
+        async () => ({ hash: "0xhash" }),
+        3,
+        async () => {},
+      ),
+      /Canonical transaction 0xhash is still available/,
     );
   });
 

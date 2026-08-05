@@ -18,8 +18,8 @@ export interface TransactionTokenKey {
   tokenId: number;
 }
 
-export type ConfirmedReceipt<T> =
-  | { status: "present"; receipt: T }
+export type ConfirmedRpcValue<T> =
+  | { status: "present"; value: T }
   | { status: "absent" };
 
 export interface TransactionReconciliationDiff {
@@ -150,20 +150,23 @@ export function isRpcLogRangeLimitError(error: unknown): boolean {
   );
 }
 
-export async function fetchReceiptWithConfirmedAbsence<T>(
-  fetchReceipt: () => Promise<T | null>,
+export async function fetchRpcValueWithConfirmedAbsence<T>(
+  fetchValue: () => Promise<T | null>,
   maxAttempts: number = 3,
-  wait: (delayMs: number) => Promise<unknown> = (delayMs) =>
-    new Promise((resolve) => setTimeout(resolve, delayMs)),
-): Promise<ConfirmedReceipt<T>> {
+  wait?: (delayMs: number) => Promise<unknown>,
+): Promise<ConfirmedRpcValue<T>> {
   let confirmedAbsences = 0;
   let lastError: unknown;
+  const waitForRetry =
+    wait ??
+    ((delayMs: number) =>
+      new Promise((resolve) => setTimeout(resolve, delayMs)));
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      const receipt = await fetchReceipt();
-      if (receipt !== null) {
-        return { status: "present", receipt };
+      const value = await fetchValue();
+      if (value !== null) {
+        return { status: "present", value };
       }
       confirmedAbsences++;
     } catch (error) {
@@ -171,7 +174,7 @@ export async function fetchReceiptWithConfirmedAbsence<T>(
     }
 
     if (attempt < maxAttempts) {
-      await wait(250 * attempt);
+      await waitForRetry(250 * attempt);
     }
   }
 
@@ -181,7 +184,52 @@ export async function fetchReceiptWithConfirmedAbsence<T>(
   if (lastError) {
     throw lastError;
   }
-  throw new Error("Receipt lookup was inconclusive");
+  throw new Error("RPC value lookup was inconclusive");
+}
+
+export async function confirmReceiptlessOrphan(
+  hash: string,
+  recordedBlocks: number[],
+  fetchBlockTransactionHashes: (
+    block: number,
+  ) => Promise<readonly string[] | null>,
+  fetchTransaction: () => Promise<unknown | null>,
+  maxAttempts: number = 3,
+  wait?: (delayMs: number) => Promise<unknown>,
+): Promise<void> {
+  const normalizedHash = hash.toLowerCase();
+  const uniqueBlocks = Array.from(new Set(recordedBlocks));
+
+  for (const block of uniqueBlocks) {
+    const blockLookup = await fetchRpcValueWithConfirmedAbsence(
+      () => fetchBlockTransactionHashes(block),
+      maxAttempts,
+      wait,
+    );
+    if (blockLookup.status === "absent") {
+      throw new Error(
+        `Unable to verify canonical block ${block} for transaction ${hash}`,
+      );
+    }
+    if (
+      blockLookup.value.some(
+        (transactionHash) => transactionHash.toLowerCase() === normalizedHash,
+      )
+    ) {
+      throw new Error(
+        `Canonical block ${block} still contains transaction ${hash}`,
+      );
+    }
+  }
+
+  const transactionLookup = await fetchRpcValueWithConfirmedAbsence(
+    fetchTransaction,
+    maxAttempts,
+    wait,
+  );
+  if (transactionLookup.status === "present") {
+    throw new Error(`Canonical transaction ${hash} is still available`);
+  }
 }
 
 export function isRetryableSqliteLockError(error: unknown): boolean {
