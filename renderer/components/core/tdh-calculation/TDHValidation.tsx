@@ -74,7 +74,7 @@ export default function TDHValidation({
   );
 
   return (
-    <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800 [&_table]:tw-w-full [&_table]:tw-table-fixed [&_tbody_tr]:tw-w-full [&_td:nth-child(1)]:tw-flex-[0_0_8rem] [&_td:nth-child(1)]:tw-whitespace-nowrap [&_td:nth-child(2)]:tw-flex-[2_1_0%] [&_td:nth-child(3)]:tw-flex-[2_1_0%] [&_td:nth-child(4)]:tw-flex-[0_0_5rem] [&_td:nth-child(5)]:tw-flex-1 [&_td]:tw-flex [&_td]:tw-min-h-[65px] [&_td]:tw-items-center [&_td]:tw-gap-2 [&_td]:tw-p-2 [&_th:nth-child(1)]:tw-flex-[0_0_8rem] [&_th:nth-child(1)]:tw-whitespace-nowrap [&_th:nth-child(2)]:tw-flex-[2_1_0%] [&_th:nth-child(3)]:tw-flex-[2_1_0%] [&_th:nth-child(4)]:tw-flex-[0_0_5rem] [&_th:nth-child(5)]:tw-flex-1 [&_th]:tw-flex [&_th]:tw-items-center [&_th]:tw-gap-2 [&_th]:tw-p-2 [&_th]:tw-text-left [&_thead_tr]:tw-border-b [&_thead_tr]:tw-border-iron-800 [&_tr]:tw-flex [&_tr]:tw-flex-row [&_tr]:tw-items-stretch">
+    <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800 [&_table]:tw-w-full [&_table]:tw-table-fixed [&_tbody_tr]:tw-w-full [&_td:nth-child(1)]:tw-flex-[0_0_8rem] [&_td:nth-child(1)]:tw-whitespace-nowrap [&_td:nth-child(2)]:tw-flex-[1.5_1_0%] [&_td:nth-child(3)]:tw-flex-[1.5_1_0%] [&_td:nth-child(4)]:tw-flex-[0_0_5rem] [&_td:nth-child(5)]:tw-flex-[1.3_1_0%] [&_td]:tw-flex [&_td]:tw-min-h-[65px] [&_td]:tw-items-center [&_td]:tw-gap-2 [&_td]:tw-p-2 [&_th:nth-child(1)]:tw-flex-[0_0_8rem] [&_th:nth-child(1)]:tw-whitespace-nowrap [&_th:nth-child(2)]:tw-flex-[1.5_1_0%] [&_th:nth-child(3)]:tw-flex-[1.5_1_0%] [&_th:nth-child(4)]:tw-flex-[0_0_5rem] [&_th:nth-child(5)]:tw-flex-[1.3_1_0%] [&_th]:tw-flex [&_th]:tw-items-center [&_th]:tw-gap-2 [&_th]:tw-p-2 [&_th]:tw-text-left [&_thead_tr]:tw-border-b [&_thead_tr]:tw-border-iron-800 [&_tr]:tw-flex [&_tr]:tw-flex-row [&_tr]:tw-items-stretch">
       <table>
         <thead>
           <tr>
@@ -135,9 +135,25 @@ export default function TDHValidation({
           <hr className="tw-my-2 tw-w-full tw-border-0 tw-border-t tw-border-iron-700" />
           <tr>
             <td>Merkle Root</td>
-            <td className="tw-break-all tw-text-sm">{localInfo?.merkleRoot}</td>
-            <td className="tw-break-all tw-text-sm">
-              {isFetchingRemote ? remoteShimmer : (remoteInfo?.merkle_root ?? "N/A")}
+            <td className="tw-min-w-0 tw-text-sm">
+              <span className="tw-min-w-0 tw-break-all">
+                {localInfo?.merkleRoot}
+              </span>
+              {localInfo?.merkleRoot && (
+                <CopyIcon text={localInfo.merkleRoot} small />
+              )}
+            </td>
+            <td className="tw-min-w-0 tw-text-sm">
+              {isFetchingRemote ? remoteShimmer : (
+                <>
+                  <span className="tw-min-w-0 tw-break-all">
+                    {remoteInfo?.merkle_root ?? "N/A"}
+                  </span>
+                  {remoteInfo?.merkle_root && (
+                    <CopyIcon text={remoteInfo.merkle_root} small />
+                  )}
+                </>
+              )}
             </td>
             <td className="tw-justify-center">
               {printStatusIcon(merkleRootIcon, merkleRootStatus)}
@@ -150,7 +166,7 @@ export default function TDHValidation({
   );
 }
 
-function CopyIcon({ text }: { text: string }) {
+function CopyIcon({ text, small = false }: { text: string; small?: boolean }) {
   const [isCopied, setIsCopied] = useState(false);
 
   const handleCopy = () => {
@@ -162,14 +178,16 @@ function CopyIcon({ text }: { text: string }) {
   return (
     <>
       <FontAwesomeIcon
-        className="tw-ml-2 tw-cursor-pointer tw-select-none"
+        className={`${small ? "tw-ml-1" : "tw-ml-2"} tw-shrink-0 tw-cursor-pointer tw-select-none`}
         icon={faCopy}
-        height={14}
+        height={small ? 11 : 14}
         color={isCopied ? "green" : "white"}
         onClick={handleCopy}
       />
       {isCopied && (
-        <span className="tw-ml-2 tw-text-sm tw-font-light tw-text-emerald-400">
+        <span
+          className={`${small ? "tw-ml-1 tw-text-xs" : "tw-ml-2 tw-text-sm"} tw-font-light tw-text-emerald-400`}
+        >
           Copied!
         </span>
       )}
