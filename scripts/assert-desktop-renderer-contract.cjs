@@ -589,6 +589,79 @@ assertContract(
   "getSessionClientType must return desktop for Electron",
 );
 
+const sessionPersistencePath =
+  "renderer/services/auth/session-persistence.utils.ts";
+const sessionPersistence = parseSource(sessionPersistencePath);
+const persistNativeRefreshTokenIfNeeded = findVariable(
+  sessionPersistence,
+  "persistNativeRefreshTokenIfNeeded",
+);
+const electronPersistenceGuard = persistNativeRefreshTokenIfNeeded
+  ? findDescendant(
+      persistNativeRefreshTokenIfNeeded,
+      (node) =>
+        ts.isIfStatement(node) &&
+        callsIdentifier(node.expression, "isElectron") &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (conditionNode) =>
+              ts.isStringLiteral(conditionNode) &&
+              conditionNode.text === "desktop",
+          ),
+        ) &&
+        returnsStringLiteral(node.thenStatement, "persisted") &&
+        !callsIdentifier(node.thenStatement, "setNativeRefreshToken"),
+    )
+  : undefined;
+assertContract(
+  Boolean(electronPersistenceGuard),
+  sessionPersistencePath,
+  "Electron session persistence must leave refresh tokens in the main process",
+);
+
+const authRequestSignInPath =
+  "renderer/components/auth/authRequestSignIn.ts";
+const authRequestSignIn = parseSource(authRequestSignInPath);
+const createSignInSession = findVariable(
+  authRequestSignIn,
+  "createSignInSession",
+);
+assertContract(
+  createSignInSession &&
+    Boolean(
+      findDescendant(
+        createSignInSession,
+        (node) =>
+          ts.isPropertyAccessExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "clientSignature" &&
+          node.name.text === "cancelled",
+      ),
+    ),
+  authRequestSignInPath,
+  "auth request sign-in must preserve explicit cancellation results",
+);
+
+const authActionsPath = "renderer/components/auth/authActions.ts";
+const authActions = parseSource(authActionsPath);
+const requestSessionUpgrade = findVariable(
+  authActions,
+  "requestSessionUpgrade",
+);
+assertContract(
+  requestSessionUpgrade &&
+    Boolean(
+      findDescendant(
+        requestSessionUpgrade,
+        (node) => ts.isIdentifier(node) && node.text === "cancelled",
+      ),
+    ) &&
+    callsIdentifier(requestSessionUpgrade, "setShowSignModal"),
+  authActionsPath,
+  "session-upgrade cancellation must dismiss without failure handling",
+);
+
 for (const [functionName, bridgeMethod] of [
   ["loginWithSessionV2", "sessionLogin"],
   ["executeSessionRefreshV2", "sessionRefresh"],
