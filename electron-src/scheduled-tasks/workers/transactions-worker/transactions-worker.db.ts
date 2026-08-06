@@ -1,4 +1,4 @@
-import { DataSource, EntityManager, LessThanOrEqual } from "typeorm";
+import { Between, DataSource, EntityManager, LessThanOrEqual } from "typeorm";
 import {
   Transaction,
   TransactionBlock,
@@ -6,6 +6,12 @@ import {
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { extractNFTOwnerDeltas, NFTOwnerDelta } from "./nft-owners";
 import { batchUpsert, logInfo } from "../../worker-helpers";
+import {
+  excludeOrphansRepairedByIdentity,
+  retryOnSqliteLock,
+  TRANSACTION_IDENTITY_COLUMNS,
+  type TransactionTokenKey,
+} from "./transaction-reconciliation";
 
 export async function getLatestTransactionsBlock(
   db: EntityManager
@@ -13,6 +19,30 @@ export async function getLatestTransactionsBlock(
   const repo = db.getRepository(TransactionBlock);
   const block = await repo.findOne({ where: { id: 1 } });
   return block?.block ?? 0;
+}
+
+export async function getTransactionsInBlockRange(
+  db: EntityManager,
+  fromBlock: number,
+  toBlock: number
+): Promise<Transaction[]> {
+  return await db.getRepository(Transaction).find({
+    where: {
+      block: Between(fromBlock, toBlock),
+    },
+  });
+}
+
+export async function setTdhRecalculationNeeded(
+  db: EntityManager,
+  needed: boolean
+) {
+  await db.getRepository(TransactionBlock).update(
+    { id: 1 },
+    {
+      tdh_needs_recalculation: needed,
+    }
+  );
 }
 
 export class OwnerDeltaError extends Error {
@@ -63,22 +93,18 @@ export async function persistTransactionsAndOwners(
   maxRetries: number = 5,
   delayMs: number = 100
 ) {
-  let attempt = 0;
-
-  while (attempt < maxRetries) {
-    try {
+  await retryOnSqliteLock(
+    async () => {
       await db.transaction(async (transaction) => {
         const transactionRepository = transaction.getRepository(Transaction);
         const transactionBlockRepository =
           transaction.getRepository(TransactionBlock);
 
-        await batchUpsert<Transaction>(transactionRepository, transactions, [
-          "transaction",
-          "contract",
-          "from_address",
-          "to_address",
-          "token_id",
-        ]);
+        await batchUpsert<Transaction>(
+          transactionRepository,
+          transactions,
+          [...TRANSACTION_IDENTITY_COLUMNS]
+        );
 
         await persistOwners(transaction, ownerDeltas);
 
@@ -91,24 +117,11 @@ export async function persistTransactionsAndOwners(
           ["id"]
         );
       });
-      return;
-    } catch (error) {
-      if (
-        error instanceof Error &&
-        error.message.includes("database is locked")
-      ) {
-        attempt++;
-        if (attempt >= maxRetries) {
-          throw new Error(
-            `Updating Database failed after ${maxRetries} retries due to database lock.`
-          );
-        }
-        await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
-      } else {
-        throw error;
-      }
-    }
-  }
+    },
+    maxRetries,
+    delayMs,
+    "Updating Database"
+  );
 }
 
 export async function recalculateTransactionOwners(
@@ -139,6 +152,108 @@ export async function recalculateTransactionOwners(
   });
 
   logInfo(parentPort, "All transactions owners recalculated");
+}
+
+export async function rebuildTransactionOwnersForTokens(
+  db: EntityManager,
+  affectedTokens: TransactionTokenKey[],
+  latestBlock: number
+) {
+  const transactionRepository = db.getRepository(Transaction);
+  const ownerRepository = db.getRepository(NFTOwner);
+  const uniqueAffectedTokens = new Map(
+    affectedTokens.map((affectedToken) => [
+      `${affectedToken.contract.toLowerCase()}:${affectedToken.tokenId}`,
+      {
+        contract: affectedToken.contract.toLowerCase(),
+        tokenId: affectedToken.tokenId,
+      },
+    ])
+  );
+
+  for (const affectedToken of uniqueAffectedTokens.values()) {
+    const transactions = await transactionRepository.find({
+      where: {
+        contract: affectedToken.contract,
+        token_id: affectedToken.tokenId,
+        block: LessThanOrEqual(latestBlock),
+      },
+    });
+    const ownerDeltas = await extractNFTOwnerDeltas(transactions);
+
+    await ownerRepository.delete({
+      contract: affectedToken.contract,
+      token_id: affectedToken.tokenId,
+    });
+    await persistOwners(db, ownerDeltas);
+  }
+}
+
+function getTransactionDeleteCriteria(transaction: Transaction) {
+  return Object.fromEntries(
+    TRANSACTION_IDENTITY_COLUMNS.map((column) => [
+      column,
+      transaction[column],
+    ])
+  ) as Pick<Transaction, (typeof TRANSACTION_IDENTITY_COLUMNS)[number]>;
+}
+
+export async function applyTransactionReconciliation(
+  db: DataSource,
+  repairs: Transaction[],
+  orphaned: Transaction[],
+  affectedTokens: TransactionTokenKey[],
+  latestBlock: number,
+  maxRetries: number = 5,
+  delayMs: number = 100
+) {
+  if (
+    repairs.length === 0 &&
+    orphaned.length === 0 &&
+    affectedTokens.length === 0
+  ) {
+    return;
+  }
+
+  await retryOnSqliteLock(
+    async () => {
+      // TypeORM rolls the transaction back before this promise rejects, so a
+      // retry always starts from the last committed owner/transaction state.
+      await db.transaction(async (manager) => {
+        const transactionRepository = manager.getRepository(Transaction);
+        // A receipt-derived repair has the same composite primary key as the
+        // local row it replaces. Never also delete that identity: the upsert
+        // below updates the one row in place and makes delete/upsert ordering
+        // irrelevant even if callers provide overlapping inputs.
+        const transactionsToDelete = excludeOrphansRepairedByIdentity(
+          orphaned,
+          repairs
+        );
+
+        for (const orphanedTransaction of transactionsToDelete) {
+          await transactionRepository.delete(
+            getTransactionDeleteCriteria(orphanedTransaction)
+          );
+        }
+
+        await batchUpsert<Transaction>(
+          transactionRepository,
+          repairs,
+          [...TRANSACTION_IDENTITY_COLUMNS]
+        );
+
+        await rebuildTransactionOwnersForTokens(
+          manager,
+          affectedTokens,
+          latestBlock
+        );
+        await setTdhRecalculationNeeded(manager, true);
+      });
+    },
+    maxRetries,
+    delayMs,
+    "Transaction reconciliation"
+  );
 }
 
 export async function extractOwnersFromDeltas(

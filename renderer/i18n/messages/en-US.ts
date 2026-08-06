@@ -1423,6 +1423,35 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
   } as const
 );
 
+const CORE_TRANSACTION_MESSAGES = objectMessages("core.transactions", {
+  "actions.reconcile": "Reconcile",
+  "actions.rebuildOwnership": "Rebuild Ownership",
+  "actions.resetToBlock": "Reset to Block",
+  "ownershipRebuild.title": "Rebuild Ownership",
+  "ownershipRebuild.body":
+    "Rebuild every locally indexed NFT ownership balance from the existing transaction history without changing transaction records or the sync checkpoint. Use this only when transaction history is believed to be correct but ownership balances are inconsistent.",
+  "reconcile.title": "Reconcile Transactions",
+  "reconcile.cancel": "Cancel",
+  "reconcile.confirm": "Reconcile",
+  "reconcile.error": "Unable to start transaction reconciliation.",
+  "reconcile.body":
+    "Compare Ethereum transfer logs with the local transaction index. Only missing, inconsistent, or orphaned records will be repaired. Ownership will be rebuilt for affected tokens, and TDH will be marked for recalculation when repairs are made.",
+  "reconcile.rangeLegend": "Reconciliation range",
+  "reconcile.fromBlock": "Reconcile from a specific block",
+  "reconcile.blockPlaceholder": "Enter block number",
+  "reconcile.blockAriaLabel": "Reconciliation starting block",
+  "reconcile.fullHistory": "Reconcile full history from block {block}",
+  "reconcile.note":
+    "The run stops at the local transaction checkpoint captured when it starts. Full history may take a significant amount of time.",
+} as const);
+
+const CORE_TDH_MESSAGES = objectMessages("core.tdh", {
+  recalculationWarning:
+    "Transaction history was repaired or reset after this TDH result was calculated. Recalculate TDH before treating the values below as current.",
+  recalculationRequired: "Transaction history changed — recalculation required",
+  lastCalculation: "Last Calculation: {date}",
+} as const);
+
 const COMMON_MESSAGES = objectMessages("common", {
   clearFilters: "Clear filters",
   close: "Close",
@@ -2557,6 +2586,8 @@ export const EN_US_MESSAGES = {
   ...ATTACHMENT_MESSAGES,
   ...CORE_NFT_LOCAL_DATA_MESSAGES,
   ...CORE_TRANSACTION_LOCAL_DATA_MESSAGES,
+  ...CORE_TRANSACTION_MESSAGES,
+  ...CORE_TDH_MESSAGES,
   ...LINK_PREVIEW_MESSAGES,
   ...COMMON_MESSAGES,
   ...EN_US_PAGINATION_MESSAGES,

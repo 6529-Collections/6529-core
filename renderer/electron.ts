@@ -11,6 +11,7 @@ import {
   IMPORT_SEED_WALLET,
   MANUAL_START_WORKER,
   RECALCULATE_TRANSACTIONS_OWNERS,
+  RECONCILE_TRANSACTIONS,
   RESET_TRANSACTIONS_TO_BLOCK,
   RESET_WORKER,
   SET_RPC_PROVIDER_ACTIVE,
@@ -109,6 +110,10 @@ export async function resetTransactionsToBlock(
 export async function recalculateTransactionsOwners() {
   const data = await window.api.sendSync(RECALCULATE_TRANSACTIONS_OWNERS);
   return data;
+}
+
+export async function reconcileTransactions(fromBlock: number) {
+  return await window.api.invoke(RECONCILE_TRANSACTIONS, fromBlock);
 }
 
 export async function resetWorker(namespace: string) {

@@ -25,6 +25,7 @@ export const MANUAL_START_WORKER = "manualStartWorker";
 export const FULL_REFRESH_WORKER = "fullRefreshWorker";
 export const RESET_TRANSACTIONS_TO_BLOCK = "resetTransactionsToBlock";
 export const RECALCULATE_TRANSACTIONS_OWNERS = "recalculateTransactionsOwners";
+export const RECONCILE_TRANSACTIONS = "reconcileTransactions";
 export const RESET_WORKER = "resetWorker";
 export const STOP_WORKER = "stopWorker";
 

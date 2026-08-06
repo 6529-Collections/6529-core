@@ -4,12 +4,13 @@ import { publicEnv } from "@/config/env";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faCheckCircle,
-  faCopy,
   faMinusCircle,
   faXmarkCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useId, useRef, useState } from "react";
+import { Tooltip } from "react-tooltip";
+import type { TooltipRefProps } from "react-tooltip";
 import { TDHInfo } from "../eth-scanner/Workers";
 
 export default function TDHValidation({
@@ -23,6 +24,12 @@ export default function TDHValidation({
     block: number;
     merkle_root: string;
   }>();
+  const copyTooltipRef = useRef<TooltipRefProps>(null);
+  const copyFeedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
+  const isCopyFeedbackVisible = useRef(false);
+  const [copyAnnouncement, setCopyAnnouncement] = useState("");
 
   const fetchRemote = () => {
     fetch(`${publicEnv.API_ENDPOINT}/oracle/tdh/total`)
@@ -36,6 +43,50 @@ export default function TDHValidation({
   useEffect(() => {
     fetchRemote();
   }, [localInfo]);
+
+  useEffect(
+    () => () => {
+      if (copyFeedbackTimer.current) {
+        clearTimeout(copyFeedbackTimer.current);
+      }
+    },
+    []
+  );
+
+  const showCopyHover = (anchorId: string) => {
+    if (isCopyFeedbackVisible.current) {
+      return;
+    }
+    copyTooltipRef.current?.open({
+      anchorSelect: `#${anchorId}`,
+      content: "Click to copy",
+      delay: 150,
+    });
+  };
+
+  const hideCopyHover = () => {
+    if (!isCopyFeedbackVisible.current) {
+      copyTooltipRef.current?.close();
+    }
+  };
+
+  const showCopyFeedback = (anchorId: string, status: "copied" | "failed") => {
+    const message = status === "copied" ? "Copied" : "Copy failed";
+    isCopyFeedbackVisible.current = true;
+    setCopyAnnouncement(message);
+    if (copyFeedbackTimer.current) {
+      clearTimeout(copyFeedbackTimer.current);
+    }
+    copyTooltipRef.current?.open({
+      anchorSelect: `#${anchorId}`,
+      content: message,
+    });
+    copyFeedbackTimer.current = setTimeout(() => {
+      isCopyFeedbackVisible.current = false;
+      setCopyAnnouncement("");
+      copyTooltipRef.current?.close();
+    }, 2000);
+  };
 
   function printStatusIcon(icon: IconProp, status: string) {
     return (
@@ -74,7 +125,7 @@ export default function TDHValidation({
   );
 
   return (
-    <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800 [&_table]:tw-w-full [&_table]:tw-table-fixed [&_tbody_tr]:tw-w-full [&_td:nth-child(1)]:tw-flex-[0_0_8rem] [&_td:nth-child(1)]:tw-whitespace-nowrap [&_td:nth-child(2)]:tw-flex-[2_1_0%] [&_td:nth-child(3)]:tw-flex-[2_1_0%] [&_td:nth-child(4)]:tw-flex-[0_0_5rem] [&_td:nth-child(5)]:tw-flex-1 [&_td]:tw-flex [&_td]:tw-min-h-[65px] [&_td]:tw-items-center [&_td]:tw-gap-2 [&_td]:tw-p-2 [&_th:nth-child(1)]:tw-flex-[0_0_8rem] [&_th:nth-child(1)]:tw-whitespace-nowrap [&_th:nth-child(2)]:tw-flex-[2_1_0%] [&_th:nth-child(3)]:tw-flex-[2_1_0%] [&_th:nth-child(4)]:tw-flex-[0_0_5rem] [&_th:nth-child(5)]:tw-flex-1 [&_th]:tw-flex [&_th]:tw-items-center [&_th]:tw-gap-2 [&_th]:tw-p-2 [&_th]:tw-text-left [&_thead_tr]:tw-border-b [&_thead_tr]:tw-border-iron-800 [&_tr]:tw-flex [&_tr]:tw-flex-row [&_tr]:tw-items-stretch">
+    <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-800 tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800 [&_table]:tw-w-full [&_table]:tw-table-fixed [&_tbody_tr]:tw-w-full [&_td:nth-child(1)]:tw-flex-[0_0_8rem] [&_td:nth-child(1)]:tw-whitespace-nowrap [&_td:nth-child(2)]:tw-flex-[1.5_1_0%] [&_td:nth-child(3)]:tw-flex-[1.5_1_0%] [&_td:nth-child(4)]:tw-flex-[0_0_5rem] [&_td:nth-child(5)]:tw-flex-[1.3_1_0%] [&_td]:tw-flex [&_td]:tw-min-h-[65px] [&_td]:tw-items-center [&_td]:tw-gap-2 [&_td]:tw-p-2 [&_th:nth-child(1)]:tw-flex-[0_0_8rem] [&_th:nth-child(1)]:tw-whitespace-nowrap [&_th:nth-child(2)]:tw-flex-[1.5_1_0%] [&_th:nth-child(3)]:tw-flex-[1.5_1_0%] [&_th:nth-child(4)]:tw-flex-[0_0_5rem] [&_th:nth-child(5)]:tw-flex-[1.3_1_0%] [&_th]:tw-flex [&_th]:tw-items-center [&_th]:tw-gap-2 [&_th]:tw-p-2 [&_th]:tw-text-left [&_thead_tr]:tw-border-b [&_thead_tr]:tw-border-iron-800 [&_tr]:tw-flex [&_tr]:tw-flex-row [&_tr]:tw-items-stretch">
       <table>
         <thead>
           <tr>
@@ -90,17 +141,29 @@ export default function TDHValidation({
           <tr>
             <td>TDH</td>
             <td>
-              {localInfo?.totalTDH?.toLocaleString()}{" "}
-              {localInfo?.totalTDH && (
-                <CopyIcon text={localInfo.totalTDH.toString()} />
+              {localInfo?.totalTDH !== undefined && (
+                <CopyableValue
+                  text={localInfo.totalTDH.toString()}
+                  onHover={showCopyHover}
+                  onLeave={hideCopyHover}
+                  onFeedback={showCopyFeedback}
+                >
+                  {localInfo.totalTDH.toLocaleString()}
+                </CopyableValue>
               )}
             </td>
             <td>
               {isFetchingRemote ? remoteShimmer : (
-                <>
-                  {remoteInfo?.tdh?.toLocaleString()}
-                  {remoteInfo?.tdh && <CopyIcon text={remoteInfo.tdh.toString()} />}
-                </>
+                remoteInfo?.tdh !== undefined && (
+                  <CopyableValue
+                    text={remoteInfo.tdh.toString()}
+                    onHover={showCopyHover}
+                    onLeave={hideCopyHover}
+                    onFeedback={showCopyFeedback}
+                  >
+                    {remoteInfo.tdh.toLocaleString()}
+                  </CopyableValue>
+                )
               )}
             </td>
             <td className="tw-justify-center">
@@ -112,19 +175,29 @@ export default function TDHValidation({
           <tr>
             <td>Last Block</td>
             <td>
-              {localInfo?.block}
-              {localInfo?.block && (
-                <CopyIcon text={localInfo.block.toString()} />
+              {localInfo?.block !== undefined && (
+                <CopyableValue
+                  text={localInfo.block.toString()}
+                  onHover={showCopyHover}
+                  onLeave={hideCopyHover}
+                  onFeedback={showCopyFeedback}
+                >
+                  {localInfo.block}
+                </CopyableValue>
               )}
             </td>
             <td>
               {isFetchingRemote ? remoteShimmer : (
-                <>
-                  {remoteInfo?.block}
-                  {remoteInfo?.block && (
-                    <CopyIcon text={remoteInfo.block.toString()} />
-                  )}
-                </>
+                remoteInfo?.block !== undefined && (
+                  <CopyableValue
+                    text={remoteInfo.block.toString()}
+                    onHover={showCopyHover}
+                    onLeave={hideCopyHover}
+                    onFeedback={showCopyFeedback}
+                  >
+                    {remoteInfo.block}
+                  </CopyableValue>
+                )
               )}
             </td>
             <td className="tw-justify-center">
@@ -135,9 +208,37 @@ export default function TDHValidation({
           <hr className="tw-my-2 tw-w-full tw-border-0 tw-border-t tw-border-iron-700" />
           <tr>
             <td>Merkle Root</td>
-            <td className="tw-break-all tw-text-sm">{localInfo?.merkleRoot}</td>
-            <td className="tw-break-all tw-text-sm">
-              {isFetchingRemote ? remoteShimmer : (remoteInfo?.merkle_root ?? "N/A")}
+            <td className="tw-min-w-0 tw-text-sm">
+              {localInfo?.merkleRoot && (
+                <CopyableValue
+                  text={localInfo.merkleRoot}
+                  className="tw-min-w-0 tw-break-all"
+                  textSize="sm"
+                  onHover={showCopyHover}
+                  onLeave={hideCopyHover}
+                  onFeedback={showCopyFeedback}
+                >
+                  {localInfo.merkleRoot}
+                </CopyableValue>
+              )}
+            </td>
+            <td className="tw-min-w-0 tw-text-sm">
+              {isFetchingRemote ? remoteShimmer : (
+                remoteInfo?.merkle_root ? (
+                  <CopyableValue
+                    text={remoteInfo.merkle_root}
+                    className="tw-min-w-0 tw-break-all"
+                    textSize="sm"
+                    onHover={showCopyHover}
+                    onLeave={hideCopyHover}
+                    onFeedback={showCopyFeedback}
+                  >
+                    {remoteInfo.merkle_root}
+                  </CopyableValue>
+                ) : (
+                  "N/A"
+                )
+              )}
             </td>
             <td className="tw-justify-center">
               {printStatusIcon(merkleRootIcon, merkleRootStatus)}
@@ -146,33 +247,63 @@ export default function TDHValidation({
           </tr>
         </tbody>
       </table>
+      <Tooltip
+        ref={copyTooltipRef}
+        imperativeModeOnly
+        place="top"
+        opacity={1}
+        variant="light"
+      />
+      <span className="tw-sr-only" role="status" aria-live="polite">
+        {copyAnnouncement}
+      </span>
     </div>
   );
 }
 
-function CopyIcon({ text }: { text: string }) {
-  const [isCopied, setIsCopied] = useState(false);
+function CopyableValue({
+  text,
+  children,
+  className = "",
+  textSize = "base",
+  onHover,
+  onLeave,
+  onFeedback,
+}: {
+  text: string;
+  children: ReactNode;
+  className?: string;
+  textSize?: "base" | "sm";
+  onHover: (anchorId: string) => void;
+  onLeave: () => void;
+  onFeedback: (anchorId: string, status: "copied" | "failed") => void;
+}) {
+  const anchorId = `tdh-copy-${useId().replaceAll(":", "")}`;
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(text);
-    setIsCopied(true);
-    setTimeout(() => setIsCopied(false), 500);
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      onFeedback(anchorId, "copied");
+    } catch {
+      onFeedback(anchorId, "failed");
+    }
   };
 
   return (
-    <>
-      <FontAwesomeIcon
-        className="tw-ml-2 tw-cursor-pointer tw-select-none"
-        icon={faCopy}
-        height={14}
-        color={isCopied ? "green" : "white"}
+    <span className="tw-min-w-0">
+      <button
+        id={anchorId}
+        type="button"
+        aria-label="Copy value"
+        className={`${className} ${textSize === "sm" ? "!tw-text-sm" : "tw-text-base"} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
+        onMouseEnter={() => onHover(anchorId)}
+        onMouseLeave={onLeave}
+        onFocus={() => onHover(anchorId)}
+        onBlur={onLeave}
         onClick={handleCopy}
-      />
-      {isCopied && (
-        <span className="tw-ml-2 tw-text-sm tw-font-light tw-text-emerald-400">
-          Copied!
-        </span>
-      )}
-    </>
+      >
+        {children}
+      </button>
+    </span>
   );
 }

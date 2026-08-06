@@ -17,16 +17,30 @@ export interface CoreWorkerMessageUpdate {
   statusPercentage?: number;
 }
 
+export interface CoreWorkerMessageDeferred {
+  message: string;
+}
+
 export type CoreWorkerMessage = {
   log?: CoreWorkerMessageLog;
   update?: CoreWorkerMessageUpdate;
-} & ({ log: CoreWorkerMessageLog } | { update: CoreWorkerMessageUpdate });
+  deferred?: CoreWorkerMessageDeferred;
+} & (
+  | { log: CoreWorkerMessageLog }
+  | { update: CoreWorkerMessageUpdate }
+  | { deferred: CoreWorkerMessageDeferred }
+);
 
 export const sendStatusUpdate = (
   parentPort: any,
   message: CoreWorkerMessage
 ) => {
   parentPort?.postMessage(message);
+};
+
+export const deferWorkerStart = (parentPort: any, message: string) => {
+  const workerMessage: CoreWorkerMessage = { deferred: { message } };
+  parentPort?.postMessage(workerMessage);
 };
 
 const logMessage = (parentPort: any, level: LogLevel, ...args: any[]) => {
