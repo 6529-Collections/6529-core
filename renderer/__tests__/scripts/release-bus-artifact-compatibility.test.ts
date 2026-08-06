@@ -189,18 +189,57 @@ function createStrictEvidence(root: string, mergeSha: string) {
   const evidenceRoot = path.join(root, "evidence-source");
   fs.mkdirSync(evidenceRoot);
   const policyBundle = `file\ta.cjs\t${"c".repeat(40)}\n`;
+  const baseSha = "a".repeat(40);
+  const museumSourceCommit = "f".repeat(40);
+  const museumSelectionUnsigned = {
+    activation: {
+      effective_mode: "full",
+      hold_state: "clear",
+      requested_mode: "full",
+      reason: "Immediate rollback switch requires every Museum pack.",
+    },
+    browser_scope: "all-museum-packs",
+    classification: {
+      tier: "P3",
+      base_sha: baseSha,
+      head_sha: mergeSha,
+    },
+    contract: "museum-release-selection-v1",
+    environment: "pr",
+    selected_packs: [
+      "test:e2e:museum-data-architecture",
+      "test:e2e:museum-institutional-practice",
+      "test:e2e:museum-about",
+      "test:e2e:museum-inside-system",
+      "test:e2e:museum-rights",
+    ],
+    source_commit: museumSourceCommit,
+    static_contracts: [
+      "__tests__/lib/museum/publication/corpusContracts.test.ts",
+    ],
+    static_scope: "full",
+  };
+  const museumReleaseSelection = {
+    ...museumSelectionUnsigned,
+    selection_digest: sha256(JSON.stringify(museumSelectionUnsigned)),
+  };
   const manifest = JSON.stringify({
     schema_version: 1,
     evidence_contract: "exact-merge-tree-pr-ci-v1",
     repository: "frontend",
     event: "pull_request",
     workflow: ".github/workflows/app-pr-ci.yml",
+    base_sha: baseSha,
     merge_sha: mergeSha,
     head_sha: "e".repeat(40),
     production_build_required: true,
     dependency_analysis_required: true,
     release_bus_contract_required: true,
     test_typecheck_required: true,
+    museum_browser_required: true,
+    museum_source_commit: museumSourceCommit,
+    museum_release_selection_digest: museumReleaseSelection.selection_digest,
+    museum_release_selection: museumReleaseSelection,
     policy_bundle_contract: "pr-ci-policy-bundle-v1",
     policy_bundle_digest: sha256(policyBundle),
     policy_bundle_line_count: 1,
@@ -216,16 +255,21 @@ function createStrictEvidence(root: string, mergeSha: string) {
       "related-jest-selection",
       "production-build-or-plan-not-required",
       "pr-ci-policy-bundle",
+      "museum-release-selection",
+      "museum-browser-qualification",
     ],
   });
   fs.writeFileSync(path.join(evidenceRoot, "manifest.json"), manifest);
   fs.writeFileSync(path.join(evidenceRoot, "policy-bundle.txt"), policyBundle);
-  fs.writeFileSync(
-    path.join(evidenceRoot, "SHA256SUMS"),
-    `${sha256(manifest)}  ./manifest.json\n${sha256(
-      policyBundle
-    )}  ./policy-bundle.txt\n`
+  const checksums = spawnSync(
+    "bash",
+    ["-c", "sha256sum ./manifest.json ./policy-bundle.txt"],
+    { cwd: evidenceRoot, encoding: "utf8" }
   );
+  if (checksums.status !== 0) {
+    throw new Error(`Unable to construct strict evidence: ${checksums.stderr}`);
+  }
+  fs.writeFileSync(path.join(evidenceRoot, "SHA256SUMS"), checksums.stdout);
   return evidenceRoot;
 }
 
@@ -248,10 +292,14 @@ if [ "\${MOCK_GH_FAILURE:-}" = missing ]; then
   echo 'HTTP 404 Not Found' >&2
   exit 1
 fi
-if [ "$1" = api ] && [[ "$2" == *"/artifacts?name="* ]]; then
+if [ "$1" = api ] && [[ "$2" == *"6529networkmuseum/git/ref/heads/main"* ]]; then
+  printf '{"object":{"type":"commit","sha":"%s"}}\n' "$MOCK_MUSEUM_SOURCE_SHA"
+elif [ "$1" = api ] && [[ "$2" == *"/artifacts?name="* ]]; then
   printf '{"artifacts":[{"expired":false,"name":"%s","digest":"sha256:%s"}]}\n' "$MOCK_ARTIFACT_NAME" "$MOCK_ARTIFACT_DIGEST"
 elif [ "$1" = api ]; then
-  printf '{"event":"pull_request","conclusion":"success","head_sha":"%s","path":".github/workflows/app-pr-ci.yml"}\n' "$MOCK_HEAD_SHA"
+  printf '{"event":"pull_request","conclusion":"success","head_sha":"%s","path":".github/workflows/app-pr-ci.yml","pull_requests":[{"base":{"sha":"%s"}}]}\n' "$MOCK_HEAD_SHA" "$MOCK_BASE_SHA"
+elif [ "$1" = issue ] && [ "$2" = list ]; then
+  printf '[]\n'
 elif [ "$1" = run ] && [ "$2" = download ]; then
   destination=""
   while [ "$#" -gt 0 ]; do
@@ -268,6 +316,66 @@ fi
   );
   fs.chmodSync(executable, 0o755);
   return bin;
+}
+
+function createMockMuseumSelectionTool(root: string) {
+  const executable = path.join(root, "museum-release-selection.cjs");
+  fs.writeFileSync(
+    executable,
+    `#!/usr/bin/env node
+"use strict";
+const crypto = require("node:crypto");
+const fs = require("node:fs");
+function sha256(value) {
+  return crypto.createHash("sha256").update(value).digest("hex");
+}
+function verifySelectionDigest(selection) {
+  if (!selection || typeof selection.selection_digest !== "string") return false;
+  const { selection_digest, ...unsigned } = selection;
+  return sha256(JSON.stringify(unsigned)) === selection_digest;
+}
+function option(name) {
+  const index = process.argv.indexOf(name);
+  return index === -1 ? "" : (process.argv[index + 1] || "");
+}
+if (require.main === module) {
+  const unsigned = {
+    activation: {
+      effective_mode: "full",
+      hold_state: option("--hold-state"),
+      requested_mode: option("--activation-mode"),
+      reason: "Immediate rollback switch requires every Museum pack.",
+    },
+    browser_scope: "all-museum-packs",
+    classification: {
+      tier: "P3",
+      base_sha: option("--base"),
+      head_sha: option("--head"),
+    },
+    contract: "museum-release-selection-v1",
+    environment: option("--environment"),
+    selected_packs: [
+      "test:e2e:museum-data-architecture",
+      "test:e2e:museum-institutional-practice",
+      "test:e2e:museum-about",
+      "test:e2e:museum-inside-system",
+      "test:e2e:museum-rights",
+    ],
+    source_commit: option("--source-commit"),
+    static_contracts: [
+      "__tests__/lib/museum/publication/corpusContracts.test.ts",
+    ],
+    static_scope: "full",
+  };
+  fs.writeFileSync(
+    option("--output"),
+    JSON.stringify({ ...unsigned, selection_digest: sha256(JSON.stringify(unsigned)) })
+  );
+}
+module.exports = { verifySelectionDigest };
+`
+  );
+  return executable;
 }
 
 function createMockCurl(bin: string) {
@@ -343,7 +451,7 @@ set -euo pipefail
 if [ "$*" = "exec node scripts/e2e-packs.cjs --capabilities" ]; then
   case "\${MOCK_RUNNER_CAPABILITY:-old}" in
     current)
-      printf '%s\\n' '{"contract":"release-bus-e2e-runner-capabilities.v1","features":{"readonly_pack_parallelism":{"version":1,"max_parallel":4},"pack_exclusion":{"version":1}}}'
+      printf '%s\\n' '{"contract":"release-bus-e2e-runner-capabilities.v1","features":{"readonly_pack_parallelism":{"version":1,"max_parallel":4},"pack_exclusion":{"version":1},"serial_failed_pack_retry":{"version":1,"max_retries":1}}}'
       exit 0
       ;;
     incompatible)
@@ -354,6 +462,11 @@ if [ "$*" = "exec node scripts/e2e-packs.cjs --capabilities" ]; then
       exit 2
       ;;
   esac
+fi
+if [ "$*" = "exec node -" ] && [ "\${MOCK_MUSEUM_PACK_ALIASES:-0}" = 1 ]; then
+  cat >/dev/null
+  printf '%s\\n' museum-about museum-institutional-practice museum-inside-system
+  exit 0
 fi
 printf '%s\\n' "$@" > "$MOCK_6529_ARGS"
 `
@@ -746,6 +859,9 @@ describe("Release Bus artifact rollout compatibility", () => {
           GITHUB_ENV: githubEnv,
           MOCK_6529_ARGS: invocation,
           MUSEUM_E2E_REQUIRED: "false",
+          MUSEUM_SELECTED_PACKS_JSON:
+            '["museum-data-architecture","museum-about","museum-rights"]',
+          MOCK_MUSEUM_PACK_ALIASES: "1",
           SELECTED_PACK: "all",
         };
 
@@ -762,14 +878,11 @@ describe("Release Bus artifact rollout compatibility", () => {
         expect(currentArgs).toEqual(
           expect.arrayContaining(["--trigger", "post-deploy"])
         );
-        if (environment === "staging") {
-          expect(currentArgs).toEqual(
-            expect.arrayContaining([
-              "--exclude-pack",
-              "museum-institutional-practice",
-            ])
-          );
-        }
+        expect(
+          currentArgs.flatMap((arg, index) =>
+            arg === "--exclude-pack" ? [currentArgs[index + 1]] : []
+          )
+        ).toEqual(["museum-institutional-practice", "museum-inside-system"]);
 
         expect(
           runShell(step.run!, {
@@ -898,6 +1011,7 @@ describe("Release Bus artifact rollout compatibility", () => {
       const evidenceSource = createStrictEvidence(root, mergeSha);
       const mockBin = createMockGh(root);
       createMockCurl(mockBin);
+      const museumSelectionTool = createMockMuseumSelectionTool(root);
       const curlPayload = path.join(root, "authorize-payload.json");
       const evidenceOutput = path.join(root, "evidence-output");
       const ghInvocations = path.join(root, "gh-invocations");
@@ -912,9 +1026,20 @@ describe("Release Bus artifact rollout compatibility", () => {
         GITHUB_OUTPUT: evidenceOutput,
         MOCK_ARTIFACT_DIGEST: artifactDigest,
         MOCK_ARTIFACT_NAME: artifactName,
+        MOCK_BASE_SHA: "a".repeat(40),
         MOCK_CURL_PAYLOAD: curlPayload,
         MOCK_EVIDENCE_SOURCE: evidenceSource,
         MOCK_HEAD_SHA: "e".repeat(40),
+        MOCK_MUSEUM_SOURCE_SHA: "f".repeat(40),
+        MUSEUM_RELEASE_SELECTION_TOOL: museumSelectionTool.replaceAll(
+          "\\",
+          "/"
+        ),
+        MUSEUM_RELEASE_TIER_MODE: "full",
+        MUSEUM_SELECTION_REPOSITORY_ROOT: root.replaceAll("\\", "/"),
+        MUSEUM_SELECTOR_NODE_PATH: path
+          .join(process.cwd(), "node_modules")
+          .replaceAll("\\", "/"),
         MOCK_GH_INVOCATIONS: ghInvocations,
         MOCK_MERGE_SHA: mergeSha,
         OPERATION_KEY: "rb2:compatibility:a1",
@@ -922,7 +1047,7 @@ describe("Release Bus artifact rollout compatibility", () => {
         REUSE_ARTIFACT_DIGEST: artifactDigest,
         REUSE_ARTIFACT_NAME: artifactName,
         REUSE_ARTIFACT_RUN_ID: "1234",
-        RUNNER_TEMP: path.join(root, "runner"),
+        RUNNER_TEMP: path.join(root, "runner").replaceAll("\\", "/"),
         SOURCE_REF: "release-bus-v2/compatibility",
         TRAIN_ID,
         TRAIN_REVISION: "1",
@@ -962,7 +1087,7 @@ describe("Release Bus artifact rollout compatibility", () => {
       });
       if (strictEvidenceResult.status !== 0) {
         throw new Error(
-          `strict evidence failed (${strictEvidenceResult.status}): ${strictEvidenceResult.stderr}`
+          `strict evidence failed (${strictEvidenceResult.status}): ${strictEvidenceResult.stderr}\nstdout: ${strictEvidenceResult.stdout}`
         );
       }
       expect(baseEnv.EXPECTED_SHA).not.toBe(baseEnv.MOCK_HEAD_SHA);
@@ -979,6 +1104,42 @@ describe("Release Bus artifact rollout compatibility", () => {
           env: { ...baseEnv, MOCK_HEAD_SHA: "a".repeat(40) },
         }).status
       ).not.toBe(0);
+      expect(
+        runShell(validateEvidence.run!, {
+          env: { ...baseEnv, MOCK_BASE_SHA: "b".repeat(40) },
+        }).status
+      ).not.toBe(0);
+      const strictManifestPath = path.join(evidenceSource, "manifest.json");
+      const strictChecksumsPath = path.join(evidenceSource, "SHA256SUMS");
+      const originalManifest = fs.readFileSync(strictManifestPath);
+      const originalChecksums = fs.readFileSync(strictChecksumsPath);
+      try {
+        const tamperedManifest = JSON.parse(originalManifest.toString("utf8"));
+        tamperedManifest.museum_release_selection.selected_packs = [];
+        const {
+          selection_digest: _discardedDigest,
+          ...tamperedSelectionUnsigned
+        } = tamperedManifest.museum_release_selection;
+        tamperedManifest.museum_release_selection.selection_digest = sha256(
+          JSON.stringify(tamperedSelectionUnsigned)
+        );
+        tamperedManifest.museum_release_selection_digest =
+          tamperedManifest.museum_release_selection.selection_digest;
+        fs.writeFileSync(strictManifestPath, JSON.stringify(tamperedManifest));
+        const tamperedChecksums = spawnSync(
+          "bash",
+          ["-c", "sha256sum ./manifest.json ./policy-bundle.txt"],
+          { cwd: evidenceSource, encoding: "utf8" }
+        );
+        expect(tamperedChecksums.status).toBe(0);
+        fs.writeFileSync(strictChecksumsPath, tamperedChecksums.stdout);
+        expect(
+          runShell(validateEvidence.run!, { env: baseEnv }).status
+        ).not.toBe(0);
+      } finally {
+        fs.writeFileSync(strictManifestPath, originalManifest);
+        fs.writeFileSync(strictChecksumsPath, originalChecksums);
+      }
       expect(
         runShell(validateLocal.run!, {
           env: {
