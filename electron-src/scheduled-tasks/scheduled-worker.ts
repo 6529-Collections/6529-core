@@ -10,11 +10,15 @@ import {
   ScheduledWorkerStatus,
   TransactionsWorkerScope,
 } from "../../shared/types";
-import { getTransactionMutationBlockReason } from "./transaction-mutation-guard";
+import {
+  canStartScheduledWorker,
+  getTransactionMutationBlockReason,
+} from "./transaction-mutation-guard";
 import type {
   TransactionMutationAction,
   WorkerStartGuard,
 } from "./transaction-mutation-guard";
+import { WorkerStartQueue } from "./worker-start-queue";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -26,6 +30,7 @@ export interface WorkerData {
 export interface TransactionsWorkerData extends WorkerData {
   scope?: TransactionsWorkerScope;
   block?: number;
+  checkpointBlock?: number;
 }
 
 export interface ResettableWorkerData extends WorkerData {
@@ -51,6 +56,8 @@ export class ScheduledWorker {
   protected logger: WorkerLogger;
   private task: cron.ScheduledTask | null = null;
   private startGuard: WorkerStartGuard | null = null;
+  private startQueue = new WorkerStartQueue();
+  private exitListeners: Array<() => void> = [];
   protected worker: Worker | null = null;
 
   protected update: CoreWorkerMessageUpdate = {
@@ -127,15 +134,22 @@ export class ScheduledWorker {
   }
 
   private startScheduledWorker() {
-    if (this.worker || !this.enabled) {
+    // Scheduled base runs and manual scoped runs share this worker slot. This
+    // serializes reconciliation/reset/ownership mutations against base sync.
+    if (!canStartScheduledWorker(!!this.worker, this.enabled)) {
+      return;
+    }
+    if (this.startQueue.isQueued()) {
+      this.retryQueuedStart();
       return;
     }
 
-    const blockedReason = this.startGuard?.();
+    const blockedReason = this.startGuard?.() ?? null;
     if (blockedReason) {
+      this.queueStart(blockedReason);
       this.logger.log(
         "info",
-        `Scheduled ${this.display} start skipped because ${blockedReason}`,
+        `Scheduled ${this.display} start queued because ${blockedReason}`,
       );
       return;
     }
@@ -145,6 +159,64 @@ export class ScheduledWorker {
 
   public setStartGuard(startGuard: WorkerStartGuard) {
     this.startGuard = startGuard;
+  }
+
+  public addExitListener(listener: () => void) {
+    this.exitListeners.push(listener);
+  }
+
+  public isStartQueued(): boolean {
+    return this.startQueue.isQueued();
+  }
+
+  private queueStart(blockedReason: string) {
+    this.setQueuedStatus(this.startQueue.queue(blockedReason));
+  }
+
+  private queueStartWithMessage(waitingMessage: string) {
+    this.setQueuedStatus(
+      this.startQueue.queueWaitingMessage(waitingMessage),
+    );
+  }
+
+  private setQueuedStatus(waitingMessage: string) {
+    this.update = {
+      status: ScheduledWorkerStatus.STARTING,
+      message: waitingMessage,
+      statusPercentage: 0,
+    };
+    this.postWorkerUpdate(
+      this.namespace,
+      this.update.status,
+      this.update.message,
+      this.update.action,
+      this.update.statusPercentage,
+    );
+  }
+
+  public retryQueuedStart() {
+    const blockedReason = this.startGuard?.() ?? null;
+    const retry = this.startQueue.retry(
+      !!this.worker,
+      this.enabled,
+      blockedReason,
+    );
+    if (retry.status === "blocked") {
+      this.update = {
+        status: ScheduledWorkerStatus.STARTING,
+        message: retry.waitingMessage,
+        statusPercentage: 0,
+      };
+      this.postWorkerUpdate(
+        this.namespace,
+        this.update.status,
+        this.update.message,
+        this.update.action,
+        this.update.statusPercentage,
+      );
+    } else if (retry.status === "ready") {
+      this.startWorker();
+    }
   }
 
   protected getWorkerUnavailableReason(): string | null {
@@ -169,11 +241,25 @@ export class ScheduledWorker {
   }
 
   public manualStart(): WorkerStartResult {
-    const blockedReason = this.getStartBlockReason();
-    if (blockedReason) {
+    if (this.startQueue.isQueued()) {
+      return {
+        status: true,
+        message: `${this.display} worker is already queued — ${this.update.message}`,
+      };
+    }
+    const unavailableReason = this.getWorkerUnavailableReason();
+    if (unavailableReason) {
       return {
         status: false,
-        message: blockedReason,
+        message: unavailableReason,
+      };
+    }
+    const blockedReason = this.startGuard?.();
+    if (blockedReason) {
+      this.queueStart(blockedReason);
+      return {
+        status: true,
+        message: `${this.display} worker queued — ${this.update.message}`,
       };
     }
     this.startWorker();
@@ -187,6 +273,7 @@ export class ScheduledWorker {
     if (this.worker) {
       return;
     }
+    this.startQueue.cancel();
 
     if (!workerData) {
       workerData = {
@@ -226,6 +313,8 @@ export class ScheduledWorker {
           this.update.action,
           this.update.statusPercentage,
         );
+      } else if (message.deferred) {
+        this.queueStartWithMessage(message.deferred.message);
       }
     });
 
@@ -239,8 +328,14 @@ export class ScheduledWorker {
       Logger.log(`[${this.namespace}]`, `Worker exited with code ${code}`);
       this.worker?.removeAllListeners();
       this.worker = null;
+      this.onWorkerExit();
+      for (const listener of this.exitListeners) {
+        listener();
+      }
     });
   }
+
+  protected onWorkerExit() {}
 
   public getNamespace(): string {
     return this.namespace;
@@ -294,6 +389,26 @@ export class ScheduledWorker {
   }
 
   public async manualStop() {
+    if (this.startQueue.isQueued() && !this.worker) {
+      // Cancelling a queued start is terminal user intent. No worker exits in
+      // this branch, so it intentionally does not trigger the exit-listener
+      // retry cascade.
+      this.startQueue.cancel();
+      this.update.status = ScheduledWorkerStatus.STOPPED;
+      this.update.message = "Queued worker start cancelled";
+      this.update.statusPercentage = 0;
+      this.postWorkerUpdate(
+        this.namespace,
+        this.update.status,
+        this.update.message,
+        "",
+        this.update.statusPercentage,
+      );
+      return {
+        status: true,
+        message: "Queued worker start cancelled",
+      };
+    }
     await this.worker?.terminate();
     this.worker?.removeAllListeners();
     this.worker = null;
@@ -316,6 +431,7 @@ export class ScheduledWorker {
 
 export class TransactionsScheduledWorker extends ScheduledWorker {
   private mutationGuard: WorkerStartGuard | null = null;
+  private mutationRunning = false;
 
   constructor(
     rpcUrl: string | null,
@@ -355,6 +471,24 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     this.mutationGuard = mutationGuard;
   }
 
+  public isMutationRunning(): boolean {
+    return this.mutationRunning;
+  }
+
+  protected override onWorkerExit() {
+    this.mutationRunning = false;
+  }
+
+  private startMutationWorker(workerData: TransactionsWorkerData) {
+    this.mutationRunning = true;
+    try {
+      this.startWorker(workerData);
+    } catch (error) {
+      this.mutationRunning = false;
+      throw error;
+    }
+  }
+
   private getMutationBlockReason(
     action: TransactionMutationAction,
   ): string | null {
@@ -383,7 +517,7 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       block,
     } as TransactionsWorkerData;
 
-    this.startWorker(workerData);
+    this.startMutationWorker(workerData);
 
     return {
       status: true,
@@ -408,11 +542,43 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       scope: TransactionsWorkerScope.RECALCULATE_OWNERS,
     } as TransactionsWorkerData;
 
-    this.startWorker(workerData);
+    this.startMutationWorker(workerData);
 
     return {
       status: true,
-      message: "Owner recalculation started",
+      message: "Ownership rebuild started",
+    };
+  }
+
+  public async reconcileTransactions(
+    fromBlock: number,
+    checkpointBlock: number,
+  ) {
+    // getMutationBlockReason checks this ScheduledWorker's active worker before
+    // the TDH guard, so reconciliation cannot overlap its scheduled base run.
+    const blockedReason = this.getMutationBlockReason("reconcile");
+    if (blockedReason) {
+      return {
+        status: false,
+        message: blockedReason,
+      };
+    }
+
+    const workerData: TransactionsWorkerData = {
+      rpcUrl: this.rpcUrl,
+      dbParams: getBaseDbParams(),
+      blockRange: this.blockRange,
+      maxConcurrentRequests: this.maxConcurrentRequests,
+      scope: TransactionsWorkerScope.RECONCILE,
+      block: fromBlock,
+      checkpointBlock,
+    } as TransactionsWorkerData;
+
+    this.startMutationWorker(workerData);
+
+    return {
+      status: true,
+      message: `Transaction reconciliation from block ${fromBlock} through checkpoint ${checkpointBlock} started`,
     };
   }
 }

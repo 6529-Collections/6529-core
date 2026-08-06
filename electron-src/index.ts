@@ -30,12 +30,17 @@ import {
   IMPORT_SEED_WALLET,
   MANUAL_START_WORKER,
   RECALCULATE_TRANSACTIONS_OWNERS,
+  RECONCILE_TRANSACTIONS,
   RESET_TRANSACTIONS_TO_BLOCK,
   RESET_WORKER,
   SET_RPC_PROVIDER_ACTIVE,
   STOP_WORKER,
 } from "../electron-constants";
-import { ScheduledWorkerStatus, SeedWalletRequest } from "../shared/types";
+import {
+  ScheduledWorkerStatus,
+  SeedWalletRequest,
+  TRANSACTIONS_START_BLOCK,
+} from "../shared/types";
 import type { NotificationNavigationContext } from "../shared/preload-types";
 import {
   addRpcProvider,
@@ -53,6 +58,7 @@ import {
 } from "./db/db";
 import { runCoreMigrations } from "./db/db.migrations";
 import { RPCProvider } from "./db/entities/IRpcProvider";
+import { TransactionBlock } from "./db/entities/ITransaction";
 import IPFSServer from "./ipfs/ipfs.server";
 import { menuTemplate } from "./menu";
 import { sanitizeNativeSessionResponse } from "./native-auth-session";
@@ -2132,6 +2138,44 @@ ipcMain.on(RECALCULATE_TRANSACTIONS_OWNERS, (event) => {
       event.returnValue = { error: !data.status, data: data.message };
     });
   }
+});
+
+ipcMain.handle(RECONCILE_TRANSACTIONS, async (_event, args: [number]) => {
+  const [fromBlock] = args;
+  Logger.info(`Reconciling transactions from block ${fromBlock}`);
+  if (!Number.isInteger(fromBlock) || fromBlock < TRANSACTIONS_START_BLOCK) {
+    return {
+      error: true,
+      data: `Reconciliation block must be an integer at or above ${TRANSACTIONS_START_BLOCK}`,
+    };
+  }
+  const transactionBlock = await getDb()
+    .getRepository(TransactionBlock)
+    .findOne({ where: { id: 1 } });
+  if (!transactionBlock) {
+    return {
+      error: true,
+      data: "Transactions must be synced before reconciliation",
+    };
+  }
+  if (fromBlock > transactionBlock.block) {
+    return {
+      error: true,
+      data: `Reconciliation block cannot exceed the local transaction block ${transactionBlock.block}`,
+    };
+  }
+  const transactionsWorker = scheduledWorkers.find(
+    (worker) => worker instanceof TransactionsScheduledWorker,
+  ) as TransactionsScheduledWorker | undefined;
+  if (!transactionsWorker) {
+    return { error: true, data: "Transactions worker not found" };
+  }
+
+  const data = await transactionsWorker.reconcileTransactions(
+    fromBlock,
+    transactionBlock.block,
+  );
+  return { error: !data.status, data: data.message };
 });
 
 ipcMain.on(RESET_WORKER, (event, args: [string]) => {

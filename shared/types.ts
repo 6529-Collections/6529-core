@@ -49,6 +49,7 @@ export enum ScheduledWorkerDisplay {
 export enum TransactionsWorkerScope {
   RECALCULATE_OWNERS,
   RESET_TO_BLOCK,
+  RECONCILE,
 }
 
 export const TRANSACTIONS_START_BLOCK = 13360860;
