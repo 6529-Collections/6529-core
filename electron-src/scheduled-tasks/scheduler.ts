@@ -190,6 +190,10 @@ export function startSchedulers(
 
   for (const completedWorker of scheduledWorkers) {
     completedWorker.addExitListener(() => {
+      // Resume only starts that were actually requested while blocked. A
+      // transaction mutation marks TDH stale, but does not itself request an
+      // automatic TDH calculation; a later manual or scheduled start runs
+      // normally through the same guard.
       for (const queuedWorker of scheduledWorkers) {
         if (queuedWorker !== completedWorker) {
           queuedWorker.retryQueuedStart();

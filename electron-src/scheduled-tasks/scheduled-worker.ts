@@ -390,6 +390,9 @@ export class ScheduledWorker {
 
   public async manualStop() {
     if (this.startQueue.isQueued() && !this.worker) {
+      // Cancelling a queued start is terminal user intent. No worker exits in
+      // this branch, so it intentionally does not trigger the exit-listener
+      // retry cascade.
       this.startQueue.cancel();
       this.update.status = ScheduledWorkerStatus.STOPPED;
       this.update.message = "Queued worker start cancelled";

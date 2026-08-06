@@ -7,6 +7,7 @@ import {
   getTransactionMutationBlockReason,
 } from "./transaction-mutation-guard";
 import type { TransactionMutationAction } from "./transaction-mutation-guard";
+import { WorkerStartQueue } from "./worker-start-queue";
 
 describe("transaction mutation guard", () => {
   it("blocks a scheduled base run while a scoped worker holds the slot", () => {
@@ -68,5 +69,25 @@ describe("transaction mutation guard", () => {
 
     isTransactionMutationRunning = false;
     assert.equal(guard(), null);
+  });
+
+  it("releases a requested TDH start when the transaction mutation finishes", () => {
+    let isTransactionMutationRunning = true;
+    const guard = createTransactionMutationTdhGuard(
+      () => isTransactionMutationRunning,
+    );
+    const queue = new WorkerStartQueue();
+    const blockedReason = guard();
+
+    assert.ok(blockedReason);
+    queue.queue(blockedReason);
+    assert.deepEqual(queue.retry(false, true, guard()), {
+      status: "blocked",
+      waitingMessage: "Waiting for transaction history update to finish",
+    });
+
+    isTransactionMutationRunning = false;
+    assert.deepEqual(queue.retry(false, true, guard()), { status: "ready" });
+    assert.equal(queue.isQueued(), false);
   });
 });
