@@ -194,17 +194,6 @@ export function WorkerCard({
       }
     }
 
-    if (task.status?.status === ScheduledWorkerStatus.COMPLETED) {
-      return (
-        <span
-          role="status"
-          className="tw-block tw-w-full tw-whitespace-normal tw-break-words tw-text-left tw-text-sm tw-font-light tw-text-iron-400"
-        >
-          {task.status.message}
-        </span>
-      );
-    }
-
     const printProgress = () => {
       let p = <></>;
 
@@ -221,9 +210,11 @@ export function WorkerCard({
     };
 
     const progressBg =
-      task.status?.status === ScheduledWorkerStatus.ERROR
-        ? "tw-bg-red-500"
-        : "tw-bg-primary-500";
+      task.status?.status === ScheduledWorkerStatus.COMPLETED
+        ? "tw-bg-emerald-500"
+        : task.status?.status === ScheduledWorkerStatus.ERROR
+          ? "tw-bg-red-500"
+          : "tw-bg-primary-500";
     const progressNowValue = task.status?.statusPercentage ?? 100;
     let progressNowLabel;
     if (task.status?.statusPercentage !== undefined) {
@@ -231,8 +222,8 @@ export function WorkerCard({
     }
 
     return (
-      <div className="tw-w-full">
-        <div className="tw-flex tw-items-center tw-justify-start tw-gap-2">
+      <span>
+        <div className="tw-flex tw-items-center tw-justify-end tw-gap-2">
           {progressNowLabel !== undefined && (
             <span className="tw-font-light tw-text-iron-400">
               {(Math.floor(progressNowLabel * 100) / 100).toLocaleString(
@@ -247,16 +238,16 @@ export function WorkerCard({
           )}
           <div className="tw-h-4 tw-w-[20vw] tw-min-w-0 tw-overflow-hidden tw-rounded-full tw-bg-iron-800">
             <div
-              className={`tw-h-full ${progressBg} ${isWorkerActive ? "tw-animate-pulse" : ""}`}
+              className={`tw-h-full ${progressBg} ${task.status?.status === ScheduledWorkerStatus.RUNNING ? "tw-animate-pulse" : ""}`}
               style={{ width: `${progressNowValue}%` }}
             />
           </div>
         </div>
-        <div className="tw-mt-1 tw-flex tw-flex-wrap tw-text-left tw-text-sm tw-font-light tw-text-iron-400">
+        <div className="tw-mt-1 tw-flex tw-text-right tw-text-sm tw-font-light tw-text-iron-400">
           <span>{task.status?.message}</span>
           {printProgress()}
         </div>
-      </div>
+      </span>
     );
   };
 
@@ -522,7 +513,7 @@ export function WorkerCard({
     <div className="tw-pb-4">
       <div className="tw-rounded-xl tw-bg-iron-950 tw-p-5 tw-ring-1 tw-ring-inset tw-ring-iron-800">
         <div
-          className={`tw-flex tw-gap-2 ${isMobile ? "tw-flex-col tw-items-center" : "tw-flex-row tw-items-start"}`}
+          className={`tw-flex tw-flex-wrap tw-gap-2 tw-pb-2 ${isMobile ? "tw-flex-col tw-items-center" : "tw-flex-row tw-items-start tw-justify-between"}`}
         >
           <div
             className={`tw-flex tw-flex-col tw-gap-1 ${isMobile ? "tw-items-center" : "tw-items-start"}`}
@@ -544,11 +535,11 @@ export function WorkerCard({
               </span>
             ) : null}
           </div>
-        </div>
-        <div
-          className={`tw-flex tw-min-h-[3.5rem] tw-w-full tw-min-w-0 tw-items-center tw-pb-2 tw-pt-2 ${isMobile ? "tw-justify-center" : "tw-justify-start"}`}
-        >
-          {printStatus()}
+          <div
+            className={`tw-flex tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-items-center" : "tw-items-end"}`}
+          >
+            {printStatus()}
+          </div>
         </div>
         <div className="tw-mt-3">
           <LogsViewer
