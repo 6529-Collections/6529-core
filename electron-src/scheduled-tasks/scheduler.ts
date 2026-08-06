@@ -188,6 +188,16 @@ export function startSchedulers(
     createTdhTransactionMutationGuard(() => tdhWorker?.isRunning() ?? false),
   );
 
+  for (const completedWorker of scheduledWorkers) {
+    completedWorker.addExitListener(() => {
+      for (const queuedWorker of scheduledWorkers) {
+        if (queuedWorker !== completedWorker) {
+          queuedWorker.retryQueuedStart();
+        }
+      }
+    });
+  }
+
   for (const scheduledWorker of scheduledWorkers) {
     if (
       scheduledWorker.isEnabled() &&

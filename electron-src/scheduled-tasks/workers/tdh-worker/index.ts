@@ -2,6 +2,7 @@ import { parentPort, workerData } from "worker_threads";
 import { WorkerData } from "../../scheduled-worker";
 import { DataSourceOptions } from "typeorm";
 import {
+  deferWorkerStart,
   getBlockTimestamp,
   logInfo,
   sendStatusUpdate,
@@ -40,6 +41,7 @@ import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
 import { ethers } from "ethers";
 import { getLatestNFTDBlock } from "../nftdelegation-worker/nftdelegation-worker.db";
+import { getTdhCheckpointWaitingMessage } from "./tdh-readiness";
 
 const data: WorkerData = workerData;
 
@@ -76,6 +78,9 @@ class TDHWorker extends CoreWorker {
     );
     logInfo(parentPort, "Block before", blockBefore.number);
     const block = blockBefore.number;
+    if (await this.deferUntilRequiredCheckpointsAreReady(block)) {
+      return;
+    }
     await this.validateBlock(block);
     const tdhResult = await this.updateTDH(block, lastTDHCalc);
     await setTdhRecalculationNeeded(this.getDb().manager, false);
@@ -91,6 +96,25 @@ class TDHWorker extends CoreWorker {
         }`,
       },
     });
+  }
+
+  private async deferUntilRequiredCheckpointsAreReady(
+    block: number,
+  ): Promise<boolean> {
+    const [latestTransactionsBlock, latestNFTDBlock] = await Promise.all([
+      getLatestTransactionsBlock(this.getDb().manager),
+      getLatestNFTDBlock(this.getDb()),
+    ]);
+    const waitingMessage = getTdhCheckpointWaitingMessage(
+      block,
+      latestTransactionsBlock,
+      latestNFTDBlock,
+    );
+    if (waitingMessage) {
+      deferWorkerStart(parentPort, waitingMessage);
+      return true;
+    }
+    return false;
   }
 
   async validateBlock(block: number) {

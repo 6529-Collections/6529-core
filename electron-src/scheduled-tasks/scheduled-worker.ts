@@ -18,6 +18,7 @@ import type {
   TransactionMutationAction,
   WorkerStartGuard,
 } from "./transaction-mutation-guard";
+import { WorkerStartQueue } from "./worker-start-queue";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -55,6 +56,8 @@ export class ScheduledWorker {
   protected logger: WorkerLogger;
   private task: cron.ScheduledTask | null = null;
   private startGuard: WorkerStartGuard | null = null;
+  private startQueue = new WorkerStartQueue();
+  private exitListeners: Array<() => void> = [];
   protected worker: Worker | null = null;
 
   protected update: CoreWorkerMessageUpdate = {
@@ -136,12 +139,17 @@ export class ScheduledWorker {
     if (!canStartScheduledWorker(!!this.worker, this.enabled)) {
       return;
     }
+    if (this.startQueue.isQueued()) {
+      this.retryQueuedStart();
+      return;
+    }
 
-    const blockedReason = this.startGuard?.();
+    const blockedReason = this.startGuard?.() ?? null;
     if (blockedReason) {
+      this.queueStart(blockedReason);
       this.logger.log(
         "info",
-        `Scheduled ${this.display} start skipped because ${blockedReason}`,
+        `Scheduled ${this.display} start queued because ${blockedReason}`,
       );
       return;
     }
@@ -151,6 +159,64 @@ export class ScheduledWorker {
 
   public setStartGuard(startGuard: WorkerStartGuard) {
     this.startGuard = startGuard;
+  }
+
+  public addExitListener(listener: () => void) {
+    this.exitListeners.push(listener);
+  }
+
+  public isStartQueued(): boolean {
+    return this.startQueue.isQueued();
+  }
+
+  private queueStart(blockedReason: string) {
+    this.setQueuedStatus(this.startQueue.queue(blockedReason));
+  }
+
+  private queueStartWithMessage(waitingMessage: string) {
+    this.setQueuedStatus(
+      this.startQueue.queueWaitingMessage(waitingMessage),
+    );
+  }
+
+  private setQueuedStatus(waitingMessage: string) {
+    this.update = {
+      status: ScheduledWorkerStatus.STARTING,
+      message: waitingMessage,
+      statusPercentage: 0,
+    };
+    this.postWorkerUpdate(
+      this.namespace,
+      this.update.status,
+      this.update.message,
+      this.update.action,
+      this.update.statusPercentage,
+    );
+  }
+
+  public retryQueuedStart() {
+    const blockedReason = this.startGuard?.() ?? null;
+    const retry = this.startQueue.retry(
+      !!this.worker,
+      this.enabled,
+      blockedReason,
+    );
+    if (retry.status === "blocked") {
+      this.update = {
+        status: ScheduledWorkerStatus.STARTING,
+        message: retry.waitingMessage,
+        statusPercentage: 0,
+      };
+      this.postWorkerUpdate(
+        this.namespace,
+        this.update.status,
+        this.update.message,
+        this.update.action,
+        this.update.statusPercentage,
+      );
+    } else if (retry.status === "ready") {
+      this.startWorker();
+    }
   }
 
   protected getWorkerUnavailableReason(): string | null {
@@ -175,11 +241,25 @@ export class ScheduledWorker {
   }
 
   public manualStart(): WorkerStartResult {
-    const blockedReason = this.getStartBlockReason();
-    if (blockedReason) {
+    if (this.startQueue.isQueued()) {
+      return {
+        status: true,
+        message: `${this.display} worker is already queued — ${this.update.message}`,
+      };
+    }
+    const unavailableReason = this.getWorkerUnavailableReason();
+    if (unavailableReason) {
       return {
         status: false,
-        message: blockedReason,
+        message: unavailableReason,
+      };
+    }
+    const blockedReason = this.startGuard?.();
+    if (blockedReason) {
+      this.queueStart(blockedReason);
+      return {
+        status: true,
+        message: `${this.display} worker queued — ${this.update.message}`,
       };
     }
     this.startWorker();
@@ -193,6 +273,7 @@ export class ScheduledWorker {
     if (this.worker) {
       return;
     }
+    this.startQueue.cancel();
 
     if (!workerData) {
       workerData = {
@@ -232,6 +313,8 @@ export class ScheduledWorker {
           this.update.action,
           this.update.statusPercentage,
         );
+      } else if (message.deferred) {
+        this.queueStartWithMessage(message.deferred.message);
       }
     });
 
@@ -243,9 +326,12 @@ export class ScheduledWorker {
     this.worker.on("exit", (code) => {
       this.logger.log("info", `Worker exited with code ${code}`);
       Logger.log(`[${this.namespace}]`, `Worker exited with code ${code}`);
-      this.onWorkerExit();
       this.worker?.removeAllListeners();
       this.worker = null;
+      this.onWorkerExit();
+      for (const listener of this.exitListeners) {
+        listener();
+      }
     });
   }
 
@@ -303,6 +389,23 @@ export class ScheduledWorker {
   }
 
   public async manualStop() {
+    if (this.startQueue.isQueued() && !this.worker) {
+      this.startQueue.cancel();
+      this.update.status = ScheduledWorkerStatus.STOPPED;
+      this.update.message = "Queued worker start cancelled";
+      this.update.statusPercentage = 0;
+      this.postWorkerUpdate(
+        this.namespace,
+        this.update.status,
+        this.update.message,
+        "",
+        this.update.statusPercentage,
+      );
+      return {
+        status: true,
+        message: "Queued worker start cancelled",
+      };
+    }
     await this.worker?.terminate();
     this.worker?.removeAllListeners();
     this.worker = null;
