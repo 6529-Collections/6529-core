@@ -10,6 +10,7 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { ReactNode, useEffect, useId, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
+import type { TooltipRefProps } from "react-tooltip";
 import { TDHInfo } from "../eth-scanner/Workers";
 
 export default function TDHValidation({
@@ -23,6 +24,12 @@ export default function TDHValidation({
     block: number;
     merkle_root: string;
   }>();
+  const copyTooltipRef = useRef<TooltipRefProps>(null);
+  const copyFeedbackTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
+  const isCopyFeedbackVisible = useRef(false);
+  const [copyAnnouncement, setCopyAnnouncement] = useState("");
 
   const fetchRemote = () => {
     fetch(`${publicEnv.API_ENDPOINT}/oracle/tdh/total`)
@@ -36,6 +43,50 @@ export default function TDHValidation({
   useEffect(() => {
     fetchRemote();
   }, [localInfo]);
+
+  useEffect(
+    () => () => {
+      if (copyFeedbackTimer.current) {
+        clearTimeout(copyFeedbackTimer.current);
+      }
+    },
+    []
+  );
+
+  const showCopyHover = (anchorId: string) => {
+    if (isCopyFeedbackVisible.current) {
+      return;
+    }
+    copyTooltipRef.current?.open({
+      anchorSelect: `#${anchorId}`,
+      content: "Click to copy",
+      delay: 150,
+    });
+  };
+
+  const hideCopyHover = () => {
+    if (!isCopyFeedbackVisible.current) {
+      copyTooltipRef.current?.close();
+    }
+  };
+
+  const showCopyFeedback = (anchorId: string, status: "copied" | "failed") => {
+    const message = status === "copied" ? "Copied" : "Copy failed";
+    isCopyFeedbackVisible.current = true;
+    setCopyAnnouncement(message);
+    if (copyFeedbackTimer.current) {
+      clearTimeout(copyFeedbackTimer.current);
+    }
+    copyTooltipRef.current?.open({
+      anchorSelect: `#${anchorId}`,
+      content: message,
+    });
+    copyFeedbackTimer.current = setTimeout(() => {
+      isCopyFeedbackVisible.current = false;
+      setCopyAnnouncement("");
+      copyTooltipRef.current?.close();
+    }, 2000);
+  };
 
   function printStatusIcon(icon: IconProp, status: string) {
     return (
@@ -91,7 +142,12 @@ export default function TDHValidation({
             <td>TDH</td>
             <td>
               {localInfo?.totalTDH !== undefined && (
-                <CopyableValue text={localInfo.totalTDH.toString()}>
+                <CopyableValue
+                  text={localInfo.totalTDH.toString()}
+                  onHover={showCopyHover}
+                  onLeave={hideCopyHover}
+                  onFeedback={showCopyFeedback}
+                >
                   {localInfo.totalTDH.toLocaleString()}
                 </CopyableValue>
               )}
@@ -99,7 +155,12 @@ export default function TDHValidation({
             <td>
               {isFetchingRemote ? remoteShimmer : (
                 remoteInfo?.tdh !== undefined && (
-                  <CopyableValue text={remoteInfo.tdh.toString()}>
+                  <CopyableValue
+                    text={remoteInfo.tdh.toString()}
+                    onHover={showCopyHover}
+                    onLeave={hideCopyHover}
+                    onFeedback={showCopyFeedback}
+                  >
                     {remoteInfo.tdh.toLocaleString()}
                   </CopyableValue>
                 )
@@ -115,7 +176,12 @@ export default function TDHValidation({
             <td>Last Block</td>
             <td>
               {localInfo?.block !== undefined && (
-                <CopyableValue text={localInfo.block.toString()}>
+                <CopyableValue
+                  text={localInfo.block.toString()}
+                  onHover={showCopyHover}
+                  onLeave={hideCopyHover}
+                  onFeedback={showCopyFeedback}
+                >
                   {localInfo.block}
                 </CopyableValue>
               )}
@@ -123,7 +189,12 @@ export default function TDHValidation({
             <td>
               {isFetchingRemote ? remoteShimmer : (
                 remoteInfo?.block !== undefined && (
-                  <CopyableValue text={remoteInfo.block.toString()}>
+                  <CopyableValue
+                    text={remoteInfo.block.toString()}
+                    onHover={showCopyHover}
+                    onLeave={hideCopyHover}
+                    onFeedback={showCopyFeedback}
+                  >
                     {remoteInfo.block}
                   </CopyableValue>
                 )
@@ -142,6 +213,9 @@ export default function TDHValidation({
                 <CopyableValue
                   text={localInfo.merkleRoot}
                   className="tw-min-w-0 tw-break-all"
+                  onHover={showCopyHover}
+                  onLeave={hideCopyHover}
+                  onFeedback={showCopyFeedback}
                 >
                   {localInfo.merkleRoot}
                 </CopyableValue>
@@ -153,6 +227,9 @@ export default function TDHValidation({
                   <CopyableValue
                     text={remoteInfo.merkle_root}
                     className="tw-min-w-0 tw-break-all"
+                    onHover={showCopyHover}
+                    onLeave={hideCopyHover}
+                    onFeedback={showCopyFeedback}
                   >
                     {remoteInfo.merkle_root}
                   </CopyableValue>
@@ -168,6 +245,16 @@ export default function TDHValidation({
           </tr>
         </tbody>
       </table>
+      <Tooltip
+        ref={copyTooltipRef}
+        imperativeModeOnly
+        place="top"
+        opacity={1}
+        variant="light"
+      />
+      <span className="tw-sr-only" role="status" aria-live="polite">
+        {copyAnnouncement}
+      </span>
     </div>
   );
 }
@@ -176,76 +263,43 @@ function CopyableValue({
   text,
   children,
   className = "",
+  onHover,
+  onLeave,
+  onFeedback,
 }: {
   text: string;
   children: ReactNode;
   className?: string;
+  onHover: (anchorId: string) => void;
+  onLeave: () => void;
+  onFeedback: (anchorId: string, status: "copied" | "failed") => void;
 }) {
-  const tooltipId = `tdh-copy-${useId().replaceAll(":", "")}`;
-  const [copyStatus, setCopyStatus] = useState<
-    "idle" | "copied" | "failed"
-  >("idle");
-  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
-    undefined
-  );
-
-  useEffect(
-    () => () => {
-      if (resetTimer.current) {
-        clearTimeout(resetTimer.current);
-      }
-    },
-    []
-  );
-
-  const showTransientCopyStatus = (status: "copied" | "failed") => {
-    setCopyStatus(status);
-    if (resetTimer.current) {
-      clearTimeout(resetTimer.current);
-    }
-    resetTimer.current = setTimeout(() => setCopyStatus("idle"), 1500);
-  };
+  const anchorId = `tdh-copy-${useId().replaceAll(":", "")}`;
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      showTransientCopyStatus("copied");
+      onFeedback(anchorId, "copied");
     } catch {
-      showTransientCopyStatus("failed");
+      onFeedback(anchorId, "failed");
     }
   };
-
-  const copyStatusMessage =
-    copyStatus === "copied"
-      ? "Copied"
-      : copyStatus === "failed"
-        ? "Copy failed"
-        : "Click to copy";
 
   return (
     <span className="tw-min-w-0">
       <button
+        id={anchorId}
         type="button"
         aria-label="Copy value"
-        data-tooltip-id={tooltipId}
         className={`${className} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] tw-text-inherit focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
+        onMouseEnter={() => onHover(anchorId)}
+        onMouseLeave={onLeave}
+        onFocus={() => onHover(anchorId)}
+        onBlur={onLeave}
         onClick={handleCopy}
       >
         {children}
       </button>
-      <Tooltip
-        id={tooltipId}
-        delayShow={150}
-        place="top"
-        opacity={1}
-        variant="light"
-        {...(copyStatus !== "idle" ? { isOpen: true } : {})}
-      >
-        {copyStatusMessage}
-      </Tooltip>
-      <span className="tw-sr-only" role="status" aria-live="polite">
-        {copyStatus === "idle" ? "" : copyStatusMessage}
-      </span>
     </span>
   );
 }
