@@ -213,6 +213,7 @@ export default function TDHValidation({
                 <CopyableValue
                   text={localInfo.merkleRoot}
                   className="tw-min-w-0 tw-break-all"
+                  textSize="sm"
                   onHover={showCopyHover}
                   onLeave={hideCopyHover}
                   onFeedback={showCopyFeedback}
@@ -227,6 +228,7 @@ export default function TDHValidation({
                   <CopyableValue
                     text={remoteInfo.merkle_root}
                     className="tw-min-w-0 tw-break-all"
+                    textSize="sm"
                     onHover={showCopyHover}
                     onLeave={hideCopyHover}
                     onFeedback={showCopyFeedback}
@@ -263,6 +265,7 @@ function CopyableValue({
   text,
   children,
   className = "",
+  textSize = "base",
   onHover,
   onLeave,
   onFeedback,
@@ -270,6 +273,7 @@ function CopyableValue({
   text: string;
   children: ReactNode;
   className?: string;
+  textSize?: "base" | "sm";
   onHover: (anchorId: string) => void;
   onLeave: () => void;
   onFeedback: (anchorId: string, status: "copied" | "failed") => void;
@@ -291,7 +295,7 @@ function CopyableValue({
         id={anchorId}
         type="button"
         aria-label="Copy value"
-        className={`${className} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] tw-text-inherit focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
+        className={`${className} ${textSize === "sm" ? "tw-text-sm" : "tw-text-base"} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
         onMouseEnter={() => onHover(anchorId)}
         onMouseLeave={onLeave}
         onFocus={() => onHover(anchorId)}
