@@ -431,7 +431,6 @@ export class TransactionsWorker extends CoreWorker {
       await sleep(250);
     }
 
-    const repairCount = totals.missing + totals.inconsistent + totals.orphaned;
     const summary =
       `Scanned ${totals.scanned.toLocaleString()} | ` +
       `Correct ${totals.unchanged.toLocaleString()} | ` +
@@ -443,8 +442,7 @@ export class TransactionsWorker extends CoreWorker {
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
-        message:
-          repairCount > 0 ? `${summary} | TDH recalculation required` : summary,
+        message: summary,
         statusPercentage: 100,
       },
     });
