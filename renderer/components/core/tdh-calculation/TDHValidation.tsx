@@ -295,7 +295,7 @@ function CopyableValue({
         id={anchorId}
         type="button"
         aria-label="Copy value"
-        className={`${className} ${textSize === "sm" ? "tw-text-sm" : "tw-text-base"} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
+        className={`${className} ${textSize === "sm" ? "!tw-text-sm" : "tw-text-base"} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
         onMouseEnter={() => onHover(anchorId)}
         onMouseLeave={onLeave}
         onFocus={() => onHover(anchorId)}
