@@ -4,12 +4,12 @@ import { publicEnv } from "@/config/env";
 import { IconProp } from "@fortawesome/fontawesome-svg-core";
 import {
   faCheckCircle,
-  faCopy,
   faMinusCircle,
   faXmarkCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useEffect, useState } from "react";
+import { ReactNode, useEffect, useId, useRef, useState } from "react";
+import { Tooltip } from "react-tooltip";
 import { TDHInfo } from "../eth-scanner/Workers";
 
 export default function TDHValidation({
@@ -90,17 +90,19 @@ export default function TDHValidation({
           <tr>
             <td>TDH</td>
             <td>
-              {localInfo?.totalTDH?.toLocaleString()}{" "}
-              {localInfo?.totalTDH && (
-                <CopyIcon text={localInfo.totalTDH.toString()} />
+              {localInfo?.totalTDH !== undefined && (
+                <CopyableValue text={localInfo.totalTDH.toString()}>
+                  {localInfo.totalTDH.toLocaleString()}
+                </CopyableValue>
               )}
             </td>
             <td>
               {isFetchingRemote ? remoteShimmer : (
-                <>
-                  {remoteInfo?.tdh?.toLocaleString()}
-                  {remoteInfo?.tdh && <CopyIcon text={remoteInfo.tdh.toString()} />}
-                </>
+                remoteInfo?.tdh !== undefined && (
+                  <CopyableValue text={remoteInfo.tdh.toString()}>
+                    {remoteInfo.tdh.toLocaleString()}
+                  </CopyableValue>
+                )
               )}
             </td>
             <td className="tw-justify-center">
@@ -112,19 +114,19 @@ export default function TDHValidation({
           <tr>
             <td>Last Block</td>
             <td>
-              {localInfo?.block}
-              {localInfo?.block && (
-                <CopyIcon text={localInfo.block.toString()} />
+              {localInfo?.block !== undefined && (
+                <CopyableValue text={localInfo.block.toString()}>
+                  {localInfo.block}
+                </CopyableValue>
               )}
             </td>
             <td>
               {isFetchingRemote ? remoteShimmer : (
-                <>
-                  {remoteInfo?.block}
-                  {remoteInfo?.block && (
-                    <CopyIcon text={remoteInfo.block.toString()} />
-                  )}
-                </>
+                remoteInfo?.block !== undefined && (
+                  <CopyableValue text={remoteInfo.block.toString()}>
+                    {remoteInfo.block}
+                  </CopyableValue>
+                )
               )}
             </td>
             <td className="tw-justify-center">
@@ -136,23 +138,27 @@ export default function TDHValidation({
           <tr>
             <td>Merkle Root</td>
             <td className="tw-min-w-0 tw-text-sm">
-              <span className="tw-min-w-0 tw-break-all">
-                {localInfo?.merkleRoot}
-              </span>
               {localInfo?.merkleRoot && (
-                <CopyIcon text={localInfo.merkleRoot} small />
+                <CopyableValue
+                  text={localInfo.merkleRoot}
+                  className="tw-min-w-0 tw-break-all"
+                >
+                  {localInfo.merkleRoot}
+                </CopyableValue>
               )}
             </td>
             <td className="tw-min-w-0 tw-text-sm">
               {isFetchingRemote ? remoteShimmer : (
-                <>
-                  <span className="tw-min-w-0 tw-break-all">
-                    {remoteInfo?.merkle_root ?? "N/A"}
-                  </span>
-                  {remoteInfo?.merkle_root && (
-                    <CopyIcon text={remoteInfo.merkle_root} small />
-                  )}
-                </>
+                remoteInfo?.merkle_root ? (
+                  <CopyableValue
+                    text={remoteInfo.merkle_root}
+                    className="tw-min-w-0 tw-break-all"
+                  >
+                    {remoteInfo.merkle_root}
+                  </CopyableValue>
+                ) : (
+                  "N/A"
+                )
               )}
             </td>
             <td className="tw-justify-center">
@@ -166,43 +172,67 @@ export default function TDHValidation({
   );
 }
 
-function CopyIcon({ text, small = false }: { text: string; small?: boolean }) {
+function CopyableValue({
+  text,
+  children,
+  className = "",
+}: {
+  text: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const tooltipId = `tdh-copy-${useId().replaceAll(":", "")}`;
   const [isCopied, setIsCopied] = useState(false);
+  const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined
+  );
+
+  useEffect(
+    () => () => {
+      if (resetTimer.current) {
+        clearTimeout(resetTimer.current);
+      }
+    },
+    []
+  );
 
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
       setIsCopied(true);
-      setTimeout(() => setIsCopied(false), 500);
+      if (resetTimer.current) {
+        clearTimeout(resetTimer.current);
+      }
+      resetTimer.current = setTimeout(() => setIsCopied(false), 1500);
     } catch {
       setIsCopied(false);
     }
   };
 
   return (
-    <>
+    <span className="tw-min-w-0">
       <button
         type="button"
         aria-label="Copy value"
-        title="Copy value"
-        className={`${small ? "tw-ml-1" : "tw-ml-2"} tw-flex tw-shrink-0 tw-items-center tw-border-0 tw-bg-transparent tw-p-0 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
+        data-tooltip-id={tooltipId}
+        className={`${className} tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-font-[inherit] tw-text-inherit focus-visible:tw-rounded focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500`}
         onClick={handleCopy}
       >
-        <FontAwesomeIcon
-          aria-hidden="true"
-          icon={faCopy}
-          height={small ? 11 : 14}
-          color={isCopied ? "green" : "white"}
-        />
+        {children}
       </button>
-      {isCopied && (
-        <span
-          role="status"
-          className={`${small ? "tw-ml-1 tw-text-xs" : "tw-ml-2 tw-text-sm"} tw-font-light tw-text-emerald-400`}
-        >
-          Copied!
-        </span>
-      )}
-    </>
+      <Tooltip
+        id={tooltipId}
+        delayShow={150}
+        place="top"
+        opacity={1}
+        variant="light"
+        {...(isCopied ? { isOpen: true } : {})}
+      >
+        {isCopied ? "Copied" : "Click to copy"}
+      </Tooltip>
+      <span className="tw-sr-only" role="status" aria-live="polite">
+        {isCopied ? "Copied" : ""}
+      </span>
+    </span>
   );
 }
