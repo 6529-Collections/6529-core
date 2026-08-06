@@ -182,7 +182,9 @@ function CopyableValue({
   className?: string;
 }) {
   const tooltipId = `tdh-copy-${useId().replaceAll(":", "")}`;
-  const [isCopied, setIsCopied] = useState(false);
+  const [copyStatus, setCopyStatus] = useState<
+    "idle" | "copied" | "failed"
+  >("idle");
   const resetTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined
   );
@@ -196,18 +198,29 @@ function CopyableValue({
     []
   );
 
+  const showTransientCopyStatus = (status: "copied" | "failed") => {
+    setCopyStatus(status);
+    if (resetTimer.current) {
+      clearTimeout(resetTimer.current);
+    }
+    resetTimer.current = setTimeout(() => setCopyStatus("idle"), 1500);
+  };
+
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(text);
-      setIsCopied(true);
-      if (resetTimer.current) {
-        clearTimeout(resetTimer.current);
-      }
-      resetTimer.current = setTimeout(() => setIsCopied(false), 1500);
+      showTransientCopyStatus("copied");
     } catch {
-      setIsCopied(false);
+      showTransientCopyStatus("failed");
     }
   };
+
+  const copyStatusMessage =
+    copyStatus === "copied"
+      ? "Copied"
+      : copyStatus === "failed"
+        ? "Copy failed"
+        : "Click to copy";
 
   return (
     <span className="tw-min-w-0">
@@ -226,12 +239,12 @@ function CopyableValue({
         place="top"
         opacity={1}
         variant="light"
-        {...(isCopied ? { isOpen: true } : {})}
+        {...(copyStatus !== "idle" ? { isOpen: true } : {})}
       >
-        {isCopied ? "Copied" : "Click to copy"}
+        {copyStatusMessage}
       </Tooltip>
       <span className="tw-sr-only" role="status" aria-live="polite">
-        {isCopied ? "Copied" : ""}
+        {copyStatus === "idle" ? "" : copyStatusMessage}
       </span>
     </span>
   );
