@@ -73,6 +73,11 @@ app-global Quick Direct Messages, cookie consent/analytics, version notices,
 and automatic wallet-auth prompts. Restore those desktop adaptations if the
 guard fails; do not remove or weaken the guard.
 
+The Core renderer does not mount the web frontend's environment badges or
+favicon manager in any app mode. Desktop environment/backend information is
+shown by the native titlebar instead, so do not add a second badge below the
+logo or favicon links to the renderer layout during conflict resolution.
+
 ⚠️ Note: there might be conflicts that need resolving
 
 #### Packages
@@ -91,6 +96,7 @@ After pulling frontend changes (or on a fresh clone), run:
 - merge `main` into `pull-web`
 - run `6529 pull-web`
 - resolve conflicts
+- keep the root package version and related version metadata identical to current `main`; never bump the desktop version on `pull-web`
 - run `6529 install`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - merge any relevant `renderer/next.config.ts` changes into root `next.config.ts`
@@ -138,6 +144,12 @@ active/switch states, and fixed request actions.
 
 > ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.
 > If you skip this step, the previous version may be overwritten and the `electron-updater` will not function correctly.
+
+Perform that version update only on an explicitly requested release branch
+created from `main` and named for the version. Release from that branch, then
+merge it back to `main`. Never update the desktop version as part of a
+`pull-web` renderer sync; `pull-web` must retain the version from current
+`main`.
 
 ### Desktop Backend Targets
 

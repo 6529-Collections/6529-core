@@ -153,7 +153,7 @@ function artifactPointer(overrides: Record<string, unknown> = {}) {
 describe("testing strategy risk floor", () => {
   it("keeps docs and tests in the fast lane", () => {
     const result = classifyChangedFiles([
-      "ops/workstreams/frontend-a11y-i18n/testing-improvement-plan.md",
+      "ops/workstreams/README.md",
       "__tests__/components/example.test.tsx",
     ]);
 
@@ -292,17 +292,15 @@ describe("testing strategy risk floor", () => {
 
 describe("testing strategy CI plan", () => {
   it("keeps docs-only PRs in the no-install fast lane", () => {
-    const plan = createCiPlan([
-      "ops/workstreams/frontend-a11y-i18n/testing-improvement-plan.md",
-    ]);
+    const plan = createCiPlan(["ops/workstreams/README.md"]);
 
     expect(plan.schema_version).toBe(CI_PLAN_SCHEMA_VERSION);
     expect(plan.risk.computed_floor).toBe(0);
     expect(plan.checks.risk_floor.required).toBe(true);
     expect(plan.checks.secret_scan.required).toBe(true);
     expect(plan.checks.install.required).toBe(false);
-    expect(plan.checks.playwright_smoke.required).toBe(false);
-    expect(plan.checks.playwright_critical_shell.required).toBe(false);
+    expect(plan.checks["playwright_smoke"]!.required).toBe(false);
+    expect(plan.checks["playwright_critical_shell"]!.required).toBe(false);
     expect(plan.security).toMatchObject({
       secrets_allowed: false,
       token_permissions: "contents:read",
@@ -319,10 +317,13 @@ describe("testing strategy CI plan", () => {
     expect(plan.checks.install.required).toBe(true);
     expect(plan.checks.lint_changed.required).toBe(true);
     expect(plan.checks.typecheck_changed.required).toBe(true);
-    expect(plan.checks.test_typecheck.required).toBe(true);
+    expect(plan.checks["test_typecheck"]!.required).toBe(true);
+    expect(plan.checks["test_typecheck"]?.reason).toContain(
+      "Jest diagnostic ratchet"
+    );
     expect(plan.checks.jest_changed.required).toBe(true);
-    expect(plan.checks.playwright_smoke.required).toBe(true);
-    expect(plan.checks.playwright_critical_shell.required).toBe(false);
+    expect(plan.checks["playwright_smoke"]!.required).toBe(true);
+    expect(plan.checks["playwright_critical_shell"]!.required).toBe(false);
     expect(plan.checks.build.required).toBe(false);
   });
 
@@ -336,7 +337,19 @@ describe("testing strategy CI plan", () => {
     expect(plan.checks.workflow_security_review.required).toBe(true);
     expect(plan.checks.dependency_governance.required).toBe(true);
     expect(plan.checks.build.required).toBe(true);
-    expect(plan.checks.playwright_critical_shell.required).toBe(true);
+    expect(plan.checks["playwright_critical_shell"]!.required).toBe(true);
+  });
+
+  it.each([
+    "config/public-reviews/6529-stream.reference.json",
+    "public/review-data/6529-stream/index.json",
+    "scripts/public-reviews/solidity-reference.cjs",
+  ])("treats public review reference input %s as build-sensitive", (file) => {
+    const plan = createCiPlan([file]);
+
+    expect(plan.checks["build"]!.required).toBe(true);
+    expect(plan.checks["playwright_critical_shell"]!.required).toBe(true);
+    expect(plan.checks["build"]!.reason).toContain("build-sensitive");
   });
 
   it("requires build coverage for deleted runtime source", () => {
@@ -344,7 +357,7 @@ describe("testing strategy CI plan", () => {
 
     expect(plan.risk.computed_floor).toBe(2);
     expect(plan.checks.build.required).toBe(true);
-    expect(plan.checks.playwright_critical_shell.required).toBe(true);
+    expect(plan.checks["playwright_critical_shell"]!.required).toBe(true);
     expect(plan.checks.build.reason).toContain("deleted runtime source");
   });
 
@@ -414,6 +427,181 @@ describe("testing strategy CI plan", () => {
     expect(plan.checks.agent_files_sync.required).toBe(false);
     expect(plan.checks.install.required).toBe(false);
   });
+
+  it("runs Museum browser coverage only for Museum-impacting PRs and deployed changes", () => {
+    const workflow = fs.readFileSync(
+      path.join(process.cwd(), ".github/workflows/app-pr-ci.yml"),
+      "utf8"
+    );
+    const stagingWorkflow = fs.readFileSync(
+      path.join(process.cwd(), ".github/workflows/staging-e2e.yml"),
+      "utf8"
+    );
+    const museumReleaseSelector = fs.readFileSync(
+      path.join(process.cwd(), "scripts/museum-release-selection.cjs"),
+      "utf8"
+    );
+    const museumSpec = fs.readFileSync(
+      path.join(
+        process.cwd(),
+        "tests/museum/institutional-practice-readonly.spec.ts"
+      ),
+      "utf8"
+    );
+    const aboutSpec = fs.readFileSync(
+      path.join(process.cwd(), "tests/museum/about-readonly.spec.ts"),
+      "utf8"
+    );
+
+    expect(workflow).toContain("playwright install --with-deps chromium");
+    expect(workflow).toContain("test:e2e:smoke");
+    expect(workflow).toContain("test:e2e:critical-shell");
+    for (const museumBrowserSpec of [
+      "tests/museum/data-architecture-readonly.spec.ts",
+      "tests/museum/institutional-practice-readonly.spec.ts",
+      "tests/museum/about-readonly.spec.ts",
+      "tests/museum/inside-system-readonly.spec.ts",
+      "tests/museum/rights-readonly.spec.ts",
+    ]) {
+      expect(workflow).toContain(museumBrowserSpec);
+    }
+    expect(workflow).toContain("PLAYWRIGHT_WEB_SERVER_COMMAND");
+    expect(stagingWorkflow).toContain("--trigger post-deploy");
+    expect(stagingWorkflow).toContain("SELECTED_PACK");
+    expect(stagingWorkflow).toContain(
+      'args+=(--exclude-pack "$museum_pack_alias")'
+    );
+    expect(stagingWorkflow).toContain("const isMuseumPack = (pack) =>");
+    expect(stagingWorkflow).not.toContain("scripts/museum-e2e-change-set.cjs");
+    expect(museumReleaseSelector).toContain("failClosedClassification");
+    expect(museumReleaseSelector).toContain("effectiveActivation");
+    expect(museumReleaseSelector).toContain("source commit must be an exact");
+    expect(workflow).toContain(
+      "playwright_museum_required: ${{ steps.plan_outputs.outputs.playwright_museum_required }}"
+    );
+    expect(workflow).toContain(
+      "Resolve exact Museum publication for Playwright"
+    );
+    expect(workflow).toContain(
+      "MUSEUM_PUBLICATION_TEST_COMMIT: ${{ steps.museum_publication.outputs.commit }}"
+    );
+    expect(workflow).toContain(
+      "MUSEUM_PUBLICATION_EXPECTED_COMMIT: ${{ steps.museum_publication.outputs.commit }}"
+    );
+    expect(workflow).toContain('case "$selected_pack"');
+    expect(workflow).toContain("selected_specs=()");
+    expect(workflow).toContain('[ ! -f "$selected_spec" ]');
+    expect(workflow).toContain("./bin/6529 exec playwright test");
+    expect(workflow).not.toContain('./bin/6529 run "$selected_pack"');
+    expect(workflow).toContain("--workers=1");
+    expect(stagingWorkflow).toContain(
+      "Unable to prove the deployed parent; retaining every Museum pack."
+    );
+    expect(museumSpec).toContain('test.describe.configure({ mode: "serial" })');
+    expect(museumSpec).toContain("for (const profile of PROFILE_ROUTES)");
+    expect(aboutSpec).toContain("MUSEUM_PUBLICATION_EXPECTED_COMMIT");
+    expect(aboutSpec).toContain("museum_publication_expected_commit_not_exact");
+    expect(
+      fs.existsSync(
+        path.join(
+          process.cwd(),
+          "__tests__/lib/museum/publication/institutionalPractice.test.ts"
+        )
+      )
+    ).toBe(true);
+    expect(
+      fs.existsSync(
+        path.join(
+          process.cwd(),
+          "__tests__/lib/museum/publication/pageSources.test.ts"
+        )
+      )
+    ).toBe(true);
+
+    const parsed = YAML.parse(workflow) as {
+      jobs: Record<
+        string,
+        {
+          if?: string;
+          name?: string;
+          needs?: string | string[];
+          strategy?: { matrix?: string };
+          "runs-on"?: string;
+          steps?: Array<{ name?: string; if?: string; run?: string }>;
+        }
+      >;
+    };
+    expect(parsed.jobs["app-checks"]).toMatchObject({
+      if: "needs.plan.outputs.install_required == 'true'",
+      "runs-on": "${{ matrix.runner }}",
+      strategy: {
+        matrix: "${{ fromJSON(needs.plan.outputs.app_check_matrix) }}",
+      },
+    });
+    expect(parsed.jobs["app-checks"]?.steps).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          name: "Build production profile",
+          if: "matrix.lane == 'build'",
+        }),
+        expect.objectContaining({
+          name: "Run small Playwright smoke pack",
+          if: "matrix.lane == 'playwright-smoke'",
+        }),
+        expect.objectContaining({
+          name: "Run critical route-shell Playwright pack",
+          if: "matrix.lane == 'playwright-critical-shell'",
+        }),
+        expect.objectContaining({
+          name: "Run Network Museum Playwright packs",
+          if: "matrix.lane == 'playwright-museum'",
+        }),
+      ])
+    );
+    const museumBrowserStep = parsed.jobs["app-checks"]?.steps?.find(
+      (step) => step.name === "Run Network Museum Playwright packs"
+    );
+    const museumBrowserRun = museumBrowserStep?.run ?? "";
+    expect(
+      museumBrowserRun.match(/tests\/museum\/[a-z-]+\.spec\.ts/gu) ?? []
+    ).toEqual([
+      "tests/museum/data-architecture-readonly.spec.ts",
+      "tests/museum/institutional-practice-readonly.spec.ts",
+      "tests/museum/about-readonly.spec.ts",
+      "tests/museum/inside-system-readonly.spec.ts",
+      "tests/museum/rights-readonly.spec.ts",
+    ]);
+    expect(museumBrowserRun).toContain("--project=web-desktop-chromium");
+    expect(museumBrowserRun).toContain("--project=web-mobile-chromium");
+    expect(museumBrowserRun).toContain("--workers=1");
+    expect(parsed.jobs["installed-checks"]).toMatchObject({
+      name: "Installed app checks",
+      needs: ["plan", "app-checks"],
+      if: "always() && needs.plan.result == 'success' && needs.plan.outputs.install_required == 'true'",
+    });
+    expect(workflow).toContain(
+      'write("app_check_matrix", JSON.stringify({ include: appCheckLanes }))'
+    );
+    expect(workflow).toContain("BUILD_CI_RUNNER");
+    expect(workflow).toContain("Restore Playwright browser");
+    expect(workflow).toContain("node22-pr-production-nextjs");
+  });
+
+  it("keeps full-history CI checkouts blobless", () => {
+    const appPrCi = fs.readFileSync(
+      path.join(process.cwd(), ".github/workflows/app-pr-ci.yml"),
+      "utf8"
+    );
+    const pushSecretScan = fs.readFileSync(
+      path.join(process.cwd(), ".github/workflows/push-secret-scan.yml"),
+      "utf8"
+    );
+
+    expect(appPrCi.match(/filter: blob:none/gu)).toHaveLength(2);
+    expect(appPrCi.match(/fetch-depth: 0/gu)).toHaveLength(2);
+    expect(pushSecretScan).toContain("filter: blob:none");
+    expect(pushSecretScan).toContain("fetch-depth: 0");
+  });
 });
 
 describe("testing strategy CI security checks", () => {
@@ -472,6 +660,31 @@ describe("testing strategy CI security checks", () => {
         pattern: "named-secret-assignment",
       },
     ]);
+  });
+
+  it("does not treat YAML secret declarations as assigned values", () => {
+    fs.mkdirSync(path.join(tempDir, ".github", "workflows"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(tempDir, ".github", "workflows", "reusable.yml"),
+      [
+        "on:",
+        "  workflow_call:",
+        "    secrets:",
+        "      ALCHEMY_API_KEY:",
+        "        required: false",
+        "      SENTRY_AUTH_TOKEN:",
+        "        required: true",
+      ].join("\n")
+    );
+
+    const result = scanFilesForSecrets(
+      [".github/workflows/reusable.yml"],
+      tempDir
+    );
+
+    expect(result).toMatchObject({ ok: true, findings: [] });
   });
 
   it("scans common credential files that do not look like source", () => {
@@ -544,6 +757,145 @@ describe("testing strategy CI security checks", () => {
       checked_files: [".github/workflows/safe.yml"],
       findings: [],
     });
+  });
+
+  it("flags ordinary pull_request_target workflows", () => {
+    fs.mkdirSync(path.join(tempDir, ".github", "workflows"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(tempDir, ".github", "workflows", "target.yml"),
+      [
+        "name: Unsafe target",
+        "on:",
+        "  pull_request_target:",
+        "permissions:",
+        "  contents: read",
+        "jobs:",
+        "  inspect:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        "      - run: echo ok",
+      ].join("\n")
+    );
+
+    const result = validateWorkflowSecurityFiles(
+      [".github/workflows/target.yml"],
+      tempDir
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.findings.map((finding) => finding.pattern)).toContain(
+      "pull_request_target"
+    );
+  });
+
+  it.each([
+    "on: { pull_request_target: {} }",
+    "on:\n  'pull_request_target':",
+    'on: "pull_request_target"',
+  ])("flags alternate pull_request_target syntax: %s", (trigger) => {
+    fs.mkdirSync(path.join(tempDir, ".github", "workflows"), {
+      recursive: true,
+    });
+    fs.writeFileSync(
+      path.join(tempDir, ".github", "workflows", "alternate-target.yml"),
+      [
+        "name: Alternate target",
+        trigger,
+        "permissions:",
+        "  contents: write",
+        "jobs:",
+        "  inspect:",
+        "    runs-on: ubuntu-latest",
+        "    steps:",
+        '      - run: echo "${{ secrets.STAGING_AUTH }}"',
+      ].join("\n")
+    );
+
+    const result = validateWorkflowSecurityFiles(
+      [".github/workflows/alternate-target.yml"],
+      tempDir
+    );
+
+    expect(result.ok).toBe(false);
+    expect(result.findings.map((finding) => finding.pattern)).toEqual(
+      expect.arrayContaining([
+        "pull_request_target",
+        "pull_request-secrets",
+        "pull_request-write-permission",
+      ])
+    );
+  });
+
+  it("accepts only the exact base-owned public-review trust workflow", () => {
+    const workflowPath = path.join(
+      ".github",
+      "workflows",
+      "public-review-snapshot-trust.yml"
+    );
+    const source = fs
+      .readFileSync(path.join(process.cwd(), workflowPath), "utf8")
+      .replaceAll("\r\n", "\n");
+    fs.mkdirSync(path.join(tempDir, ".github", "workflows"), {
+      recursive: true,
+    });
+    fs.writeFileSync(path.join(tempDir, workflowPath), source);
+
+    const result = validateWorkflowSecurityFiles(
+      [workflowPath.replaceAll("\\", "/")],
+      tempDir
+    );
+
+    expect(result.ok).toBe(true);
+    expect(result.findings).toEqual([]);
+  });
+
+  it("rejects any privilege or candidate-execution drift in the trusted workflow", () => {
+    const workflowPath = path.join(
+      ".github",
+      "workflows",
+      "public-review-snapshot-trust.yml"
+    );
+    const source = fs
+      .readFileSync(path.join(process.cwd(), workflowPath), "utf8")
+      .replaceAll("\r\n", "\n");
+    const mutations = [
+      source.replace(
+        "permissions:\n  contents: read",
+        "permissions:\n  contents: write"
+      ),
+      source.replace(
+        '          git checkout --detach "$SNAPSHOT_BASE_SHA"',
+        '          git checkout --detach "$SNAPSHOT_HEAD_SHA"'
+      ),
+      source.replace(
+        "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020",
+        "actions/setup-node@v4"
+      ),
+      source.replace(
+        "      - name: Verify candidate snapshot from Git objects",
+        [
+          '      - run: echo "${{ secrets.STAGING_AUTH }}"',
+          "      - name: Verify candidate snapshot from Git objects",
+        ].join("\n")
+      ),
+    ];
+    fs.mkdirSync(path.join(tempDir, ".github", "workflows"), {
+      recursive: true,
+    });
+
+    for (const mutation of mutations) {
+      fs.writeFileSync(path.join(tempDir, workflowPath), mutation);
+      const result = validateWorkflowSecurityFiles(
+        [workflowPath.replaceAll("\\", "/")],
+        tempDir
+      );
+      expect(result.ok).toBe(false);
+      expect(result.findings.map((finding) => finding.pattern)).toContain(
+        "pull_request_target"
+      );
+    }
   });
 
   it("flags pull_request workflows that expose secrets or write permissions", () => {

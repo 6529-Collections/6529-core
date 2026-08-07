@@ -248,6 +248,37 @@ function jsxAttributeContainsIdentifier(
   );
 }
 
+function jsxAttributeHasStringValue(
+  node,
+  elementName,
+  attributeName,
+  expectedValue,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        (!ts.isJsxOpeningElement(candidate) &&
+          !ts.isJsxSelfClosingElement(candidate)) ||
+        !ts.isIdentifier(candidate.tagName) ||
+        candidate.tagName.text !== elementName
+      ) {
+        return false;
+      }
+      const attribute = candidate.attributes.properties.find(
+        (property) =>
+          ts.isJsxAttribute(property) && property.name.text === attributeName,
+      );
+      return (
+        attribute !== undefined &&
+        ts.isJsxAttribute(attribute) &&
+        attribute.initializer !== undefined &&
+        ts.isStringLiteral(attribute.initializer) &&
+        attribute.initializer.text === expectedValue
+      );
+    }),
+  );
+}
+
 function allJsxElementsUseIdentifier(
   node,
   elementName,
@@ -556,6 +587,79 @@ assertContract(
     returnsStringLiteral(clientTypeFunction, "desktop"),
   sessionUtilsPath,
   "getSessionClientType must return desktop for Electron",
+);
+
+const sessionPersistencePath =
+  "renderer/services/auth/session-persistence.utils.ts";
+const sessionPersistence = parseSource(sessionPersistencePath);
+const persistNativeRefreshTokenIfNeeded = findVariable(
+  sessionPersistence,
+  "persistNativeRefreshTokenIfNeeded",
+);
+const electronPersistenceGuard = persistNativeRefreshTokenIfNeeded
+  ? findDescendant(
+      persistNativeRefreshTokenIfNeeded,
+      (node) =>
+        ts.isIfStatement(node) &&
+        callsIdentifier(node.expression, "isElectron") &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (conditionNode) =>
+              ts.isStringLiteral(conditionNode) &&
+              conditionNode.text === "desktop",
+          ),
+        ) &&
+        returnsStringLiteral(node.thenStatement, "persisted") &&
+        !callsIdentifier(node.thenStatement, "setNativeRefreshToken"),
+    )
+  : undefined;
+assertContract(
+  Boolean(electronPersistenceGuard),
+  sessionPersistencePath,
+  "Electron session persistence must leave refresh tokens in the main process",
+);
+
+const authRequestSignInPath =
+  "renderer/components/auth/authRequestSignIn.ts";
+const authRequestSignIn = parseSource(authRequestSignInPath);
+const createSignInSession = findVariable(
+  authRequestSignIn,
+  "createSignInSession",
+);
+assertContract(
+  createSignInSession &&
+    Boolean(
+      findDescendant(
+        createSignInSession,
+        (node) =>
+          ts.isPropertyAccessExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "clientSignature" &&
+          node.name.text === "cancelled",
+      ),
+    ),
+  authRequestSignInPath,
+  "auth request sign-in must preserve explicit cancellation results",
+);
+
+const authActionsPath = "renderer/components/auth/authActions.ts";
+const authActions = parseSource(authActionsPath);
+const requestSessionUpgrade = findVariable(
+  authActions,
+  "requestSessionUpgrade",
+);
+assertContract(
+  requestSessionUpgrade &&
+    Boolean(
+      findDescendant(
+        requestSessionUpgrade,
+        (node) => ts.isIdentifier(node) && node.text === "cancelled",
+      ),
+    ) &&
+    callsIdentifier(requestSessionUpgrade, "setShowSignModal"),
+  authActionsPath,
+  "session-upgrade cancellation must dismiss without failure handling",
 );
 
 for (const [functionName, bridgeMethod] of [
@@ -1255,6 +1359,29 @@ assertContract(
   rootLayoutPath,
   "RootLayout must route all pages through AppRouteProviders",
 );
+assertContract(
+  rootLayoutFunction &&
+    !hasJsxElement(rootLayoutFunction, "RuntimeFavicon") &&
+    !jsxAttributeHasStringValue(rootLayoutFunction, "link", "rel", "icon"),
+  rootLayoutPath,
+  "Core renderer must not mount favicon management or favicon links",
+);
+
+for (const headerPath of [
+  "renderer/components/header/AppSidebarHeader.tsx",
+  "renderer/components/layout/SmallScreenHeader.tsx",
+  "renderer/components/layout/sidebar/WebSidebarHeader.tsx",
+]) {
+  const header = parseSource(headerPath);
+  assertContract(
+    !importsModulePrefix(
+      header,
+      "@/components/common/EnvironmentBadge",
+    ) && !hasJsxElement(header, "EnvironmentBadge"),
+    headerPath,
+    "Core headers must use the native titlebar as the only environment indicator",
+  );
+}
 
 const awsRumPath = "renderer/components/monitoring/AwsRumProvider.tsx";
 const awsRum = parseSource(awsRumPath);

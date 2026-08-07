@@ -1,16 +1,20 @@
-import styles from "@/styles/Home.module.css";
-
 import About from "@/components/about/About";
-import { getAboutSectionDocumentTitle } from "@/components/about/about.routes";
+import {
+  getAboutSectionDocumentTitle,
+  isAboutFeatureSection,
+  isAboutLegalSection,
+} from "@/components/about/about.routes";
 import {
   AboutCol as Col,
   AboutContainer as Container,
+  ABOUT_PAGE_SURFACE_CLASS_NAME,
   AboutRow as Row,
 } from "@/components/about/AboutLayout";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { AboutSection } from "@/types/enums";
+import clsx from "clsx";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
@@ -28,23 +32,29 @@ export default async function AboutPage(props: Readonly<Props>) {
     notFound();
   }
 
-  const isSubscriptions = section === AboutSection.SUBSCRIPTIONS;
+  const aboutSection = section as AboutSection;
+  const isMemes = aboutSection === AboutSection.MEMES;
+  const usesFeatureLayout = isAboutFeatureSection(aboutSection);
+  const usesLegalLayout = isAboutLegalSection(aboutSection);
 
   return (
     <main
-      className={`${styles["main"]} tailwind-scope ${
-        isSubscriptions
-          ? "tw-border-y-0 tw-border-l-0 tw-border-r tw-border-solid tw-border-iron-800"
-          : ""
-      }`}
+      className={clsx(
+        "tailwind-scope tw-min-h-screen",
+        (usesFeatureLayout || usesLegalLayout) && ABOUT_PAGE_SURFACE_CLASS_NAME
+      )}
     >
-      <Container fluid className="tw-pt-4">
-        <Row>
-          <Col>
-            <About section={section as AboutSection} />
-          </Col>
-        </Row>
-      </Container>
+      {isMemes ? (
+        <About section={AboutSection.MEMES} />
+      ) : (
+        <Container fluid className="tw-pt-4">
+          <Row>
+            <Col>
+              <About section={aboutSection} />
+            </Col>
+          </Row>
+        </Container>
+      )}
     </main>
   );
 }

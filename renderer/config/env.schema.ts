@@ -56,13 +56,16 @@ export const publicEnvSchema = z.object({
    *   • OPTIONAL
    * ────────────────
    */
-  // 6529 Desktop has its own IPFS_API_ENDPOINT, IPFS_GATEWAY_ENDPOINT, and IPFS_MFS_PATH
-  // IPFS_API_ENDPOINT: z.string().url("IPFS_API_ENDPOINT must be a valid URL"),
-  // IPFS_GATEWAY_ENDPOINT: z
-  //   .string()
-  //   .url("IPFS_GATEWAY_ENDPOINT must be a valid URL"),
-  // // OPTIONAL
-  // IPFS_MFS_PATH: z.string().optional(),
+  // 6529 Desktop supplies these through its local runtime when IPFS is enabled.
+  IPFS_API_ENDPOINT: z
+    .string()
+    .url("IPFS_API_ENDPOINT must be a valid URL")
+    .optional(),
+  IPFS_GATEWAY_ENDPOINT: z
+    .string()
+    .url("IPFS_GATEWAY_ENDPOINT must be a valid URL")
+    .optional(),
+  IPFS_MFS_PATH: z.string().optional(),
   MEDIA_RESOLVER_ENDPOINT: z
     .string()
     .url("MEDIA_RESOLVER_ENDPOINT must be a valid URL")
