@@ -13,7 +13,6 @@ import {
   faLockOpen,
   faPlugCircleMinus,
   faPlugCirclePlus,
-  faPlugCircleXmark,
   faRightFromBracket,
   faShuffle,
   faShieldHalved,
@@ -250,6 +249,15 @@ export default function HeaderUserMenuDropdown({
                               "Failed to add connected account. Please try again.",
                           });
                         }}
+                        onSignOutAll={() => {
+                          void runMenuAction({
+                            action: seizeDisconnectAndLogoutAll,
+                            pendingKey: "logout-all",
+                            errorMessage:
+                              "Failed to sign out all profiles. Please try again.",
+                          });
+                        }}
+                        actionsDisabled={pendingAction !== null}
                       />
                     </li>
                   )}
@@ -517,7 +525,10 @@ export default function HeaderUserMenuDropdown({
                       }}
                       disabled={pendingAction !== null}
                       type="button"
-                      aria-label="Disconnect & Logout"
+                      aria-label={t(
+                        HEADER_USER_MENU_LOCALE,
+                        "headerUserMenu.logout"
+                      )}
                       className="tw-relative tw-grid tw-h-full tw-w-full tw-cursor-pointer tw-select-none tw-grid-cols-[1.5rem_minmax(0,1fr)] tw-items-center tw-gap-x-3 tw-rounded-lg tw-border-none tw-bg-transparent tw-px-3 tw-py-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-700 hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
                     >
                       <FontAwesomeIcon
@@ -525,31 +536,10 @@ export default function HeaderUserMenuDropdown({
                         height={20}
                         width={20}
                       />
-                      <span>{isConnected && `Disconnect & `}Logout</span>
+                      <span>
+                        {t(HEADER_USER_MENU_LOCALE, "headerUserMenu.logout")}
+                      </span>
                     </button>
-                    {availableConnectedAccounts.length > 1 && (
-                      <button
-                        onClick={() => {
-                          void runMenuAction({
-                            action: seizeDisconnectAndLogoutAll,
-                            pendingKey: "logout-all",
-                            errorMessage:
-                              "Failed to sign out all profiles. Please try again.",
-                          });
-                        }}
-                        disabled={pendingAction !== null}
-                        type="button"
-                        aria-label="Sign Out All Profiles"
-                        className="tw-relative tw-grid tw-h-full tw-w-full tw-cursor-pointer tw-select-none tw-grid-cols-[1.5rem_minmax(0,1fr)] tw-items-center tw-gap-x-3 tw-rounded-lg tw-border-none tw-bg-transparent tw-px-3 tw-py-2.5 tw-text-left tw-text-md tw-font-medium tw-text-iron-300 tw-transition tw-duration-300 tw-ease-out hover:tw-bg-iron-700 hover:tw-text-iron-50 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-primary-400"
-                      >
-                        <FontAwesomeIcon
-                          icon={faPlugCircleXmark}
-                          height={20}
-                          width={20}
-                        />
-                        <span>Sign Out All Profiles</span>
-                      </button>
-                    )}
                   </li>
                 </ul>
               </div>
