@@ -15,12 +15,12 @@ const AppSidebarHeader: FC<AppSidebarHeaderProps> = ({ onClose }) => {
 
   return (
     <div className="tw-px-6 tw-pb-4 tw-pt-2">
-      <div className="tw-flex tw-items-center tw-justify-end">
+      <div className="tw-flex tw-items-center">
         <button
           type="button"
           onClick={onClose}
           aria-label="Close menu"
-          className="tw-border-none tw-bg-transparent tw-p-0 tw-text-iron-400 tw-transition-colors tw-duration-200 hover:tw-text-white focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-iron-900 active:tw-text-white"
+          className="tw-ml-auto tw-border-none tw-bg-transparent tw-p-0 tw-text-iron-400 tw-transition-colors tw-duration-200 hover:tw-text-white focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-iron-900 active:tw-text-white"
         >
           <XMarkIcon className="tw-size-6 tw-flex-shrink-0" />
         </button>

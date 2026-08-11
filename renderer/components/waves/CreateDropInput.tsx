@@ -46,7 +46,10 @@ import ExampleTheme from "../drops/create/lexical/ExampleTheme";
 import { assertUnreachable } from "@/helpers/AllowlistToolHelpers";
 import type { ClearEditorPluginHandles } from "../drops/create/lexical/plugins/ClearEditorPlugin";
 import ClearEditorPlugin from "../drops/create/lexical/plugins/ClearEditorPlugin";
-import type { NewMentionsPluginHandles } from "../drops/create/lexical/plugins/mentions/MentionsPlugin";
+import type {
+  MentionAliasExpansionResult,
+  NewMentionsPluginHandles,
+} from "../drops/create/lexical/plugins/mentions/MentionsPlugin";
 import NewMentionsPlugin from "../drops/create/lexical/plugins/mentions/MentionsPlugin";
 import type { NewHastagsPluginHandles } from "../drops/create/lexical/plugins/hashtags/HashtagsPlugin";
 import NewHashtagsPlugin from "../drops/create/lexical/plugins/hashtags/HashtagsPlugin";
@@ -60,23 +63,20 @@ import CreateDropEmojiPicker from "./CreateDropEmojiPicker";
 import useCapacitor from "@/hooks/useCapacitor";
 import EmojiPlugin from "../drops/create/lexical/plugins/emoji/EmojiPlugin";
 import { EmojiNode } from "../drops/create/lexical/nodes/EmojiNode";
-import { SAFE_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/markdownTransformers";
-import { EMOJI_TRANSFORMER } from "../drops/create/lexical/transformers/EmojiTransformer";
-import { HASHTAG_TRANSFORMER } from "../drops/create/lexical/transformers/HastagTransformer";
-import { IMAGE_TRANSFORMER } from "../drops/create/lexical/transformers/ImageTransformer";
-import { MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/MentionTransformer";
-import { WAVE_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/WaveMentionTransformer";
-import { GROUP_MENTION_TRANSFORMER } from "../drops/create/lexical/transformers/GroupMentionTransformer";
+import { CREATE_DROP_MARKDOWN_TRANSFORMERS } from "@/components/drops/create/lexical/transformers/createDropMarkdownTransformers";
 import PlainTextPastePlugin from "@/components/drops/create/lexical/plugins/PlainTextPastePlugin";
 import EditLastDropArrowUpPlugin from "./EditLastDropArrowUpPlugin";
 import RootBlockGuardPlugin from "@/components/drops/create/lexical/plugins/RootBlockGuardPlugin";
 import { $selectEndOfRootBlock } from "@/components/drops/create/lexical/utils/rootContent";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
+import { useDropComposerDensity } from "./CreateDropWaveWrapper";
+import { MAX_DROP_PART_UTF16_UNITS } from "@/helpers/waves/drop-content-limits";
 
 export interface CreateDropInputHandles {
   clearEditorState: () => void;
   setMarkdown: (markdown: string) => void;
+  expandMentionAliases: () => Promise<MentionAliasExpansionResult>;
   focus: () => void;
   blur: () => void;
 }
@@ -110,36 +110,30 @@ interface EditorCommandsPluginHandles {
   blur: () => void;
 }
 
-const EditorCommandsPlugin = forwardRef<
-  EditorCommandsPluginHandles,
-  { readonly canMentionAll: boolean }
->(({ canMentionAll }, ref) => {
-  const [editor] = useLexicalComposerContext();
+const EditorCommandsPlugin = forwardRef<EditorCommandsPluginHandles>(
+  (_props, ref) => {
+    const [editor] = useLexicalComposerContext();
 
-  useImperativeHandle(
-    ref,
-    () => ({
-      focus: () => editor.focus(),
-      blur: () => editor.blur(),
-      setMarkdown: (markdown: string) => {
-        editor.update(() => {
-          $convertFromMarkdownString(markdown, [
-            ...SAFE_MARKDOWN_TRANSFORMERS,
-            MENTION_TRANSFORMER,
-            ...(canMentionAll ? [GROUP_MENTION_TRANSFORMER] : []),
-            HASHTAG_TRANSFORMER,
-            WAVE_MENTION_TRANSFORMER,
-            IMAGE_TRANSFORMER,
-            EMOJI_TRANSFORMER,
-          ]);
-        });
-      },
-    }),
-    [canMentionAll, editor]
-  );
+    useImperativeHandle(
+      ref,
+      () => ({
+        focus: () => editor.focus(),
+        blur: () => editor.blur(),
+        setMarkdown: (markdown: string) => {
+          editor.update(() => {
+            $convertFromMarkdownString(
+              markdown,
+              CREATE_DROP_MARKDOWN_TRANSFORMERS
+            );
+          });
+        },
+      }),
+      [editor]
+    );
 
-  return null;
-});
+    return null;
+  }
+);
 EditorCommandsPlugin.displayName = "EditorCommandsPlugin";
 
 /**
@@ -191,7 +185,10 @@ function InitialMarkdownPlugin({
     editor.update(() => {
       const root = $getRoot();
       root.clear();
-      $convertFromMarkdownString(initialMarkdown, SAFE_MARKDOWN_TRANSFORMERS);
+      $convertFromMarkdownString(
+        initialMarkdown,
+        CREATE_DROP_MARKDOWN_TRANSFORMERS
+      );
       $selectEndOfRootBlock(root);
     });
     editor.focus();
@@ -265,6 +262,8 @@ const CreateDropInput = forwardRef<
   ) => {
     const { isCapacitor } = useCapacitor();
     const locale = useBrowserLocale();
+    const composerDensity = useDropComposerDensity();
+    const isCompact = composerDensity === "compact";
     const editorConfig: InitialConfigType = {
       namespace: "User Drop",
       nodes: [
@@ -357,6 +356,7 @@ const CreateDropInput = forwardRef<
 
     const clearEditorRef = useRef<ClearEditorPluginHandles | null>(null);
     const editorCommandsRef = useRef<EditorCommandsPluginHandles | null>(null);
+    const mentionsPluginRef = useRef<NewMentionsPluginHandles | null>(null);
     const clearEditorState = useCallback(() => {
       clearEditorRef.current?.clearEditorState();
     }, []);
@@ -367,13 +367,19 @@ const CreateDropInput = forwardRef<
         clearEditorState,
         setMarkdown: (markdown: string) =>
           editorCommandsRef.current?.setMarkdown(markdown),
+        expandMentionAliases: async () => {
+          const mentionsPlugin = mentionsPluginRef.current;
+          if (!mentionsPlugin) {
+            throw new Error("Quick Tags are not ready yet.");
+          }
+          return mentionsPlugin.expandMentionAliases();
+        },
         focus: () => editorCommandsRef.current?.focus(),
         blur: () => editorCommandsRef.current?.blur(),
       }),
       [clearEditorState]
     );
 
-    const mentionsPluginRef = useRef<NewMentionsPluginHandles | null>(null);
     const hashtagPluginRef = useRef<NewHastagsPluginHandles | null>(null);
     const waveMentionsPluginRef = useRef<NewWaveMentionsPluginHandles | null>(
       null
@@ -422,18 +428,26 @@ const CreateDropInput = forwardRef<
                       ariaLabel={placeholderText}
                       style={{ touchAction: "manipulation" }}
                       onBlur={onEditorBlur}
-                      className={`editor-input-one-liner tw-form-input tw-block tw-max-h-[40vh] tw-w-full tw-resize-none tw-rounded-lg tw-border-0 tw-bg-iron-900 tw-py-2.5 tw-pl-3 tw-text-base tw-font-normal tw-leading-6 tw-text-white tw-caret-primary-400 tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-transition tw-duration-300 tw-ease-out tw-scrollbar-thin tw-scrollbar-track-iron-900 tw-scrollbar-thumb-iron-600 placeholder:tw-text-iron-500 focus:tw-bg-iron-950 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 sm:tw-text-sm ${
+                      className={`editor-input-one-liner tw-form-input tw-block tw-max-h-[40vh] tw-w-full tw-resize-none tw-rounded-lg tw-border-0 tw-bg-iron-900 tw-pl-3 tw-font-normal tw-text-white tw-caret-primary-400 tw-shadow-sm tw-ring-1 tw-ring-inset tw-ring-iron-700 tw-transition tw-duration-300 tw-ease-out tw-scrollbar-thin tw-scrollbar-track-iron-900 tw-scrollbar-thumb-iron-600 placeholder:tw-text-iron-500 focus:tw-bg-iron-950 focus:tw-outline-none focus:tw-ring-1 focus:tw-ring-inset focus:tw-ring-primary-400 ${
+                        isCompact
+                          ? "tw-py-3 tw-text-sm tw-leading-5"
+                          : "tw-pb-2 tw-pt-3 tw-text-base tw-leading-6 sm:tw-text-sm"
+                      } ${
                         submitting ? "tw-cursor-default tw-opacity-50" : ""
                       } ${isCapacitor ? "tw-pr-[35px]" : "tw-pr-[40px]"}`}
                     />
-                    <CreateDropEmojiPicker />
+                    <CreateDropEmojiPicker
+                      verticalAlignment={isCompact ? "center" : "top"}
+                    />
                   </div>
                 }
                 placeholder={
                   <span
                     className={`editor-placeholder tw-block tw-max-w-[calc(100%-3.5rem)] tw-overflow-hidden tw-text-ellipsis tw-whitespace-nowrap ${
-                      submitting ? "tw-opacity-50" : ""
-                    }`}
+                      isCompact
+                        ? "tw-translate-y-0.5 tw-text-sm tw-leading-5"
+                        : "tw-translate-y-0.5 tw-text-base tw-leading-6 sm:tw-text-sm"
+                    } ${submitting ? "tw-opacity-50" : ""}`}
                   >
                     {placeholderText}
                   </span>
@@ -462,20 +476,17 @@ const CreateDropInput = forwardRef<
                 onSelect={onHashtagAdded}
                 ref={hashtagPluginRef}
               />
-              <MaxLengthPlugin maxLength={25000} />
+              <MaxLengthPlugin maxLength={MAX_DROP_PART_UTF16_UNITS} />
               <DragDropPastePlugin onAttachmentFiles={onAttachmentFiles} />
               <ListPlugin />
               <PlainTextPastePlugin />
               <MarkdownShortcutPlugin
-                transformers={SAFE_MARKDOWN_TRANSFORMERS}
+                transformers={CREATE_DROP_MARKDOWN_TRANSFORMERS}
               />
               <TabIndentationPlugin />
               <LinkPlugin validateUrl={validateUrl} />
               <ClearEditorPlugin ref={clearEditorRef} />
-              <EditorCommandsPlugin
-                ref={editorCommandsRef}
-                canMentionAll={canMentionAll}
-              />
+              <EditorCommandsPlugin ref={editorCommandsRef} />
               <DisableEditPlugin disabled={submitting} />
               <InitialMarkdownPlugin
                 initialMarkdown={initialMarkdown}

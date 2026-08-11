@@ -27,12 +27,13 @@ with cause filters, grouped reactions, and inline drop previews.
   remains visible while the site restores an existing wallet in a new tab or
   completes an active connect/reconnect attempt. The disconnected wallet prompt
   is shown only after that process finishes without valid auth.
-- Wallet missing: `Connect your wallet to view notifications.` with
-  `Reconnect wallet`.
+- Wallet missing: `This content is only available to connected wallets.` with
+  `Connect your wallet to continue.` and the wallet connect action.
+- Wallet connected without a profile:
+  `You need to set up a profile to continue.` with
+  `Create a profile to access notifications.` and `Create profile`. The action
+  opens the connected wallet's profile setup route.
 - Profile loading: `Loading profile...`.
-- Handle resolution failure:
-  `We couldn't determine your profile handle. Please reconnect to continue.`
-  with `Reconnect wallet`.
 - Proxy profile active:
   `Notifications are not available while you are using a profile proxy.` with
   `Switch to primary profile`.
@@ -47,7 +48,8 @@ with cause filters, grouped reactions, and inline drop previews.
 ## Feed Filters
 
 - Cause filters are horizontal chips:
-  `All`, `Mentions`, `Replies`, `Identity`, `Reactions`, `Invites`.
+  `All`, `Mentions`, `Replies`, `Identity`, `Reactions`, `Invites`,
+  `Subscriptions`.
 - Filter mapping:
   - `All`: all notification causes, including priority alerts, all-drops rows,
     and unknown causes.
@@ -57,6 +59,8 @@ with cause filters, grouped reactions, and inline drop previews.
   - `Reactions`: voted, reacted, and boosted drop notifications.
   - `Invites`: wave-created notifications, including standard waves the user
     can access and direct-message waves started with the user.
+  - `Subscriptions`: coverage alerts as a profile moves into plan-a-top-up,
+    running-low, or action-required state.
 
 ## Row and Action Behavior
 
@@ -77,6 +81,11 @@ with cause filters, grouped reactions, and inline drop previews.
   and can include `Join wave` plus `Follow creator` controls.
 - Direct-message wave-created rows say the creator started a DM with the user
   and expose `Open DM` instead of the wave join control.
+- Subscription coverage rows show the severity, consecutive funded runway,
+  funded-through or next-unfunded Meme context, an authoritative deadline when
+  available, and an exact minimum top-up action when supplied.
+- Coverage alerts are transition-based so routine balance recalculation does
+  not repeatedly nag the user without a meaningful risk-state change.
 - Unknown causes render a generic row (formatted cause/context) instead of
   failing feed render.
 

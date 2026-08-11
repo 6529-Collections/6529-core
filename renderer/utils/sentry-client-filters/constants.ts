@@ -95,13 +95,33 @@ export const noisyThirdPartyTelemetryNetworkPaths = new Set([
 ]);
 export const objectCapturedPromiseRejectionMessage =
   "Object captured as promise rejection with keys: code, message, stack";
+export const objectCapturedPromiseRejectionWithoutStackMessage =
+  "Object captured as promise rejection with keys: code, message";
 export const objectCapturedPromiseRejectionMessages = new Set([
   objectCapturedPromiseRejectionMessage,
-  "Object captured as promise rejection with keys: code, message",
+  objectCapturedPromiseRejectionWithoutStackMessage,
+]);
+const braveWalletSelectedAddressEvaluationErrorMessage =
+  "undefined is not an object (evaluating 'window.ethereum.selectedAddress = undefined')";
+const braveWalletEmitEvaluationErrorMessage =
+  "undefined is not an object (evaluating 'window.ethereum.emit')";
+export const braveWalletPageEvaluationErrorMessages = new Set([
+  braveWalletSelectedAddressEvaluationErrorMessage,
+  braveWalletEmitEvaluationErrorMessage,
 ]);
 export const providerDisconnectedCode = 4900;
 export const providerDisconnectedMessage =
   "The provider is disconnected from all chains.";
+export const walletRevokePermissionsUnsupportedCode = -32601;
+export const walletRevokePermissionsUnsupportedMessage =
+  "the method wallet_revokePermissions does not exist/is not available";
+export const backpackInternalJsonRpcErrorCode = -32603;
+export const backpackInternalJsonRpcErrorMessage = "Internal JSON-RPC error.";
+export const backpackWalletCollisionBreadcrumbMessage =
+  "Backpack was unable to override window.ethereum. If you're having issues connecting to a dapp, disable any other wallets and try again.";
+export const readOnlyEthereumProxyBreadcrumbPattern =
+  /^\[\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z\] \[\[WagmiSetup\] Skipping safe ethereum proxy install for read-only window\.ethereum\] Error: Signature request failed\. Please try again\.$/;
+export const backpackCollisionBreadcrumbWindowSeconds = 1;
 export const talismanExtensionOnboardingMessage =
   "Talisman extension has not been configured yet. Please continue with onboarding.";
 export const browserExtensionUrlPrefixes = [
@@ -122,6 +142,15 @@ export const rabbyMobileUserRejectedCode = 4001;
 export const rabbyMobileUserRejectedMessage = "Not Allowed";
 export const rabbyMobileStackContextPattern = "rabbymobile";
 export const rabbyMobileUserRejectedStackPattern = "userrejectedrequest";
+export const rabbyChromeUserRejectedCode = 4001;
+export const rabbyChromeUserRejectedMessage = "User rejected the request.";
+export const rabbyChromeUserRejectedStackHeader = `Error: ${rabbyChromeUserRejectedMessage}`;
+// Rabby's pinned source maps this extension ID to its Chrome Web Store listing:
+// https://github.com/RabbyHub/Rabby/blob/606cd9c641a79aff335ee992ebe7fa8d8982c0bd/src/ui/utils/webapi.tsx#L63-L70
+export const rabbyChromeExtensionContentScriptUrlPrefix =
+  "chrome-extension://acmacodkjbdgmoleebolmdjonilkdbch/content-script.js:";
+export const rabbyChromeUserRejectedStackFunction =
+  "Object.userRejectedRequest";
 export const appOwnedStackPatterns = [
   "webpack-internal:///(app-pages-browser)",
   "webpack://_n_e/./",
@@ -165,6 +194,7 @@ export const REACT_DOM_INSERT_BEFORE_RUNTIME_FUNCTIONS = new Set([
   "commitMutationEffectsOnFiber",
   "recursivelyTraverseMutationEffects",
 ]);
+export const JOIN_6529_ROUTE_PATH = "/join-6529";
 export const WAVES_ROUTE_PATH = "/waves";
 export const GRADIENT_ROUTE_PATH = "/6529-gradient";
 export const USER_PROFILE_ROUTE_TRANSACTION = "/:user";
@@ -227,6 +257,7 @@ export const extensionMessagingConnectionFailureMessage =
   "Could not establish connection. Receiving end does not exist.";
 export const extensionMessagingContentScriptPaths = new Set([
   "app:///content-scripts/content.js",
+  "app:///injected-script.js",
 ]);
 export const injectedScriptBundlePathToken = "injectedscript.bundle.js";
 export const injectedScriptSendMessageError =

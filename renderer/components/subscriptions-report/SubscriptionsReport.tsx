@@ -23,11 +23,13 @@ import type { MemeSeason } from "@/entities/ISeason";
 import type { SeasonMintRow } from "@/components/meme-calendar/meme-calendar.helpers";
 import {
   getCardsRemainingUntilEndOf,
+  getMintTimelineDetails,
   getUpcomingMintsAcrossSeasons,
 } from "@/components/meme-calendar/meme-calendar.helpers";
 import type { Paginated } from "@/components/pagination/Pagination";
 import Pagination from "@/components/pagination/Pagination";
 import ShowMoreButton from "@/components/show-more-button/ShowMoreButton";
+import Button from "@/components/utils/button/Button";
 import type { RedeemedSubscriptionCounts } from "@/generated/models/RedeemedSubscriptionCounts";
 import type { SubscriptionCounts } from "@/generated/models/SubscriptionCounts";
 import { commonApiFetch } from "@/services/api/common-api";
@@ -39,29 +41,71 @@ import {
   ArrowDownTrayIcon,
   ChevronDownIcon,
 } from "@heroicons/react/24/outline";
+import {
+  CONTENT_PAGE_CONTAINER_CLASS,
+  CONTENT_PAGE_TITLE_CLASS,
+} from "@/components/about/AboutLayout";
+import {
+  SUBSCRIPTIONS_PANEL_CLASS,
+  SUBSCRIPTIONS_SECTION_HEADING_CLASS,
+} from "@/components/about/aboutSubscriptionsStyles";
+import { DATA_TABLE_HEADER_TEXT_CLASS_NAME } from "@/components/utils/table/tableStyles";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 const PAGE_SIZE = 10;
 const UPCOMING_PAGE_SIZE = 5;
+const REPORT_SECTION_HEADING_CLASS_NAME =
+  SUBSCRIPTIONS_SECTION_HEADING_CLASS;
+const REPORT_MAJOR_SECTION_GAP_CLASS_NAME = "tw-pt-[34px]";
+const REPORT_SECTION_CONTENT_GAP_CLASS_NAME = "tw-pt-[13px]";
+const REPORT_TABLE_HEADER_CLASS_NAME = `tw-hidden tw-gap-4 tw-border-b tw-border-x-0 tw-border-t-0 tw-border-solid tw-border-iron-800 tw-px-4 tw-py-2 tw-text-left tw-font-semibold tw-text-iron-400 sm:tw-grid sm:tw-px-6 sm:tw-py-3 ${DATA_TABLE_HEADER_TEXT_CLASS_NAME}`;
 
 type MemeCalendarCurrentResponse = {
   readonly status: string;
   readonly current: {
     readonly mint_number: number;
   } | null;
+  readonly next?: {
+    readonly mint_number: number;
+    readonly mint_date: string;
+  };
 };
 
-function getCurrentLiveMintNumber(
-  currentMint: MemeCalendarCurrentResponse
+function getUtcDateKey(value: string): string | null {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+}
+
+function getReportActiveMintNumber(
+  currentMint: MemeCalendarCurrentResponse,
+  now: Date = new Date()
 ): number | null {
-  if (currentMint.status !== "live") {
+  if (currentMint.status === "live") {
+    return normalizeMemeTokenId(currentMint.current?.mint_number);
+  }
+
+  const nextMint = currentMint.next;
+  const todayUtc = now.toISOString().slice(0, 10);
+  return currentMint.status === "none" &&
+    nextMint &&
+    getUtcDateKey(nextMint.mint_date) === todayUtc
+    ? normalizeMemeTokenId(nextMint.mint_number)
+    : null;
+}
+
+function getMintRowForTokenId(tokenId: unknown): SeasonMintRow | null {
+  const normalizedTokenId = normalizeMemeTokenId(tokenId);
+  if (normalizedTokenId === null) {
     return null;
   }
 
-  const mintNumber = currentMint.current?.mint_number;
-  return typeof mintNumber === "number" && Number.isSafeInteger(mintNumber)
-    ? mintNumber
-    : null;
+  const timeline = getMintTimelineDetails(normalizedTokenId);
+  return {
+    meme: timeline.mintNumber,
+    utcDay: timeline.mintDayUtc,
+    instantUtc: timeline.instantUtc,
+    seasonIndex: timeline.seasonIndex,
+  };
 }
 
 function getActiveRedeemedDrop(
@@ -101,7 +145,7 @@ function getDisplayedRedeemedTotal(
   return Math.max(totalRedeemed - 1, 0);
 }
 
-async function fetchCurrentLiveMintNumber() {
+async function fetchReportActiveMintNumber(now: Date) {
   const response = await fetch("/api/meme-calendar/current");
 
   if (!response.ok) {
@@ -111,7 +155,7 @@ async function fetchCurrentLiveMintNumber() {
   }
 
   const currentMint = (await response.json()) as MemeCalendarCurrentResponse;
-  return getCurrentLiveMintNumber(currentMint);
+  return getReportActiveMintNumber(currentMint, now);
 }
 
 export default function SubscriptionsReportComponent() {
@@ -159,6 +203,23 @@ export default function SubscriptionsReportComponent() {
     () => getUpcomingMintsAcrossSeasons(upcomingCounts.length || 50, now),
     [now, upcomingCounts.length]
   );
+  const rowsByMeme = useMemo(
+    () => new Map(rows.map((row) => [row.meme, row])),
+    [rows]
+  );
+  const upcomingRows = useMemo(
+    () =>
+      upcomingCounts.flatMap((count, index) => {
+        const tokenId = normalizeMemeTokenId(count.token_id);
+        const date =
+          (tokenId === null ? null : rowsByMeme.get(tokenId)) ??
+          getMintRowForTokenId(count.token_id) ??
+          rows[index];
+
+        return date ? [{ count, date }] : [];
+      }),
+    [rows, rowsByMeme, upcomingCounts]
+  );
 
   async function fetchUpcomingCounts(count: number) {
     return await commonApiFetch<SubscriptionCounts[]>({
@@ -193,23 +254,23 @@ export default function SubscriptionsReportComponent() {
       let remainingCountForSeason = getCardsRemainingUntilEndOf("szn");
       let activeRedeemedDrop: RedeemedSubscriptionCounts | null = null;
       let activeTokenId: number | null = null;
-      let currentLiveMintNumber: number | null = null;
-      const currentLiveMintNumberPromise = fetchCurrentLiveMintNumber().catch(
-        (error: unknown) => {
-          console.error("Failed to fetch current meme calendar mint:", error);
-          return null;
-        }
-      );
+      let reportActiveMintNumber: number | null = null;
+      const reportActiveMintNumberPromise = fetchReportActiveMintNumber(
+        now
+      ).catch((error: unknown) => {
+        console.error("Failed to fetch current meme calendar mint:", error);
+        return null;
+      });
 
       try {
-        const [redeemed, liveMintNumber] = await Promise.all([
+        const [redeemed, activeMintNumber] = await Promise.all([
           fetchRedeemedCounts(1),
-          currentLiveMintNumberPromise,
+          reportActiveMintNumberPromise,
         ]);
-        currentLiveMintNumber = liveMintNumber;
+        reportActiveMintNumber = activeMintNumber;
         activeRedeemedDrop = getActiveRedeemedDrop(
           redeemed.data,
-          currentLiveMintNumber
+          reportActiveMintNumber
         );
         activeTokenId = activeRedeemedDrop
           ? normalizeMemeTokenId(activeRedeemedDrop.token_id)
@@ -229,7 +290,7 @@ export default function SubscriptionsReportComponent() {
         setTotalRedeemed(0);
       }
 
-      if (currentLiveMintNumber !== null && !activeRedeemedDrop) {
+      if (reportActiveMintNumber !== null && !activeRedeemedDrop) {
         remainingCountForSeason += 1;
       }
 
@@ -306,9 +367,11 @@ export default function SubscriptionsReportComponent() {
   function renderEmptyState(loading: boolean, type: string) {
     if (loading) {
       return (
-        <span className="tw-animate-pulse tw-text-sm tw-text-gray-400">
+        <output
+          className="tw-animate-pulse tw-text-sm tw-text-iron-400 motion-reduce:tw-animate-none"
+        >
           Loading {type} drops...
-        </span>
+        </output>
       );
     }
     return <>No Subscriptions Found</>;
@@ -382,15 +445,15 @@ export default function SubscriptionsReportComponent() {
     !upcomingLoading && !redeemedLoading && seasonOptionsLoaded;
 
   return (
-    <div className="tw-container tw-mx-auto tw-px-2 tw-py-5 lg:tw-px-6 xl:tw-px-8">
+    <div className={CONTENT_PAGE_CONTAINER_CLASS}>
       <div>
         <div className="tw-flex tw-flex-col tw-gap-3 sm:tw-flex-row sm:tw-items-center sm:tw-justify-between">
-          <h1 className="tw-m-0">Subscriptions Report</h1>
+          <h1 className={CONTENT_PAGE_TITLE_CLASS}>Subscriptions Report</h1>
           <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-justify-center tw-gap-x-4 tw-gap-y-3 sm:tw-w-auto sm:tw-justify-end">
             <AboutSubscriptionsProfileButton />
             <Link
               href="/about/subscriptions"
-              className="tw-whitespace-nowrap tw-no-underline hover:tw-underline"
+              className="hover:tw-text-primary-200 tw-whitespace-nowrap tw-text-sm tw-font-semibold tw-leading-5 tw-text-primary-300 tw-no-underline hover:tw-underline"
               aria-label="Learn more about The Memes subscriptions"
             >
               Learn More
@@ -400,23 +463,25 @@ export default function SubscriptionsReportComponent() {
       </div>
       {activeDrop && (
         <>
-          <div className="tw-pt-3">
-            <div className="tw-flex tw-items-center tw-gap-3">
-              <span className="tw-text-lg tw-font-bold tw-no-underline">
-                Active Drop
-              </span>
+          <div className={REPORT_MAJOR_SECTION_GAP_CLASS_NAME}>
+            <div className="tw-flex tw-items-center tw-gap-2">
+              <span
+                aria-hidden="true"
+                className="tw-size-1.5 tw-shrink-0 tw-rounded-full tw-bg-emerald-500"
+              />
+              <h2 className={REPORT_SECTION_HEADING_CLASS_NAME}>Active Drop</h2>
             </div>
           </div>
           <div
-            className="tw-pt-3"
+            className={REPORT_SECTION_CONTENT_GAP_CLASS_NAME}
             data-testid="subscriptions-report-active-drop"
           >
-            <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-primary-400/40 tw-bg-iron-900">
+            <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-solid tw-border-iron-700">
               <span className="tw-sr-only">
                 Active meme card subscribed and airdropped subscription counts
               </span>
               <div
-                className={`${ACTIVE_REPORT_GRID_CLASS_NAME} tw-hidden tw-gap-4 tw-bg-primary-500/10 tw-px-6 tw-py-3 tw-text-left tw-text-sm tw-font-semibold tw-uppercase tw-tracking-wider tw-text-gray-300 sm:tw-grid`}
+                className={`${ACTIVE_REPORT_GRID_CLASS_NAME} ${REPORT_TABLE_HEADER_CLASS_NAME}`}
                 aria-hidden="true"
               >
                 <span>Meme Card</span>
@@ -424,7 +489,6 @@ export default function SubscriptionsReportComponent() {
                 <span className="tw-text-center">Airdropped</span>
               </div>
               <ActiveSubscriptionRow
-                className="tw-bg-iron-800"
                 count={activeDrop}
                 subscribedCount={activeSubscribedCount}
               />
@@ -433,36 +497,34 @@ export default function SubscriptionsReportComponent() {
         </>
       )}
       <div ref={upcomingTableTopRef} />
-      <div className={activeDrop ? "tw-pt-8" : "tw-pt-3"}>
+      <div className={REPORT_MAJOR_SECTION_GAP_CLASS_NAME}>
         <div className="tw-flex tw-items-center tw-gap-3">
-          <span className="tw-text-lg tw-font-bold tw-no-underline">
-            Upcoming Drops
-          </span>
+          <h2 className={REPORT_SECTION_HEADING_CLASS_NAME}>Upcoming Drops</h2>
           {upcomingLoading && <CircleLoader size={CircleLoaderSize.MEDIUM} />}
         </div>
       </div>
       <div
-        className="tw-pt-3"
+        className={REPORT_SECTION_CONTENT_GAP_CLASS_NAME}
         data-testid="subscriptions-report-upcoming-drops"
       >
         <div>
-          {upcomingCounts?.length > 0 ? (
+          {upcomingRows.length > 0 ? (
             <>
-              <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-700 tw-bg-iron-900">
+              <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-solid tw-border-iron-800/60">
                 <span className="tw-sr-only">
                   Upcoming meme card subscription counts
                 </span>
                 <div
-                  className={`${STANDARD_REPORT_GRID_CLASS_NAME} tw-hidden tw-gap-4 tw-bg-iron-900 tw-px-6 tw-py-3 tw-text-left tw-text-sm tw-font-semibold tw-uppercase tw-tracking-wider tw-text-gray-300 sm:tw-grid`}
+                  className={`${STANDARD_REPORT_GRID_CLASS_NAME} ${REPORT_TABLE_HEADER_CLASS_NAME}`}
                   aria-hidden="true"
                 >
                   <span>Meme Card</span>
                   <span className="tw-text-center">Subscriptions</span>
                 </div>
                 <div>
-                  {upcomingCounts
+                  {upcomingRows
                     .slice(0, upcomingVisible)
-                    .map((count, index) => {
+                    .map(({ count, date }, index) => {
                       const isNew =
                         animateFromIndex !== null && index >= animateFromIndex;
                       return (
@@ -471,30 +533,31 @@ export default function SubscriptionsReportComponent() {
                           ref={
                             index === animateFromIndex ? firstNewRowRef : null
                           }
-                          className={[
-                            index % 2 === 0
-                              ? "tw-bg-iron-800"
-                              : "tw-bg-iron-900",
-                            isNew ? styles["upcomingRowNew"] : "",
-                          ].join(" ")}
-                          date={rows[index]!}
+                          className={
+                            isNew ? (styles["upcomingRowNew"] ?? "") : ""
+                          }
+                          date={date}
                           count={count}
                         />
                       );
                     })}
                 </div>
               </div>
-              {upcomingCounts.length > UPCOMING_PAGE_SIZE && (
-                <div ref={upcomingToggleRef} className="tw-pt-3 tw-text-center">
-                  {upcomingVisible < upcomingCounts.length ? (
+              {upcomingRows.length > UPCOMING_PAGE_SIZE && (
+                <div
+                  ref={upcomingToggleRef}
+                  className="tw-mt-3 tw-flex tw-justify-center tw-pb-1"
+                >
+                  {upcomingVisible < upcomingRows.length ? (
                     <ShowMoreButton
                       expanded={false}
+                      variant="subtle"
                       setExpanded={() => {
                         setAnimateFromIndex(upcomingVisible);
                         setUpcomingVisible((prev) =>
                           Math.min(
                             prev + UPCOMING_PAGE_SIZE,
-                            upcomingCounts.length
+                            upcomingRows.length
                           )
                         );
                       }}
@@ -502,6 +565,7 @@ export default function SubscriptionsReportComponent() {
                   ) : (
                     <ShowMoreButton
                       expanded={true}
+                      variant="subtle"
                       setExpanded={() => {
                         setAnimateFromIndex(null);
                         setUpcomingVisible(UPCOMING_PAGE_SIZE);
@@ -522,35 +586,36 @@ export default function SubscriptionsReportComponent() {
           )}
         </div>
       </div>
-      <div ref={pastDropsTarget} className="tw-pt-5">
+      <div
+        ref={pastDropsTarget}
+        className={REPORT_MAJOR_SECTION_GAP_CLASS_NAME}
+      >
         <div className="tw-flex tw-items-center tw-gap-3">
-          <span className="tw-text-lg tw-font-bold tw-no-underline">
-            Past Drops
-          </span>
+          <h2 className={REPORT_SECTION_HEADING_CLASS_NAME}>Past Drops</h2>
           {redeemedLoading && <CircleLoader size={CircleLoaderSize.MEDIUM} />}
         </div>
       </div>
-      <div className="tw-pt-3" data-testid="subscriptions-report-past-drops">
+      <div
+        className={REPORT_SECTION_CONTENT_GAP_CLASS_NAME}
+        data-testid="subscriptions-report-past-drops"
+      >
         <div>
           {redeemedCounts?.length > 0 ? (
-            <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-iron-700 tw-bg-iron-900">
+            <div className="tw-overflow-hidden tw-rounded-xl tw-border tw-border-solid tw-border-iron-800/60">
               <span className="tw-sr-only">
                 Past meme card subscription redemptions
               </span>
               <div
-                className={`${STANDARD_REPORT_GRID_CLASS_NAME} tw-hidden tw-gap-4 tw-bg-iron-900 tw-px-6 tw-py-3 tw-text-left tw-text-sm tw-font-semibold tw-uppercase tw-tracking-wider tw-text-gray-300 sm:tw-grid`}
+                className={`${STANDARD_REPORT_GRID_CLASS_NAME} ${REPORT_TABLE_HEADER_CLASS_NAME}`}
                 aria-hidden="true"
               >
                 <span>Meme Card</span>
                 <span className="tw-text-center">Subscriptions</span>
               </div>
               <div>
-                {redeemedCounts.map((count, index) => (
+                {redeemedCounts.map((count) => (
                   <RedeemedSubscriptionRow
                     key={getMemeTokenIdKey(count.token_id)}
-                    className={
-                      index % 2 === 0 ? "tw-bg-iron-800" : "tw-bg-iron-900"
-                    }
                     count={count}
                   />
                 ))}
@@ -581,11 +646,13 @@ export default function SubscriptionsReportComponent() {
         </div>
       )}
       {shouldShowDownloadSection && (
-        <div className="tw-pt-5">
+        <div className={REPORT_MAJOR_SECTION_GAP_CLASS_NAME}>
           <div>
-            <div className="tw-rounded-xl tw-border tw-border-iron-700 tw-bg-iron-900/95 tw-p-4 tw-shadow-sm md:tw-p-5">
+            <div className={`${SUBSCRIPTIONS_PANEL_CLASS} tw-p-5`}>
               <div className="tw-flex tw-flex-col tw-gap-4 lg:tw-flex-row lg:tw-items-center lg:tw-justify-between">
-                <h2 className="tw-m-0 tw-flex tw-min-h-11 tw-items-center tw-text-base tw-font-semibold tw-leading-6 tw-text-white md:tw-text-lg">
+                <h2
+                  className={`${REPORT_SECTION_HEADING_CLASS_NAME} tw-flex tw-min-h-11 tw-items-center`}
+                >
                   Redeemed Subscriptions Report
                 </h2>
                 <div className="tw-flex tw-w-full tw-flex-col tw-gap-3 sm:tw-flex-row sm:tw-items-stretch lg:tw-w-auto lg:tw-shrink-0">
@@ -613,37 +680,16 @@ export default function SubscriptionsReportComponent() {
                       />
                     </div>
                   )}
-                  <button
+                  <Button
                     type="button"
                     onClick={onDownloadCsv}
-                    disabled={isDownloadingCsv}
-                    className="tw-flex tw-h-11 tw-min-w-[190px] tw-items-center tw-justify-center tw-gap-2 tw-whitespace-nowrap tw-rounded-lg tw-border-0 tw-bg-primary-500 tw-px-5 tw-text-sm tw-font-semibold tw-text-white tw-transition tw-duration-300 tw-ease-out hover:tw-bg-primary-600 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-300 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-black disabled:tw-cursor-not-allowed disabled:tw-opacity-60 sm:tw-w-52"
+                    loading={isDownloadingCsv}
+                    variant="action"
+                    size="lg"
+                    className="tw-self-start"
                   >
                     {isDownloadingCsv ? (
-                      <>
-                        <svg
-                          className="tw-h-4 tw-w-4 tw-animate-spin"
-                          xmlns="http://www.w3.org/2000/svg"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          aria-hidden="true"
-                        >
-                          <circle
-                            className="tw-opacity-25"
-                            cx="12"
-                            cy="12"
-                            r="10"
-                            stroke="currentColor"
-                            strokeWidth="4"
-                          />
-                          <path
-                            className="tw-opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                          />
-                        </svg>
-                        Downloading
-                      </>
+                      "Downloading"
                     ) : (
                       <>
                         <ArrowDownTrayIcon
@@ -653,7 +699,7 @@ export default function SubscriptionsReportComponent() {
                         Download
                       </>
                     )}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

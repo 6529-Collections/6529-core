@@ -55,7 +55,6 @@
     }
   },
   "win": {
-    "publisherName": "6529 Collection LLC",
     "icon": "assets/icon.ico",
     "target": [
       {
@@ -64,7 +63,10 @@
       }
     ],
     "artifactName": "6529-DESKTOP-LOCAL-win-${arch}-${version}.${ext}",
-    "signingHashAlgorithms": ["sha256"]
+    "signtoolOptions": {
+      "publisherName": "6529 Collection LLC",
+      "signingHashAlgorithms": ["sha256"]
+    }
   },
   "nsis": {
     "oneClick": false,
@@ -90,14 +92,6 @@
       }
     ],
     "artifactName": "6529-DESKTOP-LOCAL-linux-${arch}-${version}.${ext}",
-    "desktop": {
-      "Name": "6529 Desktop Local",
-      "Type": "Application",
-      "Terminal": false,
-      "MimeType": "x-scheme-handler/localcore6529;",
-      "Categories": "Utility;Network;",
-      "Comment": "6529 Desktop Local Application"
-    },
     "protocols": [
       {
         "name": "6529 Desktop Local Protocol",

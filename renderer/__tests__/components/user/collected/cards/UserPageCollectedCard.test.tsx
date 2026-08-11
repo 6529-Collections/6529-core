@@ -49,6 +49,23 @@ describe("UserPageCollectedCard", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a dash instead of rank zero when rank data is missing", () => {
+    render(
+      <UserPageCollectedCard
+        card={{ ...memeCard, rank: null }}
+        contractType={ContractType.ERC1155}
+        showDataRow={true}
+        onToggle={() => {}}
+        onIncQty={() => {}}
+        onDecQty={() => {}}
+        copiesMax={1}
+      />
+    );
+
+    expect(screen.getByText("Rank -")).toBeInTheDocument();
+    expect(screen.queryByText("Rank 0")).not.toBeInTheDocument();
+  });
+
   it("hides seized count for zero balance by default", () => {
     render(
       <UserPageCollectedCard
@@ -361,6 +378,33 @@ describe("UserPageCollectedCard", () => {
 
     const link = screen.getByRole("link");
     expect(link).toHaveAttribute("href", "/the-memes/1");
+  });
+
+  it("includes the profile collected return target for NextGen cards", () => {
+    render(
+      <UserPageCollectedCard
+        card={{
+          ...memeCard,
+          collection: CollectedCollectionType.NEXTGEN,
+          token_id: 10000000643,
+        }}
+        contractType={ContractType.ERC721}
+        showDataRow={true}
+        interactiveMode="link"
+        onToggle={() => {}}
+        onIncQty={() => {}}
+        onDecQty={() => {}}
+        copiesMax={1}
+        returnTo="/Shelby/collected?collection=nextgen&page=3"
+      />
+    );
+
+    const href = screen.getByRole("link").getAttribute("href");
+    const url = new URL(href ?? "", "https://6529.io");
+    expect(url.pathname).toBe("/nextgen/token/10000000643");
+    expect(url.searchParams.get("returnTo")).toBe(
+      "/Shelby/collected?collection=nextgen&page=3#collected-card-nextgen-10000000643"
+    );
   });
 
   it("calls onToggle and onDecQty when decrementing from qtySelected 1 for ERC1155", async () => {

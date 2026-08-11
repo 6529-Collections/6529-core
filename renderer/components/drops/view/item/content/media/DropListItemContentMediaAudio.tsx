@@ -8,9 +8,9 @@ export default function DropListItemContentMediaAudio({
   const safeSrc = getSafeMediaSourceUrl(src);
 
   return (
-    <div>
+    <div className="tw-w-full">
       {safeSrc ? (
-        <audio controls className="tw-max-h-10 tw-w-full">
+        <audio controls preload="metadata" className="tw-w-full">
           <source src={safeSrc} type="audio/mpeg" />
           Your browser does not support the audio element.
         </audio>

@@ -10,7 +10,7 @@ import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { CompactMenu } from "@/components/compact-menu";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP } from "@/constants/constants";
@@ -34,9 +34,10 @@ import Spinner from "../utils/Spinner";
 import AppSidebar from "./AppSidebar";
 import HeaderSearchButton from "./header-search/HeaderSearchButton";
 import HeaderPageShareButton from "./share/HeaderPageShareButton";
+import { isPageShareSupported } from "./share/page-share-support";
 import HeaderActionButtons from "./HeaderActionButtons";
 import NetworkHealthCTA from "./NetworkHealthCTA";
-import PrimaryButton from "../utils/button/PrimaryButton";
+import Button from "../utils/button/Button";
 import { useWaveShareCopyAction } from "@/hooks/waves/useWaveShareCopyAction";
 import WaveDescriptionPopover from "@/components/waves/header/WaveDescriptionPopover";
 import WavePicture from "@/components/waves/WavePicture";
@@ -55,6 +56,7 @@ import {
 } from "./app-header-wave-preview";
 import WaveHeaderRestrictionButton from "@/components/waves/header/WaveHeaderRestrictionButton";
 import MainStageNominationPopover from "@/components/brain/my-stream/tabs/MainStageNominationPopover";
+import { useProfileDoubleActivate } from "./useProfileDoubleActivate";
 
 const COLLECTION_TITLES: Record<string, string> = {
   "the-memes": "The Memes",
@@ -62,17 +64,12 @@ const COLLECTION_TITLES: Record<string, string> = {
   "meme-lab": "Meme Lab",
   nextgen: "NextGen",
 };
-const PROFILE_DOUBLE_ACTIVATE_DELAY_MS = 280;
 const HEADER_RESTRICTION_BUTTON_CLASS =
   "tw-size-9 tw-min-w-9 tw-rounded-lg tw-border-0 tw-bg-black tw-p-0 tw-text-iron-300 tw-shadow-sm desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-50";
 
 interface HeaderConnectedAccount {
   readonly address: string;
   readonly isActive: boolean;
-}
-
-interface HeaderTimeoutRef {
-  current: ReturnType<typeof setTimeout> | null;
 }
 
 interface HeaderProfileSource {
@@ -131,34 +128,6 @@ const getDropForgeTitle = (pathSegments: string[]): string | null => {
   }
 
   return null;
-};
-
-const shouldShowHeaderPageShareAction = ({
-  activeView,
-  isCapacitor,
-  pathname,
-}: {
-  readonly activeView: string | null;
-  readonly isCapacitor: boolean;
-  readonly pathname: string;
-}): boolean => {
-  if (!isCapacitor) {
-    return false;
-  }
-
-  if (
-    pathname === "/" ||
-    pathname === "/waves" ||
-    pathname.startsWith("/waves/") ||
-    pathname === "/messages" ||
-    pathname.startsWith("/messages/") ||
-    pathname === "/notifications" ||
-    pathname.startsWith("/notifications/")
-  ) {
-    return false;
-  }
-
-  return activeView !== "waves" && activeView !== "messages";
 };
 
 const getHeaderTitle = ({
@@ -352,18 +321,16 @@ const HeaderDropActionButton = ({
   }
 
   return (
-    <PrimaryButton
-      loading={false}
-      disabled={false}
-      onClicked={action.onOpen}
-      padding="tw-p-0 sm:tw-px-2.5 sm:tw-py-2"
+    <Button
+      onClick={action.onOpen}
+      size={null}
       title={title}
-      ariaLabel={action.label}
+      aria-label={action.label}
       className="tw-size-9 tw-min-w-9 tw-p-0"
     >
       <PlusIcon className="tw-size-5 tw-flex-shrink-0" />
       <span className="tw-sr-only">{action.compactLabel}</span>
-    </PrimaryButton>
+    </Button>
   );
 };
 
@@ -483,38 +450,6 @@ const switchToNextConnectedAccount = ({
   }
 };
 
-const handleProfileActivate = ({
-  address,
-  profileClickTimeoutRef,
-  openMenu,
-  switchConnectedAccount,
-}: {
-  readonly address: string | null | undefined;
-  readonly profileClickTimeoutRef: HeaderTimeoutRef;
-  readonly openMenu: () => void;
-  readonly switchConnectedAccount: () => boolean;
-}) => {
-  if (!address) {
-    openMenu();
-    return;
-  }
-
-  if (profileClickTimeoutRef.current) {
-    clearTimeout(profileClickTimeoutRef.current);
-    profileClickTimeoutRef.current = null;
-
-    if (!switchConnectedAccount()) {
-      openMenu();
-    }
-    return;
-  }
-
-  profileClickTimeoutRef.current = setTimeout(() => {
-    profileClickTimeoutRef.current = null;
-    openMenu();
-  }, PROFILE_DOUBLE_ACTIVATE_DELAY_MS);
-};
-
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const myStream = useMyStreamOptional();
@@ -531,9 +466,6 @@ export default function AppHeader() {
     seizeSwitchConnectedAccount,
   } = useSeizeConnectContext();
   const { isSeedWallet } = useSeedWallet();
-  const profileClickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
   const { connectedProfile, activeProfileProxy } = useAuth();
   const pathname = usePathname();
   const params = useParams();
@@ -542,15 +474,6 @@ export default function AppHeader() {
     handleOrWallet: address ?? null,
     initialProfile: null,
   });
-
-  useEffect(
-    () => () => {
-      if (profileClickTimeoutRef.current) {
-        clearTimeout(profileClickTimeoutRef.current);
-      }
-    },
-    []
-  );
 
   const pfp = getHeaderProfilePfp({ activeProfileProxy, profile });
   const resolvedPfp = pfp ? resolveIpfsUrlSync(pfp) : null;
@@ -616,11 +539,10 @@ export default function AppHeader() {
     activeWaveId: waveParam,
     searchParams,
   });
-  const showPageShareAction = shouldShowHeaderPageShareAction({
-    activeView,
-    isCapacitor,
-    pathname,
-  });
+  const showPageShareAction =
+    isCapacitor &&
+    !isInsideWave &&
+    isPageShareSupported({ activeView, pathname, surface: "mobile" });
 
   const isProfilePage = typeof params["user"] === "string";
 
@@ -663,23 +585,21 @@ export default function AppHeader() {
   );
   const hasMultipleConnectedAccounts = connectedAccounts.length > 1;
   const openMenu = () => setMenuOpen(true);
-  const onProfileActivate = () =>
-    handleProfileActivate({
-      address,
-      profileClickTimeoutRef,
-      openMenu,
-      switchConnectedAccount: () =>
-        switchToNextConnectedAccount({
-          connectedAccounts,
-          seizeSwitchConnectedAccount,
-          onFailure: (error) => {
-            console.error(
-              "Failed to switch connected account from header",
-              error
-            );
-          },
-        }),
+  const closeMenu = () => setMenuOpen(false);
+  const switchConnectedAccount = () =>
+    switchToNextConnectedAccount({
+      connectedAccounts,
+      seizeSwitchConnectedAccount,
+      onFailure: (error) => {
+        console.error("Failed to switch connected account from header", error);
+      },
     });
+  const { onProfileActivate, profileButtonRef } = useProfileDoubleActivate({
+    canSwitchAccount: hasMultipleConnectedAccounts,
+    openMenu,
+    closeMenu,
+    switchConnectedAccount,
+  });
 
   const finalTitle = getHeaderTitle({
     pathname,
@@ -712,6 +632,7 @@ export default function AppHeader() {
             <BackButton />
           ) : (
             <button
+              ref={profileButtonRef}
               type="button"
               aria-label={
                 hasMultipleConnectedAccounts
@@ -751,15 +672,17 @@ export default function AppHeader() {
               <HeaderPageShareButton isCapacitor={isCapacitor} />
             </div>
           )}
-          <div className="tw-flex-shrink-0">
-            <HeaderSearchButton
-              wave={
-                isInsideWave && (isWavesRoute || isMessagesRoute)
-                  ? activeWave
-                  : null
-              }
-            />
-          </div>
+          {!isCreateRoute && (
+            <div className="tw-flex-shrink-0">
+              <HeaderSearchButton
+                wave={
+                  isInsideWave && (isWavesRoute || isMessagesRoute)
+                    ? activeWave
+                    : null
+                }
+              />
+            </div>
+          )}
           <HeaderMoreMenu items={appHeaderMoreMenuItems} />
         </div>
       </div>

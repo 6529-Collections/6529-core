@@ -39,6 +39,7 @@ const NOTIFICATION_CAUSE_PRIORITY: Record<NotificationCause, number> = {
   [ApiNotificationCause.WaveCreated]: 10,
   [ApiNotificationCause.AllDrops]: 11,
   [ApiNotificationCause.PriorityAlert]: 12,
+  [ApiNotificationCause.SubscriptionCoverage]: 13,
 };
 
 const compareNotificationCause = (
@@ -133,13 +134,10 @@ export default function Notifications({
         >
           <NotificationsContent
             isLoadingProfile={contentState.isLoadingProfile}
-            hasConnectedProfile={contentState.hasConnectedProfile}
-            hasProfileHandle={contentState.hasProfileHandle}
             showProxyDisabledState={contentState.showProxyDisabledState}
             showErrorState={contentState.showErrorState}
             resolvedErrorMessage={contentState.resolvedErrorMessage}
             handleRetry={handlers.handleRetry}
-            handleAuthRetry={handlers.handleAuthRetry}
             handleProxyDisable={handlers.handleProxyDisable}
             showLoader={contentState.showLoader}
             showNoItems={contentState.showNoItems}

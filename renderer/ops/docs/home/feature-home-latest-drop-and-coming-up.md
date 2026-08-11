@@ -50,10 +50,10 @@ Use this page for visibility rules, state switches, and route targets.
    - `Latest Drop` when the current mint is not ended, or when no next winner
      is available.
    - `Next Drop` when the current mint is ended and a next winner exists.
-4. `Latest Drop` shows artwork, stats, subscription awareness, edition details,
-   and countdown states: `Upcoming`, `Live`, `Mint Complete`, or `Error`. When
-   the card has an explicit Main Stage mapping, edition details also includes
-   `Main Stage Submission` → `View`.
+4. `Latest Drop` shows artwork, stats, connected-wallet allowlist status,
+   subscription awareness, edition details, and countdown states: `Upcoming`,
+   `Live`, `Mint Complete`, or `Error`. When the card has an explicit Main Stage
+   mapping, edition details also includes `Main Stage Submission` → `View`.
 5. `Coming up` resolves after app settings load and `memes_wave_id` is
    available.
 6. `Coming up` then shows:
@@ -99,6 +99,14 @@ Use this page for visibility rules, state switches, and route targets.
   alongside its wave, submission time, and rating details.
 - On iOS outside the US, the countdown `Mint` button is hidden.
 - On iOS outside the US, The Memes subscription row is hidden.
+- Latest Drop and mapped Next Drop cards show a separate `Your allowlist` row.
+  It checks the connected wallet only and lists every Phase 0, Phase 1, or Phase
+  2 entry with a positive manual-allowlist allocation. Subscription airdrops do
+  not count as manual allowlist access.
+- The allowlist row asks disconnected users to connect a wallet, keeps a stable
+  checking state while wallet/API data loads, and distinguishes no matching
+  phase from an unavailable lookup. It reports allowlist membership, not whether
+  an allocation is still unused or mintable now.
 - Latest Drop subscription awareness is read-only and links to subscription
   info/profile subscriptions without querying the upcoming-meme status endpoint
   for the current or already-dropped card.
@@ -113,10 +121,16 @@ Use this page for visibility rules, state switches, and route targets.
 - Awareness-only rows do not embed the profile subscription editor. They show a
   blue read-only `Subscription Minting` box, a non-mutating on/off toggle,
   optional `xN` user subscribed count when already subscribed, an
-  `xN subscribers` total, a `Set up`/`Manage` profile-subscriptions action,
-  and a right-edge question-mark info link.
-- Balance, eligibility, quantity selectors, and subscription mutation controls
-  are intentionally not shown in home/latest-card awareness rows.
+  `xN subscribers` total, a contextual profile-subscriptions action, and a
+  right-edge question-mark info link.
+- For a connected non-proxy profile, the awareness row can also show the
+  compact runway summary, for example
+  `Automatic · 0.18 ETH · 4 drops funded`. Its action follows the coverage
+  state: setup/settings for non-minters, upcoming choices for Manual mode with
+  no selections, and top-up for low coverage.
+- Detailed forecast fields, eligibility controls, quantity selectors, and
+  subscription mutation controls are intentionally not shown in
+  home/latest-card awareness rows.
 - Without a connected profile, the subscription row can still show a read-only
   off toggle awareness state, a `Set up` action that opens wallet connection,
   and a link to `/about/subscriptions`.

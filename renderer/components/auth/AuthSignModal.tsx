@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import type { MouseEvent } from "react";
 import { ConfirmModalShell } from "@/components/shared/ConfirmModalShell";
 import { AUTHENTICATION_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
+import Button from "@/components/utils/button/Button";
 import { t } from "@/i18n/messages";
 import DotLoader from "../dotLoader/DotLoader";
 import {
@@ -119,23 +120,27 @@ export function AuthSignModal({
       footer={
         <>
           {canDismissSignModal && (
-            <button
+            <Button
               type="button"
-              className={styles["signModalCancelButton"]}
               onClick={onCancelSignRequest}
+              variant="secondary"
+              size="md"
+              className="tw-min-w-32 max-[576px]:tw-min-w-0 max-[576px]:tw-flex-1"
             >
               {isSessionUpgradePrompt && sessionUpgradeHasDeadline
                 ? t(AUTH_MODAL_LOCALE, "auth.signModal.remindLater")
                 : t(AUTH_MODAL_LOCALE, "auth.signModal.cancel")}
-            </button>
+            </Button>
           )}
           {!isConnectionShareUpgradePrompt && (
-            <button
+            <Button
               type="button"
-              className={styles["signModalConfirmButton"]}
               data-auth-sign-primary
               onClick={onConfirmSignRequest}
               disabled={isSignRequestInProgress}
+              variant="action"
+              size="md"
+              className="tw-min-w-32 max-[576px]:tw-min-w-0 max-[576px]:tw-flex-1"
             >
               {isSigningPending ? (
                 <span className={styles["signModalButtonContent"]}>
@@ -145,7 +150,7 @@ export function AuthSignModal({
               ) : (
                 signModalConfirmText
               )}
-            </button>
+            </Button>
           )}
         </>
       }

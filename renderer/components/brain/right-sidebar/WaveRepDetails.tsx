@@ -5,6 +5,7 @@ import CircleLoader, {
 } from "@/components/distribution-plan-tool/common/CircleLoader";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
 import { getDefaultQueryRetry } from "@/components/react-query-wrapper/utils/query-utils";
+import Button from "@/components/utils/button/Button";
 import type { ProfileActivityLogRatingEdit } from "@/entities/IProfile";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import type { ApiWaveRepCategoriesPage } from "@/generated/models/ApiWaveRepCategoriesPage";
@@ -284,7 +285,7 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
   const isShowingPreviousContributors = contributorsQuery.isPlaceholderData;
 
   return (
-    <div className="tw-flex tw-min-h-full tw-flex-col tw-gap-4 tw-p-4 tw-@container/rep">
+    <div className="tw-flex tw-min-h-full tw-flex-col tw-gap-[13px] tw-p-4 tw-@container/rep">
       <section aria-label={detailText("waves.rep.details.summary.title")}>
         <div className="tw-overflow-hidden tw-border-x-0 tw-border-y tw-border-solid tw-border-white/5">
           <div className="tw-flex tw-items-end tw-justify-between tw-gap-4 tw-px-2 tw-py-2.5">
@@ -344,48 +345,55 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
             </span>
           )}
         </div>
-        <CategorySearch value={categorySearch} onChange={setCategorySearch} />
-        <div className="tw-mt-2 tw-divide-y tw-divide-solid tw-divide-white/5 tw-overflow-hidden tw-border-x-0 tw-border-y tw-border-solid tw-border-white/5">
-          <CategoryRow
-            label={detailText("waves.rep.details.categories.all")}
-            totalRep={summary.totalRep}
-            contributorCount={summary.contributorCount}
-            selected={selectedCategory === null}
-            ariaLabel={detailText("waves.rep.details.categories.allAriaLabel", {
-              rep: formatSignedRep(summary.totalRep),
-              contributors: getContributorCountLabel(summary.contributorCount),
-            })}
-            onClick={clearSelectedCategory}
-          />
-          {filteredCategories.map((category) => (
+        <div className="tw-rounded-lg tw-border tw-border-solid tw-border-white/[0.06] tw-bg-white/[0.025] tw-p-1.5">
+          <CategorySearch value={categorySearch} onChange={setCategorySearch} />
+          <div className="tw-mt-1.5 tw-divide-y tw-divide-solid tw-divide-white/[0.04] tw-overflow-hidden tw-rounded-md">
             <CategoryRow
-              key={category.category}
-              label={category.category}
-              totalRep={category.total_rep}
-              contributorCount={category.contributor_count}
-              selected={selectedCategory === category.category}
+              label={detailText("waves.rep.details.categories.all")}
+              totalRep={summary.totalRep}
+              contributorCount={summary.contributorCount}
+              selected={selectedCategory === null}
               ariaLabel={detailText(
-                "waves.rep.details.categories.categoryAriaLabel",
+                "waves.rep.details.categories.allAriaLabel",
                 {
-                  category: category.category,
-                  rep: formatSignedRep(category.total_rep),
+                  rep: formatSignedRep(summary.totalRep),
                   contributors: getContributorCountLabel(
-                    category.contributor_count
+                    summary.contributorCount
                   ),
                 }
               )}
-              onClick={() => selectCategory(category)}
+              onClick={clearSelectedCategory}
             />
-          ))}
-          {normalizedCategorySearch.length > 0 &&
-            filteredCategories.length === 0 &&
-            categoriesQuery.status === "success" &&
-            !categoriesQuery.hasNextPage &&
-            !categoriesQuery.isFetchingNextPage && (
-              <p className="tw-mb-0 tw-px-2.5 tw-py-3 tw-text-xs tw-font-medium tw-text-iron-500">
-                {detailText("waves.rep.details.categories.noMatches")}
-              </p>
-            )}
+            {filteredCategories.map((category) => (
+              <CategoryRow
+                key={category.category}
+                label={category.category}
+                totalRep={category.total_rep}
+                contributorCount={category.contributor_count}
+                selected={selectedCategory === category.category}
+                ariaLabel={detailText(
+                  "waves.rep.details.categories.categoryAriaLabel",
+                  {
+                    category: category.category,
+                    rep: formatSignedRep(category.total_rep),
+                    contributors: getContributorCountLabel(
+                      category.contributor_count
+                    ),
+                  }
+                )}
+                onClick={() => selectCategory(category)}
+              />
+            ))}
+            {normalizedCategorySearch.length > 0 &&
+              filteredCategories.length === 0 &&
+              categoriesQuery.status === "success" &&
+              !categoriesQuery.hasNextPage &&
+              !categoriesQuery.isFetchingNextPage && (
+                <p className="tw-mb-0 tw-px-2.5 tw-py-3 tw-text-xs tw-font-medium tw-text-iron-500">
+                  {detailText("waves.rep.details.categories.noMatches")}
+                </p>
+              )}
+          </div>
         </div>
 
         {categoriesQuery.status === "success" && categories.length === 0 && (
@@ -418,21 +426,23 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
                 {detailText("waves.rep.details.categories.loadMoreError")}
               </p>
             )}
-            <button
+            <Button
               type="button"
               onClick={fetchNextCategoriesPage}
               disabled={categoriesQuery.isFetchingNextPage}
-              className="tw-w-full tw-cursor-pointer tw-rounded-md tw-border tw-border-solid tw-border-white/10 tw-bg-white/[0.02] tw-px-3 tw-py-2 tw-text-xs tw-font-semibold tw-text-white tw-transition hover:tw-border-white/20 hover:tw-bg-white/[0.05] disabled:tw-cursor-wait disabled:tw-opacity-60"
+              variant="tertiary"
+              size="xs"
+              fullWidth
             >
               {categoriesQuery.isFetchingNextPage
                 ? detailText("waves.rep.details.categories.loadingMore")
                 : detailText(categoryLoadMoreMessageKey)}
-            </button>
+            </Button>
           </div>
         )}
       </section>
 
-      <div className="tw-sticky tw-top-0 tw-z-20 tw-flex tw-flex-col tw-bg-iron-950/95 tw-py-2 tw-backdrop-blur">
+      <div className="tw-sticky tw-top-0 tw-z-20 tw-flex tw-flex-col tw-bg-iron-950/95 tw-backdrop-blur">
         <fieldset className="tw-m-0 tw-grid tw-min-w-0 tw-grid-cols-2 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-white/5 tw-p-0">
           <legend className="tw-sr-only">
             {detailText("waves.rep.details.view.ariaLabel")}
@@ -443,7 +453,7 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
             onClick={() => setActiveView("contributors")}
             className={`tw-cursor-pointer tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-bg-transparent tw-px-3 tw-py-2 !tw-text-sm tw-font-medium tw-transition ${
               activeView === "contributors"
-                ? "tw-border-primary-300/60 tw-text-iron-100"
+                ? "tw-border-primary-300 tw-text-iron-100"
                 : "tw-border-transparent tw-text-iron-500 hover:tw-text-iron-300"
             }`}
           >
@@ -455,7 +465,7 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
             onClick={showActivity}
             className={`tw-cursor-pointer tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-bg-transparent tw-px-3 tw-py-2 !tw-text-sm tw-font-medium tw-transition ${
               activeView === "activity"
-                ? "tw-border-primary-300/60 tw-text-iron-100"
+                ? "tw-border-primary-300 tw-text-iron-100"
                 : "tw-border-transparent tw-text-iron-500 hover:tw-text-iron-300"
             }`}
           >
@@ -488,13 +498,15 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
               <p className="tw-mb-0 tw-text-sm tw-text-iron-300">
                 {detailText("waves.rep.details.contributors.error")}
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={retryContributors}
-                className="tw-mt-3 tw-cursor-pointer tw-rounded-lg tw-border tw-border-solid tw-border-white/10 tw-bg-white/[0.03] tw-px-3 tw-py-2 tw-text-xs tw-font-semibold tw-text-white tw-transition hover:tw-border-white/15 hover:tw-bg-white/[0.06]"
+                variant="tertiary"
+                size="xs"
+                className="tw-mt-3"
               >
                 {detailText(RETRY_ACTION_MESSAGE_KEY)}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -551,16 +563,18 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
 
               {(contributorsQuery.hasNextPage ||
                 contributorsQuery.isFetchingNextPage) && (
-                <button
+                <Button
                   type="button"
                   onClick={fetchNextContributorsPage}
                   disabled={contributorsQuery.isFetchingNextPage}
-                  className="tw-w-full tw-cursor-pointer tw-rounded-md tw-border tw-border-solid tw-border-white/10 tw-bg-white/[0.02] tw-px-3 tw-py-2 tw-text-xs tw-font-semibold tw-text-white tw-transition hover:tw-border-white/20 hover:tw-bg-white/[0.05] disabled:tw-cursor-wait disabled:tw-opacity-60"
+                  variant="tertiary"
+                  size="xs"
+                  fullWidth
                 >
                   {contributorsQuery.isFetchingNextPage
                     ? detailText("waves.rep.details.contributors.loadingMore")
                     : detailText("waves.rep.details.contributors.loadMore")}
-                </button>
+                </Button>
               )}
             </div>
           )}
@@ -591,13 +605,15 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
               <p className="tw-mb-0 tw-text-sm tw-text-iron-300">
                 {detailText("waves.rep.details.activity.error")}
               </p>
-              <button
+              <Button
                 type="button"
                 onClick={retryLogs}
-                className="tw-mt-3 tw-cursor-pointer tw-rounded-lg tw-border tw-border-solid tw-border-white/10 tw-bg-white/[0.03] tw-px-3 tw-py-2 tw-text-xs tw-font-semibold tw-text-white tw-transition hover:tw-border-white/15 hover:tw-bg-white/[0.06]"
+                variant="tertiary"
+                size="xs"
+                className="tw-mt-3"
               >
                 {detailText(RETRY_ACTION_MESSAGE_KEY)}
-              </button>
+              </Button>
             </div>
           )}
 
@@ -635,16 +651,18 @@ export default function WaveRepDetails({ wave }: WaveRepDetailsProps) {
               )}
 
               {(logsQuery.hasNextPage || logsQuery.isFetchingNextPage) && (
-                <button
+                <Button
                   type="button"
                   onClick={fetchNextLogsPage}
                   disabled={logsQuery.isFetchingNextPage}
-                  className="tw-w-full tw-cursor-pointer tw-rounded-md tw-border tw-border-solid tw-border-white/10 tw-bg-white/[0.02] tw-px-3 tw-py-2 tw-text-xs tw-font-semibold tw-text-white tw-transition hover:tw-border-white/20 hover:tw-bg-white/[0.05] disabled:tw-cursor-wait disabled:tw-opacity-60"
+                  variant="tertiary"
+                  size="xs"
+                  fullWidth
                 >
                   {logsQuery.isFetchingNextPage
                     ? detailText("waves.rep.details.activity.loadingMore")
                     : detailText("waves.rep.details.activity.loadMore")}
-                </button>
+                </Button>
               )}
             </div>
           )}

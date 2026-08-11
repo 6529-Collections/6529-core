@@ -15,25 +15,35 @@ import {
 import {
   sanitizeSentryBreadcrumb,
   sanitizeSentryEvent,
+  sanitizeSentrySpan,
   sanitizeUrlString,
 } from "@/utils/sentry-sanitizer";
 import {
   getLowValueNetworkErrorDecision,
   getNetworkErrorMessageTargetUrl,
   getThirdPartyTelemetrySpanTargetKey,
+  redactDropReactionFailureIdentifiers,
   shouldFilterAnonymousUnsafeEvalCspError,
   shouldFilterAppleWebKitSortedTrackListTypeError,
   shouldFilterByFilenameExceptions,
   shouldFilterBrowserExtensionMessagingConnectionError,
   shouldFilterBrowserExtensionSendMessageError,
+  shouldFilterBrowserExtensionWalletRejection,
+  shouldFilterBraveWalletPageEvaluationError,
+  shouldFilterChromeMobileIosInjectedGaError,
   shouldFilterPoperBlockerOrphanFetchRejection,
+  shouldFilterExpectedWaveRequestReplacementAbort,
   shouldFilterCoinbaseWalletLinkWebSocket1006,
   shouldFilterDisconnectedWalletProviderRejection,
+  shouldFilterInjectedIosAutoplayNotAllowedError,
   shouldFilterInjectedProviderProxyStartsWithError,
   shouldFilterInjectedWalletCollision,
+  shouldFilterInstagramPageHideBridgeError,
+  shouldFilterKnownWalletProviderObjectRejection,
   shouldFilterReactDomInsertBeforeNotFoundError,
   shouldFilterReactDomRemoveChildNotFoundError,
   shouldFilterInjectedWasmCspUnsafeEval,
+  shouldFilterRabbyChromeUserRejectedRequest,
   shouldFilterRabbyMobileRainbowKitNotFoundError,
   shouldFilterRabbyMobileUserRejectedRequest,
   shouldFilterTalismanExtensionOnboardingError,
@@ -136,7 +146,19 @@ function shouldFilterEvent(
     return true;
   }
 
+  if (shouldFilterBraveWalletPageEvaluationError(event, hint)) {
+    return true;
+  }
+
   if (shouldFilterDisconnectedWalletProviderRejection(event, hint)) {
+    return true;
+  }
+
+  if (shouldFilterKnownWalletProviderObjectRejection(event, hint)) {
+    return true;
+  }
+
+  if (shouldFilterRabbyChromeUserRejectedRequest(event, hint)) {
     return true;
   }
 
@@ -164,7 +186,15 @@ function shouldFilterEvent(
     return true;
   }
 
+  if (shouldFilterBrowserExtensionWalletRejection(event, hint)) {
+    return true;
+  }
+
   if (shouldFilterPoperBlockerOrphanFetchRejection(event, hint)) {
+    return true;
+  }
+
+  if (shouldFilterExpectedWaveRequestReplacementAbort(event)) {
     return true;
   }
 
@@ -188,6 +218,10 @@ function shouldFilterEvent(
     return true;
   }
 
+  if (shouldFilterInstagramPageHideBridgeError(event, hint)) {
+    return true;
+  }
+
   if (shouldFilterReactDomInsertBeforeNotFoundError(event)) {
     return true;
   }
@@ -206,6 +240,14 @@ function shouldFilterEvent(
   // retaining only the sampled diagnostic subset would hide genuine app errors.
 
   if (shouldFilterAppleWebKitSortedTrackListTypeError(event)) {
+    return true;
+  }
+
+  if (shouldFilterChromeMobileIosInjectedGaError(event)) {
+    return true;
+  }
+
+  if (shouldFilterInjectedIosAutoplayNotAllowedError(event)) {
     return true;
   }
 
@@ -466,6 +508,10 @@ Sentry.init({
     return sanitizeSentryBreadcrumb(breadcrumb);
   },
 
+  beforeSendSpan(span) {
+    return sanitizeSentrySpan(span);
+  },
+
   beforeSend(event, hint) {
     if (shouldFilterEvent(event, hint)) {
       return null;
@@ -511,6 +557,7 @@ Sentry.init({
     }
     if (networkNoiseDecision === "keep_sampled") {
       tagSampledLowValueNetworkError(event);
+      redactDropReactionFailureIdentifiers(event);
     }
 
     return sanitizeSentryEvent(event);

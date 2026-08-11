@@ -1,4 +1,5 @@
 import type { ActivityLogParams } from "@/components/profile-activity/ProfileActivityLogs";
+import Button from "@/components/utils/button/Button";
 import type { ApiRepCategory } from "@/generated/models/ApiRepCategory";
 import type { ApiRepOverview } from "@/generated/models/ApiRepOverview";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
@@ -147,15 +148,18 @@ export default function MobileRepTabContent({
         )}
 
       <div className="tw-mt-4">
-        <div className="tw-mb-4 tw-flex tw-items-center tw-justify-between tw-gap-3">
+        <div className="tw-mb-4">
           <div className="tw-whitespace-nowrap tw-text-xs tw-font-semibold tw-uppercase tw-tracking-wider tw-text-iron-500">
             Rep Categories
           </div>
-          <RepDirectionToggle
-            repDirection={repDirection}
-            onRepDirectionChange={onRepDirectionChange}
-            compact
-          />
+          <div className="tw-mt-3 tw-w-full sm:tw-w-fit">
+            <RepDirectionToggle
+              repDirection={repDirection}
+              onRepDirectionChange={onRepDirectionChange}
+              variant="tabs"
+              fill
+            />
+          </div>
         </div>
       </div>
 
@@ -175,14 +179,13 @@ export default function MobileRepTabContent({
               />
             ))}
             {hasMore && (
-              <button
-                type="button"
+              <Button
+                variant="secondary"
                 onClick={onShowMore}
                 disabled={isLoadMoreDisabled}
-                className="tw-inline-flex tw-items-center tw-gap-2.5 tw-rounded-lg tw-border tw-border-solid tw-border-iron-700/60 tw-bg-iron-900/60 tw-px-4 tw-py-2.5 tw-text-xs tw-font-semibold tw-text-iron-400 tw-transition-colors hover:tw-border-iron-600/60 hover:tw-bg-iron-800/60 hover:tw-text-iron-300 disabled:tw-cursor-default disabled:tw-opacity-70"
               >
                 {loadMoreLabel}
-              </button>
+              </Button>
             )}
           </div>
         </div>

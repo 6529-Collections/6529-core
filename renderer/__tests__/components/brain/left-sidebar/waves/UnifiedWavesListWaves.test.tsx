@@ -1,5 +1,4 @@
 import React from "react";
-import userEvent from "@testing-library/user-event";
 import {
   act,
   fireEvent,
@@ -396,18 +395,74 @@ it("renders announcement, highly rated preview, pinned, and one filterable botto
   expect(screen.queryByLabelText("Following waves")).toBeNull();
   expect(screen.getByTestId("waves-filter-toggle")).toBeInTheDocument();
   expect(screen.getByTestId("wave-a1")).toHaveAttribute("data-pin", "false");
-  expect(screen.queryByTestId("wave-h1")).toBeNull();
+  expect(screen.getByTestId("wave-h1")).toHaveAttribute("data-pin", "true");
   expect(screen.getByTestId("wave-p1")).toHaveAttribute("data-pin", "true");
   expect(screen.getByTestId("wave-f1")).toHaveAttribute("data-pin", "true");
   expect(screen.getByTestId("wave-r1")).toHaveAttribute("data-pin", "true");
   expect(
     screen.getAllByTestId(/^wave-/).map((item) => item.dataset.testid)
-  ).toEqual(["wave-a1", "wave-p1", "wave-f1", "wave-r1"]);
+  ).toEqual(["wave-a1", "wave-p1", "wave-h1", "wave-f1", "wave-r1"]);
   expect(ref.current?.containerRef.current).toBe(container);
   expect(ref.current?.sentinelRef.current).toBeInstanceOf(HTMLElement);
 });
 
-it("uses highly rated preview score semantics instead of unread badges", () => {
+it("keeps worth checking out waves in All at their recent-activity position", () => {
+  render(
+    <UnifiedWavesListWaves
+      waves={[
+        createMockMinimalWave({
+          id: "quality-wave",
+          sidebarActivityTimestamp: 200,
+          sidebarSection: "highly-rated",
+        }),
+        createMockMinimalWave({
+          id: "older-wave",
+          sidebarActivityTimestamp: 100,
+        }),
+        createMockMinimalWave({
+          id: "recent-wave",
+          sidebarActivityTimestamp: 300,
+        }),
+      ]}
+      onHover={jest.fn()}
+      scrollContainerRef={scrollRef}
+    />
+  );
+
+  expect(screen.getByTestId("preview-avatar-quality-wave")).toBeInTheDocument();
+  const bottomItems = mockUseVirtualizedWaves.mock.calls.at(-1)?.[0].items;
+  expect(bottomItems.map((row: any) => row.wave.id)).toEqual([
+    "recent-wave",
+    "quality-wave",
+    "older-wave",
+  ]);
+});
+
+it("keeps discovery-only worth checking out waves out of Joined", () => {
+  mockUseShowFollowingWaves.mockReturnValue([true, jest.fn()]);
+
+  render(
+    <UnifiedWavesListWaves
+      waves={[
+        createMockMinimalWave({
+          id: "recommendation",
+          isInAllWaves: false,
+          sidebarSection: "highly-rated",
+        }),
+        createMockMinimalWave({ id: "joined-wave", isFollowing: true }),
+      ]}
+      onHover={jest.fn()}
+      scrollContainerRef={scrollRef}
+    />
+  );
+
+  expect(screen.getByTestId("preview-avatar-recommendation")).toBeInTheDocument();
+  expect(screen.getByLabelText("Following waves list")).toBeInTheDocument();
+  expect(screen.queryByTestId("wave-recommendation")).toBeNull();
+  expect(screen.getByTestId("wave-joined-wave")).toBeInTheDocument();
+});
+
+it("keeps the overlaid score inside the wave link and opens details on hover", async () => {
   const latestDropTimestamp = Date.now() - 60 * 60 * 1000;
 
   render(
@@ -437,30 +492,35 @@ it("uses highly rated preview score semantics instead of unread badges", () => {
     />
   );
 
-  expect(
-    screen.getByRole("link", { name: "Open Scored Discovery, score 93" })
-  ).toBeInTheDocument();
-  const scoreDetailsButton = screen.getByRole("button", {
-    name: "Open Scored Discovery score details, score 93",
+  const waveLink = screen.getByRole("link", {
+    name: "Open Scored Discovery, score 93",
   });
+  expect(waveLink).toHaveClass(
+    "tw-relative",
+    "tw-size-8",
+    "tw-cursor-pointer"
+  );
   const scoreBadgeText = screen.getByText("93", { selector: "text" });
+  const scoreBadge = scoreBadgeText.closest("span");
   expect(scoreBadgeText).toBeInTheDocument();
-  expect(scoreBadgeText.closest("button")).toBe(scoreDetailsButton);
-  expect(scoreDetailsButton).toHaveClass("-tw-bottom-1");
-  expect(scoreDetailsButton).toHaveClass("-tw-right-1.5");
-  expect(scoreDetailsButton).toHaveClass("tw-h-6");
-  expect(scoreDetailsButton).toHaveClass("tw-w-7");
+  expect(scoreBadgeText.closest("a")).toBe(waveLink);
+  expect(scoreBadge).toHaveClass(
+    "tw-absolute",
+    "-tw-bottom-1",
+    "-tw-right-1.5",
+    "tw-h-6",
+    "tw-w-7",
+    "tw-cursor-pointer"
+  );
   expect(scoreBadgeText.closest("svg")).toHaveClass("tw-h-5");
   expect(scoreBadgeText.closest("svg")).toHaveClass("tw-w-6");
-  fireEvent.click(
-    screen.getByRole("link", { name: "Open Scored Discovery, score 93" })
-  );
+  fireEvent.click(scoreBadgeText);
   expect(
     screen.queryByRole("dialog", { name: "Wave score details" })
   ).not.toBeInTheDocument();
-  fireEvent.click(scoreDetailsButton);
+  fireEvent.mouseEnter(waveLink);
   expect(
-    screen.getByRole("dialog", { name: "Wave score details" })
+    await screen.findByRole("dialog", { name: "Wave score details" })
   ).toBeInTheDocument();
   expect(screen.getByText("Scored Discovery")).toBeInTheDocument();
   expect(screen.getByText("Last message")).toBeInTheDocument();
@@ -487,7 +547,7 @@ it("uses highly rated preview score semantics instead of unread badges", () => {
   );
 });
 
-it("uses no-message copy in the combined highly rated score card", () => {
+it("uses no-message copy in the combined highly rated score card", async () => {
   render(
     <UnifiedWavesListWaves
       waves={[
@@ -509,20 +569,19 @@ it("uses no-message copy in the combined highly rated score card", () => {
     />
   );
 
-  fireEvent.click(
-    screen.getByRole("button", {
-      name: "Open Quiet Discovery score details, score 88",
+  fireEvent.mouseEnter(
+    screen.getByRole("link", {
+      name: "Open Quiet Discovery, score 88",
     })
   );
   expect(
-    screen.getByRole("dialog", { name: "Wave score details" })
+    await screen.findByRole("dialog", { name: "Wave score details" })
   ).toBeInTheDocument();
   expect(screen.getByText("Quiet Discovery")).toBeInTheDocument();
   expect(screen.getByText("No messages yet")).toBeInTheDocument();
 });
 
-it("opens the combined highly rated score card from keyboard score activation", async () => {
-  const user = userEvent.setup();
+it("opens the combined highly rated score card when the wave link receives focus", async () => {
   render(
     <UnifiedWavesListWaves
       waves={[
@@ -545,11 +604,10 @@ it("opens the combined highly rated score card from keyboard score activation", 
   );
 
   screen
-    .getByRole("button", {
-      name: "Open Keyboard Discovery score details, score 86",
+    .getByRole("link", {
+      name: "Open Keyboard Discovery, score 86",
     })
     .focus();
-  await user.keyboard("{Enter}");
 
   expect(
     await screen.findByRole("dialog", { name: "Wave score details" })
@@ -647,7 +705,7 @@ it("keeps the active highly rated wave visible in the preview strip", () => {
     screen.getByRole("link", { name: "Open Highly Rated One" })
   ).toBeInTheDocument();
   expect(screen.queryByLabelText("Worth checking out waves")).toBeNull();
-  expect(screen.queryByTestId("wave-h1")).toBeNull();
+  expect(screen.getByTestId("wave-h1")).toBeInTheDocument();
 });
 
 it("renders direct messages as one flat latest-first list", () => {
@@ -811,7 +869,10 @@ it("respects hide options and does not render toggle when not connected", () => 
   expect(screen.queryByTestId("header-All Waves")).toBeNull();
   expect(screen.queryByTestId("waves-filter-toggle")).toBeNull();
   expect(screen.getByTestId("wave-a1")).toHaveAttribute("data-pin", "false");
-  expect(screen.getByTestId("wave-h1")).toHaveAttribute("data-pin", "false");
+  expect(screen.getAllByTestId("wave-h1")).toHaveLength(2);
+  screen.getAllByTestId("wave-h1").forEach((row) => {
+    expect(row).toHaveAttribute("data-pin", "false");
+  });
   expect(screen.queryByTestId("wave-p1")).toBeNull();
   expect(screen.getByTestId("wave-r1")).toHaveAttribute("data-pin", "false");
 });

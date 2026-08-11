@@ -2,8 +2,7 @@
 
 import { AuthContext } from "@/components/auth/Auth";
 import { ReactQueryWrapperContext } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import ActionButton from "@/components/utils/button/ActionButton";
-import SecondaryButton from "@/components/utils/button/SecondaryButton";
+import Button from "@/components/utils/button/Button";
 import type {
   ApiCreateOrUpdateProfileCicStatement,
   CicStatement,
@@ -138,7 +137,7 @@ export default function UserPageHeaderAboutEdit({
       <form onSubmit={onSubmit}>
         <div className="tw-relative">
           <textarea
-            className="tw-block tw-min-h-32 tw-w-full tw-resize-none tw-rounded-lg tw-border-0 tw-bg-iron-950/80 tw-px-4 tw-pb-10 tw-pt-3.5 tw-text-sm tw-font-normal tw-leading-6 tw-text-iron-50 tw-caret-primary-400 tw-shadow-inner tw-ring-1 tw-ring-inset tw-ring-white/10 tw-transition tw-duration-200 tw-ease-out placeholder:tw-text-iron-600 hover:tw-ring-white/15 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-inset focus:tw-ring-primary-400/60"
+            className="tw-block tw-min-h-32 tw-w-full tw-resize-none tw-rounded-lg tw-border-0 tw-bg-iron-900 tw-px-4 tw-pb-10 tw-pt-3.5 tw-text-sm tw-font-normal tw-leading-6 tw-text-iron-50 tw-caret-primary-400 tw-shadow-inner tw-ring-1 tw-ring-inset tw-ring-white/10 tw-transition tw-duration-200 tw-ease-out placeholder:tw-text-iron-600 hover:tw-ring-white/15 focus:tw-outline-none focus:tw-ring-2 focus:tw-ring-inset focus:tw-ring-primary-400/60"
             name="profile-about"
             id="profile-about-input"
             aria-label={getUserProfileHeaderMessage(
@@ -161,25 +160,29 @@ export default function UserPageHeaderAboutEdit({
             {characterCount}
           </div>
         </div>
-        <div className="tw-mt-3 tw-flex tw-w-full tw-gap-2 sm:tw-ml-auto sm:tw-w-auto">
-          <SecondaryButton
+        <div className="tw-mt-3 tw-flex tw-w-full tw-flex-col-reverse tw-gap-2 sm:tw-ml-auto sm:tw-w-auto sm:tw-flex-row">
+          <Button
+            variant="secondary"
+            size="lg"
             disabled={loading}
-            onClicked={onClose}
+            onClick={onClose}
             className="tw-min-h-11 tw-flex-1 sm:tw-flex-none"
           >
             {getUserProfileHeaderMessage("user.profileHeader.aboutEdit.cancel")}
-          </SecondaryButton>
-          <ActionButton
+          </Button>
+          <Button
             type="submit"
+            variant="action"
+            size="lg"
             disabled={isDisabled}
             loading={loading}
-            ariaLabel={getUserProfileHeaderMessage(
+            aria-label={getUserProfileHeaderMessage(
               "user.profileHeader.aboutEdit.save"
             )}
             className="tw-min-h-11 tw-flex-1 sm:tw-flex-none"
           >
             {getUserProfileHeaderMessage("user.profileHeader.aboutEdit.save")}
-          </ActionButton>
+          </Button>
         </div>
       </form>
       <AnimatePresence mode="wait" initial={false}>

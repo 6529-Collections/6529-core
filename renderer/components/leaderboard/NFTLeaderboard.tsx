@@ -15,11 +15,14 @@ import { DEFAULT_LOCALE, type SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { formatInteger } from "@/i18n/format";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import Button from "@/components/utils/button/Button";
+import { DATA_TABLE_HEADER_TEXT_CLASS_NAME } from "@/components/utils/table/tableStyles";
 import Pagination from "../pagination/Pagination";
 import { SortDirection } from "@/entities/ISort";
 import type { CICType } from "@/entities/IProfile";
 import type { DBResponse } from "@/entities/IDBResponse";
 import { LeaderboardCollector } from "./LeaderboardCollector";
+import { LEADERBOARD_ROW_CLASS_NAME } from "./leaderboardTableStyles";
 import {
   SearchModalDisplay,
   SearchWalletsDisplay,
@@ -32,8 +35,7 @@ import {
   faSquareCaretDown,
 } from "@fortawesome/free-solid-svg-icons";
 
-const tableHeaderClassName =
-  "tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-center tw-text-xs tw-font-semibold tw-leading-4 tw-text-iron-400 md:tw-px-4 md:tw-py-3";
+const tableHeaderClassName = `tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-center tw-font-semibold tw-text-iron-400 md:tw-px-4 md:tw-py-3 ${DATA_TABLE_HEADER_TEXT_CLASS_NAME}`;
 
 const tableCellClassName =
   "tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-center tw-text-xs tw-font-medium tw-leading-5 tw-text-iron-100 md:tw-px-4 md:tw-py-3 md:tw-text-sm";
@@ -291,7 +293,7 @@ export function NftLeaderboardCollectorRow({
   lead: NftTDHRanked;
 }>) {
   return (
-    <tr className="odd:tw-bg-transparent even:tw-bg-iron-900/45 hover:tw-bg-iron-900/70">
+    <tr className={LEADERBOARD_ROW_CLASS_NAME}>
       <td className="tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-center tw-text-xs tw-font-semibold tw-leading-5 tw-text-iron-100 md:tw-px-4 md:tw-py-3 md:tw-text-sm">
         {numberWithCommas(lead.rank)}
       </td>
@@ -438,16 +440,17 @@ function CollectorsCsvDownloadControls({
   return (
     <div className="tw-flex tw-flex-col tw-items-end tw-gap-2">
       <div className="tw-flex tw-flex-wrap tw-items-center tw-justify-end tw-gap-3">
-        <button
+        <Button
           type="button"
           onClick={handleCsvDownload}
           disabled={isCsvDownloading}
           aria-busy={isCsvDownloading}
+          variant="secondary"
+          size="sm"
           aria-label={t(
             locale,
             "theMemes.detail.collectors.downloadCsvAriaLabel"
           )}
-          className="tw-inline-flex tw-h-10 tw-items-center tw-justify-center tw-gap-2 tw-rounded-lg tw-border tw-border-solid tw-border-iron-700 tw-bg-iron-900 tw-px-3 tw-text-xs tw-font-semibold tw-leading-5 tw-text-iron-200 tw-transition-colors tw-duration-300 tw-ease-out hover:tw-border-iron-500 hover:tw-bg-iron-800 hover:tw-text-white focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400 disabled:tw-cursor-not-allowed disabled:tw-opacity-60"
         >
           <span className="tw-whitespace-nowrap">
             {isCsvDownloading
@@ -459,7 +462,7 @@ function CollectorsCsvDownloadControls({
             className={`tw-size-3.5 ${isCsvDownloading ? "motion-safe:tw-animate-spin" : ""}`}
             aria-hidden="true"
           />
-        </button>
+        </Button>
         {children}
       </div>
       <span className="tw-sr-only" role="status" aria-live="polite">
@@ -658,14 +661,14 @@ export default function NFTLeaderboard(props: Readonly<Props>) {
               <th
                 colSpan={3}
                 scope="colgroup"
-                className="tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-l tw-border-solid tw-border-iron-800 tw-px-4 tw-py-3 tw-text-center tw-text-xs tw-font-semibold tw-leading-4 tw-text-iron-300"
+                className={`tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-l tw-border-solid tw-border-iron-800 tw-px-4 tw-py-3 tw-text-center tw-font-semibold tw-text-iron-300 ${DATA_TABLE_HEADER_TEXT_CLASS_NAME}`}
               >
                 This Card
               </th>
               <th
                 colSpan={3}
                 scope="colgroup"
-                className="tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-l tw-border-solid tw-border-iron-800 tw-px-4 tw-py-3 tw-text-center tw-text-xs tw-font-semibold tw-leading-4 tw-text-iron-300"
+                className={`tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-l tw-border-solid tw-border-iron-800 tw-px-4 tw-py-3 tw-text-center tw-font-semibold tw-text-iron-300 ${DATA_TABLE_HEADER_TEXT_CLASS_NAME}`}
               >
                 Total
               </th>
@@ -673,13 +676,13 @@ export default function NFTLeaderboard(props: Readonly<Props>) {
             <tr>
               <th
                 scope="col"
-                className="tw-w-12 tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-center tw-text-xs tw-font-semibold tw-leading-4 tw-text-iron-400 md:tw-w-20 md:tw-px-4 md:tw-py-3"
+                className={`tw-w-12 tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-center tw-font-semibold tw-text-iron-400 md:tw-w-20 md:tw-px-4 md:tw-py-3 ${DATA_TABLE_HEADER_TEXT_CLASS_NAME}`}
               >
                 Rank
               </th>
               <th
                 scope="col"
-                className="tw-min-w-[11rem] tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-left tw-text-xs tw-font-semibold tw-leading-4 tw-text-iron-400 md:tw-min-w-[18rem] md:tw-px-4 md:tw-py-3"
+                className={`tw-min-w-[11rem] tw-whitespace-nowrap tw-border-0 tw-border-b tw-border-solid tw-border-iron-800 tw-px-2 tw-py-2 tw-text-left tw-font-semibold tw-text-iron-400 md:tw-min-w-[18rem] md:tw-px-4 md:tw-py-3 ${DATA_TABLE_HEADER_TEXT_CLASS_NAME}`}
               >
                 Collector{" "}
                 {totalResults > 0 && `x${formatInteger(locale, totalResults)}`}

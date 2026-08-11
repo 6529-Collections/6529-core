@@ -1,6 +1,6 @@
 ---
 name: sync-desktop-renderer
-description: Sync the 6529 web frontend into the 6529-core Electron renderer subtree, preserve desktop-only behavior, resolve pull-web conflicts, and update duplicated desktop config. Use when Codex is asked to bring the Electron desktop app up to date with recent or current 6529.io frontend changes.
+description: Sync the 6529 web frontend into the 6529-core Electron renderer subtree, preserve desktop-only behavior, resolve pull-web conflicts, update duplicated desktop config, and keep desktop version metadata aligned with main. Use when Codex is asked to bring the Electron desktop app up to date with recent or current 6529.io frontend changes.
 ---
 
 # Sync Desktop Renderer
@@ -23,8 +23,16 @@ $env:SEIZE_6529_COMMAND='1'; pnpm run pull-web
 ```
 
 - If a merge is left open, finish resolving and commit before pulling another web delta.
-- Run `pull-web` only from the long-lived `pull-web` branch. The command now fails closed on any other branch.
-- Never change the desktop version during a renderer sync. Version changes belong on an explicitly requested release branch created from `main`.
+- Run `pull-web` only from the long-lived `pull-web` branch. The command fails
+  closed on any other branch.
+- Never change the desktop version during a `pull-web` sync. Before committing,
+  compare root `package.json` and related version metadata with current `main`
+  and restore any version drift from `main`.
+- Change the desktop version only for an explicitly requested release. Create
+  a new branch from `main` named for the version, update the version and release
+  from that branch, then merge that release branch back to `main`. Do not infer
+  release/version work from a renderer sync, release-candidate wording, PR
+  creation, or a push.
 
 ## Conflict Policy
 
@@ -39,6 +47,7 @@ Preserve or reapply desktop-specific behavior in these areas:
 - `renderer/components/confirm/ConfirmSeedWalletRequest.tsx`, `renderer/components/confirm/seed-wallet-request-layout.ts`: keep only the Core request body scrolling while its header and actions remain fixed inside the shared responsive envelope.
 - `renderer/components/auth/SeizeConnectProvider.tsx`: cancelling or failing a new-wallet connection must restore the last authenticated profile state after the provider disconnects.
 - `renderer/app/layout.tsx`, `renderer/components/providers/AppRouteProviders.tsx`, `renderer/components/providers/app-route-provider-features.ts`, `renderer/components/monitoring/AwsRumProvider.tsx`: `/browser-connector` must retain the wallet infrastructure needed for connection transfer while disabling app-global wallet-auth prompts, Quick Direct Messages, cookie consent/Mixpanel, version toasts, and AWS RUM.
+- `renderer/app/layout.tsx`, `renderer/components/header/AppSidebarHeader.tsx`, `renderer/components/layout/SmallScreenHeader.tsx`, `renderer/components/layout/sidebar/WebSidebarHeader.tsx`: Core must not mount `RuntimeFavicon`, favicon `<link>` elements, or `EnvironmentBadge`. The native titlebar is the single desktop environment indicator in every Core app mode. Reapply this omission after frontend imports and make the contract guard pass.
 - `renderer/components/error/Error.tsx`: the route error fallback must stay independent of `TitleProvider` and other application providers so it can render the original failure when provider initialization throws.
 - `renderer/components/header/share/HeaderQRScanner.tsx`: desktop QR behavior, avoiding mobile-only scanner assumptions.
 - `renderer/components/eula/EULAConsentContext.tsx`: Electron/local consent behavior.

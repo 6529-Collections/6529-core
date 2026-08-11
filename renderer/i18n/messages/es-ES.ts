@@ -3,10 +3,15 @@ import { ES_ES_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-to
 import { ES_ES_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { ES_ES_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { ES_ES_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
+import { ES_ES_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
 import stormComposerEsMessages from "@/i18n/messages/stormComposer.es-ES.json";
 import type { MessageKey } from "@/i18n/messages/en-US";
 
 export const ES_ES_MESSAGES = {
+  "linkPreview.twitter.kind.article": "Artículo",
+  "linkPreview.twitter.kind.post": "Publicación",
+  "linkPreview.twitter.article.provider": "Artículo en X",
+  "linkPreview.twitter.article.read": "Leer artículo: {title}",
   "waves.drop.actions.copyText": "Copiar texto",
   "waves.drop.actions.copyLink": "Copiar enlace",
   "waves.drop.actions.copied": "Copiado!",
@@ -59,6 +64,39 @@ export const ES_ES_MESSAGES = {
   "linkPreview.github.fact.mime": "MIME",
   "linkPreview.github.fact.type": "Tipo",
   "linkPreview.github.fileKind": "Archivo {kind}",
+  "linkPreview.etherscan.provider": "Etherscan",
+  "linkPreview.etherscan.previewLabel":
+    "Vista previa de {kind} de Etherscan en {network}",
+  "linkPreview.etherscan.open": "Abrir en Etherscan",
+  "linkPreview.etherscan.copy": "Copiar {kind}",
+  "linkPreview.etherscan.copied": "{kind} copiado",
+  "linkPreview.etherscan.copyFailed": "No se pudo copiar {kind}",
+  "linkPreview.etherscan.retry": "Reintentar",
+  "linkPreview.etherscan.loading": "Cargando vista previa de Etherscan",
+  "linkPreview.etherscan.partial":
+    "Algunos datos en directo no están disponibles",
+  "linkPreview.etherscan.liveUnavailable": "Datos en directo no disponibles",
+  "linkPreview.etherscan.legacy":
+    "Red histórica: los datos en directo no están disponibles para este explorador archivado.",
+  "linkPreview.etherscan.status.success": "Correcta",
+  "linkPreview.etherscan.status.pending": "Pendiente",
+  "linkPreview.etherscan.status.reverted": "Revertida",
+  "linkPreview.etherscan.status.finalized": "Finalizado",
+  "linkPreview.etherscan.status.proposed": "Propuesto",
+  "linkPreview.etherscan.status.future": "Bloque futuro",
+  "linkPreview.etherscan.status.unknown": "Estado no disponible",
+  "linkPreview.etherscan.action.nativeTransfer": "{value} ETH enviados",
+  "linkPreview.etherscan.action.tokenTransfer": "Transferencia de token",
+  "linkPreview.etherscan.action.contractCreation": "Contrato creado",
+  "linkPreview.etherscan.action.contractInteraction":
+    "Interacción con contrato",
+  "linkPreview.etherscan.action.transaction": "Transacción de Ethereum",
+  "linkPreview.etherscan.action.compound":
+    "Compound {action}: {amount} {token}",
+  "linkPreview.etherscan.description.tool":
+    "Enlace de solo lectura a una herramienta de Etherscan. 6529 no envía su formulario.",
+  "linkPreview.etherscan.description.unknown":
+    "Una página de Etherscan. Ábrela para consultar la ruta completa.",
   "profileCms.block.audioUnavailable": "Audio no disponible",
   "profileCms.block.collectionFallback": "Colección",
   "profileCms.block.galleryUnavailable": "Galería no disponible",
@@ -370,6 +408,7 @@ export const ES_ES_MESSAGES = {
     "Área de carga de archivos del chat de wave",
   ...stormComposerEsMessages,
   "waves.loadingStatus": "Cargando waves",
+  "waves.gifPicker.open": "Añadir GIF",
   "waves.gifPicker.dialogTitle": "Busqueda de GIF",
   "waves.gifPicker.searchPlaceholder": "Buscar GIF",
   "waves.gifPicker.noResults": "No se encontraron GIFs.",
@@ -385,6 +424,11 @@ export const ES_ES_MESSAGES = {
   "desktopUpdateToast.versionAvailable":
     "La versión {version} está disponible.",
   "desktopUpdateToast.viewUpdate": "Ver actualización",
+  "waves.create.actions.cancel": "Cancelar",
+  "waves.create.actions.complete": "Completar",
+  "waves.create.actions.next": "Siguiente",
+  "waves.create.actions.previous": "Anterior",
+  "waves.create.actions.save": "Guardar",
   ...ES_ES_PAGINATION_MESSAGES,
   "memes.quickVote.leftThisRound": "{count} restantes esta ronda",
   "memes.quickVote.unrated": "{count} sin valorar",
@@ -412,6 +456,49 @@ export const ES_ES_MESSAGES = {
   "waves.leaderboard.retryMore": "Reintentar la carga de más drops",
   "waves.leaderboard.loadMore": "Cargar más drops",
   "waves.leaderboard.loadingMoreButton": "Cargando…",
+  "waves.leaderboard.grid.untitled": "Drop sin título",
+  "waves.leaderboard.grid.readFullText": "Leer el texto completo",
+  "waves.leaderboard.grid.open": "Abrir",
+  "waves.leaderboard.grid.openNamed": "Abrir {title}",
+  "waves.leaderboard.grid.authorProfile": "Ver el perfil de {author}",
+  "waves.leaderboard.grid.voters.one": "{count} votante",
+  "waves.leaderboard.grid.voters.other": "{count} votantes",
+  "waves.leaderboard.grid.you": "Tú",
+  "waves.leaderboard.grid.votesNow": "Votos actuales",
+  "waves.leaderboard.grid.status.approved": "Aprobado",
+  "waves.leaderboard.grid.status.approvingIn": "Aprobación en {time}",
+  "waves.leaderboard.grid.status.reachedThreshold": "Umbral alcanzado",
+  "waves.leaderboard.grid.status.closed": "Cerrado",
+  "waves.leaderboard.grid.status.needs": "Faltan {amount}",
+  "waves.leaderboard.grid.voteSummary.approval":
+    "Alcanzados {reached} de {required} {unit}. Estado: {status}.",
+  "waves.leaderboard.grid.voteSummary.approvalWithRealtime":
+    "Alcanzados {reached} de {required} {unit}. Votos actuales: {votesNow} {unit}. Estado: {status}.",
+  "waves.leaderboard.grid.voteSummary.standard":
+    "Voto actual: {current} {unit}. Proyección: {projected} {unit}.",
+  "waves.leaderboard.timeline.toggle":
+    "Mostrar u ocultar la cronología de decisiones",
+  "waves.leaderboard.timeline.decisionTimeline": "Cronología de decisiones",
+  "waves.leaderboard.timeline.announcementHistory": "Historial de anuncios",
+  "waves.leaderboard.timeline.paused": "En pausa",
+  "waves.leaderboard.timeline.nextDecisionAfter":
+    "Próxima decisión después del {date}",
+  "waves.leaderboard.timeline.noDecisionScheduled":
+    "No hay ninguna decisión programada",
+  "waves.leaderboard.timeline.noUpcomingEvents": "No hay próximos eventos",
+  "waves.leaderboard.timeline.nextWinner": "Próximo ganador",
+  "waves.leaderboard.timeline.nextWinnerIn": "Próximo ganador en {countdown}",
+  "waves.leaderboard.timeline.unit.day.one": "{count} día",
+  "waves.leaderboard.timeline.unit.day.other": "{count} días",
+  "waves.leaderboard.timeline.unit.hour.one": "{count} hora",
+  "waves.leaderboard.timeline.unit.hour.other": "{count} horas",
+  "waves.leaderboard.timeline.unit.minute.one": "{count} minuto",
+  "waves.leaderboard.timeline.unit.minute.other": "{count} minutos",
+  "waves.leaderboard.timeline.unit.second.one": "{count} segundo",
+  "waves.leaderboard.timeline.unit.second.other": "{count} segundos",
+  "waves.leaderboard.timeline.status.next": "Siguiente",
+  "waves.leaderboard.timeline.status.done": "Hecho",
+  "waves.leaderboard.timeline.status.completed": "Completado",
   "waves.poll.actions.viewResults": "Ver resultados",
   "waves.poll.actions.vote": "Votar",
   "waves.poll.actions.changeVote": "Cambiar voto",
@@ -419,6 +506,7 @@ export const ES_ES_MESSAGES = {
   "waves.poll.status.updated": "Actualizado",
   "theMemes.documentTitle": "The Memes | Colecciones",
   "theMemes.description.collections": "Colecciones",
+  "theMemes.detail.live.artwork.mintDateLabel": "Fecha de mint:",
   ...ES_ES_THE_MEMES_COLLECTORS_MESSAGES,
   "theMemes.sorting.regionLabel": "Orden de memes",
   "theMemes.sorting.sortBy": "Ordenar por",
@@ -463,4 +551,5 @@ export const ES_ES_MESSAGES = {
   "theMemes.volume.7Days": "7 días",
   "theMemes.volume.30Days": "30 días",
   "theMemes.volume.allTime": "Todo el tiempo",
+  ...ES_ES_TRANSFER_MESSAGES,
 } satisfies Partial<Record<MessageKey, string>>;

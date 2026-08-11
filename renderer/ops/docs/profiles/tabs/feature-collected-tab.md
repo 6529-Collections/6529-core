@@ -80,6 +80,9 @@ Transfer mode is part of the Native collected view (not a separate route).
        labels are message-backed from the source locale
      - collected details tables include screen-reader captions and row headers
        for assistive technologies
+     - wide tables stay inside their bordered sections on narrow screens; the
+       first label column remains visible while the numeric columns scroll
+       horizontally by touch or the browser's horizontal scroll controls
    - `Activity Overview`
    - Activity Overview heading, table headings, row labels, and per-season
      labels are message-backed from the source locale
@@ -113,10 +116,18 @@ Transfer mode is part of the Native collected view (not a separate route).
    - View, collection, sort, seized, and filter-scroll control names are
      message-backed from the source locale.
 7. Apply sort and browse pages.
+   - Collection, filter, sort, and pagination changes add browser-history
+     entries, so browser Back and Forward restore earlier collected views.
+   - Automatic correction of an unavailable page replaces the current history
+     entry instead of adding another one.
 8. In native view (outside transfer mode), open token routes from cards:
    - `/the-memes/{id}`, `/6529-gradient/{id}`, `/nextgen/token/{id}`, `/meme-lab/{id}`.
    - Native card results render as a labelled `Collected cards` list with one
      list item per card for assistive technologies.
+   - A NextGen token opened here shows `Back to {profile}'s collected`. The
+     action restores the originating Collected filters and page, then returns
+     keyboard focus and scroll position to the opened card when it is still on
+     that page.
 9. In network view, review xTDH token holdings:
    - Network card results render as a labelled `Collected network cards` list
      with one list item per token for assistive technologies.
@@ -146,6 +157,8 @@ Transfer mode is part of the Native collected view (not a separate route).
 - Filter Memes by season and clear back to `All Seasons`.
 - Switch to `Network` to inspect per-token `xTDH` and `xTDH/day`.
 - Keep a transfer selection while changing pages or filters.
+- Open a NextGen token, review its detail sections, then return to the same
+  profile Collected view and card.
 
 ## Edge Cases
 
@@ -158,6 +171,13 @@ Transfer mode is part of the Native collected view (not a separate route).
 - `Details` can open even when summary metrics are sparse; if the profile cannot
   produce a stats scope, the panel shows `Stats are unavailable for this profile.`.
 - The `Seasons` strip is hidden when there are no started Meme seasons.
+- A canonical direct NextGen token URL, including one created by the in-app
+  share action, has no originating Collected position. It offers the current
+  owner's NextGen holdings when owner data is available, while the separate
+  collection-art action remains available.
+- If an originating Collected destination is invalid, or the token no longer
+  appears on that page, the token page uses the owner fallback and the
+  Collected page remains usable without card-position restoration.
 - On desktop, the started-season row can collapse behind `+N more`; on
   touch/mobile, seasons stay horizontally scrollable. When a season filter is
   active, the collapsed desktop row keeps that season visible.

@@ -12,7 +12,9 @@ satisfied.
 ## Before Commit
 
 - Confirm the renderer sync PR uses the repository's `pull-web` branch when updating the bundled frontend. Do not move renderer subtree imports onto an ad hoc `codex/` branch unless the repo owner explicitly asks for that.
-- Confirm a renderer sync does not change the desktop version. Version changes belong only to an explicitly requested release branch created from `main`.
+- Confirm root desktop version metadata exactly matches current `main`. A
+  `pull-web` PR must never contain a version bump; restore any version drift
+  from `main` before committing or pushing.
 - Run the Core-owned desktop renderer contract guard and restore any desktop adaptation it reports instead of weakening the guard.
 - Confirm Add only opens the Electron connector chooser: it must not wait for
   AppKit, disconnect the current provider, or switch/activate any account.
@@ -42,7 +44,7 @@ draft PR only when the user explicitly asks for a draft PR in the current task.
 Include:
 
 - imported frontend SHA and date checked
-- confirmation that the desktop package version remains aligned with `main`
+- confirmation that desktop version metadata is unchanged from current `main`
 - desktop renderer contract decisions preserved
 - desktop-specific conflict decisions preserved
 - local validation commands and results

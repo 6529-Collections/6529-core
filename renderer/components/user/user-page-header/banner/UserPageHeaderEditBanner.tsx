@@ -7,7 +7,7 @@ import UserSettingsBannerImageInput from "@/components/user/settings/UserSetting
 import UserSettingsSave from "@/components/user/settings/UserSettingsSave";
 import type { CommonSelectItem } from "@/components/utils/select/CommonSelect";
 import CommonTabs from "@/components/utils/select/tabs/CommonTabs";
-import SecondaryButton from "@/components/utils/button/SecondaryButton";
+import Button from "@/components/utils/button/Button";
 import type { ApiCreateOrUpdateProfileRequest } from "@/entities/IProfile";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
@@ -216,7 +216,7 @@ export default function UserPageHeaderEditBanner({
       <button
         type="button"
         aria-label="Close edit banner modal"
-        className="tw-absolute tw-inset-0 tw-cursor-pointer tw-border-none tw-bg-gray-600 tw-bg-opacity-50 tw-p-0 tw-backdrop-blur-sm"
+        className="tw-absolute tw-inset-0 tw-cursor-pointer tw-border-none tw-bg-gray-600 tw-bg-opacity-50 tw-p-0"
         onClick={handleClose}
       />
       <div className="tw-relative tw-flex tw-min-h-full tw-w-full tw-items-center tw-justify-center tw-overflow-y-auto tw-p-2 lg:tw-p-4">
@@ -227,12 +227,12 @@ export default function UserPageHeaderEditBanner({
           <h2 id={dialogTitleId} className="tw-sr-only">
             Edit Banner
           </h2>
-          <form onSubmit={onSubmit} className="tw-flex tw-flex-col tw-gap-y-6">
+          <form onSubmit={onSubmit} className="tw-flex tw-flex-col tw-gap-y-5">
             <div>
-              <p className="tw-mb-1 tw-text-lg tw-font-semibold tw-text-iron-50 sm:tw-text-xl">
+              <p className="tw-m-0 tw-text-lg tw-font-semibold tw-text-iron-50 sm:tw-text-xl">
                 Edit profile cover
               </p>
-              <p className="tw-mb-0 tw-text-sm tw-text-iron-400">
+              <p className="tw-m-0 tw-mt-2 tw-text-sm tw-text-iron-400">
                 Choose a gradient or upload an image for your profile cover.
               </p>
             </div>
@@ -259,17 +259,18 @@ export default function UserPageHeaderEditBanner({
               />
             )}
 
-            <div className="tw-pt-6">
-              <div className="tw-gap-x-3 sm:tw-flex sm:tw-flex-row-reverse">
-                <UserSettingsSave loading={isSaving} disabled={!haveChanges} />
-                <SecondaryButton
-                  disabled={isSaving}
-                  onClicked={handleClose}
-                  className="tw-mt-3 tw-w-full sm:tw-mt-0 sm:tw-w-auto"
-                >
-                  Cancel
-                </SecondaryButton>
-              </div>
+            <div className="tw-gap-x-3 sm:tw-flex sm:tw-flex-row-reverse">
+              <UserSettingsSave loading={isSaving} disabled={!haveChanges} />
+              <Button
+                variant="secondary"
+                size="lg"
+                disabled={isSaving}
+                onClick={handleClose}
+                fullWidth
+                className="tw-mt-3 sm:tw-mt-0 sm:tw-w-auto"
+              >
+                Cancel
+              </Button>
             </div>
           </form>
         </div>

@@ -909,6 +909,36 @@ describe("push registration behavior", () => {
   });
 
   it.each([
+    "An SSL error has occurred and a secure connection to the server cannot be made.",
+    "A TLS error caused the secure connection to fail.",
+  ])(
+    "records observed iOS secure-connection registration error %s as transient",
+    async (errorMessage) => {
+      const sentry = require("@sentry/nextjs");
+      const nativeError = { error: errorMessage };
+      const { registrationErrorCallback } = await setupRegistrationCallback();
+
+      act(() => {
+        registrationErrorCallback(nativeError);
+      });
+
+      expect(sentry.captureException).not.toHaveBeenCalled();
+      expect(sentry.addBreadcrumb).toHaveBeenCalledWith(
+        expect.objectContaining({
+          level: "warning",
+          message: "Push registration transient error.",
+          data: expect.objectContaining({
+            component: "NotificationsProvider",
+            operation: "pushRegistrationError",
+            retryable: true,
+            error_message: errorMessage,
+          }),
+        })
+      );
+    }
+  );
+
+  it.each([
     "The request timed out.",
     "A server with the specified hostname could not be found.",
   ])(
@@ -945,8 +975,12 @@ describe("push registration behavior", () => {
     "The request timed out because the device token is invalid.",
     "A server with the specified hostname could not be found because the push configuration is invalid.",
     "Too many server requests because the push configuration is invalid.",
+    "An SSL error has occurred and a secure connection to the server cannot be made. More details followed.",
+    "An SSL error has occurred and a secure connection to the server cannot be made because the push configuration is invalid.",
+    "A TLS error caused the secure connection to fail. More details followed.",
+    "A TLS error caused the secure connection to fail because the push configuration is invalid.",
   ])(
-    "captures permanent native registration near-miss %s",
+    "captures native registration near-miss %s",
     async (errorMessage) => {
       const sentry = require("@sentry/nextjs");
       const nativeError = new Error(errorMessage);

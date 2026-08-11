@@ -73,6 +73,17 @@ app-global Quick Direct Messages, cookie consent/analytics, version notices,
 and automatic wallet-auth prompts. Restore those desktop adaptations if the
 guard fails; do not remove or weaken the guard.
 
+The Core renderer does not mount the web frontend's environment badges or
+favicon manager in any app mode. Desktop environment/backend information is
+shown by the native titlebar instead, so do not add a second badge below the
+logo or favicon links to the renderer layout during conflict resolution.
+
+Core-only `/core` routes do not expose page sharing because they have no public
+browser equivalent. On other shareable routes, Electron uses `BASE_ENDPOINT`
+for public links and shows a globe-labeled `Open in 6529.io` instead of the
+redundant `Open in 6529 Desktop` action; the public page opens in the system
+browser.
+
 ⚠️ Note: there might be conflicts that need resolving
 
 #### Packages
@@ -91,6 +102,7 @@ After pulling frontend changes (or on a fresh clone), run:
 - merge `main` into `pull-web`
 - run `6529 pull-web`
 - resolve conflicts
+- keep the root package version and related version metadata identical to current `main`; never bump the desktop version on `pull-web`
 - run `6529 install`
 - update `tailwind.config.js` with any incoming changes from `renderer/tailwind.config.js`
 - merge any relevant `renderer/next.config.ts` changes into root `next.config.ts`
@@ -132,12 +144,19 @@ late cancelled signature, cross-wire Core wallet addresses, or reintroduce
 global application UI on the isolated browser connector. It also preserves the
 shared responsive chooser/request envelope, its required connection-context
 nesting, a provider-independent route error fallback, compact Core wallet
-active/switch states, and fixed request actions.
+active/switch states, fixed request actions, and public-origin page sharing in
+Electron.
 
 ## Building and Publishing
 
 > ⚠️ **IMPORTANT:** Before building and publishing a new version of the app, make sure to **update the version in `package.json`**.
 > If you skip this step, the previous version may be overwritten and the `electron-updater` will not function correctly.
+
+Perform that version update only on an explicitly requested release branch
+created from `main` and named for the version. Release from that branch, then
+merge it back to `main`. Never update the desktop version as part of a
+`pull-web` renderer sync; `pull-web` must retain the version from current
+`main`.
 
 ### Desktop Backend Targets
 
@@ -148,13 +167,16 @@ Desktop distribution scripts take an optional backend target argument:
 
 The backend target is separate from the app environment (`local`, `staging`, or
 `production`). The app environment still controls the package config, protocol
-scheme, update channel, and splash/titlebar app label. The backend target only
-controls the API and WebSocket endpoints, plus the staging access header when
-building against Test.
+scheme, update channel, and splash/titlebar app label. The backend target
+controls the canonical public web origin, API and WebSocket endpoints, plus the
+staging access header when building against Test. The embedded renderer still
+runs on localhost; public page sharing uses the canonical web origin instead of
+exposing that internal address.
 
 Live backend:
 
 ```bash
+BASE_ENDPOINT=https://6529.io
 API_ENDPOINT=https://api.6529.io
 WS_ENDPOINT=wss://ws.6529.io
 ```
@@ -162,6 +184,7 @@ WS_ENDPOINT=wss://ws.6529.io
 Test backend:
 
 ```bash
+BASE_ENDPOINT=https://staging.6529.io
 API_ENDPOINT=https://api.staging.6529.io
 WS_ENDPOINT=wss://ws.staging.6529.io
 ```

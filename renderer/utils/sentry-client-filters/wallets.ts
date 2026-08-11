@@ -1,36 +1,36 @@
 import {
+  backpackCollisionBreadcrumbWindowSeconds,
+  backpackInternalJsonRpcErrorCode,
+  backpackInternalJsonRpcErrorMessage,
+  backpackWalletCollisionBreadcrumbMessage,
   circularReactMetaElementMessagePatterns,
   injectedProviderProxyStartsWithMessage,
   jsonStringifyFunction,
   metaMaskMobileUpdateUrlFunction,
-  objectCapturedPromiseRejectionMessage,
+  objectCapturedPromiseRejectionWithoutStackMessage,
   providerDisconnectedCode,
   providerDisconnectedMessage,
-  rabbyMobileStackContextPattern,
-  rabbyMobileUserRejectedCode,
-  rabbyMobileUserRejectedMessage,
-  rabbyMobileUserRejectedStackPattern,
-  RABBY_MOBILE_RAINBOWKIT_NOT_FOUND_MESSAGE,
-  RABBY_MOBILE_USER_AGENT_TOKEN,
+  readOnlyEthereumProxyBreadcrumbPattern,
   talismanExtensionOnboardingMessage,
   walletCollisionPatterns,
   walletConnectStaleSessionFunctions,
   walletConnectStaleSessionTopicPrefix,
+  walletRevokePermissionsUnsupportedCode,
+  walletRevokePermissionsUnsupportedMessage,
 } from "./constants";
 import type {
+  SentryBreadcrumb,
   SentryClientEvent,
   SentryEventHint,
   SentryStackFrame,
 } from "./types";
 import {
   getBreadcrumbMessages,
-  getContextString,
+  getBreadcrumbValues,
   getEventMessage,
   getHintExceptionMessage,
   getHintExceptionStack,
   getNumericValue,
-  getRequestHeaderString,
-  getRuntimeUserAgentString,
   getSerializedExceptionStack,
   getSerializedObjectRejection,
   getStringValue,
@@ -43,8 +43,7 @@ import {
   hasAppOwnedSourceEvidence,
   hasAppOwnedSourceFrame,
   hasAppOwnedSourceStackValue,
-  hasAppOwnedStackPath,
-  hasLikelyAppOwnedFrame,
+  hasAppOwnedStackEvidence,
   hasOnlyInjectedProviderProxyFrames,
   isInjectedOrThirdPartyWalletExtensionPath,
 } from "./app-frame-utils";
@@ -61,92 +60,6 @@ import {
   hasWalletLinkWebSocketUnhandledRejectionSignature,
   isCoinbaseWalletLinkWebSocket1006Message,
 } from "./walletlink-websocket";
-
-const rabbyRainbowKitRawChunkPathPrefix = "app:///_next/static/chunks/";
-
-function matchesStackPattern(
-  value: string | undefined,
-  pattern: string
-): boolean {
-  return value?.toLowerCase().includes(pattern) ?? false;
-}
-
-function hasRabbyMobileStackContext(
-  serializedStack: string | undefined,
-  hint?: SentryEventHint
-): boolean {
-  return [serializedStack, getHintExceptionStack(hint)].some((stack) =>
-    matchesStackPattern(stack, rabbyMobileStackContextPattern)
-  );
-}
-
-function hasRabbyMobileUserRejectedStack(
-  serializedStack: string | undefined,
-  hint?: SentryEventHint
-): boolean {
-  return [serializedStack, getHintExceptionStack(hint)].some((stack) =>
-    matchesStackPattern(stack, rabbyMobileUserRejectedStackPattern)
-  );
-}
-
-function isObservedRabbyRainbowKitRawChunkFrame(
-  frame: SentryStackFrame | undefined
-): boolean {
-  if (frame?.in_app !== true || frame.function !== "n") {
-    return false;
-  }
-
-  const paths = [frame.filename, frame.abs_path].filter(
-    (path): path is string => typeof path === "string" && path.length > 0
-  );
-  return (
-    paths.length > 0 &&
-    paths.every(
-      (path) =>
-        path.startsWith(rabbyRainbowKitRawChunkPathPrefix) &&
-        path.endsWith(".js")
-    )
-  );
-}
-
-function isObservedRabbyRainbowKitNativePromiseFrame(
-  frame: SentryStackFrame | undefined
-): boolean {
-  const paths = [frame?.filename, frame?.abs_path].filter(
-    (path): path is string => typeof path === "string" && path.length > 0
-  );
-  return (
-    frame?.in_app === true &&
-    frame.function === "Promise" &&
-    paths.length > 0 &&
-    paths.every((path) => path === "[native code]")
-  );
-}
-
-function hasObservedRabbyRainbowKitRawFrames(
-  frames: SentryStackFrame[] | undefined
-): boolean {
-  // beforeSend receives this exact two-frame shape before Sentry symbolicates it.
-  return (
-    Array.isArray(frames) &&
-    frames.length === 2 &&
-    isObservedRabbyRainbowKitRawChunkFrame(frames[0]) &&
-    isObservedRabbyRainbowKitNativePromiseFrame(frames[1])
-  );
-}
-
-function hasAppOwnedStackEvidence(
-  event: SentryClientEvent,
-  serializedStack: string | undefined,
-  hint?: SentryEventHint
-): boolean {
-  const frames = event.exception?.values?.[0]?.stacktrace?.frames;
-  return (
-    hasLikelyAppOwnedFrame(frames) ||
-    hasAppOwnedStackPath(serializedStack) ||
-    hasAppOwnedStackPath(getHintExceptionStack(hint))
-  );
-}
 
 function isWalletConnectStaleSessionTopicMessage(value: string): boolean {
   const normalized = normalizeErrorPrefix(value);
@@ -367,24 +280,6 @@ function hasMetaMaskMobileUpdateUrlCircularJsonSignature(
   );
 }
 
-function hasRabbyMobileContext(event: SentryClientEvent): boolean {
-  const candidates = [
-    getContextString(event, "browser", "name"),
-    getRequestHeaderString(event, "user-agent"),
-    getRuntimeUserAgentString(),
-    getStringValue(event.tags?.["browser"]),
-    getStringValue(event.tags?.["browser.name"]),
-    getStringValue(event.tags?.["user_agent"]),
-    getStringValue(event.tags?.["userAgent"]),
-  ];
-
-  return candidates.some(
-    (candidate) =>
-      typeof candidate === "string" &&
-      candidate.toLowerCase().includes(RABBY_MOBILE_USER_AGENT_TOKEN)
-  );
-}
-
 export function shouldFilterDisconnectedWalletProviderRejection(
   event: SentryClientEvent,
   hint?: SentryEventHint
@@ -421,73 +316,149 @@ export function shouldFilterDisconnectedWalletProviderRejection(
   return isThirdPartyWalletExtensionStack(stack);
 }
 
-export function shouldFilterRabbyMobileUserRejectedRequest(
+function hasSingleFramelessBrowserUnhandledRejection(
+  event: SentryClientEvent
+): boolean {
+  const values = event.exception?.values;
+  if (!Array.isArray(values) || values.length !== 1) {
+    return false;
+  }
+
+  const value = values[0];
+  const frames = value?.stacktrace?.frames;
+  const hasNoFrames =
+    frames === undefined || (Array.isArray(frames) && frames.length === 0);
+
+  return (
+    value?.type === "UnhandledRejection" &&
+    value.value === objectCapturedPromiseRejectionWithoutStackMessage &&
+    hasBrowserUnhandledRejectionMechanism(value) &&
+    hasNoFrames
+  );
+}
+
+function hasExactCodeAndMessageShape(
+  serialized: Record<string, unknown>
+): boolean {
+  const keys = Object.keys(serialized);
+  return keys.length === 2 && keys.includes("code") && keys.includes("message");
+}
+
+function getBreadcrumbTimestamp(breadcrumb: SentryBreadcrumb): number | null {
+  const timestamp = breadcrumb.timestamp;
+  return typeof timestamp === "number" && Number.isFinite(timestamp)
+    ? timestamp
+    : null;
+}
+
+function getLatestBreadcrumbTimestamp(
+  breadcrumbs: SentryBreadcrumb[],
+  predicate: (breadcrumb: SentryBreadcrumb) => boolean
+): number | null {
+  let latestTimestamp: number | null = null;
+
+  for (const breadcrumb of breadcrumbs) {
+    if (!predicate(breadcrumb)) {
+      continue;
+    }
+
+    const timestamp = getBreadcrumbTimestamp(breadcrumb);
+    if (
+      timestamp !== null &&
+      (latestTimestamp === null || timestamp > latestTimestamp)
+    ) {
+      latestTimestamp = timestamp;
+    }
+  }
+
+  return latestTimestamp;
+}
+
+function isBackpackWalletCollisionBreadcrumb(
+  breadcrumb: SentryBreadcrumb
+): boolean {
+  return (
+    breadcrumb.category === "console" &&
+    breadcrumb.level === "info" &&
+    breadcrumb.message === backpackWalletCollisionBreadcrumbMessage
+  );
+}
+
+function isReadOnlyEthereumProxyBreadcrumb(
+  breadcrumb: SentryBreadcrumb
+): boolean {
+  return (
+    breadcrumb.category === "console" &&
+    breadcrumb.level === "error" &&
+    typeof breadcrumb.message === "string" &&
+    readOnlyEthereumProxyBreadcrumbPattern.test(breadcrumb.message)
+  );
+}
+
+function hasRecentBackpackWalletCollisionBreadcrumbs(
+  event: SentryClientEvent
+): boolean {
+  const breadcrumbs = getBreadcrumbValues(event);
+  const eventTimestamp = event.timestamp;
+  const proxyTimestamp = getLatestBreadcrumbTimestamp(
+    breadcrumbs,
+    isReadOnlyEthereumProxyBreadcrumb
+  );
+  const backpackTimestamp = getLatestBreadcrumbTimestamp(
+    breadcrumbs,
+    isBackpackWalletCollisionBreadcrumb
+  );
+
+  if (
+    typeof eventTimestamp !== "number" ||
+    !Number.isFinite(eventTimestamp) ||
+    proxyTimestamp === null ||
+    backpackTimestamp === null
+  ) {
+    return false;
+  }
+
+  const proxyToBackpackSeconds = backpackTimestamp - proxyTimestamp;
+  const backpackAgeSeconds = eventTimestamp - backpackTimestamp;
+  return (
+    proxyToBackpackSeconds >= 0 &&
+    proxyToBackpackSeconds <= backpackCollisionBreadcrumbWindowSeconds &&
+    backpackAgeSeconds >= 0 &&
+    backpackAgeSeconds <= backpackCollisionBreadcrumbWindowSeconds
+  );
+}
+
+export function shouldFilterKnownWalletProviderObjectRejection(
   event: SentryClientEvent,
   hint?: SentryEventHint
 ): boolean {
-  if (getEventMessage(event) !== objectCapturedPromiseRejectionMessage) {
+  if (!hasSingleFramelessBrowserUnhandledRejection(event)) {
     return false;
   }
 
   const serialized = getSerializedObjectRejection(event, hint);
-  if (!serialized) {
+  if (!serialized || !hasExactCodeAndMessageShape(serialized)) {
     return false;
   }
 
-  const code = getNumericValue(serialized["code"]);
-  const message = getStringValue(serialized["message"])?.trim();
-  const stack = getStringValue(serialized["stack"]);
+  if (getHintExceptionStack(hint)) {
+    return false;
+  }
 
+  const code = serialized["code"];
+  const message = serialized["message"];
   if (
-    code !== rabbyMobileUserRejectedCode ||
-    message !== rabbyMobileUserRejectedMessage
+    code === walletRevokePermissionsUnsupportedCode &&
+    message === walletRevokePermissionsUnsupportedMessage
   ) {
-    return false;
+    return true;
   }
 
-  if (!hasRabbyMobileUserRejectedStack(stack, hint)) {
-    return false;
-  }
-
-  if (
-    !hasRabbyMobileContext(event) &&
-    !hasRabbyMobileStackContext(stack, hint)
-  ) {
-    return false;
-  }
-
-  return !hasAppOwnedStackEvidence(event, stack, hint);
-}
-
-export function shouldFilterRabbyMobileRainbowKitNotFoundError(
-  event: SentryClientEvent,
-  hint?: SentryEventHint
-): boolean {
-  const value = event.exception?.values?.[0];
-  if (
-    value?.type !== "Error" ||
-    !hasBrowserUnhandledRejectionMechanism(value)
-  ) {
-    return false;
-  }
-
-  const messageCandidates = [
-    value?.value,
-    event.message,
-    getHintExceptionMessage(hint),
-  ];
-  const hasExactMessage = messageCandidates.some(
-    (candidate) =>
-      typeof candidate === "string" &&
-      candidate.trim() === RABBY_MOBILE_RAINBOWKIT_NOT_FOUND_MESSAGE
+  return (
+    code === backpackInternalJsonRpcErrorCode &&
+    message === backpackInternalJsonRpcErrorMessage &&
+    hasRecentBackpackWalletCollisionBreadcrumbs(event)
   );
-
-  if (!hasExactMessage) {
-    return false;
-  }
-
-  const frames = value.stacktrace?.frames;
-  return hasObservedRabbyRainbowKitRawFrames(frames);
 }
 
 export function shouldFilterCoinbaseWalletLinkWebSocket1006(
@@ -522,8 +493,9 @@ export function shouldFilterCoinbaseWalletLinkWebSocket1006(
     return false;
   }
 
-  const hasCoinbaseRequestRelaySignature =
-    hasCoinbaseWalletRequestRelayFrame(value?.stacktrace?.frames);
+  const hasCoinbaseRequestRelaySignature = hasCoinbaseWalletRequestRelayFrame(
+    value?.stacktrace?.frames
+  );
   if (hasCoinbaseRequestRelaySignature) {
     return (
       event.exception?.values?.length === 1 &&

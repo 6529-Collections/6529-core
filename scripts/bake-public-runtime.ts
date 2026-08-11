@@ -13,8 +13,10 @@ const PRIVATE_DEST_JSON = path.join(
   "config",
   "__PRIVATE_RUNTIME.json",
 );
+const LIVE_BASE_ENDPOINT = "https://6529.io";
 const LIVE_API_ENDPOINT = "https://api.6529.io";
 const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
+const TEST_BASE_ENDPOINT = "https://staging.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
 const CORE_SCHEMES = {
@@ -161,6 +163,7 @@ function getRuntimeEndpointOverrides(backendTarget: BackendTarget) {
     }
     return {
       publicRuntime: {
+        BASE_ENDPOINT: TEST_BASE_ENDPOINT,
         API_ENDPOINT: TEST_API_ENDPOINT,
         WS_ENDPOINT: TEST_WS_ENDPOINT,
         BACKEND_TARGET: "test",
@@ -173,6 +176,7 @@ function getRuntimeEndpointOverrides(backendTarget: BackendTarget) {
 
   return {
     publicRuntime: {
+      BASE_ENDPOINT: LIVE_BASE_ENDPOINT,
       API_ENDPOINT: LIVE_API_ENDPOINT,
       WS_ENDPOINT: LIVE_WS_ENDPOINT,
       BACKEND_TARGET: "live",

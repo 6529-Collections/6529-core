@@ -1,5 +1,6 @@
 "use client";
 
+import Button from "@/components/utils/button/Button";
 import {
   faChevronDown,
   faChevronUp,
@@ -92,13 +93,14 @@ export default function ErrorComponent({
         </p>
 
         {onReset && (
-          <button
+          <Button
             type="button"
             onClick={onReset}
-            className="tw-rounded-lg tw-bg-white tw-px-6 tw-py-2 tw-font-semibold tw-text-black tw-transition-colors hover:tw-bg-gray-200"
+            variant="primary"
+            size="md"
           >
             Try Again
-          </button>
+          </Button>
         )}
 
         {(hasStackTrace || digest) && (
@@ -127,15 +129,16 @@ export default function ErrorComponent({
                 )}
               </button>
               {isStacktraceExpanded && (
-                <button
+                <Button
                   type="button"
                   onClick={onCopy}
                   disabled={isCopied}
-                  className="tw-rounded-lg tw-bg-white tw-px-4 tw-py-1 tw-font-medium tw-text-black tw-transition-colors hover:tw-bg-gray-200"
+                  variant="primary"
+                  size="sm"
                 >
                   {isCopied ? "Copied" : "Copy"}{" "}
                   {!isCopied && <FontAwesomeIcon icon={faCopy} />}
-                </button>
+                </Button>
               )}
             </div>
             <AnimatePresence>

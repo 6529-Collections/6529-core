@@ -248,6 +248,37 @@ function jsxAttributeContainsIdentifier(
   );
 }
 
+function jsxAttributeHasStringValue(
+  node,
+  elementName,
+  attributeName,
+  expectedValue,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        (!ts.isJsxOpeningElement(candidate) &&
+          !ts.isJsxSelfClosingElement(candidate)) ||
+        !ts.isIdentifier(candidate.tagName) ||
+        candidate.tagName.text !== elementName
+      ) {
+        return false;
+      }
+      const attribute = candidate.attributes.properties.find(
+        (property) =>
+          ts.isJsxAttribute(property) && property.name.text === attributeName,
+      );
+      return (
+        attribute !== undefined &&
+        ts.isJsxAttribute(attribute) &&
+        attribute.initializer !== undefined &&
+        ts.isStringLiteral(attribute.initializer) &&
+        attribute.initializer.text === expectedValue
+      );
+    }),
+  );
+}
+
 function allJsxElementsUseIdentifier(
   node,
   elementName,
@@ -353,6 +384,38 @@ function callsIdentifier(node, identifier) {
         ts.isIdentifier(candidate.expression) &&
         candidate.expression.text === identifier,
     ),
+  );
+}
+
+function callObjectPropertyUsesIdentifier(
+  node,
+  functionName,
+  propertyName,
+  identifier,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isCallExpression(candidate) ||
+        !ts.isIdentifier(candidate.expression) ||
+        candidate.expression.text !== functionName
+      ) {
+        return false;
+      }
+      const options = candidate.arguments[0];
+      if (!options || !ts.isObjectLiteralExpression(options)) {
+        return false;
+      }
+      return options.properties.some(
+        (property) =>
+          ts.isPropertyAssignment(property) &&
+          (ts.isIdentifier(property.name) ||
+            ts.isStringLiteral(property.name)) &&
+          property.name.text === propertyName &&
+          ts.isIdentifier(property.initializer) &&
+          property.initializer.text === identifier,
+      );
+    }),
   );
 }
 
@@ -547,6 +610,123 @@ assertContract(
   "Electron production compilation must preserve output paths and exclude tests",
 );
 
+const headerQrModalPath =
+  "renderer/components/header/share/header-share/HeaderQRModal.tsx";
+const headerQrModal = parseSource(headerQrModalPath);
+const headerQrModalFunction = findFunction(headerQrModal, "HeaderQRModal");
+const electronPublicShareUrl = headerQrModalFunction
+  ? findDescendant(
+      headerQrModalFunction,
+      (node) =>
+        ts.isConditionalExpression(node) &&
+        ts.isIdentifier(node.condition) &&
+        node.condition.text === "isElectron" &&
+        callsIdentifier(node.whenTrue, "getCurrentPublicUrl"),
+    )
+  : undefined;
+assertContract(
+  Boolean(electronPublicShareUrl),
+  headerQrModalPath,
+  "Electron page-share QR, copy, and social actions must use the public URL",
+);
+
+const headerShareModalViewPath =
+  "renderer/components/header/share/header-share/HeaderShareModalView.tsx";
+const headerShareModalView = parseSource(headerShareModalViewPath);
+const headerShareModalViewFunction = findFunction(
+  headerShareModalView,
+  "HeaderShareModalView",
+);
+assertContract(
+  headerShareModalViewFunction &&
+    callObjectPropertyUsesIdentifier(
+      headerShareModalViewFunction,
+      "useSystemShare",
+      "usePublicUrl",
+      "isElectron",
+    ),
+  headerShareModalViewPath,
+  "Electron system sharing must use BASE_ENDPOINT instead of localhost",
+);
+const openActionUrl = findVariable(headerShareModalView, "openActionUrl");
+const openActionUrlInitializer =
+  openActionUrl && unwrapExpression(openActionUrl.initializer);
+assertContract(
+  headerShareModalViewFunction &&
+    openActionUrlInitializer &&
+    ts.isConditionalExpression(openActionUrlInitializer) &&
+    ts.isIdentifier(openActionUrlInitializer.condition) &&
+    openActionUrlInitializer.condition.text === "isElectron" &&
+    ts.isIdentifier(openActionUrlInitializer.whenTrue) &&
+    openActionUrlInitializer.whenTrue.text === "url" &&
+    jsxAttributeUsesIdentifier(
+      headerShareModalViewFunction,
+      "a",
+      "href",
+      "openActionUrl",
+    ) &&
+    jsxAttributeContainsIdentifier(
+      headerShareModalViewFunction,
+      "a",
+      "target",
+      "isElectron",
+    ) &&
+    callsIdentifier(headerShareModalViewFunction, "openInExternalBrowser") &&
+    hasJsxElement(headerShareModalViewFunction, "GlobeAltIcon") &&
+    Boolean(
+      findDescendant(
+        headerShareModalViewFunction,
+        (node) =>
+          ts.isStringLiteral(node) &&
+          node.text === "headerShare.social.web",
+      ),
+    ),
+  headerShareModalViewPath,
+  "Electron page sharing must show a globe action that opens the public 6529.io page in the system browser",
+);
+
+const pageShareSupportPath =
+  "renderer/components/header/share/page-share-support.ts";
+const pageShareSupport = parseSource(pageShareSupportPath);
+const allPageShareUnsupportedPaths = findVariable(
+  pageShareSupport,
+  "ALL_PAGE_SHARE_UNSUPPORTED_PATHS",
+);
+const allPageShareUnsupportedPathsInitializer =
+  allPageShareUnsupportedPaths &&
+  unwrapExpression(allPageShareUnsupportedPaths.initializer);
+assertContract(
+  allPageShareUnsupportedPathsInitializer &&
+    ts.isArrayLiteralExpression(allPageShareUnsupportedPathsInitializer) &&
+    [
+      "PAGE_SHARE_UNSUPPORTED_PATHS",
+      "CORE_PAGE_SHARE_UNSUPPORTED_PATHS",
+    ].every((identifier) =>
+      allPageShareUnsupportedPathsInitializer.elements.some(
+        (element) =>
+          ts.isSpreadElement(element) &&
+          ts.isIdentifier(element.expression) &&
+          element.expression.text === identifier,
+      ),
+    ),
+  pageShareSupportPath,
+  "Page-share support must combine frontend and Core-only exclusions",
+);
+
+const corePageShareSupportPath =
+  "renderer/components/header/share/core-page-share-support.ts";
+const corePageShareSupport = parseSource(corePageShareSupportPath);
+assertContract(
+  Boolean(
+    findDescendant(
+      corePageShareSupport,
+      (node) => ts.isStringLiteral(node) && node.text === "/core",
+    ),
+  ),
+  corePageShareSupportPath,
+  "Core-only routes must remain excluded from public page sharing",
+);
+
 const sessionUtilsPath = "renderer/services/auth/session-v2.utils.ts";
 const sessionUtils = parseSource(sessionUtilsPath);
 const clientTypeFunction = findFunction(sessionUtils, "getSessionClientType");
@@ -556,6 +736,79 @@ assertContract(
     returnsStringLiteral(clientTypeFunction, "desktop"),
   sessionUtilsPath,
   "getSessionClientType must return desktop for Electron",
+);
+
+const sessionPersistencePath =
+  "renderer/services/auth/session-persistence.utils.ts";
+const sessionPersistence = parseSource(sessionPersistencePath);
+const persistNativeRefreshTokenIfNeeded = findVariable(
+  sessionPersistence,
+  "persistNativeRefreshTokenIfNeeded",
+);
+const electronPersistenceGuard = persistNativeRefreshTokenIfNeeded
+  ? findDescendant(
+      persistNativeRefreshTokenIfNeeded,
+      (node) =>
+        ts.isIfStatement(node) &&
+        callsIdentifier(node.expression, "isElectron") &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (conditionNode) =>
+              ts.isStringLiteral(conditionNode) &&
+              conditionNode.text === "desktop",
+          ),
+        ) &&
+        returnsStringLiteral(node.thenStatement, "persisted") &&
+        !callsIdentifier(node.thenStatement, "setNativeRefreshToken"),
+    )
+  : undefined;
+assertContract(
+  Boolean(electronPersistenceGuard),
+  sessionPersistencePath,
+  "Electron session persistence must leave refresh tokens in the main process",
+);
+
+const authRequestSignInPath =
+  "renderer/components/auth/authRequestSignIn.ts";
+const authRequestSignIn = parseSource(authRequestSignInPath);
+const createSignInSession = findVariable(
+  authRequestSignIn,
+  "createSignInSession",
+);
+assertContract(
+  createSignInSession &&
+    Boolean(
+      findDescendant(
+        createSignInSession,
+        (node) =>
+          ts.isPropertyAccessExpression(node) &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "clientSignature" &&
+          node.name.text === "cancelled",
+      ),
+    ),
+  authRequestSignInPath,
+  "auth request sign-in must preserve explicit cancellation results",
+);
+
+const authActionsPath = "renderer/components/auth/authActions.ts";
+const authActions = parseSource(authActionsPath);
+const requestSessionUpgrade = findVariable(
+  authActions,
+  "requestSessionUpgrade",
+);
+assertContract(
+  requestSessionUpgrade &&
+    Boolean(
+      findDescendant(
+        requestSessionUpgrade,
+        (node) => ts.isIdentifier(node) && node.text === "cancelled",
+      ),
+    ) &&
+    callsIdentifier(requestSessionUpgrade, "setShowSignModal"),
+  authActionsPath,
+  "session-upgrade cancellation must dismiss without failure handling",
 );
 
 for (const [functionName, bridgeMethod] of [
@@ -1255,6 +1508,29 @@ assertContract(
   rootLayoutPath,
   "RootLayout must route all pages through AppRouteProviders",
 );
+assertContract(
+  rootLayoutFunction &&
+    !hasJsxElement(rootLayoutFunction, "RuntimeFavicon") &&
+    !jsxAttributeHasStringValue(rootLayoutFunction, "link", "rel", "icon"),
+  rootLayoutPath,
+  "Core renderer must not mount favicon management or favicon links",
+);
+
+for (const headerPath of [
+  "renderer/components/header/AppSidebarHeader.tsx",
+  "renderer/components/layout/SmallScreenHeader.tsx",
+  "renderer/components/layout/sidebar/WebSidebarHeader.tsx",
+]) {
+  const header = parseSource(headerPath);
+  assertContract(
+    !importsModulePrefix(
+      header,
+      "@/components/common/EnvironmentBadge",
+    ) && !hasJsxElement(header, "EnvironmentBadge"),
+    headerPath,
+    "Core headers must use the native titlebar as the only environment indicator",
+  );
+}
 
 const awsRumPath = "renderer/components/monitoring/AwsRumProvider.tsx";
 const awsRum = parseSource(awsRumPath);
