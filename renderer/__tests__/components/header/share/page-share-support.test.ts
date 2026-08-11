@@ -2,6 +2,7 @@ import {
   isPageShareSupported,
   PAGE_SHARE_UNSUPPORTED_PATHS,
 } from "@/components/header/share/page-share-support";
+import { CORE_PAGE_SHARE_UNSUPPORTED_PATHS } from "@/components/header/share/core-page-share-support";
 
 describe("page share support", () => {
   it.each(PAGE_SHARE_UNSUPPORTED_PATHS)(
@@ -43,6 +44,34 @@ describe("page share support", () => {
       ).toBe(false);
     }
   );
+
+  it.each(CORE_PAGE_SHARE_UNSUPPORTED_PATHS)(
+    "hides Share on Core-only path %s",
+    (pathname) => {
+      expect(
+        isPageShareSupported({
+          activeView: null,
+          pathname,
+          surface: "desktop-web",
+        })
+      ).toBe(false);
+    }
+  );
+
+  it.each([
+    "/core/core-info",
+    "/core/core-wallets",
+    "/core/eth-transactions",
+    "/core/tdh-calculation",
+  ])("hides Share on Core-only child path %s", (pathname) => {
+    expect(
+      isPageShareSupported({
+        activeView: null,
+        pathname,
+        surface: "desktop-web",
+      })
+    ).toBe(false);
+  });
 
   it("hides Share in the messages query view on every surface", () => {
     expect(

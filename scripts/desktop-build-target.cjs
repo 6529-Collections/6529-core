@@ -6,8 +6,10 @@ const path = require("node:path");
 const dotenv = require("dotenv");
 
 const ROOT = path.resolve(__dirname, "..");
+const LIVE_BASE_ENDPOINT = "https://6529.io";
 const LIVE_API_ENDPOINT = "https://api.6529.io";
 const LIVE_WS_ENDPOINT = "wss://ws.6529.io";
+const TEST_BASE_ENDPOINT = "https://staging.6529.io";
 const TEST_API_ENDPOINT = "https://api.staging.6529.io";
 const TEST_WS_ENDPOINT = "wss://ws.staging.6529.io";
 const CORE_SCHEMES = {
@@ -175,11 +177,13 @@ function getBuildEnvironment(commandConfig, backendTarget) {
   const endpointEnv =
     backendTarget === "test"
       ? {
+          BASE_ENDPOINT: TEST_BASE_ENDPOINT,
           API_ENDPOINT: TEST_API_ENDPOINT,
           WS_ENDPOINT: TEST_WS_ENDPOINT,
           STAGING_API_KEY: stagingApiKey,
         }
       : {
+          BASE_ENDPOINT: LIVE_BASE_ENDPOINT,
           API_ENDPOINT: LIVE_API_ENDPOINT,
           WS_ENDPOINT: LIVE_WS_ENDPOINT,
           STAGING_API_KEY: "",
@@ -212,6 +216,8 @@ function run(command, args, env) {
 }
 
 function printSummary(commandName, commandConfig, backendTarget) {
+  const baseEndpoint =
+    backendTarget === "test" ? TEST_BASE_ENDPOINT : LIVE_BASE_ENDPOINT;
   const apiEndpoint =
     backendTarget === "test" ? TEST_API_ENDPOINT : LIVE_API_ENDPOINT;
   const wsEndpoint =
@@ -219,6 +225,7 @@ function printSummary(commandName, commandConfig, backendTarget) {
   console.log(
     `[desktop-build-target] ${commandName}: app=${commandConfig.appEnvironment}, backend=${backendTarget}`
   );
+  console.log(`[desktop-build-target] BASE_ENDPOINT=${baseEndpoint}`);
   console.log(`[desktop-build-target] API_ENDPOINT=${apiEndpoint}`);
   console.log(`[desktop-build-target] WS_ENDPOINT=${wsEndpoint}`);
 }

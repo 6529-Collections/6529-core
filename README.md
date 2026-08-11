@@ -78,6 +78,12 @@ favicon manager in any app mode. Desktop environment/backend information is
 shown by the native titlebar instead, so do not add a second badge below the
 logo or favicon links to the renderer layout during conflict resolution.
 
+Core-only `/core` routes do not expose page sharing because they have no public
+browser equivalent. On other shareable routes, Electron uses `BASE_ENDPOINT`
+for public links and shows a globe-labeled `Open in 6529.io` instead of the
+redundant `Open in 6529 Desktop` action; the public page opens in the system
+browser.
+
 ⚠️ Note: there might be conflicts that need resolving
 
 #### Packages
@@ -138,7 +144,8 @@ late cancelled signature, cross-wire Core wallet addresses, or reintroduce
 global application UI on the isolated browser connector. It also preserves the
 shared responsive chooser/request envelope, its required connection-context
 nesting, a provider-independent route error fallback, compact Core wallet
-active/switch states, and fixed request actions.
+active/switch states, fixed request actions, and public-origin page sharing in
+Electron.
 
 ## Building and Publishing
 
@@ -160,13 +167,16 @@ Desktop distribution scripts take an optional backend target argument:
 
 The backend target is separate from the app environment (`local`, `staging`, or
 `production`). The app environment still controls the package config, protocol
-scheme, update channel, and splash/titlebar app label. The backend target only
-controls the API and WebSocket endpoints, plus the staging access header when
-building against Test.
+scheme, update channel, and splash/titlebar app label. The backend target
+controls the canonical public web origin, API and WebSocket endpoints, plus the
+staging access header when building against Test. The embedded renderer still
+runs on localhost; public page sharing uses the canonical web origin instead of
+exposing that internal address.
 
 Live backend:
 
 ```bash
+BASE_ENDPOINT=https://6529.io
 API_ENDPOINT=https://api.6529.io
 WS_ENDPOINT=wss://ws.6529.io
 ```
@@ -174,6 +184,7 @@ WS_ENDPOINT=wss://ws.6529.io
 Test backend:
 
 ```bash
+BASE_ENDPOINT=https://staging.6529.io
 API_ENDPOINT=https://api.staging.6529.io
 WS_ENDPOINT=wss://ws.staging.6529.io
 ```

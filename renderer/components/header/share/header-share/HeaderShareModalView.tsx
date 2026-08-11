@@ -4,6 +4,7 @@ import {
   ArrowDownTrayIcon,
   ComputerDesktopIcon,
   EllipsisHorizontalIcon,
+  GlobeAltIcon,
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import Image from "next/image";
@@ -12,6 +13,7 @@ import { type CSSProperties, useEffect, useRef } from "react";
 import { Tooltip } from "react-tooltip";
 
 import Button from "@/components/utils/button/Button";
+import { openInExternalBrowser } from "@/helpers";
 import { t } from "@/i18n/messages";
 import {
   HEADER_SHARE_LOCALE,
@@ -75,7 +77,7 @@ export function HeaderShareModalView({
   } = useSystemShare({
     enabled:
       mode === Mode.PAGE_SHARE && isVisible && Boolean(navigateBrowserUrl),
-    usePublicUrl: false,
+    usePublicUrl: isElectron,
   });
 
   useEffect(() => {
@@ -456,6 +458,7 @@ export function HeaderShareModalView({
       url,
       title: shareTitle,
     });
+    const openActionUrl = isElectron ? url : desktopUrl;
     const copyLabel = t(
       HEADER_SHARE_LOCALE,
       urlCopied ? "headerShare.copy.copied" : "headerShare.copy.default"
@@ -494,13 +497,37 @@ export function HeaderShareModalView({
             {copyLabel}
           </span>
         </button>
-        {desktopUrl && (
-          <a href={desktopUrl} className={SHARE_ACTION_CLASS_NAME}>
-            <ComputerDesktopIcon
-              className={SHARE_ACTION_ICON_CLASS_NAME}
-              aria-hidden="true"
-            />
-            <span>{t(HEADER_SHARE_LOCALE, "headerShare.social.desktop")}</span>
+        {openActionUrl && (
+          <a
+            href={openActionUrl}
+            target={isElectron ? "_blank" : undefined}
+            rel={isElectron ? "noopener noreferrer" : undefined}
+            onClick={
+              isElectron
+                ? (event) => openInExternalBrowser(openActionUrl, event)
+                : undefined
+            }
+            className={SHARE_ACTION_CLASS_NAME}
+          >
+            {isElectron ? (
+              <GlobeAltIcon
+                className={SHARE_ACTION_ICON_CLASS_NAME}
+                aria-hidden="true"
+              />
+            ) : (
+              <ComputerDesktopIcon
+                className={SHARE_ACTION_ICON_CLASS_NAME}
+                aria-hidden="true"
+              />
+            )}
+            <span>
+              {t(
+                HEADER_SHARE_LOCALE,
+                isElectron
+                  ? "headerShare.social.web"
+                  : "headerShare.social.desktop"
+              )}
+            </span>
           </a>
         )}
         <a

@@ -387,6 +387,38 @@ function callsIdentifier(node, identifier) {
   );
 }
 
+function callObjectPropertyUsesIdentifier(
+  node,
+  functionName,
+  propertyName,
+  identifier,
+) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isCallExpression(candidate) ||
+        !ts.isIdentifier(candidate.expression) ||
+        candidate.expression.text !== functionName
+      ) {
+        return false;
+      }
+      const options = candidate.arguments[0];
+      if (!options || !ts.isObjectLiteralExpression(options)) {
+        return false;
+      }
+      return options.properties.some(
+        (property) =>
+          ts.isPropertyAssignment(property) &&
+          (ts.isIdentifier(property.name) ||
+            ts.isStringLiteral(property.name)) &&
+          property.name.text === propertyName &&
+          ts.isIdentifier(property.initializer) &&
+          property.initializer.text === identifier,
+      );
+    }),
+  );
+}
+
 function isPropertyCall(node, receiver, method) {
   return (
     ts.isCallExpression(node) &&
@@ -576,6 +608,123 @@ assertContract(
     electronBuildExcludes.includes("**/*.test.tsx"),
   electronBuildTsconfigPath,
   "Electron production compilation must preserve output paths and exclude tests",
+);
+
+const headerQrModalPath =
+  "renderer/components/header/share/header-share/HeaderQRModal.tsx";
+const headerQrModal = parseSource(headerQrModalPath);
+const headerQrModalFunction = findFunction(headerQrModal, "HeaderQRModal");
+const electronPublicShareUrl = headerQrModalFunction
+  ? findDescendant(
+      headerQrModalFunction,
+      (node) =>
+        ts.isConditionalExpression(node) &&
+        ts.isIdentifier(node.condition) &&
+        node.condition.text === "isElectron" &&
+        callsIdentifier(node.whenTrue, "getCurrentPublicUrl"),
+    )
+  : undefined;
+assertContract(
+  Boolean(electronPublicShareUrl),
+  headerQrModalPath,
+  "Electron page-share QR, copy, and social actions must use the public URL",
+);
+
+const headerShareModalViewPath =
+  "renderer/components/header/share/header-share/HeaderShareModalView.tsx";
+const headerShareModalView = parseSource(headerShareModalViewPath);
+const headerShareModalViewFunction = findFunction(
+  headerShareModalView,
+  "HeaderShareModalView",
+);
+assertContract(
+  headerShareModalViewFunction &&
+    callObjectPropertyUsesIdentifier(
+      headerShareModalViewFunction,
+      "useSystemShare",
+      "usePublicUrl",
+      "isElectron",
+    ),
+  headerShareModalViewPath,
+  "Electron system sharing must use BASE_ENDPOINT instead of localhost",
+);
+const openActionUrl = findVariable(headerShareModalView, "openActionUrl");
+const openActionUrlInitializer =
+  openActionUrl && unwrapExpression(openActionUrl.initializer);
+assertContract(
+  headerShareModalViewFunction &&
+    openActionUrlInitializer &&
+    ts.isConditionalExpression(openActionUrlInitializer) &&
+    ts.isIdentifier(openActionUrlInitializer.condition) &&
+    openActionUrlInitializer.condition.text === "isElectron" &&
+    ts.isIdentifier(openActionUrlInitializer.whenTrue) &&
+    openActionUrlInitializer.whenTrue.text === "url" &&
+    jsxAttributeUsesIdentifier(
+      headerShareModalViewFunction,
+      "a",
+      "href",
+      "openActionUrl",
+    ) &&
+    jsxAttributeContainsIdentifier(
+      headerShareModalViewFunction,
+      "a",
+      "target",
+      "isElectron",
+    ) &&
+    callsIdentifier(headerShareModalViewFunction, "openInExternalBrowser") &&
+    hasJsxElement(headerShareModalViewFunction, "GlobeAltIcon") &&
+    Boolean(
+      findDescendant(
+        headerShareModalViewFunction,
+        (node) =>
+          ts.isStringLiteral(node) &&
+          node.text === "headerShare.social.web",
+      ),
+    ),
+  headerShareModalViewPath,
+  "Electron page sharing must show a globe action that opens the public 6529.io page in the system browser",
+);
+
+const pageShareSupportPath =
+  "renderer/components/header/share/page-share-support.ts";
+const pageShareSupport = parseSource(pageShareSupportPath);
+const allPageShareUnsupportedPaths = findVariable(
+  pageShareSupport,
+  "ALL_PAGE_SHARE_UNSUPPORTED_PATHS",
+);
+const allPageShareUnsupportedPathsInitializer =
+  allPageShareUnsupportedPaths &&
+  unwrapExpression(allPageShareUnsupportedPaths.initializer);
+assertContract(
+  allPageShareUnsupportedPathsInitializer &&
+    ts.isArrayLiteralExpression(allPageShareUnsupportedPathsInitializer) &&
+    [
+      "PAGE_SHARE_UNSUPPORTED_PATHS",
+      "CORE_PAGE_SHARE_UNSUPPORTED_PATHS",
+    ].every((identifier) =>
+      allPageShareUnsupportedPathsInitializer.elements.some(
+        (element) =>
+          ts.isSpreadElement(element) &&
+          ts.isIdentifier(element.expression) &&
+          element.expression.text === identifier,
+      ),
+    ),
+  pageShareSupportPath,
+  "Page-share support must combine frontend and Core-only exclusions",
+);
+
+const corePageShareSupportPath =
+  "renderer/components/header/share/core-page-share-support.ts";
+const corePageShareSupport = parseSource(corePageShareSupportPath);
+assertContract(
+  Boolean(
+    findDescendant(
+      corePageShareSupport,
+      (node) => ts.isStringLiteral(node) && node.text === "/core",
+    ),
+  ),
+  corePageShareSupportPath,
+  "Core-only routes must remain excluded from public page sharing",
 );
 
 const sessionUtilsPath = "renderer/services/auth/session-v2.utils.ts";

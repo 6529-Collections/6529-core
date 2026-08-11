@@ -40,6 +40,7 @@ import {
   type ConnectionShareStatus,
   generateQrCodeSource,
   getCachedConnectionShare,
+  getCurrentPublicUrl,
   getFocusableElements,
   getLocalLegacyDesktopAuth,
   isAbortError,
@@ -243,8 +244,8 @@ function HeaderQRModal({
     const coreScheme = publicEnv.CORE_SCHEME ?? "core6529";
 
     if (mode === Mode.PAGE_SHARE) {
-      const { fullUrl: browserUrl, routerPath: pageRouterPath } =
-        getCurrentPageLocation();
+      const { fullUrl, routerPath: pageRouterPath } = getCurrentPageLocation();
+      const browserUrl = isElectron ? getCurrentPublicUrl() : fullUrl;
       const appUrl = buildNavigateDeepLinkUrl({
         scheme: appScheme,
         routerPath: pageRouterPath,

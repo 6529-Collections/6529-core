@@ -23,6 +23,7 @@ import React from "react";
 const mockCapacitorCanShare = jest.fn();
 const mockCapacitorShare = jest.fn();
 const mockShowAppToast = jest.fn();
+const mockOpenExternal = jest.fn();
 
 // Mocks
 jest.mock("@/hooks/useCapacitor");
@@ -177,6 +178,8 @@ Object.assign(navigator, {
 
 const testOrigin = globalThis.window.location.origin;
 const testPageUrl = `${testOrigin}/mock-path?something=value#details`;
+const testPublicPageUrl =
+  "https://test.6529.io/mock-path?something=value#details";
 const originalSecureContextDescriptor = Object.getOwnPropertyDescriptor(
   globalThis,
   "isSecureContext"
@@ -222,6 +225,10 @@ describe("HeaderShare", () => {
     mockPathname = "/mock-path";
     mockSearchParams = new URLSearchParams("something=value");
     mockUseElectron.mockReturnValue(false);
+    Object.defineProperty(globalThis.window, "api", {
+      configurable: true,
+      value: { openExternal: mockOpenExternal },
+    });
     mockCapacitorCanShare.mockResolvedValue({ value: true });
     mockCapacitorShare.mockResolvedValue(undefined);
     document.title = "6529";
@@ -622,6 +629,80 @@ describe("HeaderShare", () => {
       expect.stringContaining("stale-router-path"),
       expect.anything()
     );
+  });
+
+  it("uses the public web origin for every Electron page-share action", async () => {
+    const qrcode = require("qrcode");
+    const systemShare = jest.fn().mockResolvedValue(undefined);
+    Object.defineProperty(globalThis.navigator, "share", {
+      configurable: true,
+      value: systemShare,
+    });
+    Object.defineProperty(globalThis.navigator, "canShare", {
+      configurable: true,
+      value: jest.fn().mockReturnValue(true),
+    });
+    mockUseCapacitor.mockReturnValue({ isCapacitor: false } as any);
+    mockIsMobile.mockReturnValue(false);
+    mockUseElectron.mockReturnValue(true);
+
+    renderWithProviders(<HeaderShare />);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Share this page" })
+    );
+
+    expect(await screen.findByAltText("Current page QR code")).toBeVisible();
+    expect(qrcode.toDataURL).toHaveBeenCalledWith(
+      testPublicPageUrl,
+      QR_CODE_OPTIONS
+    );
+    expect(qrcode.toDataURL).toHaveBeenCalledWith(
+      "testmobile6529://navigate/mock-path?something=value#details",
+      QR_CODE_OPTIONS
+    );
+    expect(
+      screen.queryByRole("link", { name: "Open in 6529 Desktop" })
+    ).not.toBeInTheDocument();
+    const openWebLink = screen.getByRole("link", {
+      name: "Open in 6529.io",
+    });
+    expect(openWebLink).toHaveAttribute("href", testPublicPageUrl);
+    expect(openWebLink).toHaveAttribute("target", "_blank");
+
+    await userEvent.click(openWebLink);
+    expect(mockOpenExternal).toHaveBeenLastCalledWith(testPublicPageUrl);
+
+    await userEvent.click(screen.getByRole("button", { name: "Copy Link" }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
+      testPublicPageUrl
+    );
+
+    const xShareUrl = new URL(
+      (screen.getByRole("link", { name: "Share on X" }) as HTMLAnchorElement)
+        .href
+    );
+    expect(xShareUrl.searchParams.get("text")).toBe(
+      `6529\n${testPublicPageUrl}`
+    );
+
+    const farcasterShareUrl = new URL(
+      (
+        screen.getByRole("link", {
+          name: "Share on Farcaster",
+        }) as HTMLAnchorElement
+      ).href
+    );
+    expect(farcasterShareUrl.searchParams.getAll("embeds[]")).toEqual([
+      testPublicPageUrl,
+    ]);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Share with another app" })
+    );
+    expect(systemShare).toHaveBeenCalledWith({
+      title: "6529",
+      url: testPublicPageUrl,
+    });
   });
 
   it("uses the system share sheet with the exact current URL when available", async () => {

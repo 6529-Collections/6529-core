@@ -1951,6 +1951,7 @@ export const EN_US_MESSAGES = {
   "headerShare.social.x": "Share on X",
   "headerShare.social.farcaster": "Share on Farcaster",
   "headerShare.social.desktop": "Open in 6529 Desktop",
+  "headerShare.social.web": "Open in 6529.io",
   "headerShare.social.more": "More",
   "headerShare.social.systemShare": "Share with another app",
   "headerShare.social.systemShareUnavailable": "System sharing is unavailable.",

@@ -94,6 +94,7 @@ import {
 } from "./utils/info";
 import { prepareNext } from "./utils/prepareNext";
 import { APP_CLOSE_DIALOG_OPTIONS, getAppCloseAction } from "./app-close";
+import { shouldOpenInExternalBrowser } from "./navigation-policy";
 import { runShutdownStepWithTimeout } from "./shutdown";
 
 contextMenu({
@@ -1404,20 +1405,38 @@ function initListeners(mw: BrowserWindow) {
       return { action: "deny" };
     }
 
+    if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
+      Logger.info("Opening external web URL in the default browser:", url);
+      shell.openExternal(url).catch((error) => {
+        Logger.error("Failed to open external web URL:", url, error);
+      });
+      return { action: "deny" };
+    }
+
     return { action: "allow" };
   });
 
   mw.webContents.on("will-navigate", (event, url) => {
-    if (!isLocalIpfsApiUrl(url)) {
+    if (isLocalIpfsApiUrl(url)) {
+      Logger.info(
+        "Preventing main window IPFS navigation and opening dedicated BrowserWindow:",
+        url
+      );
+      event.preventDefault();
+      openIpfsWindow(url);
       return;
     }
 
-    Logger.info(
-      "Preventing main window IPFS navigation and opening dedicated BrowserWindow:",
-      url
-    );
-    event.preventDefault();
-    openIpfsWindow(url);
+    if (shouldOpenInExternalBrowser(mw.webContents.getURL(), url)) {
+      Logger.info(
+        "Preventing external main-window navigation and opening the default browser:",
+        url
+      );
+      event.preventDefault();
+      shell.openExternal(url).catch((error) => {
+        Logger.error("Failed to open external web URL:", url, error);
+      });
+    }
   });
 
   mw.webContents.on("did-navigate", updateNavigationState);
