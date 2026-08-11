@@ -10,7 +10,7 @@ import clsx from "clsx";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { CompactMenu } from "@/components/compact-menu";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP } from "@/constants/constants";
@@ -56,6 +56,7 @@ import {
 } from "./app-header-wave-preview";
 import WaveHeaderRestrictionButton from "@/components/waves/header/WaveHeaderRestrictionButton";
 import MainStageNominationPopover from "@/components/brain/my-stream/tabs/MainStageNominationPopover";
+import { useProfileDoubleActivate } from "./useProfileDoubleActivate";
 
 const COLLECTION_TITLES: Record<string, string> = {
   "the-memes": "The Memes",
@@ -63,17 +64,12 @@ const COLLECTION_TITLES: Record<string, string> = {
   "meme-lab": "Meme Lab",
   nextgen: "NextGen",
 };
-const PROFILE_DOUBLE_ACTIVATE_DELAY_MS = 280;
 const HEADER_RESTRICTION_BUTTON_CLASS =
   "tw-size-9 tw-min-w-9 tw-rounded-lg tw-border-0 tw-bg-black tw-p-0 tw-text-iron-300 tw-shadow-sm desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-50";
 
 interface HeaderConnectedAccount {
   readonly address: string;
   readonly isActive: boolean;
-}
-
-interface HeaderTimeoutRef {
-  current: ReturnType<typeof setTimeout> | null;
 }
 
 interface HeaderProfileSource {
@@ -454,38 +450,6 @@ const switchToNextConnectedAccount = ({
   }
 };
 
-const handleProfileActivate = ({
-  address,
-  profileClickTimeoutRef,
-  openMenu,
-  switchConnectedAccount,
-}: {
-  readonly address: string | null | undefined;
-  readonly profileClickTimeoutRef: HeaderTimeoutRef;
-  readonly openMenu: () => void;
-  readonly switchConnectedAccount: () => boolean;
-}) => {
-  if (!address) {
-    openMenu();
-    return;
-  }
-
-  if (profileClickTimeoutRef.current) {
-    clearTimeout(profileClickTimeoutRef.current);
-    profileClickTimeoutRef.current = null;
-
-    if (!switchConnectedAccount()) {
-      openMenu();
-    }
-    return;
-  }
-
-  profileClickTimeoutRef.current = setTimeout(() => {
-    profileClickTimeoutRef.current = null;
-    openMenu();
-  }, PROFILE_DOUBLE_ACTIVATE_DELAY_MS);
-};
-
 export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
   const myStream = useMyStreamOptional();
@@ -502,9 +466,6 @@ export default function AppHeader() {
     seizeSwitchConnectedAccount,
   } = useSeizeConnectContext();
   const { isSeedWallet } = useSeedWallet();
-  const profileClickTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
-    null
-  );
   const { connectedProfile, activeProfileProxy } = useAuth();
   const pathname = usePathname();
   const params = useParams();
@@ -513,15 +474,6 @@ export default function AppHeader() {
     handleOrWallet: address ?? null,
     initialProfile: null,
   });
-
-  useEffect(
-    () => () => {
-      if (profileClickTimeoutRef.current) {
-        clearTimeout(profileClickTimeoutRef.current);
-      }
-    },
-    []
-  );
 
   const pfp = getHeaderProfilePfp({ activeProfileProxy, profile });
   const resolvedPfp = pfp ? resolveIpfsUrlSync(pfp) : null;
@@ -633,23 +585,21 @@ export default function AppHeader() {
   );
   const hasMultipleConnectedAccounts = connectedAccounts.length > 1;
   const openMenu = () => setMenuOpen(true);
-  const onProfileActivate = () =>
-    handleProfileActivate({
-      address,
-      profileClickTimeoutRef,
-      openMenu,
-      switchConnectedAccount: () =>
-        switchToNextConnectedAccount({
-          connectedAccounts,
-          seizeSwitchConnectedAccount,
-          onFailure: (error) => {
-            console.error(
-              "Failed to switch connected account from header",
-              error
-            );
-          },
-        }),
+  const closeMenu = () => setMenuOpen(false);
+  const switchConnectedAccount = () =>
+    switchToNextConnectedAccount({
+      connectedAccounts,
+      seizeSwitchConnectedAccount,
+      onFailure: (error) => {
+        console.error("Failed to switch connected account from header", error);
+      },
     });
+  const { onProfileActivate, profileButtonRef } = useProfileDoubleActivate({
+    canSwitchAccount: hasMultipleConnectedAccounts,
+    openMenu,
+    closeMenu,
+    switchConnectedAccount,
+  });
 
   const finalTitle = getHeaderTitle({
     pathname,
@@ -682,6 +632,7 @@ export default function AppHeader() {
             <BackButton />
           ) : (
             <button
+              ref={profileButtonRef}
               type="button"
               aria-label={
                 hasMultipleConnectedAccounts
