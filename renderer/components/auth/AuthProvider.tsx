@@ -104,6 +104,7 @@ export default function Auth({
     isSafeWallet,
     connectionState,
     isDisconnecting,
+    isSigningOutAll,
   } = useSeizeConnectContext();
 
   const {
@@ -384,7 +385,7 @@ export default function Auth({
     // Clear previous operations when dependencies change
     abortCurrentAuthOperation();
 
-    if (isDisconnecting) {
+    if (isDisconnecting || isSigningOutAll) {
       setShowSignModal(false);
       return undefined;
     }
@@ -513,6 +514,7 @@ export default function Auth({
     authStorageRevision,
     dismissedAuthPromptAddress,
     isDisconnecting,
+    isSigningOutAll,
     normalizedAddress,
   ]);
 
@@ -741,6 +743,7 @@ export default function Auth({
     return (
       showSignModal &&
       !isDisconnecting &&
+      !isSigningOutAll &&
       !isDismissedAuthPrompt &&
       !shouldHideDuringValidation &&
       (connectionState === "connected" || isDisconnectedWebSessionUpgradePrompt)
@@ -751,6 +754,7 @@ export default function Auth({
     dismissedAuthPromptAddress,
     isDisconnectedWebSessionUpgradePrompt,
     isDisconnecting,
+    isSigningOutAll,
     normalizedAddress,
     showSignModal,
     signModalReason,
