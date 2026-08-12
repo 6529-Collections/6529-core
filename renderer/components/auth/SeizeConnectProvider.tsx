@@ -155,6 +155,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   const {
+    getSignOutAllGeneration,
+    hasSignOutAllGenerationChanged,
     isSigningOutAll,
     isSigningOutAllRef,
     seizeDisconnectAndLogoutAll,
@@ -164,6 +166,21 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     refreshStoredConnectedAccounts,
     setDisconnected,
   });
+
+  useEffect(() => {
+    if (!isSigningOutAll) {
+      return;
+    }
+    if (retryConnectTimeoutRef.current) {
+      clearTimeout(retryConnectTimeoutRef.current);
+      retryConnectTimeoutRef.current = null;
+    }
+    isAddingConnectedAccountRef.current = false;
+    addFlowOriginAddressRef.current = null;
+    setIsAddingConnectedAccount(false);
+    clearBrowserConnectorConnectIntent();
+    setShowConnectModal(false);
+  }, [isSigningOutAll, setShowConnectModal]);
 
   useEffect(() => {
     if (globalThis.window === undefined) {
@@ -309,6 +326,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       if (isSigningOutAllRef.current) {
         return;
       }
+      const signOutGeneration = getSignOutAllGeneration();
       try {
         clearConnectIntentHandoffTimeout();
 
@@ -331,12 +349,26 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           await waitForAppKitReady();
         }
 
-        if (!isMountedRef.current) {
+        if (
+          !isMountedRef.current ||
+          hasSignOutAllGenerationChanged(signOutGeneration)
+        ) {
+          clearConnectIntentWaitingForAppKit();
           return;
         }
 
         const openAppKit = await appKitModalBridgeStore.waitForOpen();
+        if (hasSignOutAllGenerationChanged(signOutGeneration)) {
+          clearConnectIntentWaitingForAppKit();
+          return;
+        }
         await openAppKit({ view: "Connect" });
+
+        if (hasSignOutAllGenerationChanged(signOutGeneration)) {
+          clearConnectIntentWaitingForAppKit();
+          await appKitModalBridgeStore.close();
+          return;
+        }
 
         logSecurityEvent(
           SecurityEventType.WALLET_MODAL_OPENED,
@@ -356,6 +388,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     [
       clearConnectIntentHandoffTimeout,
       clearConnectIntentWaitingForAppKit,
+      getSignOutAllGeneration,
+      hasSignOutAllGenerationChanged,
       appKitModalBridgeStore,
       isAppKitReady,
       isSigningOutAllRef,
@@ -445,6 +479,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     if (isSigningOutAllRef.current) {
       return;
     }
+    const signOutGeneration = getSignOutAllGeneration();
     isAddingConnectedAccountRef.current = false;
     addFlowOriginAddressRef.current = null;
     setIsAddingConnectedAccount(false);
@@ -482,7 +517,10 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       setTimeout(resolve, CONNECT_AFTER_DISCONNECT_DELAY_MS);
     });
 
-    if (!isMountedRef.current) {
+    if (
+      !isMountedRef.current ||
+      hasSignOutAllGenerationChanged(signOutGeneration)
+    ) {
       return;
     }
 
@@ -492,6 +530,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.isConnected,
     disconnect,
     getActiveConnectIntent,
+    getSignOutAllGeneration,
+    hasSignOutAllGenerationChanged,
     isActiveLocalWalletConnector,
     isSigningOutAllRef,
     seizeConnectOrThrow,
@@ -700,8 +740,17 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const openAddConnectedAccountModal = useCallback(
     (
       clearAddConnectedAccountGuard: () => void,
-      originAddress: string | null
+      originAddress: string | null,
+      signOutGeneration: number
     ): void => {
+      if (
+        isSigningOutAllRef.current ||
+        hasSignOutAllGenerationChanged(signOutGeneration)
+      ) {
+        clearAddConnectedAccountGuard();
+        setIsAddingConnectedAccount(false);
+        return;
+      }
       seizeConnectOrThrow(
         "seizeAddConnectedAccount",
         getAddAccountConnectIntent(originAddress)
@@ -714,7 +763,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     },
     [
       getAddAccountConnectIntent,
+      hasSignOutAllGenerationChanged,
       handleAddConnectedAccountConnectFailure,
+      isSigningOutAllRef,
       seizeConnectOrThrow,
     ]
   );
@@ -736,6 +787,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     ) {
       return;
     }
+    const signOutGeneration = getSignOutAllGeneration();
 
     // The desktop chooser can coexist with every connector. Opening Add must
     // never disconnect or activate a wallet before the user selects one.
@@ -747,7 +799,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
         clearAddConnectedAccountGuard,
         storedOrigin && isAddress(storedOrigin)
           ? getAddress(storedOrigin)
-          : null
+          : null,
+        signOutGeneration
       );
       return;
     }
@@ -798,7 +851,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
 
       openAddConnectedAccountModal(
         clearAddConnectedAccountGuard,
-        addFlowOriginWallet
+        addFlowOriginWallet,
+        signOutGeneration
       );
       return;
     }
@@ -823,7 +877,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
             }
             openAddConnectedAccountModal(
               clearAddConnectedAccountGuard,
-              liveConnectedWallet
+              liveConnectedWallet,
+              signOutGeneration
             );
           }, CONNECT_AFTER_DISCONNECT_DELAY_MS);
         })
@@ -854,6 +909,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveAccount.status,
     canAddConnectedAccount,
     disconnect,
+    getSignOutAllGeneration,
     isActiveLocalWalletConnector,
     isSigningOutAllRef,
     isAddingConnectedAccount,
@@ -904,7 +960,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   ]);
 
   const activeStoredAccount = useMemo(() => {
-    if (!activeAddress) {
+    if (!activeAddress || isSigningOutAll) {
       return null;
     }
 
@@ -915,19 +971,23 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
           normalizeAddress(activeAddress)
       ) ?? null
     );
-  }, [activeAddress, storedConnectedAccounts]);
+  }, [activeAddress, isSigningOutAll, storedConnectedAccounts]);
 
-  const hasActiveWalletAddress = !!activeAddress;
+  const hasActiveWalletAddress = !isSigningOutAll && !!activeAddress;
   const hasValidWalletAuth = useMemo(
     () =>
+      !isSigningOutAll &&
       isAuthAddressAuthorized({
         address: activeAddress,
         connectedAccounts: storedConnectedAccounts,
       }),
-    [activeAddress, storedConnectedAccounts]
+    [activeAddress, isSigningOutAll, storedConnectedAccounts]
   );
 
   const jwtPollingStoredConnectedAccounts = useMemo(() => {
+    if (isSigningOutAll) {
+      return [];
+    }
     if (!activeAddress) {
       return storedConnectedAccounts;
     }
@@ -944,6 +1004,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [
     activeAddress,
     activeStoredAccount?.profileHandle,
+    isSigningOutAll,
     storedConnectedAccounts,
   ]);
 
@@ -1007,7 +1068,9 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isAddingConnectedAccount,
-      seizeConnectOpen: isConnectModalOpen || isConnectIntentWaitingForAppKit,
+      seizeConnectOpen:
+        !isSigningOutAll &&
+        (isConnectModalOpen || isConnectIntentWaitingForAppKit),
       isConnected: !isSigningOutAll && isActiveWalletConnected,
       isDisconnecting,
       canSignActiveWallet: !isSigningOutAll && isActiveWalletConnected,

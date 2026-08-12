@@ -387,6 +387,22 @@ function callsIdentifier(node, identifier) {
   );
 }
 
+function countIdentifierCalls(node, identifier) {
+  let count = 0;
+  const visit = (candidate) => {
+    if (
+      ts.isCallExpression(candidate) &&
+      ts.isIdentifier(candidate.expression) &&
+      candidate.expression.text === identifier
+    ) {
+      count += 1;
+    }
+    ts.forEachChild(candidate, visit);
+  };
+  visit(node);
+  return count;
+}
+
 function callObjectPropertyUsesIdentifier(
   node,
   functionName,
@@ -1153,12 +1169,67 @@ assertContract(
 const connectProvider = parseSource(
   authProviderPath.replace("AuthProvider.tsx", "SeizeConnectProvider.tsx"),
 );
+const connectProviderPath =
+  "renderer/components/auth/SeizeConnectProvider.tsx";
 const seizeDisconnect = findVariable(connectProvider, "seizeDisconnect");
 assertContract(
   seizeDisconnect &&
     callsIdentifier(seizeDisconnect, "restoreStoredWalletState"),
-  "renderer/components/auth/SeizeConnectProvider.tsx",
+  connectProviderPath,
   "wallet cancellation must restore the last authenticated profile state",
+);
+const signOutAllResetEffect = findDescendant(
+  connectProvider,
+  (node) =>
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "useEffect" &&
+    Boolean(
+      findDescendant(
+        node,
+        (child) => ts.isIdentifier(child) && child.text === "isSigningOutAll",
+      ),
+    ) &&
+    callsIdentifier(node, "clearBrowserConnectorConnectIntent") &&
+    callsIdentifier(node, "setShowConnectModal"),
+);
+const authSignOutGuard = authFunction
+  ? findDescendant(
+      authFunction,
+      (node) =>
+        ts.isIfStatement(node) &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (child) =>
+              ts.isIdentifier(child) && child.text === "isSigningOutAll",
+          ),
+        ) &&
+        callsIdentifier(node.thenStatement, "setShowSignModal"),
+    )
+  : undefined;
+const shouldShowSignModal = findVariable(authProvider, "shouldShowSignModal");
+assertContract(
+  Boolean(signOutAllResetEffect) &&
+    countIdentifierCalls(
+      connectProvider,
+      "hasSignOutAllGenerationChanged",
+    ) >= 4 &&
+    callsIdentifier(connectProvider, "getSignOutAllGeneration"),
+  connectProviderPath,
+  "atomic sign-out must close desktop connector state and fence delayed connect/add continuations",
+);
+assertContract(
+  Boolean(authSignOutGuard) &&
+    shouldShowSignModal &&
+    Boolean(
+      findDescendant(
+        shouldShowSignModal.initializer,
+        (node) => ts.isIdentifier(node) && node.text === "isSigningOutAll",
+      ),
+    ),
+  authProviderPath,
+  "Auth must suppress wallet-auth prompts throughout atomic sign-out",
 );
 const activeLocalWalletConnector = findVariable(
   connectProvider,
