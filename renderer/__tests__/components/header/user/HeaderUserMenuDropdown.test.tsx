@@ -232,6 +232,7 @@ function createConnectContext(
     canSignActiveWallet: true,
     hasActiveWalletAddress: Boolean(address),
     hasValidWalletAuth: true,
+    isSigningOutAll: false,
     isAuthenticated: true,
     connectionState: "connected",
     walletState: address
