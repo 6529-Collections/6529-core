@@ -476,7 +476,7 @@ const WAVE_LEADERBOARD_MESSAGES = objectMessages("waves.leaderboard", {
   loadMore: "Load more drops",
   loadingMoreButton: "Loading more…",
   "grid.untitled": "Untitled drop",
-  "grid.readFullText": "Read full text",
+  "grid.readFull": "Read full",
   "grid.open": "Open",
   "grid.openNamed": "Open {title}",
   "grid.authorProfile": "View {author}'s profile",
@@ -522,6 +522,46 @@ const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
   copyLink: "Copy link",
   copied: "Copied!",
   copyFailed: "Copy failed",
+} as const);
+
+const WAVE_PROPOSAL_CARD_MESSAGES = objectMessages("waves.proposalCard", {
+  contextLabel: "Proposal",
+  readFull: "Read full",
+  readFullNamed: "Read full: {title}",
+  untitledProposal: "Untitled proposal",
+  previewAlt: "Media preview for {title}",
+  "part.one": "{count} part",
+  "part.other": "{count} parts",
+  "media.one": "{count} media item",
+  "media.other": "{count} media items",
+  "attachment.one": "{count} attachment",
+  "attachment.other": "{count} attachments",
+  appearanceLabel: "Proposal card appearance",
+  "mode.standard.label": "Full proposal",
+  "mode.standard.description": "Show original content directly in the feed.",
+  "mode.custom.label": "Summary card",
+  "mode.custom.description":
+    "Show a title, shortened text, and an optional image.",
+  excerptLabel: "Text preview limit",
+  excerptInputAriaLabel: "Maximum proposal preview characters",
+  characters: "characters",
+  excerptRangeError: "Enter a whole number from {min} to {max}.",
+  mediaLabel: "Image on summary card",
+  "settings.editLabel": "Edit proposal card settings",
+  "settings.layoutLabel": "Proposal layout",
+  "settings.rowLabel": "Proposal cards",
+  "settings.toastAuthFailed":
+    "Couldn't authenticate. Reconnect your wallet and try again.",
+  "settings.toastSaveFailedTitle":
+    "Couldn't save these proposal card settings.",
+  "settings.toastRetry": PLEASE_TRY_AGAIN,
+  tabLabelsLabel: "Tab labels",
+  tabLabelsDescription: "Names shown on this wave's tabs.",
+  approvalsTabLabel: "Approvals tab label",
+  approvedTabLabel: "Approved tab label",
+  "tabLabels.errorTooLong": "Labels must be {max} characters or fewer.",
+  "tabLabels.errorDuplicate": "Use two different tab labels.",
+  "tabLabels.errorReserved": "Labels cannot match existing tabs.",
 } as const);
 
 const WAVE_COMPETITION_BADGE_MESSAGES = objectMessages(
@@ -700,6 +740,15 @@ const USER_PROFILE_TABS_MESSAGES = objectMessages("user.profile.tabs", {
   "badges.beta": "Beta",
 } as const);
 
+const USER_PROFILE_IDENTITY_MOBILE_TABS_MESSAGES = objectMessages(
+  "user.profile.identity.mobileTabs",
+  {
+    totalRep: "Total REP",
+    nic: "NIC",
+    idStatements: "ID Statements",
+  } as const
+);
+
 const MENTION_SHORTCUT_COMPOSER_MESSAGES = objectMessages(
   "waves.composer.mentionShortcuts",
   {
@@ -793,20 +842,20 @@ const USER_PROFILE_HEADER_MESSAGES = objectMessages("user.profileHeader", {
   "aboutEdit.errors.saveFailed":
     "Couldn't save this about statement. Please try again.",
   "aboutEdit.errors.close": "Dismiss About statement error",
-  "aboutEdit.errors.unknown.title": "Unknown Error",
-  "aboutEdit.errors.hateSpeech.title": "Error: Hate Speech",
+  "aboutEdit.errors.unknown.title": "Couldn't save About",
+  "aboutEdit.errors.hateSpeech.title": "Hate speech warning",
   "aboutEdit.errors.hateSpeech.value":
-    "Your About text was not accepted because our automated checks flagged it for potentially containing hate speech. We want to keep seize a welcoming place! We'd appreciate it if you adjusted your text.",
-  "aboutEdit.errors.personalInsults.title": "Error: Personal Insults",
+    "Your About statement was flagged for possible hate speech. Revise it and try again.",
+  "aboutEdit.errors.personalInsults.title": "Personal insult warning",
   "aboutEdit.errors.personalInsults.value":
-    "Your About text was not accepted because our automated checks flagged it for potentially containing a personal insult. We want to keep seize a welcoming place! We'd appreciate it if you adjusted your text.",
+    "Your About statement was flagged for a possible personal insult. Revise it and try again.",
   "aboutEdit.errors.inappropriateLanguage.title":
-    "Error: Inappropriate Language",
+    "Language warning",
   "aboutEdit.errors.inappropriateLanguage.value":
-    "Your About text was not accepted because our automated checks flagged it for potentially containing inappropriate language that may make others uncomfortable. We want to keep seize a welcoming place! We'd appreciate it if you adjusted your text.",
-  "aboutEdit.errors.doxxing.title": "Error: Doxxing of Another Person",
+    "Your About statement was flagged for language that may be inappropriate. Revise it and try again.",
+  "aboutEdit.errors.doxxing.title": "Privacy warning",
   "aboutEdit.errors.doxxing.value":
-    "Your About text was not accepted because our automated checks flagged it for potentially doxxing another user of the system. We have a strong cultural value around respecting pseudonymity, so we'd appreciate it if you adjusted your text.",
+    "Your About statement may reveal another person's private information. Remove it and try again.",
   "edit.open": "Edit profile",
   "edit.title": "Edit profile",
   "edit.banner": "Profile cover",
@@ -973,6 +1022,10 @@ const WAVE_NOTIFICATION_SETTINGS_MESSAGES = namespaceMessages(
 );
 
 const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
+  title: "Access",
+  description: "Choose who can access, participate in, and manage this wave.",
+  viewGroupName: "Who can view",
+  adminGroupName: "Admin",
   accessHelper:
     "The {viewGroupName} group controls who can access this wave. Your followers who can view the wave may be notified when it is created.",
   selectedGroup: "Selected group",
@@ -995,6 +1048,19 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
   "error.fallbackDetails": "The group service did not complete the request.",
 } as const);
 
+const WAVE_CREATE_DATES_MESSAGES = objectMessages("waves.create.dates", {
+  title: "Schedule",
+  description:
+    "Review when this wave opens, voting begins, and winners are announced.",
+  "approve.noEndSummary": "Starts {start}. No end date.",
+  "approve.endSummary": "Starts {start}. Ends {end}.",
+  "approve.endInfoLabel": "About wave end",
+  "rank.ongoingSummary":
+    "Submissions start {submission}. Voting starts {voting}. Ranking stays open.",
+  "rank.scheduledSummary":
+    "Submissions start {submission}. Voting starts {voting}. First winners: {announcement}.",
+} as const);
+
 const WAVE_CREATE_ACTIONS_MESSAGES = objectMessages("waves.create.actions", {
   cancel: "Cancel",
   complete: "Complete",
@@ -1006,6 +1072,23 @@ const WAVE_CREATE_ACTIONS_MESSAGES = objectMessages("waves.create.actions", {
   openCreateMenu: "Open create menu",
   previous: "Previous",
   save: "Save",
+} as const);
+
+const WAVE_CREATE_DIALOG_MESSAGES = objectMessages("waves.create.dialog", {
+  subwaveTitle: "Create subwave",
+  waveTitle: "Create Wave",
+} as const);
+
+const WAVE_CREATE_ADVANCED_MESSAGES = objectMessages("waves.create.advanced", {
+  title: "Advanced settings",
+  customized: "Customized",
+  needsAttention: "Needs attention",
+  errorSummary: "Review the highlighted settings before continuing.",
+} as const);
+
+const WAVE_CREATE_OVERVIEW_MESSAGES = objectMessages("waves.create.overview", {
+  picture: "Wave Profile Picture",
+  displaySettings: "Display settings",
 } as const);
 
 const WAVE_CREATE_RANK_MODE_MESSAGES = objectMessages(
@@ -1022,6 +1105,13 @@ const WAVE_CREATE_RANK_MODE_MESSAGES = objectMessages(
 );
 
 const WAVE_CREATE_DROPS_MESSAGES = objectMessages("waves.create.drops", {
+  title: "Drops",
+  description: "Choose what participants can submit to this wave.",
+  "advanced.defaultSummary": "No additional submission requirements.",
+  "advanced.customSummary": "Submission requirements customized.",
+  "maxSimultaneousSubmissions.label": "Max simultaneous submissions",
+  "maxSimultaneousSubmissions.description":
+    "Maximum number of simultaneous submissions per participant. Optional. Unlimited if left blank.",
   identityDuplicatesRequireWinners:
     "Perpetual ranking waves never announce winners, so identities can't be resubmitted “after a win”. Choose a different re-submission rule.",
 } as const);
@@ -1551,6 +1641,7 @@ const CORE_TDH_MESSAGES = objectMessages("core.tdh", {
 } as const);
 
 const COMMON_MESSAGES = objectMessages("common", {
+  back: "Back",
   clearFilters: "Clear filters",
   close: "Close",
 } as const);
@@ -2039,6 +2130,7 @@ export const EN_US_MESSAGES = {
   "headerUserMenu.profiles": "Profiles",
   "headerUserMenu.addProfile": "Add profile",
   "appSidebar.openingAccountConnection": "Opening account connection",
+  "appSidebar.openProfile": "Open {name} profile",
   "appSidebar.accountSwitchFailed":
     "Failed to switch connected account. Please try again.",
   "appSidebar.accountConnectionFailed":
@@ -2778,6 +2870,7 @@ export const EN_US_MESSAGES = {
   "drops.additionalActionBadge.tooltip":
     "The creator marked this submission as promising an extra action beyond the artwork, such as an event, donation, physical item, airdrop, or future deliverable.",
   ...USER_PROFILE_TABS_MESSAGES,
+  ...USER_PROFILE_IDENTITY_MOBILE_TABS_MESSAGES,
   ...MENTION_SHORTCUT_COMPOSER_MESSAGES,
   ...GROUP_MENTION_COMPOSER_MESSAGES,
   ...MENTION_SHORTCUT_SETTINGS_MESSAGES,
@@ -2799,7 +2892,11 @@ export const EN_US_MESSAGES = {
   ...WAVE_HEADER_MESSAGES,
   ...WAVE_NOTIFICATION_SETTINGS_MESSAGES,
   ...WAVE_CREATE_ACTIONS_MESSAGES,
+  ...WAVE_CREATE_DIALOG_MESSAGES,
+  ...WAVE_CREATE_ADVANCED_MESSAGES,
+  ...WAVE_CREATE_OVERVIEW_MESSAGES,
   ...WAVE_CREATE_GROUPS_MESSAGES,
+  ...WAVE_CREATE_DATES_MESSAGES,
   ...WAVE_CREATE_RANK_MODE_MESSAGES,
   ...WAVE_CREATE_DROPS_MESSAGES,
   ...WAVE_CREATE_OUTCOMES_MESSAGES,
@@ -2852,6 +2949,7 @@ export const EN_US_MESSAGES = {
   ...WAVES_MOBILE_MESSAGES,
   ...WAVE_LEADERBOARD_MESSAGES,
   ...WAVE_DROP_ACTIONS_MESSAGES,
+  ...WAVE_PROPOSAL_CARD_MESSAGES,
   ...WAVE_COMPETITION_BADGE_MESSAGES,
   ...WAVE_VOTE_RATIONALE_MESSAGES,
   ...WAVE_VOTE_MODE_MESSAGES,
