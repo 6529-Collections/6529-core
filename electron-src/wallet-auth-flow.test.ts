@@ -20,6 +20,7 @@ import {
   CONNECTOR_MODAL_BODY_CLASS,
   CONNECTOR_MODAL_DIALOG_CLASS,
 } from "../renderer/components/header/user/connector-modal-layout";
+import { completeConnectorSelection } from "../renderer/components/header/user/complete-connector-selection";
 import { getSeedWalletSelectionState } from "../renderer/components/header/user/seed-wallet-selection-state";
 import { CORE_WALLET_MODAL_SIZE_CLASS } from "../renderer/components/shared/core-wallet-modal-layout";
 import {
@@ -144,6 +145,31 @@ describe("desktop wallet authentication flow", () => {
       }),
       "available",
     );
+  });
+
+  it("makes a selected Core wallet authoritative before closing the chooser", async () => {
+    const selectedAddress = "0x2222222222222222222222222222222222222222";
+    const events: string[] = [];
+    let resolveConnection: (() => void) | undefined;
+    const connection = new Promise<void>((resolve) => {
+      resolveConnection = resolve;
+    });
+
+    const selection = completeConnectorSelection({
+      connect: () => connection,
+      seedWalletAddress: selectedAddress,
+      acceptConnection: (address) => events.push(`accept:${address}`),
+      select: () => events.push("close"),
+    });
+
+    await Promise.resolve();
+    assert.deepEqual(events, []);
+
+    assert.ok(resolveConnection);
+    resolveConnection();
+    await selection;
+
+    assert.deepEqual(events, [`accept:${selectedAddress}`, "close"]);
   });
 
   it("keeps Core wallet modals in the same responsive size envelope", () => {

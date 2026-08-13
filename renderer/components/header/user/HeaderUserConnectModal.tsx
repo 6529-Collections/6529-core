@@ -20,6 +20,7 @@ import {
   CONNECTOR_MODAL_BODY_CLASS,
   CONNECTOR_MODAL_DIALOG_CLASS,
 } from "./connector-modal-layout";
+import { completeConnectorSelection } from "./complete-connector-selection";
 import { getSeedWalletSelectionState } from "./seed-wallet-selection-state";
 
 const CONNECTOR_MODAL_LOCALE = DEFAULT_LOCALE;
@@ -229,6 +230,7 @@ function ConnectorSelector(
   const {
     address: activeAddress,
     connectedAccounts,
+    seizeAcceptConnection,
     seizeSwitchConnectedAccount,
   } = useSeizeConnectContext();
 
@@ -276,8 +278,14 @@ function ConnectorSelector(
     }
 
     try {
-      await connectAsync({ connector: props.connector });
-      props.selected(props.connector);
+      await completeConnectorSelection({
+        connect: async () => {
+          await connectAsync({ connector: props.connector });
+        },
+        seedWalletAddress: isSeed ? props.connector.id : null,
+        acceptConnection: seizeAcceptConnection,
+        select: () => props.selected(props.connector),
+      });
     } catch (connectionError) {
       reportConnectionError(connectionError);
     }

@@ -1371,27 +1371,39 @@ const connectorSelectorFunction = findFunction(
   connectorModal,
   "ConnectorSelector",
 );
-const connectorOnConnect = connectorSelectorFunction
-  ? findVariable(connectorSelectorFunction, "onConnect")
-  : undefined;
-const awaitedConnectorSelection = connectorOnConnect
+const connectorSelectionPath =
+  "renderer/components/header/user/complete-connector-selection.ts";
+const connectorSelection = parseSource(connectorSelectionPath);
+const completeConnectorSelectionFunction = findFunction(
+  connectorSelection,
+  "completeConnectorSelection",
+);
+const awaitedConnect = completeConnectorSelectionFunction
   ? findDescendant(
-      connectorOnConnect,
+      completeConnectorSelectionFunction,
       (node) =>
-        ts.isTryStatement(node) &&
-        Boolean(
-          findDescendant(
-            node.tryBlock,
-            (child) =>
-              ts.isAwaitExpression(child) &&
-              callsIdentifier(child.expression, "connectAsync"),
-          ),
-        ) &&
-        Boolean(
-          findDescendant(node.tryBlock, (child) =>
-            isPropertyCall(child, "props", "selected"),
-          ),
-        ),
+        ts.isAwaitExpression(node) &&
+        ts.isCallExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) &&
+        node.expression.expression.text === "connect",
+    )
+  : undefined;
+const acceptedConnection = completeConnectorSelectionFunction
+  ? findDescendant(
+      completeConnectorSelectionFunction,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "acceptConnection",
+    )
+  : undefined;
+const completedSelection = completeConnectorSelectionFunction
+  ? findDescendant(
+      completeConnectorSelectionFunction,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "select",
     )
   : undefined;
 assertContract(
@@ -1415,7 +1427,7 @@ assertContract(
     connectorSelectorFunction &&
     callsIdentifier(connectorSelectorFunction, "getSeedWalletSelectionState") &&
     callsIdentifier(connectorSelectorFunction, "seizeSwitchConnectedAccount") &&
-    Boolean(awaitedConnectorSelection) &&
+    callsIdentifier(connectorSelectorFunction, "completeConnectorSelection") &&
     jsxAttributeUsesIdentifier(
       connectorSelectorFunction,
       "button",
@@ -1423,7 +1435,16 @@ assertContract(
       "isActive",
     ),
   connectorModalPath,
-  "Core wallet chooser must await new connections before closing, stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+  "Core wallet chooser must complete new connections before closing, stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+);
+assertContract(
+  awaitedConnect &&
+    acceptedConnection &&
+    completedSelection &&
+    awaitedConnect.getStart() < acceptedConnection.getStart() &&
+    acceptedConnection.getStart() < completedSelection.getStart(),
+  connectorSelectionPath,
+  "Core wallet selection must connect, make the selected address authoritative, and only then close the chooser",
 );
 
 const browserConnectorConnectPath =
