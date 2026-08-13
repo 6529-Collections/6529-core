@@ -1371,6 +1371,29 @@ const connectorSelectorFunction = findFunction(
   connectorModal,
   "ConnectorSelector",
 );
+const connectorOnConnect = connectorSelectorFunction
+  ? findVariable(connectorSelectorFunction, "onConnect")
+  : undefined;
+const awaitedConnectorSelection = connectorOnConnect
+  ? findDescendant(
+      connectorOnConnect,
+      (node) =>
+        ts.isTryStatement(node) &&
+        Boolean(
+          findDescendant(
+            node.tryBlock,
+            (child) =>
+              ts.isAwaitExpression(child) &&
+              callsIdentifier(child.expression, "connectAsync"),
+          ),
+        ) &&
+        Boolean(
+          findDescendant(node.tryBlock, (child) =>
+            isPropertyCall(child, "props", "selected"),
+          ),
+        ),
+    )
+  : undefined;
 assertContract(
   importsModulePrefix(
     connectorModal,
@@ -1392,6 +1415,7 @@ assertContract(
     connectorSelectorFunction &&
     callsIdentifier(connectorSelectorFunction, "getSeedWalletSelectionState") &&
     callsIdentifier(connectorSelectorFunction, "seizeSwitchConnectedAccount") &&
+    Boolean(awaitedConnectorSelection) &&
     jsxAttributeUsesIdentifier(
       connectorSelectorFunction,
       "button",
@@ -1399,7 +1423,29 @@ assertContract(
       "isActive",
     ),
   connectorModalPath,
-  "Core wallet chooser must stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+  "Core wallet chooser must await new connections before closing, stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+);
+
+const browserConnectorConnectPath =
+  "renderer/components/browser-connector/BrowserConnectorConnect.tsx";
+const browserConnectorConnect = parseSource(browserConnectorConnectPath);
+const browserConnectorConnectFunction = findFunction(
+  browserConnectorConnect,
+  "BrowserConnectorConnect",
+);
+assertContract(
+  browserConnectorConnectFunction &&
+    hasJsxElement(browserConnectorConnectFunction, "Button") &&
+    !findDescendant(
+      browserConnectorConnectFunction,
+      (node) =>
+        ts.isStringLiteral(node) &&
+        ["signModalCancelButton", "signModalConfirmButton"].includes(
+          node.text,
+        ),
+    ),
+  browserConnectorConnectPath,
+  "browser-connector authentication actions must use shared styled buttons instead of removed CSS-module classes",
 );
 
 const seizeConnectModalContextPath =

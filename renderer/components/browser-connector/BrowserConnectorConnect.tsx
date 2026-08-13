@@ -21,6 +21,7 @@ import {
   getSessionNonce,
   type RefreshTokenSessionClientType,
 } from "@/services/auth/session-v2.utils";
+import Button from "@/components/utils/button/Button";
 import authModalStyles from "../auth/Auth.module.css";
 import { useSeizeConnectContext } from "../auth/SeizeConnectContext";
 import HeaderUserConnect from "../header/user/HeaderUserConnect";
@@ -696,21 +697,25 @@ export default function BrowserConnectorConnect(
               )}
             </div>
             <div className={authModalStyles["signModalFooter"]}>
-              <button
+              <Button
                 type="button"
                 onClick={() => void handleAuthModalCancel()}
-                className={authModalStyles["signModalCancelButton"]}
+                variant="secondary"
+                size="md"
+                className="tw-min-w-32 max-[576px]:tw-min-w-0 max-[576px]:tw-flex-1"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 disabled={isAuthenticating}
                 onClick={() => void handleAuthModalSign()}
-                className={authModalStyles["signModalConfirmButton"]}
+                variant="action"
+                size="md"
+                className="tw-min-w-32 max-[576px]:tw-min-w-0 max-[576px]:tw-flex-1"
               >
                 {isAuthenticating ? "Confirm in your wallet" : "Sign"}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

@@ -251,7 +251,7 @@ function ConnectorSelector(
     console.error("error", connectionError);
   };
 
-  const onConnect = () => {
+  const onConnect = async (): Promise<void> => {
     if (isActive) {
       return;
     }
@@ -271,12 +271,16 @@ function ConnectorSelector(
       void Promise.resolve(
         open({ view: "ConnectingWalletConnectBasic" })
       ).catch(reportConnectionError);
-    } else {
-      void connectAsync({ connector: props.connector }).catch(
-        reportConnectionError
-      );
+      props.selected(props.connector);
+      return;
     }
-    props.selected(props.connector);
+
+    try {
+      await connectAsync({ connector: props.connector });
+      props.selected(props.connector);
+    } catch (connectionError) {
+      reportConnectionError(connectionError);
+    }
   };
 
   const ariaLabel = isActive
@@ -292,7 +296,7 @@ function ConnectorSelector(
   return (
     <button
       type="button"
-      onClick={onConnect}
+      onClick={() => void onConnect()}
       disabled={isActive}
       aria-label={ariaLabel}
       className={`tw-flex tw-w-full tw-items-center tw-justify-start tw-gap-3 tw-rounded-lg tw-border tw-border-solid tw-py-3 tw-pl-3 tw-pr-3 tw-text-left tw-text-iron-100 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 disabled:tw-cursor-default disabled:tw-opacity-100 ${
