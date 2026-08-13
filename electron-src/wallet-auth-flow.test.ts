@@ -23,6 +23,7 @@ import {
 import {
   completeConnectorSelection,
   ConnectorSelectionGuard,
+  startFreshBrowserConnectorSelection,
 } from "../renderer/components/header/user/complete-connector-selection";
 import { getSeedWalletSelectionState } from "../renderer/components/header/user/seed-wallet-selection-state";
 import { CORE_WALLET_MODAL_SIZE_CLASS } from "../renderer/components/shared/core-wallet-modal-layout";
@@ -184,6 +185,34 @@ describe("desktop wallet authentication flow", () => {
     selectionGuard.release();
 
     assert.equal(selectionGuard.tryAcquire(), true);
+  });
+
+  it("closes the chooser before resetting and reconnecting a browser connector", async () => {
+    const events: string[] = [];
+    let resolveReset: (() => void) | undefined;
+    const reset = new Promise<void>((resolve) => {
+      resolveReset = resolve;
+    });
+
+    const selection = startFreshBrowserConnectorSelection({
+      select: () => events.push("close"),
+      reset: async () => {
+        events.push("reset");
+        await reset;
+      },
+      connect: async () => {
+        events.push("connect");
+      },
+    });
+
+    await Promise.resolve();
+    assert.deepEqual(events, ["close", "reset"]);
+
+    assert.ok(resolveReset);
+    resolveReset();
+    await selection;
+
+    assert.deepEqual(events, ["close", "reset", "connect"]);
   });
 
   it("keeps Core wallet modals in the same responsive size envelope", () => {

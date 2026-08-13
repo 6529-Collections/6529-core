@@ -5,6 +5,12 @@ interface CompleteConnectorSelectionParams {
   readonly select: () => void;
 }
 
+interface StartFreshBrowserConnectorSelectionParams {
+  readonly connect: () => Promise<void>;
+  readonly reset: () => Promise<void>;
+  readonly select: () => void;
+}
+
 /** Serializes connector choices shared by every row in one chooser. */
 export class ConnectorSelectionGuard {
   private active = false;
@@ -40,4 +46,18 @@ export async function completeConnectorSelection({
   }
 
   select();
+}
+
+/**
+ * Browser handoff must close the chooser before waiting for the external
+ * browser, and it must reset any previous connector session before reconnecting.
+ */
+export async function startFreshBrowserConnectorSelection({
+  connect,
+  reset,
+  select,
+}: StartFreshBrowserConnectorSelectionParams): Promise<void> {
+  select();
+  await reset();
+  await connect();
 }

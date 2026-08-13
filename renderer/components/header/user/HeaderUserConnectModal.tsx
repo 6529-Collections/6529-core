@@ -15,7 +15,13 @@ import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { Connector, useConnect, useConnectors } from "wagmi";
+import {
+  type Connector,
+  useConnect,
+  useConnections,
+  useConnectors,
+  useDisconnect,
+} from "wagmi";
 import {
   CONNECTOR_MODAL_BODY_CLASS,
   CONNECTOR_MODAL_DIALOG_CLASS,
@@ -23,6 +29,7 @@ import {
 import {
   completeConnectorSelection,
   ConnectorSelectionGuard,
+  startFreshBrowserConnectorSelection,
 } from "./complete-connector-selection";
 import { getSeedWalletSelectionState } from "./seed-wallet-selection-state";
 
@@ -240,6 +247,8 @@ function ConnectorSelector(
   }>
 ) {
   const { connectAsync } = useConnect();
+  const connections = useConnections();
+  const { disconnectAsync } = useDisconnect();
   const { open } = useAppKit();
   const {
     address: activeAddress,
@@ -293,6 +302,30 @@ function ConnectorSelector(
           open({ view: "ConnectingWalletConnectBasic" })
         ).catch(reportConnectionError);
         props.selected(props.connector);
+        return;
+      }
+
+      if (props.connector.type === "browser") {
+        try {
+          await startFreshBrowserConnectorSelection({
+            select: () => props.selected(props.connector),
+            reset: async () => {
+              const trackedConnection = connections.some(
+                (connection) => connection.connector.uid === props.connector.uid
+              );
+              if (trackedConnection) {
+                await disconnectAsync({ connector: props.connector });
+                return;
+              }
+              await props.connector.disconnect();
+            },
+            connect: async () => {
+              await connectAsync({ connector: props.connector });
+            },
+          });
+        } catch (connectionError) {
+          reportConnectionError(connectionError);
+        }
         return;
       }
 

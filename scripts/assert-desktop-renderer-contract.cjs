@@ -1357,6 +1357,7 @@ const electronAddDirectOpenGuard = seizeAddConnectedAccount
         callsIdentifier(node.expression, "isElectron") &&
         callsIdentifier(node.thenStatement, "openAddConnectedAccountModal") &&
         callsIdentifier(node.thenStatement, "getWalletAddress") &&
+        callsIdentifier(node.thenStatement, "setIsAddingConnectedAccount") &&
         !callsIdentifier(node.thenStatement, "disconnect") &&
         !callsIdentifier(node.thenStatement, "setActiveWalletAccount") &&
         !callsIdentifier(node.thenStatement, "setConnected") &&
@@ -1365,6 +1366,42 @@ const electronAddDirectOpenGuard = seizeAddConnectedAccount
             ts.isReturnStatement(child),
           ),
         ),
+    )
+  : undefined;
+const electronAddStateGuard = electronAddDirectOpenGuard
+  ? findDescendant(
+      electronAddDirectOpenGuard.thenStatement,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "setIsAddingConnectedAccount" &&
+        node.arguments.length === 1 &&
+        node.arguments[0].kind === ts.SyntaxKind.TrueKeyword,
+    )
+  : undefined;
+const electronAddRefGuard = electronAddDirectOpenGuard
+  ? findDescendant(
+      electronAddDirectOpenGuard.thenStatement,
+      (node) =>
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        isMemberExpression(
+          node.left,
+          "isAddingConnectedAccountRef",
+          "current",
+        ) &&
+        node.right.kind === ts.SyntaxKind.TrueKeyword,
+    )
+  : undefined;
+const electronAddOriginGuard = electronAddDirectOpenGuard
+  ? findDescendant(
+      electronAddDirectOpenGuard.thenStatement,
+      (node) =>
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        isMemberExpression(node.left, "addFlowOriginAddressRef", "current") &&
+        ts.isIdentifier(node.right) &&
+        node.right.text === "addFlowOriginWallet",
     )
   : undefined;
 const localConnectorDirectOpenGuard = seizeAddConnectedAccount
@@ -1428,9 +1465,12 @@ assertContract(
   "live wallet selection must preserve the explicitly active browser connector over stale Wagmi state",
 );
 assertContract(
-  Boolean(electronAddDirectOpenGuard),
+  electronAddDirectOpenGuard &&
+    electronAddStateGuard &&
+    electronAddRefGuard &&
+    electronAddOriginGuard,
   "renderer/components/auth/SeizeConnectProvider.tsx",
-  "Electron Add must only open the chooser and must not disconnect or activate a wallet",
+  "Electron Add must preserve the origin, set the add-flow guard true, open the chooser, and not disconnect or activate a wallet",
 );
 assertContract(
   electronChooserDirectOpenGuard &&
@@ -1480,12 +1520,48 @@ const selectionGuardRelease = connectorOnConnect
         ),
     )
   : undefined;
+const browserConnectorSelectionGuard = connectorOnConnect
+  ? findDescendant(
+      connectorOnConnect,
+      (node) =>
+        ts.isIfStatement(node) &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (child) => ts.isStringLiteral(child) && child.text === "browser",
+          ),
+        ) &&
+        callsIdentifier(
+          node.thenStatement,
+          "startFreshBrowserConnectorSelection",
+        ) &&
+        callsIdentifier(node.thenStatement, "disconnectAsync") &&
+        callsIdentifier(node.thenStatement, "connectAsync") &&
+        Boolean(
+          findDescendant(
+            node.thenStatement,
+            (child) =>
+              ts.isCallExpression(child) &&
+              ts.isPropertyAccessExpression(child.expression) &&
+              child.expression.name.text === "disconnect" &&
+              ts.isPropertyAccessExpression(child.expression.expression) &&
+              ts.isIdentifier(child.expression.expression.expression) &&
+              child.expression.expression.expression.text === "props" &&
+              child.expression.expression.name.text === "connector",
+          ),
+        ),
+    )
+  : undefined;
 const connectorSelectionPath =
   "renderer/components/header/user/complete-connector-selection.ts";
 const connectorSelection = parseSource(connectorSelectionPath);
 const completeConnectorSelectionFunction = findFunction(
   connectorSelection,
   "completeConnectorSelection",
+);
+const startFreshBrowserConnectorSelectionFunction = findFunction(
+  connectorSelection,
+  "startFreshBrowserConnectorSelection",
 );
 const awaitedConnect = completeConnectorSelectionFunction
   ? findDescendant(
@@ -1513,6 +1589,35 @@ const completedSelection = completeConnectorSelectionFunction
         ts.isCallExpression(node) &&
         ts.isIdentifier(node.expression) &&
         node.expression.text === "select",
+    )
+  : undefined;
+const browserSelectionClosed = startFreshBrowserConnectorSelectionFunction
+  ? findDescendant(
+      startFreshBrowserConnectorSelectionFunction,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "select",
+    )
+  : undefined;
+const browserConnectorReset = startFreshBrowserConnectorSelectionFunction
+  ? findDescendant(
+      startFreshBrowserConnectorSelectionFunction,
+      (node) =>
+        ts.isAwaitExpression(node) &&
+        ts.isCallExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) &&
+        node.expression.expression.text === "reset",
+    )
+  : undefined;
+const browserConnectorConnected = startFreshBrowserConnectorSelectionFunction
+  ? findDescendant(
+      startFreshBrowserConnectorSelectionFunction,
+      (node) =>
+        ts.isAwaitExpression(node) &&
+        ts.isCallExpression(node.expression) &&
+        ts.isIdentifier(node.expression.expression) &&
+        node.expression.expression.text === "connect",
     )
   : undefined;
 assertContract(
@@ -1556,6 +1661,16 @@ assertContract(
     acceptedConnection.getStart() < completedSelection.getStart(),
   connectorSelectionPath,
   "Core wallet selection must connect, make the selected address authoritative, and only then close the chooser",
+);
+assertContract(
+  browserConnectorSelectionGuard &&
+    browserSelectionClosed &&
+    browserConnectorReset &&
+    browserConnectorConnected &&
+    browserSelectionClosed.getStart() < browserConnectorReset.getStart() &&
+    browserConnectorReset.getStart() < browserConnectorConnected.getStart(),
+  connectorSelectionPath,
+  "Browser selection must close the chooser immediately, reset the previous connector session, and only then reconnect",
 );
 
 const browserConnectorConnectPath =
