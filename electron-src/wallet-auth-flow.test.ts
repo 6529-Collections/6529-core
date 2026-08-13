@@ -20,6 +20,11 @@ import {
   CONNECTOR_MODAL_BODY_CLASS,
   CONNECTOR_MODAL_DIALOG_CLASS,
 } from "../renderer/components/header/user/connector-modal-layout";
+import {
+  completeConnectorSelection,
+  ConnectorSelectionGuard,
+  startFreshBrowserConnectorSelection,
+} from "../renderer/components/header/user/complete-connector-selection";
 import { getSeedWalletSelectionState } from "../renderer/components/header/user/seed-wallet-selection-state";
 import { CORE_WALLET_MODAL_SIZE_CLASS } from "../renderer/components/shared/core-wallet-modal-layout";
 import {
@@ -30,6 +35,10 @@ import {
 import {
   selectLiveWalletAccount,
 } from "../renderer/components/auth/selectLiveWalletAccount";
+import {
+  openDesktopAddConnectorChooser,
+  shouldReconcileConnectorState,
+} from "../renderer/components/auth/connector-selection-lifecycle";
 
 describe("desktop wallet authentication flow", () => {
   it("keeps Core wallet unlock and request prompts above authentication", () => {
@@ -38,6 +47,64 @@ describe("desktop wallet authentication flow", () => {
     assert.equal(NON_WALLET_MODAL_OVERLAY_CLASS, "tw-z-[9990]");
     assert.equal(AUTHENTICATION_MODAL_OVERLAY_CLASS, "tw-z-[10000]");
     assert.equal(WALLET_REQUEST_MODAL_OVERLAY_CLASS, "tw-z-[10010]");
+  });
+
+  it("keeps an active Browser profile stable when Add opens over stale Wagmi state", () => {
+    const activeBrowserAddress = "0x1111111111111111111111111111111111111111";
+    const staleWagmiAddress = "0x2222222222222222222222222222222222222222";
+    const events: string[] = [];
+    let activeAddress = activeBrowserAddress;
+    let isAddingConnectedAccount = true;
+    let isConnectorChooserOpen = false;
+
+    openDesktopAddConnectorChooser({
+      clearAddCandidate: () => events.push("clear-candidate"),
+      setAddingConnectedAccount: (isAdding) => {
+        isAddingConnectedAccount = isAdding;
+        events.push(`adding:${isAdding}`);
+      },
+      openChooser: () => {
+        isConnectorChooserOpen = true;
+        events.push("open-chooser");
+      },
+    });
+
+    const shouldReconcile = shouldReconcileConnectorState({
+      isSigningOutAll: false,
+      isBrowserConnectorHandoff: false,
+      isConnectorChooserOpen,
+    });
+    if (shouldReconcile || isAddingConnectedAccount) {
+      activeAddress = staleWagmiAddress;
+    }
+
+    assert.equal(activeAddress, activeBrowserAddress);
+    assert.equal(isAddingConnectedAccount, false);
+    assert.equal(shouldReconcile, false);
+    assert.deepEqual(events, [
+      "clear-candidate",
+      "adding:false",
+      "open-chooser",
+    ]);
+  });
+
+  it("resumes connector reconciliation only after chooser and handoff guards clear", () => {
+    assert.equal(
+      shouldReconcileConnectorState({
+        isSigningOutAll: false,
+        isBrowserConnectorHandoff: false,
+        isConnectorChooserOpen: false,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldReconcileConnectorState({
+        isSigningOutAll: false,
+        isBrowserConnectorHandoff: true,
+        isConnectorChooserOpen: false,
+      }),
+      false,
+    );
   });
 
   it("rejects malformed Core wallet addresses", () => {
@@ -144,6 +211,106 @@ describe("desktop wallet authentication flow", () => {
       }),
       "available",
     );
+  });
+
+  it("makes a selected Core wallet authoritative before closing the chooser", async () => {
+    const selectedAddress = "0x2222222222222222222222222222222222222222";
+    const events: string[] = [];
+    let resolveConnection: (() => void) | undefined;
+    const connection = new Promise<void>((resolve) => {
+      resolveConnection = resolve;
+    });
+
+    const selection = completeConnectorSelection({
+      connect: () => connection,
+      seedWalletAddress: selectedAddress,
+      acceptConnection: (address) => events.push(`accept:${address}`),
+      select: () => events.push("close"),
+    });
+
+    await Promise.resolve();
+    assert.deepEqual(events, []);
+
+    assert.ok(resolveConnection);
+    resolveConnection();
+    await selection;
+
+    assert.deepEqual(events, [`accept:${selectedAddress}`, "close"]);
+  });
+
+  it("allows only one connector selection at a time", () => {
+    const selectionGuard = new ConnectorSelectionGuard();
+
+    assert.equal(selectionGuard.tryAcquire(), true);
+    assert.equal(selectionGuard.tryAcquire(), false);
+
+    selectionGuard.release();
+
+    assert.equal(selectionGuard.tryAcquire(), true);
+  });
+
+  it("closes the chooser before resetting and reconnecting a browser connector", async () => {
+    const events: string[] = [];
+    let resolveReset: (() => void) | undefined;
+    const reset = new Promise<void>((resolve) => {
+      resolveReset = resolve;
+    });
+
+    const selection = startFreshBrowserConnectorSelection({
+      beginHandoff: () => events.push("protect-active-profile"),
+      select: () => events.push("close"),
+      reset: async () => {
+        events.push("reset");
+        await reset;
+      },
+      connect: async () => {
+        events.push("connect");
+      },
+      endHandoff: () => events.push("restore-active-profile"),
+    });
+
+    await Promise.resolve();
+    assert.deepEqual(events, ["protect-active-profile", "close", "reset"]);
+
+    assert.ok(resolveReset);
+    resolveReset();
+    await selection;
+
+    assert.deepEqual(events, [
+      "protect-active-profile",
+      "close",
+      "reset",
+      "connect",
+      "restore-active-profile",
+    ]);
+  });
+
+  it("restores the active profile when browser reconnection fails", async () => {
+    const events: string[] = [];
+
+    await assert.rejects(
+      startFreshBrowserConnectorSelection({
+        beginHandoff: () => events.push("protect-active-profile"),
+        select: () => events.push("close"),
+        reset: async () => {
+          events.push("reset");
+        },
+        connect: async () => {
+          events.push("connect");
+          throw new Error("browser connection failed");
+        },
+        endHandoff: () => events.push("restore-active-profile"),
+      }),
+      /browser connection failed/,
+    );
+
+    assert.deepEqual(events, [
+      "protect-active-profile",
+      "close",
+      "reset",
+      "connect",
+      "restore-active-profile",
+    ]);
   });
 
   it("keeps Core wallet modals in the same responsive size envelope", () => {

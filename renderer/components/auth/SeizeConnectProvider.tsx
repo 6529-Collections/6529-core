@@ -50,6 +50,7 @@ import {
   createAppKitModalBridgeStore,
   useAppKitModalBridgeState,
 } from "./AppKitModalBridge";
+import { openDesktopAddConnectorChooser } from "./connector-selection-lifecycle";
 import { WalletErrorBoundary } from "./error-boundary";
 import { SeizeConnectContext } from "./seizeConnectContextValue";
 import {
@@ -117,6 +118,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const retryConnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectIntentHandoffTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAddingConnectedAccountRef = useRef(false);
+  const isBrowserConnectorHandoffRef = useRef(false);
   const isMountedRef = useRef(true);
   const { agentLoginImpersonatedAddress, impersonatedAddress } =
     getSeizeConnectImpersonation();
@@ -176,6 +178,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       retryConnectTimeoutRef.current = null;
     }
     isAddingConnectedAccountRef.current = false;
+    isBrowserConnectorHandoffRef.current = false;
     addFlowOriginAddressRef.current = null;
     setIsAddingConnectedAccount(false);
     clearBrowserConnectorConnectIntent();
@@ -272,6 +275,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     impersonatedAddress,
     isAddingConnectedAccount,
     isAddingConnectedAccountRef,
+    isBrowserConnectorHandoffRef,
     isConnectIntentWaitingForAppKit,
     isInitialized,
     isSigningOutAll,
@@ -547,6 +551,25 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     setDisconnected();
   }, [refreshStoredConnectedAccounts, setConnected, setDisconnected]);
 
+  const seizeBeginBrowserConnectorHandoff = useCallback((): void => {
+    isBrowserConnectorHandoffRef.current = true;
+    isAddingConnectedAccountRef.current = false;
+    addFlowOriginAddressRef.current = null;
+    if (retryConnectTimeoutRef.current) {
+      clearTimeout(retryConnectTimeoutRef.current);
+      retryConnectTimeoutRef.current = null;
+    }
+    setIsAddingConnectedAccount(false);
+  }, []);
+
+  const seizeEndBrowserConnectorHandoff = useCallback((): void => {
+    isBrowserConnectorHandoffRef.current = false;
+    if (isSigningOutAllRef.current) {
+      return;
+    }
+    restoreStoredWalletState();
+  }, [isSigningOutAllRef, restoreStoredWalletState]);
+
   const seizeDisconnect = useCallback(async (): Promise<void> => {
     if (isSigningOutAllRef.current) {
       return;
@@ -792,16 +815,21 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     // The desktop chooser can coexist with every connector. Opening Add must
     // never disconnect or activate a wallet before the user selects one.
     if (isElectron()) {
-      clearAddConnectedAccountGuard();
-      setIsAddingConnectedAccount(false);
       const storedOrigin = getWalletAddress();
-      openAddConnectedAccountModal(
-        clearAddConnectedAccountGuard,
+      const addFlowOriginWallet =
         storedOrigin && isAddress(storedOrigin)
           ? getAddress(storedOrigin)
-          : null,
-        signOutGeneration
-      );
+          : null;
+      openDesktopAddConnectorChooser({
+        clearAddCandidate: clearAddConnectedAccountGuard,
+        setAddingConnectedAccount: setIsAddingConnectedAccount,
+        openChooser: () =>
+          openAddConnectedAccountModal(
+            clearAddConnectedAccountGuard,
+            addFlowOriginWallet,
+            signOutGeneration
+          ),
+      });
       return;
     }
 
@@ -1065,6 +1093,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      seizeBeginBrowserConnectorHandoff,
+      seizeEndBrowserConnectorHandoff,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isAddingConnectedAccount,
@@ -1104,6 +1134,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      seizeBeginBrowserConnectorHandoff,
+      seizeEndBrowserConnectorHandoff,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isConnectIntentWaitingForAppKit,

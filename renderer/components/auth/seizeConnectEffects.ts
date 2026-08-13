@@ -19,6 +19,7 @@ import {
   ADD_FLOW_CANCEL_GRACE_MS,
   normalizeAddress,
 } from "./seizeConnectWalletState";
+import { shouldReconcileConnectorState } from "./connector-selection-lifecycle";
 
 interface SeizeConnectProviderEffectsParams {
   readonly account: {
@@ -34,6 +35,7 @@ interface SeizeConnectProviderEffectsParams {
   readonly impersonatedAddress: string | undefined;
   readonly isAddingConnectedAccount: boolean;
   readonly isAddingConnectedAccountRef: RefObject<boolean>;
+  readonly isBrowserConnectorHandoffRef: RefObject<boolean>;
   readonly isConnectIntentWaitingForAppKit: boolean;
   readonly isInitialized: boolean;
   readonly isSigningOutAll: boolean;
@@ -324,6 +326,7 @@ export function useSeizeConnectProviderEffects({
   impersonatedAddress,
   isAddingConnectedAccount,
   isAddingConnectedAccountRef,
+  isBrowserConnectorHandoffRef,
   isConnectIntentWaitingForAppKit,
   isInitialized,
   isSigningOutAll,
@@ -390,7 +393,13 @@ export function useSeizeConnectProviderEffects({
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      if (isSigningOutAllRef.current) {
+      if (
+        !shouldReconcileConnectorState({
+          isSigningOutAll: isSigningOutAllRef.current,
+          isBrowserConnectorHandoff: isBrowserConnectorHandoffRef.current,
+          isConnectorChooserOpen: stateOpen,
+        })
+      ) {
         return;
       }
       syncWalletConnectionState({
@@ -423,6 +432,8 @@ export function useSeizeConnectProviderEffects({
     isInitialized,
     isSigningOutAll,
     isSigningOutAllRef,
+    isBrowserConnectorHandoffRef,
+    stateOpen,
     storedConnectedAccounts,
     walletState,
     setConnected,
