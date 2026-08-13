@@ -1368,7 +1368,7 @@ const electronAddDirectOpenGuard = seizeAddConnectedAccount
         ),
     )
   : undefined;
-const electronAddStateGuard = electronAddDirectOpenGuard
+const electronAddStateReset = electronAddDirectOpenGuard
   ? findDescendant(
       electronAddDirectOpenGuard.thenStatement,
       (node) =>
@@ -1376,10 +1376,10 @@ const electronAddStateGuard = electronAddDirectOpenGuard
         ts.isIdentifier(node.expression) &&
         node.expression.text === "setIsAddingConnectedAccount" &&
         node.arguments.length === 1 &&
-        node.arguments[0].kind === ts.SyntaxKind.TrueKeyword,
+        node.arguments[0].kind === ts.SyntaxKind.FalseKeyword,
     )
   : undefined;
-const electronAddRefGuard = electronAddDirectOpenGuard
+const electronAddRefArmed = electronAddDirectOpenGuard
   ? findDescendant(
       electronAddDirectOpenGuard.thenStatement,
       (node) =>
@@ -1393,15 +1393,13 @@ const electronAddRefGuard = electronAddDirectOpenGuard
         node.right.kind === ts.SyntaxKind.TrueKeyword,
     )
   : undefined;
-const electronAddOriginGuard = electronAddDirectOpenGuard
+const electronAddOriginMutation = electronAddDirectOpenGuard
   ? findDescendant(
       electronAddDirectOpenGuard.thenStatement,
       (node) =>
         ts.isBinaryExpression(node) &&
         node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
-        isMemberExpression(node.left, "addFlowOriginAddressRef", "current") &&
-        ts.isIdentifier(node.right) &&
-        node.right.text === "addFlowOriginWallet",
+        isMemberExpression(node.left, "addFlowOriginAddressRef", "current"),
     )
   : undefined;
 const browserConnectorHandoffRef = findVariable(
@@ -1542,11 +1540,11 @@ assertContract(
 );
 assertContract(
   electronAddDirectOpenGuard &&
-    electronAddStateGuard &&
-    electronAddRefGuard &&
-    electronAddOriginGuard,
+    electronAddStateReset &&
+    !electronAddRefArmed &&
+    !electronAddOriginMutation,
   "renderer/components/auth/SeizeConnectProvider.tsx",
-  "Electron Add must preserve the origin, set the add-flow guard true, open the chooser, and not disconnect or activate a wallet",
+  "Electron Add must keep candidate reconciliation disabled, open the chooser, and not disconnect or activate a wallet",
 );
 assertContract(
   browserConnectorHandoffRef &&

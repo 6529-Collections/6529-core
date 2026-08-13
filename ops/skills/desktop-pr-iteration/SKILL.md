@@ -18,6 +18,8 @@ satisfied.
 - Run the Core-owned desktop renderer contract guard and restore any desktop adaptation it reports instead of weakening the guard.
 - Confirm Add only opens the Electron connector chooser: it must not wait for
   AppKit, disconnect the current provider, or switch/activate any account.
+  Opening the chooser must leave generic add-candidate reconciliation disabled;
+  only an explicit connector selection may arm or change connection authority.
   Confirm explicit active-account storage remains authoritative while connector
   metadata reconciles, including an active browser wallet with stale Core
   state still reported by Wagmi. When an active Browser connector is reset for

@@ -815,14 +815,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     // never disconnect or activate a wallet before the user selects one.
     if (isElectron()) {
       clearAddConnectedAccountGuard();
+      setIsAddingConnectedAccount(false);
       const storedOrigin = getWalletAddress();
       const addFlowOriginWallet =
         storedOrigin && isAddress(storedOrigin)
           ? getAddress(storedOrigin)
           : null;
-      isAddingConnectedAccountRef.current = true;
-      addFlowOriginAddressRef.current = addFlowOriginWallet;
-      setIsAddingConnectedAccount(true);
       openAddConnectedAccountModal(
         clearAddConnectedAccountGuard,
         addFlowOriginWallet,
