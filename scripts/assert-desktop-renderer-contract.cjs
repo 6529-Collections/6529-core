@@ -114,6 +114,86 @@ function hasJsxElement(node, elementName) {
   );
 }
 
+function countJsxElements(node, elementName) {
+  let count = 0;
+  const visit = (candidate) => {
+    if (
+      (ts.isJsxOpeningElement(candidate) ||
+        ts.isJsxSelfClosingElement(candidate)) &&
+      ts.isIdentifier(candidate.tagName) &&
+      candidate.tagName.text === elementName
+    ) {
+      count += 1;
+    }
+    ts.forEachChild(candidate, visit);
+  };
+  visit(node);
+  return count;
+}
+
+function isMemberExpression(node, objectName, memberName) {
+  const expression = unwrapExpression(node);
+  if (
+    ts.isPropertyAccessExpression(expression) &&
+    ts.isIdentifier(expression.expression)
+  ) {
+    return (
+      expression.expression.text === objectName &&
+      expression.name.text === memberName
+    );
+  }
+  return Boolean(
+    ts.isElementAccessExpression(expression) &&
+      ts.isIdentifier(expression.expression) &&
+      expression.expression.text === objectName &&
+      expression.argumentExpression &&
+      ts.isStringLiteral(expression.argumentExpression) &&
+      expression.argumentExpression.text === memberName,
+  );
+}
+
+function findJsxElementByMemberAttribute(
+  node,
+  elementName,
+  attributeName,
+  objectName,
+  memberName,
+) {
+  return findDescendant(node, (candidate) => {
+    if (
+      !ts.isJsxElement(candidate) ||
+      !ts.isIdentifier(candidate.openingElement.tagName) ||
+      candidate.openingElement.tagName.text !== elementName
+    ) {
+      return false;
+    }
+    const attribute = candidate.openingElement.attributes.properties.find(
+      (property) =>
+        ts.isJsxAttribute(property) && property.name.text === attributeName,
+    );
+    return Boolean(
+      attribute &&
+        ts.isJsxAttribute(attribute) &&
+        attribute.initializer &&
+        ts.isJsxExpression(attribute.initializer) &&
+        attribute.initializer.expression &&
+        isMemberExpression(
+          attribute.initializer.expression,
+          objectName,
+          memberName,
+        ),
+    );
+  });
+}
+
+function referencesMember(node, objectName, memberName) {
+  return Boolean(
+    findDescendant(node, (candidate) =>
+      isMemberExpression(candidate, objectName, memberName),
+    ),
+  );
+}
+
 function hasJsxElementWithinMemberElement(
   node,
   objectName,
@@ -1371,6 +1451,35 @@ const connectorSelectorFunction = findFunction(
   connectorModal,
   "ConnectorSelector",
 );
+const connectorOnConnect = connectorSelectorFunction
+  ? findVariable(connectorSelectorFunction, "onConnect")
+  : undefined;
+const isSelectionGuardCall = (node, methodName) =>
+  ts.isCallExpression(node) &&
+  ts.isPropertyAccessExpression(node.expression) &&
+  node.expression.name.text === methodName &&
+  ts.isPropertyAccessExpression(node.expression.expression) &&
+  ts.isIdentifier(node.expression.expression.expression) &&
+  node.expression.expression.expression.text === "props" &&
+  node.expression.expression.name.text === "selectionGuard";
+const selectionGuardAcquire = connectorOnConnect
+  ? findDescendant(connectorOnConnect, (node) =>
+      isSelectionGuardCall(node, "tryAcquire"),
+    )
+  : undefined;
+const selectionGuardRelease = connectorOnConnect
+  ? findDescendant(
+      connectorOnConnect,
+      (node) =>
+        ts.isTryStatement(node) &&
+        node.finallyBlock &&
+        Boolean(
+          findDescendant(node.finallyBlock, (child) =>
+            isSelectionGuardCall(child, "release"),
+          ),
+        ),
+    )
+  : undefined;
 const connectorSelectionPath =
   "renderer/components/header/user/complete-connector-selection.ts";
 const connectorSelection = parseSource(connectorSelectionPath);
@@ -1428,6 +1537,8 @@ assertContract(
     callsIdentifier(connectorSelectorFunction, "getSeedWalletSelectionState") &&
     callsIdentifier(connectorSelectorFunction, "seizeSwitchConnectedAccount") &&
     callsIdentifier(connectorSelectorFunction, "completeConnectorSelection") &&
+    Boolean(selectionGuardAcquire) &&
+    Boolean(selectionGuardRelease) &&
     jsxAttributeUsesIdentifier(
       connectorSelectorFunction,
       "button",
@@ -1435,7 +1546,7 @@ assertContract(
       "isActive",
     ),
   connectorModalPath,
-  "Core wallet chooser must complete new connections before closing, stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
+  "Core wallet chooser must serialize selections, complete new connections before closing, stay wide, disable the active wallet, and switch authenticated wallets without reconnecting",
 );
 assertContract(
   awaitedConnect &&
@@ -1454,19 +1565,28 @@ const browserConnectorConnectFunction = findFunction(
   browserConnectorConnect,
   "BrowserConnectorConnect",
 );
+const browserConnectorAuthFooter = browserConnectorConnectFunction
+  ? findJsxElementByMemberAttribute(
+      browserConnectorConnectFunction,
+      "div",
+      "className",
+      "authModalStyles",
+      "signModalFooter",
+    )
+  : undefined;
 assertContract(
   browserConnectorConnectFunction &&
-    hasJsxElement(browserConnectorConnectFunction, "Button") &&
-    !findDescendant(
-      browserConnectorConnectFunction,
-      (node) =>
-        ts.isStringLiteral(node) &&
-        ["signModalCancelButton", "signModalConfirmButton"].includes(
-          node.text,
-        ),
+    browserConnectorAuthFooter &&
+    countJsxElements(browserConnectorAuthFooter, "Button") === 2 &&
+    !["signModalCancelButton", "signModalConfirmButton"].some((memberName) =>
+      referencesMember(
+        browserConnectorConnectFunction,
+        "authModalStyles",
+        memberName,
+      ),
     ),
   browserConnectorConnectPath,
-  "browser-connector authentication actions must use shared styled buttons instead of removed CSS-module classes",
+  "browser-connector authentication footer must contain both shared styled buttons and must not use removed CSS-module classes",
 );
 
 const seizeConnectModalContextPath =

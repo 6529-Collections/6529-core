@@ -20,7 +20,10 @@ import {
   CONNECTOR_MODAL_BODY_CLASS,
   CONNECTOR_MODAL_DIALOG_CLASS,
 } from "./connector-modal-layout";
-import { completeConnectorSelection } from "./complete-connector-selection";
+import {
+  completeConnectorSelection,
+  ConnectorSelectionGuard,
+} from "./complete-connector-selection";
 import { getSeedWalletSelectionState } from "./seed-wallet-selection-state";
 
 const CONNECTOR_MODAL_LOCALE = DEFAULT_LOCALE;
@@ -40,6 +43,9 @@ export default function HeaderUserConnectModal({
 
   const isBrowser = !isElectron();
   const [openSection, setOpenSection] = useState<string | null>(null);
+  const [connectorSelectionGuard] = useState(
+    () => new ConnectorSelectionGuard()
+  );
 
   useEffect(() => {
     if (!show) setOpenSection(null);
@@ -97,6 +103,7 @@ export default function HeaderUserConnectModal({
             <ConnectorList
               connectors={otherConnectors}
               selected={handleConnectorSelected}
+              selectionGuard={connectorSelectionGuard}
               className="tw-mb-3"
             />
           ) : (
@@ -109,6 +116,7 @@ export default function HeaderUserConnectModal({
                 <ConnectorList
                   connectors={seedConnectors}
                   selected={handleConnectorSelected}
+                  selectionGuard={connectorSelectionGuard}
                 />
                 {seedConnectors.length === 0 && (
                   <div className="tw-text-center">
@@ -141,6 +149,7 @@ export default function HeaderUserConnectModal({
                 <ConnectorList
                   connectors={browserConnectors}
                   selected={handleConnectorSelected}
+                  selectionGuard={connectorSelectionGuard}
                 />
               </ConnectSection>
               <ConnectSection
@@ -152,6 +161,7 @@ export default function HeaderUserConnectModal({
                 <ConnectorList
                   connectors={otherConnectors}
                   selected={handleConnectorSelected}
+                  selectionGuard={connectorSelectionGuard}
                 />
               </ConnectSection>
             </>
@@ -170,10 +180,12 @@ export default function HeaderUserConnectModal({
 function ConnectorList({
   connectors,
   selected,
+  selectionGuard,
   className = "",
 }: Readonly<{
   connectors: Connector[];
   selected: (connector: Connector) => void;
+  selectionGuard: ConnectorSelectionGuard;
   className?: string;
 }>) {
   return (
@@ -185,6 +197,7 @@ function ConnectorList({
           key={connector.id}
           connector={connector}
           selected={selected}
+          selectionGuard={selectionGuard}
         />
       ))}
     </div>
@@ -223,6 +236,7 @@ function ConnectorSelector(
   props: Readonly<{
     connector: Connector;
     selected: (connector: Connector) => void;
+    selectionGuard: ConnectorSelectionGuard;
   }>
 ) {
   const { connectAsync } = useConnect();
@@ -258,36 +272,44 @@ function ConnectorSelector(
       return;
     }
 
-    if (isConnected) {
-      try {
-        seizeSwitchConnectedAccount(props.connector.id);
-      } catch (connectionError) {
-        reportConnectionError(connectionError);
-        return;
-      }
-      props.selected(props.connector);
-      return;
-    }
-
-    if (props.connector.type === "walletConnect") {
-      void Promise.resolve(
-        open({ view: "ConnectingWalletConnectBasic" })
-      ).catch(reportConnectionError);
-      props.selected(props.connector);
+    if (!props.selectionGuard.tryAcquire()) {
       return;
     }
 
     try {
-      await completeConnectorSelection({
-        connect: async () => {
-          await connectAsync({ connector: props.connector });
-        },
-        seedWalletAddress: isSeed ? props.connector.id : null,
-        acceptConnection: seizeAcceptConnection,
-        select: () => props.selected(props.connector),
-      });
-    } catch (connectionError) {
-      reportConnectionError(connectionError);
+      if (isConnected) {
+        try {
+          seizeSwitchConnectedAccount(props.connector.id);
+        } catch (connectionError) {
+          reportConnectionError(connectionError);
+          return;
+        }
+        props.selected(props.connector);
+        return;
+      }
+
+      if (props.connector.type === "walletConnect") {
+        void Promise.resolve(
+          open({ view: "ConnectingWalletConnectBasic" })
+        ).catch(reportConnectionError);
+        props.selected(props.connector);
+        return;
+      }
+
+      try {
+        await completeConnectorSelection({
+          connect: async () => {
+            await connectAsync({ connector: props.connector });
+          },
+          seedWalletAddress: isSeed ? props.connector.id : null,
+          acceptConnection: seizeAcceptConnection,
+          select: () => props.selected(props.connector),
+        });
+      } catch (connectionError) {
+        reportConnectionError(connectionError);
+      }
+    } finally {
+      props.selectionGuard.release();
     }
   };
 

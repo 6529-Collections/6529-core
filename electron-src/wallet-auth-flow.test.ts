@@ -20,7 +20,10 @@ import {
   CONNECTOR_MODAL_BODY_CLASS,
   CONNECTOR_MODAL_DIALOG_CLASS,
 } from "../renderer/components/header/user/connector-modal-layout";
-import { completeConnectorSelection } from "../renderer/components/header/user/complete-connector-selection";
+import {
+  completeConnectorSelection,
+  ConnectorSelectionGuard,
+} from "../renderer/components/header/user/complete-connector-selection";
 import { getSeedWalletSelectionState } from "../renderer/components/header/user/seed-wallet-selection-state";
 import { CORE_WALLET_MODAL_SIZE_CLASS } from "../renderer/components/shared/core-wallet-modal-layout";
 import {
@@ -170,6 +173,17 @@ describe("desktop wallet authentication flow", () => {
     await selection;
 
     assert.deepEqual(events, [`accept:${selectedAddress}`, "close"]);
+  });
+
+  it("allows only one connector selection at a time", () => {
+    const selectionGuard = new ConnectorSelectionGuard();
+
+    assert.equal(selectionGuard.tryAcquire(), true);
+    assert.equal(selectionGuard.tryAcquire(), false);
+
+    selectionGuard.release();
+
+    assert.equal(selectionGuard.tryAcquire(), true);
   });
 
   it("keeps Core wallet modals in the same responsive size envelope", () => {

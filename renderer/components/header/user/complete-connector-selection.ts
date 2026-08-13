@@ -5,6 +5,23 @@ interface CompleteConnectorSelectionParams {
   readonly select: () => void;
 }
 
+/** Serializes connector choices shared by every row in one chooser. */
+export class ConnectorSelectionGuard {
+  private active = false;
+
+  tryAcquire(): boolean {
+    if (this.active) {
+      return false;
+    }
+    this.active = true;
+    return true;
+  }
+
+  release(): void {
+    this.active = false;
+  }
+}
+
 /**
  * Makes a newly selected Core wallet authoritative before the chooser closes.
  * This prevents the previous active Core connector from being restored while
