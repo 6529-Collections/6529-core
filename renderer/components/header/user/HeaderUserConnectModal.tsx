@@ -254,6 +254,8 @@ function ConnectorSelector(
     address: activeAddress,
     connectedAccounts,
     seizeAcceptConnection,
+    seizeBeginBrowserConnectorHandoff,
+    seizeEndBrowserConnectorHandoff,
     seizeSwitchConnectedAccount,
   } = useSeizeConnectContext();
 
@@ -308,6 +310,7 @@ function ConnectorSelector(
       if (props.connector.type === "browser") {
         try {
           await startFreshBrowserConnectorSelection({
+            beginHandoff: () => seizeBeginBrowserConnectorHandoff(),
             select: () => props.selected(props.connector),
             reset: async () => {
               const trackedConnection = connections.some(
@@ -322,6 +325,7 @@ function ConnectorSelector(
             connect: async () => {
               await connectAsync({ connector: props.connector });
             },
+            endHandoff: () => seizeEndBrowserConnectorHandoff(),
           });
         } catch (connectionError) {
           reportConnectionError(connectionError);

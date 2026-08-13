@@ -34,6 +34,7 @@ interface SeizeConnectProviderEffectsParams {
   readonly impersonatedAddress: string | undefined;
   readonly isAddingConnectedAccount: boolean;
   readonly isAddingConnectedAccountRef: RefObject<boolean>;
+  readonly isBrowserConnectorHandoffRef: RefObject<boolean>;
   readonly isConnectIntentWaitingForAppKit: boolean;
   readonly isInitialized: boolean;
   readonly isSigningOutAll: boolean;
@@ -324,6 +325,7 @@ export function useSeizeConnectProviderEffects({
   impersonatedAddress,
   isAddingConnectedAccount,
   isAddingConnectedAccountRef,
+  isBrowserConnectorHandoffRef,
   isConnectIntentWaitingForAppKit,
   isInitialized,
   isSigningOutAll,
@@ -390,7 +392,7 @@ export function useSeizeConnectProviderEffects({
     }
 
     debounceTimeoutRef.current = setTimeout(() => {
-      if (isSigningOutAllRef.current) {
+      if (isSigningOutAllRef.current || isBrowserConnectorHandoffRef.current) {
         return;
       }
       syncWalletConnectionState({
@@ -423,6 +425,7 @@ export function useSeizeConnectProviderEffects({
     isInitialized,
     isSigningOutAll,
     isSigningOutAllRef,
+    isBrowserConnectorHandoffRef,
     storedConnectedAccounts,
     walletState,
     setConnected,

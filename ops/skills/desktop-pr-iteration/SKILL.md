@@ -20,7 +20,9 @@ satisfied.
   AppKit, disconnect the current provider, or switch/activate any account.
   Confirm explicit active-account storage remains authoritative while connector
   metadata reconciles, including an active browser wallet with stale Core
-  state still reported by Wagmi.
+  state still reported by Wagmi. When an active Browser connector is reset for
+  another Browser connection, suppress Wagmi's temporary fallback connector
+  for the entire external handoff so it cannot become the active profile.
 - Confirm local evidence is ready: current web SHA, install result, checks, Windows build/package result, and artifact path or blocker.
 - Stage only intended files. A renderer subtree sync can be large; inspect the summary and any root files carefully.
 - Use `codex-diff-check` on Windows.

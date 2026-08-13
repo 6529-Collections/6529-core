@@ -6,7 +6,9 @@ interface CompleteConnectorSelectionParams {
 }
 
 interface StartFreshBrowserConnectorSelectionParams {
+  readonly beginHandoff: () => void;
   readonly connect: () => Promise<void>;
+  readonly endHandoff: () => void;
   readonly reset: () => Promise<void>;
   readonly select: () => void;
 }
@@ -53,11 +55,18 @@ export async function completeConnectorSelection({
  * browser, and it must reset any previous connector session before reconnecting.
  */
 export async function startFreshBrowserConnectorSelection({
+  beginHandoff,
   connect,
+  endHandoff,
   reset,
   select,
 }: StartFreshBrowserConnectorSelectionParams): Promise<void> {
+  beginHandoff();
   select();
-  await reset();
-  await connect();
+  try {
+    await reset();
+    await connect();
+  } finally {
+    endHandoff();
+  }
 }

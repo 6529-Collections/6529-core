@@ -117,6 +117,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const retryConnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const connectIntentHandoffTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isAddingConnectedAccountRef = useRef(false);
+  const isBrowserConnectorHandoffRef = useRef(false);
   const isMountedRef = useRef(true);
   const { agentLoginImpersonatedAddress, impersonatedAddress } =
     getSeizeConnectImpersonation();
@@ -176,6 +177,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       retryConnectTimeoutRef.current = null;
     }
     isAddingConnectedAccountRef.current = false;
+    isBrowserConnectorHandoffRef.current = false;
     addFlowOriginAddressRef.current = null;
     setIsAddingConnectedAccount(false);
     clearBrowserConnectorConnectIntent();
@@ -272,6 +274,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     impersonatedAddress,
     isAddingConnectedAccount,
     isAddingConnectedAccountRef,
+    isBrowserConnectorHandoffRef,
     isConnectIntentWaitingForAppKit,
     isInitialized,
     isSigningOutAll,
@@ -546,6 +549,25 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     }
     setDisconnected();
   }, [refreshStoredConnectedAccounts, setConnected, setDisconnected]);
+
+  const seizeBeginBrowserConnectorHandoff = useCallback((): void => {
+    isBrowserConnectorHandoffRef.current = true;
+    isAddingConnectedAccountRef.current = false;
+    addFlowOriginAddressRef.current = null;
+    if (retryConnectTimeoutRef.current) {
+      clearTimeout(retryConnectTimeoutRef.current);
+      retryConnectTimeoutRef.current = null;
+    }
+    setIsAddingConnectedAccount(false);
+  }, []);
+
+  const seizeEndBrowserConnectorHandoff = useCallback((): void => {
+    isBrowserConnectorHandoffRef.current = false;
+    if (isSigningOutAllRef.current) {
+      return;
+    }
+    restoreStoredWalletState();
+  }, [isSigningOutAllRef, restoreStoredWalletState]);
 
   const seizeDisconnect = useCallback(async (): Promise<void> => {
     if (isSigningOutAllRef.current) {
@@ -1069,6 +1091,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      seizeBeginBrowserConnectorHandoff,
+      seizeEndBrowserConnectorHandoff,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isAddingConnectedAccount,
@@ -1108,6 +1132,8 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       seizeDisconnectAndLogout,
       seizeDisconnectAndLogoutAll,
       seizeAcceptConnection,
+      seizeBeginBrowserConnectorHandoff,
+      seizeEndBrowserConnectorHandoff,
       seizeSwitchConnectedAccount,
       seizeAddConnectedAccount,
       isConnectIntentWaitingForAppKit,

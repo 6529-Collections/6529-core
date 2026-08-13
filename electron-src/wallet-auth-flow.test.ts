@@ -195,6 +195,7 @@ describe("desktop wallet authentication flow", () => {
     });
 
     const selection = startFreshBrowserConnectorSelection({
+      beginHandoff: () => events.push("protect-active-profile"),
       select: () => events.push("close"),
       reset: async () => {
         events.push("reset");
@@ -203,16 +204,51 @@ describe("desktop wallet authentication flow", () => {
       connect: async () => {
         events.push("connect");
       },
+      endHandoff: () => events.push("restore-active-profile"),
     });
 
     await Promise.resolve();
-    assert.deepEqual(events, ["close", "reset"]);
+    assert.deepEqual(events, ["protect-active-profile", "close", "reset"]);
 
     assert.ok(resolveReset);
     resolveReset();
     await selection;
 
-    assert.deepEqual(events, ["close", "reset", "connect"]);
+    assert.deepEqual(events, [
+      "protect-active-profile",
+      "close",
+      "reset",
+      "connect",
+      "restore-active-profile",
+    ]);
+  });
+
+  it("restores the active profile when browser reconnection fails", async () => {
+    const events: string[] = [];
+
+    await assert.rejects(
+      startFreshBrowserConnectorSelection({
+        beginHandoff: () => events.push("protect-active-profile"),
+        select: () => events.push("close"),
+        reset: async () => {
+          events.push("reset");
+        },
+        connect: async () => {
+          events.push("connect");
+          throw new Error("browser connection failed");
+        },
+        endHandoff: () => events.push("restore-active-profile"),
+      }),
+      /browser connection failed/,
+    );
+
+    assert.deepEqual(events, [
+      "protect-active-profile",
+      "close",
+      "reset",
+      "connect",
+      "restore-active-profile",
+    ]);
   });
 
   it("keeps Core wallet modals in the same responsive size envelope", () => {

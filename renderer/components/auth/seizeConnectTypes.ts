@@ -54,6 +54,12 @@ export interface SeizeConnectContextType {
    */
   seizeAcceptConnection: (address: string) => void;
 
+  /** Prevents temporary connector fallback from changing the active profile. */
+  seizeBeginBrowserConnectorHandoff: () => void;
+
+  /** Ends Browser handoff and restores the explicitly selected profile. */
+  seizeEndBrowserConnectorHandoff: () => void;
+
   /** Whether the connection modal is currently open */
   seizeConnectOpen: boolean;
 

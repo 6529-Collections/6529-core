@@ -1404,6 +1404,82 @@ const electronAddOriginGuard = electronAddDirectOpenGuard
         node.right.text === "addFlowOriginWallet",
     )
   : undefined;
+const browserConnectorHandoffRef = findVariable(
+  connectProvider,
+  "isBrowserConnectorHandoffRef",
+);
+const beginBrowserConnectorHandoff = findVariable(
+  connectProvider,
+  "seizeBeginBrowserConnectorHandoff",
+);
+const endBrowserConnectorHandoff = findVariable(
+  connectProvider,
+  "seizeEndBrowserConnectorHandoff",
+);
+const beginBrowserHandoffStateGuard = beginBrowserConnectorHandoff
+  ? findDescendant(
+      beginBrowserConnectorHandoff,
+      (node) =>
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        isMemberExpression(
+          node.left,
+          "isBrowserConnectorHandoffRef",
+          "current",
+        ) &&
+        node.right.kind === ts.SyntaxKind.TrueKeyword,
+    )
+  : undefined;
+const beginBrowserHandoffCancelsAdd = beginBrowserConnectorHandoff
+  ? callsIdentifier(
+      beginBrowserConnectorHandoff,
+      "setIsAddingConnectedAccount",
+    ) &&
+    Boolean(
+      findDescendant(
+        beginBrowserConnectorHandoff,
+        (node) =>
+          ts.isBinaryExpression(node) &&
+          node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+          isMemberExpression(
+            node.left,
+            "isAddingConnectedAccountRef",
+            "current",
+          ) &&
+          node.right.kind === ts.SyntaxKind.FalseKeyword,
+      ),
+    )
+  : false;
+const endBrowserHandoffStateGuard = endBrowserConnectorHandoff
+  ? findDescendant(
+      endBrowserConnectorHandoff,
+      (node) =>
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
+        isMemberExpression(
+          node.left,
+          "isBrowserConnectorHandoffRef",
+          "current",
+        ) &&
+        node.right.kind === ts.SyntaxKind.FalseKeyword,
+    )
+  : undefined;
+const providerEffectsCall = findDescendant(
+  connectProvider,
+  (node) =>
+    ts.isCallExpression(node) &&
+    ts.isIdentifier(node.expression) &&
+    node.expression.text === "useSeizeConnectProviderEffects",
+);
+const providerEffectsReceivesBrowserHandoffRef = providerEffectsCall
+  ? Boolean(
+      findDescendant(
+        providerEffectsCall,
+        (node) =>
+          ts.isIdentifier(node) && node.text === "isBrowserConnectorHandoffRef",
+      ),
+    )
+  : false;
 const localConnectorDirectOpenGuard = seizeAddConnectedAccount
   ? findDescendant(
       seizeAddConnectedAccount,
@@ -1473,6 +1549,17 @@ assertContract(
   "Electron Add must preserve the origin, set the add-flow guard true, open the chooser, and not disconnect or activate a wallet",
 );
 assertContract(
+  browserConnectorHandoffRef &&
+    beginBrowserHandoffStateGuard &&
+    beginBrowserHandoffCancelsAdd &&
+    endBrowserHandoffStateGuard &&
+    endBrowserConnectorHandoff &&
+    callsIdentifier(endBrowserConnectorHandoff, "restoreStoredWalletState") &&
+    providerEffectsReceivesBrowserHandoffRef,
+  "renderer/components/auth/SeizeConnectProvider.tsx",
+  "Browser reconnect handoff must suppress generic Add reconciliation and restore the explicitly selected profile",
+);
+assertContract(
   electronChooserDirectOpenGuard &&
     appKitReadinessWait &&
     electronChooserDirectOpenGuard.getStart() < appKitReadinessWait.getStart(),
@@ -1537,6 +1624,14 @@ const browserConnectorSelectionGuard = connectorOnConnect
         ) &&
         callsIdentifier(node.thenStatement, "disconnectAsync") &&
         callsIdentifier(node.thenStatement, "connectAsync") &&
+        callsIdentifier(
+          node.thenStatement,
+          "seizeBeginBrowserConnectorHandoff",
+        ) &&
+        callsIdentifier(
+          node.thenStatement,
+          "seizeEndBrowserConnectorHandoff",
+        ) &&
         Boolean(
           findDescendant(
             node.thenStatement,
@@ -1600,6 +1695,15 @@ const browserSelectionClosed = startFreshBrowserConnectorSelectionFunction
         node.expression.text === "select",
     )
   : undefined;
+const browserHandoffBegan = startFreshBrowserConnectorSelectionFunction
+  ? findDescendant(
+      startFreshBrowserConnectorSelectionFunction,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "beginHandoff",
+    )
+  : undefined;
 const browserConnectorReset = startFreshBrowserConnectorSelectionFunction
   ? findDescendant(
       startFreshBrowserConnectorSelectionFunction,
@@ -1618,6 +1722,19 @@ const browserConnectorConnected = startFreshBrowserConnectorSelectionFunction
         ts.isCallExpression(node.expression) &&
         ts.isIdentifier(node.expression.expression) &&
         node.expression.expression.text === "connect",
+    )
+  : undefined;
+const browserHandoffEnded = startFreshBrowserConnectorSelectionFunction
+  ? findDescendant(
+      startFreshBrowserConnectorSelectionFunction,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "endHandoff" &&
+        ts.isExpressionStatement(node.parent) &&
+        ts.isBlock(node.parent.parent) &&
+        ts.isTryStatement(node.parent.parent.parent) &&
+        node.parent.parent.parent.finallyBlock === node.parent.parent,
     )
   : undefined;
 assertContract(
@@ -1664,13 +1781,46 @@ assertContract(
 );
 assertContract(
   browserConnectorSelectionGuard &&
+    browserHandoffBegan &&
     browserSelectionClosed &&
     browserConnectorReset &&
     browserConnectorConnected &&
+    browserHandoffEnded &&
+    browserHandoffBegan.getStart() < browserSelectionClosed.getStart() &&
     browserSelectionClosed.getStart() < browserConnectorReset.getStart() &&
-    browserConnectorReset.getStart() < browserConnectorConnected.getStart(),
+    browserConnectorReset.getStart() < browserConnectorConnected.getStart() &&
+    browserConnectorConnected.getStart() < browserHandoffEnded.getStart(),
   connectorSelectionPath,
-  "Browser selection must close the chooser immediately, reset the previous connector session, and only then reconnect",
+  "Browser selection must protect the active profile, close immediately, reset and reconnect, then always end the handoff",
+);
+
+const connectEffectsPath = "renderer/components/auth/seizeConnectEffects.ts";
+const connectEffects = parseSource(connectEffectsPath);
+const useConnectEffectsFunction = findFunction(
+  connectEffects,
+  "useSeizeConnectProviderEffects",
+);
+const browserHandoffEffectGuard = useConnectEffectsFunction
+  ? findDescendant(
+      useConnectEffectsFunction,
+      (node) =>
+        ts.isIfStatement(node) &&
+        referencesMember(
+          node.expression,
+          "isBrowserConnectorHandoffRef",
+          "current",
+        ) &&
+        Boolean(
+          findDescendant(node.thenStatement, (child) =>
+            ts.isReturnStatement(child),
+          ),
+        ),
+    )
+  : undefined;
+assertContract(
+  Boolean(browserHandoffEffectGuard),
+  connectEffectsPath,
+  "Wallet reconciliation must ignore temporary Wagmi fallback connectors during Browser reconnect handoff",
 );
 
 const browserConnectorConnectPath =
