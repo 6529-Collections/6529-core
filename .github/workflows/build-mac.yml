@@ -302,7 +302,8 @@ jobs:
           CONFIG=$(node -e "console.log(JSON.stringify(require('./electron-builder.production.json').publish[0]))")
           BUCKET=$(echo "$CONFIG" | jq -r '.bucket')
           REGION=$(echo "$CONFIG" | jq -r '.region')
-          PATH_PREFIX=$(echo "$CONFIG" | jq -r '.path' | sed 's|\${os}|mac|')
+          RAW_PATH=$(echo "$CONFIG" | jq -r '.path')
+          PATH_PREFIX=$(node scripts/resolve-s3-publish-prefix.cjs "$RAW_PATH" mac)
 
           echo "bucket=$BUCKET" >> $GITHUB_OUTPUT
           echo "region=$REGION" >> $GITHUB_OUTPUT

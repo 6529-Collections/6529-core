@@ -118,6 +118,16 @@
       }
     ],
     "artifactName": "6529-DESKTOP-linux-${arch}-${version}.${ext}",
+    "desktop": {
+      "entry": {
+        "Name": "6529 Desktop",
+        "Type": "Application",
+        "Terminal": "false",
+        "MimeType": "x-scheme-handler/core6529;",
+        "Categories": "Utility;Network;",
+        "Comment": "6529 Desktop Application"
+      }
+    },
     "protocols": [
       {
         "name": "6529 Desktop Protocol",

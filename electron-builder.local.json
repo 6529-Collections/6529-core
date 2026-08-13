@@ -92,6 +92,16 @@
       }
     ],
     "artifactName": "6529-DESKTOP-LOCAL-linux-${arch}-${version}.${ext}",
+    "desktop": {
+      "entry": {
+        "Name": "6529 Desktop Local",
+        "Type": "Application",
+        "Terminal": "false",
+        "MimeType": "x-scheme-handler/localcore6529;",
+        "Categories": "Utility;Network;",
+        "Comment": "6529 Desktop Local Application"
+      }
+    },
     "protocols": [
       {
         "name": "6529 Desktop Local Protocol",

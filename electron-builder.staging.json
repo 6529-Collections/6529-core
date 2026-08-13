@@ -106,6 +106,16 @@
       }
     ],
     "artifactName": "6529-DESKTOP-STAGING-linux-${arch}-${version}.${ext}",
+    "desktop": {
+      "entry": {
+        "Name": "6529 Desktop Staging",
+        "Type": "Application",
+        "Terminal": "false",
+        "MimeType": "x-scheme-handler/stagingcore6529;",
+        "Categories": "Utility;Network;",
+        "Comment": "6529 Desktop Staging Application"
+      }
+    },
     "protocols": [
       {
         "name": "6529 Desktop Staging Protocol",
