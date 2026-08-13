@@ -35,7 +35,7 @@
       "provider": "s3",
       "bucket": "6529bucket",
       "region": "eu-west-1",
-      "path": "6529-staging-core-app/${os}/",
+      "path": "6529-staging-core-app/${os}",
       "acl": null
     },
     {
