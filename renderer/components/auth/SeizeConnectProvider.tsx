@@ -50,6 +50,7 @@ import {
   createAppKitModalBridgeStore,
   useAppKitModalBridgeState,
 } from "./AppKitModalBridge";
+import { openDesktopAddConnectorChooser } from "./connector-selection-lifecycle";
 import { WalletErrorBoundary } from "./error-boundary";
 import { SeizeConnectContext } from "./seizeConnectContextValue";
 import {
@@ -814,18 +815,21 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     // The desktop chooser can coexist with every connector. Opening Add must
     // never disconnect or activate a wallet before the user selects one.
     if (isElectron()) {
-      clearAddConnectedAccountGuard();
-      setIsAddingConnectedAccount(false);
       const storedOrigin = getWalletAddress();
       const addFlowOriginWallet =
         storedOrigin && isAddress(storedOrigin)
           ? getAddress(storedOrigin)
           : null;
-      openAddConnectedAccountModal(
-        clearAddConnectedAccountGuard,
-        addFlowOriginWallet,
-        signOutGeneration
-      );
+      openDesktopAddConnectorChooser({
+        clearAddCandidate: clearAddConnectedAccountGuard,
+        setAddingConnectedAccount: setIsAddingConnectedAccount,
+        openChooser: () =>
+          openAddConnectedAccountModal(
+            clearAddConnectedAccountGuard,
+            addFlowOriginWallet,
+            signOutGeneration
+          ),
+      });
       return;
     }
 

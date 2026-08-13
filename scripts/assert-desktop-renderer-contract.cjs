@@ -1355,9 +1355,9 @@ const electronAddDirectOpenGuard = seizeAddConnectedAccount
       (node) =>
         ts.isIfStatement(node) &&
         callsIdentifier(node.expression, "isElectron") &&
+        callsIdentifier(node.thenStatement, "openDesktopAddConnectorChooser") &&
         callsIdentifier(node.thenStatement, "openAddConnectedAccountModal") &&
         callsIdentifier(node.thenStatement, "getWalletAddress") &&
-        callsIdentifier(node.thenStatement, "setIsAddingConnectedAccount") &&
         !callsIdentifier(node.thenStatement, "disconnect") &&
         !callsIdentifier(node.thenStatement, "setActiveWalletAccount") &&
         !callsIdentifier(node.thenStatement, "setConnected") &&
@@ -1366,17 +1366,6 @@ const electronAddDirectOpenGuard = seizeAddConnectedAccount
             ts.isReturnStatement(child),
           ),
         ),
-    )
-  : undefined;
-const electronAddStateReset = electronAddDirectOpenGuard
-  ? findDescendant(
-      electronAddDirectOpenGuard.thenStatement,
-      (node) =>
-        ts.isCallExpression(node) &&
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === "setIsAddingConnectedAccount" &&
-        node.arguments.length === 1 &&
-        node.arguments[0].kind === ts.SyntaxKind.FalseKeyword,
     )
   : undefined;
 const electronAddRefArmed = electronAddDirectOpenGuard
@@ -1400,6 +1389,42 @@ const electronAddOriginMutation = electronAddDirectOpenGuard
         ts.isBinaryExpression(node) &&
         node.operatorToken.kind === ts.SyntaxKind.EqualsToken &&
         isMemberExpression(node.left, "addFlowOriginAddressRef", "current"),
+    )
+  : undefined;
+const connectorLifecyclePath =
+  "renderer/components/auth/connector-selection-lifecycle.ts";
+const connectorLifecycle = parseSource(connectorLifecyclePath);
+const openDesktopAddConnectorChooser = findFunction(
+  connectorLifecycle,
+  "openDesktopAddConnectorChooser",
+);
+const desktopAddCandidateCleared = openDesktopAddConnectorChooser
+  ? findDescendant(
+      openDesktopAddConnectorChooser,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "clearAddCandidate",
+    )
+  : undefined;
+const desktopAddStateReset = openDesktopAddConnectorChooser
+  ? findDescendant(
+      openDesktopAddConnectorChooser,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "setAddingConnectedAccount" &&
+        node.arguments.length === 1 &&
+        node.arguments[0].kind === ts.SyntaxKind.FalseKeyword,
+    )
+  : undefined;
+const desktopAddChooserOpened = openDesktopAddConnectorChooser
+  ? findDescendant(
+      openDesktopAddConnectorChooser,
+      (node) =>
+        ts.isCallExpression(node) &&
+        ts.isIdentifier(node.expression) &&
+        node.expression.text === "openChooser",
     )
   : undefined;
 const browserConnectorHandoffRef = findVariable(
@@ -1540,10 +1565,14 @@ assertContract(
 );
 assertContract(
   electronAddDirectOpenGuard &&
-    electronAddStateReset &&
     !electronAddRefArmed &&
-    !electronAddOriginMutation,
-  "renderer/components/auth/SeizeConnectProvider.tsx",
+    !electronAddOriginMutation &&
+    desktopAddCandidateCleared &&
+    desktopAddStateReset &&
+    desktopAddChooserOpened &&
+    desktopAddCandidateCleared.getStart() < desktopAddStateReset.getStart() &&
+    desktopAddStateReset.getStart() < desktopAddChooserOpened.getStart(),
+  connectorLifecyclePath,
   "Electron Add must keep candidate reconciliation disabled, open the chooser, and not disconnect or activate a wallet",
 );
 assertContract(
@@ -1798,15 +1827,22 @@ const useConnectEffectsFunction = findFunction(
   connectEffects,
   "useSeizeConnectProviderEffects",
 );
-const browserHandoffEffectGuard = useConnectEffectsFunction
+const connectorReconciliationEffectGuard = useConnectEffectsFunction
   ? findDescendant(
       useConnectEffectsFunction,
       (node) =>
         ts.isIfStatement(node) &&
+        callsIdentifier(node.expression, "shouldReconcileConnectorState") &&
         referencesMember(
           node.expression,
           "isBrowserConnectorHandoffRef",
           "current",
+        ) &&
+        Boolean(
+          findDescendant(
+            node.expression,
+            (child) => ts.isIdentifier(child) && child.text === "stateOpen",
+          ),
         ) &&
         Boolean(
           findDescendant(node.thenStatement, (child) =>
@@ -1816,9 +1852,9 @@ const browserHandoffEffectGuard = useConnectEffectsFunction
     )
   : undefined;
 assertContract(
-  Boolean(browserHandoffEffectGuard),
+  Boolean(connectorReconciliationEffectGuard),
   connectEffectsPath,
-  "Wallet reconciliation must ignore temporary Wagmi fallback connectors during Browser reconnect handoff",
+  "Wallet reconciliation must ignore existing connectors while the chooser is open or Browser reconnect handoff is active",
 );
 
 const browserConnectorConnectPath =

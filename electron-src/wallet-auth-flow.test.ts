@@ -35,6 +35,10 @@ import {
 import {
   selectLiveWalletAccount,
 } from "../renderer/components/auth/selectLiveWalletAccount";
+import {
+  openDesktopAddConnectorChooser,
+  shouldReconcileConnectorState,
+} from "../renderer/components/auth/connector-selection-lifecycle";
 
 describe("desktop wallet authentication flow", () => {
   it("keeps Core wallet unlock and request prompts above authentication", () => {
@@ -43,6 +47,64 @@ describe("desktop wallet authentication flow", () => {
     assert.equal(NON_WALLET_MODAL_OVERLAY_CLASS, "tw-z-[9990]");
     assert.equal(AUTHENTICATION_MODAL_OVERLAY_CLASS, "tw-z-[10000]");
     assert.equal(WALLET_REQUEST_MODAL_OVERLAY_CLASS, "tw-z-[10010]");
+  });
+
+  it("keeps an active Browser profile stable when Add opens over stale Wagmi state", () => {
+    const activeBrowserAddress = "0x1111111111111111111111111111111111111111";
+    const staleWagmiAddress = "0x2222222222222222222222222222222222222222";
+    const events: string[] = [];
+    let activeAddress = activeBrowserAddress;
+    let isAddingConnectedAccount = true;
+    let isConnectorChooserOpen = false;
+
+    openDesktopAddConnectorChooser({
+      clearAddCandidate: () => events.push("clear-candidate"),
+      setAddingConnectedAccount: (isAdding) => {
+        isAddingConnectedAccount = isAdding;
+        events.push(`adding:${isAdding}`);
+      },
+      openChooser: () => {
+        isConnectorChooserOpen = true;
+        events.push("open-chooser");
+      },
+    });
+
+    const shouldReconcile = shouldReconcileConnectorState({
+      isSigningOutAll: false,
+      isBrowserConnectorHandoff: false,
+      isConnectorChooserOpen,
+    });
+    if (shouldReconcile || isAddingConnectedAccount) {
+      activeAddress = staleWagmiAddress;
+    }
+
+    assert.equal(activeAddress, activeBrowserAddress);
+    assert.equal(isAddingConnectedAccount, false);
+    assert.equal(shouldReconcile, false);
+    assert.deepEqual(events, [
+      "clear-candidate",
+      "adding:false",
+      "open-chooser",
+    ]);
+  });
+
+  it("resumes connector reconciliation only after chooser and handoff guards clear", () => {
+    assert.equal(
+      shouldReconcileConnectorState({
+        isSigningOutAll: false,
+        isBrowserConnectorHandoff: false,
+        isConnectorChooserOpen: false,
+      }),
+      true,
+    );
+    assert.equal(
+      shouldReconcileConnectorState({
+        isSigningOutAll: false,
+        isBrowserConnectorHandoff: true,
+        isConnectorChooserOpen: false,
+      }),
+      false,
+    );
   });
 
   it("rejects malformed Core wallet addresses", () => {
