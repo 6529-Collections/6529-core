@@ -61,12 +61,19 @@ function findLatestRendererSync(repositoryRoot) {
     if (parents.length !== 2) {
       continue;
     }
-    const [firstParent, frontendCommit] = parents;
-    if (
-      changesOnlyRenderer(commit, firstParent, repositoryRoot) &&
-      isFrontendCommit(frontendCommit, repositoryRoot)
+    for (
+      let frontendParentIndex = 0;
+      frontendParentIndex < 2;
+      frontendParentIndex += 1
     ) {
-      return { mergeCommit: commit, frontendCommit };
+      const frontendCommit = parents[frontendParentIndex];
+      if (!isFrontendCommit(frontendCommit, repositoryRoot)) {
+        continue;
+      }
+      const firstParent = parents[1 - frontendParentIndex];
+      if (changesOnlyRenderer(commit, firstParent, repositoryRoot)) {
+        return { mergeCommit: commit, frontendCommit };
+      }
     }
   }
 

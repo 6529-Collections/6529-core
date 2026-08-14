@@ -9,16 +9,30 @@ const {
 
 const repositoryRoot = path.resolve(__dirname, "..");
 
+function readGitValue(args) {
+  try {
+    return execFileSync("git", args, {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    return null;
+  }
+}
+
 try {
   const manifest = readRendererSourceManifest(repositoryRoot);
   const isShallowRepository =
-    execFileSync("git", ["rev-parse", "--is-shallow-repository"], {
-      cwd: repositoryRoot,
-      encoding: "utf8",
-    }).trim() === "true";
-  if (isShallowRepository) {
+    readGitValue(["rev-parse", "--is-shallow-repository"]) === "true";
+  const isPartialRepository = Boolean(
+    readGitValue(["config", "--get", "extensions.partialclone"]) ||
+    readGitValue(["config", "--get", "remote.origin.partialclonefilter"]) ||
+    readGitValue(["config", "--get", "remote.origin.promisor"]) === "true",
+  );
+  if (isShallowRepository || isPartialRepository) {
     console.log(
-      `Renderer source manifest is valid at ${manifest.sha}; history comparison is unavailable in this shallow checkout.`,
+      `Renderer source manifest is valid at ${manifest.sha}; history comparison is unavailable in this shallow or partial checkout.`,
     );
     process.exit(0);
   }
