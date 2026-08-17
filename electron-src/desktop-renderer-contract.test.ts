@@ -4,21 +4,44 @@ import { spawnSync } from "node:child_process";
 import { describe, it } from "node:test";
 
 describe("desktop renderer contract", () => {
-  it("preserves secure auth, modal escape, and connector isolation", () => {
+  it("records the exact frontend commit imported by the latest renderer sync", () => {
     const repositoryRoot = path.resolve(__dirname, "..");
     const result = spawnSync(
       process.execPath,
-      [path.join(repositoryRoot, "scripts/assert-desktop-renderer-contract.cjs")],
+      [path.join(repositoryRoot, "scripts/assert-renderer-source.cjs")],
       {
         cwd: repositoryRoot,
         encoding: "utf8",
-      }
+      },
     );
 
     assert.equal(
       result.status,
       0,
-      [result.stdout, result.stderr].filter(Boolean).join("\n")
+      [result.stdout, result.stderr].filter(Boolean).join("\n"),
+    );
+  });
+
+  it("preserves secure auth, modal escape, and connector isolation", () => {
+    const repositoryRoot = path.resolve(__dirname, "..");
+    const result = spawnSync(
+      process.execPath,
+      [
+        path.join(
+          repositoryRoot,
+          "scripts/assert-desktop-renderer-contract.cjs",
+        ),
+      ],
+      {
+        cwd: repositoryRoot,
+        encoding: "utf8",
+      },
+    );
+
+    assert.equal(
+      result.status,
+      0,
+      [result.stdout, result.stderr].filter(Boolean).join("\n"),
     );
   });
 });
