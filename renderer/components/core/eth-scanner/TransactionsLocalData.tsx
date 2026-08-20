@@ -24,6 +24,7 @@ import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
 
 type TransactionSortDirection = "ASC" | "DESC";
+const TRANSACTION_HASH_PATTERN = /^0x[a-fA-F0-9]{64}$/;
 
 const SORT_DIRECTION_OPTIONS = [
   {
@@ -64,6 +65,10 @@ export default function TransactionsLocalData() {
   const [queryParams, setQueryParams] = useState(initialQueryParams);
 
   const [isLoading, setIsLoading] = useState(false);
+  const normalizedTransactionHash = queryParams.transactionHash.trim();
+  const transactionHashInvalid =
+    normalizedTransactionHash.length > 0 &&
+    !TRANSACTION_HASH_PATTERN.test(normalizedTransactionHash);
 
   const fetchTransactions = useCallback(() => {
     setIsLoading(true);
@@ -141,6 +146,13 @@ export default function TransactionsLocalData() {
             <input
               type="search"
               value={queryParams.transactionHash}
+              pattern="^0x[a-fA-F0-9]{64}$"
+              aria-invalid={transactionHashInvalid}
+              aria-describedby={
+                transactionHashInvalid
+                  ? "transaction-hash-filter-error"
+                  : undefined
+              }
               onChange={(e) =>
                 updateQueryParams({
                   transactionHash: e.target.value.trimStart(),
@@ -152,6 +164,17 @@ export default function TransactionsLocalData() {
                 "core.ethScanner.transactionsData.filters.transactionHashPlaceholder"
               )}
             />
+            {transactionHashInvalid && (
+              <span
+                id="transaction-hash-filter-error"
+                className="tw-max-w-72 tw-text-sm tw-text-red"
+              >
+                {t(
+                  locale,
+                  "core.ethScanner.transactionsData.filters.transactionHashInvalid"
+                )}
+              </span>
+            )}
           </label>
 
           <label className="tw-flex tw-flex-col tw-gap-2">

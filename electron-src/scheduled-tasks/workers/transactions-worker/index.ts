@@ -444,6 +444,9 @@ export class TransactionsWorker extends CoreWorker {
           );
         }
       } else {
+        // This range made no database changes, so advancing the cursor alone is
+        // sufficient. A crash before the update repeats an idempotent scan; a
+        // crash after it safely resumes at the next unverified range.
         await advanceTransactionReconciliation(
           this.getDb().manager,
           nextToBlock + 1,

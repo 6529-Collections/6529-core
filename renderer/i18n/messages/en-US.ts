@@ -1506,6 +1506,8 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
     "filters.endDate": "End Date",
     "filters.transactionHash": "Transaction Hash",
     "filters.transactionHashPlaceholder": "0x transaction hash",
+    "filters.transactionHashInvalid":
+      "Enter a full 0x-prefixed 64-character transaction hash.",
     "filters.pageSize": "Page Size",
     "filters.contract": "Contract",
     "filters.sortDirection": "Sort",

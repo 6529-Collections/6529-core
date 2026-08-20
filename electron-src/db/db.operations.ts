@@ -42,6 +42,7 @@ const DEFAULT_TRANSACTION_SORT_DIRECTION: TransactionSortDirection = "DESC";
 const MAX_NFT_PAGE_SIZE = 100;
 const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
 const NEXTGEN_TOKEN_ID_MODULUS = 10_000_000_000;
+const TRANSACTION_HASH_PATTERN = /^0x[a-f0-9]{64}$/;
 
 const coercePositiveInteger = (value: unknown, fallback: number): number => {
   const numericValue =
@@ -217,9 +218,13 @@ async function fetchTransactions(
 
   const normalizedTransactionHash = transactionHash?.trim().toLowerCase();
   if (normalizedTransactionHash) {
-    queryBuilder.andWhere("transaction.transaction = :transactionHash", {
-      transactionHash: normalizedTransactionHash,
-    });
+    if (TRANSACTION_HASH_PATTERN.test(normalizedTransactionHash)) {
+      queryBuilder.andWhere("transaction.transaction = :transactionHash", {
+        transactionHash: normalizedTransactionHash,
+      });
+    } else {
+      queryBuilder.andWhere("1 = 0");
+    }
   }
 
   // Apply pagination
