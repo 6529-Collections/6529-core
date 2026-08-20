@@ -195,8 +195,16 @@ async function resolveValue(
     }
   }
 
+  const isPrimaryMintTransaction =
+    (areEqualAddresses(t.contract, MEMES_CONTRACT) &&
+      areEqualAddresses(t.from_address, NULL_ADDRESS)) ||
+    areEqualAddresses(t.from_address, MANIFOLD_ADDRESS) ||
+    (areEqualAddresses(t.from_address, ACK_DEPLOYER) &&
+      areEqualAddresses(t.contract, MEMELAB_CONTRACT) &&
+      t.token_id == 12);
+
   let manifoldMintValuesResolved = false;
-  if (transaction) {
+  if (transaction && isPrimaryMintTransaction) {
     try {
       const manifoldMintValues = await resolveManifoldMintValues(
         transaction,
@@ -209,6 +217,8 @@ async function resolveValue(
         if (manifoldMintValues.primaryProceeds !== null) {
           t.primary_proceeds = manifoldMintValues.primaryProceeds;
         } else {
+          // Gross value includes the Manifold fee, so it is not a safe
+          // substitute when primary proceeds cannot be verified.
           t.primary_proceeds = 0;
           printStatus(
             `Recovered Manifold mint value without verified primary proceeds for transaction ${t.transaction}`
@@ -223,14 +233,7 @@ async function resolveValue(
     }
   }
 
-  if (
-    (areEqualAddresses(t.contract, MEMES_CONTRACT) &&
-      areEqualAddresses(t.from_address, NULL_ADDRESS)) ||
-    areEqualAddresses(t.from_address, MANIFOLD_ADDRESS) ||
-    (areEqualAddresses(t.from_address, ACK_DEPLOYER) &&
-      areEqualAddresses(t.contract, MEMELAB_CONTRACT) &&
-      t.token_id == 12)
-  ) {
+  if (isPrimaryMintTransaction) {
     if (!manifoldMintValuesResolved) {
       const block = `0x${t.block.toString(16)}`;
       const internlTrfs = await getInternalTransfers(

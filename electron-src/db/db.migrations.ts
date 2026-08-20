@@ -36,13 +36,22 @@ export async function runErc4337Meme537ValueRepairMigration(
   await dataSource.transaction(async (transactionalEntityManager) => {
     const transactionRepository =
       transactionalEntityManager.getRepository(Transaction);
-    const existing = await transactionRepository.findOne({
-      where: ERC4337_MEME_537_REPAIR_IDENTITY
+    const candidates = await transactionRepository.find({
+      where: {
+        transaction: ERC4337_MEME_537_REPAIR_IDENTITY.transaction
+      }
     });
+    const existing = candidates.find(shouldRepairErc4337Meme537Transaction);
 
-    if (existing && shouldRepairErc4337Meme537Transaction(existing)) {
+    if (existing) {
       await transactionRepository.update(
-        ERC4337_MEME_537_REPAIR_IDENTITY,
+        {
+          transaction: existing.transaction,
+          from_address: existing.from_address,
+          to_address: existing.to_address,
+          contract: existing.contract,
+          token_id: existing.token_id
+        },
         ERC4337_MEME_537_REPAIR_VALUES
       );
       Logger.info(

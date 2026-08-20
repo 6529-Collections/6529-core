@@ -50,6 +50,22 @@ describe("ERC-4337 Meme #537 database repair", () => {
     );
   });
 
+  it("matches the stored identity regardless of address casing", () => {
+    assert.equal(
+      shouldRepairErc4337Meme537Transaction(
+        candidate({
+          transaction:
+            ERC4337_MEME_537_REPAIR_IDENTITY.transaction.toUpperCase(),
+          from_address:
+            ERC4337_MEME_537_REPAIR_IDENTITY.from_address.toUpperCase(),
+          to_address: ERC4337_MEME_537_REPAIR_IDENTITY.to_address.toUpperCase(),
+          contract: ERC4337_MEME_537_REPAIR_IDENTITY.contract.toUpperCase()
+        })
+      ),
+      true
+    );
+  });
+
   it("does not overwrite rows that do not retain the known bad values", () => {
     assert.equal(
       shouldRepairErc4337Meme537Transaction(candidate({ token_count: 2 })),

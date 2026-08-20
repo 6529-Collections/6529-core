@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { ethers } from "ethers";
+import type { Transaction } from "../../../db/entities/ITransaction";
 import {
   MANIFOLD_LAZY_CLAIM_CONTRACT,
   manifoldMintValueTestInterfaces,
   resolveManifoldMintValues,
   type ManifoldClaimPricing
 } from "./manifold-mint-values";
+import { findTransactionValues } from "./transaction-values";
 
 const ENTRY_POINT_V6 = "0x5ff137d4b0fdcd49dca30c7cf57e578a026d2789";
 const MEMES_CONTRACT = "0x33fd426905f149f8376e227d0c9d3340aad17af1";
@@ -186,6 +188,34 @@ describe("Manifold mint calldata values", () => {
     });
   });
 
+  it("rejects all primary proceeds when a batch mixes verified and unverified payments", async () => {
+    const transaction = makeHandleOpsTransaction(
+      makeExecuteBatchCall([
+        {
+          target: MANIFOLD_LAZY_CLAIM_CONTRACT,
+          value: ethers.parseEther("0.06579"),
+          data: makeMintData()
+        },
+        {
+          target: MANIFOLD_LAZY_CLAIM_CONTRACT,
+          value: ethers.parseEther("0.07"),
+          data: makeMintData()
+        }
+      ])
+    );
+
+    const result = await resolveManifoldMintValues(
+      transaction,
+      row({ token_count: 2 }),
+      async () => pricing()
+    );
+
+    assert.deepEqual(result, {
+      value: 0.13579,
+      primaryProceeds: null
+    });
+  });
+
   it("rejects calldata that does not match the database transfer row", async () => {
     const transaction = makeHandleOpsTransaction(
       makeExecuteBatchCall([
@@ -221,5 +251,59 @@ describe("Manifold mint calldata values", () => {
       ),
       null
     );
+  });
+
+  it("does not run Manifold attribution for a secondary-sale row", async () => {
+    const transaction = {
+      ...makeHandleOpsTransaction(
+        makeExecuteBatchCall([
+          {
+            target: MANIFOLD_LAZY_CLAIM_CONTRACT,
+            value: ethers.parseEther("0.06579"),
+            data: makeMintData()
+          }
+        ])
+      ),
+      hash: "0xsecondary",
+      value: ethers.parseEther("1")
+    };
+    let contractCallCount = 0;
+    const provider = {
+      getTransaction: async () => transaction,
+      getTransactionReceipt: async () => null,
+      call: async () => {
+        contractCallCount++;
+        throw new Error("Secondary rows must not read Manifold pricing");
+      }
+    } as unknown as ethers.Provider;
+    const secondaryRow = {
+      transaction: transaction.hash,
+      block: 1,
+      transaction_date: 0,
+      from_address: BUNDLER,
+      to_address: RECIPIENT,
+      contract: MEMES_CONTRACT,
+      token_id: 537,
+      token_count: 1,
+      value: 0,
+      primary_proceeds: 0,
+      royalties: 0,
+      gas_gwei: 0,
+      gas_price: 0,
+      gas_price_gwei: 0,
+      gas: 0,
+      eth_price_usd: 0,
+      value_usd: 0,
+      gas_usd: 0
+    } as Transaction;
+
+    const [result] = await findTransactionValues(
+      provider,
+      [secondaryRow],
+      () => undefined
+    );
+
+    assert.equal(result.value, 1);
+    assert.equal(contractCallCount, 0);
   });
 });
