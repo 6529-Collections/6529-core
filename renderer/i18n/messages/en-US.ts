@@ -22,6 +22,7 @@ import networkTdhMessages from "@/i18n/messages/networkTdh.en-US.json";
 import toolsMessages from "@/i18n/messages/tools.en-US.json";
 import wavesRightPanelMessages from "@/i18n/messages/wavesRightPanel.en-US.json";
 import { QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { EN_US_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import profileCmsArtDisplayMessages from "@/i18n/messages/profileCmsArtDisplay.en-US.json";
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
@@ -364,6 +365,7 @@ const NAVIGATION_MESSAGES = objectMessages("navigation", {
   "primary.dms": "DMs",
   "primary.join6529": "Join 6529",
   "primary.about": "About",
+  "about.overview": "Overview",
   "primary.home": "Home",
   "sidebar.submenuLabel": "{section} sub-navigation",
   "sidebar.panelLabel": "{section} items",
@@ -1090,8 +1092,26 @@ const NOTIFICATIONS_WAVE_FOLLOW_BUTTON_MESSAGES = objectMessages(
 
 const WAVE_HEADER_MESSAGES = objectMessages("waves.header", {
   createdLabel: "Created {relativeTime} · {date}",
+  deleteCancel: "Cancel",
+  deleteDescription: "Are you sure you want to delete this wave?",
+  deleteErrorDescription: "Please try again.",
+  deleteErrorTitle: "Couldn't delete this wave.",
+  deleteSuccess: "Wave deleted.",
+  deleteTitle: "Delete wave",
+  ownerOptionsDelete: "Delete",
+  ownerOptionsOpenLabel: "Open options",
+  ownerOptionsTitle: "Wave options",
+  pictureEditCancel: "Cancel",
+  pictureEditDescription: "Choose a new image up to 10 MB.",
+  pictureEditLabel: "Edit wave picture",
+  pictureEditSave: "Save",
+  pictureEditTitle: "Update wave picture",
   "postLabel.one": "Post",
   "postLabel.other": "Posts",
+} as const);
+
+const WAVE_DROP_ELIGIBILITY_MESSAGES = objectMessages("waves.dropEligibility", {
+  loginRequired: "Please log in",
 } as const);
 
 const WAVE_NOTIFICATION_SETTINGS_MESSAGES = namespaceMessages(
@@ -1147,7 +1167,16 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
   selectedGroup: "Selected group",
   limitedAccessTitle: "Warning: Limited Access",
   limitedAccessDescription:
-    'This wave is configured with restricted access. It can only be viewed by members of the "{viewGroupName}" group and managed by members of the "{adminGroupName}" group. If you are not in a group that can view it, you will not be able to access this wave.',
+    'This wave is restricted to the "{viewGroupName}" group. Every Drop, Vote, Chat, and "{adminGroupName}" group member must also belong to that group.',
+  "validation.checking": "Checking group access…",
+  "validation.unavailableTitle": "Couldn't verify group access.",
+  "validation.unavailable":
+    "Group access could not be verified. Try again before continuing.",
+  "validation.outsideView":
+    'The "{groupName}" group includes people who are not in "{viewGroupName}".',
+  "validation.invalidTitle": "Some access groups need attention.",
+  "validation.invalidDescription":
+    "Every Drop, Vote, Chat, and Admin group member must also belong to the View group.",
   "inlineIdentities.emptyHelper":
     "Add identities one by one to build this access group.",
   "inlineIdentities.creatorExcludedWarning":
@@ -1522,8 +1551,10 @@ const WAVE_STORM_COMPOSER_MESSAGES = objectMessages("waves.stormComposer", {
 
 const WAVE_CHAT_SETTINGS_MESSAGES = objectMessages("waves.chatSettings", {
   "access.anyone": "Anyone",
-  "access.anyoneWhenEnabled": "Anyone when enabled",
+  "access.inspectGroup": "Inspect {groupName} group criteria and members",
   "access.label": "Chat access",
+  "access.privateGroup": "Private group",
+  "access.unavailableGroup": "Group unavailable",
   "groups.admin": "Admin",
   "groups.drop": "Drop",
   "groups.view": "View",
@@ -1536,6 +1567,20 @@ const WAVE_CHAT_SETTINGS_MESSAGES = objectMessages("waves.chatSettings", {
   "status.enableLabel": "Enable chat",
   "status.label": "Chat status",
 } as const);
+
+const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
+  "network.groupInspection",
+  {
+    selectedGroup: "Selected group",
+    close: "Clear selected group",
+    membersTitle: "Members",
+    membersUnavailable: "Group members unavailable.",
+    loading: "Loading group criteria",
+    unavailableTitle: "Group criteria unavailable",
+    unavailableDescription:
+      "This group may be private, deleted, or temporarily unavailable.",
+  } as const
+);
 
 const WAVE_LOADING_MESSAGES = objectMessages("waves", {
   loadingStatus: "Loading waves",
@@ -2224,6 +2269,54 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 } as const);
 
 export const EN_US_MESSAGES = {
+  "profilePreferences.title": "Profile Preferences",
+  "profilePreferences.button": "Preferences",
+  "profilePreferences.loading": "Loading profile preferences",
+  "profilePreferences.loadError":
+    "Couldn’t load profile preferences. Please try again.",
+  "profilePreferences.save": "Save Changes",
+  "profilePreferences.saving": "Saving…",
+  "profilePreferences.saveSuccess": "Profile preferences saved.",
+  "profilePreferences.saveError":
+    "Couldn’t save profile preferences. Please try again.",
+  "profilePreferences.dm.heading": "Who can start a direct message with me?",
+  "profilePreferences.dm.description":
+    "This only affects new conversations. Existing direct messages and group messages stay available.",
+  "profilePreferences.dm.EVERYONE.label": "Everyone",
+  "profilePreferences.dm.EVERYONE.description":
+    "Any profile can start a new conversation with you.",
+  "profilePreferences.dm.PEOPLE_I_FOLLOW.label": "People I follow",
+  "profilePreferences.dm.PEOPLE_I_FOLLOW.description":
+    "Only profiles you follow can start a new conversation with you.",
+  "profilePreferences.dm.NOBODY.label": "Nobody",
+  "profilePreferences.dm.NOBODY.description":
+    "No one can start a new conversation with you.",
+  "profilePreferences.dm.createRetry": "Please try again.",
+  "profilePreferences.notifications.heading": "Notifications",
+  "profilePreferences.notifications.description":
+    "Choose between All and Essential notifications.",
+  "profilePreferences.notifications.ALL.label": "All",
+  "profilePreferences.notifications.ALL.description":
+    "Essential security and account notifications, plus the optional categories selected below.",
+  "profilePreferences.notifications.ESSENTIAL_ONLY.label": "Essential",
+  "profilePreferences.notifications.ESSENTIAL_ONLY.description":
+    "Security and account notifications only.",
+  "profilePreferences.notifications.paused": "Paused",
+  "profilePreferences.notifications.category.direct_messages":
+    "Direct messages and wave activity",
+  "profilePreferences.notifications.category.mentions_replies_quotes":
+    "Mentions, replies, and quotes",
+  "profilePreferences.notifications.category.reactions_votes_boosts":
+    "Reactions, votes, and boosts",
+  "profilePreferences.notifications.category.new_followers": "New followers",
+  "profilePreferences.notifications.category.rep_and_nic":
+    "REP and NIC updates",
+  "profilePreferences.notifications.category.subscription_coverage":
+    "Subscription coverage",
+  "profilePreferences.notifications.deviceNote":
+    "Push notifications are managed separately on each device.",
+  "notifications.filter.ariaLabel": "Filter notifications: {selection}",
+  "notifications.filter.selected": "{count} selected",
   "linkPreview.twitter.kind.article": "Article",
   "linkPreview.twitter.kind.post": "Post",
   "linkPreview.twitter.article.provider": "Article on X",
@@ -3174,6 +3267,7 @@ export const EN_US_MESSAGES = {
   "desktopUpdateToast.versionAvailable": "Version {version} is available.",
   "desktopUpdateToast.viewUpdate": "View update",
   ...QR_SCANNER_MESSAGES,
+  ...CAPACITOR_CONNECT_MESSAGES,
   "drops.additionalActionBadge.label": "Additional Action",
   "drops.additionalActionBadge.tooltip":
     "The creator marked this submission as promising an extra action beyond the artwork, such as an event, donation, physical item, airdrop, or future deliverable.",
@@ -3196,10 +3290,12 @@ export const EN_US_MESSAGES = {
   ...WAVE_CHAT_MESSAGES,
   ...WAVE_STORM_COMPOSER_MESSAGES,
   ...WAVE_CHAT_SETTINGS_MESSAGES,
+  ...NETWORK_GROUP_INSPECTION_MESSAGES,
   ...WAVE_LOADING_MESSAGES,
   ...WAVE_DROPS_SEARCH_MODAL_MESSAGES,
   ...WAVE_GIF_PICKER_MESSAGES,
   ...WAVE_HEADER_MESSAGES,
+  ...WAVE_DROP_ELIGIBILITY_MESSAGES,
   ...WAVE_NOTIFICATION_SETTINGS_MESSAGES,
   ...WAVE_CREATE_ACTIONS_MESSAGES,
   ...WAVE_CREATE_DIALOG_MESSAGES,

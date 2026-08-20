@@ -1,6 +1,7 @@
 import { DE_DE_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { DE_DE_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { DE_DE_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { DE_DE_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { DE_DE_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { DE_DE_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { DE_DE_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
@@ -401,6 +402,7 @@ export const DE_DE_MESSAGES = {
   "quickDm.loadingStatus": "Direktnachrichten werden geladen",
   "quickDm.chatLoadError": "Diese Konversation konnte nicht geladen werden.",
   ...DE_DE_QR_SCANNER_MESSAGES,
+  ...DE_DE_CAPACITOR_CONNECT_MESSAGES,
   ...DE_DE_NEW_VERSION_TOAST_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Datei-Upload-Bereich für den Wave-Chat",
@@ -442,6 +444,17 @@ export const DE_DE_MESSAGES = {
     "Lege fest, wer auf diese Wave zugreifen, teilnehmen und sie verwalten kann.",
   "waves.create.groups.viewGroupName": "Wer darf ansehen",
   "waves.create.groups.adminGroupName": "Admin",
+  "waves.create.groups.validation.checking": "Gruppenzugriff wird geprüft…",
+  "waves.create.groups.validation.unavailableTitle":
+    "Der Gruppenzugriff konnte nicht geprüft werden.",
+  "waves.create.groups.validation.unavailable":
+    "Der Gruppenzugriff konnte nicht geprüft werden. Versuche es erneut, bevor du fortfährst.",
+  "waves.create.groups.validation.outsideView":
+    "Die Gruppe „{groupName}“ enthält Personen, die nicht in „{viewGroupName}“ sind.",
+  "waves.create.groups.validation.invalidTitle":
+    "Einige Zugriffsgruppen müssen angepasst werden.",
+  "waves.create.groups.validation.invalidDescription":
+    "Alle Mitglieder der Einreichungs-, Abstimmungs-, Chat- und Admin-Gruppen müssen auch der Ansichtsgruppe angehören.",
   "waves.create.dates.title": "Zeitplan",
   "waves.create.dates.description":
     "Prüfe, wann diese Wave startet, die Abstimmung beginnt und Gewinner bekannt gegeben werden.",

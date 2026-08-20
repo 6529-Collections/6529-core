@@ -7188,6 +7188,67 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ApiGlobalRepCategoryWaveContributorsPage"
+  /profile-preferences:
+    get:
+      tags:
+        - Profiles
+      summary: Get the authenticated profile's privacy and notification preferences
+      operationId: getProfilePreferences
+      security:
+        - bearerAuth: []
+      x-6529-router:
+        enabled: true
+        auth: required
+        typeImportGroup: profile-preferences
+        handler:
+          import: "@/api/profile-preferences/profile-preferences.handlers"
+          name: handleGetProfilePreferences
+      responses:
+        "200":
+          description: Profile preferences, including backward-compatible defaults
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProfilePreferences"
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - authenticated profile required
+    put:
+      tags:
+        - Profiles
+      summary: Update the authenticated profile's privacy and notification preferences
+      operationId: putProfilePreferences
+      security:
+        - bearerAuth: []
+      x-6529-router:
+        enabled: true
+        auth: required
+        typeImportGroup: profile-preferences
+        handler:
+          import: "@/api/profile-preferences/profile-preferences.handlers"
+          name: handlePutProfilePreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiUpdateProfilePreferences"
+      responses:
+        "200":
+          description: Updated profile preferences
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiProfilePreferences"
+        "400":
+          description: Bad request
+        "401":
+          description: Unauthorized
+        "403":
+          description: Forbidden - authenticated profile required
   /profiles:
     post:
       tags:
@@ -10534,6 +10595,42 @@ paths:
                 $ref: "#/components/schemas/ApiWave"
         "400":
           description: Invalid request
+  /wave-group-validation:
+    post:
+      tags:
+        - Waves
+      summary: Validate Wave privilege groups against its View group
+      description: >-
+        Returns the active privilege scopes that contain at least one member
+        outside the supplied View group. Omitted privilege properties are not
+        checked. A null Drop, Vote, or Chat property represents Everyone; a null
+        Admin property means there is no explicit Admin group. Private groups
+        are available only to their creator or eligible members; other private
+        group ids are treated as unavailable.
+      operationId: validateWaveGroups
+      x-6529-router:
+        enabled: true
+        auth: optional
+        handler:
+          import: "@/api/waves/wave-group-validation.handler"
+          name: handleValidateWaveGroups
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApiWaveGroupValidationRequest"
+      responses:
+        "200":
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiWaveGroupValidationResponse"
+        "400":
+          description: Invalid request or unavailable group
+        "403":
+          description: Authentication is required when validating the caller as Admin
   /waves/direct-message/new:
     post:
       tags:
@@ -12717,14 +12814,6 @@ components:
       type: http
       scheme: bearer
   schemas:
-    ApiErrorResponse:
-      type: object
-      additionalProperties: false
-      required:
-        - error
-      properties:
-        error:
-          type: string
     AirdropAddressResponse:
       type: object
       required:
@@ -17126,6 +17215,14 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropWithoutWave"
+    ApiErrorResponse:
+      type: object
+      additionalProperties: false
+      required:
+        - error
+      properties:
+        error:
+          type: string
     ApiEthereumAddress:
       type: string
       pattern: ^0x[a-fA-F0-9]{40}$
@@ -20389,6 +20486,51 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiProfileMin"
+    ApiProfileNotificationCategories:
+      type: object
+      required:
+        - direct_messages
+        - mentions_replies_quotes
+        - reactions_votes_boosts
+        - new_followers
+        - rep_and_nic
+        - subscription_coverage
+      properties:
+        direct_messages:
+          type: boolean
+          description: >-
+            Direct-message and wave-activity notifications, including new waves,
+            all-drops subscriptions, and priority alerts.
+        mentions_replies_quotes:
+          type: boolean
+        reactions_votes_boosts:
+          type: boolean
+        new_followers:
+          type: boolean
+        rep_and_nic:
+          type: boolean
+        subscription_coverage:
+          type: boolean
+    ApiProfilePreferences:
+      type: object
+      required:
+        - direct_message_policy
+        - notification_level
+        - notifications
+      properties:
+        direct_message_policy:
+          type: string
+          enum:
+            - EVERYONE
+            - PEOPLE_I_FOLLOW
+            - NOBODY
+        notification_level:
+          type: string
+          enum:
+            - ALL
+            - ESSENTIAL_ONLY
+        notifications:
+          $ref: "#/components/schemas/ApiProfileNotificationCategories"
     ApiProfileProxy:
       type: object
       required:
@@ -22430,6 +22572,43 @@ components:
       type: object
       allOf:
         - $ref: "#/components/schemas/ApiCreateWaveDropRequest"
+    ApiUpdateProfileNotificationCategories:
+      type: object
+      additionalProperties: false
+      properties:
+        direct_messages:
+          type: boolean
+          description: >-
+            Direct-message and wave-activity notifications, including new waves,
+            all-drops subscriptions, and priority alerts.
+        mentions_replies_quotes:
+          type: boolean
+        reactions_votes_boosts:
+          type: boolean
+        new_followers:
+          type: boolean
+        rep_and_nic:
+          type: boolean
+        subscription_coverage:
+          type: boolean
+    ApiUpdateProfilePreferences:
+      type: object
+      minProperties: 1
+      additionalProperties: false
+      properties:
+        direct_message_policy:
+          type: string
+          enum:
+            - EVERYONE
+            - PEOPLE_I_FOLLOW
+            - NOBODY
+        notification_level:
+          type: string
+          enum:
+            - ALL
+            - ESSENTIAL_ONLY
+        notifications:
+          $ref: "#/components/schemas/ApiUpdateProfileNotificationCategories"
     ApiUpdateProxyActionRequest:
       type: object
       properties:
@@ -23146,6 +23325,59 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/ApiDropTraceItem"
+    ApiWaveGroupRole:
+      type: string
+      enum:
+        - PARTICIPATION
+        - VOTING
+        - CHAT
+        - ADMIN
+    ApiWaveGroupValidationRequest:
+      type: object
+      required:
+        - visibility_group_id
+      properties:
+        visibility_group_id:
+          description: Null means everyone can view the Wave.
+          type: string
+          nullable: true
+        participation_group_id:
+          description: Omit when Drop access is inactive; null means Everyone.
+          type: string
+          nullable: true
+        voting_group_id:
+          description: Omit when Vote access is inactive; null means Everyone.
+          type: string
+          nullable: true
+        chat_group_id:
+          description: Omit when Chat is disabled; null means Everyone.
+          type: string
+          nullable: true
+        admin_group_id:
+          description: >-
+            The explicit Admin group to check. Omit or use null when there is no
+            Admin group, including when creation will make only the
+            authenticated profile an Admin.
+          type: string
+          nullable: true
+        include_authenticated_user_as_admin:
+          description: >-
+            Also require the authenticated acting profile to belong to the View
+            group.
+          type: boolean
+          default: false
+    ApiWaveGroupValidationResponse:
+      type: object
+      required:
+        - valid
+        - invalid_roles
+      properties:
+        valid:
+          type: boolean
+        invalid_roles:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiWaveGroupRole"
     ApiWaveLog:
       type: object
       required:

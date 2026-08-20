@@ -1,6 +1,7 @@
 import { ES_ES_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { ES_ES_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { ES_ES_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { ES_ES_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { ES_ES_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { ES_ES_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { ES_ES_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
@@ -403,6 +404,7 @@ export const ES_ES_MESSAGES = {
   "quickDm.loadingStatus": "Cargando mensajes directos",
   "quickDm.chatLoadError": "No se pudo cargar esta conversación.",
   ...ES_ES_QR_SCANNER_MESSAGES,
+  ...ES_ES_CAPACITOR_CONNECT_MESSAGES,
   ...ES_ES_NEW_VERSION_TOAST_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Área de carga de archivos del chat de wave",
@@ -445,6 +447,17 @@ export const ES_ES_MESSAGES = {
     "Elige quién puede acceder, participar y gestionar esta Wave.",
   "waves.create.groups.viewGroupName": "Quién puede ver",
   "waves.create.groups.adminGroupName": "Administración",
+  "waves.create.groups.validation.checking": "Comprobando el acceso…",
+  "waves.create.groups.validation.unavailableTitle":
+    "No se pudo verificar el acceso.",
+  "waves.create.groups.validation.unavailable":
+    "No se pudo verificar el acceso de los grupos. Inténtalo de nuevo antes de continuar.",
+  "waves.create.groups.validation.outsideView":
+    "El grupo «{groupName}» incluye personas que no están en «{viewGroupName}».",
+  "waves.create.groups.validation.invalidTitle":
+    "Algunos grupos de acceso necesitan atención.",
+  "waves.create.groups.validation.invalidDescription":
+    "Cada miembro de los grupos de envíos, votación, chat y administración también debe pertenecer al grupo de visualización.",
   "waves.create.dates.title": "Calendario",
   "waves.create.dates.description":
     "Revisa cuándo empieza la Wave, comienza la votación y se anuncian los ganadores.",

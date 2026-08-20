@@ -3,6 +3,7 @@ import type {
   WaveRules,
 } from "@/helpers/waves/wave-rules.helpers";
 import { waveRightPanelText } from "@/helpers/waves/wave-right-panel.helpers";
+import Link from "next/link";
 
 interface WaveRulesPanelProps {
   readonly rules: WaveRules;
@@ -143,13 +144,24 @@ export default function WaveRulesPanel({
               {section.rows.map((row) => (
                 <div
                   key={row.id}
-                  className="tw-grid tw-min-h-9 tw-grid-cols-[minmax(6.5rem,0.7fr)_minmax(0,1.3fr)] tw-items-start tw-gap-x-3 tw-gap-y-1.5 tw-py-2 tw-text-sm"
+                  className="tw-grid tw-min-h-9 tw-grid-cols-[minmax(6.5rem,0.7fr)_minmax(0,1.3fr)] tw-items-center tw-gap-x-3 tw-gap-y-1.5 tw-py-2 tw-text-sm"
                 >
                   <dt className="tw-min-w-0 tw-break-words tw-font-normal tw-leading-5 tw-text-iron-500">
                     {row.label}
                   </dt>
                   <dd className="tw-mb-0 tw-ml-0 tw-min-w-0 tw-break-words tw-text-right tw-font-medium tw-leading-5 tw-text-iron-50">
-                    {row.value}
+                    {row.valueHref ? (
+                      <Link
+                        href={row.valueHref}
+                        aria-label={row.valueLinkLabel}
+                        title={row.value}
+                        className="tw-inline-flex tw-min-h-11 tw-max-w-full tw-cursor-pointer tw-items-center tw-justify-end tw-break-words tw-rounded-md tw-text-right tw-text-iron-50 tw-underline tw-underline-offset-2 tw-transition-colors tw-duration-200 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400 desktop-hover:hover:tw-text-primary-300 desktop-hover:hover:tw-decoration-2 sm:tw-min-h-9"
+                      >
+                        {row.value}
+                      </Link>
+                    ) : (
+                      row.value
+                    )}
                     {row.description && (
                       <span className="tw-mt-1 tw-block tw-text-xs tw-font-medium tw-leading-4 tw-text-iron-500">
                         {row.description}

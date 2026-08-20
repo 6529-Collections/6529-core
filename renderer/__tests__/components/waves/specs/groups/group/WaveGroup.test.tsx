@@ -53,8 +53,15 @@ describe("WaveGroup", () => {
 
   it("shows edit buttons when editable", () => {
     const scope = { group: { is_direct_message: false } } as any;
-    render(<WaveGroup {...baseProps} scope={scope} />, { wrapper });
+    const { container } = render(<WaveGroup {...baseProps} scope={scope} />, {
+      wrapper,
+    });
+
     expect(screen.getByTestId("edit")).toBeInTheDocument();
+    expect(container.firstChild).toHaveClass("tw-items-center");
+    expect(screen.getByTestId("scope").parentElement).toHaveClass(
+      "tw-items-center"
+    );
   });
 
   it("hides edit buttons when cannot edit", () => {
@@ -69,12 +76,12 @@ describe("WaveGroup", () => {
     expect(screen.getByText("Anyone")).toBeInTheDocument();
   });
 
-  it("clarifies empty chat scope only applies when chat is enabled", () => {
+  it('shows "Anyone" for an empty chat scope', () => {
     render(
       <WaveGroup {...baseProps} type={WaveGroupType.CHAT} scope={{} as any} />,
       { wrapper }
     );
 
-    expect(screen.getByText("Anyone when enabled")).toBeInTheDocument();
+    expect(screen.getByText("Anyone")).toBeInTheDocument();
   });
 });

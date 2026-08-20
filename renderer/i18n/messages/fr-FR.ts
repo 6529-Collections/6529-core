@@ -1,6 +1,7 @@
 import { FR_FR_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { FR_FR_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { FR_FR_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { FR_FR_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { FR_FR_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { FR_FR_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { FR_FR_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
@@ -409,6 +410,7 @@ export const FR_FR_MESSAGES = {
   "quickDm.loadingStatus": "Chargement des messages directs",
   "quickDm.chatLoadError": "Impossible de charger cette conversation.",
   ...FR_FR_QR_SCANNER_MESSAGES,
+  ...FR_FR_CAPACITOR_CONNECT_MESSAGES,
   ...FR_FR_NEW_VERSION_TOAST_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Zone d'envoi de fichiers du chat de wave",
@@ -451,6 +453,17 @@ export const FR_FR_MESSAGES = {
     "Choisissez qui peut accéder à cette Wave, y participer et la gérer.",
   "waves.create.groups.viewGroupName": "Qui peut voir",
   "waves.create.groups.adminGroupName": "Administration",
+  "waves.create.groups.validation.checking": "Vérification des accès…",
+  "waves.create.groups.validation.unavailableTitle":
+    "Impossible de vérifier les accès.",
+  "waves.create.groups.validation.unavailable":
+    "Les accès aux groupes n’ont pas pu être vérifiés. Réessayez avant de continuer.",
+  "waves.create.groups.validation.outsideView":
+    "Le groupe « {groupName} » comprend des personnes absentes de « {viewGroupName} ».",
+  "waves.create.groups.validation.invalidTitle":
+    "Certains groupes d’accès doivent être corrigés.",
+  "waves.create.groups.validation.invalidDescription":
+    "Chaque membre des groupes de soumission, vote, chat et administration doit aussi appartenir au groupe de visibilité.",
   "waves.create.dates.title": "Calendrier",
   "waves.create.dates.description":
     "Vérifiez le début de la Wave, du vote et des annonces des gagnants.",
