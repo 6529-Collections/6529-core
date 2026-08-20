@@ -1,3 +1,5 @@
+import { TRANSACTIONS_START_BLOCK } from "../../../../shared/types";
+
 export interface TransactionReconciliationState {
   fromBlock: number;
   nextBlock: number;
@@ -8,6 +10,20 @@ interface PersistedTransactionReconciliationState {
   reconciliation_from_block: number | null;
   reconciliation_next_block: number | null;
   reconciliation_checkpoint_block: number | null;
+}
+
+export function isValidTransactionReconciliationState(
+  state: TransactionReconciliationState,
+): boolean {
+  return (
+    Number.isInteger(state.fromBlock) &&
+    Number.isInteger(state.nextBlock) &&
+    Number.isInteger(state.checkpointBlock) &&
+    state.fromBlock >= TRANSACTIONS_START_BLOCK &&
+    state.fromBlock <= state.nextBlock &&
+    state.fromBlock <= state.checkpointBlock &&
+    state.nextBlock <= state.checkpointBlock + 1
+  );
 }
 
 export function readTransactionReconciliationState(
@@ -27,12 +43,5 @@ export function readTransactionReconciliationState(
     nextBlock: Number(block.reconciliation_next_block),
     checkpointBlock: Number(block.reconciliation_checkpoint_block),
   };
-  if (
-    state.fromBlock > state.nextBlock ||
-    state.fromBlock > state.checkpointBlock ||
-    state.nextBlock > state.checkpointBlock + 1
-  ) {
-    return null;
-  }
-  return state;
+  return isValidTransactionReconciliationState(state) ? state : null;
 }

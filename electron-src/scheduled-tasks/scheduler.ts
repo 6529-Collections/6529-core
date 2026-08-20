@@ -227,6 +227,12 @@ export function startSchedulers(
     }
   }
 
+  if (pendingTransactionReconciliation && !transactionsWorker?.isEnabled()) {
+    Logger.log(
+      "Transaction reconciliation remains pending because the transactions worker is disabled; it will resume after restart with an active RPC provider.",
+    );
+  }
+
   Logger.log("All Tasks scheduled.");
   return scheduledWorkers;
 }

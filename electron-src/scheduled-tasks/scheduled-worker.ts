@@ -23,6 +23,9 @@ import {
   startTransactionReconciliation,
   type TransactionReconciliationState,
 } from "./workers/transactions-worker/transactions-worker.db";
+import {
+  isValidTransactionReconciliationState,
+} from "./workers/transactions-worker/transaction-reconciliation-state";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -514,6 +517,13 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
   }
 
   public resumeReconciliation(state: TransactionReconciliationState) {
+    if (!isValidTransactionReconciliationState(state)) {
+      return {
+        status: false,
+        message: "Invalid transaction reconciliation state",
+      };
+    }
+
     const workerData = this.getReconciliationWorkerData(state);
     const blockedReason = this.getMutationBlockReason("reconcile");
     if (blockedReason) {
@@ -597,6 +607,19 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     fromBlock: number,
     checkpointBlock: number,
   ) {
+    if (
+      !isValidTransactionReconciliationState({
+        fromBlock,
+        nextBlock: fromBlock,
+        checkpointBlock,
+      })
+    ) {
+      return {
+        status: false,
+        message: "Invalid transaction reconciliation range",
+      };
+    }
+
     // getMutationBlockReason checks this ScheduledWorker's active worker before
     // the TDH guard, so reconciliation cannot overlap its scheduled base run.
     const blockedReason = this.getMutationBlockReason("reconcile");

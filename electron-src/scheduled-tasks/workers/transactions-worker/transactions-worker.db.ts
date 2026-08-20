@@ -13,6 +13,7 @@ import {
   type TransactionTokenKey,
 } from "./transaction-reconciliation";
 import {
+  isValidTransactionReconciliationState,
   readTransactionReconciliationState,
   type TransactionReconciliationState,
 } from "./transaction-reconciliation-state";
@@ -42,6 +43,16 @@ export async function startTransactionReconciliation(
   fromBlock: number,
   checkpointBlock: number,
 ) {
+  if (
+    !isValidTransactionReconciliationState({
+      fromBlock,
+      nextBlock: fromBlock,
+      checkpointBlock,
+    })
+  ) {
+    throw new Error("Invalid transaction reconciliation range");
+  }
+
   await retryOnSqliteLock(
     async () => {
       const result = await db.getRepository(TransactionBlock).update(

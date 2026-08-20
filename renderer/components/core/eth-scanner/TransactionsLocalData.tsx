@@ -17,7 +17,7 @@ import {
   faRefresh,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
@@ -65,12 +65,14 @@ export default function TransactionsLocalData() {
   const [queryParams, setQueryParams] = useState(initialQueryParams);
 
   const [isLoading, setIsLoading] = useState(false);
+  const latestRequestId = useRef(0);
   const normalizedTransactionHash = queryParams.transactionHash.trim();
   const transactionHashInvalid =
     normalizedTransactionHash.length > 0 &&
     !TRANSACTION_HASH_PATTERN.test(normalizedTransactionHash);
 
   const fetchTransactions = useCallback(() => {
+    const requestId = ++latestRequestId.current;
     setIsLoading(true);
     const {
       startDate,
@@ -93,6 +95,7 @@ export default function TransactionsLocalData() {
         sortDirection
       )
       .then((transactions) => {
+        if (requestId !== latestRequestId.current) return;
         transactions.data.forEach((t: Transaction) => {
           t.transaction_date = new Date(
             Number((t.transaction_date as any) * 1000)
@@ -100,8 +103,15 @@ export default function TransactionsLocalData() {
         });
         setTransactions(transactions);
       })
+      .catch(() => {
+        if (requestId === latestRequestId.current) {
+          setTransactions(undefined);
+        }
+      })
       .finally(() => {
-        setIsLoading(false);
+        if (requestId === latestRequestId.current) {
+          setIsLoading(false);
+        }
       });
   }, [queryParams]);
 
