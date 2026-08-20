@@ -12,6 +12,13 @@ import {
   TRANSACTION_IDENTITY_COLUMNS,
   type TransactionTokenKey,
 } from "./transaction-reconciliation";
+import {
+  readTransactionReconciliationState,
+  type TransactionReconciliationState,
+} from "./transaction-reconciliation-state";
+export type {
+  TransactionReconciliationState,
+} from "./transaction-reconciliation-state";
 
 export async function getLatestTransactionsBlock(
   db: EntityManager
@@ -19,6 +26,81 @@ export async function getLatestTransactionsBlock(
   const repo = db.getRepository(TransactionBlock);
   const block = await repo.findOne({ where: { id: 1 } });
   return block?.block ?? 0;
+}
+
+export async function getTransactionReconciliationState(
+  db: EntityManager,
+): Promise<TransactionReconciliationState | null> {
+  const block = await db
+    .getRepository(TransactionBlock)
+    .findOne({ where: { id: 1 } });
+  return readTransactionReconciliationState(block);
+}
+
+export async function startTransactionReconciliation(
+  db: EntityManager,
+  fromBlock: number,
+  checkpointBlock: number,
+) {
+  await retryOnSqliteLock(
+    async () => {
+      const result = await db.getRepository(TransactionBlock).update(
+        { id: 1 },
+        {
+          reconciliation_from_block: fromBlock,
+          reconciliation_next_block: fromBlock,
+          reconciliation_checkpoint_block: checkpointBlock,
+        },
+      );
+      if (result.affected !== 1) {
+        throw new Error("Unable to persist transaction reconciliation state");
+      }
+    },
+    5,
+    100,
+    "Starting transaction reconciliation",
+  );
+}
+
+export async function advanceTransactionReconciliation(
+  db: EntityManager,
+  nextBlock: number,
+) {
+  await retryOnSqliteLock(
+    async () => {
+      const result = await db.getRepository(TransactionBlock).update(
+        { id: 1 },
+        { reconciliation_next_block: nextBlock },
+      );
+      if (result.affected !== 1) {
+        throw new Error("Unable to advance transaction reconciliation state");
+      }
+    },
+    5,
+    100,
+    "Advancing transaction reconciliation",
+  );
+}
+
+export async function clearTransactionReconciliation(db: EntityManager) {
+  await retryOnSqliteLock(
+    async () => {
+      const result = await db.getRepository(TransactionBlock).update(
+        { id: 1 },
+        {
+          reconciliation_from_block: null,
+          reconciliation_next_block: null,
+          reconciliation_checkpoint_block: null,
+        },
+      );
+      if (result.affected !== 1) {
+        throw new Error("Unable to clear transaction reconciliation state");
+      }
+    },
+    5,
+    100,
+    "Completing transaction reconciliation",
+  );
 }
 
 export async function getTransactionsInBlockRange(
@@ -204,6 +286,7 @@ export async function applyTransactionReconciliation(
   orphaned: Transaction[],
   affectedTokens: TransactionTokenKey[],
   latestBlock: number,
+  reconciliationNextBlock: number,
   maxRetries: number = 5,
   delayMs: number = 100
 ) {
@@ -248,6 +331,10 @@ export async function applyTransactionReconciliation(
           latestBlock
         );
         await setTdhRecalculationNeeded(manager, true);
+        await advanceTransactionReconciliation(
+          manager,
+          reconciliationNextBlock,
+        );
       });
     },
     maxRetries,

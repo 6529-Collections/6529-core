@@ -49,6 +49,7 @@ const SORT_DIRECTION_OPTIONS = [
 
 const initialQueryParams = {
   contractAddress: "",
+  transactionHash: "",
   startDate: undefined as string | undefined,
   endDate: undefined as string | undefined,
   page: 1,
@@ -72,6 +73,7 @@ export default function TransactionsLocalData() {
       page,
       limit,
       contractAddress,
+      transactionHash,
       sortDirection,
     } = queryParams;
 
@@ -82,6 +84,7 @@ export default function TransactionsLocalData() {
         page,
         limit,
         contractAddress,
+        transactionHash,
         sortDirection
       )
       .then((transactions) => {
@@ -115,6 +118,7 @@ export default function TransactionsLocalData() {
   const clearFiltersEnabled = useMemo(
     () =>
       queryParams.contractAddress !== initialQueryParams.contractAddress ||
+      queryParams.transactionHash !== initialQueryParams.transactionHash ||
       queryParams.startDate !== initialQueryParams.startDate ||
       queryParams.endDate !== initialQueryParams.endDate ||
       queryParams.page !== initialQueryParams.page ||
@@ -127,6 +131,29 @@ export default function TransactionsLocalData() {
     <div className="tw-mt-4">
       <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-end tw-justify-between tw-gap-4">
         <div className="tw-flex tw-flex-wrap tw-items-end tw-gap-4">
+          <label className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(
+                locale,
+                "core.ethScanner.transactionsData.filters.transactionHash"
+              )}
+            </span>
+            <input
+              type="search"
+              value={queryParams.transactionHash}
+              onChange={(e) =>
+                updateQueryParams({
+                  transactionHash: e.target.value.trimStart(),
+                })
+              }
+              className="tw-h-10 tw-w-72 tw-rounded-lg tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
+              placeholder={t(
+                locale,
+                "core.ethScanner.transactionsData.filters.transactionHashPlaceholder"
+              )}
+            />
+          </label>
+
           <label className="tw-flex tw-flex-col tw-gap-2">
             <span className="tw-text-sm tw-font-medium tw-text-iron-300">
               {t(
@@ -393,7 +420,7 @@ export default function TransactionsLocalData() {
             {transactions?.data.map((transaction) => (
               <LatestActivityRow
                 tr={transaction}
-                key={`${transaction.from_address}-${transaction.to_address}-${transaction.transaction}-${transaction.token_id}`}
+                key={`${transaction.contract}-${transaction.from_address}-${transaction.to_address}-${transaction.transaction}-${transaction.token_id}`}
               />
             ))}
           </tbody>

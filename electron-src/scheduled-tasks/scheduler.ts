@@ -13,6 +13,9 @@ import {
   createTdhTransactionMutationGuard,
   createTransactionMutationTdhGuard,
 } from "./transaction-mutation-guard";
+import type {
+  TransactionReconciliationState,
+} from "./workers/transactions-worker/transactions-worker.db";
 
 const DEFAULT_BLOCK_RANGE = 500;
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
@@ -91,6 +94,8 @@ export function startSchedulers(
     action?: string,
     statusPercentage?: number,
   ) => void,
+  pendingTransactionReconciliation: TransactionReconciliationState | null =
+    null,
 ) {
   if (!logDirectory) {
     throw new Error("Log directory is required");
@@ -208,7 +213,17 @@ export function startSchedulers(
       scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER
     ) {
       Logger.log(`Starting ${scheduledWorker.getNamespace()}`);
-      scheduledWorker.manualStart();
+      if (
+        scheduledWorker === transactionsWorker &&
+        pendingTransactionReconciliation
+      ) {
+        const resume = transactionsWorker.resumeReconciliation(
+          pendingTransactionReconciliation,
+        );
+        Logger.log(resume.message);
+      } else {
+        scheduledWorker.manualStart();
+      }
     }
   }
 

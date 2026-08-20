@@ -1504,6 +1504,8 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
   {
     "filters.startDate": "Start Date",
     "filters.endDate": "End Date",
+    "filters.transactionHash": "Transaction Hash",
+    "filters.transactionHashPlaceholder": "0x transaction hash",
     "filters.pageSize": "Page Size",
     "filters.contract": "Contract",
     "filters.sortDirection": "Sort",

@@ -7,7 +7,9 @@ import {
 } from "../../../../shared/abis/memes";
 import { Time } from "../../../../shared/time";
 import {
+  advanceTransactionReconciliation,
   applyTransactionReconciliation,
+  clearTransactionReconciliation,
   getLatestTransactionsBlock,
   getTransactionsInBlockRange,
   OwnerDeltaError,
@@ -86,6 +88,7 @@ export class TransactionsWorker extends CoreWorker {
 
   private scope?: TransactionsWorkerScope;
   private block?: number;
+  private reconciliationNextBlock?: number;
   private checkpointBlock?: number;
 
   constructor(
@@ -95,6 +98,7 @@ export class TransactionsWorker extends CoreWorker {
     maxConcurrentRequests: number,
     scope?: TransactionsWorkerScope,
     block?: number,
+    reconciliationNextBlock?: number,
     checkpointBlock?: number,
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
@@ -104,6 +108,7 @@ export class TransactionsWorker extends CoreWorker {
     ]);
     this.scope = scope;
     this.block = block;
+    this.reconciliationNextBlock = reconciliationNextBlock;
     this.checkpointBlock = checkpointBlock;
   }
 
@@ -228,7 +233,11 @@ export class TransactionsWorker extends CoreWorker {
           "Starting block and checkpoint are required for reconciliation",
         );
       }
-      await this.reconcileTransactions(this.block, this.checkpointBlock);
+      await this.reconcileTransactions(
+        this.block,
+        this.reconciliationNextBlock ?? this.block,
+        this.checkpointBlock,
+      );
     } else {
       await this.baseWork();
     }
@@ -257,6 +266,7 @@ export class TransactionsWorker extends CoreWorker {
 
   private async reconcileTransactions(
     fromBlock: number,
+    resumeFromBlock: number,
     checkpointBlock: number,
   ) {
     const currentLatestBlock = await getLatestTransactionsBlock(
@@ -275,6 +285,13 @@ export class TransactionsWorker extends CoreWorker {
         `Reconciliation block cannot exceed the local transaction block ${checkpointBlock}`,
       );
     }
+    if (
+      !Number.isInteger(resumeFromBlock) ||
+      resumeFromBlock < fromBlock ||
+      resumeFromBlock > checkpointBlock + 1
+    ) {
+      throw new Error("Invalid transaction reconciliation resume block");
+    }
     if (currentLatestBlock < checkpointBlock) {
       throw new Error(
         `Transaction checkpoint changed before reconciliation started (expected at least ${checkpointBlock}, found ${currentLatestBlock})`,
@@ -291,7 +308,7 @@ export class TransactionsWorker extends CoreWorker {
     };
     const affectedTokenIdentities = new Set<string>();
     const contracts = this.getContracts();
-    let currentFromBlock = fromBlock;
+    let currentFromBlock = resumeFromBlock;
 
     logInfo(
       parentPort,
@@ -418,18 +435,26 @@ export class TransactionsWorker extends CoreWorker {
           repairs,
           verifiedOrphans.orphaned,
           affectedTokens,
-          latestBlock
+          latestBlock,
+          nextToBlock + 1,
         );
         for (const affectedToken of affectedTokens) {
           affectedTokenIdentities.add(
             `${affectedToken.contract}:${affectedToken.tokenId}`
           );
         }
+      } else {
+        await advanceTransactionReconciliation(
+          this.getDb().manager,
+          nextToBlock + 1,
+        );
       }
 
       currentFromBlock = nextToBlock + 1;
       await sleep(250);
     }
+
+    await clearTransactionReconciliation(this.getDb().manager);
 
     const summary =
       `Scanned ${totals.scanned.toLocaleString()} | ` +
@@ -1147,5 +1172,6 @@ new TransactionsWorker(
   data.maxConcurrentRequests,
   data.scope,
   data.block,
+  data.reconciliationNextBlock,
   data.checkpointBlock,
 );

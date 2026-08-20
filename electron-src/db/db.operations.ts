@@ -22,6 +22,16 @@ interface FetchNftsPayload {
   readonly sortDirection?: string;
 }
 
+interface FetchTransactionsPayload {
+  readonly startDate?: number;
+  readonly endDate?: number;
+  readonly page?: number;
+  readonly limit?: number;
+  readonly contractAddress?: string;
+  readonly transactionHash?: string;
+  readonly sortDirection?: string;
+}
+
 type NftSortDirection = "ASC" | "DESC";
 type TransactionSortDirection = "ASC" | "DESC";
 
@@ -180,6 +190,7 @@ async function fetchTransactions(
   page: number = 1,
   limit: number = 50,
   contractAddress?: string,
+  transactionHash?: string,
   sortDirection?: string,
 ): Promise<PaginatedResponseLocal<Transaction>> {
   const transactionRepository = getDb().getRepository(Transaction);
@@ -201,6 +212,13 @@ async function fetchTransactions(
   if (contractAddress) {
     queryBuilder.andWhere("transaction.contract = :contractAddress", {
       contractAddress: contractAddress.toLowerCase(),
+    });
+  }
+
+  const normalizedTransactionHash = transactionHash?.trim().toLowerCase();
+  if (normalizedTransactionHash) {
+    queryBuilder.andWhere("transaction.transaction = :transactionHash", {
+      transactionHash: normalizedTransactionHash,
     });
   }
 
@@ -299,14 +317,24 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
     IPC_DB_CHANNELS.GET_TRANSACTIONS,
     async (
       _event,
-      { startDate, endDate, page, limit, contractAddress, sortDirection },
+      payload: FetchTransactionsPayload = {},
     ) => {
+      const {
+        startDate,
+        endDate,
+        page,
+        limit,
+        contractAddress,
+        transactionHash,
+        sortDirection,
+      } = payload;
       const transactions = await fetchTransactions(
         startDate,
         endDate,
         page,
         limit,
         contractAddress,
+        transactionHash,
         sortDirection,
       );
       return transactions;

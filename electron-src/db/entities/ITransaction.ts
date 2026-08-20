@@ -86,4 +86,13 @@ export class Transaction extends BaseTransaction {}
 export class TransactionBlock extends SingletonBlockEntity {
   @Column({ type: "boolean", default: false })
   tdh_needs_recalculation!: boolean;
+
+  @Column({ type: "int", nullable: true })
+  reconciliation_from_block!: number | null;
+
+  @Column({ type: "int", nullable: true })
+  reconciliation_next_block!: number | null;
+
+  @Column({ type: "int", nullable: true })
+  reconciliation_checkpoint_block!: number | null;
 }

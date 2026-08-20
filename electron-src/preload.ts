@@ -300,6 +300,7 @@ export const localDb = {
     page?: number,
     limit?: number,
     contractAddress?: string,
+    transactionHash?: string,
     sortDirection?: string
   ) =>
     ipcRenderer.invoke("get-transactions", {
@@ -308,6 +309,7 @@ export const localDb = {
       page,
       limit,
       contractAddress,
+      transactionHash,
       sortDirection,
     }),
   getNfts: (
