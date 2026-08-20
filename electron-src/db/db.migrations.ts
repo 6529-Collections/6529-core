@@ -10,12 +10,61 @@ import { NFT } from "./entities/INFT";
 import { getEditionSizes } from "../scheduled-tasks/workers/nft-worker/nft-worker";
 import { MEMES_ABI, MEMES_CONTRACT } from "../../shared/abis/memes";
 import { areEqualAddresses } from "../../shared/helpers";
+import {
+  ERC4337_MEME_537_REPAIR_IDENTITY,
+  ERC4337_MEME_537_REPAIR_VALUES,
+  shouldRepairErc4337Meme537Transaction
+} from "./erc4337-meme-537-repair";
 
 const loggerName = "[DB MIGRATIONS]";
 
 export async function runCoreMigrations(dataSource: DataSource) {
+  await runErc4337Meme537ValueRepairMigration(dataSource);
   await runBlurRoyaltiesMigration(dataSource);
   await runNftEditionSizeFloorMigration(dataSource);
+}
+
+export async function runErc4337Meme537ValueRepairMigration(
+  dataSource: DataSource
+) {
+  const migrationName = "erc4337Meme537ValueRepair";
+  if (await hasMigrationRun(dataSource, migrationName)) {
+    return;
+  }
+
+  Logger.info(loggerName, `Running migration ${migrationName}...`);
+  await dataSource.transaction(async (transactionalEntityManager) => {
+    const transactionRepository =
+      transactionalEntityManager.getRepository(Transaction);
+    const candidates = await transactionRepository.find({
+      where: {
+        transaction: ERC4337_MEME_537_REPAIR_IDENTITY.transaction
+      }
+    });
+    const existing = candidates.find(shouldRepairErc4337Meme537Transaction);
+
+    if (existing) {
+      await transactionRepository.update(
+        {
+          transaction: existing.transaction,
+          from_address: existing.from_address,
+          to_address: existing.to_address,
+          contract: existing.contract,
+          token_id: existing.token_id
+        },
+        ERC4337_MEME_537_REPAIR_VALUES
+      );
+      Logger.info(
+        loggerName,
+        `Repaired transaction ${ERC4337_MEME_537_REPAIR_IDENTITY.transaction}.`
+      );
+    }
+
+    await transactionalEntityManager.getRepository(CoreMigration).insert({
+      migration_name: migrationName
+    });
+  });
+  Logger.info(loggerName, `Migration ${migrationName} completed.`);
 }
 
 async function hasMigrationRun(

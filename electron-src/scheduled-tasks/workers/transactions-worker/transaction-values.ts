@@ -6,6 +6,11 @@ import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses, sleep } from "../../../../shared/helpers";
 import { Transaction } from "../../../db/entities/ITransaction";
 import { SEAPORT_IFACE } from "./seaport";
+import {
+  createManifoldClaimPricingReader,
+  resolveManifoldMintValues,
+  type ManifoldClaimPricingReader
+} from "./manifold-mint-values";
 
 const ACK_DEPLOYER = "0x03ee832367e29a5cd001f65093283eabb5382b62";
 const WETH_TOKEN_ADDRESS = "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2";
@@ -58,9 +63,15 @@ export const findTransactionValues = async (
   printStatus: (...args: any[]) => void
 ) => {
   printStatus("> Processing values", transactions.length);
+  const readManifoldClaimPricing = createManifoldClaimPricingReader(provider);
 
   const parseTransaction = async (t: Transaction): Promise<Transaction> => {
-    const parsedTransaction = await resolveValue(provider, t, printStatus);
+    const parsedTransaction = await resolveValue(
+      provider,
+      t,
+      printStatus,
+      readManifoldClaimPricing
+    );
     await sleep(100);
     return parsedTransaction; // Explicitly returns Transaction
   };
@@ -79,7 +90,8 @@ export const findTransactionValues = async (
 async function resolveValue(
   provider: ethers.Provider,
   t: Transaction,
-  printStatus: (...args: any[]) => void
+  printStatus: (...args: any[]) => void,
+  readManifoldClaimPricing: ManifoldClaimPricingReader
 ) {
   const transaction = await provider.getTransaction(t.transaction);
   t.value = transaction ? parseFloat(formatEther(transaction.value)) : 0;
@@ -183,39 +195,76 @@ async function resolveValue(
     }
   }
 
-  if (
+  const isPrimaryMintTransaction =
     (areEqualAddresses(t.contract, MEMES_CONTRACT) &&
       areEqualAddresses(t.from_address, NULL_ADDRESS)) ||
     areEqualAddresses(t.from_address, MANIFOLD_ADDRESS) ||
     (areEqualAddresses(t.from_address, ACK_DEPLOYER) &&
       areEqualAddresses(t.contract, MEMELAB_CONTRACT) &&
-      t.token_id == 12)
-  ) {
-    const block = `0x${t.block.toString(16)}`;
-    const internlTrfs = await getInternalTransfers(provider, t.contract, block);
-    const filteredInternalTrfs = internlTrfs.filter(
-      (it) =>
-        it.transactionHash == t.transaction &&
-        (areEqualAddresses(it.args.from, t.to_address) ||
-          areEqualAddresses(it.args.from, MANIFOLD_ADDRESS) ||
-          (it.args.to && areEqualAddresses(it.args.to, MEMES_DEPLOYER)))
-    );
+      t.token_id == 12);
 
-    if (filteredInternalTrfs.length > 0) {
-      let primaryProceeds = 0;
-      filteredInternalTrfs.forEach((internalT) => {
-        if (internalT?.args?.value) {
-          primaryProceeds += internalT.args.value;
+  let manifoldMintValuesResolved = false;
+  if (transaction && isPrimaryMintTransaction) {
+    try {
+      const manifoldMintValues = await resolveManifoldMintValues(
+        transaction,
+        t,
+        readManifoldClaimPricing
+      );
+      if (manifoldMintValues) {
+        manifoldMintValuesResolved = true;
+        t.value = manifoldMintValues.value;
+        if (manifoldMintValues.primaryProceeds !== null) {
+          t.primary_proceeds = manifoldMintValues.primaryProceeds;
+        } else {
+          // Gross value includes the Manifold fee, so it is not a safe
+          // substitute when primary proceeds cannot be verified.
+          t.primary_proceeds = 0;
+          printStatus(
+            `Recovered Manifold mint value without verified primary proceeds for transaction ${t.transaction}`
+          );
         }
-      });
-      if (primaryProceeds) {
-        t.primary_proceeds = primaryProceeds;
-        t.value = primaryProceeds;
       }
+    } catch (error) {
+      printStatus(
+        `Error resolving Manifold mint calldata for transaction ${t.transaction}`,
+        error
+      );
     }
+  }
 
-    if (!t.primary_proceeds) {
-      t.primary_proceeds = t.value;
+  if (isPrimaryMintTransaction) {
+    if (!manifoldMintValuesResolved) {
+      const block = `0x${t.block.toString(16)}`;
+      const internlTrfs = await getInternalTransfers(
+        provider,
+        t.contract,
+        block
+      );
+      const filteredInternalTrfs = internlTrfs.filter(
+        (it) =>
+          it.transactionHash == t.transaction &&
+          (areEqualAddresses(it.args.from, t.to_address) ||
+            areEqualAddresses(it.args.from, MANIFOLD_ADDRESS) ||
+            (it.args.to && areEqualAddresses(it.args.to, MEMES_DEPLOYER)))
+      );
+
+      if (filteredInternalTrfs.length > 0) {
+        let primaryProceeds = 0;
+        filteredInternalTrfs.forEach((internalT) => {
+          if (internalT?.args?.value) {
+            primaryProceeds += internalT.args.value;
+          }
+        });
+        if (primaryProceeds) {
+          t.primary_proceeds = primaryProceeds;
+          t.value = primaryProceeds;
+        }
+      }
+
+      if (!t.primary_proceeds) {
+        t.primary_proceeds = t.value;
+      }
     }
   }
 
