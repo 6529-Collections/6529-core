@@ -154,11 +154,7 @@ export default function TransactionsLocalData() {
               )}
               aria-haspopup="dialog"
               onClick={() => setShowTransactionSearch(true)}
-              className={`tw-inline-flex tw-h-10 tw-w-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border tw-border-solid tw-p-0 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 ${
-                queryParams.transactionHash
-                  ? "tw-border-primary-400 tw-bg-primary-500 tw-text-white desktop-hover:hover:tw-bg-primary-600"
-                  : "tw-border-white/10 tw-bg-transparent tw-text-iron-200 desktop-hover:hover:tw-border-white/20 desktop-hover:hover:tw-bg-white/[0.06] desktop-hover:hover:tw-text-white"
-              }`}
+              className="tw-inline-flex tw-h-10 tw-w-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-white tw-p-0 tw-text-black tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-200"
             >
               <FontAwesomeIcon
                 icon={faSearch}
