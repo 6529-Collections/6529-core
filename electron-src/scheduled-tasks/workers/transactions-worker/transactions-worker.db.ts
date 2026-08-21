@@ -149,9 +149,19 @@ export async function setTdhRunIncomplete(
   db: EntityManager,
   incomplete: boolean,
 ) {
-  await db.getRepository(TransactionBlock).update(
-    { id: 1 },
-    { tdh_run_incomplete: incomplete },
+  await retryOnSqliteLock(
+    async () => {
+      const result = await db.getRepository(TransactionBlock).update(
+        { id: 1 },
+        { tdh_run_incomplete: incomplete },
+      );
+      if (result.affected !== 1) {
+        throw new Error("Unable to persist TDH run state");
+      }
+    },
+    5,
+    100,
+    incomplete ? "Starting TDH calculation" : "Completing TDH calculation",
   );
 }
 

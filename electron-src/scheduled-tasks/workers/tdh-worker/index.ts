@@ -83,6 +83,9 @@ class TDHWorker extends CoreWorker {
     logInfo(parentPort, "Block before", blockBefore.number);
     const block = blockBefore.number;
     if (await this.deferUntilRequiredCheckpointsAreReady(block)) {
+      // No calculation started, so a normal checkpoint deferral should not
+      // be recovered as an interrupted TDH run on the next app launch.
+      await setTdhRunIncomplete(this.getDb().manager, false);
       return;
     }
     await this.validateBlock(block);
