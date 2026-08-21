@@ -2,7 +2,7 @@ import Logger from "electron-log";
 import { WorkerLogger } from "./worker-logger";
 import cron from "node-cron";
 import path from "path";
-import { getBaseDbParams } from "../db/db";
+import { getBaseDbParams, getDb } from "../db/db";
 import { CoreWorkerMessage, CoreWorkerMessageUpdate } from "./worker-helpers";
 import { Worker } from "worker_threads";
 import { BetterSqlite3ConnectionOptions } from "typeorm/driver/better-sqlite3/BetterSqlite3ConnectionOptions";
@@ -19,6 +19,13 @@ import type {
   WorkerStartGuard,
 } from "./transaction-mutation-guard";
 import { WorkerStartQueue } from "./worker-start-queue";
+import {
+  startTransactionReconciliation,
+  type TransactionReconciliationState,
+} from "./workers/transactions-worker/transactions-worker.db";
+import {
+  isValidTransactionReconciliationState,
+} from "./workers/transactions-worker/transaction-reconciliation-state";
 
 export interface WorkerData {
   rpcUrl: string;
@@ -30,6 +37,7 @@ export interface WorkerData {
 export interface TransactionsWorkerData extends WorkerData {
   scope?: TransactionsWorkerScope;
   block?: number;
+  reconciliationNextBlock?: number;
   checkpointBlock?: number;
 }
 
@@ -56,7 +64,7 @@ export class ScheduledWorker {
   protected logger: WorkerLogger;
   private task: cron.ScheduledTask | null = null;
   private startGuard: WorkerStartGuard | null = null;
-  private startQueue = new WorkerStartQueue();
+  private startQueue = new WorkerStartQueue<() => void>();
   private exitListeners: Array<() => void> = [];
   protected worker: Worker | null = null;
 
@@ -169,8 +177,8 @@ export class ScheduledWorker {
     return this.startQueue.isQueued();
   }
 
-  private queueStart(blockedReason: string) {
-    this.setQueuedStatus(this.startQueue.queue(blockedReason));
+  protected queueStart(blockedReason: string, intent?: () => void) {
+    this.setQueuedStatus(this.startQueue.queue(blockedReason, intent));
   }
 
   private queueStartWithMessage(waitingMessage: string) {
@@ -215,7 +223,11 @@ export class ScheduledWorker {
         this.update.statusPercentage,
       );
     } else if (retry.status === "ready") {
-      this.startWorker();
+      if (retry.intent) {
+        retry.intent();
+      } else {
+        this.startWorker();
+      }
     }
   }
 
@@ -489,6 +501,47 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     }
   }
 
+  private getReconciliationWorkerData(
+    state: TransactionReconciliationState,
+  ): TransactionsWorkerData {
+    return {
+      rpcUrl: this.rpcUrl,
+      dbParams: getBaseDbParams(),
+      blockRange: this.blockRange,
+      maxConcurrentRequests: this.maxConcurrentRequests,
+      scope: TransactionsWorkerScope.RECONCILE,
+      block: state.fromBlock,
+      reconciliationNextBlock: state.nextBlock,
+      checkpointBlock: state.checkpointBlock,
+    } as TransactionsWorkerData;
+  }
+
+  public resumeReconciliation(state: TransactionReconciliationState) {
+    if (!isValidTransactionReconciliationState(state)) {
+      return {
+        status: false,
+        message: "Invalid transaction reconciliation state",
+      };
+    }
+
+    const workerData = this.getReconciliationWorkerData(state);
+    const blockedReason = this.getMutationBlockReason("reconcile");
+    if (blockedReason) {
+      this.queueStart(blockedReason, () => {
+        this.resumeReconciliation(state);
+      });
+      return {
+        status: true,
+        message: `Transaction reconciliation queued to resume from block ${state.nextBlock} through checkpoint ${state.checkpointBlock}`,
+      };
+    }
+    this.startMutationWorker(workerData);
+    return {
+      status: true,
+      message: `Transaction reconciliation resuming from block ${state.nextBlock} through checkpoint ${state.checkpointBlock}`,
+    };
+  }
+
   private getMutationBlockReason(
     action: TransactionMutationAction,
   ): string | null {
@@ -554,6 +607,19 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
     fromBlock: number,
     checkpointBlock: number,
   ) {
+    if (
+      !isValidTransactionReconciliationState({
+        fromBlock,
+        nextBlock: fromBlock,
+        checkpointBlock,
+      })
+    ) {
+      return {
+        status: false,
+        message: "Invalid transaction reconciliation range",
+      };
+    }
+
     // getMutationBlockReason checks this ScheduledWorker's active worker before
     // the TDH guard, so reconciliation cannot overlap its scheduled base run.
     const blockedReason = this.getMutationBlockReason("reconcile");
@@ -564,22 +630,18 @@ export class TransactionsScheduledWorker extends ScheduledWorker {
       };
     }
 
-    const workerData: TransactionsWorkerData = {
-      rpcUrl: this.rpcUrl,
-      dbParams: getBaseDbParams(),
-      blockRange: this.blockRange,
-      maxConcurrentRequests: this.maxConcurrentRequests,
-      scope: TransactionsWorkerScope.RECONCILE,
-      block: fromBlock,
+    await startTransactionReconciliation(
+      getDb().manager,
+      fromBlock,
       checkpointBlock,
-    } as TransactionsWorkerData;
-
-    this.startMutationWorker(workerData);
-
-    return {
-      status: true,
-      message: `Transaction reconciliation from block ${fromBlock} through checkpoint ${checkpointBlock} started`,
+    );
+    const reconciliationState = {
+      fromBlock,
+      nextBlock: fromBlock,
+      checkpointBlock,
     };
+
+    return this.resumeReconciliation(reconciliationState);
   }
 }
 

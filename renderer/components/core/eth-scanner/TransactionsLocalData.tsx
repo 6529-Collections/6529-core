@@ -6,22 +6,26 @@ import {
   MEMES_CONTRACT,
   NEXTGEN_CONTRACT,
 } from "@/constants/constants";
-import { Transaction } from "@/entities/ITransaction";
+import type { Transaction } from "@/entities/ITransaction";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { formatInteger } from "@/i18n/format";
 import { t } from "@/i18n/messages";
-import { PaginatedResponseLocal } from "@/shared/types";
+import type { PaginatedResponseLocal } from "@/shared/types";
 import {
   faChevronDown,
   faChevronUp,
   faRefresh,
+  faSearch,
+  faXmark,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Tooltip } from "react-tooltip";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
+import { normalizeLocalTransactionResponse } from "./local-transaction-response";
+import TransactionSearchModal from "./TransactionSearchModal";
 
 type TransactionSortDirection = "ASC" | "DESC";
 
@@ -49,6 +53,7 @@ const SORT_DIRECTION_OPTIONS = [
 
 const initialQueryParams = {
   contractAddress: "",
+  transactionHash: "",
   startDate: undefined as string | undefined,
   endDate: undefined as string | undefined,
   page: 1,
@@ -61,10 +66,13 @@ export default function TransactionsLocalData() {
   const [transactions, setTransactions] =
     useState<PaginatedResponseLocal<Transaction>>();
   const [queryParams, setQueryParams] = useState(initialQueryParams);
+  const [showTransactionSearch, setShowTransactionSearch] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
+  const latestRequestId = useRef(0);
 
   const fetchTransactions = useCallback(() => {
+    const requestId = ++latestRequestId.current;
     setIsLoading(true);
     const {
       startDate,
@@ -72,6 +80,7 @@ export default function TransactionsLocalData() {
       page,
       limit,
       contractAddress,
+      transactionHash,
       sortDirection,
     } = queryParams;
 
@@ -82,18 +91,22 @@ export default function TransactionsLocalData() {
         page,
         limit,
         contractAddress,
+        transactionHash,
         sortDirection
       )
       .then((transactions) => {
-        transactions.data.forEach((t: Transaction) => {
-          t.transaction_date = new Date(
-            Number((t.transaction_date as any) * 1000)
-          );
-        });
-        setTransactions(transactions);
+        if (requestId !== latestRequestId.current) return;
+        setTransactions(normalizeLocalTransactionResponse(transactions));
+      })
+      .catch(() => {
+        if (requestId === latestRequestId.current) {
+          setTransactions(undefined);
+        }
       })
       .finally(() => {
-        setIsLoading(false);
+        if (requestId === latestRequestId.current) {
+          setIsLoading(false);
+        }
       });
   }, [queryParams]);
 
@@ -115,6 +128,7 @@ export default function TransactionsLocalData() {
   const clearFiltersEnabled = useMemo(
     () =>
       queryParams.contractAddress !== initialQueryParams.contractAddress ||
+      queryParams.transactionHash !== initialQueryParams.transactionHash ||
       queryParams.startDate !== initialQueryParams.startDate ||
       queryParams.endDate !== initialQueryParams.endDate ||
       queryParams.page !== initialQueryParams.page ||
@@ -127,6 +141,46 @@ export default function TransactionsLocalData() {
     <div className="tw-mt-4">
       <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-end tw-justify-between tw-gap-4">
         <div className="tw-flex tw-flex-wrap tw-items-end tw-gap-4">
+          <div className="tw-flex tw-flex-col tw-gap-2">
+            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
+              {t(locale, "core.ethScanner.transactionsData.filters.hash")}
+            </span>
+            <button
+              type="button"
+              data-tooltip-id="search-local-transactions-tooltip"
+              aria-label={t(
+                locale,
+                "core.ethScanner.transactionsData.actions.searchTransactions"
+              )}
+              aria-haspopup="dialog"
+              onClick={() => setShowTransactionSearch(true)}
+              className="tw-inline-flex tw-h-10 tw-w-10 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-white tw-p-0 tw-text-black tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-200"
+            >
+              <FontAwesomeIcon
+                icon={faSearch}
+                className="tw-h-4 tw-w-4"
+                aria-hidden="true"
+              />
+            </button>
+            <Tooltip
+              id="search-local-transactions-tooltip"
+              place="top-start"
+              style={{
+                backgroundColor: "#1F2937",
+                color: "white",
+                padding: "4px 8px",
+              }}
+              delayShow={150}
+              openEvents={{ mouseenter: true, focus: true }}
+              closeEvents={{ mouseleave: true, blur: true, click: true }}
+            >
+              {t(
+                locale,
+                "core.ethScanner.transactionsData.actions.searchTransactions"
+              )}
+            </Tooltip>
+          </div>
+
           <label className="tw-flex tw-flex-col tw-gap-2">
             <span className="tw-text-sm tw-font-medium tw-text-iron-300">
               {t(
@@ -366,11 +420,17 @@ export default function TransactionsLocalData() {
           aria-live="polite"
           aria-busy={isLoading}
         >
-          {t(locale, "core.ethScanner.transactionsData.summary.total", {
-            count: transactions
-              ? formatInteger(locale, transactions.total)
-              : "-",
-          })}
+          {queryParams.transactionHash
+            ? t(locale, "core.ethScanner.transactionsData.search.total", {
+                count: transactions
+                  ? formatInteger(locale, transactions.total)
+                  : "-",
+              })
+            : t(locale, "core.ethScanner.transactionsData.summary.total", {
+                count: transactions
+                  ? formatInteger(locale, transactions.total)
+                  : "-",
+              })}
           {isLoading && (
             <span className="tw-ml-2 tw-inline-flex tw-align-middle">
               <span className="tw-sr-only">
@@ -385,6 +445,35 @@ export default function TransactionsLocalData() {
             </span>
           )}
         </div>
+        {queryParams.transactionHash && (
+          <div className="tw-inline-flex tw-max-w-full tw-items-center tw-gap-1 tw-rounded-full tw-border tw-border-solid tw-border-primary-400/40 tw-bg-primary-500/10 tw-py-1 tw-pl-3 tw-pr-1 tw-text-sm tw-font-medium tw-text-primary-200">
+            <span
+              className="tw-max-w-[24rem] tw-truncate"
+              title={queryParams.transactionHash}
+            >
+              {t(
+                locale,
+                "core.ethScanner.transactionsData.search.activeFilter",
+                { hash: queryParams.transactionHash }
+              )}
+            </span>
+            <button
+              type="button"
+              aria-label={t(
+                locale,
+                "core.ethScanner.transactionsData.search.clearApplied"
+              )}
+              onClick={() => updateQueryParams({ transactionHash: "" })}
+              className="tw-inline-flex tw-h-7 tw-w-7 tw-shrink-0 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-transparent tw-p-0 tw-text-primary-200 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-primary-400/20 desktop-hover:hover:tw-text-white"
+            >
+              <FontAwesomeIcon
+                icon={faXmark}
+                className="tw-h-3.5 tw-w-3.5"
+                aria-hidden="true"
+              />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="tw-overflow-x-auto [&_tbody_tr:nth-child(odd)]:tw-bg-black [&_tbody_tr:nth-child(even)]:tw-bg-transparent">
@@ -393,12 +482,20 @@ export default function TransactionsLocalData() {
             {transactions?.data.map((transaction) => (
               <LatestActivityRow
                 tr={transaction}
-                key={`${transaction.from_address}-${transaction.to_address}-${transaction.transaction}-${transaction.token_id}`}
+                key={`${transaction.contract}-${transaction.from_address}-${transaction.to_address}-${transaction.transaction}-${transaction.token_id}`}
               />
             ))}
           </tbody>
         </table>
       </div>
+
+      {!isLoading &&
+        queryParams.transactionHash &&
+        transactions?.total === 0 && (
+          <p className="tw-m-0 tw-text-sm tw-text-iron-400">
+            {t(locale, "core.ethScanner.transactionsData.search.empty")}
+          </p>
+        )}
 
       {transactions?.total && transactions?.total > queryParams.limit ? (
         <div className="tw-mt-4 tw-text-center">
@@ -413,6 +510,18 @@ export default function TransactionsLocalData() {
         </div>
       ) : (
         <></>
+      )}
+
+      {showTransactionSearch && (
+        <TransactionSearchModal
+          show
+          initialValue={queryParams.transactionHash}
+          onHide={() => setShowTransactionSearch(false)}
+          onSearch={(transactionHash) => {
+            updateQueryParams({ transactionHash });
+            setShowTransactionSearch(false);
+          }}
+        />
       )}
     </div>
   );

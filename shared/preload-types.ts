@@ -1,4 +1,9 @@
-import { LogLine, ScheduledWorkerStatus, SeedWalletRequest } from "./types";
+import type {
+  LogLine,
+  PaginatedResponseLocal,
+  ScheduledWorkerStatus,
+  SeedWalletRequest,
+} from "./types";
 
 export interface NotificationNavigationContext {
   readonly targetAddress?: string | null;
@@ -200,6 +205,28 @@ export interface ElectronSeedConnector {
   offDisconnect: (callback: any) => void;
 }
 
+export interface RawTransaction {
+  readonly created_at: Date;
+  readonly transaction: string;
+  readonly block: number;
+  readonly transaction_date: number;
+  readonly from_address: `0x${string}`;
+  readonly from_display?: string;
+  readonly to_address: `0x${string}`;
+  readonly to_display?: string;
+  readonly contract: string;
+  readonly token_id: number;
+  readonly token_count: number;
+  readonly value: number;
+  readonly royalties: number;
+  readonly gas_gwei: number;
+  readonly gas_price: number;
+  readonly gas_price_gwei: number;
+  readonly gas: number;
+}
+
+export type RawTransactionResponse = PaginatedResponseLocal<RawTransaction>;
+
 export interface ElectronLocalDB {
   getTdhInfo: () => Promise<any>;
   getTdhInfoForKey: (key: string) => Promise<any>;
@@ -209,8 +236,9 @@ export interface ElectronLocalDB {
     page?: number,
     limit?: number,
     contractAddress?: string,
+    transactionHash?: string,
     sortDirection?: string
-  ) => Promise<any>;
+  ) => Promise<RawTransactionResponse>;
   getNfts: (
     page?: number,
     limit?: number,

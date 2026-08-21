@@ -31,6 +31,7 @@ import { NFT } from "../../../db/entities/INFT";
 import {
   getLatestTransactionsBlock,
   setTdhRecalculationNeeded,
+  setTdhRunIncomplete,
 } from "../transactions-worker/transactions-worker.db";
 import { Contract, ContractType, getTokenUri } from "../nft-worker/nft-worker";
 import { GRADIENT_ABI } from "../../../../shared/abis/gradient";
@@ -70,6 +71,9 @@ class TDHWorker extends CoreWorker {
 
   async work() {
     const startTime = Time.now();
+    // A TDH calculation is rebuilt from scratch after any interruption. Set
+    // this before doing work and clear it only after the full run succeeds.
+    await setTdhRunIncomplete(this.getDb().manager, true);
 
     const lastTDHCalc = getLastTDH();
     const blockBefore = await findLatestBlockBeforeTimestamp(
@@ -79,11 +83,15 @@ class TDHWorker extends CoreWorker {
     logInfo(parentPort, "Block before", blockBefore.number);
     const block = blockBefore.number;
     if (await this.deferUntilRequiredCheckpointsAreReady(block)) {
+      // No calculation started, so a normal checkpoint deferral should not
+      // be recovered as an interrupted TDH run on the next app launch.
+      await setTdhRunIncomplete(this.getDb().manager, false);
       return;
     }
     await this.validateBlock(block);
     const tdhResult = await this.updateTDH(block, lastTDHCalc);
     await setTdhRecalculationNeeded(this.getDb().manager, false);
+    await setTdhRunIncomplete(this.getDb().manager, false);
 
     logInfo(parentPort, "Finished");
 
