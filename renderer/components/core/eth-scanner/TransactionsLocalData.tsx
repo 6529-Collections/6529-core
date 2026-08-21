@@ -15,6 +15,7 @@ import {
   faChevronDown,
   faChevronUp,
   faRefresh,
+  faSearch,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -22,9 +23,9 @@ import { Tooltip } from "react-tooltip";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
+import TransactionSearchModal from "./TransactionSearchModal";
 
 type TransactionSortDirection = "ASC" | "DESC";
-const TRANSACTION_HASH_PATTERN = /^0x[a-fA-F0-9]{64}$/;
 
 const SORT_DIRECTION_OPTIONS = [
   {
@@ -50,7 +51,6 @@ const SORT_DIRECTION_OPTIONS = [
 
 const initialQueryParams = {
   contractAddress: "",
-  transactionHash: "",
   startDate: undefined as string | undefined,
   endDate: undefined as string | undefined,
   page: 1,
@@ -63,13 +63,10 @@ export default function TransactionsLocalData() {
   const [transactions, setTransactions] =
     useState<PaginatedResponseLocal<Transaction>>();
   const [queryParams, setQueryParams] = useState(initialQueryParams);
+  const [showTransactionSearch, setShowTransactionSearch] = useState(false);
 
   const [isLoading, setIsLoading] = useState(false);
   const latestRequestId = useRef(0);
-  const normalizedTransactionHash = queryParams.transactionHash.trim();
-  const transactionHashInvalid =
-    normalizedTransactionHash.length > 0 &&
-    !TRANSACTION_HASH_PATTERN.test(normalizedTransactionHash);
 
   const fetchTransactions = useCallback(() => {
     const requestId = ++latestRequestId.current;
@@ -80,7 +77,6 @@ export default function TransactionsLocalData() {
       page,
       limit,
       contractAddress,
-      transactionHash,
       sortDirection,
     } = queryParams;
 
@@ -91,7 +87,7 @@ export default function TransactionsLocalData() {
         page,
         limit,
         contractAddress,
-        transactionHash,
+        undefined,
         sortDirection
       )
       .then((transactions) => {
@@ -133,7 +129,6 @@ export default function TransactionsLocalData() {
   const clearFiltersEnabled = useMemo(
     () =>
       queryParams.contractAddress !== initialQueryParams.contractAddress ||
-      queryParams.transactionHash !== initialQueryParams.transactionHash ||
       queryParams.startDate !== initialQueryParams.startDate ||
       queryParams.endDate !== initialQueryParams.endDate ||
       queryParams.page !== initialQueryParams.page ||
@@ -146,47 +141,6 @@ export default function TransactionsLocalData() {
     <div className="tw-mt-4">
       <div className="tw-mb-6 tw-flex tw-flex-wrap tw-items-end tw-justify-between tw-gap-4">
         <div className="tw-flex tw-flex-wrap tw-items-end tw-gap-4">
-          <label className="tw-flex tw-flex-col tw-gap-2">
-            <span className="tw-text-sm tw-font-medium tw-text-iron-300">
-              {t(
-                locale,
-                "core.ethScanner.transactionsData.filters.transactionHash"
-              )}
-            </span>
-            <input
-              type="search"
-              value={queryParams.transactionHash}
-              pattern="^0x[a-fA-F0-9]{64}$"
-              aria-invalid={transactionHashInvalid}
-              aria-describedby={
-                transactionHashInvalid
-                  ? "transaction-hash-filter-error"
-                  : undefined
-              }
-              onChange={(e) =>
-                updateQueryParams({
-                  transactionHash: e.target.value.trimStart(),
-                })
-              }
-              className="tw-h-10 tw-w-72 tw-rounded-lg tw-border tw-border-gray-300 tw-bg-white tw-px-3 tw-py-2 tw-text-black"
-              placeholder={t(
-                locale,
-                "core.ethScanner.transactionsData.filters.transactionHashPlaceholder"
-              )}
-            />
-            {transactionHashInvalid && (
-              <span
-                id="transaction-hash-filter-error"
-                className="tw-max-w-72 tw-text-sm tw-text-red"
-              >
-                {t(
-                  locale,
-                  "core.ethScanner.transactionsData.filters.transactionHashInvalid"
-                )}
-              </span>
-            )}
-          </label>
-
           <label className="tw-flex tw-flex-col tw-gap-2">
             <span className="tw-text-sm tw-font-medium tw-text-iron-300">
               {t(
@@ -387,6 +341,21 @@ export default function TransactionsLocalData() {
         <div className="tw-flex tw-items-center tw-gap-2">
           <button
             type="button"
+            onClick={() => setShowTransactionSearch(true)}
+            className="tw-inline-flex tw-h-10 tw-cursor-pointer tw-items-center tw-gap-2 tw-rounded-lg tw-border tw-border-solid tw-border-white/10 tw-bg-transparent tw-px-3 tw-text-sm tw-font-medium tw-text-iron-200 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-border-white/20 desktop-hover:hover:tw-bg-white/[0.06] desktop-hover:hover:tw-text-white"
+          >
+            <FontAwesomeIcon
+              icon={faSearch}
+              className="tw-h-4 tw-w-4"
+              aria-hidden="true"
+            />
+            {t(
+              locale,
+              "core.ethScanner.transactionsData.actions.searchTransactions"
+            )}
+          </button>
+          <button
+            type="button"
             data-tooltip-id="refresh-transaction-results-tooltip"
             aria-label={t(
               locale,
@@ -474,6 +443,11 @@ export default function TransactionsLocalData() {
       ) : (
         <></>
       )}
+
+      <TransactionSearchModal
+        show={showTransactionSearch}
+        onHide={() => setShowTransactionSearch(false)}
+      />
     </div>
   );
 }

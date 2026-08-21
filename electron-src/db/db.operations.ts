@@ -8,6 +8,7 @@ import { PaginatedResponseLocal } from "../../shared/types";
 import { NFT } from "./entities/INFT";
 import { Brackets, type SelectQueryBuilder } from "typeorm";
 import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
+import { parseTransactionHashSearch } from "../../shared/transaction-hash-search";
 
 interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
   seasonOptions: number[];
@@ -42,7 +43,6 @@ const DEFAULT_TRANSACTION_SORT_DIRECTION: TransactionSortDirection = "DESC";
 const MAX_NFT_PAGE_SIZE = 100;
 const NFT_LIKE_ESCAPE_CLAUSE = "ESCAPE '\\'";
 const NEXTGEN_TOKEN_ID_MODULUS = 10_000_000_000;
-const TRANSACTION_HASH_PATTERN = /^0x[a-f0-9]{64}$/;
 
 const coercePositiveInteger = (value: unknown, fallback: number): number => {
   const numericValue =
@@ -216,11 +216,16 @@ async function fetchTransactions(
     });
   }
 
-  const normalizedTransactionHash = transactionHash?.trim().toLowerCase();
-  if (normalizedTransactionHash) {
-    if (TRANSACTION_HASH_PATTERN.test(normalizedTransactionHash)) {
+  if (transactionHash?.trim()) {
+    const parsedTransactionHash = parseTransactionHashSearch(transactionHash);
+
+    if (parsedTransactionHash?.match === "exact") {
       queryBuilder.andWhere("transaction.transaction = :transactionHash", {
-        transactionHash: normalizedTransactionHash,
+        transactionHash: `0x${parsedTransactionHash.normalizedHash}`,
+      });
+    } else if (parsedTransactionHash) {
+      queryBuilder.andWhere("transaction.transaction LIKE :transactionHash", {
+        transactionHash: `%${parsedTransactionHash.normalizedHash}%`,
       });
     } else {
       queryBuilder.andWhere("1 = 0");

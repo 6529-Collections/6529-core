@@ -1504,10 +1504,6 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
   {
     "filters.startDate": "Start Date",
     "filters.endDate": "End Date",
-    "filters.transactionHash": "Transaction Hash",
-    "filters.transactionHashPlaceholder": "0x transaction hash",
-    "filters.transactionHashInvalid":
-      "Enter a full 0x-prefixed 64-character transaction hash.",
     "filters.pageSize": "Page Size",
     "filters.contract": "Contract",
     "filters.sortDirection": "Sort",
@@ -1518,8 +1514,22 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
     "contracts.memelab": "Meme Lab",
     "actions.clearFilters": "Clear transaction filters",
     "actions.refreshResults": "Refresh transaction results",
+    "actions.searchTransactions": "Search transactions",
     "actions.sortAscending": "Sort oldest first",
     "actions.sortDescending": "Sort newest first",
+    "search.title": "Search local transactions",
+    "search.label": "Transaction hash",
+    "search.description":
+      "Enter 4–64 hexadecimal characters. The 0x prefix is optional.",
+    "search.placeholder": "Transaction hash or partial hash",
+    "search.invalid":
+      "Enter 4–64 hexadecimal characters, with an optional 0x prefix.",
+    "search.submit": "Search",
+    "search.cancel": "Cancel",
+    "search.loading": "Searching local transactions",
+    "search.error": "Unable to search local transactions. Try again.",
+    "search.empty": "No local transactions matched this hash.",
+    "search.total": "Matching transaction records: {count}",
     "summary.loading": "Loading transaction data",
     "summary.total": "Total Transactions: {count}",
   } as const
