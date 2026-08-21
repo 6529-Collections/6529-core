@@ -23,6 +23,7 @@ import { Tooltip } from "react-tooltip";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
+import { normalizeLocalTransactionResponse } from "./local-transaction-response";
 import TransactionSearchModal from "./TransactionSearchModal";
 
 type TransactionSortDirection = "ASC" | "DESC";
@@ -92,12 +93,7 @@ export default function TransactionsLocalData() {
       )
       .then((transactions) => {
         if (requestId !== latestRequestId.current) return;
-        transactions.data.forEach((t: Transaction) => {
-          t.transaction_date = new Date(
-            Number((t.transaction_date as any) * 1000)
-          );
-        });
-        setTransactions(transactions);
+        setTransactions(normalizeLocalTransactionResponse(transactions));
       })
       .catch(() => {
         if (requestId === latestRequestId.current) {

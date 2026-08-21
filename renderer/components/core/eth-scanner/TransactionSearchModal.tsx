@@ -18,14 +18,9 @@ import type { FormEvent } from "react";
 import DotLoader from "../../dotLoader/DotLoader";
 import LatestActivityRow from "../../latest-activity/LatestActivityRow";
 import Pagination from "../../pagination/Pagination";
+import { normalizeLocalTransactionResponse } from "./local-transaction-response";
 
 const SEARCH_PAGE_SIZE = 10;
-
-type RawTransaction = Omit<Transaction, "transaction_date"> & {
-  readonly transaction_date: number;
-};
-
-type RawTransactionResponse = PaginatedResponseLocal<RawTransaction>;
 
 export default function TransactionSearchModal({
   show,
@@ -87,17 +82,10 @@ export default function TransactionSearchModal({
         normalizedValue,
         "DESC"
       )
-      .then((response: RawTransactionResponse) => {
+      .then((response) => {
         if (requestId !== latestRequestId.current) return;
 
-        const normalizedResponse: PaginatedResponseLocal<Transaction> = {
-          ...response,
-          data: response.data.map((transaction) => ({
-            ...transaction,
-            transaction_date: new Date(transaction.transaction_date * 1000),
-          })),
-        };
-        setResults(normalizedResponse);
+        setResults(normalizeLocalTransactionResponse(response));
       })
       .catch(() => {
         if (requestId !== latestRequestId.current) return;
