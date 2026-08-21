@@ -8,6 +8,8 @@ interface SqliteTableColumn {
   name: string;
 }
 
+// Keep these upgrade definitions aligned with the corresponding
+// TransactionBlock columns in entities/ITransaction.ts.
 const RECOVERY_COLUMNS = [
   {
     name: "tdh_run_incomplete",
