@@ -164,6 +164,7 @@ export default function TransactionsLocalData() {
             </button>
             <Tooltip
               id="search-local-transactions-tooltip"
+              place="top-start"
               style={{
                 backgroundColor: "#1F2937",
                 color: "white",
