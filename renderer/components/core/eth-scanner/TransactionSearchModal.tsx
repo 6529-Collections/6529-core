@@ -21,6 +21,12 @@ import Pagination from "../../pagination/Pagination";
 
 const SEARCH_PAGE_SIZE = 10;
 
+type RawTransaction = Omit<Transaction, "transaction_date"> & {
+  readonly transaction_date: number;
+};
+
+type RawTransactionResponse = PaginatedResponseLocal<RawTransaction>;
+
 export default function TransactionSearchModal({
   show,
   onHide,
@@ -81,15 +87,17 @@ export default function TransactionSearchModal({
         normalizedValue,
         "DESC"
       )
-      .then((response: PaginatedResponseLocal<Transaction>) => {
+      .then((response: RawTransactionResponse) => {
         if (requestId !== latestRequestId.current) return;
 
-        response.data.forEach((transaction) => {
-          transaction.transaction_date = new Date(
-            Number(transaction.transaction_date) * 1000
-          );
-        });
-        setResults(response);
+        const normalizedResponse: PaginatedResponseLocal<Transaction> = {
+          ...response,
+          data: response.data.map((transaction) => ({
+            ...transaction,
+            transaction_date: new Date(transaction.transaction_date * 1000),
+          })),
+        };
+        setResults(normalizedResponse);
       })
       .catch(() => {
         if (requestId !== latestRequestId.current) return;
