@@ -8,6 +8,7 @@ import { PaginatedResponseLocal } from "../../shared/types";
 import { NFT } from "./entities/INFT";
 import { Brackets, type SelectQueryBuilder } from "typeorm";
 import { NEXTGEN_CONTRACT } from "../../shared/abis/nextgen";
+import { parseTransactionHashSearch } from "../../shared/transaction-hash-search";
 
 interface PaginatedNftsResponseLocal extends PaginatedResponseLocal<NFT> {
   seasonOptions: number[];
@@ -19,6 +20,16 @@ interface FetchNftsPayload {
   readonly contractAddress?: string;
   readonly search?: string;
   readonly season?: number;
+  readonly sortDirection?: string;
+}
+
+interface FetchTransactionsPayload {
+  readonly startDate?: number;
+  readonly endDate?: number;
+  readonly page?: number;
+  readonly limit?: number;
+  readonly contractAddress?: string;
+  readonly transactionHash?: string;
   readonly sortDirection?: string;
 }
 
@@ -180,6 +191,7 @@ async function fetchTransactions(
   page: number = 1,
   limit: number = 50,
   contractAddress?: string,
+  transactionHash?: string,
   sortDirection?: string,
 ): Promise<PaginatedResponseLocal<Transaction>> {
   const transactionRepository = getDb().getRepository(Transaction);
@@ -202,6 +214,22 @@ async function fetchTransactions(
     queryBuilder.andWhere("transaction.contract = :contractAddress", {
       contractAddress: contractAddress.toLowerCase(),
     });
+  }
+
+  if (transactionHash?.trim()) {
+    const parsedTransactionHash = parseTransactionHashSearch(transactionHash);
+
+    if (parsedTransactionHash?.match === "exact") {
+      queryBuilder.andWhere("transaction.transaction = :transactionHash", {
+        transactionHash: `0x${parsedTransactionHash.normalizedHash}`,
+      });
+    } else if (parsedTransactionHash) {
+      queryBuilder.andWhere("transaction.transaction LIKE :transactionHash", {
+        transactionHash: `%${parsedTransactionHash.normalizedHash}%`,
+      });
+    } else {
+      queryBuilder.andWhere("1 = 0");
+    }
   }
 
   // Apply pagination
@@ -299,14 +327,24 @@ export function registerIpcHandlers(ipcMain: IpcMain) {
     IPC_DB_CHANNELS.GET_TRANSACTIONS,
     async (
       _event,
-      { startDate, endDate, page, limit, contractAddress, sortDirection },
+      payload: FetchTransactionsPayload = {},
     ) => {
+      const {
+        startDate,
+        endDate,
+        page,
+        limit,
+        contractAddress,
+        transactionHash,
+        sortDirection,
+      } = payload;
       const transactions = await fetchTransactions(
         startDate,
         endDate,
         page,
         limit,
         contractAddress,
+        transactionHash,
         sortDirection,
       );
       return transactions;

@@ -65,4 +65,22 @@ describe("worker start queue", () => {
     assert.equal(queue.queueWaitingMessage(waitingMessage), waitingMessage);
     assert.equal(queue.isQueued(), true);
   });
+
+  it("preserves an explicit start intent until the blocker clears", () => {
+    const resumeReconciliation = () => "resume";
+    const queue = new WorkerStartQueue<() => string>();
+
+    queue.queue("TDH worker is running", resumeReconciliation);
+    assert.deepEqual(queue.retry(false, true, "TDH worker is running"), {
+      status: "blocked",
+      waitingMessage: "Waiting for TDH worker to finish",
+    });
+
+    const retry = queue.retry(false, true, null);
+    assert.equal(retry.status, "ready");
+    assert.equal(retry.status === "ready" && retry.intent?.(), "resume");
+    assert.deepEqual(queue.retry(false, true, null), {
+      status: "not-queued",
+    });
+  });
 });

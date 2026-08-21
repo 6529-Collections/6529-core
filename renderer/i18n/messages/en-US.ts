@@ -1936,6 +1936,7 @@ const CORE_NFT_LOCAL_DATA_MESSAGES = objectMessages(
 const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
   "core.ethScanner.transactionsData",
   {
+    "filters.hash": "Hash",
     "filters.startDate": "Start Date",
     "filters.endDate": "End Date",
     "filters.pageSize": "Page Size",
@@ -1948,8 +1949,23 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
     "contracts.memelab": "Meme Lab",
     "actions.clearFilters": "Clear transaction filters",
     "actions.refreshResults": "Refresh transaction results",
+    "actions.searchTransactions": "Search transactions",
     "actions.sortAscending": "Sort oldest first",
     "actions.sortDescending": "Sort newest first",
+    "search.title": "Search local transactions",
+    "search.label": "Transaction hash",
+    "search.description":
+      "Enter 4–64 hexadecimal characters. The 0x prefix is optional.",
+    "search.placeholder": "Transaction hash or partial hash",
+    "search.invalid":
+      "Enter 4–64 hexadecimal characters, with an optional 0x prefix.",
+    "search.clear": "Clear transaction hash",
+    "search.clearApplied": "Clear transaction hash search",
+    "search.activeFilter": "Hash contains {hash}",
+    "search.submit": "Search",
+    "search.cancel": "Cancel",
+    "search.empty": "No local transactions matched this hash.",
+    "search.total": "Matching transaction records: {count}",
     "summary.loading": "Loading transaction data",
     "summary.total": "Total Transactions: {count}",
   } as const

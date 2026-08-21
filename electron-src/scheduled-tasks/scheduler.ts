@@ -13,6 +13,10 @@ import {
   createTdhTransactionMutationGuard,
   createTransactionMutationTdhGuard,
 } from "./transaction-mutation-guard";
+import type {
+  TransactionReconciliationState,
+} from "./workers/transactions-worker/transactions-worker.db";
+import { getTdhRestartAction } from "./workers/tdh-worker/tdh-restart";
 
 const DEFAULT_BLOCK_RANGE = 500;
 const DEFAULT_MAX_CONCURRENT_REQUESTS = 5;
@@ -91,6 +95,9 @@ export function startSchedulers(
     action?: string,
     statusPercentage?: number,
   ) => void,
+  pendingTransactionReconciliation: TransactionReconciliationState | null =
+    null,
+  incompleteTdhRun = false,
 ) {
   if (!logDirectory) {
     throw new Error("Log directory is required");
@@ -208,8 +215,39 @@ export function startSchedulers(
       scheduledWorker.getNamespace() !== ScheduledWorkerNames.TDH_WORKER
     ) {
       Logger.log(`Starting ${scheduledWorker.getNamespace()}`);
-      scheduledWorker.manualStart();
+      if (
+        scheduledWorker === transactionsWorker &&
+        pendingTransactionReconciliation
+      ) {
+        const resume = transactionsWorker.resumeReconciliation(
+          pendingTransactionReconciliation,
+        );
+        Logger.log(resume.message);
+      } else {
+        scheduledWorker.manualStart();
+      }
     }
+  }
+
+  if (pendingTransactionReconciliation && !transactionsWorker?.isEnabled()) {
+    Logger.log(
+      "Transaction reconciliation remains pending because the transactions worker is disabled; it will resume after restart with an active RPC provider.",
+    );
+  }
+
+  const tdhRestartAction = getTdhRestartAction(
+    incompleteTdhRun,
+    tdhWorker?.isEnabled() ?? false,
+  );
+  if (tdhRestartAction === "rerun" && tdhWorker) {
+    // manualStart always launches a fresh TDH calculation; the existing
+    // guards queue it when a conflicting startup worker is still running.
+    const rerun = tdhWorker.manualStart();
+    Logger.log(`Interrupted TDH run detected — ${rerun.message}`);
+  } else if (tdhRestartAction === "defer") {
+    Logger.log(
+      "Interrupted TDH run remains pending because the TDH worker is disabled; it will rerun after restart with an active RPC provider.",
+    );
   }
 
   Logger.log("All Tasks scheduled.");

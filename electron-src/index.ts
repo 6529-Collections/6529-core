@@ -59,6 +59,10 @@ import {
 import { runCoreMigrations } from "./db/db.migrations";
 import { RPCProvider } from "./db/entities/IRpcProvider";
 import { TransactionBlock } from "./db/entities/ITransaction";
+import {
+  getTdhRunIncomplete,
+  getTransactionReconciliationState,
+} from "./scheduled-tasks/workers/transactions-worker/transactions-worker.db";
 import IPFSServer from "./ipfs/ipfs.server";
 import { menuTemplate } from "./menu";
 import { sanitizeNativeSessionResponse } from "./native-auth-session";
@@ -1452,13 +1456,20 @@ function initListeners(mw: BrowserWindow) {
 }
 
 async function createScheduledTasks() {
-  stopSchedulers(scheduledWorkers);
+  await stopSchedulers(scheduledWorkers);
   rpcProviders = await getRpcProviders();
   const rpcProvider = rpcProviders.find((provider) => provider.active);
+  const [pendingTransactionReconciliation, incompleteTdhRun] =
+    await Promise.all([
+      getTransactionReconciliationState(getDb().manager),
+      getTdhRunIncomplete(getDb().manager),
+    ]);
   scheduledWorkers = startSchedulers(
     rpcProvider?.url ?? null,
     getLogDirectory(),
     postWorkerUpdate,
+    pendingTransactionReconciliation,
+    incompleteTdhRun,
   );
 }
 

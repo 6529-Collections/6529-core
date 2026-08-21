@@ -15,13 +15,29 @@ import {
   ERC4337_MEME_537_REPAIR_VALUES,
   shouldRepairErc4337Meme537Transaction
 } from "./erc4337-meme-537-repair";
+import { ensureTransactionBlockRecoveryColumns } from "./transaction-block-schema-migration";
 
 const loggerName = "[DB MIGRATIONS]";
 
 export async function runCoreMigrations(dataSource: DataSource) {
+  await runTransactionBlockRecoverySchemaMigration(dataSource);
   await runErc4337Meme537ValueRepairMigration(dataSource);
   await runBlurRoyaltiesMigration(dataSource);
   await runNftEditionSizeFloorMigration(dataSource);
+}
+
+async function runTransactionBlockRecoverySchemaMigration(
+  dataSource: DataSource,
+) {
+  const migrationName = "transactionBlockRecoverySchema";
+  if (await hasMigrationRun(dataSource, migrationName)) {
+    return;
+  }
+
+  Logger.info(loggerName, `Running migration ${migrationName}...`);
+  await ensureTransactionBlockRecoveryColumns(dataSource);
+  await recordMigrationIfNeeded(dataSource, migrationName);
+  Logger.info(loggerName, `Migration ${migrationName} completed.`);
 }
 
 export async function runErc4337Meme537ValueRepairMigration(
