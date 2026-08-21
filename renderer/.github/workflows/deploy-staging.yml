@@ -140,7 +140,7 @@ jobs:
       WS_ENDPOINT: ${{ vars.STAGING_WS_ENDPOINT || 'wss://ws.staging.6529.io' }}
       ALLOWLIST_API_ENDPOINT: ${{ vars.STAGING_ALLOWLIST_API_ENDPOINT || 'https://allowlist-api.staging.6529.io' }}
       BASE_ENDPOINT: https://staging.6529.io
-      NEXTGEN_CHAIN_ID: ${{ vars.STAGING_NEXTGEN_CHAIN_ID || '11155111' }}
+      NEXTGEN_CHAIN_ID: ${{ vars.STAGING_NEXTGEN_CHAIN_ID || '1' }}
       ASSETS_FROM_S3: "false"
 
     steps:
@@ -555,9 +555,14 @@ jobs:
           PUBLIC_REVIEW_DISCUSSION_DESTINATIONS: ${{ secrets.PUBLIC_REVIEW_DISCUSSION_DESTINATIONS }}
           REPO_DIR: ${{ env.STAGING_REPO_DIR }}
           RUN_AS: ${{ env.STAGING_RUN_AS }}
+          STAGING_SSR_CLIENT_ID: ${{ secrets.STAGING_SSR_CLIENT_ID }}
+          STAGING_SSR_CLIENT_SECRET: ${{ secrets.STAGING_SSR_CLIENT_SECRET }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          test -n "$STAGING_SSR_CLIENT_ID"
+          test -n "$STAGING_SSR_CLIENT_SECRET"
 
           jq -e '
             type == "object" and
@@ -584,6 +589,12 @@ jobs:
             printf '%q' \
               "$(printf '%s' "$PUBLIC_REVIEW_DISCUSSION_DESTINATIONS" | base64 -w0)"
           )"
+          ssr_client_id_b64_q="$(
+            printf '%q' "$(printf '%s' "$STAGING_SSR_CLIENT_ID" | base64 -w0)"
+          )"
+          ssr_client_secret_b64_q="$(
+            printf '%q' "$(printf '%s' "$STAGING_SSR_CLIENT_SECRET" | base64 -w0)"
+          )"
 
           remote_script="$(
             cat <<REMOTE_SCRIPT_VARS
@@ -595,6 +606,8 @@ jobs:
           EXPECTED_DIGEST=$expected_digest_q
           EXPECTED_SHA=$expected_sha_q
           PUBLIC_REVIEW_DISCUSSION_DESTINATIONS_B64=$public_review_destinations_b64_q
+          SSR_CLIENT_ID_B64=$ssr_client_id_b64_q
+          SSR_CLIENT_SECRET_B64=$ssr_client_secret_b64_q
           REMOTE_SCRIPT_VARS
             cat <<'REMOTE_SCRIPT_BODY'
 
@@ -647,6 +660,8 @@ jobs:
           PUBLIC_REVIEW_DISCUSSION_DESTINATIONS_B64="$PUBLIC_REVIEW_DISCUSSION_DESTINATIONS_B64" \
           REPO_DIR="$REPO_DIR" \
           RUN_AS="$RUN_AS" \
+          SSR_CLIENT_ID_B64="$SSR_CLIENT_ID_B64" \
+          SSR_CLIENT_SECRET_B64="$SSR_CLIENT_SECRET_B64" \
             bash ops/scripts/deploy-staging-artifact.sh
           REMOTE_SCRIPT_BODY
           )"
@@ -910,9 +925,10 @@ jobs:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_ALERT_TYPE: deploy
           CI_PIPELINES_TARGET_ENV: staging
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Seize STAGING WEB DEPLOY: CI pipeline is broken!!!"
+          CI_PIPELINES_TITLE: "WEB deploy failed"
           CI_PIPELINES_ENVIRONMENT: staging
           CI_PIPELINES_SERVICE: web
           CI_PIPELINES_SHA: ${{ github.sha }}
@@ -925,9 +941,10 @@ jobs:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_ALERT_TYPE: deploy
           CI_PIPELINES_TARGET_ENV: staging
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "Seize STAGING WEB DEPLOY: CI pipeline complete"
+          CI_PIPELINES_TITLE: "WEB deploy complete"
           CI_PIPELINES_ENVIRONMENT: staging
           CI_PIPELINES_SERVICE: web
           CI_PIPELINES_SHA: ${{ github.sha }}
@@ -964,9 +981,10 @@ jobs:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
           CI_PIPELINES_ALERT_SECRET: ${{ secrets.CI_PIPELINES_ALERT_SECRET }}
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
+          CI_PIPELINES_ALERT_TYPE: deploy
           CI_PIPELINES_TARGET_ENV: staging
           CI_PIPELINES_STATUS: failure
-          CI_PIPELINES_TITLE: "Seize STAGING WEB DEPLOY: CI pipeline is broken!!!"
+          CI_PIPELINES_TITLE: "WEB deploy failed"
           CI_PIPELINES_ENVIRONMENT: staging
           CI_PIPELINES_SERVICE: web
           CI_PIPELINES_SHA: ${{ github.sha }}

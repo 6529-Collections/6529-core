@@ -1,5 +1,6 @@
 import { isAddress } from "viem";
 import type { AppToastInput } from "@/components/utils/toast/AppToast";
+import { getNodeEnv, publicEnv } from "@/config/env";
 import {
   InvalidRoleStateError,
   MissingActiveProfileError,
@@ -96,6 +97,13 @@ interface AuthRequestActions {
 }
 
 const MANUAL_AUTH_VALIDATION_TIMEOUT_MS = 30_000;
+
+const isDevAuthenticationEnabled = (): boolean => {
+  const nodeEnv = getNodeEnv();
+  const isDevLikeEnv = nodeEnv === "development" || nodeEnv === "test";
+
+  return publicEnv.USE_DEV_AUTH === "true" && isDevLikeEnv;
+};
 
 const dispatchProfileSwitchedEvent = (profileProxy: ApiProfileProxy | null) => {
   if (globalThis.window === undefined) {
@@ -551,7 +559,7 @@ export function createAuthRequestActions({
       return { success: false };
     }
 
-    if (!enableWalletAuthentication) {
+    if (!enableWalletAuthentication || isDevAuthenticationEnabled()) {
       return { success: true };
     }
 

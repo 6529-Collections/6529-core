@@ -1,10 +1,13 @@
 import type { ApiWaveType } from "@/generated/models/ApiWaveType";
 import { CREATE_WAVE_VALIDATION_ERROR } from "@/helpers/waves/create-wave.validation";
 import CreateWaveTypeInputs from "./CreateWaveTypeInputs";
+import { CREATE_WAVE_FORM_STYLES } from "../../utils/createWaveFormStyles";
+
+const NO_VALIDATION_ERRORS: CREATE_WAVE_VALIDATION_ERROR[] = [];
 
 export default function CreateWaveType({
   selected,
-  errors = [],
+  errors = NO_VALIDATION_ERRORS,
   onChange,
 }: {
   readonly selected: ApiWaveType | null;
@@ -18,9 +21,7 @@ export default function CreateWaveType({
 
   return (
     <div className="tw-space-y-3">
-      <p className="tw-mb-0 tw-text-sm tw-font-semibold tw-text-iron-200">
-        Wave Type
-      </p>
+      <h3 className={CREATE_WAVE_FORM_STYLES.sectionTitle}>Wave Type</h3>
       <div
         aria-invalid={isTypeError}
         aria-describedby={isTypeError ? errorId : undefined}
@@ -30,7 +31,7 @@ export default function CreateWaveType({
       {isTypeError && (
         <p
           id={errorId}
-          className="tw-mb-0 tw-text-xs tw-font-medium tw-text-red"
+          className="tw-m-0 tw-text-xs tw-font-medium tw-text-red"
         >
           Please choose a wave type to continue.
         </p>

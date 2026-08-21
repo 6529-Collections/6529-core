@@ -3,6 +3,7 @@
 import { useCookieConsent } from "@/components/cookies/CookieConsentContext";
 import { shouldHideSubscriptions } from "@/components/user/layout/userPageVisibility";
 import EthereumIcon from "@/components/user/utils/icons/EthereumIcon";
+import ButtonLink from "@/components/utils/button/ButtonLink";
 import { getProfileSubscriptionsHref } from "@/components/user/subscriptions/subscriptionNavigation";
 import {
   formatSubscriptionCoverageDate,
@@ -27,12 +28,14 @@ import {
 import clsx from "clsx";
 import Link from "next/link";
 import type { ComponentType, SVGProps } from "react";
+import {
+  USER_PAGE_HEADER_INTERACTIVE_SURFACE_CLASS,
+  USER_PAGE_HEADER_SURFACE_CLASS,
+} from "./user-page-header-surface";
 
 type StatusIcon = ComponentType<SVGProps<SVGSVGElement>>;
 
-function SubscriptionEthIcon({
-  className,
-}: Readonly<SVGProps<SVGSVGElement>>) {
+function SubscriptionEthIcon({ className }: Readonly<SVGProps<SVGSVGElement>>) {
   return (
     <span className={clsx("tw-inline-flex tw-flex-none", className)}>
       <EthereumIcon />
@@ -47,25 +50,21 @@ const STATUS_ICONS: Record<SubscriptionCoverageTone, StatusIcon> = {
   neutral: SubscriptionEthIcon,
 };
 
-const STATUS_CONTAINER_RING_CLASSES: Record<SubscriptionCoverageTone, string> = {
-  positive: "tw-ring-emerald-400/25",
-  caution: "tw-ring-amber-300/30",
-  danger: "tw-ring-red-300/35",
-  neutral: "tw-ring-white/10",
-};
-
 const STATUS_ICON_CLASSES: Record<SubscriptionCoverageTone, string> = {
-  positive:
-    "tw-bg-emerald-400/10 tw-text-emerald-300 tw-ring-emerald-400/25",
+  positive: "tw-bg-emerald-400/10 tw-text-emerald-300 tw-ring-emerald-400/25",
   caution: "tw-bg-amber-300/10 tw-text-amber-200 tw-ring-amber-300/25",
   danger: "tw-bg-red-300/10 tw-text-red-200 tw-ring-red-300/30",
   neutral: "tw-bg-iron-800 tw-text-iron-300 tw-ring-iron-700",
 };
 
+const SUBSCRIPTIONS_TITLE_KEY = "subscriptions.coverage.header.title";
+
 export default function UserPageHeaderSubscriptionStatus({
   profile,
+  compact = false,
 }: Readonly<{
   profile: ApiIdentity;
+  compact?: boolean;
 }>) {
   const locale = useBrowserLocale();
   const { country } = useCookieConsent();
@@ -77,7 +76,7 @@ export default function UserPageHeaderSubscriptionStatus({
   const profileKey = profile.consolidation_key.trim();
   const profileHref = getProfileSubscriptionsHref(profile);
   const coverageQuery = useSubscriptionCoverage({
-    enabled: !hideSubscriptions,
+    enabled: !hideSubscriptions && !compact,
     profileKey,
   });
 
@@ -85,11 +84,29 @@ export default function UserPageHeaderSubscriptionStatus({
     return null;
   }
 
+  if (compact) {
+    return (
+      <ButtonLink
+        href={profileHref}
+        variant="tertiary"
+        size="sm"
+        aria-label={t(locale, SUBSCRIPTIONS_TITLE_KEY)}
+        className={`${USER_PAGE_HEADER_SURFACE_CLASS} ${USER_PAGE_HEADER_INTERACTIVE_SURFACE_CLASS}`}
+      >
+        <span>{t(locale, SUBSCRIPTIONS_TITLE_KEY)}</span>
+        <ArrowRightIcon className="tw-size-3.5" aria-hidden="true" />
+      </ButtonLink>
+    );
+  }
+
   if (coverageQuery.isLoading) {
     return (
       <div
         aria-label={t(locale, "subscriptions.coverage.loading")}
-        className="tw-min-h-14 tw-w-full tw-animate-pulse tw-rounded-xl tw-bg-white/[0.035] tw-p-2.5 tw-shadow-sm tw-shadow-black/20 tw-ring-1 tw-ring-white/10 tw-backdrop-blur-sm sm:tw-w-[22rem]"
+        className={clsx(
+          "tw-min-h-14 tw-w-full tw-animate-pulse tw-rounded-xl tw-p-2.5 sm:tw-w-[22rem]",
+          USER_PAGE_HEADER_SURFACE_CLASS
+        )}
       >
         <div className="tw-h-3.5 tw-w-40 tw-rounded tw-bg-iron-700/80" />
         <div className="tw-mt-1.5 tw-h-3 tw-w-48 tw-rounded tw-bg-iron-800/90" />
@@ -102,11 +119,15 @@ export default function UserPageHeaderSubscriptionStatus({
     return (
       <Link
         href={profileHref}
-        className="tw-flex tw-min-h-14 tw-w-full tw-items-center tw-justify-between tw-gap-2 tw-rounded-xl tw-bg-white/[0.035] tw-p-2.5 tw-text-left tw-no-underline tw-shadow-sm tw-shadow-black/20 tw-ring-1 tw-ring-white/10 tw-backdrop-blur-sm tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-300 desktop-hover:hover:tw-bg-white/[0.06] sm:tw-w-[22rem]"
+        className={clsx(
+          "tw-flex tw-min-h-14 tw-w-full tw-items-center tw-justify-between tw-gap-2 tw-rounded-xl tw-p-2.5 tw-text-left tw-no-underline focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400 sm:tw-w-[22rem]",
+          USER_PAGE_HEADER_SURFACE_CLASS,
+          USER_PAGE_HEADER_INTERACTIVE_SURFACE_CLASS
+        )}
       >
         <span className="tw-min-w-0">
           <span className="tw-block tw-text-[13px] tw-font-medium tw-text-iron-100">
-            {t(locale, "subscriptions.coverage.header.title")}
+            {t(locale, SUBSCRIPTIONS_TITLE_KEY)}
           </span>
           <span className="tw-mt-0.5 tw-block tw-text-[11px] tw-text-iron-400">
             {t(locale, "subscriptions.coverage.status.unknown")}
@@ -152,8 +173,8 @@ export default function UserPageHeaderSubscriptionStatus({
   return (
     <div
       className={clsx(
-        "tw-flex tw-min-h-14 tw-w-full tw-items-center tw-gap-2 tw-rounded-xl tw-bg-white/[0.035] tw-p-2.5 tw-shadow-sm tw-shadow-black/20 tw-ring-1 tw-backdrop-blur-sm focus-within:tw-ring-2 focus-within:tw-ring-primary-300 sm:tw-w-[22rem]",
-        STATUS_CONTAINER_RING_CLASSES[presentation.tone]
+        "tw-flex tw-min-h-14 tw-w-full tw-items-center tw-gap-2 tw-rounded-xl tw-p-2.5 focus-within:tw-outline focus-within:tw-outline-2 focus-within:tw-outline-offset-2 focus-within:tw-outline-primary-400 sm:tw-w-[22rem]",
+        USER_PAGE_HEADER_SURFACE_CLASS
       )}
     >
       <span
@@ -167,7 +188,7 @@ export default function UserPageHeaderSubscriptionStatus({
       </span>
       <span className="tw-min-w-0 tw-flex-1">
         <span className="tw-block tw-truncate tw-text-[13px] tw-font-medium tw-text-iron-100">
-          {t(locale, "subscriptions.coverage.header.title")}
+          {t(locale, SUBSCRIPTIONS_TITLE_KEY)}
         </span>
         <span className="tw-mt-0.5 tw-block tw-text-[11px] tw-leading-4 tw-text-iron-400">
           {secondaryLine}

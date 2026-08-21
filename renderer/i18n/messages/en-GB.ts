@@ -410,11 +410,132 @@ export const EN_GB_MESSAGES = {
   "common.close": "Close",
   "desktopUpdateToast.versionAvailable": "Version {version} is available.",
   "desktopUpdateToast.viewUpdate": "View update",
+  "waves.create.dialog.subwaveTitle": "Create subwave",
+  "waves.create.dialog.waveTitle": "Create Wave",
   "waves.create.actions.cancel": "Cancel",
+  "waves.create.actions.backToCriteria": "Back to criteria",
   "waves.create.actions.complete": "Complete",
   "waves.create.actions.next": "Next",
   "waves.create.actions.previous": "Previous",
   "waves.create.actions.save": "Save",
+  "waves.create.advanced.title": "Advanced settings",
+  "waves.create.advanced.customized": "Customised",
+  "waves.create.advanced.needsAttention": "Needs attention",
+  "waves.create.advanced.errorSummary":
+    "Review the highlighted settings before continuing.",
+  "waves.create.overview.title": "Create Wave",
+  "waves.create.overview.picture": "Wave profile picture",
+  "waves.create.overview.advancedTitle": "Appearance and labels",
+  "waves.create.overview.displaySettings": "Display settings",
+  "waves.create.groups.title": "Access",
+  "waves.create.groups.description":
+    "Choose who can access, participate in, and manage this wave.",
+  "waves.create.groups.viewGroupName": "Who can view",
+  "waves.create.groups.adminGroupName": "Admin",
+  "waves.create.groups.members.currentCount": "{count} currently eligible",
+  "waves.create.groups.members.countLoading": "Checking current audience…",
+  "waves.create.groups.members.countUnavailable":
+    "Current audience unavailable",
+  "waves.create.groups.members.view": "View members",
+  "waves.create.groups.members.previewDraft": "Preview matches",
+  "waves.create.groups.members.dialogTitle": "{role}: {group}",
+  "waves.create.groups.members.dynamicDescription":
+    "This is a live preview based on current profile, reputation, and ownership data. Membership can change over time.",
+  "waves.create.groups.members.criteriaSummary": "Why these identities qualify",
+  "waves.create.groups.members.criteriaUnavailable":
+    "Group criteria aren't available, but you can still inspect the current members below.",
+  "waves.create.groups.members.searchLabel": "Find an identity",
+  "waves.create.groups.members.searchPlaceholder": "Search by handle or wallet",
+  "waves.create.groups.members.clearSearch": "Clear identity search",
+  "waves.create.groups.members.loadingStatus": "Loading current members",
+  "waves.create.groups.members.empty":
+    "No identities currently match this group.",
+  "waves.create.groups.members.searchEmpty": "No matching identities found.",
+  "waves.create.groups.members.errorTitle": "Couldn't load current members.",
+  "waves.create.groups.members.errorDescription":
+    "Check your connection and try again.",
+  "waves.create.groups.members.retry": "Try again",
+  "waves.create.groups.members.listLabel": "Current group members",
+  "waves.create.groups.members.openProfile":
+    "Open {identity}'s profile in a new tab",
+  "waves.create.groups.validation.checking": "Checking group access…",
+  "waves.create.groups.validation.unavailableTitle":
+    "Couldn't verify group access.",
+  "waves.create.groups.validation.unavailable":
+    "Group access could not be verified. Try again before continuing.",
+  "waves.create.groups.validation.outsideView":
+    'The "{groupName}" group includes people who are not in "{viewGroupName}".',
+  "waves.create.groups.validation.invalidTitle":
+    "Some access groups need attention.",
+  "waves.create.groups.validation.invalidDescription":
+    "Every Drop, Vote, Chat, and Admin group member must also belong to the View group.",
+  "waves.create.dates.title": "Schedule",
+  "waves.create.dates.description":
+    "Review when this wave opens, voting begins, and winners are announced.",
+  "waves.create.dates.approve.noEndSummary": "Starts {start}. No end date.",
+  "waves.create.dates.approve.endSummary": "Starts {start}. Ends {end}.",
+  "waves.create.dates.approve.endInfoLabel": "About wave end",
+  "waves.create.dates.approve.advancedSummary": "Wave end",
+  "waves.create.dates.rank.ongoingSummary":
+    "Submissions start {submission}. Voting starts {voting}. Ranking stays open.",
+  "waves.create.dates.rank.scheduledSummary":
+    "Submissions start {submission}. Voting starts {voting}. First winners: {announcement}.",
+  "waves.create.dates.rank.advancedSummary": "Winner schedule",
+  "waves.create.drops.requirementsTitle": "Submission requirements",
+  "waves.create.rules.advancedSummary": "Creator rules and acceptance",
+  "waves.create.rules.chatAdvancedSummary": "Creator rules",
+  "waves.create.voting.rankAdvancedSummary": "Vote limits and behaviour",
+  "waves.create.voting.approveAdvancedSummary":
+    "Vote limits, behaviour, and timing",
+  "waves.create.outcomes.rankAdvancedSummary": "Outcome visibility",
+  "waves.create.outcomes.approveAdvancedSummary": "Winner limits",
+  "waves.create.drops.maxSimultaneousSubmissions.label":
+    "Max simultaneous submissions",
+  "waves.create.drops.maxSimultaneousSubmissions.description":
+    "Maximum number of simultaneous submissions per participant. Optional. Unlimited if left blank.",
+  "waves.proposalCard.contextLabel": "Proposal",
+  "waves.proposalCard.readFull": "Read full",
+  "waves.proposalCard.readFullNamed": "Read full: {title}",
+  "waves.proposalCard.untitledProposal": "Untitled proposal",
+  "waves.proposalCard.previewAlt": "Media preview for {title}",
+  "waves.proposalCard.part.one": "{count} part",
+  "waves.proposalCard.part.other": "{count} parts",
+  "waves.proposalCard.media.one": "{count} media item",
+  "waves.proposalCard.media.other": "{count} media items",
+  "waves.proposalCard.attachment.one": "{count} attachment",
+  "waves.proposalCard.attachment.other": "{count} attachments",
+  "waves.proposalCard.appearanceLabel": "Proposal card appearance",
+  "waves.proposalCard.mode.standard.label": "Full proposal",
+  "waves.proposalCard.mode.standard.description":
+    "Show original content directly in the feed.",
+  "waves.proposalCard.mode.custom.label": "Summary card",
+  "waves.proposalCard.mode.custom.description":
+    "Show a title, shortened text, and an optional image.",
+  "waves.proposalCard.excerptLabel": "Text preview limit",
+  "waves.proposalCard.excerptInputAriaLabel":
+    "Maximum proposal preview characters",
+  "waves.proposalCard.characters": "characters",
+  "waves.proposalCard.excerptRangeError":
+    "Enter a whole number from {min} to {max}.",
+  "waves.proposalCard.mediaLabel": "Image on summary card",
+  "waves.proposalCard.settings.editLabel": "Edit proposal card settings",
+  "waves.proposalCard.settings.layoutLabel": "Proposal layout",
+  "waves.proposalCard.settings.rowLabel": "Proposal cards",
+  "waves.proposalCard.settings.toastAuthFailed":
+    "Couldn't authenticate. Reconnect your wallet and try again.",
+  "waves.proposalCard.settings.toastSaveFailedTitle":
+    "Couldn't save these proposal card settings.",
+  "waves.proposalCard.settings.toastRetry": "Please try again.",
+  "waves.proposalCard.tabLabelsLabel": "Tab labels",
+  "waves.proposalCard.tabLabelsDescription": "Names shown on this wave's tabs.",
+  "waves.proposalCard.approvalsTabLabel": "Approvals tab label",
+  "waves.proposalCard.approvedTabLabel": "Approved tab label",
+  "waves.proposalCard.tabLabels.errorTooLong":
+    "Labels must be {max} characters or fewer.",
+  "waves.proposalCard.tabLabels.errorDuplicate":
+    "Use two different tab labels.",
+  "waves.proposalCard.tabLabels.errorReserved":
+    "Labels cannot match existing tabs.",
   ...EN_GB_PAGINATION_MESSAGES,
   "memes.quickVote.leftThisRound": "{count} left this round",
   "memes.quickVote.unrated": "{count} unrated",
@@ -434,10 +555,8 @@ export const EN_GB_MESSAGES = {
   "waves.leaderboard.timeline.decisionTimeline": "Decision Timeline",
   "waves.leaderboard.timeline.announcementHistory": "Announcement history",
   "waves.leaderboard.timeline.paused": "Paused",
-  "waves.leaderboard.timeline.nextDecisionAfter":
-    "Next decision after {date}",
-  "waves.leaderboard.timeline.noDecisionScheduled":
-    "No decision scheduled",
+  "waves.leaderboard.timeline.nextDecisionAfter": "Next decision after {date}",
+  "waves.leaderboard.timeline.noDecisionScheduled": "No decision scheduled",
   "waves.leaderboard.timeline.noUpcomingEvents": "No upcoming events",
   "waves.leaderboard.timeline.nextWinner": "Next winner",
   "waves.leaderboard.timeline.nextWinnerIn": "Next winner in {countdown}",
@@ -463,5 +582,22 @@ export const EN_GB_MESSAGES = {
   "theMemes.filters.season.label": "Season",
   "theMemes.filters.season.all": "All Seasons",
   "theMemes.filters.season.allForYear": "All Year {year}",
+  "home.mintAllowlist.label": "Your allowance",
+  "home.mintAllowlist.allocationsAriaLabel":
+    "Mint allocations for the connected wallet",
+  "home.mintAllowlist.connectWallet": "Connect your wallet to view details.",
+  "home.mintAllowlist.checking": "Checking…",
+  "home.mintAllowlist.notPublished":
+    "Available once distribution is published.",
+  "home.mintAllowlist.notFound": "None found for this wallet.",
+  "home.mintAllowlist.unavailable": "Temporarily unavailable.",
+  "home.mintAllowlist.phase.phase0": "Phase 0",
+  "home.mintAllowlist.phase.phase1": "Phase 1",
+  "home.mintAllowlist.phase.phase2": "Phase 2",
+  "home.mintAllowlist.phase.public": "Public",
+  "home.mintAllowlist.pill.airdrop": "{phase} · {airdrop}x Airdrop",
+  "home.mintAllowlist.pill.allowlist": "{phase} · {allowlist}x Allowlist",
+  "home.mintAllowlist.pill.mixed":
+    "{phase} · {airdrop}x Airdrop · {allowlist}x Allowlist",
   ...TRANSFER_MESSAGES,
 } satisfies Partial<Record<MessageKey, string>>;

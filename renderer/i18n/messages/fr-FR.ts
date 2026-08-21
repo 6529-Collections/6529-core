@@ -1,6 +1,7 @@
 import { FR_FR_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { FR_FR_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { FR_FR_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
+import { FR_FR_CAPACITOR_CONNECT_MESSAGES } from "@/i18n/messages/capacitor-connect";
 import { FR_FR_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { FR_FR_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { FR_FR_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
@@ -409,6 +410,7 @@ export const FR_FR_MESSAGES = {
   "quickDm.loadingStatus": "Chargement des messages directs",
   "quickDm.chatLoadError": "Impossible de charger cette conversation.",
   ...FR_FR_QR_SCANNER_MESSAGES,
+  ...FR_FR_CAPACITOR_CONNECT_MESSAGES,
   ...FR_FR_NEW_VERSION_TOAST_MESSAGES,
   "waves.chat.fileUploadAreaAriaLabel":
     "Zone d'envoi de fichiers du chat de wave",
@@ -430,11 +432,142 @@ export const FR_FR_MESSAGES = {
   "desktopUpdateToast.versionAvailable":
     "La version {version} est disponible.",
   "desktopUpdateToast.viewUpdate": "Voir la mise à jour",
+  "waves.create.dialog.subwaveTitle": "Créer une sous-wave",
+  "waves.create.dialog.waveTitle": "Créer une wave",
   "waves.create.actions.cancel": "Annuler",
+  "waves.create.actions.backToCriteria": "Retour aux critères",
   "waves.create.actions.complete": "Terminer",
   "waves.create.actions.next": "Suivant",
   "waves.create.actions.previous": "Précédent",
   "waves.create.actions.save": "Enregistrer",
+  "waves.create.advanced.title": "Paramètres avancés",
+  "waves.create.advanced.customized": "Personnalisé",
+  "waves.create.advanced.needsAttention": "À vérifier",
+  "waves.create.advanced.errorSummary":
+    "Vérifiez les paramètres signalés avant de continuer.",
+  "waves.create.overview.title": "Créer une Wave",
+  "waves.create.overview.picture": "Image de la Wave",
+  "waves.create.overview.advancedTitle": "Apparence et libellés",
+  "waves.create.overview.displaySettings": "Paramètres d’affichage",
+  "waves.create.groups.title": "Accès",
+  "waves.create.groups.description":
+    "Choisissez qui peut accéder à cette Wave, y participer et la gérer.",
+  "waves.create.groups.viewGroupName": "Qui peut voir",
+  "waves.create.groups.adminGroupName": "Administration",
+  "waves.create.groups.members.currentCount": "{count} éligibles actuellement",
+  "waves.create.groups.members.countLoading":
+    "Vérification de l’audience actuelle…",
+  "waves.create.groups.members.countUnavailable":
+    "Audience actuelle indisponible",
+  "waves.create.groups.members.view": "Voir les membres",
+  "waves.create.groups.members.previewDraft": "Prévisualiser les résultats",
+  "waves.create.groups.members.dialogTitle": "{role} : {group}",
+  "waves.create.groups.members.dynamicDescription":
+    "Cet aperçu en direct repose sur les données actuelles de profil, de réputation et de propriété. L’appartenance peut évoluer.",
+  "waves.create.groups.members.criteriaSummary":
+    "Pourquoi ces identités sont éligibles",
+  "waves.create.groups.members.criteriaUnavailable":
+    "Les critères du groupe ne sont pas disponibles, mais vous pouvez toujours consulter les membres actuels ci-dessous.",
+  "waves.create.groups.members.searchLabel": "Rechercher une identité",
+  "waves.create.groups.members.searchPlaceholder":
+    "Rechercher par pseudo ou portefeuille",
+  "waves.create.groups.members.clearSearch": "Effacer la recherche d’identité",
+  "waves.create.groups.members.loadingStatus": "Chargement des membres actuels",
+  "waves.create.groups.members.empty":
+    "Aucune identité ne correspond actuellement à ce groupe.",
+  "waves.create.groups.members.searchEmpty": "Aucune identité trouvée.",
+  "waves.create.groups.members.errorTitle":
+    "Impossible de charger les membres actuels.",
+  "waves.create.groups.members.errorDescription":
+    "Vérifiez votre connexion et réessayez.",
+  "waves.create.groups.members.retry": "Réessayer",
+  "waves.create.groups.members.listLabel": "Membres actuels du groupe",
+  "waves.create.groups.members.openProfile":
+    "Ouvrir le profil de {identity} dans un nouvel onglet",
+  "waves.create.groups.validation.checking": "Vérification des accès…",
+  "waves.create.groups.validation.unavailableTitle":
+    "Impossible de vérifier les accès.",
+  "waves.create.groups.validation.unavailable":
+    "Les accès aux groupes n’ont pas pu être vérifiés. Réessayez avant de continuer.",
+  "waves.create.groups.validation.outsideView":
+    "Le groupe « {groupName} » comprend des personnes absentes de « {viewGroupName} ».",
+  "waves.create.groups.validation.invalidTitle":
+    "Certains groupes d’accès doivent être corrigés.",
+  "waves.create.groups.validation.invalidDescription":
+    "Chaque membre des groupes de soumission, vote, chat et administration doit aussi appartenir au groupe de visibilité.",
+  "waves.create.dates.title": "Calendrier",
+  "waves.create.dates.description":
+    "Vérifiez le début de la Wave, du vote et des annonces des gagnants.",
+  "waves.create.dates.approve.noEndSummary":
+    "Débute le {start}. Aucune date de fin.",
+  "waves.create.dates.approve.endSummary":
+    "Débute le {start}. Se termine le {end}.",
+  "waves.create.dates.approve.endInfoLabel": "À propos de la fin de la Wave",
+  "waves.create.dates.approve.advancedSummary": "Fin de la Wave",
+  "waves.create.dates.rank.ongoingSummary":
+    "Les soumissions débutent le {submission}. Le vote débute le {voting}. Le classement reste ouvert.",
+  "waves.create.dates.rank.scheduledSummary":
+    "Les soumissions débutent le {submission}. Le vote débute le {voting}. Premiers gagnants : {announcement}.",
+  "waves.create.dates.rank.advancedSummary": "Calendrier des gagnants",
+  "waves.create.drops.requirementsTitle": "Exigences de soumission",
+  "waves.create.rules.advancedSummary": "Règles du créateur et acceptation",
+  "waves.create.rules.chatAdvancedSummary": "Règles du créateur",
+  "waves.create.voting.rankAdvancedSummary": "Limites et comportement du vote",
+  "waves.create.voting.approveAdvancedSummary":
+    "Limites, comportement et calendrier du vote",
+  "waves.create.outcomes.rankAdvancedSummary": "Visibilité des résultats",
+  "waves.create.outcomes.approveAdvancedSummary": "Limites des gagnants",
+  "waves.create.drops.maxSimultaneousSubmissions.label":
+    "Nombre maximal de soumissions simultanées",
+  "waves.create.drops.maxSimultaneousSubmissions.description":
+    "Nombre maximal de soumissions simultanées par participant. Facultatif. Illimité si ce champ est vide.",
+  "waves.proposalCard.contextLabel": "Proposition",
+  "waves.proposalCard.readFull": "Lire en entier",
+  "waves.proposalCard.readFullNamed": "Lire en entier : {title}",
+  "waves.proposalCard.untitledProposal": "Proposition sans titre",
+  "waves.proposalCard.previewAlt": "Aperçu du média pour {title}",
+  "waves.proposalCard.part.one": "{count} partie",
+  "waves.proposalCard.part.other": "{count} parties",
+  "waves.proposalCard.media.one": "{count} média",
+  "waves.proposalCard.media.other": "{count} médias",
+  "waves.proposalCard.attachment.one": "{count} pièce jointe",
+  "waves.proposalCard.attachment.other": "{count} pièces jointes",
+  "waves.proposalCard.appearanceLabel": "Apparence de la carte de proposition",
+  "waves.proposalCard.mode.standard.label": "Proposition complète",
+  "waves.proposalCard.mode.standard.description":
+    "Afficher le contenu original directement dans le fil.",
+  "waves.proposalCard.mode.custom.label": "Carte récapitulative",
+  "waves.proposalCard.mode.custom.description":
+    "Afficher un titre, un texte raccourci et une image facultative.",
+  "waves.proposalCard.excerptLabel": "Limite de l’aperçu du texte",
+  "waves.proposalCard.excerptInputAriaLabel":
+    "Nombre maximal de caractères dans l’aperçu de la proposition",
+  "waves.proposalCard.characters": "caractères",
+  "waves.proposalCard.excerptRangeError":
+    "Saisissez un nombre entier compris entre {min} et {max}.",
+  "waves.proposalCard.mediaLabel": "Image sur la carte récapitulative",
+  "waves.proposalCard.settings.editLabel":
+    "Modifier les paramètres des cartes de proposition",
+  "waves.proposalCard.settings.layoutLabel": "Présentation de la proposition",
+  "waves.proposalCard.settings.rowLabel": "Cartes de proposition",
+  "waves.proposalCard.settings.toastAuthFailed":
+    "L’authentification a échoué. Reconnectez votre portefeuille et réessayez.",
+  "waves.proposalCard.settings.toastSaveFailedTitle":
+    "Impossible d’enregistrer ces paramètres de cartes de proposition.",
+  "waves.proposalCard.settings.toastRetry": "Veuillez réessayer.",
+  "waves.proposalCard.tabLabelsLabel": "Libellés des onglets",
+  "waves.proposalCard.tabLabelsDescription":
+    "Noms affichés dans les onglets de cette Wave.",
+  "waves.proposalCard.approvalsTabLabel":
+    "Libellé de l’onglet des propositions",
+  "waves.proposalCard.approvedTabLabel":
+    "Libellé de l’onglet des propositions approuvées",
+  "waves.proposalCard.tabLabels.errorTooLong":
+    "Les libellés doivent comporter au maximum {max} caractères.",
+  "waves.proposalCard.tabLabels.errorDuplicate":
+    "Utilisez deux libellés d’onglet différents.",
+  "waves.proposalCard.tabLabels.errorReserved":
+    "Les libellés ne peuvent pas correspondre aux onglets existants.",
   ...FR_FR_PAGINATION_MESSAGES,
   "memes.quickVote.leftThisRound": "{count} restant ce tour",
   "memes.quickVote.unrated": "{count} non notés",
@@ -464,7 +597,7 @@ export const FR_FR_MESSAGES = {
   "waves.leaderboard.loadMore": "Charger plus de drops",
   "waves.leaderboard.loadingMoreButton": "Chargement…",
   "waves.leaderboard.grid.untitled": "Drop sans titre",
-  "waves.leaderboard.grid.readFullText": "Lire le texte intégral",
+  "waves.leaderboard.grid.readFull": "Tout lire",
   "waves.leaderboard.grid.open": "Ouvrir",
   "waves.leaderboard.grid.openNamed": "Ouvrir {title}",
   "waves.leaderboard.grid.authorProfile": "Voir le profil de {author}",
@@ -558,5 +691,23 @@ export const FR_FR_MESSAGES = {
   "theMemes.volume.7Days": "7 jours",
   "theMemes.volume.30Days": "30 jours",
   "theMemes.volume.allTime": "Tout l’historique",
+  "home.mintAllowlist.label": "Votre allocation",
+  "home.mintAllowlist.allocationsAriaLabel":
+    "Allocations de mint pour le wallet connecté",
+  "home.mintAllowlist.connectWallet":
+    "Connectez votre wallet pour voir les détails.",
+  "home.mintAllowlist.checking": "Vérification…",
+  "home.mintAllowlist.notPublished":
+    "Disponible après la publication de la distribution.",
+  "home.mintAllowlist.notFound": "Aucune pour ce wallet.",
+  "home.mintAllowlist.unavailable": "Temporairement indisponible.",
+  "home.mintAllowlist.phase.phase0": "Phase 0",
+  "home.mintAllowlist.phase.phase1": "Phase 1",
+  "home.mintAllowlist.phase.phase2": "Phase 2",
+  "home.mintAllowlist.phase.public": "Public",
+  "home.mintAllowlist.pill.airdrop": "{phase} · {airdrop}x Airdrop",
+  "home.mintAllowlist.pill.allowlist": "{phase} · {allowlist}x Allowlist",
+  "home.mintAllowlist.pill.mixed":
+    "{phase} · {airdrop}x Airdrop · {allowlist}x Allowlist",
   ...FR_FR_TRANSFER_MESSAGES,
 } satisfies Partial<Record<MessageKey, string>>;

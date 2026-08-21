@@ -28,14 +28,50 @@
 - Raw mode and `ALL` are internal emergency fences, not normal routing or UI
   controls. Never bypass them. Use the backend fast-off helper only for an
   emergency hard stop.
-- In manual fallback, dispatch backend `Deploy a service` workflows one at a
-  time and wait for exact success before starting the next. Shared concurrency
-  can cancel sibling service runs, including independent DAG-frontier units.
+- In manual fallback, dispatch exactly one backend `Deploy a service` workflow
+  and stop. A later continuation may dispatch another service only after the
+  prior run's exact success is already established and a new staging-drain
+  snapshot is clear. Shared concurrency can cancel sibling service runs,
+  including independent DAG-frontier units.
+- Immediately before pushing frontend `1a-staging`, and separately immediately
+  before dispatching each backend staging service, take one fresh bounded
+  read-only staging-drain snapshot across both repositories. Finish preparatory
+  work first, including the final shared-ref fetch and any recomputation. Then
+  read each existing source once: the repo-local Release Bus status helper for
+  the effective staging lane, `/deploy/ui/bus` or its versioned read API for the
+  `staging-environment` lock plus active trains and operations, and GitHub
+  Actions for `queued` and `in_progress` runs in both repositories. Bound the
+  Actions scan to ten pages of 100 runs per status and repository; fail closed
+  if that bound or any source cannot prove current state. The status helper
+  alone is not a staging-drain snapshot.
+- A clear snapshot requires staging `OFF` with `changeable: true`, an unowned
+  staging lock, no active `STAGING` or `PRODUCTION_QUALIFICATION` train or
+  nonterminal operation, and no queued/running staging mutation or staging E2E.
+  Staging mutations include frontend/backend staging deploys and both staging-
+  ref advance workflows. Production deploy/E2E, PR CI, and unrelated workflows
+  do not block staging.
+- Snapshot collection is the final read-only sequence before one mutation; do
+  not reuse it for another service, a batch, or a later push. If blocked,
+  unavailable, incomplete, or ambiguous, stop and return control without
+  waiting, polling, cancelling, retrying, or mutating. For a workflow blocker,
+  report repository, workflow, status, run ID, and link. Otherwise report the
+  gate/lock/train/operation/source, exact state or error, observation time, and
+  available owner, identity, or link. Existing workflow authorization and all
+  rejection/failure alerts remain unchanged as final race protection.
 - For coupled work, declare backend dependencies and preserve backend-before-
   frontend ordering. Within v2, only independent backend DAG frontier units run
   together.
 - `STAGING_DEPLOYED` is not validation. Do not mutate staging during manifest-
   bound E2E, and never infer production readiness from staging validation.
+- CI wave workflows send deploy/run identities, never raw drop IDs. Preserve
+  the parent deploy run ID and Release Bus train ID through WEB E2E reruns; the
+  backend alone resolves and supplies the drop `reply_to` target.
+- Keep CI wave notification jobs best effort. Roll out the backend `api`
+  receiver before frontend workflow senders. The related backend rollout also
+  updates the production-only `releaseBus` service's trusted frontend PR-CI
+  policy digest; staging notification validation needs only `api`. Automatic
+  E2E dispatchers source their called workflow from `main`, not `1a-staging`.
+  See `ops/docs/developer/ci-wave-deploy-validation-notifications.md`.
 - Normal train preflight reuses exact-head/merge-tree PR CI evidence, not
   environment-incompatible artifact bytes. It builds only the target
   environment profile and emits an immutable environment-bound manifest.
@@ -164,6 +200,14 @@ All project commands must go through the repo-local `6529` wrapper.
   `ops/standards/frontend-design-ui-ux.md` for repo-specific visual
   consistency, Tailwind-first styling migration, responsive layout, interaction
   states, media behavior, and browser evidence.
+- Every Network Museum PR that changes a public route, visible component,
+  layout, copy, or media must also pass the pre-PR full-page adversarial review
+  gate in `ops/standards/museum-visual-release-acceptance.md`. A PR must not be
+  opened until exact production-build screenshots of every changed Museum route
+  have been reviewed independently for museum/curatorial quality, visual/UX
+  quality, and copy/editorial quality, and all blocking findings have been fixed
+  and recaptured. Automated geometry, DOM, and accessibility checks do not
+  substitute for this gate.
 - Use `ops/skills/design-ui-ux/SKILL.md` for frontend design and UX review.
 - Use `ops/skills/wcag-22-aa/SKILL.md` for accessibility audits and fixes.
 - Use `ops/skills/i18n-localization/SKILL.md` for progressive localization

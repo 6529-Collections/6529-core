@@ -5,8 +5,10 @@ import { useParams, useRouter } from "next/navigation";
 import { useContext, useMemo, useState } from "react";
 
 import { AuthContext } from "@/components/auth/Auth";
+import ProfilePreferencesSettings from "@/components/header/ProfilePreferencesSettings";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { QueryKey } from "@/components/react-query-wrapper/ReactQueryWrapper";
+import Button from "@/components/utils/button/Button";
 import ButtonLink from "@/components/utils/button/ButtonLink";
 import type { CicStatement } from "@/entities/IProfile";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
@@ -21,6 +23,7 @@ import { useIdentity } from "@/hooks/useIdentity";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { commonApiFetch } from "@/services/api/common-api";
+import { Cog6ToothIcon } from "@heroicons/react/24/outline";
 import UserFollowBtn from "../utils/UserFollowBtn";
 import WebsiteIcon from "../utils/icons/WebsiteIcon";
 import UserPageHeaderAbout from "./about/UserPageHeaderAbout";
@@ -35,6 +38,10 @@ import {
   getUserProfileHeaderDisplayName,
   getUserProfileHeaderMessage,
 } from "./user-page-header.messages";
+import {
+  USER_PAGE_HEADER_INTERACTIVE_SURFACE_CLASS,
+  USER_PAGE_HEADER_SURFACE_CLASS,
+} from "./user-page-header-surface";
 
 type Props = {
   readonly profile: ApiIdentity;
@@ -99,6 +106,8 @@ export default function UserPageHeaderClient({
 
   const [directMessageLoading, setDirectMessageLoading] =
     useState<boolean>(false);
+  const [isProfilePreferencesOpen, setIsProfilePreferencesOpen] =
+    useState(false);
 
   const isMyProfile = useMemo(
     () =>
@@ -155,7 +164,14 @@ export default function UserPageHeaderClient({
     !isMyProfile && profile.handle && connectedProfile?.handle
       ? profile.handle
       : null;
-  const showSubscriptionStatus = isMyProfile && !activeProfileProxy;
+  const canManageProfilePreferences = isMyProfile && !activeProfileProxy;
+  const showSubscriptionStatus = canManageProfilePreferences;
+  let subscriptionStatusVisibilityClass = "";
+  if (canEdit) {
+    subscriptionStatusVisibilityClass = hasTouchScreen
+      ? "tw-hidden"
+      : "tw-hidden sm:tw-block";
+  }
 
   const handleCreateDirectMessage = async (
     primaryWallet: string | undefined
@@ -173,15 +189,17 @@ export default function UserPageHeaderClient({
       navigateToDirectMessage({ waveId: wave.id, router, isApp });
     } catch (error) {
       console.error(error);
+      const errorMessage = getToastErrorDetails(error);
       setToast({
         type: "error",
         title: getUserProfileHeaderMessage(
           "user.profileHeader.dm.createFailed.title"
         ),
-        description: getUserProfileHeaderMessage(
-          "user.profileHeader.dm.createFailed.description"
-        ),
-        details: getToastErrorDetails(error),
+        description:
+          errorMessage ??
+          getUserProfileHeaderMessage(
+            "user.profileHeader.dm.createFailed.description"
+          ),
       });
     } finally {
       setDirectMessageLoading(false);
@@ -202,12 +220,26 @@ export default function UserPageHeaderClient({
             canEdit={canInlineEdit}
             profileLabel={profileLabel}
           />
+          {canEdit ? (
+            <div
+              className={`tw-absolute tw-right-4 tw-top-3 tw-z-20 sm:tw-right-6 sm:tw-top-4 md:tw-right-8 ${
+                hasTouchScreen ? "" : "sm:tw-hidden"
+              }`}
+            >
+              <UserPageHeaderEditProfile
+                profile={profile}
+                statement={aboutStatement}
+                defaultBanner1={banner1Color}
+                defaultBanner2={banner2Color}
+              />
+            </div>
+          ) : null}
         </div>
 
-        <div className="tw-relative tw-z-20 tw-bg-black md:-tw-mt-[164px] md:tw-pointer-events-none md:tw-bg-transparent">
+        <div className="tw-relative tw-z-20 tw-bg-black md:tw-pointer-events-none md:-tw-mt-[164px] md:tw-bg-transparent">
           <div className="tw-relative tw-z-10 tw-px-4 sm:tw-px-6 md:tw-px-8">
             <div className="tw-mb-4 tw-flex tw-flex-col tw-items-start tw-gap-5 md:tw-flex-row md:tw-items-end lg:tw-mb-8">
-              <div className="tw-relative -tw-mt-10 tw-flex-shrink-0 sm:-tw-mt-[58px] md:tw-mt-0 md:tw-pointer-events-auto">
+              <div className="tw-relative -tw-mt-10 tw-flex-shrink-0 sm:-tw-mt-[58px] md:tw-pointer-events-auto md:tw-mt-0">
                 <UserPageHeaderPfpWrapper
                   profile={profile}
                   canEdit={canInlineEdit}
@@ -224,16 +256,11 @@ export default function UserPageHeaderClient({
 
               {canEdit ? (
                 <div
-                  className={`tw-absolute tw-right-4 tw-top-0 sm:tw-right-6 md:tw-right-8 md:tw-pointer-events-auto ${
+                  className={`tw-absolute tw-right-4 tw-top-0 sm:tw-right-6 md:tw-pointer-events-auto md:tw-right-8 ${
                     hasTouchScreen ? "" : "sm:tw-hidden"
                   }`}
                 >
-                  <UserPageHeaderEditProfile
-                    profile={profile}
-                    statement={aboutStatement}
-                    defaultBanner1={banner1Color}
-                    defaultBanner2={banner2Color}
-                  />
+                  <UserPageHeaderSubscriptionStatus profile={profile} compact />
                 </div>
               ) : null}
 
@@ -247,7 +274,7 @@ export default function UserPageHeaderClient({
                     profileEnabledAt={profileEnabledAt}
                     variant="title"
                   />
-                  <div className="tw-mt-1.5">
+                  <div className="tw-mt-2 sm:tw-mt-1.5">
                     <UserPageHeaderName
                       profile={profile}
                       canEdit={canInlineEdit}
@@ -257,6 +284,18 @@ export default function UserPageHeaderClient({
                       variant="meta"
                     />
                   </div>
+                  {canManageProfilePreferences ? (
+                    <Button
+                      variant="tertiary"
+                      size="sm"
+                      onClick={() => setIsProfilePreferencesOpen(true)}
+                      aria-label={t(locale, "profilePreferences.button")}
+                      className={`tw-mt-3 ${USER_PAGE_HEADER_SURFACE_CLASS} ${USER_PAGE_HEADER_INTERACTIVE_SURFACE_CLASS}`}
+                    >
+                      <Cog6ToothIcon className="tw-size-4" aria-hidden="true" />
+                      <span>{t(locale, "profilePreferences.button")}</span>
+                    </Button>
+                  ) : null}
                 </div>
 
                 {websiteAction || followHandle || showSubscriptionStatus ? (
@@ -267,7 +306,7 @@ export default function UserPageHeaderClient({
                         : "tw-hidden lg:tw-flex"
                     }`}
                   >
-                    {showSubscriptionStatus ? (
+                    {showSubscriptionStatus && !(canEdit && hasTouchScreen) ? (
                       <div className="tw-hidden lg:tw-block">
                         <UserPageHeaderSubscriptionStatus profile={profile} />
                       </div>
@@ -315,17 +354,15 @@ export default function UserPageHeaderClient({
 
             {showSubscriptionStatus ? (
               <div
-                className={
-                  hasVisibleAbout
-                    ? "tw-mt-4 md:tw-pointer-events-auto lg:tw-hidden"
-                    : "md:tw-pointer-events-auto lg:tw-hidden"
-                }
+                className={`md:tw-pointer-events-auto lg:tw-hidden ${
+                  hasVisibleAbout ? "tw-mt-4" : ""
+                } ${subscriptionStatusVisibilityClass}`}
               >
                 <UserPageHeaderSubscriptionStatus profile={profile} />
               </div>
             ) : null}
 
-            <div className="tw-mt-4 tw-flex tw-items-center md:tw-mt-6 md:tw-pointer-events-auto">
+            <div className="tw-mt-4 tw-flex tw-items-center md:tw-pointer-events-auto md:tw-mt-6">
               <UserPageHeaderStats
                 profile={profile}
                 handleOrWallet={normalizedHandleOrWallet}
@@ -335,6 +372,12 @@ export default function UserPageHeaderClient({
           </div>
         </div>
       </section>
+      {canManageProfilePreferences ? (
+        <ProfilePreferencesSettings
+          isOpen={isProfilePreferencesOpen}
+          onClose={() => setIsProfilePreferencesOpen(false)}
+        />
+      ) : null}
     </div>
   );
 }
