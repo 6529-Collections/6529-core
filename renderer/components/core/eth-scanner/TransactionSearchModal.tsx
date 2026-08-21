@@ -7,101 +7,42 @@ import {
   confirmInputClass,
 } from "@/components/shared/ConfirmModalShell";
 import { NON_WALLET_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
-import type { Transaction } from "@/entities/ITransaction";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
-import { formatInteger } from "@/i18n/format";
 import { t } from "@/i18n/messages";
-import type { PaginatedResponseLocal } from "@/shared/types";
 import { parseTransactionHashSearch } from "@/shared/transaction-hash-search";
-import { useCallback, useId, useRef, useState } from "react";
+import { faXmark } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { useId, useRef, useState } from "react";
 import type { FormEvent } from "react";
-import DotLoader from "../../dotLoader/DotLoader";
-import LatestActivityRow from "../../latest-activity/LatestActivityRow";
-import Pagination from "../../pagination/Pagination";
-import { normalizeLocalTransactionResponse } from "./local-transaction-response";
-
-const SEARCH_PAGE_SIZE = 10;
 
 export default function TransactionSearchModal({
   show,
+  initialValue,
   onHide,
+  onSearch,
 }: {
   readonly show: boolean;
+  readonly initialValue: string;
   readonly onHide: () => void;
+  readonly onSearch: (value: string) => void;
 }) {
   const locale = useBrowserLocale();
   const formId = useId();
   const descriptionId = useId();
   const errorId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
-  const latestRequestId = useRef(0);
-  const [searchValue, setSearchValue] = useState("");
-  const [submittedSearch, setSubmittedSearch] = useState("");
-  const [results, setResults] = useState<PaginatedResponseLocal<Transaction>>();
-  const [isLoading, setIsLoading] = useState(false);
+  const [searchValue, setSearchValue] = useState(initialValue);
   const [showValidationError, setShowValidationError] = useState(false);
-  const [searchFailed, setSearchFailed] = useState(false);
 
-  const resetAndHide = useCallback(() => {
-    latestRequestId.current += 1;
-    setSearchValue("");
-    setSubmittedSearch("");
-    setResults(undefined);
-    setIsLoading(false);
-    setShowValidationError(false);
-    setSearchFailed(false);
-    onHide();
-  }, [onHide]);
-
-  const runSearch = useCallback((value: string, page: number) => {
-    if (!parseTransactionHashSearch(value)) {
-      latestRequestId.current += 1;
-      setSubmittedSearch("");
-      setResults(undefined);
-      setIsLoading(false);
-      setSearchFailed(false);
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!parseTransactionHashSearch(searchValue)) {
       setShowValidationError(true);
       inputRef.current?.focus();
       return;
     }
 
-    const requestId = ++latestRequestId.current;
-    const normalizedValue = value.trim();
-    setSubmittedSearch(normalizedValue);
-    setShowValidationError(false);
-    setSearchFailed(false);
-    setIsLoading(true);
-
-    window.localDb
-      .getTransactions(
-        undefined,
-        undefined,
-        page,
-        SEARCH_PAGE_SIZE,
-        undefined,
-        normalizedValue,
-        "DESC"
-      )
-      .then((response) => {
-        if (requestId !== latestRequestId.current) return;
-
-        setResults(normalizeLocalTransactionResponse(response));
-      })
-      .catch(() => {
-        if (requestId !== latestRequestId.current) return;
-        setResults(undefined);
-        setSearchFailed(true);
-      })
-      .finally(() => {
-        if (requestId === latestRequestId.current) {
-          setIsLoading(false);
-        }
-      });
-  }, []);
-
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    runSearch(searchValue, 1);
+    onSearch(searchValue.trim());
   };
 
   return (
@@ -110,14 +51,13 @@ export default function TransactionSearchModal({
       title={t(locale, "core.ethScanner.transactionsData.search.title")}
       initialFocusRef={inputRef}
       overlayClassName={NON_WALLET_MODAL_OVERLAY_CLASS}
-      dialogClassName="!tw-max-w-5xl tw-overflow-hidden"
-      bodyClassName="tw-max-h-[65vh] tw-overflow-y-auto"
-      onBackdropClick={resetAndHide}
+      dialogClassName="!tw-max-w-2xl"
+      onBackdropClick={onHide}
       footer={
         <>
           <button
             type="button"
-            onClick={resetAndHide}
+            onClick={onHide}
             className={confirmBtnSecondary}
           >
             {t(locale, "core.ethScanner.transactionsData.search.cancel")}
@@ -125,7 +65,7 @@ export default function TransactionSearchModal({
           <button
             type="submit"
             form={formId}
-            disabled={isLoading || searchValue.trim().length === 0}
+            disabled={searchValue.trim().length === 0}
             className={confirmBtnPrimary}
           >
             {t(locale, "core.ethScanner.transactionsData.search.submit")}
@@ -146,29 +86,54 @@ export default function TransactionSearchModal({
         >
           {t(locale, "core.ethScanner.transactionsData.search.description")}
         </p>
-        <input
-          ref={inputRef}
-          id={`${formId}-transaction-hash`}
-          type="search"
-          autoComplete="off"
-          spellCheck={false}
-          value={searchValue}
-          aria-invalid={showValidationError}
-          aria-describedby={
-            showValidationError ? `${descriptionId} ${errorId}` : descriptionId
-          }
-          onChange={(event) => {
-            setSearchValue(event.target.value.trimStart());
-            if (showValidationError) {
-              setShowValidationError(false);
+        <div className="tw-relative">
+          <input
+            ref={inputRef}
+            id={`${formId}-transaction-hash`}
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            value={searchValue}
+            aria-invalid={showValidationError}
+            aria-describedby={
+              showValidationError
+                ? `${descriptionId} ${errorId}`
+                : descriptionId
             }
-          }}
-          className={confirmInputClass}
-          placeholder={t(
-            locale,
-            "core.ethScanner.transactionsData.search.placeholder"
+            onChange={(event) => {
+              setSearchValue(event.target.value.trimStart());
+              if (showValidationError) {
+                setShowValidationError(false);
+              }
+            }}
+            className={`${confirmInputClass} tw-pr-12`}
+            placeholder={t(
+              locale,
+              "core.ethScanner.transactionsData.search.placeholder"
+            )}
+          />
+          {searchValue.length > 0 && (
+            <button
+              type="button"
+              aria-label={t(
+                locale,
+                "core.ethScanner.transactionsData.search.clear"
+              )}
+              onClick={() => {
+                setSearchValue("");
+                setShowValidationError(false);
+                inputRef.current?.focus();
+              }}
+              className="tw-absolute tw-right-1 tw-top-1/2 tw-inline-flex tw-h-8 tw-w-8 -tw-translate-y-1/2 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-md tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-300 tw-transition-colors focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 desktop-hover:hover:tw-bg-iron-700 desktop-hover:hover:tw-text-white"
+            >
+              <FontAwesomeIcon
+                icon={faXmark}
+                className="tw-h-4 tw-w-4"
+                aria-hidden="true"
+              />
+            </button>
           )}
-        />
+        </div>
         {showValidationError && (
           <p
             id={errorId}
@@ -179,67 +144,6 @@ export default function TransactionSearchModal({
           </p>
         )}
       </form>
-
-      <div className="tw-mt-6" aria-live="polite" aria-busy={isLoading}>
-        {isLoading && (
-          <div className="tw-flex tw-items-center tw-gap-2 tw-text-sm tw-text-iron-300">
-            <span aria-hidden="true">
-              <DotLoader />
-            </span>
-            <span>
-              {t(locale, "core.ethScanner.transactionsData.search.loading")}
-            </span>
-          </div>
-        )}
-
-        {!isLoading && searchFailed && (
-          <p role="alert" className="tw-text-red-400 tw-m-0 tw-text-sm">
-            {t(locale, "core.ethScanner.transactionsData.search.error")}
-          </p>
-        )}
-
-        {!isLoading && !searchFailed && results && (
-          <>
-            <p className="tw-mb-3 tw-mt-0 tw-text-sm tw-font-medium tw-text-iron-200">
-              {t(locale, "core.ethScanner.transactionsData.search.total", {
-                count: formatInteger(locale, results.total),
-              })}
-            </p>
-
-            {results.total === 0 ? (
-              <p className="tw-m-0 tw-text-sm tw-text-iron-400">
-                {t(locale, "core.ethScanner.transactionsData.search.empty")}
-              </p>
-            ) : (
-              <>
-                <div className="tw-overflow-x-auto [&_tbody_tr:nth-child(even)]:tw-bg-transparent [&_tbody_tr:nth-child(odd)]:tw-bg-black">
-                  <table className="tw-w-full tw-table-auto tw-border-collapse">
-                    <tbody className="[&>tr>td:first-child]:tw-w-px [&>tr>td]:tw-whitespace-nowrap [&>tr>td]:tw-p-2 [&>tr]:tw-leading-10">
-                      {results.data.map((transaction) => (
-                        <LatestActivityRow
-                          tr={transaction}
-                          key={`${transaction.contract}-${transaction.from_address}-${transaction.to_address}-${transaction.transaction}-${transaction.token_id}`}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {results.total > SEARCH_PAGE_SIZE && (
-                  <div className="tw-mt-4 tw-text-center">
-                    <Pagination
-                      page={results.page}
-                      pageSize={SEARCH_PAGE_SIZE}
-                      totalResults={results.total}
-                      setPage={(page) => runSearch(submittedSearch, page)}
-                    />
-                  </div>
-                )}
-              </>
-            )}
-          </>
-        )}
-      </div>
     </ConfirmModalShell>
   );
 }

@@ -1502,6 +1502,7 @@ const CORE_NFT_LOCAL_DATA_MESSAGES = objectMessages(
 const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
   "core.ethScanner.transactionsData",
   {
+    "filters.hash": "Hash",
     "filters.startDate": "Start Date",
     "filters.endDate": "End Date",
     "filters.pageSize": "Page Size",
@@ -1524,10 +1525,11 @@ const CORE_TRANSACTION_LOCAL_DATA_MESSAGES = objectMessages(
     "search.placeholder": "Transaction hash or partial hash",
     "search.invalid":
       "Enter 4–64 hexadecimal characters, with an optional 0x prefix.",
+    "search.clear": "Clear transaction hash",
+    "search.clearApplied": "Clear transaction hash search",
+    "search.activeFilter": "Hash contains {hash}",
     "search.submit": "Search",
     "search.cancel": "Cancel",
-    "search.loading": "Searching local transactions",
-    "search.error": "Unable to search local transactions. Try again.",
     "search.empty": "No local transactions matched this hash.",
     "search.total": "Matching transaction records: {count}",
     "summary.loading": "Loading transaction data",
