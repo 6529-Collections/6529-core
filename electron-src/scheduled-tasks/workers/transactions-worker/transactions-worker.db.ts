@@ -138,6 +138,23 @@ export async function setTdhRecalculationNeeded(
   );
 }
 
+export async function getTdhRunIncomplete(db: EntityManager): Promise<boolean> {
+  const block = await db
+    .getRepository(TransactionBlock)
+    .findOne({ where: { id: 1 } });
+  return block?.tdh_run_incomplete ?? false;
+}
+
+export async function setTdhRunIncomplete(
+  db: EntityManager,
+  incomplete: boolean,
+) {
+  await db.getRepository(TransactionBlock).update(
+    { id: 1 },
+    { tdh_run_incomplete: incomplete },
+  );
+}
+
 export class OwnerDeltaError extends Error {
   private delta: number;
   private address: string;
