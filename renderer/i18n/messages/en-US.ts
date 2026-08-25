@@ -28,6 +28,7 @@ import profileCmsArtDisplayMessages from "@/i18n/messages/profileCmsArtDisplay.e
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
 import { PUBLIC_REVIEW_MESSAGES } from "@/i18n/messages/public-review";
+import { PROFILE_CURATION_MESSAGES } from "@/i18n/messages/profile-curation";
 
 type MessageEntry = readonly [key: string, value: string];
 
@@ -225,7 +226,7 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
   "grant.actions.cancel": "Cancel",
   "grant.toast.updated": "REP updated.",
   "grant.toast.updateFailed": "Couldn't update this REP rating.",
-  "grant.toast.tryAgain": "Please try again.",
+  "grant.toast.tryAgain": PLEASE_TRY_AGAIN,
   "grant.toast.loginRequired": "Log in to continue.",
   "grant.errors.generic": "Couldn't complete this request. Please try again.",
   "suggested.loading": "Loading active REP categories",
@@ -816,7 +817,7 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
     viewTransaction: "View transaction",
     primarySuccess: "Primary address set.",
     primaryErrorTitle: "Couldn’t set the primary address.",
-    primaryErrorDescription: "Please try again.",
+    primaryErrorDescription: PLEASE_TRY_AGAIN,
     openStatement: "Open",
     copyStatement: "Copy",
     deleteStatement: "Delete",
@@ -1104,7 +1105,7 @@ const WAVE_HEADER_MESSAGES = objectMessages("waves.header", {
   createdLabel: "Created {relativeTime} · {date}",
   deleteCancel: "Cancel",
   deleteDescription: "Are you sure you want to delete this wave?",
-  deleteErrorDescription: "Please try again.",
+  deleteErrorDescription: PLEASE_TRY_AGAIN,
   deleteErrorTitle: "Couldn't delete this wave.",
   deleteSuccess: "Wave deleted.",
   deleteTitle: "Delete wave",
@@ -1420,6 +1421,10 @@ const WAVE_CREATE_ACTIONS_MESSAGES = objectMessages("waves.create.actions", {
 } as const);
 
 const WAVE_CREATE_DIALOG_MESSAGES = objectMessages("waves.create.dialog", {
+  profileRequiredConfirm: "Go to Identity",
+  profileRequiredDescription:
+    "Set up your profile before creating a Wave.",
+  profileRequiredTitle: "Create your profile first",
   subwaveTitle: "Create subwave",
   waveTitle: "Create Wave",
 } as const);
@@ -2436,7 +2441,7 @@ export const EN_US_MESSAGES = {
   "profilePreferences.dm.NOBODY.label": "Nobody",
   "profilePreferences.dm.NOBODY.description":
     "No one can start a new conversation with you.",
-  "profilePreferences.dm.createRetry": "Please try again.",
+  "profilePreferences.dm.createRetry": PLEASE_TRY_AGAIN,
   "profilePreferences.notifications.heading": "Notifications",
   "profilePreferences.notifications.description":
     "Choose between All and Essential notifications.",
@@ -2896,6 +2901,10 @@ export const EN_US_MESSAGES = {
   "waveChat.boostedDrops.display.label": "Boosted drops",
   "waveChat.boostedDrops.display.menuCurrent": "Boosted drops: {mode}",
   "waveChat.boostedDrops.display.sectionTitle": "Your display",
+  "waveChat.boostedDrops.display.personalTooltip":
+    "This setting only changes how boosted drops appear to you. It does not affect what other people see.",
+  "waveChat.boostedDrops.display.personalTooltipAriaLabel":
+    "About your display preference",
   "theMemes.documentTitle": "The Memes | Collections",
   "theMemes.description.collections": "Collections",
   "theMemes.title": "The Memes",
@@ -3496,6 +3505,7 @@ export const EN_US_MESSAGES = {
   ...TITLE_CONTEXT_MESSAGES,
   ...WAVE_NAVIGATION_MESSAGES,
   ...MY_STREAM_CURATION_MESSAGES,
+  ...PROFILE_CURATION_MESSAGES,
   ...WAVE_SCORE_NAVIGATION_MESSAGES,
   ...MEMES_QUICK_VOTE_MESSAGES,
   ...MEMES_WAVE_FOOTER_MESSAGES,
