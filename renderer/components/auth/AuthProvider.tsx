@@ -76,6 +76,7 @@ import {
   runImmediateAuthValidation,
 } from "./authValidation";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
+import { useAuthChainGuard } from "./useAuthChainGuard";
 
 export default function Auth({
   children,
@@ -91,7 +92,7 @@ export default function Auth({
   const pathname = usePathname();
   const router = useRouter();
   const seizeSettingsContext = useSeizeSettingsOptional();
-
+  const authChainGuard = useAuthChainGuard();
   const {
     address,
     hasValidWalletAuth: isAddressAuthorized,
@@ -106,7 +107,6 @@ export default function Auth({
     isDisconnecting,
     isSigningOutAll,
   } = useSeizeConnectContext();
-
   const {
     signMessage,
     isSigningPending,
@@ -587,6 +587,7 @@ export default function Auth({
       expireSessionUpgradeAuth,
       invalidateAll,
       isAddressAuthorized,
+      isActiveChainSupported: authChainGuard.isLatestChainSupported,
       seizeDisconnect,
       resetSessionUpgradeExpiryDedupe,
       setActiveProfileProxy,
@@ -719,7 +720,6 @@ export default function Auth({
     sessionUpgradeCanDismiss,
     signModalReason,
   ]);
-
   const isSignRequestInProgress =
     isSigningPending || authLoadingState === "signing";
   const isSessionUpgradePrompt = signModalReason === "session-upgrade";
@@ -730,35 +730,21 @@ export default function Auth({
     sessionUpgradePromptMode === "sign" &&
     !canSignActiveWallet &&
     getSessionClientType() === "web";
-
-  // Computed modal visibility to prevent flickering during rapid state changes
-  const shouldShowSignModal = useMemo(() => {
-    const shouldHideDuringValidation =
-      authLoadingState === "validating" &&
-      signModalReason !== "session-upgrade";
-    const isDismissedAuthPrompt =
-      signModalReason !== "session-upgrade" &&
-      dismissedAuthPromptAddress !== null &&
-      dismissedAuthPromptAddress === normalizedAddress;
-    return (
-      showSignModal &&
-      !isDisconnecting &&
-      !isSigningOutAll &&
-      !isDismissedAuthPrompt &&
-      !shouldHideDuringValidation &&
-      (connectionState === "connected" || isDisconnectedWebSessionUpgradePrompt)
-    );
-  }, [
+  const shouldShowSignModalForChain = authChainGuard.shouldShowSignModal({
     authLoadingState,
     connectionState,
-    dismissedAuthPromptAddress,
+    isConnectionShareUpgradePrompt,
     isDisconnectedWebSessionUpgradePrompt,
-    isDisconnecting,
     isSigningOutAll,
-    normalizedAddress,
     showSignModal,
     signModalReason,
-  ]);
+  });
+  const isDismissedAuthPrompt =
+    signModalReason !== "session-upgrade" &&
+    dismissedAuthPromptAddress !== null &&
+    dismissedAuthPromptAddress === normalizedAddress;
+  const shouldShowSignModal =
+    shouldShowSignModalForChain && !isDisconnecting && !isDismissedAuthPrompt;
 
   useEffect(() => {
     syncVisibleAuthPromptTracking({

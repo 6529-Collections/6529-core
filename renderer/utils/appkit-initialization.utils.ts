@@ -16,6 +16,9 @@ import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 import type { AppKitNetwork } from "@reown/appkit-common";
 import type { Chain } from "viem";
 
+const COINBASE_WALLET_ID =
+  "fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa";
+
 // Configuration interface for AppKit initialization
 export interface AppKitAdapterConfig {
   wallets: AppWallet[];
@@ -183,6 +186,7 @@ function buildAppKitConfig(
     },
     enableWalletGuide: false,
     enableCoinbase: !isCapacitor,
+    ...(isCapacitor ? { excludeWalletIds: [COINBASE_WALLET_ID] } : undefined),
     featuredWalletIds: isElectron() ? [] : ["metamask", "walletConnect"],
     allWallets: isElectron() ? ("HIDE" as const) : ("SHOW" as const),
     features: {

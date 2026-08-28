@@ -1045,6 +1045,8 @@
       ],
       "facts": [
         "Search 6529 finds Pages, NFTs, Profiles, and Waves, with an always-visible result-type selector and a result count tied to the visible query.",
+        "Search 6529 ranks exact, prefix, and substring profile-handle matches before ENS-only matches, then orders each match group by level from highest to lowest.",
+        "Wave results in Search 6529 exclude direct-message conversations.",
         "The search control in an active Wave opens Search messages for that Wave; use Search all 6529 in the dialog to switch to site search.",
         "In Search messages, open Filters to limit results to one author who has posted in the Wave, an After date, a Before date, or a combination of those filters.",
         "Arrow keys move through site results and Enter opens the selected result.",
@@ -1381,9 +1383,13 @@
       "facts": [
         "The Profile Brain tab surfaces Brain-related profile activity and wave context.",
         "Brain views include activity and wave sidebar surfaces where available.",
-        "Created Waves is labeled Wave posts, and each row's Last activity time refers to the newest post by anyone in that wave.",
-        "Most Active In is labeled All time and ranks accessible non-direct-message waves by how many posts the identity has written in them across all time.",
-        "Most Active In shows up to five ranked waves and labels each desktop row Last post with when the viewed identity last posted in that specific wave.",
+        "Created Waves lists accessible non-direct-message root waves and subwaves created by the profile, ordered by that profile's latest post in each wave; waves without a qualifying profile post appear after active waves.",
+        "Recently Active In lists accessible non-direct-message root waves and subwaves ordered by the profile's latest post, whether or not the profile created them; a wave can appear in both sections.",
+        "Each row labels the profile-specific time as Last post. Created Waves also labels its separate total wave posts count, which includes retained CHAT posts by all authors; Recently Active In does not show that wave-wide total.",
+        "Created Waves initially shows five rows on desktop, and both lists provide Load more controls so cursor pages remain reachable.",
+        "On small screens, More opens the Created waves modal with the same profile-specific ordering and Load more pagination; it does not show a partial page count as a total.",
+        "When a focused Load more control retrieves the final cursor page, focus moves to an All waves loaded status so keyboard focus is preserved.",
+        "Created Waves and Recently Active In load and recover independently, and results refresh for a connected-viewer change so private-wave access is not reused across viewers.",
         "Use /{user}/brain for profile-specific Brain context."
       ],
       "canonical_path": "/{user}/brain",
@@ -2322,6 +2328,7 @@
         "The Groups step shows all access and moderation rows immediately, organized from Visibility through Admins without an Advanced settings disclosure.",
         "In Groups, Visibility controls wave access; followers who can view the wave may get a notification when it is created.",
         "Each Groups access row offers Replace criteria and Choose group; Replace criteria contains Add identity and the rule choices, Back to criteria returns from identity search, and Next stays disabled until the pending replacement is created, discarded, or replaced by a saved group.",
+        "Inline group identity search ranks exact, prefix, and substring profile-handle matches before ENS-only matches, then orders each match group by profile level, highest first.",
         "An empty Visibility, drop, vote, or chat scope is labeled Public without a Current group heading; after a group is selected, the heading and its current eligible identity count are shown.",
         "A selected saved access group shows its current eligible identity count; View members opens a paginated, searchable member browser without leaving wave creation.",
         "A valid unsaved inline group offers Preview matches, which evaluates current membership without saving the group or applying it to the Wave.",
@@ -2518,6 +2525,7 @@
         "All wave creation includes a Rules step. Chat enters Rules after Groups and then goes to Description; Rank and Approve enter Rules after Drops and then go to Voting.",
         "Generated rules summarize the wave setup. Chat rules focus on wave type, access, and chat settings; Rank and Approve rules also include timing, submissions, voting, approval, and outcome visibility.",
         "Creators can add Wave guidelines that are saved as wave metadata and shown under Guidelines in the wave rules panel.",
+        "When a wave has guidelines, a profile with no prior chat messages or participation drops in that wave reviews them before its first chat message is sent. Agree sends the pending message; Decline keeps the draft and shows the guidelines again on the next attempt.",
         "For Rank and Approve waves, creators can add rules that require acceptance; those use the existing participation terms and wallet-signature submit flow.",
         "Wave admins can edit Wave guidelines later from Configuration. For Rank and Approve waves, admins can also edit acceptance-required rules there.",
         "Participants can review rules in Configuration in the desktop wave right sidebar or from the mobile About information path."
@@ -2527,6 +2535,7 @@
       "tags": ["waves", "rules", "chat", "rank", "approve"],
       "source_refs": [
         "ops/docs/waves/create/feature-rules-step.md",
+        "ops/docs/waves/composer/feature-first-message-guidelines.md",
         "ops/docs/waves/flow-wave-participation.md",
         "ops/docs/waves/sidebars/feature-right-sidebar-tabs.md"
       ]
@@ -2546,6 +2555,7 @@
       "facts": [
         "Direct-message waves live under /messages and individual message threads use /messages/{waveId}.",
         "A direct-message creation flow is available at /messages/create.",
+        "Direct-message recipient search ranks exact, prefix, and substring handle matches before ENS or auto-wallet matches, then orders each match group from highest to lowest profile level.",
         "Direct messages use wave mechanics but are surfaced separately from standard public wave routes.",
         "Direct-message content stays gated until wallet and profile prerequisites are resolved."
       ],
@@ -2565,7 +2575,9 @@
         "post a drop",
         "write a drop",
         "drop composer",
-        "reply in wave"
+        "reply in wave",
+        "composer actions",
+        "plus button"
       ],
       "keywords": [
         "composer",
@@ -2575,11 +2587,20 @@
         "markdown",
         "mentions",
         "attachments",
-        "images"
+        "images",
+        "upload",
+        "gif",
+        "poll",
+        "storm"
       ],
       "facts": [
         "The wave composer is where users post drops and replies inside a wave.",
+        "If a wave has guidelines and the profile has posted neither a chat message nor a participation drop there, submitting its first chat message opens a Wave guidelines dialog before the message is sent.",
+        "Agree sends the pending first message and prevents repeat prompts in that wave. Decline or dismissing the dialog does not send the message, keeps the draft, and shows the guidelines again on the next submit attempt.",
         "Composer docs cover markdown, mentions, NFT hashtag references, curation URLs, media uploads, and Enter-key behavior.",
+        "On narrow composer rows, the plus button opens a labeled action tray below the input for available Upload, GIF, Poll, Storm, and Metadata actions.",
+        "Poll and Storm are mutually exclusive on narrow composer rows: while Poll is open, the plus control becomes an X that closes Poll and the action tray stays unavailable; while Storm is active, Poll remains visible but unavailable until the Storm is finished or discarded.",
+        "On mobile and in the app, the GIF picker uses the same drag handle and swipe-down dismissal as the emoji picker.",
         "Composer availability depends on the wave, groups, permissions, and current state.",
         "If an authenticated wallet has no profile handle yet, public wave content can stay readable while the composer prompts the user to create a profile before participating."
       ],
@@ -2588,6 +2609,8 @@
       "tags": ["waves", "composer", "drops"],
       "source_refs": [
         "ops/docs/waves/composer/README.md",
+        "ops/docs/waves/composer/feature-enter-key-behavior.md",
+        "ops/docs/waves/composer/feature-first-message-guidelines.md",
         "ops/docs/waves/chat/feature-chat-composer-availability.md"
       ]
     },
@@ -2981,6 +3004,7 @@
         "For full-collection xTDH grants, group membership requires ownership of at least one collection token.",
         "Group creation requires the relevant connected profile permissions.",
         "Groups can be used later in workflows such as wave access or participation settings.",
+        "Include and exclude identity search ranks exact, prefix, and substring profile-handle matches before ENS-only matches, then orders each match group by profile level, highest first.",
         "Publishing a replacement for a group used by a Wave is rejected if it would leave any active Drop, Vote, Chat, or Admins group member outside that Wave's Visibility group."
       ],
       "canonical_path": "/network/groups",
@@ -4837,11 +4861,16 @@
         "The expandable Details panel can show holdings totals, wallet activity, distributions, TDH history, and boost breakdown.",
         "Wide tables in Details scroll horizontally on narrow screens while their first label column stays visible.",
         "Native view covers The Memes, Gradients, NextGen, and Meme Lab holdings; Network view covers xTDH token holdings by contract.",
-        "A NextGen token opened from a profile's Collected tab can return to the same profile filters, page, and opened card; direct token visits offer the current owner's NextGen holdings when available.",
+        "In the native app, The Memes, Gradients, NextGen, and Meme Lab tokens opened from a profile's Collected tab use the app-header Back chevron to restore the same profile filters, page, and opened card while retaining the detail page's collection link; mobile web shows an in-page return action, desktop uses browser Back, and direct token visits do not show a false return action, while NextGen can separately offer the current owner's holdings when available.",
         "Use collection route records for collection-level browsing and profile collected for a user's holdings."
       ],
       "canonical_path": "/{user}/collected",
-      "related_paths": ["/the-memes", "/meme-lab", "/nextgen"],
+      "related_paths": [
+        "/the-memes",
+        "/6529-gradient",
+        "/meme-lab",
+        "/nextgen"
+      ],
       "tags": ["profiles", "collected", "nfts"],
       "source_refs": [
         "app/[user]/collected/page.tsx",
@@ -5286,11 +5315,12 @@
         "post"
       ],
       "facts": [
-        "Write the first part and select Break into storm to open the private Storm draft workspace.",
-        "The primary action says Add part while writing a new part, Save changes while editing, and Post storm when the current editor is empty.",
-        "Saved parts have visible controls to edit, move earlier or later, and remove; Discard clears the complete draft after confirmation.",
+        "Select Storm in the compact composer or Break into storm in the expanded composer to open the private Storm draft workspace before writing the first part.",
+        "An empty Storm draft shows 0 parts and Write part 1; if valid text or media is already present, selecting Storm saves it as part 1.",
+        "The primary action says Add part until at least one valid part is saved, Save changes while editing, and Post storm when a saved Storm has an empty current editor.",
+        "Close exits an untouched empty Storm immediately; once the Storm has saved or unsaved content, Discard clears the complete draft after confirmation.",
         "Blank or whitespace-only text is not saved as a storm part, while media-only parts are allowed.",
-        "The storm is published as one drop with multiple ordered parts."
+        "An empty Storm draft cannot be posted, Poll and Storm cannot be started together, and the storm is published as one drop with multiple ordered parts."
       ],
       "canonical_path": "/waves",
       "related_paths": ["/messages"],

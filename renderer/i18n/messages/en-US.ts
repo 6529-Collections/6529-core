@@ -128,22 +128,35 @@ const USER_COLLECTED_STATS_MESSAGES = namespaceMessages(
 const USER_BRAIN_SIDEBAR_MESSAGES = objectMessages("user.brain.sidebar", {
   createdHeading: "Created Waves",
   createdMobileHeading: "Created",
-  createdScope: "Wave posts",
-  mostActiveHeading: "Most Active In",
-  rankingBasis: "All time",
-  waveLastActivityShort: "Last activity {time}",
-  identityLastPostShort: "Last post {time}",
-  latestWavePost: "Last wave post {time} ago",
-  lastPosted: "Last posted {time} ago",
-  loadingWaveContext: "Loading profile wave context",
+  recentlyActiveHeading: "Recently Active In",
+  lastPost: "Last post {time}",
+  noPostsByProfile: "No posts by this profile",
+  "totalWavePosts.one": "{count} total wave post",
+  "totalWavePosts.other": "{count} total wave posts",
+  privateWave: "Private wave",
+  loadingWaveActivity: "Loading profile wave activity",
+  loadingMoreWaveActivity: "Loading more profile wave activity",
   mobileStripLabel: "Brain waves",
-  noDropsYet: "No drops yet",
+  createdEmpty: "No accessible created waves.",
+  recentEmpty: "No recent wave posts.",
+  createdLoadError: "Created waves could not be loaded.",
+  recentLoadError: "Recent wave activity could not be loaded.",
+  loadMoreError: "More waves could not be loaded.",
+  retry: "Retry",
+  retryLoadMore: "Retry loading more",
+  loadMore: "Load more",
+  loadingMore: "Loading…",
+  allWavesLoaded: "All waves loaded.",
+  more: "More",
   showLess: "Show less",
-  "showMore.one": "Show {count} more",
-  "showMore.other": "Show {count} more",
-  viewAllCreatedWaves: "View all created waves",
-  waveImageAlt: "Wave {waveName}",
-  wavePictureAlt: "Wave picture",
+  showMore: "Show more",
+  viewMoreCreatedWaves: "View more created waves",
+  createdModalTitle: "Created waves by {profile}",
+  "loadedCreatedCount.one": "Showing {count} loaded wave",
+  "loadedCreatedCount.other": "Showing {count} loaded waves",
+  "createdCount.one": "{count} created wave",
+  "createdCount.other": "{count} created waves",
+  closeCreatedWaves: "Close created waves",
 } as const);
 
 const USER_COLLECTED_STATS_DETAILS_MESSAGES = objectMessages(
@@ -522,6 +535,8 @@ const WAVE_LEADERBOARD_MESSAGES = objectMessages("waves.leaderboard", {
 } as const);
 
 const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
+  menuLabel: "Drop actions",
+  reactionPickerLabel: "Add reaction to drop",
   copyText: "Copy text",
   copyLink: "Copy link",
   copied: "Copied!",
@@ -1619,6 +1634,17 @@ const GROUP_NFT_OWNERSHIP_MESSAGES = objectMessages("groups.nftOwnership", {
 
 const WAVE_CHAT_MESSAGES = objectMessages("waves.chat", {
   fileUploadAreaAriaLabel: "Wave chat file upload area",
+  "guidelinesDialog.title": "Wave guidelines",
+  "guidelinesDialog.description":
+    "Review this wave's guidelines before sending your first message.",
+  "guidelinesDialog.guidelinesLabel": "Guidelines",
+  "guidelinesDialog.actionHint":
+    "Agree sends your message. Decline keeps it as a draft.",
+  "guidelinesDialog.agree": "Agree",
+  "guidelinesDialog.decline": "Decline",
+  "guidelinesDialog.loadErrorTitle": "Couldn't load the wave guidelines.",
+  "guidelinesDialog.loadErrorDescription":
+    "Please try again before sending your message.",
   "replyTargetDeletedToast.title": "Reply removed.",
   "replyTargetDeletedToast.description":
     "The message you were replying to was deleted. Your draft is still here.",
@@ -1634,8 +1660,22 @@ const WAVE_CHAT_MESSAGES = objectMessages("waves.chat", {
   "replyTargetUnavailableToast.actionReviewDraft": "Review draft",
 } as const);
 
+const WAVE_COMPOSER_ACTION_MESSAGES = objectMessages("waves.composer.actions", {
+  show: "Show composer actions",
+  hide: "Hide composer actions",
+  label: "Composer actions",
+  metadata: "Metadata",
+  upload: "Upload",
+  gif: "GIF",
+  poll: "Poll",
+  closePoll: "Close poll",
+  storm: "Storm",
+} as const);
+
 const WAVE_STORM_COMPOSER_MESSAGES = objectMessages("waves.stormComposer", {
   draftTitle: "Storm draft",
+  emptyDraft: "Your storm parts will appear here.",
+  closeDraft: "Close",
   privateDraftHint: "Only you can see this until you post it.",
   partsCountOne: "{count} part",
   partsCountOther: "{count} parts",
@@ -2483,7 +2523,6 @@ export const EN_US_MESSAGES = {
   "nextgen.navigation.about": "About",
   "nextgen.navigation.featuredAriaLabel": "NextGen featured",
   "nextgen.navigation.sectionsAriaLabel": "NextGen sections",
-  "nextgen.token.navigation.backToCollected": "Back to {profile}'s collected",
   "nextgen.token.navigation.viewOwnerCollected": "View {profile}'s collected",
   "nextgen.home.byArtist": "by {artist}",
   "nextgen.home.exploreCollection": "Explore Collection",
@@ -3062,6 +3101,7 @@ export const EN_US_MESSAGES = {
   "rememes.card.tokenAriaLabel": "Token #{tokenId}",
   "rememes.card.replicaCount": "(x{count})",
   "user.collected.cards.listLabel": "Collected cards",
+  "user.collected.navigation.backToCollected": "Back to {profile}'s collected",
   "user.collected.empty.noCards": "No cards to display",
   "user.collected.empty.fullSetter": "Congratulations, full setter!",
   "user.collected.empty.memesFullSetter":
@@ -3443,6 +3483,7 @@ export const EN_US_MESSAGES = {
   ...NOTIFICATIONS_WAVE_CREATED_MESSAGES,
   ...NOTIFICATIONS_WAVE_FOLLOW_BUTTON_MESSAGES,
   ...WAVE_CHAT_MESSAGES,
+  ...WAVE_COMPOSER_ACTION_MESSAGES,
   ...WAVE_STORM_COMPOSER_MESSAGES,
   ...WAVE_CHAT_SETTINGS_MESSAGES,
   ...NETWORK_GROUP_INSPECTION_MESSAGES,
