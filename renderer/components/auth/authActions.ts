@@ -301,6 +301,20 @@ export function createAuthRequestActions({
     setToast,
   });
 
+  const createSigningAuthRequestGuard = (
+    authRequestGuard: AuthRequestGuard
+  ): AuthRequestGuard => ({
+    isCurrent: () => isActiveChainSupported() && authRequestGuard.isCurrent(),
+    acceptCurrentState: (walletAddress: string) => {
+      if (!isActiveChainSupported()) {
+        return false;
+      }
+
+      const accepted = authRequestGuard.acceptCurrentState(walletAddress);
+      return accepted && isActiveChainSupported();
+    },
+  });
+
   const ensureConnectedWalletAddress = (): string | null => {
     if (address) {
       return address;
@@ -317,13 +331,19 @@ export function createAuthRequestActions({
     walletAddress: string,
     authRequestGuard: AuthRequestGuard
   ): Promise<boolean> => {
+    const signingAuthRequestGuard =
+      createSigningAuthRequestGuard(authRequestGuard);
+    if (!signingAuthRequestGuard.isCurrent()) {
+      return false;
+    }
+
     const { success, cancelled } = await requestSignIn({
       signerAddress: walletAddress,
       role: null,
-      authRequestGuard,
+      authRequestGuard: signingAuthRequestGuard,
     });
 
-    if (!authRequestGuard.isCurrent()) {
+    if (!signingAuthRequestGuard.isCurrent()) {
       return false;
     }
     if (!success) {
@@ -465,21 +485,27 @@ export function createAuthRequestActions({
     readonly validationResult: AuthorizedWalletValidationResult;
     readonly walletAddress: string;
   }): Promise<boolean> => {
+    const signingAuthRequestGuard =
+      createSigningAuthRequestGuard(authRequestGuard);
+    if (!signingAuthRequestGuard.isCurrent()) {
+      return false;
+    }
+
     const canReauthenticate = await prepareAuthorizedWalletReauthentication({
       serverRejected,
       walletAddress,
       validationResult,
     });
-    if (!canReauthenticate || !authRequestGuard.isCurrent()) {
+    if (!canReauthenticate || !signingAuthRequestGuard.isCurrent()) {
       return false;
     }
 
     const { success, cancelled } = await requestSignIn({
       signerAddress: walletAddress,
       role,
-      authRequestGuard,
+      authRequestGuard: signingAuthRequestGuard,
     });
-    if (!authRequestGuard.isCurrent()) {
+    if (!signingAuthRequestGuard.isCurrent()) {
       return false;
     }
     if (!success) {
@@ -567,14 +593,7 @@ export function createAuthRequestActions({
       return { success: false };
     }
 
-    if (!isActiveChainSupported()) {
-      return { success: false };
-    }
-
-    const authRequestGuard = createAuthRequestGuard(
-      options ?? {},
-      isActiveChainSupported
-    );
+    const authRequestGuard = createAuthRequestGuard(options ?? {});
     if (!authRequestGuard.isCurrent()) {
       return { success: false };
     }
@@ -598,9 +617,7 @@ export function createAuthRequestActions({
           );
       return { success };
     } finally {
-      // A chain change makes the request guard stale, but must still release
-      // the signing state so authentication can resume after switching back.
-      if (authRequestGuard.isCurrent() || !isActiveChainSupported()) {
+      if (authRequestGuard.isCurrent()) {
         setAuthLoadingState("idle");
       }
     }
@@ -646,11 +663,10 @@ export function createAuthRequestActions({
         return { success: false };
       }
 
-      const authRequestGuard = createAuthRequestGuard(
-        {},
-        isActiveChainSupported
+      const signingAuthRequestGuard = createSigningAuthRequestGuard(
+        createAuthRequestGuard({})
       );
-      if (!authRequestGuard.isCurrent()) {
+      if (!signingAuthRequestGuard.isCurrent()) {
         return { success: false };
       }
 
@@ -660,10 +676,10 @@ export function createAuthRequestActions({
       const { success, cancelled } = await requestSignIn({
         signerAddress: upgradeAddress,
         role,
-        authRequestGuard,
+        authRequestGuard: signingAuthRequestGuard,
       });
 
-      if (!authRequestGuard.isCurrent()) {
+      if (!signingAuthRequestGuard.isCurrent()) {
         return { success: false };
       }
 
@@ -708,10 +724,12 @@ export function createAuthRequestActions({
       return;
     }
 
-    const authRequestGuard = createAuthRequestGuard({}, isActiveChainSupported);
+    const signingAuthRequestGuard = createSigningAuthRequestGuard(
+      createAuthRequestGuard({})
+    );
 
     await removeAuthJwt();
-    if (!authRequestGuard.isCurrent()) {
+    if (!signingAuthRequestGuard.isCurrent()) {
       setToast({
         message:
           "Network changed. Switch to a supported network to continue signing in.",
@@ -723,9 +741,9 @@ export function createAuthRequestActions({
       const { success } = await requestSignIn({
         signerAddress: address,
         role: profileProxy ? validateRoleForAuthentication(profileProxy) : null,
-        authRequestGuard,
+        authRequestGuard: signingAuthRequestGuard,
       });
-      if (success && authRequestGuard.isCurrent()) {
+      if (success && signingAuthRequestGuard.isCurrent()) {
         setActiveProfileProxy(profileProxy);
         dispatchProfileSwitchedEvent(profileProxy);
       }
