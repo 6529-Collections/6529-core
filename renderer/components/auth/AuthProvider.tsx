@@ -744,7 +744,10 @@ export default function Auth({
     dismissedAuthPromptAddress !== null &&
     dismissedAuthPromptAddress === normalizedAddress;
   const shouldShowSignModal =
-    shouldShowSignModalForChain && !isDisconnecting && !isDismissedAuthPrompt;
+    shouldShowSignModalForChain &&
+    !isDisconnecting &&
+    !isSigningOutAll &&
+    !isDismissedAuthPrompt;
 
   useEffect(() => {
     syncVisibleAuthPromptTracking({

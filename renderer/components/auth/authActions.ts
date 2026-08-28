@@ -237,6 +237,7 @@ export function createAuthRequestActions({
       return {
         signature: null,
         userRejected: false,
+        cancelled: false,
         failureToastShown: true,
       };
     }
