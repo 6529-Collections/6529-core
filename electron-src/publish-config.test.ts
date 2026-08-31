@@ -75,4 +75,35 @@ describe("desktop publish configuration", () => {
       /PATH_PREFIX=\$\(node scripts\/resolve-s3-publish-prefix\.cjs "\$RAW_PATH" mac\)/,
     );
   });
+
+  it("requests release notes for both production publishing flows", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github", "workflows", "build-all-platforms.yml"),
+      "utf8",
+    );
+    const releaseNoteStep = workflow
+      .split(
+        "- name: Notify CI wave about production S3 links and request release note",
+      )[1]
+      ?.split("\n      - name: ")[0];
+
+    assert.ok(releaseNoteStep);
+
+    assert.match(
+      releaseNoteStep,
+      /github\.event\.inputs\.flow == 'Publish' \|\| github\.event\.inputs\.flow == 'Build All'/,
+    );
+    assert.match(
+      releaseNoteStep,
+      /github\.event\.inputs\.env == 'Production'/,
+    );
+    assert.match(
+      releaseNoteStep,
+      /CI_PIPELINES_TITLE: "Desktop \$\{\{ github\.event\.inputs\.flow \}\} S3 links published"/,
+    );
+    assert.match(
+      releaseNoteStep,
+      /CI_PIPELINES_WORKFLOW: \$\{\{ github\.event\.inputs\.flow \}\}/,
+    );
+  });
 });
