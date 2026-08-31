@@ -266,7 +266,7 @@ jobs:
           color: 0x00bfff
 
       - name: Notify CI wave about production S3 links and request release note
-        if: success() && env.SHOULD_FAIL != 'true' && github.event.inputs.flow == 'Publish' && github.event.inputs.env == 'Production'
+        if: success() && env.SHOULD_FAIL != 'true' && (github.event.inputs.flow == 'Publish' || github.event.inputs.flow == 'Build All') && github.event.inputs.env == 'Production'
         continue-on-error: true
         env:
           CI_PIPELINES_ALERT_URL: ${{ vars.CI_PIPELINES_ALERT_URL }}
@@ -277,7 +277,7 @@ jobs:
           CI_PIPELINES_TITLE: "Desktop Publish S3 links published"
           CI_PIPELINES_DESCRIPTION: "Production v${{ github.event.inputs.version }} S3 download links are available."
           CI_PIPELINES_SERVICE: desktop
-          CI_PIPELINES_WORKFLOW: Publish
+          CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
           CI_RELEASE_NOTES_PROMPT_PATH: ops/release-notes/desktop-release-notes.prompt.md
           CI_RELEASE_GROUP_ID: desktop-v${{ github.event.inputs.version }}
           CI_RELEASE_GROUP_SERVICES: desktop

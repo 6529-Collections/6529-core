@@ -75,4 +75,24 @@ describe("desktop publish configuration", () => {
       /PATH_PREFIX=\$\(node scripts\/resolve-s3-publish-prefix\.cjs "\$RAW_PATH" mac\)/,
     );
   });
+
+  it("requests release notes for both production publishing flows", () => {
+    const workflow = readFileSync(
+      resolve(process.cwd(), ".github", "workflows", "build-all-platforms.yml"),
+      "utf8",
+    );
+
+    assert.match(
+      workflow,
+      /github\.event\.inputs\.flow == 'Publish' \|\| github\.event\.inputs\.flow == 'Build All'/,
+    );
+    assert.match(
+      workflow,
+      /github\.event\.inputs\.env == 'Production'/,
+    );
+    assert.match(
+      workflow,
+      /CI_PIPELINES_WORKFLOW: \$\{\{ github\.event\.inputs\.flow \}\}/,
+    );
+  });
 });
