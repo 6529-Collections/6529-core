@@ -23,6 +23,7 @@ export const FR_FR_MESSAGES = {
     "Chargement de l’activité du profil dans les Waves",
   "user.brain.sidebar.loadingMoreWaveActivity":
     "Chargement d’autres activités du profil dans les Waves",
+  "user.brain.sidebar.desktopScrollRegionLabel": "Waves du Brain",
   "user.brain.sidebar.mobileStripLabel": "Waves du Brain",
   "user.brain.sidebar.createdEmpty": "Aucune Wave créée accessible.",
   "user.brain.sidebar.recentEmpty":
@@ -515,6 +516,46 @@ export const FR_FR_MESSAGES = {
   "waves.create.groups.dialog.changeDescription":
     "Créez un groupe ou choisissez un autre groupe existant.",
   "waves.create.groups.identities": "Identités",
+  "waves.create.groups.hideCriteriaAndMembers":
+    "Masquer les critères et les membres",
+  "waves.create.groups.hideCriteriaAndMembersTooltip":
+    "Les critères et la liste des membres sont visibles par les membres de ce groupe, mais masqués pour tous les autres.",
+  "waves.create.groups.hideCriteriaAndMembersInfoLabel":
+    "À propos de la visibilité des critères et des membres",
+  "waves.create.groups.editAccess.title": "Modifier l’accès {groupLabel}",
+  "waves.create.groups.editAccess.triggerLabel":
+    "Modifier l’accès {groupLabel}",
+  "waves.create.groups.editAccess.chatLabel": "Discussion",
+  "waves.create.groups.editAccess.description":
+    "Les critères actuels sont préremplis. L’enregistrement crée un nouveau groupe et modifie uniquement l’accès {groupLabel}.",
+  "waves.create.groups.editAccess.loading": "Chargement des critères actuels…",
+  "waves.create.groups.editAccess.loadErrorTitle":
+    "Impossible de charger les critères actuels.",
+  "waves.create.groups.editAccess.loadErrorDescription":
+    "Aucune modification n’a été effectuée. Réessayez de charger le groupe.",
+  "waves.create.groups.editAccess.retry": "Réessayer",
+  "waves.create.groups.editAccess.makePublic": "Rendre la wave publique",
+  "waves.create.groups.editAccess.makePublicDescription":
+    "Supprimez la restriction de visibilité afin que tout le monde puisse accéder à cette wave.",
+  "waves.create.groups.editAccess.useVisibility":
+    "Utiliser les critères de visibilité",
+  "waves.create.groups.editAccess.useVisibilityDescription":
+    "Appliquez à l’accès {groupLabel} les mêmes critères que pour la visibilité.",
+  "waves.create.groups.editAccess.useVisibilityPublicDescription":
+    "La visibilité est publique. Rendez également l’accès {groupLabel} public.",
+  "waves.create.groups.editAccess.makePublicConfirmTitle":
+    "Rendre la wave publique ?",
+  "waves.create.groups.editAccess.makePublicConfirmMessage":
+    "Tout le monde pourra trouver et voir cette wave. Seul l’accès de visibilité sera modifié.",
+  "waves.create.groups.editAccess.useVisibilityConfirmTitle":
+    "Utiliser les critères de visibilité ?",
+  "waves.create.groups.editAccess.useVisibilityConfirmMessage":
+    "L’accès {groupLabel} utilisera le même groupe que la visibilité. Seul ce paramètre d’accès sera modifié.",
+  "waves.create.groups.editAccess.useVisibilityPublicConfirmMessage":
+    "La visibilité est publique ; l’accès {groupLabel} deviendra donc public lui aussi. Seul ce paramètre d’accès sera modifié.",
+  "waves.create.groups.editAccess.confirmMakePublic": "Rendre publique",
+  "waves.create.groups.editAccess.confirmUseVisibility":
+    "Utiliser les critères de visibilité",
   "waves.create.groups.actions.editCriteria": "Modifier les critères",
   "waves.create.groups.inlineIdentities.modeLabel": "Traitement des identités",
   "waves.create.groups.inlineIdentities.included.label": "Incluses",
@@ -843,6 +884,40 @@ export const FR_FR_MESSAGES = {
   "waves.poll.actions.changeVote": "Modifier le vote",
   "waves.poll.status.voted": "Voté",
   "waves.poll.status.updated": "Mis à jour",
+  "waves.composer.placeholder.createDrop": "Créer un drop",
+  "waves.composer.placeholder.writeChatMessage": "Écrire un message",
+  "waves.composer.placeholder.dropReply": "Répondre avec un drop",
+  "waves.composer.placeholder.postReply": "Publier une réponse",
+  "waves.composer.placeholder.quoteDrop": "Citer un drop",
+  "waves.composer.placeholder.postQuote": "Publier une citation",
+  "waves.poll.composer.title": "Créer un sondage",
+  "waves.poll.composer.questionPlaceholder": "Posez la question du sondage",
+  "waves.poll.composer.questionRequired": "Ajoutez une question au sondage.",
+  "waves.poll.composer.mode.groupLabel": "Type de réponse au sondage",
+  "waves.poll.composer.mode.single": "Unique",
+  "waves.poll.composer.mode.multiple": "Multiple",
+  "waves.poll.composer.mode.singleDescription":
+    "Les votants peuvent sélectionner une seule option.",
+  "waves.poll.composer.mode.multipleDescription":
+    "Les votants peuvent sélectionner plusieurs options.",
+  "waves.poll.composer.optionLabel": "Option de sondage {number}",
+  "waves.poll.composer.optionPlaceholder": "Option {number}",
+  "waves.poll.composer.removeOption": "Supprimer l’option {number}",
+  "waves.poll.composer.add": "Ajouter un sondage",
+  "waves.poll.composer.addOption": "Ajouter une option",
+  "waves.poll.composer.remove": "Supprimer le sondage",
+  "waves.poll.composer.closingTime": "Heure de clôture",
+  "waves.poll.composer.onlyDroppersCanRespond":
+    "Seules les personnes autorisées à discuter peuvent répondre",
+  "waves.poll.composer.anonymous": "Sondage anonyme",
+  "waves.poll.composer.validation.minimumOptions":
+    "Renseignez au moins {count} options.",
+  "waves.poll.composer.validation.optionLength":
+    "Les options peuvent contenir jusqu’à {max} caractères.",
+  "waves.poll.composer.validation.uniqueOptions":
+    "Les options du sondage doivent être uniques.",
+  "waves.poll.composer.validation.futureClosingTime":
+    "Choisissez une heure de clôture ultérieure.",
   "theMemes.documentTitle": "The Memes | Collections",
   "theMemes.description.collections": "Collections",
   "theMemes.detail.live.artwork.mintDateLabel": "Date de mint :",

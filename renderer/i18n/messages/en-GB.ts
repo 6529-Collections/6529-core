@@ -17,6 +17,7 @@ export const EN_GB_MESSAGES = {
   "user.brain.sidebar.loadingWaveActivity": "Loading profile wave activity",
   "user.brain.sidebar.loadingMoreWaveActivity":
     "Loading more profile wave activity",
+  "user.brain.sidebar.desktopScrollRegionLabel": "Brain waves",
   "user.brain.sidebar.mobileStripLabel": "Brain waves",
   "user.brain.sidebar.createdEmpty": "No accessible created waves.",
   "user.brain.sidebar.recentEmpty": "No recent wave posts.",
@@ -454,6 +455,39 @@ export const EN_GB_MESSAGES = {
   "waves.poll.actions.changeVote": "Change vote",
   "waves.poll.status.voted": "Voted",
   "waves.poll.status.updated": "Updated",
+  "waves.composer.placeholder.createDrop": "Create a drop",
+  "waves.composer.placeholder.writeChatMessage": "Write a chat message",
+  "waves.composer.placeholder.dropReply": "Drop a reply",
+  "waves.composer.placeholder.postReply": "Post a reply",
+  "waves.composer.placeholder.quoteDrop": "Quote a drop",
+  "waves.composer.placeholder.postQuote": "Post a quote",
+  "waves.poll.composer.title": "Create poll",
+  "waves.poll.composer.questionPlaceholder": "Ask a poll question",
+  "waves.poll.composer.questionRequired": "Add a poll question.",
+  "waves.poll.composer.mode.groupLabel": "Poll response type",
+  "waves.poll.composer.mode.single": "Single",
+  "waves.poll.composer.mode.multiple": "Multiple",
+  "waves.poll.composer.mode.singleDescription": "Voters can select one option.",
+  "waves.poll.composer.mode.multipleDescription":
+    "Voters can select more than one option.",
+  "waves.poll.composer.optionLabel": "Poll option {number}",
+  "waves.poll.composer.optionPlaceholder": "Option {number}",
+  "waves.poll.composer.removeOption": "Remove option {number}",
+  "waves.poll.composer.add": "Add poll",
+  "waves.poll.composer.addOption": "Add option",
+  "waves.poll.composer.remove": "Remove poll",
+  "waves.poll.composer.closingTime": "Closing time",
+  "waves.poll.composer.onlyDroppersCanRespond":
+    "Only people who can chat can respond",
+  "waves.poll.composer.anonymous": "Anonymous poll",
+  "waves.poll.composer.validation.minimumOptions":
+    "Enter at least {count} options.",
+  "waves.poll.composer.validation.optionLength":
+    "Options can be up to {max} characters.",
+  "waves.poll.composer.validation.uniqueOptions":
+    "Poll options must be unique.",
+  "waves.poll.composer.validation.futureClosingTime":
+    "Choose a future closing time.",
   "common.close": "Close",
   "desktopUpdateToast.versionAvailable": "Version {version} is available.",
   "desktopUpdateToast.viewUpdate": "View update",
@@ -487,6 +521,42 @@ export const EN_GB_MESSAGES = {
   "waves.create.groups.dialog.changeDescription":
     "Create a new group or choose a different existing group.",
   "waves.create.groups.identities": "Identities",
+  "waves.create.groups.hideCriteriaAndMembers": "Hide criteria and members",
+  "waves.create.groups.hideCriteriaAndMembersTooltip":
+    "The criteria and member list are visible to members of this group, but hidden from everyone else.",
+  "waves.create.groups.hideCriteriaAndMembersInfoLabel":
+    "About criteria and member visibility",
+  "waves.create.groups.editAccess.title": "Edit {groupLabel} access",
+  "waves.create.groups.editAccess.triggerLabel": "Edit {groupLabel} access",
+  "waves.create.groups.editAccess.chatLabel": "Chat",
+  "waves.create.groups.editAccess.description":
+    "The current criteria are prefilled. Saving creates a new group and changes only {groupLabel} access.",
+  "waves.create.groups.editAccess.loading": "Loading current criteria…",
+  "waves.create.groups.editAccess.loadErrorTitle":
+    "Couldn't load the current criteria.",
+  "waves.create.groups.editAccess.loadErrorDescription":
+    "Nothing has been changed. Try loading the group again.",
+  "waves.create.groups.editAccess.retry": "Try again",
+  "waves.create.groups.editAccess.makePublic": "Make wave public",
+  "waves.create.groups.editAccess.makePublicDescription":
+    "Remove the Visibility restriction so everyone can access this wave.",
+  "waves.create.groups.editAccess.useVisibility": "Use visibility criteria",
+  "waves.create.groups.editAccess.useVisibilityDescription":
+    "Set {groupLabel} access to the same criteria as Visibility.",
+  "waves.create.groups.editAccess.useVisibilityPublicDescription":
+    "Visibility is public. Set {groupLabel} access to public too.",
+  "waves.create.groups.editAccess.makePublicConfirmTitle": "Make wave public?",
+  "waves.create.groups.editAccess.makePublicConfirmMessage":
+    "Everyone will be able to find and view this wave. Only Visibility access will change.",
+  "waves.create.groups.editAccess.useVisibilityConfirmTitle":
+    "Use visibility criteria?",
+  "waves.create.groups.editAccess.useVisibilityConfirmMessage":
+    "{groupLabel} access will use the same group as Visibility. Only this access setting will change.",
+  "waves.create.groups.editAccess.useVisibilityPublicConfirmMessage":
+    "Visibility is public, so {groupLabel} access will become public too. Only this access setting will change.",
+  "waves.create.groups.editAccess.confirmMakePublic": "Make public",
+  "waves.create.groups.editAccess.confirmUseVisibility":
+    "Use visibility criteria",
   "waves.create.groups.actions.editCriteria": "Edit criteria",
   "waves.create.groups.inlineIdentities.modeLabel": "Identity treatment",
   "waves.create.groups.inlineIdentities.included.label": "Included",

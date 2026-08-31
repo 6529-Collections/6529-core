@@ -136,6 +136,7 @@ const USER_BRAIN_SIDEBAR_MESSAGES = objectMessages("user.brain.sidebar", {
   privateWave: "Private wave",
   loadingWaveActivity: "Loading profile wave activity",
   loadingMoreWaveActivity: "Loading more profile wave activity",
+  desktopScrollRegionLabel: "Brain waves",
   mobileStripLabel: "Brain waves",
   createdEmpty: "No accessible created waves.",
   recentEmpty: "No recent wave posts.",
@@ -651,6 +652,28 @@ const WAVE_POLL_MESSAGES = objectMessages("waves.poll", {
   "actions.changeVote": "Change vote",
   "status.voted": "Voted",
   "status.updated": "Updated",
+  "composer.title": "Create poll",
+  "composer.questionPlaceholder": "Ask a poll question",
+  "composer.questionRequired": "Add a poll question.",
+  "composer.mode.groupLabel": "Poll response type",
+  "composer.mode.single": "Single",
+  "composer.mode.multiple": "Multiple",
+  "composer.mode.singleDescription": "Voters can select one option.",
+  "composer.mode.multipleDescription":
+    "Voters can select more than one option.",
+  "composer.optionLabel": "Poll option {number}",
+  "composer.optionPlaceholder": "Option {number}",
+  "composer.removeOption": "Remove option {number}",
+  "composer.add": "Add poll",
+  "composer.addOption": "Add option",
+  "composer.remove": "Remove poll",
+  "composer.closingTime": "Closing time",
+  "composer.onlyDroppersCanRespond": "Only people who can chat can respond",
+  "composer.anonymous": "Anonymous poll",
+  "composer.validation.minimumOptions": "Enter at least {count} options.",
+  "composer.validation.optionLength": "Options can be up to {max} characters.",
+  "composer.validation.uniqueOptions": "Poll options must be unique.",
+  "composer.validation.futureClosingTime": "Choose a future closing time.",
 } as const);
 
 const WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES = objectMessages(
@@ -1219,6 +1242,38 @@ const WAVE_CREATE_GROUPS_MESSAGES = objectMessages("waves.create.groups", {
   allowAdminsToDeletePosts: "Allow admins to delete posts",
   defaultGroupName: "Wave Group",
   notAppliedYet: "Not applied yet.",
+  hideCriteriaAndMembers: "Hide criteria and members",
+  hideCriteriaAndMembersTooltip:
+    "The criteria and member list are visible to members of this group, but hidden from everyone else.",
+  hideCriteriaAndMembersInfoLabel: "About criteria and member visibility",
+  "editAccess.title": "Edit {groupLabel} access",
+  "editAccess.triggerLabel": "Edit {groupLabel} access",
+  "editAccess.chatLabel": "Chat",
+  "editAccess.description":
+    "The current criteria are prefilled. Saving creates a new group and changes only {groupLabel} access.",
+  "editAccess.loading": "Loading current criteria…",
+  "editAccess.loadErrorTitle": "Couldn't load the current criteria.",
+  "editAccess.loadErrorDescription":
+    "Nothing has been changed. Try loading the group again.",
+  "editAccess.retry": "Try again",
+  "editAccess.makePublic": "Make wave public",
+  "editAccess.makePublicDescription":
+    "Remove the Visibility restriction so everyone can access this wave.",
+  "editAccess.useVisibility": "Use visibility criteria",
+  "editAccess.useVisibilityDescription":
+    "Set {groupLabel} access to the same criteria as Visibility.",
+  "editAccess.useVisibilityPublicDescription":
+    "Visibility is public. Set {groupLabel} access to public too.",
+  "editAccess.makePublicConfirmTitle": "Make wave public?",
+  "editAccess.makePublicConfirmMessage":
+    "Everyone will be able to find and view this wave. Only Visibility access will change.",
+  "editAccess.useVisibilityConfirmTitle": "Use visibility criteria?",
+  "editAccess.useVisibilityConfirmMessage":
+    "{groupLabel} access will use the same group as Visibility. Only this access setting will change.",
+  "editAccess.useVisibilityPublicConfirmMessage":
+    "Visibility is public, so {groupLabel} access will become public too. Only this access setting will change.",
+  "editAccess.confirmMakePublic": "Make public",
+  "editAccess.confirmUseVisibility": "Use visibility criteria",
   "actions.editCriteria": "Edit criteria",
   "actions.chooseGroup": "Choose group",
   "draft.notReadyTitle": "Not ready yet.",
@@ -1734,6 +1789,18 @@ const WAVE_COMPOSER_ACTION_MESSAGES = objectMessages("waves.composer.actions", {
   storm: "Storm",
 } as const);
 
+const WAVE_COMPOSER_PLACEHOLDER_MESSAGES = objectMessages(
+  "waves.composer.placeholder",
+  {
+    createDrop: "Create a drop",
+    writeChatMessage: "Write a chat message",
+    dropReply: "Drop a reply",
+    postReply: "Post a reply",
+    quoteDrop: "Quote a drop",
+    postQuote: "Post a quote",
+  } as const
+);
+
 const WAVE_STORM_COMPOSER_MESSAGES = objectMessages("waves.stormComposer", {
   draftTitle: "Storm draft",
   emptyDraft: "Your storm parts will appear here.",
@@ -1800,6 +1867,16 @@ const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
       "This group may be private, deleted, or temporarily unavailable.",
   } as const
 );
+
+const NETWORK_GROUP_FILTER_MESSAGES = objectMessages("network.groupFilter", {
+  title: "Filter Network",
+  suggestedName: "Network filter",
+  defaultLabel: "All Network members",
+  membersRoleLabel: "Network",
+  createErrorTitle: "Couldn't create this group.",
+  createErrorDescription: "Please check the group setup and try again.",
+  createSuccess: "Group created and applied as the Network filter.",
+} as const);
 
 const WAVE_LOADING_MESSAGES = objectMessages("waves", {
   loadingStatus: "Loading waves",
@@ -3546,9 +3623,11 @@ export const EN_US_MESSAGES = {
   ...NOTIFICATIONS_WAVE_FOLLOW_BUTTON_MESSAGES,
   ...WAVE_CHAT_MESSAGES,
   ...WAVE_COMPOSER_ACTION_MESSAGES,
+  ...WAVE_COMPOSER_PLACEHOLDER_MESSAGES,
   ...WAVE_STORM_COMPOSER_MESSAGES,
   ...WAVE_CHAT_SETTINGS_MESSAGES,
   ...NETWORK_GROUP_INSPECTION_MESSAGES,
+  ...NETWORK_GROUP_FILTER_MESSAGES,
   ...WAVE_LOADING_MESSAGES,
   ...WAVE_DROPS_SEARCH_MODAL_MESSAGES,
   ...WAVE_GIF_PICKER_MESSAGES,
