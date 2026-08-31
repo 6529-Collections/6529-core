@@ -274,7 +274,7 @@ jobs:
           CI_PIPELINES_ALERT_API_AUTH: ${{ secrets.CI_PIPELINES_ALERT_API_AUTH }}
           CI_PIPELINES_TARGET_ENV: Production
           CI_PIPELINES_STATUS: success
-          CI_PIPELINES_TITLE: "Desktop Publish S3 links published"
+          CI_PIPELINES_TITLE: "Desktop ${{ github.event.inputs.flow }} S3 links published"
           CI_PIPELINES_DESCRIPTION: "Production v${{ github.event.inputs.version }} S3 download links are available."
           CI_PIPELINES_SERVICE: desktop
           CI_PIPELINES_WORKFLOW: ${{ github.event.inputs.flow }}
