@@ -20,6 +20,7 @@ import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { isElectron } from "@/helpers";
 import { groupProfileProxies } from "@/helpers/profile-proxy.helpers";
 import { getProfileConnectedStatus } from "@/helpers/ProfileHelpers";
+import { useContentModerationStateScope } from "@/hooks/content-moderation/useContentModerationStateScope";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useSecureSign } from "@/hooks/useSecureSign";
 import { commonApiFetch } from "@/services/api/common-api";
@@ -140,12 +141,17 @@ export default function Auth({
     profile: loadedProfile,
     address,
   });
-  const connectedProfile = isConnectedProfileForAddress ? loadedProfile : null;
+  const connectedProfile =
+    !isSigningOutAll && isConnectedProfileForAddress ? loadedProfile : null;
+  useContentModerationStateScope(connectedProfile?.id);
   const isConnectedProfileSettling = Boolean(
-    address && loadedProfile && !isConnectedProfileForAddress
+    !isSigningOutAll &&
+      address &&
+      loadedProfile &&
+      !isConnectedProfileForAddress
   );
   const isFetchingConnectedProfile =
-    fetchingProfile || isConnectedProfileSettling;
+    !isSigningOutAll && (fetchingProfile || isConnectedProfileSettling);
 
   const abortControllerRef = useRef<AbortController | null>(null);
   const latestAddressRef = useRef<string | undefined>(address);

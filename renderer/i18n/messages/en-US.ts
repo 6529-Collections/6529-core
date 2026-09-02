@@ -28,6 +28,7 @@ import profileCmsArtDisplayMessages from "@/i18n/messages/profileCmsArtDisplay.e
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
 import { PUBLIC_REVIEW_MESSAGES } from "@/i18n/messages/public-review";
+import { CONTENT_MODERATION_MESSAGES } from "@/i18n/messages/content-moderation";
 import { EULA_MESSAGES } from "@/i18n/messages/eula";
 import { PROFILE_CURATION_MESSAGES } from "@/i18n/messages/profile-curation";
 
@@ -1887,6 +1888,12 @@ const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
     close: "Clear selected group",
     membersTitle: "Members",
     membersUnavailable: "Group members unavailable.",
+    bulkRep: "REP everyone matching criteria",
+    bulkNic: "NIC everyone matching criteria",
+    bulkActionsLabel: "Bulk rating actions",
+    bulkRepSuccess: "REP distributed.",
+    bulkNicSuccess: "NIC distributed.",
+    source: "Source: filters + optional manual list",
     loading: "Loading group criteria",
     unavailableTitle: "Group criteria unavailable",
     unavailableDescription:
@@ -2673,6 +2680,13 @@ export const EN_US_MESSAGES = {
     "Push notifications are managed separately on each device.",
   "notifications.filter.ariaLabel": "Filter notifications: {selection}",
   "notifications.filter.selected": "{count} selected",
+  "notifications.filter.sheetTitle": "Filter notifications",
+  "notifications.filter.option.mentions": "Mentions",
+  "notifications.filter.option.replies": "Replies",
+  "notifications.filter.option.identity": "Identity",
+  "notifications.filter.option.reactions": "Reactions",
+  "notifications.filter.option.invites": "Invites",
+  "notifications.filter.option.subscriptions": "Subscriptions",
   "linkPreview.twitter.kind.article": "Article",
   "linkPreview.twitter.kind.post": "Post",
   "linkPreview.twitter.article.provider": "Article on X",
@@ -3733,6 +3747,7 @@ export const EN_US_MESSAGES = {
   ...WAVE_POLL_MESSAGES,
   ...WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES,
   ...TRANSFER_MESSAGES,
+  ...CONTENT_MODERATION_MESSAGES,
 } as const;
 
 export type MessageKey = keyof typeof EN_US_MESSAGES;
