@@ -448,7 +448,7 @@ describe("private GitHub Packages repository policy", () => {
       "0.0.2"
     );
     expect(() => policy.validatePackageJson(changedVersion)).toThrow(
-      "must be an exact 0.0.1 devDependency"
+      "must be an exact 0.0.3 devDependency"
     );
   });
 
