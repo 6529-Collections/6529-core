@@ -3,8 +3,9 @@ import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 
 let mockBreakpoint = "LG";
-let mockIsElectron = false;
 let mockWaveId: string | null = null;
+let mockIsRightSidebarOpen = false;
+let mockEffectiveDropId: string | undefined;
 
 const mockChildMounted = jest.fn();
 const mockCloseRightSidebar = jest.fn();
@@ -14,6 +15,35 @@ const mockUseQuery = jest.fn();
 jest.mock("react-use", () => ({
   createBreakpoint: () => () => mockBreakpoint,
 }));
+
+jest.mock("framer-motion", () => {
+  const React = require("react");
+  const MotionDiv = React.forwardRef(
+    (
+      {
+        children,
+        layout: _layout,
+        layoutDependency: _layoutDependency,
+        transition: _transition,
+        ...props
+      }: any,
+      ref: React.ForwardedRef<HTMLDivElement>
+    ) => (
+      <div ref={ref} {...props}>
+        {children}
+      </div>
+    )
+  );
+
+  return {
+    domAnimation: {},
+    LazyMotion: ({ children }: { children: React.ReactNode }) => (
+      <>{children}</>
+    ),
+    m: { div: MotionDiv },
+    useReducedMotion: () => false,
+  };
+});
 
 jest.mock("next/navigation", () => ({
   usePathname: () => "/waves",
@@ -25,10 +55,6 @@ jest.mock("@/helpers/navigation.helpers", () => ({
   getActiveWaveIdFromUrl: () => mockWaveId,
 }));
 
-jest.mock("@/helpers", () => ({
-  isElectron: () => mockIsElectron,
-}));
-
 jest.mock("@tanstack/react-query", () => ({
   keepPreviousData: (value: unknown) => value,
   useQuery: (options: unknown) => mockUseQuery(options),
@@ -37,7 +63,7 @@ jest.mock("@tanstack/react-query", () => ({
 jest.mock("@/hooks/useSidebarState", () => ({
   useSidebarState: () => ({
     closeRightSidebar: mockCloseRightSidebar,
-    isRightSidebarOpen: false,
+    isRightSidebarOpen: mockIsRightSidebarOpen,
   }),
 }));
 
@@ -52,7 +78,7 @@ jest.mock("@/hooks/useCreateModalState", () => ({
 jest.mock("@/hooks/useClosingDropId", () => ({
   useClosingDropId: () => ({
     beginClosingDrop: jest.fn(),
-    effectiveDropId: undefined,
+    effectiveDropId: mockEffectiveDropId,
   }),
 }));
 
@@ -61,10 +87,7 @@ jest.mock("@/components/auth/Auth", () => ({
 }));
 
 jest.mock("@/components/brain/my-stream/layout/LayoutContext", () => ({
-  useLayout: () => ({
-    contentContainerStyle: {},
-    spaces: { headerSpace: 0, spacerSpace: 0 },
-  }),
+  useLayout: () => ({ contentContainerStyle: {} }),
 }));
 
 jest.mock("@/contexts/wave/WaveChatScrollContext", () => ({
@@ -77,13 +100,33 @@ jest.mock("@/contexts/wave/WaveChatScrollContext", () => ({
 
 jest.mock("@/components/brain/left-sidebar/web/WebLeftSidebar", () => ({
   __esModule: true,
-  default: () => <div data-testid="left-sidebar" />,
+  default: ({ isCollapsed }: { readonly isCollapsed: boolean }) => (
+    <div
+      data-testid="left-sidebar"
+      data-collapsed={isCollapsed ? "true" : "false"}
+    />
+  ),
 }));
 
 jest.mock("@/components/brain/right-sidebar/BrainRightSidebar", () => ({
   __esModule: true,
   SidebarTab: { ABOUT: "ABOUT" },
-  default: () => <div data-testid="right-sidebar" />,
+  default: ({
+    isOpen,
+    variant,
+    waveId,
+  }: {
+    readonly isOpen: boolean;
+    readonly variant: string;
+    readonly waveId: string | null | undefined;
+  }) => (
+    <div
+      data-testid="right-sidebar"
+      data-open={isOpen ? "true" : "false"}
+      data-variant={variant}
+      data-wave-id={waveId}
+    />
+  ),
 }));
 
 jest.mock("@/components/brain/BrainDesktopDrop", () => ({
@@ -112,8 +155,9 @@ function renderWrapper() {
 describe("WavesMessagesWrapper", () => {
   beforeEach(() => {
     mockBreakpoint = "LG";
-    mockIsElectron = false;
     mockWaveId = null;
+    mockIsRightSidebarOpen = false;
+    mockEffectiveDropId = undefined;
     jest.clearAllMocks();
     mockUseQuery.mockReturnValue({ data: undefined, error: null });
   });
@@ -150,29 +194,112 @@ describe("WavesMessagesWrapper", () => {
     expect(mockChildMounted).toHaveBeenCalledTimes(1);
   });
 
-  it("sizes electron waves content from its measured viewport offset", async () => {
-    mockIsElectron = true;
-    jest.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue({
-      bottom: 900,
-      height: 856,
-      left: 0,
-      right: 1200,
-      toJSON: jest.fn(),
-      top: 44,
-      width: 1200,
-      x: 0,
-      y: 44,
-    });
+  it("coordinates the inline panel with the collapsed left rail", () => {
+    mockBreakpoint = "LG";
+    mockWaveId = "wave-1";
+    mockIsRightSidebarOpen = true;
 
     renderWrapper();
 
-    const wavesShell = screen.getByTestId("left-sidebar").parentElement;
-    expect(wavesShell).not.toBeNull();
+    expect(screen.getByTestId("left-sidebar")).toHaveAttribute(
+      "data-collapsed",
+      "true"
+    );
+    expect(screen.getByTestId("right-sidebar")).toHaveAttribute(
+      "data-open",
+      "true"
+    );
+    expect(screen.getByTestId("right-sidebar")).toHaveAttribute(
+      "data-variant",
+      "inline"
+    );
+  });
+
+  it("uses the overlay presentation without collapsing a mobile left rail", () => {
+    mockBreakpoint = "S";
+    mockWaveId = "wave-1";
+    mockIsRightSidebarOpen = true;
+
+    renderWrapper();
+
+    expect(screen.queryByTestId("left-sidebar")).not.toBeInTheDocument();
+    expect(screen.getByTestId("right-sidebar")).toHaveAttribute(
+      "data-open",
+      "true"
+    );
+    expect(screen.getByTestId("right-sidebar")).toHaveAttribute(
+      "data-variant",
+      "overlay"
+    );
+  });
+
+  it("keeps one sidebar controller while crossing the layout breakpoint", () => {
+    mockBreakpoint = "LG";
+    mockWaveId = "wave-1";
+    mockIsRightSidebarOpen = true;
+    const { rerender } = renderWrapper();
+    const controller = screen.getByTestId("right-sidebar");
+
+    mockBreakpoint = "S";
+    rerender(
+      <WavesMessagesWrapper>
+        <MainContentProbe />
+      </WavesMessagesWrapper>
+    );
+
+    expect(screen.getByTestId("right-sidebar")).toBe(controller);
+    expect(controller).toHaveAttribute("data-variant", "overlay");
+    expect(controller).toHaveAttribute("data-open", "true");
+  });
+
+  it("auto-closes the sidebar when the active wave is deselected", async () => {
+    mockIsRightSidebarOpen = true;
+
+    renderWrapper();
+
     await waitFor(() => {
-      expect(wavesShell).toHaveStyle({
-        height: "calc(100dvh - 44px - 0px)",
-        maxHeight: "calc(100dvh - 44px - 0px)",
-      });
+      expect(mockCloseRightSidebar).toHaveBeenCalledTimes(1);
     });
+    expect(screen.getByTestId("right-sidebar")).toHaveAttribute(
+      "data-open",
+      "false"
+    );
+  });
+
+  it("suppresses the sidebar while a drop overlay is open", () => {
+    mockWaveId = "wave-1";
+    mockIsRightSidebarOpen = true;
+    mockEffectiveDropId = "drop-1";
+    mockUseQuery.mockReturnValue({ data: { id: "drop-1" }, error: null });
+
+    renderWrapper();
+
+    const dropOverlay = screen.getByTestId("drop-overlay");
+    expect(dropOverlay).toBeInTheDocument();
+    expect(screen.getByTestId("main-content")).not.toContainElement(
+      dropOverlay
+    );
+    expect(screen.getByTestId("right-sidebar")).toHaveAttribute(
+      "data-open",
+      "false"
+    );
+  });
+
+  it("keeps the open sidebar controller mounted when switching waves", () => {
+    mockWaveId = "wave-1";
+    mockIsRightSidebarOpen = true;
+    const { rerender } = renderWrapper();
+    const controller = screen.getByTestId("right-sidebar");
+
+    mockWaveId = "wave-2";
+    rerender(
+      <WavesMessagesWrapper>
+        <MainContentProbe />
+      </WavesMessagesWrapper>
+    );
+
+    expect(screen.getByTestId("right-sidebar")).toBe(controller);
+    expect(controller).toHaveAttribute("data-open", "true");
+    expect(controller).toHaveAttribute("data-wave-id", "wave-2");
   });
 });

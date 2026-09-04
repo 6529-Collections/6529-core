@@ -1,6 +1,8 @@
 "use client";
 
 import CommonDropdownItemsMobileWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsMobileWrapper";
+import ContentModerationDropActions from "@/components/content-moderation/ContentModerationDropActions";
+import ReportDropModal from "@/components/content-moderation/ReportDropModal";
 import { MobileVotingModal, VotingModal } from "@/components/voting";
 import VotingModalButton from "@/components/voting/VotingModalButton";
 import { useVotingModalState } from "@/components/voting/useVotingModalState";
@@ -9,7 +11,10 @@ import WaveDropActionsOptions from "@/components/waves/drops/WaveDropActionsOpti
 import WaveDropMobileMenuDelete from "@/components/waves/drops/WaveDropMobileMenuDelete";
 import WaveDropMobileMenuCopyLink from "@/components/waves/drops/WaveDropMobileMenuCopyLink";
 import WaveDropMobileMenuOpen from "@/components/waves/drops/WaveDropMobileMenuOpen";
-import type { DropContentPresentation } from "@/components/waves/drops/dropContentPresentation";
+import {
+  PROPOSAL_LIST_CARD_SURFACE_CLASS,
+  type DropContentPresentation,
+} from "@/components/waves/drops/dropContentPresentation";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import useIsMobileScreen from "@/hooks/isMobileScreen";
@@ -64,7 +69,9 @@ export const DefaultWaveLeaderboardDrop: React.FC<
   } = useVotingModalState(isVotingActionLocked);
   const { hasTouchScreen } = useDeviceInfo();
   const isMobileScreen = useIsMobileScreen();
+  const [isReportOpen, setIsReportOpen] = React.useState(false);
   const suppressNextClickRef = React.useRef(false);
+  const isProposalCard = contentPresentation === "proposalCard";
 
   const handleInteractionStart = React.useCallback(() => {
     suppressNextClickRef.current = true;
@@ -110,7 +117,14 @@ export const DefaultWaveLeaderboardDrop: React.FC<
   }, [handleMobileMenuOpenChange]);
 
   const getBorderClasses = () => {
-    return "tw-rounded-xl tw-bg-iron-950 tw-p-4 md:tw-px-5 tw-border tw-border-solid tw-border-iron-800 tw-transition-all tw-duration-200 tw-ease-out tw-overflow-hidden desktop-hover:hover:tw-border-iron-700";
+    const backgroundClass = isProposalCard
+      ? PROPOSAL_LIST_CARD_SURFACE_CLASS
+      : "tw-bg-iron-950";
+    const paddingClass = isProposalCard
+      ? "tw-px-4 tw-pb-3 tw-pt-4 md:tw-px-5"
+      : "tw-p-4 md:tw-px-5";
+
+    return `tw-rounded-xl ${backgroundClass} ${paddingClass} tw-border tw-border-solid tw-border-iron-800 tw-transition-all tw-duration-200 tw-ease-out tw-overflow-hidden desktop-hover:hover:tw-border-iron-700`;
   };
 
   const handleVoteButtonClick = () => {
@@ -156,13 +170,9 @@ export const DefaultWaveLeaderboardDrop: React.FC<
                 showAvatar={false}
                 winningThreshold={winningThreshold}
               />
-              <div className="tw-flex tw-items-center">
-                <div className="tw-hidden tw-h-8 lg:tw-block">
-                  <WaveDropActionsOpen drop={drop} />
-                </div>
-                <div className="tw-hidden tw-h-8 lg:tw-block">
-                  {canDelete && <WaveDropActionsOptions drop={drop} />}
-                </div>
+              <div className="tw-hidden tw-h-8 tw-items-center lg:tw-flex">
+                {!isProposalCard && <WaveDropActionsOpen drop={drop} />}
+                {canDelete && <WaveDropActionsOptions drop={drop} />}
               </div>
             </div>
             <WaveLeaderboardDropContent
@@ -171,17 +181,38 @@ export const DefaultWaveLeaderboardDrop: React.FC<
               mediaContainerHeightClassName={mediaContainerHeightClassName}
               contentPresentation={contentPresentation}
             />
-            <div className="tw-mt-3 tw-flex tw-w-full tw-flex-col tw-justify-between tw-gap-x-2 tw-space-y-3 @[700px]:tw-flex-row @[700px]:tw-items-center @[700px]:tw-space-y-0">
-              <div className="tw-flex tw-flex-wrap tw-items-center tw-gap-x-4 tw-gap-y-2">
+            <div
+              className={`tw-flex tw-justify-between tw-gap-x-2 ${
+                isProposalCard
+                  ? "tw-relative tw-ml-[-3.25rem] tw-mt-1 tw-w-[calc(100%+3.25rem)] tw-flex-row tw-items-center tw-pl-[3.25rem] tw-pt-3"
+                  : "tw-mt-3 tw-w-full tw-flex-col tw-space-y-3 @[700px]:tw-flex-row @[700px]:tw-items-center @[700px]:tw-space-y-0"
+              }`}
+            >
+              {isProposalCard && (
+                <span
+                  aria-hidden="true"
+                  className="tw-pointer-events-none tw-absolute tw-left-[-1rem] tw-right-[-1rem] tw-top-0 tw-h-px tw-bg-iron-800/60 md:tw-left-[-1.25rem] md:tw-right-[-1.25rem]"
+                />
+              )}
+              <div
+                className={`tw-flex tw-flex-wrap tw-items-center tw-gap-x-4 tw-gap-y-2 ${
+                  isProposalCard ? "tw-min-w-0 tw-flex-1" : ""
+                }`}
+              >
                 <WaveLeaderboardDropRaters
                   drop={drop}
                   winningThreshold={winningThreshold}
                   winningThresholdMinDurationMs={winningThresholdMinDurationMs}
                   isVotingClosed={isVotingClosed}
+                  emphasizeCurrent={isProposalCard}
                 />
               </div>
               <div
-                className="tw-flex tw-w-full tw-items-center tw-justify-end tw-gap-1.5 tw-border-x-0 tw-border-b-0 tw-border-t tw-border-solid tw-border-iron-800 tw-pt-4 @[700px]:tw-ml-auto @[700px]:tw-w-auto @[700px]:tw-border-t-0 @[700px]:tw-pt-0"
+                className={`tw-flex tw-items-center tw-justify-end tw-gap-1.5 ${
+                  isProposalCard
+                    ? "tw-ml-auto tw-w-auto tw-flex-shrink-0"
+                    : "tw-w-full tw-border-x-0 tw-border-b-0 tw-border-t tw-border-solid tw-border-iron-800 tw-pt-4 @[700px]:tw-ml-auto @[700px]:tw-w-auto @[700px]:tw-border-t-0 @[700px]:tw-pt-0"
+                }`}
                 onClick={(e) => e.stopPropagation()}
               >
                 {canShowVotingAction && (
@@ -234,6 +265,14 @@ export const DefaultWaveLeaderboardDrop: React.FC<
                   drop={drop}
                   onCopy={handleMobileMenuClose}
                 />
+                <ContentModerationDropActions
+                  drop={drop}
+                  mobile
+                  onReport={() => {
+                    handleMobileMenuClose();
+                    setIsReportOpen(true);
+                  }}
+                />
 
                 {/* Delete option - only if user can delete */}
                 {canDelete && (
@@ -247,6 +286,11 @@ export const DefaultWaveLeaderboardDrop: React.FC<
           </div>,
           document.body
         )}
+      <ReportDropModal
+        drop={drop}
+        isOpen={isReportOpen}
+        onClose={() => setIsReportOpen(false)}
+      />
     </div>
   );
 };

@@ -8,6 +8,7 @@ import {
   useWaveDropsLeaderboard,
   WAVE_DROPS_LEADERBOARD_MAX_PAGES,
 } from "@/hooks/useWaveDropsLeaderboard";
+import { useWaveProposalCardPresentation } from "@/hooks/waves/useWaveProposalCardPresentation";
 import React, { useMemo } from "react";
 import {
   useLeaderboardLeadingItemCount,
@@ -18,6 +19,7 @@ import {
   WaveLeaderboardVotingModal,
 } from "../WaveLeaderboardVotingModal";
 import { WaveLeaderboardGridItem } from "./WaveLeaderboardGridItem";
+import ContentModerationDropGate from "@/components/content-moderation/ContentModerationDropGate";
 
 export type WaveLeaderboardGridMode = "compact" | "content_only";
 
@@ -54,6 +56,8 @@ export const WaveLeaderboardGrid: React.FC<WaveLeaderboardGridProps> = ({
     wave.wave.type === ApiWaveType.Approve
       ? wave.wave.winning_threshold_min_duration_ms
       : null;
+  const isProposalCard =
+    useWaveProposalCardPresentation(wave.id) === "proposalCard";
   const {
     drops,
     pageMetadata,
@@ -139,16 +143,19 @@ export const WaveLeaderboardGrid: React.FC<WaveLeaderboardGridProps> = ({
         isFetchNextPageError={isFetchNextPageError}
         isFetchPreviousPageError={isFetchPreviousPageError}
         renderItem={(drop) => (
-          <WaveLeaderboardGridItem
-            drop={drop}
-            mode={mode}
-            isVotingClosed={isVotingClosed}
-            isVotingControlsLocked={isVotingControlsLocked}
-            winningThreshold={winningThreshold}
-            winningThresholdMinDurationMs={winningThresholdMinDurationMs}
-            onDropClick={onDropClick}
-            onVoteClick={openVotingModal}
-          />
+          <ContentModerationDropGate drop={drop} compact>
+            <WaveLeaderboardGridItem
+              drop={drop}
+              mode={mode}
+              isVotingClosed={isVotingClosed}
+              isVotingControlsLocked={isVotingControlsLocked}
+              winningThreshold={winningThreshold}
+              winningThresholdMinDurationMs={winningThresholdMinDurationMs}
+              emphasizeCurrent={isProposalCard}
+              onDropClick={onDropClick}
+              onVoteClick={openVotingModal}
+            />
+          </ContentModerationDropGate>
         )}
       />
       <WaveLeaderboardVotingModal

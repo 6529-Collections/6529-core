@@ -19,6 +19,10 @@ import {
   useWaveDropQuoteDisplay,
   WaveDropQuoteDisplayProvider,
 } from "./WaveDropQuoteDisplayContext";
+import { ApiDropType } from "@/generated/models/ApiDropType";
+import ProposalCardContent from "./proposal/ProposalCardContent";
+import { useWaveProposalCardPresentation } from "@/hooks/waves/useWaveProposalCardPresentation";
+import ContentModerationDropGate from "@/components/content-moderation/ContentModerationDropGate";
 
 interface WaveDropQuoteProps {
   readonly drop: ApiDrop | null;
@@ -37,6 +41,74 @@ interface WaveDropQuoteProps {
 
 interface WaveDropQuoteProfilePictureProps {
   readonly drop: ApiDrop | null;
+}
+
+function getQuotedWaveHref(drop: ApiDrop | null): string {
+  if (drop === null) return "";
+  const waveDetails = drop.wave as unknown as {
+    chat?:
+      | {
+          scope?:
+            | {
+                group?: { is_direct_message?: boolean | undefined } | undefined;
+              }
+            | undefined;
+        }
+      | undefined;
+  };
+  return getWaveRoute({
+    waveId: drop.wave.id,
+    isDirectMessage: waveDetails.chat?.scope?.group?.is_direct_message ?? false,
+    isApp: false,
+  });
+}
+
+function getEffectiveQuotePath(
+  drop: ApiDrop | null,
+  quotePath: readonly string[] | undefined
+): string[] {
+  const path = quotePath ? [...quotePath] : [];
+  if (drop?.wave.id === undefined) return path;
+  const currentQuoteKey = `${drop.wave.id}:${drop.serial_no}`;
+  if (!path.includes(currentQuoteKey)) path.push(currentQuoteKey);
+  return path;
+}
+
+function handleQuoteClick(
+  event: React.MouseEvent<HTMLDivElement>,
+  isInteractive: boolean,
+  goToQuoteDrop: () => void
+) {
+  event.stopPropagation();
+  if (isInteractive) goToQuoteDrop();
+}
+
+function handleQuoteKeyDown(
+  event: React.KeyboardEvent<HTMLDivElement>,
+  goToQuoteDrop: () => void
+) {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  event.stopPropagation();
+  goToQuoteDrop();
+}
+
+function getQuoteContainerAccessibility(
+  isInteractive: boolean,
+  goToQuoteDrop: () => void
+): {
+  readonly onKeyDown?:
+    | ((event: React.KeyboardEvent<HTMLDivElement>) => void)
+    | undefined;
+  readonly role?: "button" | undefined;
+  readonly tabIndex?: 0 | undefined;
+} {
+  if (!isInteractive) return {};
+  return {
+    onKeyDown: (event) => handleQuoteKeyDown(event, goToQuoteDrop),
+    role: "button",
+    tabIndex: 0,
+  };
 }
 
 const WaveDropQuoteProfilePicture: React.FC<
@@ -137,7 +209,24 @@ function WaveDropQuoteBody({
   );
 }
 
-const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
+const WaveDropQuote: React.FC<WaveDropQuoteProps> = (props) => {
+  const drop = props.drop;
+  if (drop === null) {
+    return <WaveDropQuoteContent {...props} />;
+  }
+
+  return (
+    <ContentModerationDropGate
+      drop={drop}
+      compact
+      onGlobalTombstoneClick={() => props.onQuoteClick(drop)}
+    >
+      <WaveDropQuoteContent {...props} />
+    </ContentModerationDropGate>
+  );
+};
+
+const WaveDropQuoteContent: React.FC<WaveDropQuoteProps> = ({
   drop,
   partId,
   onQuoteClick,
@@ -151,11 +240,11 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
 }) => {
   const { onCardActionsActiveChange } = useLinkPreviewContext();
   const { flattenWhenAuthorSameAs } = useWaveDropQuoteDisplay();
+  const proposalCardPresentation = useWaveProposalCardPresentation(
+    drop?.wave.id
+  );
   const quotedPart = useMemo<ApiDropPart | null>(() => {
-    if (!drop) {
-      return null;
-    }
-
+    if (!drop) return null;
     return drop.parts.find((part) => part.part_id === partId) ?? null;
   }, [drop, partId]);
 
@@ -165,44 +254,11 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
     }
   };
 
-  const waveHref = useMemo(() => {
-    if (!drop) return "";
-
-    const waveDetails = drop.wave as unknown as {
-      chat?:
-        | {
-            scope?:
-              | {
-                  group?:
-                    | { is_direct_message?: boolean | undefined }
-                    | undefined;
-                }
-              | undefined;
-          }
-        | undefined;
-    };
-
-    const isDirectMessage =
-      waveDetails.chat?.scope?.group?.is_direct_message ?? false;
-
-    return getWaveRoute({
-      waveId: drop.wave.id,
-      isDirectMessage,
-      isApp: false,
-    });
-  }, [drop]);
-
-  const effectiveQuotePath = useMemo(() => {
-    const path = quotePath ? [...quotePath] : [];
-    if (drop?.wave.id) {
-      const currentQuoteKey = `${drop.wave.id}:${drop.serial_no}`;
-      if (!path.includes(currentQuoteKey)) {
-        path.push(currentQuoteKey);
-      }
-    }
-
-    return path;
-  }, [drop, quotePath]);
+  const waveHref = useMemo(() => getQuotedWaveHref(drop), [drop]);
+  const effectiveQuotePath = useMemo(
+    () => getEffectiveQuotePath(drop, quotePath),
+    [drop, quotePath]
+  );
 
   const resolvedOnLinkCardActionsActiveChange =
     onLinkCardActionsActiveChange ?? onCardActionsActiveChange;
@@ -217,21 +273,12 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
   const handleQuoteContainerClick = (
     event: React.MouseEvent<HTMLDivElement>
   ) => {
-    event.stopPropagation();
-
-    if (isInteractive) {
-      goToQuoteDrop();
-    }
+    handleQuoteClick(event, isInteractive, goToQuoteDrop);
   };
-  const handleQuoteContainerKeyDown = isInteractive
-    ? (event: React.KeyboardEvent<HTMLDivElement>) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          event.stopPropagation();
-          goToQuoteDrop();
-        }
-      }
-    : undefined;
+  const quoteContainerAccessibility = getQuoteContainerAccessibility(
+    isInteractive,
+    goToQuoteDrop
+  );
   const quoteContainerClassName = `tw-mt-1 ${
     isInteractive ? "tw-cursor-pointer" : ""
   } tw-rounded-xl tw-bg-iron-950 tw-px-3 tw-py-3 tw-ring-1 tw-ring-inset tw-ring-iron-800`;
@@ -247,27 +294,32 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
     );
   }
 
-  const quoteContent = (
-    <WaveDropQuoteDisplayProvider flattenWhenAuthorSameAs={null}>
-      <DropPartMarkdownWithPropLogger
-        partContent={quotedPart?.content ?? ""}
-        mentionedUsers={drop?.mentioned_users ?? []}
-        mentionedGroups={drop?.mentioned_groups ?? []}
-        mentionedWaves={drop?.mentioned_waves ?? []}
-        referencedNfts={drop?.referenced_nfts ?? []}
-        nftLinks={drop?.nft_links}
-        textSize="sm"
-        onQuoteClick={onQuoteClick}
-        currentDropId={drop?.id}
-        embedPath={embedPath}
-        quotePath={effectiveQuotePath}
-        embedDepth={embedDepth}
-        maxEmbedDepth={maxEmbedDepth}
-        hideLinkPreviews={hideLinkPreviews}
-        onLinkCardActionsActiveChange={resolvedOnLinkCardActionsActiveChange}
-      />
-    </WaveDropQuoteDisplayProvider>
-  );
+  const quoteContent =
+    drop !== null &&
+    drop.drop_type !== ApiDropType.Chat &&
+    proposalCardPresentation === "proposalCard" ? (
+      <ProposalCardContent drop={drop} density="compact" />
+    ) : (
+      <WaveDropQuoteDisplayProvider flattenWhenAuthorSameAs={null}>
+        <DropPartMarkdownWithPropLogger
+          partContent={quotedPart?.content ?? ""}
+          mentionedUsers={drop?.mentioned_users ?? []}
+          mentionedGroups={drop?.mentioned_groups ?? []}
+          mentionedWaves={drop?.mentioned_waves ?? []}
+          referencedNfts={drop?.referenced_nfts ?? []}
+          nftLinks={drop?.nft_links}
+          textSize="sm"
+          onQuoteClick={onQuoteClick}
+          currentDropId={drop?.id}
+          embedPath={embedPath}
+          quotePath={effectiveQuotePath}
+          embedDepth={embedDepth}
+          maxEmbedDepth={maxEmbedDepth}
+          hideLinkPreviews={hideLinkPreviews}
+          onLinkCardActionsActiveChange={resolvedOnLinkCardActionsActiveChange}
+        />
+      </WaveDropQuoteDisplayProvider>
+    );
 
   if (shouldFlattenQuote) {
     return quoteContent;
@@ -277,9 +329,9 @@ const WaveDropQuote: React.FC<WaveDropQuoteProps> = ({
     <div
       className={quoteContainerClassName}
       onClick={handleQuoteContainerClick}
-      onKeyDown={handleQuoteContainerKeyDown}
-      role={isInteractive ? "button" : undefined}
-      tabIndex={isInteractive ? 0 : undefined}
+      onKeyDown={quoteContainerAccessibility.onKeyDown}
+      role={quoteContainerAccessibility.role}
+      tabIndex={quoteContainerAccessibility.tabIndex}
     >
       <WaveDropQuoteBody
         drop={drop}

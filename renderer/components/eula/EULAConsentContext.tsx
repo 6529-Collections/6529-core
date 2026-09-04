@@ -3,7 +3,9 @@
 import React, { createContext, ReactNode, useContext, useMemo } from "react";
 
 type EULAConsentContextType = {
-  consent: () => void;
+  readonly consent: () => Promise<void>;
+  readonly isSaving: boolean;
+  readonly saveError: string | null;
 };
 
 const EULAConsentContext = createContext<EULAConsentContextType | undefined>(
@@ -18,17 +20,20 @@ export const useEULAConsent = () => {
 };
 
 type EULAConsentProviderProps = {
-  children: ReactNode;
+  readonly children: ReactNode;
+  readonly initialIsIos?: boolean;
+  readonly initialConsentVersion?: string | undefined;
 };
 
 export const EULAConsentProvider: React.FC<EULAConsentProviderProps> = ({
   children,
 }) => {
-  const consent = async () => {
-    throw new Error("Not implemented");
-  };
+  const consent = async (): Promise<void> => undefined;
 
-  const value = useMemo(() => ({ consent }), [consent]);
+  const value = useMemo(
+    () => ({ consent, isSaving: false, saveError: null }),
+    [consent]
+  );
 
   return (
     <EULAConsentContext.Provider value={value}>

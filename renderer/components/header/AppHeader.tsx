@@ -42,6 +42,10 @@ import { useWaveShareCopyAction } from "@/hooks/waves/useWaveShareCopyAction";
 import WaveDescriptionPopover from "@/components/waves/header/WaveDescriptionPopover";
 import WavePicture from "@/components/waves/WavePicture";
 import { getDirectMessageProfileHref } from "@/helpers/waves/direct-message-profile.helpers";
+import {
+  getProfileCollectedTokenReturnContext,
+  PROFILE_COLLECTED_RETURN_PARAM,
+} from "@/helpers/profile-collected-navigation";
 import { getWaveDescriptionPreviewText } from "@/helpers/waves/waveDescriptionPreview";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getActiveViewFromUrl } from "../navigation/ViewContext";
@@ -539,15 +543,30 @@ export default function AppHeader() {
     activeWaveId: waveParam,
     searchParams,
   });
+  const isProfileWavesFeedView =
+    isCapacitor &&
+    pathname === "/waves" &&
+    !waveParam &&
+    searchParams.get("view") === "profile-feed";
   const showPageShareAction =
     isCapacitor &&
     !isInsideWave &&
     isPageShareSupported({ activeView, pathname, surface: "mobile" });
 
   const isProfilePage = typeof params["user"] === "string";
+  const profileCollectedReturnContext = isCapacitor
+    ? getProfileCollectedTokenReturnContext({
+        pathname,
+        returnTo: searchParams.get(PROFILE_COLLECTED_RETURN_PARAM),
+      })
+    : null;
 
   const showBackButton =
-    isInsideWave || isCreateRoute || (isProfilePage && canGoBack);
+    isInsideWave ||
+    isCreateRoute ||
+    isProfileWavesFeedView ||
+    profileCollectedReturnContext !== null ||
+    (isProfilePage && canGoBack);
   const pfpImage = (
     <div className="tw-relative tw-h-10 tw-w-10 tw-flex-shrink-0">
       <div
@@ -629,7 +648,13 @@ export default function AppHeader() {
       <div className="tw-flex tw-h-16 tw-items-center tw-justify-between tw-gap-x-2 tw-px-4">
         <div className="tw-flex tw-h-10 tw-w-10 tw-flex-shrink-0 tw-items-center tw-justify-center">
           {showBackButton ? (
-            <BackButton />
+            <BackButton
+              key={`${pathname}?${searchParams.toString()}`}
+              returnTo={
+                profileCollectedReturnContext?.href ??
+                (isProfileWavesFeedView ? "/waves" : undefined)
+              }
+            />
           ) : (
             <button
               ref={profileButtonRef}

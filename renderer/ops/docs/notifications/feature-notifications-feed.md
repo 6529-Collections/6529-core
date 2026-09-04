@@ -6,7 +6,7 @@ Parent: [Notifications Index](README.md)
 
 `/notifications` is the My Stream activity feed for the connected profile.
 It resolves auth/profile prerequisites first, then shows a reverse-scroll list
-with cause filters, grouped reactions, and inline drop previews.
+with a multi-select cause filter, grouped reactions, and inline drop previews.
 
 ## Location in the Site
 
@@ -47,9 +47,21 @@ with cause filters, grouped reactions, and inline drop previews.
 
 ## Feed Filters
 
-- Cause filters are horizontal chips:
-  `All`, `Mentions`, `Replies`, `Identity`, `Reactions`, `Invites`,
-  `Subscriptions`.
+- The filter presentation follows the app layout boundary:
+  - mobile-layout viewports open `Filter notifications` in a bottom sheet;
+  - wider viewports keep the compact anchored dropdown.
+- Both presentations support selecting multiple notification categories at
+  once and apply changes immediately. The mobile sheet stays open while users
+  combine categories and provides a visible close action.
+- The trigger defaults to `All`; one selected category shows its name, and
+  multiple selected categories show the selected count. Closing and reopening
+  the filter preserves the current selection. `All` clears category filters
+  and returns to the complete feed.
+- The mobile sheet traps focus, blocks background feed interaction and
+  scrolling, supports Escape/backdrop/close-button dismissal, restores focus
+  to the trigger, scrolls internally on short viewports, and includes bottom
+  safe-area padding. Resizing across the layout boundary closes the active
+  presentation instead of opening a second filter surface.
 - Filter mapping:
   - `All`: all notification causes, including priority alerts, all-drops rows,
     and unknown causes.
@@ -124,7 +136,7 @@ with cause filters, grouped reactions, and inline drop previews.
   connected-account fallback while realtime coverage is disconnected or
   unconfirmed. Covered profiles use a five-minute REST reconciliation poll to
   recover from any missed event.
-- `PRIORITY_ALERT` and `ALL_DROPS` rows stay under `All` (no dedicated chip).
+- `PRIORITY_ALERT` and `ALL_DROPS` rows stay under `All` (no dedicated filter).
 - Cause filters only affect `/notifications` results.
 - If auth expires, the page can trigger one re-auth request automatically after
   an unauthorized notifications error.

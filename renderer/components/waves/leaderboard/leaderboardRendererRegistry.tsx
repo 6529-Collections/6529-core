@@ -15,6 +15,8 @@ import { MemesWaveSmallLeaderboardDrop } from "@/components/waves/small-leaderbo
 import { QuorumWaveSmallLeaderboardDrop } from "@/components/waves/small-leaderboard/QuorumWaveSmallLeaderboardDrop";
 import { DefaultWaveLeaderboardDrop } from "./drops/DefaultWaveLeaderboardDrop";
 import { QuorumWaveLeaderboardDrop } from "./drops/QuorumWaveLeaderboardDrop";
+import { useWaveProposalCardPresentation } from "@/hooks/waves/useWaveProposalCardPresentation";
+import ContentModerationDropGate from "@/components/content-moderation/ContentModerationDropGate";
 
 interface WaveLeaderboardDropRendererProps {
   readonly drop: ExtendedDrop;
@@ -46,6 +48,21 @@ interface ResolvedWaveLeaderboardRendererSet extends WaveLeaderboardRendererSet 
   readonly variant: WaveParticipationVariant;
 }
 
+const withContentModerationGate = <
+  Props extends { readonly drop: ExtendedDrop },
+>(
+  Renderer: ComponentType<Props>,
+  compact = false
+): ComponentType<Props> => {
+  const ModeratedRenderer = (props: Props) => (
+    <ContentModerationDropGate drop={props.drop} compact={compact}>
+      <Renderer {...props} />
+    </ContentModerationDropGate>
+  );
+  ModeratedRenderer.displayName = "ModeratedLeaderboardDropRenderer";
+  return ModeratedRenderer;
+};
+
 const WAVE_LEADERBOARD_VARIANT_OVERRIDES: Readonly<
   Partial<Record<string, WaveParticipationVariant>>
 > = {};
@@ -74,6 +91,41 @@ const DefaultLeaderboardDropRenderer: React.FC<
     />
   );
 };
+
+const ProposalCardLeaderboardDropRenderer: React.FC<
+  WaveLeaderboardDropRendererProps
+> = ({
+  drop,
+  onDropClick,
+  onVoteClick,
+  isVotingClosed,
+  isVotingControlsLocked,
+  winningThreshold,
+  winningThresholdMinDurationMs,
+}) => {
+  return (
+    <DefaultWaveLeaderboardDrop
+      drop={drop}
+      onDropClick={onDropClick}
+      onVoteClick={onVoteClick}
+      isVotingClosed={isVotingClosed}
+      isVotingControlsLocked={isVotingControlsLocked}
+      winningThreshold={winningThreshold}
+      winningThresholdMinDurationMs={winningThresholdMinDurationMs}
+      mediaContainerHeightClassName="tw-h-96"
+      contentPresentation="proposalCard"
+    />
+  );
+};
+
+const ProposalCardSmallLeaderboardDropRenderer: React.FC<
+  WaveSmallLeaderboardDropRendererProps
+> = (props) => (
+  <DefaultWaveSmallLeaderboardDrop
+    {...props}
+    contentPresentation="proposalCard"
+  />
+);
 
 const QuorumLeaderboardDropRenderer: React.FC<
   WaveLeaderboardDropRendererProps
@@ -113,24 +165,51 @@ const MemesLeaderboardDropRenderer: React.FC<
   );
 };
 
+const ModeratedDefaultLeaderboardDropRenderer = withContentModerationGate(
+  DefaultLeaderboardDropRenderer
+);
+const ModeratedDefaultSmallLeaderboardDrop = withContentModerationGate(
+  DefaultWaveSmallLeaderboardDrop,
+  true
+);
+const ModeratedMemesLeaderboardDropRenderer = withContentModerationGate(
+  MemesLeaderboardDropRenderer
+);
+const ModeratedMemesSmallLeaderboardDrop = withContentModerationGate(
+  MemesWaveSmallLeaderboardDrop,
+  true
+);
+const ModeratedQuorumLeaderboardDropRenderer = withContentModerationGate(
+  QuorumLeaderboardDropRenderer
+);
+const ModeratedQuorumSmallLeaderboardDrop = withContentModerationGate(
+  QuorumWaveSmallLeaderboardDrop,
+  true
+);
+const ModeratedProposalCardLeaderboardDropRenderer = withContentModerationGate(
+  ProposalCardLeaderboardDropRenderer
+);
+const ModeratedProposalCardSmallLeaderboardDropRenderer =
+  withContentModerationGate(ProposalCardSmallLeaderboardDropRenderer, true);
+
 const WAVE_LEADERBOARD_RENDERERS: Readonly<
   Record<WaveParticipationVariant, WaveLeaderboardRendererSet>
 > = {
   default: {
-    LeaderboardDrop: DefaultLeaderboardDropRenderer,
-    SmallLeaderboardDrop: DefaultWaveSmallLeaderboardDrop,
+    LeaderboardDrop: ModeratedDefaultLeaderboardDropRenderer,
+    SmallLeaderboardDrop: ModeratedDefaultSmallLeaderboardDrop,
   },
   memes: {
-    LeaderboardDrop: MemesLeaderboardDropRenderer,
-    SmallLeaderboardDrop: MemesWaveSmallLeaderboardDrop,
+    LeaderboardDrop: ModeratedMemesLeaderboardDropRenderer,
+    SmallLeaderboardDrop: ModeratedMemesSmallLeaderboardDrop,
   },
   curation: {
-    LeaderboardDrop: DefaultLeaderboardDropRenderer,
-    SmallLeaderboardDrop: DefaultWaveSmallLeaderboardDrop,
+    LeaderboardDrop: ModeratedDefaultLeaderboardDropRenderer,
+    SmallLeaderboardDrop: ModeratedDefaultSmallLeaderboardDrop,
   },
   quorum: {
-    LeaderboardDrop: QuorumLeaderboardDropRenderer,
-    SmallLeaderboardDrop: QuorumWaveSmallLeaderboardDrop,
+    LeaderboardDrop: ModeratedQuorumLeaderboardDropRenderer,
+    SmallLeaderboardDrop: ModeratedQuorumSmallLeaderboardDrop,
   },
 };
 
@@ -138,6 +217,7 @@ export const useWaveLeaderboardRendererSet = (
   waveId: string | null | undefined
 ): ResolvedWaveLeaderboardRendererSet => {
   const { isMemesWave, isCurationWave, isQuorumWave } = useSeizeSettings();
+  const proposalCardPresentation = useWaveProposalCardPresentation(waveId);
 
   return useMemo(() => {
     const variant = resolveWaveParticipationVariant({
@@ -148,9 +228,25 @@ export const useWaveLeaderboardRendererSet = (
       isQuorumWave,
     });
 
+    const rendererSet = WAVE_LEADERBOARD_RENDERERS[variant];
+
+    if (variant === "default" && proposalCardPresentation === "proposalCard") {
+      return {
+        variant,
+        LeaderboardDrop: ModeratedProposalCardLeaderboardDropRenderer,
+        SmallLeaderboardDrop: ModeratedProposalCardSmallLeaderboardDropRenderer,
+      };
+    }
+
     return {
       variant,
-      ...WAVE_LEADERBOARD_RENDERERS[variant],
+      ...rendererSet,
     };
-  }, [isCurationWave, isMemesWave, isQuorumWave, waveId]);
+  }, [
+    isCurationWave,
+    isMemesWave,
+    isQuorumWave,
+    proposalCardPresentation,
+    waveId,
+  ]);
 };

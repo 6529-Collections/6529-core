@@ -29,6 +29,45 @@ const env = {
   SEIZE_6529_COMMAND: "1",
 };
 
+const secureInstallCommands = new Map([
+  ["secure-install", "install"],
+  ["secure-install:frozen", "install:frozen"],
+  ["secure-install:prod", "install:prod"],
+]);
+const secureInstallCommand = secureInstallCommands.get(args[0]);
+
+if (secureInstallCommand) {
+  if (args.length !== 1) {
+    console.error(`${args[0]} does not accept additional arguments.`);
+    process.exit(1);
+  }
+
+  const rendererWrapper = path.join(rendererRoot, "bin", "6529");
+  const command =
+    process.platform === "win32" ? findWindowsBash() : rendererWrapper;
+  if (!command) {
+    console.error(
+      "Git Bash was not found. Set GIT_BASH to bash.exe before installing renderer dependencies on Windows.",
+    );
+    process.exit(1);
+  }
+  const commandArgs =
+    process.platform === "win32"
+      ? [rendererWrapper, secureInstallCommand]
+      : [secureInstallCommand];
+  const secureResult = spawnSync(command, commandArgs, {
+    cwd: rendererRoot,
+    env,
+    stdio: "inherit",
+    shell: false,
+  });
+
+  if (secureResult.error) {
+    throw secureResult.error;
+  }
+  process.exit(secureResult.status ?? 1);
+}
+
 if (process.platform === "win32" && !env.npm_config_script_shell) {
   const bash = findWindowsBash();
   if (!bash) {

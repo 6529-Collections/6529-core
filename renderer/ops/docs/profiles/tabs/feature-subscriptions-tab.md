@@ -20,9 +20,11 @@ are documented in
 
 - Open `/{user}/subscriptions` directly.
 - Open a profile and choose the `Subscriptions` tab.
-- On your own profile, use the compact subscription status in the profile
-  header. Its action opens the relevant settings, upcoming-drops, or top-up
-  section.
+- On your own profile, use the profile-header subscription control. It appears
+  beneath Preferences on desktop layouts, and as a full-width subtle row below
+  the identity block on smaller layouts. The current state and contextual
+  action share the row's second line, and the whole row opens the relevant
+  settings, upcoming-drops, or top-up section.
 - Use the subscription-awareness action on Home or a Meme card.
 - Use `Learn more` in the `Subscription minting` section to open
   `/about/subscriptions`.

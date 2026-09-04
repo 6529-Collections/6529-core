@@ -103,7 +103,7 @@ jest.mock("@/components/voting/VotingModalButton", () => ({
 
 jest.mock("@/components/waves/drops/WaveDropActionsOpen", () => ({
   __esModule: true,
-  default: () => <button data-testid="open-action">Open</button>,
+  default: () => <button data-testid="desktop-open-action">Open drop</button>,
 }));
 
 jest.mock("@/components/waves/drops/WaveDropMobileMenuOpen", () => ({
@@ -207,14 +207,24 @@ describe("WaveLeaderboardGridItem", () => {
       "tw-text-sm",
       "tw-text-iron-100"
     );
-    expect(screen.getByText("Read full text")).toHaveClass(
+    expect(screen.getByText("Read full")).toHaveClass(
       "tw-text-xs",
       "tw-text-primary-400",
       "tw-min-h-11"
     );
     expect(screen.getByTestId("rank")).toBeInTheDocument();
     expect(screen.getByTestId("votes")).toBeInTheDocument();
-    expect(screen.getByTestId("vote-button")).toBeInTheDocument();
+    const voteButton = screen.getByTestId("vote-button");
+    expect(voteButton).toBeInTheDocument();
+    expect(voteButton).toHaveAttribute(
+      "data-class-name",
+      expect.stringContaining("tw-self-center")
+    );
+    expect(voteButton.parentElement).toHaveClass(
+      "tw-items-center",
+      "tw-self-center",
+      "tw-flex-none"
+    );
     expect(screen.getByLabelText("7 voters")).toBeInTheDocument();
     const footer = screen.getByTestId("wave-leaderboard-grid-item-footer-d1");
     expect(footer).toBeInTheDocument();
@@ -394,7 +404,12 @@ describe("WaveLeaderboardGridItem", () => {
     );
 
     expect(screen.getByText("You:")).toBeInTheDocument();
-    expect(screen.getByText("-4 NIC")).toHaveClass("tw-text-rose-400");
+    expect(screen.getByText("-4")).toHaveClass(
+      "tw-font-mono",
+      "tw-text-rose-400"
+    );
+    expect(screen.getByText("NIC")).toHaveClass("tw-text-rose-400");
+    expect(screen.getByText("NIC")).not.toHaveClass("tw-font-mono");
     expect(screen.getByLabelText("7 voters")).toBeInTheDocument();
   });
 
@@ -529,9 +544,10 @@ describe("WaveLeaderboardGridItem", () => {
     ).toHaveClass(
       "tw-opacity-0",
       "group-focus-within:tw-opacity-100",
-      "desktop-hover:group-hover:tw-opacity-100"
+      "desktop-hover:group-hover:tw-opacity-100",
+      "touch-only:tw-opacity-100"
     );
-    expect(screen.getByTestId("open-action")).toBeInTheDocument();
+    expect(screen.getByTestId("desktop-open-action")).toBeInTheDocument();
     expect(screen.getByTestId("vote-button")).toBeInTheDocument();
     expect(screen.getByTestId("media")).toBeInTheDocument();
     const mediaWrapper = screen.getByTestId("media")
@@ -841,7 +857,7 @@ describe("WaveLeaderboardGridItem", () => {
       />
     );
 
-    expect(screen.queryByTestId("open-action")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("desktop-open-action")).not.toBeInTheDocument();
     expect(screen.queryByTestId("vote-button")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mobile-copy-action")).not.toBeInTheDocument();
   });
@@ -860,7 +876,7 @@ describe("WaveLeaderboardGridItem", () => {
     expect(
       screen.getByTestId("wave-leaderboard-grid-item-content-only-actions-d1")
     ).toBeInTheDocument();
-    expect(screen.getByTestId("open-action")).toBeInTheDocument();
+    expect(screen.getByTestId("desktop-open-action")).toBeInTheDocument();
     expect(screen.queryByTestId("vote-button")).not.toBeInTheDocument();
   });
 });

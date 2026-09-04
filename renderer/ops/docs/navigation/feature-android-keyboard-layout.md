@@ -44,6 +44,9 @@ blank space.
   the keyboard is open.
 - Create Wave flow on iOS: extra bottom margin used in non-keyboard state is
   removed while typing.
+- AppKit wallet search on iOS and Android: the wallet sheet lifts by a capped
+  amount while the keyboard is open, keeping search results reachable without
+  forcing the sheet to the top of the screen.
 
 ## Edge Cases
 
@@ -54,6 +57,8 @@ blank space.
   safe-area and navigation spacing return.
 - When reduced motion is enabled, keyboard-driven layout changes use no added
   transition duration.
+- Portrait-to-landscape and landscape-to-portrait viewport changes reset the
+  closed-keyboard geometry instead of being treated as keyboard visibility.
 - If keyboard listeners are unavailable or fail, layout stays in non-keyboard
   state.
 - This behavior does not apply to desktop web or small-screen web sidebar layout.
@@ -61,7 +66,8 @@ blank space.
 ## Failure and Recovery
 
 - If bottom navigation appears stuck hidden, close the keyboard first
-  (`Done`/back key or blur input).
+  (`Done`/back key or blur input). Rotation without an open keyboard should
+  leave the navigation visible.
 - If spacing looks stale after keyboard close, change route once and return.
 - If stale spacing persists, refresh the current route.
 

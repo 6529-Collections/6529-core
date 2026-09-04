@@ -7,6 +7,9 @@ import { mainnet } from "viem/chains";
 import type { AppKitAdapterManager } from "@/components/providers/AppKitAdapterManager";
 import type { WagmiAdapter } from "@reown/appkit-adapter-wagmi";
 
+const COINBASE_WALLET_ID =
+  "fd20dc426fb37566d803205b19bbc1d4096b248ac04548e3cfb6b3a38bd033aa";
+
 jest.mock("@reown/appkit/react", () => ({
   createAppKit: jest.fn(() => ({
     setEIP6963Enabled: jest.fn(),
@@ -63,7 +66,7 @@ describe("AppKit initialization", () => {
     expect(createAppKit).not.toHaveBeenCalled();
   });
 
-  it("disables AppKit's default Coinbase connector on Capacitor", () => {
+  it("removes Coinbase connection choices on Capacitor", () => {
     initializeAppKit({
       adapter,
       isCapacitor: true,
@@ -73,6 +76,7 @@ describe("AppKit initialization", () => {
     expect(createAppKit).toHaveBeenCalledWith(
       expect.objectContaining({
         enableCoinbase: false,
+        excludeWalletIds: [COINBASE_WALLET_ID],
       })
     );
   });
@@ -87,6 +91,11 @@ describe("AppKit initialization", () => {
     expect(createAppKit).toHaveBeenCalledWith(
       expect.objectContaining({
         enableCoinbase: true,
+      })
+    );
+    expect(createAppKit).toHaveBeenCalledWith(
+      expect.not.objectContaining({
+        excludeWalletIds: expect.anything(),
       })
     );
   });

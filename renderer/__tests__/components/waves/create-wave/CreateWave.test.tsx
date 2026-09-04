@@ -94,6 +94,10 @@ jest.mock("@/services/api/waves-v2-api", () => ({
   createWaveMetadata: jest.fn(),
 }));
 
+jest.mock("@/services/api/wave-group-validation-api", () => ({
+  validateWaveGroups: jest.fn(),
+}));
+
 // Mock step components
 jest.mock("@/components/waves/create-wave/overview/CreateWaveOverview", () => {
   return function MockCreateWaveOverview() {
@@ -102,19 +106,46 @@ jest.mock("@/components/waves/create-wave/overview/CreateWaveOverview", () => {
 });
 
 jest.mock("@/components/waves/create-wave/groups/CreateWaveGroups", () => {
-  return function MockCreateWaveGroups() {
-    return <div data-testid="create-wave-groups">Groups Step</div>;
+  return function MockCreateWaveGroups({
+    onCriteriaReplacementChange,
+    onGroupResolutionChange,
+  }: {
+    onCriteriaReplacementChange: (groupType: string, active: boolean) => void;
+    onGroupResolutionChange: (groupType: string, active: boolean) => void;
+  }) {
+    return (
+      <div data-testid="create-wave-groups">
+        Groups Step
+        <button onClick={() => onCriteriaReplacementChange("CAN_VIEW", true)}>
+          Start criteria replacement
+        </button>
+        <button onClick={() => onCriteriaReplacementChange("CAN_VIEW", false)}>
+          Discard criteria replacement
+        </button>
+        <button onClick={() => onGroupResolutionChange("CAN_VIEW", true)}>
+          Fail group restoration
+        </button>
+        <button onClick={() => onGroupResolutionChange("CAN_VIEW", false)}>
+          Resolve group restoration
+        </button>
+      </div>
+    );
   };
 });
 
 jest.mock("@/components/waves/create-wave/utils/CreateWaveActions", () => {
   return function MockCreateWaveActions({
     onComplete,
+    nextDisabled,
   }: {
     onComplete: () => void;
+    nextDisabled: boolean;
   }) {
     return (
       <div data-testid="create-wave-actions">
+        <button data-testid="mock-next" disabled={nextDisabled}>
+          Next
+        </button>
         <button onClick={onComplete}>Complete</button>
       </div>
     );
@@ -161,6 +192,7 @@ import { generateDropPart } from "@/components/waves/create-wave/services/waveMe
 import { getCreateNewWaveBody } from "@/helpers/waves/create-wave.helpers";
 import { useGroupMutations } from "@/hooks/groups/useGroupMutations";
 import { createWaveMetadata } from "@/services/api/waves-v2-api";
+import { validateWaveGroups } from "@/services/api/wave-group-validation-api";
 
 const mockedUseRouter = useRouter as jest.Mock;
 const mockedUseWaveConfig = useWaveConfig as jest.Mock;
@@ -171,6 +203,7 @@ const mockedGetAdminGroupId = getAdminGroupId as jest.Mock;
 const mockedMultiPartUpload = multiPartUpload as jest.Mock;
 const mockedUseGroupMutations = useGroupMutations as jest.Mock;
 const mockedCreateWaveMetadata = createWaveMetadata as jest.Mock;
+const mockedValidateWaveGroups = validateWaveGroups as jest.Mock;
 
 describe("CreateWave", () => {
   const mockRouter = {
@@ -273,6 +306,11 @@ describe("CreateWave", () => {
     selectedOutcomeType: null,
     errors: [],
     groupsCache: {},
+    groupValidation: {
+      invalidRoles: [],
+      isFetching: false,
+      unavailable: false,
+    },
     isMemeCountLoading: false,
     isMemeCountError: false,
     setOverview: jest.fn(),
@@ -329,6 +367,10 @@ describe("CreateWave", () => {
       id: 1,
       data_key: "key",
       data_value: "value",
+    });
+    mockedValidateWaveGroups.mockResolvedValue({
+      valid: true,
+      invalid_roles: [],
     });
     mockedMultiPartUpload.mockResolvedValue({
       url: "https://example.com/image.jpg",
@@ -408,6 +450,43 @@ describe("CreateWave", () => {
     expect(screen.getByTestId("create-wave-groups")).toBeInTheDocument();
   });
 
+  it("keeps Next disabled until an open criteria replacement is discarded", () => {
+    mockedUseWaveConfig.mockReturnValue({
+      ...mockWaveConfig,
+      step: CreateWaveStep.GROUPS,
+    });
+
+    renderCreateWave();
+
+    expect(screen.getByTestId("mock-next")).toBeEnabled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Start criteria replacement" })
+    );
+    expect(screen.getByTestId("mock-next")).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Discard criteria replacement" })
+    );
+    expect(screen.getByTestId("mock-next")).toBeEnabled();
+  });
+
+  it("keeps Next disabled until a selected draft group is restored", () => {
+    mockedUseWaveConfig.mockReturnValue({
+      ...mockWaveConfig,
+      step: CreateWaveStep.GROUPS,
+    });
+
+    renderCreateWave();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Fail group restoration" })
+    );
+    expect(screen.getByTestId("mock-next")).toBeDisabled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Resolve group restoration" })
+    );
+    expect(screen.getByTestId("mock-next")).toBeEnabled();
+  });
+
   it("hides acceptance rules on the chat rules step", () => {
     mockedUseWaveConfig.mockReturnValue({
       ...mockWaveConfig,
@@ -423,9 +502,7 @@ describe("CreateWave", () => {
 
     renderCreateWave();
 
-    expect(
-      screen.getByLabelText("Display-only creator rules")
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Wave guidelines")).toBeInTheDocument();
     expect(
       screen.queryByText("Rules that require acceptance")
     ).not.toBeInTheDocument();
@@ -510,6 +587,40 @@ describe("CreateWave", () => {
           displayMetadataRequests: [],
         });
       });
+    });
+
+    it("blocks a restricted Wave before creating an Admin group when access is invalid", async () => {
+      mockedValidateWaveGroups.mockResolvedValue({
+        valid: false,
+        invalid_roles: ["CHAT"],
+      });
+      mockedUseWaveConfig.mockReturnValue({
+        ...mockWaveConfig,
+        step: CreateWaveStep.DESCRIPTION,
+        config: {
+          ...mockWaveConfig.config,
+          groups: {
+            ...mockWaveConfig.config.groups,
+            admin: null,
+            canView: "view-group-id",
+          },
+        },
+      });
+
+      renderCreateWave();
+      fireEvent.click(screen.getByRole("button", { name: /complete/i }));
+
+      await waitFor(() => {
+        expect(mockedValidateWaveGroups).toHaveBeenCalled();
+        expect(mockAuthContext.setToast).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: "Some access groups need attention.",
+            type: "error",
+          })
+        );
+      });
+      expect(mockedGetAdminGroupId).not.toHaveBeenCalled();
+      expect(mockAddWaveMutation.mutateAsync).not.toHaveBeenCalled();
     });
 
     it("passes parent wave id into submitted subwave body", async () => {
@@ -1285,7 +1396,7 @@ describe("CreateWave", () => {
     expect(descriptionComponent).toBeInTheDocument();
   });
 
-  it("renders a sticky glass action footer instead of the legacy iOS bottom margin", () => {
+  it("renders a sticky solid action footer instead of the legacy iOS bottom margin", () => {
     const useCapacitor = require("@/hooks/useCapacitor").default;
     useCapacitor.mockReturnValue({ isIos: true });
     (useNativeKeyboard as jest.Mock).mockReturnValue({ isVisible: false });
@@ -1293,12 +1404,13 @@ describe("CreateWave", () => {
     renderCreateWave();
 
     // The old iOS-only tw-mb-10 dock spacer is gone (it read as a chunky
-    // footer); Prev/Next now live in a sticky, translucent-blur footer.
+    // footer); Prev/Next now live in a sticky, opaque footer.
     const mainColumn = document.querySelector(".tw-flex-1.tw-bg-iron-950");
     expect(mainColumn).not.toHaveClass("tw-mb-10");
 
     const footer = screen.getByTestId("create-wave-actions").parentElement;
     expect(footer?.className).toContain("tw-sticky");
-    expect(footer?.className).toContain("tw-backdrop-blur-md");
+    expect(footer?.className).toContain("tw-bg-iron-950");
+    expect(footer?.className).not.toContain("tw-backdrop-blur-md");
   });
 });

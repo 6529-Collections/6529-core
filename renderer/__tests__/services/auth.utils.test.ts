@@ -13,6 +13,7 @@ import {
   getWalletAddress,
   hasActiveSessionV2Auth,
   hasRecentBrowserConnectorSessionV2Auth,
+  invalidateAuthSessionForAddress,
   isAuthAddressAuthorized,
   markRecentBrowserConnectorSessionV2Auth,
   PROFILE_SWITCHED_EVENT,

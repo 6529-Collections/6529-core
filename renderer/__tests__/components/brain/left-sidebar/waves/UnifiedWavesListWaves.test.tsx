@@ -406,6 +406,43 @@ it("renders announcement, highly rated preview, pinned, and one filterable botto
   expect(ref.current?.sentinelRef.current).toBeInstanceOf(HTMLElement);
 });
 
+it("uses darker section dividers in the app without changing the web tone", () => {
+  const { container, rerender } = render(
+    <UnifiedWavesListWaves
+      waves={baseWaves}
+      onHover={jest.fn()}
+      scrollContainerRef={scrollRef}
+    />
+  );
+  const getSectionDividers = () =>
+    Array.from(container.querySelectorAll("div.tw-border-t"));
+
+  expect(getSectionDividers()).toHaveLength(3);
+  expect(getSectionDividers()[0]).toHaveClass("tw-mb-1", "tw-mt-2");
+  expect(getSectionDividers()[0]).not.toHaveClass("tw-my-3");
+  getSectionDividers().forEach((divider) => {
+    expect(divider).toHaveClass("tw-border-iron-700");
+    expect(divider).not.toHaveClass("tw-border-iron-800");
+  });
+
+  mockDeviceInfo = { isApp: true, hasTouchScreen: true };
+  rerender(
+    <UnifiedWavesListWaves
+      waves={baseWaves}
+      onHover={jest.fn()}
+      scrollContainerRef={scrollRef}
+    />
+  );
+
+  expect(getSectionDividers()).toHaveLength(3);
+  expect(getSectionDividers()[0]).toHaveClass("tw-my-3");
+  expect(getSectionDividers()[0]).not.toHaveClass("tw-mb-1", "tw-mt-2");
+  getSectionDividers().forEach((divider) => {
+    expect(divider).toHaveClass("tw-border-iron-800");
+    expect(divider).not.toHaveClass("tw-border-iron-700");
+  });
+});
+
 it("keeps worth checking out waves in All at their recent-activity position", () => {
   render(
     <UnifiedWavesListWaves
@@ -500,6 +537,7 @@ it("keeps the overlaid score inside the wave link and opens details on hover", a
     "tw-size-8",
     "tw-cursor-pointer"
   );
+  expect(waveLink.closest(".tw-pt-1")).not.toBeNull();
   const scoreBadgeText = screen.getByText("93", { selector: "text" });
   const scoreBadge = scoreBadgeText.closest("span");
   expect(scoreBadgeText).toBeInTheDocument();
@@ -514,6 +552,14 @@ it("keeps the overlaid score inside the wave link and opens details on hover", a
   );
   expect(scoreBadgeText.closest("svg")).toHaveClass("tw-h-5");
   expect(scoreBadgeText.closest("svg")).toHaveClass("tw-w-6");
+  const scoreBadgePaths = scoreBadgeText
+    .closest("svg")
+    ?.querySelectorAll("path");
+  expect(scoreBadgePaths).toHaveLength(1);
+  expect(scoreBadgePaths?.[0]).toHaveClass(
+    "tw-fill-iron-900",
+    "tw-stroke-white/25"
+  );
   fireEvent.click(scoreBadgeText);
   expect(
     screen.queryByRole("dialog", { name: "Wave score details" })

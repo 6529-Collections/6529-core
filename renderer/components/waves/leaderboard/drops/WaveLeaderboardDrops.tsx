@@ -19,6 +19,10 @@ import {
 import { WaveLeaderboardDrop } from "./WaveLeaderboardDrop";
 import { WaveLeaderboardEmptyState } from "./WaveLeaderboardEmptyState";
 import { WaveLeaderboardLoading } from "./WaveLeaderboardLoading";
+import { useWaveProposalCardPresentation } from "@/hooks/waves/useWaveProposalCardPresentation";
+import { useSeizeSettings } from "@/contexts/SeizeSettingsContext";
+
+const PROPOSAL_CARD_ROW_ESTIMATE_PX = 360;
 
 interface WaveLeaderboardDropsProps {
   readonly wave: ApiWave;
@@ -80,6 +84,10 @@ export const WaveLeaderboardDrops: React.FC<WaveLeaderboardDropsProps> = ({
   });
   const { votingDrop, openVotingModal, closeVotingModal } =
     useWaveLeaderboardVotingModal(drops, scrollContainerRef);
+  const contentPresentation = useWaveProposalCardPresentation(wave.id);
+  const { isQuorumWave } = useSeizeSettings();
+  const usesCompactRows =
+    contentPresentation === "proposalCard" || isQuorumWave(wave.id);
 
   const handleSourceDropDeleted = React.useCallback(() => {
     void refetch();
@@ -113,6 +121,10 @@ export const WaveLeaderboardDrops: React.FC<WaveLeaderboardDropsProps> = ({
         isFetchNextPageError={isFetchNextPageError}
         isFetchPreviousPageError={isFetchPreviousPageError}
         autoLoadNext
+        estimatedRowHeight={
+          usesCompactRows ? PROPOSAL_CARD_ROW_ESTIMATE_PX : undefined
+        }
+        measureLoadedRowsAtNaturalHeight
         renderItem={(drop) => (
           <WaveLeaderboardDrop
             drop={drop}

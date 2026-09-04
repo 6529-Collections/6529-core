@@ -15,9 +15,11 @@ You write the first wave drop here, then click `Complete`.
 ## Step Paths
 
 - `Chat`: `Overview` -> `Groups` -> `Rules` -> `Description`
-- `Rank`: `Overview` -> `Groups` -> `Dates` -> `Drops` -> `Rules` ->
+- Scheduled `Rank`: `Overview` -> `Groups` -> `Schedule` -> `Drops` -> `Rules` ->
   `Voting` -> `Outcomes` -> `Description`
-- `Approve`: `Overview` -> `Groups` -> `Dates` -> `Drops` -> `Rules` ->
+- `Perpetual Ranking`: `Overview` -> `Groups` -> `Schedule` -> `Drops` ->
+  `Rules` -> `Voting` -> `Description`
+- `Approve`: `Overview` -> `Groups` -> `Schedule` -> `Drops` -> `Rules` ->
   `Voting` -> `Outcomes` -> `Description`
 
 ## What You Can Add
@@ -29,7 +31,7 @@ You write the first wave drop here, then click `Complete`.
 - Same editor features as wave drop composer:
   mentions, wave mentions, hashtag/NFT references, markdown, emoji, metadata,
   drag/paste media, and optional storm mode (`Break into storm`)
-- Individual `@` mention suggestions use the draft wave's `Who can view`
+- Individual `@` mention suggestions use the draft wave's `Visibility`
   group. Public drafts search all profiles; private drafts suggest only profiles
   eligible for the selected visibility group.
 
@@ -68,6 +70,8 @@ You write the first wave drop here, then click `Complete`.
 ## Limitations / Notes
 
 - No separate review step exists after `Description`.
+- `Description` is always a core editor and has no optional-settings
+  disclosure.
 - `Description` has no standalone step-validation rules in create-step
   validation.
 - `Complete` submits prior step config and the description drop in one

@@ -1,42 +1,47 @@
 "use client";
 
+import { useContext, useEffect, useRef, useState } from "react";
+import type { ApiCommunityMemberOverview } from "@/generated/models/ApiCommunityMemberOverview";
+import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
 import { AuthContext } from "@/components/auth/Auth";
 import {
   QueryKey,
   ReactQueryWrapperContext,
 } from "@/components/react-query-wrapper/ReactQueryWrapper";
-import { SortDirection } from "@/entities/ISort";
-import type { ApiCommunityMemberOverview } from "@/generated/models/ApiCommunityMemberOverview";
-import type { ApiGroupFull } from "@/generated/models/ApiGroupFull";
+import { CreditDirection } from "../GroupCard";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type { Page } from "@/helpers/Types";
 import { getToastErrorDetails } from "@/helpers/toast.helpers";
+import type { CommunityMembersQuery } from "@/app/network/page";
+import { SortDirection } from "@/entities/ISort";
 import { commonApiFetch, commonApiPost } from "@/services/api/common-api";
-import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
-import { useContext, useEffect, useRef, useState } from "react";
-import { CreditDirection } from "../GroupCard";
 
-import { CommunityMembersQuery } from "@/app/network/page";
-import { ApiBulkRateRequest } from "@/generated/models/ApiBulkRateRequest";
-import { ApiBulkRateResponse } from "@/generated/models/ApiBulkRateResponse";
-import { ApiCommunityMembersSortOption } from "@/generated/models/ApiCommunityMembersSortOption";
+import GroupCardActionWrapper from "../GroupCardActionWrapper";
 import { ApiRateMatter } from "@/generated/models/ApiRateMatter";
 import type { GroupCardRateMatter } from "../GroupCard";
-import GroupCardActionWrapper from "../GroupCardActionWrapper";
 import GroupCardActionStats from "../utils/GroupCardActionStats";
 import GroupCardVoteAllInputs from "./GroupCardVoteAllInputs";
+import { ApiCommunityMembersSortOption } from "@/generated/models/ApiCommunityMembersSortOption";
+import type { ApiBulkRateRequest } from "@/generated/models/ApiBulkRateRequest";
+import type { ApiBulkRateResponse } from "@/generated/models/ApiBulkRateResponse";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
 
 export default function GroupCardVoteAll({
   matter,
   group,
   onCancel,
+  viewerIdentityKey,
 }: {
   readonly matter: GroupCardRateMatter;
   readonly group?: ApiGroupFull | undefined;
   readonly onCancel: () => void;
+  readonly viewerIdentityKey: string | null;
 }) {
+  const locale = useBrowserLocale();
   const SUCCESS_LABEL: Record<GroupCardRateMatter, string> = {
-    [ApiRateMatter.Cic]: "NIC distributed.",
-    [ApiRateMatter.Rep]: "Rep distributed.",
+    [ApiRateMatter.Cic]: t(locale, "network.groupInspection.bulkNicSuccess"),
+    [ApiRateMatter.Rep]: t(locale, "network.groupInspection.bulkRepSuccess"),
   };
 
   // Ref to track if the component is mounted
@@ -70,6 +75,7 @@ export default function GroupCardVoteAll({
         sort: ApiCommunityMembersSortOption.Level,
         sortDirection: SortDirection.DESC,
         groupId: group?.id ?? null,
+        viewerIdentityKey,
       },
     ],
     queryFn: async () =>
@@ -86,7 +92,6 @@ export default function GroupCardVoteAll({
           group_id: group?.id,
         },
       }),
-    placeholderData: keepPreviousData,
   });
 
   const [membersCount, setMembersCount] = useState<number | null>(null);

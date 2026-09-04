@@ -1,13 +1,12 @@
 import {
   assertApprovedArtBlocksMediaUrl,
   assertApprovedMuseumRepositoryMediaUrl,
-  buildImmutableMuseumBlobUrl,
 } from "./security";
 import {
   buildMuseumSignedWaveStormDropUrl,
   isMuseumExternalProposalMediaUrl,
   isMuseumExternalProposalPresentationMedia,
-  type MuseumAcquisitionMethod,
+  isMuseumExternalProposalTokenSourceUrl,
   type MuseumExternalProposalPresentationAffordance,
   type MuseumExternalProposalPresentationMedia,
 } from "./entities";
@@ -20,12 +19,8 @@ import type {
   MuseumMediaMetadata,
   MuseumRightsCredit,
   MuseumSourceDocument,
-  MuseumWorkAlias,
 } from "./types";
-import {
-  ACQUISITION_METHODS,
-  ENTITY_ID_PATTERNS,
-} from "./publicEntityGraphSchema";
+import { ENTITY_ID_PATTERNS } from "./publicEntityGraphSchema";
 import {
   optionalString,
   requiredObject,
@@ -41,6 +36,7 @@ import {
   proposalMetadata,
 } from "./publicEntityGraphMediaMetadata";
 import { accessionMediaFacts } from "./publicEntityGraphAccessionMedia";
+import { accessionPresentationVariants } from "./publicEntityGraphAccessionPresentation";
 export { findWavePublicationPart } from "./publicEntityGraphWaveMediaJoin";
 
 export function mapWorkStatus(
@@ -108,6 +104,7 @@ export interface MuseumProjectedMedia {
 
 interface MuseumMediaProjectionInput {
   readonly uri: string | null;
+  readonly tokenSourceUri: string | null;
   readonly repositoryPath: string | null;
   readonly visual: boolean;
   readonly mediaType: string;
@@ -117,6 +114,7 @@ interface MuseumMediaProjectionInput {
   readonly creditLine: string;
   readonly licenseLabel: string | null;
   readonly allowedUiAffordances: readonly string[];
+  readonly sourceByteSize: number | null;
 }
 
 interface MuseumMediaProjectionContext {
@@ -207,6 +205,14 @@ function mediaFromEntity(
     "repository_path",
     "public_entity_graph_media_path"
   );
+  const tokenSourceValue = media["token_source_locator"];
+  const tokenSourceUri = isRecord(tokenSourceValue)
+    ? optionalString(
+        tokenSourceValue,
+        "uri",
+        "public_entity_graph_media_token_source_uri"
+      )
+    : null;
   const mediaType = requiredString(
     media,
     "media_type",
@@ -231,11 +237,18 @@ function mediaFromEntity(
     "public_entity_graph_media_affordances",
     false
   );
+  const sourceByteSize =
+    typeof media["source_byte_size"] === "number" &&
+    Number.isSafeInteger(media["source_byte_size"]) &&
+    media["source_byte_size"] > 0
+      ? media["source_byte_size"]
+      : null;
   if (media["subject_entity_id"] !== subjectEntity.id) {
     throw new Error("public_entity_graph_media_subject");
   }
   const input: MuseumMediaProjectionInput = {
     uri,
+    tokenSourceUri,
     repositoryPath,
     visual,
     mediaType,
@@ -245,6 +258,7 @@ function mediaFromEntity(
     creditLine,
     licenseLabel,
     allowedUiAffordances,
+    sourceByteSize,
   };
   if (role === "historical_wave_proposal_presentation") {
     return projectProposalMedia(mediaEntity, subjectEntity, context, input);
@@ -277,9 +291,16 @@ function projectProposalMedia(
   if (!mediaEntity.sourceRecordIds.includes(publicationRecordId)) {
     throw new Error("public_entity_graph_media_wave_source_join");
   }
+  if (
+    input.visual &&
+    input.allowedUiAffordances.includes("view") &&
+    input.tokenSourceUri === null
+  ) {
+    throw new Error("public_entity_graph_media_token_source_locator");
+  }
   const metadataOnly =
     !input.visual ||
-    (input.uri === null && input.repositoryPath === null) ||
+    (input.tokenSourceUri === null && input.repositoryPath === null) ||
     !input.allowedUiAffordances.includes("view");
   if (metadataOnly) {
     assertProposalContext(media, subjectEntity, context, waveId, dropId);
@@ -305,16 +326,37 @@ function projectProposalMedia(
   const { sourceByteSize, publicationPartNumber } = accessionMediaFacts(
     mediaEntity,
     media,
-    publicationRecordId
+    publicationRecordId,
+    input.uri,
+    input.tokenSourceUri,
+    context.sourceDocuments
   );
   const affordances = proposalAffordances(input);
+  const sourceSha256 = requiredString(
+    requiredObject(media, "fixity", "public_entity_graph_media_fixity"),
+    "digest",
+    "public_entity_graph_media_fixity"
+  );
+  const variants = accessionPresentationVariants({
+    workId: subjectEntity.id,
+    mediaId: mediaEntity.id,
+    sourceUrl: input.tokenSourceUri,
+    sourceSha256,
+    sourceByteSize,
+    sourceWidth: input.width,
+    sourceHeight: input.height,
+    sourceAltText: input.altText,
+    sourceDocuments: context.sourceDocuments,
+    catalogMediaAssetPaths: context.catalogMediaAssetPaths,
+  });
   const candidate: MuseumExternalProposalPresentationMedia = {
     id: mediaEntity.id,
     kind: "external_proposal_presentation",
-    mediaUrl: input.uri,
+    mediaUrl: input.tokenSourceUri,
     mediaMimeType:
       input.mediaType as MuseumExternalProposalPresentationMedia["mediaMimeType"],
     sourceByteSize,
+    ...(variants.length === 0 ? {} : { variants }),
     width: input.width,
     height: input.height,
     altText: input.altText,
@@ -353,12 +395,14 @@ function assertProposalPresentationInput(
   input: MuseumMediaProjectionInput
 ): asserts input is MuseumMediaProjectionInput & {
   readonly uri: string;
+  readonly tokenSourceUri: string;
   readonly width: number;
   readonly height: number;
   readonly altText: string;
 } {
   if (
     input.uri === null ||
+    input.tokenSourceUri === null ||
     !input.visual ||
     typeof input.width !== "number" ||
     typeof input.height !== "number" ||
@@ -441,7 +485,9 @@ function assertProposalContext(
 function assertProposalSourceLocator(input: MuseumMediaProjectionInput): void {
   if (
     input.uri === null ||
-    !isMuseumExternalProposalMediaUrl(input.uri)
+    !isMuseumExternalProposalMediaUrl(input.uri) ||
+    input.tokenSourceUri === null ||
+    !isMuseumExternalProposalTokenSourceUrl(input.tokenSourceUri)
   ) {
     throw new Error("public_entity_graph_media_proposal_source_locator");
   }
@@ -479,7 +525,16 @@ function projectRetainedMedia(
   readonly presentation: null;
   readonly metadata: MuseumMediaMetadata | null;
 } {
-  if (!input.allowedUiAffordances.includes("view")) {
+  const media = requiredObject(
+    mediaEntity.profile,
+    "media",
+    "public_entity_graph_media"
+  );
+  const canPresent =
+    input.allowedUiAffordances.includes("view") ||
+    (media["media_role"] === "token_linked_source_media" &&
+      input.allowedUiAffordances.includes("interact_sandboxed"));
+  if (!canPresent) {
     return {
       retained: null,
       presentation: null,
@@ -497,11 +552,6 @@ function projectRetainedMedia(
       metadata: metadataOnlyMedia(mediaEntity, subjectEntityId, input, role),
     };
   }
-  const media = requiredObject(
-    mediaEntity.profile,
-    "media",
-    "public_entity_graph_media"
-  );
   const credit = mediaRightsCredit(
     input.creditLine,
     input.licenseLabel,
@@ -518,6 +568,75 @@ function projectRetainedMedia(
   }
   if (media["media_role"] === "token_linked_source_media") {
     const approved = assertApprovedArtBlocksMediaUrl(input.uri);
+    const fixity = requiredObject(
+      media,
+      "fixity",
+      "public_entity_graph_media_fixity"
+    );
+    const sourceSha256 = optionalString(
+      fixity,
+      "digest",
+      "public_entity_graph_media_fixity_digest"
+    );
+    const fixityStatus = requiredString(
+      fixity,
+      "status",
+      "public_entity_graph_media_fixity_status"
+    );
+    const variants =
+      approved.kind !== "still" ||
+      sourceSha256 === null ||
+      input.sourceByteSize === null ||
+      input.altText === null
+        ? []
+        : accessionPresentationVariants({
+            workId: subjectEntityId,
+            mediaId: mediaEntity.id,
+            sourceUrl: approved.url,
+            sourceSha256,
+            sourceByteSize: input.sourceByteSize,
+            sourceWidth: input.width,
+            sourceHeight: input.height,
+            sourceAltText: input.altText,
+            sourceDocuments: context.sourceDocuments,
+            catalogMediaAssetPaths: context.catalogMediaAssetPaths,
+          });
+    if (
+      approved.kind === "still" &&
+      input.repositoryPath !== null &&
+      sourceSha256 !== null &&
+      fixityStatus === "verified" &&
+      /^sha256:[a-f0-9]{64}$/u.test(sourceSha256) &&
+      context.catalogMediaAssetPaths.has(input.repositoryPath)
+    ) {
+      const retainedUrl = assertApprovedMuseumRepositoryMediaUrl(
+        context.sourceCommit,
+        input.repositoryPath,
+        context.catalogMediaAssetPaths
+      );
+      return {
+        retained: {
+          id: mediaEntity.id,
+          artworkId: subjectEntityId,
+          kind: "still",
+          role: "source",
+          mediaType: input.mediaType,
+          width: input.width,
+          height: input.height,
+          altText: input.altText,
+          credit,
+          sourcePath: mediaEntity.sourcePath,
+          custody: "retained",
+          url: retainedUrl,
+          preservationStatus: "retained_verified",
+          sha256: sourceSha256 as `sha256:${string}`,
+          upstreamProvider: null,
+          ...(variants.length === 0 ? {} : { variants }),
+        },
+        presentation: null,
+        metadata: null,
+      };
+    }
     return {
       retained: {
         id: mediaEntity.id,
@@ -535,6 +654,7 @@ function projectRetainedMedia(
         preservationStatus: "not_retained",
         sha256: null,
         upstreamProvider: "art_blocks",
+        ...(variants.length === 0 ? {} : { variants }),
       },
       presentation: null,
       metadata: null,
@@ -641,101 +761,4 @@ function projectPreservedMedia(
     presentation: null,
     metadata: null,
   };
-}
-
-export function aliasesForWorks(
-  entities: readonly MuseumPublicEntityRecord[]
-): readonly MuseumWorkAlias[] {
-  const aliases = new Map<string, MuseumWorkAlias>();
-  const sharedReferences = new Set<string>();
-  for (const work of entities.filter(
-    (entity) => entity.entityType === "WORK"
-  )) {
-    // A manifestation can be shared by several Works (for example a visual
-    // observation record). Only a typed manifestation/source-object reference
-    // is an identity alias; the inventory remains authoritative for all other
-    // source joins.
-    const refs = sourceProfileReferences(
-      work.profile,
-      "manifestation_references",
-      "manifestation"
-    );
-    for (const alias of refs) {
-      if (sharedReferences.has(alias)) continue;
-      if (
-        alias === work.id ||
-        ENTITY_ID_PATTERNS["WORK"]?.test(alias) === true
-      ) {
-        continue;
-      }
-      const existing = aliases.get(alias);
-      if (existing !== undefined && existing.workId !== work.id) {
-        // A shared manifestation (for example a visual observation) is
-        // context, not a Work identity alias. The identity inventory remains
-        // authoritative for aliases that may redirect to a canonical Work.
-        aliases.delete(alias);
-        sharedReferences.add(alias);
-        continue;
-      }
-      aliases.set(alias, {
-        kind: "work_source_alias",
-        sourceObjectId: alias,
-        workId: work.id,
-        sourcePath: work.sourcePath,
-      });
-    }
-  }
-  return [...aliases.values()].sort((left, right) =>
-    left.sourceObjectId.localeCompare(right.sourceObjectId)
-  );
-}
-
-function sourceProfileReferences(
-  profile: Readonly<Record<string, unknown>>,
-  key: string,
-  referenceType: string
-): string[] {
-  const values = profile[key];
-  if (!Array.isArray(values)) return [];
-  return values.flatMap((value) => {
-    if (!isRecord(value)) return [];
-    if (value["reference_type"] !== referenceType) return [];
-    const sourceRecordId = value["source_record_id"];
-    return typeof sourceRecordId === "string" &&
-      sourceRecordId.trim().length > 0
-      ? [sourceRecordId]
-      : [];
-  });
-}
-
-export function mergeWorkAliases(
-  aliases: readonly MuseumWorkAlias[]
-): readonly MuseumWorkAlias[] {
-  const byAlias = new Map<string, MuseumWorkAlias>();
-  for (const alias of aliases) {
-    const existing = byAlias.get(alias.sourceObjectId);
-    if (existing !== undefined && existing.workId !== alias.workId) {
-      throw new Error("public_entity_graph_alias_collision");
-    }
-    byAlias.set(alias.sourceObjectId, alias);
-  }
-  return [...byAlias.values()].sort((left, right) =>
-    left.sourceObjectId.localeCompare(right.sourceObjectId)
-  );
-}
-
-export function mapAcquisitionMethod(value: string): MuseumAcquisitionMethod {
-  if (!ACQUISITION_METHODS.has(value as MuseumAcquisitionMethod)) {
-    throw new Error("public_entity_graph_acquisition_method");
-  }
-  return value as MuseumAcquisitionMethod;
-}
-
-export function immutableDocumentSource(
-  sourceCommit: string,
-  path: string
-): string {
-  const url = buildImmutableMuseumBlobUrl(sourceCommit, path);
-  if (url === null) throw new Error("public_entity_graph_document_join");
-  return url;
 }

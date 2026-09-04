@@ -64,11 +64,23 @@ Open a new shell, or activate the wrapper in the current shell:
 source <(./bin/6529 bootstrap --print-export)
 ```
 
-Install dependencies through the secure project path:
+The dependency set includes one private GitHub Package. Create a GitHub PAT
+classic with `read:packages` only and authorize organization SSO when required.
+The runtime `NODE_AUTH_TOKEN` needs read-only GitHub Packages access. For a
+normal interactive install, simply run:
 
 ```bash
 6529 install
 ```
+
+If `NODE_AUTH_TOKEN` is not already set, the wrapper asks for it silently and
+keeps it only for that command. CI and other non-interactive shells must supply
+`NODE_AUTH_TOKEN` at runtime. Do not store it in the repository or
+package-manager configuration. Codex worktrees have a separate one-time macOS
+Keychain setup. See
+[pnpm and Socket Firewall](ops/docs/developer/pnpm-and-socket-firewall.md) for
+that setup, the exact package-routing boundary, and other authenticated package
+commands.
 
 Create a local `.env` file from [.env.sample](.env.sample), then start the app:
 
@@ -116,7 +128,6 @@ Common commands:
 6529 run lint:changed
 6529 run typecheck:changed
 6529 run check:changed
-6529 run deployment-bus -- validate-manifest --file deployment-bus-manifest.json
 ```
 
 If pnpm reports ignored install/build scripts, run:
@@ -187,6 +198,8 @@ deployment-sensitive code:
 - Agent and automation instructions: [AGENTS.md](AGENTS.md)
 - Package-manager and deployment-wrapper guidance:
   [ops/docs/developer/pnpm-and-socket-firewall.md](ops/docs/developer/pnpm-and-socket-firewall.md)
+- CI wave deploy and WEB E2E notification contract:
+  [ops/docs/developer/ci-wave-deploy-validation-notifications.md](ops/docs/developer/ci-wave-deploy-validation-notifications.md)
 - Standalone Memes mint page notes:
   [standalone/standalone-memes-mint/README.md](standalone/standalone-memes-mint/README.md)
 
@@ -203,9 +216,12 @@ through [Procfile](Procfile).
 Repository and deployment helper details, including `ghruns`, `ghdeploy`,
 `6529 staging`, and PM2 launch examples, are documented in
 [ops/docs/developer/pnpm-and-socket-firewall.md](ops/docs/developer/pnpm-and-socket-firewall.md).
-The staging and production release process for coordinating shared validation,
-backend dependencies, and production promotion is documented in
-[ops/docs/developer/simple-release-bus-v2.md](ops/docs/developer/simple-release-bus-v2.md).
+The staging and production merge/deployment process, including backend
+dependencies and automatic frontend E2E, is documented in
+[Deployment](ops/docs/developer/deployment.md).
+CI wave message formats, deploy-to-E2E reply correlation, manual reruns, and
+rollout order are documented in
+[ops/docs/developer/ci-wave-deploy-validation-notifications.md](ops/docs/developer/ci-wave-deploy-validation-notifications.md).
 
 ## Contributing
 

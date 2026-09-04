@@ -8,7 +8,12 @@ import React, {
   useState,
   useSyncExternalStore,
 } from "react";
-import { AnimatePresence, LazyMotion, domAnimation, m } from "framer-motion";
+import {
+  LazyMotion,
+  domAnimation,
+  m,
+  useReducedMotion,
+} from "framer-motion";
 import BrainMobileTabs from "./mobile/BrainMobileTabs";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
@@ -70,6 +75,7 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { isApp } = useDeviceInfo();
+  const shouldReduceMotion = useReducedMotion() ?? false;
   const { registerRef } = useLayout();
   const { connectedProfile, fetchingProfile } = useAuth();
   const hasAuthenticatedProfile = Boolean(connectedProfile?.handle);
@@ -266,7 +272,7 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
   }, [isApp, searchParams, connectedProfile, closeCreateOverlay]);
 
   const dropOverlayClass = isApp
-    ? "tw-fixed tw-inset-0 tw-z-[1010] tw-bg-black tailwind-scope"
+    ? "tw-fixed tw-inset-0 tw-z-[1010] tw-bg-[#0d0d0e] tailwind-scope"
     : "tw-absolute tw-inset-0 tw-z-[1010]";
   const quickVoteRuntimeIntent =
     activeView === BrainView.WAVES && quickVote.shouldMountRuntime
@@ -274,7 +280,11 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
       : null;
 
   return (
-    <div className="tw-relative tw-flex tw-h-full tw-flex-col">
+    <div
+      className={`tw-relative tw-flex tw-h-full tw-flex-col ${
+        isApp ? "tw-bg-[#0d0d0e]" : ""
+      }`}
+    >
       {createOverlay}
       {isDropOpen && (
         <div className={dropOverlayClass}>
@@ -322,36 +332,37 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
           <MobileWaveSubwavesBar wave={wave} />
         ))}
       <LazyMotion features={domAnimation}>
-        <AnimatePresence mode="wait">
-          <m.div
-            key={activeView}
-            {...swipeBackHandlers}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.2, ease: "easeInOut" }}
-            className="tw-relative tw-min-w-0 tw-flex-1"
+        <m.div
+          key={activeView}
+          {...swipeBackHandlers}
+          initial={shouldReduceMotion ? false : { opacity: 0.92 }}
+          animate={{ opacity: 1 }}
+          transition={
+            shouldReduceMotion
+              ? { duration: 0 }
+              : { duration: 0.12, ease: "easeOut" }
+          }
+          className="tw-relative tw-min-w-0 tw-flex-1"
+        >
+          <BrainMobileViewContent
+            activeView={activeView}
+            activeWaveId={waveId}
+            activeAboutTab={activeAboutTab}
+            onAboutTabChange={onAboutTabChange}
+            isCurationWave={isCurationWave}
+            isMemesWave={isMemesWave}
+            isRankWave={isRankWave}
+            isApproveWave={isApproveWave}
+            outcomesVisible={outcomesVisible}
+            hasPolls={hasPolls}
+            onDropClick={onDropClick}
+            onOpenQuickVote={quickVote.openQuickVote}
+            onPrefetchQuickVote={quickVote.prefetchQuickVote}
+            wave={wave}
           >
-            <BrainMobileViewContent
-              activeView={activeView}
-              activeWaveId={waveId}
-              activeAboutTab={activeAboutTab}
-              onAboutTabChange={onAboutTabChange}
-              isCurationWave={isCurationWave}
-              isMemesWave={isMemesWave}
-              isRankWave={isRankWave}
-              isApproveWave={isApproveWave}
-              outcomesVisible={outcomesVisible}
-              hasPolls={hasPolls}
-              onDropClick={onDropClick}
-              onOpenQuickVote={quickVote.openQuickVote}
-              onPrefetchQuickVote={quickVote.prefetchQuickVote}
-              wave={wave}
-            >
-              {children}
-            </BrainMobileViewContent>
-          </m.div>
-        </AnimatePresence>
+            {children}
+          </BrainMobileViewContent>
+        </m.div>
       </LazyMotion>
       {quickVoteRuntimeIntent === null ? null : (
         <LazyMemesQuickVoteRuntime
