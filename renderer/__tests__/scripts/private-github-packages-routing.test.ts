@@ -100,6 +100,22 @@ type SecureRunnerModule = {
   quoteWindowsShellArgument: (value: string) => string;
 };
 
+type PackageWorkflowJob = {
+  permissions?: {
+    packages?: string;
+  };
+  steps?: Array<{
+    run?: string;
+  }>;
+};
+
+type PackageWorkflow = {
+  permissions?: {
+    packages?: string;
+  };
+  jobs?: Record<string, PackageWorkflowJob>;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const policy =
   require("../../scripts/private-github-packages-policy.cjs") as PolicyModule;
@@ -114,6 +130,11 @@ const REPOSITORY_ROOT = path.resolve(__dirname, "../..");
 const TEST_TOKEN = "read-only-test-token";
 const AUTH_HELPER_RELATIVE_PATH = "scripts/private-github-packages-auth.sh";
 const AUTH_HELPER_PATH = path.join(REPOSITORY_ROOT, AUTH_HELPER_RELATIVE_PATH);
+const WINDOWS_CREDENTIAL_HELPER_PATH = path.join(
+  REPOSITORY_ROOT,
+  "scripts",
+  "private-github-packages-credential.ps1"
+);
 
 function isolatedAuthTestEnvironment(): NodeJS.ProcessEnv {
   const environment = { ...process.env };
@@ -151,6 +172,17 @@ function runAuthHarness({
       timeout: 1_000,
     }
   );
+}
+
+function hasAuthorizedFrozenInstall(workflow: PackageWorkflow): boolean {
+  return Object.values(workflow.jobs ?? {}).some((job) => {
+    const hasFrozenInstall = (job.steps ?? []).some((step) =>
+      step.run?.includes("./bin/6529 ci")
+    );
+    const effectivePackagePermission =
+      job.permissions?.packages ?? workflow.permissions?.packages;
+    return hasFrozenInstall && effectivePackagePermission === "read";
+  });
 }
 
 function validNpmrc() {
@@ -589,7 +621,10 @@ describe("private GitHub Packages repository policy", () => {
   it("rejects CLI attempts to change routing or extend the package bypass", () => {
     expect(() =>
       policy.validatePnpmArguments(["config", "get", policy.AUTH_KEY])
-    ).toThrow("only install, add, update, and audit");
+    ).toThrow("only install, add, remove, update, and audit");
+    expect(() =>
+      policy.validatePnpmArguments(["remove", "public-package"])
+    ).not.toThrow();
     expect(() =>
       policy.validatePnpmArguments([
         "add",
@@ -998,6 +1033,31 @@ describe("host-specific Socket Firewall routing", () => {
     expect(JSON.stringify(consoleError.mock.calls)).not.toContain(TEST_TOKEN);
   });
 
+  it("resolves dependency removal without auth before the frozen fetch", () => {
+    const spawn = jest.fn(() => ({ status: 0 }));
+
+    expect(
+      routing.runPnpm({
+        args: ["remove", "public-package"],
+        environment: socketEnvironment(socketCaPath),
+        repositoryRoot: REPOSITORY_ROOT,
+        spawn,
+      })
+    ).toBe(0);
+    const spawnCalls = spawn.mock.calls as unknown as Array<
+      [string, string[], { env: Environment }]
+    >;
+
+    expect(spawnCalls.map((call) => call[1])).toEqual([
+      ["remove", "public-package", "--lockfile-only"],
+      routing.TOKEN_FREE_LOCKFILE_ARGUMENTS,
+      routing.AUTHENTICATED_FROZEN_INSTALL_ARGUMENTS,
+      routing.TOKEN_FREE_REBUILD_ARGUMENTS,
+    ]);
+    expect(spawnCalls[0]?.[2].env).not.toHaveProperty("NODE_AUTH_TOKEN");
+    expect(spawnCalls[2]?.[2].env.NODE_AUTH_TOKEN).toBe(TEST_TOKEN);
+  });
+
   it("rejects a newly resolved private dependency before auth is attached", () => {
     writeValidRepositoryPolicyFiles(temporaryDirectory);
     const spawn = jest.fn(
@@ -1311,6 +1371,7 @@ describe("documented private-package setup flows", () => {
         input: `${TEST_TOKEN}\n`,
         statements: [
           "private_package_auth_is_interactive() { return 0; }",
+          "private_package_auth_stored_credential_is_available() { return 1; }",
           "set -x",
           "ensure_private_package_auth",
           'printf "auth-present=%s\\n" "${NODE_AUTH_TOKEN:+yes}"',
@@ -1328,6 +1389,7 @@ describe("documented private-package setup flows", () => {
         input: TEST_TOKEN,
         statements: [
           "private_package_auth_is_interactive() { return 0; }",
+          "private_package_auth_stored_credential_is_available() { return 1; }",
           "ensure_private_package_auth",
           'printf "auth-present=%s\\n" "${NODE_AUTH_TOKEN:+yes}"',
         ],
@@ -1343,6 +1405,7 @@ describe("documented private-package setup flows", () => {
         input: "\n",
         statements: [
           "private_package_auth_is_interactive() { return 0; }",
+          "private_package_auth_stored_credential_is_available() { return 1; }",
           "ensure_private_package_auth",
         ],
       });
@@ -1381,6 +1444,62 @@ describe("documented private-package setup flows", () => {
       expect(`${result.stdout}${result.stderr}`).not.toContain(TEST_TOKEN);
     });
 
+    it("uses a stored macOS credential without prompting", () => {
+      const result = runAuthHarness({
+        statements: [
+          "private_package_auth_is_interactive() { return 0; }",
+          "private_package_auth_keychain_is_available() { return 0; }",
+          "private_package_auth_windows_credential_is_available() { return 1; }",
+          `private_package_auth_read_keychain() { printf '%s' '${TEST_TOKEN}'; }`,
+          "set -x",
+          "ensure_private_package_auth",
+          'printf "auth-present=%s\\n" "${NODE_AUTH_TOKEN:+yes}"',
+        ],
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("auth-present=yes\n");
+      expect(result.stderr).not.toContain("input hidden");
+      expect(`${result.stdout}${result.stderr}`).not.toContain(TEST_TOKEN);
+    });
+
+    it("uses a stored Windows credential without prompting", () => {
+      const result = runAuthHarness({
+        statements: [
+          "private_package_auth_is_interactive() { return 0; }",
+          "private_package_auth_keychain_is_available() { return 1; }",
+          "private_package_auth_windows_credential_is_available() { return 0; }",
+          `private_package_auth_read_windows_credential() { printf '%s' '${TEST_TOKEN}'; }`,
+          "set -x",
+          "ensure_private_package_auth",
+          'printf "auth-present=%s\\n" "${NODE_AUTH_TOKEN:+yes}"',
+        ],
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("auth-present=yes\n");
+      expect(result.stderr).not.toContain("input hidden");
+      expect(`${result.stdout}${result.stderr}`).not.toContain(TEST_TOKEN);
+    });
+
+    it("falls back to the hidden prompt when no stored credential exists", () => {
+      const result = runAuthHarness({
+        input: `${TEST_TOKEN}\n`,
+        statements: [
+          "private_package_auth_is_interactive() { return 0; }",
+          "private_package_auth_stored_credential_is_available() { return 0; }",
+          "private_package_auth_read_stored_credential() { return 1; }",
+          "ensure_private_package_auth",
+          'printf "auth-present=%s\\n" "${NODE_AUTH_TOKEN:+yes}"',
+        ],
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.stdout).toBe("auth-present=yes\n");
+      expect(result.stderr).toContain("input hidden");
+      expect(`${result.stdout}${result.stderr}`).not.toContain(TEST_TOKEN);
+    });
+
     it("loads the Codex token without printing it", () => {
       const result = runAuthHarness({
         statements: [
@@ -1400,6 +1519,8 @@ describe("documented private-package setup flows", () => {
     it("fails closed when the Codex Keychain item is missing", () => {
       const result = runAuthHarness({
         statements: [
+          "private_package_auth_is_macos() { return 0; }",
+          "private_package_auth_is_windows() { return 1; }",
           "private_package_auth_keychain_is_available() { return 0; }",
           "private_package_auth_read_keychain() { return 1; }",
           "load_private_package_auth_for_codex",
@@ -1447,16 +1568,23 @@ describe("documented private-package setup flows", () => {
 
     expect(wrapper).not.toContain('"$REAL_PNPM" run install:secure');
     expect(wrapper).not.toContain("scripts/assert-no-package-lock.cjs");
-    expect(wrapper.match(/run-secure-pnpm\.cjs/g)).toHaveLength(8);
-    expect(wrapper.match(/--seize-secure-pnpm-binary/g)).toHaveLength(8);
-    expect(wrapper.match(/ensure_private_package_auth/g)).toHaveLength(8);
+    expect(wrapper.match(/run-secure-pnpm\.cjs/g)).toHaveLength(7);
+    expect(wrapper.match(/--seize-secure-pnpm-binary/g)).toHaveLength(7);
+    expect(wrapper.match(/ensure_private_package_auth/g)).toHaveLength(7);
     expect(wrapper).toContain('SEIZE_STAGING_TRUSTED_PNPM_BINARY="$REAL_PNPM"');
+    expect(wrapper).toContain("-- install --frozen-lockfile");
+    expect(wrapper).toContain('-- remove "$@"');
+    expect(wrapper).toContain('-- update "$@"');
+    expect(wrapper).toContain('-- audit "$@"');
+    expect(wrapper).toContain('-- audit --fix "$@"');
+    expect(wrapper).toContain('exec "$REAL_PNPM" approve-builds "$@"');
+    expect(wrapper).not.toContain('exec "$REAL_PNPM" "$command_name" "$@"');
     expect(packageJson.scripts).not.toHaveProperty("install:secure");
     expect(packageJson.scripts).not.toHaveProperty("install:secure:frozen");
     expect(packageJson.scripts).not.toHaveProperty("install:secure:prod");
   });
 
-  it("prompts only after validating the eight package commands", () => {
+  it("prompts only for the seven authenticated package command branches", () => {
     const wrapper = fs.readFileSync(
       path.join(REPOSITORY_ROOT, "bin", "6529"),
       "utf8"
@@ -1471,24 +1599,115 @@ describe("documented private-package setup flows", () => {
       .map((match) => match[1]);
 
     expect(promptedCommands).toEqual([
-      "i",
-      "install",
       "ci",
-      "install:frozen",
       "install:prod",
       "add",
+      "remove|rm|uninstall",
       "update",
-      "update:all",
+      "audit",
+      "audit:fix",
     ]);
 
-    for (const command of promptedCommands.filter(
-      (entry) => entry !== "update:all"
-    )) {
+    for (const command of [
+      "ci",
+      "install:prod",
+      "add",
+      "remove|rm|uninstall",
+    ]) {
       const branch = commandBranches.find((match) => match[1] === command)?.[2];
       expect(branch).toBeDefined();
       expect(branch?.indexOf("ensure_private_package_auth")).toBeGreaterThan(
         branch?.indexOf("fi") ?? -1
       );
+    }
+  });
+
+  it.each([
+    [
+      "i",
+      "Direct install-style commands are intentionally unavailable.\nUse `6529 ci` for a frozen install or `6529 add <package>` to change dependencies.\n",
+    ],
+    [
+      "install",
+      "Direct install-style commands are intentionally unavailable.\nUse `6529 ci` for a frozen install or `6529 add <package>` to change dependencies.\n",
+    ],
+    [
+      "install:frozen",
+      "`6529 install:frozen` is intentionally unavailable because `6529 ci` is the canonical frozen install.\n",
+    ],
+  ])(
+    "rejects ambiguous install-style command %s with exact guidance",
+    (command, expectedError) => {
+      const fakeBinaryDirectory = fs.mkdtempSync(
+        path.join(os.tmpdir(), "frontend-package-command-")
+      );
+      const fakePnpm = path.join(fakeBinaryDirectory, "pnpm");
+      fs.writeFileSync(fakePnpm, "#!/usr/bin/env bash\nexit 99\n");
+      fs.chmodSync(fakePnpm, 0o755);
+
+      try {
+        const result = spawnSync(
+          path.join(REPOSITORY_ROOT, "bin", "6529"),
+          [command],
+          {
+            cwd: REPOSITORY_ROOT,
+            encoding: "utf8",
+            env: {
+              ...process.env,
+              PATH: `${fakeBinaryDirectory}:${process.env["PATH"] ?? ""}`,
+            },
+          }
+        );
+
+        expect(result.status).toBe(1);
+        expect(result.stderr).toBe(expectedError);
+      } finally {
+        fs.rmSync(fakeBinaryDirectory, { recursive: true, force: true });
+      }
+    }
+  );
+
+  it("rejects noncanonical dependency-update aliases", () => {
+    const wrapper = fs.readFileSync(
+      path.join(REPOSITORY_ROOT, "bin", "6529"),
+      "utf8"
+    );
+
+    expect(wrapper).toContain("up|upgrade|update:all)");
+    expect(wrapper).toContain(
+      "Use \\`6529 update [package]\\` for intentional dependency updates."
+    );
+  });
+
+  it("fails closed instead of forwarding unsupported wrapper commands", () => {
+    const fakeBinaryDirectory = fs.mkdtempSync(
+      path.join(os.tmpdir(), "frontend-package-command-")
+    );
+    const fakePnpm = path.join(fakeBinaryDirectory, "pnpm");
+    fs.writeFileSync(fakePnpm, "#!/usr/bin/env bash\nexit 99\n");
+    fs.chmodSync(fakePnpm, 0o755);
+
+    try {
+      const result = spawnSync(
+        path.join(REPOSITORY_ROOT, "bin", "6529"),
+        ["unknown-command"],
+        {
+          cwd: REPOSITORY_ROOT,
+          encoding: "utf8",
+          env: {
+            ...process.env,
+            PATH: `${fakeBinaryDirectory}:${process.env["PATH"] ?? ""}`,
+          },
+        }
+      );
+
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(
+        "Unsupported 6529 command: unknown-command"
+      );
+      expect(result.stderr).toContain("6529 run dev");
+    } finally {
+      fs.rmSync(fakeBinaryDirectory, { recursive: true, force: true });
     }
   });
 
@@ -1510,13 +1729,30 @@ describe("documented private-package setup flows", () => {
     expect(setupHelper.indexOf("set +x")).toBeLessThan(
       setupHelper.indexOf("load_private_package_auth_for_codex")
     );
-    expect(setupHelper).toContain('exec "$REPO_ROOT/bin/6529" install');
+    expect(setupHelper).toContain('exec "$REPO_ROOT/bin/6529" ci');
     expect(setupHelper).not.toContain("add-generic-password");
     expect(authHelper).toContain(
       'PRIVATE_GITHUB_PACKAGES_KEYCHAIN_SERVICE="6529seize-frontend-github-packages"'
     );
     expect(authHelper).toContain("/usr/bin/security find-generic-password");
+    expect(authHelper).toContain("private-github-packages-credential.ps1");
     expect(authHelper).not.toContain("gh auth token");
+    const windowsCredentialHelper = fs.readFileSync(
+      WINDOWS_CREDENTIAL_HELPER_PATH,
+      "utf8"
+    );
+    expect(windowsCredentialHelper).toContain('ValidateSet("read", "store")');
+    expect(windowsCredentialHelper).toContain("CredReadW");
+    expect(windowsCredentialHelper).toContain("CredWriteW");
+    expect(windowsCredentialHelper).toContain("Read-Host");
+    expect(windowsCredentialHelper).toContain("-AsSecureString");
+    expect(windowsCredentialHelper).toContain(
+      "[string]::IsNullOrEmpty($token)"
+    );
+    expect(windowsCredentialHelper).toMatch(
+      /if \(\[string\]::IsNullOrEmpty\(\$token\)\) \{\s+exit 1\s+\}/
+    );
+    expect(windowsCredentialHelper).not.toContain("Write-Output $token");
     expect(installIndex).toBeGreaterThanOrEqual(0);
     expect(authRemovalIndex).toBeGreaterThan(installIndex);
     expect(environmentSetup).toContain("unset NODE_AUTH_TOKEN");
@@ -1574,13 +1810,13 @@ describe("documented private-package setup flows", () => {
     expect(authPreflightIndex).toBeLessThan(envWriteIndex);
     expect(authPreflightIndex).toBeLessThan(dependencyInstallIndex);
     expect(setupScript).toContain(
-      'NODE_AUTH_TOKEN="$package_auth_token" ./bin/6529 install:frozen'
+      'NODE_AUTH_TOKEN="$package_auth_token" ./bin/6529 ci'
     );
     expect(localTokenUnsetIndex).toBeGreaterThan(dependencyInstallIndex);
     expect(localTokenUnsetIndex).toBeLessThan(buildIndex);
     expect(localTokenUnsetIndex).toBeLessThan(startIndex);
     expect(setupScript).toContain('rm -rf "$REPO_ROOT/node_modules"');
-    expect(setupScript).toContain("./bin/6529 install:frozen");
+    expect(setupScript).toContain("./bin/6529 ci");
     expect(setupScript).not.toContain("gh auth token");
   });
 
@@ -1685,7 +1921,7 @@ describe("documented private-package setup flows", () => {
       '--seize-secure-repository-root "$WORKTREE_PATH" \\'
     );
     expect(worktreeScript).toContain(
-      '--seize-secure-pnpm-binary "$TRUSTED_PNPM_BINARY" -- install'
+      '--seize-secure-pnpm-binary "$TRUSTED_PNPM_BINARY" -- install --frozen-lockfile'
     );
     expect(worktreeScript).not.toContain(
       'NODE_AUTH_TOKEN="$PACKAGE_AUTH_TOKEN" 6529'
@@ -1704,7 +1940,7 @@ describe("documented private-package setup flows", () => {
         "utf8"
       );
       const authIndex = documentation.indexOf("NODE_AUTH_TOKEN");
-      const installIndex = documentation.indexOf("6529 install");
+      const installIndex = documentation.indexOf("6529 ci");
 
       expect(authIndex).toBeGreaterThanOrEqual(0);
       expect(authIndex).toBeLessThan(installIndex);
@@ -1717,6 +1953,33 @@ describe("documented private-package setup flows", () => {
 });
 
 describe("GitHub Actions package access", () => {
+  it("requires delegated package permission on the frozen-install job", () => {
+    expect(
+      hasAuthorizedFrozenInstall({
+        jobs: {
+          install: {
+            steps: [{ run: "./bin/6529 ci" }],
+          },
+          unrelated: {
+            permissions: { packages: "read" },
+            steps: [{ run: "echo no package install" }],
+          },
+        },
+      })
+    ).toBe(false);
+
+    expect(
+      hasAuthorizedFrozenInstall({
+        permissions: { packages: "read" },
+        jobs: {
+          install: {
+            steps: [{ run: "./bin/6529 ci" }],
+          },
+        },
+      })
+    ).toBe(true);
+  });
+
   it("keeps the exact private package out of unauthenticated Dependabot updates", () => {
     const dependabot = parseYaml(
       fs.readFileSync(
@@ -1890,7 +2153,7 @@ describe("GitHub Actions package access", () => {
 
       for (const [jobName, job] of Object.entries(workflow.jobs ?? {})) {
         const frozenInstallSteps = (job.steps ?? []).filter((step) =>
-          step.run?.includes("./bin/6529 install:frozen")
+          step.run?.includes("./bin/6529 ci")
         );
         const effectivePermissions =
           job.permissions ?? workflow.permissions ?? {};
@@ -1914,21 +2177,26 @@ describe("GitHub Actions package access", () => {
           }
         }
 
-        const reusableWorkflow = job.uses?.match(/^\.\/\.github\/workflows\/([A-Za-z0-9_-]+\.yml)$/);
-        let delegatesFrozenInstall = false;
+        const reusableWorkflow = job.uses?.match(
+          /^\.\/\.github\/workflows\/([A-Za-z0-9_-]+\.yml)$/
+        );
+        let delegatesAuthorizedFrozenInstall = false;
         if (reusableWorkflow) {
-          const child = parseYaml(fs.readFileSync(path.join(workflowDirectory, reusableWorkflow[1]!), "utf8"));
-          delegatesFrozenInstall = Object.values(child.jobs ?? {}).some((childJob) =>
-            ((childJob as { steps?: Array<{ run?: string }> }).steps ?? []).some((step) => step.run?.includes("./bin/6529 install:frozen"))
-          );
+          const child = parseYaml(
+            fs.readFileSync(
+              path.join(workflowDirectory, reusableWorkflow[1]!),
+              "utf8"
+            )
+          ) as PackageWorkflow;
+          delegatesAuthorizedFrozenInstall = hasAuthorizedFrozenInstall(child);
         }
         if (
           effectivePermissions.packages === "read" &&
           frozenInstallSteps.length === 0 &&
-          !delegatesFrozenInstall
+          !delegatesAuthorizedFrozenInstall
         ) {
           throw new Error(
-            `${workflowFile} job ${jobName} grants package read without a frozen install`
+            `${workflowFile} job ${jobName} grants package read without an authorized frozen install`
           );
         }
       }
