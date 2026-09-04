@@ -13,11 +13,13 @@ The supported entrypoint is the repo-local `6529` command:
 
 ```bash
 6529 bootstrap
-6529 install
-6529 install:frozen
+6529 ci
 6529 install:prod
-6529 update
-6529 update:all
+6529 add <package>
+6529 remove <package>
+6529 update [package]
+6529 audit
+6529 audit:fix
 6529 run dev
 6529 run build
 6529 approve-builds
@@ -26,7 +28,9 @@ The supported entrypoint is the repo-local `6529` command:
 6529 run lint
 ```
 
-Plain `pnpm install` and direct package-manager script execution are intentionally rejected by the repo guard. Use `6529 run <script>` for package.json scripts.
+Plain `pnpm install`, direct package-manager script execution, and unsupported
+wrapper commands are intentionally rejected by the repo guard. Use
+`6529 run <script>` for package.json scripts.
 
 If you use the repo's `.envrc`, the local `bin/` directory is added to `PATH`
 so the `6529` shorthand commands above work directly inside the repository.
@@ -67,24 +71,33 @@ shell profiles, shell history, or command arguments.
 For a normal interactive package command, just use the existing wrapper:
 
 ```bash
-6529 install
+6529 ci
 ```
 
-If `NODE_AUTH_TOKEN` is not already set, `6529` asks for it with hidden input.
-The token stays in memory only for that command. Empty input is rejected. CI
-and other non-interactive shells never prompt or wait; they must receive
-`NODE_AUTH_TOKEN` at runtime and fail closed when it is missing.
+If `NODE_AUTH_TOKEN` is not already set, `6529` first checks the macOS Keychain
+or Windows Credential Manager. When no stored credential is available, it asks
+for the token with hidden input and keeps it in memory only for that command.
+Empty input is rejected. CI and other non-interactive shells never read a
+developer credential, prompt, or wait; they must receive `NODE_AUTH_TOKEN` at
+runtime and fail closed when it is missing.
 
-The prompt applies only to package commands that can resolve or install
-dependencies: `install`, `i`, `ci`, `install:frozen`, `install:prod`, `add`,
-`update`, and `update:all`. It does not run for ordinary development, test,
-build, or application commands.
+The prompt applies only to package commands that can resolve, install, or audit
+dependencies: `ci`, `install:prod`, `add`, `remove`, `update`, `audit`, and
+`audit:fix`. It does not run for ordinary development, test, build, or
+application commands.
 
-### One-time Codex worktree setup on macOS
+`6529 ci` is the normal deterministic installation path. It runs the secure
+pnpm install with `--frozen-lockfile`, so routine setup cannot change
+`pnpm-lock.yaml`. Bare `6529 install` and `6529 i` are rejected because they
+are ambiguous between frozen setup and dependency mutation. The redundant
+`6529 install:frozen` alias is also rejected so `6529 ci` remains the single
+frozen-install vocabulary. Use `6529 add`, `6529 remove`, or `6529 update`
+when intentionally changing dependencies.
 
-Codex creates a worktree non-interactively, so it cannot use the terminal
-prompt. Save the read-only token once in your private macOS login Keychain with
-this command:
+### One-time credential-store setup
+
+On macOS, save the read-only token once in your private login Keychain with this
+command:
 
 ```bash
 security add-generic-password \
@@ -99,17 +112,29 @@ for the token separately with hidden input, so the token is not placed in the
 command or shell history. Run the same command again to replace an expired
 token.
 
-The checked-in Codex environment setup reads this one exact Keychain item only
-for `./bin/6529 install`. It passes the token into the existing secure package
-helper, then the helper process exits. The setup also removes any inherited
-`NODE_AUTH_TOKEN` before Codex captures the successful setup environment. It
-copies existing `.env.development` and `.env.production` files from the primary
-worktree for local development and restricts the copies to the current user.
-It does not write the package token into those files or a shell profile. If the
-Keychain item is missing, Codex setup fails immediately with a clear message.
+On Windows, open PowerShell in the repository and run:
 
-On non-macOS Codex hosts, supply `NODE_AUTH_TOKEN` to the setup process at
-runtime. The setup removes it before Codex captures the resulting environment.
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass `
+  -File .\scripts\private-github-packages-credential.ps1 store
+```
+
+The helper asks for the token with hidden input and stores it as the generic
+credential `6529seize-frontend-github-packages` in Windows Credential Manager.
+Run the same command again to replace an expired token.
+
+Normal interactive package commands read the matching operating-system
+credential automatically and fall back to the hidden terminal prompt when it
+is missing. The checked-in Codex environment setup uses the same credential for
+its non-interactive `./bin/6529 ci`, then removes `NODE_AUTH_TOKEN` before
+Codex captures the successful setup environment. It also copies existing
+`.env.development` and `.env.production` files from the primary worktree for
+local development and restricts the copies to the current user. It does not
+write the package token into those files or a shell profile. If the credential
+is missing, Codex setup fails immediately with a clear message.
+
+On other Codex hosts, supply `NODE_AUTH_TOKEN` to the setup process at runtime.
+The setup removes it before Codex captures the resulting environment.
 
 Commands that may change dependency resolution first update the manifest and
 lockfile without package credentials. The helper validates the resulting
@@ -150,21 +175,22 @@ verification. The helper keeps Socket's loopback proxy for every other host,
 including `registry.npmjs.org`, and keeps Socket's CA as an additional trusted
 root for those proxied requests. There is no general skip-Socket option.
 
-To apply audit fixes, use the same secure wrapper path. It prompts silently when
-the token is not already present:
+To report or apply audit fixes, use the same secure wrapper path. It prompts
+silently when the token is not already present:
 
 ```bash
-6529 update
+6529 audit
+6529 audit:fix
 ```
 
-For an intentional broader pnpm update, use:
+For an intentional dependency update, use:
 
 ```bash
-6529 update:all
+6529 update [package]
 ```
 
 Dependabot intentionally ignores the exact private package because its npm
-update job has no package credential. `6529 update:all` cannot change this
+update job has no package credential. `6529 update` cannot change this
 package: the bypass remains pinned to `0.0.3` before pnpm starts. A future
 upgrade requires a separate reviewed change that updates the policy constants,
 manifest, release-age exception, and lockfile tarball integrity together. Do

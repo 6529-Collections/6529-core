@@ -70,17 +70,18 @@ The runtime `NODE_AUTH_TOKEN` needs read-only GitHub Packages access. For a
 normal interactive install, simply run:
 
 ```bash
-6529 install
+6529 ci
 ```
 
-If `NODE_AUTH_TOKEN` is not already set, the wrapper asks for it silently and
-keeps it only for that command. CI and other non-interactive shells must supply
-`NODE_AUTH_TOKEN` at runtime. Do not store it in the repository or
-package-manager configuration. Codex worktrees have a separate one-time macOS
-Keychain setup. See
+If `NODE_AUTH_TOKEN` is not already set, the wrapper first checks the macOS
+Keychain or Windows Credential Manager, then asks for the token with hidden
+input when no stored credential is available. A prompted token is kept only for
+that command. CI and other non-interactive shells must supply `NODE_AUTH_TOKEN`
+at runtime. Do not store it in the repository or package-manager configuration.
+See
 [pnpm and Socket Firewall](ops/docs/developer/pnpm-and-socket-firewall.md) for
-that setup, the exact package-routing boundary, and other authenticated package
-commands.
+the one-time credential-store setup, the exact package-routing boundary, and
+other authenticated package commands.
 
 Create a local `.env` file from [.env.sample](.env.sample), then start the app:
 
@@ -110,15 +111,19 @@ Important notes:
 This repository intentionally routes project commands through `6529`.
 Do not use plain `pnpm install`, `pnpm dev`, or `npm run ...`; the scripts are
 guarded so dependency installs and package scripts use the expected secure path.
+Unsupported wrapper commands fail closed; use `6529 run <script>` for
+package.json scripts.
 
 Common commands:
 
 ```bash
-6529 install
-6529 install:frozen
+6529 ci
 6529 add <package>
 6529 add -D <package>
-6529 update
+6529 remove <package>
+6529 update [package]
+6529 audit
+6529 audit:fix
 6529 run dev
 6529 run build
 6529 run test
