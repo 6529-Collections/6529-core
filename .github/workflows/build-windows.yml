@@ -80,6 +80,8 @@ jobs:
         if: ${{ inputs.should_run }}
         working-directory: renderer
         run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
 
       - name: Configure AWS Credentials
         if: ${{ inputs.should_run }}
