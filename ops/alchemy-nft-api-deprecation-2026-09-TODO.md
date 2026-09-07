@@ -36,9 +36,15 @@ Sources:
   API endpoint named in the deprecation notice. Root `next.config.ts` only
   supplies `ALCHEMY_API_KEY` to renderer runtime configuration; it does not
   choose an endpoint.
-- The other nine deprecated endpoint families are absent. Application concepts
-  named airdrop, rarity, sales, spam, and local NFT queries are unrelated to
-  the removed Alchemy methods.
+- The audit covered `electron-src/`, shared root code, and renderer Alchemy
+  services, routes, hooks, and consumers. Those call sites do not invoke the
+  other nine deprecated endpoint families: `getCollectionsForOwner`,
+  `getCollectionMetadata`, `isHolderOfCollection`/`isHolderOfContract`,
+  `getSpamContracts`, `summarizeNftAttributes`/`summarizeNFTAttributes`,
+  `computeRarity`, `invalidateContract`, `isAirdrop`/`isAirdropNFT`, or
+  `getNFTSales`. The renderer's local `isAirdrop()` helper and application
+  concepts named rarity, sales, spam, and local NFT queries are unrelated to
+  those Alchemy methods.
 
 ## Required TODOs
 
@@ -79,16 +85,28 @@ Sources:
 - [ ] If keyword discovery is retained, verify the new provider works in the
   packaged desktop runtime and does not depend on a browser-only secret or
   unsupported network path.
+- [ ] For retained keyword discovery, verify `searchNftCollections` trims the
+  query, preserves `pageKey` pagination, applies `hideSpam`, and that
+  `processSearchResponse` returns normalized `items`, `hiddenCount`, and
+  `nextPageKey`. Exercise that contract through both
+  `UserPageXtdhGrantSelection` and `MemeCardSetPicker`; an address-only
+  `getContractMetadata` test is not evidence of free-text compatibility.
 
 ### 4. Release before the deadline
 
 - [ ] Merge the renderer-sync PR to Core `main` with enough lead time for the
   normal desktop release process.
+- [ ] Immediately before the sync, confirm the FE source head and Core
+  renderer-contract workflow are green, then record that FE head in
+  `renderer-source.json`.
 - [ ] Publish a desktop version containing the synced migration before
   September 30, 2026; updating FE/BE alone does not update already installed
   desktop bundles.
 - [ ] After release, verify the shipped version no longer sends
   `searchContractMetadata` requests.
+- [ ] Define the rollback path before release: revert the renderer-sync change,
+  cut a corrective desktop release, and verify the shipped fallback build does
+  not resume calls to an endpoint after its removal date.
 
 ## Exactness and logic assessment
 
