@@ -2073,6 +2073,20 @@ assertContract(
   "Core renderer must not mount favicon management or favicon links",
 );
 
+const userPageDropModalPath =
+  "renderer/components/user/layout/UserPageDropModal.tsx";
+const userPageDropModal = parseSource(userPageDropModalPath);
+assertContract(
+  [
+    "spaces.headerSpace + CORE_TITLEBAR_HEIGHT_PX",
+    "top: topOffset",
+    "height: `calc(100dvh - ${topOffset}px)`",
+    "maxHeight: `calc(100dvh - ${topOffset}px)`",
+  ].every((snippet) => userPageDropModal.text.includes(snippet)),
+  userPageDropModalPath,
+  "profile drop overlays must remain below the native titlebar",
+);
+
 for (const headerPath of [
   "renderer/components/header/AppSidebarHeader.tsx",
   "renderer/components/layout/SmallScreenHeader.tsx",
