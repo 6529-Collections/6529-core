@@ -8,6 +8,12 @@ Current skills:
 - `ops/skills/test-desktop-build`: validate and package the Windows desktop app locally.
 - `ops/skills/desktop-pr-iteration`: open a desktop update PR and iterate with CI/review bots.
 
+Current plans:
+
+- [Alchemy NFT API deprecation TODO](alchemy-nft-api-deprecation-2026-09-TODO.md):
+  import, validate, and release the frontend migration before September 30,
+  2026.
+
 Desktop renderer invariants are enforced outside the imported subtree by
 `scripts/assert-desktop-renderer-contract.cjs` and
 `electron-src/desktop-renderer-contract.test.ts`. The guard runs after
