@@ -6,6 +6,7 @@ import {
 } from "@/components/header/titlebar/titlebar.constants";
 import { SingleWaveDrop } from "@/components/waves/drop/SingleWaveDrop";
 import { DropSize } from "@/helpers/waves/drop.helpers";
+import { isElectron } from "@/helpers";
 import { useDropModal } from "@/hooks/useDropModal";
 import { useEffect } from "react";
 
@@ -45,7 +46,9 @@ export default function UserPageDropModal() {
     stableKey: activeDrop.id,
     stableHash: activeDrop.id,
   };
-  const topOffset = spaces.headerSpace + CORE_TITLEBAR_HEIGHT_PX;
+  const titlebarSpace =
+    isElectron() && !spaces.hasHeader ? CORE_TITLEBAR_HEIGHT_PX : 0;
+  const topOffset = spaces.headerSpace + titlebarSpace;
 
   return (
     <div

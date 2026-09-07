@@ -194,6 +194,32 @@ function referencesMember(node, objectName, memberName) {
   );
 }
 
+function referencesIdentifier(node, identifier) {
+  return Boolean(
+    findDescendant(
+      node,
+      (candidate) =>
+        ts.isIdentifier(candidate) && candidate.text === identifier,
+    ),
+  );
+}
+
+function objectPropertyReferencesIdentifier(node, propertyName, identifier) {
+  return Boolean(
+    findDescendant(node, (candidate) => {
+      if (
+        !ts.isPropertyAssignment(candidate) ||
+        (!ts.isIdentifier(candidate.name) &&
+          !ts.isStringLiteral(candidate.name)) ||
+        candidate.name.text !== propertyName
+      ) {
+        return false;
+      }
+      return referencesIdentifier(candidate.initializer, identifier);
+    }),
+  );
+}
+
 function hasJsxElementWithinMemberElement(
   node,
   objectName,
@@ -2076,13 +2102,28 @@ assertContract(
 const userPageDropModalPath =
   "renderer/components/user/layout/UserPageDropModal.tsx";
 const userPageDropModal = parseSource(userPageDropModalPath);
+const userPageDropModalFunction = findFunction(
+  userPageDropModal,
+  "UserPageDropModal",
+);
+const titlebarSpace = findVariable(userPageDropModal, "titlebarSpace");
+const topOffset = findVariable(userPageDropModal, "topOffset");
 assertContract(
-  [
-    "spaces.headerSpace + CORE_TITLEBAR_HEIGHT_PX",
-    "top: topOffset",
-    "height: `calc(100dvh - ${topOffset}px)`",
-    "maxHeight: `calc(100dvh - ${topOffset}px)`",
-  ].every((snippet) => userPageDropModal.text.includes(snippet)),
+  userPageDropModalFunction &&
+    titlebarSpace &&
+    callsIdentifier(titlebarSpace, "isElectron") &&
+    referencesMember(titlebarSpace, "spaces", "hasHeader") &&
+    referencesIdentifier(titlebarSpace, "CORE_TITLEBAR_HEIGHT_PX") &&
+    topOffset &&
+    referencesMember(topOffset, "spaces", "headerSpace") &&
+    referencesIdentifier(topOffset, "titlebarSpace") &&
+    ["top", "height", "maxHeight"].every((propertyName) =>
+      objectPropertyReferencesIdentifier(
+        userPageDropModalFunction,
+        propertyName,
+        "topOffset",
+      ),
+    ),
   userPageDropModalPath,
   "profile drop overlays must remain below the native titlebar",
 );
