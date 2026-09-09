@@ -108,7 +108,7 @@ function ConnectedAccountRow({
             {hasNoProfile && (
               <span
                 id={noProfileDescriptionId}
-                className="tw-shrink-0 tw-rounded-md tw-bg-iron-800 tw-px-1.5 tw-py-0.5 tw-text-[10px] tw-font-medium tw-text-iron-300"
+                className="tw-shrink-0 tw-rounded-full tw-border tw-border-solid tw-border-iron-600 tw-bg-black/20 tw-px-2 tw-py-0.5 tw-text-[10px] tw-font-medium tw-leading-none tw-text-iron-300"
               >
                 {t(HEADER_USER_MENU_LOCALE, "headerUserMenu.noProfile")}
               </span>
