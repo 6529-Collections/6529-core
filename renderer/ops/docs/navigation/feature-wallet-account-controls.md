@@ -50,8 +50,13 @@ action.
 - The dropdown enters with a short opacity and vertical-position reveal;
   reduced-motion preferences show it immediately without animation.
 - Identity rows:
-  - the section heading is `Profiles`; a compact outlined `+` button beside it
+  - the section heading is `Accounts`; a compact outlined `+` button beside it
     replaces the full-width Add row while another profile slot is available
+  - rows show the profile handle when available; Core wallets fall back to their
+    saved wallet name, then the shortened address. A loaded identity without a
+    handle shows `No profile` beside its name, with the address underneath.
+    The label disappears once a profile handle is available; profile creation
+    remains on the main page.
   - base identity row is always present
   - received proxy rows appear when available
   - connected-account rows can show unread count badges (`1-99+`) and can be
@@ -68,7 +73,7 @@ action.
     section, separated by a lighter full-width divider; surrounding account,
     proxy, network, and profile sections use stronger boundaries
   - `Profile` and `Logout` share the final subsection; multi-profile
-    `Sign out all` lives in the Profiles header
+    `Sign out all` lives in the Accounts header
   - wallet connected: `Disconnect Wallet`, `Logout`
   - wallet disconnected: `Connect Wallet`, `Logout`
   - `Logout` signs out the active profile; multi-account sessions switch to the

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { getConnectionProfileIndicator } from "@/components/auth/connection-state-indicator";
 import { resolveIpfsUrlSync } from "@/components/ipfs/IPFSContext";
 import { DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP } from "@/constants/constants";
@@ -31,6 +31,7 @@ function ConnectedAccountRow({
   readonly showActiveState: boolean;
   readonly actionsDisabled: boolean;
 }) {
+  const noProfileDescriptionId = useId();
   const { profile, isLoading: isProfileLoading } = useIdentity({
     handleOrWallet: account.address,
     initialProfile: null,
@@ -50,10 +51,11 @@ function ConnectedAccountRow({
     resolvedPfp ??
     (shouldShowFallbackPfp ? DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP : null);
   const label =
-    profile?.handle ??
+    (profile?.handle || undefined) ??
     account.displayName ??
     `${account.address.slice(0, 6)}...${account.address.slice(-4)}`;
   const walletLabel = formatAddress(account.address);
+  const hasNoProfile = !isProfileLoading && profile !== null && !profile.handle;
   const unreadCount = account.unreadNotificationsCount ?? 0;
   const showUnreadBadge = unreadCount > 0;
   const unreadBadgeLabel =
@@ -97,10 +99,20 @@ function ConnectedAccountRow({
         )}
       </div>
 
-      <div className="tw-flex tw-w-full tw-items-center tw-justify-between tw-gap-2">
+      <div className="tw-flex tw-min-w-0 tw-flex-1 tw-items-center tw-justify-between tw-gap-2">
         <div className="tw-flex tw-min-w-0 tw-flex-col tw-items-start tw-leading-tight">
-          <span className="tw-w-full tw-truncate tw-text-md tw-font-medium tw-text-white">
-            {label}
+          <span className="tw-flex tw-w-full tw-items-center tw-gap-2">
+            <span className="tw-min-w-0 tw-truncate tw-text-md tw-font-medium tw-text-white">
+              {label}
+            </span>
+            {hasNoProfile && (
+              <span
+                id={noProfileDescriptionId}
+                className="tw-shrink-0 tw-rounded-full tw-border tw-border-solid tw-border-iron-600 tw-bg-black/20 tw-px-2 tw-py-0.5 tw-text-[10px] tw-font-medium tw-leading-none tw-text-iron-300"
+              >
+                {t(HEADER_USER_MENU_LOCALE, "headerUserMenu.noProfile")}
+              </span>
+            )}
           </span>
           <span className="tw-w-full tw-truncate tw-text-[11px] tw-font-medium tw-text-iron-400">
             {walletLabel}
@@ -145,6 +157,7 @@ function ConnectedAccountRow({
         profile: label,
         wallet: walletLabel,
       })}
+      aria-describedby={hasNoProfile ? noProfileDescriptionId : undefined}
     >
       {rowContent}
     </button>
@@ -174,7 +187,7 @@ export default function HeaderUserConnectedAccounts({
     <div className="tw-flex tw-flex-col tw-gap-y-1">
       <div className="tw-flex tw-min-h-8 tw-items-center tw-gap-2 tw-pl-3">
         <p className="tw-m-0 tw-text-xs tw-font-semibold tw-uppercase tw-tracking-wide tw-text-iron-500">
-          {t(HEADER_USER_MENU_LOCALE, "headerUserMenu.profiles")}
+          {t(HEADER_USER_MENU_LOCALE, "headerUserMenu.accounts")}
         </p>
         {(canAddAccount || accounts.length > 1) && (
           <div className="tw-ml-auto tw-flex tw-items-center tw-gap-2">
