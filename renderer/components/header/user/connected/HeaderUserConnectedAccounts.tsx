@@ -51,7 +51,7 @@ function ConnectedAccountRow({
     resolvedPfp ??
     (shouldShowFallbackPfp ? DEFAULT_CONNECTED_PROFILE_FALLBACK_PFP : null);
   const label =
-    profile?.handle ??
+    (profile?.handle || undefined) ??
     account.displayName ??
     `${account.address.slice(0, 6)}...${account.address.slice(-4)}`;
   const walletLabel = formatAddress(account.address);

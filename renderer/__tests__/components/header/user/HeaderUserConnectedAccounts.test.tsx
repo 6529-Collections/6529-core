@@ -13,14 +13,23 @@ jest.mock("@/components/ipfs/IPFSContext", () => ({
   resolveIpfsUrlSync: (value: string) => value,
 }));
 jest.mock("@/hooks/useIdentity", () => ({
-  useIdentity: ({ handleOrWallet }: { readonly handleOrWallet: string }) => ({
-    profile: {
-      handle: handleOrWallet === "0xactive" ? "active" : "secondary",
-      pfp: null,
+  useIdentity: ({ handleOrWallet }: { readonly handleOrWallet: string }) =>
+    mockIdentityStates.get(handleOrWallet) ?? {
+      profile: {
+        handle: handleOrWallet === "0xactive" ? "active" : "secondary",
+        pfp: null,
+      },
+      isLoading: false,
     },
-    isLoading: false,
-  }),
 }));
+
+const mockIdentityStates = new Map<
+  string,
+  {
+    profile: { handle: string | null; pfp: null } | null;
+    isLoading: boolean;
+  }
+>();
 
 const activeAccount = {
   address: "0xactive",
@@ -59,6 +68,62 @@ function renderAccounts({
 }
 
 describe("HeaderUserConnectedAccounts", () => {
+  beforeEach(() => {
+    mockIdentityStates.clear();
+  });
+
+  it.each([null, ""])(
+    "shows the wallet name and accessible no-profile status for handle %p",
+    (handle) => {
+      mockIdentityStates.set(activeAccount.address, {
+        profile: { handle, pfp: null },
+        isLoading: false,
+      });
+      const walletAccount = { ...activeAccount, displayName: "Frankie" };
+      renderAccounts({ accounts: [walletAccount, secondaryAccount] });
+
+      const row = screen.getByRole("button", { name: /Switch to Frankie/ });
+      const badge = screen.getByText("No profile");
+      expect(screen.getByText("Frankie")).toBeInTheDocument();
+      expect(badge.id).not.toBe("");
+      expect(row).toHaveAttribute("aria-describedby", badge.id);
+      expect(row).toHaveAccessibleDescription("No profile");
+    }
+  );
+
+  it("falls back to the shortened address when there is no handle or wallet name", () => {
+    mockIdentityStates.set(activeAccount.address, {
+      profile: { handle: "", pfp: null },
+      isLoading: false,
+    });
+    renderAccounts({ accounts: [activeAccount, secondaryAccount] });
+
+    expect(
+      screen.getByRole("button", { name: /Switch to 0xacti\.\.\.tive/ })
+    ).toHaveAccessibleDescription("No profile");
+  });
+
+  it.each([
+    { profile: { handle: null, pfp: null }, isLoading: true },
+    { profile: null, isLoading: true },
+    { profile: null, isLoading: false },
+    { profile: { handle: "actual-profile", pfp: null }, isLoading: false },
+  ])("hides the no-profile status for %p", (identity) => {
+    mockIdentityStates.set(activeAccount.address, identity);
+    const walletAccount = { ...activeAccount, displayName: "Frankie" };
+    renderAccounts({ accounts: [walletAccount, secondaryAccount] });
+
+    const label = identity.profile?.handle ?? "Frankie";
+    const row = screen.getByRole("button", {
+      name: new RegExp(`Switch to ${label}`),
+    });
+    expect(screen.queryByText("No profile")).not.toBeInTheDocument();
+    expect(row).not.toHaveAttribute("aria-describedby");
+    if (identity.profile?.handle) {
+      expect(screen.queryByText("Frankie")).not.toBeInTheDocument();
+    }
+  });
+
   it("keeps a single profile visually neutral and hides multi-profile actions", () => {
     renderAccounts({ accounts: [activeAccount] });
 
