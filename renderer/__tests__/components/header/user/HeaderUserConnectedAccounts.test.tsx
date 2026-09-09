@@ -62,7 +62,7 @@ describe("HeaderUserConnectedAccounts", () => {
   it("keeps a single profile visually neutral and hides multi-profile actions", () => {
     renderAccounts({ accounts: [activeAccount] });
 
-    const profilesHeading = screen.getByText("Profiles");
+    const profilesHeading = screen.getByText("Accounts");
     expect(profilesHeading).toBeInTheDocument();
     expect(profilesHeading.parentElement).toHaveClass("tw-pl-3");
     expect(profilesHeading.parentElement).not.toHaveClass("tw-px-3");
