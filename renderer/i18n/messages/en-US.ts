@@ -13,6 +13,7 @@ import {
   THE_MEMES_DETAIL_TIMELINE_MESSAGES,
   TIMELINE_MESSAGES,
 } from "@/i18n/messages/collection-detail";
+import emmaSnapshotsMessages from "@/i18n/messages/emmaSnapshots.en-US.json";
 import aboutMessages from "@/i18n/messages/about.en-US.json";
 import homeNewcomerMessages from "@/i18n/messages/homeNewcomer.en-US.json";
 import join6529Messages from "@/i18n/messages/join6529.en-US.json";
@@ -619,6 +620,18 @@ const WAVE_LEADERBOARD_MESSAGES = objectMessages("waves.leaderboard", {
   "grid.authorProfile": "View {author}'s profile",
   "grid.voters.one": "{count} voter",
   "grid.voters.other": "{count} voters",
+  "podium.place.first": "1st",
+  "podium.place.second": "2nd",
+  "podium.place.third": "3rd",
+  "podium.open.first": "Open 1st {name}",
+  "podium.open.second": "Open 2nd {name}",
+  "podium.open.third": "Open 3rd {name}",
+  "podium.avatar": "{name} avatar",
+  "podium.selfNominated": "self-nominated",
+  "podium.nominatedBy": "nominated by {nominator}",
+  "podium.outcome": "Outcome",
+  "podium.empty.title": "No Winners to Display",
+  "podium.empty.description": "This wave ended without any submissions",
   "grid.you": "You",
   "grid.votesNow": "Votes now",
   "grid.status.approved": "Approved",
@@ -652,6 +665,12 @@ const WAVE_LEADERBOARD_MESSAGES = objectMessages("waves.leaderboard", {
   "timeline.status.next": "Next",
   "timeline.status.done": "Done",
   "timeline.status.completed": "Completed",
+} as const);
+
+const WAVE_VOTE_DETAILS_MESSAGES = objectMessages("waves.voteDetails", {
+  title: "Votes",
+  "trigger.one": "View voters and vote log for {count} voter",
+  "trigger.other": "View voters and vote log for {count} voters",
 } as const);
 
 const WAVE_DROP_ACTIONS_MESSAGES = objectMessages("waves.drop.actions", {
@@ -3938,6 +3957,7 @@ export const EN_US_MESSAGES = {
   ...PROFILE_ACTIVITY_RATE_MESSAGES,
   ...USER_RATE_MESSAGES,
   ...aboutMessages,
+  ...emmaSnapshotsMessages,
   ...museumMessages,
   ...networkMetricsMessages,
   ...networkTdhMessages,
@@ -3983,6 +4003,7 @@ export const EN_US_MESSAGES = {
   ...WAVES_MOBILE_MESSAGES,
   ...PROFILE_WAVE_FEED_MESSAGES,
   ...WAVE_LEADERBOARD_MESSAGES,
+  ...WAVE_VOTE_DETAILS_MESSAGES,
   ...WAVE_DROP_ACTIONS_MESSAGES,
   ...WAVE_PROPOSAL_CARD_MESSAGES,
   ...WAVE_COMPETITION_BADGE_MESSAGES,
