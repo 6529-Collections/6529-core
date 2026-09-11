@@ -1,3 +1,4 @@
+import { getDesktopDropPreview } from "@/shared/desktop-notification-text";
 import { getUserPageTabByRoute } from "@/components/user/layout/userTabs.config";
 import { ApiNotification } from "@/generated/models/ApiNotification";
 import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
@@ -22,9 +23,7 @@ type FindNativeEmoji = (
   emojiId: string
 ) => { skins: { native: string }[] } | null;
 
-type FindCustomEmoji = (
-  emojiId: string
-) => { skins: { src: string }[] } | null;
+type FindCustomEmoji = (emojiId: string) => { skins: { src: string }[] } | null;
 
 interface EmojiResolvers {
   findNativeEmoji: FindNativeEmoji;
@@ -56,9 +55,7 @@ export function generateNotificationData(
   const cause = notification.cause;
   const { findNativeEmoji, findCustomEmoji } = emojiResolvers;
 
-  const getReactionPresentation = (
-    reaction: string
-  ): ReactionPresentation => {
+  const getReactionPresentation = (reaction: string): ReactionPresentation => {
     const trimmedReaction = reaction.trim();
     if (nativeEmojiPattern.test(trimmedReaction)) {
       return { text: trimmedReaction };
@@ -90,13 +87,15 @@ export function generateNotificationData(
     return { text: `'${normalizedReaction}'` };
   };
 
+  let isLiteralDropPreview = false;
+
   const getDropContent = (dropIndex: number = 0): string | null => {
     if (!notification.related_drops?.length) return null;
     const drop = notification.related_drops[dropIndex];
     if (!drop) return null;
-    const firstPart =
-      drop.parts?.find((part) => part.content) ?? drop.parts?.[0];
-    return firstPart?.content ?? null;
+    const preview = getDesktopDropPreview(drop.parts);
+    isLiteralDropPreview = preview !== null && preview.kind !== "content";
+    return preview?.text ?? null;
   };
 
   const getWavesRedirect = (dropIndex: number = 0): string => {
@@ -282,7 +281,9 @@ export function generateNotificationData(
   }
 
   let title = emojify(notificationData.title.replace(/@\[(.+?)\]/g, "@$1"));
-  let body = emojify(notificationData.body.replace(/@\[(.+?)\]/g, "@$1"));
+  const body = isLiteralDropPreview
+    ? notificationData.body
+    : emojify(notificationData.body.replace(/@\[(.+?)\]/g, "@$1"));
 
   return {
     title,
