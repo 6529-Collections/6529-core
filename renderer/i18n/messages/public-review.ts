@@ -1,4 +1,6 @@
 import { PUBLIC_REVIEW_ARTISTS_AND_ROLES_MESSAGES } from "@/i18n/messages/public-review-artists-and-roles";
+import { PUBLIC_REVIEW_ENTRY_GUIDE_MESSAGES } from "@/i18n/messages/public-review-entry-guides";
+import { PUBLIC_REVIEW_STREAM_DIAGRAM_MESSAGES } from "@/i18n/messages/public-review-stream-diagrams";
 import { PUBLIC_REVIEW_ARTWORK_LIFECYCLE_MESSAGES } from "@/i18n/messages/public-review-artwork-lifecycle";
 import { PUBLIC_REVIEW_COMMUNITY_MESSAGES } from "@/i18n/messages/public-review-community";
 import { PUBLIC_REVIEW_CURATION_TDH_MESSAGES } from "@/i18n/messages/public-review-curation-tdh";
@@ -10,8 +12,11 @@ import { PUBLIC_REVIEW_FREEZING_FINALITY_MESSAGES } from "@/i18n/messages/public
 import { PUBLIC_REVIEW_REVENUE_SPLITS_MESSAGES } from "@/i18n/messages/public-review-revenue-splits";
 import { PUBLIC_REVIEW_RANDOMNESS_MESSAGES } from "@/i18n/messages/public-review-randomness";
 import { PUBLIC_REVIEW_METADATA_MESSAGES } from "@/i18n/messages/public-review-metadata";
+import { PUBLIC_REVIEW_STREAM_CONCEPT_PREVIEW_MESSAGES } from "@/i18n/messages/public-review-stream-concept-preview";
 
 export const PUBLIC_REVIEW_MESSAGES = {
+  ...PUBLIC_REVIEW_ENTRY_GUIDE_MESSAGES,
+  ...PUBLIC_REVIEW_STREAM_DIAGRAM_MESSAGES,
   "navigation.nfts.theMemes": "The Memes",
   "navigation.nfts.gradient": "6529 Gradient",
   "navigation.nfts.nextGen": "NextGen",
@@ -177,6 +182,7 @@ export const PUBLIC_REVIEW_MESSAGES = {
   "publicReview.overviewGuide.audiences.auditors.description":
     "Start with known limits, test evidence, and the risks that still block release.",
   "publicReview.overviewGuide.startPage": "Start with {page}",
+  ...PUBLIC_REVIEW_STREAM_CONCEPT_PREVIEW_MESSAGES,
   ...PUBLIC_REVIEW_ARTISTS_AND_ROLES_MESSAGES,
   ...PUBLIC_REVIEW_ARTWORK_LIFECYCLE_MESSAGES,
   ...PUBLIC_REVIEW_FREEZING_FINALITY_MESSAGES,

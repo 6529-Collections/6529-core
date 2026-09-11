@@ -4,6 +4,10 @@
 
 - Follow `ops/skills/deploy-6529/SKILL.md` for authorized staging and production
   work, using ordinary Git merges and the existing GitHub Actions workflows.
+- For new staging or direct production release intents that include frontend,
+  follow the skill's [Coordinator release recording](ops/skills/deploy-6529/SKILL.md#coordinator-release-recording)
+  step before release merges or deployments. Preserve this current integration
+  when changing deployment instructions; keep its details in the skill.
 - For staging, merge the development branch into the latest `1a-staging` and
   push. Frontend changes automatically start `Web Deploy - STAGING`; backend
   changes require dispatching `Deploy a service` for the required services.
@@ -119,8 +123,15 @@ find the correct source of truth.
 All project commands must go through the repo-local `6529` wrapper.
 
 - Fresh shell setup: `./bin/6529 bootstrap` when needed.
-- Install dependencies: `6529 install`.
+- Install dependencies: `6529 ci`.
 - Add dependencies: `6529 add <package>` or `6529 add -D <package>`.
+- Remove dependencies: `6529 remove <package>`.
+- Update dependencies: `6529 update [package]`.
+- Audit dependencies: `6529 audit` or `6529 audit:fix`.
+- If a dependency needs an install/build script, add it to `allowBuilds` in
+  `pnpm-workspace.yaml` and `ALLOWED_BUILD_DEPENDENCIES` in
+  `scripts/public-package-policy.cjs` in the same reviewed pull request. Do not
+  approve build scripts automatically.
 - Run app: `6529 run dev`. The default local app port is `3001`.
 - Run scripts: `6529 run <script>`.
 - Do not use plain `pnpm install`, `pnpm dev`, `npm run ...`,
@@ -203,6 +214,32 @@ is available, use it; otherwise read the relevant files in
   and the repo patterns in `ops/standards/frontend-design-ui-ux.md`; scoped
   plain-CSS modules are the fallback where Tailwind cannot express a selector
   cleanly.
+
+## Capacitor iOS NFT purchasing visibility
+
+- Preserve the current regional rule: restrict first-party minting and paid
+  Meme subscription surfaces on Capacitor iOS when the IP-derived country is
+  not `US`. An unknown country is restricted. This is the current product rule;
+  do not silently replace it with all-iOS blocking or App Store storefront logic.
+- Use `useNftPurchasingVisibility` for new or changed surfaces and
+  `NftPurchasingGate` to keep restricted components from mounting. Preserve the
+  existing `shouldHideSubscriptions` country normalization.
+- Completely omit restricted sections, copy, cards, actions, navigation/search
+  entries, and subscription-coverage notification controls. Do not leave empty
+  cards, disabled purchase buttons, or an unavailable banner.
+- Direct and deep-linked restricted pages redirect to an appropriate allowed
+  destination: profile subscriptions to Identity, NextGen mint to its collection,
+  and About Minting/Subscriptions to `/about`. Do not mount purchasing content
+  or start its requests/contract hooks before redirecting; keep it hidden during
+  server rendering and hydration too.
+- Check inbound first-party links as well as the destination. Apply the same
+  checks to new mint/subscription promotions and notification entry points.
+- Preserve US iOS, Android, and web behavior. Ordinary user-authored posts and
+  links, NFT browsing/history, calendar invitations, and open-data reports are
+  not subject to blanket word or link suppression. Hide purchase promotions
+  embedded in otherwise allowed pages without removing those pages.
+- Cover restricted iOS, unknown country, US iOS, Android, web, and direct-link
+  behavior in focused tests. See the mobile-testing skill's purchasing checklist.
 
 ## Architecture Boundaries
 

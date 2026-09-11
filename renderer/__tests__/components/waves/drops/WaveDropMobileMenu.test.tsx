@@ -13,6 +13,11 @@ import { render, screen } from "@testing-library/react";
 import type { ComponentProps } from "react";
 import userEvent from "@testing-library/user-event";
 
+jest.mock(
+  "@/components/waves/drops/WaveDropDocumentationAction",
+  () => () => null
+);
+
 const mockIsMemesWave = jest.fn();
 const mockIsQuorumWave = jest.fn();
 const writeText = jest.fn().mockResolvedValue(undefined);
@@ -219,6 +224,57 @@ beforeEach(() => {
     isWinner: false,
     isVotingEnded: false,
   });
+});
+
+test("never opens an empty curation-only sheet when no removal is available", () => {
+  render(
+    <WaveDropMobileMenu
+      drop={dropFixture}
+      isOpen
+      showReplyAndQuote={false}
+      longPressTriggered={false}
+      setOpen={jest.fn()}
+      onReply={jest.fn()}
+      onAddReaction={jest.fn()}
+      showOnlyQuickRemove
+    />
+  );
+
+  expect(screen.queryByTestId("wrapper")).not.toBeInTheDocument();
+});
+
+test("shows the confirmed curation removal immediately without unrelated mobile actions", () => {
+  render(
+    <AuthContext.Provider
+      value={
+        {
+          ...unauthenticatedAuth,
+          connectedProfile: { handle: "curator" },
+        } as AuthProviderValue
+      }
+    >
+      <WaveDropMobileMenu
+        drop={dropFixture}
+        isOpen
+        showReplyAndQuote={false}
+        longPressTriggered={false}
+        setOpen={jest.fn()}
+        onReply={jest.fn()}
+        onAddReaction={jest.fn()}
+        showOnlyQuickRemove
+        standaloneQuickRemoveCuration={{
+          id: "curation-1",
+          name: "Marketplace",
+        }}
+      />
+    </AuthContext.Provider>
+  );
+
+  expect(screen.getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  expect(screen.queryByText("Copy link")).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: "Flag Content" })
+  ).not.toBeInTheDocument();
 });
 
 test("copies serial jump links for non-memes drops", async () => {

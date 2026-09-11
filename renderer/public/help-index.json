@@ -1,9 +1,128 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-08-11T15:43:52.000Z",
+  "generated_at": "2026-08-11T15:43:52Z",
   "commit_sha": "21d60faed6a5",
   "base_url": "https://6529.io",
   "records": [
+    {
+      "id": "nft.market-depth",
+      "kind": "workflow",
+      "title": "Card market depth",
+      "aliases": [
+        "order book",
+        "market depth",
+        "asks and bids",
+        "buying pressure",
+        "sell orders"
+      ],
+      "keywords": [
+        "market",
+        "depth",
+        "OpenSea",
+        "orders",
+        "asks",
+        "bids",
+        "liquidity",
+        "price",
+        "quantity"
+      ],
+      "facts": [
+        "The Memes, Meme Lab, Gradients and NextGen card pages show captured OpenSea market depth with best quoted asks and bids, price levels, remaining quantities, cumulative quoted quantities and snapshot freshness.",
+        "Currencies are shown separately, including ETH and WETH. A unit price applies to one edition; partially filled orders contribute only their remaining quantity.",
+        "Quoted quantities are not guaranteed executable liquidity. Several listings may share seller inventory, several offers may share bidder funding, and a collection offer has one shared budget across eligible cards.",
+        "Private, inactive and expired orders do not contribute to current public depth. Trait offers whose eligibility is unverified appear separately from the price levels.",
+        "Unavailable capture differs from a completed empty snapshot. Stale data shows an older snapshot time. Retry failed requests and reload order pagination if the book changes.",
+        "Recorded marketplace actions appear alongside on-chain transactions in NFT Activity and supported card activity sections. Off-chain actions may have no Ethereum transaction hash."
+      ],
+      "canonical_path": "/the-memes/{id}",
+      "link_label": "Open the card's market depth",
+      "related_paths": [
+        "/meme-lab/{id}",
+        "/6529-gradient/{id}",
+        "/nextgen/token/{token}",
+        "/nft-activity"
+      ],
+      "tags": ["nft", "market", "memes", "gradients", "nextgen"],
+      "source_refs": [
+        "components/nft-market-depth/MarketDepthPanel.tsx",
+        "components/nft-market-activity/NftMarketActivity.tsx",
+        "ops/docs/media/feature-card-market-depth.md"
+      ]
+    },
+    {
+      "id": "artwork-documentation.overview",
+      "kind": "workflow",
+      "title": "Artwork documentation and publication preparation",
+      "aliases": [
+        "my artwork documentation",
+        "artist dossier",
+        "Keys and Gates documentation",
+        "artwork provenance"
+      ],
+      "keywords": [
+        "artwork",
+        "documentation",
+        "artist",
+        "provenance",
+        "original files",
+        "rights",
+        "consent",
+        "preservation",
+        "Keys and Gates"
+      ],
+      "facts": [
+        "When the server enables artwork documentation for a profile, My artwork documentation appears in the account menu and opens /artwork-documentation. Eligible owned artwork menus also offer Artwork documentation on desktop and mobile.",
+        "New publication forms collect one artwork record: identity, story and process, public credits, final files, rights intentions, preservation and an optional interview. All answers and selected files are intended for publication with the work.",
+        "Documentation can begin independently or in a supported submission form and can continue afterward. It is optional during submission. A successful artwork post is not retried when its documentation source link needs recovery.",
+        "Drafts save to the database. Unsaved text is not persisted in browser local storage. Keep the window open when saving fails or authentication expires, and resolve a version conflict before continuing.",
+        "Drafts remain stored with 6529 during preparation. New publication forms have no per-field privacy choices or private evidence uploads. Earlier records preserve their original publication choices; restricted material is never silently converted.",
+        "File transfer, checksum verification, inspection and malware screening have separate statuses. Upload limits are 4 GiB per file, 20 GiB of stored and reserved files per context, 100 files and five simultaneous upload sessions per context.",
+        "Only the artist can confirm a documentation revision through a direct authenticated session. Confirmation preserves a dated immutable version in the database; it is not a wallet signature, mint instruction, or automatic effect of a proposed license. Curatorial, technical and rights reviews are separate.",
+        "New edits preserve earlier confirmed versions. Shared artist information is versioned and pinned per work. Keys and Gates uses a photography documentation profile; selection does not establish minting, purchase or Museum accession.",
+        "Every section offers a complete fictional worked example for The Space Between by Ari Example. Empty sections open the example; existing records can reopen it. Examples never automatically save artist facts. Selected empty narrative fields offer an unsaved writing structure; explicit Use my answer adds only the artist-reviewed answer to ordinary autosave.",
+        "Questions for the team at the end of review are a separate drafting conversation. Questions and replies are excluded from artwork answers, confirmed versions and future publication. Resolved questions remain available as drafting history and can be reopened. Resolve questions before finalizing and add relevant public answers to the artwork form.",
+        "Mint preparation and on-chain, IPFS or Arweave publication are deferred. The documentation form does not perform them."
+      ],
+      "canonical_path": "/artwork-documentation",
+      "link_label": "My artwork documentation",
+      "related_paths": ["/waves"],
+      "tags": ["artwork", "artists", "documentation", "privacy", "museum"],
+      "source_refs": [
+        "ops/docs/artwork-documentation.md",
+        "app/artwork-documentation/page.tsx",
+        "components/header/user/HeaderArtworkDocumentationLink.tsx",
+        "components/waves/drops/WaveDropDocumentationAction.tsx"
+      ]
+    },
+    {
+      "id": "waves.memes.submission-identity",
+      "kind": "workflow",
+      "title": "Memes submission profile and wallet confirmation",
+      "aliases": ["submitting as", "submit artwork", "Memes submission wallet"],
+      "keywords": [
+        "memes",
+        "submission",
+        "profile",
+        "wallet",
+        "eligible",
+        "amber",
+        "green"
+      ],
+      "facts": [
+        "Additional Information and Submission Preview show the authenticated submitting profile's avatar and handle beside grouped action buttons on desktop, even when its wallet is disconnected. On smaller screens, the buttons sit below the identity and can wrap. Normal eligibility is not labeled; eligibility checks, errors, and blocking explanations remain visible.",
+        "The connection dot on the avatar is amber when the active profile's wallet is not connected and green when it is connected. Hover, keyboard focus, or tap the avatar reveals Connect a wallet to submit or Wallet connected. The footer does not show a Submitting as label, wallet address, or wallet-provider name. Back actions use a quiet text style while Preview stays outlined and the primary action stays filled.",
+        "Connect Wallet replaces Submit Artwork when the active profile has no signing connection. Connecting never starts artwork submission automatically; review the profile and click Submit Artwork separately.",
+        "Connecting B's wallet while A remains the active authenticated profile leaves A in the strip with an amber dot. Explicitly switching the active profile updates the strip and checks that profile's eligibility before allowing submission.",
+        "The primary action stays disabled during upload, signing, and processing, with phase-specific progress text."
+      ],
+      "canonical_path": "/waves",
+      "related_paths": ["/waves"],
+      "tags": ["waves", "memes", "submission"],
+      "source_refs": [
+        "ops/docs/waves/memes/feature-memes-preview-and-submit-states.md",
+        "components/waves/memes/submission/ui/SubmissionIdentityPanel.tsx"
+      ]
+    },
     {
       "id": "content-moderation.controls",
       "kind": "workflow",
@@ -463,24 +582,22 @@
       ],
       "facts": [
         "The 6529 Stream public review is published at /reviews/6529-stream in local development, shared staging, and production while its lifecycle permits public routes.",
-        "The review explains how Stream supports serious one-of-one digital art and artist-chosen editions.",
-        "The current Overview opens with a broad introduction for artists, collectors, and the wider community, followed by five important parts of a Stream artwork—identity, media, artist control, sales and payments, and locked Core details—a short explanation of artist control defined in Stream's ADRs but not implemented in the current contracts, a seven-step artwork journey, and focused starting points for artists, collectors and minters, and smart contract auditors.",
-        "The current Overview ends after its audience paths and does not repeat the versioned technical editorial or its evidence legend.",
-        "The current Artwork Lifecycle page replaces the archived technical walkthrough with plain-language stages from collection identity and artwork setup through minting, payments, preservation, and finality. It separates artist-signed evidence from permission to mint, and archived version routes keep their exact editorial snapshot.",
-        "The current Curation and TDH Authorization page starts with a one-minute answer, then explains the offchain decision, signed permission, contract checks, signer and admin powers, open public-evidence work, risks, and reviewer questions. It labels ADR 0001 as accepted design while treating the pinned Solidity as proof of current behavior. Its existing section anchors remain stable, and archived version routes keep their exact editorial snapshot.",
-        "The current Tokens, Collections, and Minting page starts with a one-minute explanation, then separates permanent Core identity from replaceable minting rules. It explains the two source mint paths, supply and counter rules, the proposed ADR 0018 replay change, the zero-mint supply-closure gap, and reviewer questions. Archived version routes keep their exact editorial snapshot.",
-        "The current Fixed-Price Sales and Auctions page starts with a one-minute sale flow, then explains signed terms, paid and free mints, auction custody, bidding, refunds, timing, settlement, cancellation, payment balances, and open risks in plain language. It separates pinned contract behavior, accepted ADR design, and the still-proposed ERC-20 path. Archived version routes keep their exact editorial snapshot.",
-        "The current Randomness page starts with a one-minute answer and a five-step request flow. It separates reviewed code from accepted ADR 0005 design and open recovery ideas, then explains provider trust, request states, seed evidence, same-seed retries, stale requests, provider changes, burns, funding, risks, and reviewer questions. Archived version routes keep their exact editorial snapshot.",
-        "The current For Artists page begins with a plain artist guide covering the artwork plan, its lifecycle, approval, roles, sales, changes, and permanence. It then replaces the archived technical text with fifteen short sections. The sections use Reviewed code, Accepted design, and Still proposed labels. They cover identity, artist approval, records, artwork files, editions, minting, curation, sales, revenue, randomness, freezing, lifetime authority, design goals, and artist questions. Archived version routes keep their exact editorial snapshot.",
-        "The current Who Can Do What page replaces the archived technical text with a plain status-first guide. It separates powers working in the current rehearsal, connected for integration, built in source, planned, and still open. It also explains duties outside the contracts, main risks, and reviewer questions. Archived version routes keep their exact editorial snapshot.",
-        "The current Changes, Emergencies, and Future Contracts page starts with a short explanation of setup sealing, delayed changes, pauses, permanent powers, and replacement contracts. It separates current code, accepted ADR 0017, open governance risks, and launch evidence. It also explains that the 30-day successor class and 48-hour module registration are separate in the pinned source. Archived version routes keep their exact editorial snapshot.",
-        "The current Metadata, Scripts, and Dependencies page begins with a one-minute explanation. It separates behavior in the pinned Solidity, accepted design in ADR 0006, unbuilt satellite refresh helpers, and external compatibility evidence. It keeps detailed source links, risks, and reviewer questions, while archived version routes keep their exact editorial snapshot.",
-        "The current Where Development Stands page begins by answering whether Stream is ready to launch. It says not yet, lists the three remaining launch gates in plain language, and shows the last checked date plus the open release-blocker count. The next sections explain what the review covers, use five plain progress labels, and explain what each kind of proof shows and does not show. Built code stays separate from safety evidence, accepted plans stay separate from unaccepted designs, and ADRs are not treated as implementation or launch proof. The exact commit and Git tree follow under Technical details.",
-        "The current Community Review page begins with six focused review questions and the review authorship disclosure.",
-        "Fourteen editorial pages explain artwork lifecycle, artist controls, responsibilities, curation and TDH authorization, minting, sales, revenue, randomness, metadata, freezing, contract changes, current development, and community review.",
-        "Current review pages show lifecycle, deployment, and audit status plus an exact source link, page navigation, and a collapsible feedback rail without exposing an archive version number. Saved snapshot pages show their exact review version and link back to the current review. Detailed editorial pages also show on-page contents, while the simplified current Overview omits hidden technical headings. Snapshot evidence is collected on Where Development Stands.",
-        "Review chapters stay in the review contents navigation. Technical reference, All public feedback, and Review history are separate review-wide destinations on current pages; Review history opens the immutable technical Overview for the active snapshot. Page comments and sending feedback remain page-specific actions.",
-        "Active and historical routes read immutable versioned editorial content and validate its manifest before rendering.",
+        "Start here, For artists, For collectors, and Review the code are the four current entry guides. Community Review explains how to give feedback. All topics expands the detailed chapters; current pages offer relevant Explore next links instead of a fourteen-page sequence.",
+        "The active review is 2026-09-09.1, pinned to Stream source 92ea123380917032f01aae09691141a2a72df935 and checked September 9, 2026. Earlier snapshots keep their source and editorial content with feedback closed.",
+        "The overview explains 1/1, 1/1/x, and editions outside The Memes. These are contract capabilities; launch formats and publishing tools still need confirmation.",
+        "All Stream NFTs share one permanent Core address. Marketplaces may display different Stream collections together unless they support the collection information.",
+        "Guides define Core as the main contract and minting as creating a token, and label built code, agreed but unfinished requirements, and still-proposed designs. The specification inventory still lists Draft documents: accepted design decisions do not make a specification Final. The policy requires governing specifications to reach Final before deployment. Code existence does not establish integration, independent audit, deployment, or live-service behavior.",
+        "The permanent Core accepts mint requests only from its registered manager, but the real mint manager and ledger currently fail Core's installation checks. Their code is implemented separately; the connection needs fixing and testing together. The older signed-sale rehearsal imports a test-only legacy Core and does not prove that connection.",
+        "Artist acceptance, mint consent, collaborator acceptance, scoped delegation, key rotation, estate arrangements, and consent for relevant economic changes are accepted requirements. Complete artist-authority implementation is unfinished; ADR 0023 remains proposed.",
+        "Full artist details opens the active snapshot artist chapter below the short guide. The fictional artwork preview describes an intended workflow and explicitly says complete artist approval enforcement is unfinished.",
+        "Six current pages use static diagrams: artwork formats on the overview, artist approvals in For artists, role permissions in Who Can Do What, mint paths in Review the code, sale credits and withdrawals in Revenue, Splits, and Royalties, and Core freeze order in Freezing, Preservation, and Artwork Finality. They stack vertically in narrow layouts. Full role and component tables open below their diagrams; saved versions retain their original text and tables.",
+        "The permanent Core supports fixed-size, capped-open, and uncapped-open collections. A closed collection cannot reopen, including with no minted tokens. Burn blocking must precede Core freeze, but the two actions can execute in the same transaction once governance conditions are met; no extra block delay is required. Wider artwork finality has separate conditions and a registry whose Core installation is also blocked.",
+        "The mint manager and ledger implement ADR 0018 batch operation roots, per-token identities, and replay accounting. This does not establish installability into Core or complete typed payment settlement, shared/global counters, successor continuity, or required artist connections. ADR 0021 accepts a revenue architecture; ADRs 0022 and 0023 remain proposed. Historical implementation notes must not be mistaken for current behavior.",
+        "The older ETH sale contracts keep local credits for the named poster, protocol, and curator reserve. The poster is not automatically the artist or transaction submitter. A winning contract unable to receive an NFT has no alternate-recipient recovery, curator rotation can strand old reserve credits, and auction payment splits can change after a funded bid. Separate split wallets and settlement code do not prove those sales use them; deprecated payment tokens currently block split-wallet withdrawals that the specification requires to remain eligible.",
+        "The permanent Core has royalty lookup code but cannot install its royalty resolver; ordinary configuration therefore reports no receiver and zero royalty. Core's artist-registry connection is disabled too. These connections must be completed before deploying permanent Core. Even a working royalty lookup cannot force marketplace payment. Metadata refresh helpers exist; full router and reveal integrations require separate implementation and evidence. Core stores the coordinator selected at mint and passes the mint commitment to it; Core does not store that commitment itself.",
+        "Emergency controls pause specific checked operations. Admin pause domains, manager phases, and Core collection status are separate controls; there is no universal pause-everything promise.",
+        "Where Development Stands reports the same source as the active review, retained Core runtime size of 18,997 bytes with 5,579 bytes of margin, and incomplete audit and deployment evidence. Its introduction names unfinished connections and the need for Final specifications. The displayed count is ten open blockers in the saved risk register, not a complete count of all current findings. Public beta and production remain blocked.",
+        "The current Community Review page gives questions for artists, collectors, and code reviewers, explains the status labels, and discloses AI-assisted drafting and the need for human and specialist review.",
         "Each immutable version has its own lifecycle, deployment status, and audit status: superseded versions can remain readable as REVIEW_CLOSED, stop accepting submissions, link back to the current review, and avoid inheriting newer deployment or audit claims.",
         "The generated technical reference exposes the exact versioned Solidity source, definitions, functions, events, errors, and other declarations.",
         "The all-declarations explorer applies its text, kind, scope, and location filters on the server and returns at most 100 matches per page instead of sending the complete declaration inventory to the browser.",
@@ -506,23 +623,25 @@
         "/reviews/6529-stream/security-testing-and-known-limitations",
         "/reviews/6529-stream/community-review",
         "/reviews/6529-stream/reference",
-        "/reviews/6529-stream/feedback"
+        "/reviews/6529-stream/feedback",
+        "/reviews/6529-stream/for-collectors",
+        "/reviews/6529-stream/review-the-code"
       ],
       "tags": ["stream", "contract", "review", "security"],
       "source_refs": [
         "app/reviews/[review]/page.tsx",
+        "lib/public-review/streamReviewEditorialCorrections.ts",
         "components/public-review/PublicReviewShell.tsx",
-        "components/public-review/StreamReviewForArtistsGuide.tsx",
-        "components/public-review/StreamReviewOverviewGuide.tsx",
-        "components/public-review/StreamReviewRolesGuide.tsx",
+        "components/public-review/StreamArtworkConceptPreview.tsx",
+        "components/public-review/StreamReviewDiagram.tsx",
+        "lib/public-review/streamReviewDiagrams.tsx",
+        "i18n/messages/public-review-stream-diagrams.ts",
         "components/public-review/StreamReviewDevelopmentStatus.tsx",
-        "lib/public-review/streamReviewTokensMintingPage.ts",
-        "lib/public-review/streamReviewRandomnessPage.ts",
         "config/public-reviews/6529-stream.development-status.json",
-        "lib/public-review/streamReviewCurationTdhPage.ts",
-        "lib/public-review/streamReviewGovernancePage.ts",
-        "lib/public-review/streamReviewMetadataPage.ts",
-        "ops/docs/public-reviews/README.md"
+        "ops/docs/public-reviews/README.md",
+        "lib/public-review/streamReviewEntryGuides.ts",
+        "i18n/messages/public-review-entry-guides.ts",
+        "content/public-reviews/6529-stream/versions/2026-09-09.1/editorial/manifest.json"
       ]
     },
     {
@@ -553,15 +672,14 @@
         "A successful feedback post uses the standard app toast; Open discussion in the Wave remains the single route from the review back to the posted discussion.",
         "Every submission carries the immutable review version, page or section, category, suspected severity, and exact source provenance when code is selected.",
         "Possible exploitable security vulnerabilities are intentionally submitted to the same public review during Stream's predeployment lifecycle.",
-        "The review records a source-confirmed limitation in which finalizing an unfrozen collection before any token is minted writes zero, which setCollectionData can later treat as uninitialized and replace with a nonzero cap; the candidate needs a monotonic finalization guard or equivalent before this promise is irreversible.",
         "Public vulnerability submission is available only during the PUBLIC_REVIEW lifecycle state; deployed reviews use their configured post-deployment disclosure policy.",
         "The public feedback ledger supports category, page, contract, severity, disposition, and text filters plus CSV and Markdown auditor exports.",
         "Ledger entries are identified and deduplicated by immutable Wave drop ID rather than the client-supplied submission UUID.",
         "Ledger metadata for a 50-drop page is hydrated in batches of no more than eight concurrent requests.",
         "A feedback section is accepted only when that exact section is explicitly allowed for the selected page; pages without a section allow-list accept no section IDs.",
-        "Immutable review-version routes have their own version-filtered feedback ledger and exact source-commit banner; review versions 2026-07-26.1, 2026-07-27.1, and 2026-07-30.1 are retained with feedback closed while 2026-08-01.1 is the active writing revision.",
-        "The current Community Review page includes the visible authorship note explaining that bots wrote the review under punk6529's mission and standards; immutable versioned editorial pages retain the disclosure used by their snapshot routes.",
-        "Ledger code links open the immutable in-site versioned source and also provide the pinned GitHub source."
+        "Ledger code links open the immutable in-site versioned source and also provide the pinned GitHub source.",
+        "Review 2026-09-09.1 is active. The earlier 2026-08-01.1 version is closed and retains its original source, editorial, and feedback targets, including comments on the superseded current-only entry guides.",
+        "The current Community Review page discloses AI-assisted preparation and distinguishes community review from independent security audit."
       ],
       "canonical_path": "/reviews/6529-stream/feedback",
       "related_paths": [
@@ -569,6 +687,7 @@
         "/reviews/6529-stream/community-review",
         "/reviews/6529-stream/security-testing-and-known-limitations",
         "/reviews/6529-stream/reference",
+        "/reviews/6529-stream/versions/2026-09-09.1/feedback",
         "/reviews/6529-stream/versions/2026-08-01.1/feedback",
         "/reviews/6529-stream/versions/2026-07-30.1/feedback",
         "/reviews/6529-stream/versions/2026-07-27.1/feedback",
@@ -613,6 +732,7 @@
       ],
       "facts": [
         "The Join 6529 page lives at /join-6529.",
+        "On native iOS when the detected country is not US or is unknown, the Collect step, subscription promotions/actions, and purchasing FAQs are absent; progress counts four visible steps and there is no unavailable banner.",
         "/join redirects to /join-6529 for compatibility.",
         "It is a state-aware onboarding hub that adapts to wallet connection, wallet auth, and profile setup.",
         "The journey covers connecting a wallet, setting up a profile, joining a Wave, participating, and collecting.",
@@ -988,6 +1108,7 @@
       ],
       "facts": [
         "The Minting The Memes guide lives at /about/minting.",
+        "On native iOS when the detected country is not US or is unknown, About Minting and Subscriptions links are hidden and direct visits return to /about without rendering the guides.",
         "The guide links to the current in-app mint at /the-memes/mint and the official standalone mint page at https://thememes.6529.io/.",
         "Users can choose regular minting or subscription minting; a subscription does not create eligibility and can mint only in a phase the destination wallet already qualifies for.",
         "The current mint flow can move through Phase 0, Phase 1, Phase 2, and a public phase for a card.",
@@ -1251,12 +1372,17 @@
         "On desktop web, the collapsed sidebar account avatar highlights on hover but opens its account dropdown only when activated; the dropdown stays aligned with the sidebar on centered wide-screen layouts.",
         "Sign out all clears every connected profile in one visible transition without switching through the remaining profiles.",
         "If wallet connection is not working, retry from the header wallet controls and confirm the wallet modal is completed before using write actions.",
+        "If Post cannot finish its session check, the draft stays in the composer. Wait for loading to finish, check the connection, complete sign-in if prompted, then retry Post. A stalled session check expires so a later attempt can check again; it does not automatically post the draft.",
+        "If Post asks you to reconnect or reactions show Please reconnect your wallet, the saved profile can still be visible even though its session cannot renew. Reconnect that profile from the wallet account controls, then retry the action. Save your draft before logging out or reloading; failed authentication keeps it in the composer, and reactions are not automatically retried after sign-in.",
         "Some write actions, settings, and subscriptions require a connected profile."
       ],
       "canonical_path": "/",
       "related_paths": ["/access"],
       "tags": ["auth", "wallet", "profiles"],
-      "source_refs": ["ops/docs/navigation/feature-wallet-account-controls.md"]
+      "source_refs": [
+        "ops/docs/navigation/feature-wallet-account-controls.md",
+        "ops/docs/waves/troubleshooting-wave-navigation-and-posting.md"
+      ]
     },
     {
       "id": "wallet.connection-sharing",
@@ -1465,6 +1591,7 @@
       ],
       "facts": [
         "A user's Meme Card subscription controls and history live under /{user}/subscriptions.",
+        "On native iOS when the detected country is not US or is unknown, subscription controls stay hidden and direct or deep-linked visits return to the profile Identity tab without showing subscription content.",
         "The tab leads with subscription coverage: status, consecutive intended drops funded, funded-through and next-unfunded Meme context, and an authoritative top-up deadline only when one is available.",
         "The tab also shows exact ETH balance, raw mint capacity, airdrop address, manual or automatic mode, edition preference, upcoming drops, and history when subscriptions are available.",
         "Owners can update settings, including airdrop address and mode, and top up; read-only viewers can inspect visible subscription information.",
@@ -1629,17 +1756,25 @@
         "TDH is 6529's time-weighted holding metric for eligible NFTs.",
         "Conceptually, TDH measures long-term participation and skin in the 6529 ecosystem.",
         "Each eligible NFT contributes value based on how long it has been held; that base holding time is then adjusted by edition-size weighting and by collection boosters.",
+        "FirstGM (Meme #8) was designed to establish the one-TDH reference: one copy held for one complete day earns one base TDH before boosts. Its open-mint design is central to its role as the original reference card, explained near the start of the TDH page at #tdh-reference.",
+        "Ordinary burns do not reduce the minted count used for TDH edition weighting. FirstGM (Meme #8) has a fixed exception that subtracts 2,588 from its 6,529 minted copies, giving 3,941 before the edition-size floor is applied.",
         "The calculation has three layers: unweighted days, edition weighting, and boosts.",
         "Unweighted days means each NFT contributes 1 unit per day it is held.",
-        "Edition weighting means days held are multiplied by a HODL or edition-size rate; on the frontend TDH page, FirstGM with edition size 3,941 is the 1.0 baseline.",
+        "Edition weighting means days held are multiplied by a HODL or edition-size rate. The calculator derives rates from the largest eligible effective Meme edition.",
+        "An edition-size floor is a minimum count used for TDH: when fewer copies were minted, the calculation uses the floor instead. The exact calculation section explains how floors are set and gives a worked example.",
         "Boosts multiply weighted TDH by active boosters based on what the holder owns.",
-        "The backend stores the distinctions separately: tdh__raw is raw full days held, tdh is raw days multiplied by HODL or edition weighting, and boosted_tdh is weighted TDH multiplied by the active boost.",
-        "Current TDH 1.4 rules use the higher of Category A or Category B boosters, plus Category C.",
-        "Category A is the complete Meme Card set boost, with diminishing additional-set boosts.",
-        "Category B covers season, genesis, and nakamoto set boosts.",
-        "Category C is the Gradient boost, up to 5 Gradients.",
-        "The current TDH guide presents the Category A or Category B comparison before Category C, then groups formulas, examples, season boosts, limits, and related destinations for quick reference.",
-        "TDH is calculated daily at 00:00 UTC and is used throughout the network: profiles, leaderboards, Levels, groups, Network views, Waves voting and eligibility, and public data."
+        "The TDH page has anchors for FirstGM's reference role, a fixed worked example, profile lookup, current boosts, and exact calculation details.",
+        "The worked example compares Today and +30 days and can remove Nakamoto #4 before the snapshot; it demonstrates that a sale removes both the card contribution and any boost component it supplied.",
+        "Profile lookup accepts a public handle or wallet-like identity without requiring wallet authentication, and shows loading, empty, not-found, retryable error, snapshot, holdings, boost breakdown, and paginated collection states.",
+        "The daily snapshot uses the Ethereum block at or immediately before 00:00 UTC; holding age uses that block timestamp, while a displayed API date can reflect later processing time.",
+        "The current boost is deterministic for a particular snapshot once eligible cards, ownership history, rates, and season configuration are known; future inputs can still change the result.",
+        "The Current boosts section at /network/tdh#tdh-1-4 loads configured bonus amounts, boosted-season limits, additional-set decay and Gradient limits from GET /tdh/rules. Consult that section for current values and the future schedule.",
+        "The highest eligible season is excluded from season boosts; later seasons do not automatically extend the configured boosted-season limit.",
+        "A full eligible Meme collection uses the configured season sum plus geometrically diminishing bonuses for additional full sets, with no hard set-count cap.",
+        "Distinct Gradients add the configured per-token bonus up to the configured count limit. The page derives the eventual rounded multiplier ceiling from the full season schedule, additional-set series and Gradient limit.",
+        "The displayed future ceiling is conditional: future cards must become eligible and can make a previously complete collection incomplete.",
+        "Rates are rounded before wallet and token-level TDH rounding; consolidated wallets preserve qualifying internal-transfer ages, recompute the boost, and sum per-token rounded final contributions.",
+        "TDH is used throughout the network, including profiles, leaderboards, Levels, groups, Network views, Waves voting and eligibility, and public data."
       ],
       "canonical_path": "/network/tdh",
       "related_paths": [
@@ -1935,7 +2070,7 @@
       ],
       "facts": [
         "TDH (unboosted) is TDH weighted by edition size before boosters are applied.",
-        "FirstGM with edition size 3,941 is the 1.0 baseline for edition weighting on the TDH page."
+        "FirstGM (Meme #8) was designed as the original one-TDH reference: one copy held for one complete day earns one base TDH before boosts. The calculator derives edition rates from the largest eligible effective Meme edition."
       ],
       "canonical_path": "/network/definitions",
       "related_paths": ["/network/tdh", "/network/health/network-tdh"],
@@ -1969,7 +2104,7 @@
       "facts": [
         "Nakamoto Set is a SZN1 Category B TDH boost term.",
         "Under current TDH 1.4 rules, SZN1 can use a complete set boost or the Genesis Set and Nakamoto Set boosts.",
-        "The current Nakamoto Set boost shown on the TDH page is 1.01x."
+        "Holding Nakamoto (Meme #4) adds the configured Nakamoto partial-set bonus when SZN1 is boostable and incomplete. The complete SZN1 boost replaces its partial-set bonuses. See Current boosts at /network/tdh#tdh-1-4 for the current API-derived amount."
       ],
       "canonical_path": "/network/tdh",
       "related_paths": [
@@ -2045,6 +2180,8 @@
         "Daily xTDH rate is xtdh_rate = produced_today - granted_out_today + received_today.",
         "Total xTDH accumulates as xtdh_total = xtdh_total_previous + xtdh_rate.",
         "The key idea is grants: a profile that produces xTDH can grant future xTDH flow to all tokens in an external ERC-721 collection or to a selected subset of tokens.",
+        "To select a collection in Create New Grant, paste its Ethereum contract address (0x followed by 40 hexadecimal characters), select the ERC-721 result, then choose all tokens, individual IDs, or ranges. Collection-name search, ENS names, and marketplace URLs are not supported for this lookup.",
+        "If collection metadata fails to load, use Try again. A missing or non-ERC-721 result cannot be selected. Contract metadata lookup is not a spam or authenticity check.",
         "If you own a token with an active grant, you receive your share of that grant while you own the token.",
         "Per-token grant flow is grant_amount_per_token = rate / denominator, where the denominator is either the collection total supply for full-collection grants or the number of selected tokens for partial grants.",
         "Transfers inside the same consolidation group do not reset the ownership window; sales or transfers across groups do reset it.",
@@ -2289,15 +2426,23 @@
         "Standard wave threads live at /waves/{waveId}; direct messages live at /messages/{waveId}.",
         "Public wave content can remain readable for authenticated wallets without a profile, but posting and other participation actions require profile setup.",
         "The Waves panel includes wave lists, pinned waves, highly rated waves, a Discover Waves link, and create controls.",
+        "On desktop with no selected Wave, /waves shows the latest posts from members' effective public Profile Wave curations, newest first.",
+        "Each latest-profile-post card identifies the author, posting time, and originating Profile Wave; curated replies can also appear. On small screens, the default /waves view remains a Wave navigator.",
         "In Worth Checking Out, each avatar and its overlaid score shield form one wave navigation link; hovering or focusing the combined link shows score details.",
-        "Every Worth Checking Out recommendation also appears in All at its recent-activity position; Joined includes only waves the user has joined."
+        "Every Worth Checking Out recommendation also appears in All at its recent-activity position; Joined normally includes only waves the user has joined.",
+        "A Wave opened from a direct link remains visible and highlighted in the left sidebar even when it is not followed, pinned, or present in the loaded overview; this temporary route context does not join or pin it.",
+        "When a direct link opens a subwave, the sidebar surfaces its visible parent, loads and expands the subwave list, reveals the selected child row, and keeps that parent tree ahead of paginated activity rows so every sibling remains reachable.",
+        "An active subwave header shows an up-left arrow and a linked parent wave name; selecting that name opens the parent wave.",
+        "Pin and unpin check the selected profile session before changing the list. If the session cannot renew, reconnect that wallet and retry; a failed session check leaves the pin state unchanged. Public waves can remain readable after session expiry but are not added to saved pins. Failed server pin changes roll back and show an error."
       ],
       "canonical_path": "/waves",
       "related_paths": ["/waves?create=wave", "/messages"],
       "tags": ["waves", "glossary"],
       "source_refs": [
         "ops/docs/waves/README.md",
-        "ops/docs/waves/sidebars/feature-wave-list-navigation.md"
+        "ops/docs/waves/sidebars/feature-wave-list-navigation.md",
+        "ops/docs/wave-subwave-interaction-model.md",
+        "ops/docs/waves/sidebars/feature-pinned-wave-controls.md"
       ]
     },
     {
@@ -2363,7 +2508,7 @@
         "Compact proposal cards do not generate summaries, categories, or proposal metadata.",
         "Selecting a proposal card opens the complete original proposal, including its full markdown, media, attachments, and multipart navigation.",
         "Memes, Curation, and Quorum Waves keep their specialized proposal presentations.",
-        "Wave creators can choose Full proposal or Summary card under Advanced settings in the Overview step for a Rank or Approve Wave. New Waves default to Summary card; existing Waves and older drafts without this setting keep Full proposal except for the Network Museum compatibility fallback.",
+        "Wave creators can choose Full proposal or Summary card under Advanced settings in the Setup step for a Rank or Approve Wave. New Waves default to Summary card; existing Waves and older drafts without this setting keep Full proposal except for the Network Museum compatibility fallback.",
         "Wave admins can change the same presentation later from the right sidebar under Settings, Display, Proposal cards. This control is available for standard Rank and Approve Waves, not Chat, Memes, Curation, or Quorum presentations.",
         "Summary card lets the admin set a proposal-text limit from 120 to 1000 characters and choose whether the first ready still image appears beside proposal summaries in chat and list views. Invalid limits cannot be saved. Full proposal media is unchanged."
       ],
@@ -2414,14 +2559,18 @@
       "facts": [
         "Eligible admins can open the + menu in a root wave's tab row and select New subwave on web or in the app.",
         "New subwave is hidden in direct messages, inside an existing subwave, while using a profile proxy, when the parent has no reusable admin group, or when the profile cannot administer the parent.",
-        "A new subwave starts with the parent wave's admin group, and the creator can choose a different existing admin group in the Groups step before submitting."
+        "Subwave creation shows Create subwave of the parent wave name in both the modal header and Setup heading. Its first-step labels are Subwave Name, Subwave Profile Picture, and Subwave Type. Saved Drafts is hidden during subwave creation.",
+        "A new subwave starts with the parent wave's exact access group. Chat and, for Rank and Approve waves, submission and voting default to that same group. A public parent's subwaves start public. Changing the wave type restores these defaults, but inherited groups are editable and do not have to match the parent's groups.",
+        "When creating a subwave or editing its groups, a group with members outside the parent's audience triggers a warning before saving. Continue anyway saves the chosen group; Go back keeps the form open. Different groups fully covered by the parent's audience need no warning. Members must have access to both the subwave and its parent, even if the subwave itself is public. Parent visibility can change while subwaves exist.",
+        "A new subwave starts with the parent wave's admin group, and the creator can choose a different existing admin group in the Access step before submitting."
       ],
       "canonical_path": "/waves",
       "related_paths": ["/waves"],
       "tags": ["waves", "subwaves", "create", "admin", "mobile"],
       "source_refs": [
         "ops/docs/waves/chat/feature-content-tabs.md",
-        "ops/docs/waves/create/feature-groups-step.md"
+        "ops/docs/waves/create/feature-groups-step.md",
+        "ops/docs/waves/create/feature-overview-step.md"
       ]
     },
     {
@@ -2486,30 +2635,33 @@
         "description"
       ],
       "facts": [
-        "The wave creation flow starts with Overview and then configures groups, description, and additional steps depending on wave type.",
-        "The Overview step begins with the Create Wave heading and keeps the wave name, picture, type, and Rank ranking mode visible; Appearance and labels contains display, proposal-card, and applicable tab-label customization.",
+        "The wave creation flow starts with Setup and then configures access, rules, description, and additional steps depending on wave type. A final read-only Overview follows Description, with Confirm and create as the submit action.",
+        "The Setup step begins with the Create Wave heading and keeps the wave name, picture, type, and Rank ranking mode visible; Appearance and labels contains display, proposal-card, and applicable tab-label customization.",
         "Optional sections are named for their contents instead of repeating Advanced settings. They show Customized for non-default values and open automatically when a hidden field needs attention.",
-        "The Groups step shows all access and moderation rows immediately, organized from Visibility through Admins without an Advanced settings disclosure.",
-        "In Groups, Visibility controls wave access; followers who can view the wave may get a notification when it is created.",
-        "Each Groups access row offers Edit criteria and Choose group; Edit criteria keeps Identities alongside the rule choices, supports explicitly included and excluded identities, and Next stays disabled until the pending replacement is created, discarded, or replaced by a saved group.",
-        "The inline criteria editor includes a Hide criteria and members switch. Its tooltip explains that the criteria and member list remain visible to group members but are hidden from everyone else. The switch starts off for a new inline group, preserves the setting copied from a selected saved group, and applies the current setting when Create and use new group is selected.",
+        "The Access step initially shows one Who can access this wave control. By default, that group can also chat and, for Rank and Approve waves, submit and vote; only the creator can administer the wave.",
+        "Customize other permissions expands the separate chat, submission, voting, and admin group controls when a wave needs different access rules.",
+        "Each Access row offers one Edit action with a pencil icon and no Choose group action. Edit opens Identities immediately alongside the rule choices, supports explicitly included and excluded identities, and Next stays disabled until the pending replacement is saved or cancelled.",
+        "The inline criteria editor includes a Hide criteria and members switch. Its tooltip explains that the criteria and member list remain visible to group members but are hidden from everyone else. The switch starts off for a new inline group, preserves the setting copied from the current assignment, and applies the current setting when Save changes is selected.",
         "The inline Identities editor can add either included or excluded identities through profile search, an authenticated EMMA allowlist, or a dragged or selected CSV file. Source wallets are normalized and deduplicated, source choices persist while the group remains an unsaved draft, and the latest include or exclude action wins when the same wallet appears on both sides.",
         "Inline group identity search ranks exact, prefix, and substring profile-handle matches before ENS-only matches, then orders each match group by profile level, highest first.",
-        "An empty Visibility, drop, vote, or chat scope is labeled Public without a Current group heading; after a group is selected, the heading and its current eligible identity count are shown.",
+        "An empty access, drop, vote, or chat scope is labeled Everyone. During editing, matching Before editing and After editing summaries compare the applied and proposed audiences.",
         "A selected saved access group shows its current eligible identity count; View members opens a paginated, searchable member browser without leaving wave creation.",
-        "A valid unsaved inline group offers Preview matches, which evaluates current membership without saving the group or applying it to the Wave.",
+        "A valid draft exposes View members from its After editing summary; there is no separate Preview matches, Close, or Discard draft action.",
+        "The currently open criterion has a solid blue button with an underlined label and is announced as pressed. A dot plus an accessible Configured state marks criteria with values independently of which editor is open.",
+        "Make wave public changes access to Everyone and also changes chat, submission, or voting only when that row still matched access at click time; independently customized rows and Admins remain unchanged.",
+        "A chat, submission, or voting row that differs from access offers Match wave access to copy the current access group and resume default synchronization.",
         "Group membership previews use current profile, reputation, and ownership data, so the matching identities can change over time.",
         "If an older saved draft references a group whose criteria are unavailable, the member browser explains that limitation and continues showing any current members it can resolve instead of closing wave creation.",
-        "When Visibility is restricted, every active Drop, Vote, Chat, and Admins group member must also belong to the Visibility group; incompatible rows are highlighted and block progress.",
+        "When wave access is restricted, every active Drop, Vote, Chat, and Admins group member must also belong to the main access group; incompatible rows are revealed, highlighted, and block progress.",
         "Wave creation verifies the final access groups again after authentication and before creating a personal group for the Admins scope or the Wave.",
         "New inline groups include the connected creator by default, even when the group otherwise contains only rules; choosing a saved group preserves the saved group's membership instead.",
         "Inline identity groups warn when the connected creator is excluded, because excluding yourself from a view group can prevent you from opening the created wave.",
-        "All wave types include Rules; Rank and Approve also include Schedule, Drops, and Voting. Scheduled Rank and Approve include Outcomes, while Perpetual Ranking skips Outcomes.",
+        "All wave types include Guidelines; Rank and Approve also include Schedule, Drops, and Voting. Scheduled Rank and Approve include Outcomes, while Perpetual Ranking skips Outcomes.",
         "Schedule keeps Submissions Open, Voting Opens, and applicable first-announcement controls visible under Opening dates. Winner schedule or Wave end reveals secondary controls; Perpetual Ranking has no Schedule optional section.",
-        "Drops keeps submission type visible and puts optional controls under Submission requirements.",
-        "Rules keeps generated wave rules visible and puts optional Wave guidelines and applicable acceptance rules in a Wave guidelines section.",
+        "Drops shows submission type and Submission requirements as always-visible sections. Submission requirements contains required media types, metadata, the simultaneous-submission limit, and signing rules, with no expand/collapse control.",
+        "Guidelines always shows the Chat guidelines textbox. For Rank and Approve, Rules that require acceptance is in Drops under Submission requirements, below the simultaneous-submission limit. The section is always visible. Entering signing rules requires a wallet signature before submitting; leaving the textbox empty or clearing it removes that requirement. There is no acceptance toggle. The generated configuration summary appears in the final read-only Overview.",
         "Voting keeps the power model, scope, required Rep or Memes details, and Approve threshold visible; named Vote limits sections contain negative-vote behavior, time weighting, and Approve hold timing.",
-        "Outcomes keeps outcome selection, reward configuration, and Show outcomes visible; Approve waves place the optional maximum winner count under Winner limits.",
+        "Outcomes keeps outcome selection, reward configuration, and Show outcomes menu section visible. Show outcomes menu section controls the Outcomes tab and reward details on leaderboard and winner cards; rewards still apply when hidden. Approve waves place the optional maximum winner count under Winner limits.",
         "In Description, individual @ mention suggestions follow the draft wave's Visibility group; private drafts suggest only eligible profiles.",
         "The docs for wave creation live under ops/docs/waves/create; on web, use /waves?create=wave to open create-wave mode."
       ],
@@ -2544,7 +2696,7 @@
       ],
       "facts": [
         "Chat waves are conversation-focused waves.",
-        "Chat wave creation uses Overview, Groups, Rules, and Description steps.",
+        "Chat wave creation uses Setup, Access, Guidelines, Description, and final Overview steps.",
         "Use Chat when the wave does not need ranking or approval mechanics."
       ],
       "canonical_path": "/waves?create=wave",
@@ -2572,8 +2724,8 @@
       ],
       "facts": [
         "Rank waves collect drops and allow participants to vote/rank them according to configured rules.",
-        "On the Overview step, rank waves choose between Announce Winners (scheduled winner announcements) and Perpetual Ranking (a continuous leaderboard with no winners and no end date).",
-        "Rank wave setup includes Overview, Groups, Schedule, Drops, Rules, Voting, and Description; Announce Winners waves also configure an Outcomes step, which Perpetual Ranking waves skip.",
+        "On the Setup step, rank waves choose between Announce Winners (scheduled winner announcements) and Perpetual Ranking (a continuous leaderboard with no winners and no end date).",
+        "Rank wave setup includes Setup, Access, Schedule, Drops, Voting, Guidelines, Description, and final Overview; Announce Winners waves also configure Outcomes before Guidelines, while Perpetual Ranking waves skip Outcomes.",
         "Rank wave rules are visible in the desktop right sidebar and mobile About information path.",
         "Leaderboards, winners, and voting state are part of rank-wave participation; perpetual ranking waves keep a live leaderboard but never announce winners or award outcomes."
       ],
@@ -2602,7 +2754,7 @@
       ],
       "facts": [
         "Approve waves use approval-oriented voting rather than a plain chat flow.",
-        "Approve wave setup includes Overview, Groups, Schedule, Drops, Rules, Voting, Outcomes, and Description.",
+        "Approve wave setup includes Setup, Access, Schedule, Drops, Voting, Outcomes, Guidelines, Description, and final Overview.",
         "Approve wave rules are visible in the desktop right sidebar and mobile About information path.",
         "Use Approve when the wave is intended to accept or reject submissions."
       ],
@@ -2706,6 +2858,7 @@
         "configuration rules",
         "rules step",
         "wave guidelines",
+        "chat guidelines",
         "guidelines",
         "creator rules",
         "custom rules",
@@ -2725,12 +2878,13 @@
         "mobile"
       ],
       "facts": [
-        "All wave creation includes a Rules step. Chat enters Rules after Groups and then goes to Description; Rank and Approve enter Rules after Drops and then go to Voting.",
+        "Guidelines is for editing optional chat guidelines. Acceptance-required rules are configured in Drops under Submission requirements. The read-only configuration summary is in the final Overview after Description. Overview shows access, schedules, submissions, voting, approval settings, detailed outcomes, acceptance-required rules and guidelines, and the description. Confirm and create submits only from this last step. Previous returns to Description without clearing text or attachments.",
+        "Guidelines is directly before Description for every wave type. Chat enters it after Access, Perpetual Ranking after Voting, and scheduled Rank and Approve after Outcomes.",
         "Generated rules summarize the wave setup. Chat rules focus on wave type, access, and chat settings; Rank and Approve rules also include timing, submissions, voting, approval, and outcome visibility.",
-        "Creators can add Wave guidelines that are saved as wave metadata and shown under Guidelines in the wave rules panel.",
+        "Creators use the Chat guidelines section and Add chat guidelines... textbox to add guidelines. The subtitle explains that users see them when sending their first chat message. Guidelines are saved as wave metadata and also shown under Guidelines in the wave rules panel.",
         "When a wave has guidelines, a profile with no prior chat messages or participation drops in that wave reviews them before its first chat message is sent. Agree sends the pending message; Decline keeps the draft and shows the guidelines again on the next attempt.",
-        "For Rank and Approve waves, creators can add rules that require acceptance; those use the existing participation terms and wallet-signature submit flow.",
-        "Wave admins can edit Wave guidelines later from Configuration. For Rank and Approve waves, admins can also edit acceptance-required rules there.",
+        "For Rank and Approve waves, creators add Rules that require acceptance in Drops under Submission requirements. The textbox sits below the simultaneous-submission limit. Entering rules requires signing; empty or whitespace-only text does not. The section stays open, and navigating between steps preserves the text. These rules use the existing participation terms and wallet-signature submit flow.",
+        "Wave admins can edit Chat guidelines later from Configuration. For Rank and Approve waves, admins can also edit acceptance-required rules there.",
         "Participants can review rules in Configuration in the desktop wave right sidebar or from the mobile About information path."
       ],
       "canonical_path": "/waves/create",
@@ -2738,6 +2892,8 @@
       "tags": ["waves", "rules", "chat", "rank", "approve"],
       "source_refs": [
         "ops/docs/waves/create/feature-rules-step.md",
+        "ops/docs/waves/create/feature-drops-step.md",
+        "ops/docs/waves/create/feature-final-overview-step.md",
         "ops/docs/waves/composer/feature-first-message-guidelines.md",
         "ops/docs/waves/flow-wave-participation.md",
         "ops/docs/waves/sidebars/feature-right-sidebar-tabs.md"
@@ -2883,11 +3039,12 @@
       ],
       "facts": [
         "Drop actions include reactions, ratings, voting, boosting, curation, replies, link copy, and pinning where allowed.",
+        "On desktop, hover or keyboard-focus a drop action to read its label beside the control. Moving the pointer away, scrolling, resizing, pressing Escape, clicking elsewhere, or activating the control with a pointer or keyboard dismisses action tooltips. Touch uses the drop action menu.",
         "Posted full drops can support emoji reactions and clap rating with optimistic UI and rollback on failure.",
         "Reaction controls are disabled while a proxy profile is active.",
         "Reaction controls are disabled only when chatting and reacting are disabled for the entire wave. A viewer who can see the wave may still react when the wave's chat group does not permit them to post.",
         "If the API rejects the current session, the app starts one authentication recovery attempt for that session and temporarily disables reaction actions. The failed reaction is not automatically replayed.",
-        "If a reaction request times out, the app rolls back the optimistic state, refreshes the canonical drop state, and does not automatically retry the write.",
+        "If a reaction request times out, the app briefly checks the saved state. If it matches the latest choice, the reaction stays without an error or rollback. If the choice cannot be confirmed, refresh and check before trying again: the request may have changed the reaction, and repeating the same choice can undo that change. The app never automatically retries the write.",
         "Rating controls clamp values to the drop's allowed min/max range and can be disabled when the viewer has no available credit.",
         "Rank/Approve waves expose voting controls such as vote sliders and vote summaries when the user is eligible.",
         "The normal vote dialog can optionally post a standard drop reply with a generated vote rationale prefix; Vote with reply starts off and can be enabled directly or by editing the prefilled text.",
@@ -3012,7 +3169,7 @@
       ],
       "facts": [
         "Selecting an access-row gear in Wave Configuration opens the group editor directly without an intermediate context menu.",
-        "The Configuration modal renders the same group assignment editor as wave creation, including Edit criteria and Choose group, the privacy row, criteria chips, expanded editors, draft summary, and save actions. It preloads the row's rules, included and excluded identities, NFT and grant requirements, and criteria/member privacy setting.",
+        "The Configuration modal opens on Identities in the same criteria editor as wave creation, including the privacy row, configured criteria chips, Before editing and After editing summaries, Cancel, and Save changes. Wave access editors do not offer Choose group. It preloads the row's rules, included and excluded identities, NFT and grant requirements, and criteria/member privacy setting.",
         "A public access row starts a new criteria draft with the editor's primary wallet explicitly included by default; Include me can be turned off from Identities.",
         "An already restricted row keeps its saved included and excluded identities and does not add the editor automatically.",
         "Saving edited criteria creates a separate group and normally updates only the selected access row; it does not mutate the original group or other access rows that use it.",
@@ -3167,7 +3324,9 @@
         "memes main stage",
         "main stage submission",
         "can't submit to memes main stage",
-        "quick vote memes"
+        "quick vote memes",
+        "uncast power",
+        "change quick vote amount"
       ],
       "keywords": [
         "memes",
@@ -3183,6 +3342,9 @@
         "started",
         "proxy",
         "preview",
+        "250 mb",
+        "glb",
+        "gltf",
         "quick",
         "vote",
         "additional",
@@ -3190,12 +3352,19 @@
       ],
       "facts": [
         "Memes wave docs cover submission, preview/submit states, additional info fields, and quick voting.",
+        "Memes Quick Vote opens from the Uncast Power card or compact bolt-count trigger in supported Waves footers when an authenticated non-proxy profile has remaining voting power and unrated submissions.",
+        "The Quick Vote dialog shows submission counts at the top and remaining voting power above the bottom controls: Change vote amount on the left, Vote in the center, and Skip on the right.",
+        "Quick Vote custom entry starts closed. Open Change vote amount to type an amount, then select Vote or press Enter. Closing the editor retains the draft for reopening on the same submission; typing alone does not save it as a remembered amount. Selecting a remembered amount submits that vote.",
+        "In the native app's mobile layout, the Quick Vote dialog shrinks when the keyboard opens to keep the amount input and voting controls above it.",
+        "Quick Vote descriptions collapse to two lines in the mobile layout and four on desktop; See more appears only when text is hidden. Swipe chevrons appear only on touch screens in the mobile layout, where swiping right votes and swiping left skips. Use Vote and Skip in a narrow browser without touch input.",
         "The Memes - Main Stage is a Memes wave context, not the /the-memes collection browse or mint route.",
         "Submission availability depends on login, proxy mode, participation eligibility, the submission window, and per-user submission limits.",
         "If the submit control is hidden or shows a restriction icon or label, select or focus the restriction control to read why submission is unavailable, then recover by logging in, disabling proxy mode, waiting for the submission window, or freeing submission capacity.",
         "In the Artwork step, Continue remains available before required fields are complete, except while an interactive artwork hash is being verified; selecting Continue turns every missing or invalid field and the missing media control red, shows inline recovery messages, and focuses the first missing item in form order.",
         "On larger viewports the artwork remains visible while the metadata form scrolls independently. On smaller viewports the complete form scrolls as one page, focused text fields move into view when the software keyboard opens, and the native modal shrinks to keep its action bar above the keyboard.",
         "On The Memes Main Stage, the desktop How to Submit control and native app lock both open Unlock submissions with the current 50,000 MemesNominee REP requirement, live progress, and a Get nominated action.",
+        "Main Stage file uploads accept PNG, JPG/JPEG, GIF, MP4/MOV, and binary GLB models up to 250 MB (250,000,000 bytes); the upload area shows Max 250 MB beside the format badges; JSON .gltf files are not accepted, and the service verifies the stored file size when the submission is created.",
+        "An oversized file, unsupported format, or invalid GLB shows an inline error immediately without Try Again. Use Select Art or drag and drop another file into the upload area to replace the rejected file.",
         "Use the wave composer and Memes-specific submission surfaces when participating in Memes waves."
       ],
       "canonical_path": "/waves",
@@ -3204,6 +3373,7 @@
       "source_refs": [
         "ops/docs/waves/memes/README.md",
         "ops/docs/waves/memes/feature-memes-submission.md",
+        "ops/docs/waves/memes/feature-memes-quick-vote.md",
         "ops/docs/waves/leaderboard/feature-drop-entry-and-eligibility.md",
         "ops/docs/waves/troubleshooting-wave-navigation-and-posting.md"
       ]
@@ -3223,7 +3393,7 @@
       ],
       "facts": [
         "Groups are reusable community/member sets used across app workflows such as waves.",
-        "On Network, open Filter and then Choose group to search for and apply a saved group.",
+        "On Network, open Filter to create and apply a criteria-based group. The Network filter does not offer Choose group.",
         "Criteria-based groups are created inline from workflows such as Network filtering and Wave setup; there is no standalone Network Groups page.",
         "A profile's Groups tab remains available at /{user}/groups."
       ],
@@ -4455,7 +4625,12 @@
       "facts": [
         "Mobile layouts use bottom navigation for Discovery, Waves, Messages, Home, Network, Collections, and Notifications.",
         "The mobile bottom navigation surface is separate from the desktop and app sidebar IA.",
-        "Tablet-sized app viewports use a wider dock while phone sizing stays unchanged.",
+        "Tablet-sized app viewports use a wider dock.",
+        "Tap the bell at the right end of the app bottom bar to open Notifications. Its tap area includes the space around the icon in both expanded and compact states.",
+        "Bottom navigation icons dim while pressed to acknowledge the touch.",
+        "If a primary tab needs more time after a tap, the destination can present a lightweight loading shell without changing the bottom-bar icon design.",
+        "Rapid primary-tab switching commits the most recently requested destination.",
+        "In the Android app, bottom spacing respects the space the device reports for system navigation.",
         "Rotating a phone or tablet keeps bottom navigation visible unless a route, edit state, open drop, or real software keyboard hides it.",
         "In the native app, the new-version refresh prompt stays centered directly above the dock and follows its expanded or compact position."
       ],
@@ -4505,6 +4680,7 @@
       "facts": [
         "The open-mobile route handles mobile app handoff and landing behavior.",
         "Use /open-mobile when users ask how to open the 6529 app from the web.",
+        "A valid internal path is used for the app handoff and Back to 6529.io, including query and fragment. A missing or invalid path skips app handoff and Back to 6529.io returns home.",
         "Mobile navigation and push notification behavior are documented separately."
       ],
       "canonical_path": "/open-mobile",
@@ -4706,6 +4882,7 @@
       ],
       "facts": [
         "The notifications feed lives at /notifications.",
+        "Opening Notifications marks notifications read. Rows still reported as unread display an Unread label and dot; grouped reactions are unread while any notification in the group is unread. The label disappears when refreshed data confirms the notifications are read.",
         "A connected wallet without a profile sees the profile setup prompt and can open its profile setup route with Create profile.",
         "It supports a responsive multi-select feed filter, row actions, read state, paging, and navigation to related app content.",
         "The notification filter opens as a bottom sheet in the mobile layout and as an anchored dropdown on wider viewports.",
@@ -4716,6 +4893,7 @@
         "Standard wave-created rows can offer Join wave and Follow creator controls; direct-message wave-created rows offer Open DM instead of joining the wave.",
         "The Reactions filter includes voted, reacted, and boosted drop notifications; the Identity filter includes new follows and REP/NIC updates.",
         "The Subscriptions filter includes transition-based coverage alerts with runway, Meme context, authoritative deadline when available, and exact minimum top-up action.",
+        "On native iOS when the detected country is not US or is unknown, subscription coverage feed items, their filter and the device settings entry are hidden; social follow notifications remain available.",
         "Notification rows may be missing or stale if loading, permissions, or realtime connectivity are disrupted."
       ],
       "canonical_path": "/notifications",
@@ -4758,12 +4936,14 @@
         "All notifications includes essential notices plus enabled optional categories; Essential only pauses optional in-app notification creation, hides the individual category controls, and preserves their choices.",
         "Direct messages still arrive in Essential only mode, but their optional alerts are paused.",
         "Device push settings remain separate, and a suppressed in-app notification cannot trigger a push.",
-        "Profile Preferences is available from the app sidebar, the desktop profile menu, and the Preferences action in the authenticated user's own profile header."
+        "Profile Preferences is available from the app sidebar, the desktop profile menu, and the Preferences action in the authenticated user's own profile header.",
+        "When Preferences is opened from the active profile, desktop users can select Back to profile and mobile-app users can use the standard app-header back arrow. Sidebar, desktop profile-menu, and direct entries omit that profile-return control."
       ],
       "canonical_path": "/notifications",
       "related_paths": ["/messages", "/notifications"],
       "tags": ["profile", "privacy", "direct messages", "notifications"],
       "source_refs": [
+        "components/header/AppHeader.tsx",
         "components/header/ProfilePreferencesSettings.tsx",
         "components/user/user-page-header/UserPageHeaderClient.tsx",
         "ops/docs/notifications/feature-profile-preferences.md",
@@ -4894,7 +5074,9 @@
       ],
       "facts": [
         "The NFT activity feed lives at /nft-activity.",
-        "It is a realtime-oriented feed for NFT activity browsing and pagination.",
+        "The feed combines indexed sales, mints, airdrops, transfers and burns with recorded OpenSea listings, offers, cancellations, expirations and order validity changes for The Memes, Meme Lab, Gradients and NextGen.",
+        "Choose collection and action filters and use Load more to see older activity. Changing filters starts a new result list. Empty and failed requests have clear states and a retry control.",
+        "Off-chain market actions may have no transaction hash. Market history begins with captured provider events and status observations; best-effort delivery does not guarantee every historical off-chain action.",
         "Use Network Activity for network-level activity context and /nft-activity for the dedicated NFT activity route."
       ],
       "canonical_path": "/nft-activity",
@@ -4902,6 +5084,7 @@
       "tags": ["realtime", "nft", "activity"],
       "source_refs": [
         "app/nft-activity/page.tsx",
+        "components/nft-market-activity/NftMarketActivity.tsx",
         "ops/docs/realtime/feature-nft-activity-feed.md",
         "ops/docs/realtime/flow-nft-activity-browsing.md"
       ]
@@ -5275,25 +5458,42 @@
     {
       "id": "profiles.cms-builder",
       "kind": "workflow",
-      "title": "Profile CMS builder",
+      "title": "Profile website studio",
       "aliases": [
         "profile builder",
         "cms builder",
+        "website studio",
         "edit profile site",
         "profile homepage builder"
       ],
-      "keywords": ["profile", "cms", "builder", "homepage", "edit", "agent"],
+      "keywords": [
+        "profile",
+        "cms",
+        "website",
+        "studio",
+        "builder",
+        "template",
+        "page",
+        "publish"
+      ],
       "facts": [
-        "Profile CMS builder behavior is documented under profile docs.",
-        "The builder is for profile-owned custom page/content management surfaces.",
-        "Builder access and editing depend on the connected profile and permissions."
+        "Open /{user}/cms/builder directly to build or edit a profile-owned website. A profile with an available published website shows Website in its header; that link opens the published site.",
+        "The studio has 39 complete visual templates: 23 original compositions and 16 inspired by credited CC0 cards from The Memes. Templates and point-and-click editing work without an AI agent.",
+        "Use Pages for page titles, addresses, menu labels, duplication, removal, and choosing the homepage. Use Content to edit sections and Design for site name, layout, palette, typography, spacing, and accent color.",
+        "Preview all pages in Desktop and Phone views. Review and replace sample names, writing, artwork, claims, and links before confirming the sample-content review for publication.",
+        "Saving, image upload, server validation, and publishing require the connected non-proxy owner profile. Publishing uploads content and asks the wallet to sign; saving alone does not publish.",
+        "Versions contains saved drafts and publications. Editing a publication creates a new draft when saved; the active site remains until a replacement is published. Browser recovery is local to the current browser and account context.",
+        "Restore selects a previous publication. Unpublish removes the active website pointer but does not delete immutable content, uploaded images, or version history.",
+        "More tools contains optional JSON and Agent file workflows. A connected MCP agent service is not available."
       ],
       "canonical_path": "/{user}/cms/builder",
       "related_paths": ["/{user}"],
       "tags": ["profiles", "cms"],
       "source_refs": [
         "app/[user]/cms/builder/page.tsx",
-        "ops/docs/profiles/feature-profile-cms-builder-ai-agent-affordances.md"
+        "components/profile-cms-builder/ProfileCmsBuilder.tsx",
+        "components/profile-cms-builder/studio/ProfileCmsStudioEditor.tsx",
+        "ops/docs/profiles/feature-profile-cms-builder.md"
       ]
     },
     {
@@ -5356,7 +5556,10 @@
         "chat tabs",
         "gallery tab",
         "polls tab",
-        "poll results"
+        "poll results",
+        "switch curation",
+        "curation tabs",
+        "your curation view"
       ],
       "keywords": [
         "waves",
@@ -5365,12 +5568,18 @@
         "chat",
         "gallery",
         "polls",
-        "results"
+        "results",
+        "curation"
       ],
       "facts": [
         "Wave content tabs organize the visible wave content area.",
         "Some waves can switch between chat and gallery-style views.",
         "Available tabs depend on wave type, state, and content.",
+        "Named curations are collections of posts from a wave. Switch between them using their tabs below the wave header on desktop and mobile web, or alongside the main wave navigation tabs in the native app. Select a regular tab such as Chat to leave the curation view.",
+        "Curation navigation is available to viewers and admins through the tabs. Configuration contains admin-only curation management, with no separate curation view picker.",
+        "A single curation has its own named tab. When many tabs overflow the row, scroll horizontally or swipe on touch layouts; the active tab scrolls into view.",
+        "A valid ?curation={curationId} wave link opens that curation. If the curation was deleted or does not belong to this wave, the wave returns to its regular view after available curations load successfully. Loading or a failed request does not discard the linked curation.",
+        "Native app Back restores the wave section from that visit, such as returning from an author profile to Leaderboard; normally opening another wave still uses its default section.",
         "Open unanswered polls can show a View results control so eligible readers can inspect counts and percentages before voting, then return to Vote while the poll is open."
       ],
       "canonical_path": "/waves",
@@ -5378,7 +5587,9 @@
       "tags": ["waves", "tabs"],
       "source_refs": [
         "ops/docs/waves/chat/feature-content-tabs.md",
-        "ops/docs/waves/header/feature-chat-gallery-toggle.md"
+        "ops/docs/waves/header/feature-chat-gallery-toggle.md",
+        "components/brain/my-stream/MyStreamWaveDesktopTabs.tsx",
+        "components/brain/mobile/BrainMobileTabs.tsx"
       ]
     },
     {
@@ -5866,6 +6077,9 @@
       "facts": [
         "Wave drop open and copy link actions are documented under drop actions.",
         "Use this when users ask how to copy or open a specific drop.",
+        "In the native mobile app on a touchscreen, tapping the title, media, description, or free space of a Memes leaderboard List or artwork Grid card opens the submission. In List view, the username opens the author's profile, while the avatar and author badges open the submission. In Grid view, the username opens the submission. Explicit vote, rating, and other action buttons keep their own actions.",
+        "Native-app touchscreen leaderboard cards show non-interactive media previews, using a provided poster image when available; open the submission for media controls. Media-format and additional-action-promise badges are informational, not separate tap or keyboard-focus actions.",
+        "Browser views, including mobile browsers, retain their author profile links and media interactions; the native-app whole-card touch rule does not apply there.",
         "Wave-level sharing is handled in the wave header."
       ],
       "canonical_path": "/waves",
@@ -5928,6 +6142,8 @@
       "keywords": ["waves", "drop", "touch", "long", "press", "menu", "mobile"],
       "facts": [
         "Wave drop touch menu behavior covers long-press and touch action button entry points.",
+        "In the native mobile app on a touchscreen, a short tap on a Memes leaderboard List or artwork Grid card opens the drop, including taps on its media. The List username opens the author's profile, while the List avatar and author badges open the submission; the Grid username opens the submission. A long press still opens the action sheet without also opening the drop on release. Explicit vote, rating, and other action buttons stay independent.",
+        "Scrolling gestures, cancelled touches, and touches that stop ongoing scrolling do not open native-app leaderboard cards; tap normally once scrolling settles. Browser views, including mobile browsers, retain their own profile-link and media behavior.",
         "Menu entries depend on device, drop state, and available actions.",
         "Use this when mobile users ask where drop actions went."
       ],
@@ -6031,6 +6247,8 @@
         "Wave Winners tab behavior is documented under leaderboard features.",
         "Availability depends on wave decision state and whether the wave has winner outcomes.",
         "Single-decision and multi-decision waves have different winner display behavior.",
+        "The single-decision podium shows first place raised in the center, second place on the left, and third place on the right. Card content wraps and grows to fit names, nomination details, vote totals, credit labels, voter counts, and outcomes. Missing places and loading use matching podium placeholders.",
+        "Select a podium card outside its controls, or focus its winner button and press Enter or Space, to open the winning drop. Keyboard focus is visible. Profile links, voter details, and Outcome keep their own actions without opening the drop. Hover, keyboard-focus, or tap Outcome to read the awards; Escape or tapping outside closes the tooltip.",
         "Mapped winners in The Memes Main Stage show a The Memes #N link and a viewer-local scheduled Mint date in the Winners tab; the decision date above the winner group is separate. The same Meme link appears beside the Minted on The Memes outcome on the dedicated drop view. The frontend never guesses a Meme ID or mint date when the backend mapping is absent.",
         "Mapped Meme card pages show a Main Stage Submission action beside Distribution Plan in the market overview panel to the right of the artwork; older unmapped cards omit the action."
       ],
@@ -6054,6 +6272,8 @@
         "The My Votes tab is documented under wave leaderboard features.",
         "It helps a user inspect their own voting activity where the wave supports it.",
         "Availability depends on wave type, eligibility, and voting state.",
+        "Click a row outside its controls or use the checkbox beside the artwork to select or deselect its vote for reset. Use its artwork or title buttons to open the drop; these buttons support Enter and Space. Vote controls and profile links keep their own actions. Selecting text does not toggle the row. Select all selects loaded rows for reset. Row selection is disabled during reset and when voting is closed.",
+        "Reset votes opens a confirmation showing the selected count. Confirming sets those votes to zero; cancelling leaves votes unchanged.",
         "Rows can include an Explain action that opens a normal drop reply prefilled with a vote rationale prefix without submitting or changing the vote."
       ],
       "canonical_path": "/waves",
@@ -6065,17 +6285,52 @@
       "id": "waves.leaderboard.top-voters",
       "kind": "route",
       "title": "Wave top voters lists",
-      "aliases": ["top voters", "voter leaderboard", "who voted most"],
-      "keywords": ["waves", "leaderboard", "top", "voters", "votes"],
+      "aliases": [
+        "top voters",
+        "voter leaderboard",
+        "who voted most",
+        "largest vote",
+        "largest positive vote",
+        "largest negative vote",
+        "largest supporting vote",
+        "largest opposing vote",
+        "vote distribution"
+      ],
+      "keywords": [
+        "waves",
+        "leaderboard",
+        "top",
+        "voters",
+        "votes",
+        "positive",
+        "negative",
+        "support",
+        "opposition",
+        "others"
+      ],
       "facts": [
-        "Top voters lists are documented wave leaderboard surfaces.",
-        "They summarize voting participation where the wave exposes that data.",
+        "The right-sidebar Voters tab ranks voters across a rank wave; a single drop's collapsible Top voters section ranks voters for that drop. Both keep descending absolute totals and pagination. Single-drop rows show an explicit green plus for positive votes and coral minus for negative votes, both when both directions have amounts, and neither for zero-only rows. The adjacent number remains an absolute total, not a vote change. Wave-sidebar rows retain their colored markers.",
+        "Leaderboard List view items for participatory rank-wave drops can show Largest vote with a profile link and signed amount without opening Top voters. Grid cards do not show this highlight and keep their existing voter-count and voting controls. It is the largest current individual allocation by absolute size, so a negative vote can be selected.",
+        "A signed allocation belongs to one voter on this drop: plus is positive and minus is negative. It is not the voter's latest adjustment or their total across the wave.",
+        "In single-drop detail, an optional current-vote ribbon with Largest supporting vote (positive) and Largest opposing vote (negative) stays visible inside Top voters, beneath its header. Select the Top voters header row, apart from its separate download control, to toggle the voter rows below the summary; its indicator reads View voters when closed and Hide voters when open. Row ordering, absolute totals, and pagination are unchanged. Download All stays visible in the header, including when collapsed, and uses an icon-only button on narrow screens. It downloads all voters as CSV without toggling the list. The graph does not toggle the list, and collapsing the rows does not hide the summary.",
+        "Ribbon widths represent complete positive and negative allocation amounts before they offset each other. Each side highlights up to three individual allocations; the striped Others segment combines the remaining amount on that side, not a voter count. If voter-profile details are only partly available, the authoritative side total still renders and the unenriched amount is included in Others.",
+        "Hover a ribbon segment to see its voter and exact signed amount; Others shows a combined amount. Tap or click anywhere on the ribbon, or keyboard-focus it, to see the complete breakdown, including very small segments. Largest supporting vote and Largest opposing vote are static summaries and do not open tooltips. Narrow screens show one Largest votes label above a single row of signed highlights; names shorten as needed while amounts remain visible. Escape or tapping outside dismisses the tooltip.",
+        "When one direction has no allocations, its sign and largest-voter highlight are hidden. A positive-only ribbon shows no minus sign, and a negative-only ribbon shows no plus sign.",
+        "The current-vote summary shows a compact placeholder during its first request. If it cannot load or the response is unusable, it shows a Retry action without hiding the rest of Top voters. A failed background refresh keeps the last valid summary visible.",
+        "Current allocation totals are separate from the calculated and projected score in the existing TDH Total strip. Time weighting can make those scores differ from the raw positive-plus-negative net; voting rules and leaderboard ranking are unchanged.",
+        "Largest-vote card highlights and single-drop distributions are limited to participatory RANK drops. They are omitted for winners, CHAT and APPROVE waves. An unavailable card highlight or a single-drop retry state does not prove there are no votes or no negative votes.",
+        "An open drop's distribution refreshes after the user edits or resets a vote and when relevant real-time drop or vote updates arrive; closely spaced updates are grouped. Reopening detail can reuse a result for up to 60 seconds unless a vote update requests fresh data. There is no periodic polling, and the summary is not a live activity log.",
+        "Reactions and content updates preserve the latest available card highlight. The user's own or incoming real-time vote changes clear it until the leaderboard's next normal refresh. Voting does not force the leaderboard to reload or reorder.",
         "Top voters are distinct from winners, which are about submitted drops or outcomes."
       ],
       "canonical_path": "/waves",
       "related_paths": ["/waves"],
       "tags": ["waves", "leaderboard", "voters"],
-      "source_refs": ["ops/docs/waves/leaderboard/feature-top-voters-lists.md"]
+      "source_refs": [
+        "ops/docs/waves/leaderboard/feature-top-voters-lists.md",
+        "ops/docs/waves/leaderboard/feature-gallery-cards.md",
+        "ops/docs/waves/drop-actions/feature-vote-summary-and-modal.md"
+      ]
     },
     {
       "id": "waves.leaderboard.sales",
@@ -6150,7 +6405,7 @@
         "controls"
       ],
       "facts": [
-        "The Network filter opens the same criteria builder used for Wave group assignment, with criteria creation open by default and Choose group available for searching saved groups.",
+        "The Network filter opens the shared criteria builder with criteria creation open by default. Its Network-specific version omits Choose group and Hide criteria and members.",
         "Create and use new group saves the criteria as a new group and immediately applies it to the Network member list; All Network members clears the scope.",
         "When a group is already active, reopening the filter prefills its criteria and identity lists. Saving edits creates a new group without mutating the original.",
         "Signed-in users with active Network criteria can use REP everyone matching criteria or NIC everyone matching criteria below the selected Network filter name to grant credits to every matching member.",
@@ -6695,6 +6950,7 @@
       "keywords": ["nextgen", "mint", "distribution", "plan", "collection"],
       "facts": [
         "NextGen mint and distribution-plan behavior is documented under NextGen docs.",
+        "On native iOS when the detected country is not US or is unknown, mint and burn-to-mint buttons are absent and direct mint routes return to the collection without displaying mint controls; countdown information and distribution data remain available.",
         "Mint routes live under /nextgen/collection/{collection}/mint.",
         "Distribution plan routes live under /nextgen/collection/{collection}/distribution-plan.",
         "The distribution-plan allowlist shows a loading state while entries are fetched and a no-match state when active filters return no entries."
@@ -6935,12 +7191,22 @@
         "EMMA is the Editor for Managing Multiphase Allowlists and the first reference implementation of Janus.",
         "The EMMA landing route lives at /emma and the plans route lives at /emma/plans.",
         "The distribution plan tool helps build mint plans with airdrops, allowlists, and public minting in one or more phases.",
-        "EMMA uses TDH as a lightweight anti-spam/rate-limit measure for allowlist creation."
+        "EMMA uses TDH as a lightweight anti-spam/rate-limit measure for allowlist creation.",
+        "In Create Snapshots at /emma/plans/{planId}, Use a 6529 collection presents five image rows: The Memes by 6529 (ERC1155), Meme Lab (ERC1155), 6529 Gradient (ERC721), 6529 RAW (ERC721), and 6529 Intern JPGs (ERC1155). Tab reaches each shortcut; Enter or Space selects it.",
+        "The Memes shortcut opens a season picker; choosing all or no seasons uses the full collection. Intern JPGs loads its subcollection token IDs. The other shortcuts fill name and contract address and clear old token IDs. Switching shortcuts preserves block numbers.",
+        "Or enter another collection keeps manual name and full contract address entry available, together with block number, optional token IDs, and optional consolidation block number. A full address can autofill an empty name. If metadata lookup fails, enter the name yourself. Collection-name search is unavailable.",
+        "The five shortcuts remain available without metadata lookup. If Intern JPG token IDs fail to load or are empty, the form stays unchanged and shows an error. Select the shortcut to retry, or enter its name, contract address, and token IDs manually; leaving token IDs empty selects all tokens in the shared contract."
       ],
       "canonical_path": "/emma",
       "related_paths": ["/emma/plans"],
       "tags": ["tools", "emma", "allowlist", "glossary"],
-      "source_refs": ["app/emma/page.tsx", "app/emma/plans/page.tsx"]
+      "source_refs": [
+        "app/emma/page.tsx",
+        "app/emma/plans/page.tsx",
+        "components/distribution-plan-tool/create-snapshots/form/CreateSnapshotForm.tsx",
+        "components/distribution-plan-tool/create-snapshots/form/CreateSnapshotFormCollections.tsx",
+        "ops/docs/emma/feature-create-snapshots-status-and-retry.md"
+      ]
     },
     {
       "id": "tools.api-authentication",
@@ -7146,7 +7412,9 @@
       "facts": [
         "Drop Forge craft claims live under /drop-forge/craft.",
         "Craft claim detail pages use /drop-forge/craft/{id}.",
-        "Craft claims are distinct from launch claims."
+        "Craft claims are distinct from launch claims.",
+        "A winning submission only creates a craft claim after successful media inspection and validation of the computed details. Zero-byte files, empty SHA-256 digests, non-positive image/video dimensions, or video without positive duration and codecs cannot become valid computed media details. The binary media limit is 250 MB (250,000,000 bytes). Editable draft fields may still be incomplete; HTML details are format-only, and GLB does not require video-only details.",
+        "GLB binary contents are checked server-side during inspection and before animation publication; renaming another file to .glb does not make it valid. This does not guarantee scene rendering or availability of external resources. Correct invalid or oversized media before retrying publication."
       ],
       "canonical_path": "/drop-forge/craft",
       "related_paths": ["/drop-forge", "/drop-forge/launch"],
@@ -7352,6 +7620,268 @@
       "related_paths": ["/restricted"],
       "tags": ["access", "navigation"],
       "source_refs": ["app/access/page.tsx", "app/access/page.client.tsx"]
+    },
+    {
+      "id": "profiles.cms-pages",
+      "kind": "business_rule",
+      "title": "Published custom profile pages",
+      "aliases": [
+        "custom profile page",
+        "profile website",
+        "published CMS page"
+      ],
+      "keywords": [
+        "profile",
+        "cms",
+        "published",
+        "page",
+        "route",
+        "capitalization"
+      ],
+      "facts": [
+        "Published custom profile pages have readable addresses such as /{user}/studio and /{user}/about. The normal 6529 profile stays at /{user}.",
+        "Use the profile header Website link or the published website navigation. Existing package paths ending in /index.html remain readable, and archived HTML keeps its file paths.",
+        "The studio accepts unique lowercase page addresses made from letters, numbers, and hyphen-separated words, up to 80 characters. Existing profile routes such as brain, cms, collected, identity, and subscriptions are reserved.",
+        "Profile handles in custom page links are case-insensitive; existing imported page names after the handle remain case-sensitive. The page must exist in the active publication, not just a draft.",
+        "Show in site menu controls the menu link only. Hiding a page from navigation does not make its published address private.",
+        "Keep the signed publication manifest and recovery receipt for independent website verification and archival recovery. External media files still need their own backup."
+      ],
+      "canonical_path": "/{user}",
+      "related_paths": ["/{user}/cms/builder"],
+      "tags": ["profiles", "cms"],
+      "source_refs": [
+        "app/[user]/[...cmsPath]/page.tsx",
+        "lib/profile-cms/runtime/routes.ts",
+        "components/user/user-page-header/UserPageHeaderClient.tsx",
+        "ops/docs/profiles/feature-profile-cms-builder.md"
+      ]
+    },
+    {
+      "id": "profiles.cms-page-sharing",
+      "kind": "ui_affordance",
+      "title": "Website page sharing images and search visibility",
+      "aliases": [
+        "website sharing image",
+        "website link preview",
+        "hide website page from search",
+        "website form changes"
+      ],
+      "keywords": [
+        "cms",
+        "page settings",
+        "sharing image",
+        "automatic image",
+        "social preview",
+        "search engines",
+        "noindex",
+        "public",
+        "apply changes",
+        "discard",
+        "autosave"
+      ],
+      "facts": [
+        "Open Page settings in /{user}/cms/builder. Sharing image selects an image from the package library for that page's link preview. Automatic image clears the explicit choice and uses an available image displayed on that page.",
+        "Choose Apply changes, then save and publish the revision to update the public page. Sharing services may keep a cached preview temporarily.",
+        "Clearing Allow search engines to index this page adds noindex after publication. The page and its media remain public and accessible by URL; search engines may take time to revisit it.",
+        "Apply changes or Discard form changes before saving, publishing, switching panels, or Undo. Unapplied page, section, and design fields are not autosaved; browser recovery keeps the applied document. Finish or cancel an image upload before leaving its panel."
+      ],
+      "canonical_path": "/{user}/cms/builder",
+      "related_paths": ["/{user}"],
+      "tags": ["profiles", "cms", "sharing", "search"],
+      "source_refs": [
+        "components/profile-cms-builder/studio/StudioPageSettings.tsx",
+        "components/profile-cms-builder/studio/StudioForm.tsx",
+        "lib/profile-cms/runtime/social-image.ts",
+        "app/[user]/[...cmsPath]/page.tsx",
+        "ops/docs/profiles/feature-profile-cms-builder.md"
+      ]
+    },
+    {
+      "id": "profiles.cms-templates",
+      "kind": "workflow",
+      "title": "Website templates and visual page editing",
+      "aliases": [
+        "artist website template",
+        "collector website template",
+        "Memes website",
+        "company website",
+        "fund website",
+        "DAO website"
+      ],
+      "keywords": [
+        "templates",
+        "Memes",
+        "artist",
+        "portfolio",
+        "exhibition",
+        "collector",
+        "organization",
+        "fund",
+        "DAO",
+        "visual editor"
+      ],
+      "facts": [
+        "Browse 39 templates in People & ideas, Collections, Artists, Organizations, Funds & collecting groups, and The Memes. Open a full example, explore its pages, then choose Use this template.",
+        "Artist examples cover studios, portfolios, exhibitions, medium studies, process journals, editions, and retrospectives. Organization examples include professional practices, nonprofits, crypto protocols, NFT projects, funds, collecting DAOs, and institutional collections.",
+        "All templates use visually editable content. Click a section or select it in Content to edit supported text, images, captions, credits, links, widths, and treatments. Add, duplicate, remove, and reorder sections with the controls.",
+        "Pages supports adding and duplicating pages, page settings, choosing the home page, showing a page in the site menu, and changing menu order. A referenced page cannot be removed until its remaining links or homepage reference are changed.",
+        "Design restyles the current site. Start a new site replaces the draft with a new template after confirmation; save or download the current draft first. This is not automatic content-preserving template conversion.",
+        "The Memes examples preserve card titles, artist credits, and source links. Static previews avoid autoplaying animated originals. Template use does not claim token ownership, authorship, or artist endorsement."
+      ],
+      "canonical_path": "/{user}/cms/builder",
+      "related_paths": ["/{user}"],
+      "tags": ["profiles", "cms", "templates"],
+      "source_refs": [
+        "lib/profile-cms/studio/templates.ts",
+        "components/profile-cms-builder/studio/StudioTemplateLibrary.tsx",
+        "components/profile-cms-builder/studio/StudioPageActions.tsx",
+        "ops/docs/profiles/feature-profile-cms-builder.md"
+      ]
+    },
+    {
+      "id": "profiles.cms-media",
+      "kind": "workflow",
+      "title": "Add images and wallet galleries to a website",
+      "aliases": [
+        "CMS upload",
+        "add my art",
+        "NFT gallery website",
+        "ENS gallery",
+        "wallet sources"
+      ],
+      "keywords": [
+        "cms",
+        "upload",
+        "image",
+        "public",
+        "gallery",
+        "wallet",
+        "ENS",
+        "NFT",
+        "snapshot"
+      ],
+      "facts": [
+        "In Add your art, upload JPEG, PNG, WebP, or GIF images up to 20 MiB with an image description and optional credit. Uploading, processing, and verification finish before the image is added to the draft.",
+        "Uploaded images become publicly accessible before the website is published. A saved draft does not make its files private. Removing an image placement or unpublishing does not delete the uploaded file.",
+        "Request snapshot requires a signed-in session and accepts up to 25 Ethereum addresses or ENS names, including other wallets. If the session cannot be verified, sign in again and retry.",
+        "The snapshot request uses the service default of 200 indexed assets. Review source wallets and incomplete or unresolved warnings; choose and order up to 50 works for one import, then enter a gallery title.",
+        "Adding a wallet selection creates gallery pages and a menu entry while preserving existing pages, site identity, and design. Source-wallet addresses are included in the record and become public with publication.",
+        "Wallet snapshots cover collections indexed by 6529 and are not a complete cross-chain NFT inventory. They are dated selections, not live holdings. Refresh to review changed holdings; a holdings import does not identify every work an artist created.",
+        "If image dimensions or media cannot be verified, an NFT record may remain without an image. Review the partial-media warning. Offline example snapshots are for preview and cannot be published as real holdings."
+      ],
+      "canonical_path": "/{user}/cms/builder",
+      "related_paths": ["/{user}/collected"],
+      "tags": ["profiles", "cms", "media"],
+      "source_refs": [
+        "components/profile-cms-builder/studio/StudioImageUpload.tsx",
+        "lib/profile-cms/studio/image-upload.ts",
+        "components/profile-cms-builder/studio/StudioWalletImport.tsx",
+        "lib/profile-cms/studio/wallet-import.ts",
+        "ops/docs/profiles/feature-profile-cms-builder.md"
+      ]
+    },
+    {
+      "id": "profiles.cms-agent-files",
+      "kind": "workflow",
+      "title": "Use your own agent through website files",
+      "aliases": [
+        "bring your own agent",
+        "CMS AI",
+        "agent patch",
+        "website JSON export",
+        "CMS MCP"
+      ],
+      "keywords": [
+        "cms",
+        "agent",
+        "AI",
+        "MCP",
+        "JSON",
+        "patch",
+        "export",
+        "import",
+        "files"
+      ],
+      "facts": [
+        "The visual website studio works without an agent. More tools opens optional JSON and Agent workspaces for users who bring their own external agent or local tool.",
+        "Download Package JSON, Source packet JSON, and Schema bundle JSON. Review their draft content and wallet-source details before sharing them with an external tool; the source packet does not replace the complete package.",
+        "Paste or upload an agent-patch JSON file up to 2 MiB, choose Review patch, inspect the changes and validation findings, then choose Apply to draft. Applying a patch is local editing and cannot save, sign, or publish.",
+        "The current patch importer edits supported first-page metadata and block fields, block additions/removals/reordering, the first menu label, and the theme accent. It is not a general multipage API; use the visual editor or full-package JSON import for broader changes.",
+        "Stale draft IDs, versions, base hashes, unsupported operations, and invalid results are rejected. Re-review against the current draft after changes.",
+        "A complete replacement package can be pasted into JSON and imported for the current profile handle. Preserve a saved or downloaded copy before broad replacement.",
+        "There is no connected MCP service, automatic agent session, or built-in paid inference provider. File exchange does not require sharing website session tokens, wallet private keys, or recovery phrases. Publication remains a separate owner-reviewed wallet-signing step."
+      ],
+      "canonical_path": "/{user}/cms/builder",
+      "related_paths": ["/{user}"],
+      "tags": ["profiles", "cms", "agents"],
+      "source_refs": [
+        "components/profile-cms-builder/ProfileCmsAgentPanel.tsx",
+        "lib/profile-cms/builder/agent-patch-operations.ts",
+        "components/profile-cms-builder/ProfileCmsBuilderJsonPanel.tsx",
+        "ops/docs/profiles/feature-profile-cms-builder-ai-agent-affordances.md"
+      ]
+    },
+    {
+      "id": "collect.overview",
+      "kind": "workflow",
+      "title": "Collect artwork and complete profile sets",
+      "aliases": [
+        "buy 6529 NFTs",
+        "sell NFTs",
+        "NFT bids",
+        "cheapest NFTs",
+        "complete a season",
+        "complete Pebbles",
+        "lowest cost TDH",
+        "gift a purchase"
+      ],
+      "keywords": [
+        "Collect",
+        "Memes",
+        "Gradient",
+        "Pebbles",
+        "season",
+        "artist",
+        "sets",
+        "marketplace",
+        "listing",
+        "offer",
+        "WETH",
+        "recipient",
+        "gifts",
+        "TDH"
+      ],
+      "facts": [
+        "Collect at /collect supports The Memes, 6529 Gradient and NextGen Pebbles. Browse artwork, compare observed low-price listings, find specific tokens, analyze season/full-set/artist/Pebbles trait goals and compare additional TDH.",
+        "All set collecting uses the profile across its confirmed consolidated wallets. Wallets identify custody, funding, signing or receipt; selecting a custody wallet does not redefine the primary collecting scope.",
+        "Purchase recipients follow minting: choose a profile wallet or enter a third-party wallet. Review the exact address. The purchase transaction delivers the NFT directly to that one recipient without a separate onward transfer. A gift outside the profile does not advance that profile’s projected completion or TDH.",
+        "Pebbles is the current NextGen project. Palette, Size, Traced and Ultimate goals extend its existing Trait Sets. Ultimate can satisfy multiple trait requirements with one token.",
+        "Completion plans show missing requirements and incomplete coverage. The initial scan checks one best exact OpenSea listing per artwork; it does not exhaust market depth. Each planned purchase gets a fresh quote and wallet approval, and several orders use separate transactions.",
+        "Supported execution uses Ethereum mainnet, exact NFTs, explicit quantities and ETH or WETH. Fixed-price offers use WETH and receive NFTs in the signing wallet. Profile consolidation and social proxy access do not grant trading authority over another wallet.",
+        "Review the total price, fees, seller net where applicable, recipient and token approval scope. New listings include configured creator support; standard offers include required provider fees; purchases and accepted offers preserve their signed fees. The 6529 platform fee is zero.",
+        "Orders at /collect/orders tracks operation recovery. Potential offer exposure begins when signable terms are revealed, even if no signature or publication is confirmed. A quote freshness timer does not expire a signed order.",
+        "If a wallet may have submitted a transaction but its hash was not returned, the review shows Checking the outcome and blocks another send for that operation across browsers. Copy the hash from wallet activity into Transaction hash from your wallet and select Check this transaction. The site verifies the exact transaction; this does not send a replacement. Approvals and recovery without local browser data use the same flow.",
+        "If publication or broadcast is uncertain, retain the order or transaction hash and reconcile it instead of sending a duplicate purchase. Cancellation can lose a race to a fill and is effective only after chain verification. Revoking an approval or pausing new trading does not permanently cancel signed orders.",
+        "TDH comparisons use a verified official snapshot and include changes to bonuses on existing holdings. The ranking is best among observed candidates, includes an estimated gas reserve, and is not a guarantee of future TDH or complete market coverage.",
+        "A Safe can receive a gift purchase. Execution from smart contract wallets and inside the native app is unavailable until those paths are supported. Programmatic preparation still requires owner review and wallet authorization; the backend does not hold user signing keys.",
+        "Saved rules freeze exact targets, funding wallet, recipient, unit and total review limits, gas reserve, expiry and action count. They prepare one ETH purchase at a time for wallet approval. Pause and expiry retain unresolved operations, and confirmed acquisitions count permanently even if the NFT is later sold or transferred. Rules do not grant unattended wallet execution authority."
+      ],
+      "canonical_path": "/collect",
+      "link_label": "Collect",
+      "related_paths": [
+        "/collect/orders",
+        "/the-memes",
+        "/6529-gradient",
+        "/nextgen"
+      ],
+      "tags": ["collections", "marketplace", "profiles", "TDH", "wallets"],
+      "source_refs": [
+        "ops/docs/media/collecting.md",
+        "app/collect/page.tsx",
+        "app/collect/orders/page.tsx",
+        "components/collect/CollectPageClient.tsx",
+        "components/collect/useMarketExecution.ts"
+      ]
     }
   ]
 }

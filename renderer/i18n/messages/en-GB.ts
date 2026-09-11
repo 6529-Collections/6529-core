@@ -1,11 +1,144 @@
+import studioTemplateDescriptions from "@/i18n/messages/studioTemplateDescriptions.en-GB.json";
+import profileCmsStudioUploadMessages from "@/i18n/messages/profileCmsStudioUpload.en-GB.json";
+import studioWalletImportMessages from "@/i18n/messages/studioWalletImport.en-GB.json";
 import { EN_GB_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { EN_GB_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
 import { EN_GB_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES as EN_GB_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
 import type { MessageKey } from "@/i18n/messages/en-US";
+import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.en-GB.json";
 
 export const EN_GB_MESSAGES = {
+  ...profileCmsStudioMessages,
+  ...studioTemplateDescriptions,
+  ...profileCmsStudioUploadMessages,
+  ...studioWalletImportMessages,
+  "profileCms.builder.gallery.snapshot.required":
+    "Request and review a wallet snapshot before saving or publishing this gallery.",
+  "profileCms.builder.publish.savedNotCurrent":
+    "This signed publication is saved but is not the active website. Review version history before changing the website.",
+  "profileCms.builder.gallery.snapshot.warning.unmeasuredImages":
+    "Some image sizes could not be verified. Those works keep their NFT details without an image in the publication. Refresh the snapshot to try again.",
+  "profileCms.builder.json.pending":
+    "Apply or discard your JSON changes before saving or publishing.",
+  "profileCms.builder.json.reviewPending": "Review JSON changes",
+  "profileCms.builder.json.discardPending": "Discard JSON changes",
+  "profileCms.builder.history.actionFailed":
+    "The website could not be updated. Refresh version history and try again.",
+  "profileCms.builder.gallery.snapshot.warning.unresolvedWallets":
+    "Some wallet entries could not be resolved and are not part of this snapshot.",
+  "profileCms.builder.gallery.snapshot.warning.truncated":
+    "The snapshot hit the asset limit, so some indexed works are not shown.",
+  "profileCms.builder.api.serverValidationInvalid":
+    "Server validation found blocking issues in this package.",
+  "profileCms.builder.drafts.title": "Saved drafts",
+  "profileCms.builder.drafts.refresh": "Refresh drafts",
+  "profileCms.builder.drafts.loading": "Loading...",
+  "profileCms.builder.drafts.failed": "Could not load saved drafts.",
+  "profileCms.builder.drafts.empty": "No saved drafts yet.",
+  "profileCms.builder.drafts.version": "Version {version}",
+  "profileCms.builder.drafts.load": "Load",
+  "profileCms.builder.drafts.status.draft": "Draft",
+  "profileCms.builder.drafts.status.validating": "Validating",
+  "profileCms.builder.drafts.status.published": "Published",
+  "profileCms.builder.drafts.status.failed": "Failed",
+  "profileCms.builder.drafts.status.archived": "Archived",
+  "profileCms.builder.drafts.status.superseded": "Superseded",
+  "profileCms.builder.drafts.loadFailed":
+    "This draft could not be loaded into the editor.",
+  "profileCms.builder.publish.title": "Publish",
+  "profileCms.builder.publish.description":
+    "Save, validate, upload to decentralized storage, sign with your wallet, then publish this package as your primary profile website.",
+  "profileCms.builder.publish.publish": "Publish website",
+  "profileCms.builder.publish.publishing": "Publishing...",
+  "profileCms.builder.publish.retry": "Retry",
+  "profileCms.builder.publish.reSign": "Sign again",
+  "profileCms.builder.publish.walletRequired":
+    "Connect the wallet linked to this profile to sign the publish.",
+  "profileCms.builder.publish.safeNotice":
+    "Smart-contract wallet detected. Your wallet must support this signature request. If it cannot, use another authorized wallet for this profile.",
+  "profileCms.builder.publish.success":
+    "Published. Your profile website is now live at:",
+  "profileCms.builder.publish.step.validate": "Save and validate draft",
+  "profileCms.builder.publish.step.upload": "Upload to storage",
+  "profileCms.builder.publish.step.sign": "Sign with wallet",
+  "profileCms.builder.publish.step.publish": "Make website live",
+  "profileCms.builder.publish.error.validationInvalid":
+    "Server validation found blocking issues. Fix them, then publish again.",
+  "profileCms.builder.publish.error.saveFailed":
+    "Could not save the draft before publishing.",
+  "profileCms.builder.publish.error.validateFailed":
+    "The server validation request failed.",
+  "profileCms.builder.publish.error.uploadFailed":
+    "Uploading the package to decentralized storage failed.",
+  "profileCms.builder.publish.error.signatureRejected":
+    "The signature request was cancelled in your wallet.",
+  "profileCms.builder.publish.error.signatureFailed":
+    "Wallet signing failed. Check your wallet and try again.",
+  "profileCms.builder.publish.error.deadlineExpired":
+    "The signature deadline expired before publishing. Sign again to continue.",
+  "profileCms.builder.publish.error.publishConflict":
+    "The published website changed during this attempt. Review version history before publishing again.",
+  "profileCms.builder.publish.error.storagePending":
+    "Permanent storage is still making your signed publication available. Wait a moment, then retry. Your signature and saved version will be reused.",
+  "profileCms.builder.publish.signedPublication": "Signed publication",
+  "profileCms.builder.publish.signedPublicationHash": "Manifest hash: {hash}",
+  "profileCms.builder.publish.error.publishFailed":
+    "Publishing failed. Please try again.",
+  "profileCms.builder.history.title": "Version history",
+  "profileCms.builder.history.refresh": "Refresh",
+  "profileCms.builder.history.loading": "Loading...",
+  "profileCms.builder.history.unavailable":
+    "Connect as this profile owner to view published versions.",
+  "profileCms.builder.history.failed": "Could not load version history.",
+  "profileCms.builder.history.empty": "No saved versions yet.",
+  "profileCms.builder.history.version": "Version {version}",
+  "profileCms.builder.history.primary": "Primary",
+  "profileCms.builder.history.rollback": "Make primary",
+  "profileCms.builder.history.rollbackFailed": "Rollback failed.",
+  "profileCms.builder.history.confirm.title": "Confirm rollback",
+  "profileCms.builder.history.confirm.body":
+    "Point your primary profile website back to version {version}? This replaces the currently published version.",
+  "profileCms.builder.history.confirm.confirm": "Confirm",
+  "profileCms.builder.history.confirm.working": "Rolling back...",
+  "profileCms.builder.history.confirm.cancel": "Cancel",
+  "profileCms.builder.history.unpublish": "Unpublish website",
+  "profileCms.builder.history.unpublishConfirm":
+    "Remove this website from the public profile? Its saved versions remain available to restore.",
+  "profileCms.builder.recovery.title":
+    "An unsaved draft is available on this device.",
+  "profileCms.builder.recovery.restore": "Recover draft",
+  "profileCms.builder.recovery.discard": "Discard recovery",
+  "profileCms.builder.recovery.failed":
+    "This browser could not save a recovery copy. Save a draft or download JSON before leaving.",
+  "profileCms.builder.recovery.unsaved": "Unsaved changes",
+  "profileCms.builder.recovery.saved": "All changes saved",
+  "profileCms.builder.recovery.leave":
+    "Leave the editor with unsaved changes or an operation in progress? A recovery copy is kept when browser storage is available.",
+  "profileCms.builder.recovery.replace":
+    "Replace the current editor contents? Save or download your changes first.",
+  "profileCms.builder.editor.advanced":
+    "This package contains a custom site. Use JSON or Agent to edit it while preserving every page and asset.",
+  "profileCms.builder.history.changed":
+    "The public website was updated. It may take a few seconds for visitors to see the change.",
+  "profileCms.builder.publish.error.stale":
+    "The draft or wallet changed. Start publishing again.",
+  "navigation.primary.loading.home": "Loading home",
+  "navigation.primary.loading.discovery": "Loading discovery",
+  "navigation.primary.loading.network": "Loading network",
+  "navigation.primary.loading.collections": "Loading collections",
+  "navigation.primary.loading.notifications": "Loading notifications",
+  "headerSearch.wave.byAuthor": "by {author}",
+  "headerSearch.wave.serial": "Wave #{serial}",
+  "headerSearch.wave.label": "Wave",
+  "waves.subwaves.accessWarning.title": "Parent wave restrictions apply",
+  "waves.subwaves.accessWarning.message":
+    "Some members of this group cannot access the parent wave, so they will not be able to open this subwave. You can still use this group.",
+  "waves.subwaves.accessWarning.continue": "Continue anyway",
+  "waves.subwaves.accessWarning.back": "Go back",
+  "waves.subwaves.accessWarning.checkFailed":
+    "Couldn't check parent wave access. Please try again.",
   "network.groupInspection.bulkRep": "REP everyone matching criteria",
   "network.groupInspection.bulkNic": "NIC everyone matching criteria",
   "network.groupInspection.bulkActionsLabel": "Bulk rating actions",
@@ -287,6 +420,10 @@ export const EN_GB_MESSAGES = {
   "profileCms.builder.gallery.review.title": "Snapshot review",
   "profileCms.builder.gallery.settings": "Gallery settings",
   "profileCms.builder.gallery.snapshot.api": "Backend snapshot",
+  "profileCms.builder.gallery.snapshot.signInRequired":
+    "Sign in to request a wallet snapshot.",
+  "profileCms.builder.gallery.snapshot.sessionExpired":
+    "Your session could not be verified. Sign in again to request a wallet snapshot.",
   "profileCms.builder.gallery.snapshot.failed":
     "Gallery snapshot could not be created.",
   "profileCms.builder.gallery.snapshot.fixture": "Fixture snapshot",
@@ -326,7 +463,7 @@ export const EN_GB_MESSAGES = {
   "profileCms.builder.publishState.packageHash": "Package hash",
   "profileCms.builder.publishState.payloadHash": "Payload hash",
   "profileCms.builder.publishState.pending":
-    "Save and publish require the backend builder endpoints. This UI will not fake a production publish.",
+    "Save a draft to keep an editable version. Publish when you are ready to make this website public.",
   "profileCms.builder.publishState.title": "Draft and publish state",
   "profileCms.builder.siteSettings": "Site settings",
   "profileCms.builder.tab.agent": "Agent",
@@ -497,6 +634,48 @@ export const EN_GB_MESSAGES = {
   "common.close": "Close",
   "desktopUpdateToast.versionAvailable": "Version {version} is available.",
   "desktopUpdateToast.viewUpdate": "View update",
+  "waves.create.dialog.subwaveOfTitle": 'Create subwave of "{parentWaveName}"',
+  "waves.create.overview.subwaveName": "Subwave Name",
+  "waves.create.overview.subwavePicture": "Subwave Profile Picture",
+  "waves.create.overview.subwaveType": "Subwave Type",
+  "waves.create.overview.type": "Wave Type",
+  "waves.create.overview.subwaveTypeRequired":
+    "Please choose a subwave type to continue.",
+  "waves.create.overview.typeRequired":
+    "Please choose a wave type to continue.",
+  "waves.create.outcomes.showOutcomes": "Show outcomes menu section",
+  "waves.create.outcomes.showOutcomesDescription":
+    "Shows the Outcomes tab and reward details on leaderboard and winner cards. Rewards still apply when hidden.",
+  "waves.create.rules.title": "Guidelines",
+  "waves.create.rules.guidelinesFieldLabel": "Chat guidelines",
+  "waves.create.rules.guidelinesDescription":
+    "These guidelines will be shown to user when they send their first chat message",
+  "waves.create.rules.guidelinesPlaceholder": "Add chat guidelines...",
+  "waves.create.rules.acceptanceTitle": "Rules that require acceptance",
+  "waves.create.rules.acceptanceDescription":
+    "Participants must accept these rules and sign with their wallet before submitting.",
+  "waves.create.rules.acceptancePlaceholder":
+    "Enter rules participants must accept before submitting...",
+  "waves.create.rules.acceptanceHelper":
+    "Leave empty if no rules require signing.",
+  "waves.create.rules.acceptanceCharacterCount": "Characters: {count}",
+  "waves.create.review.title": "Overview",
+  "waves.create.review.description":
+    "Review your wave before creating it. Use Previous or the completed steps to make changes.",
+  "waves.create.review.submit": "Confirm and create",
+  "waves.create.review.uploadsPending": "Wait for image uploads to finish.",
+  "waves.create.review.setup": "Setup",
+  "waves.create.review.name": "Name",
+  "waves.create.review.parent": "Parent wave",
+  "waves.create.review.picture": "Wave profile picture",
+  "waves.create.review.manual": "Manual",
+  "waves.create.review.outcomeType": "Outcome type",
+  "waves.create.review.reward": "Reward",
+  "waves.create.review.category": "Category",
+  "waves.create.review.total": "Total",
+  "waves.create.review.winner": "Winner {position}",
+  "waves.create.review.perApprovedDrop": "Per approved drop",
+  "waves.create.review.outcome": "Outcome {number}",
   "waves.create.dialog.subwaveTitle": "Create subwave",
   "waves.create.dialog.waveTitle": "Create Wave",
   "waves.create.actions.cancel": "Cancel",
@@ -517,8 +696,12 @@ export const EN_GB_MESSAGES = {
   "waves.create.groups.title": "Access",
   "waves.create.groups.description":
     "Choose who can access, participate in, and manage this wave.",
-  "waves.create.groups.viewGroupName": "Visibility",
+  "waves.create.groups.viewGroupName": "Who can access this wave",
+  "waves.create.groups.accessHelper":
+    "By default, everyone with access can participate. Only you can administer the wave.",
+  "waves.create.groups.customizePermissions": "Customise other permissions",
   "waves.create.groups.adminGroupName": "Admins",
+  "waves.create.groups.currentGroup": "Before editing",
   "waves.create.groups.currentGroupWithName": "Current group: {name}",
   "waves.create.groups.dialog.addTitle": "Add group",
   "waves.create.groups.dialog.changeTitle": "Change group",
@@ -564,6 +747,11 @@ export const EN_GB_MESSAGES = {
   "waves.create.groups.editAccess.confirmUseVisibility":
     "Use visibility criteria",
   "waves.create.groups.actions.editCriteria": "Edit criteria",
+  "waves.create.groups.actions.edit": "Edit",
+  "waves.create.groups.actions.matchWaveAccess": "Match wave access",
+  "waves.create.groups.draft.saveChanges": "Save changes",
+  "waves.create.groups.draft.afterEditing": "After editing",
+  "waves.create.groups.rules.configured": "Configured",
   "waves.create.groups.inlineIdentities.modeLabel": "Identity treatment",
   "waves.create.groups.inlineIdentities.included.label": "Included",
   "waves.create.groups.inlineIdentities.included.searchLabel":
@@ -818,6 +1006,32 @@ export const EN_GB_MESSAGES = {
   "memes.waveFooter.uncastPower.votesVisible": "votes",
   "waves.mobile.profileFeed.title": "Profile Waves Feed",
   "waves.mobile.profileFeed.subtitle": "Featured drops from profile waves",
+  "waves.header.postLabel.inProgress": "Posting",
+  "waves.profileFeed.title": "Latest From Profile Waves",
+  "waves.profileFeed.description":
+    "See what the community is sharing in Profile Waves.",
+  "waves.profileFeed.errorTitle": "Couldn’t load profile posts",
+  "waves.profileFeed.errorDescription": "Refresh this view to try again.",
+  "waves.profileFeed.emptyTitle": "No profile posts yet",
+  "waves.profileFeed.emptyDescription":
+    "New posts from members’ Profile Waves will appear here.",
+  "waves.leaderboard.podium.place.first": "1st",
+  "waves.leaderboard.podium.place.second": "2nd",
+  "waves.leaderboard.podium.place.third": "3rd",
+  "waves.leaderboard.podium.open.first": "Open 1st {name}",
+  "waves.leaderboard.podium.open.second": "Open 2nd {name}",
+  "waves.leaderboard.podium.open.third": "Open 3rd {name}",
+  "waves.leaderboard.podium.avatar": "{name} avatar",
+  "waves.leaderboard.podium.selfNominated": "self-nominated",
+  "waves.leaderboard.podium.nominatedBy": "nominated by {nominator}",
+  "waves.leaderboard.podium.outcome": "Outcome",
+  "waves.leaderboard.podium.empty.title": "No Winners to Display",
+  "waves.leaderboard.podium.empty.description":
+    "This wave ended without any submissions",
+  "waves.voteDetails.title": "Votes",
+  "waves.voteDetails.trigger.one": "View voters and vote log for {count} voter",
+  "waves.voteDetails.trigger.other":
+    "View voters and vote log for {count} voters",
   "waves.leaderboard.timeline.toggle": "Toggle decision timeline",
   "waves.leaderboard.timeline.decisionTimeline": "Decision Timeline",
   "waves.leaderboard.timeline.announcementHistory": "Announcement history",
@@ -871,6 +1085,8 @@ export const EN_GB_MESSAGES = {
   "notifications.filter.ariaLabel": "Filter notifications: {selection}",
   "notifications.filter.selected": "{count} selected",
   "notifications.filter.sheetTitle": "Filter notifications",
+  "notifications.status.unread": "Unread",
+  "notifications.preview.expand": "Show full drop",
   "notifications.filter.option.mentions": "Mentions",
   "notifications.filter.option.replies": "Replies",
   "notifications.filter.option.identity": "Identity",

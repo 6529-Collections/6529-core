@@ -14,7 +14,6 @@ run-name: Production deploy ${{ github.sha }}
 permissions:
   actions: read
   contents: read
-  packages: read
 
 concurrency:
   group: web-deploy-prod
@@ -47,6 +46,8 @@ jobs:
 
   resolve-production-artifact:
     name: Resolve production artifact metadata
+    permissions:
+      actions: read
     needs: build-production-artifact
     uses: ./.github/workflows/production-artifact-metadata.yml
 

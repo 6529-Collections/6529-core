@@ -1,3 +1,6 @@
+import studioTemplateDescriptions from "@/i18n/messages/studioTemplateDescriptions.fr-FR.json";
+import profileCmsStudioUploadMessages from "@/i18n/messages/profileCmsStudioUpload.fr-FR.json";
+import studioWalletImportMessages from "@/i18n/messages/studioWalletImport.fr-FR.json";
 import { FR_FR_DROP_REACTION_MESSAGES } from "@/i18n/messages/drop-reactions";
 import { FR_FR_NEW_VERSION_TOAST_MESSAGES } from "@/i18n/messages/new-version-toast";
 import { FR_FR_QR_SCANNER_MESSAGES } from "@/i18n/messages/qr-scanner";
@@ -7,8 +10,144 @@ import { FR_FR_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-c
 import { FR_FR_TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
 import stormComposerFrMessages from "@/i18n/messages/stormComposer.fr-FR.json";
 import type { MessageKey } from "@/i18n/messages/en-US";
+import profileCmsStudioMessages from "@/i18n/messages/profileCmsStudio.fr-FR.json";
 
 export const FR_FR_MESSAGES = {
+  ...profileCmsStudioMessages,
+  ...studioTemplateDescriptions,
+  ...profileCmsStudioUploadMessages,
+  ...studioWalletImportMessages,
+  "profileCms.builder.gallery.snapshot.required":
+    "Demandez et vérifiez un instantané des portefeuilles avant d’enregistrer ou de publier cette galerie.",
+  "profileCms.builder.publish.savedNotCurrent":
+    "Cette publication signée est enregistrée, mais ce n’est pas le site actif. Consultez l’historique des versions avant de modifier le site.",
+  "profileCms.builder.gallery.snapshot.warning.unmeasuredImages":
+    "Les dimensions de certaines images n’ont pas pu être vérifiées. Ces œuvres conservent leurs informations NFT sans image dans la publication. Actualisez l’instantané pour réessayer.",
+  "profileCms.builder.json.pending":
+    "Appliquez ou abandonnez vos modifications JSON avant d’enregistrer ou de publier.",
+  "profileCms.builder.json.reviewPending": "Examiner les modifications JSON",
+  "profileCms.builder.json.discardPending": "Abandonner les modifications JSON",
+  "profileCms.builder.history.actionFailed":
+    "Impossible de mettre le site à jour. Actualisez l’historique des versions et réessayez.",
+  "profileCms.builder.gallery.snapshot.warning.unresolvedWallets":
+    "Certains portefeuilles n’ont pas pu être identifiés et sont exclus de cet instantané.",
+  "profileCms.builder.gallery.snapshot.warning.truncated":
+    "La limite d’œuvres de l’instantané a été atteinte. Certaines œuvres indexées ne sont pas affichées.",
+  "profileCms.builder.api.serverValidationInvalid":
+    "La validation du serveur a détecté des problèmes bloquants dans ce paquet.",
+  "profileCms.builder.drafts.title": "Brouillons enregistrés",
+  "profileCms.builder.drafts.refresh": "Actualiser les brouillons",
+  "profileCms.builder.drafts.loading": "Chargement des brouillons…",
+  "profileCms.builder.drafts.failed":
+    "Impossible de charger les brouillons enregistrés.",
+  "profileCms.builder.drafts.empty": "Aucun brouillon enregistré.",
+  "profileCms.builder.drafts.version": "Version {version}",
+  "profileCms.builder.drafts.load": "Charger",
+  "profileCms.builder.drafts.status.draft": "Brouillon",
+  "profileCms.builder.drafts.status.validating": "Validation en cours",
+  "profileCms.builder.drafts.status.published": "Publié",
+  "profileCms.builder.drafts.status.failed": "Échec",
+  "profileCms.builder.drafts.status.archived": "Archivé",
+  "profileCms.builder.drafts.status.superseded": "Remplacé",
+  "profileCms.builder.drafts.loadFailed":
+    "Impossible de charger ce brouillon dans l’éditeur.",
+  "profileCms.builder.publish.title": "Publier",
+  "profileCms.builder.publish.description":
+    "Enregistrez, validez, envoyez vers un stockage décentralisé, signez avec votre portefeuille, puis publiez ce paquet comme site principal de votre profil.",
+  "profileCms.builder.publish.publish": "Publier le site",
+  "profileCms.builder.publish.publishing": "Publication en cours…",
+  "profileCms.builder.publish.retry": "Réessayer",
+  "profileCms.builder.publish.reSign": "Signer à nouveau",
+  "profileCms.builder.publish.walletRequired":
+    "Connectez un portefeuille lié à ce profil pour signer la publication.",
+  "profileCms.builder.publish.safeNotice":
+    "Portefeuille de contrat intelligent détecté. Votre portefeuille doit prendre en charge cette demande de signature. Sinon, utilisez un autre portefeuille autorisé pour ce profil.",
+  "profileCms.builder.publish.success":
+    "Publié. Le site de votre profil est accessible ici :",
+  "profileCms.builder.publish.step.validate":
+    "Enregistrer et valider le brouillon",
+  "profileCms.builder.publish.step.upload": "Envoyer vers le stockage",
+  "profileCms.builder.publish.step.sign": "Signer avec le portefeuille",
+  "profileCms.builder.publish.step.publish": "Mettre le site en ligne",
+  "profileCms.builder.publish.error.validationInvalid":
+    "La validation du serveur a détecté des problèmes bloquants. Corrigez-les, puis publiez à nouveau.",
+  "profileCms.builder.publish.error.saveFailed":
+    "Impossible d’enregistrer le brouillon avant la publication.",
+  "profileCms.builder.publish.error.validateFailed":
+    "La demande de validation du serveur a échoué.",
+  "profileCms.builder.publish.error.uploadFailed":
+    "L’envoi du paquet vers le stockage décentralisé a échoué.",
+  "profileCms.builder.publish.error.signatureRejected":
+    "La demande de signature a été annulée dans votre portefeuille.",
+  "profileCms.builder.publish.error.signatureFailed":
+    "La signature a échoué. Vérifiez votre portefeuille et réessayez.",
+  "profileCms.builder.publish.error.deadlineExpired":
+    "La signature a expiré avant la publication. Signez à nouveau pour continuer.",
+  "profileCms.builder.publish.error.publishConflict":
+    "Le site publié a changé pendant cette tentative. Consultez l’historique des versions avant de publier à nouveau.",
+  "profileCms.builder.publish.error.storagePending":
+    "Le stockage permanent prépare encore l’accès à votre publication signée. Patientez, puis réessayez. Votre signature et la version enregistrée seront réutilisées.",
+  "profileCms.builder.publish.signedPublication": "Publication signée",
+  "profileCms.builder.publish.signedPublicationHash":
+    "Empreinte du manifeste : {hash}",
+  "profileCms.builder.publish.error.publishFailed":
+    "La publication a échoué. Veuillez réessayer.",
+  "profileCms.builder.history.title": "Historique des versions",
+  "profileCms.builder.history.refresh": "Actualiser",
+  "profileCms.builder.history.loading": "Chargement…",
+  "profileCms.builder.history.unavailable":
+    "Connectez-vous en tant que propriétaire de ce profil pour voir les versions publiées.",
+  "profileCms.builder.history.failed":
+    "Impossible de charger l’historique des versions.",
+  "profileCms.builder.history.empty": "Aucune version enregistrée.",
+  "profileCms.builder.history.version": "Version {version}",
+  "profileCms.builder.history.primary": "Principale",
+  "profileCms.builder.history.rollback": "Définir comme principale",
+  "profileCms.builder.history.rollbackFailed": "La restauration a échoué.",
+  "profileCms.builder.history.confirm.title": "Confirmer la restauration",
+  "profileCms.builder.history.confirm.body":
+    "Rétablir la version {version} comme site principal de votre profil ? Cela remplace la version actuellement publiée.",
+  "profileCms.builder.history.confirm.confirm": "Confirmer",
+  "profileCms.builder.history.confirm.working": "Restauration en cours…",
+  "profileCms.builder.history.confirm.cancel": "Annuler",
+  "profileCms.builder.history.unpublish": "Dépublier le site",
+  "profileCms.builder.history.unpublishConfirm":
+    "Retirer ce site du profil public ? Ses versions enregistrées pourront toujours être restaurées.",
+  "profileCms.builder.recovery.title":
+    "Un brouillon non enregistré est disponible sur cet appareil.",
+  "profileCms.builder.recovery.restore": "Récupérer le brouillon",
+  "profileCms.builder.recovery.discard": "Supprimer la copie de récupération",
+  "profileCms.builder.recovery.failed":
+    "Ce navigateur n’a pas pu enregistrer de copie de récupération. Enregistrez un brouillon ou téléchargez le JSON avant de quitter.",
+  "profileCms.builder.recovery.unsaved": "Modifications non enregistrées",
+  "profileCms.builder.recovery.saved":
+    "Toutes les modifications sont enregistrées",
+  "profileCms.builder.recovery.leave":
+    "Quitter l’éditeur avec des modifications non enregistrées ou une opération en cours ? Une copie de récupération est conservée si le stockage du navigateur est disponible.",
+  "profileCms.builder.recovery.replace":
+    "Remplacer le contenu actuel de l’éditeur ? Enregistrez ou téléchargez d’abord vos modifications.",
+  "profileCms.builder.editor.advanced":
+    "Ce paquet contient un site personnalisé. Utilisez JSON ou Agent pour le modifier en conservant toutes les pages et ressources.",
+  "profileCms.builder.history.changed":
+    "Le site public a été mis à jour. Les visiteurs verront le changement dans quelques secondes.",
+  "profileCms.builder.publish.error.stale":
+    "Le brouillon ou le portefeuille a changé. Relancez la publication.",
+  "navigation.primary.loading.home": "Chargement de l’accueil",
+  "navigation.primary.loading.discovery": "Chargement de la découverte",
+  "navigation.primary.loading.network": "Chargement du réseau",
+  "navigation.primary.loading.collections": "Chargement des collections",
+  "navigation.primary.loading.notifications": "Chargement des notifications",
+  "headerSearch.wave.byAuthor": "par {author}",
+  "headerSearch.wave.serial": "Wave nº {serial}",
+  "headerSearch.wave.label": "Wave",
+  "waves.subwaves.accessWarning.title":
+    "Les restrictions de la wave parente s’appliquent",
+  "waves.subwaves.accessWarning.message":
+    "Certains membres de ce groupe n’ont pas accès à la wave parente et ne pourront donc pas ouvrir cette sous-wave. Vous pouvez quand même utiliser ce groupe.",
+  "waves.subwaves.accessWarning.continue": "Continuer quand même",
+  "waves.subwaves.accessWarning.back": "Retour",
+  "waves.subwaves.accessWarning.checkFailed":
+    "Impossible de vérifier l’accès à la wave parente. Veuillez réessayer.",
   "network.groupInspection.bulkRep":
     "Donner du REP à tous les profils correspondant aux critères",
   "network.groupInspection.bulkNic":
@@ -309,6 +448,10 @@ export const FR_FR_MESSAGES = {
   "profileCms.builder.gallery.review.title": "Examen de la copie d'écran",
   "profileCms.builder.gallery.settings": "Paramètres de la galerie",
   "profileCms.builder.gallery.snapshot.api": "Copie d'écran du serveur",
+  "profileCms.builder.gallery.snapshot.signInRequired":
+    "Connectez-vous pour demander un instantané de portefeuille.",
+  "profileCms.builder.gallery.snapshot.sessionExpired":
+    "Votre session n’a pas pu être vérifiée. Reconnectez-vous pour demander un instantané de portefeuille.",
   "profileCms.builder.gallery.snapshot.failed":
     "Impossible de créer la copie d'écran de la galerie.",
   "profileCms.builder.gallery.snapshot.fixture":
@@ -351,7 +494,7 @@ export const FR_FR_MESSAGES = {
   "profileCms.builder.publishState.packageHash": "Hash du paquet",
   "profileCms.builder.publishState.payloadHash": "Hash de la charge utile",
   "profileCms.builder.publishState.pending":
-    "L'enregistrement et la publication nécessitent les points de terminaison du serveur. Cette interface utilisateur ne simulera pas une publication de production.",
+    "Enregistrez un brouillon pour conserver une version modifiable. Publiez lorsque vous êtes prêt à rendre ce site public.",
   "profileCms.builder.publishState.title":
     "État du brouillon et de la publication",
   "profileCms.builder.siteSettings": "Paramètres du site",
@@ -495,6 +638,51 @@ export const FR_FR_MESSAGES = {
   "desktopUpdateToast.versionAvailable":
     "La version {version} est disponible.",
   "desktopUpdateToast.viewUpdate": "Voir la mise à jour",
+  "waves.create.dialog.subwaveOfTitle":
+    "Créer une sous-wave de « {parentWaveName} »",
+  "waves.create.overview.subwaveName": "Nom de la sous-wave",
+  "waves.create.overview.subwavePicture": "Photo de profil de la sous-wave",
+  "waves.create.overview.subwaveType": "Type de sous-wave",
+  "waves.create.overview.type": "Type de wave",
+  "waves.create.overview.subwaveTypeRequired":
+    "Veuillez choisir un type de sous-wave pour continuer.",
+  "waves.create.overview.typeRequired":
+    "Veuillez choisir un type de wave pour continuer.",
+  "waves.create.outcomes.showOutcomes": "Afficher la section Résultats du menu",
+  "waves.create.outcomes.showOutcomesDescription":
+    "Affiche l’onglet Résultats et les détails des récompenses sur les cartes du classement et des gagnants. Les récompenses restent applicables lorsqu’elles sont masquées.",
+  "waves.create.rules.title": "Directives",
+  "waves.create.rules.guidelinesFieldLabel": "Directives du chat",
+  "waves.create.rules.guidelinesDescription":
+    "Ces directives seront affichées aux utilisateurs lorsqu’ils enverront leur premier message dans le chat.",
+  "waves.create.rules.guidelinesPlaceholder":
+    "Ajoutez des directives pour le chat...",
+  "waves.create.rules.acceptanceTitle": "Règles à accepter",
+  "waves.create.rules.acceptanceDescription":
+    "Les participants doivent accepter ces règles et les signer avec leur portefeuille avant de soumettre leur contenu.",
+  "waves.create.rules.acceptancePlaceholder":
+    "Saisissez les règles à accepter avant de soumettre du contenu...",
+  "waves.create.rules.acceptanceHelper":
+    "Laissez vide si aucune règle ne nécessite de signature.",
+  "waves.create.rules.acceptanceCharacterCount": "Caractères : {count}",
+  "waves.create.review.title": "Vue d’ensemble",
+  "waves.create.review.description":
+    "Vérifiez votre wave avant de la créer. Utilisez Précédent ou les étapes terminées pour apporter des modifications.",
+  "waves.create.review.submit": "Confirmer et créer",
+  "waves.create.review.uploadsPending":
+    "Attendez la fin du téléversement des images.",
+  "waves.create.review.setup": "Configuration",
+  "waves.create.review.name": "Nom",
+  "waves.create.review.parent": "Wave parente",
+  "waves.create.review.picture": "Photo de profil de la wave",
+  "waves.create.review.manual": "Manuel",
+  "waves.create.review.outcomeType": "Type de résultat",
+  "waves.create.review.reward": "Récompense",
+  "waves.create.review.category": "Catégorie",
+  "waves.create.review.total": "Total",
+  "waves.create.review.winner": "Gagnant {position}",
+  "waves.create.review.perApprovedDrop": "Par drop approuvé",
+  "waves.create.review.outcome": "Résultat {number}",
   "waves.create.dialog.subwaveTitle": "Créer une sous-wave",
   "waves.create.dialog.waveTitle": "Créer une wave",
   "waves.create.actions.cancel": "Annuler",
@@ -515,8 +703,13 @@ export const FR_FR_MESSAGES = {
   "waves.create.groups.title": "Accès",
   "waves.create.groups.description":
     "Choisissez qui peut accéder à cette Wave, y participer et la gérer.",
-  "waves.create.groups.viewGroupName": "Visibilité",
+  "waves.create.groups.viewGroupName": "Qui peut accéder à cette Wave",
+  "waves.create.groups.accessHelper":
+    "Par défaut, toutes les personnes ayant accès peuvent participer. Vous seul pouvez administrer la Wave.",
+  "waves.create.groups.customizePermissions":
+    "Personnaliser les autres autorisations",
   "waves.create.groups.adminGroupName": "Administrateurs",
+  "waves.create.groups.currentGroup": "Avant modification",
   "waves.create.groups.currentGroupWithName": "Groupe actuel : {name}",
   "waves.create.groups.dialog.addTitle": "Ajouter un groupe",
   "waves.create.groups.dialog.changeTitle": "Changer de groupe",
@@ -566,6 +759,12 @@ export const FR_FR_MESSAGES = {
   "waves.create.groups.editAccess.confirmUseVisibility":
     "Utiliser les critères de visibilité",
   "waves.create.groups.actions.editCriteria": "Modifier les critères",
+  "waves.create.groups.actions.edit": "Modifier",
+  "waves.create.groups.actions.matchWaveAccess":
+    "Aligner sur l’accès à la wave",
+  "waves.create.groups.draft.saveChanges": "Enregistrer les modifications",
+  "waves.create.groups.draft.afterEditing": "Après modification",
+  "waves.create.groups.rules.configured": "Configuré",
   "waves.create.groups.inlineIdentities.modeLabel": "Traitement des identités",
   "waves.create.groups.inlineIdentities.included.label": "Incluses",
   "waves.create.groups.inlineIdentities.included.searchLabel":
@@ -835,6 +1034,16 @@ export const FR_FR_MESSAGES = {
   ...FR_FR_DROP_REACTION_MESSAGES,
   "waves.mobile.profileFeed.title": "Flux Profile Waves",
   "waves.mobile.profileFeed.subtitle": "Drops en vedette des profile waves",
+  "waves.header.postLabel.inProgress": "Publication en cours",
+  "waves.profileFeed.title": "Dernières publications des Profile Waves",
+  "waves.profileFeed.description":
+    "Découvrez ce que la communauté partage dans les Profile Waves.",
+  "waves.profileFeed.errorTitle":
+    "Impossible de charger les publications de profil",
+  "waves.profileFeed.errorDescription": "Actualisez cette vue pour réessayer.",
+  "waves.profileFeed.emptyTitle": "Aucune publication de profil pour le moment",
+  "waves.profileFeed.emptyDescription":
+    "Les nouvelles publications des Profile Waves des membres apparaîtront ici.",
   "waves.leaderboard.listLabel": "Drops du classement",
   "waves.leaderboard.loadingEarlier": "Chargement des drops précédents",
   "waves.leaderboard.previousLoadError":
@@ -853,6 +1062,24 @@ export const FR_FR_MESSAGES = {
   "waves.leaderboard.grid.authorProfile": "Voir le profil de {author}",
   "waves.leaderboard.grid.voters.one": "{count} votant",
   "waves.leaderboard.grid.voters.other": "{count} votants",
+  "waves.leaderboard.podium.place.first": "1er",
+  "waves.leaderboard.podium.place.second": "2e",
+  "waves.leaderboard.podium.place.third": "3e",
+  "waves.leaderboard.podium.open.first": "Ouvrir la 1re place : {name}",
+  "waves.leaderboard.podium.open.second": "Ouvrir la 2e place : {name}",
+  "waves.leaderboard.podium.open.third": "Ouvrir la 3e place : {name}",
+  "waves.leaderboard.podium.avatar": "Avatar de {name}",
+  "waves.leaderboard.podium.selfNominated": "auto-nommé",
+  "waves.leaderboard.podium.nominatedBy": "nommé par {nominator}",
+  "waves.leaderboard.podium.outcome": "Résultat",
+  "waves.leaderboard.podium.empty.title": "Aucun gagnant à afficher",
+  "waves.leaderboard.podium.empty.description":
+    "Cette wave s’est terminée sans aucune soumission",
+  "waves.voteDetails.title": "Votes",
+  "waves.voteDetails.trigger.one":
+    "Voir les votants et le journal pour {count} votant",
+  "waves.voteDetails.trigger.other":
+    "Voir les votants et le journal pour {count} votants",
   "waves.leaderboard.grid.you": "Vous",
   "waves.leaderboard.grid.votesNow": "Votes actuels",
   "waves.leaderboard.grid.status.approved": "Approuvé",
@@ -998,6 +1225,8 @@ export const FR_FR_MESSAGES = {
   "notifications.filter.ariaLabel": "Filtrer les notifications : {selection}",
   "notifications.filter.selected": "{count} sélectionnées",
   "notifications.filter.sheetTitle": "Filtrer les notifications",
+  "notifications.status.unread": "Non lu",
+  "notifications.preview.expand": "Afficher le drop complet",
   "notifications.filter.option.mentions": "Mentions",
   "notifications.filter.option.replies": "Réponses",
   "notifications.filter.option.identity": "Identité",

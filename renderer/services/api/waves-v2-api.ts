@@ -155,7 +155,7 @@ export function getWavesV2OverviewQueryKeyParams({
 const getWaveOverviewContext = (wave: ApiWaveOverview) =>
   wave.context_profile_context;
 
-const mapApiWaveOverviewToSidebarWave = (
+export const mapApiWaveOverviewToSidebarWave = (
   wave: ApiWaveOverview
 ): SidebarWave => {
   const context = getWaveOverviewContext(wave);
@@ -452,7 +452,10 @@ async function searchLegacyWavesByName({
     headers,
   });
 
-  return waves.map(mapApiWaveToSidebarWave);
+  return waves.map((wave) => ({
+    ...mapApiWaveToSidebarWave(wave),
+    creator: wave.author,
+  }));
 }
 
 const WAVE_SEARCH_UNAVAILABLE_MESSAGE =

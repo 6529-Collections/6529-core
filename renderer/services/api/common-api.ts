@@ -693,6 +693,7 @@ export const commonApiPut = async <T, U, Z = Record<string, string>>(param: {
   headers?: Record<string, string> | undefined;
   params?: Z | undefined;
   signal?: AbortSignal | undefined;
+  errorMode?: ApiErrorMode | undefined;
 }): Promise<U> => {
   const url = buildUrl(
     param.endpoint,
@@ -705,6 +706,7 @@ export const commonApiPut = async <T, U, Z = Record<string, string>>(param: {
     headers: getHeaders(param.headers, true),
     body: JSON.stringify(param.body),
     signal: param.signal,
+    errorMode: param.errorMode,
   });
 };
 
@@ -714,6 +716,7 @@ export const commonApiPatch = async <T, U, Z = Record<string, string>>(param: {
   headers?: Record<string, string> | undefined;
   params?: Z | undefined;
   signal?: AbortSignal | undefined;
+  errorMode?: ApiErrorMode | undefined;
 }): Promise<U> => {
   const url = buildUrl(
     param.endpoint,
@@ -726,6 +729,7 @@ export const commonApiPatch = async <T, U, Z = Record<string, string>>(param: {
     headers: getHeaders(param.headers, true),
     body: JSON.stringify(param.body),
     signal: param.signal,
+    errorMode: param.errorMode,
   });
 };
 
