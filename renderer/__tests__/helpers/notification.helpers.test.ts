@@ -1,3 +1,6 @@
+import { ApiAttachmentKind } from "@/generated/models/ApiAttachmentKind";
+import { ApiAttachmentStatus } from "@/generated/models/ApiAttachmentStatus";
+import { ApiAttachmentUploadMimeType } from "@/generated/models/ApiAttachmentUploadMimeType";
 import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
 import { generateNotificationData } from "@/helpers/notification.helpers";
 import type { ApiNotification } from "@/generated/models/ApiNotification";
@@ -145,4 +148,35 @@ describe("outgoing native notification previews", () => {
       generateNotificationData(notification, emptyEmojiResolvers)?.body
     ).toBe("View drop");
   });
+});
+
+it("preserves attachment filenames literally in outgoing notification content", () => {
+  const notification = createDropReactedNotification(":white_check_mark:");
+  const part = notification.related_drops[0].parts[0];
+  part.content = "![image](https://example.com/x)";
+  part.attachments = [
+    {
+      attachment_id: "attachment-1",
+      file_name: "@[draft]_:wave:.pdf",
+      mime_type: ApiAttachmentUploadMimeType.ApplicationPdf,
+      kind: ApiAttachmentKind.Pdf,
+      status: ApiAttachmentStatus.Ready,
+    },
+  ];
+  const data = generateNotificationData(notification, emptyEmojiResolvers);
+  expect(data?.body).toBe("@[draft]_:wave:.pdf");
+  expect(data?.title).toBe("prxt0 reacted ✅");
+});
+
+it("sends later readable content instead of an earlier part's attachment fallback", () => {
+  const notification = createDropReactedNotification("✅");
+  const part = notification.related_drops[0].parts[0];
+  part.content = "![image](https://example.com/x)";
+  notification.related_drops[0].parts.push({
+    ...part,
+    content: "**Hi** @[prxt0] :wave:",
+  });
+  expect(
+    generateNotificationData(notification, emptyEmojiResolvers)?.body
+  ).toBe("Hi @prxt0 👋");
 });

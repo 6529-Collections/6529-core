@@ -87,11 +87,15 @@ export function generateNotificationData(
     return { text: `'${normalizedReaction}'` };
   };
 
+  let isLiteralDropPreview = false;
+
   const getDropContent = (dropIndex: number = 0): string | null => {
     if (!notification.related_drops?.length) return null;
     const drop = notification.related_drops[dropIndex];
     if (!drop) return null;
-    return getDesktopDropPreview(drop.parts);
+    const preview = getDesktopDropPreview(drop.parts);
+    isLiteralDropPreview = preview !== null && preview.kind !== "content";
+    return preview?.text ?? null;
   };
 
   const getWavesRedirect = (dropIndex: number = 0): string => {
@@ -277,7 +281,9 @@ export function generateNotificationData(
   }
 
   let title = emojify(notificationData.title.replace(/@\[(.+?)\]/g, "@$1"));
-  let body = emojify(notificationData.body.replace(/@\[(.+?)\]/g, "@$1"));
+  const body = isLiteralDropPreview
+    ? notificationData.body
+    : emojify(notificationData.body.replace(/@\[(.+?)\]/g, "@$1"));
 
   return {
     title,

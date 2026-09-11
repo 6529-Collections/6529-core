@@ -139,18 +139,27 @@ interface PreviewPart {
   media?: readonly { mime_type: string }[];
 }
 
+export interface DesktopDropPreview {
+  text: string;
+  kind: "content" | "attachment" | "media";
+}
+
 /** Convert complete Markdown before native OS clipping; keep fallbacks literal. */
 export function getDesktopDropPreview(
   parts: readonly PreviewPart[] = [],
-): string | null {
-  const part = parts.find((item) => item.content) ?? parts[0];
-  const text = formatDesktopNotificationMarkdown(part?.content ?? "");
-  if (text) return text;
+): DesktopDropPreview | null {
+  for (const part of parts) {
+    const text = formatDesktopNotificationMarkdown(part.content ?? "");
+    if (text) return { text, kind: "content" };
+  }
   const attachments = parts.flatMap((item) => item.attachments ?? []);
   if (attachments.length) {
-    return attachments.map((item) => item.file_name).join(", ");
+    return {
+      text: attachments.map((item) => item.file_name).join(", "),
+      kind: "attachment",
+    };
   }
   const media = parts.flatMap((item) => item.media ?? []);
-  if (media.length) return "Media attachment";
+  if (media.length) return { text: "Media attachment", kind: "media" };
   return null;
 }

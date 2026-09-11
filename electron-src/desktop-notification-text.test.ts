@@ -53,28 +53,46 @@ test("parses complete links before native clipping and retains long readable tex
 });
 
 test("preserves literal attachment fallbacks and default fallback eligibility", () => {
-  assert.equal(
+  assert.deepEqual(
     getDesktopDropPreview([
       {
         content: "![image](https://example.com/x)",
         attachments: [{ file_name: "my_**file**.pdf" }],
       },
     ]),
-    "my_**file**.pdf",
+    { text: "my_**file**.pdf", kind: "attachment" },
   );
-  assert.equal(
+  assert.deepEqual(
     getDesktopDropPreview([
       {
         content: "> ![image](https://example.com/x)",
         media: [{ mime_type: "image/png" }],
       },
     ]),
-    "Media attachment",
+    { text: "Media attachment", kind: "media" },
   );
-  assert.equal(getDesktopDropPreview([{ content: "---" }]), null);
-  assert.equal(getDesktopDropPreview(), null);
-  assert.equal(
+  assert.deepEqual(getDesktopDropPreview([{ content: "---" }]), null);
+  assert.deepEqual(getDesktopDropPreview(), null);
+  assert.deepEqual(
     getDesktopDropPreview([{ content: "" }, { content: "**second**" }]),
-    "second",
+    { text: "second", kind: "content" },
   );
 });
+
+for (const content of [
+  "![image](https://example.com/x)",
+  "---",
+  " ",
+  "x".repeat(25001),
+]) {
+  test(`selects later readable content after ${content.slice(0, 30)}`, () => {
+    assert.deepEqual(
+      getDesktopDropPreview([
+        { content, attachments: [{ file_name: "fallback.pdf" }] },
+        { content: "**second**" },
+        { content: "third" },
+      ]),
+      { text: "second", kind: "content" },
+    );
+  });
+}
