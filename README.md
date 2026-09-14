@@ -4,6 +4,19 @@
 
 6529 Desktop App supporting Windows, MacOS and Linux
 
+## Native notification previews
+
+Desktop notifications on Windows, macOS, and Linux show readable plain text
+from drop Markdown. Headings, list bullets and numbering, link labels, mentions,
+emoji, and code remain readable. Emphasis and strikethrough markers, media URLs,
+and empty lines are removed. Blockquotes use curly double quotes (alternating
+with single quotes when nested); inline code uses curly single quotes. Multiline
+code remains plain text.
+
+Formatting happens before the operating system clips the preview. Empty previews
+show attachment filenames, a media attachment label, or the usual default message.
+Drop content and Markdown rendering inside the app are unchanged.
+
 ## Structure
 
 ### electron-src
