@@ -1,3 +1,5 @@
+import artworkShareMessages from "@/i18n/messages/artworkShare.en-US.json";
+import profileCmsAgentMessages from "@/i18n/messages/profileCmsAgent.en-US.json";
 import studioTemplateDescriptions from "@/i18n/messages/studioTemplateDescriptions.en-US.json";
 import profileCmsStudioUploadMessages from "@/i18n/messages/profileCmsStudioUpload.en-US.json";
 import studioWalletImportMessages from "@/i18n/messages/studioWalletImport.en-US.json";
@@ -13,6 +15,7 @@ import {
   MARKET_DEPTH_MESSAGES,
   THE_MEMES_DETAIL_ACTIVITY_MESSAGES,
   THE_MEMES_DETAIL_ART_MESSAGES,
+  THE_MEMES_DETAIL_ARTIST_WORKS_MESSAGES,
   THE_MEMES_DETAIL_LIVE_MESSAGES,
   THE_MEMES_DETAIL_REFERENCES_MESSAGES,
   THE_MEMES_DETAIL_TIMELINE_MESSAGES,
@@ -37,13 +40,17 @@ import { EN_US_PAGINATION_MESSAGES } from "@/i18n/messages/pagination";
 import profileCmsArtDisplayMessages from "@/i18n/messages/profileCmsArtDisplay.en-US.json";
 import { EN_US_THE_MEMES_COLLECTORS_MESSAGES } from "@/i18n/messages/the-memes-collectors";
 import { TRANSFER_MESSAGES } from "@/i18n/messages/transfer";
+import { THE_MEMES_MINT_SUCCESS_MESSAGES } from "@/i18n/messages/the-memes-mint-success";
+import { THE_MEMES_MINT_PROGRESS_MESSAGES } from "@/i18n/messages/the-memes-mint-progress";
 import { PUBLIC_REVIEW_MESSAGES } from "@/i18n/messages/public-review";
 import { CONTENT_MODERATION_MESSAGES } from "@/i18n/messages/content-moderation";
+import { MODERATION_CHECK_MESSAGES } from "@/i18n/messages/moderation-checks";
 import { EULA_MESSAGES } from "@/i18n/messages/eula";
 import { PROFILE_CURATION_MESSAGES } from "@/i18n/messages/profile-curation";
 import { ARTWORK_DOCUMENTATION_MESSAGES } from "@/i18n/messages/artwork-documentation";
 import { ARTWORK_DOCUMENTATION_INTEGRATION_MESSAGES } from "@/i18n/messages/artwork-documentation-integration";
 import { COLLECT_MESSAGES } from "@/i18n/messages/collect";
+import { COLLECT_TDH_TARGET_MESSAGES } from "@/i18n/messages/collect-tdh-target";
 
 type MessageEntry = readonly [key: string, value: string];
 
@@ -503,6 +510,21 @@ const MEMES_QUICK_VOTE_MESSAGES = objectMessages("memes.quickVote", {
 } as const);
 
 const MEMES_SUBMISSION_MESSAGES = objectMessages("memes.submission", {
+  "agreement.changed":
+    "The submission destination or terms changed. Review and agree again to continue. Your artwork draft has been kept.",
+  "agreement.reviewRequired":
+    "Review and agree to the current submission terms before submitting. Your artwork draft has been kept.",
+  "signing.notice": "Wallet signature · No gas fee",
+  "signing.explain": "What to expect",
+  "signing.title": "What will my wallet show?",
+  "signing.review":
+    "Look for “Submit a Meme Card to The Memes” and check your artwork title and submission terms.",
+  "signing.metamask": "MetaMask",
+  "signing.metamaskDescription": "Shows the message as labeled fields.",
+  "signing.rabby": "Rabby",
+  "signing.rabbyDescription":
+    "May show the message as raw data with “Unknown Signature Type”. Review the message details before signing.",
+  "signing.mismatch": "Cancel if the details do not match your submission.",
   "media.missingUpload": "Select artwork or choose Interactive HTML.",
   "media.missingInteractive": "Enter a valid hash or choose Upload File.",
   "identity.connectPrompt":
@@ -2884,8 +2906,11 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  ...artworkShareMessages,
   ...COLLECT_MESSAGES,
+  ...COLLECT_TDH_TARGET_MESSAGES,
   ...profileCmsStudioMessages,
+  ...profileCmsAgentMessages,
   ...studioTemplateDescriptions,
   ...profileCmsStudioUploadMessages,
   ...studioWalletImportMessages,
@@ -3063,13 +3088,18 @@ export const EN_US_MESSAGES = {
   "auth.sessionUpgrade.action": "Upgrade Authentication",
   "auth.signModal.connectionUpdateRequired": "Connection Update Required",
   "auth.signModal.upgradeAuthentication": "Upgrade Authentication",
-  "auth.signModal.authenticationRequest": "Sign Authentication Request",
+  "waves.signIn.post": "Sign in to 6529 to post",
+  "waves.signIn.newHere":
+    "New here? Sign a message with your wallet to get started.",
+  "auth.signModal.authenticationRequest": "Sign in to 6529",
+  "auth.signModal.cancelSignIn": "Cancel sign-in",
+  "auth.signModal.walletAddress": "Wallet address",
+  "auth.signModal.noTransaction": "No transaction or gas fees.",
   "auth.signModal.connectionShareLead":
     "This shared connection uses the previous authentication flow. Reshare the connection from a device that is already signed in with the new authentication.",
   "auth.signModal.sessionUpgradeLead":
     "We have upgraded wallet authentication. Sign once to move this connected wallet to the new secure session.",
-  "auth.signModal.authLead":
-    "To connect your wallet, you will need to sign a message to confirm your identity.",
+  "auth.signModal.authLead": "Sign a message to confirm this address is yours.",
   "auth.signModal.connectionSharePrimary":
     "Use connection sharing from an active session-v2 web connection, then open the new shared connection on this device.",
   "auth.signModal.disconnectedUpgradePrimary":
@@ -3093,11 +3123,11 @@ export const EN_US_MESSAGES = {
   "auth.signModal.noGas":
     "Your signature will not cost any gas and is purely for authentication purposes.",
   "auth.signModal.connect": "Connect",
-  "auth.signModal.sign": "Sign",
+  "auth.signModal.sign": "Sign message",
   "auth.signModal.learnMore": "Learn more about this update",
   "auth.signModal.remindLater": "Remind me later",
   "auth.signModal.cancel": "Cancel",
-  "auth.signModal.confirmInWallet": "Confirm in your wallet",
+  "auth.signModal.confirmInWallet": "Check your wallet…",
   "header.connector.seedWallet.active": "Connected · Active",
   "header.connector.seedWallet.switch": "Connected · Switch",
   "header.connector.seedWallet.activeAria":
@@ -3517,7 +3547,8 @@ export const EN_US_MESSAGES = {
   "theMemes.detail.history.ariaLabel": "Meme history sections",
   "theMemes.detail.tabs.overview": "Overview",
   "theMemes.detail.tabs.yourCards": "Your Cards",
-  "theMemes.detail.tabs.theArt": "The Art",
+  "theMemes.detail.tabs.details": "Details",
+  "nftDetail.tabs.loading": "Loading section…",
   "theMemes.detail.tabs.references": "References",
   "theMemes.detail.tabs.collectors": "Collectors",
   "theMemes.detail.tabs.history": "History",
@@ -3530,6 +3561,7 @@ export const EN_US_MESSAGES = {
   ...THE_MEMES_DETAIL_ACTIVITY_MESSAGES,
   ...THE_MEMES_DETAIL_TIMELINE_MESSAGES,
   ...THE_MEMES_DETAIL_REFERENCES_MESSAGES,
+  ...THE_MEMES_DETAIL_ARTIST_WORKS_MESSAGES,
   ...THE_MEMES_DETAIL_ART_MESSAGES,
   ...TIMELINE_MESSAGES,
   ...MEME_CALENDAR_MESSAGES,
@@ -4223,7 +4255,10 @@ export const EN_US_MESSAGES = {
   ...WAVE_POLL_MESSAGES,
   ...WAVE_SUBMISSION_BUTTON_LABEL_MESSAGES,
   ...TRANSFER_MESSAGES,
+  ...THE_MEMES_MINT_SUCCESS_MESSAGES,
+  ...THE_MEMES_MINT_PROGRESS_MESSAGES,
   ...CONTENT_MODERATION_MESSAGES,
+  ...MODERATION_CHECK_MESSAGES,
 } as const;
 
 export type MessageKey = keyof typeof EN_US_MESSAGES;
