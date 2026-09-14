@@ -35,3 +35,7 @@ layout while excluding tests; both platform build scripts and the desktop
 contract guard require that boundary. Pure renderer contract modules imported
 by Electron tests must stay free of `viem`, `ox`, and other frontend dependency
 source so the test-inclusive Electron type-check remains isolated too.
+
+Tracked follow-ups:
+
+- [Desktop notification localization follow-up](desktop-notification-localization.md)
