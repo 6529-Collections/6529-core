@@ -252,7 +252,6 @@ jobs:
     permissions:
       contents: read
       actions: none
-      packages: read
     steps:
       - name: Require authenticated controller dispatch before source checkout
         env:
@@ -406,12 +405,11 @@ jobs:
         id: install_frozen
         working-directory: source
         env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
           SFW_BIN: ${{ steps.socket_firewall.outputs.firewall-path-binary }}
         run: |
           set -euo pipefail
           test "$(pnpm --version)" = "10.33.0"
-          ./bin/6529 install:frozen
+          ./bin/6529 ci
 
       - name: Finish dependency timing
         if: always()

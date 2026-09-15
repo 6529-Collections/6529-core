@@ -4,6 +4,12 @@ Agents and developers deploy with ordinary merges and the repository's GitHub
 Actions workflows. Use the phase authorized by the user; a staging request does
 not authorize production.
 
+For a new staging or direct production release intent that includes frontend,
+follow [Coordinator release recording](../../skills/deploy-6529/SKILL.md#coordinator-release-recording)
+after authorization, scope, and exact release inputs are established, before any
+merge or deployment. Use the same recording outcome for retries, resumes, and
+promotion; the skill defines submission and failure handling.
+
 | Target     | Frontend                                                                       | Backend                                                                                                         |
 | ---------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
 | Staging    | Merge into `1a-staging` and push; `Web Deploy - STAGING` starts automatically. | Merge into `1a-staging`, then dispatch `Deploy a service` for each required service with `environment=staging`. |
@@ -38,6 +44,19 @@ actual deployment.
   run. Wait for that work to finish when the environment would conflict.
 
 ## Workflow dispatch examples
+
+Production E2E also runs a daily read-only canary at 05:30 UTC. It resolves the
+most recently started successful production deployment, verifies its canonical
+deploy job and current live version, and checks out that exact source before
+running the manifest's production `cron` packs. It shares the post-deploy E2E
+concurrency group, installation steps, publication provenance, and artifacts.
+The canary runs the full cron set regardless of the previous deployment's change
+scope; only failures notify the shared CI wave receiver.
+
+To rerun that canary, dispatch Production E2E on `main` with `scope=canary` and
+the successful deployment run ID in `automatic_deploy_run_id`. The default
+`post-deploy` scope preserves ordinary deployment validation. Both modes reject
+a selected deployment that is no longer live.
 
 Run these only after the corresponding merge and within the authorized scope.
 Select the service needed by the change; `api` below is an example.

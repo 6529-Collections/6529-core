@@ -1,5 +1,11 @@
 import { publicEnv } from "@/config/env";
+import { getUsableText } from "@/app/api/og-metadata/_lib/imageUtils";
 import { MEMELAB_CONTRACT } from "@/constants/constants";
+import {
+  getNftCanonicalPath,
+  getNftFocusPolicy,
+  type NftCollectionRoute,
+} from "@/helpers/seo/nft-route-policy";
 import type { DBResponse } from "@/entities/IDBResponse";
 import type { BaseNFT } from "@/entities/INFT";
 import { areEqualAddresses, idStringToDisplay } from "@/helpers/Helpers";
@@ -22,6 +28,7 @@ export enum MEME_FOCUS {
   LIVE = "live",
   YOUR_CARDS = "your-cards",
   THE_ART = "the-art",
+  MARKET = "listings-and-offers",
   REFERENCES = "references",
   COLLECTORS = "collectors",
   HISTORY = "history",
@@ -50,7 +57,9 @@ export function getMemeFocusLabel(
     case MEME_FOCUS.YOUR_CARDS:
       return t(locale, "theMemes.detail.tabs.yourCards");
     case MEME_FOCUS.THE_ART:
-      return t(locale, "theMemes.detail.tabs.theArt");
+      return t(locale, "theMemes.detail.tabs.overview");
+    case MEME_FOCUS.MARKET:
+      return t(locale, "marketDepth.disclosure");
     case MEME_FOCUS.REFERENCES:
       return t(locale, "theMemes.detail.tabs.references");
     case MEME_FOCUS.COLLECTORS:
@@ -71,7 +80,7 @@ export function getMemeFocusLabel(
 export const MEME_TABS: MemeTab[] = [
   { focus: MEME_FOCUS.LIVE },
   { focus: MEME_FOCUS.YOUR_CARDS },
-  { focus: MEME_FOCUS.THE_ART },
+  { focus: MEME_FOCUS.MARKET },
   { focus: MEME_FOCUS.REFERENCES },
   { focus: MEME_FOCUS.COLLECTORS },
   { focus: MEME_FOCUS.HISTORY },
@@ -92,15 +101,18 @@ async function getMetadataProps(
   prefetchedNft?: PrefetchedNft
 ) {
   let urlPath = "nfts";
+  let collectionRoute: NftCollectionRoute = "the-memes";
   const idDisplay = idStringToDisplay(id);
   let collection = "The Memes";
   let name = `The Memes #${idDisplay}`;
-  let description = "Collections";
   if (areEqualAddresses(contract, MEMELAB_CONTRACT)) {
     urlPath = "nfts_memelab";
+    collectionRoute = "meme-lab";
     collection = "Meme Lab";
     name = `Meme Lab #${idDisplay}`;
   }
+  const collectionLabel = name;
+  let description = collectionLabel;
   const query = new URLSearchParams({ contract, id }).toString();
   let artist: string | null = null;
   let image: string | null = null;
@@ -113,14 +125,13 @@ async function getMetadataProps(
       nft = Array.isArray(response.data) ? response.data[0] : undefined;
     }
     if (nft && typeof nft.name === "string" && nft.name.trim().length > 0) {
-      description = `${name} | ${description}`;
       name = nft.name;
-      artist = nft.artist ?? null;
-      if (nft.thumbnail) {
-        image = nft.thumbnail;
-      } else if (nft.image) {
-        image = nft.image;
-      }
+      artist = getUsableText(nft.artist);
+      description = [name, artist, collectionLabel].filter(Boolean).join(" · ");
+      image =
+        getUsableText(nft.scaled) ??
+        getUsableText(nft.image) ??
+        getUsableText(nft.thumbnail);
     }
   } catch (error) {
     console.warn("Failed to fetch NFT metadata for social card", {
@@ -130,10 +141,12 @@ async function getMetadataProps(
     });
   }
 
-  if (focus && focus !== MEME_FOCUS.LIVE) {
-    if (isMemeFocus(focus)) {
-      name = `${name} | ${getMemeFocusLabel(focus, locale)}`;
-    }
+  const canonicalFocus = getNftFocusPolicy(
+    collectionRoute,
+    focus
+  ).canonicalFocus;
+  if (canonicalFocus && isMemeFocus(canonicalFocus)) {
+    name = `${name} | ${getMemeFocusLabel(canonicalFocus, locale)}`;
   } else if (isDistribution) {
     name = `${name} | ${t(locale, "distribution.title")}`;
   }
@@ -148,7 +161,6 @@ async function getMetadataProps(
       contract,
       id,
       image,
-      subtitle: description,
       title: name,
     }),
     ogImageAlt: `${name} social card`,
@@ -172,13 +184,29 @@ export async function getSharedAppServerSideProps(
     prefetchedNft
   );
 
+  const collection: NftCollectionRoute = areEqualAddresses(
+    contract,
+    MEMELAB_CONTRACT
+  )
+    ? "meme-lab"
+    : "the-memes";
+  const focusPolicy = getNftFocusPolicy(collection, focus);
+
   return getAppMetadata(
     getLargeSocialCardMetadata({
       title,
       description,
       ogImage,
       ogImageAlt,
-    })
+    }),
+    {
+      canonicalPath: getNftCanonicalPath({
+        collection,
+        id,
+        requestedFocus: focus,
+      }),
+      robots: { index: focusPolicy.indexable, follow: true },
+    }
   );
 }
 
@@ -196,8 +224,9 @@ export function getMemeTabTitle(
   if (nft) {
     t = `${nft.name} | ${t}`;
   }
-  if (focus && focus !== MEME_FOCUS.LIVE) {
-    t = `${t} | ${getMemeFocusLabel(focus, locale)}`;
+  const canonicalFocus = getNftFocusPolicy("the-memes", focus).canonicalFocus;
+  if (canonicalFocus && isMemeFocus(canonicalFocus)) {
+    t = `${t} | ${getMemeFocusLabel(canonicalFocus, locale)}`;
   }
   return t;
 }

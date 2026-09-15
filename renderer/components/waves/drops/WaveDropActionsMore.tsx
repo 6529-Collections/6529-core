@@ -6,7 +6,10 @@ import CommonAnimationWrapper from "@/components/utils/animation/CommonAnimation
 import CommonDropdownItemsDefaultWrapper from "@/components/utils/select/dropdown/CommonDropdownItemsDefaultWrapper";
 import { useAuth } from "@/components/auth/Auth";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { useCanShowDropCurationsAction } from "@/hooks/drops/useCanShowDropCurationsAction";
+import {
+  type QuickCurationAction,
+  useCanShowDropCurationsAction,
+} from "@/hooks/drops/useCanShowDropCurationsAction";
 import { useDropCurationMembershipMutation } from "@/hooks/drops/useDropCurationMembershipMutation";
 import { useDropInteractionRules } from "@/hooks/drops/useDropInteractionRules";
 import { getProfileWaveIdentity } from "@/hooks/useProfileWave";
@@ -18,7 +21,7 @@ import {
   XMarkIcon,
 } from "@heroicons/react/24/outline";
 import { useRef, useState } from "react";
-import { Tooltip } from "react-tooltip";
+import DropActionTooltip from "./DropActionTooltip";
 import WaveDropActionsCopyLink from "./WaveDropActionsCopyLink";
 import WaveDropActionsCopyText from "./WaveDropActionsCopyText";
 import WaveDropCurationsActionIcon from "./WaveDropCurationsActionIcon";
@@ -30,17 +33,23 @@ import WaveDropActionsRestoreLinkPreviews from "./WaveDropActionsRestoreLinkPrev
 import WaveDropActionsSetPinnedDrop from "./WaveDropActionsSetPinnedDrop";
 import ContentModerationDropActions from "@/components/content-moderation/ContentModerationDropActions";
 import ReportDropModal from "@/components/content-moderation/ReportDropModal";
+import WaveDropDocumentationAction from "./WaveDropDocumentationAction";
 
 interface WaveDropActionsMoreProps {
   readonly drop: ExtendedDrop;
   readonly onOpenChange?: (isOpen: boolean) => void;
   readonly showOnlyQuickRemove?: boolean | undefined;
+  readonly standaloneQuickRemoveCuration?:
+    | QuickCurationAction
+    | null
+    | undefined;
 }
 
 export default function WaveDropActionsMore({
   drop,
   onOpenChange,
   showOnlyQuickRemove = false,
+  standaloneQuickRemoveCuration = null,
 }: WaveDropActionsMoreProps) {
   const { connectedProfile } = useAuth();
   const locale = useBrowserLocale();
@@ -50,16 +59,24 @@ export default function WaveDropActionsMore({
   const [isReportOpen, setIsReportOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { canDelete, canSetPinnedDrop } = useDropInteractionRules(drop);
-  const { showManageCurations, quickAddCuration, quickRemoveCuration } =
-    useCanShowDropCurationsAction({
-      dropId: drop.id,
-      waveId: drop.wave.id,
-      profileIdentity: getProfileWaveIdentity(connectedProfile),
-      isTemporaryDrop: drop.id.startsWith("temp-"),
-      isWaveAdmin: drop.wave.authenticated_user_admin === true,
-      enabled:
-        (isOpen || isCurationsDialogOpen) && Boolean(connectedProfile?.handle),
-    });
+  const {
+    showManageCurations,
+    quickAddCuration,
+    quickRemoveCuration: availableQuickRemoveCuration,
+  } = useCanShowDropCurationsAction({
+    dropId: drop.id,
+    waveId: drop.wave.id,
+    profileIdentity: getProfileWaveIdentity(connectedProfile),
+    isTemporaryDrop: drop.id.startsWith("temp-"),
+    isWaveAdmin: drop.wave.authenticated_user_admin === true,
+    enabled:
+      !showOnlyQuickRemove &&
+      (isOpen || isCurationsDialogOpen) &&
+      Boolean(connectedProfile?.handle),
+  });
+  const quickRemoveCuration = showOnlyQuickRemove
+    ? standaloneQuickRemoveCuration
+    : availableQuickRemoveCuration;
   const { updateMembershipAsync } = useDropCurationMembershipMutation({
     dropId: drop.id,
     waveId: drop.wave.id,
@@ -111,43 +128,33 @@ export default function WaveDropActionsMore({
     }
   };
 
+  if (
+    showOnlyQuickRemove &&
+    (!quickRemoveCuration || drop.id.startsWith("temp-"))
+  ) {
+    return null;
+  }
+
   return (
     <>
-      <button
-        ref={buttonRef}
-        className="tw-flex tw-size-8 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-400 tw-transition-colors tw-duration-200 tw-ease-out desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-200"
-        onClick={(event) => {
-          event.stopPropagation();
-          handleOpenChange(!isOpen);
-        }}
-        aria-label="More actions"
-        aria-haspopup="true"
-        aria-expanded={isOpen}
-        data-tooltip-id={`more-actions-${drop.id}`}
+      <DropActionTooltip
+        content={<span className="tw-text-xs">More</span>}
+        disabled={isOpen}
       >
-        <EllipsisVerticalIcon className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-transition tw-duration-300 tw-ease-out" />
-      </button>
-      {!isOpen && (
-        <Tooltip
-          id={`more-actions-${drop.id}`}
-          place="top"
-          offset={8}
-          opacity={1}
-          style={{
-            padding: "4px 8px",
-            background: "#37373E",
-            color: "white",
-            fontSize: "13px",
-            fontWeight: 500,
-            borderRadius: "6px",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-            zIndex: 99999,
-            pointerEvents: "none",
+        <button
+          ref={buttonRef}
+          className="tw-flex tw-size-8 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-400 tw-transition-colors tw-duration-200 tw-ease-out desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-iron-200"
+          onClick={(event) => {
+            event.stopPropagation();
+            handleOpenChange(!isOpen);
           }}
+          aria-label="More actions"
+          aria-haspopup="true"
+          aria-expanded={isOpen}
         >
-          <span className="tw-text-xs">More</span>
-        </Tooltip>
-      )}
+          <EllipsisVerticalIcon className="tw-h-5 tw-w-5 tw-flex-shrink-0 tw-transition tw-duration-300 tw-ease-out" />
+        </button>
+      </DropActionTooltip>
       <CommonDropdownItemsDefaultWrapper
         isOpen={isOpen}
         setOpen={handleOpenChange}
@@ -237,6 +244,12 @@ export default function WaveDropActionsMore({
                   isDropdownItem={true}
                   onOpen={closeDropdown}
                 />
+                {isOpen && (
+                  <WaveDropDocumentationAction
+                    drop={drop}
+                    onSelected={closeDropdown}
+                  />
+                )}
                 {canSetPinnedDrop && (
                   <WaveDropActionsSetPinnedDrop
                     drop={drop}

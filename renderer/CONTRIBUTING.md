@@ -42,22 +42,17 @@ Open a new shell, or activate the wrapper in the current shell:
 source <(./bin/6529 bootstrap --print-export)
 ```
 
-The dependency set includes one private GitHub Package. Create a GitHub PAT
-classic with `read:packages` only and authorize organization SSO when required.
-The runtime `NODE_AUTH_TOKEN` needs read-only GitHub Packages access. For a
-normal interactive install, run:
+Dependencies, including `@6529-collections/release-request`, come from public
+npm. No package token or private-registry setup is required. Install the exact
+lockfile through the existing secure wrapper:
 
 ```bash
-6529 install
+6529 ci
 ```
 
-If `NODE_AUTH_TOKEN` is not already set, the wrapper asks for it silently and
-keeps it only for that command. CI and other non-interactive shells must supply
-`NODE_AUTH_TOKEN` at runtime. Do not store it in the repository or
-package-manager configuration. See
+See
 [pnpm and Socket Firewall](ops/docs/developer/pnpm-and-socket-firewall.md) for
-the one-time Codex Keychain setup, the exact package-routing boundary, and other
-authenticated package commands.
+the package command boundary and dependency security checks.
 
 Create a local `.env` file from [.env.sample](.env.sample), then start the app:
 
@@ -98,6 +93,38 @@ Useful commands:
 `lint:changed` runs the tight ESLint rules through `eslint.config.diff.mjs`,
 reporting only lines changed from the branch's merge base with `origin/main`.
 Legacy violations on untouched lines do not block a focused contribution.
+
+Changed-file lint and format commands use a Node runner to select files and
+split large lists into bounded chunks before invoking the installed tools.
+Paths with spaces, brackets, and parentheses stay intact, including when pnpm
+uses the default Windows shell. An empty change set skips the tool, and any
+failing chunk makes the command fail.
+
+E2E selectors have a separate gate: `6529 run lint:e2e-selectors` checks all
+JavaScript and TypeScript under `tests/` and `e2e/`, including helpers and TSX.
+Start element queries with `getByRole`, `getByLabel`, or another Playwright
+`getBy*` query; `getByTestId` is also supported, though it does not establish
+accessibility. CSS/XPath narrowing may follow that query in the same chain,
+for example `page.getByRole("button", { name: "Save" }).locator("svg")`.
+Standalone `html`, `body`, `head`, and `meta[name="..."]` or
+`meta[property="..."]` selectors are explicit document-state exceptions.
+
+The gate reads existing violations from the Git merge base with `origin/main`
+(CI supplies its exact base SHA). It allows only the same call text and count
+in the same file. New or duplicated calls in an old file fail; deleted calls
+lose their allowance once merged. Moving a call to another file or changing
+its formatting requires migrating that call too. There is no editable legacy
+allowlist, and inline ESLint disables cannot bypass this gate. The rule checks
+direct `.locator()` calls regardless of receiver name, including template and
+dynamic arguments; it does not perform Page type inference or resolve method
+aliases. Keep narrowing in a direct accessible chain so the scope is visible
+to both readers and the rule. Run `6529 run test:e2e-selectors` when changing
+this policy.
+
+Same-repository PRs run both selector commands in the installed quality lane.
+Fork PRs retain the existing untrusted-PR policy and skip installed app checks;
+run the commands locally and validate the contribution on a maintainer-owned
+branch before merging. This gate does not expand dependency execution on forks.
 
 Use focused checks for narrow changes. Use `6529 run build` when changes touch
 build-time behavior, generated API models, Next.js configuration, routing, or

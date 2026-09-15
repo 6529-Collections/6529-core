@@ -148,7 +148,7 @@ const getColorClasses = ({
     const ringClasses = isWaveView
       ? ""
       : "tw-ring-1 tw-ring-inset tw-ring-iron-800";
-    const bgClass = isWaveView ? "" : "tw-bg-iron-950/80";
+    const bgClass = isWaveView ? "" : "tw-bg-iron-950";
 
     return `${bgClass} ${ringClasses} ${hoverClass}`.trim();
   }
@@ -694,7 +694,7 @@ const getContentBlock = ({
     >
       {showAuthorInfo && (
         <div
-          className={`tw-flex tw-w-full tw-items-center tw-gap-x-2 ${
+          className={`tw-flex tw-w-full tw-items-start tw-gap-x-2 ${
             inlineAuthorOnDesktop
               ? ""
               : "md:tw-block md:tw-w-auto md:tw-flex-shrink-0"

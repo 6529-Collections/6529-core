@@ -1,4 +1,5 @@
 import GradientPageComponent from "@/components/6529Gradient/GradientPage";
+import { getUsableText } from "@/app/api/og-metadata/_lib/imageUtils";
 import {
   getAppMetadata,
   getLargeSocialCardMetadata,
@@ -51,16 +52,18 @@ export default async function GradientPage({
 
   return (
     <main className={styles["main"]}>
-      <JsonLdScript
-        data={buildNftPageJsonLd({
-          nft,
-          path: `/6529-gradient/${id}`,
-          fallbackName: `6529 Gradient #${id}`,
-          collectionName: "6529 Gradient",
-          collectionPath: "/6529-gradient",
-          license: null,
-        })}
-      />
+      {nft ? (
+        <JsonLdScript
+          data={buildNftPageJsonLd({
+            nft,
+            path: `/6529-gradient/${id}`,
+            fallbackName: `6529 Gradient #${id}`,
+            collectionName: "6529 Gradient",
+            collectionPath: "/6529-gradient",
+            license: null,
+          })}
+        />
+      ) : null}
       <GradientPageComponent
         id={id}
         searchParamsString={serializeSearchParams(resolvedSearchParams)}
@@ -78,22 +81,30 @@ export async function generateMetadata({
 
   const title = `6529 Gradient #${id}`;
   const nft = await loadGradientNft(id);
-  const image = nft?.thumbnail ?? nft?.image ?? null;
-
+  const artist = getUsableText(nft?.artist);
+  const image =
+    getUsableText(nft?.scaled) ??
+    getUsableText(nft?.image) ??
+    getUsableText(nft?.thumbnail);
+  const description = [title, artist].filter(Boolean).join(" · ");
   return getAppMetadata(
     getLargeSocialCardMetadata({
       title,
-      description: "Collections",
+      description,
       ogImage: getNftSocialCardImagePath({
+        artist,
         badge: "6529 Gradient",
         collection: "6529 Gradient",
         contract: GRADIENT_CONTRACT,
         id,
         image,
-        subtitle: "Collections",
         title,
       }),
       ogImageAlt: `${title} social card`,
-    })
+    }),
+    {
+      canonicalPath: `/6529-gradient/${encodeURIComponent(id)}`,
+      robots: { index: nft !== null, follow: true },
+    }
   );
 }

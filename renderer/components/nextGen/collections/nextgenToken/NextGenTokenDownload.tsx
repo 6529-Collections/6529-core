@@ -39,6 +39,7 @@ function getUrl(token: NextGenToken, resolution: Resolution) {
 type NextGenTokenProps = Readonly<{
   token: NextGenToken;
   resolution: Resolution;
+  download: ReturnType<typeof useDownloader>["download"];
   onSelect?: (() => void) | undefined;
 }>;
 
@@ -77,7 +78,6 @@ export function NextGenTokenDownloadDropdownItem(props: NextGenTokenProps) {
     props.token,
     props.resolution
   );
-  const downloader = useDownloader();
   let availabilityClassName = "tw-cursor-not-allowed tw-text-iron-500";
   if (!imageLoaded) {
     availabilityClassName = "tw-cursor-wait tw-text-iron-300";
@@ -93,7 +93,7 @@ export function NextGenTokenDownloadDropdownItem(props: NextGenTokenProps) {
         disabled={!imageLoaded || !imageExists}
         onClick={() => {
           if (imageExists) {
-            downloader.download(
+            void props.download(
               getUrl(props.token, props.resolution),
               `${props.token.id}_${props.resolution.toUpperCase()}.png`
             );

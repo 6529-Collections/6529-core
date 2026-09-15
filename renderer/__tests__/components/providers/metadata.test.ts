@@ -92,6 +92,37 @@ describe("Metadata functionality (migrated from _document.tsx)", () => {
       });
     });
 
+    it("uses the configured origin for metadata base and declared canonicals", () => {
+      publicEnv.BASE_ENDPOINT = "https://staging.6529.io";
+
+      const metadata = getAppMetadata(
+        { title: "Card" },
+        { canonicalPath: "/the-memes/1?focus=activity" }
+      );
+
+      expect(metadata.metadataBase?.toString()).toBe(
+        "https://staging.6529.io/"
+      );
+      expect(metadata.alternates?.canonical?.toString()).toBe(
+        "https://staging.6529.io/the-memes/1?focus=activity"
+      );
+      expect(metadata.openGraph?.url?.toString()).toBe(
+        "https://staging.6529.io/the-memes/1?focus=activity"
+      );
+    });
+
+    it("rejects non-route canonical values", () => {
+      expect(() =>
+        getAppMetadata({}, { canonicalPath: "https://unexpected.test/path" })
+      ).toThrow("metadata_canonical_path_must_be_absolute_path");
+      expect(() =>
+        getAppMetadata({}, { canonicalPath: "//unexpected.test/path" })
+      ).toThrow("metadata_canonical_path_must_be_absolute_path");
+      expect(() =>
+        getAppMetadata({}, { canonicalPath: "/\\unexpected.test/path" })
+      ).toThrow("metadata_canonical_path_must_be_absolute_path");
+    });
+
     it("uses 6529.io as the default production title", () => {
       const metadata = getAppMetadata();
 
@@ -243,5 +274,20 @@ describe("Metadata functionality (migrated from _document.tsx)", () => {
         "/api/og-metadata/nfts/0xabc%2Fdef/1%2F2?artist=6529er&badge=The+Memes&collection=The+Memes&displayId=42&image=https%3A%2F%2Fcdn.test%2Fimage.png&subtitle=The+Memes+%231+%7C+Collections&title=Seize+the+Memes"
       );
     });
+
+    it.each(["landscape", "square", "portrait", "story"] as const)(
+      "includes the requested %s NFT export format",
+      (format) => {
+        const url = new URL(
+          getNftSocialCardImagePath({
+            contract: "0xabc",
+            id: 42,
+            format,
+          }),
+          "https://6529.io"
+        );
+        expect(url.searchParams.get("format")).toBe(format);
+      }
+    );
   });
 });

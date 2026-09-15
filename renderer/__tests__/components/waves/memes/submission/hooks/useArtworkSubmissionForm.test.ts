@@ -8,6 +8,7 @@ import type { CicStatement } from "@/entities/IProfile";
 import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
 
 const CID_V1 = "bafybeigdyrztobg3tv6zj5n6xvztf4k5p3xf7r6xkqfq5jz3o5quftdjum";
+const AGREEMENT = { waveId: "memes-wave", terms: "Submission terms" };
 
 jest.mock("@/components/waves/memes/traits/schema", () => ({
   getInitialTraitsValues: () => ({
@@ -101,10 +102,10 @@ const createQueryWrapper = (profileStatements?: CicStatement[]) => {
 };
 
 const renderArtworkSubmissionForm = (
-  initialDraft?: Parameters<typeof useArtworkSubmissionForm>[0],
+  initialDraft?: MemesSubmissionInitialDraft,
   profileStatements?: CicStatement[]
 ) =>
-  renderHook(() => useArtworkSubmissionForm(initialDraft), {
+  renderHook(() => useArtworkSubmissionForm(AGREEMENT, initialDraft), {
     wrapper: createQueryWrapper(profileStatements),
   });
 
@@ -123,6 +124,72 @@ describe("useArtworkSubmissionForm", () => {
   afterEach(() => {
     jest.clearAllMocks();
   });
+
+  it.each([
+    { waveId: AGREEMENT.waveId, terms: `${AGREEMENT.terms} ` },
+    { waveId: "another-wave", terms: AGREEMENT.terms },
+    { waveId: AGREEMENT.waveId, terms: null },
+  ])(
+    "requires renewed acceptance for $waveId / $terms without losing the draft",
+    (updatedAgreement) => {
+      const initialDraft = createDraftWithExistingMedia({
+        url: "https://example.com/art.png",
+        mimeType: "image/png",
+      });
+      const { result, rerender } = renderHook(
+        ({ agreement }) => useArtworkSubmissionForm(agreement, initialDraft),
+        {
+          initialProps: {
+            agreement: AGREEMENT as Parameters<
+              typeof useArtworkSubmissionForm
+            >[0],
+          },
+          wrapper: createQueryWrapper(),
+        }
+      );
+      act(() => result.current.setAgreements(true));
+      act(() => {
+        result.current.handleContinueFromTerms();
+        result.current.setTraits({ title: "Edited draft" });
+        result.current.setCommentary("Unpublished commentary");
+      });
+      act(() => result.current.handleContinueFromArtwork());
+      const { acceptedAgreement: originalAcceptance, ...draftBefore } =
+        result.current.getSubmissionData();
+      const mediaBefore = result.current.getMediaSelection();
+      expect(originalAcceptance).toEqual(AGREEMENT);
+
+      rerender({ agreement: { ...AGREEMENT } });
+      expect(result.current.agreements).toBe(true);
+      expect(result.current.currentStep).toBe("additional_info");
+
+      rerender({ agreement: updatedAgreement });
+      expect(result.current.currentStep).toBe("agreement");
+      expect(result.current.agreements).toBe(false);
+      expect(result.current.agreementReviewRequired).toBe(true);
+      expect(result.current.getSubmissionData()).toEqual({
+        ...draftBefore,
+        acceptedAgreement: null,
+      });
+      expect(result.current.getMediaSelection()).toEqual(mediaBefore);
+      act(() => result.current.handleContinueFromTerms());
+      expect(result.current.currentStep).toBe("agreement");
+
+      act(() => result.current.setAgreements(true));
+      expect(result.current.currentStep).toBe("agreement");
+      expect(result.current.getSubmissionData().acceptedAgreement).toEqual(
+        updatedAgreement
+      );
+      act(() => result.current.handleContinueFromTerms());
+      expect(result.current.currentStep).toBe("artwork");
+      act(() => result.current.handleContinueFromArtwork());
+      expect(result.current.getSubmissionData()).toEqual({
+        ...draftBefore,
+        acceptedAgreement: updatedAgreement,
+      });
+      expect(result.current.getMediaSelection()).toEqual(mediaBefore);
+    }
+  );
 
   it("initializes traits from profile and updates fields", () => {
     const { result } = renderArtworkSubmissionForm();
@@ -150,7 +217,7 @@ describe("useArtworkSubmissionForm", () => {
     expect(result.current.isAdditionalActionPromised).toBe(true);
   });
 
-  it("initializes from a draft without profile defaults or bio fetch", () => {
+  it("preserves draft fields while syncing the read-only submitting profile", () => {
     const operationalData = {
       airdrop_config: [{ id: "draft-airdrop", address: "0xdraft", count: 20 }],
       payment_info: {
@@ -189,10 +256,28 @@ describe("useArtworkSubmissionForm", () => {
     expect(result.current.artworkUrl).toBe("https://example.com/art.png");
     expect(result.current.existingMedia).toEqual(initialDraft.existingMedia);
     expect(result.current.traits.artist).toBe("draft-artist");
-    expect(result.current.traits.seizeArtistProfile).toBe("draft-profile");
+    expect(result.current.traits.seizeArtistProfile).toBe("alice");
     expect(result.current.operationalData).toBe(operationalData);
     expect(result.current.isAdditionalActionPromised).toBe(true);
     expect(commonApiFetch).not.toHaveBeenCalled();
+  });
+
+  it("updates only the read-only submitting profile when identity changes", () => {
+    const { result, rerender } = renderArtworkSubmissionForm();
+
+    act(() => {
+      result.current.updateTraitField("artist", "Custom artist credit");
+    });
+    (useAuth as jest.Mock).mockReturnValue({
+      connectedProfile: { handle: "bob", primary_wallet: "0xbob" },
+    });
+    rerender();
+
+    expect(result.current.traits.seizeArtistProfile).toBe("bob");
+    expect(result.current.traits.artist).toBe("Custom artist credit");
+    expect(result.current.operationalData.payment_info.payment_address).toBe(
+      "0xalice"
+    );
   });
 
   it("clears existing resubmission media to allow first replacement selection", () => {
@@ -339,6 +424,7 @@ describe("useArtworkSubmissionForm", () => {
 
     expect(result.current.operationalData.about_artist).toBe("");
 
+    act(() => result.current.setAgreements(true));
     act(() => {
       result.current.handleContinueFromArtwork();
     });
@@ -364,6 +450,7 @@ describe("useArtworkSubmissionForm", () => {
 
   it("handles continue and file select", () => {
     const { result } = renderArtworkSubmissionForm();
+    act(() => result.current.setAgreements(true));
     act(() => {
       result.current.handleContinueFromTerms();
     });

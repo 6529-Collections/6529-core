@@ -14,9 +14,11 @@ import type { CompactMenuItem } from "@/components/compact-menu";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/components/auth/Auth";
+import { AnnouncementWaveIcon } from "@/components/brain/left-sidebar/waves/SidebarIconTile";
 import type { SetActiveContentTab } from "@/components/brain/ContentTabContext";
 import HeaderSearchModal from "@/components/header/header-search/HeaderSearchModal";
 import { useWaveChatScrollOptional } from "@/contexts/wave/WaveChatScrollContext";
+import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { getWaveHomeRoute } from "@/helpers/navigation.helpers";
 import { getDirectMessageProfileHref } from "@/helpers/waves/direct-message-profile.helpers";
@@ -31,6 +33,7 @@ import { WaveTrustSignals } from "@/components/waves/WaveTrustSignals";
 import MyStreamActionTooltip from "../MyStreamActionTooltip";
 import { useSidebarState } from "../../../../hooks/useSidebarState";
 import WaveRepButton from "@/components/waves/header/rep/WaveRepButton";
+import WaveParentNavigation from "@/components/waves/header/WaveParentNavigation";
 import CompactWaveActions from "./CompactWaveActions";
 import { waveRightPanelText } from "@/helpers/waves/wave-right-panel.helpers";
 import { BRAIN_RIGHT_SIDEBAR_ID } from "@/components/brain/right-sidebar/BrainRightSidebarTypes";
@@ -137,6 +140,8 @@ function MyStreamWaveHeaderIdentity({
   waveScoreLearnMoreHref,
   showWaveRepAction,
 }: MyStreamWaveHeaderIdentityProps) {
+  const seizeSettings = useSeizeSettingsOptional();
+  const isAnnouncement = seizeSettings?.isAnnouncementsWave(wave.id) ?? false;
   const scoreActions = !isCompact ? (
     <span className="tw-mt-1.5 tw-flex tw-min-w-0 tw-flex-wrap tw-items-center tw-gap-1.5 tw-self-start">
       <WaveTrustSignals
@@ -173,14 +178,28 @@ function MyStreamWaveHeaderIdentity({
 
   return (
     <>
-      <div className="tw-size-9 tw-flex-shrink-0 tw-self-start tw-rounded-full tw-ring-1 tw-ring-white/30 tw-ring-offset-1 tw-ring-offset-iron-950">
-        <WavePicture
-          name={wave.name}
-          picture={wave.picture}
-          contributors={wavePictureContributors}
-        />
+      <div
+        className={`tw-size-9 tw-flex-shrink-0 tw-self-start ${
+          isAnnouncement
+            ? "tw-rounded-lg"
+            : "tw-rounded-full tw-ring-1 tw-ring-white/30 tw-ring-offset-1 tw-ring-offset-iron-950"
+        }`}
+      >
+        {isAnnouncement ? (
+          <AnnouncementWaveIcon className="tw-size-5" />
+        ) : (
+          <WavePicture
+            name={wave.name}
+            picture={wave.picture}
+            contributors={wavePictureContributors}
+          />
+        )}
       </div>
       <div className="tw-flex tw-min-w-0 tw-flex-1 tw-flex-col">
+        <WaveParentNavigation
+          parentWave={wave.parent_wave}
+          variant={isCompact ? "compact-header" : "header"}
+        />
         {showDescriptionPreview ? (
           <>
             <WaveDescriptionPopover
@@ -429,7 +448,7 @@ export default function MyStreamWaveTabsHeader({
             <button
               type="button"
               onClick={handleMobileBack}
-              className="tw-flex tw-h-9 tw-self-start tw-items-center tw-border-0 tw-bg-transparent tw-p-0 tw-px-1.5 tw-text-iron-300 tw-transition-colors hover:tw-text-iron-50 sm:-tw-ml-2.5 sm:tw-px-2.5"
+              className="tw-flex tw-h-9 tw-items-center tw-self-start tw-border-0 tw-bg-transparent tw-p-0 tw-px-1.5 tw-text-iron-300 tw-transition-colors hover:tw-text-iron-50 sm:-tw-ml-2.5 sm:tw-px-2.5"
               aria-label="Go back"
             >
               <ArrowLeftIcon className="tw-h-5 tw-w-5 tw-flex-shrink-0 sm:tw-h-6 sm:tw-w-6" />

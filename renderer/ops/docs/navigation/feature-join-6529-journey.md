@@ -40,7 +40,7 @@ The journey shows five visible steps:
 4. Participate.
 5. Collect.
 
-The Collect step includes minting active drops, buying on secondary markets, and
+The Collect step includes minting active drops, collecting on secondary markets, and
 setting up subscription minting for future Meme Cards. Logged-out visitors see
 the marketing timeline without progress chrome and the first step highlighted as
 the next action. Connected or logged-in users see progress state for the same
@@ -61,6 +61,13 @@ The compact focus area links users to:
 - Public Waves for asking `@help6529`.
 
 ## Notes
+
+On native iOS when the detected country is not `US` (including while it is
+unknown), the Collect step, subscription card, logged-in subscription action,
+and purchasing FAQs are omitted entirely. The wallet FAQ describes browsing,
+profiles, posting, and voting. Progress counts only the four visible steps;
+there is no unavailable banner or empty card. US iOS, web, and Android retain
+the full journey.
 
 The route is available at `/join-6529`; `/join` redirects there for compatibility.
 

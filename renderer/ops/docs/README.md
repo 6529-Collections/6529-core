@@ -29,7 +29,10 @@ March 19, 2026.
 - Open profile routes and tabs:
   [Profiles](profiles/README.md),
   [Profile Troubleshooting](profiles/troubleshooting/README.md)
-- Browse memes, collections, minting, and media actions: [Media](media/README.md)
+- Browse artwork, trade and complete profile sets: [Collect](media/collecting.md),
+  [Media](media/README.md)
+- Prepare, read or review an artwork's record:
+  [Artwork Documentation](artwork-documentation.md)
 - Review a proposed permanent contract before deployment:
   [Public Contract Reviews](public-reviews/README.md)
 - Run Drop Forge craft and launch claim operations: [Drop Forge](drop-forge/README.md)
@@ -87,6 +90,8 @@ March 19, 2026.
   `/open-data/rememes`, `/open-data/royalties`, `/open-data/team`
 - [Network Museum](museum/README.md): `/museum/network` and
   `/museum/network/{param*}`
+- [Education](education/README.md): `/education`, its Tweetstorms and Podcasts
+  archives, and the collaboration contact
 - [Navigation](navigation/README.md): app shell controls, `/open-mobile`, and
   `/about/6529-apps`
 - [Shared](shared/README.md): behavior reused by multiple areas
@@ -108,7 +113,8 @@ Route patterns use normalized placeholders: `{param}` for one segment,
   `/{user}`, `/{user}/brain`, `/{user}/collected`, `/{user}/followers`,
   `/{user}/groups`, `/{user}/identity`, `/{user}/proxy`,
   `/{user}/subscriptions`, `/{user}/waves`, `/{user}/xtdh`,
-  `/{user}/cms/builder` when the profile CMS builder flag is enabled,
+  `/{user}/cms/builder` for the website studio when enabled, custom published
+  pages such as `/{user}/studio`,
   `/about/primary-address`
 - Media:
   `/the-memes`, `/the-memes/mint`, `/the-memes/{id}`,
@@ -154,6 +160,9 @@ Route patterns use normalized placeholders: `{param}` for one segment,
   `/museum/network`, including collection, artist, project, gift, program,
   about, and Stories & Research routes. The institutional-practice study is at
   `/museum/network/stories/a-field-of-practice/{param*}`.
+- Education:
+  `/education`, `/education/tweetstorms`, `/education/podcasts`, and
+  `/education/education-collaboration-form`
 
 ### Out of Scope
 
@@ -161,8 +170,8 @@ Route patterns use normalized placeholders: `{param}` for one segment,
   `/about/*` (except `/about/primary-address` and `/about/6529-apps`),
   legacy gallery routes under `/museum` and `/museum/*` outside
   `/museum/network`,
-  `/blog/*`, `/news/*`, `/city/*`, `/om`, `/om/*`, `/education`,
-  `/education/*`, `/capital`, `/capital/*`, `/author/*`, `/category/*`,
+  `/blog/*`, `/news/*`, `/city/*`, `/om`, `/om/*`, `/capital`, `/capital/*`,
+  `/author/*`, `/category/*`,
   `/buidl`, `/casabatllo`
 - Standalone utility routes:
   `/access`, `/restricted`, `/dispute-resolution`,
