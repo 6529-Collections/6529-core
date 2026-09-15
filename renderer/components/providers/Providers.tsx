@@ -1,6 +1,7 @@
 import { AppWalletsProvider } from "@/components/app-wallets/AppWalletsContext";
 import Auth from "@/components/auth/Auth";
 import AuthLaunchTimingReporter from "@/components/auth/AuthLaunchTimingReporter";
+import MarketActivityTracker from "@/components/collect/MarketActivityTracker";
 import { SeizeConnectProvider } from "@/components/auth/SeizeConnectContext";
 import { CookieConsentProvider } from "@/components/cookies/CookieConsentContext";
 import { EULAConsentProvider } from "@/components/eula/EULAConsentContext";
@@ -91,6 +92,9 @@ export default function Providers({
                                       enableWalletAuthentication
                                     }
                                   />
+                                  {enableWalletAuthentication && (
+                                    <MarketActivityTracker />
+                                  )}
                                   <WaveEligibilityProvider>
                                     <NotificationsProvider>
                                       <CookieConsentProvider

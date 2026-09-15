@@ -643,7 +643,7 @@ export const DE_DE_MESSAGES = {
     "GIF-Suche ist voruebergehend nicht verfuegbar.",
   "waves.gifPicker.unavailable.hint":
     "Du kannst stattdessen eine GIF-Datei hochladen.",
-  "common.close": "Schliessen",
+  "common.close": "Schließen",
   "desktopUpdateToast.versionAvailable": "Version {version} ist verfügbar.",
   "desktopUpdateToast.viewUpdate": "Aktualisierung anzeigen",
   "waves.create.dialog.subwaveOfTitle":
@@ -692,6 +692,11 @@ export const DE_DE_MESSAGES = {
   "waves.create.review.outcome": "Ergebnis {number}",
   "waves.create.dialog.subwaveTitle": "Subwave erstellen",
   "waves.create.dialog.waveTitle": "Wave erstellen",
+  "waves.create.dialog.discardTitle": "Änderungen verwerfen?",
+  "waves.create.dialog.discardMessage":
+    "Nicht gespeicherte Änderungen gehen verloren. Bereits gespeicherte Entwürfe bleiben erhalten.",
+  "waves.create.dialog.discardConfirm": "Änderungen verwerfen",
+  "waves.create.dialog.keepEditing": "Weiter bearbeiten",
   "waves.create.actions.cancel": "Abbrechen",
   "waves.create.actions.backToCriteria": "Zurück zu den Kriterien",
   "waves.create.actions.complete": "Abschließen",
