@@ -1,3 +1,4 @@
+import { VersionStatusProvider } from "@/contexts/VersionStatusContext";
 import { AppWalletsProvider } from "@/components/app-wallets/AppWalletsContext";
 import Auth from "@/components/auth/Auth";
 import AuthLaunchTimingReporter from "@/components/auth/AuthLaunchTimingReporter";
@@ -72,66 +73,68 @@ export default function Providers({
           <AnchorInterceptorSetup />
           <IpfsImageSetup />
           <ReactQueryWrapper>
-            <ModalStateProvider>
-              <RefreshProvider>
-                <SeizeSettingsProvider>
-                  <EmojiProvider>
-                    <IpfsProvider>
-                      <SeizeConnectModalProvider>
-                        <SeizeConnectProvider>
-                          <ConfirmProvider>
-                            <ToastProvider>
-                              <SeedWalletProvider>
-                                <Auth
-                                  enableWalletAuthentication={
-                                    enableWalletAuthentication
-                                  }
-                                >
-                                  <AuthLaunchTimingReporter
+            <VersionStatusProvider enabled={enableVersionCheck}>
+              <ModalStateProvider>
+                <RefreshProvider>
+                  <SeizeSettingsProvider>
+                    <EmojiProvider>
+                      <IpfsProvider>
+                        <SeizeConnectModalProvider>
+                          <SeizeConnectProvider>
+                            <ConfirmProvider>
+                              <ToastProvider>
+                                <SeedWalletProvider>
+                                  <Auth
                                     enableWalletAuthentication={
                                       enableWalletAuthentication
                                     }
-                                  />
-                                  {enableWalletAuthentication && (
-                                    <MarketActivityTracker />
-                                  )}
-                                  <WaveEligibilityProvider>
-                                    <NotificationsProvider>
-                                      <CookieConsentProvider
-                                        disabled={!enableCookieConsent}
-                                      >
-                                        <MixpanelSetup />
-                                        <EULAConsentProvider>
-                                          <AppWebSocketProvider>
-                                            <LayoutProvider>
-                                              {enableMyStream ? (
-                                                <MyStreamProvider>
-                                                  {sharedProviders}
-                                                  <QuickDirectMessagesGate />
-                                                </MyStreamProvider>
-                                              ) : (
-                                                sharedProviders
+                                  >
+                                    <AuthLaunchTimingReporter
+                                      enableWalletAuthentication={
+                                        enableWalletAuthentication
+                                      }
+                                    />
+                                    {enableWalletAuthentication && (
+                                      <MarketActivityTracker />
+                                    )}
+                                    <WaveEligibilityProvider>
+                                      <NotificationsProvider>
+                                        <CookieConsentProvider
+                                          disabled={!enableCookieConsent}
+                                        >
+                                          <MixpanelSetup />
+                                          <EULAConsentProvider>
+                                            <AppWebSocketProvider>
+                                              <LayoutProvider>
+                                                {enableMyStream ? (
+                                                  <MyStreamProvider>
+                                                    {sharedProviders}
+                                                    <QuickDirectMessagesGate />
+                                                  </MyStreamProvider>
+                                                ) : (
+                                                  sharedProviders
+                                                )}
+                                              </LayoutProvider>
+                                              {enableVersionCheck && (
+                                                <NewVersionToast />
                                               )}
-                                            </LayoutProvider>
-                                            {enableVersionCheck && (
-                                              <NewVersionToast />
-                                            )}
-                                          </AppWebSocketProvider>
-                                        </EULAConsentProvider>
-                                      </CookieConsentProvider>
-                                    </NotificationsProvider>
-                                  </WaveEligibilityProvider>
-                                </Auth>
-                              </SeedWalletProvider>
-                            </ToastProvider>
-                          </ConfirmProvider>
-                        </SeizeConnectProvider>
-                      </SeizeConnectModalProvider>
-                    </IpfsProvider>
-                  </EmojiProvider>
-                </SeizeSettingsProvider>
-              </RefreshProvider>
-            </ModalStateProvider>
+                                            </AppWebSocketProvider>
+                                          </EULAConsentProvider>
+                                        </CookieConsentProvider>
+                                      </NotificationsProvider>
+                                    </WaveEligibilityProvider>
+                                  </Auth>
+                                </SeedWalletProvider>
+                              </ToastProvider>
+                            </ConfirmProvider>
+                          </SeizeConnectProvider>
+                        </SeizeConnectModalProvider>
+                      </IpfsProvider>
+                    </EmojiProvider>
+                  </SeizeSettingsProvider>
+                </RefreshProvider>
+              </ModalStateProvider>
+            </VersionStatusProvider>
           </ReactQueryWrapper>
         </WagmiSetup>
       </AppWalletsProvider>
