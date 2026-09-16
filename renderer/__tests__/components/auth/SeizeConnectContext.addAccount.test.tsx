@@ -405,7 +405,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
 
@@ -460,9 +460,12 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
+
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+    expect(mockOpen).not.toHaveBeenCalled();
 
     mockWagmiAccount = {
       connector: {
@@ -500,7 +503,7 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockLogError).not.toHaveBeenCalled();
   });
 
-  it("clears add-account state when disconnect throws synchronously", () => {
+  it("clears add-account state when disconnect throws synchronously", async () => {
     mockDisconnect.mockImplementation(() => {
       throw new Error("synchronous disconnect failure");
     });
@@ -514,10 +517,14 @@ describe("SeizeConnectProvider add-account flow", () => {
     const addAccountButton = screen.getByRole("button", {
       name: "Add account",
     });
-    expect(() => fireEvent.click(addAccountButton)).not.toThrow();
+    await act(async () => {
+      expect(() => fireEvent.click(addAccountButton)).not.toThrow();
+    });
     expect(mockLogError).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(addAccountButton);
+    await act(async () => {
+      fireEvent.click(addAccountButton);
+    });
     expect(mockDisconnect).toHaveBeenCalledTimes(2);
   });
 
@@ -528,7 +535,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
 
@@ -655,7 +662,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
 

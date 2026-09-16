@@ -1,6 +1,5 @@
 "use client";
 
-import { useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import React, {
   useCallback,
   useEffect,
@@ -49,6 +48,7 @@ import {
 import {
   AppKitModalBridge,
   createAppKitModalBridgeStore,
+  useAppKitAccountBridgeState,
   useAppKitModalBridgeState,
 } from "./AppKitModalBridge";
 import { openDesktopAddConnectorChooser } from "./connector-selection-lifecycle";
@@ -83,10 +83,8 @@ import {
 export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const appKitAccount = useAppKitAccount();
   const wagmiAccount = useAccount();
   const wagmiConnectors = useConnectors();
-  const { disconnect } = useDisconnect();
   const capacitor = useCapacitor();
   const { showConnectModal, setShowConnectModal } = useSeizeConnectModal();
   const {
@@ -99,9 +97,20 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
   const appKitModalBridgeStore = useMemo(createAppKitModalBridgeStore, []);
   const appKitModalState = useAppKitModalBridgeState(appKitModalBridgeStore);
   const isConnectModalOpen = appKitModalState.isOpen || showConnectModal;
+  const appKitAccount = useAppKitAccountBridgeState(appKitModalBridgeStore);
+  const disconnect = useCallback(() => {
+    if (isAppKitReady) {
+      return appKitModalBridgeStore
+        .waitForOpen()
+        .then(() => appKitModalBridgeStore.disconnect());
+    }
+    return waitForAppKitReady()
+      .then(() => appKitModalBridgeStore.waitForOpen())
+      .then(() => appKitModalBridgeStore.disconnect());
+  }, [appKitModalBridgeStore, isAppKitReady, waitForAppKitReady]);
   const [storedConnectedAccounts, setStoredConnectedAccounts] = useState<
     ConnectedWalletAccount[]
-  >(() => getConnectedWalletAccounts());
+  >([]);
   const [isAddingConnectedAccount, setIsAddingConnectedAccount] =
     useState(false);
   const [
