@@ -17,7 +17,13 @@ export function getEthereumRpcUrl(): string {
     );
   }
 
-  const parsed = ethereumRpcEnvSchema.safeParse(process.env);
+  // Core's embedded server cannot rely on the hosted frontend's private RPC
+  // configuration. Retain the public 6529 endpoint already used by desktop
+  // previews, while allowing a server-side override without bundling secrets.
+  const parsed = ethereumRpcEnvSchema.safeParse({
+    ETHEREUM_RPC_URL:
+      process.env["ETHEREUM_RPC_URL"]?.trim() || "https://rpc1.6529.io",
+  });
   if (!parsed.success) {
     const issue =
       parsed.error.issues[0]?.message ?? "ETHEREUM_RPC_URL is missing";
