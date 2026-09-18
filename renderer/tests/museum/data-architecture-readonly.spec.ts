@@ -11,7 +11,9 @@ import {
   assertNoFailedResponses,
   attachPageDiagnostics,
 } from "../support/pageAssertions";
+import { installLocalMuseumCountryCheck } from "../support/localMuseumCountryCheck";
 import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import { MUSEUM_SETTINGS_FETCH_ERROR_PATTERN } from "../support/museumConsoleDiagnostics";
 import {
   MUSEUM_DATA_ARCHITECTURE_CASEY_AUDIT_TITLE,
   MUSEUM_DATA_ARCHITECTURE_STANDARDS,
@@ -32,7 +34,7 @@ const SHELL_ALLOWED_CONSOLE_ERROR_PATTERNS = [
   // These exact shell transport diagnostics are unrelated to Museum content;
   // HTTP 5xx responses and every other console error still fail.
   /^Error checking Cross-Origin-Opener-Policy: Failed to fetch(?: \(6529\.io\))?(?:\n|$)/,
-  /^Failed to fetch seize settings TypeError: Failed to fetch(?:\n|$)/,
+  MUSEUM_SETTINGS_FETCH_ERROR_PATTERN,
   /^Failed to fetch cookie consent status Error: Network request failed\. Please check your connection and try again\. \(https:\/\/api(?:\.staging)?\.6529\.io\/api\/policies\/country-check\)(?:\n|$)/,
   ...(DEPLOYED_ENVIRONMENT
     ? []
@@ -130,7 +132,8 @@ test.describe("Museum data architecture @surface @readonly", () => {
   test.describe.configure({ mode: "serial" });
   test.setTimeout(300_000);
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page, baseURL }, testInfo) => {
+    await installLocalMuseumCountryCheck(page, baseURL);
     if (testInfo.project.name === MOBILE_PROJECT) {
       await page.setViewportSize(MOBILE_VIEWPORT);
       expect(page.viewportSize()).toEqual(MOBILE_VIEWPORT);

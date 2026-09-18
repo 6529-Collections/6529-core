@@ -9,7 +9,9 @@ import {
   test,
   waitForRouteReady,
 } from "../testHelpers";
+import { installLocalMuseumCountryCheck } from "../support/localMuseumCountryCheck";
 import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import { expectMuseumPath } from "../support/museumNavigation";
 import {
   expectAcquisitionsAcceptance,
   expectCollectionAcceptance,
@@ -40,7 +42,7 @@ async function openRoute(page: Page, path: string) {
     200
   );
   await waitForRouteReady(page);
-  await expect(page).toHaveURL((url) => url.pathname === path);
+  await expectMuseumPath(page, path);
 }
 
 async function retainScreenshot(page: Page, testInfo: TestInfo, name: string) {
@@ -166,6 +168,10 @@ async function expectUniformMediaStageRatio(
     )
     .toBe(true);
 }
+
+test.beforeEach(async ({ page, baseURL }) => {
+  await installLocalMuseumCountryCheck(page, baseURL);
+});
 
 test.describe("Museum public IA rendered contract @surface @readonly", () => {
   test.skip(

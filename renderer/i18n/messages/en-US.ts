@@ -2272,6 +2272,13 @@ const WAVE_EXPLORE_CARD_MESSAGES = objectMessages("waves.explore.card", {
   viewWithScoreAriaLabel: "View wave {waveName}. {scoreSummary}",
 } as const);
 
+const WAVE_PREVIEW_MESSAGES = objectMessages("waves.preview", {
+  level: "Level {level}",
+  "drops.one": "{count} Drop",
+  "drops.other": "{count} Drops",
+  joined: "{count} Joined",
+} as const);
+
 const WAVE_SCORE_SUMMARY_MESSAGES = objectMessages("waves.score.summary", {
   title: "Score",
   quality: "Quality",
@@ -4181,6 +4188,7 @@ export const EN_US_MESSAGES = {
   "drop.media.unavailable": "Image unavailable",
   "drop.media.unavailableGeneric": "Media unavailable",
   "drop.media.loadFailed": "Couldn’t load image.",
+  "drop.media.videoLoadFailed": "Couldn’t load video.",
   "drop.media.retry": "Retry",
   "drop.media.openPreview": "Open image preview",
   "drop.media.openMedia": "Open drop media",
@@ -4255,6 +4263,7 @@ export const EN_US_MESSAGES = {
   ...WAVE_RULES_SCHEDULE_MESSAGES,
   ...GROUP_NFT_OWNERSHIP_MESSAGES,
   ...WAVE_EXPLORE_CARD_MESSAGES,
+  ...WAVE_PREVIEW_MESSAGES,
   ...WAVE_SCORE_SUMMARY_MESSAGES,
   ...WAVE_SCORE_DETAILS_MESSAGES,
   ...WAVE_REP_ACTION_MESSAGES,
