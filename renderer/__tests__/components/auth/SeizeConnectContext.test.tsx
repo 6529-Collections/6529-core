@@ -1466,6 +1466,25 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
     jest.restoreAllMocks();
   });
 
+  it.each(["connecting", "reconnecting"])(
+    "exposes live wallet restoration separately from stored auth (%s)",
+    async (status) => {
+      const { useAccount } = jest.requireMock("wagmi");
+      useAccount.mockReturnValue({ status });
+      const { result, rerender } = renderHook(() => useSeizeConnectContext(), {
+        wrapper: ({ children }) => (
+          <SeizeConnectProvider>{children}</SeizeConnectProvider>
+        ),
+      });
+      expect(result.current.isWalletConnectionPending).toBe(true);
+      useAccount.mockReturnValue({ status: "disconnected" });
+      rerender();
+      await waitFor(() =>
+        expect(result.current.isWalletConnectionPending).toBe(false)
+      );
+    }
+  );
+
   it("should maintain all original context values", async () => {
     const validAddress = "0x1234567890abcdef1234567890abcdef12345678";
     const checksummedAddress = "0x1234567890AbcdEF1234567890AbcDEF12345678";
@@ -1625,7 +1644,9 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
   it("keeps AppKit-only hooks deferred without remounting children", async () => {
     const {
       useAppKit,
+      useAppKitAccount,
       useAppKitState,
+      useDisconnect,
       useWalletInfo,
     } = require("@reown/appkit/react");
     (useAppKit as jest.Mock).mockImplementation(() => {
@@ -1659,6 +1680,8 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
     const view = render(renderTree());
     const childBeforeAppKit = screen.getByTestId("stable-fast-path-child");
     expect(useAppKit).not.toHaveBeenCalled();
+    expect(useAppKitAccount).not.toHaveBeenCalled();
+    expect(useDisconnect).not.toHaveBeenCalled();
     expect(useAppKitState).not.toHaveBeenCalled();
     expect(useWalletInfo).not.toHaveBeenCalled();
 
@@ -1920,6 +1943,33 @@ describe("Regression Tests: Original Functionality with Secure Implementation", 
     await waitFor(() => {
       expect(screen.getByTestId("address")).toHaveTextContent(validAddress);
     });
+  });
+
+  it("waits for bridge registration when a child disconnects during mount", async () => {
+    mockGetWalletAddress.mockReturnValue(null);
+    jest.mocked(authUtils.removeAuthJwt).mockResolvedValue(undefined);
+    const onSuccess = jest.fn();
+    const onFailure = jest.fn();
+    const MountDisconnect = () => {
+      const { seizeDisconnectAndLogout } = useSeizeConnectContext();
+      const started = React.useRef(false);
+      React.useLayoutEffect(() => {
+        if (started.current) return;
+        started.current = true;
+        void seizeDisconnectAndLogout().then(onSuccess, onFailure);
+      }, [seizeDisconnectAndLogout]);
+      return null;
+    };
+
+    render(
+      <SeizeConnectProvider>
+        <MountDisconnect />
+      </SeizeConnectProvider>
+    );
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(onFailure).not.toHaveBeenCalled();
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
   });
 
   it("should handle disconnect and logout", async () => {

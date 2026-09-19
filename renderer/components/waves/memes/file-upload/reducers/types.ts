@@ -2,6 +2,7 @@ import type {
   InteractiveMediaMimeType,
   InteractiveMediaProvider,
 } from "../../submission/constants/media";
+import type { ProposalCardLayout } from "@/lib/proposal-card/document";
 
 /**
  * Type definitions for the file upload system
@@ -59,6 +60,7 @@ export type FileUploaderAction =
   | { type: "RESET_STATE" }
   | { type: "START_PROCESSING"; payload: File }
   | { type: "PROCESSING_SUCCESS"; payload: { objectUrl: string; file: File } }
+  | { type: "VALIDATION_ERROR"; payload: string }
   | { type: "PROCESSING_ERROR"; payload: string }
   | { type: "PROCESSING_RETRY" }
   | { type: "PROCESSING_TIMEOUT" }
@@ -69,6 +71,8 @@ export type FileUploaderAction =
  * Props for the MemesArtSubmissionFile component
  */
 export interface MemesArtSubmissionFileProps {
+  readonly proposalFrame?: ProposalCardLayout | null | undefined;
+  readonly artworkTitle?: string | undefined;
   /** Whether artwork has been uploaded */
   readonly artworkUploaded: boolean;
   /** URL of the uploaded artwork */
@@ -153,6 +157,8 @@ export interface VideoFallbackPreviewProps {
  * Props for the file preview component
  */
 export interface FilePreviewProps {
+  readonly proposalFrame?: ProposalCardLayout | null | undefined;
+  readonly artworkTitle?: string | undefined;
   /** URL of the file to preview */
   readonly url: string;
   /** File object */

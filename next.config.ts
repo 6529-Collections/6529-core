@@ -10,6 +10,31 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// Mirror renderer/config/meebits445Headers.ts: the generated root config is
+// unbundled and must not import renderer TypeScript at runtime.
+const meebits445Headers = {
+  source: "/artwork/the-memes/445.html",
+  headers: [
+    {
+      key: "Content-Security-Policy",
+      value: [
+        "default-src 'none'",
+        "sandbox allow-scripts allow-downloads",
+        "script-src 'sha256-70ombBBD8oj09C+DdAkQCOAuMVr7LmHQPdNNGImMnlg=' https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.module.js",
+        "connect-src https://api.exchange.coinbase.com/products/ETH-USD/stats",
+        "style-src 'unsafe-inline' https://fonts.googleapis.com",
+        "font-src https://fonts.gstatic.com",
+        "img-src data: https://cdn.meebco.com",
+        "base-uri 'none'",
+        "form-action 'none'",
+        "frame-ancestors 'self'",
+      ].join("; "),
+    },
+    { key: "Referrer-Policy", value: "no-referrer" },
+    { key: "X-Robots-Tag", value: "noindex" },
+  ],
+};
+
 const require = createRequire(import.meta.url);
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -301,6 +326,8 @@ function createSecurityHeaders(
     "'self'",
     "blob:",
     ...localGatewaySources,
+    "https://6529-artwork-documentation-987989283142-eu-west-1.s3.eu-west-1.amazonaws.com",
+    "https://6529-artwork-documentation-987989283142-us-east-1.s3.us-east-1.amazonaws.com",
     "https://*.cloudfront.net",
     "https://videos.files.wordpress.com",
     mediaResolverSource,
@@ -514,6 +541,7 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
             },
           ),
         },
+        meebits445Headers,
       ];
     },
     turbopack: {

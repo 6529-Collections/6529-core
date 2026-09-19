@@ -18,6 +18,7 @@ Each record should be short, factual, and linkable:
 - `aliases` should include natural phrases users might type.
 - `keywords` should include important retrieval terms.
 - `facts` should be concise statements the bot can safely reuse.
+- Desktop `brief_answer` contains the short default/fallback response (at most 900 characters); `answer_links` lists relevant named public destinations for the final footer. Detailed facts remain available on request.
 - `canonical_path` should be the best 6529.io destination for the answer.
 - `link_label` should be the page/action label used when the bot links to
   `canonical_path`; omit it only when the record `title` is already the best
@@ -46,7 +47,19 @@ endpoints fail closed to the production corpus. `agent-files:sync` regenerates
 `public/glossary.json` and `public/llms.txt` from that published,
 environment-matching corpus and `ops/help/llms.txt.template`.
 
+Keep the template's mission summary, main site links, and agent integration
+links aligned with the public site. Use the help index for detailed route
+coverage. Do not present the corpus's manually maintained `generated_at` field
+as the entry point's current revision or the freshness of live API data.
+
 Commit the regenerated `public/` artifacts with the corpus change. PR CI runs
 `__tests__/scripts/sync-agent-files.test.ts` (the "Verify agent files sync"
 step) whenever these files change and fails if the committed artifacts drift
 from the corpus.
+
+## 6529 Desktop (Core)
+
+Desktop knowledge uses `desktop.*` records tagged `desktop-core`, with native
+menu labels and pinned Core source references. See [Desktop corpus maintenance](desktop-core-sources.md)
+and the [Desktop guides](../docs/desktop/README.md). Keep recovery effects and
+local-data boundaries explicit; do not publish nonexistent website `/core` links.

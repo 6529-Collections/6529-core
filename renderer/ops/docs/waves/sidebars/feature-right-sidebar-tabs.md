@@ -22,7 +22,9 @@ linked section pages.
 
 ## Entry Points
 
-- Desktop: open a wave thread, open the right sidebar, and select a tab.
+- Desktop/tablet: open a wave thread, select the `Show right sidebar` icon, and select a tab.
+  `About` contains Add/Edit REP for eligible viewers and the labeled wave
+  share/copy action for every non-DM viewer.
 - Compact web layouts: select the `Wave details` button beside the wave-search
   action. It opens the same information sidebar as the desktop control without
   requiring the `More wave actions` menu.
@@ -58,9 +60,8 @@ linked section pages.
   labels on Approve waves, and curation creation, editing, deletion, and ordering
   controls. Those shared controls are completely hidden from non-administrators.
   When chat is enabled, Your display lets each viewer choose how boosted-drop
-  cards appear for them. A final personal curation selector appears when the wave
-  has curations. Both personal controls include explanatory tooltips and change
-  only the current viewer's view.
+  cards appear for them, with an explanatory tooltip. Switch between curations
+  from the [wave content tabs](../chat/feature-content-tabs.md).
 - `Rank` and `Approve` waves add `Voters` and `Activity` after `Configuration`.
 - For `Rank` and `Approve` waves, participants still review and sign
   acceptance-required rules in the submit terms modal.
@@ -75,9 +76,10 @@ linked section pages.
 ## Overflow and Keyboard Behavior
 
 - Desktop Chat waves show all three base sections in the scroll-safe tab strip.
-  Rank and Approve waves keep `About`, `REP`, `Configuration`, and `Voters`
-  visible and move `Activity` into `More`, so the fixed-width panel never clips
-  a section label.
+  Rank and Approve waves also show `Voters` and `Activity` as direct tabs.
+  Scroll the tab strip horizontally if the labels do not all fit.
+- A single remaining section appears as a direct tab, without a dropdown
+  chevron or menu. `More` is used only when it contains at least two sections.
 - Native keeps three compact pills visible and moves remaining sections into
   `More`, avoiding a compressed desktop-style tab row on narrow phones.
 - The contextual row and every section share the same panel canvas, including
@@ -97,7 +99,7 @@ linked section pages.
 ## User Journey
 
 1. Open a wave thread on `/waves/{waveId}` or `/messages/{waveId}`.
-2. Open the right sidebar from the desktop sidebar control or the compact
+2. Open the right sidebar from the desktop/tablet `Show right sidebar` icon or the compact
    `Wave details` header button.
 3. Select a desktop tab or native information pill. Use `More` for the
    remaining sections.

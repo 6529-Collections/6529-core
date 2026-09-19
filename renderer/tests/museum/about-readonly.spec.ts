@@ -11,7 +11,9 @@ import {
   assertNoFailedResponses,
   attachPageDiagnostics,
 } from "../support/pageAssertions";
+import { installLocalMuseumCountryCheck } from "../support/localMuseumCountryCheck";
 import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import { MUSEUM_SETTINGS_FETCH_ERROR_PATTERN } from "../support/museumConsoleDiagnostics";
 
 const ABOUT_PATH = "/museum/network/about";
 const MOBILE_PROJECT = "web-mobile-chromium";
@@ -31,7 +33,7 @@ const EXACT_CONTRIBUTOR_GUIDE_PATTERN = new RegExp(
 const ALLOWED_CONSOLE_ERROR_PATTERNS = [
   /^Analytics SDK: TypeError: Failed to fetch(?:\n|$)/u,
   /^Error checking Cross-Origin-Opener-Policy: Failed to fetch(?: \(6529\.io\))?(?:\n|$)/u,
-  /^Failed to fetch seize settings TypeError: Failed to fetch(?:\n|$)/u,
+  MUSEUM_SETTINGS_FETCH_ERROR_PATTERN,
   /^Failed to fetch cookie consent status Error: Network request failed\./u,
 ];
 
@@ -103,7 +105,8 @@ async function openAbout(page: Page) {
 test.describe("Museum About proposition @surface @readonly", () => {
   test.setTimeout(120_000);
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page, baseURL }, testInfo) => {
+    await installLocalMuseumCountryCheck(page, baseURL);
     if (testInfo.project.name === MOBILE_PROJECT) {
       await page.setViewportSize(MOBILE_VIEWPORT);
       expect(page.viewportSize()).toEqual(MOBILE_VIEWPORT);

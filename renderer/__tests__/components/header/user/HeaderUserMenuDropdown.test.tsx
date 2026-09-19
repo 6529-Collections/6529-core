@@ -20,6 +20,13 @@ import type { ApiProfileMin } from "@/generated/models/ApiProfileMin";
 import type { ApiProfileProxy } from "@/generated/models/ApiProfileProxy";
 import { mainnet } from "viem/chains";
 
+jest.mock(
+  "@/hooks/artwork-documentation/useArtworkDocumentationAccess",
+  () => ({
+    useArtworkDocumentationAccess: () => ({ enabled: false }),
+  })
+);
+
 jest.mock("@/components/header/user/HeaderUserProxyDropdownItem", () => () => (
   <div data-testid="item" />
 ));
@@ -100,8 +107,8 @@ jest.mock("@/hooks/isMobileDevice", () => ({
     isDeviceDetectionResolved: true,
   }),
 }));
-jest.mock("@/hooks/useIdentity", () => ({
-  useIdentity: () => ({ profile: null, isLoading: false }),
+jest.mock("@/components/layout/sidebar/useSidebarIdentity", () => ({
+  useSidebarIdentity: () => ({ profile: null, isLoading: false }),
 }));
 jest.mock("react-use", () => ({ useClickAway: jest.fn() }));
 
@@ -185,6 +192,7 @@ function connectedAccount(
 }
 
 interface RenderOptions {
+  readonly artworkDocumentationEnabled?: boolean;
   readonly address?: string | undefined;
   readonly isAuthenticated?: boolean | undefined;
   readonly isConnected?: boolean | undefined;
@@ -230,6 +238,7 @@ function createConnectContext(
     seizeConnectOpen: false,
     isConnected: true,
     canSignActiveWallet: true,
+    isWalletConnectionPending: false,
     hasActiveWalletAddress: Boolean(address),
     hasValidWalletAuth: true,
     isSigningOutAll: false,
@@ -348,10 +357,14 @@ function renderDropdown(options: RenderOptions) {
     switchToNextChain: options.switchToNextChain || jest.fn(() => false),
   });
   const onClose = jest.fn();
-  render(
+  const rendered = render(
     <AuthContext.Provider value={authValue}>
       <HeaderUserMenuDropdown
+        key="first"
         isOpen
+        artworkDocumentationEnabled={
+          options.artworkDocumentationEnabled ?? false
+        }
         profile={options.profile ?? profileBase}
         onClose={onClose}
         onOpenConnect={options.onOpenConnect}
@@ -359,6 +372,8 @@ function renderDropdown(options: RenderOptions) {
     </AuthContext.Provider>
   );
   return {
+    rendered,
+    authValue,
     onClose,
     ...authValue,
     ...connectContext,
@@ -794,4 +809,33 @@ describe("HeaderUserMenuDropdown", () => {
       expect(onClose).not.toHaveBeenCalled();
     });
   });
+});
+
+it("reveals documentation when access resolves in an open menu and removes revoked access", () => {
+  const { rendered, authValue, onClose } = renderDropdown({
+    address: "0xabc",
+    artworkDocumentationEnabled: false,
+  });
+  const menu = (enabled: boolean) => (
+    <AuthContext.Provider value={authValue}>
+      <HeaderUserMenuDropdown
+        key="first"
+        isOpen
+        profile={profileBase}
+        onClose={onClose}
+        artworkDocumentationEnabled={enabled}
+      />
+    </AuthContext.Provider>
+  );
+  expect(
+    screen.queryByRole("link", { name: "My artwork documentation" })
+  ).not.toBeInTheDocument();
+  rendered.rerender(menu(true));
+  expect(
+    screen.getByRole("link", { name: "My artwork documentation" })
+  ).toBeInTheDocument();
+  rendered.rerender(menu(false));
+  expect(
+    screen.queryByRole("link", { name: "My artwork documentation" })
+  ).not.toBeInTheDocument();
 });

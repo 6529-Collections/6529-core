@@ -1,9 +1,18 @@
 import { render, screen } from "@testing-library/react";
 import React from "react";
+import { useReadContract } from "wagmi";
 import NextGenCollectionHeader, {
   NextGenBackToCollectionPageLink,
+  NextGenMintCounts,
 } from "@/components/nextGen/collections/collectionParts/NextGenCollectionHeader";
 import { fetchUrl } from "@/services/6529api";
+import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
+jest.mock("@/hooks/useNftPurchasingVisibility", () => ({
+  useNftPurchasingVisibility: jest.fn(() => ({
+    hideNftPurchasing: false,
+    shouldRedirect: false,
+  })),
+}));
 
 jest.mock("@/services/6529api", () => ({
   fetchUrl: jest.fn(() => Promise.resolve({})),
@@ -62,6 +71,49 @@ const collection: any = {
 };
 
 describe("NextGenCollectionHeader", () => {
+  it("keeps polling unavailable and unminted counts, then stops at the confirmed total supply", () => {
+    jest.mocked(useReadContract).mockClear();
+    render(<NextGenMintCounts collection={collection} />);
+    const interval =
+      jest.mocked(useReadContract).mock.calls[0]?.[0]?.query?.refetchInterval;
+    if (typeof interval !== "function") {
+      throw new Error(
+        "Mint supply polling must inspect the current query result"
+      );
+    }
+    for (const [data, expected] of [
+      [undefined, 10000],
+      [BigInt(0), 10000],
+      [BigInt(9), 10000],
+      [BigInt(10), false],
+    ]) {
+      expect(Reflect.apply(interval, undefined, [{ state: { data } }])).toBe(
+        expected
+      );
+    }
+  });
+
+  it("keeps an unavailable chain count distinct from zero", () => {
+    const { container } = render(<NextGenMintCounts collection={collection} />);
+    expect(screen.getByText("Mint count unavailable")).toBeInTheDocument();
+    expect(container).not.toHaveTextContent("NaN");
+    expect(container).not.toHaveTextContent("0 / 10 minted");
+  });
+  afterEach(() =>
+    jest
+      .mocked(useNftPurchasingVisibility)
+      .mockReturnValue({ hideNftPurchasing: false, shouldRedirect: false })
+  );
+  it("retains countdown information without a mint CTA on restricted iOS", () => {
+    jest
+      .mocked(useNftPurchasingVisibility)
+      .mockReturnValue({ hideNftPurchasing: true, shouldRedirect: true });
+    const { container } = render(
+      <NextGenCollectionHeader collection={collection} show_links={false} />
+    );
+    expect(screen.getByText(/Allowlist Starting/)).toBeInTheDocument();
+    expect(container.querySelector('a[href$="/mint"]')).toBeNull();
+  });
   it("renders back link text depending on path", () => {
     window.history.pushState({}, "", "/x/art");
     render(<NextGenBackToCollectionPageLink collection={collection} />);

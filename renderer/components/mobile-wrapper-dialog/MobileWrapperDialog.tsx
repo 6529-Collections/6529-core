@@ -3,15 +3,10 @@ import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
 import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
-import {
-  Dialog,
-  DialogPanel,
-  Transition,
-  TransitionChild,
-} from "@headlessui/react";
+import { Dialog, DialogPanel, TransitionChild } from "@headlessui/react";
 import clsx from "clsx";
-import { Fragment, useEffect, useRef } from "react";
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CSSProperties, ReactNode, RefObject } from "react";
 import MobileWrapperDialogCloseButton from "./MobileWrapperDialogCloseButton";
 import MobileWrapperDialogHeader from "./MobileWrapperDialogHeader";
 import { useMobileDialogDrag } from "./useMobileDialogDrag";
@@ -62,8 +57,52 @@ type MobileWrapperDialogProps = {
   readonly backLabel?: string | undefined;
   readonly closeLabel?: string | undefined;
   readonly dismissible?: boolean | undefined;
+  /** Keep focus available when Escape opens a confirmation instead of closing. */
+  readonly preserveFocusOnEscape?: boolean | undefined;
   readonly hideOnDesktopHover?: boolean | undefined;
+  /** Preserve an in-progress review while the dialog is closed. */
+  readonly keepMounted?: boolean | undefined;
 };
+
+/** Retained children do not trigger Headless UI's unmount focus restoration. */
+export function useRetainedDialogFocus(
+  enabled: boolean,
+  open: boolean,
+  dialog: RefObject<HTMLDivElement | null>
+) {
+  const opener = useRef<HTMLElement | null>(null);
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => {
+    if (!enabled) return;
+    const previouslyOpen = wasOpen.current;
+    wasOpen.current = open;
+    if (open && !previouslyOpen) {
+      const active = document.activeElement;
+      // Headless UI schedules initial focus in a microtask, after layout effects.
+      if (active instanceof HTMLElement && !dialog.current?.contains(active))
+        opener.current = active;
+      return;
+    }
+    if (open || !previouslyOpen) return;
+    const frame = globalThis.requestAnimationFrame(() => {
+      const active = document.activeElement;
+      if (active !== document.body && !dialog.current?.contains(active)) return;
+      const anotherModal = Array.from(
+        document.querySelectorAll<HTMLElement>(
+          '[role="dialog"][aria-modal="true"]'
+        )
+      ).some(
+        (element) =>
+          element !== dialog.current &&
+          !element.closest("[hidden]") &&
+          globalThis.getComputedStyle(element).display !== "none"
+      );
+      if (!anotherModal && opener.current?.isConnected)
+        opener.current.focus({ preventScroll: true });
+    });
+    return () => globalThis.cancelAnimationFrame(frame);
+  }, [dialog, enabled, open]);
+}
 
 function getSlideTransition(tabletModal?: boolean) {
   return {
@@ -377,13 +416,17 @@ export default function MobileWrapperDialog({
   backLabel,
   closeLabel,
   dismissible = true,
+  preserveFocusOnEscape = false,
   hideOnDesktopHover = false,
+  keepMounted = false,
 }: MobileWrapperDialogProps) {
   const locale = useBrowserLocale();
   const { isCapacitor, isIos } = useCapacitor();
   const isMobileLayoutViewport = useIsMobileLayoutViewport();
   const isTouchDevice = useIsTouchDevice();
   const titleRef = useRef<HTMLElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const [dialogMount, setDialogMount] = useState<HTMLSpanElement | null>(null);
   const resolvedBackLabel = backLabel ?? t(locale, "common.back");
   const resolvedCloseLabel = closeLabel ?? t(locale, "common.close");
   const {
@@ -415,6 +458,7 @@ export default function MobileWrapperDialog({
   });
   const dragPanelClassNames = getDragPanelClassNames(canDragToClose);
   const hasDragHandle = showDragHandle ?? canDragToClose;
+  const showTouchDragHandle = hasDragHandle && isTouchDevice;
   const containerClassNames = getContainerClassNames(tabletModal);
   const slideTransition = getSlideTransition(tabletModal);
   const panelStyle = getPanelStyle({
@@ -431,7 +475,7 @@ export default function MobileWrapperDialog({
     allowOverflow,
     noPadding,
     showScrollbar,
-    hasDragHandle,
+    hasDragHandle: showTouchDragHandle,
     tabletModal,
   });
   const surfaceStyle = getSurfaceStyle({
@@ -442,12 +486,14 @@ export default function MobileWrapperDialog({
     dismissible && !!tabletModal && !showHeaderCloseButton;
   const showFloatingCloseButton = dismissible && !showHeaderCloseButton;
   const showInlineHeaderCloseButton = dismissible && !!showHeaderCloseButton;
-  const hideMobileCloseButton = canDragToClose;
+  const hideMobileCloseButton = canDragToClose && isTouchDevice;
   const shouldHideOnDesktopHover =
     hideOnDesktopHover && !isMobileLayoutViewport && !isTouchDevice;
+  const dialogOpen = isOpen && dialogMount !== null;
+  useRetainedDialogFocus(keepMounted, dialogOpen, dialogRef);
 
   useEffect(() => {
-    if (!isOpen || !focusTitleOnOpen) {
+    if (!dialogOpen || !focusTitleOnOpen) {
       return;
     }
 
@@ -456,18 +502,40 @@ export default function MobileWrapperDialog({
     });
 
     return () => globalThis.cancelAnimationFrame(frame);
-  }, [focusTitleOnOpen, isOpen, title]);
+  }, [focusTitleOnOpen, dialogOpen, title]);
 
   if (shouldHideOnDesktopHover) {
     return null;
   }
 
   return (
-    <Transition appear={true} show={isOpen} as={Fragment}>
+    <>
+      {/* Commit the in-tree mount before opening so Headless UI can resolve its
+          modal boundary even after a menu has completed the global handoff.
+          The stable callback ref also resets readiness when this surface hides. */}
+      <span hidden aria-hidden="true" ref={setDialogMount} />
       <Dialog
+        ref={dialogRef}
         as="div"
+        open={dialogOpen}
+        unmount={!keepMounted}
         className={clsx("tailwind-scope tw-absolute", zIndexClassName)}
         onClose={handleClose}
+        onKeyDown={(event) => {
+          // Headless UI blurs focus before calling onClose for Escape. Keep
+          // focus here, but let nested dialogs and portalled controls handle it.
+          if (
+            preserveFocusOnEscape &&
+            !event.defaultPrevented &&
+            event.key === "Escape" &&
+            event.target instanceof Element &&
+            event.target.closest('[role="dialog"], [role="alertdialog"]') ===
+              event.currentTarget
+          ) {
+            event.preventDefault();
+            handleClose();
+          }
+        }}
         aria-label={ariaLabel}
         {...(focusTitleOnOpen ? { initialFocus: titleRef } : {})}
       >
@@ -491,7 +559,11 @@ export default function MobileWrapperDialog({
               className={containerClassNames}
               style={MOBILE_DIALOG_CONTAINER_STYLE}
             >
-              <TransitionChild as={Fragment} {...slideTransition}>
+              <TransitionChild
+                as={Fragment}
+                unmount={!keepMounted}
+                {...slideTransition}
+              >
                 <div className={panelClassNames}>
                   <DialogPanel
                     className={dragPanelClassNames}
@@ -513,7 +585,7 @@ export default function MobileWrapperDialog({
                         style={{ paddingBottom: bottomPadding }}
                       >
                         <DragHandle
-                          show={hasDragHandle}
+                          show={showTouchDragHandle}
                           tabletModal={tabletModal}
                         />
                         <MobileWrapperDialogHeader
@@ -526,13 +598,11 @@ export default function MobileWrapperDialog({
                           headerActions={headerActions}
                           showHeaderCloseButton={showInlineHeaderCloseButton}
                           showHeaderDivider={showHeaderDivider}
-                          headerCloseButtonClassName={
-                            clsx(
-                              hideMobileCloseButton &&
-                                "!tw-hidden md:!tw-inline-flex",
-                              headerCloseButtonClassName
-                            )
-                          }
+                          headerCloseButtonClassName={clsx(
+                            hideMobileCloseButton &&
+                              "!tw-hidden md:!tw-inline-flex",
+                            headerCloseButtonClassName
+                          )}
                           titleClassName={titleClassName}
                           titleRef={titleRef}
                           backLabel={resolvedBackLabel}
@@ -548,6 +618,6 @@ export default function MobileWrapperDialog({
           </div>
         </div>
       </Dialog>
-    </Transition>
+    </>
   );
 }

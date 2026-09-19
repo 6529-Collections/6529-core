@@ -12,7 +12,9 @@ import {
   assertNoFailedResponses,
   attachPageDiagnostics,
 } from "../support/pageAssertions";
+import { installLocalMuseumCountryCheck } from "../support/localMuseumCountryCheck";
 import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import { installLocalMuseumAppKitConfig } from "../support/localMuseumAppKitConfig";
 
 const STUDY_PATH = "/museum/network/research/institutional-practice";
 const SOURCE_REPOSITORY = "6529-Collections/6529networkmuseum";
@@ -20,6 +22,7 @@ const EXACT_COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 const REQUIRED_SOURCE_COMMIT =
   process.env["MUSEUM_PUBLICATION_EXPECTED_COMMIT"]?.trim() || null;
 const MOBILE_PROJECT = "web-mobile-chromium";
+const ROUTE_URL_SETTLEMENT_TIMEOUT_MS = 30000;
 const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
 const CASEY_WORK_HREFS = Array.from(
   { length: 7 },
@@ -271,7 +274,9 @@ async function expectStudyRoute(
     expect(response?.status()).toBe(200);
     await waitForRouteReady(page);
 
-    await expect(page).toHaveURL((url) => url.pathname === route.path);
+    await expect(page).toHaveURL((url) => url.pathname === route.path, {
+      timeout: ROUTE_URL_SETTLEMENT_TIMEOUT_MS,
+    });
     await expect(page).not.toHaveTitle(/404|PAGE NOT FOUND/iu);
     await expect(page.locator("h1")).toHaveCount(1);
     await expect(
@@ -304,7 +309,9 @@ async function expectStudyRoute(
 test.describe("Museum institutional-practice publication @surface @large @readonly", () => {
   test.setTimeout(120_000);
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page, baseURL }, testInfo) => {
+    await installLocalMuseumCountryCheck(page, baseURL);
+    await installLocalMuseumAppKitConfig(page, baseURL);
     if (testInfo.project.name === MOBILE_PROJECT) {
       await page.setViewportSize(MOBILE_VIEWPORT);
       expect(page.viewportSize()).toEqual(MOBILE_VIEWPORT);

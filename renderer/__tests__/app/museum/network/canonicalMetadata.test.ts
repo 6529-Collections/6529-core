@@ -9,7 +9,6 @@ import { metadata as acquisitionsMetadata } from "@/app/museum/network/acquisiti
 import { generateMetadata as acquisitionDetailMetadata } from "@/app/museum/network/acquisitions/[slug]/page";
 import { metadata as artistsMetadata } from "@/app/museum/network/artists/page";
 import { generateMetadata as artistDetailMetadata } from "@/app/museum/network/artists/[slug]/page";
-import { generateMetadata as collectionObjectMetadata } from "@/app/museum/network/collection/[objectId]/page";
 import { metadata as collectionMetadata } from "@/app/museum/network/collection/page";
 import { metadata as organizationsMetadata } from "@/app/museum/network/organizations/page";
 import { generateMetadata as organizationDetailMetadata } from "@/app/museum/network/organizations/[slug]/page";
@@ -172,10 +171,17 @@ describe("Network Museum canonical metadata", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     installPublication();
-    mockedObjectMetadata.mockResolvedValue({
-      title: "Legacy object",
-      description: "Legacy object metadata",
-    });
+    mockedObjectMetadata.mockImplementation(async (objectId) => ({
+      title: "Museum work",
+      description: "Museum work metadata",
+      ...(objectId === "6529NM-W-0001" || objectId === "6529NM.2026.001.01"
+        ? {
+            alternates: {
+              canonical: "/museum/network/works/6529NM-W-0001",
+            },
+          }
+        : {}),
+    }));
   });
 
   it.each([
@@ -295,14 +301,18 @@ describe("Network Museum canonical metadata", () => {
     ).rejects.toMatchObject({ digest: "NEXT_HTTP_ERROR_FALLBACK;404" });
   });
 
-  it("keeps legacy Collection object metadata redirect-owned", async () => {
+  it("canonicalizes the destination Work metadata through the accepted bundle", async () => {
     expect(
       canonical(
-        await collectionObjectMetadata({
-          params: Promise.resolve({ objectId: "6529NM.2026.001.01" }),
+        await workDetailMetadata({
+          params: Promise.resolve({ workId: "6529NM-W-0001" }),
         })
       )
-    ).toBeUndefined();
+    ).toBe("/museum/network/works/6529NM-W-0001");
+    expect(mockedObjectMetadata).toHaveBeenLastCalledWith(
+      "6529NM-W-0001",
+      expect.objectContaining({ status: "current", publication })
+    );
   });
 
   it("canonicalizes a resolved governance slug", async () => {

@@ -1,5 +1,6 @@
 "use client";
 
+import { DROP_UPLOAD_ACCEPT } from "@/services/uploads/mediaUploadMimeType";
 import { publicEnv } from "@/config/env";
 import { TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
@@ -131,7 +132,7 @@ const CompactActionButton: React.FC<CompactActionButtonProps> = ({
     }`}
   >
     <span
-      className={`tw-flex tw-size-10 tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-transition ${getCompactActionSurfaceStyles(
+      className={`tw-flex tw-size-10 tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-transition desktop-hover:tw-size-9 ${getCompactActionSurfaceStyles(
         { pressed, disabled, required }
       )}`}
       aria-hidden="true"
@@ -340,8 +341,21 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
         <div className="tw-contents">
           {isCompactLayout ? (
             <>
-              {!isPollActive && (
-                <div className="tw-col-start-1 tw-row-start-2 tw-mb-0.5 tw-self-end">
+              <div
+                data-testid="drop-actions-compact-slot"
+                className="tw-col-start-1 tw-row-start-2 tw-mb-0.5 tw-size-10 tw-self-end desktop-hover:tw-mb-0 desktop-hover:tw-size-9 desktop-hover:tw-self-center"
+              >
+                {isPollActive ? (
+                  <span
+                    aria-hidden="true"
+                    className="tw-flex tw-size-10 tw-items-center tw-justify-center tw-rounded-full tw-border tw-border-primary-400/20 tw-bg-primary-500/10 tw-text-primary-300 desktop-hover:tw-size-9"
+                  >
+                    <ChartBarIcon
+                      className="tw-size-5"
+                      aria-hidden="true"
+                    />
+                  </span>
+                ) : (
                   <motion.button
                     data-testid="drop-actions-toggle-motion"
                     type="button"
@@ -355,7 +369,7 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
                         ? optionMotionTransition
                         : { duration: 0 }
                     }
-                    className={`tw-flex tw-size-10 tw-items-center tw-justify-center tw-rounded-full tw-border tw-transition focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-iron-950 ${compactToggleStyles}`}
+                    className={`tw-flex tw-size-10 tw-items-center tw-justify-center tw-rounded-full tw-border tw-transition focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-iron-950 desktop-hover:tw-size-9 ${compactToggleStyles}`}
                   >
                     <FontAwesomeIcon
                       icon={faPlus}
@@ -363,8 +377,8 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
                       className="tw-size-4"
                     />
                   </motion.button>
-                </div>
-              )}
+                )}
+              </div>
               <AnimatePresence initial={false}>
                 {showOptions && !isPollActive && (
                   <motion.div
@@ -374,8 +388,9 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
                     {...compactTrayMotionProps}
                     role="group"
                     aria-label={actionsLabel}
-                    className="tw-col-span-2 tw-col-start-2 tw-row-start-3 tw-mt-2 tw-overflow-hidden md:tw-col-span-1 md:tw-col-start-2"
+                    className="tw-col-span-2 tw-col-start-2 tw-row-start-3 tw-overflow-hidden"
                   >
+                    <div aria-hidden="true" className="tw-h-2" />
                     <div className="tw-rounded-2xl tw-border tw-border-white/10 tw-bg-iron-950/95 tw-p-2 tw-pl-0 tw-shadow-[0_12px_32px_rgba(0,0,0,0.28)]">
                       <div className="tw-flex tw-flex-wrap tw-items-start tw-justify-start tw-gap-6">
                         {isDropMode && (
@@ -440,7 +455,7 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
               </AnimatePresence>
             </>
           ) : (
-            <div className="tw-relative tw-col-start-1 tw-row-start-2 tw-mb-1 tw-self-end">
+            <div className="tw-relative tw-col-start-1 tw-row-start-2 tw-self-center">
               <motion.div
                 data-testid="drop-actions-motion-shell"
                 {...shellMotionProps}
@@ -637,7 +652,7 @@ const CreateDropActions: React.FC<CreateDropActionsProps> = memo(
             ref={fileInputRef}
             type="file"
             className="tw-hidden"
-            accept="image/*,video/*,audio/*,application/pdf,text/csv,.pdf,.csv"
+            accept={DROP_UPLOAD_ACCEPT}
             multiple
             onChange={onFiles}
           />

@@ -40,7 +40,9 @@ export default function RootLayout({
   const isUsingStaticAssets = publicEnv.ASSETS_FROM_S3 === "true";
 
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    // Headless UI may add its focus-visible marker before React hydrates when
+    // keyboard input arrives during startup. Keep that root-only mutation.
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href={publicEnv.API_ENDPOINT} crossOrigin="" />
         <link rel="preconnect" href="https://d3lqz0a4bldqgf.cloudfront.net" />

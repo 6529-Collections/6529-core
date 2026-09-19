@@ -5,6 +5,11 @@ import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
 
 const mockChatProps: any[] = [];
 
+jest.mock("@/components/waves/drop/SingleWaveDropShare", () => ({
+  __esModule: true,
+  default: () => <button type="button">Share drop</button>,
+}));
+
 jest.mock("@/components/waves/drop/SingleWaveDropChat", () => ({
   __esModule: true,
   SingleWaveDropChat: (props: any) => {
@@ -65,6 +70,17 @@ describe("SingleWaveDropWrapper", () => {
     );
 
     expect(screen.getByTestId("child")).toBeInTheDocument();
+    const scrollArea = screen.getByTestId("child").parentElement!;
+    expect(scrollArea.firstElementChild).toHaveClass(
+      "tw-h-[var(--video-header-reserve)]"
+    );
+    const wrapper = scrollArea.parentElement!.parentElement!;
+    expect(wrapper).toHaveClass(
+      "viewport",
+      "[--video-header-reserve:calc(env(safe-area-inset-top,0px)+4rem)]",
+      "[--video-bottom-reserve:env(safe-area-inset-bottom,0px)]"
+    );
+    expect(screen.getByRole("button", { name: "Share drop" })).toBeVisible();
     expect(screen.queryByTestId("chat")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Show chat" }));

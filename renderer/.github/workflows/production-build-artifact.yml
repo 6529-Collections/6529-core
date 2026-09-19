@@ -16,6 +16,8 @@ on:
     secrets:
       ALCHEMY_API_KEY:
         required: false
+      ETHEREUM_RPC_URL:
+        required: true
       AWS_RUM_APP_ID:
         required: false
       AWS_RUM_REGION:
@@ -88,7 +90,6 @@ jobs:
     timeout-minutes: 60
     permissions:
       contents: read
-      packages: read
     outputs:
       artifact_name: ${{ steps.validate-inputs.outputs.artifact_name }}
       package_sha256: ${{ steps.package.outputs.package_sha256 }}
@@ -207,7 +208,7 @@ jobs:
             ${{ runner.os }}-node22-pnpm-
 
       - name: Use cached pnpm store
-        run: ./bin/6529 exec pnpm config set store-dir ~/.pnpm-store
+        run: echo "npm_config_store_dir=$HOME/.pnpm-store" >> "$GITHUB_ENV"
 
       - name: Install Socket Firewall
         id: socket-firewall
@@ -216,22 +217,22 @@ jobs:
           mode: firewall
 
       - name: Assert npm lockfile is absent
-        run: ./bin/6529 guard:no-package-lock
+        run: ./bin/6529 run guard:no-package-lock
 
       - name: Install frozen dependencies
         env:
-          NODE_AUTH_TOKEN: ${{ github.token }}
           SFW_BIN: ${{ steps.socket-firewall.outputs.firewall-path-binary }}
-        run: ./bin/6529 install:frozen
+        run: ./bin/6529 ci
 
       - name: Lint package.json versions
-        run: ./bin/6529 lint:package-json
+        run: ./bin/6529 run lint:package-json
 
       - name: Build exact production bytes
         env:
           NODE_ENV: "production"
           VERSION: ${{ inputs.target_sha }}
           ALCHEMY_API_KEY: ${{ secrets.ALCHEMY_API_KEY }}
+          ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}
           GIPHY_API_KEY: ${{ vars.GIPHY_API_KEY || secrets.GIPHY_API_KEY }}
           AWS_RUM_APP_ID: ${{ secrets.AWS_RUM_APP_ID }}
           AWS_RUM_REGION: ${{ secrets.AWS_RUM_REGION }}

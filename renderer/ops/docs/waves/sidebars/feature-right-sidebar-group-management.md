@@ -28,6 +28,9 @@ Users can:
 - Select `Configuration` to inspect or manage access.
 - In `Access`, select the gear on a row to open its group editor.
 - In `Curations`, use the section gear or a curation row gear.
+- To view a curation, select its name in the
+  [wave content tabs](../chat/feature-content-tabs.md) on desktop, mobile web,
+  or the native app.
 
 ## User Journey
 
@@ -45,13 +48,14 @@ Users can:
 5. Return with normal browser back navigation when finished inspecting.
 6. Editors can select a Configuration access-row gear to open the group editor
    directly. There is no intermediate action menu.
-7. The modal renders the same group assignment editor used during wave
-   creation, including its `Edit criteria` and `Choose group` actions, privacy
-   row, criteria chips, expanded editors, draft summary, and save actions. The
+7. The modal opens on `Identities` in the same criteria editor used during wave creation,
+   including the privacy row, configured criteria chips, matching
+   `Before editing` and `After editing` summaries, and `Save changes`. Wave
+   access editors do not offer `Choose group`. The
    selected row's rules, included and excluded identities, NFT requirements,
    grant requirement, and criteria/member privacy setting are prefilled.
-8. Continue editing the prefilled criteria, or select `Choose group` to assign
-   another saved group. `View members` remains available for both the saved
+8. Continue editing the prefilled criteria or use `Cancel` to discard the
+   pending replacement. `View members` remains available for both the saved
    group and a valid draft.
 9. Visibility with a group also offers `Make wave public`. The app explains
    that everyone will be able to find and view the wave and requires explicit
@@ -87,6 +91,13 @@ Users can:
 
 ## Edge Cases
 
+- Subwave groups can differ from their parent's groups. Before saving a group
+  with members outside the parent's audience, a warning explains that those
+  members cannot open the subwave. Select `Continue anyway` to save the chosen
+  group or `Go back` to keep editing. Groups fully covered by the parent's
+  audience need no warning, even when the group itself is different.
+- Parent visibility can change while subwaves exist. Opening a subwave always
+  requires access to both waves.
 - Chat waves show only `Visibility`, `Chat access`, and `Admins`.
 - `Chat access` controls who can chat only when chat is enabled; it does not
   show whether chat is currently enabled or disabled.
@@ -108,8 +119,7 @@ Users can:
 - The Visibility shortcut is omitted when two different groups have equivalent
   criteria and identity lists, and it is never shown for `Admins`.
 - A public access row opens a new criteria draft with the editor explicitly
-  included by default. The editor can turn off `Include me` from `Identities`,
-  and `Choose group` remains available.
+  included by default. The editor can turn off `Include me` from `Identities`.
 - Editing an already restricted row preserves its saved included and excluded
   identities instead of adding the editor automatically.
 - The Visibility cascade runs only when Visibility, Drop, Vote, and Chat access
@@ -119,7 +129,7 @@ Users can:
 - Curation management is entirely hidden from viewers who cannot edit the wave.
 - Curation rows show an unavailable-group label when full group data is missing.
 - If no curations exist, administrators see the empty state and the create gear;
-  other viewers see no curation selector.
+  other viewers see no `Curations` management section.
 - Identity suggestions start after at least 3 typed characters.
 - Identity selection supports `ArrowUp`, `ArrowDown`, and `Enter`.
 

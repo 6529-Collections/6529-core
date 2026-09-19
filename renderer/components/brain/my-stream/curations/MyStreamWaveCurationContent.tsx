@@ -5,13 +5,23 @@ import CircleLoader, {
 } from "@/components/distribution-plan-tool/common/CircleLoader";
 import CurationEmptyState from "@/components/brain/my-stream/curations/CurationEmptyState";
 import CommonIntersectionElement from "@/components/utils/CommonIntersectionElement";
+import Button from "@/components/utils/button/Button";
 import Drop, { DropLocation } from "@/components/waves/drops/Drop";
 import type { ExtendedDrop } from "@/helpers/waves/drop.helpers";
-import { useWaveCurationDrops } from "@/hooks/useWaveCurationDrops";
+import { useCurationOrder } from "@/hooks/useCurationOrder";
+import { useCurationOrderReveal } from "@/hooks/useCurationOrderReveal";
+import { useCurationPagination } from "@/hooks/useCurationPagination";
+import CurationOrganize from "./CurationOrganize";
+import CurationOrganizeCard from "./CurationOrganizeCard";
+import { useCurationManagementPermission } from "@/hooks/useCurationManagementPermission";
+import { useCurationPermissionProbe } from "@/hooks/useCurationPermissionProbe";
+import type { QuickCurationAction } from "@/hooks/drops/useCanShowDropCurationsAction";
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { useApprovalWaveStatus } from "@/hooks/waves/useApprovalWaveStatus";
-import { useCallback, useMemo, type ReactNode } from "react";
+import { memo, useMemo, useRef, useState, type ReactNode } from "react";
 import { useLayout } from "../layout/LayoutContext";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
 
 interface MyStreamWaveCurationContentProps {
   readonly wave: ApiWave;
@@ -30,6 +40,7 @@ function MyStreamWaveCurationDropItem({
   winningThresholdMinDurationMs,
   isVotingClosed,
   isVotingControlsLocked,
+  standaloneQuickRemoveCuration,
 }: {
   readonly drop: ExtendedDrop;
   readonly previousDrop: ExtendedDrop | null;
@@ -39,6 +50,7 @@ function MyStreamWaveCurationDropItem({
   readonly winningThresholdMinDurationMs?: number | null | undefined;
   readonly isVotingClosed?: boolean | undefined;
   readonly isVotingControlsLocked?: boolean | undefined;
+  readonly standaloneQuickRemoveCuration: QuickCurationAction | null;
 }) {
   return (
     <Drop
@@ -56,6 +68,7 @@ function MyStreamWaveCurationDropItem({
       onQuoteClick={() => {}}
       onDropContentClick={onDropClick}
       showStandaloneActionsButton
+      standaloneQuickRemoveCuration={standaloneQuickRemoveCuration}
       winningThreshold={winningThreshold}
       winningThresholdMinDurationMs={winningThresholdMinDurationMs}
       isVotingClosed={isVotingClosed}
@@ -63,6 +76,8 @@ function MyStreamWaveCurationDropItem({
     />
   );
 }
+
+const MemoizedMyStreamWaveCurationDropItem = memo(MyStreamWaveCurationDropItem);
 
 export default function MyStreamWaveCurationContent({
   wave,
@@ -72,13 +87,32 @@ export default function MyStreamWaveCurationContent({
   constrainToViewport = true,
 }: MyStreamWaveCurationContentProps) {
   const { leaderboardViewStyle } = useLayout();
-  const { drops, fetchNextPage, hasNextPage, isFetching, isFetchingNextPage } =
-    useWaveCurationDrops({
-      wave,
-      curationId,
-    });
+  const locale = useBrowserLocale();
+  const [isOrganizing, setIsOrganizing] = useState(false);
+  const order = useCurationOrder({ wave, curationId });
+  const organizeButton = useRef<HTMLButtonElement | null>(null);
+  const container = useRef<HTMLDivElement | null>(null);
+  useCurationOrderReveal(order, container);
+  const {
+    drops,
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isFetchingNextPage,
+    isPlaceholderData,
+  } = order;
 
+  const permissionProbeDropId = useCurationPermissionProbe(
+    curationId,
+    drops,
+    isPlaceholderData
+  );
   const isInitialLoading = isFetching && drops.length === 0;
+  const canManageActiveCuration = useCurationManagementPermission({
+    curationId,
+    probeDropId:
+      isPlaceholderData && !isOrganizing ? "" : permissionProbeDropId,
+  });
   const {
     winningThreshold,
     winningThresholdMinDurationMs,
@@ -86,39 +120,50 @@ export default function MyStreamWaveCurationContent({
     isVotingControlsLocked,
   } = useApprovalWaveStatus({ wave });
 
-  const handleBottomIntersection = useCallback(
-    (isIntersecting: boolean) => {
-      if (!isIntersecting || !hasNextPage || isFetchingNextPage) {
-        return;
-      }
-
-      void fetchNextPage();
-    },
-    [fetchNextPage, hasNextPage, isFetchingNextPage]
-  );
+  const pagination = useCurationPagination({
+    fetchNextPage,
+    hasNextPage,
+    isFetching,
+    isError: order.isError,
+  });
 
   const curationTitle = curationName?.trim() ?? "Curation";
+  const standaloneQuickRemoveCuration = useMemo<QuickCurationAction | null>(
+    () =>
+      canManageActiveCuration && !isPlaceholderData
+        ? { id: curationId, name: curationTitle }
+        : null,
+    [canManageActiveCuration, curationId, curationTitle, isPlaceholderData]
+  );
 
   const renderedDrops = useMemo(
     () =>
       drops.map((drop, index) => (
-        <MyStreamWaveCurationDropItem
-          key={drop.stableKey}
-          drop={drop}
-          previousDrop={index > 0 ? (drops[index - 1] ?? null) : null}
-          nextDrop={drops[index + 1] ?? null}
-          onDropClick={onDropClick}
-          winningThreshold={winningThreshold}
-          winningThresholdMinDurationMs={winningThresholdMinDurationMs}
-          isVotingClosed={isVotingClosed}
-          isVotingControlsLocked={isVotingControlsLocked}
-        />
+        <CurationOrganizeCard
+          key={drop.id}
+          id={drop.id}
+          position={order.startIndex + index + 1}
+        >
+          <MemoizedMyStreamWaveCurationDropItem
+            drop={drop}
+            previousDrop={index > 0 ? (drops[index - 1] ?? null) : null}
+            nextDrop={drops[index + 1] ?? null}
+            onDropClick={onDropClick}
+            winningThreshold={winningThreshold}
+            winningThresholdMinDurationMs={winningThresholdMinDurationMs}
+            isVotingClosed={isVotingClosed}
+            isVotingControlsLocked={isVotingControlsLocked}
+            standaloneQuickRemoveCuration={standaloneQuickRemoveCuration}
+          />
+        </CurationOrganizeCard>
       )),
     [
       drops,
+      order.startIndex,
       isVotingClosed,
       isVotingControlsLocked,
       onDropClick,
+      standaloneQuickRemoveCuration,
       winningThreshold,
       winningThresholdMinDurationMs,
     ]
@@ -145,19 +190,21 @@ export default function MyStreamWaveCurationContent({
     );
   } else {
     content = (
-      <div className="tw-flex tw-min-h-0 tw-flex-1 tw-flex-col">
+      <div
+        className={`tw-flex tw-min-h-0 tw-flex-1 tw-flex-col ${isOrganizing ? "tw-gap-4 tw-pb-4" : ""}`}
+      >
         {renderedDrops}
         {(hasNextPage || isFetchingNextPage) && (
           <div className="tw-py-4">
-            {isFetchingNextPage ? (
+            {isFetchingNextPage && (
               <div className="tw-flex tw-justify-center">
                 <CircleLoader size={CircleLoaderSize.MEDIUM} />
               </div>
-            ) : (
-              <CommonIntersectionElement
-                onIntersection={handleBottomIntersection}
-              />
             )}
+            <CommonIntersectionElement
+              key={pagination.sentinelKey}
+              onIntersection={pagination.onIntersection}
+            />
           </div>
         )}
       </div>
@@ -166,6 +213,7 @@ export default function MyStreamWaveCurationContent({
 
   return (
     <div
+      ref={container}
       className={
         constrainToViewport
           ? "tw-flex tw-h-full tw-min-h-0 tw-w-full tw-min-w-0 tw-flex-grow tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-overscroll-y-contain tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500 desktop-hover:hover:tw-scrollbar-thumb-iron-300"
@@ -173,7 +221,32 @@ export default function MyStreamWaveCurationContent({
       }
       style={constrainToViewport ? leaderboardViewStyle : undefined}
     >
-      {content}
+      {!isOrganizing &&
+        order.canAuthenticate &&
+        canManageActiveCuration &&
+        !isPlaceholderData &&
+        drops.length > 1 && (
+          <div className="tailwind-scope tw-flex tw-h-[52px] tw-w-full tw-items-center tw-justify-start tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-800 tw-px-4">
+            <Button
+              ref={organizeButton}
+              variant="secondary"
+              size="sm"
+              onClick={() => setIsOrganizing(true)}
+            >
+              {t(locale, "profileCuration.order.action")}
+            </Button>
+          </div>
+        )}
+      <CurationOrganize
+        order={order}
+        enabled={isOrganizing && canManageActiveCuration}
+        onDone={() => {
+          setIsOrganizing(false);
+          requestAnimationFrame(() => organizeButton.current?.focus());
+        }}
+      >
+        {content}
+      </CurationOrganize>
     </div>
   );
 }
