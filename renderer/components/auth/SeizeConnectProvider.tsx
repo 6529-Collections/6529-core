@@ -1,12 +1,7 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getAddress, isAddress } from "viem";
 import { useAccount, useConnectors } from "wagmi";
 import { MAX_CONNECTED_PROFILES } from "@/constants/constants";
@@ -25,7 +20,10 @@ import {
   removeAuthJwt,
   setActiveWalletAccount,
 } from "@/services/auth/auth.utils";
-import { logoutSessionV2 } from "@/services/auth/session-v2.utils";
+import {
+  getSessionClientType,
+  logoutSessionV2,
+} from "@/services/auth/session-v2.utils";
 import { useConnectedAccountsUnreadNotifications } from "@/hooks/useConnectedAccountsUnreadNotifications";
 import { useUnreadNotifications } from "@/hooks/useUnreadNotifications";
 import useCapacitor from "@/hooks/useCapacitor";
@@ -53,6 +51,7 @@ import {
 } from "./AppKitModalBridge";
 import { openDesktopAddConnectorChooser } from "./connector-selection-lifecycle";
 import { WalletErrorBoundary } from "./error-boundary";
+import { mergeConnectedAccountUnreadCounts } from "./connectedAccountUnreadCounts";
 import { SeizeConnectContext } from "./seizeConnectContextValue";
 import {
   AuthenticationError,
@@ -332,6 +331,12 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     liveConnectedAddress &&
     normalizeAddress(activeAddress) === normalizeAddress(liveConnectedAddress)
   );
+  const isWalletConnectionPending =
+    !isSigningOutAll &&
+    !isActiveWalletConnected &&
+    (appKitBootstrapStatus === "initializing" ||
+      wagmiAccount.status === "connecting" ||
+      wagmiAccount.status === "reconnecting");
   const activeConnectorType = wagmiAccount.connector?.type;
   const isActiveAppWalletConnector =
     activeConnectorType === APP_WALLET_CONNECTOR_TYPE;
@@ -723,6 +728,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
               ? error
               : new Error("Failed to revoke session during logout");
           logError("seizeDisconnectAndLogout.logoutSessionV2", revokeError);
+          if (getSessionClientType() === "native") throw revokeError;
         }
         await removeAuthJwt();
         refreshStoredConnectedAccounts();
@@ -1165,46 +1171,35 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   );
 
-  const connectedAccountUnreadNotifications = useMemo(() => {
-    const unreadNotificationsByAddress = {
-      ...jwtConnectedAccountUnreadNotifications,
-    };
-
-    if (activeStoredAccount?.profileHandle) {
-      const activeAccountAddress = normalizeAddress(
-        activeStoredAccount.address
-      );
-      const activeUnreadCount = activeUnreadNotifications?.unread_count;
-
-      if (typeof activeUnreadCount === "number") {
-        unreadNotificationsByAddress[activeAccountAddress] = activeUnreadCount;
-      }
-    } else if (activeStoredAccount) {
-      const activeAccountAddress = normalizeAddress(
-        activeStoredAccount.address
-      );
-      unreadNotificationsByAddress[activeAccountAddress] ??= 0;
-    }
-
-    return unreadNotificationsByAddress;
-  }, [
-    activeStoredAccount,
-    activeUnreadNotifications?.unread_count,
-    jwtConnectedAccountUnreadNotifications,
-  ]);
+  const connectedAccountUnreadNotifications = useMemo(
+    () =>
+      mergeConnectedAccountUnreadCounts(
+        jwtConnectedAccountUnreadNotifications,
+        activeStoredAccount,
+        activeUnreadNotifications?.unread_count
+      ),
+    [
+      activeStoredAccount,
+      activeUnreadNotifications?.unread_count,
+      jwtConnectedAccountUnreadNotifications,
+    ]
+  );
 
   const contextValue = useMemo(
     (): SeizeConnectContextType => ({
       address: isSigningOutAll ? undefined : activeAddress,
-      walletName: !isSigningOutAll && isActiveWalletConnected
-        ? appKitModalState.walletName
-        : undefined,
-      walletIcon: !isSigningOutAll && isActiveWalletConnected
-        ? appKitModalState.walletIcon
-        : undefined,
-      isSafeWallet: !isSigningOutAll && isActiveWalletConnected
-        ? appKitModalState.isSafeWallet
-        : false,
+      walletName:
+        !isSigningOutAll && isActiveWalletConnected
+          ? appKitModalState.walletName
+          : undefined,
+      walletIcon:
+        !isSigningOutAll && isActiveWalletConnected
+          ? appKitModalState.walletIcon
+          : undefined,
+      isSafeWallet:
+        !isSigningOutAll && isActiveWalletConnected
+          ? appKitModalState.isSafeWallet
+          : false,
       seizeConnect,
       seizeConnectFresh,
       seizeDisconnect,
@@ -1225,6 +1220,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isConnected: !isSigningOutAll && isActiveWalletConnected,
       isDisconnecting,
       canSignActiveWallet: !isSigningOutAll && isActiveWalletConnected,
+      isWalletConnectionPending,
       hasActiveWalletAddress,
       hasValidWalletAuth,
       isSigningOutAll,
@@ -1245,6 +1241,7 @@ export const SeizeConnectProvider: React.FC<{ children: React.ReactNode }> = ({
       isActiveWalletConnected,
       isAddingConnectedAccount,
       isDisconnecting,
+      isWalletConnectionPending,
       connectedAccounts,
       appKitModalState.walletName,
       appKitModalState.walletIcon,

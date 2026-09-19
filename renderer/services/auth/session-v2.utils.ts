@@ -1,3 +1,4 @@
+import { queueNativePushLogout } from "@/services/notifications/push-installation";
 import { Capacitor } from "@capacitor/core";
 import { isElectron } from "@/helpers";
 import type { ApiSessionNonceResponse } from "@/generated/models/ApiSessionNonceResponse";
@@ -39,7 +40,10 @@ import {
 } from "./session-refresh-coordination.utils";
 
 export type { AuthSessionClientType } from "./session-refresh-coordination.utils";
-export type RefreshTokenSessionClientType = Exclude<AuthSessionClientType, "web">;
+export type RefreshTokenSessionClientType = Exclude<
+  AuthSessionClientType,
+  "web"
+>;
 
 interface SessionLoginRequest {
   readonly client_type: AuthSessionClientType;
@@ -834,11 +838,10 @@ export async function createLegacyDesktopConnectionShare({
 }): Promise<CreateLegacyDesktopConnectionShareResponse> {
   const sourceProof = await getNativeConnectionShareSourceProof();
   if (isElectron()) {
-    const createLegacyDesktopConnectionShare =
-      requireDesktopAuthBridgeMethod(
-        "createLegacyDesktopConnectionShare",
-        "Desktop legacy connection-share bridge is unavailable"
-      );
+    const createLegacyDesktopConnectionShare = requireDesktopAuthBridgeMethod(
+      "createLegacyDesktopConnectionShare",
+      "Desktop legacy connection-share bridge is unavailable"
+    );
     if (!sourceProof) {
       throw new Error("Connection sharing requires an active desktop session");
     }
@@ -873,6 +876,14 @@ export async function logoutSessionV2({
   const clientType = getSessionClientType();
   if (clientType !== "web") {
     if (!address) {
+      return;
+    }
+    if (!isElectron()) {
+      await queueNativePushLogout(address, false);
+      await removeNativeRefreshToken(
+        address,
+        toNativeRefreshTokenClientType(clientType)
+      );
       return;
     }
     try {
