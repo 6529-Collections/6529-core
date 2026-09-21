@@ -44,9 +44,13 @@ describe("StormButton", () => {
   });
 
   it("keeps the storm action icon-only at the 751px transition", () => {
-    const originalWidth = window.innerWidth;
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      window,
+      "innerWidth"
+    );
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
+      writable: true,
       value: 751,
     });
 
@@ -66,10 +70,11 @@ describe("StormButton", () => {
         within(button).queryByText("Break into storm")
       ).not.toBeInTheDocument();
     } finally {
-      Object.defineProperty(window, "innerWidth", {
-        configurable: true,
-        value: originalWidth,
-      });
+      if (originalDescriptor) {
+        Object.defineProperty(window, "innerWidth", originalDescriptor);
+      } else {
+        Reflect.deleteProperty(window, "innerWidth");
+      }
     }
   });
 });

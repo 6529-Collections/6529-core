@@ -33,7 +33,7 @@ pagination, and profile links.
   default. The Network version omits `Choose group` and `Hide criteria and
   members`.
 - Applying new criteria creates a saved group and immediately uses it as the
-  Network scope. Choosing `All Network members` clears the group scope.
+  Network scope. Choosing `Clear selected group` clears the group scope.
 - When a signed-in user has an active Network scope with at least one
   criterion, the selected-group summary shows `REP everyone matching criteria`
   and `NIC everyone matching criteria` directly below the group name.

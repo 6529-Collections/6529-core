@@ -11,7 +11,7 @@ Users can:
 - follow visible `1 user` or `X users` counts to inspect both criteria and
   current members
 - open a prefilled group editor directly from each access-row gear
-- edit criteria and identities or choose a different existing group
+- edit criteria and identities
 - make wave visibility public or align an eligible access row with Visibility
 - create, edit, delete, and reorder wave curations without leaving the thread
 
@@ -70,8 +70,7 @@ Users can:
 12. Authenticate when prompted.
 13. Saving edited criteria creates a separate group and assigns that copy only
     to the access row whose gear was opened. The original group, other access
-    rows, and other waves using it remain unchanged. Choosing an existing group
-    also changes only the selected access row, except for the fully public
+    rows, and other waves using it remain unchanged, except for the fully public
     Visibility cascade described above.
 14. The app verifies that an updated `Drop`, `Vote`, `Chat access`, or `Admins`
     group is contained in `Visibility` before saving.

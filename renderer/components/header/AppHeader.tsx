@@ -266,7 +266,10 @@ const HeaderTitleContent = ({
               parentWave={activeWave?.parent_wave}
               variant="compact-header"
             />
-            {activeWave !== null && !isDm && previewText !== null ? (
+            {activeWave !== null &&
+            Boolean(activeWave.description_drop?.id) &&
+            !isDm &&
+            previewText !== null ? (
               <WaveDescriptionPopover
                 wave={activeWave}
                 align="left"
