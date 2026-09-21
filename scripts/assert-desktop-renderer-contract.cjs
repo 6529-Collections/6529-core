@@ -2087,6 +2087,16 @@ const rootLayoutPath = "renderer/app/layout.tsx";
 const rootLayout = parseSource(rootLayoutPath);
 const rootLayoutFunction = findFunction(rootLayout, "RootLayout");
 assertContract(
+  rootLayoutFunction && Boolean(findDescendant(rootLayoutFunction, (node) =>
+    ts.isJsxElement(node) &&
+    ts.isIdentifier(node.openingElement.tagName) &&
+    node.openingElement.tagName.text === "Suspense" &&
+    hasJsxElement(node, "AppRouteProviders")
+  )),
+  rootLayoutPath,
+  "Core's URL-dependent shared provider shell must remain beneath Suspense for production prerendering",
+);
+assertContract(
   rootLayoutFunction && hasJsxElement(rootLayoutFunction, "AppRouteProviders"),
   rootLayoutPath,
   "RootLayout must route all pages through AppRouteProviders",

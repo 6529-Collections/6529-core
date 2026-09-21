@@ -20,6 +20,7 @@ import LayoutWrapper from "@/components/providers/LayoutWrapper";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
 import type { Viewport } from "next";
+import { Suspense } from "react";
 
 export const fetchCache = "force-no-store";
 
@@ -56,10 +57,15 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <MobileLaunchTimingReporter />
         <AwsRumProvider>
-          <AppRouteProviders>
-            <DynamicHeadTitle />
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </AppRouteProviders>
+          {/* Core's client shell reads the live URL in analytics, title, wave,
+              and navigation providers. Keep those reads below a boundary when
+              Next prerenders static routes, unlike the request-time web shell. */}
+          <Suspense fallback={null}>
+            <AppRouteProviders>
+              <DynamicHeadTitle />
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </AppRouteProviders>
+          </Suspense>
         </AwsRumProvider>
       </body>
     </html>
