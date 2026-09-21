@@ -3,8 +3,12 @@ import {
   useVersionStatus,
 } from "@/contexts/VersionStatusContext";
 import { act, render, screen } from "@testing-library/react";
+import { renderToString } from "react-dom/server";
+import { useSearchParams } from "next/navigation";
 jest.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(globalThis.location.search),
+  useSearchParams: jest.fn(
+    () => new URLSearchParams(globalThis.location.search)
+  ),
 }));
 const updater = {
   checkUpdates: jest.fn(),
@@ -17,6 +21,16 @@ const getInfo = jest.fn();
 function Consumer() {
   return <span>{useVersionStatus() ? "update" : "current"}</span>;
 }
+it("prerenders page content without reading request-only search params", () => {
+  jest.mocked(useSearchParams).mockClear();
+  const html = renderToString(
+    <VersionStatusProvider>
+      <Consumer />
+    </VersionStatusProvider>
+  );
+  expect(html).toContain("current");
+  expect(useSearchParams).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   jest.clearAllMocks();
   globalThis.history.replaceState(null, "", "/");

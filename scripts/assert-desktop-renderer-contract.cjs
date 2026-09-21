@@ -2156,7 +2156,23 @@ assertContract(
 );
 
 const versionStatusPath = "renderer/contexts/VersionStatusContext.tsx";
-const versionStatus = parseSource(versionStatusPath).text;
+const versionStatusSource = parseSource(versionStatusPath);
+const versionStatus = versionStatusSource.text;
+const versionStatusProvider = findFunction(versionStatusSource, "VersionStatusProvider");
+const desktopUpdatePreview = findFunction(versionStatusSource, "DesktopUpdatePreview");
+assertContract(
+  versionStatusProvider && desktopUpdatePreview &&
+    !callsIdentifier(versionStatusProvider, "useSearchParams") &&
+    callsIdentifier(desktopUpdatePreview, "useSearchParams") &&
+    Boolean(findDescendant(versionStatusProvider, (node) =>
+      ts.isJsxElement(node) &&
+      ts.isIdentifier(node.openingElement.tagName) &&
+      node.openingElement.tagName.text === "Suspense" &&
+      hasJsxElement(node, "DesktopUpdatePreview")
+    )),
+  versionStatusPath,
+  "desktop preview URL reader must stay beneath Suspense, outside the page-providing update component",
+);
 assertContract(
   versionStatus.includes("window.updater.onUpdateAvailable(") &&
     versionStatus.includes("window.updater.offUpdateAvailable(") &&
