@@ -22,6 +22,7 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import styles from "./TitleBar.module.css";
 import TooltipButton from "./TooltipButton";
@@ -30,6 +31,11 @@ import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
+
+// The OS is constant for this renderer. During hydration, use the same unknown
+// snapshot as the server rather than interpreting Node's user agent as Windows.
+const subscribePlatform = () => () => undefined;
+const getServerPlatform = (): null => null;
 
 const TITLEBAR_HEIGHT_STYLE = {
   "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
@@ -334,7 +340,13 @@ export default function TitleBar() {
     });
   };
 
-  const isMacPlatform = isMac();
+  const isMacPlatform = useSyncExternalStore(
+    subscribePlatform,
+    isMac,
+    getServerPlatform
+  );
+  const platformPendingClass =
+    isMacPlatform === null ? styles["platformPending"] : "";
   const versionPositionClass = (() => {
     if (isMacPlatform) {
       return updateAvailable
@@ -457,7 +469,7 @@ export default function TitleBar() {
         )}
       </span>
       <span
-        className={`${versionClass} ${versionPositionClass}`}
+        className={`${versionClass} ${versionPositionClass} ${platformPendingClass}`}
         style={TITLEBAR_HEIGHT_STYLE}
       >
         {isMacPlatform ? (
@@ -473,7 +485,7 @@ export default function TitleBar() {
         )}
       </span>
       <TooltipButton
-        buttonStyles={`${infoClass} ${infoPositionClass} ${
+        buttonStyles={`${infoClass} ${infoPositionClass} ${platformPendingClass} ${
           navigationLoading ? disabledClass : ""
         }`}
         placement="left"

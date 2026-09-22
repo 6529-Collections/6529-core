@@ -2212,6 +2212,15 @@ assertContract(
 const titlebarUpdatePath = "renderer/components/header/titlebar/TitleBar.tsx";
 const titlebarUpdate = parseSource(titlebarUpdatePath).text;
 assertContract(
+  /useSyncExternalStore\(\s*subscribePlatform,\s*isMac,\s*getServerPlatform\s*\)/.test(titlebarUpdate) &&
+    /const getServerPlatform = \(\): null => null/.test(titlebarUpdate) &&
+    !/const isMacPlatform = isMac\(\)/.test(titlebarUpdate) &&
+    titlebarUpdate.includes('${versionPositionClass} ${platformPendingClass}') &&
+    titlebarUpdate.includes('${infoPositionClass} ${platformPendingClass}'),
+  titlebarUpdatePath,
+  "titlebar OS positioning must use an unknown hydration snapshot and hide both platform-dependent elements until detected",
+);
+assertContract(
   titlebarUpdate.includes("useVersionStatus()") &&
     !titlebarUpdate.includes("<DesktopUpdateToast"),
   titlebarUpdatePath,
