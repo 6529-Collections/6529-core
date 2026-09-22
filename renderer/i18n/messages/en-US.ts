@@ -1,3 +1,5 @@
+import { EN_US_DROP_METADATA_MESSAGES } from "@/i18n/messages/drop-metadata";
+import { EN_DROP_REQUIREMENT_MESSAGES } from "@/i18n/messages/drop-requirements";
 import artworkShareMessages from "@/i18n/messages/artworkShare.en-US.json";
 import profileCmsAgentMessages from "@/i18n/messages/profileCmsAgent.en-US.json";
 import studioTemplateDescriptions from "@/i18n/messages/studioTemplateDescriptions.en-US.json";
@@ -599,6 +601,8 @@ const MEMES_WAVE_FOOTER_MESSAGES = objectMessages("memes.waveFooter", {
 } as const);
 
 const DROP_REACTION_MESSAGES = objectMessages("drops.reactions", {
+  reactWith: "React with {emoji}",
+  thumbsUp: "Thumbs up",
   unconfirmed:
     "Could not confirm your reaction. Refresh to check before trying again.",
   capabilityDisabled: "Reactions are disabled for this wave.",
@@ -2925,6 +2929,8 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  ...EN_DROP_REQUIREMENT_MESSAGES,
+  ...EN_US_DROP_METADATA_MESSAGES,
   "drop.composer.image": "Image",
   "drop.composer.selectImage": "Select image",
   "drop.composer.removeImage": "Remove image",
