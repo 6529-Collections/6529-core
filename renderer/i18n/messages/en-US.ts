@@ -1,3 +1,4 @@
+import emmaMessages from "@/i18n/messages/emma.en-US.json";
 import { EN_US_DROP_METADATA_MESSAGES } from "@/i18n/messages/drop-metadata";
 import { EN_DROP_REQUIREMENT_MESSAGES } from "@/i18n/messages/drop-requirements";
 import artworkShareMessages from "@/i18n/messages/artworkShare.en-US.json";
@@ -4241,6 +4242,9 @@ export const EN_US_MESSAGES = {
   "drop.media.processingGeneric": "Processing media",
   "drop.media.loading": "Loading image",
   "drop.media.unavailable": "Image unavailable",
+  "drop.media.previewAlt": "Expanded image preview",
+  "drop.media.previewUnavailable": "Preview unavailable",
+  "drop.media.retryPreview": "Retry preview",
   "drop.media.unavailableGeneric": "Media unavailable",
   "drop.media.loadFailed": "Couldn’t load image.",
   "drop.media.videoLoadFailed": "Couldn’t load video.",
@@ -4328,6 +4332,7 @@ export const EN_US_MESSAGES = {
   ...USER_RATE_MESSAGES,
   ...aboutMessages,
   ...emmaSnapshotsMessages,
+  ...emmaMessages,
   ...museumMessages,
   ...networkMetricsMessages,
   ...networkTdhMessages,
