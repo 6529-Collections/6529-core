@@ -1,12 +1,27 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import React from "react";
 
+const mockMutationFunctions: Array<(ids?: number[]) => Promise<void>> = [];
+const mockReconcileDelivered = jest.fn().mockResolvedValue(undefined);
+const mockPostRead = jest.fn().mockResolvedValue(undefined);
+jest.mock("@/services/api/common-api", () => ({
+  commonApiPostWithoutBodyAndResponse: (...args: unknown[]) =>
+    mockPostRead(...args),
+}));
+
 const mutateAsyncMock = jest.fn();
 const requestAuthMock = jest.fn().mockResolvedValue({ success: true });
 const setActiveProfileProxyMock = jest.fn().mockResolvedValue(undefined);
 const setToastMock = jest.fn();
 const mockMarkMobileLaunchStep = jest.fn();
 const mockScheduleMobileLaunchFlush = jest.fn();
+let mockHideNftPurchasing = false;
+
+jest.mock("@/hooks/useNftPurchasingVisibility", () => ({
+  useNftPurchasingVisibility: () => ({
+    hideNftPurchasing: mockHideNftPurchasing,
+  }),
+}));
 
 jest.mock("@/utils/monitoring/mobileLaunchTiming", () => ({
   markMobileLaunchStep: (...args: unknown[]) =>
@@ -16,7 +31,10 @@ jest.mock("@/utils/monitoring/mobileLaunchTiming", () => ({
 }));
 
 jest.mock("@tanstack/react-query", () => ({
-  useMutation: () => ({ mutateAsync: mutateAsyncMock }),
+  useMutation: (options: { mutationFn: (ids?: number[]) => Promise<void> }) => {
+    mockMutationFunctions.push(options.mutationFn);
+    return { mutateAsync: mutateAsyncMock };
+  },
 }));
 
 jest.mock("next/navigation", () => ({
@@ -77,12 +95,15 @@ jest.mock("@/components/brain/my-stream/layout/MyStreamNoItems", () => ({
 
 const useNotificationsQueryMock = jest.fn();
 jest.mock("@/hooks/useNotificationsQuery", () => ({
-  useNotificationsQuery: () => useNotificationsQueryMock(),
+  useNotificationsQuery: (options: unknown) => {
+    const result = useNotificationsQueryMock(options);
+    return { ...result, rawItems: result.rawItems ?? result.items };
+  },
 }));
 
 jest.mock("@/components/notifications/NotificationsContext", () => ({
   useNotificationsContext: () => ({
-    removeAllDeliveredNotifications: jest.fn(),
+    reconcileProfileDeliveredNotifications: mockReconcileDelivered,
   }),
 }));
 
@@ -118,6 +139,7 @@ jest.mock("@/contexts/TitleContext", () => ({
 import Notifications from "@/components/brain/notifications";
 import { floatingDockClearanceClassName } from "@/components/brain/notifications/notifications.constants";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
 
 const useDeviceInfoMock = useDeviceInfo as jest.MockedFunction<
   typeof useDeviceInfo
@@ -146,6 +168,7 @@ const mockSuccessfulNotificationsQuery = () => {
 
 describe("Notifications component", () => {
   beforeEach(() => {
+    mockHideNftPurchasing = false;
     mutateAsyncMock.mockClear();
     mutateAsyncMock.mockResolvedValue(undefined);
     useNotificationsQueryMock.mockReset();
@@ -158,6 +181,32 @@ describe("Notifications component", () => {
     mockMarkMobileLaunchStep.mockClear();
     mockScheduleMobileLaunchFlush.mockClear();
     useDeviceInfoMock.mockReturnValue(getDefaultDeviceInfo());
+  });
+
+  it("excludes coverage from queries and cached results when purchasing is restricted", () => {
+    mockHideNftPurchasing = true;
+    mockSuccessfulNotificationsQuery();
+    useNotificationsQueryMock.mockReturnValue({
+      ...useNotificationsQueryMock(),
+      items: [{ cause: ApiNotificationCause.SubscriptionCoverage }],
+      rawItems: [{ cause: ApiNotificationCause.SubscriptionCoverage }],
+    });
+    useNotificationsQueryMock.mockClear();
+    const { rerender } = render(
+      <Notifications activeDrop={null} setActiveDrop={jest.fn()} />
+    );
+    expect(screen.getByTestId("no-items")).toBeInTheDocument();
+    expect(screen.queryByTestId("wrapper")).not.toBeInTheDocument();
+    const causes = useNotificationsQueryMock.mock.calls[0][0].cause;
+    expect(causes).toBeNull();
+    const excludedCauses =
+      useNotificationsQueryMock.mock.calls[0][0].causeExclude;
+    expect(excludedCauses).toEqual([ApiNotificationCause.SubscriptionCoverage]);
+    rerender(<Notifications activeDrop={null} setActiveDrop={jest.fn()} />);
+    expect(useNotificationsQueryMock.mock.lastCall[0].cause).toBe(causes);
+    expect(useNotificationsQueryMock.mock.lastCall[0].causeExclude).toBe(
+      excludedCauses
+    );
   });
 
   it("shows loader when fetching and no items", async () => {
@@ -263,5 +312,35 @@ describe("Notifications component", () => {
     await waitFor(() => {
       expect(mutateAsyncMock).toHaveBeenCalled();
     });
+  });
+});
+
+describe("delivered notification read ordering", () => {
+  beforeEach(() => {
+    mockMutationFunctions.length = 0;
+    mockPostRead.mockReset().mockResolvedValue(undefined);
+    mockReconcileDelivered.mockClear();
+  });
+
+  it("reconciles only after mark-all persistence succeeds", async () => {
+    render(<Notifications activeDrop={null} setActiveDrop={jest.fn()} />);
+    let finishRead: (() => void) | undefined;
+    mockPostRead.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        finishRead = resolve;
+      })
+    );
+    const pending = mockMutationFunctions[0]!();
+    expect(mockReconcileDelivered).not.toHaveBeenCalled();
+    finishRead!();
+    await pending;
+    expect(mockReconcileDelivered).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not remove delivered entries when a grouped read fails", async () => {
+    render(<Notifications activeDrop={null} setActiveDrop={jest.fn()} />);
+    mockPostRead.mockRejectedValueOnce(new Error("offline"));
+    await expect(mockMutationFunctions[1]!([1, 2])).rejects.toThrow("offline");
+    expect(mockReconcileDelivered).not.toHaveBeenCalled();
   });
 });

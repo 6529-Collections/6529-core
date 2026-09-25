@@ -5,7 +5,7 @@ import Link from "next/link";
 
 export default function HeroHeader() {
   return (
-    <section className="tw-relative tw-max-w-xl tw-px-4 tw-pt-10 md:tw-mx-auto md:tw-max-w-3xl md:tw-px-6 md:tw-text-center lg:tw-px-8">
+    <section className="tw-relative tw-px-4 tw-pt-10 md:tw-mx-auto md:tw-max-w-3xl md:tw-px-6 md:tw-pt-12 md:tw-text-center lg:tw-px-8">
       <Link
         href="/network/health"
         aria-label="Open network health dashboard"
@@ -19,10 +19,10 @@ export default function HeroHeader() {
           />
         </span>
       </Link>
-      <p className="tw-mx-auto tw-mb-1 tw-text-balance tw-text-xs tw-uppercase tw-tracking-[0.2em] tw-text-iron-500">
+      <p className="tw-mb-3 tw-mt-0 tw-text-xs tw-font-medium tw-uppercase tw-tracking-wider tw-text-iron-400">
         6529
       </p>
-      <h1 className="tw-mb-3 tw-mt-0 tw-text-balance tw-text-3xl tw-font-semibold tw-leading-tight tw-tracking-tight tw-text-iron-100 md:tw-text-4xl">
+      <h1 className="tw-m-0 tw-max-w-3xl tw-text-balance tw-text-3xl tw-font-medium tw-leading-tight tw-tracking-tight tw-text-iron-100 md:tw-text-4xl">
         Building a decentralized network state
       </h1>
     </section>

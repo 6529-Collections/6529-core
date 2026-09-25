@@ -1,4 +1,5 @@
 import { createSecurityHeaders } from "./securityHeaders";
+import { meebits445Headers } from "./meebits445Headers";
 import { PublicEnv } from "./env.schema";
 import { NextConfig } from "next";
 import { ARWEAVE_GATEWAY_REMOTE_PATTERN_HOSTNAMES } from "../lib/media/arweave-gateways";
@@ -16,6 +17,7 @@ const OG_IMAGE_SHARP_TRACE_INCLUDES = [
   "node_modules/@img/sharp-libvips-*/**/*",
   "node_modules/.pnpm/@img+sharp-libvips-*/node_modules/@img/sharp-libvips-*/**/*",
 ];
+const MUSEUM_PUBLICATION_TRACE_INCLUDES = [".museum-publication/current.json"];
 
 function getAllowedDevOrigins(): string[] {
   return (
@@ -70,27 +72,37 @@ export function sharedConfig(
       "/*": PUBLIC_REVIEW_TRACE_EXCLUDES,
     },
     outputFileTracingIncludes: {
+      "/*": MUSEUM_PUBLICATION_TRACE_INCLUDES,
       "/api/og-metadata/image": OG_IMAGE_SHARP_TRACE_INCLUDES,
     },
     async headers() {
       return [
         {
           source: "/:path*",
-          headers: createSecurityHeaders(
-            publicEnv["API_ENDPOINT"],
-            publicEnv["IPFS_GATEWAY_ENDPOINT"],
-            publicEnv["MEDIA_RESOLVER_ENDPOINT"],
-            {
-              allowInsecureLocalhostConnectSrc:
-                publicEnv.NODE_ENV === "development" ||
-                publicEnv.NODE_ENV === "local",
-              allowUnsafeEval:
-                publicEnv.NODE_ENV === "development" ||
-                publicEnv.NODE_ENV === "local",
-              webSocketEndpoint: publicEnv["WS_ENDPOINT"],
-            }
-          ),
+          headers: [
+            ...createSecurityHeaders(
+              publicEnv["API_ENDPOINT"],
+              publicEnv["IPFS_GATEWAY_ENDPOINT"],
+              publicEnv["MEDIA_RESOLVER_ENDPOINT"],
+              {
+                allowInsecureLocalhostConnectSrc:
+                  publicEnv.NODE_ENV === "development" ||
+                  publicEnv.NODE_ENV === "local",
+                allowUnsafeEval:
+                  publicEnv.NODE_ENV === "development" ||
+                  publicEnv.NODE_ENV === "local",
+                webSocketEndpoint: publicEnv["WS_ENDPOINT"],
+              }
+            ),
+            // Environment-wide, including /access, redirects and public files.
+            // Use the baked deployment origin, never NODE_ENV or request headers:
+            // staging runs production builds and proxies may rewrite the Host.
+            ...(new URL(publicEnv.BASE_ENDPOINT).hostname === "staging.6529.io"
+              ? [{ key: "X-Robots-Tag", value: "noindex" }]
+              : []),
+          ],
         },
+        meebits445Headers,
       ];
     },
     turbopack: {

@@ -6,13 +6,16 @@ import type { CicStatement } from "@/entities/IProfile";
 import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
 import { commonApiFetch } from "@/services/api/common-api";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useReducer } from "react";
+import { useCallback, useMemo, useReducer } from "react";
 import type { MemesSubmissionInitialDraft } from "../utils/submissionDraft";
+import { SubmissionStep } from "../types/Steps";
+import type { ProposalCardLayout } from "@/lib/proposal-card/document";
 import {
   createInitialState,
   formReducer,
   type CreateInitialStateInput,
   type ProfileDefaults,
+  type SubmissionAgreement,
 } from "./artworkSubmissionFormState";
 import { useArtworkSubmissionFormActions } from "./useArtworkSubmissionFormActions";
 import { useArtworkSubmissionMediaControls } from "./useArtworkSubmissionMediaControls";
@@ -25,6 +28,7 @@ const getProfileBio = (statements: CicStatement[] | null | undefined): string =>
   )?.statement_value ?? "";
 
 export function useArtworkSubmissionForm(
+  agreement: SubmissionAgreement,
   initialDraft?: MemesSubmissionInitialDraft
 ) {
   const { connectedProfile } = useAuth();
@@ -72,18 +76,41 @@ export function useArtworkSubmissionForm(
     initialStateInput,
     createInitialState
   );
+  const agreements =
+    state.acceptedAgreement?.waveId === agreement.waveId &&
+    state.acceptedAgreement.terms === agreement.terms;
+  const acceptedAgreement = agreements ? state.acceptedAgreement : null;
 
   const formActions = useArtworkSubmissionFormActions({
     state,
     dispatch,
+    agreement,
+    agreements,
     profileDefaults,
     shouldApplyProfileDefaults: !isDraftInitialized,
   });
   const mediaControls = useArtworkSubmissionMediaControls({ state, dispatch });
+  const setProposalFrame = useCallback((layout: ProposalCardLayout | null) => {
+    dispatch({ type: "SET_PROPOSAL_FRAME", payload: layout });
+  }, []);
+  const traits = useMemo(
+    () =>
+      profileHandle
+        ? { ...state.traits, seizeArtistProfile: profileHandle }
+        : state.traits,
+    [profileHandle, state.traits]
+  );
+  const getSubmissionData = useCallback(
+    () => ({ ...formActions.getSubmissionData(), traits, acceptedAgreement }),
+    [acceptedAgreement, formActions, traits]
+  );
 
   return {
-    currentStep: state.currentStep,
-    agreements: state.agreements,
+    proposalFrame: state.proposalFrame,
+    setProposalFrame,
+    currentStep: agreements ? state.currentStep : SubmissionStep.AGREEMENT,
+    agreements,
+    agreementReviewRequired: state.acceptedAgreement !== null && !agreements,
     setAgreements: formActions.setAgreements,
     handleContinueFromTerms: formActions.handleContinueFromTerms,
     handleContinueFromArtwork: formActions.handleContinueFromArtwork,
@@ -111,7 +138,7 @@ export function useArtworkSubmissionForm(
     clearExternalMedia: mediaControls.clearExternalMedia,
     handleFileSelect: mediaControls.handleFileSelect,
 
-    traits: state.traits,
+    traits,
     setTraits: formActions.setTraits,
     updateTraitField: formActions.updateTraitField,
     isAdditionalActionPromised: state.isAdditionalActionPromised,
@@ -125,7 +152,7 @@ export function useArtworkSubmissionForm(
     setCommentary: formActions.setCommentary,
     setAboutArtist: formActions.setAboutArtist,
 
-    getSubmissionData: formActions.getSubmissionData,
+    getSubmissionData,
     getMediaSelection: formActions.getMediaSelection,
   };
 }

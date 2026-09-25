@@ -169,18 +169,21 @@ describe("MemesSingleWaveDropInfoPanel", () => {
     expect(screen.getByText("Desc")).toBeInTheDocument();
   });
 
-  it("uses compact responsive media sizing before the desktop breakpoint", () => {
+  it("fits images within the overlay-aware artwork height budget", () => {
     render(<MemesSingleWaveDropInfoPanel drop={baseDrop} wave={null} />);
 
     const mediaFrame = screen.getByTestId("media").parentElement;
     const heroWrapper = mediaFrame?.parentElement?.parentElement?.parentElement;
 
-    expect(mediaFrame).toHaveClass(
+    expect(mediaFrame).toHaveAttribute("data-artwork-image-frame", "true");
+    expect(mediaFrame).toHaveClass("submissionImage");
+    expect(mediaFrame).not.toHaveClass(
       "tw-h-[clamp(24rem,calc(100dvh-10rem),42rem)]",
       "sm:tw-h-[clamp(18rem,75vw,calc(100dvh-8rem))]"
     );
-    expect(mediaFrame).toHaveClass("lg:tw-h-[95vh]");
-    expect(heroWrapper).toHaveClass("lg:tw-min-h-screen");
+    expect(mediaFrame).not.toHaveClass("lg:tw-h-[95vh]");
+    expect(heroWrapper).toHaveClass("artworkStage");
+    expect(heroWrapper).not.toHaveClass("lg:tw-min-h-screen");
     expect(heroWrapper).not.toHaveClass("tw-min-h-screen");
   });
 
@@ -242,6 +245,20 @@ describe("MemesSingleWaveDropInfoPanel", () => {
     expect(
       screen.queryByRole("button", { name: "Full screen" })
     ).not.toBeInTheDocument();
+  });
+
+  it("keeps interactive HTML hero media on the viewport-aware renderer", () => {
+    render(
+      <MemesSingleWaveDropInfoPanel
+        drop={dropWithMedia("text/html", "interactive.html")}
+        wave={null}
+      />
+    );
+
+    expect(screen.getByTestId("media")).toHaveAttribute(
+      "data-load-strategy",
+      "in-view"
+    );
   });
 
   it("passes single-drop close callback to resubmit source deletion", async () => {

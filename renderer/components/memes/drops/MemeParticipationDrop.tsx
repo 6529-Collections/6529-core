@@ -113,6 +113,10 @@ export default function MemeParticipationDrop({
   const artworkMedia = firstPart?.media.at(0);
 
   const borderClasses = getBorderClasses(drop, isActiveDrop);
+  const backgroundClass =
+    location === DropLocation.WAVE
+      ? "tw-bg-iron-900/80"
+      : "tw-bg-[var(--drop-card-background,theme(colors.iron.950))]";
 
   const handleOnReply = useCallback(() => {
     onReply({ drop, partId: drop.parts[0]?.part_id! });
@@ -200,11 +204,7 @@ export default function MemeParticipationDrop({
         }`}
       >
         <div
-          className={`${borderClasses} ${
-            location === DropLocation.WAVE
-              ? "tw-bg-iron-900/80"
-              : "tw-bg-iron-950"
-          }`}
+          className={`${borderClasses} ${isActiveDrop ? "" : backgroundClass}`}
         >
           {showInteractions ? (
             <DropMobileMenuHandler
@@ -235,8 +235,15 @@ export default function MemeParticipationDrop({
             )}
           </div>
 
-          {showInteractions && drop.reactions.length > 0 && (
-            <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1 tw-px-4 tw-pb-4">
+          {showInteractions && (
+            <div
+              hidden={drop.reactions.length === 0}
+              className={
+                drop.reactions.length > 0
+                  ? "tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1 tw-px-4 tw-pb-4"
+                  : undefined
+              }
+            >
               <WaveDropReactions drop={drop} />
             </div>
           )}

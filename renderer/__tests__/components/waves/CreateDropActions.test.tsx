@@ -1,3 +1,4 @@
+import { DROP_UPLOAD_ACCEPT } from "@/services/uploads/mediaUploadMimeType";
 import CreateDropActions from "@/components/waves/CreateDropActions";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -290,6 +291,16 @@ describe("CreateDropActions", () => {
     expect(screen.getAllByTestId("storm-button").length).toBeGreaterThan(0);
   });
 
+  it("centers the desktop action row against the input", () => {
+    render(<CreateDropActions {...defaultProps} />);
+
+    const actionSlot = screen.getByTestId(
+      "drop-actions-motion-shell"
+    ).parentElement;
+    expect(actionSlot).toHaveClass("tw-self-center");
+    expect(actionSlot).not.toHaveClass("tw-self-end", "tw-mb-1");
+  });
+
   it("renders poll action for admins and toggles it", async () => {
     render(<CreateDropActions {...defaultProps} canCreatePoll={true} />);
 
@@ -321,6 +332,68 @@ describe("CreateDropActions", () => {
 
     expect(screen.queryByLabelText("Add poll")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Remove poll")).not.toBeInTheDocument();
+  });
+
+  it("uses the compact action slot to indicate an active poll", () => {
+    render(
+      <CreateDropActions
+        {...defaultProps}
+        isCompactLayout={true}
+        canCreatePoll={true}
+        isPollActive={true}
+      />
+    );
+
+    expect(screen.getByTestId("drop-actions-compact-slot")).toHaveClass(
+      "tw-size-10",
+      "desktop-hover:tw-size-9"
+    );
+    expect(
+      screen.getByTestId("drop-actions-compact-slot").querySelector("button")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("drop-actions-toggle-motion")
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps compact tray spacing inside its animated height", () => {
+    render(
+      <CreateDropActions
+        {...defaultProps}
+        isCompactLayout={true}
+        showOptions={true}
+      />
+    );
+
+    const tray = screen.getByTestId("drop-actions-compact-tray");
+    expect(tray).not.toHaveClass("tw-mt-2");
+    expect(tray).toHaveClass("tw-col-span-2", "tw-col-start-2");
+    expect(tray).not.toHaveClass("md:tw-col-span-1");
+    expect(tray.firstElementChild).toHaveClass("tw-h-2");
+  });
+
+  it("keeps compact controls touch sized and scales their surfaces for fine pointers", () => {
+    render(
+      <CreateDropActions
+        {...defaultProps}
+        isCompactLayout={true}
+        showOptions={true}
+      />
+    );
+
+    const toggle = screen.getByTestId("drop-actions-toggle-motion");
+    expect(toggle).toHaveClass("tw-size-10", "desktop-hover:tw-size-9");
+    expect(screen.getByTestId("drop-actions-compact-slot")).toHaveClass(
+      "tw-self-end",
+      "desktop-hover:tw-self-center"
+    );
+
+    const tray = screen.getByTestId("drop-actions-compact-tray");
+    const firstActionSurface = tray.querySelector("button > span");
+    expect(firstActionSurface).toHaveClass(
+      "tw-size-10",
+      "desktop-hover:tw-size-9"
+    );
   });
 
   it("disables the storm action while a poll is active", () => {
@@ -459,6 +532,29 @@ describe("CreateDropActions", () => {
     expect(uploadLabels[0]).toHaveClass("tw-text-[#FEDF89]");
   });
 
+  it("scopes action tooltips to each mounted composer", () => {
+    render(
+      <>
+        <CreateDropActions {...defaultProps} />
+        <CreateDropActions {...defaultProps} />
+      </>
+    );
+
+    const uploadButtons = screen.getAllByLabelText("Upload a file");
+    const tooltipIds = uploadButtons.map((button) =>
+      button.getAttribute("data-tooltip-id")
+    );
+
+    expect(tooltipIds).toHaveLength(2);
+    expect(tooltipIds.every(Boolean)).toBe(true);
+    expect(new Set(tooltipIds)).toHaveProperty("size", 2);
+    expect(
+      uploadButtons.every(
+        (button) => button.getAttribute("data-tooltip-content") === "Upload"
+      )
+    ).toBe(true);
+  });
+
   it("highlights chevron button when any required content is missing", () => {
     render(
       <CreateDropActions
@@ -480,10 +576,7 @@ describe("CreateDropActions", () => {
     render(<CreateDropActions {...defaultProps} />);
 
     const fileInput = getFileInput();
-    expect(fileInput).toHaveAttribute(
-      "accept",
-      "image/*,video/*,audio/*,application/pdf,text/csv,.pdf,.csv"
-    );
+    expect(fileInput).toHaveAttribute("accept", DROP_UPLOAD_ACCEPT);
     expect(fileInput).toHaveAttribute("multiple");
   });
 

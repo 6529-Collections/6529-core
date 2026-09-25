@@ -5,6 +5,10 @@ jest.mock("@/helpers/server.app.helpers", () => ({
   getAppCommonHeaders: jest.fn(async () => ({ "x-test": "1" })),
 }));
 
+jest.mock("@/services/api/common-api", () => ({
+  commonApiFetch: jest.fn().mockResolvedValue([]),
+}));
+
 jest.mock("@/helpers/server.helpers", () => ({
   getUserProfile: jest.fn(async ({ user }: { user: string }) => ({
     handle: user,
@@ -17,7 +21,13 @@ jest.mock("@/helpers/server.helpers", () => ({
 }));
 
 jest.mock("@/components/providers/metadata", () => ({
-  getAppMetadata: jest.fn((v: any) => v),
+  getAppMetadata: jest.fn((v: any, options?: any) => ({
+    ...v,
+    ...(options?.robots ? { robots: options.robots } : {}),
+    ...(options?.canonicalPath
+      ? { alternates: { canonical: options.canonicalPath } }
+      : {}),
+  })),
   getLargeSocialCardMetadata: jest.fn((v: any) => v),
 }));
 
@@ -33,10 +43,14 @@ jest.mock("@/components/user/layout/UserPageLayout", () => ({
 const redirectMock = jest.fn();
 jest.mock("next/navigation", () => ({
   redirect: (url: string) => redirectMock(url),
+  notFound: () => {
+    throw new Error("NEXT_HTTP_ERROR_FALLBACK;404");
+  },
 }));
 
 import { createUserTabPage } from "@/app/[user]/_lib/userTabPageFactory";
 import { getAppMetadata } from "@/components/providers/metadata";
+import { commonApiFetch } from "@/services/api/common-api";
 import {
   getUserProfile,
   userPageNeedsRedirect,
@@ -54,7 +68,17 @@ const buildFactory = () =>
 
 describe("user tab page via createUserTabPage", () => {
   beforeEach(() => {
+    jest.clearAllMocks();
     redirectMock.mockClear();
+    (getUserProfile as jest.Mock).mockImplementation(
+      async ({ user }: { user: string }) => ({
+        handle: user,
+        walletAddress: "0xabc",
+        tdh: 0,
+        rep: 0,
+        level: 0,
+      })
+    );
     (userPageNeedsRedirect as jest.Mock).mockReturnValue(null);
   });
 
@@ -82,6 +106,17 @@ describe("user tab page via createUserTabPage", () => {
       subroute: "collected",
     });
     expect(redirectMock).not.toHaveBeenCalled();
+  });
+
+  it("turns a structured missing-profile response into a route 404", async () => {
+    (getUserProfile as jest.Mock).mockRejectedValueOnce(
+      Object.assign(new Error("missing identity"), { status: 404 })
+    );
+    const { Page } = buildFactory();
+
+    await expect(
+      Page({ params: Promise.resolve({ user: "missing" }) } as any)
+    ).rejects.toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
   });
 
   it("does not invoke the tab component while composing the page", async () => {
@@ -144,6 +179,13 @@ describe("user tab page via createUserTabPage", () => {
   it("generateMetadata uses helpers", async () => {
     const { generateMetadata } = buildFactory();
     const spy = jest.spyOn(Helpers, "getMetadataForUserPage");
+    (commonApiFetch as jest.Mock).mockResolvedValueOnce([
+      {
+        statement_group: "GENERAL",
+        statement_type: "BIO",
+        statement_value: "Public artist biography",
+      },
+    ]);
 
     const meta = await generateMetadata({
       params: Promise.resolve({ user: "Dave" }),
@@ -151,11 +193,52 @@ describe("user tab page via createUserTabPage", () => {
 
     expect(spy).toHaveBeenCalledWith(
       expect.objectContaining({ handle: "dave", walletAddress: "0xabc" }),
-      "collected"
+      "collected",
+      "Public artist biography"
     );
     expect(getAppMetadata).toHaveBeenCalled();
     expect(meta).toEqual(
-      expect.objectContaining({ title: expect.stringContaining("dave") })
+      expect.objectContaining({
+        title: expect.stringContaining("dave"),
+        alternates: { canonical: "/dave/collected" },
+        robots: { index: true, follow: true },
+      })
     );
+  });
+
+  it("encodes the profile identity in the public BIO endpoint", async () => {
+    const { generateMetadata } = buildFactory();
+
+    await generateMetadata({
+      params: Promise.resolve({ user: "Alice%2FAdmin" }),
+    });
+
+    expect(commonApiFetch).toHaveBeenCalledWith({
+      endpoint: "profiles/alice%252fadmin/cic/statements",
+      headers: { "x-test": "1" },
+    });
+  });
+
+  it("noindexes profile utility tabs and temporary profile failures", async () => {
+    const subscriptions = createUserTabPage({
+      subroute: "subscriptions",
+      Tab: DummyCollectedTab,
+    });
+    const utilityMetadata = await subscriptions.generateMetadata({
+      params: Promise.resolve({ user: "Dave" }),
+    });
+    expect(utilityMetadata.robots).toEqual({ index: false, follow: true });
+
+    (getUserProfile as jest.Mock).mockRejectedValueOnce(
+      Object.assign(new Error("upstream failed"), { status: 503 })
+    );
+    const unavailableMetadata = await buildFactory().generateMetadata({
+      params: Promise.resolve({ user: "Dave" }),
+    });
+    expect(unavailableMetadata.robots).toEqual({
+      index: false,
+      follow: true,
+    });
+    expect(unavailableMetadata.alternates?.canonical).toBeUndefined();
   });
 });

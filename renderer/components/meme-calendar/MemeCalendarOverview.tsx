@@ -1,9 +1,11 @@
 "use client";
 
 import { getRouteHrefWithLocale } from "@/components/rememes/rememesRouteParams";
+import ClientOnly from "@/components/client-only/ClientOnly";
 import Button from "@/components/utils/button/Button";
 import { buildTooltipId, TOOLTIP_STYLES } from "@/helpers/tooltip.helpers";
 import useCapacitor from "@/hooks/useCapacitor";
+import type { PublishedMemesStatus } from "@/hooks/usePublishedMemes";
 import { formatInteger } from "@/i18n/format";
 import { DEFAULT_LOCALE, type SupportedLocale } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -39,6 +41,7 @@ import {
   ScreenshotFeedback,
   type ScreenshotStatus,
 } from "./MemeCalendarScreenshotControls";
+import MemeCalendarArtworkAvailability from "./MemeCalendarArtworkAvailability";
 import MemeNumberSearch from "./MemeNumberSearch";
 
 const MAX_MINT_NUMBER = 100_000;
@@ -54,6 +57,8 @@ interface MemeCalendarOverviewProps {
   readonly locale?: SupportedLocale | undefined;
   readonly showViewAll?: boolean | undefined;
   readonly headerAction?: ReactNode | undefined;
+  readonly publishedMemeIds?: ReadonlySet<number> | undefined;
+  readonly publishedMemesStatus?: PublishedMemesStatus | undefined;
 }
 
 export default function MemeCalendarOverview({
@@ -61,6 +66,8 @@ export default function MemeCalendarOverview({
   locale = DEFAULT_LOCALE,
   showViewAll = false,
   headerAction,
+  publishedMemeIds = new Set<number>(),
+  publishedMemesStatus,
 }: MemeCalendarOverviewProps) {
   return (
     <div className="tw-flex tw-min-w-0 tw-flex-col tw-gap-5 sm:tw-gap-6">
@@ -87,13 +94,20 @@ export default function MemeCalendarOverview({
       </div>
       <div className="tw-grid tw-grid-cols-1 tw-gap-4 lg:tw-grid-cols-2">
         <div className="tw-h-full">
-          <MemeCalendarOverviewNextMint displayTz={displayTz} locale={locale} />
-        </div>
-        <div className="tw-h-full">
-          <MemeCalendarOverviewUpcomingMints
+          <MemeCalendarOverviewNextMint
             displayTz={displayTz}
             locale={locale}
+            publishedMemeIds={publishedMemeIds}
+            publishedMemesStatus={publishedMemesStatus}
           />
+        </div>
+        <div className="tw-h-full">
+          <ClientOnly fallback={<CalendarClockPlaceholder />}>
+            <MemeCalendarOverviewUpcomingMints
+              displayTz={displayTz}
+              locale={locale}
+            />
+          </ClientOnly>
         </div>
       </div>
     </div>
@@ -108,6 +122,8 @@ interface MemeCalendarOverviewNextMintProps {
   readonly displayTz: DisplayTz;
   readonly id?: number | undefined;
   readonly locale?: SupportedLocale | undefined;
+  readonly publishedMemeIds?: ReadonlySet<number> | undefined;
+  readonly publishedMemesStatus?: PublishedMemesStatus | undefined;
 }
 
 interface TopControlsProps {
@@ -168,7 +184,7 @@ const TopControls = memo((props: TopControlsProps) => {
         value={mintInputValue}
         error={mintInputError}
         label={t(locale, "memeCalendar.overview.controls.memeNumber")}
-        submitLabel={t(locale, "memeCalendar.numberInput.submit")}
+        submitLabel={t(locale, "memeCalendar.overview.controls.showSchedule")}
         max={MAX_MINT_NUMBER}
         className="!tw-w-[140px] !tw-flex-none sm:!tw-w-44"
         onChange={onMintInputChange}
@@ -195,10 +211,34 @@ const TopControls = memo((props: TopControlsProps) => {
 });
 TopControls.displayName = "TopControls";
 
-export function MemeCalendarOverviewNextMint({
+function CalendarClockPlaceholder() {
+  return (
+    <div
+      aria-hidden="true"
+      className={`${OVERVIEW_CARD_CLASS} tw-min-h-80 tw-w-full`}
+    />
+  );
+}
+
+export function MemeCalendarOverviewNextMint(
+  props: MemeCalendarOverviewNextMintProps
+) {
+  // The clock, current mint, and local timezone belong to the browser. Never
+  // compare two independently sampled clocks during hydration (or hide the
+  // mismatch with suppressHydrationWarning). This does not wait for a wallet.
+  return (
+    <ClientOnly fallback={<CalendarClockPlaceholder />}>
+      <MemeCalendarOverviewNextMintContent {...props} />
+    </ClientOnly>
+  );
+}
+
+function MemeCalendarOverviewNextMintContent({
   displayTz,
   id,
   locale = DEFAULT_LOCALE,
+  publishedMemeIds = new Set<number>(),
+  publishedMemesStatus,
 }: MemeCalendarOverviewNextMintProps) {
   const overviewInstanceId = useId();
   const calendarInviteTooltipId = buildTooltipId(
@@ -312,7 +352,6 @@ export function MemeCalendarOverviewNextMint({
   const endMs = mintDetails.mintEndUtc.getTime();
   const isUpcoming = nowMs < startMs;
   const isPast = nowMs >= endMs;
-
   let heading: string;
   if (isUpcoming) {
     heading =
@@ -485,6 +524,14 @@ export function MemeCalendarOverviewNextMint({
           <div className="tw-mt-5 tw-border-0 tw-border-t tw-border-solid tw-border-iron-800 tw-pt-2 tw-text-sm tw-leading-5 tw-text-iron-300">
             {formatToFullDivision(mintDetails.instantUtc, locale)}
           </div>
+          {publishedMemesStatus && (
+            <MemeCalendarArtworkAvailability
+              locale={locale}
+              memeNumber={selectedMintNumber}
+              publishedMemeIds={publishedMemeIds}
+              status={publishedMemesStatus}
+            />
+          )}
           <ScreenshotFeedback
             locale={locale}
             statusId={screenshotStatusId}

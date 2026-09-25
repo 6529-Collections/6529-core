@@ -1,4 +1,6 @@
 import { getInitialTraitsValues } from "@/components/waves/memes/traits/schema";
+import type { ProposalCardLayout } from "@/lib/proposal-card/document";
+import { getProposalCardMimeType } from "@/lib/proposal-card/media";
 import {
   parseDecentralizedMediaRef,
   toNativeUri,
@@ -49,9 +51,15 @@ export interface ProfileDefaults {
   readonly aboutArtist?: string;
 }
 
+export interface SubmissionAgreement {
+  readonly waveId: string;
+  readonly terms: string | null;
+}
+
 export type FormAction =
+  | { type: "SET_PROPOSAL_FRAME"; payload: ProposalCardLayout | null }
   | { type: "SET_STEP"; payload: SubmissionStep }
-  | { type: "SET_AGREEMENTS"; payload: boolean }
+  | { type: "SET_AGREEMENTS"; payload: SubmissionAgreement | null }
   | { type: "SET_ADDITIONAL_ACTION_PROMISED"; payload: boolean }
   | { type: "APPLY_PROFILE_DEFAULTS"; payload: ProfileDefaults }
   | {
@@ -83,8 +91,9 @@ export type FormAction =
   | { type: "SET_ABOUT_ARTIST"; payload: string };
 
 export interface FormState {
+  proposalFrame: ProposalCardLayout | null;
   currentStep: SubmissionStep;
-  agreements: boolean;
+  acceptedAgreement: SubmissionAgreement | null;
   artworkUploaded: boolean;
   artworkUrl: string;
   uploadArtworkUrl: string;
@@ -364,8 +373,9 @@ export const createInitialState = ({
   const existingMedia = initialDraft?.existingMedia ?? null;
 
   const state: FormState = {
+    proposalFrame: initialDraft?.proposalFrame ?? null,
     currentStep: SubmissionStep.AGREEMENT,
-    agreements: false,
+    acceptedAgreement: null,
     artworkUploaded: Boolean(existingMedia),
     artworkUrl: existingMedia?.url ?? "",
     uploadArtworkUrl: "",
@@ -390,11 +400,17 @@ export const createInitialState = ({
 
 export function formReducer(state: FormState, action: FormAction): FormState {
   switch (action.type) {
+    case "SET_PROPOSAL_FRAME":
+      return { ...state, proposalFrame: action.payload };
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
 
     case "SET_AGREEMENTS":
-      return { ...state, agreements: action.payload };
+      return {
+        ...state,
+        acceptedAgreement: action.payload,
+        currentStep: SubmissionStep.AGREEMENT,
+      };
 
     case "SET_ADDITIONAL_ACTION_PROMISED":
       return { ...state, isAdditionalActionPromised: action.payload };
@@ -592,6 +608,10 @@ const reduceSetUploadMedia = (
   return {
     ...state,
     selectedFile: payload.file,
+    proposalFrame:
+      getProposalCardMimeType(payload.file.type) !== undefined
+        ? state.proposalFrame
+        : null,
     artworkUrl: payload.artworkUrl,
     uploadArtworkUrl: payload.artworkUrl,
     uploadError: null,
@@ -611,8 +631,13 @@ const reduceMediaSource = (
   if (nextSource === "upload") {
     const hasFile = state.selectedFile !== null;
     const hasExistingMedia = state.existingMedia !== null;
+    const mimeType = state.selectedFile?.type ?? state.existingMedia?.mimeType;
     return {
       ...state,
+      proposalFrame:
+        mimeType && getProposalCardMimeType(mimeType) === undefined
+          ? null
+          : state.proposalFrame,
       mediaSource: nextSource,
       uploadError: null,
       artworkUploaded: hasFile || hasExistingMedia,

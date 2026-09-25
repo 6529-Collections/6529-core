@@ -13,7 +13,7 @@ instead of this host-provisioning script.
 
 - Ensures **Node ≥ 20** (keeps 21/22 if present)
 - Activates the repo-pinned **pnpm** version with **Corepack**
-- Installs **Socket Firewall** and uses `6529 install:frozen`
+- Installs **Socket Firewall** and uses `6529 ci`
 - Installs **PM2**
 - Prompts you and writes **.env** **before** any build (no `.env.sample` used)
 - Installs deps, **builds**, and **starts** the app with PM2 on the standalone runtime path (default port **3001**)
@@ -76,6 +76,7 @@ bash dev-setup/run-staging-ec2-setup.sh
 - **SEIZE API ENDPOINT** → staging or production
 - **ALLOWLIST API ENDPOINT** → staging or production
 - **ALCHEMY_API_KEY** → required
+- **ETHEREUM_RPC_URL** → required server-only Ethereum mainnet JSON-RPC URL
 - **CW_PROJECT_ID** → required
 - **GIPHY_API_KEY** → optional (can be empty)
 - **NEXTGEN_CHAIN_ID** → `1` (mainnet) or `11155111` (sepolia)

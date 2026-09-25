@@ -1,8 +1,12 @@
 import { TransferProvider } from "@/components/nft-transfer/TransferState";
 import { getAppMetadata } from "@/components/providers/metadata";
 import UserPageLayout from "@/components/user/layout/UserPageLayout";
+import type { CicStatement } from "@/entities/IProfile";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
-import { getMetadataForUserPage } from "@/helpers/Helpers";
+import { getMetadataForUserPage, getUserPageTitle } from "@/helpers/Helpers";
+import { STATEMENT_GROUP, STATEMENT_TYPE } from "@/helpers/Types";
+import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { t } from "@/i18n/messages";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import {
   getUserProfile,
@@ -10,12 +14,16 @@ import {
 } from "@/helpers/server.helpers";
 import JsonLdScript from "@/lib/structured-data/json-ld";
 import { buildProfilePageJsonLd } from "@/lib/structured-data/profile";
+import { commonApiFetch } from "@/services/api/common-api";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
 type TabProps = { readonly profile: ApiIdentity };
 type UserRouteParams = { user: string };
 type UserSearchParams = Record<string, string | string[] | undefined>;
+type ProfileLoadResult =
+  | { readonly ok: true; readonly profile: ApiIdentity }
+  | { readonly ok: false; readonly error: unknown };
 
 const PROBE_USER_SUFFIXES = [
   ".html",
@@ -25,6 +33,14 @@ const PROBE_USER_SUFFIXES = [
   ".aspx",
   ".jsp",
 ] as const;
+
+const PROFILE_NOINDEX_SUBROUTES = new Set([
+  "brain",
+  "cms/builder",
+  "subscriptions",
+]);
+const PROFILE_BIO_STATEMENT_TYPE: CicStatement["statement_type"] =
+  STATEMENT_TYPE.BIO;
 
 const normalizeSearchParams = (
   params?: UserSearchParams | URLSearchParams
@@ -76,20 +92,44 @@ const isNotFoundError = (error: unknown): boolean => {
     return true;
   }
 
-  let message: string | undefined;
-
-  if (typeof error === "string") {
-    message = error;
-  } else if (error instanceof Error) {
-    message = error.message;
-  }
-
-  return message?.toLowerCase().includes("not found") ?? false;
+  return false;
 };
 
 const isProbeLikeUserSlug = (user: string): boolean => {
   const normalized = user.trim().toLowerCase();
   return PROBE_USER_SUFFIXES.some((suffix) => normalized.endsWith(suffix));
+};
+
+const loadProfile = async (
+  user: string,
+  headers: Record<string, string>
+): Promise<ProfileLoadResult> => {
+  try {
+    return { ok: true, profile: await getUserProfile({ user, headers }) };
+  } catch (error) {
+    return { ok: false, error };
+  }
+};
+
+const loadPublicProfileBio = async (
+  user: string,
+  headers: Record<string, string>
+): Promise<string | null> => {
+  try {
+    const statements = await commonApiFetch<CicStatement[]>({
+      endpoint: `profiles/${encodeURIComponent(user)}/cic/statements`,
+      headers,
+    });
+    return (
+      statements.find(
+        (statement) =>
+          statement.statement_group === STATEMENT_GROUP.GENERAL &&
+          statement.statement_type === PROFILE_BIO_STATEMENT_TYPE
+      )?.statement_value ?? null
+    );
+  } catch {
+    return null;
+  }
 };
 
 export function createUserTabPage<
@@ -129,15 +169,14 @@ export function createUserTabPage<
     const resolvedSearchParams = searchParams ? await searchParams : undefined;
     const query: UserSearchParams = normalizeSearchParams(resolvedSearchParams);
     const headers = await getAppCommonHeaders();
-    const profile: ApiIdentity = await getUserProfile({
-      user: normalizedUser,
-      headers,
-    }).catch((error: unknown) => {
-      if (isNotFoundError(error)) {
+    const profileResult = await loadProfile(normalizedUser, headers);
+    if (!profileResult.ok) {
+      if (isNotFoundError(profileResult.error)) {
         notFound();
       }
-      throw error;
-    });
+      throw profileResult.error;
+    }
+    const profile = profileResult.profile;
 
     const needsRedirect = userPageNeedsRedirect({
       profile,
@@ -167,7 +206,11 @@ export function createUserTabPage<
             path: profilePath,
           })}
         />
-        <UserPageLayout profile={profile} handleOrWallet={normalizedUser}>
+        <UserPageLayout
+          profile={profile}
+          handleOrWallet={normalizedUser}
+          pageTitle={getUserPageTitle(profile, subroute)}
+        >
           <Tab profile={profile} {...extraProps} />
         </UserPageLayout>
       </>
@@ -196,16 +239,39 @@ export function createUserTabPage<
 
     const normalizedUser = resolvedParams.user.toLowerCase();
     const headers = await getAppCommonHeaders();
-    const profile: ApiIdentity = await getUserProfile({
-      user: normalizedUser,
-      headers,
-    }).catch((error: unknown) => {
-      if (isNotFoundError(error)) {
+    const profileResult = await loadProfile(normalizedUser, headers);
+    if (!profileResult.ok) {
+      if (isNotFoundError(profileResult.error)) {
         notFound();
       }
-      throw error;
+      return getAppMetadata(
+        {
+          title: t(DEFAULT_LOCALE, "profile.metadata.unavailable.title"),
+          description: t(
+            DEFAULT_LOCALE,
+            "profile.metadata.unavailable.description"
+          ),
+        },
+        { robots: { index: false, follow: true } }
+      );
+    }
+    const profile = profileResult.profile;
+    const publicBio = await loadPublicProfileBio(normalizedUser, headers);
+    const canonicalUser = profile.handle ?? profile.primary_wallet;
+    const canonicalUserPath = canonicalUser
+      ? `/${encodeURIComponent(canonicalUser)}`
+      : undefined;
+    const canonicalPath =
+      canonicalUserPath && subroute
+        ? `${canonicalUserPath}/${subroute}`
+        : canonicalUserPath;
+    return getAppMetadata(getMetadataForUserPage(profile, subroute, publicBio), {
+      canonicalPath,
+      robots: {
+        index: !PROFILE_NOINDEX_SUBROUTES.has(subroute),
+        follow: true,
+      },
     });
-    return getAppMetadata(getMetadataForUserPage(profile, subroute));
   }
 
   return { Page, generateMetadata };

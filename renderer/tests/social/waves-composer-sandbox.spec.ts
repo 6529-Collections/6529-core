@@ -1,4 +1,7 @@
+import { defineWaveImageLayoutTests } from "../media/imageArtworkLayoutCases";
 import type { Page, Route } from "@playwright/test";
+import { defineWaveImagePreviewTests } from "../media/waveImagePreviewCases";
+import { defineWaveVideoLayoutTests } from "../media/waveVideoLayoutCases";
 
 import {
   expect,
@@ -23,6 +26,7 @@ const PREVIEW_URL = "https://example.com/6529-composer-preview";
 const PREVIEW_TITLE = "Sandbox Preview Title";
 const PREVIEW_DESCRIPTION = "Deterministic local preview served by Playwright.";
 const SANDBOX_CHAT_DROP_CONTENT = "Local-only chat drop from Playwright.";
+const SANDBOX_POLL_QUESTION = "Which sandbox option do you prefer?";
 const SANDBOX_GUIDELINES_FIRST_LINE =
   "1. Keep discussions constructive and stay on topic in this local sandbox wave.";
 const SANDBOX_FIRST_POLL_OPTION =
@@ -44,6 +48,10 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     "PLAYWRIGHT_COMPOSER_SANDBOX",
     "Composer sandbox requires the local mock API runner."
   );
+
+  defineWaveVideoLayoutTests();
+  defineWaveImageLayoutTests();
+  defineWaveImagePreviewTests();
 
   test("queues and removes an attachment without upload or submit", async ({
     baseURL,
@@ -76,6 +84,35 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await page.getByRole("button", { name: "Remove file" }).last().click();
     await expect(page.getByText("composer-sandbox.pdf")).toBeHidden();
     await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("reserves a visible video preview without decoded metadata", async ({
+    baseURL,
+    page,
+  }) => {
+    await gotoSandboxWave(page);
+    await showDropActionsIfCollapsed(page);
+
+    const fileInput = page.getByLabel("Upload media", { exact: true }).first();
+    // Deliberately undecodable: the frame must remain usable even before
+    // metadata is available, or when a selected video cannot be decoded.
+    await fileInput.setInputFiles({
+      name: "composer-video.mp4",
+      mimeType: "video/mp4",
+      buffer: Buffer.from("undecodable video fixture"),
+    });
+
+    const video = page.getByLabel("Video player", { exact: true }).last();
+    await expect(video).toBeVisible();
+    await expect(video).toHaveAttribute("controls", "");
+    const bounds = await video.boundingBox();
+    expect(bounds?.width).toBeGreaterThan(0);
+    expect(bounds?.height).toBeGreaterThan(0);
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole("button", { name: "Remove file" }).last().click();
+    await expect(page.getByText("composer-video.mp4")).toBeHidden();
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
@@ -454,10 +491,16 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       name: "Only people who can chat can respond",
     });
     const anonymous = page.getByRole("checkbox", { name: "Anonymous poll" });
-    await responderScope.check();
-    await anonymous.check();
+    await page
+      .getByText("Only people who can chat can respond", { exact: true })
+      .click();
+    await page.getByText("Anonymous poll", { exact: true }).click();
     await expect(responderScope).toBeChecked();
     await expect(anonymous).toBeChecked();
+
+    await page
+      .getByRole("textbox", { name: "Ask a poll question" })
+      .fill(SANDBOX_POLL_QUESTION);
 
     await expectNoHorizontalOverflow(page);
     const postButton = page.getByRole("button", { name: "Post" }).last();
@@ -489,7 +532,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       body: expect.objectContaining({
         wave_id: SANDBOX_WAVE_ID,
         drop_type: "CHAT",
-        content: null,
+        content: SANDBOX_POLL_QUESTION,
         poll: expect.objectContaining({
           options: SANDBOX_POLL_OPTIONS,
           multichoice: true,
@@ -739,21 +782,35 @@ async function installExternalDataFixtures(page: Page) {
 async function showDropActionsIfCollapsed(page: Page) {
   await dismissNextDevTools(page);
 
-  const showActionsButton = page.getByRole("button", {
-    name: "Show drop actions",
-  });
+  const showActionsButtons = page
+    .getByRole("button", { name: "Show composer actions" })
+    .or(page.getByRole("button", { name: "Show drop actions" }));
 
-  if (await showActionsButton.isVisible().catch(() => false)) {
-    await showActionsButton.evaluate((element) => {
-      if (element instanceof HTMLElement) {
-        element.click();
-      }
-    });
+  for (const showActionsButton of await showActionsButtons.all()) {
+    if (await showActionsButton.isVisible()) {
+      await showActionsButton.evaluate((element) => {
+        if (element instanceof HTMLElement) {
+          element.click();
+        }
+      });
+      break;
+    }
   }
 
-  await expect(page.getByRole("button", { name: "Upload a file" })).toBeVisible(
-    { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
-  );
+  await expect
+    .poll(
+      async () =>
+        (await page
+          .getByRole("button", { name: "Upload a file" })
+          .isVisible()
+          .catch(() => false)) ||
+        (await page
+          .getByRole("button", { name: "Upload", exact: true })
+          .isVisible()
+          .catch(() => false)),
+      { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
+    )
+    .toBe(true);
 }
 
 async function installOpenGraphFixture(page: Page) {

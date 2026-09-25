@@ -3,9 +3,9 @@
 import { usePathname } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 import { ErrorBoundary } from "react-error-boundary";
+import { finishVersionReloadWhenReady } from "@/components/version-update/versionReload";
 import FooterWrapper from "@/components/footer/FooterWrapper";
 import MobileLayout from "@/components/layout/MobileLayout";
-import SmallScreenLayout from "@/components/layout/SmallScreenLayout";
 import WebLayout from "@/components/layout/WebLayout";
 import LayoutErrorFallback from "@/components/providers/LayoutErrorFallback";
 import { isBrowserConnectorRoute } from "@/components/providers/app-route-provider-features";
@@ -69,6 +69,7 @@ export default function LayoutWrapper({
 
   useEffect(() => {
     const flushAfterPaint = () => {
+      void finishVersionReloadWhenReady();
       markMobileLaunchStep("first_useful_app_shell");
       scheduleMobileLaunchFlush("shell_paint", 5000);
     };
@@ -86,8 +87,10 @@ export default function LayoutWrapper({
     };
   }, [pathname]);
 
-  let LayoutComponent: ComponentType<{ readonly children: ReactNode }> =
-    WebLayout;
+  const LayoutComponent: ComponentType<{
+    readonly children: ReactNode;
+    readonly isSmall?: boolean;
+  }> = isApp ? MobileLayout : WebLayout;
 
   // hasTouchScreen covers touch-first hardware; isMobileDevice (UA-based)
   // keeps phones on the small layout even when a mouse or trackpad is
@@ -96,19 +99,13 @@ export default function LayoutWrapper({
     (hasTouchScreen || isMobileDevice) &&
     (isSmallScreen || isTouchTabletViewport);
 
-  if (isApp) {
-    LayoutComponent = MobileLayout;
-  } else if (isSmallLayout) {
-    LayoutComponent = SmallScreenLayout;
-  }
-
   if (isStandaloneRoute) {
     return <>{children}</>;
   }
 
   return (
     <TitleBarWrapper>
-      <LayoutComponent>
+      <LayoutComponent isSmall={isSmallLayout}>
         <ErrorBoundary
           key={refreshKey}
           FallbackComponent={LayoutErrorFallback}

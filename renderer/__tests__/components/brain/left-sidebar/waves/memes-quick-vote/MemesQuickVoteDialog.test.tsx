@@ -6,8 +6,15 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import React from "react";
+
+let mockIsMobile = false;
+
+jest.mock("@/hooks/useMediaQuery", () => ({
+  useMediaQuery: () => mockIsMobile,
+}));
 
 jest.mock("@/components/waves/drops/WaveDropAuthorPfp", () => ({
   __esModule: true,
@@ -19,6 +26,11 @@ jest.mock("@/components/waves/drops/time/WaveDropTime", () => ({
   default: () => <span>just now</span>,
 }));
 
+jest.mock("@/components/content-moderation/ContentModerationDropGate", () => ({
+  __esModule: true,
+  default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
+
 jest.mock(
   "@/components/drops/view/item/content/media/DropListItemContentMedia",
   () => ({
@@ -26,6 +38,18 @@ jest.mock(
     default: () => <div data-testid="drop-media" />,
   })
 );
+
+jest.mock("@/hooks/useOptimizedVideo", () => ({
+  useOptimizedVideo: jest.fn(() => ({
+    playableUrl: "",
+    isOptimized: false,
+    isChecking: false,
+    isHls: false,
+  })),
+}));
+
+const useOptimizedVideoMock = require("@/hooks/useOptimizedVideo")
+  .useOptimizedVideo as jest.Mock;
 
 const createDrop = ({
   serialNo = 42,
@@ -148,6 +172,7 @@ describe("MemesQuickVoteDialog", () => {
   });
 
   beforeEach(() => {
+    mockIsMobile = false;
     jest.clearAllMocks();
     jest.useFakeTimers();
   });
@@ -172,10 +197,17 @@ describe("MemesQuickVoteDialog", () => {
       />
     );
 
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Change vote amount" }));
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "-250" },
     });
     expect(screen.getByRole("textbox")).toHaveValue("-250");
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close change vote amount" })
+    );
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Vote -250" }));
     await act(async () => {
@@ -186,6 +218,131 @@ describe("MemesQuickVoteDialog", () => {
     await waitFor(() => {
       expect(submitVote).toHaveBeenCalledWith(activeDrop, -250);
     });
+  });
+
+  it.each([
+    { draft: "9999", label: "Vote 5,000", amount: 5_000 },
+    { draft: "-9999", label: "Vote -5,000", amount: -5_000 },
+  ])(
+    "displays and submits the existing limit for draft $draft",
+    async ({ draft, label, amount }) => {
+      const activeDrop = createDrop({ minRating: -5_000 });
+      const submitVote = jest.fn().mockResolvedValue(true);
+
+      render(
+        <MemesQuickVoteDialog
+          {...createDialogProps({
+            activeDrop,
+            latestUsedAmount: null,
+            recentAmounts: [],
+            submitVote,
+          })}
+        />
+      );
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Change vote amount" })
+      );
+      fireEvent.change(screen.getByRole("textbox"), {
+        target: { value: draft },
+      });
+
+      expect(screen.getByRole("textbox")).toHaveValue(draft);
+      const voteButton = screen.getByRole("button", { name: label });
+      expect(voteButton).toHaveTextContent(label);
+      fireEvent.click(voteButton);
+
+      await act(async () => {
+        jest.advanceTimersByTime(650);
+        await Promise.resolve();
+      });
+
+      expect(submitVote).toHaveBeenCalledWith(activeDrop, amount);
+    }
+  );
+
+  it("returns to the latest used amount after closing an edited draft", async () => {
+    const activeDrop = createDrop();
+    const submitVote = jest.fn().mockResolvedValue(true);
+
+    render(
+      <MemesQuickVoteDialog
+        {...createDialogProps({
+          activeDrop,
+          latestUsedAmount: 500,
+          recentAmounts: [250, 500],
+          submitVote,
+        })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "Vote 500" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Change vote amount" }));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "100" },
+    });
+    expect(screen.getByRole("button", { name: "Vote 100" })).toBeEnabled();
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close change vote amount" })
+    );
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Vote 500" })).toBeEnabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change vote amount" }));
+    expect(screen.getByRole("textbox")).toHaveValue("100");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close change vote amount" })
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Vote 500" }));
+
+    expect(screen.getByRole("button", { name: "Voted" })).toBeDisabled();
+    expect(submitVote).not.toHaveBeenCalled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(650);
+      await Promise.resolve();
+    });
+
+    expect(submitVote).toHaveBeenCalledWith(activeDrop, 500);
+  });
+
+  it("uses the closed custom draft when the latest amount is unavailable for a negative-only range", async () => {
+    const activeDrop = createDrop({ minRating: -5_000, maxRating: 0 });
+    const submitVote = jest.fn().mockResolvedValue(true);
+
+    render(
+      <MemesQuickVoteDialog
+        {...createDialogProps({
+          activeDrop,
+          latestUsedAmount: 250,
+          recentAmounts: [-400, 250],
+          submitVote,
+        })}
+      />
+    );
+
+    expect(screen.getByRole("button", { name: "-400" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Vote" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Change vote amount" }));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "-100" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Close change vote amount" })
+    );
+
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "-400" })).toBeEnabled();
+    fireEvent.click(screen.getByRole("button", { name: "Vote -100" }));
+    expect(screen.getByRole("button", { name: "Voted" })).toBeDisabled();
+
+    await act(async () => {
+      jest.advanceTimersByTime(650);
+      await Promise.resolve();
+    });
+
+    expect(submitVote).toHaveBeenCalledWith(activeDrop, -100);
   });
 
   it("does not render active drop content while closed", () => {
@@ -199,6 +356,70 @@ describe("MemesQuickVoteDialog", () => {
 
     expect(screen.queryByTestId("drop-media")).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+  });
+
+  it("preloads the next image without mounting a second media tree", () => {
+    render(
+      <MemesQuickVoteDialog
+        {...createDialogProps({
+          nextDrop: createDrop({ serialNo: 43 }),
+        })}
+      />
+    );
+
+    expect(screen.getAllByTestId("drop-media")).toHaveLength(1);
+    expect(screen.queryByTestId("quick-vote-preview-card-next")).toBeNull();
+    expect(
+      document.querySelector(
+        'link[data-testid="quick-vote-next-image-preload"]'
+      )
+    ).toHaveAttribute("href", "https://example.com/drop.png");
+  });
+
+  it("allows both mobile preview regions to shrink on short screens", () => {
+    mockIsMobile = true;
+    render(<MemesQuickVoteDialog {...createDialogProps()} />);
+
+    const mobileContext = screen.getByTestId(
+      "quick-vote-preview-mobile-context"
+    );
+    const mediaRegion = mobileContext.firstElementChild;
+    const detailsRegion = mobileContext.lastElementChild;
+
+    expect(mediaRegion).toHaveClass("tw-min-h-0");
+    expect(mediaRegion).not.toHaveClass("tw-min-h-24");
+    expect(detailsRegion).toHaveClass("tw-min-h-0");
+    expect(detailsRegion).not.toHaveClass("tw-min-h-[12.5rem]");
+    expect(
+      within(mobileContext).getByRole("heading", { name: "Drop 42" })
+    ).toHaveClass("tw-line-clamp-2");
+  });
+
+  it("warms video renditions without creating a hidden video player", () => {
+    const nextDrop = createDrop({ serialNo: 43 });
+    nextDrop.parts[0].media[0] = {
+      mime_type: "video/mp4",
+      url: "https://example.com/drop.mp4",
+    };
+
+    render(
+      <MemesQuickVoteDialog
+        {...createDialogProps({
+          nextDrop,
+        })}
+      />
+    );
+
+    expect(screen.getAllByTestId("drop-media")).toHaveLength(1);
+    expect(useOptimizedVideoMock).toHaveBeenCalledWith(
+      "https://example.com/drop.mp4",
+      expect.objectContaining({ enabled: true, preferHls: true })
+    );
+    expect(
+      document.querySelector(
+        'link[data-testid="quick-vote-next-image-preload"]'
+      )
+    ).toBeNull();
   });
 
   it("keeps signed draft values from submitting", async () => {
@@ -216,6 +437,7 @@ describe("MemesQuickVoteDialog", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Change vote amount" }));
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "-" },
     });
@@ -248,7 +470,7 @@ describe("MemesQuickVoteDialog", () => {
     );
 
     const negativeButton = screen.getByRole("button", { name: "-250" });
-    expect(negativeButton).toHaveClass("tw-text-rose-200");
+    expect(negativeButton).toHaveClass("tw-text-red");
 
     fireEvent.click(negativeButton);
     await act(async () => {
@@ -272,6 +494,7 @@ describe("MemesQuickVoteDialog", () => {
       />
     );
 
+    fireEvent.click(screen.getByRole("button", { name: "Change vote amount" }));
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "-250" },
     });

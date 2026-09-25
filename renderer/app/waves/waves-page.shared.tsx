@@ -11,8 +11,11 @@ import {
   getAppMetadata,
   getLargeSocialCardMetadata,
 } from "@/components/providers/metadata";
+import { toMetadataExcerpt } from "@/helpers/metadataText";
 import WavesPageClient from "./page.client";
+import { fetchPublicWaveFeed } from "./public-wave-feed.server";
 import { fetchServerWaveFeedSeed } from "./wave-feed-seed.server";
+import PublicWaveFeed from "@/components/waves/PublicWaveFeed";
 import WaveServerFeedSeed, {
   WaveServerFeedSeedGate,
 } from "@/components/waves/WaveServerFeedSeed";
@@ -24,6 +27,9 @@ import type { ApiOgMetadata } from "@/generated/models/ApiOgMetadata";
 import type { ApiOgMetadataProfile } from "@/generated/models/ApiOgMetadataProfile";
 import { ApiDropMainType } from "@/generated/models/ApiDropMainType";
 import { formatAddress } from "@/helpers/Helpers";
+import { isPublicNonDirectMessageWave } from "@/helpers/waves/wave.helpers";
+import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { t } from "@/i18n/messages";
 import {
   getWaveRouteWithSearchParams,
   type RouteSearchParams,
@@ -276,6 +282,13 @@ export async function renderWavesPageContent({
           waveId: context.waveId,
         })
       : null;
+  const publicFeedPromise =
+    routeContext === "waves" &&
+    context.waveId &&
+    context.wave &&
+    isPublicNonDirectMessageWave(context.wave)
+      ? fetchPublicWaveFeed(context.waveId)
+      : null;
 
   const dropMetadataId = getDropMetadataId(searchParams)?.trim();
   const dropMetadata =
@@ -285,6 +298,17 @@ export async function renderWavesPageContent({
           JSON.stringify(context.headers)
         )
       : null;
+  const publicFeed = publicFeedPromise ? await publicFeedPromise : null;
+  const publicFeedFallback =
+    publicFeed?.ok && publicFeed.items.length > 0 ? (
+      <PublicWaveFeed feed={publicFeed} />
+    ) : null;
+  const wavesPageClient = (
+    <WavesPageClient
+      publicFeedFallback={publicFeedFallback}
+      publicFeedWaveId={publicFeed?.ok ? publicFeed.waveId : null}
+    />
+  );
 
   return (
     <>
@@ -313,13 +337,11 @@ export async function renderWavesPageContent({
               />
             </Suspense>
             <Suspense fallback={null}>
-              <WavesPageClient />
+              {wavesPageClient}
             </Suspense>
           </WaveServerFeedSeedGate>
         ) : (
-          <Suspense fallback={null}>
-            <WavesPageClient />
-          </Suspense>
+          <Suspense fallback={null}>{wavesPageClient}</Suspense>
         )}
       </HydrationBoundary>
     </>
@@ -331,10 +353,13 @@ export async function buildWavesMetadata(
   searchParams: WavesSearchParams = {}
 ): Promise<Metadata> {
   if (waveId === null) {
-    return getAppMetadata({
-      title: "Waves | Brain",
-      description: "Browse and explore waves",
-    });
+    return getAppMetadata(
+      {
+        title: "Waves | Brain",
+        description: "Browse and explore waves",
+      },
+      { canonicalPath: "/waves" }
+    );
   }
 
   const shortUuid =
@@ -345,21 +370,37 @@ export async function buildWavesMetadata(
   const wave = waveResult.ok ? waveResult.wave : null;
 
   if (wave === null) {
-    return getAppMetadata({
-      title: `Wave ${shortUuid} | Waves`,
-      description: "Browse and explore waves",
-    });
+    return getAppMetadata(
+      {
+        title: `Wave ${shortUuid} | Waves`,
+        description: "Browse and explore waves",
+      },
+      { robots: { index: false, follow: true } }
+    );
   }
+
+  const isIndexableWave = isPublicNonDirectMessageWave(wave);
+  const canonicalPath = buildWaveStructuredDataPath({ waveId, searchParams });
+  const metadataOptions = {
+    canonicalPath,
+    robots: { index: isIndexableWave, follow: true },
+  };
 
   const waveName =
     typeof wave.name === "string" && wave.name.trim().length > 0
       ? wave.name.trim()
       : `Wave ${shortUuid}`;
-
-  const authorHandle =
-    wave.author.handle && wave.author.handle.trim().length > 0
-      ? `@${wave.author.handle.replace(/^@/, "")}`
-      : formatAddress(wave.author.primary_address);
+  const descriptionDrop = wave.description_drop as
+    | {
+        readonly parts?:
+          | ReadonlyArray<{ readonly content?: string | null }>
+          | undefined;
+      }
+    | undefined;
+  const description = isIndexableWave
+    ? (toMetadataExcerpt(descriptionDrop?.parts?.[0]?.content) ??
+      t(DEFAULT_LOCALE, "waves.pageMetadata.publicDescription", { waveName }))
+    : t(DEFAULT_LOCALE, "waves.pageMetadata.privateDescription");
 
   const dropMetadataId = getDropMetadataId(searchParams)?.trim();
   if (dropMetadataId) {
@@ -374,17 +415,18 @@ export async function buildWavesMetadata(
     });
 
     if (dropPageMetadata) {
-      return getAppMetadata(dropPageMetadata);
+      return getAppMetadata(dropPageMetadata, metadataOptions);
     }
   }
 
   return getAppMetadata(
     getLargeSocialCardMetadata({
-      title: `${waveName} by ${authorHandle}`,
-      description: "Waves",
+      title: t(DEFAULT_LOCALE, "waves.pageMetadata.title", { waveName }),
+      description,
       ogImage: `/api/og-metadata/waves/${encodeURIComponent(waveId)}`,
-      ogImageAlt: `${waveName} wave social card`,
-    })
+      ogImageAlt: t(DEFAULT_LOCALE, "waves.pageMetadata.ogImageAlt", { waveName }),
+    }),
+    metadataOptions
   );
 }
 

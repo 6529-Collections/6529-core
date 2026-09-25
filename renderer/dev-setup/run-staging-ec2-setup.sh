@@ -39,14 +39,6 @@ color() {
   return 0
 }
 
-require_private_package_auth() {
-  if [[ -z "${NODE_AUTH_TOKEN:-}" ]]; then
-    color red "NODE_AUTH_TOKEN with read-only GitHub Packages access is required before staging setup."
-    exit 1
-  fi
-  return 0
-}
-
 # Resolve a real binary by stripping the repo's bin/ shim directory from PATH,
 # so calls like `npm -v` and `npm install --global` never hit the repo shims.
 # Usage: resolve_real_binary npm REAL_NPM
@@ -352,13 +344,12 @@ obtain_cert_and_enable_https() {
 # ---------- Build & Run ----------
 
 install_dependencies() {
-  local package_auth_token="$1"
   color yellow "Installing project dependencies through Socket Firewall + pnpm…"
   if [[ -d "$REPO_ROOT/node_modules" ]]; then
     color yellow "Removing existing node_modules for a clean install…"
     rm -rf "$REPO_ROOT/node_modules"
   fi
-  ( cd "$REPO_ROOT" && NODE_AUTH_TOKEN="$package_auth_token" ./bin/6529 install:frozen )
+  ( cd "$REPO_ROOT" && ./bin/6529 ci )
   color green "Dependencies installed."
   return 0
 }
@@ -444,6 +435,7 @@ collect_all_inputs() {
 
   # Required / optional keys
   prompt_input_required ALCHEMY_API_KEY "Enter ALCHEMY_API_KEY"
+  prompt_input_required ETHEREUM_RPC_URL "Enter ETHEREUM_RPC_URL"
   exec 3</dev/tty || true
   read -u 3 -r -p "Enter GIPHY_API_KEY (optional, can be empty): " GIPHY_API_KEY || true
   exec 3<&- || true
@@ -502,6 +494,7 @@ BASE_ENDPOINT=$base_endpoint
 
 # API KEYS
 ALCHEMY_API_KEY=$ALCHEMY_API_KEY
+ETHEREUM_RPC_URL=$ETHEREUM_RPC_URL
 
 # GIPHY API KEY (optional)
 GIPHY_API_KEY=$GIPHY_API_KEY
@@ -523,29 +516,36 @@ EOF
   return 0
 }
 
+validate_ethereum_rpc_url() {
+  if ! printf '%s' "$ETHEREUM_RPC_URL" | \
+    node "$REPO_ROOT/ops/scripts/validate-ethereum-rpc-url.cjs"; then
+    color red "ETHEREUM_RPC_URL must be a complete HTTP(S) URL."
+    exit 1
+  fi
+  return 0
+}
+
 # ---------- Main ----------
 
 main() {
-  # Package authentication must be present before prompts or filesystem changes.
-  require_private_package_auth
-  local package_auth_token="$NODE_AUTH_TOKEN"
-  unset NODE_AUTH_TOKEN
+  # Private-package tokens are no longer needed and must not reach builds or PM2.
+  unset NODE_AUTH_TOKEN NPM_TOKEN
 
   # 0) Gather ALL user input up front (single interaction)
   collect_all_inputs
-  create_env_file
 
   # 1) Prerequisites
   require_sudo_if_linux
   ensure_node_ge20
+  validate_ethereum_rpc_url
+  create_env_file
   activate_pnpm_with_corepack
   install_socket_firewall
   install_pm2
   ensure_java_for_openapi
 
   # 2) Build & run app
-  install_dependencies "$package_auth_token"
-  unset package_auth_token
+  install_dependencies
   build_project
   start_pm2
 

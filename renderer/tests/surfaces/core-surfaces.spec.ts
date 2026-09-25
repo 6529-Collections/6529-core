@@ -59,10 +59,11 @@ async function expectWaveScorePage(page: Page) {
 
 async function expectTdhExplainer(page: Page) {
   await expect(
-    page.getByRole("heading", { level: 1, name: "TDH" })
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", { name: "How TDH is computed" })
+    page.getByRole("heading", {
+      level: 1,
+      name: "How TDH is calculated",
+      exact: true,
+    })
   ).toBeVisible();
 }
 
@@ -105,7 +106,9 @@ test.describe("Core app surface coverage @surface @medium @large", () => {
     await nav.getByRole("button", { name: "Network & Reputation" }).click();
     await nav.getByRole("link", { name: "TDH", exact: true }).click();
 
-    await expect(page).toHaveURL(/\/network\/tdh$/);
+    await expect(page).toHaveURL(/\/network\/tdh$/, {
+      timeout: NAVIGATION_TIMEOUT_MS,
+    });
     await waitForRouteReady(page);
     await expectTdhExplainer(page);
   });
@@ -185,14 +188,20 @@ test.describe("Core app surface coverage @surface @medium @large", () => {
     await gotoReady(page, "/network/tdh");
 
     await expectTdhExplainer(page);
-    await expect(page.getByRole("heading", { name: /TDH 1\.4/ })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        level: 2,
+        name: "Current boosts & the full schedule",
+        exact: true,
+      })
+    ).toBeVisible();
     await expectLinkHref(page, "Definitions", "/network/definitions");
     await expectLinkHref(
       page,
-      "View Network TDH Stats",
+      "Network TDH Stats",
       "/network/health/network-tdh"
     );
-    await expectLinkHref(page, "View Levels", "/network/levels");
+    await expectLinkHref(page, "Levels", "/network/levels");
   });
 
   test("Delegation Center renders disconnected-safe choices", async ({

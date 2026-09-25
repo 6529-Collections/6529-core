@@ -39,7 +39,6 @@ import {
   hasPendingInlineImageUploadDrop,
   hasPendingInlineImageUploadMarkdown,
 } from "@/helpers/waves/inline-image-upload.helpers";
-import { getIdentitySubmissionMetadataErrors } from "../utils/identitySubmissionMetadataValidation";
 import { normalizeCurationDropInput } from "../utils/validateCurationDropUrl";
 import {
   areHandlesEqual,
@@ -64,6 +63,7 @@ import { useCreateDropTyping } from "./useCreateDropTyping";
 import { exportComposerMarkdown } from "./exportComposerMarkdown";
 import { useCreateDropContainerWidth } from "./useCreateDropContainerWidth";
 import { useCreateDropPollActions } from "./useCreateDropPollActions";
+import { useCreateDropMetadataErrors } from "./useCreateDropMetadataErrors";
 import { useStormPartActions } from "./useStormPartActions";
 import type {
   CreateDropContentProps,
@@ -247,15 +247,12 @@ export function useCreateDropContentController({
     isDropMode,
     requiredMetadata,
   });
-  const metadataErrorById = useMemo(
-    () =>
-      getIdentitySubmissionMetadataErrors({
-        isIdentitySubmissionExperience:
-          isIdentitySubmissionExperience && isDropMode,
-        metadata,
-      }),
-    [isDropMode, isIdentitySubmissionExperience, metadata]
-  );
+  const metadataErrorById = useCreateDropMetadataErrors({
+    isIdentitySubmissionExperience,
+    isDropMode,
+    locale,
+    metadata,
+  });
   const hasMetadataValidationErrors = Object.keys(metadataErrorById).length > 0;
 
   const hasMetadata = useMemo(() => hasMetadataContent(metadata), [metadata]);
@@ -318,11 +315,28 @@ export function useCreateDropContentController({
 
   useCreateDropTyping({ markdown: getMarkdown, waveId: wave.id });
 
+  const { handleFileChange, removeFile, isPreparingFiles, preparingFiles } =
+    useCreateDropFileHandlers({
+      disabled: submitting,
+      drop,
+      files,
+      keepOptionsVisible: keepDesktopOptionsVisible,
+      waveId: wave.id,
+      externalAttachmentDrop,
+      onExternalAttachmentDropConsumed,
+      setToast,
+      setFiles,
+      setDrop,
+      setShowOptionsState,
+      closeOnNextInputRef,
+    });
+
   const hasPendingInlineImageUpload = useMemo(
     () =>
+      isPreparingFiles ||
       hasPendingInlineImageUploadMarkdown(getMarkdown) ||
       (drop ? hasPendingInlineImageUploadDrop(drop) : false),
-    [drop, getMarkdown]
+    [drop, getMarkdown, isPreparingFiles]
   );
 
   const isSlowModeSubmitBlocked = isChatBlockedBySlowMode && !isDropMode;
@@ -392,6 +406,7 @@ export function useCreateDropContentController({
     !isDropMode &&
     !isStormMode &&
     !submitting &&
+    !hasPendingInlineImageUpload &&
     editingDropId === null &&
     activeDrop === null &&
     (getMarkdown?.trim().length ?? 0) === 0 &&
@@ -611,20 +626,6 @@ export function useCreateDropContentController({
     onSwitchToDropModeWithUrl(normalizedCurationDropUrl);
   }, [normalizedCurationDropUrl, onSwitchToDropModeWithUrl]);
 
-  const { handleFileChange, removeFile } = useCreateDropFileHandlers({
-    drop,
-    files,
-    keepOptionsVisible: keepDesktopOptionsVisible,
-    waveId: wave.id,
-    externalAttachmentDrop,
-    onExternalAttachmentDropConsumed,
-    setToast,
-    setFiles,
-    setDrop,
-    setShowOptionsState,
-    closeOnNextInputRef,
-  });
-
   const handleSetShowOptions = useCallback(
     (next: boolean) => {
       setShowOptionsState({ scopeKey: wave.id, value: next });
@@ -685,7 +686,6 @@ export function useCreateDropContentController({
 
   const { onChangeKey, onChangeValue, onAddMetadata, onRemoveMetadata } =
     createMetadataHandlers({
-      metadata,
       setMetadata,
       generateMetadataId,
     });
@@ -756,6 +756,9 @@ export function useCreateDropContentController({
       canAddPart,
       canSubmit,
       editingPartIndex,
+      hasMissingRequirements:
+        missingRequirements.metadata.length > 0 ||
+        missingRequirements.media.length > 0,
       isStormMode,
     }),
     handleEditorStateChange,
@@ -787,7 +790,7 @@ export function useCreateDropContentController({
     closeMetadata,
     drop,
     files,
-    uploadingFiles,
+    uploadingFiles: [...uploadingFiles, ...preparingFiles],
     removeFile,
     termsSignatureFlowEnabled,
     suppressInitialHeightAnimation: focusOnInitialActiveDrop,

@@ -2,6 +2,7 @@
 
 import { AuthContext } from "@/components/auth/Auth";
 import CollectionsDropdown from "@/components/collections-dropdown/CollectionsDropdown";
+import CollectEntryLink from "@/components/collect/CollectEntryLink";
 import DotLoader from "@/components/dotLoader/DotLoader";
 import { LFGButton } from "@/components/lfg-slideshow/LFGSlideshow";
 import { NftBalancesProvider } from "@/components/nft-image/NftBalancesContext";
@@ -15,6 +16,7 @@ import {
   normalizeMemeFilterIds,
 } from "@/components/the-memes/theMemesFilters";
 import { getTheMemesBrowseHref } from "@/components/the-memes/theMemesRouteParams";
+import type { TheMemesInitialData } from "@/app/the-memes/theMemesInitialData";
 import VolumeTypeDropdown from "@/components/the-memes/VolumeTypeDropdown";
 import FilterGridDropdown from "@/components/utils/select/dropdown/FilterGridDropdown";
 import MemeSeasonGridDropdown from "@/components/utils/select/dropdown/MemeSeasonGridDropdown";
@@ -39,7 +41,14 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 interface Meme {
   meme: number;
@@ -169,14 +178,17 @@ function getSortQueryParam(sort: MemesSort, volumeType: VolumeType): string {
 }
 
 export default function TheMemesComponent({
+  initialData,
   locale = DEFAULT_LOCALE,
 }: Readonly<{
+  initialData?: TheMemesInitialData | undefined;
   locale?: SupportedLocale;
 }> = {}) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const { connectedProfile } = useContext(AuthContext);
+  const initialDataRef = useRef(initialData);
 
   const [seasonId, setSeasonId] = useState<number | null>(null);
   const [yearId, setYearId] = useState<number | null>(null);
@@ -184,10 +196,12 @@ export default function TheMemesComponent({
   const [seasonsLoaded, setSeasonsLoaded] = useState(false);
 
   const handleSeasonChange = (season: MemeSeason | null) => {
+    initialDataRef.current = undefined;
     setSeasonId(season?.id ?? null);
   };
 
   const handleYearChange = (nextYearId: number | null) => {
+    initialDataRef.current = undefined;
     setYearId(nextYearId);
     setSeasonId(null);
   };
@@ -205,6 +219,17 @@ export default function TheMemesComponent({
       getInitialSortAndVolume(searchParams);
     const initialSznId = getInitialSeasonId(searchParams);
     const initialYearId = getInitialYearId(searchParams);
+
+    // The server seed belongs only to the unfiltered, oldest-first view.
+    // URL navigation can change that view before the season request finishes.
+    if (
+      initialSort !== MemesSort.AGE ||
+      initialSortDir !== SortDirection.ASC ||
+      initialSznId !== null ||
+      initialYearId !== null
+    ) {
+      initialDataRef.current = undefined;
+    }
 
     setSort(initialSort);
     setSortDir(initialSortDir);
@@ -313,11 +338,13 @@ export default function TheMemesComponent({
     return `${publicEnv.API_ENDPOINT}/api/memes_extended_data?${query.toString()}`;
   }, [activeSeasonId, activeYearId, seasons, sort, sortDir, volumeType]);
 
-  const [fetching, setFetching] = useState(true);
+  const [fetching, setFetching] = useState(initialData === undefined);
 
-  const [nfts, setNfts] = useState<ApiMemesExtendedData[]>([]);
+  const [nfts, setNfts] = useState<ApiMemesExtendedData[]>(
+    () => initialData?.nfts ?? []
+  );
   const tokenIds = useMemo(() => nfts.map((nft) => nft.id), [nfts]);
-  const [nftsNextPage, setNftsNextPage] = useState<string>();
+  const nftsNextPage = useRef(initialData?.nextPage);
 
   const [nftMemes, setNftMemes] = useState<Meme[]>([]);
   const [nftsByMeme, setNftsByMeme] = useState<
@@ -389,34 +416,60 @@ export default function TheMemesComponent({
     setNftsByMeme(nextNftsByMeme);
   }, [nfts, sortDir]);
 
+  const activeRequest = useRef<AbortController | undefined>(undefined);
+
   const fetchNfts = useCallback(() => {
-    if (nftsNextPage === undefined) {
-      setFetching(false);
+    const url = nftsNextPage.current;
+    if (activeRequest.current !== undefined || url === undefined) {
       return;
     }
-    fetchUrl(nftsNextPage)
+    const controller = new AbortController();
+    activeRequest.current = controller;
+    setFetching(true);
+
+    fetchUrl(url, { signal: controller.signal })
       .then((responseNfts: Partial<DBResponse<ApiMemesExtendedData>>) => {
+        // Aborting alone is insufficient if a response has already settled.
+        if (controller.signal.aborted) return;
+
+        // Once finally releases the lock, a scroll may run before React
+        // commits. Read the next cursor from this ref, not the previous render.
+        nftsNextPage.current =
+          typeof responseNfts.next === "string" ? responseNfts.next : undefined;
         setNfts((prev) => [...prev, ...(responseNfts.data ?? [])]);
-        setNftsNextPage(
-          typeof responseNfts.next === "string" ? responseNfts.next : undefined
-        );
       })
       .catch(() => {
         // optionally surface a toast/log here
       })
-      .finally(() => setFetching(false));
-  }, [nftsNextPage]);
+      .finally(() => {
+        if (controller.signal.aborted) return;
+
+        activeRequest.current = undefined;
+        setFetching(false);
+      });
+  }, []);
 
   useEffect(() => {
-    if (filtersReady) {
+    if (!filtersReady) return;
+
+    if (initialDataRef.current !== undefined) {
+      initialDataRef.current = undefined;
+    } else {
+      nftsNextPage.current = getNftsNextPage();
       setNfts([]);
-      setNftsNextPage(getNftsNextPage());
-      setFetching(true);
+      fetchNfts();
     }
+
+    // This also owns pagination requests started by scrolling in this view.
+    return () => {
+      activeRequest.current?.abort();
+      activeRequest.current = undefined;
+    };
   }, [
     activeSeasonId,
     activeYearId,
     filtersReady,
+    fetchNfts,
     getNftsNextPage,
     sort,
     sortDir,
@@ -424,20 +477,14 @@ export default function TheMemesComponent({
   ]);
 
   useEffect(() => {
-    if (fetching && filtersReady && nftsNextPage !== undefined) {
-      fetchNfts();
-    }
-  }, [fetching, fetchNfts, filtersReady, nftsNextPage]);
-
-  useEffect(() => {
-    if (nftsNextPage === undefined) {
+    if (!filtersReady) {
       return;
     }
 
     let throttleTimeout: ReturnType<typeof setTimeout> | null = null;
 
     const handleScroll = () => {
-      if (throttleTimeout !== null) {
+      if (throttleTimeout !== null || nftsNextPage.current === undefined) {
         return;
       }
 
@@ -449,8 +496,8 @@ export default function TheMemesComponent({
           window.innerHeight -
           window.scrollY;
 
-        if (distanceFromBottom <= 400 && filtersReady) {
-          setFetching(true);
+        if (distanceFromBottom <= 400) {
+          fetchNfts();
         }
       }, 200);
     };
@@ -463,7 +510,7 @@ export default function TheMemesComponent({
       }
       window.removeEventListener("scroll", handleScroll);
     };
-  }, [filtersReady, nftsNextPage]);
+  }, [fetchNfts, filtersReady]);
 
   function printSortDirectionButton(
     direction: SortDirection,
@@ -477,7 +524,10 @@ export default function TheMemesComponent({
         type="button"
         aria-label={label}
         aria-pressed={isActive}
-        onClick={() => setSortDir(direction)}
+        onClick={() => {
+          initialDataRef.current = undefined;
+          setSortDir(direction);
+        }}
         className={`tw-m-0 tw-inline-flex tw-h-7 tw-w-6 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-transparent tw-p-0 tw-transition tw-duration-200 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 ${
           isActive
             ? "tw-bg-white/[0.06] tw-text-white"
@@ -571,6 +621,15 @@ export default function TheMemesComponent({
                     {t(locale, "theMemes.title")}
                   </h1>
                   <LFGButton contract={MEMES_CONTRACT} />
+                  <CollectEntryLink
+                    collection="memes"
+                    intent={activeSeason ? "season" : "full_set"}
+                    definitionId={
+                      activeSeason ? String(activeSeason.id) : "memes"
+                    }
+                    locale={locale}
+                    complete
+                  />
                 </div>
                 <div
                   className="tw-grid tw-w-full tw-shrink-0 tw-grid-cols-1 tw-gap-2 sm:tw-w-auto sm:tw-grid-cols-[9rem_13rem]"
@@ -640,15 +699,24 @@ export default function TheMemesComponent({
                       currentSort={sort}
                       sort={v}
                       locale={locale}
-                      select={() => setSort(v)}
+                      select={() => {
+                        initialDataRef.current = undefined;
+                        setSort(v);
+                      }}
                     />
                   ))}
                 <div className="tw-shrink-0">
                   <VolumeTypeDropdown
                     isVolumeSort={sort === MemesSort.VOLUME}
                     selectedVolumeSort={volumeType}
-                    setVolumeType={setVolumeType}
-                    setVolumeSort={() => setSort(MemesSort.VOLUME)}
+                    setVolumeType={(nextVolumeType) => {
+                      initialDataRef.current = undefined;
+                      setVolumeType(nextVolumeType);
+                    }}
+                    setVolumeSort={() => {
+                      initialDataRef.current = undefined;
+                      setSort(MemesSort.VOLUME);
+                    }}
                     locale={locale}
                   />
                 </div>

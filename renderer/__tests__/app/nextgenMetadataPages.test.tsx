@@ -1,12 +1,25 @@
+import { generateMetadata as generateArtMetadata } from "@/app/nextgen/collection/[collection]/art/page";
 import { generateMetadata as generateNextGenCollectionMetadata } from "@/app/nextgen/collection/[collection]/[[...view]]/page";
 import { generateNextgenCollectionMetadata } from "@/app/nextgen/collection/[collection]/page-utils";
 import { generateMetadata as generateNextGenMetadata } from "@/app/nextgen/[[...view]]/page";
 import { generateMetadata as generateNextGenAdminMetadata } from "@/app/nextgen/manager/page";
-import { generateMetadata as generateNextGenTokenMetadata } from "@/app/nextgen/token/[token]/[[...view]]/page";
+import NextGenTokenPage, {
+  generateMetadata as generateNextGenTokenMetadata,
+} from "@/app/nextgen/token/[token]/[[...view]]/page";
+import { render } from "@testing-library/react";
 import { NEXTGEN_CONTRACT } from "@/constants/constants";
 import { commonApiFetch } from "@/services/api/common-api";
 import type { NextGenCollection, NextGenToken } from "@/entities/INextgen";
 import type { Metadata } from "next";
+
+jest.mock(
+  "@/components/nextGen/collections/collectionParts/art/NextGenCollectionArtPage",
+  () => ({ __esModule: true, default: () => null })
+);
+jest.mock("@/app/nextgen/collection/[collection]/CollectionPageShell", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
 jest.mock("@/helpers/server.app.helpers", () => ({
   getAppCommonHeaders: jest.fn().mockResolvedValue({ "x-test": "1" }),
@@ -138,13 +151,19 @@ const getSocialImage = (metadata: Metadata) => {
     url: string;
     width: number;
   }[];
+  if (!image) {
+    throw new Error("Expected a social image.");
+  }
   return image;
 };
 
 const mockNextgenFetches = () => {
   (commonApiFetch as jest.Mock).mockImplementation(
     ({ endpoint }: { endpoint: string }) => {
-      if (endpoint === "nextgen/tokens/10000000042") {
+      if (
+        endpoint === "nextgen/tokens/10000000042" ||
+        endpoint === "nextgen/tokens/42"
+      ) {
         return Promise.resolve(token);
       }
       if (endpoint === "nextgen/tokens/10000000042/traits") {
@@ -228,6 +247,9 @@ describe("NextGen metadata", () => {
       const image = getSocialImage(metadata);
       const url = new URL(image.url);
 
+      expect(metadata.alternates?.canonical).toBe(
+        `https://test.6529.io/nextgen/collection/pebbles${view ? `/${view}` : ""}`
+      );
       expect(metadata.title).toBe(documentTitle);
       expect(metadata.openGraph?.title).toBe(documentTitle);
       expect(metadata.twitter?.card).toBe("summary_large_image");
@@ -245,19 +267,28 @@ describe("NextGen metadata", () => {
     }
   );
 
-  it.each(["Art", "Mint", "Trait Sets", "Distribution Plan"])(
+  it.each([
+    ["Art", "art"],
+    ["Mint", "mint"],
+    ["Trait Sets", "trait-sets"],
+    ["Distribution Plan", "distribution-plan"],
+  ] as const)(
     "uses collection facts in the %s subpage card",
-    async (page) => {
+    async (page, routeSegment) => {
       mockNextgenFetches();
 
       const metadata = await generateNextgenCollectionMetadata({
         collection: "pebbles",
         headers: { "x-test": "1" },
         page,
+        routeSegment,
       });
       const image = getSocialImage(metadata);
       const url = new URL(image.url);
       const title = `${page} | Pebbles`;
+      expect(metadata.alternates?.canonical).toBe(
+        `https://test.6529.io/nextgen/collection/pebbles/${routeSegment}`
+      );
 
       expect(metadata.title).toBe(title);
       expect(metadata.openGraph?.title).toBe(title);
@@ -273,6 +304,7 @@ describe("NextGen metadata", () => {
   it.each([
     [undefined, "Pebble #42"],
     ["provenance", "Provenance | Pebble #42"],
+    ["listings-and-offers", "Listings & offers | Pebble #42"],
     ["display-center", "Display Center | Pebble #42"],
     ["rarity", "Rarity | Pebble #42"],
   ])("uses branded NFT metadata for the %s token view", async (view, title) => {
@@ -302,8 +334,11 @@ describe("NextGen metadata", () => {
     expect(url.searchParams.get("badge")).toBe("NextGen");
     expect(url.searchParams.get("collection")).toBe("Pebbles");
     expect(url.searchParams.get("displayId")).toBe("42");
-    expect(url.searchParams.get("image")).toBe("https://cdn.test/thumb.png");
-    expect(url.searchParams.get("subtitle")).toBe("Pebbles #42 | NextGen");
+    expect(url.searchParams.get("image")).toBe("https://cdn.test/token.png");
+    expect(metadata.description).toContain("Pebble #42 · 6529er · NextGen");
+    const canonical = `https://test.6529.io/nextgen/token/10000000042${view ? `/${view}` : ""}`;
+    expect(metadata.alternates?.canonical).toBe(canonical);
+    expect(metadata.openGraph?.url).toBe(canonical);
     expect(url.searchParams.get("title")).toBe(title);
   });
 
@@ -322,5 +357,138 @@ describe("NextGen metadata", () => {
     expect(url.searchParams.get("collection")).toBe("NextGen");
     expect(url.searchParams.get("image")).toBeNull();
     expect(url.searchParams.get("title")).toBe("NextGen #999");
+  });
+
+  it("normalizes short token links to the indexed token identity", async () => {
+    mockNextgenFetches();
+    const metadata = await generateNextGenTokenMetadata({
+      params: Promise.resolve({ token: "42" }),
+    });
+    expect(metadata.alternates?.canonical).toBe(
+      "https://test.6529.io/nextgen/token/10000000042"
+    );
+    expect(new URL(getSocialImage(metadata).url).pathname).toBe(
+      `/api/og-metadata/nfts/${NEXTGEN_CONTRACT}/10000000042`
+    );
+  });
+
+  it.each([
+    [undefined, ""],
+    ["display-center", "/display-center"],
+    ["listings-and-offers", "/listings-and-offers"],
+    ["rarity", "/rarity"],
+    ["unsupported", ""],
+  ])(
+    "keeps %s view metadata and JSON-LD on the same canonical token URL",
+    async (view, suffix) => {
+      mockNextgenFetches();
+      const params = Promise.resolve({
+        token: "42",
+        view: view ? [view] : undefined,
+      });
+      const metadata = await generateNextGenTokenMetadata({ params });
+      const { container } = render(
+        await NextGenTokenPage({ params, searchParams: Promise.resolve({}) })
+      );
+      const script = container.querySelector(
+        'script[type="application/ld+json"]'
+      );
+      const jsonLd = JSON.parse(script?.textContent ?? "{}") as {
+        "@graph": Record<string, unknown>[];
+      };
+      const canonical = `https://test.6529.io/nextgen/token/10000000042${suffix}`;
+      expect(metadata.alternates?.canonical).toBe(canonical);
+      expect(jsonLd["@graph"]).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ "@type": "VisualArtwork", url: canonical }),
+          expect.objectContaining({ "@type": "WebPage", url: canonical }),
+        ])
+      );
+    }
+  );
+});
+
+describe("NextGen art filter canonicals", () => {
+  it.each([
+    [{}, ""],
+    [
+      {
+        sort: "rarity_score",
+        sort_direction: "asc",
+        show_normalised: "false",
+        show_trait_count: "false",
+        utm_source: "share",
+      },
+      "",
+    ],
+    [
+      { traits: "Palette:Sgt. Pepe", sort: "id" },
+      "?traits=Palette%3ASgt.+Pepe",
+    ],
+    [
+      { traits: "Shape:Round,Palette:Sgt. Pepe,Shape:Round", listed: "true" },
+      "?traits=Palette%3ASgt.+Pepe%2CShape%3ARound&listed=true",
+    ],
+    [
+      { traits: ["Palette:Sgt. Pepe", "Shape:Round"], listed: "false" },
+      "?traits=Palette%3ASgt.+Pepe&listed=false",
+    ],
+    [{ traits: "Missing,Empty:", listed: "" }, ""],
+    [{ listed: "other" }, "?listed=false"],
+    [
+      { traits: "Shape:é,Shape:round,Shape:Round,Shape:Round" },
+      "?traits=Shape%3ARound%2CShape%3Around%2CShape%3A%C3%A9",
+    ],
+  ])(
+    "preserves result-set filters but consolidates sort/tracking variants: %j",
+    async (searchParams, query) => {
+      mockNextgenFetches();
+      const metadata = await generateArtMetadata({
+        params: Promise.resolve({ collection: "1" }),
+        searchParams: Promise.resolve(searchParams),
+      });
+      const canonical = `https://test.6529.io/nextgen/collection/pebbles/art${query}`;
+      expect(metadata.alternates?.canonical).toBe(canonical);
+      expect(metadata.openGraph?.url).toBe(canonical);
+    }
+  );
+
+  it.each([
+    [undefined, ""],
+    ["overview", ""],
+    ["OVERVIEW", ""],
+    ["unsupported", ""],
+    ["about", "/about"],
+    ["ABOUT", "/about"],
+    ["Provenance", "/provenance"],
+    ["RARITY", "/rarity"],
+    ["DISPLAY_CENTER", "/display_center"],
+    ["display-center", ""],
+    ["top-trait-sets", "/top-trait-sets"],
+    ["TOP_TRAIT_SETS", "/top-trait-sets"],
+    ["TOP-TRAIT-SETS", ""],
+  ])(
+    "canonicalizes the resolved %s collection view and preserves preview filters",
+    async (view, suffix) => {
+      mockNextgenFetches();
+      const metadata = await generateNextGenCollectionMetadata({
+        params: Promise.resolve({
+          collection: "pebbles",
+          view: view ? [view] : undefined,
+        }),
+        searchParams: Promise.resolve({ traits: "Palette:Sgt. Pepe" }),
+      });
+      const canonical = `https://test.6529.io/nextgen/collection/pebbles${suffix}?traits=Palette%3ASgt.+Pepe`;
+      expect(metadata.alternates?.canonical).toBe(canonical);
+      expect(metadata.openGraph?.url).toBe(canonical);
+    }
+  );
+
+  it("does not assign a resolved collection canonical when lookup fails", async () => {
+    jest.mocked(commonApiFetch).mockResolvedValue(null);
+    const metadata = await generateArtMetadata({
+      params: Promise.resolve({ collection: "missing" }),
+    });
+    expect(metadata.alternates).toBeUndefined();
   });
 });

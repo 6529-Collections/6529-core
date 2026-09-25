@@ -5,15 +5,26 @@ import {
   type FetchPublicUrlOptions,
 } from "@/lib/security/urlGuard";
 import { OG_IMAGE_PROXY_MAX_BYTES } from "@/app/api/og-metadata/_lib/imageProxyPolicy";
+import {
+  AdmissionQueue,
+  AdmissionQueueError,
+} from "@/lib/fetch/admissionQueue";
 import { NextResponse, type NextRequest } from "next/server";
-import sharp, { type Sharp } from "sharp";
+import sharp, { type Metadata } from "sharp";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 const DEFAULT_WIDTH = 1200;
 const MAX_WIDTH = 1200;
+const MAX_HEIGHT = 12000;
+const MAX_INPUT_PIXELS = 512_000_000;
+const MAX_INPUT_DIMENSION = 65_536;
+// Admit before fetching to bound both compressed buffers and native image work.
+// Ordinary multi-image cards can wait briefly without allocating image buffers.
+const imageAdmission = new AdmissionQueue({ maxPending: 32, waitMs: 15_000 });
 const OVERSIZED_GIF_PREVIEW_MAX_BYTES = 8 * 1024 * 1024;
+const MAX_ANIMATED_WORK_BYTES = 512 * 1024 * 1024;
 const PNG_CONTENT_TYPE = "image/png";
 const GIF_CONTENT_TYPE = "image/gif";
 const CACHE_CONTROL =
@@ -149,6 +160,15 @@ const cancelResponseBody = async (response: Response): Promise<void> => {
 };
 
 const mapErrorToResponse = (error: unknown): NextResponse => {
+  if (error instanceof AdmissionQueueError) {
+    return NextResponse.json(
+      { error: "Image processing busy" },
+      {
+        status: 503,
+        headers: { "Cache-Control": "no-store", "Retry-After": "1" },
+      }
+    );
+  }
   if (error instanceof UrlGuardError) {
     switch (error.kind) {
       case "missing-url":
@@ -203,7 +223,9 @@ const readImageResponseBuffer = async (
   return Buffer.concat(chunks, totalBytes);
 };
 
-const fetchImageBuffer = async (url: URL): Promise<Buffer> => {
+const fetchImageBuffer = async (
+  url: URL
+): Promise<{ buffer: Buffer; complete: boolean }> => {
   const response = await fetchPublicUrl(
     url,
     {
@@ -215,6 +237,7 @@ const fetchImageBuffer = async (url: URL): Promise<Buffer> => {
   );
 
   if (!response.ok) {
+    await cancelResponseBody(response);
     throw new Error(`Image request failed: ${response.status}`);
   }
 
@@ -222,14 +245,22 @@ const fetchImageBuffer = async (url: URL): Promise<Buffer> => {
   const contentType = getResponseContentType(response);
   if (shouldUseOversizedGifPreview({ contentLength, contentType, url })) {
     await cancelResponseBody(response);
-    return fetchOversizedGifPreviewBuffer(url);
+    return {
+      buffer: await fetchOversizedGifPreviewBuffer(url),
+      complete: false,
+    };
   }
 
   if (contentLength !== null) {
-    ensureAllowedImageSize(contentLength);
+    try {
+      ensureAllowedImageSize(contentLength);
+    } catch (error) {
+      await cancelResponseBody(response);
+      throw error;
+    }
   }
 
-  return readImageResponseBuffer(response);
+  return { buffer: await readImageResponseBuffer(response), complete: true };
 };
 
 const fetchOversizedGifPreviewBuffer = async (url: URL): Promise<Buffer> => {
@@ -286,48 +317,77 @@ const detectContentType = (buffer: Buffer): string | null => {
   return null;
 };
 
-const normalizeImageToPng = async ({
+const normalizeImage = async ({
   buffer,
   width,
+  allowAnimation,
 }: {
   readonly buffer: Buffer;
   readonly width: number;
-}): Promise<Buffer> => {
+  readonly allowAnimation: boolean;
+}): Promise<{ data: Buffer; contentType: string }> => {
   const detectedContentType = detectContentType(buffer);
   if (!detectedContentType?.startsWith("image/")) {
     throw new Error("Upstream response is not an image.");
   }
 
-  const image =
-    detectedContentType === GIF_CONTENT_TYPE
-      ? await createGifPreviewImage(buffer)
-      : sharp(buffer, {
-          limitInputPixels: false,
-          pages: 1,
-          sequentialRead: true,
-        });
-
-  return image
-    .timeout({ seconds: 7 })
-    .rotate()
-    .resize(width, undefined, { withoutEnlargement: true })
-    .png({ quality: 100 })
-    .toBuffer();
-};
-
-const createGifPreviewImage = async (buffer: Buffer): Promise<Sharp> => {
-  await sharp(buffer, {
-    animated: true,
-    limitInputPixels: false,
-    sequentialRead: true,
-  }).metadata();
-
-  return sharp(buffer, {
-    limitInputPixels: false,
+  const image = sharp(buffer, {
+    limitInputPixels: MAX_INPUT_PIXELS,
     page: 0,
     pages: 1,
     sequentialRead: true,
-  });
+  }).timeout({ seconds: 7 });
+  // Read only the first frame, so animation length does not consume the pixel
+  // budget. Sharp enforces its finite pixel limit while opening this metadata.
+  const metadata = await image.metadata();
+  ensureAllowedImageDimensions(metadata);
+  const frames = metadata.pages ?? 1;
+  const animatedWorkBytes =
+    metadata.width * (metadata.pageHeight ?? metadata.height) * frames * 16;
+  const animated =
+    allowAnimation &&
+    detectedContentType === GIF_CONTENT_TYPE &&
+    Number.isSafeInteger(frames) &&
+    frames > 1 &&
+    Number.isSafeInteger(animatedWorkBytes) &&
+    animatedWorkBytes <= MAX_ANIMATED_WORK_BYTES;
+  // Preserve ordinary external GIFs without admitting an unbounded animation.
+  // Range-fetched or over-budget GIFs keep the existing first-frame PNG path.
+  const output = (
+    animated
+      ? sharp(buffer, {
+          animated: true,
+          limitInputPixels: MAX_ANIMATED_WORK_BYTES / 16,
+        }).timeout({ seconds: 7 })
+      : image
+  )
+    .rotate()
+    .resize(width, MAX_HEIGHT, { fit: "inside", withoutEnlargement: true });
+  if (animated)
+    return {
+      data: await output.gif().toBuffer(),
+      contentType: GIF_CONTENT_TYPE,
+    };
+  return {
+    data: await output.png({ quality: 100 }).toBuffer(),
+    contentType: PNG_CONTENT_TYPE,
+  };
+};
+
+const ensureAllowedImageDimensions = (metadata: Metadata): void => {
+  const width = metadata.width;
+  const height = metadata.pageHeight ?? metadata.height;
+  if (
+    !Number.isSafeInteger(width) ||
+    !Number.isSafeInteger(height) ||
+    width < 1 ||
+    height < 1 ||
+    width > MAX_INPUT_DIMENSION ||
+    height > MAX_INPUT_DIMENSION ||
+    width * height > MAX_INPUT_PIXELS
+  ) {
+    throw new Error("Image dimensions exceeded supported limits.");
+  }
 };
 
 const parseImageUrl = (value: string | null): URL => {
@@ -337,20 +397,31 @@ const parseImageUrl = (value: string | null): URL => {
 };
 
 export async function GET(request: NextRequest) {
+  let releaseAdmission: (() => void) | undefined;
   try {
     const imageUrl = parseImageUrl(request.nextUrl.searchParams.get("url"));
     const width = parseWidth(request.nextUrl.searchParams.get("w"));
-    const buffer = await fetchImageBuffer(imageUrl);
-    const png = await normalizeImageToPng({ buffer, width });
+    releaseAdmission = await imageAdmission.acquire(request.signal);
+    const { buffer, complete } = await fetchImageBuffer(imageUrl);
+    const { data, contentType } = await normalizeImage({
+      buffer,
+      width,
+      allowAnimation:
+        complete && request.nextUrl.searchParams.get("animated") === "1",
+    });
 
-    return new NextResponse(new Uint8Array(png), {
+    return new NextResponse(new Uint8Array(data), {
       headers: {
         "Cache-Control": CACHE_CONTROL,
-        "Content-Type": PNG_CONTENT_TYPE,
+        "Content-Type": contentType,
       },
     });
   } catch (error) {
-    console.error("Unable to normalize OG metadata image.", error);
+    if (!(error instanceof AdmissionQueueError)) {
+      console.error("Unable to normalize OG metadata image.", error);
+    }
     return mapErrorToResponse(error);
+  } finally {
+    releaseAdmission?.();
   }
 }

@@ -20,14 +20,10 @@ async function gotoReady(
 
 async function openGroupFilters(page: Page) {
   const openButton = page.getByRole("button", { name: "Open group filters" });
-  if (
-    await openButton
-      .first()
-      .isVisible({ timeout: 5000 })
-      .catch(() => false)
-  ) {
-    await openButton.first().click();
-  }
+  // The route shell can be visible before the data-backed controls render.
+  // This control is required on both viewports, so do not silently skip it.
+  await expect(openButton.first()).toBeVisible();
+  await openButton.first().click();
 }
 
 async function expectAnyVisible(
@@ -55,6 +51,33 @@ async function expectSubscriptionsSettled(page: Page) {
   await expect(page.getByText(/Loading past drops/i)).toBeHidden({
     timeout: 30000,
   });
+}
+
+function resolveApiEndpoint(baseURL: string): string {
+  const appUrl = new URL(baseURL);
+  if (process.env["PLAYWRIGHT_COMPOSER_SANDBOX"] === "1") {
+    const sandboxPort =
+      process.env["PLAYWRIGHT_COMPOSER_SANDBOX_API_PORT"] ||
+      String(Number(appUrl.port || "3001") + 1000);
+    return `http://127.0.0.1:${sandboxPort}`;
+  }
+  if (appUrl.hostname === "staging.6529.io") {
+    return "https://api.staging.6529.io";
+  }
+  if (appUrl.hostname === "6529.io" || appUrl.hostname === "www.6529.io") {
+    return "https://api.6529.io";
+  }
+  return process.env["API_ENDPOINT"] || "http://localhost:3000";
+}
+
+async function getStagingApiHeaders(
+  page: Page
+): Promise<Record<string, string>> {
+  const apiAuth = (await page.context().cookies()).find(
+    (cookie) => cookie.name === "x-6529-auth"
+  )?.value;
+
+  return apiAuth ? { "x-6529-auth": apiAuth } : {};
 }
 
 test.describe("Public tools, calendar, and removed Groups route coverage @surface @medium @large @readonly", () => {
@@ -105,41 +128,32 @@ test.describe("Public tools, calendar, and removed Groups route coverage @surfac
     });
   }
 
-  test("activates and clears a network group filter through the active-group state", async ({
+  test("uses a criteria-only network filter and restores deep-linked groups", async ({
+    baseURL,
     page,
   }) => {
     await gotoReady(page, "/network");
 
     await openGroupFilters(page);
-    const chooseGroupButton = page
-      .getByRole("button", { name: "Choose group" })
-      .filter({ visible: true });
-    await expect(chooseGroupButton).toBeVisible({ timeout: 30000 });
-    await chooseGroupButton.click();
+    await expect(
+      page
+        .getByRole("button", { name: "Edit criteria" })
+        .filter({ visible: true })
+    ).toBeVisible({ timeout: 30000 });
+    await expect(
+      page
+        .getByRole("button", { name: "Choose group" })
+        .filter({ visible: true })
+    ).toHaveCount(0);
+    await expect(page.getByText("Hide criteria and members")).toHaveCount(0);
 
-    const groupSearch = page
-      .getByRole("combobox", { name: /Search groups/i })
-      .filter({ visible: true });
-    await expect(groupSearch).toBeVisible();
-
-    // Resolve a real group id from the saved-group search's unfiltered request
-    // so the test stays portable across local, staging, and production data
-    // sets. The criteria builder opens by default, so the request starts only
-    // after switching to Choose group and focusing its search field.
-    const groupsResponsePromise = page.waitForResponse(
-      (response) => {
-        const responseUrl = new URL(response.url());
-        return (
-          response.request().method() === "GET" &&
-          /\/groups\/?$/.test(responseUrl.pathname) &&
-          !responseUrl.searchParams.has("group_name") &&
-          response.ok()
-        );
-      },
-      { timeout: 30000 }
+    // Resolve a real group id read-only so the deep-link behavior remains
+    // portable across local, staging, and production data sets.
+    const groupsResponse = await page.request.get(
+      `${resolveApiEndpoint(baseURL ?? "http://localhost:3001")}/api/groups`,
+      { headers: await getStagingApiHeaders(page) }
     );
-    await groupSearch.focus();
-    const groupsResponse = await groupsResponsePromise;
+    expect(groupsResponse.ok()).toBe(true);
     const groupsPayload = (await groupsResponse.json()) as
       | { readonly id?: string; readonly name?: string }[]
       | { readonly data?: { readonly id?: string; readonly name?: string }[] };
@@ -273,8 +287,32 @@ test.describe("Public tools, calendar, and removed Groups route coverage @surfac
     await expect(localTab).toHaveAttribute("aria-selected", "false");
 
     await expect(page.getByRole("button", { name: "Next Mint" })).toBeVisible();
-    await expect(page.locator("#meme-overview-mint-input")).toBeVisible();
-    await expect(page.locator("#meme-calendar-mint-input")).toBeVisible();
+    const overviewMemeNumberInput = page.getByLabel("Meme #").first();
+    const calendarMemeNumberInput = page.getByLabel("Meme #").last();
+    await expect(overviewMemeNumberInput).toBeVisible();
+    await expect(calendarMemeNumberInput).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Show mint schedule" })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Find mint date" })
+    ).toBeVisible();
+
+    await overviewMemeNumberInput.fill("551");
+    await page.getByRole("button", { name: "Show mint schedule" }).click();
+    await expect(
+      page.getByRole("link", { name: "Open Meme #551" })
+    ).toHaveAttribute("href", "/the-memes/551?locale=de-DE", {
+      timeout: 30000,
+    });
+    await calendarMemeNumberInput.fill("551");
+    await page.getByRole("button", { name: "Find mint date" }).click();
+    const tooltipArtworkLink = page
+      .getByRole("tooltip")
+      .getByRole("link", { name: "Open Meme #551" });
+    await expect(tooltipArtworkLink).toBeVisible({ timeout: 30000 });
+    await tooltipArtworkLink.focus();
+    await expect(tooltipArtworkLink).toBeFocused();
     await expect(
       page.getByRole("button", { name: "Screenshot" })
     ).toBeVisible();
@@ -302,6 +340,81 @@ test.describe("Public tools, calendar, and removed Groups route coverage @surfac
       "href",
       /^https:\/\/calendar\.google\.com\/calendar\/render/
     );
+    await expectNoHorizontalOverflow(page);
+  });
+
+  test("keeps ReMeme fields intact and makes Meme references searchable", async ({
+    page,
+  }, testInfo) => {
+    if (testInfo.project.name === "web-desktop-chromium") {
+      await page.setViewportSize({ width: 1536, height: 1000 });
+    }
+    await page.route("**/api/memes_lite", async (route) => {
+      const headers = { ...route.request().headers() };
+      delete headers["if-modified-since"];
+      delete headers["if-none-match"];
+      await route.continue({ headers });
+    });
+    await gotoReady(page, "/rememes/add", {
+      readySelector: "#rememe-reference-search",
+    });
+
+    await expect(page.getByLabel("Contract", { exact: true })).toBeVisible();
+    await expect(page.getByLabel("Token IDs", { exact: true })).toHaveAttribute(
+      "placeholder",
+      "1,2,3 or 1-3 or 1,2-5 or 1-3,5"
+    );
+    await expect(page.getByRole("button", { name: "Validate" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add Rememe" })).toHaveCount(
+      0
+    );
+
+    if (testInfo.project.name === "web-desktop-chromium") {
+      const [logoBox, contractBox] = await Promise.all([
+        page.getByAltText("re-memes").boundingBox(),
+        page.getByLabel("Contract", { exact: true }).boundingBox(),
+      ]);
+      if (!logoBox || !contractBox) {
+        throw new Error(
+          "Expected the ReMeme logo and contract input to render"
+        );
+      }
+      expect(Math.abs(contractBox.x - logoBox.x)).toBeLessThanOrEqual(1);
+    }
+
+    const referenceSearch = page.getByRole("combobox", {
+      name: "Meme References",
+    });
+    await expect(referenceSearch).toBeEnabled({ timeout: 30000 });
+    await referenceSearch.fill("551");
+    const memeOption = page.getByRole("option", { name: /^#551 - / });
+    await expect(memeOption).toBeVisible();
+
+    if (testInfo.project.name === "web-mobile-chromium") {
+      await memeOption.tap();
+    } else {
+      await referenceSearch.press("ArrowDown");
+      await referenceSearch.press("Enter");
+    }
+
+    const clearReference = page.getByRole("button", {
+      name: "Clear reference #551",
+    });
+    await expect(clearReference).toBeVisible();
+    const [searchBox, selectedReferenceBox] = await Promise.all([
+      referenceSearch.boundingBox(),
+      clearReference.boundingBox(),
+    ]);
+    if (!searchBox || !selectedReferenceBox) {
+      throw new Error("Expected the reference search and selection to render");
+    }
+    expect(selectedReferenceBox.y).toBeGreaterThan(searchBox.y);
+    if (testInfo.project.name === "web-mobile-chromium") {
+      await clearReference.tap();
+    } else {
+      await clearReference.click();
+    }
+    await expect(clearReference).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
   });
 });

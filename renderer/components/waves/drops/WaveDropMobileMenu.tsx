@@ -43,6 +43,7 @@ import WaveDropMobileMenuCopyText from "./WaveDropMobileMenuCopyText";
 import ContentModerationDropActions from "@/components/content-moderation/ContentModerationDropActions";
 import ReportDropModal from "@/components/content-moderation/ReportDropModal";
 import WaveDropMobileMenuReactionPicker from "./WaveDropMobileMenuReactionPicker";
+import WaveDropDocumentationAction from "./WaveDropDocumentationAction";
 
 export interface WaveDropMobileMenuProps {
   readonly drop: ApiDrop;
@@ -58,6 +59,10 @@ export interface WaveDropMobileMenuProps {
   readonly showCopyOption?: boolean | undefined;
   readonly showVoting?: boolean | undefined;
   readonly showOnlyQuickRemove?: boolean | undefined;
+  readonly standaloneQuickRemoveCuration?:
+    | QuickCurationAction
+    | null
+    | undefined;
 }
 
 type TimeoutRef = {
@@ -270,6 +275,8 @@ function WaveDropMobileMenuAuthenticatedActions({
         </>
       )}
 
+      <WaveDropDocumentationAction drop={drop} onSelected={closeMenu} mobile />
+
       {quickAddCuration && (
         <button
           type="button"
@@ -358,6 +365,7 @@ const WaveDropMobileMenuContent: FC<WaveDropMobileMenuProps> = ({
   showCopyOption = true,
   showVoting = true,
   showOnlyQuickRemove = false,
+  standaloneQuickRemoveCuration = null,
 }) => {
   const { connectedProfile, activeProfileProxy } = useContext(AuthContext);
   const locale = useBrowserLocale();
@@ -413,16 +421,24 @@ const WaveDropMobileMenuContent: FC<WaveDropMobileMenuProps> = ({
     globalThis.requestAnimationFrame(() => reactionButtonRef.current?.focus());
   };
   const showGuestCopyOnly = connectedProfileHandle === null;
-  const { showManageCurations, quickAddCuration, quickRemoveCuration } =
-    useCanShowDropCurationsAction({
-      dropId: drop.id,
-      waveId: drop.wave.id,
-      profileIdentity: getProfileWaveIdentity(connectedProfile),
-      isTemporaryDrop,
-      isWaveAdmin: drop.wave.authenticated_user_admin === true,
-      enabled:
-        (isOpen || isCurationsDialogOpen) && connectedProfileHandle !== null,
-    });
+  const {
+    showManageCurations,
+    quickAddCuration,
+    quickRemoveCuration: availableQuickRemoveCuration,
+  } = useCanShowDropCurationsAction({
+    dropId: drop.id,
+    waveId: drop.wave.id,
+    profileIdentity: getProfileWaveIdentity(connectedProfile),
+    isTemporaryDrop,
+    isWaveAdmin: drop.wave.authenticated_user_admin === true,
+    enabled:
+      !showOnlyQuickRemove &&
+      (isOpen || isCurationsDialogOpen) &&
+      connectedProfileHandle !== null,
+  });
+  const quickRemoveCuration = showOnlyQuickRemove
+    ? standaloneQuickRemoveCuration
+    : availableQuickRemoveCuration;
   const { updateMembershipAsync } = useDropCurationMembershipMutation({
     dropId: drop.id,
     waveId: drop.wave.id,
@@ -474,6 +490,10 @@ const WaveDropMobileMenuContent: FC<WaveDropMobileMenuProps> = ({
       ? "waves.drop.actions.reactionPickerLabel"
       : "waves.drop.actions.menuLabel"
   );
+
+  if (showOnlyQuickRemove && (!quickRemoveCuration || isTemporaryDrop)) {
+    return null;
+  }
 
   return (
     <>

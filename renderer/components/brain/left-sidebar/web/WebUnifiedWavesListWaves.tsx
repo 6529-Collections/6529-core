@@ -7,6 +7,7 @@ import useIsTouchDevice from "@/hooks/useIsTouchDevice";
 import { useLoadActiveSidebarParentSubwaves } from "@/hooks/useLoadActiveSidebarParentSubwaves";
 import { useLoadPersistedExpandedSubwaves } from "@/hooks/useLoadPersistedExpandedSubwaves";
 import { useActiveSubwaveParentHint } from "@/hooks/useActiveSubwaveParentHint";
+import { useRevealActiveSidebarWave } from "@/hooks/useRevealActiveSidebarWave";
 import { usePrefetchWaveData } from "@/hooks/usePrefetchWaveData";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -51,6 +52,7 @@ import { getWaveRoute } from "@/helpers/navigation.helpers";
 import {
   groupSidebarWavesForView,
   isValidSidebarWave,
+  prioritizeActiveWaveContainer,
 } from "../waves/sidebarWaveListUtils";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -109,20 +111,14 @@ function getVirtualizedAriaLabel({
 
 function getVirtualizedKey({
   isDirectMessage,
-  isJoinedFilterActive,
 }: {
   readonly isDirectMessage: boolean;
-  readonly isJoinedFilterActive: boolean;
 }) {
   if (isDirectMessage) {
     return "web-direct-message-conversations";
   }
 
-  if (isJoinedFilterActive) {
-    return "web-unified-waves-joined";
-  }
-
-  return "web-unified-waves-all";
+  return "web-unified-waves";
 }
 
 function getBottomListLabel(isJoinedFilterActive: boolean) {
@@ -180,7 +176,7 @@ function DiscoverWavesLink() {
   return (
     <Link
       href="/discover"
-      className="tw-inline-flex tw-h-7 tw-items-center tw-rounded-md tw-px-1.5 tw-text-[13px] tw-font-medium tw-leading-none tw-text-primary-300 tw-no-underline tw-transition-colors tw-duration-150 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-black active:tw-text-primary-100 desktop-hover:hover:tw-text-primary-200 motion-reduce:tw-transition-none"
+      className="active:tw-text-primary-100 desktop-hover:hover:tw-text-primary-200 tw-inline-flex tw-h-7 tw-items-center tw-rounded-md tw-px-1.5 tw-text-[13px] tw-font-medium tw-leading-none tw-text-primary-300 tw-no-underline tw-transition-colors tw-duration-150 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400 focus-visible:tw-ring-offset-2 focus-visible:tw-ring-offset-black motion-reduce:tw-transition-none"
       aria-label={label}
     >
       {label}
@@ -205,7 +201,7 @@ function WebWavesListHeader({
     }
 
     return (
-      <div className="tw-mb-3.5 tw-flex tw-justify-center tw-px-2">
+      <div className="tw-mb-3.5 tw-mt-2 tw-flex tw-justify-center tw-px-2">
         <CreateWaveButton onClick={onCreateWave} />
       </div>
     );
@@ -320,7 +316,17 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
     () => getRows(pinnedWaves),
     [pinnedWaves, getRows]
   );
-  const allRows = useMemo(() => getRows(allWaves), [allWaves, getRows]);
+  const activeContainerWaveId = isDirectMessage
+    ? null
+    : effectiveActiveParentWaveId;
+  const prioritizedAllWaves = useMemo(
+    () => prioritizeActiveWaveContainer(allWaves, activeContainerWaveId),
+    [activeContainerWaveId, allWaves]
+  );
+  const allRows = useMemo(
+    () => getRows(prioritizedAllWaves),
+    [getRows, prioritizedAllWaves]
+  );
   const rowAnimationOptions = useMemo(
     () => ({ keepExitingRows: !isCollapsed }),
     [isCollapsed]
@@ -376,7 +382,6 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
   const shouldShowBottomHeader = !hideHeaders && !isCollapsed;
   const virtualizedKey = getVirtualizedKey({
     isDirectMessage,
-    isJoinedFilterActive,
   });
   const sectionClassName = getSectionClassName(isCollapsed);
   const rowHeight = getBaseRowHeight(isCollapsed);
@@ -467,6 +472,23 @@ const WebUnifiedWavesListWaves: React.FC<WebUnifiedWavesListWavesProps> = ({
     listContainerRef,
     rowHeight: getSidebarRowHeight,
     overscan: 5,
+  });
+  const revealStaticRows = useMemo(
+    () => [
+      animatedAnnouncementRows,
+      animatedHighlyRatedRows,
+      animatedPinnedRows,
+    ],
+    [animatedAnnouncementRows, animatedHighlyRatedRows, animatedPinnedRows]
+  );
+  useRevealActiveSidebarWave({
+    activeParentWaveId: effectiveActiveParentWaveId,
+    activeWaveId,
+    filterKey: isJoinedFilterActive ? "joined" : "all",
+    scrollContainerRef: scrollContainerRef ?? listContainerRef,
+    scrollToVirtualIndex: virtual.scrollToIndex,
+    staticRows: revealStaticRows,
+    virtualRows: virtualizedRows,
   });
 
   const renderWaveRow = (

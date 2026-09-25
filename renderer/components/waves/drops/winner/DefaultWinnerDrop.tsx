@@ -138,7 +138,7 @@ const DefaultWinnerDropInner = ({
     metadata: drop.metadata,
   });
   const getBackgroundColorClass = (_loc: DropLocation): string =>
-    "tw-bg-iron-950";
+    "tw-bg-[var(--drop-card-background,theme(colors.iron.950))]";
 
   let bgColorClass = getBackgroundColorClass(location);
   if (contentPresentation === "proposalCard") {
@@ -195,10 +195,7 @@ const DefaultWinnerDropInner = ({
     );
   const detachedProposalHeader =
     isChatProposal && showIdentity ? (
-      <ProposalCardDetachedHeader
-        drop={drop}
-        identityHeader={identityHeader}
-      />
+      <ProposalCardDetachedHeader drop={drop} identityHeader={identityHeader} />
     ) : null;
   const interactionsRow = showInteractions ? (
     <div className="tw-flex tw-w-full tw-flex-wrap tw-items-center tw-gap-x-2 tw-gap-y-1">
@@ -345,13 +342,15 @@ const DefaultWinnerDropInner = ({
                   embedDepth={embedDepth}
                   maxEmbedDepth={maxEmbedDepth}
                   contentPresentation={contentPresentation}
+                  proposalCardTextFooter={
+                    isChatProposal ? (
+                      <ProposalCardReadFullButton
+                        drop={drop}
+                        onReadFull={onDropContentClick}
+                      />
+                    ) : undefined
+                  }
                 />
-                {isChatProposal && (
-                  <ProposalCardReadFullButton
-                    drop={drop}
-                    onReadFull={onDropContentClick}
-                  />
-                )}
               </div>
             </div>
           </div>

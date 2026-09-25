@@ -11,7 +11,9 @@ import {
   assertNoFailedResponses,
   attachPageDiagnostics,
 } from "../support/pageAssertions";
+import { installLocalMuseumCountryCheck } from "../support/localMuseumCountryCheck";
 import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import { MUSEUM_SETTINGS_FETCH_ERROR_PATTERN } from "../support/museumConsoleDiagnostics";
 import {
   MUSEUM_DATA_ARCHITECTURE_CASEY_AUDIT_TITLE,
   MUSEUM_DATA_ARCHITECTURE_STANDARDS,
@@ -21,6 +23,9 @@ const BASE_PATH = "/museum/network/research/data-architecture";
 const SOURCE_REPOSITORY = "6529-Collections/6529networkmuseum";
 const MOBILE_PROJECT = "web-mobile-chromium";
 const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
+// CI exercises real link transitions against a cold Next.js development
+// server, where the first dynamic route compilation can exceed 45 seconds.
+const ROUTE_TRANSITION_TIMEOUT_MS = 90_000;
 const EXACT_COMMIT_PATTERN = /^[a-f0-9]{40}$/u;
 const DEPLOYED_ENVIRONMENT =
   process.env["PLAYWRIGHT_ENV"] === "staging" ||
@@ -29,7 +34,7 @@ const SHELL_ALLOWED_CONSOLE_ERROR_PATTERNS = [
   // These exact shell transport diagnostics are unrelated to Museum content;
   // HTTP 5xx responses and every other console error still fail.
   /^Error checking Cross-Origin-Opener-Policy: Failed to fetch(?: \(6529\.io\))?(?:\n|$)/,
-  /^Failed to fetch seize settings TypeError: Failed to fetch(?:\n|$)/,
+  MUSEUM_SETTINGS_FETCH_ERROR_PATTERN,
   /^Failed to fetch cookie consent status Error: Network request failed\. Please check your connection and try again\. \(https:\/\/api(?:\.staging)?\.6529\.io\/api\/policies\/country-check\)(?:\n|$)/,
   ...(DEPLOYED_ENVIRONMENT
     ? []
@@ -127,7 +132,8 @@ test.describe("Museum data architecture @surface @readonly", () => {
   test.describe.configure({ mode: "serial" });
   test.setTimeout(300_000);
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page, baseURL }, testInfo) => {
+    await installLocalMuseumCountryCheck(page, baseURL);
     if (testInfo.project.name === MOBILE_PROJECT) {
       await page.setViewportSize(MOBILE_VIEWPORT);
       expect(page.viewportSize()).toEqual(MOBILE_VIEWPORT);
@@ -175,11 +181,24 @@ test.describe("Museum data architecture @surface @readonly", () => {
     const diagnostics = attachPageDiagnostics(page);
     try {
       const exactCommit = await openArchitectureRoute(page, OVERVIEW, null);
+      // Compile the shared dynamic route before measuring client navigation;
+      // CI's cold dev server can otherwise defer this request until link time.
+      const firstDynamicRoute = STANDARD_ROUTES[0];
+      if (!firstDynamicRoute) {
+        throw new Error("Museum data-architecture standards are empty.");
+      }
+      const dynamicRouteWarmup = await page.request.get(
+        firstDynamicRoute.path,
+        { timeout: ROUTE_TRANSITION_TIMEOUT_MS }
+      );
+      expect(dynamicRouteWarmup.status()).toBe(200);
       for (const route of STANDARD_ROUTES) {
         const routeLink = page.locator(`a[href="${route.path}"]:visible`);
         await expect(routeLink).toHaveCount(1);
         await routeLink.click();
-        await expect(page).toHaveURL((url) => url.pathname === route.path);
+        await expect(page).toHaveURL((url) => url.pathname === route.path, {
+          timeout: ROUTE_TRANSITION_TIMEOUT_MS,
+        });
         await expect(
           page.getByRole("heading", {
             level: 1,
@@ -195,7 +214,9 @@ test.describe("Museum data architecture @surface @readonly", () => {
           exact: true,
         });
         await returnLink.click();
-        await expect(page).toHaveURL((url) => url.pathname === OVERVIEW.path);
+        await expect(page).toHaveURL((url) => url.pathname === OVERVIEW.path, {
+          timeout: ROUTE_TRANSITION_TIMEOUT_MS,
+        });
         await expect(
           page.getByRole("heading", {
             level: 1,
