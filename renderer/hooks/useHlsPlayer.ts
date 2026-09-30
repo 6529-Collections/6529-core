@@ -25,6 +25,7 @@ interface UseHlsPlayerParams {
 const HLS_MANIFEST_MAX_RETRIES = 2;
 const HLS_NETWORK_MAX_RECOVERIES = 2;
 const HLS_MANIFEST_RETRY_DELAY_MS = 2000;
+
 async function playFallbackVideo(videoEl: HTMLVideoElement): Promise<void> {
   try {
     await videoEl.play();
@@ -41,6 +42,7 @@ async function playFallbackVideo(videoEl: HTMLVideoElement): Promise<void> {
     console.warn("Fallback autoplay failed:", error);
   }
 }
+
 /**
  * A custom hook for Hls.js setup/cleanup.
  *
