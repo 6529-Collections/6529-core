@@ -28,6 +28,7 @@ import { t } from "@/i18n/messages";
 import DevicesIcon from "@/components/common/icons/DevicesIcon";
 import HeaderUserConnectedAccounts from "./connected/HeaderUserConnectedAccounts";
 import HeaderUserProxyDropdownItem from "./HeaderUserProxyDropdownItem";
+import HeaderArtworkDocumentationLink from "./HeaderArtworkDocumentationLink";
 
 const HEADER_USER_MENU_LOCALE = DEFAULT_LOCALE;
 
@@ -36,7 +37,9 @@ export default function HeaderUserMenuDropdown({
   profile,
   onClose,
   onOpenConnect,
+  artworkDocumentationEnabled = false,
 }: {
+  readonly artworkDocumentationEnabled?: boolean;
   readonly isOpen: boolean;
   readonly profile: ApiIdentity;
   readonly onClose: () => void;
@@ -220,7 +223,7 @@ export default function HeaderUserMenuDropdown({
             }}
           >
             <div className="tw-mt-1 tw-w-full tw-overflow-hidden tw-rounded-md tw-bg-iron-800 tw-shadow-2xl">
-              <div className="tw-flow-root tw-overflow-y-auto tw-overflow-x-hidden tw-py-2">
+              <div className="tw-flow-root tw-max-h-[calc(100dvh-6rem)] tw-overflow-y-auto tw-overflow-x-hidden tw-py-2">
                 <ul className="tw-m-0 tw-flex tw-list-none tw-flex-col tw-gap-y-2 tw-divide-x-0 tw-divide-y-2 tw-divide-solid tw-divide-iron-700 tw-p-0">
                   {availableConnectedAccounts.length > 0 && (
                     <li className="tw-mx-0 tw-flex tw-flex-col tw-gap-y-2 tw-px-2">
@@ -540,6 +543,10 @@ export default function HeaderUserMenuDropdown({
                         />
                       </Link>
                     </div>
+                    <HeaderArtworkDocumentationLink
+                      onClose={onClose}
+                      enabled={artworkDocumentationEnabled}
+                    />
                     <button
                       onClick={() => {
                         void runMenuAction({

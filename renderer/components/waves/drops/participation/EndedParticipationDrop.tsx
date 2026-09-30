@@ -34,6 +34,7 @@ import type {
 import { DropLocation, hasDropFooter } from "../drop.types";
 import {
   CHAT_PROPOSAL_CARD_SURFACE_CLASS,
+  QUORUM_PROPOSAL_CARD_SURFACE_CLASS,
   type DropContentPresentation,
 } from "../dropContentPresentation";
 import ParticipationIdentityProfileCard from "./ParticipationIdentityProfileCard";
@@ -163,12 +164,15 @@ function EndedParticipationDropInner({
   }, [mobileMenu]);
 
   const getDropLocationBackground = () => {
-    return "tw-bg-iron-950 tw-ring-1 tw-ring-inset tw-ring-iron-800";
+    return "tw-bg-[var(--drop-card-background,theme(colors.iron.950))] tw-ring-1 tw-ring-inset tw-ring-iron-800";
   };
 
   let dropBackgroundClass = getDropLocationBackground();
   if (isChatProposal) {
     dropBackgroundClass = CHAT_PROPOSAL_CARD_SURFACE_CLASS;
+  }
+  if (contentPresentation === "quorumCompact") {
+    dropBackgroundClass = `${getDropLocationBackground()} ${QUORUM_PROPOSAL_CARD_SURFACE_CLASS}`;
   }
   if (isActiveDrop) {
     dropBackgroundClass = "tw-bg-[#3CCB7F]/10";
@@ -249,6 +253,14 @@ function EndedParticipationDropInner({
       fullWidthLinkPreviews={fullWidthLinkPreviews}
       hasTouch={showInteractions && canUseTouchActionSheet}
       contentPresentation={contentPresentation}
+      proposalCardTextFooter={
+        isChatProposal ? (
+          <ProposalCardReadFullButton
+            drop={drop}
+            onReadFull={onDropContentClick}
+          />
+        ) : undefined
+      }
       embedPath={embedPath}
       quotePath={quotePath}
       embedDepth={embedDepth}
@@ -257,10 +269,7 @@ function EndedParticipationDropInner({
   );
   const detachedProposalHeader =
     isChatProposal && showIdentity ? (
-      <ProposalCardDetachedHeader
-        drop={drop}
-        identityHeader={identityHeader}
-      />
+      <ProposalCardDetachedHeader drop={drop} identityHeader={identityHeader} />
     ) : null;
   const effectiveIsSlideUp = isSlideUp && canUseTouchActionSheet;
 
@@ -368,12 +377,6 @@ function EndedParticipationDropInner({
 
               {isChatProposal && <ProposalCardContextLabel />}
               {content}
-              {isChatProposal && (
-                <ProposalCardReadFullButton
-                  drop={drop}
-                  onReadFull={onDropContentClick}
-                />
-              )}
             </div>
           </div>
 

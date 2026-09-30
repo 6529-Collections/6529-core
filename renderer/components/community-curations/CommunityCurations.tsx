@@ -1,11 +1,19 @@
 "use client";
 
+import { DiscoverWavesLink } from "@/components/waves/discovery/DiscoverWavesLink";
 import { COMMUNITY_CURATIONS_LIMIT } from "@/components/community-curations/communityCurations.constants";
 import CommunityCurationsMasonry from "@/components/community-curations/CommunityCurationsMasonry";
 import { useLayout } from "@/components/brain/my-stream/layout/LayoutContext";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { useCommunityCurationsDrops } from "@/hooks/useCommunityCurationsDrops";
-import { useCallback, useState } from "react";
+import { t } from "@/i18n/messages";
+import { usePersistentScrollOffset } from "@/components/token-list/hooks/usePersistentScrollOffset";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+
+// Desktop and mobile web render the same logical feed. Sharing this key keeps
+// the reading position intact when the viewport crosses the layout breakpoint.
+const PROFILE_WAVES_FEED_SCROLL_KEY = "profile-waves-feed";
 
 const COMMUNITY_CURATIONS_SKELETON_COLUMNS = [
   {
@@ -137,10 +145,17 @@ export default function CommunityCurations({
   heightStyle,
   topContent,
 }: CommunityCurationsProps = {}) {
+  const locale = useBrowserLocale();
   const { waveViewStyle } = useLayout();
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
   const [scrollContainer, setScrollContainer] = useState<HTMLElement | null>(
     null
   );
+  const initialScrollOffset = usePersistentScrollOffset(
+    PROFILE_WAVES_FEED_SCROLL_KEY,
+    scrollContainerRef
+  );
+  const hasRestoredScrollOffsetRef = useRef(initialScrollOffset === 0);
   const {
     allDrops,
     drops,
@@ -162,24 +177,46 @@ export default function CommunityCurations({
   const handleFetchNextPage = useCallback(async () => {
     await fetchNextPage();
   }, [fetchNextPage]);
+  const setScrollContainerElement = useCallback(
+    (element: HTMLElement | null) => {
+      scrollContainerRef.current = element;
+      setScrollContainer(element);
+    },
+    []
+  );
+
+  useLayoutEffect(() => {
+    if (hasRestoredScrollOffsetRef.current || !shouldShowMasonry) {
+      return;
+    }
+
+    const element = scrollContainerRef.current;
+    if (!element) {
+      return;
+    }
+
+    element.scrollTo({ top: initialScrollOffset });
+    hasRestoredScrollOffsetRef.current = true;
+  }, [initialScrollOffset, shouldShowMasonry]);
 
   return (
     <section
-      ref={setScrollContainer}
-      className="tw-flex tw-min-h-0 tw-w-full tw-flex-grow tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-overscroll-contain tw-px-4 tw-py-8 tw-scrollbar-thin tw-scrollbar-track-iron-900 tw-scrollbar-thumb-iron-600 desktop-hover:hover:tw-scrollbar-thumb-iron-500 sm:tw-px-6 lg:tw-px-8"
+      ref={setScrollContainerElement}
+      className="tw-flex tw-min-h-0 tw-w-full tw-flex-grow tw-flex-col tw-overflow-y-auto tw-overflow-x-hidden tw-overscroll-contain tw-px-4 tw-py-8 tw-scrollbar-thin tw-scrollbar-track-iron-900 tw-scrollbar-thumb-iron-600 desktop-hover:hover:tw-scrollbar-thumb-iron-500 sm:tw-px-6 lg:tw-px-8 lg:tw-pt-4"
       style={heightStyle ?? waveViewStyle}
     >
       <div className="tw-mx-auto tw-w-full tw-max-w-6xl">
         {topContent}
-        <div className="tw-flex tw-flex-col tw-gap-4">
-          <div className="tw-max-w-2xl">
-            <h1 className="tw-mb-0 tw-text-lg tw-font-bold tw-text-white md:tw-text-xl">
-              Latest From Profile Waves
+        <div className="tw-flex tw-flex-col tw-items-start tw-gap-4 lg:tw-flex-row lg:tw-justify-between">
+          <div className="tw-min-w-0 tw-max-w-2xl">
+            <h1 className="tw-m-0 tw-text-lg tw-font-bold tw-text-white md:tw-text-xl lg:tw-flex lg:tw-min-h-8 lg:tw-items-center touch-only:lg:tw-min-h-11">
+              {t(locale, "waves.profileFeed.title")}
             </h1>
             <p className="tw-mb-0 tw-mt-1 tw-text-pretty tw-text-sm tw-text-iron-400">
-              Drops 6529 users are featuring from their own profile waves.
+              {t(locale, "waves.profileFeed.description")}
             </p>
           </div>
+          <DiscoverWavesLink />
         </div>
 
         <div className="tw-mt-6">
@@ -187,15 +224,15 @@ export default function CommunityCurations({
 
           {!isInitialLoading && isError && (
             <CommunityCurationsEmptyState
-              title="Could not load curations"
-              description="Try refreshing this view in a moment."
+              title={t(locale, "waves.profileFeed.errorTitle")}
+              description={t(locale, "waves.profileFeed.errorDescription")}
             />
           )}
 
           {shouldShowEmptyState && (
             <CommunityCurationsEmptyState
-              title="No profile wave drops yet"
-              description="Drops will appear here when users feature them from their profile waves."
+              title={t(locale, "waves.profileFeed.emptyTitle")}
+              description={t(locale, "waves.profileFeed.emptyDescription")}
             />
           )}
 

@@ -10,6 +10,7 @@ import { SubmissionStep } from "./types/Steps";
 import type { SubmissionPhase } from "./ui/SubmissionProgress";
 import { getResubmissionMediaTypeInfo } from "./utils/resubmissionMediaType";
 import type { ArtworkSubmissionForm } from "./hooks/useArtworkSubmissionForm";
+import type { MemesSubmissionIdentity } from "./hooks/useMemesSubmissionIdentity";
 
 interface MemesArtSubmissionStepContentProps {
   readonly form: ArtworkSubmissionForm;
@@ -21,7 +22,9 @@ interface MemesArtSubmissionStepContentProps {
   readonly uploadProgress: number;
   readonly submissionError?: string | undefined;
   readonly submitLabel: string;
+  readonly identity: MemesSubmissionIdentity;
   readonly onClose: () => void;
+  readonly onContinueFromTerms: () => void;
   readonly onBackToEdit: () => void;
   readonly onBackFromAdditionalInfo: () => void;
   readonly onOpenPreview: () => void;
@@ -41,7 +44,9 @@ export function MemesArtSubmissionStepContent({
   uploadProgress,
   submissionError,
   submitLabel,
+  identity,
   onClose,
+  onContinueFromTerms,
   onBackToEdit,
   onBackFromAdditionalInfo,
   onOpenPreview,
@@ -89,19 +94,24 @@ export function MemesArtSubmissionStepContent({
         <AgreementStep
           wave={wave}
           agreements={form.agreements}
+          reviewRequired={form.agreementReviewRequired}
           setAgreements={form.setAgreements}
-          onContinue={form.handleContinueFromTerms}
+          onContinue={onContinueFromTerms}
         />
       );
 
     case SubmissionStep.ARTWORK:
       return (
         <ArtworkStep
+          proposalFrame={form.proposalFrame}
+          onProposalFrameChange={form.setProposalFrame}
           traits={form.traits}
           artworkUploaded={form.artworkUploaded}
           artworkUrl={form.artworkUrl}
           uploadError={form.uploadError}
-          artworkMimeType={form.existingMedia?.mimeType ?? null}
+          artworkMimeType={
+            form.selectedFile?.type ?? form.existingMedia?.mimeType ?? null
+          }
           setArtworkUploaded={form.setArtworkUploaded}
           handleFileSelect={form.handleFileSelect}
           mediaSource={form.mediaSource}
@@ -123,9 +133,7 @@ export function MemesArtSubmissionStepContent({
           updateTraitField={form.updateTraitField}
           setTraits={form.setTraits}
           isAdditionalActionPromised={form.isAdditionalActionPromised}
-          onAdditionalActionPromisedChange={
-            form.setAdditionalActionPromised
-          }
+          onAdditionalActionPromisedChange={form.setAdditionalActionPromised}
           isSubmitting={isSubmitting}
           submissionPhase={submissionPhase}
           uploadProgress={uploadProgress}
@@ -138,10 +146,28 @@ export function MemesArtSubmissionStepContent({
       if (isPreviewMode && previewDrop) {
         return (
           <MemesSubmissionPreviewScreen
+            proposalCard={
+              form.proposalFrame
+                ? {
+                    layout: form.proposalFrame,
+                    title: form.traits.title,
+                    mediaUrl: form.artworkUrl,
+                    mimeType:
+                      form.mediaSource === "url"
+                        ? form.externalMediaMimeType
+                        : (form.selectedFile?.type ??
+                          form.existingMedia?.mimeType ??
+                          "image/png"),
+                  }
+                : undefined
+            }
             previewDrop={previewDrop}
             onBackToEdit={onBackToEdit}
             onSubmit={onSubmitClick}
+            identity={identity}
             isSubmitting={isSubmitting}
+            submissionPhase={submissionPhase}
+            uploadProgress={uploadProgress}
             submitLabel={submitLabel}
           />
         );
@@ -174,7 +200,10 @@ export function MemesArtSubmissionStepContent({
           onBack={onBackFromAdditionalInfo}
           onPreview={onOpenPreview}
           onSubmit={onSubmitClick}
+          identity={identity}
           isSubmitting={isSubmitting}
+          submissionPhase={submissionPhase}
+          uploadProgress={uploadProgress}
           submitLabel={submitLabel}
         />
       );

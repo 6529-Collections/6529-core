@@ -127,9 +127,9 @@ const AUDITED_REVEAL_EXEMPTIONS: readonly AuditedRevealExemption[] = [
     file: "components/waves/drops/WaveDropActions.tsx",
     marker: "desktop-hover:group-hover:tw-pointer-events-auto",
     literalHash:
-      "cba6ffbd8f3f64aba6310f2306f8d6e0458f8bbe503330f763f99e1e15bf87a7",
+      "7d79308c5c23dade4c46c19e37817c368c5ba3950db20fb56948fda5f8951deb",
     reason:
-      "WaveDrop tracks pointerover/out without a hover capability query and passes forceVisible; the CSS hover rule is its no-JS enhancement.",
+      "WaveDrop passes forceVisible from mouse pointerover/out even when CSS hover is unavailable; focus-within also reveals the toolbar for keyboard users, and touch mode has its own action sheet.",
   },
   {
     file: "components/waves/drops/WaveDrop.helpers.tsx",
@@ -138,14 +138,6 @@ const AUDITED_REVEAL_EXEMPTIONS: readonly AuditedRevealExemption[] = [
       "dc415d6ed3f1074154a978fff7bea616f299625cfe95d3b0ab2197cefb2768df",
     reason:
       "This is a pointer-events-none timestamp, not a control, and WaveDrop's forceVisible pointer path also drives its opacity.",
-  },
-  {
-    file: "components/waves/FilePreview.tsx",
-    marker: "tw-bg-iron-950 tw-opacity-0",
-    literalHash:
-      "bdd312eefbb552edbd175dea4ef9ec973f12695c3397cfa3af018a5c83b0e0b6",
-    reason:
-      "This empty overlay is a decorative shade on a file preview; the preview content and interaction remain visible.",
   },
   {
     file: "components/waves/gallery/WaveGalleryItem.tsx",
@@ -225,12 +217,10 @@ function classStringLiterals(source: string): string[] {
 
 function literalContent(literal: string): string {
   const quote = literal.at(0);
-  return (
-    (quote === '"' || quote === "'" || quote === "`") &&
+  return (quote === '"' || quote === "'" || quote === "`") &&
     literal.at(-1) === quote
-      ? literal.slice(1, -1)
-      : literal
-  );
+    ? literal.slice(1, -1)
+    : literal;
 }
 
 const normalizeLiteral = (literal: string): string =>
@@ -482,7 +472,7 @@ describe("gate detection", () => {
 
   it("detects a gate split around a template interpolation", () => {
     const [literal] = classStringLiterals(
-      'const classes = `tw-opacity-0 ${variant} desktop-hover:group-hover:tw-opacity-100`;'
+      "const classes = `tw-opacity-0 ${variant} desktop-hover:group-hover:tw-opacity-100`;"
     );
 
     expect(literal).toBeDefined();

@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import React, { createElement, forwardRef, type ComponentProps } from "react";
 import DropListItemContentMediaImage from "@/components/drops/view/item/content/media/DropListItemContentMediaImage";
 import useCapacitor from "@/hooks/useCapacitor";
@@ -7,24 +7,27 @@ import useDeviceInfo from "@/hooks/useDeviceInfo";
 type MockNextImageProps = ComponentProps<"img"> & {
   readonly fill?: boolean | undefined;
   readonly unoptimized?: boolean | undefined;
+  readonly quality?: number | undefined;
 };
 
 jest.mock("next/image", () => ({
   __esModule: true,
   default: forwardRef<HTMLImageElement, MockNextImageProps>(
     // eslint-disable-next-line react/display-name
-    ({ fill: _fill, unoptimized: _unoptimized, alt, ...rest }, ref) =>
+    ({ fill: _fill, unoptimized: _unoptimized, quality, alt, ...rest }, ref) =>
       createElement("img", {
         ...rest,
         ref,
         alt: alt ?? "",
         "data-nimg": _fill ? "fill" : undefined,
+        "data-unoptimized": String(_unoptimized ?? false),
+        "data-quality": quality,
       })
   ),
 }));
 
 jest.mock("@/helpers/image.helpers", () => ({
-  getScaledImageUri: (_src: string) => _src,
+  getScaledImageUri: (src: string) => `${src}?preview`,
   ImageScale: { AUTOx450: "AUTOx450", AUTOx1080: "AUTOx1080" },
 }));
 
@@ -61,16 +64,211 @@ beforeEach(() => {
 });
 
 describe("DropListItemContentMediaImage", () => {
+  it.each([
+    ["jpg", "Original image"],
+    ["gif", "Original GIF animation"],
+  ])(
+    "offers inline HD for %s artwork and shares its choice with the popup",
+    (extension, originalAlt) => {
+      const src = `https://d3lqz0a4bldqgf.cloudfront.net/drops/author/art.${extension}`;
+      const { container } = render(
+        <DropListItemContentMediaImage
+          src={src}
+          showOriginalQualityToggle
+          preferHighQualityImage
+        />
+      );
+      const inline = within(container);
+      const preview = inline.getByAltText("Drop media");
+      const toggle = inline.getByRole("button", { name: "View original" });
+      expect(toggle.parentElement).toHaveClass(
+        "tw-flex",
+        "tw-pointer-events-auto"
+      );
+      expect(toggle.parentElement).not.toHaveClass("tw-hidden");
+      expect(within(toggle.parentElement!).getAllByRole("button")[0]).toBe(
+        toggle
+      );
+      expect(inline.queryByAltText(originalAlt)).toBeNull();
+      fireEvent.load(preview);
+      fireEvent.click(toggle);
+      const original = inline.getByAltText(originalAlt);
+      expect(original).toHaveAttribute("src", src);
+      expect(original).toHaveAttribute("data-unoptimized", "true");
+      expect(preview).toBeVisible();
+      expect(original).not.toBeVisible();
+      fireEvent.load(original);
+      expect(original).toBeVisible();
+      expect(preview).not.toBeVisible();
+      expect(screen.queryByAltText("Expanded image preview")).toBeNull();
+      fireEvent.click(
+        inline.getByRole("button", { name: "Open image preview" })
+      );
+      const popupToggle = screen
+        .getAllByRole("button", { name: "View optimized" })
+        .at(-1)!;
+      expect(popupToggle).toHaveAttribute("aria-pressed", "true");
+      expect(within(popupToggle.parentElement!).getAllByRole("button")[0]).toBe(
+        popupToggle
+      );
+      fireEvent.click(popupToggle);
+      expect(
+        inline.getByRole("button", { name: "View original" })
+      ).toHaveAttribute("aria-pressed", "false");
+      expect(preview).toBeVisible();
+      expect(inline.queryByAltText(originalAlt)).toBeNull();
+      fireEvent.click(screen.getByTestId("modal-backdrop"));
+      expect(preview).toBeVisible();
+    }
+  );
+
+  it("uses responsive high-quality still artwork by default and falls back to the CDN preview", () => {
+    const src = "https://d3lqz0a4bldqgf.cloudfront.net/drops/author/photo.jpg";
+    render(<DropListItemContentMediaImage src={src} preferHighQualityImage />);
+    const image = screen.getByAltText("Drop media");
+    expect(image).toHaveAttribute("src", src);
+    expect(image).toHaveAttribute("data-quality", "100");
+    expect(image).toHaveAttribute("data-unoptimized", "false");
+    expect(image).toHaveAttribute("sizes", "(max-width: 1024px) 100vw, 896px");
+    fireEvent.error(image);
+    expect(image).toHaveAttribute("src", `${src}?preview`);
+    expect(image).toHaveAttribute("data-unoptimized", "true");
+  });
+
+  it("restores the preview after an inline original failure and allows retry without opening a popup", () => {
+    render(
+      <DropListItemContentMediaImage
+        src="https://example.com/photo.jpg"
+        showOriginalQualityToggle
+      />
+    );
+    const preview = screen.getByAltText("Drop media");
+    fireEvent.load(preview);
+    const toggle = screen.getByRole("button", { name: "View original" });
+    toggle.focus();
+    fireEvent.click(toggle);
+    fireEvent.error(screen.getByAltText("Original image"));
+    expect(preview).toBeVisible();
+    expect(toggle).toHaveFocus();
+    expect(toggle).toHaveAccessibleDescription(
+      "Couldn't load the original image. You can try again."
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Couldn't load the original image"
+    );
+    fireEvent.click(toggle);
+    fireEvent.load(screen.getByAltText("Original image"));
+    expect(screen.getByAltText("Original image")).toBeVisible();
+    expect(preview).not.toBeVisible();
+  });
+
+  it("resets the artwork HD choice on source changes and omits it for unsafe URLs", () => {
+    const { rerender } = render(
+      <DropListItemContentMediaImage
+        src="https://example.com/first.jpg"
+        showOriginalQualityToggle
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: "View original" }));
+    fireEvent.load(screen.getByAltText("Original image"));
+    rerender(
+      <DropListItemContentMediaImage
+        src="https://example.com/next.jpg"
+        showOriginalQualityToggle
+      />
+    );
+    expect(screen.queryByAltText("Original image")).toBeNull();
+    expect(
+      screen.getByRole("button", { name: "View original" })
+    ).toHaveAttribute("aria-pressed", "false");
+    rerender(
+      <DropListItemContentMediaImage
+        src="javascript:photo.jpg"
+        showOriginalQualityToggle
+      />
+    );
+    expect(screen.queryByRole("button", { name: "View original" })).toBeNull();
+  });
+
+  it("shows a GIF loading placeholder until ready and resets it for another source", () => {
+    const { rerender } = render(
+      <DropListItemContentMediaImage src="https://example.com/first.gif" />
+    );
+    const loader = screen.getByRole("status", { name: "Loading image" });
+    expect(loader).toBeInTheDocument();
+    expect(loader).toHaveClass(
+      "tw-pointer-events-none",
+      "tw-left-0",
+      "tw-top-0",
+      "tw-w-64",
+      "tw-max-w-full",
+      "tw-max-h-64"
+    );
+    expect(loader.querySelector('[aria-hidden="true"]')).toHaveClass(
+      "motion-safe:tw-animate-pulse"
+    );
+    fireEvent.load(screen.getByAltText("Drop media"));
+    expect(
+      screen.queryByRole("status", { name: "Loading image" })
+    ).not.toBeInTheDocument();
+    rerender(
+      <DropListItemContentMediaImage src="https://example.com/second.GIF?version=2" />
+    );
+    expect(
+      screen.getByRole("status", { name: "Loading image" })
+    ).toBeInTheDocument();
+  });
+
+  it("does not add a GIF placeholder to static images", () => {
+    render(
+      <DropListItemContentMediaImage src="https://example.com/still.png" />
+    );
+    expect(
+      screen.queryByRole("status", { name: "Loading image" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("replaces the placeholder on failure and restores it when retrying", () => {
+    render(
+      <DropListItemContentMediaImage src="https://example.com/failure.gif" />
+    );
+    fireEvent.error(screen.getByAltText("Drop media"));
+    expect(
+      screen.queryByRole("status", { name: "Loading image" })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(
+      screen.getByRole("status", { name: "Loading image" })
+    ).toBeInTheDocument();
+    fireEvent.load(screen.getByAltText("Drop media"));
+    expect(
+      screen.queryByRole("status", { name: "Loading image" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("keeps GIF quality controls in the popup and omits the inline preview badge", () => {
+    render(<DropListItemContentMediaImage src="https://example.com/art.gif" />);
+    fireEvent.load(screen.getByAltText("Drop media"));
+    expect(screen.queryByText("GIF preview")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "View original" })
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Open image preview" }));
+    expect(
+      screen.getByRole("button", { name: "View original" })
+    ).toBeInTheDocument();
+  });
+
   it("opens and closes the modal", () => {
     render(<DropListItemContentMediaImage src="img" maxRetries={1} />);
     const img = screen.getByAltText("Drop media");
     fireEvent.load(img);
     fireEvent.click(screen.getByRole("button", { name: "Open image preview" }));
-    const modalImage = screen.getByAltText("Full size drop media");
+    const modalImage = screen.getByAltText("Expanded image preview");
     expect(modalImage).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("modal-backdrop"));
     expect(
-      screen.queryByAltText("Full size drop media")
+      screen.queryByAltText("Expanded image preview")
     ).not.toBeInTheDocument();
   });
 
@@ -83,7 +281,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.click(screen.getByTestId("modal-backdrop"));
 
     expect(
-      screen.queryByAltText("Full size drop media")
+      screen.queryByAltText("Expanded image preview")
     ).not.toBeInTheDocument();
   });
 
@@ -93,7 +291,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.load(img);
     fireEvent.click(screen.getByRole("button", { name: "Open image preview" }));
 
-    const modalImage = screen.getByAltText("Full size drop media");
+    const modalImage = screen.getByAltText("Expanded image preview");
     Object.defineProperty(modalImage, "naturalWidth", {
       configurable: true,
       value: 100,
@@ -117,7 +315,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.click(modalImage, { clientX: 50, clientY: 10 });
 
     expect(
-      screen.queryByAltText("Full size drop media")
+      screen.queryByAltText("Expanded image preview")
     ).not.toBeInTheDocument();
   });
 
@@ -127,7 +325,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.load(img);
     fireEvent.click(screen.getByRole("button", { name: "Open image preview" }));
 
-    const modalImage = screen.getByAltText("Full size drop media");
+    const modalImage = screen.getByAltText("Expanded image preview");
     Object.defineProperty(modalImage, "naturalWidth", {
       configurable: true,
       value: 100,
@@ -151,7 +349,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.click(modalImage, { clientX: 50, clientY: 50 });
 
     expect(
-      screen.queryByAltText("Full size drop media")
+      screen.queryByAltText("Expanded image preview")
     ).not.toBeInTheDocument();
   });
 
@@ -161,7 +359,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.load(img);
     fireEvent.click(img);
     expect(
-      screen.queryByAltText("Full size drop media")
+      screen.queryByAltText("Expanded image preview")
     ).not.toBeInTheDocument();
   });
 
@@ -200,7 +398,7 @@ describe("DropListItemContentMediaImage", () => {
     fireEvent.load(screen.getByAltText("Drop media"));
     fireEvent.click(screen.getByRole("button", { name: "Open image preview" }));
 
-    expect(screen.getByAltText("Full size drop media")).toBeInTheDocument();
+    expect(screen.getByAltText("Expanded image preview")).toBeInTheDocument();
     expect(
       screen.getAllByRole("button", { name: "Download media" }).length
     ).toBeGreaterThanOrEqual(1);
@@ -217,11 +415,8 @@ describe("DropListItemContentMediaImage", () => {
 
     expect(wrapper).toHaveClass("tw-w-full", "tw-min-h-40");
     expect(wrapper).not.toHaveClass("tw-h-full");
-    expect(imageFrame).toHaveClass(
-      "tw-min-h-40",
-      "tw-rounded-xl",
-      "tw-bg-iron-900/40"
-    );
+    expect(imageFrame).toHaveClass("tw-min-h-40", "tw-bg-iron-900/40");
+    expect(imageFrame).not.toHaveClass("tw-rounded-xl");
     expect(imageFrame?.getAttribute("style")).toContain("aspect-ratio: 16 / 9");
     expect(imageFrame?.getAttribute("style")).toContain("max-height: 16rem");
     expect(img).toHaveClass(
@@ -243,7 +438,6 @@ describe("DropListItemContentMediaImage", () => {
     );
 
     fireEvent.error(screen.getByAltText("Drop media"));
-    fireEvent.error(screen.getByAltText("Drop media"));
 
     expect(setTimeoutSpy).toHaveBeenCalledWith(expect.any(Function), 500);
 
@@ -253,8 +447,18 @@ describe("DropListItemContentMediaImage", () => {
 });
 
 describe("DropListItemContentMediaImage retry", () => {
-  it("shows error and retries manually", () => {
-    render(<DropListItemContentMediaImage src="img" maxRetries={-1} />);
-    expect(screen.getByText("Couldn’t load image.")).toBeInTheDocument();
+  it("keeps original actions available after a preview fails", () => {
+    render(<DropListItemContentMediaImage src="img" />);
+    fireEvent.error(screen.getByAltText("Drop media"));
+    expect(screen.getByText("Preview unavailable")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Download media" })
+    ).toBeInTheDocument();
+    expect(screen.queryByAltText("Drop media")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+    expect(screen.getByAltText("Drop media")).toHaveAttribute(
+      "src",
+      "img?preview"
+    );
   });
 });

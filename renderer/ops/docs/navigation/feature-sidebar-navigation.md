@@ -7,15 +7,26 @@ Parent: [Navigation Index](README.md)
 On web layouts, route switching is sidebar-first.
 
 - Desktop: fixed left rail with collapse/expand toggle.
+- Refresh restores the saved desktop width before the first paint, so an
+  expanded sidebar does not animate open or push the page after loading. Page
+  content renders immediately; sidebar contents appear once their saved state
+  is restored. Narrow-screen overlays keep their existing closed default.
 - Narrow desktop web: collapsed icon rail that can open as an overlay panel.
 - Touch small-screen web: header menu button opens the same sidebar as overlay.
+- While a collapsed-rail submenu flyout is open, the drawer expand handle is
+  hidden. It returns when the flyout closes.
 - In collapsed rail mode, flyout submenus keep the same subsection labels and
   nested route grouping shown in the expanded rail.
 - In collapsed rail mode, a mouse hover opens `NFTs` and `About` after a short
   intent delay; tap or click remains available for touch and pointer users.
 - Collapsed flyouts enter with a short opacity and horizontal-position reveal;
   reduced-motion preferences show them immediately without animation.
-- The 6529 logo links to `/`; there is no labeled `Home` product row.
+- The 40px 6529 logo links to `/`; there is no labeled `Home` product row.
+  Hover adds a subtle glow and a slight scale-up; reduced motion disables scaling.
+- A single-chevron toggle stays inside the sidebar’s right edge, vertically
+  centered in both states (20px wide in both states).
+  Hover anywhere in the sidebar or focus a control to reveal it; touch layouts
+  keep it visible. Expand and collapse use the same footprint.
 - Primary menu concepts are ordered `NFTs`, `Museum`, `Waves`, `DMs`,
   `Join 6529`, and `About` so art destinations stay together while Waves and
   DMs remain adjacent.
@@ -41,10 +52,24 @@ On web layouts, route switching is sidebar-first.
   `About`.
 - Gated primary row: `Drop Forge`, after `About`, only when the connected
   wallet can access it.
-- Utility rows: desktop `Search`, `Share` (only on supported desktop-web
-  routes), connected-only `Notifications`, then the profile control.
-- Bottom account area: connect action, loading placeholders, and the connected
-  user menu.
+- Three separate sections keep controls stable: scrollable primary navigation,
+  desktop utilities in a fixed-height middle section, and the bottom account area.
+  Utilities stack as `Search`, `Share` (on supported routes), then optional `Update`.
+  Without Share, Update sits directly below Search; unused space stays below them.
+- The bottom section contains connected-only `Notifications` above the account
+  control. `Update` stays below Share in the middle section even as Notifications
+  appears or disappears.
+- Newly appearing sidebar controls and labels fade in with a subtle scale over
+  125ms, including gated Drop Forge and WatchTower. Account pictures and fallback
+  icons use a simple fade. Reduced motion shows controls immediately.
+- Local and staging environment badges are present in the initial page render;
+  production shows no environment badge.
+- The account control has the same footprint while loading, signed out, or
+  showing a profile. Only the account placeholder shimmers; Search and Share
+  do not wait for wallet initialization.
+- Primary navigation scrolls independently when expanded groups or gated Drop
+  Forge and WatchTower items exceed the available height. Very short windows
+  also allow the sections to scroll so every control remains reachable.
 
 ## Entry Points
 
@@ -54,11 +79,14 @@ On web layouts, route switching is sidebar-first.
 - Open `Museum` directly from the primary sidebar row.
 - Open `Waves` directly from the primary sidebar row.
 - Open `Join 6529` directly from the primary sidebar row.
-- Open `Discover Waves` from the expanded Waves panel header or search.
+- Open `Discover Waves` from the Profile Waves Feed header or search.
 - Open `Drop Forge` from the standalone row after `About` when the current
   wallet can access `/drop-forge`.
 - Open `Search` from the desktop sidebar row.
-- Open connected `Notifications` from the lower utility rows.
+- Select the rocket below Share in the middle utility section to update. The
+  expanded sidebar labels it `Update`; the collapsed sidebar shows the rocket
+  with an `Update` tooltip.
+- Open connected `Notifications` immediately above the account control.
 - Open `Share` from the desktop sidebar on a supported route.
 - Open `Profile` or `Connect Device` from the connected user menu.
 - Press `⌘K` or `Ctrl+K` when desktop sidebar navigation is mounted.
@@ -67,7 +95,9 @@ On web layouts, route switching is sidebar-first.
 
 1. Open a web route.
 2. Switch primary sections with direct rows.
-3. Use lower utility rows in `Search`, `Share`, `Notifications`, profile order.
+3. Use `Search`, `Share`, and optional `Update` in the utility section. The
+   separate bottom section contains `Notifications` (when connected) directly
+   above the account control.
 4. Open `NFTs` or `About` for nested routes; use the `Museum`, `Waves`, and
    `Join 6529` rows for direct navigation.
 5. In collapsed mode, hover a group row with a mouse or activate it by tap,
@@ -119,7 +149,7 @@ On web layouts, route switching is sidebar-first.
   `Data & Developer Tools` instead of flattening every route into one list.
   `Museum`, `Waves`, and `Join 6529` remain direct rows in collapsed mode.
 - Open `About` and `6529 Capital` routes from grouped links.
-- Open connected `Notifications` from the lower utility rows.
+- Open connected `Notifications` from the bottom account section.
 - Open `Share` for copy, QR, X, Farcaster, and supported system-share actions
   using the exact current URL.
 - Select the connected avatar, then `Profile` (handle route first, wallet
@@ -146,7 +176,21 @@ On web layouts, route switching is sidebar-first.
   moves focus into the links, and `Escape` restores focus to the group trigger.
 - The collapsed-row tooltip stays hidden while its flyout is open.
 - Flyouts reposition on sidebar scroll and window resize.
-- `Notifications` row appears only when wallet connection is active.
+- `Notifications` appears when an account address is restored; a live wallet
+  connection is not required.
+- When a new version is available, desktop browsers show `Update` below `Share`
+  in the middle utility section, or directly below `Search` on routes without
+  Share, instead of a separate toast. Selecting it keeps the current route
+  and shows a static rocket, `Updating to the latest version`, and three
+  animated dots while the page reloads. Reduced-motion preferences keep the
+  dots still. The rocket is prepared when an update becomes available and
+  loaded eagerly during the reload. The screen clears together after the
+  rocket and app shell are ready, or after 30 seconds if startup does not
+  finish. An image-loading failure does not block the update.
+- Mobile browsers retain the full update toast and use the same updating screen
+  when it is tapped. This includes tablets using desktop browsing or a paired
+  pointer. The native app keeps its
+  [docked rocket](feature-mobile-bottom-navigation.md).
 - `Drop Forge` appears as a standalone row after `About` only when the
   connected wallet can access the `/drop-forge` landing route.
 - Connected user row opens the account menu immediately on a single activate.

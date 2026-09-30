@@ -45,6 +45,29 @@ jest.mock("next/link", () => {
   };
 });
 
+jest.mock(
+  "@/components/drops/view/item/content/media/DropListItemContentMedia",
+  () => ({
+    __esModule: true,
+    default: ({
+      artworkVideoLayout,
+      loadStrategy,
+      videoAlign,
+    }: {
+      readonly artworkVideoLayout?: boolean;
+      readonly loadStrategy?: string;
+      readonly videoAlign?: string;
+    }) => (
+      <div
+        data-testid="drop-media"
+        data-fill={String(artworkVideoLayout)}
+        data-load-strategy={loadStrategy}
+        data-align={videoAlign}
+      />
+    ),
+  })
+);
+
 const createDrop = (memeCardId?: number): ApiDropV2View =>
   ({
     id: "drop-1",
@@ -65,6 +88,23 @@ const createDrop = (memeCardId?: number): ApiDropV2View =>
     },
     ...(memeCardId ? { submission_context: { meme_card_id: memeCardId } } : {}),
   }) as ApiDropV2View;
+
+it.each([
+  ["image/png", "true"],
+  ["video/mp4", "false"],
+])(
+  "identifies %s Next Drop media even without a rendered image",
+  (mime_type, isImage) => {
+    const drop = {
+      ...createDrop(488),
+      parts: [{ media: [{ mime_type, url: "artwork" }] }],
+    } as ApiDropV2View;
+    const { container } = render(<LatestDropNextMintSection drop={drop} />);
+    const column = container.querySelector("[data-home-artwork-column]");
+    expect(column?.querySelector("img")).toBeNull();
+    expect(column).toHaveAttribute("data-home-artwork-is-image", isImage);
+  }
+);
 
 describe("LatestDropNextMintSection", () => {
   it("links an explicitly mapped next drop to its Meme card", () => {
@@ -123,4 +163,34 @@ describe("LatestDropNextMintSection", () => {
       screen.queryByRole("link", { name: "The Memes #488" })
     ).not.toBeInTheDocument();
   });
+});
+
+it("fits Next Drop video into the same centered homepage area", () => {
+  const drop = {
+    ...createDrop(488),
+    parts: [{ media: [{ mime_type: "video/mp4", url: "video.mp4" }] }],
+  } as ApiDropV2View;
+  render(<LatestDropNextMintSection drop={drop} />);
+  expect(screen.getByTestId("drop-media")).toHaveAttribute("data-fill", "true");
+  expect(
+    screen.getByTestId("drop-media").closest("[data-home-artwork-column]")
+  ).toHaveClass("tw-flex", "tw-items-center");
+  expect(screen.getByTestId("drop-media")).toHaveAttribute(
+    "data-align",
+    "center"
+  );
+});
+
+it("loads above-the-fold Next Drop media eagerly", () => {
+  const drop = {
+    ...createDrop(488),
+    parts: [{ media: [{ mime_type: "image/png", url: "image.png" }] }],
+  } as ApiDropV2View;
+
+  render(<LatestDropNextMintSection drop={drop} />);
+
+  expect(screen.getByTestId("drop-media")).toHaveAttribute(
+    "data-load-strategy",
+    "eager"
+  );
 });

@@ -64,23 +64,17 @@ Open a new shell, or activate the wrapper in the current shell:
 source <(./bin/6529 bootstrap --print-export)
 ```
 
-The dependency set includes one private GitHub Package. Create a GitHub PAT
-classic with `read:packages` only and authorize organization SSO when required.
-The runtime `NODE_AUTH_TOKEN` needs read-only GitHub Packages access. For a
-normal interactive install, simply run:
+Dependencies, including `@6529-collections/release-request`, come from public
+npm. No package token or private-registry setup is required. Install the exact
+lockfile through the existing secure wrapper:
 
 ```bash
-6529 install
+6529 ci
 ```
 
-If `NODE_AUTH_TOKEN` is not already set, the wrapper asks for it silently and
-keeps it only for that command. CI and other non-interactive shells must supply
-`NODE_AUTH_TOKEN` at runtime. Do not store it in the repository or
-package-manager configuration. Codex worktrees have a separate one-time macOS
-Keychain setup. See
+See
 [pnpm and Socket Firewall](ops/docs/developer/pnpm-and-socket-firewall.md) for
-that setup, the exact package-routing boundary, and other authenticated package
-commands.
+the package command boundary and dependency security checks.
 
 Create a local `.env` file from [.env.sample](.env.sample), then start the app:
 
@@ -110,15 +104,19 @@ Important notes:
 This repository intentionally routes project commands through `6529`.
 Do not use plain `pnpm install`, `pnpm dev`, or `npm run ...`; the scripts are
 guarded so dependency installs and package scripts use the expected secure path.
+Unsupported wrapper commands fail closed; use `6529 run <script>` for
+package.json scripts.
 
 Common commands:
 
 ```bash
-6529 install
-6529 install:frozen
+6529 ci
 6529 add <package>
 6529 add -D <package>
-6529 update
+6529 remove <package>
+6529 update [package]
+6529 audit
+6529 audit:fix
 6529 run dev
 6529 run build
 6529 run test
@@ -130,11 +128,10 @@ Common commands:
 6529 run check:changed
 ```
 
-If pnpm reports ignored install/build scripts, run:
-
-```bash
-6529 approve-builds
-```
+If a new dependency needs an install/build script, add that package to both
+`pnpm-workspace.yaml` and `scripts/public-package-policy.cjs` in the same
+reviewed pull request. Then run `6529 ci`. There is no automatic build-approval
+command.
 
 For deeper package-manager, Socket Firewall, and deployment-wrapper details,
 read [ops/docs/developer/pnpm-and-socket-firewall.md](ops/docs/developer/pnpm-and-socket-firewall.md).

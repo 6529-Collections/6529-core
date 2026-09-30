@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import type { Locator, Page } from "@playwright/test";
 
 import { EN_US_MESSAGES } from "../../i18n/messages/en-US";
 import { expect, test } from "../testHelpers";
@@ -14,6 +14,9 @@ const englishMessages: Readonly<Record<string, string>> = EN_US_MESSAGES;
 const PROFILE_FEED_DESCRIPTION =
   englishMessages["waves.profileFeed.description"] ??
   "Drops 6529 users are featuring from their own profile waves.";
+const APP_SECTIONS_LABEL =
+  englishMessages["wave.navigation.appSections"] ?? "App sections";
+const PROFILE_FEED_TITLE = "Latest From Profile Waves";
 
 const PROFILE_TAB_PATHS = [
   {
@@ -71,6 +74,12 @@ async function getFirstWaveId(page: Page) {
   return match?.[1] ?? "";
 }
 
+function getProfileFeed(page: Page): Locator {
+  return page
+    .getByRole("heading", { level: 1, name: PROFILE_FEED_TITLE })
+    .locator("xpath=ancestor::section[1]");
+}
+
 test.describe("Waves and profile read-only coverage @surface @medium @large @readonly", () => {
   test("renders the public Waves landing without write interaction", async ({
     page,
@@ -81,10 +90,13 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
     await expect(page).toHaveTitle(/Waves/i);
 
     const viewport = page.viewportSize();
-    if (viewport && viewport.width < 768) {
+    if (viewport && viewport.width < 1024) {
       await expect(
         page.locator("main").getByText("Waves").first()
       ).toBeVisible();
+      await expect(
+        page.getByRole("link", { name: /Profile Waves Feed/ })
+      ).toHaveAttribute("href", "/waves?view=profile-feed");
       await expect(
         page.getByRole("region", {
           name: /All recent waves list|Regular waves list/,
@@ -99,9 +111,278 @@ test.describe("Waves and profile read-only coverage @surface @medium @large @rea
       ).toBeVisible();
       await expect(page.getByText(PROFILE_FEED_DESCRIPTION)).toBeVisible();
       await expect(
-        page.getByRole("link", { name: "Profile Waves Feed" })
+        page.getByRole("link", { name: /Profile Waves Feed/ })
       ).toHaveAttribute("href", "/waves");
     }
+  });
+
+  test("opens the Profile Waves Feed across the exact web breakpoint", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1023, height: 900 });
+    await gotoReady(page, "/waves");
+
+    const profileFeedLink = page.getByRole("link", {
+      name: /Profile Waves Feed/,
+    });
+    await expect(profileFeedLink).toBeVisible();
+    const wavesHeader = page
+      .getByRole("heading", {
+        name: "Waves",
+        exact: true,
+        level: 2,
+      })
+      .locator("..");
+    await expect(wavesHeader).toContainText("Waves");
+    await expect(
+      wavesHeader.getByRole("link", { name: "Waves", exact: true })
+    ).toHaveCount(0);
+    await expect(
+      wavesHeader.getByRole("link", { name: "Discover Waves", exact: true })
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("link", { name: /Profile Waves Feed/ }).locator("svg")
+    ).toBeVisible();
+    await expect(
+      page.getByText("Profile Waves Feed", { exact: true })
+    ).toHaveCount(0);
+    await expect(profileFeedLink).toHaveAttribute(
+      "href",
+      "/waves?view=profile-feed"
+    );
+    await profileFeedLink.click();
+
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === "/waves" &&
+        url.searchParams.get("view") === "profile-feed"
+    );
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Latest From Profile Waves",
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: "Discover Waves", exact: true })
+    ).toHaveAttribute("href", "/discover");
+    const feedNavigation = page.getByRole("navigation", {
+      name: APP_SECTIONS_LABEL,
+    });
+    await expect(
+      feedNavigation.getByRole("link", { name: "Waves" })
+    ).toHaveAttribute("href", "/waves");
+
+    const profileFeed = getProfileFeed(page);
+    const feedPostButtons = profileFeed
+      .getByRole("article")
+      .locator('[role="button"][tabindex="0"]');
+    await expect(feedPostButtons.first()).toBeVisible({ timeout: 15000 });
+    const feedScrollOffset = await profileFeed.evaluate((element) => {
+      const maxScrollOffset = element.scrollHeight - element.clientHeight;
+      element.scrollTop = Math.min(320, maxScrollOffset);
+      element.dispatchEvent(new Event("scroll"));
+      return element.scrollTop;
+    });
+    expect(feedScrollOffset).toBeGreaterThan(0);
+
+    const visibleFeedPostIndex = await feedPostButtons.evaluateAll(
+      (buttons) => {
+        const feed = buttons[0]?.closest("section");
+        if (!feed) {
+          return -1;
+        }
+
+        const feedRect = feed.getBoundingClientRect();
+        return buttons.findIndex((button) => {
+          const rect = button.getBoundingClientRect();
+          return rect.bottom > feedRect.top && rect.top < feedRect.bottom;
+        });
+      }
+    );
+    expect(visibleFeedPostIndex).toBeGreaterThanOrEqual(0);
+    const visibleFeedPost = feedPostButtons.nth(visibleFeedPostIndex);
+    await visibleFeedPost.focus();
+    await visibleFeedPost.press("Enter");
+    await expect(page).toHaveURL(
+      (url) =>
+        /^\/waves\/[0-9a-f-]{36}$/i.test(url.pathname) &&
+        Boolean(url.searchParams.get("serialNo"))
+    );
+
+    await page.goBack();
+    await expect(page).toHaveURL(
+      (url) =>
+        url.pathname === "/waves" &&
+        url.searchParams.get("view") === "profile-feed"
+    );
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Latest From Profile Waves",
+      })
+    ).toBeVisible();
+    const restoredProfileFeed = getProfileFeed(page);
+    await expect
+      .poll(() => restoredProfileFeed.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0);
+
+    await page.goBack();
+    await expect(page).toHaveURL(
+      (url) => url.pathname === "/waves" && !url.search
+    );
+    await expect(
+      page.getByRole("region", {
+        name: /All recent waves list|Regular waves list/,
+      })
+    ).toBeVisible();
+
+    const waveId = await getFirstWaveId(page);
+    const waveList = page.getByRole("region", {
+      name: /All recent waves list|Regular waves list/,
+    });
+    const waveLinks = waveList.getByRole("link");
+    const waveLinkCount = await waveLinks.count();
+    let matchingWaveLink: Locator | null = null;
+    for (let index = 0; index < waveLinkCount; index += 1) {
+      const candidate = waveLinks.nth(index);
+      const href = await candidate.getAttribute("href");
+      if (href?.startsWith(`/waves/${waveId}`)) {
+        matchingWaveLink = candidate;
+        break;
+      }
+    }
+    expect(
+      matchingWaveLink,
+      `Expected a link for Wave ${waveId}`
+    ).not.toBeNull();
+    await matchingWaveLink!.click();
+    await expect(page).toHaveURL((url) => url.pathname === `/waves/${waveId}`);
+    await page.goBack();
+    await expect(page).toHaveURL(
+      (url) => url.pathname === "/waves" && !url.search
+    );
+
+    await gotoReady(page, "/waves?view=profile-feed");
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Latest From Profile Waves",
+      })
+    ).toBeVisible();
+
+    await page.setViewportSize({ width: 1024, height: 900 });
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Latest From Profile Waves",
+      })
+    ).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /Profile Waves Feed/ })
+    ).toHaveAttribute("href", "/waves");
+
+    await page.setViewportSize({ width: 1023, height: 900 });
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Latest From Profile Waves",
+      })
+    ).toBeVisible();
+    await expect(
+      feedNavigation.getByRole("link", { name: "Waves" })
+    ).toBeVisible();
+  });
+
+  test("keeps wave identity compact and sharing reachable through details", async ({
+    page,
+  }) => {
+    const waveId = await getFirstWaveId(page);
+    await gotoReady(page, `/waves/${waveId}`);
+
+    const compact = (page.viewportSize()?.width ?? 1280) < 768;
+    const details = page.getByRole("button", {
+      name: compact ? "Wave details" : "Show right sidebar",
+      exact: true,
+    });
+    await expect(details).toBeVisible();
+    const header = page
+      .getByRole("button", {
+        name: compact ? "Wave details" : "Show right sidebar",
+        exact: true,
+      })
+      .locator("../..");
+    await expect(header.getByRole("heading", { level: 1 })).toBeVisible();
+    const headerRep = header.getByRole("button", {
+      name: /Add Wave REP|Edit your Wave REP/,
+    });
+    await expect(
+      header.getByRole("button", { name: /^(Share wave|Copy wave link)$/ })
+    ).toHaveCount(0);
+
+    const score = header.getByRole("button", { name: /^Wave score / });
+    if (compact) {
+      await expect(headerRep).toHaveCount(0);
+      await expect(score).toHaveCount(0);
+      await header.getByRole("button", { name: "More wave actions" }).click();
+      await expect(
+        page
+          .getByRole("dialog", { name: "More wave actions" })
+          .getByRole("button", { name: /^(Share wave|Copy wave link)$/ })
+      ).toBeVisible();
+      await page.keyboard.press("Escape");
+    } else {
+      await expect(details).toHaveText("");
+      if (await headerRep.count()) {
+        await expect(headerRep).toBeVisible();
+      }
+      const description = header.getByRole("button", {
+        name: "Show wave description",
+        exact: true,
+      });
+      if (await description.count()) {
+        await expect
+          .poll(() =>
+            description.evaluate((button) => {
+              const preview = button.querySelector("span > span");
+              const identity = button.parentElement;
+              if (!preview || !identity) {
+                return false;
+              }
+              const buttonBox = button.getBoundingClientRect();
+              const identityBox = identity.getBoundingClientRect();
+              const isTruncated = preview.scrollWidth > preview.clientWidth + 1;
+              return (
+                buttonBox.right <= identityBox.right + 1 &&
+                (!isTruncated || button.querySelector("svg") !== null)
+              );
+            })
+          )
+          .toBe(true);
+      }
+      if (await score.count()) {
+        const headingBox = await header
+          .getByRole("heading", { level: 1 })
+          .boundingBox();
+        const scoreBox = await score.boundingBox();
+        expect(headingBox).not.toBeNull();
+        expect(scoreBox).not.toBeNull();
+        expect(
+          Math.abs((headingBox?.y ?? 0) - (scoreBox?.y ?? 0))
+        ).toBeLessThanOrEqual(4);
+        expect(scoreBox?.height).toBeGreaterThanOrEqual(24);
+        expect(scoreBox?.width).toBeGreaterThanOrEqual(24);
+      }
+    }
+
+    await details.click();
+    await expect(
+      page.getByRole("tab", { name: "About", exact: true })
+    ).toBeVisible();
+    await page.getByRole("tab", { name: "About", exact: true }).click();
+    await expect(
+      page.getByRole("button", { name: /^(Share wave|Copy wave link)$/ })
+    ).toBeVisible();
   });
 
   test("handles legacy wave query links without mutation", async ({ page }) => {

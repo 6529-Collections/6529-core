@@ -3,7 +3,8 @@
 ## Overview
 
 Eligible users can add a post to one or more named Curations, remove it later,
-or create a Curation while managing the post.
+or create a Curation while managing the post. Curators can also set the order
+in which a Curation's posts are shown to everyone.
 
 This named-Curation workflow is separate from the specialized leaderboard
 `Curate` / `Curated` toggle used by eligible Rank and participation surfaces.
@@ -31,6 +32,11 @@ Not shown on:
   `Manage Curations` to choose, remove, or create.
 - While viewing a Curation tab, use `Remove from {Curation name}` in the same
   post action menu to remove the post from the active Curation.
+- If you can manage a Curation with at least two posts, select `Organize`
+  above the Curation tab's posts. Posts gain small drag handles over each post. Drag
+  a handle, or tap one and then a destination handle. With a keyboard, select
+  a handle with Space, move with the arrow keys, and press Space to place it.
+  Each move saves automatically. Done exits.
 - On specialized eligible leaderboard cards, use the separate `Curate` /
   `Curated` toggle.
 
@@ -70,11 +76,15 @@ Not shown on:
   current page.
 - Profile Curation cards expose `Open original Wave`, author-only `Edit post`,
   and confirmed `Remove from Curation` actions.
+- The order set by a curator is the order readers see in the source Wave and
+  the profile's Curation grid. New posts appear at the top until moved.
 
 ## Edge Cases
 
 - Named Curation rows are shown only when
   `authenticated_user_can_curate` is true for the current account.
+- In Curation tabs, a post's standalone `More` menu offers `Remove` only when
+  permission to manage that Curation is confirmed; otherwise the menu is hidden.
 - If Curations exist but none are manageable, the dialog explains that state
   and offers creation when allowed.
 - If a drop is not curatable for your account, specialized leaderboard
@@ -86,6 +96,11 @@ Not shown on:
   action control.
 - Profile-card removal requires confirmation and does not delete the original
   post from its Wave.
+- `Organize` is available only to accounts allowed to curate with the
+  selected Group. Readers without that permission see the saved order without
+  arrangement controls.
+- Posts load in pages of 20 as you scroll. Continue scrolling to load more
+  posts before moving a post to a destination farther down the Curation.
 
 ## Failure and Recovery
 
@@ -97,6 +112,8 @@ Not shown on:
 - If the specialized curate/uncurate toggle fails, curation state returns to
   the previous value.
 - Failures show an error toast with the failure reason.
+- If saving a new order fails, the arrangement returns to the saved order and
+  shows an error. Retry the move after checking your connection or permission.
 - Retry by selecting the same curation action again.
 - Successful changes refresh drop data so leaderboard and participation views
   resync.

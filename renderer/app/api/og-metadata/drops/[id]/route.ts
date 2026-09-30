@@ -1,10 +1,13 @@
 import { publicEnv } from "@/config/env";
+import { API_AUTH_COOKIE } from "@/constants/constants";
 import type { ApiOgMetadata } from "@/generated/models/ApiOgMetadata";
+import { MetadataNotFoundError } from "@/app/api/og-metadata/_lib/metadataNotFoundError";
 import { getUsableText } from "@/app/api/og-metadata/_lib/imageUtils";
 import { getOgImageRequestOrigin } from "@/app/api/og-metadata/_lib/requestOrigin";
 import { renderDropOgImage } from "@/app/api/og-metadata/drops/[id]/image";
 import { loadMontserratFonts } from "@/app/api/og-metadata/profiles/[identity]/font";
 import { ImageResponse } from "next/og";
+import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 export const runtime = "edge";
@@ -17,13 +20,22 @@ const OG_IMAGE_SIZE = {
 const OG_CACHE_CONTROL =
   "public, max-age=300, s-maxage=300, stale-while-revalidate=600";
 
-const fetchDropMetadata = async (id: string): Promise<ApiOgMetadata> => {
+const fetchDropMetadata = async (
+  id: string,
+  apiAuth: string | null
+): Promise<ApiOgMetadata> => {
   const url = `${publicEnv.API_ENDPOINT}/api/og-metadata/drops/${encodeURIComponent(
     id
   )}`;
   const response = await fetch(url, {
+    redirect: "error",
+    headers: apiAuth === null ? {} : { "x-6529-auth": apiAuth },
     next: { revalidate },
   });
+
+  if (response.status === 404) {
+    throw new MetadataNotFoundError();
+  }
 
   if (!response.ok) {
     throw new Error(`Drop OG metadata request failed: ${response.status}`);
@@ -47,7 +59,11 @@ export async function GET(
   }
 
   try {
-    const metadata = await fetchDropMetadata(normalizedId);
+    const cookieStore = await cookies();
+    const apiAuth =
+      getUsableText(cookieStore.get(API_AUTH_COOKIE)?.value) ??
+      getUsableText(publicEnv.STAGING_API_KEY);
+    const metadata = await fetchDropMetadata(normalizedId, apiAuth);
     const montserratFonts = await loadMontserratFonts();
 
     return new ImageResponse(
@@ -62,11 +78,18 @@ export async function GET(
         ...OG_IMAGE_SIZE,
         fonts: montserratFonts,
         headers: {
-          "Cache-Control": OG_CACHE_CONTROL,
+          "Cache-Control": apiAuth ? "private, no-store" : OG_CACHE_CONTROL,
         },
       }
     );
   } catch (error) {
+    if (error instanceof MetadataNotFoundError) {
+      return NextResponse.json(
+        { error: "Drop not found." },
+        { status: 404, headers: { "Cache-Control": "private, no-store" } }
+      );
+    }
+
     console.error("Unable to generate drop OG metadata image.", error);
     return NextResponse.json(
       { error: "Unable to generate drop OG metadata image." },

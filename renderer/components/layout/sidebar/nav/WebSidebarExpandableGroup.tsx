@@ -7,6 +7,7 @@ import type { SidebarNavItem } from "@/components/navigation/navTypes";
 import Link from "next/link";
 import React, { useCallback, useMemo } from "react";
 import { isSidebarNavItemActive } from "./sidebarActive";
+import { useHasHydrated } from "@/hooks/useHasHydrated";
 
 interface WebSidebarExpandableGroupProps {
   readonly name: string;
@@ -23,6 +24,7 @@ function WebSidebarExpandableGroup({
   expanded,
   onToggle,
 }: WebSidebarExpandableGroupProps) {
+  const hasHydrated = useHasHydrated();
   const hasActiveItem = useMemo(
     () => items.some((item) => isSidebarNavItemActive(item, pathname)),
     [items, pathname]
@@ -48,6 +50,7 @@ function WebSidebarExpandableGroup({
       {/* Group header with expand button */}
       <button
         type="button"
+        disabled={!hasHydrated}
         onClick={handleToggle}
         className={`tw-touch-action-manipulation tw-ml-[2.75rem] tw-flex tw-min-h-11 tw-w-[calc(100%-2.75rem)] tw-cursor-pointer tw-items-center tw-justify-between tw-rounded-xl tw-border-none tw-py-1 tw-pl-3 tw-pr-3 tw-text-left tw-text-sm tw-font-medium tw-no-underline tw-transition-colors tw-duration-200 focus:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-iron-500 focus-visible:tw-ring-offset-2 desktop-hover:tw-min-h-10 ${stateClassName}`}
         aria-expanded={expanded}
@@ -55,7 +58,7 @@ function WebSidebarExpandableGroup({
       >
         <span className="tw-min-w-0 tw-flex-1 tw-break-words">{name}</span>
         <ChevronRightIcon
-          className={`tw-ml-3 tw-h-4 tw-w-4 tw-shrink-0 tw-transition-transform tw-duration-200 ${
+          className={`tw-ml-3 tw-mr-2 tw-h-4 tw-w-4 tw-shrink-0 tw-transition-transform tw-duration-200 ${
             expanded ? "tw-rotate-90" : ""
           }`}
         />

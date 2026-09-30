@@ -116,6 +116,7 @@ export default function MemeWinnerDrop({
             media_mime_type={artworkMedia.mime_type}
             media_url={artworkMedia.url}
             isCompetitionDrop={true}
+            fillVideoContainer
           />
         </div>
       )}
@@ -139,7 +140,7 @@ export default function MemeWinnerDrop({
           )} tw-transition-all tw-duration-200 tw-ease-out ${
             location === DropLocation.WAVE
               ? "tw-bg-iron-900/80"
-              : "tw-bg-iron-950"
+              : "tw-bg-[var(--drop-card-background,theme(colors.iron.950))]"
           } ${getRankHoverClass(effectiveRank)}`}
         >
           {showInteractions ? (

@@ -1,6 +1,11 @@
 "use client";
 
-import { FallbackImage } from "@/components/common/FallbackImage";
+import {
+  DropImagePreview,
+  getDropImagePreviewSources,
+} from "@/components/drops/view/item/content/media/DropImagePreview";
+import { GifPreviewLoadingIndicator } from "@/components/drops/view/item/content/media/GifPreviewLoadingIndicator";
+import { isGifImageUrl } from "@/helpers/gif-preview.helpers";
 import Button from "@/components/utils/button/Button";
 import {
   ImageMediaModal,
@@ -10,7 +15,7 @@ import { InlineMediaActions } from "@/components/drops/view/item/content/media/M
 import { useContainedImageBoundsStyle } from "@/components/drops/view/item/content/media/containedImageBounds";
 import { useMediaActions } from "@/components/drops/view/item/content/media/useMediaActions";
 import { useDropImageGallery } from "@/components/drops/view/part/DropImageGalleryProvider";
-import { getScaledImageUri, ImageScale } from "@/helpers/image.helpers";
+import { ImageScale } from "@/helpers/image.helpers";
 import useCapacitor from "@/hooks/useCapacitor";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -59,15 +64,16 @@ function ImageProcessingRetryState() {
 
 function ImageLoadErrorState({ onRetry }: { readonly onRetry: () => void }) {
   return (
-    <div className="tw-flex tw-h-full tw-min-h-40 tw-w-full tw-flex-col tw-items-center tw-justify-center tw-gap-2 tw-px-4 tw-py-8">
+    <div className="tw-absolute tw-inset-0 tw-flex tw-h-full tw-min-h-40 tw-w-full tw-flex-col tw-items-center tw-justify-center tw-gap-2 tw-rounded-xl tw-bg-iron-900 tw-px-4 tw-py-8">
       <span className="tw-text-sm tw-text-iron-400">
-        {t(DEFAULT_LOCALE, "drop.media.loadFailed")}
+        {t(DEFAULT_LOCALE, "drop.media.previewUnavailable")}
       </span>
       <Button
         type="button"
         onClick={onRetry}
         variant="tertiary"
         size="xs"
+        className="tw-pointer-events-auto tw-relative tw-z-30"
       >
         {t(DEFAULT_LOCALE, "drop.media.retry")}
       </Button>
@@ -77,16 +83,16 @@ function ImageLoadErrorState({ onRetry }: { readonly onRetry: () => void }) {
 
 function NaturalHeightImage({
   imgRef,
-  primarySrc,
-  fallbackSrc,
+  src,
+  imageScale,
   retryTick,
   onLoad,
   onFinalError,
   imageObjectPosition,
 }: {
   readonly imgRef: React.RefObject<HTMLImageElement | null>;
-  readonly primarySrc: string;
-  readonly fallbackSrc: string;
+  readonly src: string;
+  readonly imageScale: ImageScale;
   readonly retryTick: number;
   readonly onLoad: () => void;
   readonly onFinalError: () => void;
@@ -109,22 +115,22 @@ function NaturalHeightImage({
 
   return (
     <span
-      className="tw-relative tw-block tw-min-h-40 tw-w-full tw-max-w-full tw-overflow-hidden tw-rounded-xl tw-bg-iron-900/40"
+      className={`tw-relative tw-block tw-min-h-40 tw-w-full tw-max-w-full tw-overflow-hidden tw-rounded-xl ${isGifImageUrl(src) ? "" : "tw-bg-iron-900/40"}`}
       style={{
         aspectRatio: aspectRatio ?? NATURAL_IMAGE_RESERVED_ASPECT_RATIO,
         maxHeight: NATURAL_IMAGE_MAX_HEIGHT,
       }}
     >
       {/* Drop media can come from hosts outside next.config.ts image remotePatterns. */}
-      <FallbackImage
+      <DropImagePreview
         key={retryTick}
         ref={imgRef}
-        primarySrc={primarySrc}
-        fallbackSrc={fallbackSrc}
+        originalSrc={src}
+        fallback={null}
+        imageScale={imageScale}
         alt={t(DEFAULT_LOCALE, "drop.media.alt")}
         fill
         sizes="(max-width: 768px) 100vw, 768px"
-        optimize={false}
         className="tw-object-contain"
         style={{ objectPosition: imageObjectPosition }}
         onLoad={handleLoad}
@@ -136,16 +142,16 @@ function NaturalHeightImage({
 
 function FillContainerImage({
   imgRef,
-  primarySrc,
-  fallbackSrc,
+  src,
+  imageScale,
   retryTick,
   onLoad,
   onFinalError,
   imageObjectPosition,
 }: {
   readonly imgRef: React.RefObject<HTMLImageElement | null>;
-  readonly primarySrc: string;
-  readonly fallbackSrc: string;
+  readonly src: string;
+  readonly imageScale: ImageScale;
   readonly retryTick: number;
   readonly onLoad: () => void;
   readonly onFinalError: () => void;
@@ -154,15 +160,15 @@ function FillContainerImage({
   return (
     <span className="tw-relative tw-block tw-h-full tw-w-full tw-overflow-hidden">
       {/* Drop media can come from hosts outside next.config.ts image remotePatterns. */}
-      <FallbackImage
+      <DropImagePreview
         key={retryTick}
         ref={imgRef}
-        primarySrc={primarySrc}
-        fallbackSrc={fallbackSrc}
+        originalSrc={src}
+        fallback={null}
+        imageScale={imageScale}
         alt={t(DEFAULT_LOCALE, "drop.media.alt")}
         fill
         sizes="(max-width: 768px) 100vw, 768px"
-        optimize={false}
         className="tw-object-contain"
         style={{ objectPosition: imageObjectPosition }}
         onLoad={onLoad}
@@ -344,25 +350,21 @@ function WaveDropPartContentMediaImageContent({
     objectPosition: imageObjectPosition,
   });
 
-  if (imageViewState.failedAttempts >= MAX_FAILED_LOAD_ATTEMPTS) {
-    return <ImageLoadErrorState onRetry={manualRetry} />;
-  }
-
-  if (imageViewState.retryPending) {
-    return <ImageProcessingRetryState />;
-  }
-
-  const primarySrc = withRetryCacheBust(
-    getScaledImageUri(src, imageScale),
-    imageViewState.retryTick
-  );
-  const fallbackSrc = withRetryCacheBust(src, imageViewState.retryTick);
+  const previewSrc = withRetryCacheBust(src, imageViewState.retryTick);
+  const hasPreview = getDropImagePreviewSources(src, imageScale).length > 0;
+  const showError =
+    !hasPreview || imageViewState.failedAttempts >= MAX_FAILED_LOAD_ATTEMPTS;
+  const showGifLoading =
+    isGifImageUrl(src) &&
+    !imageViewState.loaded &&
+    !showError &&
+    !imageViewState.retryPending;
   const image = fillContainer ? (
     <FillContainerImage
       key={imageViewState.retryTick}
       imgRef={imgRef}
-      primarySrc={primarySrc}
-      fallbackSrc={fallbackSrc}
+      src={previewSrc}
+      imageScale={imageScale}
       retryTick={imageViewState.retryTick}
       onLoad={handleImageLoad}
       onFinalError={handleError}
@@ -372,8 +374,8 @@ function WaveDropPartContentMediaImageContent({
     <NaturalHeightImage
       key={imageViewState.retryTick}
       imgRef={imgRef}
-      primarySrc={primarySrc}
-      fallbackSrc={fallbackSrc}
+      src={previewSrc}
+      imageScale={imageScale}
       retryTick={imageViewState.retryTick}
       onLoad={handleImageLoad}
       onFinalError={handleError}
@@ -390,6 +392,13 @@ function WaveDropPartContentMediaImageContent({
         }`}
       >
         {image}
+        {showGifLoading && <GifPreviewLoadingIndicator />}
+        {showError && <ImageLoadErrorState onRetry={manualRetry} />}
+        {!showError && imageViewState.retryPending && (
+          <div className="tw-absolute tw-inset-0 tw-rounded-xl tw-bg-iron-900">
+            <ImageProcessingRetryState />
+          </div>
+        )}
         <div
           className="tw-group/media tw-pointer-events-none tw-absolute tw-z-20"
           style={imageActionBoundsStyle ?? { inset: 0 }}
@@ -400,7 +409,7 @@ function WaveDropPartContentMediaImageContent({
             aria-label={t(DEFAULT_LOCALE, "drop.media.openMedia")}
             className="tw-pointer-events-auto tw-absolute tw-inset-0 tw-z-10 tw-cursor-pointer tw-border-0 tw-bg-transparent tw-p-0 focus-visible:tw-shadow-[0_0_0_4px_rgba(0,0,0,0.72)] focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-white"
           />
-          {imageViewState.loaded ? (
+          {imageViewState.loaded || showError ? (
             <InlineMediaActions
               variant="image"
               onOpen={openMedia}
@@ -408,18 +417,20 @@ function WaveDropPartContentMediaImageContent({
               onDownload={downloadMedia}
               isDownloading={isDownloading}
               onFullscreen={handleFullScreen}
-              fullscreenTargetAvailable={!isCapacitor}
-              visibility="desktop-hover"
+              fullscreenTargetAvailable={!isCapacitor && imageViewState.loaded}
+              visibility={showError ? "always" : "desktop-hover"}
             />
           ) : null}
         </div>
       </div>
 
-      {!imageViewState.loaded && (
-        <div className="tw-sr-only" aria-live="polite">
-          {t(DEFAULT_LOCALE, "drop.media.loading")}
-        </div>
-      )}
+      <div className="tw-sr-only" role="status">
+        {showError
+          ? t(DEFAULT_LOCALE, "drop.media.previewUnavailable")
+          : !imageViewState.loaded &&
+            !showGifLoading &&
+            t(DEFAULT_LOCALE, "drop.media.loading")}
+      </div>
 
       {imageViewState.isModalOpen && (
         <ImageMediaModal

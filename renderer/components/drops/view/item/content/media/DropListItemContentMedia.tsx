@@ -34,7 +34,9 @@ export default function DropListItemContentMedia({
   isCompetitionDrop = false,
   disableModal = false,
   disableAutoPlay = false,
+  allowAutoPlayInApp = false,
   fillVideoContainer = false,
+  artworkVideoLayout = false,
   videoAlign,
   imageObjectPosition,
   imageScale = ImageScale.AUTOx800,
@@ -42,12 +44,16 @@ export default function DropListItemContentMedia({
   htmlPreviewImageUrl,
   loadStrategy = "in-view",
   galleryItemId,
+  showOriginalQualityToggle = false,
+  preferHighQualityImage = false,
 }: {
   readonly media_mime_type: string;
   readonly media_url: string;
   readonly isCompetitionDrop?: boolean | undefined;
   readonly disableModal?: boolean | undefined;
   readonly disableAutoPlay?: boolean | undefined;
+  readonly artworkVideoLayout?: boolean | undefined;
+  readonly allowAutoPlayInApp?: boolean | undefined;
   readonly fillVideoContainer?: boolean | undefined;
   readonly videoAlign?: "left" | "center" | undefined;
   readonly imageObjectPosition?: string | undefined;
@@ -56,6 +62,8 @@ export default function DropListItemContentMedia({
   readonly htmlPreviewImageUrl?: string | undefined;
   readonly loadStrategy?: MediaLoadStrategy | undefined;
   readonly galleryItemId?: string | undefined;
+  readonly showOriginalQualityToggle?: boolean | undefined;
+  readonly preferHighQualityImage?: boolean | undefined;
 }) {
   const dropContext = useOptionalDropContext();
   const showVideoFullscreen = dropContext?.showVideoFullscreen ?? true;
@@ -97,6 +105,8 @@ export default function DropListItemContentMedia({
           imageScale={imageScale}
           loadStrategy={loadStrategy}
           galleryItemId={galleryItemId}
+          showOriginalQualityToggle={showOriginalQualityToggle}
+          preferHighQualityImage={preferHighQualityImage}
         />
       );
     case MediaType.VIDEO:
@@ -105,7 +115,9 @@ export default function DropListItemContentMedia({
           src={media_url}
           mimeType={media_mime_type}
           disableAutoPlay={disableAutoPlay}
+          allowAutoPlayInApp={allowAutoPlayInApp}
           fillContainer={fillVideoContainer}
+          artworkLayout={artworkVideoLayout}
           align={videoAlign}
           showFullscreen={showVideoFullscreen}
           loadStrategy={loadStrategy}

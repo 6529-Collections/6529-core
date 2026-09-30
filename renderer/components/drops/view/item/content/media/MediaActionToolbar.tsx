@@ -1,6 +1,6 @@
 "use client";
 
-import { fullScreenSupported } from "@/helpers/Helpers";
+import { useFullScreenSupported } from "@/hooks/useFullScreenSupported";
 import {
   ArrowDownTrayIcon,
   ArrowTopRightOnSquareIcon,
@@ -85,6 +85,7 @@ export function InlineMediaActions({
   labels,
   className,
   style,
+  children,
 }: {
   readonly onDownload?: (() => void) | undefined;
   readonly onOpen?: (() => void) | undefined;
@@ -98,13 +99,15 @@ export function InlineMediaActions({
   readonly labels?: MediaActionLabels | undefined;
   readonly className?: string | undefined;
   readonly style?: React.CSSProperties | undefined;
+  readonly children?: React.ReactNode;
 }) {
   const actionLabels = getMediaActionLabels(labels);
+  const supportsFullScreen = useFullScreenSupported();
   const canFullscreen =
     (variant === "image" || variant === "html") &&
     Boolean(onFullscreen) &&
     Boolean(fullscreenTargetAvailable) &&
-    fullScreenSupported();
+    supportsFullScreen;
   const positionClassName =
     position === "bottom-right"
       ? "tw-bottom-[5px] tw-right-[5px]"
@@ -122,6 +125,7 @@ export function InlineMediaActions({
         className
       )}
     >
+      {children}
       {canFullscreen && (
         <ToolbarButton
           label={actionLabels.fullscreen}
@@ -159,6 +163,7 @@ export function ExpandedMediaToolbar({
   isDownloading,
   fullscreenTargetAvailable,
   labels,
+  children,
 }: {
   readonly onOpen?: (() => void) | undefined;
   readonly onDownload: () => void;
@@ -168,16 +173,19 @@ export function ExpandedMediaToolbar({
   readonly isDownloading: boolean;
   readonly fullscreenTargetAvailable?: boolean | undefined;
   readonly labels?: MediaActionLabels | undefined;
+  readonly children?: React.ReactNode;
 }) {
   const actionLabels = getMediaActionLabels(labels);
+  const supportsFullScreen = useFullScreenSupported();
   const canFullscreen =
     Boolean(onFullscreen) &&
     Boolean(fullscreenTargetAvailable) &&
-    fullScreenSupported();
+    supportsFullScreen;
 
   return (
     <div className="tw-fixed tw-right-4 tw-top-3 tw-z-[1102] tw-flex tw-items-center tw-gap-x-3 tw-pt-[env(safe-area-inset-top,0px)]">
       <div className="tw-flex tw-overflow-hidden tw-rounded-xl tw-bg-iron-900/95 tw-shadow-lg tw-shadow-black/30 tw-ring-1 tw-ring-inset tw-ring-iron-700/70 tw-backdrop-blur">
+        {children}
         {canFullscreen && (
           <ToolbarButton
             label={actionLabels.fullscreen}

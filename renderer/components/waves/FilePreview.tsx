@@ -1,3 +1,5 @@
+import { getPreparedDropImage } from "@/services/uploads/prepareDropImage";
+import { getContentType } from "@/services/uploads/mediaUploadMimeType";
 import React from "react";
 import CircleLoader, {
   CircleLoaderSize,
@@ -13,7 +15,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { getFileExtension } from "./memes/file-upload/utils/formatHelpers";
 import { useObjectUrl } from "@/hooks/useObjectUrl";
 import { t } from "@/i18n/messages";
-import { DEFAULT_LOCALE } from "@/i18n/locales";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 
 interface FileItem {
   file: File;
@@ -44,11 +47,11 @@ const ProgressOverlay: React.FC<{ progress: number }> = ({ progress }) => (
 );
 
 const getFileIcon = (file: File) => {
-  if (file.type.startsWith("video/")) {
+  if (getContentType(file).startsWith("video/")) {
     return faFileVideo;
   }
 
-  if (file.type.startsWith("audio/")) {
+  if (getContentType(file).startsWith("audio/")) {
     return faFileAudio;
   }
 
@@ -82,11 +85,12 @@ const FileTypePreview: React.FC<{ file: File }> = ({ file }) => (
   </div>
 );
 
-const ImageFilePreview: React.FC<{ file: File; index: number }> = ({
-  file,
-  index,
-}) => {
-  const previewUrl = useObjectUrl(file);
+const ImageFilePreview: React.FC<{ file: File }> = ({ file }) => {
+  const locale = useBrowserLocale();
+  const objectUrl = useObjectUrl(
+    getContentType(file) === "image/avif" ? null : file
+  );
+  const previewUrl = getPreparedDropImage(file)?.url ?? objectUrl;
 
   return (
     <div className="tw-relative tw-h-full tw-w-full">
@@ -94,11 +98,10 @@ const ImageFilePreview: React.FC<{ file: File; index: number }> = ({
         // Keep a plain img here because local blob previews cannot be optimized by next/image.
         <img
           src={previewUrl}
-          alt={`Preview ${index}`}
+          alt={t(locale, "drop.upload.imagePreview", { file: file.name })}
           className="tw-h-full tw-w-full tw-object-cover"
         />
       )}
-      <div className="tw-absolute tw-inset-0 tw-bg-iron-950 tw-opacity-0 tw-transition-opacity tw-duration-300 group-hover:tw-opacity-30"></div>
     </div>
   );
 };
@@ -109,6 +112,7 @@ const FilePreview: React.FC<FilePreviewProps> = ({
   removeFile,
   disabled,
 }) => {
+  const locale = useBrowserLocale();
   return (
     <div className="tw-mt-2 tw-flex tw-flex-wrap tw-gap-2">
       {files.map((file, index) => {
@@ -117,15 +121,18 @@ const FilePreview: React.FC<FilePreviewProps> = ({
         );
         const isUploading = !!uploadingFile;
         const progress = uploadingFile?.progress ?? 0;
+        const contentType = getContentType(file.file);
+        const isPreparingAvif = contentType === "image/avif" && isUploading;
         const isProcessingImage =
           uploadingFile?.phase === "processing" &&
-          file.file.type.startsWith("image/");
+          contentType.startsWith("image/");
         const fileKey = `${file.file.name}-${file.file.size}-${file.file.lastModified}-${index}`;
         return (
-          <div key={fileKey} className="tw-group tw-relative">
-            <div className="tw-size-24 tw-overflow-hidden tw-rounded-lg tw-bg-iron-800">
-              {file.file.type.startsWith("image/") ? (
-                <ImageFilePreview file={file.file} index={index} />
+          <div key={fileKey} className="tw-relative">
+            <div className="tw-relative tw-size-24 tw-overflow-hidden tw-rounded-lg tw-bg-iron-900/40">
+              {contentType.startsWith("image/") ? (
+                // Mount after preparation so the memoized preview reads the completed URL.
+                !isPreparingAvif && <ImageFilePreview file={file.file} />
               ) : (
                 <FileTypePreview file={file.file} />
               )}
@@ -134,11 +141,22 @@ const FilePreview: React.FC<FilePreviewProps> = ({
                   <ProgressOverlay progress={progress} />
                   <div className="tw-absolute tw-inset-0 tw-flex tw-flex-col tw-items-center tw-justify-center">
                     <CircleLoader size={CircleLoaderSize.XXLARGE} />
-                    <span className="tw-mt-1 tw-px-2 tw-text-center tw-text-sm tw-font-medium tw-leading-tight tw-text-white">
+                    <output
+                      role={isProcessingImage ? undefined : "progressbar"}
+                      aria-label={t(locale, "drop.upload.preparingFile", {
+                        file: file.file.name,
+                      })}
+                      aria-valuenow={
+                        isProcessingImage ? undefined : Math.round(progress)
+                      }
+                      aria-valuemin={isProcessingImage ? undefined : 0}
+                      aria-valuemax={isProcessingImage ? undefined : 100}
+                      className="tw-mt-1 tw-px-2 tw-text-center tw-text-sm tw-font-medium tw-leading-tight tw-text-white"
+                    >
                       {isProcessingImage
-                        ? t(DEFAULT_LOCALE, "drop.media.processing")
+                        ? t(locale, "drop.media.processing")
                         : `${Math.round(progress)}%`}
-                    </span>
+                    </output>
                   </div>
                 </>
               )}
@@ -150,26 +168,18 @@ const FilePreview: React.FC<FilePreviewProps> = ({
             )}
             {!isUploading && (
               <button
+                type="button"
                 onClick={() => removeFile(file.file)}
                 disabled={disabled}
-                className={`tw-absolute tw-right-1 tw-top-1 tw-z-10 tw-flex tw-size-7 tw-cursor-pointer tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-iron-800 tw-text-red tw-transition-all tw-duration-300 hover:tw-bg-iron-700 ${
-                  disabled ? "tw-pointer-events-none" : ""
-                }`}
-                aria-label="Remove file"
+                className="tw-absolute tw-right-1 tw-top-1 tw-z-10 tw-flex tw-size-7 tw-items-center tw-justify-center tw-rounded-full tw-border-0 tw-bg-black/80 tw-p-0 tw-text-white tw-ring-1 tw-ring-inset tw-ring-white/20 tw-transition-colors hover:tw-bg-black focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-offset-2 focus-visible:tw-outline-primary-400 disabled:tw-pointer-events-none disabled:tw-opacity-50"
+                aria-label={t(locale, "drop.upload.removeFile")}
+                title={t(locale, "drop.upload.removeFile")}
               >
-                <svg
-                  className="tw-size-5 tw-flex-shrink-0"
-                  viewBox="0 0 24 24"
-                  fill="none"
+                <XMarkIcon
+                  className="tw-size-4"
+                  strokeWidth={2}
                   aria-hidden="true"
-                  xmlns="http://www.w3.org/2000/svg"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
+                />
               </button>
             )}
           </div>

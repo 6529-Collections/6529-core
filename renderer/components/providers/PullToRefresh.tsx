@@ -1,5 +1,7 @@
 "use client";
 
+import { useIsVersionStale } from "@/hooks/useIsVersionStale";
+import { refreshAppVersion } from "@/helpers/version-refresh.helpers";
 import { useGlobalRefresh } from "@/contexts/RefreshContext";
 import {
   PULL_TO_REFRESH_ACTIVE_ATTRIBUTE,
@@ -83,6 +85,8 @@ export default function PullToRefresh({
 }: PullToRefreshProps) {
   const { invalidateAll } = useContext(ReactQueryWrapperContext);
   const { globalRefresh } = useGlobalRefresh();
+  // Pull-to-refresh refreshes content, not the native desktop binary.
+  const isVersionStale = useIsVersionStale();
   const [pullDistance, setPullDistance] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const touchStartY = useRef(0);
@@ -220,8 +224,12 @@ export default function PullToRefresh({
       pullDistanceRef.current = refreshingPullDistance;
       setPullDistance(refreshingPullDistance);
 
-      invalidateAll();
-      globalRefresh();
+      if (isVersionStale) {
+        refreshAppVersion();
+      } else {
+        invalidateAll();
+        globalRefresh();
+      }
 
       refreshTimeoutRef.current = setTimeout(() => {
         isRefreshingRef.current = false;
@@ -236,7 +244,7 @@ export default function PullToRefresh({
       setPullDistance(0);
       releaseContentToOffset(0);
     }
-  }, [invalidateAll, globalRefresh, releaseContentToOffset]);
+  }, [invalidateAll, globalRefresh, isVersionStale, releaseContentToOffset]);
 
   const handleTouchCancel = useCallback(() => {
     isPulling.current = false;

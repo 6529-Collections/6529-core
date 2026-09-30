@@ -60,8 +60,18 @@
 
 ## Common Scenarios
 
+- The Memes #445, **Red Light, Green Light** by Meebits x DocLove, uses a
+  compatibility viewer for its published interactive artwork. Its ETH/USD
+  price and 24-hour change come from Coinbase and refresh about once a minute.
+  The animated background and controls load without waiting for the price feed.
+  If prices are unavailable, the viewer says so, retains its current colors,
+  and retries automatically. The card's `Details` tab still links to the
+  original Arweave artwork and metadata.
+  Pause stops the cube, background, and lighting motion. The viewer also
+  respects reduced-motion preferences.
 - Shared wave/drop cards without a preview-image override render the host
-  banner plus sandboxed iframe.
+  banner plus a borderless sandboxed iframe. The banner keeps its uppercase
+  untrusted-content label at 11px and a separate source link.
 - Gallery, leaderboard, and other card surfaces that already have preview
   artwork can show a static preview image for HTML media instead of a live
   iframe.

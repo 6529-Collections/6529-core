@@ -1,23 +1,43 @@
 import { render, act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type AgreementStep from "@/components/waves/memes/submission/steps/AgreementStep";
 import MemesArtSubmissionContainer from "@/components/waves/memes/submission/MemesArtSubmissionContainer";
 import { SubmissionStep } from "@/components/waves/memes/submission/types/Steps";
 import { useArtworkSubmissionForm } from "@/components/waves/memes/submission/hooks/useArtworkSubmissionForm";
 import { useArtworkSubmissionMutation } from "@/components/waves/memes/submission/hooks/useArtworkSubmissionMutation";
+import { useMemesSubmissionIdentity } from "@/components/waves/memes/submission/hooks/useMemesSubmissionIdentity";
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { useAuth } from "@/components/auth/Auth";
 import { commonApiDelete } from "@/services/api/common-api";
 import type { InteractiveMediaMimeType } from "@/components/waves/memes/submission/constants/media";
+import { createProposalCardThumbnail } from "@/lib/proposal-card/thumbnail";
+
+jest.mock("@/lib/proposal-card/thumbnail", () => ({
+  createProposalCardThumbnail: jest.fn(),
+}));
+
+jest.mock(
+  "@/components/waves/memes/submission/MemesSubmissionDocumentation",
+  () => () => null
+);
 
 jest.mock("@/components/auth/Auth");
 jest.mock("@/components/waves/memes/submission/hooks/useArtworkSubmissionForm");
 jest.mock(
   "@/components/waves/memes/submission/hooks/useArtworkSubmissionMutation"
 );
+jest.mock(
+  "@/components/waves/memes/submission/hooks/useMemesSubmissionIdentity"
+);
 jest.mock("@/components/auth/SeizeConnectContext");
 jest.mock("@/services/api/common-api", () => ({
   commonApiDelete: jest.fn(),
+}));
+jest.mock("@/services/auth/auth.utils", () => ({
+  getAuthJwt: jest.fn(() => "jwt"),
+  getWalletAddress: jest.fn(() => "0x123"),
 }));
 jest.mock("@/contexts/wave/MyStreamContext", () => ({
   useMyStreamOptional: () => ({ processDropRemoved: jest.fn() }),
@@ -27,9 +47,30 @@ jest.mock(
   () =>
     ({ children }: any) => <div>{children}</div>
 );
+let agreementProps: React.ComponentProps<typeof AgreementStep>;
 jest.mock(
   "@/components/waves/memes/submission/steps/AgreementStep",
-  () => (props: any) => <div data-testid="agreement" {...props} />
+  () => (props: React.ComponentProps<typeof AgreementStep>) => {
+    agreementProps = props;
+    return <div data-testid="agreement">{props.wave.participation.terms}</div>;
+  }
+);
+jest.mock("@/components/waves/memes/submission/utils/buildPreviewDrop", () => ({
+  buildPreviewDrop: jest.fn(() => ({ id: "preview" })),
+}));
+jest.mock(
+  "@/components/waves/memes/submission/preview/MemesSubmissionPreviewScreen",
+  () => ({
+    MemesSubmissionPreviewScreen: ({
+      onBackToEdit,
+    }: {
+      onBackToEdit: () => void;
+    }) => (
+      <div data-testid="preview">
+        <button onClick={onBackToEdit}>Back to edit</button>
+      </div>
+    ),
+  })
 );
 let artworkProps: any;
 jest.mock(
@@ -72,6 +113,9 @@ const mockForm = useArtworkSubmissionForm as jest.MockedFunction<
 const mockMutation = useArtworkSubmissionMutation as jest.MockedFunction<
   typeof useArtworkSubmissionMutation
 >;
+const mockIdentity = useMemesSubmissionIdentity as jest.MockedFunction<
+  typeof useMemesSubmissionIdentity
+>;
 const mockSeizeConnect = useSeizeConnectContext as jest.MockedFunction<
   typeof useSeizeConnectContext
 >;
@@ -81,7 +125,11 @@ const mockCommonApiDelete = commonApiDelete as jest.MockedFunction<
 >;
 
 describe("MemesArtSubmissionContainer", () => {
-  const wave = { id: "w1", participation: { terms: "t" } } as any;
+  const wave = {
+    id: "w1",
+    name: "The Memes",
+    participation: { terms: "t" },
+  } as any;
   const onClose = jest.fn();
   let formState: any;
 
@@ -93,6 +141,7 @@ describe("MemesArtSubmissionContainer", () => {
     formState = {
       currentStep: SubmissionStep.ARTWORK,
       agreements: false,
+      acceptedAgreement: { waveId: wave.id, terms: wave.participation.terms },
       setAgreements: jest.fn(),
       handleContinueFromTerms: jest.fn(),
       handleContinueFromArtwork: jest.fn(async () => true),
@@ -202,6 +251,7 @@ describe("MemesArtSubmissionContainer", () => {
     });
 
     formState.getSubmissionData = () => ({
+      acceptedAgreement: formState.acceptedAgreement,
       imageUrl: formState.artworkUrl,
       traits: { title: "t", description: "d" },
       operationalData: formState.operationalData,
@@ -233,6 +283,16 @@ describe("MemesArtSubmissionContainer", () => {
       submissionError: undefined,
       isSubmitting: false,
     } as any);
+    mockIdentity.mockReturnValue({
+      status: "eligible",
+      profile: { id: "profile-a", handle: "alice" },
+      address: "0x123",
+      walletName: "MetaMask",
+      canSubmit: true,
+      connectWallet: jest.fn(),
+      verifyProfile: jest.fn(),
+      retryEligibility: jest.fn(),
+    } as any);
     mockSeizeConnect.mockReturnValue({
       address: "0x123",
       isSafeWallet: false,
@@ -250,6 +310,105 @@ describe("MemesArtSubmissionContainer", () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it("releases the framed preview image when returning to edit", async () => {
+    formState.currentStep = SubmissionStep.ADDITIONAL_INFO;
+    formState.proposalFrame = "portrait";
+    formState.artworkUrl = "https://example.com/art.png";
+    formState.existingMedia = {
+      url: formState.artworkUrl,
+      mimeType: "image/png",
+    };
+    jest
+      .mocked(createProposalCardThumbnail)
+      .mockResolvedValue(
+        new File(["png"], "preview.png", { type: "image/png" })
+      );
+    const revoke = jest.spyOn(URL, "revokeObjectURL");
+    const create = jest
+      .spyOn(URL, "createObjectURL")
+      .mockReturnValue("blob:frame");
+    try {
+      render(<MemesArtSubmissionContainer onClose={onClose} wave={wave} />);
+      await act(async () => additionalInfoProps.onPreview());
+      expect(screen.getByTestId("preview")).toBeInTheDocument();
+      expect(revoke).not.toHaveBeenCalledWith("blob:frame");
+      await userEvent.click(
+        screen.getByRole("button", { name: "Back to edit" })
+      );
+      expect(revoke).toHaveBeenCalledWith("blob:frame");
+      expect(screen.queryByTestId("preview")).not.toBeInTheDocument();
+    } finally {
+      revoke.mockRestore();
+      create.mockRestore();
+    }
+  });
+
+  it("returns to current terms on rerender, retains artwork, clears the old preview, and submits only after reacceptance", async () => {
+    const actualForm = jest.requireActual<
+      typeof import("@/components/waves/memes/submission/hooks/useArtworkSubmissionForm")
+    >("@/components/waves/memes/submission/hooks/useArtworkSubmissionForm");
+    mockForm.mockImplementation(actualForm.useArtworkSubmissionForm);
+    const queryClient = new QueryClient();
+    const wrapper = ({ children }: { readonly children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+    const { rerender } = render(
+      <MemesArtSubmissionContainer onClose={onClose} wave={wave} />,
+      { wrapper }
+    );
+    act(() => agreementProps.setAgreements(true));
+    act(() => agreementProps.onContinue());
+    const file = new File(["artwork"], "art.png", { type: "image/png" });
+    act(() => {
+      artworkProps.setTraits({
+        title: "Retained artwork",
+        description: "Retained description",
+      });
+      artworkProps.handleFileSelect(file);
+    });
+    await waitFor(() => expect(artworkProps.artworkUploaded).toBe(true));
+    act(() => artworkProps.onSubmit());
+    act(() =>
+      additionalInfoProps.onArtworkCommentaryChange("Retained commentary")
+    );
+    await act(async () => additionalInfoProps.onPreview());
+    expect(screen.getByTestId("preview")).toBeInTheDocument();
+
+    const updatedWave = {
+      ...wave,
+      participation: { ...wave.participation, terms: "Updated terms" },
+    };
+    rerender(
+      <MemesArtSubmissionContainer onClose={onClose} wave={updatedWave} />
+    );
+    expect(screen.getByTestId("agreement")).toHaveTextContent("Updated terms");
+    expect(agreementProps.agreements).toBe(false);
+    expect(agreementProps.reviewRequired).toBe(true);
+    expect(mockMutation().submitArtwork).not.toHaveBeenCalled();
+    act(() => agreementProps.onContinue());
+    expect(screen.getByTestId("agreement")).toBeInTheDocument();
+
+    act(() => agreementProps.setAgreements(true));
+    act(() => agreementProps.onContinue());
+    expect(artworkProps.traits.title).toBe("Retained artwork");
+    expect(artworkProps.artworkUploaded).toBe(true);
+    act(() => artworkProps.onSubmit());
+    expect(screen.queryByTestId("preview")).not.toBeInTheDocument();
+    expect(additionalInfoProps.artworkCommentary).toBe("Retained commentary");
+    await userEvent.click(screen.getByTestId("additional-submit"));
+    expect(mockMutation().submitArtwork).toHaveBeenCalledWith(
+      expect.objectContaining({
+        imageFile: file,
+        waveId: "w1",
+        termsOfService: "Updated terms",
+        traits: expect.objectContaining({ title: "Retained artwork" }),
+      }),
+      "0x123",
+      false,
+      expect.any(Object)
+    );
   });
 
   it("auto closes on success", () => {
@@ -310,11 +469,71 @@ describe("MemesArtSubmissionContainer", () => {
     expect(submitArtwork).toHaveBeenCalledWith(
       expect.objectContaining({
         isAdditionalActionPromised: true,
+        waveId: "w1",
+        waveName: "The Memes",
+        termsOfService: "t",
       }),
       "0x123",
       false,
       expect.any(Object)
     );
+  });
+
+  it.each([
+    null,
+    { waveId: "another-wave", terms: "t" },
+    { waveId: "w1", terms: "Older terms" },
+  ])(
+    "does not submit without acceptance of the exact wave and terms: %j",
+    async (acceptedAgreement) => {
+      formState.currentStep = SubmissionStep.ADDITIONAL_INFO;
+      formState.acceptedAgreement = acceptedAgreement;
+      formState.existingMedia = {
+        url: "https://example.com/art.png",
+        mimeType: "image/png",
+      };
+      const submitArtwork = mockMutation().submitArtwork;
+      render(<MemesArtSubmissionContainer onClose={onClose} wave={wave} />);
+      await userEvent.click(screen.getByTestId("additional-submit"));
+      expect(submitArtwork).not.toHaveBeenCalled();
+      expect(mockAuth().setToast).toHaveBeenCalledWith({
+        message:
+          "Review and agree to the current submission terms before submitting. Your artwork draft has been kept.",
+        type: "error",
+      });
+    }
+  );
+
+  it("does not start submission when the connected profile is not eligible", async () => {
+    const user = userEvent.setup();
+    const submitArtwork = jest.fn(async () => "result");
+    formState.currentStep = SubmissionStep.ADDITIONAL_INFO;
+    formState.existingMedia = {
+      url: "https://example.com/art.png",
+      mimeType: "image/png",
+    };
+    mockMutation.mockReturnValue({
+      submitArtwork,
+      uploadProgress: 0,
+      submissionPhase: "idle",
+      submissionError: undefined,
+      isSubmitting: false,
+    } as any);
+    mockIdentity.mockReturnValue({
+      status: "ineligible",
+      profile: { id: "profile-b", handle: "bob" },
+      address: "0x456",
+      walletName: "MetaMask",
+      canSubmit: false,
+      connectWallet: jest.fn(),
+      verifyProfile: jest.fn(),
+      retryEligibility: jest.fn(),
+    } as any);
+
+    render(<MemesArtSubmissionContainer onClose={onClose} wave={wave} />);
+    await user.click(screen.getByTestId("additional-submit"));
+
+    expect(submitArtwork).not.toHaveBeenCalled();
   });
 
   it("shows resubmission acknowledgement before the prefilled form", () => {

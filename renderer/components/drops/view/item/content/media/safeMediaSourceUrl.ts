@@ -9,9 +9,12 @@ function getMediaSourceBaseUrl(): string {
   return globalThis.window.location?.origin || FALLBACK_MEDIA_SOURCE_BASE_URL;
 }
 
-export function getSafeMediaSourceUrl(src: string): string | null {
+export function getSafeMediaSourceUrl(
+  src: string,
+  baseUrl = getMediaSourceBaseUrl()
+): string | null {
   try {
-    const parsed = new URL(src, getMediaSourceBaseUrl());
+    const parsed = new URL(src, baseUrl);
     if (!SAFE_MEDIA_SOURCE_PROTOCOLS.has(parsed.protocol)) {
       return null;
     }

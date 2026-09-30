@@ -14,7 +14,6 @@ import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { useIdentity } from "@/hooks/useIdentity";
 import { useProfileBlockState } from "@/hooks/content-moderation/useProfileBlockState";
 import { useContentModeratorAccess } from "@/hooks/content-moderation/useContentModeratorAccess";
-import { setModeratedProfileStatus } from "@/services/api/content-moderation-api";
 
 let mockIsSuspended = false;
 let mockIsModerator = false;
@@ -121,16 +120,19 @@ jest.mock("@/components/user/utils/UserFollowBtn", () => ({
     onUnblock,
     showFollowButton = true,
     showMuteButton = true,
+    beforeFollowAction,
   }: {
     readonly onDirectMessage?: (() => void) | undefined;
     readonly blocked?: boolean | undefined;
     readonly onUnblock?: (() => void) | undefined;
     readonly showFollowButton?: boolean | undefined;
     readonly showMuteButton?: boolean | undefined;
+    readonly beforeFollowAction?: React.ReactNode | undefined;
   }) => (
     <div data-testid="profile-actions">
       {onDirectMessage ? <button type="button">Direct Message</button> : null}
       {showMuteButton ? <button type="button">Mute</button> : null}
+      {beforeFollowAction}
       {showFollowButton ? (
         <button
           type="button"
@@ -175,9 +177,6 @@ jest.mock(
 );
 jest.mock("@/hooks/content-moderation/useContentModeratorAccess", () => ({
   useContentModeratorAccess: jest.fn(),
-}));
-jest.mock("@/services/api/content-moderation-api", () => ({
-  setModeratedProfileStatus: jest.fn(),
 }));
 jest.mock("@/hooks/useIdentity", () => ({ useIdentity: jest.fn() }));
 jest.mock("next/navigation", () => ({
@@ -229,7 +228,6 @@ describe("UserPageHeader", () => {
         );
       },
     }));
-    (setModeratedProfileStatus as jest.Mock).mockResolvedValue(undefined);
     auth.requestAuth.mockResolvedValue({ success: true });
     (useIdentity as jest.Mock).mockReturnValue({ profile });
     (useProfileBlockState as jest.Mock).mockReturnValue({
@@ -247,7 +245,7 @@ describe("UserPageHeader", () => {
     });
   });
 
-  it("lets only moderators suspend and reinstate a profile without changing personal block state", async () => {
+  it("opens developer profile review without changing personal block state", async () => {
     mockIsModerator = true;
     (useIdentity as jest.Mock).mockReturnValue({
       profile: { ...profile, id: "profile-bob" },
@@ -287,16 +285,10 @@ describe("UserPageHeader", () => {
       screen.queryByRole("button", { name: "Block profile" })
     ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Suspend Profile" }));
-    const dialog = screen.getByRole("dialog", { name: "Suspend Profile" });
-    fireEvent.click(
-      within(dialog).getByRole("button", { name: "Suspend Profile" })
-    );
-
     await waitFor(() =>
-      expect(setModeratedProfileStatus).toHaveBeenCalledWith("profile-bob", {
-        status: "SUSPENDED",
-        reason: null,
-      })
+      expect(useRouterMock().push).toHaveBeenCalledWith(
+        "/content-moderation/checks?profile=profile-bob"
+      )
     );
     expect(block).not.toHaveBeenCalled();
     expect(unblock).not.toHaveBeenCalled();
@@ -562,7 +554,10 @@ describe("UserPageHeader", () => {
       );
     });
     preferencesButtons.forEach((preferencesButton) => {
-      expect(preferencesButton).toHaveAttribute("href", "/preferences");
+      expect(preferencesButton).toHaveAttribute(
+        "href",
+        "/preferences?from=profile"
+      );
     });
   });
 
@@ -586,7 +581,10 @@ describe("UserPageHeader", () => {
     screen
       .getAllByRole("link", { name: "Preferences" })
       .forEach((preferencesLink) => {
-        expect(preferencesLink).toHaveAttribute("href", "/preferences");
+        expect(preferencesLink).toHaveAttribute(
+          "href",
+          "/preferences?from=profile"
+        );
       });
   });
 

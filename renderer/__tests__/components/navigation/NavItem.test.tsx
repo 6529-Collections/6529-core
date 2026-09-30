@@ -20,6 +20,33 @@ const TestIcon = ({
   readonly className?: string | undefined;
 }) => <span aria-hidden="true" className={className} />;
 
+const dispatchPrimaryPointerEvent = ({
+  clientX,
+  clientY,
+  element,
+  pointerId,
+  type,
+}: {
+  readonly clientX: number;
+  readonly clientY: number;
+  readonly element: Element;
+  readonly pointerId: number;
+  readonly type: "pointerdown" | "pointerup";
+}) => {
+  const event = new MouseEvent(type, {
+    bubbles: true,
+    button: 0,
+    cancelable: true,
+    clientX,
+    clientY,
+  });
+  Object.defineProperties(event, {
+    isPrimary: { value: true },
+    pointerId: { value: pointerId },
+  });
+  fireEvent(element, event);
+};
+
 jest.mock("next/link", () => {
   const MockLink = ({
     children,
@@ -92,7 +119,7 @@ describe("NavItem notifications", () => {
   const getNavHref = jest.fn();
   const recordNavClick = jest.fn();
   const seizeConnect = jest.fn();
-  const removeAllDeliveredNotifications = jest.fn();
+  const reconcileProfileDeliveredNotifications = jest.fn();
   const setTitle = jest.fn();
 
   beforeEach(() => {
@@ -115,13 +142,14 @@ describe("NavItem notifications", () => {
     (isNavItemActive as jest.Mock).mockReturnValue(false);
     (useUnreadIndicator as jest.Mock).mockReturnValue({ hasUnread: false });
     (useNotificationsContext as jest.Mock).mockReturnValue({
-      removeAllDeliveredNotifications,
+      reconcileProfileDeliveredNotifications,
     });
     (useAuth as jest.Mock).mockReturnValue({
       connectedProfile: { handle: "user", normalised_handle: "user" },
     });
     (useSeizeConnectContext as jest.Mock).mockReturnValue({
       address: "0xabc",
+      hasValidWalletAuth: true,
       seizeConnect,
     });
     (useUnreadNotifications as jest.Mock).mockReturnValue({
@@ -155,7 +183,7 @@ describe("NavItem notifications", () => {
 
     // Title is set via TitleContext hooks
     expect(container.querySelector(".tw-bg-red")).not.toBeNull();
-    expect(removeAllDeliveredNotifications).not.toHaveBeenCalled();
+    expect(reconcileProfileDeliveredNotifications).toHaveBeenCalled();
   });
 
   it("clears delivered notifications when none unread", () => {
@@ -173,8 +201,28 @@ describe("NavItem notifications", () => {
     const { container } = render(<NavItem item={item} />);
 
     // Title is set via TitleContext hooks
-    expect(removeAllDeliveredNotifications).toHaveBeenCalled();
+    expect(reconcileProfileDeliveredNotifications).toHaveBeenCalled();
     expect(container.querySelector(".tw-bg-red")).toBeNull();
+  });
+
+  it("does not treat unavailable unread state as zero", () => {
+    (useUnreadNotifications as jest.Mock).mockReturnValue({
+      notifications: undefined,
+      haveUnreadNotifications: false,
+    });
+    render(
+      <NavItem
+        item={
+          {
+            kind: "route",
+            name: "Notifications",
+            href: "/notifications",
+            icon: "/n",
+          } as any
+        }
+      />
+    );
+    expect(reconcileProfileDeliveredNotifications).not.toHaveBeenCalled();
   });
 
   it("prompts connect when profile item is clicked without a connected wallet", () => {
@@ -261,6 +309,170 @@ describe("NavItem notifications", () => {
     const link = getByRole("link", { name: "Waves" });
     expect(link).toHaveAttribute("href", "/waves");
     expect(link).toHaveAttribute("data-prefetch", "true");
+  });
+
+  it("records one activation when the floating target moves during a stationary tap", () => {
+    const item = {
+      kind: "route",
+      name: "Notifications",
+      href: "/notifications",
+      icon: "notifications",
+      iconComponent: TestIcon,
+    } as any;
+    const { getByRole } = render(<NavItem item={item} />);
+    const link = getByRole("link", { name: "Notifications" });
+    let bounds = {
+      bottom: 164,
+      height: 64,
+      left: 100,
+      right: 148,
+      top: 100,
+      width: 48,
+      x: 100,
+      y: 100,
+      toJSON: () => ({}),
+    } as DOMRect;
+    jest.spyOn(link, "getBoundingClientRect").mockImplementation(() => bounds);
+    Object.defineProperty(link, "setPointerCapture", {
+      configurable: true,
+      value: jest.fn(),
+    });
+
+    dispatchPrimaryPointerEvent({
+      clientX: 110,
+      clientY: 120,
+      element: link,
+      pointerId: 7,
+      type: "pointerdown",
+    });
+    expect(link).toHaveAttribute("data-pressed", "true");
+
+    // The compact dock moves left and down while the finger remains inside
+    // both the old and new notification bounds.
+    bounds = {
+      ...bounds,
+      bottom: 174,
+      left: 90,
+      right: 138,
+      top: 110,
+      x: 90,
+      y: 110,
+    };
+    dispatchPrimaryPointerEvent({
+      clientX: 110,
+      clientY: 120,
+      element: link,
+      pointerId: 7,
+      type: "pointerup",
+    });
+
+    expect(recordNavClick).toHaveBeenCalledTimes(1);
+    expect(link).not.toHaveAttribute("data-pressed");
+
+    // A native click synthesized after pointerup is ignored for this gesture.
+    fireEvent.click(link, { clientX: 110, clientY: 120, detail: 1 });
+    expect(recordNavClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("uses the native click path when the floating target does not move", () => {
+    const item = {
+      kind: "route",
+      name: "Notifications",
+      href: "/notifications",
+      icon: "notifications",
+      iconComponent: TestIcon,
+    } as any;
+    const { getByRole } = render(<NavItem item={item} />);
+    const link = getByRole("link", { name: "Notifications" });
+    const bounds = {
+      bottom: 164,
+      height: 64,
+      left: 100,
+      right: 148,
+      top: 100,
+      width: 48,
+      x: 100,
+      y: 100,
+      toJSON: () => ({}),
+    } as DOMRect;
+    jest.spyOn(link, "getBoundingClientRect").mockReturnValue(bounds);
+    const programmaticClick = jest.spyOn(link, "click");
+    Object.defineProperty(link, "setPointerCapture", {
+      configurable: true,
+      value: jest.fn(),
+    });
+
+    dispatchPrimaryPointerEvent({
+      clientX: 110,
+      clientY: 120,
+      element: link,
+      pointerId: 8,
+      type: "pointerdown",
+    });
+    dispatchPrimaryPointerEvent({
+      clientX: 110,
+      clientY: 120,
+      element: link,
+      pointerId: 8,
+      type: "pointerup",
+    });
+
+    expect(programmaticClick).not.toHaveBeenCalled();
+    expect(recordNavClick).not.toHaveBeenCalled();
+
+    fireEvent.click(link, { clientX: 110, clientY: 120, detail: 1 });
+    expect(recordNavClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a drag without blocking the next keyboard activation", () => {
+    const item = {
+      kind: "route",
+      name: "Notifications",
+      href: "/notifications",
+      icon: "notifications",
+      iconComponent: TestIcon,
+    } as any;
+    const { getByRole } = render(<NavItem item={item} />);
+    const link = getByRole("link", { name: "Notifications" });
+    const bounds = {
+      bottom: 164,
+      height: 64,
+      left: 100,
+      right: 148,
+      top: 100,
+      width: 48,
+      x: 100,
+      y: 100,
+      toJSON: () => ({}),
+    } as DOMRect;
+    jest.spyOn(link, "getBoundingClientRect").mockReturnValue(bounds);
+    Object.defineProperty(link, "setPointerCapture", {
+      configurable: true,
+      value: jest.fn(),
+    });
+
+    dispatchPrimaryPointerEvent({
+      clientX: 110,
+      clientY: 120,
+      element: link,
+      pointerId: 9,
+      type: "pointerdown",
+    });
+    dispatchPrimaryPointerEvent({
+      clientX: 130,
+      clientY: 120,
+      element: link,
+      pointerId: 9,
+      type: "pointerup",
+    });
+    fireEvent.click(link, { clientX: 130, clientY: 120, detail: 1 });
+
+    expect(recordNavClick).not.toHaveBeenCalled();
+    expect(link).not.toHaveAttribute("data-pressed");
+
+    fireEvent.keyDown(link, { key: "Enter" });
+    fireEvent.click(link, { detail: 0 });
+    expect(recordNavClick).toHaveBeenCalledTimes(1);
   });
 
   it("keeps pending navigations from drawing a second active highlight", () => {

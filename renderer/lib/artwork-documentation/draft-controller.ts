@@ -1,0 +1,544 @@
+import isEqual from "lodash/isEqual";
+import type { ApiArtworkDocumentationContext } from "@/generated/models/ApiArtworkDocumentationContext";
+import type { ApiArtworkDocumentationOperation } from "@/generated/models/ApiArtworkDocumentationOperation";
+import { documentationErrorStatus } from "@/services/api/artwork-documentation-api";
+import { getStructuredApiErrorCode } from "@/services/api/common-api";
+import { validDocumentationOperation } from "./validation";
+
+export type SaveState =
+  | "clean"
+  | "dirty"
+  | "saving"
+  | "retrying"
+  | "invalid"
+  | "conflict"
+  | "auth_expired"
+  | "offline";
+export interface PendingEdit {
+  readonly moduleId: string;
+  readonly operation: ApiArtworkDocumentationOperation;
+  readonly sequence: number;
+}
+interface Batch {
+  readonly context: ApiArtworkDocumentationContext;
+  readonly moduleId: string;
+  readonly edits: PendingEdit[];
+  readonly key: string;
+}
+interface QueuedContent {
+  readonly id: string;
+  readonly sequence: number;
+  readonly value: unknown;
+  readonly action: (
+    context: ApiArtworkDocumentationContext,
+    key: string,
+    signal: AbortSignal
+  ) => Promise<ApiArtworkDocumentationContext>;
+}
+export interface RejectedEdit {
+  readonly moduleId: string;
+  readonly field: string;
+  readonly sequence: number;
+  readonly errorCode?: string | undefined;
+}
+export interface DraftSnapshot {
+  readonly recoveryUnavailable?: boolean | undefined;
+  readonly rejectedEdits?: readonly RejectedEdit[] | undefined;
+  readonly errorCode?: string | undefined;
+  readonly context: ApiArtworkDocumentationContext;
+  readonly state: SaveState;
+  readonly edits: readonly PendingEdit[];
+  readonly latest: ApiArtworkDocumentationContext | null;
+  readonly dirty: boolean;
+  readonly contentEdits: ReadonlyArray<{ id: string; value: unknown }>;
+}
+interface Transport {
+  save(
+    context: ApiArtworkDocumentationContext,
+    moduleId: string,
+    operations: ApiArtworkDocumentationOperation[],
+    key: string,
+    signal: AbortSignal
+  ): Promise<ApiArtworkDocumentationContext>;
+  read(
+    id: string,
+    signal: AbortSignal
+  ): Promise<ApiArtworkDocumentationContext>;
+}
+
+/** One queue owns every content version, including edits made while a save is in flight. */
+export class DocumentationDraftController {
+  private context: ApiArtworkDocumentationContext;
+  private latest: ApiArtworkDocumentationContext | null = null;
+  private state: SaveState = "clean";
+  private errorCode: string | undefined;
+  private readonly edits = new Map<string, PendingEdit>();
+  private readonly queuedContent = new Map<string, QueuedContent>();
+  private readonly rejectedEdits = new Map<string, RejectedEdit>();
+  private readonly rejectedContent = new Map<string, number>();
+  private readonly isolatedModules = new Set<string>();
+  private pendingContent: {
+    edit: QueuedContent;
+    context: ApiArtworkDocumentationContext;
+    key: string;
+  } | null = null;
+  private sequence = 0;
+  private pendingBatch: Batch | null = null;
+  private running: Promise<boolean> | null = null;
+  private abort = new AbortController();
+  private debounce: ReturnType<typeof setTimeout> | undefined;
+  private maximum: ReturnType<typeof setTimeout> | undefined;
+  private mutationRunning = false;
+  private generation = 0;
+
+  constructor(
+    context: ApiArtworkDocumentationContext,
+    private readonly transport: Transport,
+    private readonly changed: (snapshot: DraftSnapshot) => void
+  ) {
+    this.context = context;
+  }
+  snapshot(): DraftSnapshot {
+    return {
+      context: this.context,
+      rejectedEdits: [...this.rejectedEdits.values()],
+      errorCode: this.errorCode,
+      state: this.state,
+      edits: [...this.edits.values()],
+      latest: this.latest,
+      dirty: this.edits.size > 0 || this.queuedContent.size > 0,
+      contentEdits: [...this.queuedContent.values()].map(({ id, value }) => ({
+        id,
+        value,
+      })),
+    };
+  }
+  /** Reconcile parent readback without replacing pending in-memory work. */
+  receiveContext(next: ApiArtworkDocumentationContext): void {
+    const current = this.latest ?? this.context;
+    if (
+      this.abort.signal.aborted ||
+      next.id !== current.id ||
+      next.work_id !== current.work_id ||
+      next.draft_version < current.draft_version ||
+      next.artist_record_version < current.artist_record_version ||
+      (next.draft_version === current.draft_version &&
+        next.artist_record_version === current.artist_record_version &&
+        next.updated_at < current.updated_at) ||
+      isEqual(next, current)
+    )
+      return;
+    const requireReview =
+      this.hasQueuedEdits() || this.running !== null || this.mutationRunning;
+    // A request may already have reached the server. Preserve its local queue,
+    // reject its late response, and require canonical readback before replay.
+    this.generation++;
+    this.clearTimers();
+    this.abort.abort();
+    this.abort = new AbortController();
+    this.running = null;
+    this.mutationRunning = false;
+    this.context = next;
+    this.latest = requireReview ? next : null;
+    this.state = requireReview ? "conflict" : "clean";
+    if (!requireReview) this.errorCode = undefined;
+    this.emit();
+  }
+  /** Restore tab-local answers without treating them as acknowledged server data. */
+  restore(
+    edits: readonly Pick<PendingEdit, "moduleId" | "operation">[],
+    requireReview: boolean
+  ): void {
+    if (
+      this.abort.signal.aborted ||
+      this.running ||
+      this.mutationRunning ||
+      this.hasQueuedEdits()
+    )
+      return;
+    for (const edit of edits) {
+      this.edits.set(`${edit.moduleId}.${edit.operation.field}`, {
+        ...edit,
+        sequence: ++this.sequence,
+      });
+    }
+    if (!this.edits.size) return;
+    this.state = requireReview ? "conflict" : "dirty";
+    this.latest = requireReview ? this.context : null;
+    this.emit();
+  }
+  activate() {
+    if (this.abort.signal.aborted) this.abort = new AbortController();
+  }
+  private emit() {
+    if (!this.abort.signal.aborted) this.changed(this.snapshot());
+  }
+  private clearTimers() {
+    clearTimeout(this.debounce);
+    clearTimeout(this.maximum);
+    this.debounce = undefined;
+    this.maximum = undefined;
+  }
+  edit(moduleId: string, operation: ApiArtworkDocumentationOperation) {
+    if (this.abort.signal.aborted) return;
+    this.rejectedEdits.delete(`${moduleId}.${operation.field}`);
+    this.edits.set(`${moduleId}.${operation.field}`, {
+      moduleId,
+      operation,
+      sequence: ++this.sequence,
+    });
+    this.scheduleSave();
+  }
+  queueContent(id: string, value: unknown, action: QueuedContent["action"]) {
+    if (this.abort.signal.aborted) return;
+    this.rejectedContent.delete(id);
+    this.queuedContent.set(id, {
+      id,
+      value,
+      action,
+      sequence: ++this.sequence,
+    });
+    this.scheduleSave();
+  }
+  private scheduleSave() {
+    this.errorCode = undefined;
+    if (!["conflict", "auth_expired"].includes(this.state))
+      this.state = this.running ? "saving" : "dirty";
+    this.emit();
+    clearTimeout(this.debounce);
+    this.debounce = setTimeout(() => {
+      void this.flush();
+    }, 800);
+    this.maximum ??= setTimeout(() => {
+      void this.flush();
+    }, 5000);
+  }
+  flush(): Promise<boolean> {
+    this.clearTimers();
+    if (
+      this.abort.signal.aborted ||
+      ["conflict", "auth_expired"].includes(this.state)
+    )
+      return Promise.resolve(false);
+    if (this.running) return this.running;
+    if (this.mutationRunning) return Promise.resolve(false);
+    const generation = this.generation;
+    this.running = this.runSaves(generation, this.abort.signal).finally(() => {
+      if (generation === this.generation) this.running = null;
+    });
+    return this.running;
+  }
+  private async runSaves(
+    generation: number,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    while (this.isCurrentSave(generation, signal)) {
+      const batch = this.nextBatch();
+      if (batch) {
+        if (!(await this.saveBatch(batch, generation, signal))) return false;
+      } else if (this.pendingContent || this.nextContent()) {
+        if (!(await this.saveQueuedContent(generation, signal))) return false;
+      } else return this.finishSaves();
+    }
+    return false;
+  }
+  private finishSaves(): boolean {
+    this.state = this.hasQueuedEdits() ? "invalid" : "clean";
+    if (this.state === "clean") this.errorCode = undefined;
+    this.emit();
+    return this.state === "clean";
+  }
+  private async saveBatch(
+    batch: Batch,
+    generation: number,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    this.state = "saving";
+    this.emit();
+    try {
+      const result = await this.transport.save(
+        batch.context,
+        batch.moduleId,
+        batch.edits.map((edit) => edit.operation),
+        batch.key,
+        signal
+      );
+      if (!this.isCurrentSave(generation, signal)) return false;
+      this.acknowledgeBatch(batch, result);
+      return true;
+    } catch (error) {
+      if (!this.isCurrentSave(generation, signal)) return false;
+      const status = documentationErrorStatus(error);
+      if (status !== 422 && status !== 413)
+        return this.failSave(error, generation);
+      // A rejected atomic batch saved nothing. Isolate its answers to identify
+      // the rejected field and let independent answers reach the server.
+      this.pendingBatch = null;
+      this.errorCode = getStructuredApiErrorCode(error);
+      if (batch.edits.length > 1) this.isolatedModules.add(batch.moduleId);
+      else {
+        const edit = batch.edits[0]!;
+        const key = `${edit.moduleId}.${edit.operation.field}`;
+        if (this.edits.get(key)?.sequence === edit.sequence)
+          this.rejectedEdits.set(key, {
+            moduleId: edit.moduleId,
+            field: edit.operation.field,
+            sequence: edit.sequence,
+            errorCode: this.errorCode,
+          });
+      }
+      return true;
+    }
+  }
+  private hasQueuedEdits(): boolean {
+    return (
+      this.edits.size > 0 ||
+      this.pendingBatch !== null ||
+      this.queuedContent.size > 0 ||
+      this.pendingContent !== null
+    );
+  }
+  private nextBatch(): Batch | null {
+    if (this.pendingBatch) return this.pendingBatch;
+    const eligible = [...this.edits.values()].filter(
+      (edit) =>
+        this.rejectedEdits.get(`${edit.moduleId}.${edit.operation.field}`)
+          ?.sequence !== edit.sequence &&
+        validDocumentationOperation(this.context, edit.moduleId, edit.operation)
+    );
+    const first = eligible[0];
+    if (!first) return null;
+    this.pendingBatch = {
+      context: this.context,
+      moduleId: first.moduleId,
+      edits: this.isolatedModules.has(first.moduleId)
+        ? [first]
+        : eligible.filter((edit) => edit.moduleId === first.moduleId),
+      key: crypto.randomUUID(),
+    };
+    return this.pendingBatch;
+  }
+  private nextContent(): QueuedContent | undefined {
+    return [...this.queuedContent.values()].find(
+      (edit) => this.rejectedContent.get(edit.id) !== edit.sequence
+    );
+  }
+  private isCurrentSave(generation: number, signal: AbortSignal): boolean {
+    return !signal.aborted && generation === this.generation;
+  }
+  private acknowledgeBatch(
+    batch: Batch,
+    result: ApiArtworkDocumentationContext
+  ): void {
+    this.context = result;
+    for (const edit of batch.edits) {
+      const key = `${edit.moduleId}.${edit.operation.field}`;
+      if (this.edits.get(key)?.sequence === edit.sequence)
+        this.edits.delete(key);
+    }
+    this.pendingBatch = null;
+  }
+  private async failSave(error: unknown, generation: number): Promise<false> {
+    if (generation === this.generation) await this.handleFailure(error);
+    return false;
+  }
+  private async saveQueuedContent(
+    generation: number,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    const edit = this.nextContent();
+    if (!this.pendingContent && edit)
+      this.pendingContent = {
+        edit,
+        context: this.context,
+        key: crypto.randomUUID(),
+      };
+    const batch = this.pendingContent;
+    if (!batch) return true;
+    this.state = "saving";
+    this.emit();
+    try {
+      const result = await batch.edit.action(batch.context, batch.key, signal);
+      if (signal.aborted || generation !== this.generation) return false;
+      this.context = result;
+      if (
+        this.queuedContent.get(batch.edit.id)?.sequence === batch.edit.sequence
+      )
+        this.queuedContent.delete(batch.edit.id);
+      this.pendingContent = null;
+      return true;
+    } catch (error) {
+      if (!this.isCurrentSave(generation, signal)) return false;
+      const status = documentationErrorStatus(error);
+      if (status === 422 || status === 413) {
+        this.pendingContent = null;
+        this.errorCode = getStructuredApiErrorCode(error);
+        if (
+          this.queuedContent.get(batch.edit.id)?.sequence ===
+          batch.edit.sequence
+        )
+          this.rejectedContent.set(batch.edit.id, batch.edit.sequence);
+        return true;
+      }
+      await this.handleFailure(error);
+      return false;
+    }
+  }
+  private async handleFailure(error: unknown) {
+    if (this.abort.signal.aborted) return;
+    const generation = this.generation;
+    const signal = this.abort.signal;
+    const status = documentationErrorStatus(error);
+    this.errorCode = getStructuredApiErrorCode(error);
+    if (status === 409) {
+      this.state = "conflict";
+      try {
+        const latest = await this.transport.read(this.context.id, signal);
+        if (signal.aborted || generation !== this.generation) return;
+        this.latest = latest;
+      } catch {
+        if (generation !== this.generation) return;
+        this.latest = null;
+      }
+    } else if (status === 401 || status === 403 || status === 404) {
+      this.state = "auth_expired";
+    } else if (status === 422 || status === 413 || status === 428) {
+      this.state = "invalid";
+      this.pendingBatch = null;
+      this.pendingContent = null;
+    } else this.state = "offline";
+    this.emit();
+  }
+  retry(): Promise<boolean> {
+    if (this.abort.signal.aborted || this.state === "conflict")
+      return Promise.resolve(false);
+    if (this.running) return this.running;
+    if (this.mutationRunning) return Promise.resolve(false);
+    const needsReadback =
+      !this.hasQueuedEdits() &&
+      ["invalid", "offline", "auth_expired"].includes(this.state);
+    this.rejectedEdits.clear();
+    this.rejectedContent.clear();
+    this.state = "retrying";
+    this.emit();
+    if (!needsReadback) return this.flush();
+    this.clearTimers();
+    const generation = this.generation;
+    this.running = this.readAfterFailedMutation(
+      generation,
+      this.abort.signal
+    ).finally(() => {
+      if (generation === this.generation) this.running = null;
+    });
+    return this.running;
+  }
+  private async readAfterFailedMutation(
+    generation: number,
+    signal: AbortSignal
+  ): Promise<boolean> {
+    try {
+      // A lost mutation response can mean success. Never replay it or mark an
+      // empty queue saved until the canonical context has been read back.
+      const result = await this.transport.read(this.context.id, signal);
+      if (!this.isCurrentSave(generation, signal)) return false;
+      this.context = result;
+      this.errorCode = undefined;
+      return this.runSaves(generation, signal);
+    } catch (error) {
+      return this.failSave(error, generation);
+    }
+  }
+  async resolveConflict(keepChanges: boolean) {
+    const generation = this.generation;
+    const signal = this.abort.signal;
+    let latest: ApiArtworkDocumentationContext;
+    try {
+      latest = await this.transport.read(this.context.id, signal);
+    } catch (error) {
+      if (generation === this.generation) await this.handleFailure(error);
+      return false;
+    }
+    if (signal.aborted || generation !== this.generation) return false;
+    this.context = latest;
+    this.latest = null;
+    this.rejectedEdits.clear();
+    this.rejectedContent.clear();
+    this.isolatedModules.clear();
+    this.pendingBatch = null;
+    this.pendingContent = null;
+    if (!keepChanges) this.edits.clear();
+    if (!keepChanges) this.queuedContent.clear();
+    this.state = this.snapshot().dirty ? "dirty" : "clean";
+    this.emit();
+    return this.flush();
+  }
+  async mutate(
+    action: (
+      context: ApiArtworkDocumentationContext,
+      signal: AbortSignal
+    ) => Promise<ApiArtworkDocumentationContext>
+  ): Promise<boolean> {
+    return this.runMutation(action, false);
+  }
+  /** Asset linking is independent of incomplete writing, but shares its version queue. */
+  async mutateContent(
+    action: (
+      context: ApiArtworkDocumentationContext,
+      signal: AbortSignal
+    ) => Promise<ApiArtworkDocumentationContext>
+  ): Promise<boolean> {
+    return this.runMutation(action, true);
+  }
+  private async runMutation(
+    action: (
+      context: ApiArtworkDocumentationContext,
+      signal: AbortSignal
+    ) => Promise<ApiArtworkDocumentationContext>,
+    allowIncomplete: boolean
+  ): Promise<boolean> {
+    const flushed = await this.flush();
+    if (
+      this.abort.signal.aborted ||
+      this.mutationRunning ||
+      (!flushed && !(allowIncomplete && this.state === "invalid"))
+    )
+      return false;
+    this.mutationRunning = true;
+    const generation = this.generation;
+    const signal = this.abort.signal;
+    this.state = "saving";
+    this.emit();
+    try {
+      const result = await action(this.context, signal);
+      if (signal.aborted || generation !== this.generation) return false;
+      this.context = result;
+      this.state = this.snapshot().dirty ? "dirty" : "clean";
+      this.emit();
+      return true;
+    } catch (error) {
+      if (generation === this.generation) await this.handleFailure(error);
+      return false;
+    } finally {
+      if (generation === this.generation) {
+        this.mutationRunning = false;
+        if (this.snapshot().dirty && this.state === "dirty") void this.flush();
+      }
+    }
+  }
+  dispose() {
+    this.generation++;
+    this.clearTimers();
+    this.abort.abort();
+    this.edits.clear();
+    this.queuedContent.clear();
+    this.rejectedEdits.clear();
+    this.rejectedContent.clear();
+    this.isolatedModules.clear();
+    this.pendingContent = null;
+    this.pendingBatch = null;
+    this.latest = null;
+    this.running = null;
+    this.mutationRunning = false;
+    this.state = "clean";
+  }
+}

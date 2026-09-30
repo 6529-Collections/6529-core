@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import useDeviceInfo from "../../../../hooks/useDeviceInfo";
+import { useHasHydrated } from "@/hooks/useHasHydrated";
 
 type IconComp = React.ComponentType<{ className?: string | undefined }>;
 
@@ -54,10 +55,11 @@ function WebSidebarNavItem({
   "data-section": dataSection,
 }: SidebarPrimaryItemProps) {
   const { hasTouchScreen } = useDeviceInfo();
+  const hasHydrated = useHasHydrated();
 
   const content = (
     <div
-      className={`tw-flex tw-h-full tw-w-full tw-items-center ${
+      className={`tw-flex tw-h-full tw-w-full tw-items-center motion-safe:tw-animate-sidebar-control-in ${
         collapsed ? "" : "tw-gap-x-2"
       }`}
     >
@@ -66,7 +68,7 @@ function WebSidebarNavItem({
           <div className="tw-relative">
             <Icon
               aria-hidden="true"
-              className={`tw-h-6 tw-w-6 tw-flex-shrink-0 ${
+              className={`tw-block tw-h-6 tw-w-6 tw-flex-shrink-0 ${
                 iconSizeClass ?? ""
               }`}
             />
@@ -127,6 +129,7 @@ function WebSidebarNavItem({
   return (
     <button
       type="button"
+      disabled={!hasHydrated}
       onClick={(e) => onClick?.(e)}
       onPointerEnter={onPointerEnter}
       onPointerLeave={onPointerLeave}

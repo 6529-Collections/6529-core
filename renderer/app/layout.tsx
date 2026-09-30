@@ -17,9 +17,14 @@ import AwsRumProvider from "@/components/monitoring/AwsRumProvider";
 import MobileLaunchTimingReporter from "@/components/monitoring/MobileLaunchTimingReporter";
 import AppRouteProviders from "@/components/providers/AppRouteProviders";
 import LayoutWrapper from "@/components/providers/LayoutWrapper";
+import {
+  SIDEBAR_STARTUP_SCRIPT,
+  SIDEBAR_STARTUP_STYLES,
+} from "@/components/layout/sidebarStartup";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
 import type { Viewport } from "next";
+import { Suspense } from "react";
 
 export const fetchCache = "force-no-store";
 
@@ -40,8 +45,15 @@ export default function RootLayout({
   const isUsingStaticAssets = publicEnv.ASSETS_FROM_S3 === "true";
 
   return (
-    <html lang="en" data-scroll-behavior="smooth">
+    // Headless UI may add its focus-visible marker before React hydrates when
+    // keyboard input arrives during startup. Keep that root-only mutation.
+    <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STARTUP_STYLES }} />
+        <script
+          id="sidebar-startup-bootstrap"
+          dangerouslySetInnerHTML={{ __html: SIDEBAR_STARTUP_SCRIPT }}
+        />
         <link rel="preconnect" href={publicEnv.API_ENDPOINT} crossOrigin="" />
         <link rel="preconnect" href="https://d3lqz0a4bldqgf.cloudfront.net" />
         <link rel="preconnect" href="https://media.artblocks.io" />
@@ -54,10 +66,15 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <MobileLaunchTimingReporter />
         <AwsRumProvider>
-          <AppRouteProviders>
-            <DynamicHeadTitle />
-            <LayoutWrapper>{children}</LayoutWrapper>
-          </AppRouteProviders>
+          {/* Core's client shell reads the live URL in analytics, title, wave,
+              and navigation providers. Keep those reads below a boundary when
+              Next prerenders static routes, unlike the request-time web shell. */}
+          <Suspense fallback={null}>
+            <AppRouteProviders>
+              <DynamicHeadTitle />
+              <LayoutWrapper>{children}</LayoutWrapper>
+            </AppRouteProviders>
+          </Suspense>
         </AwsRumProvider>
       </body>
     </html>

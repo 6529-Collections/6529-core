@@ -1,6 +1,7 @@
 import CmsSiteRenderer from "@/components/profile-cms/CmsSiteRenderer";
 import { ProfileCmsEmptyState } from "@/components/profile-cms/CmsSiteStates";
 import { getAppMetadata } from "@/components/providers/metadata";
+import { publicEnv } from "@/config/env";
 import { getAppCommonHeaders } from "@/helpers/server.app.helpers";
 import { getUserProfile } from "@/helpers/server.helpers";
 import {
@@ -10,14 +11,15 @@ import {
 } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { getProfileCmsPrimarySite } from "@/lib/profile-cms/runtime/fetcher";
+import { getCmsPageSocialImage } from "@/lib/profile-cms/runtime/social-image";
 import {
   buildProfileCmsPath,
+  getCmsPublicPagePath,
+  getCmsPublicPath,
+  isProfileCmsIndexSegments,
   resolveCmsRoute,
 } from "@/lib/profile-cms/runtime/routes";
-import {
-  isSafeCmsRelativeUri,
-  resolveCmsUri,
-} from "@/lib/profile-cms/runtime/uri";
+import { isSafeCmsRelativeUri } from "@/lib/profile-cms/runtime/uri";
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
@@ -47,6 +49,7 @@ export default async function ProfileCmsPage({
   }
 
   if (!context.site) {
+    if (context.isReadableRequest) return notFound();
     return <ProfileCmsEmptyState locale={locale} />;
   }
 
@@ -62,7 +65,9 @@ export default async function ProfileCmsPage({
         target: routeResolution.target,
       })
     ) {
-      redirect(routeResolution.target);
+      redirect(
+        getCmsPublicPath(context.site.cmsPackage, routeResolution.target)
+      );
     }
     return (
       <ProfileCmsEmptyState
@@ -73,6 +78,7 @@ export default async function ProfileCmsPage({
   }
 
   if (routeResolution.kind === "not_found") {
+    if (context.isReadableRequest) return notFound();
     return <ProfileCmsEmptyState locale={locale} />;
   }
 
@@ -96,10 +102,13 @@ export async function generateMetadata({
   }
 
   if (!context?.site) {
-    return getAppMetadata({
-      title: t(DEFAULT_LOCALE, "profileCms.state.empty.title"),
-      description: t(DEFAULT_LOCALE, "profileCms.state.empty.description"),
-    });
+    return getAppMetadata(
+      {
+        title: t(DEFAULT_LOCALE, "profileCms.state.empty.title"),
+        description: t(DEFAULT_LOCALE, "profileCms.state.empty.description"),
+      },
+      { robots: { index: false, follow: true } }
+    );
   }
 
   const routeResolution = resolveCmsRoute(
@@ -108,26 +117,43 @@ export async function generateMetadata({
   );
 
   if (routeResolution.kind !== "page") {
-    return getAppMetadata({
-      title: context.site.cmsPackage.site.title,
-      description: context.site.cmsPackage.site.description,
-    });
+    return getAppMetadata(
+      {
+        title: context.site.cmsPackage.site.title,
+        description: context.site.cmsPackage.site.description,
+      },
+      { robots: { index: false, follow: true } }
+    );
   }
 
   const page = routeResolution.page;
-  const socialImage = context.site.cmsPackage.payload.assets.find(
-    (asset) => asset.id === page.metadata.social_image_asset_id
+  const social = getCmsPageSocialImage(
+    context.site.cmsPackage,
+    page,
+    publicEnv.BASE_ENDPOINT
   );
-  const socialImageUrl = resolveCmsUri(socialImage?.uri);
+  const socialImage = social?.asset;
+  const socialImageUrl = social?.url;
 
-  return getAppMetadata({
-    title: page.metadata.title,
-    description: page.metadata.description,
-    ...(socialImageUrl ? { ogImage: socialImageUrl } : {}),
-    ...(socialImage?.width ? { ogImageWidth: socialImage.width } : {}),
-    ...(socialImage?.height ? { ogImageHeight: socialImage.height } : {}),
-    ...(socialImage?.alt_text ? { ogImageAlt: socialImage.alt_text } : {}),
-  });
+  const publicPath = getCmsPublicPagePath(context.site.cmsPackage, page.id);
+  return getAppMetadata(
+    {
+      title: page.metadata.title,
+      description: page.metadata.description,
+      ...(socialImageUrl ? { ogImage: socialImageUrl } : {}),
+      ...(typeof socialImage?.width === "number"
+        ? { ogImageWidth: socialImage.width }
+        : {}),
+      ...(typeof socialImage?.height === "number"
+        ? { ogImageHeight: socialImage.height }
+        : {}),
+      ...(socialImage?.alt_text ? { ogImageAlt: socialImage.alt_text } : {}),
+    },
+    {
+      canonicalPath: publicPath ?? undefined,
+      robots: { index: page.metadata.robots !== "noindex", follow: true },
+    }
+  );
 }
 
 async function getProfileCmsRouteContext(
@@ -141,6 +167,7 @@ async function getProfileCmsRouteContext(
   }
 
   const normalizedUser = user.toLowerCase();
+  const isReadableRequest = !isProfileCmsIndexSegments(cmsPathSegments);
   const requestCmsPath = buildProfileCmsPath({
     handle: normalizedUser,
     segments: cmsPathSegments,
@@ -168,6 +195,7 @@ async function getProfileCmsRouteContext(
   if (canonicalHandle !== normalizedUser) {
     return {
       cmsPath: requestCmsPath,
+      isReadableRequest,
       redirectTo: `/${encodeURIComponent(canonicalHandle)}/${cmsPathSegments
         .map(encodeCmsPathSegment)
         .join("/")}`,
@@ -182,6 +210,7 @@ async function getProfileCmsRouteContext(
   if (!site) {
     return {
       cmsPath: requestCmsPath,
+      isReadableRequest,
       redirectTo: null,
       site: null,
     };
@@ -201,6 +230,7 @@ async function getProfileCmsRouteContext(
 
   return {
     cmsPath: canonicalCmsPath,
+    isReadableRequest,
     redirectTo: null,
     site,
   };
@@ -213,8 +243,7 @@ function isNotFoundError(error: unknown): boolean {
     return true;
   }
 
-  const message = getErrorMessage(error);
-  return /not found|404/i.test(message);
+  return false;
 }
 
 function getErrorStatus(error: unknown): number | undefined {
@@ -227,18 +256,6 @@ function getErrorStatus(error: unknown): number | undefined {
     readonly status?: number | undefined;
   };
   return apiError.status ?? apiError.response?.status;
-}
-
-function getErrorMessage(error: unknown): string {
-  if (typeof error === "string") {
-    return error;
-  }
-
-  if (error instanceof Error) {
-    return error.message;
-  }
-
-  return "";
 }
 
 function encodeCmsPathSegment(segment: string): string {

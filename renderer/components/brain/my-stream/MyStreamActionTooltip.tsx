@@ -1,6 +1,7 @@
 "use client";
 
-import type { ComponentProps } from "react";
+import { type ComponentProps, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Tooltip } from "react-tooltip";
 
 interface MyStreamActionTooltipProps {
@@ -16,6 +17,8 @@ const tooltipStyle = {
   fontWeight: 500,
   borderRadius: "6px",
   boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
+  maxWidth: "min(20rem, calc(100vw - 2rem))",
+  whiteSpace: "normal",
   zIndex: 99999,
   pointerEvents: "none",
 } as const;
@@ -24,7 +27,17 @@ export default function MyStreamActionTooltip({
   id,
   place = "top",
 }: MyStreamActionTooltipProps) {
-  return (
+  const hydrated = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false
+  );
+
+  if (!hydrated) {
+    return null;
+  }
+
+  return createPortal(
     <Tooltip
       id={id}
       place={place}
@@ -32,6 +45,7 @@ export default function MyStreamActionTooltip({
       opacity={1}
       positionStrategy="fixed"
       style={tooltipStyle}
-    />
+    />,
+    document.body
   );
 }

@@ -4,15 +4,19 @@ import React, { useEffect, useRef } from "react";
 import { useInView } from "@/hooks/useInView";
 import { useOptimizedVideo } from "@/hooks/useOptimizedVideo";
 import { useHlsPlayer } from "@/hooks/useHlsPlayer";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import clsx from "clsx";
 import SeizeVideoPlayer from "./SeizeVideoPlayer";
+import VideoPlaybackErrorOverlay from "./VideoPlaybackErrorOverlay";
+import { useVideoPlaybackError } from "./useVideoPlaybackError";
 import { useMediaActions } from "./useMediaActions";
 
 interface Props {
   readonly src: string;
   readonly mimeType?: string | undefined;
   readonly showControls?: boolean | undefined;
+  readonly isInertPreview?: boolean | undefined;
   readonly fillContainer?: boolean | undefined;
 }
 
@@ -20,6 +24,7 @@ const MediaDisplayVideo: React.FC<Props> = ({
   src,
   mimeType,
   showControls = false,
+  isInertPreview = false,
   fillContainer = false,
 }) => {
   // Intersection observer for scroll-based triggers
@@ -29,7 +34,9 @@ const MediaDisplayVideo: React.FC<Props> = ({
     threshold: 0.1,
   });
   const wasFullscreenRef = useRef(false);
+  const locale = useBrowserLocale();
   const { isApp } = useDeviceInfo();
+  const shouldAutoPlay = inView && !isApp;
   const { downloadMedia, isDownloading, openLabel, openMedia } =
     useMediaActions({
       url: src,
@@ -48,13 +55,19 @@ const MediaDisplayVideo: React.FC<Props> = ({
   });
 
   // Use HLS hook to handle the video ref, loading states, etc.
-  const { videoRef, isLoading } = useHlsPlayer({
+  const { videoRef, isLoading, retry } = useHlsPlayer({
     enabled: inView,
     src: playableUrl,
     isHls,
     fallbackSrc: src, // if HLS fails, revert to original
-    autoPlay: inView && !isApp, // only autoplay if in view and not in app
+    autoPlay: shouldAutoPlay,
   });
+  const { handlePlaybackError, hasPlaybackError, retryPlayback } =
+    useVideoPlaybackError({
+      onRetry: retry,
+      resetKey: playableUrl,
+      videoRef,
+    });
   // Inline attributes for iOS / legacy WebKit
   useEffect(() => {
     const vid = videoRef.current;
@@ -117,7 +130,7 @@ const MediaDisplayVideo: React.FC<Props> = ({
     <div
       ref={wrapperRef}
       className={clsx(
-        "tw-flex tw-w-full tw-items-start",
+        "tw-relative tw-flex tw-w-full tw-items-start",
         fillContainer
           ? "tw-h-full tw-max-h-full tw-justify-center"
           : "tw-justify-start"
@@ -125,7 +138,8 @@ const MediaDisplayVideo: React.FC<Props> = ({
     >
       <SeizeVideoPlayer
         videoRef={videoRef}
-        template="ambient-media"
+        template={isInertPreview ? "card-preview" : "ambient-media"}
+        autoPlay={shouldAutoPlay}
         layout={fillContainer ? "fill" : "natural"}
         align={fillContainer ? "center" : "left"}
         showActions={showControls}
@@ -133,7 +147,12 @@ const MediaDisplayVideo: React.FC<Props> = ({
         onOpen={showControls ? openMedia : undefined}
         openLabel={showControls ? openLabel : undefined}
         isDownloading={isDownloading}
+        locale={locale}
+        onError={handlePlaybackError}
       />
+      {hasPlaybackError && (
+        <VideoPlaybackErrorOverlay onRetry={retryPlayback} />
+      )}
     </div>
   );
 };

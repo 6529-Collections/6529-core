@@ -4,6 +4,7 @@ import {
   canSubmitComposerAction,
   canSubmitDrop,
   createMetadataHandlers,
+  getMetadataNameErrors,
   handleComposerFileChange,
 } from "@/components/waves/create-drop-content/content-helpers";
 import { convertMetadataToDropMetadata } from "@/components/waves/utils/convertMetadataToDropMetadata";
@@ -24,7 +25,7 @@ describe("CreateDropContent utilities", () => {
   const createFile = (name: string, lastModified: number): File =>
     new File(["file"], name, {
       lastModified,
-      type: "text/plain",
+      type: "image/png",
     });
 
   const viewerIdentity: SelectableIdentityOption = {
@@ -121,12 +122,56 @@ describe("CreateDropContent utilities", () => {
   });
 
   describe("composer file changes", () => {
+    it("rechecks duplicates and remaining capacity when React applies a queued batch", () => {
+      const existing = Array.from({ length: 7 }, (_, index) =>
+        createFile(`existing-${index}.png`, index)
+      );
+      const last = createFile("last.png", 100);
+      const overflow = createFile("overflow.png", 200);
+      const setFiles = jest.fn();
+      const setToast = jest.fn();
+      handleComposerFileChange({
+        newFiles: [existing[0]!, last, overflow],
+        files: [],
+        drop: null,
+        waveId: "wave-1",
+        keepOptionsVisible: true,
+        setFiles,
+        setToast,
+        setShowOptionsState: jest.fn(),
+        closeOnNextInputRef: { current: false },
+      });
+
+      const update = setFiles.mock.calls[0][0];
+      expect(update(existing)).toEqual([...existing, last]);
+      expect(update([...existing, last])).toEqual([...existing, last]);
+      expect(setToast).not.toHaveBeenCalled();
+    });
+
+    it("retains files added by another batch before React applies the update", () => {
+      const first = createFile("first.png", 100);
+      const second = createFile("second.png", 100);
+      const setFiles = jest.fn();
+      handleComposerFileChange({
+        newFiles: [second],
+        files: [],
+        drop: null,
+        waveId: "wave-1",
+        keepOptionsVisible: true,
+        setFiles,
+        setToast: jest.fn(),
+        setShowOptionsState: jest.fn(),
+        closeOnNextInputRef: { current: false },
+      });
+      expect(setFiles.mock.calls[0][0]([first])).toEqual([first, second]);
+    });
+
     it("enforces the upload budget after existing drop part attachments", () => {
       const setFiles = jest.fn();
       const setToast = jest.fn();
       const setShowOptionsState = jest.fn();
-      const currentFile = createFile("current.txt", 100);
-      const newFile = createFile("new.txt", 200);
+      const currentFile = createFile("current.png", 100);
+      const newFile = createFile("new.png", 200);
 
       handleComposerFileChange({
         newFiles: [newFile],
@@ -136,7 +181,7 @@ describe("CreateDropContent utilities", () => {
               content: "existing",
               quoted_drop: null,
               media: Array.from({ length: 7 }, (_, index) =>
-                createFile(`existing-${index}.txt`, index)
+                createFile(`existing-${index}.png`, index)
               ),
             },
           ],
@@ -150,11 +195,11 @@ describe("CreateDropContent utilities", () => {
         closeOnNextInputRef: { current: false },
       });
 
-      expect(setFiles).toHaveBeenCalledWith([newFile]);
+      expect(setFiles).not.toHaveBeenCalled();
       expect(setToast).toHaveBeenCalledWith(
         expect.objectContaining({
           type: "warning",
-          message: expect.stringContaining("1 oldest file was removed"),
+          message: expect.stringContaining("Extra files were not added"),
         })
       );
       expect(setShowOptionsState).not.toHaveBeenCalled();
@@ -162,6 +207,38 @@ describe("CreateDropContent utilities", () => {
   });
 
   describe("metadata handlers", () => {
+    it("retains legacy custom values, rejects unnamed values, and omits empty rows", () => {
+      let metadata: CreateDropMetadataType[] = [
+        {
+          id: "legacy",
+          key: "Medium",
+          type: null,
+          value: null,
+          required: false,
+        },
+        { id: "blank", key: "", type: null, value: "", required: false },
+      ];
+      const setMetadata: React.Dispatch<
+        React.SetStateAction<CreateDropMetadataType[]>
+      > = (updater) => {
+        metadata = typeof updater === "function" ? updater(metadata) : updater;
+      };
+      const handlers = createMetadataHandlers({
+        setMetadata,
+        generateMetadataId: () => "new",
+      });
+      handlers.onChangeValue({ index: 0, newValue: "Digital" });
+      expect(convertMetadataToDropMetadata(metadata)).toEqual([
+        { data_key: "Medium", data_value: "Digital" },
+      ]);
+      handlers.onChangeKey({ index: 0, newKey: " " });
+      expect(getMetadataNameErrors(metadata, "en-US")).toEqual({
+        legacy: "Enter a field name.",
+      });
+      handlers.onChangeKey({ index: 0, newKey: "Medium" });
+      expect(getMetadataNameErrors(metadata, "en-US")).toEqual({});
+    });
+
     it("clears string metadata values without storing literal null", () => {
       let metadata: CreateDropMetadataType[] = [
         {
@@ -177,7 +254,6 @@ describe("CreateDropContent utilities", () => {
       });
 
       const { onChangeValue } = createMetadataHandlers({
-        metadata,
         setMetadata,
         generateMetadataId: () => "metadata-id",
       });
@@ -349,6 +425,7 @@ describe("CreateDropContent utilities", () => {
           canAddPart: false,
           canSubmit: true,
           editingPartIndex: 0,
+          hasMissingRequirements: false,
           isStormMode: true,
         })
       ).toBe(false);
@@ -358,6 +435,29 @@ describe("CreateDropContent utilities", () => {
           canAddPart: true,
           canSubmit: true,
           editingPartIndex: 0,
+          hasMissingRequirements: false,
+          isStormMode: true,
+        })
+      ).toBe(true);
+    });
+
+    it("blocks final submission until requirements are complete", () => {
+      expect(
+        canSubmitComposerAction({
+          canAddPart: false,
+          canSubmit: true,
+          editingPartIndex: null,
+          hasMissingRequirements: true,
+          isStormMode: false,
+        })
+      ).toBe(false);
+
+      expect(
+        canSubmitComposerAction({
+          canAddPart: true,
+          canSubmit: true,
+          editingPartIndex: null,
+          hasMissingRequirements: true,
           isStormMode: true,
         })
       ).toBe(true);

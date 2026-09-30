@@ -1,4 +1,7 @@
+import { defineWaveImageLayoutTests } from "../media/imageArtworkLayoutCases";
 import type { Page, Route } from "@playwright/test";
+import { defineWaveImagePreviewTests } from "../media/waveImagePreviewCases";
+import { defineWaveVideoLayoutTests } from "../media/waveVideoLayoutCases";
 
 import {
   expect,
@@ -23,6 +26,7 @@ const PREVIEW_URL = "https://example.com/6529-composer-preview";
 const PREVIEW_TITLE = "Sandbox Preview Title";
 const PREVIEW_DESCRIPTION = "Deterministic local preview served by Playwright.";
 const SANDBOX_CHAT_DROP_CONTENT = "Local-only chat drop from Playwright.";
+const SANDBOX_POLL_QUESTION = "Which sandbox option do you prefer?";
 const SANDBOX_GUIDELINES_FIRST_LINE =
   "1. Keep discussions constructive and stay on topic in this local sandbox wave.";
 const SANDBOX_FIRST_POLL_OPTION =
@@ -44,6 +48,10 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     "PLAYWRIGHT_COMPOSER_SANDBOX",
     "Composer sandbox requires the local mock API runner."
   );
+
+  defineWaveVideoLayoutTests();
+  defineWaveImageLayoutTests();
+  defineWaveImagePreviewTests();
 
   test("queues and removes an attachment without upload or submit", async ({
     baseURL,
@@ -76,6 +84,100 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
     await page.getByRole("button", { name: "Remove file" }).last().click();
     await expect(page.getByText("composer-sandbox.pdf")).toBeHidden();
     await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("pastes one image when Chrome exposes different timestamp wrappers", async ({
+    baseURL,
+    page,
+  }) => {
+    let uploadStartCount = 0;
+    await installDropImageUploadFixture(page, baseURL, () => {
+      uploadStartCount += 1;
+    });
+    await gotoSandboxWave(page);
+
+    const composer = page
+      .getByRole("textbox", { name: "Write a chat message" })
+      .last();
+    await composer.evaluate((element) => {
+      const bytes = new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+      ]);
+      const listedImage = new File([bytes], "image.png", {
+        type: "image/png",
+        lastModified: 1700000000000,
+      });
+      const itemImage = new File([bytes], "image.png", {
+        type: "image/png",
+        lastModified: 1700000000001,
+      });
+      const pasteEvent = new ClipboardEvent("paste", {
+        bubbles: true,
+        cancelable: true,
+      });
+
+      Object.defineProperty(pasteEvent, "clipboardData", {
+        value: {
+          files: [listedImage],
+          items: [
+            {
+              kind: "file",
+              type: "image/png",
+              getAsFile: () => itemImage,
+            },
+          ],
+          getData: () => "",
+        },
+      });
+      element.dispatchEvent(pasteEvent);
+    });
+
+    await expect(
+      page.getByRole("button", { name: "Select image" })
+    ).toHaveCount(1);
+    await expect.poll(() => uploadStartCount).toBe(1);
+    await expect(
+      page.getByRole("button", { name: "Select image" }).locator("img")
+    ).toHaveAttribute("src", /\/__composer-sandbox\/pasted-image\.png$/);
+    await expect(
+      page.getByRole("status").filter({ hasText: /Uploading image/i })
+    ).toHaveCount(0);
+    expect(uploadStartCount).toBe(1);
+
+    await page.getByRole("button", { name: "Remove image" }).click();
+    await expect(
+      page.getByRole("button", { name: "Select image" })
+    ).toHaveCount(0);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("reserves a visible video preview without decoded metadata", async ({
+    baseURL,
+    page,
+  }) => {
+    await gotoSandboxWave(page);
+    await showDropActionsIfCollapsed(page);
+
+    const fileInput = page.getByLabel("Upload media", { exact: true }).first();
+    // Deliberately undecodable: the frame must remain usable even before
+    // metadata is available, or when a selected video cannot be decoded.
+    await fileInput.setInputFiles({
+      name: "composer-video.mp4",
+      mimeType: "video/mp4",
+      buffer: Buffer.from("undecodable video fixture"),
+    });
+
+    const video = page.getByLabel("Video player", { exact: true }).last();
+    await expect(video).toBeVisible();
+    await expect(video).toHaveAttribute("controls", "");
+    const bounds = await video.boundingBox();
+    expect(bounds?.width).toBeGreaterThan(0);
+    expect(bounds?.height).toBeGreaterThan(0);
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole("button", { name: "Remove file" }).last().click();
+    await expect(page.getByText("composer-video.mp4")).toBeHidden();
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
@@ -454,10 +556,16 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       name: "Only people who can chat can respond",
     });
     const anonymous = page.getByRole("checkbox", { name: "Anonymous poll" });
-    await responderScope.check();
-    await anonymous.check();
+    await page
+      .getByText("Only people who can chat can respond", { exact: true })
+      .click();
+    await page.getByText("Anonymous poll", { exact: true }).click();
     await expect(responderScope).toBeChecked();
     await expect(anonymous).toBeChecked();
+
+    await page
+      .getByRole("textbox", { name: "Ask a poll question" })
+      .fill(SANDBOX_POLL_QUESTION);
 
     await expectNoHorizontalOverflow(page);
     const postButton = page.getByRole("button", { name: "Post" }).last();
@@ -489,7 +597,7 @@ test.describe("Waves composer local sandbox @auth @medium @local-only", () => {
       body: expect.objectContaining({
         wave_id: SANDBOX_WAVE_ID,
         drop_type: "CHAT",
-        content: null,
+        content: SANDBOX_POLL_QUESTION,
         poll: expect.objectContaining({
           options: SANDBOX_POLL_OPTIONS,
           multichoice: true,
@@ -736,24 +844,97 @@ async function installExternalDataFixtures(page: Page) {
   });
 }
 
+async function installDropImageUploadFixture(
+  page: Page,
+  baseURL: string | undefined,
+  onUploadStart: () => void
+) {
+  const sandboxApiOrigin = getSandboxApiOrigin(baseURL);
+  // Keep the mocked PUT same-origin so the browser can read its ETag.
+  const uploadUrl = new URL("/__composer-sandbox/image-upload", baseURL).href;
+  const mediaUrl = `${sandboxApiOrigin}/__composer-sandbox/pasted-image.png`;
+
+  await page.route("**/drop-media/multipart-upload**", async (route) => {
+    const pathname = new URL(route.request().url()).pathname;
+
+    if (pathname.endsWith("/part")) {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { upload_url: uploadUrl },
+        status: 200,
+      });
+      return;
+    }
+
+    if (pathname.endsWith("/completion")) {
+      await route.fulfill({
+        contentType: "application/json",
+        json: { media_url: mediaUrl, mime_type: "image/png" },
+        status: 200,
+      });
+      return;
+    }
+
+    onUploadStart();
+    await route.fulfill({
+      contentType: "application/json",
+      json: { upload_id: "clipboard-image", key: "clipboard-image.png" },
+      status: 200,
+    });
+  });
+
+  await page.route(uploadUrl, async (route) => {
+    await route.fulfill({
+      body: "",
+      headers: { etag: '"clipboard-image-etag"' },
+      status: 200,
+    });
+  });
+
+  await page.route(mediaUrl, async (route) => {
+    await route.fulfill({
+      body: Buffer.from(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+        "base64"
+      ),
+      contentType: "image/png",
+      status: 200,
+    });
+  });
+}
+
 async function showDropActionsIfCollapsed(page: Page) {
   await dismissNextDevTools(page);
 
-  const showActionsButton = page.getByRole("button", {
-    name: "Show drop actions",
-  });
+  const showActionsButtons = page
+    .getByRole("button", { name: "Show composer actions" })
+    .or(page.getByRole("button", { name: "Show drop actions" }));
 
-  if (await showActionsButton.isVisible().catch(() => false)) {
-    await showActionsButton.evaluate((element) => {
-      if (element instanceof HTMLElement) {
-        element.click();
-      }
-    });
+  for (const showActionsButton of await showActionsButtons.all()) {
+    if (await showActionsButton.isVisible()) {
+      await showActionsButton.evaluate((element) => {
+        if (element instanceof HTMLElement) {
+          element.click();
+        }
+      });
+      break;
+    }
   }
 
-  await expect(page.getByRole("button", { name: "Upload a file" })).toBeVisible(
-    { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
-  );
+  await expect
+    .poll(
+      async () =>
+        (await page
+          .getByRole("button", { name: "Upload a file" })
+          .isVisible()
+          .catch(() => false)) ||
+        (await page
+          .getByRole("button", { name: "Upload", exact: true })
+          .isVisible()
+          .catch(() => false)),
+      { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
+    )
+    .toBe(true);
 }
 
 async function installOpenGraphFixture(page: Page) {

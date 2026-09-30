@@ -20,6 +20,10 @@ jest.mock("@/app/waves/wave-feed-seed.server", () => ({
   fetchServerWaveFeedSeed: jest.fn(),
 }));
 
+jest.mock("@/app/waves/public-wave-feed.server", () => ({
+  fetchPublicWaveFeed: jest.fn(),
+}));
+
 jest.mock("@/components/waves/WaveServerFeedSeed", () => ({
   __esModule: true,
   default: () => null,
@@ -48,15 +52,25 @@ describe("buildWavesMetadata", () => {
         subscribers_count: 3,
         drops_count: 119,
       },
+      description_drop: {
+        parts: [
+          {
+            content:
+              "A **public** Wave for [The Memes](https://6529.io/the-memes).",
+          },
+        ],
+      },
     });
 
     const metadata = await buildWavesMetadata("wave-1");
 
-    expect(metadata.title).toBe("The Memes - Main Stage by @punk6529");
-    expect(metadata.description).toBe("Waves | 6529.io");
+    expect(metadata.title).toBe("The Memes - Main Stage | Brain");
+    expect(metadata.description).toBe(
+      "A public Wave for The Memes. | 6529.io"
+    );
     expect(metadata.openGraph).toMatchObject({
-      title: "The Memes - Main Stage by @punk6529",
-      description: "Waves | 6529.io",
+      title: "The Memes - Main Stage | Brain",
+      description: "A public Wave for The Memes. | 6529.io",
       images: [
         {
           url: "https://6529.io/api/og-metadata/waves/wave-1",
@@ -70,6 +84,39 @@ describe("buildWavesMetadata", () => {
       card: "summary_large_image",
       site: "@6529Collections",
     });
+    expect(metadata.alternates?.canonical?.toString()).toBe(
+      "https://6529.io/waves/wave-1"
+    );
+    expect(metadata.robots).toEqual({ index: true, follow: true });
+  });
+
+  it("canonicalizes the index and noindexes non-public waves", async () => {
+    const indexMetadata = await buildWavesMetadata(null);
+    expect(indexMetadata.alternates?.canonical?.toString()).toBe(
+      "https://6529.io/waves"
+    );
+
+    (commonApiFetch as jest.Mock).mockResolvedValue({
+      id: "private-wave",
+      name: "Private Wave",
+      author: { handle: "owner", primary_address: "0x1234" },
+      visibility: { scope: { group: { id: "private-group" } } },
+      chat: { scope: { group: null } },
+      description_drop: {
+        parts: [{ content: "private description must not appear" }],
+      },
+    });
+
+    const privateMetadata = await buildWavesMetadata("private-wave");
+    expect(privateMetadata.robots).toEqual({ index: false, follow: true });
+    expect(privateMetadata.description).toBe(
+      "Explore this Wave. | 6529.io"
+    );
+    expect(privateMetadata.description).not.toContain("private description");
+    expect(privateMetadata.openGraph?.description).not.toContain(
+      "private description"
+    );
+    expect(privateMetadata.twitter).not.toHaveProperty("description");
   });
 
   it("uses chat drop metadata when a serial number is shared", async () => {

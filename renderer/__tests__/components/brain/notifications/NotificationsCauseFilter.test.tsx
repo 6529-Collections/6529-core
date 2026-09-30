@@ -1,7 +1,15 @@
 import { AuthContext } from "@/components/auth/Auth";
 import NotificationsCauseFilter from "@/components/brain/notifications/NotificationsCauseFilter";
+import { useNftPurchasingVisibility } from "@/hooks/useNftPurchasingVisibility";
+jest.mock("@/hooks/useNftPurchasingVisibility", () => ({
+  useNftPurchasingVisibility: jest.fn(() => ({
+    hideNftPurchasing: false,
+    shouldRedirect: false,
+  })),
+}));
 import { ApiNotificationCause } from "@/generated/models/ApiNotificationCause";
 import useIsMobileLayoutViewport from "@/hooks/useIsMobileLayoutViewport";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { usePrefetchNotifications } from "@/hooks/useNotificationsQuery";
 import type { ReactNode } from "react";
 import { useState } from "react";
@@ -11,10 +19,12 @@ import type { NotificationFilter } from "@/components/brain/notifications/Notifi
 
 jest.mock("@/hooks/useNotificationsQuery");
 jest.mock("@/hooks/useIsMobileLayoutViewport");
+jest.mock("@/hooks/useDeviceInfo");
 
 const prefetch = jest.fn();
 const connectedProfile = { handle: "tester" } as any;
 const mockedUseIsMobileLayoutViewport = jest.mocked(useIsMobileLayoutViewport);
+const mockedUseDeviceInfo = jest.mocked(useDeviceInfo);
 
 function Wrapper({ children }: { readonly children: ReactNode }) {
   return (
@@ -45,9 +55,78 @@ function FilterHarness({
 
 describe("NotificationsCauseFilter", () => {
   beforeEach(() => {
+    jest
+      .mocked(useNftPurchasingVisibility)
+      .mockReturnValue({ hideNftPurchasing: false, shouldRedirect: false });
     (usePrefetchNotifications as jest.Mock).mockReturnValue(prefetch);
     prefetch.mockClear();
     mockedUseIsMobileLayoutViewport.mockReturnValue(false);
+    mockedUseDeviceInfo.mockReturnValue({
+      isApp: false,
+      isMobileDevice: false,
+      isAppleMobile: false,
+      hasTouchScreen: false,
+    });
+  });
+
+  it("keeps the page heading visually hidden only in the native app", () => {
+    mockedUseIsMobileLayoutViewport.mockReturnValue(true);
+    mockedUseDeviceInfo.mockReturnValue({
+      isApp: true,
+      isMobileDevice: true,
+      isAppleMobile: true,
+      hasTouchScreen: true,
+    });
+    const { rerender } = render(<FilterHarness />, { wrapper: Wrapper });
+
+    expect(screen.getByRole("heading", { name: "Notifications" })).toHaveClass(
+      "tw-sr-only"
+    );
+
+    mockedUseDeviceInfo.mockReturnValue({
+      isApp: false,
+      isMobileDevice: true,
+      isAppleMobile: true,
+      hasTouchScreen: true,
+    });
+    rerender(<FilterHarness />);
+
+    expect(
+      screen.getByRole("heading", { name: "Notifications" })
+    ).not.toHaveClass("tw-sr-only");
+  });
+
+  it.each([false, true])(
+    "omits the subscription filter on restricted iOS (mobile=%s)",
+    async (isMobile) => {
+      mockedUseIsMobileLayoutViewport.mockReturnValue(isMobile);
+      jest
+        .mocked(useNftPurchasingVisibility)
+        .mockReturnValue({ hideNftPurchasing: true, shouldRedirect: true });
+      render(<FilterHarness />, { wrapper: Wrapper });
+      await userEvent.click(
+        screen.getByRole("button", { name: "Filter notifications: All" })
+      );
+      expect(screen.queryByText("Subscriptions")).toBeNull();
+      expect(screen.getByText("Mentions")).toBeInTheDocument();
+    }
+  );
+
+  it("returns focus to the desktop filter after Escape from a menu item", async () => {
+    const user = userEvent.setup();
+    render(<FilterHarness />, { wrapper: Wrapper });
+    const trigger = screen.getByRole("button", {
+      name: "Filter notifications: All",
+    });
+
+    await user.click(trigger);
+    await user.click(screen.getByRole("menuitemcheckbox", { name: "Replies" }));
+    await user.keyboard("{Escape}");
+
+    await waitFor(() => {
+      expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+    });
+    expect(trigger).toHaveFocus();
   });
 
   it("combines multiple selected categories and resets them with All", async () => {
@@ -107,6 +186,7 @@ describe("NotificationsCauseFilter", () => {
     expect(prefetch).toHaveBeenCalledWith({
       identity: "tester",
       cause: [ApiNotificationCause.SubscriptionCoverage],
+      causeExclude: null,
       pages: 1,
     });
   });
@@ -124,6 +204,25 @@ describe("NotificationsCauseFilter", () => {
     expect(
       screen.queryByRole("button", { name: "Profile Preferences" })
     ).not.toBeInTheDocument();
+  });
+
+  it("preserves the coverage exclusion when prefetching a restricted category", async () => {
+    jest
+      .mocked(useNftPurchasingVisibility)
+      .mockReturnValue({ hideNftPurchasing: true, shouldRedirect: true });
+    const user = userEvent.setup();
+    render(<FilterHarness />, { wrapper: Wrapper });
+    await user.click(
+      screen.getByRole("button", { name: "Filter notifications: All" })
+    );
+    await user.hover(
+      screen.getByRole("menuitemcheckbox", { name: "Mentions" })
+    );
+    expect(prefetch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        causeExclude: [ApiNotificationCause.SubscriptionCoverage],
+      })
+    );
   });
 
   it("keeps mobile multi-selection open and restores focus after dismissal", async () => {

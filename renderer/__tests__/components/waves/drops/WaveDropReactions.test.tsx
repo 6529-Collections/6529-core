@@ -8,7 +8,10 @@ import { ChatRestriction } from "@/hooks/useDropPriviledges";
 import * as commonApi from "@/services/api/common-api";
 import { __resetDropReactionMonitoringForTests } from "@/utils/monitoring/dropReactionMonitoring";
 import { __resetDropReactionAuthRecoveryForTests } from "@/hooks/drops/useDropReactionAuthRecovery";
-import { __resetDropReactionRequestQueueForTests } from "@/helpers/reactions/dropReactionRequestQueue";
+import {
+  __resetDropReactionRequestQueueForTests,
+  DropReactionRequestTimeoutError,
+} from "@/helpers/reactions/dropReactionRequestQueue";
 import {
   act,
   fireEvent,
@@ -204,6 +207,150 @@ const createDeferred = <T,>() => {
 };
 
 describe("WaveDropReactions", () => {
+  it("keeps a stable chip synchronized with externally updated count and selection", async () => {
+    mockUseEmoji.mockReturnValue(
+      createEmojiContextValue([
+        {
+          category: "people",
+          emojis: [{ id: "gm", skins: [{ src: "/gm.png" }] }],
+        },
+      ])
+    );
+    const drop = createMockDrop({
+      reactions: [
+        {
+          reaction: ":gm:",
+          count: 1,
+          profiles: [{ id: "other", handle: "other" }],
+        },
+      ],
+      context_profile_context: { reaction: null },
+    }) as unknown as ApiDrop;
+    const { rerender } = render(<WaveDropReactions drop={drop} />);
+    const originalButton = screen.getAllByRole("button")[0]!;
+    const updatedReaction = { ...drop.reactions[0]!, count: 3 };
+    rerender(
+      <WaveDropReactions
+        drop={{
+          ...drop,
+          context_profile_context: {
+            ...drop.context_profile_context!,
+            reaction: ":gm:",
+          },
+          reactions: [updatedReaction],
+        }}
+      />
+    );
+    await waitFor(() => expect(originalButton).toHaveTextContent("3"));
+    expect(originalButton).toHaveClass("tw-border-primary-500");
+    expect(screen.getAllByRole("button")[0]).toBe(originalButton);
+    rerender(<WaveDropReactions drop={drop} />);
+    await waitFor(() => expect(originalButton).toHaveTextContent("1"));
+    expect(originalButton).not.toHaveClass("tw-border-primary-500");
+  });
+  it.each([null, ":wave:", ":gm:"])(
+    "reconciles a saved chip reaction after timeout (previous %s)",
+    async (previous) => {
+      mockUseEmoji.mockReturnValue(
+        createEmojiContextValue(
+          [
+            {
+              category: "people",
+              emojis: [{ id: "gm", skins: [{ src: "/gm.png" }] }],
+            },
+          ],
+          () => null
+        )
+      );
+      const rollback = jest.fn();
+      getMyStreamMock().mockReturnValue({
+        applyOptimisticDropUpdate: jest.fn(() => ({ rollback })),
+      });
+      const drop = createMockDrop({
+        reactions: [
+          {
+            reaction: ":gm:",
+            profiles: [{ id: "another", handle: "another" }],
+          },
+        ],
+        context_profile_context: { reaction: previous },
+      });
+      const intended = previous === ":gm:" ? null : ":gm:";
+      const request =
+        intended === null
+          ? jest.mocked(commonApi.commonApiDelete)
+          : jest.mocked(commonApi.commonApiPost);
+      request.mockRejectedValueOnce(new DropReactionRequestTimeoutError());
+      (fetchDropByIdBatched as jest.Mock).mockResolvedValue({
+        ...drop,
+        context_profile_context: { reaction: intended },
+        reactions: [
+          { reaction: ":gm:", profiles: [], count: intended === null ? 1 : 2 },
+        ],
+      });
+      render(<WaveDropReactions drop={drop as unknown as ApiDrop} />);
+      const button = screen.getAllByRole("button")[0]!;
+      await act(async () => {
+        fireEvent.click(button);
+      });
+      expect(setToastMock).not.toHaveBeenCalled();
+      expect(rollback).not.toHaveBeenCalled();
+      expect(request).toHaveBeenCalledTimes(1);
+      const reconciledButton = screen.getAllByRole("button")[0]!;
+      expect(reconciledButton).toHaveTextContent(intended === null ? "1" : "2");
+      if (intended === null)
+        expect(reconciledButton).not.toHaveClass("tw-border-primary-500");
+      else expect(reconciledButton).toHaveClass("tw-border-primary-500");
+    }
+  );
+  it.each([true, false])(
+    "keeps failure feedback scoped to the containing drop when its last chip disappears (drop visible: %s)",
+    async (visible) => {
+      mockUseEmoji.mockReturnValue(
+        createEmojiContextValue(
+          [
+            {
+              category: "people",
+              emojis: [{ id: "gm", skins: [{ src: "/gm.png" }] }],
+            },
+          ],
+          () => null
+        )
+      );
+      const request = createDeferred<void>();
+      jest
+        .mocked(commonApi.commonApiDelete)
+        .mockReturnValueOnce(request.promise);
+      const rollback = jest.fn();
+      getMyStreamMock().mockReturnValue({
+        applyOptimisticDropUpdate: jest.fn(() => ({ rollback })),
+      });
+      const drop = createMockDrop({
+        context_profile_context: { reaction: ":gm:" },
+        reactions: [
+          {
+            reaction: ":gm:",
+            profiles: [{ id: "profile-1", handle: "alice" }],
+          },
+        ],
+      }) as unknown as ApiDrop;
+      const { rerender, unmount } = render(<WaveDropReactions drop={drop} />);
+      fireEvent.click(screen.getAllByRole("button")[0]!);
+      if (visible)
+        rerender(<WaveDropReactions drop={{ ...drop, reactions: [] }} />);
+      else unmount();
+      await act(async () => {
+        request.reject(new Error("Reaction unavailable"));
+      });
+      expect(rollback).toHaveBeenCalledTimes(1);
+      if (visible)
+        expect(setToastMock).toHaveBeenCalledWith({
+          message: "Reaction unavailable",
+          type: "error",
+        });
+      else expect(setToastMock).not.toHaveBeenCalled();
+    }
+  );
   const getMyStreamMock = () =>
     (
       require("@/contexts/wave/MyStreamContext") as {
@@ -668,7 +815,7 @@ describe("WaveDropReactions", () => {
     });
   });
 
-  it("blocks reaction chips while a rejected session is recovering", async () => {
+  it("recovers after a raw 401 and sends another reaction only on an explicit retry", async () => {
     mockUseEmoji.mockReturnValue(
       createEmojiContextValue(
         [
@@ -684,6 +831,8 @@ describe("WaveDropReactions", () => {
     requestAuthMock.mockReturnValueOnce(recovery.promise);
     (commonApi.commonApiPost as jest.Mock).mockRejectedValueOnce(
       createStructuredReactionError({
+        body: "Unauthorized",
+        headers: new Headers({ "Content-Type": "application/json" }),
         message: "Unauthorized",
         status: 401,
       })
@@ -714,6 +863,10 @@ describe("WaveDropReactions", () => {
       });
       expect(button).toBeDisabled();
     });
+    expect(setToastMock).toHaveBeenCalledWith({
+      message: "Unauthorized",
+      type: "error",
+    });
     fireEvent.click(button);
     expect(commonApi.commonApiPost).toHaveBeenCalledTimes(1);
 
@@ -724,6 +877,27 @@ describe("WaveDropReactions", () => {
 
     await waitFor(() => expect(button).toBeEnabled());
     expect(commonApi.commonApiPost).toHaveBeenCalledTimes(1);
+    expect(button).toHaveTextContent("1");
+    expect(button).not.toHaveClass("tw-border-primary-500");
+
+    (commonApi.commonApiPost as jest.Mock).mockResolvedValueOnce({});
+    fireEvent.click(button);
+
+    await waitFor(() => {
+      expect(commonApi.commonApiPost).toHaveBeenCalledTimes(2);
+      expect(button).toBeEnabled();
+    });
+    expect(commonApi.commonApiPost).toHaveBeenLastCalledWith({
+      endpoint: "drops/test-drop/reaction",
+      body: { reaction: ":gm:" },
+      errorMode: "structured",
+      signal: expect.any(AbortSignal),
+    });
+    expect(button).toHaveTextContent("2");
+    expect(button).toHaveClass("tw-border-primary-500");
+    expect(commonApi.commonApiDelete).not.toHaveBeenCalled();
+    expect(requestAuthMock).toHaveBeenCalledTimes(1);
+    expect(setToastMock).toHaveBeenCalledTimes(1);
   });
 
   it("shows rate-limit guidance and rolls back chip state after a 429", async () => {

@@ -3,6 +3,7 @@
 import type { ButtonVariant } from "@/components/utils/button/buttonStyles";
 import Button from "@/components/utils/button/Button";
 import MobileWrapperDialog from "./MobileWrapperDialog";
+import { Description } from "@headlessui/react";
 
 interface MobileWrapperConfirmationDialogProps {
   readonly isOpen: boolean;
@@ -15,6 +16,7 @@ interface MobileWrapperConfirmationDialogProps {
   readonly isConfirming?: boolean | undefined;
   readonly confirmDisabled?: boolean | undefined;
   readonly confirmVariant?: ButtonVariant | undefined;
+  readonly zIndexClassName?: string | undefined;
 }
 
 export default function MobileWrapperConfirmationDialog({
@@ -28,6 +30,7 @@ export default function MobileWrapperConfirmationDialog({
   isConfirming = false,
   confirmDisabled = false,
   confirmVariant = "primary",
+  zIndexClassName,
 }: MobileWrapperConfirmationDialogProps) {
   return (
     <MobileWrapperDialog
@@ -36,11 +39,12 @@ export default function MobileWrapperConfirmationDialog({
       onClose={onClose}
       tabletModal
       maxWidthClass="md:tw-max-w-lg"
+      zIndexClassName={zIndexClassName}
     >
       <div className="tw-px-4 sm:tw-px-6">
-        <p className="tw-mb-0 tw-mt-3 tw-text-sm tw-leading-6 tw-text-iron-400">
+        <Description className="tw-mb-0 tw-mt-3 tw-text-sm tw-leading-6 tw-text-iron-400">
           {message}
-        </p>
+        </Description>
 
         <div className="tw-mt-6 tw-flex tw-flex-col tw-gap-2 sm:tw-flex-row sm:tw-justify-end sm:tw-gap-3">
           <Button

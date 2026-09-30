@@ -7,6 +7,8 @@ import { MuseumBreadcrumbs } from "@/components/museum/MuseumBreadcrumbs";
 import { MuseumMarkdown } from "@/components/museum/MuseumMarkdown";
 import { MuseumRelatedEntities } from "@/components/museum/MuseumRelatedEntities";
 import { MuseumPublicationUnavailable } from "@/components/museum/MuseumPublicationUnavailable";
+import JsonLdScript from "@/lib/structured-data/json-ld";
+import { buildMuseumArtistPageJsonLd } from "@/lib/structured-data/museum";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
@@ -45,14 +47,28 @@ export async function generateMetadata({
 }: MuseumArtistPageProps): Promise<Metadata> {
   const { slug } = await params;
   const { publicationState } = await getMuseumPublicationBundle();
-  const artist = publicationState.publication?.artists.find(
+  const publication = publicationState.publication
+    ? applyMuseumCollectionSemantics(publicationState.publication)
+    : null;
+  const artist = publication?.artists.find(
     (item) => item.slug === slug
   );
+  const artistName =
+    artist?.preferredName ?? t(DEFAULT_LOCALE, "museum.network.artists.title");
   const metadata = getAppMetadata({
     title:
-      artist?.preferredName ??
-      t(DEFAULT_LOCALE, "museum.network.artists.title"),
-    description: t(DEFAULT_LOCALE, "museum.network.artists.description"),
+      artist === undefined
+        ? artistName
+        : t(DEFAULT_LOCALE, "museum.network.artists.metadataTitle", {
+            artist: artistName,
+          }),
+    description:
+      (artist?.slug === CASEY_ARTIST_SLUG
+        ? t(DEFAULT_LOCALE, "museum.network.artists.caseySummary")
+        : null) ??
+      t(DEFAULT_LOCALE, "museum.network.artists.metadataDescription", {
+        artist: artistName,
+      }),
   });
   return artist === undefined
     ? metadata
@@ -149,8 +165,10 @@ function TypedArtistPage({
     context.sourcePath === null || context.sourceCommit === null
       ? null
       : buildImmutableMuseumBlobUrl(context.sourceCommit, context.sourcePath);
+  const path = museumArtistHref(artist.slug);
   return (
     <article className="tw-min-w-0">
+      <JsonLdScript data={buildMuseumArtistPageJsonLd({ artist, path })} />
       <MuseumBreadcrumbs
         ariaLabel={t(
           DEFAULT_LOCALE,

@@ -1,4 +1,3 @@
-import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { MuseumArtworkViewer } from "./MuseumArtworkViewer";
@@ -13,15 +12,14 @@ import { MuseumProposalImage } from "./MuseumProposalImage";
 import { MuseumRelatedEntities } from "./MuseumRelatedEntities";
 import { MuseumInTheSystem } from "./MuseumInsideSystem";
 import { MuseumRightsLink } from "./MuseumRightsLink";
+import { MuseumStudyLink } from "./MuseumStudyLink";
 import { displayCreditWithoutRepeatedLicense } from "@/lib/museum/credit";
-import { getAppMetadata } from "@/components/providers/metadata";
 import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import {
   CASEY_ARTIST_NAME,
   CASEY_ARTIST_SLUG,
   tryCaseyArtworksFromPublication,
-  getCaseyArtwork,
 } from "@/lib/museum/casey";
 import { getMuseumPublicationState } from "@/lib/museum/publication/runtime";
 import {
@@ -54,41 +52,7 @@ import {
 import { buildMuseumSignedWaveStormDropUrl } from "@/lib/museum/publication";
 import { museumWorkHrefIndex } from "@/lib/museum/publication/routes";
 
-export async function getMuseumObjectMetadata(
-  objectId: string
-): Promise<Metadata> {
-  const artwork = getCaseyArtwork(objectId);
-  if (artwork !== null) {
-    return getAppMetadata({
-      title: artwork.title,
-      description: artwork.visualDescription,
-    });
-  }
-
-  const publicationState = await getMuseumPublicationState();
-  const publicWork = publicationState.publication?.works?.find(
-    (work) => work.id === objectId
-  );
-  if (publicWork !== undefined) {
-    return getAppMetadata({
-      title: publicWork.title,
-      description: publicWork.title,
-    });
-  }
-
-  const view = await getMuseumView();
-  const outcome = view.objects.find((item) =>
-    museumSlugMatches(item.objectId, objectId)
-  );
-  const description =
-    outcome === undefined || outcome.scope.trim().length === 0
-      ? t(DEFAULT_LOCALE, "museum.network.objects.description")
-      : outcome.scope;
-  return getAppMetadata({
-    title: outcome?.title ?? t(DEFAULT_LOCALE, "museum.network.objects.title"),
-    description,
-  });
-}
+export { getMuseumObjectMetadata } from "./MuseumObjectMetadata";
 
 function MuseumCanonicalWorkMedia({
   work,
@@ -434,12 +398,12 @@ function MuseumCanonicalWorkRecordPage({
       />
       {insideSystemHref !== null ? (
         <div className="tw-mt-8">
-          <Link
+          <MuseumStudyLink
             href={insideSystemHref}
             className="hover:tw-text-primary-200 tw-inline-flex tw-min-h-11 tw-items-center tw-text-sm tw-font-medium tw-text-primary-300 tw-underline tw-underline-offset-4 focus-visible:tw-outline-none focus-visible:tw-ring-2 focus-visible:tw-ring-primary-400"
           >
             {t(DEFAULT_LOCALE, "museum.network.insideSystem.locateWork")}
-          </Link>
+          </MuseumStudyLink>
         </div>
       ) : null}
       {programMediaMatch === null &&

@@ -4,11 +4,21 @@
 import {
   useCallback,
   useEffect,
+  useImperativeHandle,
   useRef,
   useState,
   type CSSProperties,
+  type Ref,
 } from "react";
+import isEqual from "lodash/isEqual";
 import { usePathname } from "next/navigation";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
+import MobileWrapperConfirmationDialog from "@/components/mobile-wrapper-dialog/MobileWrapperConfirmationDialog";
+import { getCreateSubwaveTitle } from "@/helpers/waves/create-subwave-title.helpers";
+import type { CreateDropConfig } from "@/entities/IDrop";
+import { useObjectUrl } from "@/hooks/useObjectUrl";
+import CreateWaveDescription from "./description/CreateWaveDescription";
 import type { ApiIdentity } from "@/generated/models/ApiIdentity";
 import useDeviceInfo from "@/hooks/useDeviceInfo";
 import { useLayout } from "@/components/brain/my-stream/layout/LayoutContext";
@@ -25,22 +35,36 @@ import { useCreateWaveSubmission } from "./hooks/useCreateWaveSubmission";
 import useKeyboardFocusScroll from "./hooks/useKeyboardFocusScroll";
 import { useSubwaveWaveConfig } from "./hooks/useSubwaveWaveConfig";
 import CreateWaveDraftsSection from "./overview/CreateWaveDraftsSection";
+import SubwaveAccessWarningDialog from "@/components/waves/groups/SubwaveAccessWarningDialog";
+
+export interface CreateWaveHandles {
+  readonly requestClose: () => void;
+}
 
 export default function CreateWave({
+  ref,
   profile,
   onBack,
   onSuccess,
   parentWaveId,
+  parentWaveName,
   parentAdminGroupId,
+  parentViewGroupId,
 }: {
+  readonly ref?: Ref<CreateWaveHandles> | undefined;
   readonly profile: ApiIdentity;
   readonly onBack: () => void;
   readonly onSuccess?: (() => void) | undefined;
   readonly parentWaveId?: string | null | undefined;
+  readonly parentWaveName?: string | null | undefined;
   readonly parentAdminGroupId?: string | null | undefined;
+  readonly parentViewGroupId?: string | null | undefined;
 }) {
+  const locale = useBrowserLocale();
+  const isSubwave = !!parentWaveId;
   const waveConfig = useSubwaveWaveConfig({
     parentAdminGroupId,
+    parentViewGroupId,
   });
   const {
     config,
@@ -52,6 +76,17 @@ export default function CreateWave({
     endDateConfig,
     setEndDateConfig,
   } = waveConfig;
+  // Config updates are immutable. Keep the starting values, including inherited
+  // subwave settings, and compare only when the user asks to leave.
+  const initialForm = useRef({ config, endDateConfig });
+  const [showDiscardConfirmation, setShowDiscardConfirmation] = useState(false);
+  const waveNameSuffix = config.overview.name
+    ? ` "${config.overview.name}"`
+    : "";
+  const imageUrl = useObjectUrl(config.overview.image);
+  const [descriptionVisited, setDescriptionVisited] = useState(false);
+  const [descriptionSnapshot, setDescriptionSnapshot] =
+    useState<CreateDropConfig | null>(null);
   const descriptionRef = useRef<CreateWaveDescriptionHandles | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [criteriaReplacementByGroup, setCriteriaReplacementByGroup] = useState<
@@ -124,6 +159,8 @@ export default function CreateWave({
   }, []);
 
   const onLoadDraft = (draft: CreateWaveDraft) => {
+    setDescriptionVisited(false);
+    setDescriptionSnapshot(null);
     resetTransientGroupState();
     replaceConfig(draft.config);
     setEndDateConfig(draft.endDateConfig);
@@ -136,6 +173,8 @@ export default function CreateWave({
     onHaveDropToSubmitChange,
     onInlineGroupCreate,
     onComplete,
+    getDescriptionForReview,
+    subwaveAccessConfirmation,
   } = useCreateWaveSubmission({
     config,
     descriptionRef,
@@ -149,10 +188,44 @@ export default function CreateWave({
     parentAdminGroupId,
   });
 
-  const setStep = (
+  const requestClose = () => {
+    const description = descriptionRef.current?.getDropSnapshot();
+    const hasChanges =
+      !isEqual(config, initialForm.current.config) ||
+      !isEqual(endDateConfig, initialForm.current.endDateConfig) ||
+      !!description?.parts.some(
+        (part) =>
+          !!part.content?.trim() ||
+          part.media.length > 0 ||
+          (part.attachments?.length ?? 0) > 0 ||
+          (part.uploaded_attachments?.length ?? 0) > 0 ||
+          !!part.quoted_drop
+      ) ||
+      !!description?.title ||
+      (description?.metadata.length ?? 0) > 0;
+
+    if (hasChanges) {
+      setShowDiscardConfirmation(true);
+    } else {
+      onBack();
+    }
+  };
+  useImperativeHandle(ref, () => ({ requestClose }));
+
+  const setStep = async (
     targetStep: CreateWaveStep,
     direction: "forward" | "backward"
   ): Promise<void> => {
+    if (step === CreateWaveStep.DESCRIPTION) {
+      setDescriptionVisited(true);
+    }
+    if (targetStep === CreateWaveStep.REVIEW) {
+      const snapshot = getDescriptionForReview();
+      if (!snapshot) {
+        return;
+      }
+      setDescriptionSnapshot(snapshot);
+    }
     if (targetStep !== CreateWaveStep.GROUPS) {
       resetTransientGroupState();
     }
@@ -204,10 +277,12 @@ export default function CreateWave({
       className="create-wave-flow tw-flex tw-min-h-0 tw-flex-1 tw-flex-col"
     >
       <CreateWaveFlow
-        title={`${parentWaveId ? "Create subwave" : "Create Wave"} ${
-          config.overview.name ? `"${config.overview.name}"` : ""
-        }`}
-        onBack={onBack}
+        title={
+          isSubwave
+            ? getCreateSubwaveTitle(locale, parentWaveName)
+            : `Create Wave${waveNameSuffix}`
+        }
+        onBack={requestClose}
         nativeBoundedStyle={nativeBoundedStyle}
         scrollResetKey={step}
       >
@@ -224,24 +299,57 @@ export default function CreateWave({
         >
           <CreateWaveStepContent
             controller={waveConfig}
-            profile={profile}
-            descriptionRef={descriptionRef}
-            submitting={submitting}
-            showDropError={showDropError}
+            isSubwave={isSubwave}
+            parentWaveName={parentWaveName}
+            descriptionSnapshot={descriptionSnapshot}
             overviewLeading={
-              <CreateWaveDraftsSection
-                drafts={drafts}
-                onLoad={onLoadDraft}
-                onDelete={deleteDraft}
-              />
+              !isSubwave && (
+                <CreateWaveDraftsSection
+                  drafts={drafts}
+                  onLoad={onLoadDraft}
+                  onDelete={deleteDraft}
+                />
+              )
             }
-            onHaveDropToSubmitChange={onHaveDropToSubmitChange}
             onCriteriaReplacementChange={onCriteriaReplacementChange}
             onGroupResolutionChange={onGroupResolutionChange}
             onInlineGroupCreate={onInlineGroupCreate}
           />
+          {/* Keep the composer mounted after its first visit: hiding it preserves
+              Lexical state, unsaved text, uploads, and its snapshot handle. */}
+          {(descriptionVisited ||
+            step === CreateWaveStep.DESCRIPTION ||
+            step === CreateWaveStep.REVIEW) && (
+            <div hidden={step !== CreateWaveStep.DESCRIPTION}>
+              <CreateWaveDescription
+                ref={descriptionRef}
+                profile={profile}
+                submitting={submitting || step !== CreateWaveStep.DESCRIPTION}
+                showDropError={showDropError}
+                visibilityGroupId={config.groups.canView}
+                wave={{ name: config.overview.name, image: imageUrl, id: null }}
+                onHaveDropToSubmitChange={onHaveDropToSubmitChange}
+              />
+            </div>
+          )}
         </CreateWaveLayout>
       </CreateWaveFlow>
+      <SubwaveAccessWarningDialog
+        isOpen={subwaveAccessConfirmation.isOpen}
+        onDecision={subwaveAccessConfirmation.onDecision}
+      />
+      {showDiscardConfirmation && (
+        <MobileWrapperConfirmationDialog
+          isOpen
+          title={t(locale, "waves.create.dialog.discardTitle")}
+          message={t(locale, "waves.create.dialog.discardMessage")}
+          confirmText={t(locale, "waves.create.dialog.discardConfirm")}
+          cancelText={t(locale, "waves.create.dialog.keepEditing")}
+          onClose={() => setShowDiscardConfirmation(false)}
+          onConfirm={onBack}
+          zIndexClassName="tw-z-[10000]"
+        />
+      )}
     </div>
   );
 }

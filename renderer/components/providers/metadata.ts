@@ -9,6 +9,15 @@ export const DEFAULT_OG_IMAGE_PATH = "/6529io.png";
 export const DEFAULT_TWITTER_CARD = "summary" as const;
 export const LARGE_IMAGE_TWITTER_CARD = "summary_large_image" as const;
 
+export const NFT_SOCIAL_CARD_SIZES = {
+  landscape: { width: 1200, height: 630 },
+  square: { width: 1080, height: 1080 },
+  portrait: { width: 1080, height: 1350 },
+  story: { width: 1080, height: 1920 },
+} as const;
+
+export type NftSocialCardFormat = keyof typeof NFT_SOCIAL_CARD_SIZES;
+
 type OgImageDescriptor = {
   readonly url: string;
   readonly width: number;
@@ -95,6 +104,7 @@ export function getNftSocialCardImagePath({
   collection,
   contract,
   displayId,
+  format,
   id,
   image,
   subtitle,
@@ -105,6 +115,7 @@ export function getNftSocialCardImagePath({
   readonly collection?: SocialCardQueryValue;
   readonly contract: string;
   readonly displayId?: SocialCardQueryValue;
+  readonly format?: NftSocialCardFormat | undefined;
   readonly id: string | number;
   readonly image?: SocialCardQueryValue;
   readonly subtitle?: SocialCardQueryValue;
@@ -119,6 +130,7 @@ export function getNftSocialCardImagePath({
       badge,
       collection,
       displayId,
+      format,
       image,
       subtitle,
       title,
@@ -179,9 +191,14 @@ const getOpenGraphImages = ({
 };
 
 export function getAppMetadata(
-  customMetadata?: Partial<PageSSRMetadata>
+  customMetadata?: Partial<PageSSRMetadata>,
+  options: {
+    readonly canonicalPath?: string | undefined;
+    readonly robots?: Metadata["robots"] | undefined;
+  } = {}
 ): Metadata {
   const baseEndpoint = publicEnv.BASE_ENDPOINT;
+  const metadataBase = getBaseEndpointUrl(baseEndpoint);
   const environment = getAppEnvironment(baseEndpoint);
 
   const title = customMetadata?.title ?? environment.title;
@@ -201,8 +218,27 @@ export function getAppMetadata(
   });
 
   const domain = environment.hostname;
+  const canonicalPath = options.canonicalPath;
+  if (
+    canonicalPath !== undefined &&
+    (!canonicalPath.startsWith("/") ||
+      canonicalPath.startsWith("//") ||
+      canonicalPath.includes("#") ||
+      canonicalPath.includes("\\"))
+  ) {
+    throw new Error("metadata_canonical_path_must_be_absolute_path");
+  }
+  const canonicalUrl =
+    canonicalPath === undefined
+      ? undefined
+      : new URL(canonicalPath, metadataBase);
+  if (canonicalUrl && canonicalUrl.origin !== metadataBase.origin) {
+    throw new Error("metadata_canonical_path_must_be_absolute_path");
+  }
+  const canonical = canonicalUrl?.toString();
 
   return {
+    metadataBase,
     title,
     description: description ? `${description} | ${domain}` : domain,
     openGraph: {
@@ -211,6 +247,7 @@ export function getAppMetadata(
       images: openGraphImages,
       title,
       description: description ? `${description} | ${domain}` : domain,
+      ...(canonical === undefined ? {} : { url: canonical }),
     },
     twitter: {
       card: twitterCard,
@@ -219,5 +256,7 @@ export function getAppMetadata(
     other: {
       version: publicEnv.VERSION ?? "",
     },
+    ...(canonical === undefined ? {} : { alternates: { canonical } }),
+    ...(options.robots === undefined ? {} : { robots: options.robots }),
   };
 }

@@ -14,7 +14,7 @@ interface UseDropClipboardCopyFeedbackResult {
   readonly copyToClipboard: (
     getText: () => string,
     onCopied?: (() => void) | undefined
-  ) => void;
+  ) => Promise<void> | undefined;
 }
 
 /**
@@ -69,7 +69,7 @@ export function useDropClipboardCopyFeedback(): UseDropClipboardCopyFeedbackResu
       return;
     }
 
-    void clipboard
+    return clipboard
       .writeText(getText())
       .then(() => {
         if (!isMountedRef.current) {
@@ -81,7 +81,7 @@ export function useDropClipboardCopyFeedback(): UseDropClipboardCopyFeedbackResu
         // action sheet) only reveal it during the close animation; it stays
         // fully visible for any consumer that keeps its surface open.
         showTransientStatus("copied");
-        onCopied?.();
+        return onCopied?.();
       })
       .catch(() => {
         if (isMountedRef.current) {

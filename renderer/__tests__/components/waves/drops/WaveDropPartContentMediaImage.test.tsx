@@ -24,7 +24,10 @@ jest.mock("next/image", () => ({
 }));
 
 jest.mock("@/helpers/image.helpers", () => ({
-  getScaledImageUri: (_src: string) => `${_src}?scale=auto`,
+  getScaledImageUri: (src: string) => {
+    const [path, query] = src.split("?");
+    return `${path}?scale=auto${query ? `&${query}` : ""}`;
+  },
   ImageScale: { AUTOx450: "AUTOx450", AUTOx1080: "AUTOx1080" },
 }));
 
@@ -54,19 +57,72 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-const failCurrentImageThroughFallback = async () => {
-  fireEvent.error(screen.getByAltText("Drop media"));
-
-  await waitFor(() => {
-    expect(screen.getByAltText("Drop media").getAttribute("src")).not.toContain(
-      "scale=auto"
-    );
-  });
-
+const failCurrentPreview = () => {
   fireEvent.error(screen.getByAltText("Drop media"));
 };
 
 describe("WaveDropPartContentMediaImage", () => {
+  it("shows a GIF loading placeholder until ready and resets it for another source", () => {
+    const { rerender } = render(
+      <WaveDropPartContentMediaImage src="https://example.com/first.gif" />
+    );
+    const loader = screen.getByRole("status", { name: "Loading image" });
+    expect(loader).toBeInTheDocument();
+    expect(loader).toHaveClass(
+      "tw-pointer-events-none",
+      "tw-left-0",
+      "tw-top-0",
+      "tw-w-64",
+      "tw-max-w-full",
+      "tw-max-h-64"
+    );
+    expect(loader.querySelector('[aria-hidden="true"]')).toHaveClass(
+      "motion-safe:tw-animate-pulse"
+    );
+    fireEvent.load(screen.getByAltText("Drop media"));
+    expect(
+      screen.queryByRole("status", { name: "Loading image" })
+    ).not.toBeInTheDocument();
+    rerender(
+      <WaveDropPartContentMediaImage src="https://example.com/second.GIF?version=2" />
+    );
+    expect(
+      screen.getByRole("status", { name: "Loading image" })
+    ).toBeInTheDocument();
+  });
+
+  it("does not add a GIF placeholder to static images", () => {
+    const { container } = render(
+      <WaveDropPartContentMediaImage src="https://example.com/still.png" />
+    );
+    expect(container.querySelector("output")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading image");
+  });
+
+  it("uses the existing processing state between GIF retry attempts", () => {
+    jest.useFakeTimers();
+    const { container } = render(
+      <WaveDropPartContentMediaImage
+        src="https://example.com/failure.gif"
+        fillContainer
+      />
+    );
+    fireEvent.error(screen.getByAltText("Drop media"));
+    expect(container.querySelector("output")).not.toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Loading image");
+    expect(screen.getByText("Processing image")).toBeInTheDocument();
+    act(() => {
+      jest.advanceTimersByTime(1500);
+    });
+    expect(
+      screen.getByRole("status", { name: "Loading image" })
+    ).toBeInTheDocument();
+    fireEvent.load(screen.getByAltText("Drop media"));
+    expect(
+      screen.queryByRole("status", { name: "Loading image" })
+    ).not.toBeInTheDocument();
+  });
+
   it("fills a reserved-height media container without natural aspect sizing", () => {
     const { container } = render(
       <WaveDropPartContentMediaImage
@@ -112,10 +168,10 @@ describe("WaveDropPartContentMediaImage", () => {
     );
 
     fireEvent.click(screen.getByRole("button", { name: /open drop media/i }));
-    expect(screen.getByAltText("Full size drop media")).toBeInTheDocument();
+    expect(screen.getByAltText("Expanded image preview")).toBeInTheDocument();
     fireEvent.click(screen.getByTestId("modal-backdrop"));
     expect(
-      screen.queryByAltText("Full size drop media")
+      screen.queryByAltText("Expanded image preview")
     ).not.toBeInTheDocument();
   });
 
@@ -163,10 +219,10 @@ describe("WaveDropPartContentMediaImage", () => {
       "https://example.com/path/image.png?scale=auto"
     );
 
-    await failCurrentImageThroughFallback();
+    failCurrentPreview();
 
     expect(screen.getByText("Processing image")).toBeInTheDocument();
-    expect(screen.queryByText("Couldn’t load image.")).not.toBeInTheDocument();
+    expect(screen.queryByText("Preview unavailable")).not.toBeInTheDocument();
 
     act(() => {
       jest.advanceTimersByTime(1500);
@@ -188,7 +244,7 @@ describe("WaveDropPartContentMediaImage", () => {
     );
 
     for (let retryAttempt = 1; retryAttempt <= 40; retryAttempt++) {
-      await failCurrentImageThroughFallback();
+      failCurrentPreview();
 
       expect(screen.getByText("Processing image")).toBeInTheDocument();
 
@@ -204,9 +260,9 @@ describe("WaveDropPartContentMediaImage", () => {
       });
     }
 
-    await failCurrentImageThroughFallback();
+    failCurrentPreview();
 
-    expect(screen.getByText("Couldn’t load image.")).toBeInTheDocument();
+    expect(screen.getByRole("status")).toHaveTextContent("Preview unavailable");
     expect(screen.getByRole("button", { name: "Retry" })).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Retry" }));

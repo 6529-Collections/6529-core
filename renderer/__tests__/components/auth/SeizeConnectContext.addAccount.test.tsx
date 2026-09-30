@@ -14,6 +14,7 @@ import { AppKitBootstrapContext } from "@/components/providers/AppKitBootstrapCo
 import { WALLET_ACCOUNTS_UPDATED_EVENT } from "@/services/auth/auth.utils";
 import { APP_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/wagmiAppWalletConnector";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
+import * as capacitorHook from "@/hooks/useCapacitor";
 
 const ACTIVE_ADDRESS = "0x00000000000000000000000000000000000000AA";
 const SECOND_ADDRESS = "0x00000000000000000000000000000000000000BB";
@@ -228,9 +229,7 @@ function AccountMutationButtons() {
       <button onClick={() => seizeAcceptConnection("invalid-address")}>
         Accept connection
       </button>
-      <button
-        onClick={() => seizeSwitchConnectedAccount(SECOND_ADDRESS)}
-      >
+      <button onClick={() => seizeSwitchConnectedAccount(SECOND_ADDRESS)}>
         Switch account
       </button>
       <button onClick={seizeAddConnectedAccount}>Add during logout</button>
@@ -238,11 +237,17 @@ function AccountMutationButtons() {
   );
 }
 
-function LogoutButton() {
+function LogoutButton({
+  onError,
+}: {
+  readonly onError: (error: unknown) => void;
+}) {
   const { seizeDisconnectAndLogout } = useSeizeConnectContext();
 
   return (
-    <button onClick={() => void seizeDisconnectAndLogout()}>Logout</button>
+    <button onClick={() => void seizeDisconnectAndLogout().catch(onError)}>
+      Logout
+    </button>
   );
 }
 
@@ -306,6 +311,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       jest.runOnlyPendingTimers();
     });
     jest.useRealTimers();
+    jest.restoreAllMocks();
   });
 
   it("marks an authenticated disconnected wallet as the intended reconnect account", async () => {
@@ -405,7 +411,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
 
@@ -460,9 +466,12 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
+
+    expect(mockDisconnect).toHaveBeenCalledTimes(1);
+    expect(mockOpen).not.toHaveBeenCalled();
 
     mockWagmiAccount = {
       connector: {
@@ -500,7 +509,7 @@ describe("SeizeConnectProvider add-account flow", () => {
     expect(mockLogError).not.toHaveBeenCalled();
   });
 
-  it("clears add-account state when disconnect throws synchronously", () => {
+  it("clears add-account state when disconnect throws synchronously", async () => {
     mockDisconnect.mockImplementation(() => {
       throw new Error("synchronous disconnect failure");
     });
@@ -514,10 +523,14 @@ describe("SeizeConnectProvider add-account flow", () => {
     const addAccountButton = screen.getByRole("button", {
       name: "Add account",
     });
-    expect(() => fireEvent.click(addAccountButton)).not.toThrow();
+    await act(async () => {
+      expect(() => fireEvent.click(addAccountButton)).not.toThrow();
+    });
     expect(mockLogError).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(addAccountButton);
+    await act(async () => {
+      fireEvent.click(addAccountButton);
+    });
     expect(mockDisconnect).toHaveBeenCalledTimes(2);
   });
 
@@ -528,7 +541,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
 
@@ -655,7 +668,7 @@ describe("SeizeConnectProvider add-account flow", () => {
       </SeizeConnectProvider>
     );
 
-    act(() => {
+    await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Add account" }));
     });
 
@@ -677,15 +690,17 @@ describe("SeizeConnectProvider add-account flow", () => {
     });
   });
 
-  it("continues single logout cleanup when session revocation fails", async () => {
+  it("continues web single logout cleanup when session revocation fails", async () => {
     const authUtils = require("@/services/auth/auth.utils");
     const sessionV2 = require("@/services/auth/session-v2.utils");
     const revokeError = new Error("session revoke failed");
+    const onError = jest.fn();
+    sessionV2.getSessionClientType.mockReturnValue("web");
     sessionV2.logoutSessionV2.mockRejectedValueOnce(revokeError);
 
     render(
       <SeizeConnectProvider>
-        <LogoutButton />
+        <LogoutButton onError={onError} />
       </SeizeConnectProvider>
     );
 
@@ -698,6 +713,77 @@ describe("SeizeConnectProvider add-account flow", () => {
       "seizeDisconnectAndLogout.logoutSessionV2",
       revokeError
     );
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  describe("native logout before the UI reports native hydration", () => {
+    beforeEach(() => {
+      jest.spyOn(capacitorHook, "default").mockReturnValue({
+        isCapacitor: false,
+        platform: "web",
+        isIos: false,
+        isAndroid: false,
+        orientation: 0,
+        isActive: false,
+      });
+    });
+
+    it("preserves credentials when durable cleanup cannot be queued", async () => {
+      const authUtils = require("@/services/auth/auth.utils");
+      const sessionV2 = require("@/services/auth/session-v2.utils");
+      const queueError = new Error("secure storage unavailable");
+      const onError = jest.fn();
+      sessionV2.logoutSessionV2.mockRejectedValueOnce(queueError);
+
+      render(
+        <SeizeConnectProvider>
+          <LogoutButton onError={onError} />
+        </SeizeConnectProvider>
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+      });
+
+      expect(sessionV2.logoutSessionV2).toHaveBeenCalledWith({
+        address: ACTIVE_ADDRESS,
+      });
+      expect(onError).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "AuthenticationError",
+          cause: queueError,
+        })
+      );
+      expect(authUtils.removeAuthJwt).not.toHaveBeenCalled();
+    });
+
+    it("clears credentials only after durable cleanup succeeds", async () => {
+      const authUtils = require("@/services/auth/auth.utils");
+      const sessionV2 = require("@/services/auth/session-v2.utils");
+      const queuedLogout = createDeferred<void>();
+      const onError = jest.fn();
+      sessionV2.logoutSessionV2.mockReturnValueOnce(queuedLogout.promise);
+
+      render(
+        <SeizeConnectProvider>
+          <LogoutButton onError={onError} />
+        </SeizeConnectProvider>
+      );
+
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name: "Logout" }));
+      });
+
+      expect(sessionV2.logoutSessionV2).toHaveBeenCalledWith({
+        address: ACTIVE_ADDRESS,
+      });
+      expect(authUtils.removeAuthJwt).not.toHaveBeenCalled();
+
+      await act(async () => queuedLogout.resolve());
+
+      expect(authUtils.removeAuthJwt).toHaveBeenCalledTimes(1);
+      expect(onError).not.toHaveBeenCalled();
+    });
   });
 
   it("revokes every stored native account during logout all", async () => {

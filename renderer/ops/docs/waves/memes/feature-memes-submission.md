@@ -62,7 +62,32 @@ reached), select the header restriction control to see the reason, then use
      `Arweave` from the `Hosting Network` tabs, enter the root
      CID/transaction ID in `Content Hash or Path` (or paste an approved
      gateway URL), review the resulting URL, and wait for validation.
-6. Click `Continue` to open `Additional Information`.
+6. Optionally select `Add a proposal card frame (optional)` and choose
+   `Vertical` or `Horizontal`. The preview shows the animated border around
+   your image, video, or interactive HTML. Leave it unchecked to submit the
+   original media.
+7. Click `Continue` to open `Additional Information`.
+
+## Proposal Card Frame
+
+- The frame is off by default. It is available for image, video, and interactive
+  HTML submissions; selecting a GLB model removes the frame option.
+- The thin black-and-white border uses the 6529 logo in all four corners.
+  Its messages include `THIS IS A PROPOSAL TO DO SOMETHING.`,
+  `CECI N’EST PAS UNE CARTE MÈME.`, `PLEASE JUDGE THE PLAN.`, and
+  `ARTWORK MAY CHANGE.` The original artwork stays visible without cropping.
+- Select the top-right logo to pause or resume the border animation. Reduced
+  motion preferences stop the animation automatically. Video controls and
+  interactive artwork remain usable inside the frame.
+- Submission creates an HTML artwork that embeds the original media and a
+  framed still image for gallery previews. Videos and interactive HTML still
+  need the separate preview image requested in `Additional Information`.
+- `Preview` shows the animated artwork plus the framed gallery and list preview.
+  If preparing or publishing the frame fails, the submission stops and shows an
+  error. Retry after resolving the media or preview-image issue.
+- Resubmitting a framed submission restores its original media and frame
+  orientation. Change the orientation or uncheck the option to remove the
+  frame; resubmission does not nest one frame inside another.
 
 ## Common Scenarios
 
@@ -77,7 +102,11 @@ reached), select the header restriction control to see the reason, then use
   the modal after the software keyboard opens. In the native app, the modal
   also reduces its height so the keyboard does not cover the action bar.
 - The upload drop zone shows grouped format badges for image, video, and
-  interactive model uploads before a file is selected.
+  interactive model uploads and `Max 250 MB` on the same row before a file is
+  selected. The row wraps on smaller screens.
+  File sizes use decimal MB in the artwork preview and submission progress.
+  While a selected file is processing, the message notes that large files may
+  take longer.
 - After a file is selected, the preview surface keeps a `Change` control for
   clearing the current upload and picking another file.
 - The interactive artwork panel always shows `Media Type` as `Interactive HTML
@@ -90,8 +119,11 @@ reached), select the header restriction control to see the reason, then use
 - Numeric trait fields reject `0`.
 - Upload checks:
   - accepted formats include `PNG`, `JPG/JPEG`, `GIF`, `MP4/MOV`, and
-    `GLB/GLTF`
-  - files above `200MB` are rejected
+    binary `GLB` models; JSON `.gltf` files are not accepted, and `.glb`
+    uploads must contain a valid GLB v2 binary header
+  - files above `250 MB` (`250,000,000 bytes`) are rejected
+  - the service verifies the completed stored file size again when the Main
+    Stage submission is created, so API submissions follow the same limit
 - Switching between `Upload File` and `Interactive HTML` keeps each source
   draft for the current modal session.
 
@@ -115,8 +147,11 @@ reached), select the header restriction control to see the reason, then use
 
 ## Failure and Recovery
 
-- Unsupported type or oversized upload shows inline validation errors in
-  `Artwork`.
+- An oversized file, unsupported type, or invalid GLB shows an inline validation
+  error immediately in `Artwork`, without a `Try Again` button. Use `Select Art`
+  or drag and drop another file into the upload area to replace it.
+- If the uploaded file cannot be verified or has not finished processing, the
+  submission is rejected; wait for the upload to finish and try again.
 - Selecting `Continue` with missing or invalid values gives every affected
   field red error styling and an inline recovery message.
 - If artwork is missing, the upload area or interactive hash input turns red.

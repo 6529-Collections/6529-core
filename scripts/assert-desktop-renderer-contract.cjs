@@ -2087,6 +2087,16 @@ const rootLayoutPath = "renderer/app/layout.tsx";
 const rootLayout = parseSource(rootLayoutPath);
 const rootLayoutFunction = findFunction(rootLayout, "RootLayout");
 assertContract(
+  rootLayoutFunction && Boolean(findDescendant(rootLayoutFunction, (node) =>
+    ts.isJsxElement(node) &&
+    ts.isIdentifier(node.openingElement.tagName) &&
+    node.openingElement.tagName.text === "Suspense" &&
+    hasJsxElement(node, "AppRouteProviders")
+  )),
+  rootLayoutPath,
+  "Core's URL-dependent shared provider shell must remain beneath Suspense for production prerendering",
+);
+assertContract(
   rootLayoutFunction && hasJsxElement(rootLayoutFunction, "AppRouteProviders"),
   rootLayoutPath,
   "RootLayout must route all pages through AppRouteProviders",
@@ -2153,6 +2163,68 @@ assertContract(
     countGuardReturns(awsRumFunction, "isBrowserConnector") >= 2,
   awsRumPath,
   "AWS RUM must remain disabled on the browser connector route",
+);
+
+const versionStatusPath = "renderer/contexts/VersionStatusContext.tsx";
+const versionStatusSource = parseSource(versionStatusPath);
+const versionStatus = versionStatusSource.text;
+const versionStatusProvider = findFunction(versionStatusSource, "VersionStatusProvider");
+const desktopUpdatePreview = findFunction(versionStatusSource, "DesktopUpdatePreview");
+assertContract(
+  versionStatusProvider && desktopUpdatePreview &&
+    !callsIdentifier(versionStatusProvider, "useSearchParams") &&
+    callsIdentifier(desktopUpdatePreview, "useSearchParams") &&
+    Boolean(findDescendant(versionStatusProvider, (node) =>
+      ts.isJsxElement(node) &&
+      ts.isIdentifier(node.openingElement.tagName) &&
+      node.openingElement.tagName.text === "Suspense" &&
+      hasJsxElement(node, "DesktopUpdatePreview")
+    )),
+  versionStatusPath,
+  "desktop preview URL reader must stay beneath Suspense, outside the page-providing update component",
+);
+assertContract(
+  versionStatus.includes("window.updater.onUpdateAvailable(") &&
+    versionStatus.includes("window.updater.offUpdateAvailable(") &&
+    versionStatus.includes("window.updater.onUpdateNotAvailable(") &&
+    versionStatus.includes("window.updater.offUpdateNotAvailable(") &&
+    versionStatus.indexOf("window.updater.onUpdateAvailable(") <
+      versionStatus.indexOf("window.updater.checkUpdates()") &&
+    !versionStatus.includes("useIsVersionStale") &&
+    versionStatus.includes("enabled && (available || preview)"),
+  versionStatusPath,
+  "desktop update status must subscribe to native updater before checking and respect route isolation",
+);
+const sidebarUpdatePath = "renderer/components/layout/sidebar/WebSidebarVersionUpdate.tsx";
+const updateSurfacePath = "renderer/components/version-update/useWebVersionUpdate.ts";
+assertContract(
+  parseSource(updateSurfacePath).text.includes('return isVersionStale ? "sidebar" : null'),
+  updateSurfacePath,
+  "Core update availability must select the sidebar instead of the old toast, including touch hardware",
+);
+const sidebarUpdate = parseSource(sidebarUpdatePath).text;
+assertContract(
+  sidebarUpdate.includes('router.push("/core/core-info")') &&
+    !sidebarUpdate.includes("refreshAppVersion"),
+  sidebarUpdatePath,
+  "desktop sidebar update must open App Info rather than reload the web page",
+);
+const titlebarUpdatePath = "renderer/components/header/titlebar/TitleBar.tsx";
+const titlebarUpdate = parseSource(titlebarUpdatePath).text;
+assertContract(
+  /useSyncExternalStore\(\s*subscribePlatform,\s*isMac,\s*getServerPlatform\s*\)/.test(titlebarUpdate) &&
+    /const getServerPlatform = \(\): null => null/.test(titlebarUpdate) &&
+    !/const isMacPlatform = isMac\(\)/.test(titlebarUpdate) &&
+    titlebarUpdate.includes('${versionPositionClass} ${platformPendingClass}') &&
+    titlebarUpdate.includes('${infoPositionClass} ${platformPendingClass}'),
+  titlebarUpdatePath,
+  "titlebar OS positioning must use an unknown hydration snapshot and hide both platform-dependent elements until detected",
+);
+assertContract(
+  titlebarUpdate.includes("useVersionStatus()") &&
+    !titlebarUpdate.includes("<DesktopUpdateToast"),
+  titlebarUpdatePath,
+  "titlebar must share native update availability without restoring the retired toast",
 );
 
 if (failures.length > 0) {

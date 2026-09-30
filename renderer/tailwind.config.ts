@@ -45,7 +45,7 @@ const tailwindConfig: Config = {
       colors: {
         "primary-300": "#84ADFF",
         "primary-400": "#528BFF",
-        "primary-500": "#406AFE",
+        "primary-500": "#3F69FC",
         "primary-600": "#395FE4",
         error: "#F97066",
         success: "#83BF6E",
@@ -74,6 +74,14 @@ const tailwindConfig: Config = {
         1000: "1000",
       },
       keyframes: {
+        "sidebar-control-in": {
+          from: { opacity: "0", transform: "scale(0.96)" },
+          to: { opacity: "1", transform: "scale(1)" },
+        },
+        "sidebar-account-fade-in": {
+          from: { opacity: "0" },
+          to: { opacity: "1" },
+        },
         "loading-bar": {
           "0%": { transform: "translateX(-100%)" },
           "100%": { transform: "translateX(100%)" },
@@ -236,6 +244,8 @@ const tailwindConfig: Config = {
         },
       },
       animation: {
+        "sidebar-control-in": "sidebar-control-in 125ms ease-out",
+        "sidebar-account-fade-in": "sidebar-account-fade-in 125ms ease-out",
         "loading-bar": "loading-bar 1.5s infinite",
         "trophy-appear": "trophy-appear 0.3s ease-out forwards",
         "gradient-shift": "gradient-shift 8s ease infinite",

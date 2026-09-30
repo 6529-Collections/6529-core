@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { useAppKitAccount } from "@reown/appkit/react";
-import { useSignMessage } from "wagmi";
+import { useAccount, useSignMessage } from "wagmi";
 import { UserRejectedRequestError } from "viem";
 import { SigningOperationGuard } from "./signing-operation";
 
@@ -175,7 +174,7 @@ export const useSecureSign = (
   options?: UseSecureSignOptions
 ): UseSecureSignReturn => {
   const [isSigningPending, setIsSigningPending] = useState(false);
-  const { address: connectedAddress, isConnected } = useAppKitAccount();
+  const { address: connectedAddress, isConnected } = useAccount();
   const wagmiSignMessage = useSignMessage();
   const signatureType: SignatureType = options?.signatureType ?? "eoa";
   const signingOperationRef = useRef(new SigningOperationGuard());

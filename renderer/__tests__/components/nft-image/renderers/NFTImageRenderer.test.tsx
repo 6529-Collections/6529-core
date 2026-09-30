@@ -38,6 +38,8 @@ jest.mock("next/image", () => {
         className={className}
         id={id}
         style={style}
+        width={width}
+        height={height}
         data-loading={loading}
         data-priority={priority ? "true" : "false"}
         data-fetch-priority={fetchPriority}
@@ -134,6 +136,108 @@ const createDefaultProps = (
 
 describe("NFTImageRenderer", () => {
   describe("Basic Rendering", () => {
+    it("fits artwork into a reserved viewport-limited frame", () => {
+      render(
+        <NFTImageRenderer
+          {...createDefaultProps({
+            artworkLayout: true,
+            height: 650,
+            heightStyle: "legacy-height-cap",
+            imageStyle: "legacy-image-cap",
+            nft: createMockNFT({
+              metadata: { image_details: { width: 1000, height: 1400 } },
+            }),
+          })}
+        />
+      );
+      const image = screen.getByRole("img");
+      expect(image).toHaveClass("tw-object-contain");
+      expect(image).not.toHaveClass("legacy-image-cap");
+      expect(image).toHaveAttribute("width", "1000");
+      expect(image).toHaveAttribute("height", "1400");
+      expect(image.style.width).toBe("100%");
+      expect(image.style.height).toBe("100%");
+      expect(image.parentElement).toHaveClass("imageFrame");
+      expect(image.parentElement).not.toHaveClass("legacy-height-cap");
+      expect(
+        image.parentElement?.parentElement?.style.getPropertyValue(
+          "--artwork-image-height"
+        )
+      ).toBe("calc(100cqw * 1.4)");
+    });
+
+    it.each([
+      { width: 0, height: 200 },
+      { width: -1, height: 200 },
+      { width: 200, height: Number.NaN },
+      { width: Number.POSITIVE_INFINITY, height: 200 },
+    ])("reserves a stable fallback for invalid dimensions %j", (dimensions) => {
+      render(
+        <NFTImageRenderer
+          {...createDefaultProps({
+            artworkLayout: true,
+            nft: createMockNFT({ metadata: { image_details: dimensions } }),
+          })}
+        />
+      );
+      const image = screen.getByRole("img");
+      expect(image.parentElement).toHaveClass("imageFrame");
+      expect(
+        image.parentElement?.parentElement?.style.getPropertyValue(
+          "--artwork-image-height"
+        )
+      ).toBe("");
+    });
+
+    it("updates the reserved proportions when switching to another artwork", () => {
+      const props = createDefaultProps({
+        artworkLayout: true,
+        nft: createMockNFT({
+          metadata: { image_details: { width: 100, height: 200 } },
+        }),
+      });
+      const { rerender } = render(<NFTImageRenderer {...props} />);
+      const ratio = () =>
+        screen
+          .getByRole("img")
+          .parentElement?.parentElement?.style.getPropertyValue(
+            "--artwork-image-height"
+          );
+      expect(ratio()).toBe("calc(100cqw * 2)");
+      rerender(
+        <NFTImageRenderer
+          {...props}
+          nft={createMockNFT({
+            id: 2,
+            image: "landscape.png",
+            metadata: { image_details: { width: 200, height: 100 } },
+          })}
+        />
+      );
+      expect(ratio()).toBe("calc(100cqw * 0.5)");
+      rerender(
+        <NFTImageRenderer
+          {...props}
+          nft={createMockNFT({ id: 3, metadata: {} })}
+        />
+      );
+      expect(ratio()).toBe("");
+    });
+
+    it("preserves an explicitly bounded fill container", () => {
+      const { container } = render(
+        <NFTImageRenderer
+          {...createDefaultProps({ artworkLayout: true, fillContainer: true })}
+        />
+      );
+      const image = screen.getByRole("img");
+      expect(image.parentElement).toBe(container.firstElementChild);
+      expect(image.parentElement).toHaveClass("tw-h-full");
+      expect(
+        container.querySelector("[data-artwork-image-container]")
+      ).toBeNull();
+    });
+
     it("renders image with correct props", () => {
       const props = createDefaultProps({ showOriginal: true });
       render(<NFTImageRenderer {...props} />);

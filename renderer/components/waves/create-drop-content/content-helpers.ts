@@ -1,3 +1,6 @@
+import { filterValidDropUploadFiles } from "@/services/uploads/dropUploadValidation";
+import { DEFAULT_LOCALE, type SupportedLocale } from "@/i18n/locales";
+import { t } from "@/i18n/messages";
 import type {
   CreateDropConfig,
   CreateDropPart,
@@ -17,12 +20,7 @@ import {
   MAX_DROP_STORM_UTF16_UNITS,
   isDropPartWithinLimits,
 } from "@/helpers/waves/drop-content-limits";
-import { getToastErrorDetails } from "@/helpers/toast.helpers";
 import { getMentionedGroupsFromParts } from "@/helpers/waves/drop-group-mentions";
-import {
-  isAttachmentUploadFile,
-  validateAttachmentUploadFile,
-} from "@/services/uploads/attachmentUploadMimeType";
 import {
   ActiveDropAction,
   type ActiveDropState,
@@ -73,6 +71,16 @@ const isMetadataValuePresent = (value: string | number | null): boolean => {
 export const hasMetadataContent = (
   metadata: CreateDropMetadataType[]
 ): boolean => metadata.some((item) => isMetadataValuePresent(item.value));
+
+export const getMetadataNameErrors = (
+  metadata: CreateDropMetadataType[],
+  locale: SupportedLocale
+): Record<string, string> =>
+  Object.fromEntries(
+    metadata
+      .filter((item) => !item.key.trim() && isMetadataValuePresent(item.value))
+      .map((item) => [item.id, t(locale, "waves.metadata.missingName")])
+  );
 
 const hasSubmissionContent = ({
   markdown,
@@ -172,16 +180,18 @@ export const canSubmitComposerAction = ({
   canAddPart,
   canSubmit,
   editingPartIndex,
+  hasMissingRequirements,
   isStormMode,
 }: {
   readonly canAddPart: boolean;
   readonly canSubmit: boolean;
   readonly editingPartIndex: number | null;
+  readonly hasMissingRequirements: boolean;
   readonly isStormMode: boolean;
 }): boolean =>
   isStormMode && (editingPartIndex !== null || canAddPart)
     ? canAddPart
-    : canSubmit;
+    : canSubmit && !hasMissingRequirements;
 
 const ensurePartsWithFallback = (
   parts: CreateDropPart[],
@@ -544,8 +554,40 @@ export const getMentionedGroupsForParts = ({
   readonly canMentionAll: boolean;
 }): ApiDropGroupMention[] => getMentionedGroupsFromParts(parts, canMentionAll);
 
+export function selectNewComposerFiles(
+  newFiles: readonly File[],
+  existingFiles: readonly File[],
+  setToast?: (toast: AppToastInput) => void,
+  locale: SupportedLocale = DEFAULT_LOCALE
+): File[] {
+  const identities = new Set(existingFiles.map(getFileIdentity));
+  const uniqueFiles = newFiles.filter((file) => {
+    const identity = getFileIdentity(file);
+    if (identities.has(identity)) return false;
+    identities.add(identity);
+    return true;
+  });
+  const budget = Math.max(0, MAX_DROP_UPLOAD_FILES - existingFiles.length);
+  if (uniqueFiles.length > budget) {
+    setToast?.({
+      type: "warning",
+      message: t(locale, "drop.upload.fileLimit", {
+        count: MAX_DROP_UPLOAD_FILES,
+      }),
+    });
+  }
+  if (uniqueFiles.length < newFiles.length) {
+    setToast?.({
+      type: "warning",
+      message: t(locale, "drop.upload.duplicatesSkipped"),
+    });
+  }
+  return uniqueFiles.slice(0, budget);
+}
+
 export const handleComposerFileChange = ({
   newFiles,
+  locale = DEFAULT_LOCALE,
   drop,
   files,
   keepOptionsVisible,
@@ -556,6 +598,7 @@ export const handleComposerFileChange = ({
   closeOnNextInputRef,
 }: {
   readonly newFiles: File[];
+  readonly locale?: SupportedLocale;
   readonly drop: CreateDropConfig | null;
   readonly files: File[];
   readonly keepOptionsVisible: boolean;
@@ -567,66 +610,24 @@ export const handleComposerFileChange = ({
   >;
   readonly closeOnNextInputRef: MutableCurrentRef<boolean>;
 }) => {
-  try {
-    newFiles.forEach((file) => {
-      if (isAttachmentUploadFile(file)) {
-        validateAttachmentUploadFile(file);
-      }
-    });
-  } catch (error) {
-    setToast({
-      type: "error",
-      title: "Couldn't add this file.",
-      description: "Check the file and try again.",
-      details: getToastErrorDetails(error),
-    });
-    return;
-  }
+  const validNewFiles = filterValidDropUploadFiles(newFiles, setToast, locale);
+  if (validNewFiles.length === 0) return;
 
   const existingPartFiles = drop?.parts.flatMap((part) => part.media) ?? [];
-  const existingFileIds = new Set(
-    [...existingPartFiles, ...files].map(getFileIdentity)
+  const acceptedFiles = selectNewComposerFiles(
+    validNewFiles,
+    [...existingPartFiles, ...files],
+    setToast,
+    locale
   );
-  const uniqueNewFiles = newFiles.filter((file) => {
-    const fileId = getFileIdentity(file);
-    if (existingFileIds.has(fileId)) {
-      return false;
-    }
-    existingFileIds.add(fileId);
-    return true;
-  });
-  const duplicateCount = newFiles.length - uniqueNewFiles.length;
-  const existingCount = existingPartFiles.length;
-  const total = existingCount + files.length + uniqueNewFiles.length;
-  const overflow = Math.max(0, total - MAX_DROP_UPLOAD_FILES);
-  const mergedFiles = [...files, ...uniqueNewFiles];
-  const allowedNewFileBudget = Math.max(
-    0,
-    MAX_DROP_UPLOAD_FILES - existingCount
-  );
-  const updatedFiles = overflow
-    ? mergedFiles.slice(mergedFiles.length - allowedNewFileBudget)
-    : mergedFiles;
-
-  setFiles(updatedFiles);
-
-  if (overflow > 0) {
-    setToast({
-      message: `File limit exceeded. The ${overflow} oldest file${
-        overflow > 1 ? "s were" : " was"
-      } removed to maintain the ${MAX_DROP_UPLOAD_FILES}-file limit. New files have been added.`,
-      type: "warning",
-    });
-  }
-
-  if (duplicateCount > 0) {
-    setToast({
-      message: `${duplicateCount} duplicate file${
-        duplicateCount > 1 ? "s were" : " was"
-      } skipped.`,
-      type: "warning",
-    });
-  }
+  if (!acceptedFiles.length) return;
+  setFiles((currentFiles) => [
+    ...currentFiles,
+    ...selectNewComposerFiles(acceptedFiles, [
+      ...existingPartFiles,
+      ...currentFiles,
+    ]),
+  ]);
 
   if (!keepOptionsVisible) {
     setShowOptionsState({ scopeKey: waveId, value: false });
@@ -635,11 +636,9 @@ export const handleComposerFileChange = ({
 };
 
 export const createMetadataHandlers = ({
-  metadata,
   setMetadata,
   generateMetadataId,
 }: {
-  readonly metadata: CreateDropMetadataType[];
   readonly setMetadata: React.Dispatch<
     React.SetStateAction<CreateDropMetadataType[]>
   >;
@@ -671,32 +670,27 @@ export const createMetadataHandlers = ({
           };
         }
 
-        if (item.type === ApiWaveMetadataType.String) {
-          if (params.newValue === null) {
-            return { ...item, value: null };
-          }
-          if (typeof params.newValue === "string") {
-            return { ...item, value: params.newValue };
-          }
-          return { ...item, value: String(params.newValue) };
-        }
-
-        return item;
+        return {
+          ...item,
+          value: params.newValue === null ? null : String(params.newValue),
+        };
       })
     );
   };
 
   const onAddMetadata = () => {
-    setMetadata([
-      ...metadata,
+    const id = generateMetadataId();
+    setMetadata((prev) => [
+      ...prev,
       {
-        id: generateMetadataId(),
+        id,
         key: "",
-        type: null,
+        type: ApiWaveMetadataType.String,
         value: null,
         required: false,
       },
     ]);
+    return id;
   };
 
   const onRemoveMetadata = (index: number) => {

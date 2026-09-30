@@ -11,14 +11,17 @@ import {
   assertNoFailedResponses,
   attachPageDiagnostics,
 } from "../support/pageAssertions";
+import { installLocalMuseumCountryCheck } from "../support/localMuseumCountryCheck";
 import { gotoDocumentWithTransientRetry } from "../support/routeReadiness";
+import { MUSEUM_SETTINGS_FETCH_ERROR_PATTERN } from "../support/museumConsoleDiagnostics";
 
 const MOBILE_PROJECT = "web-mobile-chromium";
 const MOBILE_VIEWPORT = { width: 390, height: 844 } as const;
+const STUDY_READY_TIMEOUT_MS = 20_000;
 const SHELL_ALLOWED_CONSOLE_ERROR_PATTERNS = [
   /^Analytics SDK: TypeError: Failed to fetch(?:\n|$)/,
   /^Error checking Cross-Origin-Opener-Policy: Failed to fetch(?: \(6529\.io\))?(?:\n|$)/,
-  /^Failed to fetch seize settings TypeError: Failed to fetch(?:\n|$)/,
+  MUSEUM_SETTINGS_FETCH_ERROR_PATTERN,
   /^Failed to fetch cookie consent status Error: Network request failed\. Please check your connection and try again\. \(https:\/\/api(?:\.staging)?\.6529\.io\/api\/policies\/country-check\)(?:\n|$)/,
 ];
 
@@ -32,27 +35,62 @@ const PROJECTS = [
 
 async function openStudy(page: Page, slug: string, title: string) {
   const path = `/museum/network/projects/${slug}/system`;
-  const response = await gotoDocumentWithTransientRetry(page, path);
-  expect(response?.status()).toBe(200);
-  await waitForRouteReady(page);
-  await expect(page).toHaveURL((url) => url.pathname === path);
-  await expect(
-    page.getByRole("heading", { level: 1, name: title, exact: true })
-  ).toBeVisible();
-  await expect(
-    page.getByRole("heading", {
-      name: "Hold the Museum work. Choose what sits beside it.",
-      exact: true,
-    })
-  ).toBeVisible();
-  await expectNoHorizontalOverflow(page);
+  const studyHeading = page.getByRole("heading", {
+    level: 1,
+    name: title,
+    exact: true,
+  });
+  const notFoundHeading = page.getByRole("heading", {
+    name: "404 | USER OR PAGE NOT FOUND",
+    exact: true,
+  });
+
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    const response = await gotoDocumentWithTransientRetry(page, path);
+    expect(response?.status()).toBe(200);
+    await waitForRouteReady(page);
+    await expect(page).toHaveURL((url) => url.pathname === path, {
+      timeout: STUDY_READY_TIMEOUT_MS,
+    });
+    await studyHeading.or(notFoundHeading).waitFor({
+      state: "visible",
+      timeout: STUDY_READY_TIMEOUT_MS,
+    });
+
+    if (await studyHeading.isVisible()) {
+      const comparisonRegion = page.getByRole("region", {
+        name: "Hold the Museum work. Choose what sits beside it.",
+        exact: true,
+      });
+      await expect(
+        comparisonRegion.getByRole("heading", {
+          name: "Hold the Museum work. Choose what sits beside it.",
+          exact: true,
+        })
+      ).toBeVisible({ timeout: STUDY_READY_TIMEOUT_MS });
+      await expect(comparisonRegion).toHaveAttribute(
+        "data-client-ready",
+        "true",
+        { timeout: STUDY_READY_TIMEOUT_MS }
+      );
+      await expectNoHorizontalOverflow(page);
+      return;
+    }
+
+    if (attempt === 2) {
+      throw new Error(
+        `Museum study ${path} remained on the application 404 page after retry.`
+      );
+    }
+  }
 }
 
 test.describe("Museum Inside the System @surface @readonly", () => {
   test.describe.configure({ mode: "serial" });
   test.setTimeout(120_000);
 
-  test.beforeEach(async ({ page }, testInfo) => {
+  test.beforeEach(async ({ page, baseURL }, testInfo) => {
+    await installLocalMuseumCountryCheck(page, baseURL);
     if (testInfo.project.name === MOBILE_PROJECT) {
       await page.setViewportSize(MOBILE_VIEWPORT);
       expect(page.viewportSize()).toEqual(MOBILE_VIEWPORT);
@@ -96,11 +134,26 @@ test.describe("Museum Inside the System @surface @readonly", () => {
     try {
       await openStudy(page, "century", "CENTURY");
       const lookup = page.getByLabel("Edition number or token ID");
-      await lookup.fill("724");
-      await page.getByRole("button", { name: "View", exact: true }).click();
+      const viewButton = page.getByRole("button", {
+        name: "View",
+        exact: true,
+      });
+      const officialStill = page.getByRole("img", {
+        name: "Official still for CENTURY #724",
+      });
       await expect(
-        page.getByRole("img", { name: "Official still for CENTURY #724" })
-      ).toBeVisible();
+        page.getByRole("region", {
+          name: "Hold the Museum work. Choose what sits beside it.",
+          exact: true,
+        })
+      ).toHaveAttribute("data-client-ready", "true", {
+        timeout: STUDY_READY_TIMEOUT_MS,
+      });
+      await lookup.fill("724");
+      await viewButton.click();
+      await expect(officialStill).toBeVisible({
+        timeout: STUDY_READY_TIMEOUT_MS,
+      });
 
       const beforeRandom = await lookup.inputValue();
       await page
@@ -250,6 +303,14 @@ test.describe("Museum Inside the System @surface @readonly", () => {
         "/museum/network/projects/century/system?work=6529NM.2026.001.01#possibility-space",
         { timeout: 45_000 }
       );
+      // Visible server HTML is not proof that Next's navigation handler is ready.
+      // An early native navigation cancels the Work page's startup requests.
+      await expect(link).toHaveAttribute("data-client-ready", "true", {
+        timeout: STUDY_READY_TIMEOUT_MS,
+      });
+      const documentTimeOrigin = await page.evaluate(
+        () => performance.timeOrigin
+      );
       await link.click();
       await expect(page).toHaveURL((url) => {
         return (
@@ -261,6 +322,10 @@ test.describe("Museum Inside the System @surface @readonly", () => {
       await expect(
         page.getByRole("button", { name: "#31", exact: true })
       ).toHaveAttribute("aria-pressed", "true");
+      expect(
+        await page.evaluate(() => performance.timeOrigin),
+        "The hydrated study link should preserve the document and its startup requests"
+      ).toBe(documentTimeOrigin);
       await expectNoHorizontalOverflow(page);
     } finally {
       assertNoConsoleErrors(diagnostics, {

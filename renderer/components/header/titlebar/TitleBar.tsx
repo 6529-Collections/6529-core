@@ -14,7 +14,7 @@ import {
   faRefresh,
   faSearch,
 } from "@fortawesome/free-solid-svg-icons";
-import Cookies from "js-cookie";
+import { useVersionStatus } from "@/contexts/VersionStatusContext";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   type CSSProperties,
@@ -22,9 +22,9 @@ import {
   useEffect,
   useRef,
   useState,
+  useSyncExternalStore,
 } from "react";
 import styles from "./TitleBar.module.css";
-import DesktopUpdateToast from "./DesktopUpdateToast";
 import TooltipButton from "./TooltipButton";
 import { CORE_TITLEBAR_HEIGHT_PX } from "./titlebar.constants";
 
@@ -32,15 +32,11 @@ function isMac() {
   return /Mac/i.test(navigator.userAgent);
 }
 
-const DISABLE_UPDATE_TOAST_COOKIE = "disable_update_modal";
-const UPDATE_TOAST_SUPPRESSION_DAYS = 4 / 24;
-const SHOW_UPDATE_TOAST_PREVIEW_PARAM = "showDesktopUpdateModal";
-const UPDATE_TOAST_PREVIEW_VERSION = "0.0.0-preview";
-const UPDATE_TOAST_PREVIEW_ENVIRONMENTS = new Set([
-  "dev",
-  "local",
-  "staging",
-]);
+// The OS is constant for this renderer. During hydration, use the same unknown
+// snapshot as the server rather than interpreting Node's user agent as Windows.
+const subscribePlatform = () => () => undefined;
+const getServerPlatform = (): null => null;
+
 const TITLEBAR_HEIGHT_STYLE = {
   "--core-titlebar-height": `${CORE_TITLEBAR_HEIGHT_PX}px`,
 } as CSSProperties & Record<"--core-titlebar-height", string>;
@@ -53,10 +49,10 @@ function getEnvironmentLabel(
     environment === "dev"
       ? "Dev"
       : environment === "local"
-      ? "Local"
-      : environment === "staging"
-        ? "Staging"
-        : "";
+        ? "Local"
+        : environment === "staging"
+          ? "Staging"
+          : "";
   if (!name) {
     return "";
   }
@@ -91,11 +87,7 @@ export default function TitleBar() {
   const [canGoForward, setCanGoForward] = useState(false);
   const [navigationLoading, setNavigationLoading] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [updateAvailable, setUpdateAvailable] = useState<{
-    version: string;
-  }>();
-  const [showUpdaterUpdateToast, setShowUpdaterUpdateToast] = useState(false);
-  const [appEnvironment, setAppEnvironment] = useState<string>();
+  const updateAvailable = useVersionStatus();
   const [version, setVersion] = useState("");
   const [environmentLabel, setEnvironmentLabel] = useState("");
   const [isCopied, setIsCopied] = useState(false);
@@ -112,20 +104,11 @@ export default function TitleBar() {
       if (typeof appInfo.app_version === "string" && appInfo.app_version) {
         setVersion(`v${appInfo.app_version}`);
       }
-      if (typeof appInfo.environment === "string") {
-        setAppEnvironment(appInfo.environment);
-      }
       setEnvironmentLabel(
         getEnvironmentLabel(appInfo.environment, appInfo.backend_target)
       );
-      window.updater.checkUpdates();
     });
   }, []);
-
-  const showUpdateToastPreview =
-    appEnvironment !== undefined &&
-    UPDATE_TOAST_PREVIEW_ENVIRONMENTS.has(appEnvironment) &&
-    searchParams?.get(SHOW_UPDATE_TOAST_PREVIEW_PARAM) === "true";
 
   useEffect(() => {
     const updateNavState = () => {
@@ -136,17 +119,6 @@ export default function TitleBar() {
           setNavigationLoading(false);
         }
       });
-    };
-
-    const handleUpdateAvailable = (_event: any, info: any) => {
-      setUpdateAvailable(info);
-      const disableUpdateToast = Cookies.get(DISABLE_UPDATE_TOAST_COOKIE);
-      if (!disableUpdateToast) {
-        setShowUpdaterUpdateToast(true);
-        Cookies.set(DISABLE_UPDATE_TOAST_COOKIE, "true", {
-          expires: UPDATE_TOAST_SUPPRESSION_DAYS,
-        });
-      }
     };
 
     window.api.onNavigationStateChange(updateNavState);
@@ -169,12 +141,9 @@ export default function TitleBar() {
     };
     window.api.onNavigate(handleNavigate);
 
-    window.updater.onUpdateAvailable(handleUpdateAvailable);
-
     return () => {
       window.api.offNavigationStateChange(updateNavState);
       window.api.offNavigate(handleNavigate);
-      window.updater.offUpdateAvailable(handleUpdateAvailable);
     };
   }, [pathname, router]);
 
@@ -371,7 +340,13 @@ export default function TitleBar() {
     });
   };
 
-  const isMacPlatform = isMac();
+  const isMacPlatform = useSyncExternalStore(
+    subscribePlatform,
+    isMac,
+    getServerPlatform
+  );
+  const platformPendingClass =
+    isMacPlatform === null ? styles["platformPending"] : "";
   const versionPositionClass = (() => {
     if (isMacPlatform) {
       return updateAvailable
@@ -494,7 +469,7 @@ export default function TitleBar() {
         )}
       </span>
       <span
-        className={`${versionClass} ${versionPositionClass}`}
+        className={`${versionClass} ${versionPositionClass} ${platformPendingClass}`}
         style={TITLEBAR_HEIGHT_STYLE}
       >
         {isMacPlatform ? (
@@ -510,7 +485,7 @@ export default function TitleBar() {
         )}
       </span>
       <TooltipButton
-        buttonStyles={`${infoClass} ${infoPositionClass} ${
+        buttonStyles={`${infoClass} ${infoPositionClass} ${platformPendingClass} ${
           navigationLoading ? disabledClass : ""
         }`}
         placement="left"
@@ -518,18 +493,6 @@ export default function TitleBar() {
         icon={faInfo}
         content="App Info"
         buttonContent={updateAvailable ? "Update Available" : ""}
-      />
-      <DesktopUpdateToast
-        open={showUpdaterUpdateToast || showUpdateToastPreview}
-        version={
-          showUpdateToastPreview
-            ? UPDATE_TOAST_PREVIEW_VERSION
-            : (updateAvailable?.version ?? UPDATE_TOAST_PREVIEW_VERSION)
-        }
-        onViewUpdate={() => {
-          setShowUpdaterUpdateToast(false);
-          router.push("/core/core-info");
-        }}
       />
     </>
   );

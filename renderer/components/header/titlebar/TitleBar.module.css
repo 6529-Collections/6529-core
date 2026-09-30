@@ -95,6 +95,10 @@
   right: 30px;
 }
 
+.platformPending {
+  visibility: hidden;
+}
+
 .versionMacUpdate {
   right: 118px;
 }

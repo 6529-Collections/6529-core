@@ -40,11 +40,8 @@ describe("production exact-artifact deployment contract", () => {
     );
     const serialized = JSON.stringify(job);
 
-    expect(job.permissions).toEqual({
-      contents: "read",
-      packages: "read",
-    });
-    expect(installStep.env.NODE_AUTH_TOKEN).toBe("${{ github.token }}");
+    expect(job.permissions).toEqual({ contents: "read" });
+    expect(installStep.env).not.toHaveProperty("NODE_AUTH_TOKEN");
     expect(serialized).not.toContain("AWS_ACCESS_KEY_ID");
     expect(serialized).not.toContain("configure-aws-credentials");
     expect(buildSource).toContain(
@@ -109,6 +106,25 @@ describe("production exact-artifact deployment contract", () => {
     expect(result.status).toBe(0);
   });
 
+  it("keeps the Ethereum RPC URL server-only through build and runtime", () => {
+    expect(build.on.workflow_call.secrets.ETHEREUM_RPC_URL).toEqual({
+      required: true,
+    });
+    expect(
+      deploy.jobs["build-production-artifact"].secrets.ETHEREUM_RPC_URL
+    ).toBe("${{ secrets.ETHEREUM_RPC_URL }}");
+    expect(buildSource).toContain(
+      "ETHEREUM_RPC_URL: ${{ secrets.ETHEREUM_RPC_URL }}"
+    );
+    expect(deploySource).toContain(
+      'OptionName:"ETHEREUM_RPC_URL",Value:$ethereum_rpc_url'
+    );
+    expect(deploySource).toContain(
+      "node ops/scripts/validate-ethereum-rpc-url.cjs"
+    );
+    expect(deploySource).not.toContain("NEXT_PUBLIC_ETHEREUM_RPC_URL");
+  });
+
   it("keeps production manual and deploys only the independently verified artifact", () => {
     expect(deploy.name).toBe("Web Deploy - PROD");
     expect(deploy.on.push).toBeUndefined();
@@ -133,7 +149,13 @@ describe("production exact-artifact deployment contract", () => {
       '.artifact_contract == "production-deployment-v1"'
     );
     expect(deploySource).toContain(".schema_version == 1");
-    expect(deploySource).toContain("aws s3 sync production-artifact/target");
+    expect(deploySource).toContain("aws s3 cp production-artifact/target");
+    expect(deploySource).toContain(
+      '--recursive --cache-control "public, max-age=31536000, immutable"'
+    );
+    expect(deploySource).toContain(
+      '--cache-control "no-store, max-age=0, must-revalidate"'
+    );
     expect(deploySource).toContain("Refuse stale main or production downgrade");
     expect(deploySource).toContain(
       'if ! git merge-base --is-ancestor "$COMMIT_SHA" "$current_main_sha"; then'
