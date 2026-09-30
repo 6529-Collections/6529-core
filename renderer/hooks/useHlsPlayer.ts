@@ -25,6 +25,22 @@ interface UseHlsPlayerParams {
 const HLS_MANIFEST_MAX_RETRIES = 2;
 const HLS_NETWORK_MAX_RECOVERIES = 2;
 const HLS_MANIFEST_RETRY_DELAY_MS = 2000;
+async function playFallbackVideo(videoEl: HTMLVideoElement): Promise<void> {
+  try {
+    await videoEl.play();
+  } catch (error) {
+    // Pausing, changing sources, or unloading can cancel a pending play().
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "name" in error &&
+      error.name === "AbortError"
+    ) {
+      return;
+    }
+    console.warn("Fallback autoplay failed:", error);
+  }
+}
 /**
  * A custom hook for Hls.js setup/cleanup.
  *
@@ -128,9 +144,7 @@ export function useHlsPlayer({
     videoEl.load();
     setIsLoading(false);
     if (autoPlay) {
-      void videoEl
-        .play()
-        .catch((err) => console.warn("Fallback autoplay failed:", err));
+      void playFallbackVideo(videoEl);
     }
   }
 

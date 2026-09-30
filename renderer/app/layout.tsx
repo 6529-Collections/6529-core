@@ -17,6 +17,10 @@ import AwsRumProvider from "@/components/monitoring/AwsRumProvider";
 import MobileLaunchTimingReporter from "@/components/monitoring/MobileLaunchTimingReporter";
 import AppRouteProviders from "@/components/providers/AppRouteProviders";
 import LayoutWrapper from "@/components/providers/LayoutWrapper";
+import {
+  SIDEBAR_STARTUP_SCRIPT,
+  SIDEBAR_STARTUP_STYLES,
+} from "@/components/layout/sidebarStartup";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
 import type { Viewport } from "next";
@@ -45,6 +49,11 @@ export default function RootLayout({
     // keyboard input arrives during startup. Keep that root-only mutation.
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STARTUP_STYLES }} />
+        <script
+          id="sidebar-startup-bootstrap"
+          dangerouslySetInnerHTML={{ __html: SIDEBAR_STARTUP_SCRIPT }}
+        />
         <link rel="preconnect" href={publicEnv.API_ENDPOINT} crossOrigin="" />
         <link rel="preconnect" href="https://d3lqz0a4bldqgf.cloudfront.net" />
         <link rel="preconnect" href="https://media.artblocks.io" />
