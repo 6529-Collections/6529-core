@@ -30,8 +30,8 @@ const env = {
 };
 
 const secureInstallCommands = new Map([
-  ["secure-install", "install"],
-  ["secure-install:frozen", "install:frozen"],
+  ["secure-install", "ci"],
+  ["secure-install:frozen", "ci"],
   ["secure-install:prod", "install:prod"],
 ]);
 const secureInstallCommand = secureInstallCommands.get(args[0]);
@@ -50,6 +50,14 @@ if (secureInstallCommand) {
       "Git Bash was not found. Set GIT_BASH to bash.exe before installing renderer dependencies on Windows.",
     );
     process.exit(1);
+  }
+  // pnpm run exports the root project's npm_config_* settings into this
+  // process. The renderer validates its own package environment and rejects
+  // inherited overrides, so start its secure install with a clean config.
+  for (const key of Object.keys(env)) {
+    if (key.toLowerCase().startsWith("npm_config_")) {
+      delete env[key];
+    }
   }
   const commandArgs =
     process.platform === "win32"
