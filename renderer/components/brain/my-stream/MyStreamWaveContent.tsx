@@ -25,6 +25,9 @@ import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import { WaveWinners } from "@/components/waves/winners/WaveWinners";
 import MemesArtSubmissionModal from "@/components/waves/memes/MemesArtSubmissionModal";
 import { MyStreamWaveTab } from "@/types/waves.types";
+import BrainRightSidebarConfiguration from "@/components/brain/right-sidebar/BrainRightSidebarConfiguration";
+import MyStreamWaveAbout from "./MyStreamWaveAbout";
+import { useWaveContentTabRegistration } from "./useWaveContentTabRegistration";
 import { MyStreamWaveTabs } from "./tabs/MyStreamWaveTabs";
 import MyStreamWaveMyVotes from "./votes/MyStreamWaveMyVotes";
 import MyStreamWaveFAQ from "./MyStreamWaveFAQ";
@@ -42,10 +45,8 @@ import {
   getWaveHomeRoute,
   getWavePathRoute,
 } from "@/helpers/navigation.helpers";
-import { formatNumberWithCommas } from "@/helpers/Helpers";
-import { MEMES_NOMINEE_REQUIRED_REP } from "@/helpers/waves/memes-nomination";
 import { useWaveViewMode } from "@/hooks/useWaveViewMode";
-import { SubmissionStatus, useWave } from "@/hooks/useWave";
+import { useWave } from "@/hooks/useWave";
 import type { ApiDrop } from "@/generated/models/ApiDrop";
 import { ApiDropType } from "@/generated/models/ApiDropType";
 import { areSameProfileIdentity } from "@/helpers/ProfileHelpers";
@@ -65,6 +66,15 @@ import type {
 } from "./chatSubmitDrop.types";
 import { getChatSubmitDropLabels } from "./chatSubmitDrop.types";
 import { isCompetitionPathname } from "@/helpers/competition.helpers";
+import { useDefaultCompetitionNavigation } from "@/hooks/competitions/useDefaultCompetitionNavigation";
+import { useCompetitionEvents } from "@/hooks/competitions/useCompetitionEvents";
+import { DefaultCompetitionState } from "@/components/competitions/DefaultCompetitionState";
+import { waveCompetitionTabs } from "@/helpers/default-competition.helpers";
+import { useCompetitionNavigation } from "@/contexts/CompetitionNavigationContext";
+import {
+  getChatSubmitDropRestrictionMessage,
+  getMemesHeaderDropActionState,
+} from "./waveDropAction.helpers";
 
 export interface MyStreamWaveProps {
   readonly waveId: string;
@@ -81,142 +91,6 @@ const getContentTabPanelId = (tab: MyStreamWaveTab): string =>
 
 const useBreakpoint = createBreakpoint({ LG: 1024, S: 0 });
 
-const getChatSubmitDropRestrictionMessage = ({
-  dropEligibility,
-  isApprovalVotingControlsLocked,
-}: {
-  readonly dropEligibility: ReturnType<typeof getWaveDropEligibility>;
-  readonly isApprovalVotingControlsLocked: boolean;
-}): string | null => {
-  if (!dropEligibility.canCreateDrop) {
-    return dropEligibility.restrictionMessage;
-  }
-
-  if (isApprovalVotingControlsLocked) {
-    return "Approval controls are locked";
-  }
-
-  return null;
-};
-
-type MemesHeaderDropActionState = Pick<
-  HeaderWaveDropAction,
-  | "canOpen"
-  | "label"
-  | "compactLabel"
-  | "restrictionMessage"
-  | "restrictionKind"
->;
-
-interface MemesHeaderParticipationState {
-  readonly canSubmitNow: boolean;
-  readonly endTime: number;
-  readonly hasReachedLimit: boolean;
-  readonly isEligible: boolean;
-  readonly maxSubmissions: number | null;
-  readonly startTime: number;
-  readonly status: SubmissionStatus;
-}
-
-const getMemesSubmissionPeriodHeaderDropActionState = ({
-  endTime,
-  startTime,
-  status,
-}: Pick<
-  MemesHeaderParticipationState,
-  "endTime" | "startTime" | "status"
->): MemesHeaderDropActionState | null => {
-  if (status === SubmissionStatus.ENDED) {
-    const closingTime = endTime ? new Date(endTime).toLocaleString() : null;
-
-    return {
-      canOpen: false,
-      label: "Submissions Closed",
-      compactLabel: "Closed",
-      restrictionMessage: closingTime
-        ? `Submissions closed on ${closingTime}`
-        : "Submissions are closed",
-    };
-  }
-
-  if (status === SubmissionStatus.NOT_STARTED) {
-    const openingTime = startTime ? new Date(startTime).toLocaleString() : null;
-
-    return {
-      canOpen: false,
-      label: "Submissions Open Soon",
-      compactLabel: "Opens",
-      restrictionMessage: openingTime
-        ? `Submissions open on ${openingTime}`
-        : "Submissions will open soon",
-    };
-  }
-
-  return null;
-};
-
-const getMemesHeaderDropActionState = ({
-  participationState,
-  isApprovalVotingControlsLocked,
-}: {
-  readonly participationState: MemesHeaderParticipationState;
-  readonly isApprovalVotingControlsLocked: boolean;
-}): MemesHeaderDropActionState => {
-  if (isApprovalVotingControlsLocked) {
-    return {
-      canOpen: false,
-      label: "Submit Work to The Memes",
-      compactLabel: "Submit",
-      restrictionMessage: "Approval controls are locked",
-    };
-  }
-
-  const periodActionState =
-    getMemesSubmissionPeriodHeaderDropActionState(participationState);
-  if (periodActionState) {
-    return periodActionState;
-  }
-
-  if (!participationState.isEligible) {
-    return {
-      canOpen: false,
-      label: "How to Submit",
-      compactLabel: "Submit",
-      restrictionMessage: `Reach ${formatNumberWithCommas(MEMES_NOMINEE_REQUIRED_REP)} MemesNominee REP to become eligible to submit work.`,
-      restrictionKind: "memes-nomination",
-    };
-  }
-
-  if (participationState.hasReachedLimit) {
-    const maxSubmissions = participationState.maxSubmissions ?? "?";
-    const submissionText =
-      maxSubmissions === 1 ? "1 submission" : `${maxSubmissions} submissions`;
-
-    return {
-      canOpen: false,
-      label: "Submission Limit Reached",
-      compactLabel: "Limit",
-      restrictionMessage: `You have already submitted the maximum allowed (${submissionText})`,
-    };
-  }
-
-  if (!participationState.canSubmitNow) {
-    return {
-      canOpen: false,
-      label: "Submit Work to The Memes",
-      compactLabel: "Submit",
-      restrictionMessage: "You cannot submit at this time",
-    };
-  }
-
-  return {
-    canOpen: true,
-    label: "Submit Work to The Memes",
-    compactLabel: "Submit",
-    restrictionMessage: null,
-  };
-};
-
 const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
   waveId,
   competitionContent,
@@ -225,6 +99,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
+  const { flat } = useCompetitionNavigation();
   const { isApp } = useDeviceInfo();
   const queryClient = useQueryClient();
   const locale = useBrowserLocale();
@@ -253,6 +128,12 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
     },
   });
   const metadataWaveId = wave?.id;
+  useWaveContentTabRegistration(wave, competitionOnly);
+  const defaultNavigation = useDefaultCompetitionNavigation(
+    wave,
+    !competitionOnly
+  );
+  useCompetitionEvents(waveId, !competitionOnly);
 
   useEffect(() => {
     registerWave(waveId, true);
@@ -484,6 +365,7 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
     );
     const params = new URLSearchParams(searchParams.toString() || "");
     params.set("drop", drop.id);
+    params.delete("default");
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -704,7 +586,35 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
       <MyStreamWavePolls wave={wave} onDropClick={onDropClick} />
     ),
     [MyStreamWaveTab.FAQ]: <MyStreamWaveFAQ wave={wave} />,
+    [MyStreamWaveTab.CONFIGURATION]: (
+      <div className="tw-h-full tw-min-h-0 tw-overflow-y-auto">
+        <BrainRightSidebarConfiguration wave={wave} />
+      </div>
+    ),
+    [MyStreamWaveTab.ABOUT]: <MyStreamWaveAbout wave={wave} />,
   };
+
+  const isResolvingCompetitionTab =
+    defaultNavigation.resolve &&
+    waveCompetitionTabs[activeContentTab] !== undefined;
+  const isFlatCompetitionView = flat && isCompetitionPathname(pathname);
+  let activeTabContent = components[activeContentTab];
+  if (activeCurationId) {
+    activeTabContent = (
+      <MyStreamWaveCurationContent
+        key={activeCurationId}
+        wave={wave}
+        curationId={activeCurationId}
+        onDropClick={onDropClick}
+      />
+    );
+  } else if (isFlatCompetitionView && competitionContent !== undefined) {
+    activeTabContent = competitionContent;
+  } else if (isResolvingCompetitionTab && !flat) {
+    activeTabContent = (
+      <DefaultCompetitionState selection={defaultNavigation.selection} />
+    );
+  }
 
   return (
     <div
@@ -735,25 +645,23 @@ const MyStreamWaveContent: React.FC<MyStreamWaveProps> = ({
         />
       )}
 
+      {defaultNavigation.resolve &&
+        !isResolvingCompetitionTab &&
+        defaultNavigation.selection.isError && (
+          <DefaultCompetitionState selection={defaultNavigation.selection} />
+        )}
+
       <div
         className="tw-relative tw-min-h-0 tw-min-w-0 tw-flex-grow tw-overflow-hidden"
-        role="tabpanel"
+        role={isApp && flat ? "region" : "tabpanel"}
+        aria-label={isApp && flat ? wave.name : undefined}
         id={
           activeCurationId
             ? `my-stream-wave-tabpanel-curation-${activeCurationId}`
             : getContentTabPanelId(activeContentTab)
         }
       >
-        {activeCurationId ? (
-          <MyStreamWaveCurationContent
-            key={activeCurationId}
-            wave={wave}
-            curationId={activeCurationId}
-            onDropClick={onDropClick}
-          />
-        ) : (
-          components[activeContentTab]
-        )}
+        {activeTabContent}
       </div>
       <MemesArtSubmissionModal
         isOpen={isAppMemesSubmitModalOpen}

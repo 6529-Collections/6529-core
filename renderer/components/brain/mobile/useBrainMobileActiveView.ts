@@ -21,6 +21,21 @@ const NON_WAVE_VIEWS = new Set([
   BrainView.PROFILE_FEED,
 ]);
 
+const WAVE_TAB_VIEWS: Readonly<Record<string, BrainView>> = {
+  chat: BrainView.DEFAULT,
+  competitions: BrainView.COMPETITIONS,
+  about: BrainView.ABOUT,
+  configuration: BrainView.CONFIGURATION,
+  leaderboard: BrainView.LEADERBOARD,
+  submissions: BrainView.SUBMISSIONS,
+  sales: BrainView.SALES,
+  winners: BrainView.WINNERS,
+  outcome: BrainView.OUTCOME,
+  my_votes: BrainView.MY_VOTES,
+  polls: BrainView.POLLS,
+  faq: BrainView.FAQ,
+};
+
 interface UseBrainMobileActiveViewParams {
   readonly firstDecisionDone: boolean;
   readonly isApp: boolean;
@@ -109,19 +124,6 @@ function getRouteDefaultView({
   return null;
 }
 
-function getWaveDefaultView({
-  hasLoadedWave,
-  isApproveWave,
-  isCompleted,
-  isRankWave,
-}: Pick<WaveViewState, "isApproveWave" | "isCompleted" | "isRankWave"> & {
-  readonly hasLoadedWave: boolean;
-}): BrainView {
-  return hasLoadedWave && isRankWave && !isApproveWave && isCompleted
-    ? BrainView.SUBMISSIONS
-    : BrainView.DEFAULT;
-}
-
 function getWaveViewAvailability({
   firstDecisionDone,
   hasAuthenticatedProfile,
@@ -183,7 +185,6 @@ function normalizeActiveView({
   readonly routeDefaultView: BrainView | null;
   readonly wave: ApiWave | null | undefined;
 }): BrainView {
-  const hasLoadedWave = wave !== null && wave !== undefined;
   const waveViewState: WaveViewState = {
     firstDecisionDone,
     hasAuthenticatedProfile,
@@ -196,12 +197,6 @@ function normalizeActiveView({
     isRankWave,
     showOutcomeView,
   };
-  const waveDefaultView = getWaveDefaultView({
-    hasLoadedWave,
-    isApproveWave,
-    isCompleted,
-    isRankWave,
-  });
 
   if (!hasWave) {
     if (!GLOBAL_VIEWS.has(activeView)) {
@@ -221,7 +216,9 @@ function normalizeActiveView({
 
   if (
     activeView === BrainView.LEADERBOARD &&
-    waveDefaultView === BrainView.SUBMISSIONS
+    isRankWave &&
+    !isApproveWave &&
+    isCompleted
   ) {
     return BrainView.SUBMISSIONS;
   }
@@ -229,7 +226,7 @@ function normalizeActiveView({
   const isCurrentViewAvailable =
     getWaveViewAvailability(waveViewState)[activeView] ?? true;
 
-  return isCurrentViewAvailable ? activeView : waveDefaultView;
+  return isCurrentViewAvailable ? activeView : BrainView.DEFAULT;
 }
 
 interface ActiveViewSelection {
@@ -261,6 +258,7 @@ export function useBrainMobileActiveView({
   const viewParam = searchParams.get("view");
   const createParam = searchParams.get("create");
   const serialNoParam = searchParams.get("serialNo");
+  const tabParam = searchParams.get("tab");
   const routeDefaultView = getRouteDefaultView({
     createParam,
     isApp,
@@ -270,7 +268,9 @@ export function useBrainMobileActiveView({
   });
   const shellContextKey = `shell:${pathname}:${viewParam ?? ""}`;
   const chatTargetKey = serialNoParam === null ? "" : `serial:${serialNoParam}`;
-  const waveTargetKey = isCompetitionRoute ? pathname : chatTargetKey;
+  const waveTargetKey = isCompetitionRoute
+    ? pathname
+    : `${chatTargetKey}:${tabParam ?? ""}`;
   const currentContextKey = waveId
     ? `wave:${waveId}:${waveTargetKey}`
     : shellContextKey;
@@ -278,17 +278,12 @@ export function useBrainMobileActiveView({
     () => Symbol(currentContextKey),
     [currentContextKey]
   );
-  const hasLoadedWave = wave !== null && wave !== undefined;
-  const waveDefaultView = getWaveDefaultView({
-    hasLoadedWave: hasWave && hasLoadedWave,
-    isApproveWave,
-    isCompleted,
-    isRankWave,
-  });
   let baseView = routeDefaultView ?? BrainView.DEFAULT;
   if (hasWave) {
-    baseView = restoredView ?? waveDefaultView;
+    baseView = restoredView ?? BrainView.DEFAULT;
     if (serialNoParam !== null) baseView = BrainView.DEFAULT;
+    if (serialNoParam === null && tabParam !== null)
+      baseView = WAVE_TAB_VIEWS[tabParam] ?? baseView;
     if (isCompetitionRoute) baseView = BrainView.COMPETITIONS;
   }
   const candidateView =
