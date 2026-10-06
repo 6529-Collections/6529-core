@@ -13,6 +13,7 @@ import CircleLoader, {
 } from "@/components/distribution-plan-tool/common/CircleLoader";
 import { getTransactionLink } from "@/helpers/Helpers";
 import { trapTabFocus } from "@/components/utils/modal/focusTrap";
+import { NON_WALLET_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
 
 export type OnchainTransactionModalStatus =
   | "confirm_wallet"
@@ -356,7 +357,9 @@ export default function OnchainTransactionModal({
       : null);
 
   return createPortal(
-    <div className="tailwind-scope tw-fixed tw-inset-0 tw-z-[9999] tw-flex tw-items-center tw-justify-center tw-bg-gray-600 tw-bg-opacity-50 tw-p-4 tw-backdrop-blur-[1px]">
+    <div
+      className={`tailwind-scope tw-fixed tw-inset-0 ${NON_WALLET_MODAL_OVERLAY_CLASS} tw-flex tw-items-center tw-justify-center tw-bg-gray-600 tw-bg-opacity-50 tw-p-4 tw-backdrop-blur-[1px]`}
+    >
       {closable ? (
         <button
           type="button"
