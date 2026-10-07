@@ -69,6 +69,18 @@ and run a non-empty pack set sequentially. Deployed-environment entries are
 validated as explicitly read-only and must use the exact approved base URL.
 Their artifacts can be preserved per pack with `--artifact-root <path>`.
 
+PR selection for `test:e2e:native-competition-sandbox` is owned by
+`scripts/app-pr-ci-effective-plan.cjs`. Its desktop and mobile scenarios cover
+native competitions plus shared submission dialogs, leaderboard controls and
+drop navigation. Changes under `components/waves/leaderboard/` or its
+`__tests__/components/waves/leaderboard/` tests therefore select this pack, as
+do the desktop `components/waves/drops/WaveDropActionsOpen.tsx` and mobile
+`components/waves/drops/WaveDropMobileMenuOpen.tsx` actions and their focused
+tests.
+Keep those ownership rules covered in
+`__tests__/scripts/app-pr-ci-effective-plan.test.ts`; merely registering a
+pack here does not make a product-only PR select it.
+
 <!-- BEGIN GENERATED: e2e-pack-table -->
 
 Generated from `tests/packs.manifest.cjs` by
@@ -81,6 +93,7 @@ Generated from `tests/packs.manifest.cjs` by
 | `test:e2e:ui`                                       | —                             | local    | local       | manual                    | 90m     | Playwright UI mode for local debugging.                                                               |
 | `test:e2e:smoke`                                    | —                             | local    | local       | pr-ci, manual             | 15m     | Fast @smoke subset of home, about, and The Memes.                                                     |
 | `test:e2e:critical-shell`                           | —                             | local    | local       | pr-ci, manual             | 15m     | Boot and guarded route-shell resilience pack.                                                         |
+| `test:e2e:wave-feature-usage-sandbox`               | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Wave feature visibility and production SDK privacy with synthetic loopback data.                      |
 | `test:e2e:social-readonly`                          | —                             | readonly | local       | pr-ci, manual             | 15m     | Waves and profile read-only journeys.                                                                 |
 | `test:e2e:input-detection-readonly`                 | —                             | readonly | local       | pr-ci, manual             | 15m     | Windows touch-input detection read-only contract.                                                     |
 | `test:e2e:media-readonly`                           | —                             | readonly | local       | pr-ci, manual             | 15m     | Media and mint detail read-only coverage.                                                             |

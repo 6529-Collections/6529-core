@@ -113,7 +113,7 @@ function applyEffectiveAppPrCiPlan(plan) {
 
   const playwrightNativeCompetition = files.some(
     (file) =>
-      /^(?:components\/competitions\/|hooks\/competitions\/|__tests__\/competitions\/|app\/waves\/\[wave\]\/competitions\/|components\/waves\/create-wave\/|generated\/models\/ApiCompetition)/u.test(
+      /^(?:components\/competitions\/|hooks\/competitions\/|__tests__\/competitions\/|app\/waves\/\[wave\]\/competitions\/|components\/waves\/create-wave\/|components\/waves\/leaderboard\/|__tests__\/components\/waves\/leaderboard\/|generated\/models\/ApiCompetition)/u.test(
         file
       ) ||
       [
@@ -129,11 +129,36 @@ function applyEffectiveAppPrCiPlan(plan) {
         "components/waves/WavesMobile.tsx",
         "components/brain/BrainMobile.tsx",
         "components/brain/my-stream/MyStreamWaveContent.tsx",
+        "components/waves/drops/WaveDropActionsOpen.tsx",
+        "__tests__/components/waves/drops/WaveDropActionsOpen.test.tsx",
+        "components/waves/drops/WaveDropMobileMenuOpen.tsx",
+        "__tests__/components/waves/drops/WaveDropMobileMenuOpen.test.tsx",
         "tests/packs.manifest.cjs",
         "openapi.yaml",
         ".github/workflows/app-pr-ci.yml",
         "scripts/app-pr-ci-effective-plan.cjs",
         "__tests__/scripts/app-pr-ci-effective-plan.test.ts",
+      ].includes(file)
+  );
+
+  const playwrightWaveFeatureUsage = files.some(
+    (file) =>
+      /^(?:services\/analytics\/(?:mixpanel|waveFeature)|hooks\/useWaveFeatureUsage|tests\/(?:social\/wave-feature-usage-sandbox|support\/waveFeature)|components\/brain\/left-sidebar\/waves\/(?:SidebarDiscovery|SidebarActiveVotes|SidebarWaveNavigation|HighlyRatedWavesToggle)|components\/utils\/select\/)/u.test(
+        file
+      ) ||
+      [
+        "components/brain/my-stream/MyStreamWaveDesktopTabs.tsx",
+        "components/brain/my-stream/MyStreamWaveTabOption.tsx",
+        "components/common/TabToggle.tsx",
+        "components/providers/MixpanelSetup.tsx",
+        "components/brain/left-sidebar/web/WebProfileFeedShortcut.tsx",
+        "components/waves/leaderboard/header/WaveleaderboardSort.tsx",
+        "components/waves/leaderboard/header/WaveleaderboardHeader.tsx",
+        "playwright.config.ts",
+        "tsconfig.playwright.json",
+        "tests/packs.manifest.cjs",
+        "scripts/app-pr-ci-effective-plan.cjs",
+        ".github/workflows/app-pr-ci.yml",
       ].includes(file)
   );
 
@@ -170,6 +195,12 @@ function applyEffectiveAppPrCiPlan(plan) {
       playwrightNativeCompetition
         ? "Native competition changes require desktop and mobile sandbox browser coverage."
         : "No native competition surfaces changed."
+    ),
+    playwright_wave_feature_usage: check(
+      playwrightWaveFeatureUsage,
+      playwrightWaveFeatureUsage
+        ? "Wave tracking controls or SDK policy require isolated desktop/mobile visibility and privacy coverage."
+        : "No Wave feature tracking boundary changed."
     ),
     playwright_museum: check(
       playwrightMuseum,
