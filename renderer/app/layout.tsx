@@ -21,6 +21,10 @@ import {
   SIDEBAR_STARTUP_SCRIPT,
   SIDEBAR_STARTUP_STYLES,
 } from "@/components/layout/sidebarStartup";
+import {
+  SMALL_WEB_STARTUP_SCRIPT,
+  SMALL_WEB_STARTUP_STYLES,
+} from "@/components/layout/smallWebStartup";
 import { getAppMetadata } from "@/components/providers/metadata";
 import { publicEnv } from "@/config/env";
 import type { Viewport } from "next";
@@ -49,6 +53,11 @@ export default function RootLayout({
     // keyboard input arrives during startup. Keep that root-only mutation.
     <html lang="en" data-scroll-behavior="smooth" suppressHydrationWarning>
       <head>
+        <style dangerouslySetInnerHTML={{ __html: SMALL_WEB_STARTUP_STYLES }} />
+        <script
+          id="small-web-startup-bootstrap"
+          dangerouslySetInnerHTML={{ __html: SMALL_WEB_STARTUP_SCRIPT }}
+        />
         <style dangerouslySetInnerHTML={{ __html: SIDEBAR_STARTUP_STYLES }} />
         <script
           id="sidebar-startup-bootstrap"
