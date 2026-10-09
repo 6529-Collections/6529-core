@@ -1,3 +1,4 @@
+import { WaveInformationProvider } from "@/contexts/WaveInformationContext";
 import { VersionStatusProvider } from "@/contexts/VersionStatusContext";
 import { AppWalletsProvider } from "@/components/app-wallets/AppWalletsContext";
 import Auth from "@/components/auth/Auth";
@@ -57,7 +58,9 @@ export default function Providers({
         <SearchProvider>
           <ScrollPositionProvider>
             <ViewProvider>
-              <NavigationHistoryProvider>{children}</NavigationHistoryProvider>
+              <WaveInformationProvider>
+                <NavigationHistoryProvider>{children}</NavigationHistoryProvider>
+              </WaveInformationProvider>
             </ViewProvider>
           </ScrollPositionProvider>
         </SearchProvider>

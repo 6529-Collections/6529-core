@@ -478,6 +478,7 @@ export const baseRules = deepFreezeRuleConfig({
 export const baseGlobalIgnores = Object.freeze([
   "**/node_modules",
   "**/.next",
+  "**/.next-playwright-*",
   "**/.deployment-artifact/**",
   "**/dist",
   "**/out",

@@ -2,6 +2,7 @@ import type { Locator, Page, Route } from "@playwright/test";
 
 import {
   expect,
+  captureSafeScreenshot,
   expectNoHorizontalOverflow,
   test,
   waitForRouteReady,
@@ -177,20 +178,17 @@ async function gotoReady(page: Page, path: string) {
 }
 
 async function firstVisible(locator: Locator) {
-  const count = await locator.count();
-  for (let index = 0; index < count; index += 1) {
-    const candidate = locator.nth(index);
-    if (await candidate.isVisible().catch(() => false)) {
-      return candidate;
-    }
-  }
-  throw new Error("Expected at least one visible locator match.");
+  // Server-rendered content can precede the interactive navigation shell.
+  const candidate = locator.filter({ visible: true }).first();
+  await expect(candidate).toBeVisible({ timeout: NAVIGATION_TIMEOUT_MS });
+  return candidate;
 }
 
 async function openHeaderSearch(page: Page) {
   const searchButton = await firstVisible(
     page.getByRole("button", { name: /^Search(?: 6529)?$/ })
   );
+  await expect(searchButton).toBeEnabled({ timeout: NAVIGATION_TIMEOUT_MS });
   await searchButton.click();
   const searchInput = page.locator("#header-search-input");
   await expect(searchInput).toBeVisible();
@@ -250,6 +248,39 @@ async function installLocalActiveWaveSearchFixture(page: Page) {
       });
     }
   );
+}
+
+async function installSidebarScoreFixture(
+  page: Page,
+  votesReady?: Promise<void>
+) {
+  await page.route("**/api/v2/waves/active-votes**", async (route) => {
+    await votesReady;
+    await fulfillLocalReadOnlyFixture(route, {
+      contentType: "application/json",
+      status: 200,
+      json: {
+        page: 1,
+        next: false,
+        count: 3,
+        data: [0, 1, 2].map((index) => ({
+          wave: {
+            ...localFixtureWaveOverview,
+            id: `00000000-0000-4000-8000-00000000053${index}`,
+            name: `Search score fixture ${index + 1}`,
+            wave_score: {
+              visibility_score: 83,
+              quality_score: 78,
+              hotness_score: 92,
+              rep_sort_score: 41,
+            },
+          },
+          voting_ends_at: null,
+          next_decision_at: null,
+        })),
+      },
+    });
+  });
 }
 
 async function fulfillLocalReadOnlyFixture(
@@ -350,6 +381,152 @@ async function openSearchOnFirstWaveWithSearch(page: Page) {
 }
 
 test.describe("Search and wave-detail read-only coverage @surface @medium @large @readonly", () => {
+  test("mobile wave shortcuts keep generous touch areas around compact buttons", async ({
+    page,
+  }, testInfo) => {
+    // Desktop keeps its smaller controls; 44px targets apply to touch input.
+    test.skip(
+      !testInfo.project.use.hasTouch,
+      "Touch target geometry is mobile-only"
+    );
+    await gotoReady(page, "/waves");
+    const shortcuts = [
+      page.getByRole("link", { name: "Profile Waves Feed", exact: true }),
+      page.getByRole("button", { name: "Find a wave…", exact: true }),
+    ];
+    for (const shortcut of shortcuts) {
+      const visibleShortcut = shortcut.filter({ visible: true });
+      await visibleShortcut.scrollIntoViewIfNeeded();
+      const geometry = await visibleShortcut.evaluate((element) => {
+        const target = element.getBoundingClientRect();
+        const surface = element.firstElementChild?.getBoundingClientRect();
+        const icon = element.querySelector("svg")?.getBoundingClientRect();
+        const corners = [
+          [target.left + 1, target.top + 1],
+          [target.right - 1, target.top + 1],
+          [target.left + 1, target.bottom - 1],
+          [target.right - 1, target.bottom - 1],
+        ] as const;
+        return {
+          target: [target.width, target.height],
+          surface: [surface?.width, surface?.height],
+          icon: [icon?.width, icon?.height],
+          cornersReachTarget: corners.every(([x, y]) =>
+            element.contains(document.elementFromPoint(x, y))
+          ),
+        };
+      });
+      expect(geometry).toEqual({
+        target: [44, 44],
+        surface: [40, 40],
+        icon: [16, 16],
+        cornersReachTarget: true,
+      });
+    }
+    await page.screenshot({
+      path: testInfo.outputPath("mobile-shortcuts.png"),
+    });
+  });
+
+  test("sidebar score details close while wave search is open and return afterwards", async ({
+    page,
+  }, testInfo) => {
+    await installSidebarScoreFixture(page);
+    await gotoReady(page, "/waves");
+    const votes = page
+      .getByRole("region", { name: "Active voting waves" })
+      .filter({ visible: true });
+    const score = votes.getByRole("button", { name: /^Wave score / }).first();
+    await expect(score).toBeEnabled({ timeout: NAVIGATION_TIMEOUT_MS });
+    await score.click();
+    const details = page.getByRole("dialog", { name: "Wave score details" });
+    await expect(details).toBeVisible();
+    const searchToggle = page
+      .getByRole("button", { name: "Find a wave…", exact: true })
+      .filter({ visible: true });
+    await searchToggle.focus();
+    await searchToggle.press("Enter");
+    const search = page
+      .getByRole("searchbox", { name: "Find a wave…" })
+      .filter({ visible: true });
+    await expect(search).toBeFocused();
+    await expect(details).toHaveCount(0);
+    await expect(score).toBeDisabled();
+    await score.hover();
+    await search.fill(UNMATCHABLE_WAVE_QUERY);
+    await expect(
+      page
+        .getByRole("region", { name: "Search results · All waves" })
+        .filter({ visible: true })
+        .getByRole("status")
+    ).toHaveText(`No waves found for “${UNMATCHABLE_WAVE_QUERY}”.`, {
+      timeout: NAVIGATION_TIMEOUT_MS,
+    });
+    await expect(details).toHaveCount(0);
+    await expect(score).toBeDisabled();
+    await captureSafeScreenshot(
+      page,
+      testInfo,
+      "wave-search-score-details-suppressed"
+    );
+    await page
+      .getByRole("button", { name: "Close wave search" })
+      .filter({ visible: true })
+      .click();
+    await expect(search).toHaveCount(0);
+    await expect(score).toBeEnabled();
+    await score.click();
+    await expect(details).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(details).toHaveCount(0);
+  });
+
+  test("late-loading vote scores cannot obstruct closing an empty wave search", async ({
+    page,
+  }) => {
+    let releaseVotes!: () => void;
+    const votesReleased = new Promise<void>((resolve) => {
+      releaseVotes = resolve;
+    });
+    await installSidebarScoreFixture(page, votesReleased);
+    try {
+      await gotoReady(page, "/waves");
+      await page
+        .getByRole("button", { name: "Find a wave…", exact: true })
+        .filter({ visible: true })
+        .click();
+      const search = page
+        .getByRole("searchbox", { name: "Find a wave…" })
+        .filter({ visible: true });
+      await expect(search).toBeFocused();
+      await expect(search).toHaveValue("");
+      releaseVotes();
+      const score = page
+        .getByRole("region", { name: "Active voting waves" })
+        .filter({ visible: true })
+        .getByRole("button", { name: /^Wave score / })
+        .first();
+      await expect(score).toBeDisabled({ timeout: NAVIGATION_TIMEOUT_MS });
+      await score.hover();
+      await expect(
+        page.getByRole("dialog", { name: "Wave score details" })
+      ).toHaveCount(0);
+      await page
+        .getByRole("button", { name: "Close wave search" })
+        .filter({ visible: true })
+        .click();
+      await expect(search).toHaveCount(0);
+      await expect(score).toBeEnabled();
+      await score.click();
+      await expect(
+        page.getByRole("dialog", { name: "Wave score details" })
+      ).toBeVisible();
+    } finally {
+      releaseVotes();
+      await page.unrouteAll({ behavior: "ignoreErrors" });
+    }
+  });
+
   test("sidebar discovery and cross-collection search remain directly accessible", async ({
     page,
   }) => {
@@ -357,6 +534,10 @@ test.describe("Search and wave-detail read-only coverage @surface @medium @large
     const searchToggle = page
       .getByRole("button", { name: "Find a wave…", exact: true })
       .filter({ visible: true });
+    const publicListLabel = page
+      .getByText("All Waves", { exact: true })
+      .filter({ visible: true });
+    await expect(publicListLabel).toBeVisible();
     await searchToggle.click();
     const search = page
       .getByRole("searchbox", { name: "Find a wave…" })
@@ -391,6 +572,7 @@ test.describe("Search and wave-detail read-only coverage @surface @medium @large
       )
     ).click();
     await expect(search).toHaveCount(0);
+    await expect(publicListLabel).toBeVisible();
     const discovery = page
       .getByRole("region", { name: "Wave discovery", exact: true })
       .filter({ visible: true });
@@ -528,12 +710,21 @@ test.describe("Search and wave-detail read-only coverage @surface @medium @large
           })
         );
 
-    await expect(page).toHaveURL(
-      (url) =>
-        url.pathname === expectedPath ||
-        (expectedQueryWaveId !== null &&
-          url.searchParams.get("wave") === expectedQueryWaveId)
-    );
+    // The search dialog is ready; pending media must not make the URL check
+    // wait for the unrelated page load event.
+    await expect
+      .poll(
+        () => {
+          const url = new URL(page.url());
+          return (
+            url.pathname === expectedPath ||
+            (expectedQueryWaveId !== null &&
+              url.searchParams.get("wave") === expectedQueryWaveId)
+          );
+        },
+        { message: "Wave search must remain on the selected wave route" }
+      )
+      .toBe(true);
     await expect(searchInput).toHaveAttribute("placeholder", "Search messages");
     const minimumQueryMessage = page
       .locator("#wave-drops-search-idle-status")

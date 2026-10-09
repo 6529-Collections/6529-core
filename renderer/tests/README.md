@@ -69,6 +69,18 @@ and run a non-empty pack set sequentially. Deployed-environment entries are
 validated as explicitly read-only and must use the exact approved base URL.
 Their artifacts can be preserved per pack with `--artifact-root <path>`.
 
+PR selection for `test:e2e:native-competition-sandbox` is owned by
+`scripts/app-pr-ci-effective-plan.cjs`. Its desktop and mobile scenarios cover
+native competitions plus shared submission dialogs, leaderboard controls and
+drop navigation. Changes under `components/waves/leaderboard/` or its
+`__tests__/components/waves/leaderboard/` tests therefore select this pack, as
+do the desktop `components/waves/drops/WaveDropActionsOpen.tsx` and mobile
+`components/waves/drops/WaveDropMobileMenuOpen.tsx` actions and their focused
+tests.
+Keep those ownership rules covered in
+`__tests__/scripts/app-pr-ci-effective-plan.test.ts`; merely registering a
+pack here does not make a product-only PR select it.
+
 <!-- BEGIN GENERATED: e2e-pack-table -->
 
 Generated from `tests/packs.manifest.cjs` by
@@ -81,6 +93,7 @@ Generated from `tests/packs.manifest.cjs` by
 | `test:e2e:ui`                                       | —                             | local    | local       | manual                    | 90m     | Playwright UI mode for local debugging.                                                               |
 | `test:e2e:smoke`                                    | —                             | local    | local       | pr-ci, manual             | 15m     | Fast @smoke subset of home, about, and The Memes.                                                     |
 | `test:e2e:critical-shell`                           | —                             | local    | local       | pr-ci, manual             | 15m     | Boot and guarded route-shell resilience pack.                                                         |
+| `test:e2e:wave-feature-usage-sandbox`               | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Wave feature visibility and production SDK privacy with synthetic loopback data.                      |
 | `test:e2e:social-readonly`                          | —                             | readonly | local       | pr-ci, manual             | 15m     | Waves and profile read-only journeys.                                                                 |
 | `test:e2e:input-detection-readonly`                 | —                             | readonly | local       | pr-ci, manual             | 15m     | Windows touch-input detection read-only contract.                                                     |
 | `test:e2e:media-readonly`                           | —                             | readonly | local       | pr-ci, manual             | 15m     | Media and mint detail read-only coverage.                                                             |
@@ -100,13 +113,16 @@ Generated from `tests/packs.manifest.cjs` by
 | `test:e2e:museum-rights`                            | —                             | readonly | local       | pr-ci, manual             | 15m     | Network Museum rights education and object-license route sweep.                                       |
 | `test:e2e:museum-inside-system`                     | —                             | readonly | local       | pr-ci, manual             | 30m     | Network Museum Inside the System project and comparison sweep.                                        |
 | `test:e2e:artwork-documentation-sandbox`            | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Artwork documentation saving and upload recovery through the real editor with isolated HTTP fixtures. |
+| `test:e2e:pdf-attachments-sandbox`                  | —                             | sandbox  | local       | pr-ci, manual             | 15m     | PDF attachment scrolling, recovery and touch layout in WebKit.                                        |
 | `test:e2e:composer-sandbox`                         | —                             | sandbox  | local       | manual                    | 15m     | Waves composer sandbox against the local mock API.                                                    |
 | `test:e2e:public-review-sandbox`                    | —                             | sandbox  | local       | manual                    | 15m     | Stream review feedback sandbox against the local mock API.                                            |
 | `test:e2e:reaction-sandbox`                         | —                             | sandbox  | local       | manual                    | 15m     | Drop reaction sandbox against the local mock API.                                                     |
 | `test:e2e:edit-drop-sandbox`                        | —                             | sandbox  | local       | manual                    | 15m     | Drop edit sandbox against the local mock API.                                                         |
 | `test:e2e:native-competition-sandbox`               | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Native competition context, parallel budgets and navigation against the local mock API.               |
 | `test:e2e:signature-sandbox`                        | —                             | sandbox  | local       | manual                    | 15m     | Signed participation sandbox that fails closed unsigned.                                              |
+| `test:e2e:session-recovery-sandbox`                 | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Expired session cold-start and foreground recovery against the local mock API.                        |
 | `test:e2e:auth-sandbox`                             | —                             | sandbox  | local       | manual                    | 15m     | Aggregate authenticated sandbox pack.                                                                 |
+| `test:e2e:wave-creation-sandbox`                    | —                             | sandbox  | local       | pr-ci, manual             | 15m     | Wave creation, permissions, and draft recovery on desktop and mobile.                                 |
 | `test:e2e:smoke:surface-matrix`                     | —                             | local    | local       | pr-ci, manual             | 15m     | @smoke subset on desktop and mobile web shells.                                                       |
 | `test:e2e:surface-matrix`                           | —                             | local    | local       | pr-ci, manual             | 15m     | Core surfaces on desktop and mobile web shells.                                                       |
 | `test:e2e:browser-diversity`                        | —                             | local    | local       | pr-ci, manual             | 15m     | Engine-diversity pass on Firefox and WebKit.                                                          |
@@ -253,6 +269,13 @@ Surface matrix:
   baseline web projects.
 - `test:e2e:social-readonly` runs the public Waves/Profile read-only pack on
   both baseline web projects.
+  Its Main Stage app journey validates live vote Activity against a successful
+  API response: populated responses must render matching drop controls, and an
+  empty response must render the explicit empty state. It does not require live
+  votes or enough rows to overflow. Settings and Activity scrolling are covered
+  by `test:e2e:native-competition-sandbox` with long fixture terms and 30 vote
+  rows for both legacy and native competitions, including the iOS app simulation
+  on the mobile project.
 - `test:e2e:media-readonly` runs the public media, mint, and detail read-only
   pack on both baseline web projects. Exact ReMemes detail assertions are limited
   to the production pack until local and staging have a stable matching fixture.

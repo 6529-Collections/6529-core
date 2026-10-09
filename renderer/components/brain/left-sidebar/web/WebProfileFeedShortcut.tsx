@@ -7,7 +7,12 @@ import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { t } from "@/i18n/messages";
 import Link from "next/link";
 import React from "react";
-import { WAVE_HEADER_ACTION_CLASSES } from "../waves/WaveHeaderActions";
+import {
+  WAVE_HEADER_ACTION_CLASSES,
+  WAVE_HEADER_ACTION_SURFACE_CLASSES,
+} from "../waves/WaveHeaderActions";
+import { useWaveFeatureUsage } from "@/hooks/useWaveFeatureUsage";
+import { waveFeatureAttributes } from "@/services/analytics/waveFeatureUsage";
 
 export const PROFILE_FEED_TOOLTIP_ID = "profile-feed-shortcut-tooltip";
 
@@ -63,6 +68,7 @@ export function WebProfileFeedShortcut({
   readonly mobile?: boolean;
 }) {
   const { activeWave } = useMyStream();
+  const { ref: featureUsageRef } = useWaveFeatureUsage("sidebar");
   const locale = useBrowserLocale();
   const isMobileLayoutViewport = useIsMobileLayoutViewport();
   const opensMobileFeed = mobile || isMobileLayoutViewport;
@@ -90,6 +96,8 @@ export function WebProfileFeedShortcut({
       >
         <Link
           href={href}
+          ref={featureUsageRef}
+          {...waveFeatureAttributes("sidebar_entry", "profile_feed")}
           prefetch={false}
           onClick={handleClick}
           aria-label={profileFeedLabel}
@@ -107,6 +115,8 @@ export function WebProfileFeedShortcut({
   return (
     <Link
       href={href}
+      ref={featureUsageRef}
+      {...waveFeatureAttributes("sidebar_entry", "profile_feed")}
       prefetch={false}
       onClick={handleClick}
       aria-label={profileFeedLabel}
@@ -115,7 +125,9 @@ export function WebProfileFeedShortcut({
       data-tooltip-id={PROFILE_FEED_TOOLTIP_ID}
       data-tooltip-content={t(locale, "waves.sidebar.openProfileFeed")}
     >
-      <MasonryGridIcon />
+      <span className={WAVE_HEADER_ACTION_SURFACE_CLASSES}>
+        <MasonryGridIcon />
+      </span>
     </Link>
   );
 }

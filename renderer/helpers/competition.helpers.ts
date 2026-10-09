@@ -19,17 +19,32 @@ export const isCompetitionPathname = (pathname: string | null) => {
   );
 };
 
+export function getCompetitionIdFromPathname(
+  pathname: string | null
+): string | null {
+  if (!isCompetitionPathname(pathname)) return null;
+  const segments = (pathname ?? "").split("/").filter(Boolean);
+  const competitionId = segments[3];
+  return competitionId && !["new", "draft"].includes(competitionId)
+    ? competitionId
+    : null;
+}
+
 export const COMPETITION_TABS = [
   "leaderboard",
   "decisions",
   "outcomes",
   "votes",
-  "voters",
   "rules",
 ] as const;
 export type CompetitionTab = (typeof COMPETITION_TABS)[number];
-export const getCompetitionTab = (tab: string | null): CompetitionTab =>
-  COMPETITION_TABS.find((candidate) => candidate === tab) ?? "leaderboard";
+export const getCompetitionTab = (tab: string | null): CompetitionTab => {
+  if (tab === "voters") return "votes";
+  if (tab === "settings") return "rules";
+  return (
+    COMPETITION_TABS.find((candidate) => candidate === tab) ?? "leaderboard"
+  );
+};
 
 export const newCompetitionRequestKey = () => globalThis.crypto.randomUUID();
 

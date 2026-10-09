@@ -13,6 +13,7 @@ import {
   getFittingPreviewCount,
   getHighlyRatedPreviewWaves,
   getVisibleHighlyRatedPreviewItems,
+  HighlyRatedWavesToggle,
   type HighlyRatedWavePreviewItem,
 } from "@/components/brain/left-sidebar/waves/HighlyRatedWavesToggle";
 import { SIDEBAR_SUBWAVE_ROW_EXIT_CLEANUP_MS } from "@/hooks/useAnimatedSidebarWaveRows";
@@ -23,6 +24,7 @@ import { useSeizeSettingsOptional } from "@/contexts/SeizeSettingsContext";
 import { useMyStream } from "@/contexts/wave/MyStreamContext";
 import { createMockMinimalWave } from "@/__tests__/utils/mockFactories";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import { getWaveFeatureDescriptor } from "@/services/analytics/waveFeatureUsage";
 
 let mockDeviceInfo = { isApp: false, hasTouchScreen: false };
 
@@ -35,6 +37,7 @@ jest.mock(
       data-depth={String(props.depth)}
       data-can-expand={String(props.canExpand)}
       data-unread-subwaves={String(props.hasUnreadSubwaves)}
+      data-score-details-disabled={String(props.scoreDetailsDisabled)}
     ></div>
   )
 );
@@ -188,6 +191,30 @@ it("renders structure even when no waves", () => {
   expect(screen.getByRole("button", { name: "Joined" })).toBeInTheDocument();
 });
 
+it("suppresses announcement and wave-row score details during an empty search", () => {
+  render(
+    <UnifiedWavesListWaves
+      waves={baseWaves}
+      onHover={jest.fn()}
+      scrollContainerRef={scrollRef}
+    />
+  );
+  const expectScoreDetailsDisabled = (disabled: boolean) => {
+    for (const row of screen.getAllByTestId(/^wave-/)) {
+      expect(row).toHaveAttribute(
+        "data-score-details-disabled",
+        String(disabled)
+      );
+    }
+  };
+  expectScoreDetailsDisabled(false);
+  fireEvent.click(screen.getByRole("button", { name: "Find a wave…" }));
+  expect(screen.getByRole("searchbox")).toHaveValue("");
+  expectScoreDetailsDisabled(true);
+  fireEvent.click(screen.getByRole("button", { name: "Close wave search" }));
+  expectScoreDetailsDisabled(false);
+});
+
 it("calculates how many highly rated preview avatars fit", () => {
   expect(getFittingPreviewCount({ itemCount: 0, width: 220 })).toBe(0);
   expect(getFittingPreviewCount({ itemCount: 10, width: 0 })).toBe(6);
@@ -201,6 +228,39 @@ it("calculates how many highly rated preview avatars fit", () => {
       width: 224,
     })
   ).toBe(4);
+});
+
+it("exposes the current recommendation to accessibility and telemetry across selection changes", () => {
+  const item = createPreviewItem({
+    id: "selected-recommendation",
+    isActive: true,
+  });
+  item.wave.name = "Selected recommendation";
+  const { rerender } = render(
+    <HighlyRatedWavesToggle
+      previewItems={[item]}
+      paddingClassName="tw-px-0"
+      scoreDetailsDisabled
+    />
+  );
+  const link = screen.getByRole("link", { name: /Selected recommendation/ });
+  expect(link).toHaveAttribute("aria-current", "page");
+  expect(getWaveFeatureDescriptor(link, "sidebar")).toMatchObject({
+    value: "recommendations_wave",
+    selected: true,
+  });
+  rerender(
+    <HighlyRatedWavesToggle
+      previewItems={[{ ...item, isActive: false }]}
+      paddingClassName="tw-px-0"
+      scoreDetailsDisabled
+    />
+  );
+  expect(link).not.toHaveAttribute("aria-current");
+  expect(getWaveFeatureDescriptor(link, "sidebar")).toMatchObject({
+    value: "recommendations_wave",
+    selected: false,
+  });
 });
 
 it("keeps the active highly rated preview visible within the capped strip", () => {

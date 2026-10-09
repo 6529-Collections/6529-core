@@ -82,6 +82,7 @@ import {
 } from "./authValidation";
 import { useSeizeConnectContext } from "./SeizeConnectContext";
 import { useAuthChainGuard } from "./useAuthChainGuard";
+import { useSessionRecovery } from "./useSessionRecovery";
 
 export default function Auth({
   children,
@@ -112,6 +113,7 @@ export default function Auth({
     isDisconnecting,
     isSigningOutAll,
   } = useSeizeConnectContext();
+  useSessionRecovery(enableWalletAuthentication && !isSigningOutAll);
   const {
     signMessage,
     isSigningPending,

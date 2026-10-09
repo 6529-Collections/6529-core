@@ -25,9 +25,9 @@ export function useCompetitionConfigEditable() {
   const { competition, hub } = useCompetition();
   return (
     isMultiCompetitionEnabled() &&
-    hub.legacy_primary_competition_id !== competition.id &&
     competition.permissions.administer &&
-    (competition.lifecycle === ApiCompetitionLifecycle.Draft ||
+    (hub.legacy_primary_competition_id === competition.id ||
+      competition.lifecycle === ApiCompetitionLifecycle.Draft ||
       competition.lifecycle === ApiCompetitionLifecycle.Published)
   );
 }
@@ -78,8 +78,8 @@ export function useCompetitionConfigUpdate() {
       pending.current = null;
       await invalidateCompetition(client, identity);
       return true;
-    } catch (failure) {
-      const conflict = getStructuredApiErrorStatus(failure) === 409;
+    } catch (error_) {
+      const conflict = getStructuredApiErrorStatus(error_) === 409;
       setError(conflict ? "conflict" : "failure");
       if (conflict) await invalidateCompetition(client, identity);
       return false;

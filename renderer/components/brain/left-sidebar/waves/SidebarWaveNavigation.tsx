@@ -3,7 +3,7 @@ import useDeviceInfo from "@/hooks/useDeviceInfo";
 
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import Link from "next/link";
-import { useCallback, useId, useRef, useState } from "react";
+import { useCallback, useId, useRef } from "react";
 import type { SidebarWaveNavigation } from "@/hooks/useSidebarWaveNavigation";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
 import { useHasHydrated } from "@/hooks/useHasHydrated";
@@ -12,6 +12,8 @@ import { getWaveRoute } from "@/helpers/navigation.helpers";
 import WavePicture from "@/components/waves/WavePicture";
 import { formatInteger } from "@/i18n/format";
 import { t } from "@/i18n/messages";
+import { useWaveFeatureUsage } from "@/hooks/useWaveFeatureUsage";
+import { waveFeatureAttributes } from "@/services/analytics/waveFeatureUsage";
 
 const COLLECTION_LABELS = {
   pinned: "waves.sidebar.pinned",
@@ -28,10 +30,10 @@ export function SidebarWaveNavigationControls({
 }) {
   const locale = useBrowserLocale();
   const inputId = useId();
+  const { ref: featureUsageRef } = useWaveFeatureUsage("sidebar");
   const hasHydrated = useHasHydrated();
-  const [searchOpen, setSearchOpen] = useState(false);
+  const { searchOpen, setSearchOpen } = navigation;
   const toggleRef = useRef<HTMLButtonElement>(null);
-  const showSearch = searchOpen || navigation.searching;
   const focusSearch = useCallback(
     (input: HTMLInputElement | null) => {
       if (input && hasHydrated) input.focus();
@@ -51,8 +53,11 @@ export function SidebarWaveNavigationControls({
     (!navigation.queryEnabled || navigation.results.isFetching);
   return (
     <>
-      <div className="tailwind-scope tw-sticky tw-top-0 tw-z-10 tw-bg-[var(--wave-sidebar-background,#000)] tw-px-4 tw-py-2">
-        {showSearch ? (
+      <div
+        ref={featureUsageRef}
+        className="tailwind-scope tw-sticky tw-top-0 tw-z-30 tw-bg-[var(--wave-sidebar-background,#000)] tw-px-4 tw-py-2"
+      >
+        {searchOpen ? (
           <>
             <label htmlFor={inputId} className="tw-sr-only">
               {findWaveLabel}
@@ -101,14 +106,15 @@ export function SidebarWaveNavigationControls({
           </>
         ) : (
           <div className="tw-flex tw-items-center tw-gap-2">
-            {navigation.canUseCollections && (
+            {navigation.canUseCollections ? (
               <fieldset
                 aria-label={t(locale, "waves.sidebar.filterAriaLabel")}
-                className="tw-m-0 tw-flex tw-h-9 tw-min-w-0 tw-flex-1 tw-rounded-lg tw-border tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-0.5 touch-only:tw-h-11"
+                className="tw-m-0 tw-flex tw-h-9 tw-min-w-0 tw-flex-1 tw-rounded-lg tw-border tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-p-0.5 touch-only:tw-h-10"
               >
                 {(["all", "pinned", "joined"] as const).map((tab) => (
                   <button
                     key={tab}
+                    {...waveFeatureAttributes("sidebar_collection", tab)}
                     type="button"
                     aria-label={t(locale, COLLECTION_LABELS[tab])}
                     aria-pressed={navigation.collection === tab}
@@ -119,18 +125,25 @@ export function SidebarWaveNavigationControls({
                   </button>
                 ))}
               </fieldset>
+            ) : (
+              <span className="tw-min-w-0 tw-text-sm tw-font-semibold tw-text-iron-300">
+                {t(locale, "waves.sidebar.allWaves")}
+              </span>
             )}
             <button
               ref={toggleRef}
+              {...waveFeatureAttributes("sidebar_entry", "search")}
               type="button"
               disabled={!hasHydrated}
               aria-label={findWaveLabel}
               title={findWaveLabel}
               aria-expanded={false}
               onClick={() => setSearchOpen(true)}
-              className="tw-ml-auto tw-flex tw-size-9 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-text-iron-300 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 desktop-hover:hover:tw-bg-iron-800 desktop-hover:hover:tw-text-white touch-only:tw-size-11"
+              className="tw-group tw-ml-auto tw-flex tw-size-9 tw-shrink-0 tw-items-center tw-justify-center tw-rounded-lg tw-border-0 tw-bg-transparent tw-p-0 tw-text-iron-300 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400 desktop-hover:hover:tw-text-white touch-only:tw-size-11 touch-only:tw-rounded-none"
             >
-              <MagnifyingGlassIcon className="tw-size-4" aria-hidden="true" />
+              <span className="tw-flex tw-size-full tw-items-center tw-justify-center tw-rounded-lg tw-border tw-border-solid tw-border-iron-800 tw-bg-iron-950 desktop-hover:group-hover:tw-bg-iron-800 touch-only:tw-size-10">
+                <MagnifyingGlassIcon className="tw-size-4" aria-hidden="true" />
+              </span>
             </button>
           </div>
         )}

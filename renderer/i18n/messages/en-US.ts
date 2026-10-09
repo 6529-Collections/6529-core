@@ -1,4 +1,6 @@
 import emmaMessages from "@/i18n/messages/emma.en-US.json";
+import { EN_SUBMISSION_DISCOVERY_MESSAGES } from "@/i18n/messages/submission-discovery";
+import waveCreationMessages from "@/i18n/messages/wave-creation.en-US.json";
 import { COMPETITION_MESSAGES } from "@/i18n/messages/competitions";
 import { EN_US_DROP_METADATA_MESSAGES } from "@/i18n/messages/drop-metadata";
 import { EN_DROP_REQUIREMENT_MESSAGES } from "@/i18n/messages/drop-requirements";
@@ -56,6 +58,7 @@ import { ARTWORK_DOCUMENTATION_MESSAGES } from "@/i18n/messages/artwork-document
 import { ARTWORK_DOCUMENTATION_INTEGRATION_MESSAGES } from "@/i18n/messages/artwork-documentation-integration";
 import { COLLECT_MESSAGES } from "@/i18n/messages/collect";
 import { COLLECT_TDH_TARGET_MESSAGES } from "@/i18n/messages/collect-tdh-target";
+import { DROP_FORGE_ADMIN_MESSAGES } from "@/i18n/messages/drop-forge-admins";
 
 type MessageEntry = readonly [key: string, value: string];
 
@@ -261,6 +264,9 @@ const REP_CATEGORY_MESSAGES = objectMessages("rep.categories", {
     "Memes submissions require {amount} REP in {category}.",
   "grant.submissionLookalikeInfo":
     '"{category}" is a separate category. Only {submissionCategory} counts for submissions.',
+  "grant.amountLabel": "REP amount",
+  "grant.availableRepLabel": "Your available REP:",
+  "grant.assignedRepLabel": "Your REP assigned to {name}:",
   "grant.availableRep": "Your available REP: {amount}",
   "grant.assignedRep": "Your REP assigned to {name}: {amount}",
   "grant.actions.grant": "Grant REP",
@@ -468,10 +474,19 @@ const TITLE_CONTEXT_MESSAGES = objectMessages("titleContext", {
 } as const);
 
 const WAVE_NAVIGATION_MESSAGES = objectMessages("wave.navigation", {
+  chat: "Chat",
+  sales: "Sales",
+  myStream: "My Stream",
+  polls: "Polls",
+  loadingSection: "Loading section…",
+  about: "About",
   waveSections: "Wave sections",
   appSections: "App sections",
   loadingSections: "Loading wave sections",
   fallbackCuration: "Curation",
+  myVotes: "My Votes",
+  outcome: "Outcome",
+  faq: "FAQ",
 } as const);
 
 const MY_STREAM_CURATION_MESSAGES = objectMessages("waves.myStream.curation", {
@@ -1085,6 +1100,9 @@ const USER_PROFILE_IDENTITY_STATEMENTS_MESSAGES = objectMessages(
     retry: "Try again",
     add: "Add",
     walletChecker: "Wallet Checker",
+    addWallet: "Add another wallet",
+    addWalletDescription:
+      "Link another wallet you control. Your NFTs stay in their wallets.",
     delegationCenter: "Delegation Center",
     primary: "Primary",
     setPrimary: "Set primary",
@@ -2177,6 +2195,18 @@ const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
     bulkRep: "REP everyone matching criteria",
     bulkNic: "NIC everyone matching criteria",
     bulkActionsLabel: "Bulk rating actions",
+    add: "Add",
+    subtract: "Subtract",
+    grant: "Grant",
+    cancel: "Cancel",
+    repCategory: "Rep Category",
+    clearCategory: "Clear category",
+    repCategoryRequired: "Please enter rep category",
+    creditSummary:
+      "You can grant up to {credit} {matter} to each of {count} members of the group.",
+    progress: "{matter} Progress",
+    keepOpen:
+      "Keep this window open while we distribute credits across the group.",
     bulkRepSuccess: "REP distributed.",
     bulkNicSuccess: "NIC distributed.",
     source: "Source: filters + optional manual list",
@@ -2187,7 +2217,22 @@ const NETWORK_GROUP_INSPECTION_MESSAGES = objectMessages(
   } as const
 );
 
+const NETWORK_HEADER_ACTION_MESSAGES = objectMessages("network.actions", {
+  openFilters: "Open group filters",
+  openSort: "Open sort options",
+  openNerd: "Open Nerd view",
+} as const);
+
 const NETWORK_GROUP_FILTER_MESSAGES = objectMessages("network.groupFilter", {
+  filter: "Filter",
+  all: "All filters",
+  level: "Level",
+  tdh: "TDH",
+  nic: "NIC",
+  rep: "Rep",
+  nfts: "Required NFTs",
+  collections: "Collection Access",
+  xtdhGrant: "xTDH Grant",
   title: "Filter Network",
   suggestedName: "Network filter",
   defaultLabel: "All Network members",
@@ -2528,6 +2573,25 @@ const REVIEWBOT_USAGE_MESSAGES = objectMessages("reviewbotUsage", {
 } as const);
 
 const ATTACHMENT_MESSAGES = namespaceMessages("attachment", [
+  ["pdf.pages", "PDF pages"],
+  ["pdf.pageHeading", "Page {page}"],
+  ["pdf.loading", "Loading PDF…"],
+  ["pdf.loadingPage", "Loading page…"],
+  [
+    "pdf.error",
+    "This PDF could not be previewed. Try again or open the full PDF.",
+  ],
+  [
+    "pdf.tooLarge",
+    "This PDF is too large for this preview. Open the full PDF to read it.",
+  ],
+  [
+    "pdf.password",
+    "This PDF requires a password. Open the full PDF to read it.",
+  ],
+  ["pdf.open", "Open full PDF"],
+  ["pdf.retry", "Try again"],
+  ["pdf.page", "Page {page} of {total}"],
   ["safety.ariaLabel", "Scanned and validated attachment"],
   ["safety.badge", "Scanned and validated"],
   ["safety.heading", "Attachment safety"],
@@ -2934,9 +2998,21 @@ const MEME_DATA_TABLE_MESSAGES = objectMessages("memeData", {
 const TOKEN_NUMBER_MESSAGE = "Token #{tokenId}";
 
 export const EN_US_MESSAGES = {
+  "header.menu.open": "Open menu",
+  "header.menu.close": "Close menu",
+  "header.navigation.loading": "Loading navigation…",
+  "waves.information.open": "About {name}",
+  ...EN_SUBMISSION_DISCOVERY_MESSAGES,
+  ...waveCreationMessages,
   ...COMPETITION_MESSAGES,
   ...EN_DROP_REQUIREMENT_MESSAGES,
   ...EN_US_DROP_METADATA_MESSAGES,
+  "delegation.consolidation.instructions.title":
+    "Two wallets · two registrations",
+  "delegation.consolidation.instructions.steps":
+    "Register from this wallet, then connect the other wallet and register the return link. Each wallet needs ETH for gas.",
+  "delegation.consolidation.instructions.publicLink":
+    "The link is public. Existing profile data may be combined.",
   "drop.composer.image": "Image",
   "drop.composer.selectImage": "Select image",
   "drop.composer.removeImage": "Remove image",
@@ -3008,6 +3084,7 @@ export const EN_US_MESSAGES = {
   ...artworkShareMessages,
   ...COLLECT_MESSAGES,
   ...COLLECT_TDH_TARGET_MESSAGES,
+  ...DROP_FORGE_ADMIN_MESSAGES,
   ...profileCmsStudioMessages,
   ...profileCmsAgentMessages,
   ...studioTemplateDescriptions,
@@ -4315,6 +4392,7 @@ export const EN_US_MESSAGES = {
   ...WAVE_CHAT_SETTINGS_MESSAGES,
   ...NETWORK_GROUP_INSPECTION_MESSAGES,
   ...NETWORK_GROUP_FILTER_MESSAGES,
+  ...NETWORK_HEADER_ACTION_MESSAGES,
   ...WAVE_LOADING_MESSAGES,
   ...WAVE_DROPS_SEARCH_MODAL_MESSAGES,
   ...WAVE_GIF_PICKER_MESSAGES,
