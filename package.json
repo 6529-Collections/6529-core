@@ -20,7 +20,7 @@
     "postinstall": "node scripts/require-6529-command.cjs && electron-builder install-app-deps",
     "clean": "node scripts/require-6529-command.cjs && rm -rf dist main renderer/out renderer/.next next.config.mjs",
     "clean-win": "node scripts/require-6529-command.cjs && rimraf dist main renderer/out renderer/.next next.config.mjs",
-    "build-env-schema": "node scripts/require-6529-command.cjs && node renderer/scripts/build-env-schema.cjs && tsx scripts/bake-public-runtime.ts",
+    "build-env-schema": "node scripts/require-6529-command.cjs && node renderer/scripts/prepare-pdfjs-assets.cjs && node renderer/scripts/build-env-schema.cjs && tsx scripts/bake-public-runtime.ts",
     "build-next-config": "node scripts/require-6529-command.cjs && pnpm exec esbuild next.config.ts --outfile=next.config.mjs --format=esm --platform=node --target=node18",
     "dev": "node scripts/require-6529-command.cjs && node scripts/desktop-dev-target.cjs dev",
     "dev-win": "node scripts/require-6529-command.cjs && node scripts/desktop-dev-target.cjs dev-win",
