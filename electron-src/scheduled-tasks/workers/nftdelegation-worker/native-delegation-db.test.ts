@@ -225,6 +225,63 @@ describe("native delegation persistence and resumable atomic replay", () => {
     );
   });
 
+  it("rejects a replay target mismatch without changing live rows or progress", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 5, 100, true);
+    await assert.rejects(
+      completeNativeDelegationReplay(db, 101),
+      /checkpoint incomplete/,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(await isNativeDelegationIndexReady(db), false);
+    assert.equal(await db.getRepository(ReplayConsolidation).count(), 1);
+  });
+
+  it("fails safely if live and shadow column sets drift", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 5, 100, true);
+    const metadata = db.getMetadata(ReplayDelegation);
+    const originalColumns = metadata.columns;
+    const extraColumn = Object.assign(
+      Object.create(
+        Object.getPrototypeOf(originalColumns[0]),
+      ) as (typeof originalColumns)[0],
+      originalColumns[0],
+      { databaseName: "unexpected_column" },
+    );
+    metadata.columns = [...originalColumns, extraColumn];
+    try {
+      await assert.rejects(
+        completeNativeDelegationReplay(db, 100),
+        /replay column mismatch/,
+      );
+    } finally {
+      metadata.columns = originalColumns;
+    }
+    assert.equal(
+      (await db.getRepository(Consolidation).find())[0].wallet1,
+      "old",
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(await isNativeDelegationIndexReady(db), false);
+    assert.equal(await db.getRepository(ReplayConsolidation).count(), 1);
+    await completeNativeDelegationReplay(db, 100);
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+  });
+
+  it("ordinary delegation scope updates do not invalidate token holding TDH", async () => {
+    const changes = scan();
+    changes.consolidations = [];
+    await persistNftDelegations(db, 100, 2000, changes);
+    assert.equal(
+      (await db.getRepository(Delegation).find())[0].all_tokens,
+      false,
+    );
+    assert.equal(
+      (await db.getRepository(TransactionBlock).findOneByOrFail({ id: 1 }))
+        .tdh_needs_recalculation,
+      false,
+    );
+  });
+
   it("SQL preserves registration times and partial recalculation closes over old/current groups", async () => {
     await db.getRepository(Consolidation).clear();
     const pairs = [

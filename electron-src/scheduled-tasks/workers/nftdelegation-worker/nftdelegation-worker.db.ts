@@ -133,6 +133,19 @@ export async function completeNativeDelegationReplay(
     ]) {
       const liveMetadata = db.getMetadata(live);
       const shadowMetadata = db.getMetadata(shadow);
+      const shadowColumns = new Set(
+        shadowMetadata.columns.map((column) => column.databaseName),
+      );
+      if (
+        shadowColumns.size !== liveMetadata.columns.length ||
+        !liveMetadata.columns.every((column) =>
+          shadowColumns.has(column.databaseName),
+        )
+      ) {
+        throw new Error(
+          `Delegation replay column mismatch: ${liveMetadata.tableName} / ${shadowMetadata.tableName}`,
+        );
+      }
       const columns = liveMetadata.columns
         .map((column) => `"${column.databaseName}"`)
         .join(", ");

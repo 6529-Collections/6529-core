@@ -75,3 +75,10 @@ describe("native grouping parity with backend #2148", () => {
     assert.ok(result.every((group) => group.length <= 4));
   });
 });
+
+it("preserves the caller's link order while producing deterministic groups", () => {
+  const links = mesh("d").reverse();
+  const original = links.slice();
+  assert.deepEqual(groups(links), ["abcd"]);
+  assert.deepEqual(links, original);
+});

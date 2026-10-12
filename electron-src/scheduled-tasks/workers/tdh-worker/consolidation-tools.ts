@@ -44,13 +44,15 @@ export class ConsolidationTools {
   ): string[][] {
     // Newest link first. Links confirmed in the same block are ordered by
     // their pair key so every caller groups the same rows the same way.
-    consolidations.sort(
-      (a, b) =>
-        b.block - a.block ||
-        this.buildConsolidationKey([a.wallet1, a.wallet2]).localeCompare(
-          this.buildConsolidationKey([b.wallet1, b.wallet2]),
-        ),
-    );
+    consolidations = consolidations
+      .slice()
+      .sort(
+        (a, b) =>
+          b.block - a.block ||
+          this.buildConsolidationKey([a.wallet1, a.wallet2]).localeCompare(
+            this.buildConsolidationKey([b.wallet1, b.wallet2]),
+          ),
+      );
 
     // Create a quick lookup of all direct consolidations
     const linksByKey = new Map<string, ConsolidationLink>();

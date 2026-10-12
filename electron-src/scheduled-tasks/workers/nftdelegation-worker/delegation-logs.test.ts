@@ -142,3 +142,79 @@ it("fails on missing historical state, never silently widening a delegation", as
     NEVER_DATE,
   );
 });
+
+it("keeps oversized token entries in same-block expiry positions without emitting them", async () => {
+  const oversized = 2_147_483_648;
+  const warnings: string[] = [];
+  for (const skippedFirst of [false, true]) {
+    const tokens = skippedFirst ? [oversized, 7] : [7, oversized];
+    const result = await mapDelegationLogs(
+      tokens.map((token, index) =>
+        log(
+          "RegisterDelegation",
+          [a, MEMES_CONTRACT, b, 2, false, token],
+          index,
+        ),
+      ),
+      // A preceding block's entry must not be mistaken for this block's entries.
+      reader([
+        entry(100, false, 99),
+        ...tokens.map((token, index) => entry(1000 + index, false, token)),
+      ]),
+      timestamp,
+      (message) => warnings.push(message),
+    );
+    assert.equal(result.registrations.length, 1);
+    assert.equal(result.registrations[0].token_id, 7);
+    assert.equal(result.registrations[0].all_tokens, false);
+    assert.equal(result.registrations[0].expiry, skippedFirst ? 1001 : 1000);
+  }
+  assert.equal(warnings.length, 2);
+});
+
+it("filters same-block sub-delegation revocations and retains later renewals", async () => {
+  const registered = log(
+    "RegisterDelegation",
+    [a, MEMES_CONTRACT, b, 998, true, 0],
+    0,
+  );
+  const revoked = log(
+    "RevokeDelegationUsingSubDelegation",
+    [a, b, MEMES_CONTRACT, b, 998],
+    1,
+  );
+  const result = await mapDelegationLogs(
+    [registered, revoked],
+    reader([]),
+    timestamp,
+    warn,
+  );
+  assert.equal(result.registrations.length, 0);
+  assert.equal(result.revocations[0].wallet1, a); // Delegator, not manager.
+  const renewed = await mapDelegationLogs(
+    [
+      registered,
+      revoked,
+      log("RegisterDelegation", [a, MEMES_CONTRACT, b, 998, true, 0], 2),
+    ],
+    reader([]),
+    timestamp,
+    warn,
+  );
+  assert.deepEqual(
+    renewed.registrations.map((event) => event.log_index),
+    [2],
+  );
+  const unrelated = await mapDelegationLogs(
+    [
+      registered,
+      log("RevokeDelegation", [a, b, b, 998], 1), // Different collection.
+      log("RevokeDelegation", [b, MEMES_CONTRACT, a, 998], 2), // Different direction.
+      log("RevokeDelegation", [a, MEMES_CONTRACT, b, 2], 3), // Different use case.
+    ],
+    reader([]),
+    timestamp,
+    warn,
+  );
+  assert.equal(unrelated.registrations.length, 1);
+});

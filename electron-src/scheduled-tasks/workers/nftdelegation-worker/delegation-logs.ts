@@ -39,7 +39,10 @@ export async function mapDelegationLogs(
     registrations: [],
     revocations: [],
   };
-  const pending: { event: DelegationEvent; ref: RegistrationLogRef }[] = [];
+  // Keep every on-chain entry in the read plan, even if its token ID cannot
+  // be emitted into the native table, so same-block storage positions align.
+  const pending: { event: DelegationEvent | null; ref: RegistrationLogRef }[] =
+    [];
   const revocations: RevocationLogRef[] = [];
   const ordered = logs
     .slice()
@@ -103,6 +106,7 @@ export async function mapDelegationLogs(
       warn(
         `Skipping token ID ${tokenId} outside native/backend token_id range at ${log.blockNumber}:${log.index}`,
       );
+      pending.push({ event: null, ref: { ...ref, allTokens, tokenId } });
       continue;
     }
     delegation.all_tokens = allTokens;
@@ -117,11 +121,25 @@ export async function mapDelegationLogs(
   );
   const revoked = new Set<DelegationEvent>();
   pending.forEach(({ event }, i) => {
+    if (!event) return;
     if (expiries[i] === null) revoked.add(event);
     else event.expiry = expiries[i]!;
   });
   scan.registrations = scan.registrations.filter(
-    (event) => !revoked.has(event),
+    (event) =>
+      !revoked.has(event) &&
+      !(
+        event.use_case === USE_CASE_SUB_DELEGATION &&
+        revocations.some(
+          (revocation) =>
+            revocation.block === event.block &&
+            revocation.delegator === event.wallet1 &&
+            revocation.delegate === event.wallet2 &&
+            revocation.collection === event.collection &&
+            revocation.useCase === event.use_case &&
+            revocation.logIndex > event.log_index!,
+        )
+      ),
   );
 
   const blocks = Array.from(

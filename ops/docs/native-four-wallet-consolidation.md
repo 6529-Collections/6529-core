@@ -7,7 +7,10 @@ registration times. Safe/batch token scope and historical expiry reads follow
 [#2151](https://github.com/6529-Collections/6529seize-backend/pull/2151)
 (head `b4b7c80b5128c2e8010abec6d340e54aba137f5c`). These backend changes are
 independent rollout dependencies; native parity does not replace their deployment
-or the frontend rollout. This change requires no renderer subtree sync or desktop
+or the frontend rollout. The referenced #2151 head still needs the corresponding
+same-block sub-delegation revocation filter and oversized-token state-read
+placeholder fixes, which Core includes to avoid stale manager rows and stalled
+indexing. This change requires no renderer subtree sync or desktop
 version change.
 
 ## Grouping contract
@@ -80,7 +83,13 @@ false/zero values are written explicitly; zero or beyond-safe-integer expiry map
 to `NEVER_DATE`. The existing delegation table stores the last registration per
 (block, from, to, collection, use case), rather than all token-specific entries
 sharing that key. Token-specific IDs above the backend signed-INT ceiling are
-logged and skipped rather than widened or truncated. Consolidation eligibility
-continues to use the backend's confirmed-pair contract, rather than ordinary
-delegation expiry/token scope. Backend and Core must use the same activation
-constant if the proposed rollout date changes.
+logged and excluded from emitted rows rather than widened or truncated; their
+positions remain in the historical-state read plan so other entries in that
+block still resolve correctly. Sub-delegation registrations revoked later in
+the same block are also excluded, while later re-registrations survive.
+Consolidation eligibility continues to use the backend's confirmed-pair contract,
+rather than ordinary delegation expiry/token scope. Ordinary delegation scope
+and expiry changes do not alter token ownership, holding age or TDH boosts, so
+only consolidation changes invalidate TDH during incremental indexing. Backend
+and Core must use the same activation constant if the proposed rollout date
+changes.
