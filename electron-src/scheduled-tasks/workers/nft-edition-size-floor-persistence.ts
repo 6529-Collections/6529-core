@@ -52,6 +52,8 @@ export async function preserveEditionSizeFloors(
 
     return {
       ...nft,
+      // Preserve the confirmed historical denominators for #206/#215/#311
+      // across stale discovery and TDH saves, even after the DB repair ran.
       edition_size_floor: repairMemeCatchUpEditionSizeFloor(
         nft,
         editionSizeFloor,

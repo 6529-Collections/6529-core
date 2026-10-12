@@ -16,8 +16,8 @@ import {
   getMintDate,
   getTokenUri,
   retrieveNftFromURI,
-  withTimeout,
 } from "./nft-worker";
+import { withTimeout } from "./nft-request-timeout";
 import { persistNfts } from "./nfts-worker.db";
 import { Time } from "../../../../shared/time";
 import { DataSourceOptions } from "typeorm";

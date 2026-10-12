@@ -19,7 +19,11 @@ const { DatabaseSync } = require("node:sqlite") as {
 
 describe("repeatable NFT floor repair with isolated SQLite fixtures", () => {
   let database: FixtureDatabase;
+  let transactionCount = 0;
+  const queries: string[] = [];
   beforeEach(() => {
+    transactionCount = 0;
+    queries.length = 0;
     database = new DatabaseSync(":memory:");
     database.exec(`
       CREATE TABLE nfts (contract TEXT, id INTEGER, edition_size INTEGER,
@@ -32,13 +36,20 @@ describe("repeatable NFT floor repair with isolated SQLite fixtures", () => {
   afterEach(() => database.close());
 
   const queryExecutor = {
-    query: async (sql: string, parameters: unknown[] = []) =>
-      database.prepare(sql).run(...parameters),
+    query: async (sql: string, parameters: unknown[] = []) => {
+      queries.push(sql);
+      const statement = database.prepare(sql);
+      return sql.startsWith("SELECT")
+        ? statement.all(...parameters)
+        : statement.run(...parameters);
+    },
   };
   const db = {
+    ...queryExecutor,
     transaction: async <T>(
       run: (manager: typeof queryExecutor) => Promise<T>,
     ) => {
+      transactionCount++;
       database.exec("BEGIN");
       try {
         const result = await run(queryExecutor);
@@ -52,7 +63,7 @@ describe("repeatable NFT floor repair with isolated SQLite fixtures", () => {
   };
   function insert(
     id: number,
-    supply: number,
+    supply: number | null,
     floor: number | null,
     burns = 0,
     contract = MEMES_CONTRACT,
@@ -81,10 +92,49 @@ describe("repeatable NFT floor repair with isolated SQLite fixtures", () => {
   it("does not consume a repair on an empty fresh install", async () => {
     await repairNftEditionSizeFloors(db);
     assert.equal(needsRecalculation(), 0);
+    assert.equal(transactionCount, 0);
     insert(215, 309, 310);
     await repairNftEditionSizeFloors(db);
     assert.equal(floor(215), 309);
     assert.equal(needsRecalculation(), 1);
+  });
+
+  it("avoids write transactions for repaired and zero-supply rows", async () => {
+    insert(215, 309, 309);
+    insert(558, 173, 310);
+    insert(600, 0, null);
+    insert(601, null, null);
+    for (let run = 0; run < 3; run++) {
+      await repairNftEditionSizeFloors(db);
+    }
+    assert.equal(transactionCount, 0);
+    assert.equal(queries.length, 3);
+    assert.ok(queries.every((sql) => sql.startsWith("SELECT")));
+    assert.equal(needsRecalculation(), 0);
+    assert.equal(floor(600), null);
+    assert.equal(floor(601), null);
+  });
+
+  it("repairs missing positive floors once without perpetual recalculation", async () => {
+    insert(550, 190, null);
+    await repairNftEditionSizeFloors(db);
+    assert.equal(floor(550), 190);
+    assert.equal(needsRecalculation(), 1);
+    database.exec("UPDATE transactions_blocks SET tdh_needs_recalculation = 0");
+    await repairNftEditionSizeFloors(db);
+    assert.equal(transactionCount, 1);
+    assert.equal(needsRecalculation(), 0);
+  });
+
+  it("repairs metadata before a fresh install has a transaction checkpoint", async () => {
+    database.exec("DELETE FROM transactions_blocks");
+    insert(215, 309, 310);
+    await repairNftEditionSizeFloors(db);
+    assert.equal(floor(215), 309);
+    assert.equal(
+      database.prepare("SELECT * FROM transactions_blocks").all().length,
+      0,
+    );
   });
 
   it("repairs cards discovered after a partial-sync restart with the old marker", async () => {
