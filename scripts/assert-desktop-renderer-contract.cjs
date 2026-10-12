@@ -2226,6 +2226,25 @@ assertContract(
   titlebarUpdatePath,
   "titlebar must share native update availability without restoring the retired toast",
 );
+const seedWalletContextPath = "renderer/contexts/SeedWalletContext.tsx";
+assertContract(
+  !/\b(?:sessionStorage|localStorage)\.setItem\(/.test(
+    parseSource(seedWalletContextPath).text,
+  ),
+  seedWalletContextPath,
+  "Core wallet unlock must not save the password or any other secret in web storage",
+);
+for (const seedWalletRendererPath of [
+  seedWalletContextPath,
+  "renderer/components/core/core-wallet/SeedWallet.tsx",
+  "renderer/components/core/core-wallet/SeedWalletModal.tsx",
+]) {
+  assertContract(
+    !/\bencryptData\b/.test(parseSource(seedWalletRendererPath).text),
+    seedWalletRendererPath,
+    "Core wallet secrets must be encrypted only in the main process, never in the renderer",
+  );
+}
 
 if (failures.length > 0) {
   console.error("Desktop renderer contract failed:");
