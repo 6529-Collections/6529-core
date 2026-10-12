@@ -1,4 +1,5 @@
 import { DataSource, EntityManager } from "typeorm";
+import { repairMemeCatchUpEditionSizeFloor } from "../../../shared/memes-edition-size-floor";
 import { NFT } from "../../db/entities/INFT";
 
 function getPositiveInteger(value: number | null | undefined): number | null {
@@ -43,18 +44,20 @@ export async function preserveEditionSizeFloors(
   );
 
   return nfts.map((nft) => {
-    if (getPositiveInteger(nft.edition_size_floor) !== null) {
-      return nft;
-    }
-
     const editionSizeFloor =
+      getPositiveInteger(nft.edition_size_floor) ??
       existingFloors.get(getNftKey(nft)) ??
       getPositiveInteger(nft.edition_size) ??
       null;
 
     return {
       ...nft,
-      edition_size_floor: editionSizeFloor,
+      // Preserve the confirmed historical denominators for #206/#215/#311
+      // across stale discovery and TDH saves, even after the DB repair ran.
+      edition_size_floor: repairMemeCatchUpEditionSizeFloor(
+        nft,
+        editionSizeFloor,
+      ),
     };
   });
 }

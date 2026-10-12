@@ -17,6 +17,7 @@ import {
   getTokenUri,
   retrieveNftFromURI,
 } from "./nft-worker";
+import { withTimeout } from "./nft-request-timeout";
 import { persistNfts } from "./nfts-worker.db";
 import { Time } from "../../../../shared/time";
 import { DataSourceOptions } from "typeorm";
@@ -27,10 +28,12 @@ import {
 } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT, NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses } from "../../../../shared/helpers";
+import { selectMemeEditionSizeFloorRefreshIds } from "../../../../shared/memes-edition-size-floor";
+import { repairNftEditionSizeFloors } from "../../../db/nft-edition-size-floor-repair";
 import {
-  getMemeTokenIdsForEditionSizeFloorRefresh,
-} from "../../../../shared/memes-edition-size-floor";
-import { Transaction } from "../../../db/entities/ITransaction";
+  Transaction,
+  TransactionBlock,
+} from "../../../db/entities/ITransaction";
 
 const data: ResettableWorkerData = workerData;
 
@@ -76,6 +79,7 @@ class NFTWorker extends CoreWorker {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       NFT,
       Transaction,
+      TransactionBlock,
     ]);
     this.reset = reset;
     this.refresh = refresh;
@@ -99,16 +103,14 @@ class NFTWorker extends CoreWorker {
   }
 
   async work() {
+    await repairNftEditionSizeFloors(this.getDb());
     const now = new Date();
     const currentHour = now.getUTCHours();
     const currentMinute = now.getUTCMinutes();
 
     if (this.reset) {
       return await this.resetWork();
-    } else if (
-      this.refresh ||
-      (currentHour % 2 === 0 && currentMinute === 0)
-    ) {
+    } else if (this.refresh || (currentHour % 2 === 0 && currentMinute === 0)) {
       return await this.refreshWork();
     } else {
       return await this.normalWork();
@@ -271,68 +273,63 @@ class NFTWorker extends CoreWorker {
     }
 
     if (areEqualAddresses(contract.address, MEMES_CONTRACT)) {
-      await this.refreshLatestMemeEditionSizeFloor(ethersContract, printStatus);
+      await this.refreshMemeEditionSizeFloors(ethersContract, printStatus);
     }
   }
 
-  private async refreshLatestMemeEditionSizeFloor(
+  private async getMemeFloorRefreshIds(
+    nfts: NFT[],
+    ethersContract: ethers.Contract,
+  ) {
+    return selectMemeEditionSizeFloorRefreshIds(nfts, (tokenId) =>
+      withTimeout(
+        ethersContract.uri(tokenId),
+        Time.seconds(10).toMillis(),
+        `Timed out verifying latest Meme after #${tokenId - 1}`,
+      ),
+    );
+  }
+
+  private async refreshMemeEditionSizeFloors(
     ethersContract: ethers.Contract,
     printStatus: (...args: any[]) => void,
   ) {
-    const latestMeme = await this.getDb()
+    await repairNftEditionSizeFloors(this.getDb());
+    const memes = await this.getDb()
       .getRepository(NFT)
-      .findOne({
-        where: {
-          contract: MEMES_CONTRACT,
-        },
-        order: {
-          id: "DESC",
-        },
+      .find({
+        where: { contract: MEMES_CONTRACT },
       });
-
-    if (!latestMeme) {
-      return;
-    }
-
-    printStatus(`Refreshing latest Meme #${latestMeme.id} edition size floor`);
-    const editionSizes = await getEditionSizes(
-      this.getDb(),
-      MEMES_CONTRACT,
-      ethersContract,
-      latestMeme.id,
-      {
-        provider: this.getProvider(),
-        refreshEditionSizeFloor: true,
-      },
+    const refreshIds = new Set(
+      await this.getMemeFloorRefreshIds(memes, ethersContract),
     );
-
-    if (
-      editionSizes.editionSize === latestMeme.edition_size &&
-      editionSizes.editionSizeFloor === latestMeme.edition_size_floor &&
-      editionSizes.burnt === latestMeme.burns
-    ) {
-      printStatus(
-        `Latest Meme #${latestMeme.id} edition size already current: actual ${latestMeme.edition_size}, floor ${latestMeme.edition_size_floor}, burns ${latestMeme.burns}`,
+    for (const meme of memes.filter((nft) => refreshIds.has(nft.id))) {
+      const editionSizes = await getEditionSizes(
+        this.getDb(),
+        MEMES_CONTRACT,
+        ethersContract,
+        meme.id,
+        { provider: this.getProvider(), refreshEditionSizeFloor: true },
       );
-      return;
-    }
-
-    await this.getDb()
-      .getRepository(NFT)
-      .update(
-        {
-          contract: latestMeme.contract,
-          id: latestMeme.id,
-        },
+      if (
+        meme.edition_size === editionSizes.editionSize &&
+        meme.edition_size_floor === editionSizes.editionSizeFloor &&
+        meme.burns === editionSizes.burnt
+      ) {
+        continue;
+      }
+      await this.getDb().getRepository(NFT).update(
+        { contract: meme.contract, id: meme.id },
         {
           edition_size: editionSizes.editionSize,
           edition_size_floor: editionSizes.editionSizeFloor,
           burns: editionSizes.burnt,
         },
       );
-    printStatus(
-      `Latest Meme #${latestMeme.id} edition size updated: actual ${latestMeme.edition_size} -> ${editionSizes.editionSize}, floor ${latestMeme.edition_size_floor} -> ${editionSizes.editionSizeFloor}, burns ${latestMeme.burns} -> ${editionSizes.burnt}`,
-    );
+      printStatus(
+        `Meme #${meme.id} edition size: ${editionSizes.editionSize}, floor ${editionSizes.editionSizeFloor}, burns ${editionSizes.burnt}`,
+      );
+    }
   }
 
   async processNextgen() {
@@ -465,7 +462,7 @@ class NFTWorker extends CoreWorker {
       });
     const refreshEditionSizeFloorTokenIds = new Set(
       areEqualAddresses(contract.address, MEMES_CONTRACT)
-        ? getMemeTokenIdsForEditionSizeFloorRefresh(existingNfts)
+        ? await this.getMemeFloorRefreshIds(existingNfts, ethersContract)
         : [],
     );
 

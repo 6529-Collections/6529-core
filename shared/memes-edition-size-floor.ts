@@ -11,6 +11,32 @@ export interface CalculationEditionSizeInput {
 export interface MemeEditionSizeFloorRefreshNft {
   contract: string;
   id: number;
+  mint_date?: number | null;
+}
+
+// These predate the backend's July 2026 floor backfill. Their final supply
+// floors are confirmed by issue #241 and the backend NFT metadata. A later
+// historical claim lookup can incorrectly replace them with the 310 cap.
+export const MEME_CATCH_UP_FLOOR_REPAIRS = [
+  { id: 206, floor: 309 },
+  { id: 215, floor: 309 },
+  { id: 311, floor: 303 },
+] as const;
+
+export function repairMemeCatchUpEditionSizeFloor(
+  nft: Pick<MemeEditionSizeFloorRefreshNft, "contract" | "id">,
+  floor: number | null,
+): number | null {
+  if (
+    floor !== MEMES_EDITION_SIZE_FLOOR_CAP ||
+    !areEqualAddresses(nft.contract, MEMES_CONTRACT)
+  ) {
+    return floor;
+  }
+  return (
+    MEME_CATCH_UP_FLOOR_REPAIRS.find((repair) => repair.id === nft.id)?.floor ??
+    floor
+  );
 }
 
 function normalizePositiveInteger(value: unknown): number | null {
@@ -66,6 +92,8 @@ export function calculateHodlRate(
 
 export function getMemeTokenIdsForEditionSizeFloorRefresh(
   nfts: MemeEditionSizeFloorRefreshNft[],
+  latestMemeIsOnChainLatest: boolean,
+  nowMillis: number = Date.now(),
 ): number[] {
   const memes = nfts.filter((nft) =>
     areEqualAddresses(nft.contract, MEMES_CONTRACT),
@@ -78,5 +106,42 @@ export function getMemeTokenIdsForEditionSizeFloorRefresh(
     (latest, nft) => Math.max(latest, nft.id),
     0,
   );
-  return [latestMemeId];
+  const cutoffSeconds = (nowMillis - 30 * 24 * 60 * 60 * 1000) / 1000;
+  const tokenIds = memes
+    .filter(
+      (nft) =>
+        (latestMemeIsOnChainLatest && nft.id === latestMemeId) ||
+        (typeof nft.mint_date === "number" && nft.mint_date >= cutoffSeconds),
+    )
+    .map((nft) => nft.id);
+  return [...new Set(tokenIds)].sort((a, b) => a - b);
+}
+
+export async function selectMemeEditionSizeFloorRefreshIds(
+  nfts: MemeEditionSizeFloorRefreshNft[],
+  fetchTokenUri: (tokenId: number) => Promise<string>,
+  nowMillis: number = Date.now(),
+): Promise<number[]> {
+  const latestMemeId = nfts
+    .filter((nft) => areEqualAddresses(nft.contract, MEMES_CONTRACT))
+    .reduce((latest, nft) => Math.max(latest, nft.id), 0);
+  if (latestMemeId === 0) {
+    return [];
+  }
+
+  let latestMemeIsOnChainLatest = false;
+  try {
+    // Match discovery's unused-token URI convention, but let RPC failures
+    // remain unverified rather than treating them as discovery completion.
+    const nextId = latestMemeId + 1;
+    const uri = await fetchTokenUri(nextId);
+    latestMemeIsOnChainLatest = !uri || uri === String(nextId);
+  } catch {
+    // Recent cards still refresh on a later-card probe failure.
+  }
+  return getMemeTokenIdsForEditionSizeFloorRefresh(
+    nfts,
+    latestMemeIsOnChainLatest,
+    nowMillis,
+  );
 }

@@ -17,11 +17,15 @@ import {
 } from "../../../../shared/abis/memes";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses } from "../../../../shared/helpers";
-import { getMemeEditionSizeFloor } from "../../../../shared/memes-edition-size-floor";
+import {
+  getMemeEditionSizeFloor,
+  repairMemeCatchUpEditionSizeFloor,
+} from "../../../../shared/memes-edition-size-floor";
 import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { Transaction } from "../../../db/entities/ITransaction";
 import { logInfo } from "../../worker-helpers";
+import { withTimeout } from "./nft-request-timeout";
 
 export enum ContractType {
   ERC721,
@@ -257,7 +261,11 @@ export const getEditionSizes = async (
 
   return {
     editionSize,
-    editionSizeFloor,
+    editionSizeFloor:
+      repairMemeCatchUpEditionSizeFloor(
+        { contract: contractAddress, id: tokenId },
+        editionSizeFloor,
+      ) ?? editionSizeFloor,
     burnt,
   };
 };
@@ -291,7 +299,7 @@ async function resolveEditionSizeFloor(
     }
   }
 
-  return preserveExistingFloor ? existingFloor ?? actualSupply : actualSupply;
+  return preserveExistingFloor ? (existingFloor ?? actualSupply) : actualSupply;
 }
 
 async function getExistingEditionSizeFloor(
@@ -344,25 +352,6 @@ async function fetchMemeEditionSizeFloorFromClaim(
       error,
     );
     return null;
-  }
-}
-
-async function withTimeout<T>(
-  promise: Promise<T>,
-  timeoutMs: number,
-  timeoutMessage: string,
-): Promise<T> {
-  let timeout: ReturnType<typeof setTimeout> | undefined;
-  const timeoutPromise = new Promise<never>((_resolve, reject) => {
-    timeout = setTimeout(() => reject(new Error(timeoutMessage)), timeoutMs);
-  });
-
-  try {
-    return await Promise.race([promise, timeoutPromise]);
-  } finally {
-    if (timeout !== undefined) {
-      clearTimeout(timeout);
-    }
   }
 }
 

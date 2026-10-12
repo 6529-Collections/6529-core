@@ -1,4 +1,5 @@
 import { parentPort } from "worker_threads";
+import { repairNftEditionSizeFloors } from "../../../db/nft-edition-size-floor-repair";
 import { NFT } from "../../../db/entities/INFT";
 import { DefaultBoost, TDH, TokenTDH } from "../../../db/entities/ITDH";
 import {
@@ -205,6 +206,9 @@ export const calculateTDH = async (
   if (startingWallets) {
     logInfo(parentPort, `[STARTING WALLETS ${startingWallets.length}]`);
   }
+
+  // Repair before reading NFT metadata for any current or historical run.
+  await repairNftEditionSizeFloors(db);
 
   const transactions = await db.getRepository(Transaction).find({
     where: {
