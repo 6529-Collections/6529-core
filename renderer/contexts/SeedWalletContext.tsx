@@ -183,7 +183,11 @@ export const SeedWalletProvider: React.FC<{
   }, [isFetched, unlockedWallet, pendingCallback]);
 
   useEffect(() => {
-    sessionStorage.removeItem(LEGACY_SEED_WALLET_PASSWORD_KEY);
+    try {
+      sessionStorage.removeItem(LEGACY_SEED_WALLET_PASSWORD_KEY);
+    } catch (e) {
+      console.error("Error removing a saved wallet password", e);
+    }
   }, []);
 
   useEffect(() => {
