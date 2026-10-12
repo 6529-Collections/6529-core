@@ -1,8 +1,7 @@
 import { ethers } from "ethers";
 import { parentPort, workerData } from "worker_threads";
-import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
 import { ResettableWorkerData } from "../../scheduled-worker";
-import { DataSource, DataSourceOptions } from "typeorm";
+import { DataSourceOptions } from "typeorm";
 import {
   getBlockTimestamp,
   logInfo,
@@ -13,24 +12,19 @@ import {
   ConsolidationEvent,
   Delegation,
   DelegationEvent,
-  EventType,
-  Event,
+  ReplayConsolidation,
+  ReplayDelegation,
+  NFTDelegationReplayBlock,
   NFTDelegationBlock,
 } from "../../../db/entities/IDelegation";
-import { areEqualAddresses, sleep } from "../../../../shared/helpers";
-import {
-  CONSOLIDATED_WALLETS_TDH_TABLE,
-  DELEGATION_ALL_ADDRESS,
-  DELEGATION_CONTRACT,
-  USE_CASE_CONSOLIDATION,
-  USE_CASE_PRIMARY_ADDRESS,
-  USE_CASE_SUB_DELEGATION,
-} from "../../../../electron-constants";
-import { DELEGATIONS_IFACE } from "../../../../shared/abis/delegations";
+import { sleep } from "../../../../shared/helpers";
+import { DELEGATION_CONTRACT } from "../../../../electron-constants";
 import { Time } from "../../../../shared/time";
 import {
   getLatestNFTDBlock,
-  persistNftDelegationBlock,
+  isNativeDelegationIndexReady,
+  completeNativeDelegationReplay,
+  resetNativeDelegationReplay,
   persistNftDelegations,
 } from "./nftdelegation-worker.db";
 import { CoreWorker } from "../core-worker";
@@ -51,38 +45,13 @@ import { NFT } from "../../../db/entities/INFT";
 import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { findLatestBlockBeforeTimestamp } from "../tdh-worker/tdh";
 
+import { mapDelegationLogs } from "./delegation-logs";
+import { createDelegationStateReader } from "./delegation-registration-expiry";
+import { expandAffectedConsolidationWallets } from "../tdh-worker/tdh-worker.db";
+
 const data: ResettableWorkerData = workerData;
 
 export const NAMESPACE = "NFT_DELEGATION_WORKER >";
-
-async function getConsolidationsContainingAddress(
-  db: DataSource,
-  wallets: Set<string>
-): Promise<ConsolidatedTDH[]> {
-  const likeConditions = Array.from(wallets)
-    .map((wallet) => `consolidation_key LIKE '%${wallet.toLowerCase()}%'`)
-    .join(" OR ");
-
-  const query = `
-    SELECT * FROM ${CONSOLIDATED_WALLETS_TDH_TABLE}
-    WHERE ${likeConditions}
-  `;
-
-  return await db.query(query);
-}
-
-async function getAffectedWallets(db: DataSource, wallets: Set<string>) {
-  const allConsolidations = await getConsolidationsContainingAddress(
-    db,
-    wallets
-  );
-  allConsolidations.map((c) => {
-    const cWallets = JSON.parse(c.wallets);
-    cWallets.forEach((w: string) => wallets.add(w.toLowerCase()));
-  });
-
-  return wallets;
-}
 
 class NFTDelegationWorker extends CoreWorker {
   private reset?: boolean;
@@ -92,12 +61,15 @@ class NFTDelegationWorker extends CoreWorker {
     dbParams: DataSourceOptions,
     blockRange: number,
     maxConcurrentRequests: number,
-    reset?: boolean
+    reset?: boolean,
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       NFTDelegationBlock,
       Delegation,
       Consolidation,
+      ReplayConsolidation,
+      ReplayDelegation,
+      NFTDelegationReplayBlock,
       TDHBlock,
       TDH,
       ConsolidatedTDH,
@@ -112,46 +84,42 @@ class NFTDelegationWorker extends CoreWorker {
 
   async work() {
     if (this.reset) {
-      await this.resetWork();
-    } else {
-      await this.baseWork();
+      await resetNativeDelegationReplay(this.getDb());
+      sendStatusUpdate(parentPort, {
+        update: {
+          status: ScheduledWorkerStatus.COMPLETED,
+          message:
+            "Delegation replay reset; run NFTDelegation to rebuild the index",
+        },
+      });
+      return;
     }
+    if (!(await isNativeDelegationIndexReady(this.getDb()))) {
+      await this.replayNativeDelegations();
+      return;
+    }
+    await this.baseWork();
   }
 
-  async resetWork() {
-    logInfo(parentPort, "Resetting to block", DELEGATION_CONTRACT.deploy_block);
-    sendStatusUpdate(parentPort, {
-      update: {
-        status: ScheduledWorkerStatus.RUNNING,
-        message: `Resetting to block ${DELEGATION_CONTRACT.deploy_block}...`,
-      },
-    });
-
-    const blockTimestamp = await getBlockTimestamp(
+  private async replayNativeDelegations() {
+    const checkpoint = await this.getDb()
+      .getRepository(NFTDelegationReplayBlock)
+      .findOne({ where: { id: 1 } });
+    const fromBlock =
+      (checkpoint?.block ?? DELEGATION_CONTRACT.deploy_block - 1) + 1;
+    const latestBlock = await this.getProvider().getBlockNumber();
+    logInfo(
       parentPort,
-      this.getProvider(),
-      NAMESPACE,
-      DELEGATION_CONTRACT.deploy_block
+      "Replaying native delegations",
+      `[${fromBlock}-${latestBlock}]`,
     );
-
-    await this.getDb().transaction(async (manager) => {
-      const delegationsRepo = manager.getRepository(Delegation);
-      const consolidationRepo = manager.getRepository(Consolidation);
-
-      await delegationsRepo.clear();
-      await consolidationRepo.clear();
-      await persistNftDelegationBlock(
-        manager,
-        DELEGATION_CONTRACT.deploy_block,
-        blockTimestamp.toSeconds()
-      );
-    });
-
-    logInfo(parentPort, "Reset to block", "completed");
+    await this.findAllDelegationTransactions(fromBlock, latestBlock, true);
+    await completeNativeDelegationReplay(this.getDb(), latestBlock);
     sendStatusUpdate(parentPort, {
       update: {
         status: ScheduledWorkerStatus.COMPLETED,
-        message: `Reset completed`,
+        message: `Delegation replay completed at block ${latestBlock}; full TDH recalculation required`,
+        statusPercentage: 100,
       },
     });
   }
@@ -169,7 +137,7 @@ class NFTDelegationWorker extends CoreWorker {
       "Finished",
       delegationsResponse.consolidations.length,
       delegationsResponse.registrations.length,
-      delegationsResponse.revocations.length
+      delegationsResponse.revocations.length,
     );
     sendStatusUpdate(parentPort, {
       update: {
@@ -190,19 +158,19 @@ class NFTDelegationWorker extends CoreWorker {
   }> {
     let startBlock = await getLatestNFTDBlock(this.getDb());
     if (startBlock === 0) {
-      startBlock = DELEGATION_CONTRACT.deploy_block;
+      startBlock = DELEGATION_CONTRACT.deploy_block - 1;
     }
     const latestBlock = await this.getProvider().getBlockNumber();
     logInfo(
       parentPort,
       "Blocks",
       `[${startBlock}-${latestBlock}]`,
-      "> Fetching all transactions..."
+      "> Fetching all transactions...",
     );
 
     const response = await this.findAllDelegationTransactions(
       startBlock + 1,
-      latestBlock
+      latestBlock,
     );
 
     return {
@@ -215,7 +183,8 @@ class NFTDelegationWorker extends CoreWorker {
 
   private async findAllDelegationTransactions(
     fromBlock: number,
-    toBlock: number
+    toBlock: number,
+    replay = false,
   ) {
     let currentFromBlock = fromBlock;
 
@@ -230,14 +199,14 @@ class NFTDelegationWorker extends CoreWorker {
         100;
       const nextToBlock = Math.min(
         currentFromBlock + this.getBlockRange(),
-        toBlock
+        toBlock,
       );
 
       const latestBlockTime = await getBlockTimestamp(
         parentPort,
         this.getProvider(),
         NAMESPACE,
-        nextToBlock
+        nextToBlock,
       );
 
       const printStatus = (...args: any[]) => {
@@ -245,7 +214,7 @@ class NFTDelegationWorker extends CoreWorker {
           parentPort,
           "Blocks",
           `[${currentFromBlock}-${nextToBlock}]`,
-          ...args
+          ...args,
         );
       };
 
@@ -281,12 +250,12 @@ class NFTDelegationWorker extends CoreWorker {
           "> Mapped",
           `[REGISTRATIONS ${mappedDelegations.registrations.length}]`,
           `[CONSOLIDATIONS ${mappedDelegations.consolidations.length}]`,
-          `[REVOCATIONS ${mappedDelegations.revocations.length}]`
+          `[REVOCATIONS ${mappedDelegations.revocations.length}]`,
         );
 
         printStatus(
           "> Persisting...",
-          `[DELEGATIONS ${mappedDelegations.registrations.length}] [CONSOLIDATIONS ${mappedDelegations.consolidations.length}] [REVOCATIONS ${mappedDelegations.revocations.length}]`
+          `[DELEGATIONS ${mappedDelegations.registrations.length}] [CONSOLIDATIONS ${mappedDelegations.consolidations.length}] [REVOCATIONS ${mappedDelegations.revocations.length}]`,
         );
         sendUpdate("Updating Database");
 
@@ -294,12 +263,17 @@ class NFTDelegationWorker extends CoreWorker {
           this.getDb(),
           nextToBlock,
           latestBlockTime.toSeconds(),
-          mappedDelegations
+          mappedDelegations,
+          5,
+          100,
+          replay,
         );
 
-        allDelegations.push(...mappedDelegations.registrations);
-        allConsolidations.push(...mappedDelegations.consolidations);
-        allRevocations.push(...mappedDelegations.revocations);
+        if (!replay) {
+          allDelegations.push(...mappedDelegations.registrations);
+          allConsolidations.push(...mappedDelegations.consolidations);
+          allRevocations.push(...mappedDelegations.revocations);
+        }
 
         printStatus("> Mapped", logs.length.toLocaleString());
       } else {
@@ -311,7 +285,10 @@ class NFTDelegationWorker extends CoreWorker {
             consolidations: [],
             registrations: [],
             revocations: [],
-          }
+          },
+          5,
+          100,
+          replay,
         );
         printStatus("> No logs");
       }
@@ -327,129 +304,25 @@ class NFTDelegationWorker extends CoreWorker {
   }
 
   private async mapDelegations(logs: ethers.Log[]) {
-    const consolidations: ConsolidationEvent[] = [];
-    const registrations: DelegationEvent[] = [];
-    const revocations: DelegationEvent[] = [];
-
-    const decodedLogPromises = logs.map((d) => {
-      return this.getBottleneck().schedule(async () => {
-        const delResult = DELEGATIONS_IFACE.parseLog(d);
-        if (!delResult) {
-          return;
-        }
-        const collection = delResult.args.collectionAddress.toLowerCase();
-        const from = delResult.args.delegator
-          ? delResult.args.delegator
-          : delResult.args.from;
-        const to = delResult.args.delegationAddress;
-        const useCase = Number(delResult.args.useCase);
-
-        if (
-          !areEqualAddresses(from, to) ||
-          useCase === USE_CASE_PRIMARY_ADDRESS
-        ) {
-          if (
-            [
-              "RegisterDelegation",
-              "RegisterDelegationUsingSubDelegation",
-            ].includes(delResult.name)
-          ) {
-            const e: Event = {
-              block: d.blockNumber,
-              type: EventType.REGISTER,
-              wallet1: from.toLowerCase(),
-              wallet2: to.toLowerCase(),
-            };
-            if (useCase === USE_CASE_CONSOLIDATION) {
-              if (
-                [MEMES_CONTRACT, DELEGATION_ALL_ADDRESS].includes(collection)
-              ) {
-                consolidations.push(e);
-              } else {
-                logInfo(
-                  parentPort,
-                  `Skipping consolidation for collection [${collection}]`
-                );
-              }
-            } else if (useCase === USE_CASE_SUB_DELEGATION) {
-              registrations.push({
-                ...e,
-                use_case: useCase,
-                collection: collection.toLowerCase(),
-              });
-            } else {
-              const delegationDetails = await this.getDelegationDetails(
-                d.transactionHash
-              );
-              registrations.push({
-                ...e,
-                use_case: useCase,
-                collection: collection.toLowerCase(),
-                expiry: delegationDetails?.expiry,
-                all_tokens: delegationDetails?.allTokens,
-                token_id: delegationDetails?.tokenId,
-              });
-            }
-          } else if (
-            ["RevokeDelegation", "RevokeDelegationUsingSubDelegation"].includes(
-              delResult.name
-            )
-          ) {
-            const e: Event = {
-              block: d.blockNumber,
-              type: EventType.REVOKE,
-              wallet1: from.toLowerCase(),
-              wallet2: to.toLowerCase(),
-            };
-            if (useCase === USE_CASE_CONSOLIDATION) {
-              if (
-                [MEMES_CONTRACT, DELEGATION_ALL_ADDRESS].includes(collection)
-              ) {
-                consolidations.push(e);
-              }
-            } else {
-              revocations.push({
-                ...e,
-                use_case: useCase,
-                collection: collection.toLowerCase(),
-              });
-            }
-          } else {
-            logInfo(parentPort, `Skipping [${delResult.name}]`);
-          }
-        }
-      });
-    });
-
-    await Promise.all(decodedLogPromises);
-
-    return {
-      consolidations,
-      registrations,
-      revocations,
-    };
+    const provider = this.getProvider();
+    return mapDelegationLogs(
+      logs,
+      createDelegationStateReader(
+        (to, data, blockTag) =>
+          this.getBottleneck().schedule(() =>
+            provider.call({ to, data, blockTag }),
+          ),
+        DELEGATION_CONTRACT.contract,
+      ),
+      (block) =>
+        this.getBottleneck().schedule(async () => {
+          const result = await provider.getBlock(block);
+          if (!result) throw new Error(`Missing timestamp for block ${block}`);
+          return result.timestamp;
+        }),
+      (message) => logInfo(parentPort, message),
+    );
   }
-
-  private getDelegationDetails = async (txHash: string) => {
-    await sleep(100);
-    const tx = await this.getProvider().getTransaction(txHash);
-    if (tx) {
-      const data = tx.data;
-      try {
-        const parsed = DELEGATIONS_IFACE.parseTransaction({ data, value: 0 });
-        if (parsed?.args._expiryDate) {
-          return {
-            expiry: parsed.args._expiryDate.toNumber(),
-            allTokens: parsed.args._allTokens,
-            tokenId: parsed.args._tokenId.toNumber(),
-          };
-        }
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  };
 
   private async reconsolidateWallets(events: ConsolidationEvent[]) {
     logInfo(parentPort, "Reconsolidating wallets");
@@ -466,35 +339,38 @@ class NFTDelegationWorker extends CoreWorker {
       wallets.add(c.wallet2.toLowerCase());
     });
 
-    const affectedWallets = await getAffectedWallets(this.getDb(), wallets);
+    const affectedWallets = await expandAffectedConsolidationWallets(
+      this.getDb(),
+      Array.from(wallets),
+    );
 
-    if (affectedWallets.size > 0) {
+    if (affectedWallets.length > 0) {
       logInfo(
         parentPort,
-        `[RECONSOLIDATING FOR ${affectedWallets.size} DISTINCT WALLETS]`
+        `[RECONSOLIDATING FOR ${affectedWallets.length} DISTINCT WALLETS]`,
       );
 
       const lastTDHCalc = getLastTDH();
       const blockBefore = await findLatestBlockBeforeTimestamp(
         this.getProvider(),
-        lastTDHCalc.getTime() / 1000
+        lastTDHCalc.getTime() / 1000,
       );
       const block = blockBefore.number;
       const blockTimestamp = await getBlockTimestamp(
         parentPort,
         this.getProvider(),
         NAMESPACE,
-        block
+        block,
       );
 
-      const walletsArray = Array.from(affectedWallets);
+      const walletsArray = affectedWallets;
 
       await calculateTDH(
         this.getDb(),
         block,
         lastTDHCalc,
         blockTimestamp,
-        walletsArray
+        walletsArray,
       );
     } else {
       logInfo(parentPort, `[NO WALLETS TO RECONSOLIDATE]`);
@@ -513,5 +389,5 @@ new NFTDelegationWorker(
   data.dbParams,
   data.blockRange,
   data.maxConcurrentRequests,
-  data.reset
+  data.reset,
 );

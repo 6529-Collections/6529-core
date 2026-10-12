@@ -23,6 +23,14 @@ export class Consolidation {
 
   @Column({ type: "boolean", default: false })
   confirmed!: boolean;
+
+  // Actual registration block times in Unix seconds; unknown legacy times
+  // remain NULL until replayed and never qualify for four-wallet activation.
+  @Column({ type: "bigint", nullable: true, default: null })
+  wallet1_registered_at!: number | null;
+
+  @Column({ type: "bigint", nullable: true, default: null })
+  wallet2_registered_at!: number | null;
 }
 
 @Entity(DELEGATIONS_TABLE)
@@ -65,6 +73,8 @@ export interface Event {
   type: EventType;
   wallet1: string;
   wallet2: string;
+  timestamp?: number;
+  log_index?: number;
 }
 
 export type ConsolidationEvent = Event;
@@ -78,7 +88,20 @@ export interface DelegationEvent extends ConsolidationEvent {
 }
 
 @Entity(NFTDELEGATION_BLOCKS_TABLE)
-export class NFTDelegationBlock extends SingletonBlockEntity {}
+export class NFTDelegationBlock extends SingletonBlockEntity {
+  @Column({ type: "int", default: 0 })
+  index_version!: number;
+}
+
+// Shadow tables allow a resumable upgrade without exposing partial history.
+@Entity("consolidations_replay")
+export class ReplayConsolidation extends Consolidation {}
+
+@Entity("delegations_replay")
+export class ReplayDelegation extends Delegation {}
+
+@Entity("nft_delegation_replay_blocks")
+export class NFTDelegationReplayBlock extends SingletonBlockEntity {}
 
 export interface WalletConsolidationKey {
   wallet: string;

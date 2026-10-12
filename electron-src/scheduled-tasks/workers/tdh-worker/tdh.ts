@@ -29,6 +29,7 @@ import { logInfo, sendStatusUpdate } from "../../worker-helpers";
 import { extractNFTOwners } from "../transactions-worker/nft-owners";
 import { consolidateTDH } from "./tdh-worker.consolidation";
 import {
+  expandAffectedConsolidationWallets,
   fetchAllConsolidationAddresses,
   fetchTDHForBlock,
   fetchWalletTransactions,
@@ -204,6 +205,10 @@ export const calculateTDH = async (
     `[BLOCK ${block}] [TDH TIME ${lastTDHCalc.toLocaleString()}]`,
   );
   if (startingWallets) {
+    startingWallets = await expandAffectedConsolidationWallets(
+      db,
+      startingWallets,
+    );
     logInfo(parentPort, `[STARTING WALLETS ${startingWallets.length}]`);
   }
 
@@ -720,7 +725,7 @@ export function calculateBoost(
   };
 }
 
-function getTokenTdh(
+export function getTokenTdh(
   lastTDHCalc: Date,
   id: number,
   hodlRate: number,

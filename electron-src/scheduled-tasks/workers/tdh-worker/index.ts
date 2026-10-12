@@ -41,7 +41,10 @@ import { GRADIENT_CONTRACT } from "../../../../shared/abis/gradient";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { NEXTGEN_ABI } from "../../../../shared/abis/nextgen";
 import { ethers } from "ethers";
-import { getLatestNFTDBlock } from "../nftdelegation-worker/nftdelegation-worker.db";
+import {
+  getLatestNFTDBlock,
+  isNativeDelegationIndexReady,
+} from "../nftdelegation-worker/nftdelegation-worker.db";
 import { getTdhCheckpointWaitingMessage } from "./tdh-readiness";
 
 const data: WorkerData = workerData;
@@ -109,6 +112,13 @@ class TDHWorker extends CoreWorker {
   private async deferUntilRequiredCheckpointsAreReady(
     block: number,
   ): Promise<boolean> {
+    if (!(await isNativeDelegationIndexReady(this.getDb()))) {
+      deferWorkerStart(
+        parentPort,
+        "Waiting for native delegation timestamp/scope replay to complete",
+      );
+      return true;
+    }
     const [latestTransactionsBlock, latestNFTDBlock] = await Promise.all([
       getLatestTransactionsBlock(this.getDb().manager),
       getLatestNFTDBlock(this.getDb()),
