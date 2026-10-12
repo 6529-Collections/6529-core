@@ -3,7 +3,7 @@
 import { useSeizeConnectContext } from "@/components/auth/SeizeConnectContext";
 import { getSeedWallet, getSeedWallets } from "@/electron";
 import { areEqualAddresses } from "@/helpers/Helpers";
-import { decryptData, encryptData } from "@/shared/encrypt";
+import { decryptData } from "@/shared/encrypt";
 import { ISeedWallet, SeedWalletRequest } from "@/shared/types";
 import { SEED_WALLET_CONNECTOR_TYPE } from "@/wagmiConfig/seedWalletConnector";
 import { ethers } from "ethers";
@@ -19,7 +19,10 @@ import { useAccount, useChainId, useConnect, useConnectors } from "wagmi";
 import ConfirmSeedWalletLock from "../components/confirm/ConfirmSeedWalletLock";
 import ConfirmSeedWalletRequest from "../components/confirm/ConfirmSeedWalletRequest";
 
-export const SEED_WALLET_KEY = "seed-wallet-pass";
+// Earlier versions saved the unlock password in session storage, encrypted
+// under the wallet's public address, so anything able to read session storage
+// could recover it. It is no longer written; leftover values are removed.
+const LEGACY_SEED_WALLET_PASSWORD_KEY = "seed-wallet-pass";
 
 const hasSeedWalletBridge = (): boolean =>
   typeof window !== "undefined" && typeof window.api?.sendSync === "function";
@@ -97,15 +100,8 @@ export const SeedWalletProvider: React.FC<{
 
   const unlockWallet = useCallback(
     async (wallet: ISeedWallet, password: string): Promise<boolean> => {
-      const handleSuccess = async (decryptedPrivateKey: string) => {
-        const wallet = new ethers.Wallet(decryptedPrivateKey);
-        const encryptedPass = await encryptData(
-          wallet.address,
-          password,
-          wallet.address
-        );
-        sessionStorage.setItem(SEED_WALLET_KEY, encryptedPass);
-        setUnlockedWallet(wallet);
+      const handleSuccess = (decryptedPrivateKey: string) => {
+        setUnlockedWallet(new ethers.Wallet(decryptedPrivateKey));
         return true;
       };
       const handleError = (e: string) => {
@@ -137,7 +133,6 @@ export const SeedWalletProvider: React.FC<{
     if (clearCallback) {
       setPendingCallback(undefined);
     }
-    sessionStorage.removeItem(SEED_WALLET_KEY);
   }, []);
 
   useEffect(() => {
@@ -188,24 +183,12 @@ export const SeedWalletProvider: React.FC<{
   }, [isFetched, unlockedWallet, pendingCallback]);
 
   useEffect(() => {
+    sessionStorage.removeItem(LEGACY_SEED_WALLET_PASSWORD_KEY);
+  }, []);
+
+  useEffect(() => {
     if (lockedWallet) {
-      const storedEncryptedPassword = sessionStorage.getItem(SEED_WALLET_KEY);
-      if (storedEncryptedPassword) {
-        decryptData(
-          lockedWallet.address,
-          storedEncryptedPassword,
-          lockedWallet.address
-        )
-          .then((storedPassword) => {
-            unlockWallet(lockedWallet, storedPassword);
-          })
-          .catch((e) => {
-            console.error("Error decrypting stored password", e);
-            setIsFetched(true);
-          });
-      } else {
-        setIsFetched(true);
-      }
+      setIsFetched(true);
     }
   }, [lockedWallet]);
 
