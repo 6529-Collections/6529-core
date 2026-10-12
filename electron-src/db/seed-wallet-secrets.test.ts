@@ -8,8 +8,9 @@ import {
 } from "../../shared/encrypt";
 import { encryptSeedWalletSecrets } from "./seed-wallet-secrets";
 
-// Written by shared/encrypt.ts as released in v0.3.14, for the well-known
-// Hardhat test mnemonic. Wallets already on users' machines look like this.
+// Written by shared/encrypt.ts as released in v0.3.14. The mnemonic and key
+// are the public Hardhat test vector, not a secret. Wallets already on users'
+// machines look like this.
 const LEGACY_WALLET = {
   address: "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
   privateKey:
@@ -129,7 +130,27 @@ describe("seed wallet encryption", () => {
     envelope.kdf.iterations = 1000;
     const weakened = JSON.stringify(envelope);
 
-    assert.equal(getEncryptionVersion(weakened), 1);
-    await assert.rejects(decryptData("", weakened, PASSWORD));
+    assert.equal(getEncryptionVersion(weakened), null);
+    await assert.rejects(decryptData("", weakened, PASSWORD), {
+      message: "Invalid encrypted envelope",
+    });
+  });
+
+  it("never reads an envelope-shaped value as the legacy format", async () => {
+    for (const value of ["{", '{"version":2}', "{abc:def}"]) {
+      assert.equal(getEncryptionVersion(value), null);
+      await assert.rejects(decryptData("", value, PASSWORD), {
+        message: "Invalid encrypted envelope",
+      });
+    }
+  });
+
+  it("rejects values in neither format", async () => {
+    for (const value of ["", MNEMONIC_NA, "abc", "zz:yy", "ab:"]) {
+      assert.equal(getEncryptionVersion(value), null);
+      await assert.rejects(decryptData("", value, PASSWORD), {
+        message: "Invalid encrypted data",
+      });
+    }
   });
 });

@@ -21,6 +21,7 @@ const AUTH_TAG_BYTES = 16;
 const KEY_BYTES = 32;
 
 const HEX_PATTERN = /^[0-9a-f]+$/i;
+const LEGACY_PATTERN = /^[0-9a-f]+:[0-9a-f]+$/i;
 
 interface EncryptedEnvelopeV2 {
   version: typeof ENCRYPTION_VERSION;
@@ -78,8 +79,12 @@ function isValidKdfIterations(value: unknown): value is number {
   );
 }
 
+function isEnvelopeShaped(value: string): boolean {
+  return value.startsWith("{");
+}
+
 function parseEnvelope(encryptedData: string): EncryptedEnvelopeV2 | null {
-  if (!encryptedData.startsWith("{")) {
+  if (!isEnvelopeShaped(encryptedData)) {
     return null;
   }
   try {
@@ -91,6 +96,7 @@ function parseEnvelope(encryptedData: string): EncryptedEnvelopeV2 | null {
       parsed.kdf.hash !== "sha256" ||
       !isValidKdfIterations(parsed.kdf.iterations) ||
       parsed.kdf.key_length !== KEY_BYTES ||
+      // encryptData writes 16-byte salts; longer ones are accepted.
       !isHexOfLength(parsed.kdf.salt) ||
       parsed.kdf.salt.length < KDF_SALT_BYTES * 2 ||
       !isHexOfLength(parsed.iv, IV_BYTES) ||
@@ -106,14 +112,17 @@ function parseEnvelope(encryptedData: string): EncryptedEnvelopeV2 | null {
 }
 
 /**
- * Returns 2 for a v2 envelope, 1 for anything else that is non-empty (the
- * legacy format), and null for an empty value.
+ * Returns 2 for a valid v2 envelope, 1 for a legacy record, and null for
+ * anything else, including an envelope that fails validation.
  */
 export function getEncryptionVersion(value: unknown): 1 | 2 | null {
-  if (typeof value !== "string" || !value) {
+  if (typeof value !== "string") {
     return null;
   }
-  return parseEnvelope(value) ? 2 : 1;
+  if (parseEnvelope(value)) {
+    return 2;
+  }
+  return LEGACY_PATTERN.test(value) ? 1 : null;
 }
 
 /**
@@ -152,15 +161,19 @@ export async function encryptData(
 
 /**
  * Decrypts a v2 envelope, or a legacy record. `legacySalt` is the wallet
- * address; only legacy records use it.
+ * address; only legacy records use it. A value shaped like an envelope never
+ * falls back to the legacy format: if it fails validation, it is rejected.
  */
 export async function decryptData(
   legacySalt: string,
   encryptedData: string,
   password: string
 ): Promise<string> {
-  const envelope = parseEnvelope(encryptedData);
-  if (envelope) {
+  if (isEnvelopeShaped(encryptedData)) {
+    const envelope = parseEnvelope(encryptedData);
+    if (!envelope) {
+      throw new Error("Invalid encrypted envelope");
+    }
     const key = await deriveKey(
       password,
       Buffer.from(envelope.kdf.salt, "hex"),
@@ -178,7 +191,7 @@ export async function decryptData(
   }
 
   const [ivHex, encryptedHex] = encryptedData.split(":");
-  if (!ivHex || !encryptedHex) {
+  if (!LEGACY_PATTERN.test(encryptedData) || !ivHex || !encryptedHex) {
     throw new Error("Invalid encrypted data");
   }
   const key = await deriveKey(
