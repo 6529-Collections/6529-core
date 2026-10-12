@@ -5,12 +5,11 @@ Core's native SQLite delegation index and TDH worker follow backend
 (head `c041a853d0bc1ebbd0c181492a8f6d2592c05dd2`) for grouping and directional
 registration times. Safe/batch token scope and historical expiry reads follow
 [#2151](https://github.com/6529-Collections/6529seize-backend/pull/2151)
-(head `b4b7c80b5128c2e8010abec6d340e54aba137f5c`). These backend changes are
+(head `2ed34d62125145fc9ad634a3f3715b731d9f7d5c`). These backend changes are
 independent rollout dependencies; native parity does not replace their deployment
-or the frontend rollout. The referenced #2151 head still needs the corresponding
-same-block sub-delegation revocation filter and oversized-token state-read
-placeholder fixes, which Core includes to avoid stale manager rows and stalled
-indexing. This change requires no renderer subtree sync or desktop
+or the frontend rollout. The referenced #2151 head includes the matching same-block sub-delegation
+revocation filter and oversized-token state-read placeholder fixes, preserving
+parity with Core for manager rows and same-block expiry resolution. This change requires no renderer subtree sync or desktop
 version change.
 
 ## Grouping contract
