@@ -20,7 +20,7 @@ can belong to only one group. Two/three-wallet groups retain existing eligibilit
 
 Growth beyond three requires a member connected to every other member by pairs
 whose *both* directional registration timestamps are at or after
-2026-10-15 00:00:00 UTC (`1792022400` Unix seconds), inclusive. All six directions
+the selected backend’s configured activation cutoff, inclusive (production launch: 2026-10-15 00:00:00 UTC). All six directions
 incident to that member must qualify; old links among the other three can remain.
 There is no permanently designated fourth wallet. Passing the date alone does not
 activate an old four-wallet mesh. NULL legacy times never qualify, and indexing
@@ -92,3 +92,11 @@ and expiry changes do not alter token ownership, holding age or TDH boosts, so
 only consolidation changes invalidate TDH during incremental indexing. Backend
 and Core must use the same activation constant if the proposed rollout date
 changes.
+
+## Environment activation policy
+
+Core reads `consolidation.four_wallet_activation_at` from `/api/settings` on its selected backend before calculating TDH. Test-backend requests use the existing private staging authentication configuration. Neither the renderer nor native grouping supplies a launch-date fallback. If settings are unavailable or malformed, a manual/full TDH run waits and preserves its prior results; event indexing can continue while reconsolidation remains marked for recalculation.
+
+A calculation uses one policy snapshot for its holding-time and grouping work, including incremental reconsolidation and missing-wallet rows. TDH block completion records the backend URL and normalized cutoff. When they differ, an incremental calculation becomes a full calculation so every wallet is regrouped under the same policy. Existing databases gain the nullable completion field through the normal Core entity synchronization.
+
+Production is configured for 2026-10-15 00:00 UTC; staging may use an earlier cutoff to test four-wallet behavior before launch. Configuration belongs to the backend environment. Both environments read the same mainnet contract, so test with dedicated wallets and renew any pre-production-cutoff links after the production cutoff before expecting them to count in production.

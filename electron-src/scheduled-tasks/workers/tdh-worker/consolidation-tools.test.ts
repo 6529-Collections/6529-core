@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { CONSOLIDATION_FOURTH_WALLET_ACTIVATION_TIMESTAMP as cutoff } from "../../../../electron-constants";
+const cutoff = Date.parse("2026-10-15T00:00:00Z") / 1000;
 import { consolidationTools, ConsolidationLink } from "./consolidation-tools";
 
 const wallets = ["a", "b", "c", "d", "e"];
@@ -21,7 +21,7 @@ function mesh(freshMember?: string): ConsolidationLink[] {
 }
 const groups = (links: ConsolidationLink[]) =>
   consolidationTools
-    .extractConsolidations(links)
+    .extractConsolidations(links, cutoff)
     .map((group) => group.slice().sort().join(""))
     .sort();
 
@@ -68,7 +68,7 @@ describe("native grouping parity with backend #2148", () => {
       wallet1_registered_at: cutoff,
       wallet2_registered_at: cutoff,
     });
-    const result = consolidationTools.extractConsolidations(links);
+    const result = consolidationTools.extractConsolidations(links, cutoff);
     const flattened = result.flat();
     assert.equal(new Set(flattened).size, flattened.length);
     assert.equal(flattened.length, 5);
@@ -81,4 +81,23 @@ it("preserves the caller's link order while producing deterministic groups", () 
   const original = links.slice();
   assert.deepEqual(groups(links), ["abcd"]);
   assert.deepEqual(links, original);
+});
+
+it("applies different environment cutoffs to the same on-chain links", () => {
+  const staging = Date.parse("2026-10-12T00:00:00Z") / 1000;
+  const links = mesh("d").map((link) => ({
+    ...link,
+    wallet1_registered_at: staging,
+    wallet2_registered_at: staging,
+  }));
+  assert.ok(
+    consolidationTools
+      .extractConsolidations(links, staging)
+      .some((group) => group.length === 4),
+  );
+  assert.ok(
+    consolidationTools
+      .extractConsolidations(links, cutoff)
+      .every((group) => group.length <= 3),
+  );
 });

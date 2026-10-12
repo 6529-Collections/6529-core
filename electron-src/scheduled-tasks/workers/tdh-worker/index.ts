@@ -1,3 +1,7 @@
+import {
+  loadConsolidationPolicy,
+  type ConsolidationPolicy,
+} from "./consolidation-policy";
 import { parentPort, workerData } from "worker_threads";
 import { WorkerData } from "../../scheduled-worker";
 import { DataSourceOptions } from "typeorm";
@@ -56,7 +60,7 @@ class TDHWorker extends CoreWorker {
     rpcUrl: string,
     dbParams: DataSourceOptions,
     blockRange: number,
-    maxConcurrentRequests: number
+    maxConcurrentRequests: number,
   ) {
     super(rpcUrl, dbParams, blockRange, maxConcurrentRequests, parentPort, [
       TDHBlock,
@@ -73,6 +77,16 @@ class TDHWorker extends CoreWorker {
   }
 
   async work() {
+    let policy: ConsolidationPolicy;
+    try {
+      policy = await loadConsolidationPolicy(data.consolidationSettingsRequest);
+    } catch {
+      deferWorkerStart(
+        parentPort,
+        "Waiting for valid consolidation settings from the selected backend; previous TDH is preserved",
+      );
+      return;
+    }
     const startTime = Time.now();
     // A TDH calculation is rebuilt from scratch after any interruption. Set
     // this before doing work and clear it only after the full run succeeds.
@@ -81,7 +95,7 @@ class TDHWorker extends CoreWorker {
     const lastTDHCalc = getLastTDH();
     const blockBefore = await findLatestBlockBeforeTimestamp(
       this.getProvider(),
-      lastTDHCalc.getTime() / 1000
+      lastTDHCalc.getTime() / 1000,
     );
     logInfo(parentPort, "Block before", blockBefore.number);
     const block = blockBefore.number;
@@ -92,7 +106,7 @@ class TDHWorker extends CoreWorker {
       return;
     }
     await this.validateBlock(block);
-    const tdhResult = await this.updateTDH(block, lastTDHCalc);
+    const tdhResult = await this.updateTDH(block, lastTDHCalc, policy);
     await setTdhRecalculationNeeded(this.getDb().manager, false);
     await setTdhRunIncomplete(this.getDb().manager, false);
 
@@ -137,12 +151,12 @@ class TDHWorker extends CoreWorker {
 
   async validateBlock(block: number) {
     const latestTransactionsBlock = await getLatestTransactionsBlock(
-      this.getDb().manager
+      this.getDb().manager,
     );
 
     if (block > latestTransactionsBlock) {
       throw new Error(
-        `Not Synced: Latest Transactions Block: ${latestTransactionsBlock} | TDH Block: ${block}`
+        `Not Synced: Latest Transactions Block: ${latestTransactionsBlock} | TDH Block: ${block}`,
       );
     }
 
@@ -150,7 +164,7 @@ class TDHWorker extends CoreWorker {
 
     if (block > latestNFTDBlock) {
       throw new Error(
-        `Not Synced: Latest NFT Delegations Block: ${latestNFTDBlock} | TDH Block: ${block}`
+        `Not Synced: Latest NFT Delegations Block: ${latestNFTDBlock} | TDH Block: ${block}`,
       );
     }
 
@@ -160,7 +174,7 @@ class TDHWorker extends CoreWorker {
       "Latest Transactions Block:",
       latestTransactionsBlock,
       "TDH Block:",
-      block
+      block,
     );
 
     await this.validateNFTs();
@@ -205,7 +219,7 @@ class TDHWorker extends CoreWorker {
       const ethersContract = new ethers.Contract(
         contract.address,
         contract.abi,
-        this.getProvider()
+        this.getProvider(),
       );
 
       const nextId = maxNft.maxId + 1;
@@ -213,7 +227,7 @@ class TDHWorker extends CoreWorker {
 
       if (uri && uri != nextId) {
         throw new Error(
-          `Missing NFT: ${contract.name} #${nextId} - Sync to latest NFTs`
+          `Missing NFT: ${contract.name} #${nextId} - Sync to latest NFTs`,
         );
       }
       logInfo(parentPort, `NFT ${contract.name} #${nextId} validated`, uri);
@@ -222,7 +236,11 @@ class TDHWorker extends CoreWorker {
     logInfo(parentPort, "NFTs validated");
   }
 
-  async updateTDH(block: number, lastTDHCalc: Date) {
+  async updateTDH(
+    block: number,
+    lastTDHCalc: Date,
+    policy: ConsolidationPolicy,
+  ) {
     logInfo(parentPort, "Time", lastTDHCalc.toLocaleString());
     logInfo(parentPort, "Selected TDH block", block);
     sendStatusUpdate(parentPort, {
@@ -237,14 +255,15 @@ class TDHWorker extends CoreWorker {
       parentPort,
       this.getProvider(),
       NAMESPACE,
-      block
+      block,
     );
 
     const tdhResult = await calculateTDH(
       this.getDb(),
       block,
       lastTDHCalc,
-      blockTimestamp
+      blockTimestamp,
+      policy,
     );
 
     return tdhResult;
@@ -255,5 +274,5 @@ new TDHWorker(
   data.rpcUrl,
   data.dbParams,
   data.blockRange,
-  data.maxConcurrentRequests
+  data.maxConcurrentRequests,
 );

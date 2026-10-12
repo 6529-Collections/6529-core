@@ -1,3 +1,5 @@
+import type { ConsolidationPolicy } from "./consolidation-policy";
+import { TDHBlock } from "../../../db/entities/ITDH";
 import { parentPort } from "worker_threads";
 import { repairNftEditionSizeFloors } from "../../../db/nft-edition-size-floor-repair";
 import { NFT } from "../../../db/entities/INFT";
@@ -198,12 +200,19 @@ export const calculateTDH = async (
   block: number,
   lastTDHCalc: Date,
   blockTimestamp: Time,
+  policy: ConsolidationPolicy,
   startingWallets?: string[],
 ): Promise<{ block: number; merkleRoot: string }> => {
   logInfo(
     parentPort,
     `[BLOCK ${block}] [TDH TIME ${lastTDHCalc.toLocaleString()}]`,
   );
+  const previousPolicy = await db
+    .getRepository(TDHBlock)
+    .findOne({ where: { block } });
+  // A changed cutoff or backend must regroup everyone, even on an event-only run.
+  if (previousPolicy?.consolidation_policy_key !== policy.key)
+    startingWallets = undefined;
   if (startingWallets) {
     startingWallets = await expandAffectedConsolidationWallets(
       db,
@@ -340,7 +349,11 @@ export const calculateTDH = async (
   await Promise.all(
     Array.from(combinedAddresses).map(async (owner) => {
       const wallet = owner.toLowerCase();
-      const consolidations = await retrieveWalletConsolidations(db, wallet);
+      const consolidations = await retrieveWalletConsolidations(
+        db,
+        wallet,
+        policy.activationTimestamp,
+      );
 
       const walletMemes: any[] = [];
       let unique_memes = 0;
@@ -555,10 +568,21 @@ export const calculateTDH = async (
     },
   });
 
-  await consolidateTDH(db, block, ADJUSTED_NFTS, startingWallets);
+  await consolidateTDH(
+    db,
+    block,
+    ADJUSTED_NFTS,
+    policy.activationTimestamp,
+    startingWallets,
+  );
   await processNftTdh(db, ADJUSTED_NFTS);
 
-  const merkleRoot = await persistTDHBlock(db, block, blockTimestamp);
+  const merkleRoot = await persistTDHBlock(
+    db,
+    block,
+    blockTimestamp,
+    policy.key,
+  );
 
   return {
     block,

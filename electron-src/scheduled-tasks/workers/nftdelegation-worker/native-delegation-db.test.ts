@@ -301,12 +301,24 @@ describe("native delegation persistence and resumable atomic replay", () => {
         wallet2_registered_at: 1792022400,
       });
     }
-    assert.deepEqual((await retrieveWalletConsolidations(db, "A")).sort(), [
-      "a",
-      "b",
-      "d",
-    ]);
-    assert.deepEqual(await retrieveWalletConsolidations(db, "c"), ["c"]);
+    assert.deepEqual(
+      (
+        await retrieveWalletConsolidations(
+          db,
+          "A",
+          Date.parse("2026-10-15T00:00:00Z") / 1000,
+        )
+      ).sort(),
+      ["a", "b", "d"],
+    );
+    assert.deepEqual(
+      await retrieveWalletConsolidations(
+        db,
+        "c",
+        Date.parse("2026-10-15T00:00:00Z") / 1000,
+      ),
+      ["c"],
+    );
     // Only the wallet list is needed; raw SQL avoids inventing unrelated TDH fields.
     await db.query(
       "INSERT INTO tdh_consolidation (consolidation_key, wallets, balance, unique_memes, memes_cards_sets, tdh, boost, boosted_tdh, tdh__raw, tdh_rank, date, tdh_rank_memes, tdh_rank_gradients, tdh_rank_nextgen, genesis, nakamoto, boosted_memes_tdh, memes_tdh, memes_tdh__raw, memes_balance, boosted_gradients_tdh, gradients_tdh, gradients_tdh__raw, gradients_balance, boosted_nextgen_tdh, nextgen_tdh, nextgen_tdh__raw, nextgen_balance, block) VALUES ('c-e', '[\"c\",\"e\"]', 0,0,0,0,0,0,0,0, CURRENT_TIMESTAMP,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,100)",

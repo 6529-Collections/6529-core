@@ -88,15 +88,21 @@ export function getConsolidationsSql(wallet: string) {
 export async function retrieveWalletConsolidations(
   db: DataSource,
   wallet: string,
+  activationTimestamp: number,
 ) {
   const { sql, params } = getConsolidationsSql(wallet);
   const consolidations: any[] = await db.query(sql, params);
-  return extractConsolidationWallets(consolidations, wallet);
+  return extractConsolidationWallets(
+    consolidations,
+    wallet,
+    activationTimestamp,
+  );
 }
 
 export function extractConsolidationWallets(
   consolidations: ConsolidationLink[],
   wallet: string,
+  activationTimestamp: number,
 ): string[] {
   return consolidationTools.extractConsolidationWallets(
     consolidations.map((c) => ({
@@ -105,6 +111,7 @@ export function extractConsolidationWallets(
       wallet2: c.wallet2.toLowerCase(),
     })),
     wallet.toLowerCase(),
+    activationTimestamp,
   );
 }
 
@@ -251,13 +258,23 @@ export async function persistTDHBlock(
   db: DataSource,
   block: number,
   blockTimestamp: Time,
+  consolidationPolicyKey: string,
 ) {
   const merkleRoot = await computeMerkleRoot(db);
   await db.transaction(async (manager) => {
     const timestamp = blockTimestamp.toSeconds();
     await manager
       .getRepository(TDHBlock)
-      .upsert([{ block, timestamp }], ["block"]);
+      .upsert(
+        [
+          {
+            block,
+            timestamp,
+            consolidation_policy_key: consolidationPolicyKey,
+          },
+        ],
+        ["block"],
+      );
 
     await manager.getRepository(TDHMerkleRoot).upsert(
       [

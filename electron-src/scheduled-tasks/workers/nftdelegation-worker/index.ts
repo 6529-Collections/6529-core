@@ -1,3 +1,5 @@
+import { setTdhRecalculationNeeded } from "../transactions-worker/transactions-worker.db";
+import { loadConsolidationPolicy } from "../tdh-worker/consolidation-policy";
 import { ethers } from "ethers";
 import { parentPort, workerData } from "worker_threads";
 import { ResettableWorkerData } from "../../scheduled-worker";
@@ -365,11 +367,25 @@ class NFTDelegationWorker extends CoreWorker {
 
       const walletsArray = affectedWallets;
 
+      let policy;
+      try {
+        policy = await loadConsolidationPolicy(
+          data.consolidationSettingsRequest,
+        );
+      } catch {
+        await setTdhRecalculationNeeded(this.getDb().manager, true);
+        logInfo(
+          parentPort,
+          "Reconsolidation deferred until backend consolidation settings are available; previous TDH is preserved",
+        );
+        return;
+      }
       await calculateTDH(
         this.getDb(),
         block,
         lastTDHCalc,
         blockTimestamp,
+        policy,
         walletsArray,
       );
     } else {

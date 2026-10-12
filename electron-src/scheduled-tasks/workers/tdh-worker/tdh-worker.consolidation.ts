@@ -27,7 +27,8 @@ import { ScheduledWorkerStatus } from "../../../../shared/types";
 export async function consolidateTDHForWallets(
   db: DataSource,
   tdh: TDH[],
-  MEMES_COUNT: number
+  MEMES_COUNT: number,
+  activationTimestamp: number,
 ) {
   const consolidatedTdh: ConsolidatedTDH[] = [];
   const processedWallets = new Set<string>();
@@ -36,14 +37,18 @@ export async function consolidateTDHForWallets(
 
   for (const tdhEntry of tdh) {
     const wallet = tdhEntry.wallet;
-    const consolidations = await retrieveWalletConsolidations(db, wallet);
+    const consolidations = await retrieveWalletConsolidations(
+      db,
+      wallet,
+      activationTimestamp,
+    );
     const consolidationKey = buildConsolidationKey(consolidations);
 
     if (
       !Array.from(processedWallets).some((pw) => areEqualAddresses(wallet, pw))
     ) {
       const consolidatedWalletsTdh = [...tdh].filter((t) =>
-        consolidations.some((c) => areEqualAddresses(c, t.wallet))
+        consolidations.some((c) => areEqualAddresses(c, t.wallet)),
       );
 
       let totalTDH = 0;
@@ -78,11 +83,11 @@ export async function consolidateTDHForWallets(
         consolidationMemes = consolidateCards(consolidationMemes, wTdh.memes);
         consolidationGradients = consolidateCards(
           consolidationGradients,
-          wTdh.gradients
+          wTdh.gradients,
         );
         consolidationNextgen = consolidateCards(
           consolidationNextgen,
-          wTdh.nextgen
+          wTdh.nextgen,
         );
       });
 
@@ -91,7 +96,7 @@ export async function consolidateTDHForWallets(
         memesCardSets = Math.min(
           ...[...consolidationMemes].map(function (o) {
             return o.balance;
-          })
+          }),
         );
       }
 
@@ -159,14 +164,19 @@ export async function consolidateTDHForWallets(
 
 export const consolidateMissingWallets = async (
   db: DataSource,
-  wallets: string[]
+  wallets: string[],
+  activationTimestamp: number,
 ): Promise<ConsolidatedTDH[]> => {
   const processedWallets = new Set<string>();
   const missingTdh: ConsolidatedTDH[] = [];
   const tdhBlock = await fetchLatestTDHBlockNumber(db);
 
   for (const wallet of wallets) {
-    const consolidations = await retrieveWalletConsolidations(db, wallet);
+    const consolidations = await retrieveWalletConsolidations(
+      db,
+      wallet,
+      activationTimestamp,
+    );
     const consolidationKey = buildConsolidationKey(consolidations);
 
     if (
@@ -224,18 +234,19 @@ export const consolidateTDH = async (
   db: DataSource,
   block: number,
   nfts: NFT[],
-  startingWallets?: string[]
+  activationTimestamp: number,
+  startingWallets?: string[],
 ) => {
   const tdh: TDH[] = await fetchAllTDH(db, block, startingWallets);
 
   const memes = nfts.filter((n) =>
-    areEqualAddresses(n.contract, MEMES_CONTRACT)
+    areEqualAddresses(n.contract, MEMES_CONTRACT),
   );
   const seasons = buildSeasons(memes);
 
   logInfo(
     parentPort,
-    `[WALLETS ${tdh.length}] : [NFTs ${nfts.length}] : [MEMES ${memes.length}] : [CONSOLIDATING...]`
+    `[WALLETS ${tdh.length}] : [NFTs ${nfts.length}] : [MEMES ${memes.length}] : [CONSOLIDATING...]`,
   );
 
   sendStatusUpdate(parentPort, {
@@ -246,25 +257,26 @@ export const consolidateTDH = async (
   });
 
   const { consolidatedTdh, allGradientsTDH, allNextgenTDH } =
-    await consolidateTDHForWallets(db, tdh, memes.length);
+    await consolidateTDHForWallets(db, tdh, memes.length, activationTimestamp);
   const consolidatedBoostedTdh = await calculateBoosts(
     seasons,
-    consolidatedTdh
+    consolidatedTdh,
   );
   if (startingWallets) {
     const missingWallets = startingWallets?.filter(
       (s) =>
         !consolidatedBoostedTdh.some((c) =>
-          c.wallets.some((w: string) => areEqualAddresses(w, s))
-        )
+          c.wallets.some((w: string) => areEqualAddresses(w, s)),
+        ),
     );
     const missingConsolidatedTdh = await consolidateMissingWallets(
       db,
-      missingWallets
+      missingWallets,
+      activationTimestamp,
     );
     logInfo(
       parentPort,
-      `[MISSING WALLETS TDH ${missingConsolidatedTdh.length}]`
+      `[MISSING WALLETS TDH ${missingConsolidatedTdh.length}]`,
     );
     consolidatedBoostedTdh.push(...missingConsolidatedTdh);
   }
@@ -275,27 +287,27 @@ export const consolidateTDH = async (
       .filter(
         (t: ConsolidatedTDH) =>
           !startingWallets.some((sw) =>
-            t.wallets.some((tw: string) => areEqualAddresses(tw, sw))
-          )
+            t.wallets.some((tw: string) => areEqualAddresses(tw, sw)),
+          ),
       )
       .concat(consolidatedBoostedTdh);
     const allRankedTdh = await calculateRanks(
       allGradientsTDH,
       allNextgenTDH,
       allTdh,
-      nfts
+      nfts,
     );
     rankedTdh = allRankedTdh.filter((t: ConsolidatedTDH) =>
       startingWallets.some((sw) =>
-        t.wallets.some((tw: string) => areEqualAddresses(tw, sw))
-      )
+        t.wallets.some((tw: string) => areEqualAddresses(tw, sw)),
+      ),
     );
   } else {
     rankedTdh = await calculateRanks(
       allGradientsTDH,
       allNextgenTDH,
       consolidatedBoostedTdh,
-      nfts
+      nfts,
     );
   }
 
@@ -321,7 +333,7 @@ function consolidateCards(consolidationTokens: any[], walletTokens: any[]) {
   const mergedArray = [...consolidationTokens, ...walletTokens].reduce(
     (accumulator, current) => {
       const existingIndex = accumulator.findIndex(
-        (item: any) => item.id === current.id
+        (item: any) => item.id === current.id,
       );
 
       if (existingIndex === -1) {
@@ -334,7 +346,7 @@ function consolidateCards(consolidationTokens: any[], walletTokens: any[]) {
 
       return accumulator;
     },
-    []
+    [],
   );
 
   return mergedArray;

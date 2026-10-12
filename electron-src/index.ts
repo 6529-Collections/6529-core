@@ -1464,12 +1464,25 @@ async function createScheduledTasks() {
       getTransactionReconciliationState(getDb().manager),
       getTdhRunIncomplete(getDb().manager),
     ]);
+  let consolidationSettingsRequest;
+  try {
+    const config = getPublicRuntimeConfig();
+    consolidationSettingsRequest = {
+      url: `${getApiEndpoint(config)}/api/settings`,
+      headers: getStagingApiHeaders(config),
+    };
+  } catch {
+    Logger.error(
+      "Consolidation settings request is unavailable; TDH will wait for backend configuration",
+    );
+  }
   scheduledWorkers = startSchedulers(
     rpcProvider?.url ?? null,
     getLogDirectory(),
     postWorkerUpdate,
     pendingTransactionReconciliation,
     incompleteTdhRun,
+    consolidationSettingsRequest,
   );
 }
 
