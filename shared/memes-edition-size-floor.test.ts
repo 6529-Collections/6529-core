@@ -7,6 +7,8 @@ import {
   getCalculationEditionSize,
   getMemeEditionSizeFloor,
   getMemeTokenIdsForEditionSizeFloorRefresh,
+  repairMemeCatchUpEditionSizeFloor,
+  selectMemeEditionSizeFloorRefreshIds,
 } from "./memes-edition-size-floor";
 
 describe("meme edition size floor helpers", () => {
@@ -58,24 +60,122 @@ describe("meme edition size floor helpers", () => {
     assert.equal(calculateHodlRate(100, -1), 1);
   });
 
-  it("refreshes only the latest Meme", () => {
+  it("refreshes the verified latest Meme", () => {
     assert.deepEqual(
-      getMemeTokenIdsForEditionSizeFloorRefresh([
-        { contract: MEMES_CONTRACT, id: 1 },
-        { contract: MEMES_CONTRACT, id: 2 },
-        { contract: MEMES_CONTRACT, id: 5 },
-        { contract: GRADIENT_CONTRACT, id: 999 },
-      ]),
+      getMemeTokenIdsForEditionSizeFloorRefresh(
+        [
+          { contract: MEMES_CONTRACT, id: 1 },
+          { contract: MEMES_CONTRACT, id: 2 },
+          { contract: MEMES_CONTRACT, id: 5 },
+          { contract: GRADIENT_CONTRACT, id: 999 },
+        ],
+        true,
+      ),
       [5],
     );
   });
 
   it("returns no refresh ids when there are no Memes", () => {
     assert.deepEqual(
-      getMemeTokenIdsForEditionSizeFloorRefresh([
-        { contract: GRADIENT_CONTRACT, id: 1 },
-      ]),
+      getMemeTokenIdsForEditionSizeFloorRefresh(
+        [{ contract: GRADIENT_CONTRACT, id: 1 }],
+        true,
+      ),
       [],
+    );
+  });
+
+  it("does not treat the highest local Meme as latest while discovery waits", async () => {
+    for (const id of [206, 215, 311]) {
+      const ids = await selectMemeEditionSizeFloorRefreshIds(
+        [{ contract: MEMES_CONTRACT, id, mint_date: 1700000000 }],
+        async (nextId) => {
+          assert.equal(nextId, id + 1);
+          return "ipfs://already-minted-later-card";
+        },
+        Date.UTC(2026, 9, 12),
+      );
+      assert.deepEqual(ids, []);
+    }
+  });
+
+  it("keeps refreshing recent cards after discovery advances past them", async () => {
+    const now = Date.UTC(2026, 9, 12);
+    const secondsAgo = (days: number) => now / 1000 - days * 86400;
+    const nfts = [
+      { contract: MEMES_CONTRACT, id: 215, mint_date: secondsAgo(500) },
+      { contract: MEMES_CONTRACT, id: 557, mint_date: secondsAgo(30) },
+      { contract: MEMES_CONTRACT, id: 558, mint_date: secondsAgo(1) },
+      { contract: GRADIENT_CONTRACT, id: 999, mint_date: secondsAgo(1) },
+    ];
+    assert.deepEqual(
+      await selectMemeEditionSizeFloorRefreshIds(
+        nfts,
+        async (id) => String(id),
+        now,
+      ),
+      [557, 558],
+    );
+    assert.deepEqual(
+      await selectMemeEditionSizeFloorRefreshIds(
+        nfts,
+        async () => "ipfs://later-card",
+        now,
+      ),
+      [557, 558],
+    );
+  });
+
+  it("skips an unverified historical latest card on RPC failure", async () => {
+    assert.deepEqual(
+      await selectMemeEditionSizeFloorRefreshIds(
+        [{ contract: MEMES_CONTRACT, id: 215 }],
+        async () => {
+          throw new Error("RPC unavailable");
+        },
+      ),
+      [],
+    );
+  });
+
+  it("refreshes an old or undated latest Meme once chain discovery is verified", async () => {
+    assert.deepEqual(
+      await selectMemeEditionSizeFloorRefreshIds(
+        [{ contract: MEMES_CONTRACT, id: 558 }],
+        async (id) => String(id),
+      ),
+      [558],
+    );
+  });
+
+  it("corrects only the confirmed historical 310 floors", () => {
+    assert.equal(
+      repairMemeCatchUpEditionSizeFloor(
+        { contract: MEMES_CONTRACT, id: 215 },
+        310,
+      ),
+      309,
+    );
+    assert.equal(
+      repairMemeCatchUpEditionSizeFloor(
+        { contract: MEMES_CONTRACT, id: 215 },
+        305,
+      ),
+      305,
+    );
+    assert.equal(
+      repairMemeCatchUpEditionSizeFloor(
+        { contract: MEMES_CONTRACT, id: 558 },
+        310,
+      ),
+      310,
+    );
+    assert.equal(
+      repairMemeCatchUpEditionSizeFloor(
+        { contract: GRADIENT_CONTRACT, id: 215 },
+        310,
+      ),
+      310,
     );
   });
 });

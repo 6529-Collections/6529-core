@@ -17,7 +17,10 @@ import {
 } from "../../../../shared/abis/memes";
 import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { areEqualAddresses } from "../../../../shared/helpers";
-import { getMemeEditionSizeFloor } from "../../../../shared/memes-edition-size-floor";
+import {
+  getMemeEditionSizeFloor,
+  repairMemeCatchUpEditionSizeFloor,
+} from "../../../../shared/memes-edition-size-floor";
 import { Time } from "../../../../shared/time";
 import { NFT } from "../../../db/entities/INFT";
 import { Transaction } from "../../../db/entities/ITransaction";
@@ -257,7 +260,11 @@ export const getEditionSizes = async (
 
   return {
     editionSize,
-    editionSizeFloor,
+    editionSizeFloor:
+      repairMemeCatchUpEditionSizeFloor(
+        { contract: contractAddress, id: tokenId },
+        editionSizeFloor,
+      ) ?? editionSizeFloor,
     burnt,
   };
 };
@@ -291,7 +298,7 @@ async function resolveEditionSizeFloor(
     }
   }
 
-  return preserveExistingFloor ? existingFloor ?? actualSupply : actualSupply;
+  return preserveExistingFloor ? (existingFloor ?? actualSupply) : actualSupply;
 }
 
 async function getExistingEditionSizeFloor(
@@ -347,7 +354,7 @@ async function fetchMemeEditionSizeFloorFromClaim(
   }
 }
 
-async function withTimeout<T>(
+export async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   timeoutMessage: string,
