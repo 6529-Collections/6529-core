@@ -17,12 +17,38 @@ shared chat, independent credits, native entry content, draft/publication and
 terminal lifecycle rules. It qualifies availability rather than promising
 controls in every deployment, and retains the original-wave experience in its
 navigation guidance. Backend runtime continues consuming the published corpus.
+Its setup guidance identifies the Competition type desktop dropdown and
+small-screen bottom sheet, including selection and dismissal behavior, and
+keyboard-aware name and description fields in the app's setup editor.
+Its navigation guidance distinguishes the app's compact collection and Votes
+pills from web tabs and the shared published-competition wave row. The collection
+uses More for its remaining choices.
+
+The `waves.content-tabs` record describes steady tab rows with screen-reader
+loading announcements, section-specific loading, and destination-bound competition
+controls. It also explains that app tabs already in view keep their position
+when selected. It does not promise instant data or a loading screen on every switch.
 
 The Wave discovery record describes the independent Active Votes and Worth Checking Out
 sidebar sections, their explanations and view-all destinations. It covers the
 scrollable three-row voting window, pagination, compact empty/error states and
 independently persisted collapse preferences. Worth Checking Out comes first
 and retains its own compact preview height.
+
+The `delegation.wallet-checker` record covers linked-wallet reads with a
+six-counterparty cap, pair deduplication, relevant missing-reverse-link
+recommendations, waiting for the active-consolidation request, and partial
+results after a linked-wallet failure. It also explains that absent pairs have
+no recommendation and listed registrations do not themselves establish active
+counted membership or activate four-wallet support.
+
+The primary-address and consolidation records distinguish immediate primary
+selection from the roughly seven-day, 50,400-processed-block rule for profile
+retention after a split. The subscription record covers balance and setting
+merges, manual quantity precedence over All eligible, priority preservation,
+highest-TDH split routing, and finalized-allocation conflicts that need manual
+reconciliation. These remain frontend-owned facts published through the existing
+help-index sync and consumed by the existing backend loader.
 
 ## Problem Statement
 
@@ -142,6 +168,11 @@ chapter controls, **Answer options**, deliberate examples, file preparation,
 viewers from editors, describes read-only answers and source comparisons, and
 keeps questions, draft content and dated confirmed versions separate. Its
 control names must match the artist workspace and personal record list.
+
+The interactive text-entry record covers iPhone and iPad Safari focus behavior,
+continued Safari pinch zoom, and the native app's keyboard space for artwork
+frames. Its canonical answer links to Waves and its source includes the shared
+browser zoom guide. Artwork files and sandbox permissions stay unchanged.
 
 The artwork-sharing record covers the `Share artwork` icon in the existing
 media controls: over the artwork on individual Meme and Gradient pages, and
@@ -606,7 +637,6 @@ with RPC activation, worker sync, and scheduled TDH. It does not repeat download
 instructions or require account pairing. Explicit `answer_links` lists also
 govern ordinary knowledge answers: only those links appear in the final footer,
 and an empty list suppresses links. Related paths are not additional citations.
-
 
 Desktop progressive reconciliation uses `desktop-calculated` records with a
 non-negative safe-integer `reconciliation_min_block`. Their short answers contain

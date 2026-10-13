@@ -11,8 +11,12 @@ import { DropSize } from "@/helpers/waves/drop.helpers";
 import type { ActiveDropState } from "@/types/dropInteractionTypes";
 import type { ImageScale } from "@/helpers/image.helpers";
 import type { QuickCurationAction } from "@/hooks/drops/useCanShowDropCurationsAction";
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import DropContext from "./DropContext";
+import WaveDropReplyThread, {
+  type RenderThreadReply,
+} from "./reply-threads/WaveDropReplyThread";
+import { useWaveReplyThreads } from "./reply-threads/WaveReplyThreadsContext";
 import { DropLocation } from "./drop.types";
 import type {
   DropIdentityMode,
@@ -22,6 +26,8 @@ import type {
 import ParticipationDrop from "./participation/ParticipationDrop";
 import WaveDrop from "./WaveDrop";
 import WinnerDrop from "./winner/WinnerDrop";
+import { isMultiCompetitionEnabled } from "@/helpers/competition.helpers";
+import { useCompetitionDrop } from "@/hooks/competitions/useCompetitionDrop";
 export type { DropInteractionParams } from "./drop.types";
 export { DropLocation } from "./drop.types";
 
@@ -66,7 +72,20 @@ interface DropProps {
   readonly moderationPresentation?: "default" | "profile-activity" | undefined;
 }
 
-export default function Drop({
+function CompetitionDrop(props: DropProps) {
+  const drop = useCompetitionDrop(props.drop);
+  return <DropContent {...props} drop={drop} />;
+}
+
+export default function Drop(props: DropProps) {
+  return isMultiCompetitionEnabled() ? (
+    <CompetitionDrop {...props} />
+  ) : (
+    <DropContent {...props} />
+  );
+}
+
+function DropContent({
   drop,
   previousDrop,
   nextDrop,
@@ -209,6 +228,46 @@ export default function Drop({
     [drop, location, reserveMediaHeight, showVideoFullscreen]
   );
 
+  // Collapsed-reply waves show a drop's replies as a thread under it in the
+  // main stream; the thread itself never nests further threads.
+  const replyThreads = useWaveReplyThreads();
+  const showReplyThread =
+    replyThreads !== null &&
+    location === DropLocation.WAVE &&
+    dropViewDropId === null &&
+    drop.drop_type === ApiDropType.Chat &&
+    !drop.reply_to;
+  const renderThreadReply = useCallback<RenderThreadReply>(
+    ({ reply, previousReply, nextReply }) => (
+      <Drop
+        drop={reply}
+        previousDrop={previousReply}
+        nextDrop={nextReply}
+        showWaveInfo={false}
+        activeDrop={activeDrop?.drop.id === reply.id ? activeDrop : null}
+        location={location}
+        dropViewDropId={drop.id}
+        onReply={onReply}
+        onReplyClick={onReplyClick}
+        onQuoteClick={onQuoteClick}
+        showReplyAndQuote={showReplyAndQuote}
+        parentContainerRef={parentContainerRef}
+        moderationPresentation={moderationPresentation}
+      />
+    ),
+    [
+      activeDrop,
+      drop.id,
+      location,
+      moderationPresentation,
+      onQuoteClick,
+      onReply,
+      onReplyClick,
+      parentContainerRef,
+      showReplyAndQuote,
+    ]
+  );
+
   return (
     <DropContext.Provider value={memoizedValue}>
       <ContentModerationDropGate
@@ -218,6 +277,9 @@ export default function Drop({
       >
         {components[drop.drop_type]}
       </ContentModerationDropGate>
+      {showReplyThread && (
+        <WaveDropReplyThread drop={drop} renderReply={renderThreadReply} />
+      )}
     </DropContext.Provider>
   );
 }

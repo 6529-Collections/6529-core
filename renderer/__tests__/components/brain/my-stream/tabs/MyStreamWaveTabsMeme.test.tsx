@@ -8,6 +8,11 @@ const mockUseBreakpoint = jest.fn(() => "LG");
 const mockShare = jest.fn();
 const mockWriteText = jest.fn();
 const mockCopyToClipboard = jest.fn();
+const mockOpenInformation = jest.fn();
+
+jest.mock("@/contexts/WaveInformationContext", () => ({
+  useWaveInformation: () => ({ open: mockOpenInformation }),
+}));
 
 jest.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn(), back: jest.fn() }),
@@ -32,6 +37,12 @@ jest.mock("react-use", () => {
 });
 
 const useContentTab = jest.fn();
+
+// The Join CTA owns its auth/query wiring and has dedicated tests.
+jest.mock("@/components/waves/header/WaveJoinCta", () => ({
+  __esModule: true,
+  default: () => null,
+}));
 
 jest.mock("@/components/brain/my-stream/MyStreamWaveDesktopTabs", () => ({
   __esModule: true,
@@ -144,6 +155,7 @@ describe("MyStreamWaveTabsMeme", () => {
     mockShare.mockReset();
     mockWriteText.mockReset();
     mockCopyToClipboard.mockReset();
+    mockOpenInformation.mockReset();
     mockShare.mockResolvedValue(undefined);
     mockWriteText.mockResolvedValue(undefined);
     setNavigatorShare(mockShare);
@@ -294,7 +306,7 @@ describe("MyStreamWaveTabsMeme", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps compact actions right-aligned with subtitle trigger", () => {
+  it("keeps compact actions right-aligned and opens information from the title", () => {
     mockUseBreakpoint.mockReturnValue("S");
     useContentTab.mockReturnValue({
       activeContentTab: "CHAT",
@@ -320,9 +332,8 @@ describe("MyStreamWaveTabsMeme", () => {
     expect(waveDetailsButton).toBeInTheDocument();
     expect(moreActionsButton.nextElementSibling).toBe(searchButton);
     expect(searchButton.nextElementSibling).toBe(waveDetailsButton);
-    expect(
-      screen.getByRole("button", { name: "Show wave description" })
-    ).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "About Wave" }));
+    expect(mockOpenInformation).toHaveBeenCalledWith("w1");
     fireEvent.click(waveDetailsButton);
     expect(
       screen.getByRole("button", { name: "Hide details" })

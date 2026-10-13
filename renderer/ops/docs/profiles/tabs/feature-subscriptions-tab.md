@@ -126,12 +126,58 @@ or an unavailable page. US iOS, web, and Android retain their existing behavior.
     profile; a phase-less finalized record remains pending, and no message
     appears for unsubscribed rows, unpublished distribution, or failed lookups
   - phase and publication details refresh once per minute while the tab is visible
-  - subscribed rows show a quantity selector capped by eligibility count
+  - subscribed rows keep the numeric quantity selector with every value from 1
+    through current eligibility when eligibility is positive; at zero eligibility,
+    it shows a single `0` option and is disabled without changing the saved request
+  - untouched automatic rows in Automatic / All eligible mode follow eligibility
+    increases and decreases when consolidated balances are refreshed
+  - choosing a quantity saves a manual override for that card, including later
+    future cards; automatic eligibility updates never overwrite it
+  - a saved manual quantity above eligibility is displayed at the eligibility
+    limit without changing the saved request: manual 11 displays `10 / 10` at
+    eligibility 10, then `11 / 12` after eligibility recovers to 12 and data is
+    refreshed
+  - final quantities are capped by eligibility and available balance; refreshing
+    upcoming quantities does not change historical finalized allocations
 - `Subscription History`:
   - `Redeemed Subscriptions`
   - `Log History`
   - `Top Up History`
   - pagination when a section has more than 10 rows
+
+## Consolidation Changes
+
+When wallet groups merge, their subscription balances are added, including any
+existing destination balance once. The merged mode is `Automatic` if any source
+or the destination had it enabled. `All eligible` is retained if any source or
+the destination selected it, including a preference saved in `Manual` mode;
+otherwise the preference is `One edition`.
+
+For overlapping upcoming subscriptions to the same Meme Card:
+
+- The merged group is subscribed if either active row was subscribed.
+- A subscribed manual quantity takes precedence over automatic quantities,
+  even when smaller. For example, manual 2 and automatic 8 merge to manual 2,
+  even if the merged group uses `Automatic` / `All eligible`.
+- If several subscribed manual requests conflict, the largest manual request
+  is kept. With automatic requests only, the largest subscribed quantity is
+  kept and remains eligible for automatic updates.
+- The earliest priority timestamp among subscribed rows is kept. An
+  unsubscribed row does not override an active request.
+
+Distinct upcoming subscriptions, logs, and redeemed history move to the merged
+group. Finalized allocations remain separate: distinct allocations move with
+their existing delivery and allocation details; conflicting allocations for the
+same card stay under their old group for manual reconciliation. They are not
+automatically combined or discarded.
+
+On a split, subscriptions follow the resulting group with the highest TDH;
+they are not divided between the resulting groups. This can differ from the
+group that [keeps the existing profile](../about/feature-primary-address-reference-table.md#profile-retention-when-a-consolidation-splits).
+
+A failed subscription-group move rolls back that group's changes, preventing a
+partly moved group. These rules apply when affected consolidations are
+processed; they do not automatically recover rows stranded by earlier failures.
 
 ## Failure and Recovery
 

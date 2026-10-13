@@ -11,9 +11,12 @@ import { DEFAULT_LOCALE } from "@/i18n/locales";
 import { t } from "@/i18n/messages";
 import { clearBrowserConnectorConnectIntent } from "@/wagmiConfig/browserConnector";
 import { useAppKit } from "@reown/appkit/react";
+import { AUTHENTICATION_MODAL_OVERLAY_CLASS } from "@/components/shared/modal-layers";
+import { trapTabFocus } from "@/components/utils/modal/focusTrap";
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
 import {
   type Connector,
@@ -49,6 +52,7 @@ export default function HeaderUserConnectModal({
   );
 
   const isBrowser = !isElectron();
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [connectorSelectionGuard] = useState(
     () => new ConnectorSelectionGuard()
@@ -56,6 +60,22 @@ export default function HeaderUserConnectModal({
 
   useEffect(() => {
     if (!show) setOpenSection(null);
+  }, [show]);
+
+  useEffect(() => {
+    if (!show) return;
+    const previousFocus =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const dialog = dialogRef.current;
+    const firstControl = dialog?.querySelector<HTMLElement>(
+      "button:not([disabled]), a[href]"
+    );
+    (firstControl ?? dialog)?.focus();
+    return () => {
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
   }, [show]);
 
   const toggle = (key: string) => {
@@ -80,6 +100,18 @@ export default function HeaderUserConnectModal({
     onHide();
   };
 
+  const handleDialogKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.defaultPrevented || !dialogRef.current) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      handleHide();
+    } else if (event.key === "Tab") {
+      event.stopPropagation();
+      trapTabFocus(event.nativeEvent, dialogRef.current);
+    }
+  };
+
   const handleConnectorSelected = (connector: Connector) => {
     if (connector.type !== "browser") {
       clearBrowserConnectorConnectIntent();
@@ -91,14 +123,17 @@ export default function HeaderUserConnectModal({
 
   const overlay = (
     <div
-      className="tw-fixed tw-inset-0 tw-z-50 tw-flex tw-items-center tw-justify-center tw-bg-black/50"
+      className={`tw-fixed tw-inset-0 ${AUTHENTICATION_MODAL_OVERLAY_CLASS} tw-flex tw-items-center tw-justify-center tw-bg-black/50`}
       onClick={handleHide}
       role="dialog"
       aria-modal
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         className={CONNECTOR_MODAL_DIALOG_CLASS}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={handleDialogKeyDown}
       >
         <div className={`${confirmModalHeader} tw-shrink-0`}>
           <h2 className="tw-m-0 tw-text-lg tw-font-semibold">

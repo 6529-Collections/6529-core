@@ -6,8 +6,9 @@ export function useCompetitionDropNavigation() {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
-  return (drop: ExtendedDrop) => {
+  return (drop: Pick<ExtendedDrop, "id">) => {
     const params = new URLSearchParams(search.toString());
+    params.delete("default");
     params.set("drop", drop.id);
     router.push(`${pathname}?${params}`, { scroll: false });
   };
