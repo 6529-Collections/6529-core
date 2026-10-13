@@ -5,19 +5,13 @@ import {
   DELEGATION_ALL_ADDRESS,
   USE_CASE_CONSOLIDATION,
   USE_CASE_PRIMARY_ADDRESS,
-  USE_CASE_SUB_DELEGATION,
 } from "../../../../electron-constants";
 import {
   ConsolidationEvent,
   DelegationEvent,
   EventType,
 } from "../../../db/entities/IDelegation";
-import {
-  DelegationStateReader,
-  RegistrationLogRef,
-  RevocationLogRef,
-  resolveRegistrationExpiries,
-} from "./delegation-registration-expiry";
+import type { RegistrationLogRef } from "./delegation-registration-expiry";
 import { MAX_STORABLE_DELEGATION_TOKEN_ID } from "./delegation-row";
 import { mapInChunks } from "./map-in-chunks";
 
@@ -25,12 +19,12 @@ export interface NativeDelegationScan {
   consolidations: ConsolidationEvent[];
   registrations: DelegationEvent[];
   revocations: DelegationEvent[];
+  registrationLogs: RegistrationLogRef[];
 }
 
-/** Decode logs in chain order, independently of transaction sender/calldata. */
+/** Decode history using only logs and block timestamps, never old state. */
 export async function mapDelegationLogs(
   logs: Log[],
-  reader: DelegationStateReader,
   blockTimestamp: (block: number) => Promise<number>,
   warn: (message: string) => void,
 ): Promise<NativeDelegationScan> {
@@ -38,12 +32,8 @@ export async function mapDelegationLogs(
     consolidations: [],
     registrations: [],
     revocations: [],
+    registrationLogs: [],
   };
-  // Keep every on-chain entry in the read plan, even if its token ID cannot
-  // be emitted into the native table, so same-block storage positions align.
-  const pending: { event: DelegationEvent | null; ref: RegistrationLogRef }[] =
-    [];
-  const revocations: RevocationLogRef[] = [];
   const ordered = logs
     .slice()
     .sort((a, b) => a.blockNumber - b.blockNumber || a.index - b.index);
@@ -83,76 +73,51 @@ export async function mapDelegationLogs(
       use_case: useCase,
       collection,
     };
-    const ref: RevocationLogRef = {
+    if (revoke) {
+      scan.revocations.push(delegation);
+      continue;
+    }
+    const allTokens = Boolean(parsed.args.allTokens);
+    const tokenId = allTokens ? BigInt(0) : BigInt(parsed.args._tokenId);
+    scan.registrationLogs.push({
       block: log.blockNumber,
       logIndex: log.index,
       delegator: from,
       collection,
       delegate: to,
       useCase,
-    };
-    if (revoke) {
-      scan.revocations.push(delegation);
-      revocations.push(ref);
-      continue;
-    }
-    if (useCase === USE_CASE_SUB_DELEGATION) {
-      scan.registrations.push(delegation);
-      continue;
-    }
-    const allTokens = Boolean(parsed.args.allTokens);
-    const tokenId = allTokens ? BigInt(0) : BigInt(parsed.args._tokenId);
+      allTokens,
+      tokenId,
+      timestamp: 0,
+    });
     if (tokenId > MAX_STORABLE_DELEGATION_TOKEN_ID) {
       warn(
         `Skipping token ID ${tokenId} outside native/backend token_id range at ${log.blockNumber}:${log.index}`,
       );
-      pending.push({ event: null, ref: { ...ref, allTokens, tokenId } });
       continue;
     }
     delegation.all_tokens = allTokens;
     delegation.token_id = Number(tokenId);
     scan.registrations.push(delegation);
-    pending.push({ event: delegation, ref: { ...ref, allTokens, tokenId } });
   }
-  const expiries = await resolveRegistrationExpiries(
-    pending.map((p) => p.ref),
-    revocations,
-    reader,
+  const blocks = [
+    ...new Set([
+      ...scan.consolidations.map((event) => event.block),
+      ...scan.registrationLogs.map((event) => event.block),
+    ]),
+  ];
+  const timestamps = new Map(
+    await mapInChunks(blocks, 5, async (block) => {
+      const timestamp = await blockTimestamp(block);
+      if (!Number.isSafeInteger(timestamp) || timestamp <= 0)
+        throw new Error(`Missing timestamp for block ${block}`);
+      return [block, timestamp] as const;
+    }),
   );
-  const revoked = new Set<DelegationEvent>();
-  pending.forEach(({ event }, i) => {
-    if (!event) return;
-    if (expiries[i] === null) revoked.add(event);
-    else event.expiry = expiries[i]!;
-  });
-  scan.registrations = scan.registrations.filter(
-    (event) =>
-      !revoked.has(event) &&
-      !(
-        event.use_case === USE_CASE_SUB_DELEGATION &&
-        revocations.some(
-          (revocation) =>
-            revocation.block === event.block &&
-            revocation.delegator === event.wallet1 &&
-            revocation.delegate === event.wallet2 &&
-            revocation.collection === event.collection &&
-            revocation.useCase === event.use_case &&
-            revocation.logIndex > event.log_index!,
-        )
-      ),
-  );
-
-  const blocks = Array.from(
-    new Set(scan.consolidations.map((event) => event.block)),
-  );
-  const times = await mapInChunks(blocks, 5, async (block) => {
-    const timestamp = await blockTimestamp(block);
-    if (!Number.isSafeInteger(timestamp) || timestamp <= 0)
-      throw new Error(`Missing timestamp for block ${block}`);
-    return timestamp;
-  });
-  const timestamps = new Map(blocks.map((block, i) => [block, times[i]]));
   scan.consolidations.forEach((event) => {
+    event.timestamp = timestamps.get(event.block)!;
+  });
+  scan.registrationLogs.forEach((event) => {
     event.timestamp = timestamps.get(event.block)!;
   });
   return scan;

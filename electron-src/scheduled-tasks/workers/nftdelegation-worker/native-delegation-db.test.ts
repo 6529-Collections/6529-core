@@ -10,6 +10,8 @@ import {
   NFTDelegationReplayBlock,
   ReplayConsolidation,
   ReplayDelegation,
+  NativeDelegationRegistration,
+  ReplayNativeDelegationRegistration,
 } from "../../../db/entities/IDelegation";
 import { TransactionBlock } from "../../../db/entities/ITransaction";
 import { ConsolidatedTDH } from "../../../db/entities/ITDH";
@@ -25,6 +27,36 @@ import {
   retrieveWalletConsolidations,
 } from "../tdh-worker/tdh-worker.db";
 import { NativeDelegationScan } from "./delegation-logs";
+import {
+  getPendingDelegationGroups,
+  getStagedDelegationRegistrations,
+  persistReconciledDelegationGroup,
+  prepareNativeDelegationReplay,
+} from "./staged-delegation-sync.db";
+import { syncNativeDelegations } from "./delegation-sync";
+import { DelegationStateReader } from "./delegation-registration-expiry";
+import {
+  DELEGATION_CONTRACT,
+  NATIVE_DELEGATION_INDEX_VERSION,
+} from "../../../../electron-constants";
+
+async function resolveFixtureGroups(db: DataSource, block: number) {
+  for (const group of await getPendingDelegationGroups(db)) {
+    const registrations = await getStagedDelegationRegistrations(db, group);
+    await persistReconciledDelegationGroup(
+      db,
+      block,
+      registrations.map((r) => ({ ...r, expiry: 1234 })),
+    );
+  }
+}
+async function completeFixtureReplay(db: DataSource, block: number) {
+  const checkpoint = await db
+    .getRepository(NFTDelegationReplayBlock)
+    .findOneByOrFail({ id: 1 });
+  if (checkpoint.block === block) await resolveFixtureGroups(db, block);
+  await completeNativeDelegationReplay(db, block);
+}
 
 // Exercise real TypeORM repositories and SQLite transactions without rebuilding
 // the app's better-sqlite3 binary (which is compiled for Electron's Node ABI).
@@ -78,6 +110,19 @@ const scan = (
     },
   ],
   revocations: [],
+  registrationLogs: [
+    {
+      block: 100,
+      logIndex: wallet1 === "b" ? 1 : 0,
+      delegator: wallet1,
+      delegate: wallet2,
+      collection: "memes",
+      useCase: 2,
+      allTokens: false,
+      tokenId: BigInt(0),
+      timestamp,
+    },
+  ],
 });
 
 describe("native delegation persistence and resumable atomic replay", () => {
@@ -116,7 +161,11 @@ describe("native delegation persistence and resumable atomic replay", () => {
         NFTDelegationBlock,
         ReplayConsolidation,
         ReplayDelegation,
+        NativeDelegationRegistration,
+        ReplayNativeDelegationRegistration,
         NFTDelegationReplayBlock,
+        NativeDelegationRegistration,
+        ReplayNativeDelegationRegistration,
         TransactionBlock,
         ConsolidatedTDH,
       ],
@@ -156,7 +205,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
       100,
       true,
     );
-    await completeNativeDelegationReplay(db, 101);
+    await completeFixtureReplay(db, 101);
     assert.equal(await isNativeDelegationIndexReady(db), true);
     assert.equal(await getLatestNFTDBlock(db), 101);
     assert.equal(await db.getRepository(NFTDelegationReplayBlock).count(), 0);
@@ -204,10 +253,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
     await db.query(
       "CREATE TRIGGER fail_swap BEFORE INSERT ON delegations BEGIN SELECT RAISE(ABORT, 'fixture failure'); END",
     );
-    await assert.rejects(
-      completeNativeDelegationReplay(db, 100),
-      /fixture failure/,
-    );
+    await assert.rejects(completeFixtureReplay(db, 100), /fixture failure/);
     assert.equal(
       (await db.getRepository(Consolidation).find())[0].wallet1,
       "old",
@@ -216,7 +262,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
     assert.equal(await isNativeDelegationIndexReady(db), false);
     assert.equal(await db.getRepository(ReplayConsolidation).count(), 1);
     await db.query("DROP TRIGGER fail_swap");
-    await completeNativeDelegationReplay(db, 100);
+    await completeFixtureReplay(db, 100);
     await resetNativeDelegationReplay(db);
     assert.equal(await isNativeDelegationIndexReady(db), false);
     assert.equal(
@@ -228,7 +274,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
   it("rejects a replay target mismatch without changing live rows or progress", async () => {
     await persistNftDelegations(db, 100, 2000, scan(), 5, 100, true);
     await assert.rejects(
-      completeNativeDelegationReplay(db, 101),
+      completeFixtureReplay(db, 101),
       /checkpoint incomplete/,
     );
     assert.equal(await getLatestNFTDBlock(db), 10);
@@ -238,6 +284,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
 
   it("fails safely if live and shadow column sets drift", async () => {
     await persistNftDelegations(db, 100, 2000, scan(), 5, 100, true);
+    await resolveFixtureGroups(db, 100);
     const metadata = db.getMetadata(ReplayDelegation);
     const originalColumns = metadata.columns;
     const extraColumn = Object.assign(
@@ -250,7 +297,7 @@ describe("native delegation persistence and resumable atomic replay", () => {
     metadata.columns = [...originalColumns, extraColumn];
     try {
       await assert.rejects(
-        completeNativeDelegationReplay(db, 100),
+        completeFixtureReplay(db, 100),
         /replay column mismatch/,
       );
     } finally {
@@ -263,8 +310,515 @@ describe("native delegation persistence and resumable atomic replay", () => {
     assert.equal(await getLatestNFTDBlock(db), 10);
     assert.equal(await isNativeDelegationIndexReady(db), false);
     assert.equal(await db.getRepository(ReplayConsolidation).count(), 1);
-    await completeNativeDelegationReplay(db, 100);
+    await completeFixtureReplay(db, 100);
     assert.equal(await isNativeDelegationIndexReady(db), true);
+  });
+
+  it("fresh sync and Reset work with old logs and only recent state, resuming after interruption", async () => {
+    const deploy = DELEGATION_CONTRACT.deploy_block;
+    const head = deploy + 1000;
+    const events = scan();
+    events.consolidations[0].block = deploy + 1;
+    events.registrations[0].block = deploy + 1;
+    events.registrationLogs[0].block = deploy + 1;
+    const reads: number[] = [];
+    const reader: DelegationStateReader = {
+      readDelegates: async (query) => {
+        reads.push(query.block);
+        if (query.block < head - 64)
+          throw new Error("historical state unavailable");
+        return ["b"];
+      },
+      readEntry: async (query) => {
+        reads.push(query.block);
+        if (query.block < head - 64)
+          throw new Error("historical state unavailable");
+        return {
+          delegator: "a",
+          delegate: "b",
+          registeredAt: BigInt(1792022400),
+          expiry: BigInt(1234),
+          allTokens: false,
+          tokenId: BigInt(0),
+        };
+      },
+    };
+    const provider = {
+      getBlockNumber: async () => head,
+      getBlock: async (block: number) => ({ hash: `hash-${block}` }),
+    };
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        provider,
+        reader,
+        async (from) => {
+          assert.equal(from, deploy);
+          await persistNftDelegations(
+            db,
+            deploy + 20,
+            2000,
+            events,
+            1,
+            0,
+            true,
+          );
+          throw new Error("interrupted scan");
+        },
+        () => {},
+      ),
+      /interrupted scan/,
+    );
+    assert.equal(reads.length, 0);
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(await db.getRepository(Consolidation).count(), 1);
+    const resumed = await syncNativeDelegations(
+      db,
+      provider,
+      reader,
+      async (from, to) => {
+        assert.equal(from, deploy + 21);
+        await persistNftDelegations(
+          db,
+          to,
+          3000,
+          {
+            consolidations: [],
+            registrations: [],
+            revocations: [],
+            registrationLogs: [],
+          },
+          1,
+          0,
+          true,
+        );
+      },
+      () => {},
+    );
+    assert.equal(resumed.upgrade, true);
+    assert.deepEqual(reads, [head, head]);
+    assert.equal(
+      (
+        await db
+          .getRepository(Delegation)
+          .findOneByOrFail({ from_address: "a" })
+      ).expiry,
+      1234,
+    );
+    assert.equal(
+      await db.getRepository(NativeDelegationRegistration).count(),
+      1,
+    );
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+    await resetNativeDelegationReplay(db);
+    assert.equal(await db.getRepository(Delegation).count(), 1);
+    await syncNativeDelegations(
+      db,
+      provider,
+      reader,
+      async (from, to) => {
+        assert.equal(from, deploy);
+        await persistNftDelegations(db, to, 3000, events, 1, 0, true);
+      },
+      () => {},
+    );
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+    assert.equal(await db.getRepository(Delegation).count(), 1);
+  });
+
+  it("incremental sync applies same-block revoke/re-register order and keeps oversized slots aligned", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    await completeFixtureReplay(db, 100);
+    await db
+      .getRepository(TransactionBlock)
+      .update({ id: 1 }, { tdh_needs_recalculation: false });
+    const events = scan();
+    events.consolidations = [];
+    const r = events.registrationLogs[0];
+    events.registrationLogs = [
+      { ...r, block: 101, logIndex: 0, tokenId: BigInt(1) },
+      { ...r, block: 101, logIndex: 2, tokenId: BigInt(2147483648) },
+      { ...r, block: 101, logIndex: 3, tokenId: BigInt(7) },
+    ];
+    events.revocations = [
+      {
+        ...events.registrations[0],
+        block: 101,
+        log_index: 1,
+        type: EventType.REVOKE,
+      },
+    ];
+    const provider = {
+      getBlockNumber: async () => 101,
+      getBlock: async () => ({ hash: "101" }),
+    };
+    const reader: DelegationStateReader = {
+      readDelegates: async () => ["b", "b"],
+      readEntry: async (_q, _delegate, index) => ({
+        delegator: "a",
+        delegate: "b",
+        registeredAt: BigInt(r.timestamp),
+        expiry: BigInt(2000 + index),
+        allTokens: false,
+        tokenId: index === 0 ? BigInt(2147483648) : BigInt(7),
+      }),
+    };
+    const result = await syncNativeDelegations(
+      db,
+      provider,
+      reader,
+      async (from, to) => {
+        assert.equal(from, 101);
+        await persistNftDelegations(db, to, 3000, events, 1, 0, true);
+      },
+      () => {},
+    );
+    assert.equal(result.upgrade, false);
+    const rows = await db.getRepository(Delegation).find();
+    assert.equal(rows.length, 1);
+    assert.deepEqual(
+      [rows[0].block, rows[0].token_id, rows[0].all_tokens, rows[0].expiry],
+      [101, 7, false, 2001],
+    );
+    assert.equal(
+      await db.getRepository(NativeDelegationRegistration).count(),
+      2,
+    );
+    assert.equal(
+      (await db.getRepository(TransactionBlock).findOneByOrFail({ id: 1 }))
+        .tdh_needs_recalculation,
+      false,
+    );
+    // A later revocation needs no expiry lookup and removes every stored slot.
+    await syncNativeDelegations(
+      db,
+      {
+        getBlockNumber: async () => 102,
+        getBlock: async () => ({ hash: "102" }),
+      },
+      {
+        readDelegates: async () => {
+          throw new Error("unexpected state read");
+        },
+        readEntry: reader.readEntry,
+      },
+      async (_from, to) => {
+        await persistNftDelegations(
+          db,
+          to,
+          4000,
+          {
+            consolidations: [],
+            registrations: [],
+            registrationLogs: [],
+            revocations: [
+              { ...events.revocations[0], block: 102, log_index: 0 },
+            ],
+          },
+          1,
+          0,
+          true,
+        );
+      },
+      () => {},
+    );
+    assert.equal(await db.getRepository(Delegation).count(), 0);
+    assert.equal(
+      await db.getRepository(NativeDelegationRegistration).count(),
+      0,
+    );
+  });
+
+  it("failed state reads and aged/reorganized snapshots preserve live data and pending reconciliation", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    const provider = {
+      getBlockNumber: async () => 100,
+      getBlock: async () => ({ hash: "100" }),
+    };
+    const slots = {
+      readDelegates: async () => ["b"],
+      readEntry: async () => ({
+        delegator: "a",
+        delegate: "b",
+        registeredAt: BigInt(1792022400),
+        expiry: BigInt(1234),
+        allTokens: false,
+        tokenId: BigInt(0),
+      }),
+    };
+    const noScan = async () => {
+      throw new Error("unexpected rescan");
+    };
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        provider,
+        {
+          ...slots,
+          readEntry: async () => {
+            throw new Error("RPC failure");
+          },
+        },
+        noScan,
+        () => {},
+      ),
+      /RPC failure/,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(
+      (await db.getRepository(ReplayNativeDelegationRegistration).find())[0]
+        .expiry,
+      null,
+    );
+    let hashes = 0;
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        { ...provider, getBlock: async () => ({ hash: String(++hashes) }) },
+        slots,
+        noScan,
+        () => {},
+      ),
+      /snapshot changed/,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    let aged = false;
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        { ...provider, getBlockNumber: async () => (aged ? 165 : 100) },
+        {
+          ...slots,
+          readEntry: async () => {
+            aged = true;
+            return slots.readEntry();
+          },
+        },
+        noScan,
+        () => {},
+      ),
+      /no longer recent/,
+    );
+    assert.equal(
+      (await db.getRepository(ReplayNativeDelegationRegistration).find())[0]
+        .expiry,
+      null,
+    );
+    await syncNativeDelegations(db, provider, slots, noScan, () => {});
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+  });
+
+  it("catches logs up before expiry reads if a long replay exceeds the full-node window", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    let head = 100;
+    const snapshots: number[] = [];
+    const provider = {
+      getBlockNumber: async () => {
+        const result = head;
+        head = 200;
+        return result;
+      },
+      getBlock: async () => ({ hash: "200" }),
+    };
+    await syncNativeDelegations(
+      db,
+      provider,
+      {
+        readDelegates: async (q) => {
+          snapshots.push(q.block);
+          return ["b"];
+        },
+        readEntry: async () => ({
+          delegator: "a",
+          delegate: "b",
+          registeredAt: BigInt(1792022400),
+          expiry: BigInt(1234),
+          allTokens: false,
+          tokenId: BigInt(0),
+        }),
+      },
+      async (from, to) => {
+        assert.deepEqual([from, to], [101, 200]);
+        await persistNftDelegations(
+          db,
+          to,
+          3000,
+          {
+            consolidations: [],
+            registrations: [],
+            revocations: [],
+            registrationLogs: [],
+          },
+          1,
+          0,
+          true,
+        );
+      },
+      () => {},
+    );
+    assert.deepEqual(snapshots, [200]);
+    assert.equal(await getLatestNFTDBlock(db), 200);
+  });
+
+  it("discards an older replay format while preserving live rows and native index version", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    await db
+      .getRepository(NFTDelegationReplayBlock)
+      .update({ id: 1 }, { index_version: 1 });
+    await db
+      .getRepository(NFTDelegationBlock)
+      .update({ id: 1 }, { index_version: 1 });
+    const checkpoint = await prepareNativeDelegationReplay(db);
+    assert.equal(checkpoint.block, DELEGATION_CONTRACT.deploy_block - 1);
+    assert.equal(checkpoint.index_version, NATIVE_DELEGATION_INDEX_VERSION);
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      0,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(await db.getRepository(Consolidation).count(), 1);
+    assert.equal(await isNativeDelegationIndexReady(db), false);
+  });
+
+  it("resumes expiry batches without rereading verified groups or exposing partial live rows", async () => {
+    const logs = Array.from({ length: 21 }, (_, index) => ({
+      block: 100,
+      logIndex: index,
+      delegator: `a${String(index).padStart(2, "0")}`,
+      delegate: "b",
+      collection: "memes",
+      useCase: 2,
+      allTokens: false,
+      tokenId: BigInt(index),
+      timestamp: 1792022400 + index,
+    }));
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      {
+        consolidations: [],
+        registrations: [],
+        revocations: [],
+        registrationLogs: logs,
+      },
+      1,
+      0,
+      true,
+    );
+    let fail = true;
+    const reads: string[] = [];
+    const reader: DelegationStateReader = {
+      readDelegates: async () => ["b"],
+      readEntry: async (query) => {
+        reads.push(query.delegator);
+        if (fail && query.delegator === "a20")
+          throw new Error("last batch interrupted");
+        const index = Number(query.delegator.slice(1));
+        return {
+          delegator: query.delegator,
+          delegate: "b",
+          registeredAt: BigInt(1792022400 + index),
+          expiry: BigInt(1234 + index),
+          allTokens: false,
+          tokenId: BigInt(index),
+        };
+      },
+    };
+    const provider = {
+      getBlockNumber: async () => 100,
+      getBlock: async () => ({ hash: "100" }),
+    };
+    const noScan = async () => {
+      throw new Error("unexpected rescan");
+    };
+    await assert.rejects(
+      syncNativeDelegations(db, provider, reader, noScan, () => {}),
+      /last batch interrupted/,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(await db.getRepository(Delegation).count(), 0);
+    assert.equal(await db.getRepository(ReplayDelegation).count(), 20);
+    fail = false;
+    reads.length = 0;
+    await syncNativeDelegations(db, provider, reader, noScan, () => {});
+    assert.deepEqual(reads, ["a20"]);
+    assert.equal(await db.getRepository(Delegation).count(), 21);
+    assert.equal(
+      await db.getRepository(NativeDelegationRegistration).count(),
+      21,
+    );
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+  });
+
+  it("rejects a changed saved checkpoint before scanning or reading state", async () => {
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      scan(),
+      1,
+      0,
+      true,
+      "original-hash",
+    );
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        {
+          getBlockNumber: async () => 100,
+          getBlock: async () => ({ hash: "other-fork" }),
+        },
+        {
+          readDelegates: async () => {
+            throw new Error("unexpected call");
+          },
+          readEntry: async () => {
+            throw new Error("unexpected call");
+          },
+        },
+        async () => {
+          throw new Error("unexpected scan");
+        },
+        () => {},
+      ),
+      /checkpoint changed/,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(
+      (
+        await db
+          .getRepository(NFTDelegationReplayBlock)
+          .findOneByOrFail({ id: 1 })
+      ).block_hash,
+      "original-hash",
+    );
+  });
+
+  it("cannot publish unresolved expiry and rolls a mismatched group back without losing slots", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    await assert.rejects(
+      completeNativeDelegationReplay(db, 100),
+      /reconciliation incomplete/,
+    );
+    const staged = await db
+      .getRepository(ReplayNativeDelegationRegistration)
+      .find();
+    await assert.rejects(
+      persistReconciledDelegationGroup(
+        db,
+        100,
+        staged.map((r) => ({ ...r, expiry: 1234, token_id: "99" })),
+      ),
+      /does not match/,
+    );
+    assert.equal(staged.length, 1);
+    assert.equal(
+      (await db.getRepository(ReplayNativeDelegationRegistration).find())[0]
+        .expiry,
+      null,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
   });
 
   it("ordinary delegation scope updates do not invalidate token holding TDH", async () => {

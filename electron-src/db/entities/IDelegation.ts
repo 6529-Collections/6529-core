@@ -1,4 +1,10 @@
-import { Entity, Column, PrimaryColumn, CreateDateColumn } from "typeorm";
+import {
+  Entity,
+  Column,
+  PrimaryColumn,
+  CreateDateColumn,
+  Index,
+} from "typeorm";
 import { SingletonBlockEntity } from "./IBlock";
 import {
   CONSOLIDATIONS_TABLE,
@@ -91,6 +97,9 @@ export interface DelegationEvent extends ConsolidationEvent {
 export class NFTDelegationBlock extends SingletonBlockEntity {
   @Column({ type: "int", default: 0 })
   index_version!: number;
+
+  @Column({ type: "varchar", length: 66, nullable: true, default: null })
+  block_hash!: string | null;
 }
 
 // Shadow tables allow a resumable upgrade without exposing partial history.
@@ -101,7 +110,58 @@ export class ReplayConsolidation extends Consolidation {}
 export class ReplayDelegation extends Delegation {}
 
 @Entity("nft_delegation_replay_blocks")
-export class NFTDelegationReplayBlock extends SingletonBlockEntity {}
+export class NFTDelegationReplayBlock extends SingletonBlockEntity {
+  @Column({ type: "int", default: 0 })
+  index_version!: number;
+
+  @Column({ type: "boolean", default: true })
+  upgrade!: boolean;
+
+  @Column({ type: "boolean", default: false })
+  consolidations_changed!: boolean;
+
+  @Column({ type: "varchar", length: 66, nullable: true, default: null })
+  block_hash!: string | null;
+}
+
+// Retain every surviving registration, even entries sharing the public table's
+// key or exceeding its token-ID range, to match the contract's ordered slots.
+@Entity("native_delegation_registrations")
+@Index(["from_address", "collection", "use_case"])
+export class NativeDelegationRegistration {
+  @PrimaryColumn({ type: "int" })
+  block!: number;
+
+  @PrimaryColumn({ type: "int" })
+  log_index!: number;
+
+  @Column({ type: "varchar", length: 50 })
+  from_address!: string;
+
+  @Column({ type: "varchar", length: 50 })
+  to_address!: string;
+
+  @Column({ type: "varchar", length: 50 })
+  collection!: string;
+
+  @Column({ type: "int" })
+  use_case!: number;
+
+  @Column({ type: "bigint" })
+  registered_at!: number;
+
+  @Column({ type: "boolean" })
+  all_tokens!: boolean;
+
+  @Column({ type: "varchar", length: 78 })
+  token_id!: string;
+
+  @Column({ type: "bigint", nullable: true, default: null })
+  expiry!: number | null;
+}
+
+@Entity("native_delegation_registrations_replay")
+export class ReplayNativeDelegationRegistration extends NativeDelegationRegistration {}
 
 export interface WalletConsolidationKey {
   wallet: string;

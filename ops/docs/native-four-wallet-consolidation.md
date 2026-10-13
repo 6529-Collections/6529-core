@@ -3,7 +3,7 @@
 Core's native SQLite delegation index and TDH worker follow backend
 [#2148](https://github.com/6529-Collections/6529seize-backend/pull/2148)
 (head `c041a853d0bc1ebbd0c181492a8f6d2592c05dd2`) for grouping and directional
-registration times. Safe/batch token scope and historical expiry reads follow
+registration times. Safe/batch token scope and expiry normalization follow
 [#2151](https://github.com/6529-Collections/6529seize-backend/pull/2151)
 (head `2ed34d62125145fc9ad634a3f3715b731d9f7d5c`). These backend changes are
 independent rollout dependencies; native parity does not replace their deployment
@@ -42,40 +42,68 @@ age; card balances, sets, boosts, ranks and Merkle keys use the resulting group.
 
 ## Existing database upgrade
 
-The first NFTDelegation worker run with `index_version != 1` automatically replays
-logs from the contract deployment block (17114433) into `consolidations_replay`
-and `delegations_replay`. Nullable timestamp columns and a default-zero index
-version are added by the existing TypeORM schema synchronization. Existing live
-rows and displayed TDH remain intact during the upgrade. TDH calculations defer
-until the upgraded index is ready.
+The first NFTDelegation worker run with `index_version != 2` replays logs from
+the contract deployment block (17114433) into shadow consolidation tables and
+`native_delegation_registrations_replay`. Every surviving registration retains
+its block, log index, registration timestamp and exact token scope. The public
+`delegations` table keeps its existing key; the additional registration ledger
+retains duplicate same-block entries and oversized token IDs for state matching.
+Existing live rows and displayed TDH remain intact throughout the upgrade.
+Normal entity synchronization adds the ledger tables and checkpoint fields.
 
-Each replay chunk commits its rows and `nft_delegation_replay_blocks` checkpoint
-in one transaction. A failure or app shutdown leaves live rows intact; the next
-run resumes after the last committed chunk. Expiry/state mismatch or missing
-block time fails the chunk before its checkpoint advances. Once replay reaches
-the captured chain head, one transaction replaces both live tables, advances the
-live checkpoint, sets `index_version = 1`, marks full TDH recalculation needed,
-and clears shadow state. No startup migration guesses registration times from
-`created_at`, the old pair block, or the time of indexing.
+Historical scanning uses only `eth_getLogs` and block headers. Once logs catch
+up, the worker resolves expiry from the contract's stored entries at a recent
+block, using `retrieveDelegationAddresses` and indexed `globalDelegationHashes`
+reads. The contract appends entries on registration and deletes all entries for
+the delegator/collection/delegate/use-case key on revocation. The log replay
+applies those operations in block/log order, including same-block revocations
+and subsequent renewals. It matches each surviving entry's registration time,
+addresses, token ID and all-token flag before accepting expiry. Expired entries
+remain stored until revoked and retain their actual expiry; they are not treated
+as currently authorized just because a getter returns them.
+
+Each chunk commits shadow rows and its checkpoint atomically. Reconciliation
+processes at most 20 delegator/collection/use-case groups per batch, using one
+pinned recent block per batch. If a long scan or interruption ages the target by
+more than 32 blocks, logs catch up before further state calls. A batch exceeding
+64 blocks of age is rejected, safely inside AWS's 128-block state window.
+Snapshot hashes are checked around state reads; saved checkpoint hashes detect
+a changed chain checkpoint and require Reset to rebuild rather than publishing
+mixed history. State/count/scope/time mismatches stop reconciliation without
+publishing guessed values.
+
+Verified expiry is immutable for a surviving registration slot, so matched
+groups are durable across interruptions and newer snapshot blocks. Later log
+catch-up deletes revoked slots and marks new registrations pending; it never
+applies a revoked registration's expiry to its replacement. After every pending
+group is verified, one transaction replaces live consolidation, delegation and
+registration-ledger tables, advances the live checkpoint, and clears shadow
+state. TDH waits for the initial upgrade; ordinary scope/expiry updates do not
+invalidate token-holding TDH. Consolidation changes durably mark recalculation.
+
+Existing version-zero/one databases rebuild the version-two index. A partial
+older-format replay restarts only its shadow state once, preserving live rows.
+Subsequent version-two interruptions resume from saved scan/reconciliation
+progress. An explicit NFTDelegation Reset clears shadow progress and marks the
+index unready while preserving live rows until its replacement is complete.
+Fresh installs, Reset, existing upgrades and incremental runs use the same
+archive-free scan/reconciliation path.
 
 The ordinary scheduled/manual TDH run rebuilds all wallet/group results after
-replay. Existing displayed TDH can remain stale until that run; operators can
-manually start TDH after replay rather than wait for its normal daily schedule.
-If NFTDelegation is disabled, enable or manually run it to perform the upgrade.
-An explicit NFTDelegation Reset clears replay progress and sets version zero,
-while preserving live rows until the replacement replay completes. It does not
-itself scan the chain.
+upgrade. Existing displayed TDH can remain stale until that run; operators can
+manually start TDH after replay rather than wait for its daily schedule. If
+NFTDelegation is disabled, enable or manually run it to perform the upgrade.
 
 ## RPC and storage limits
 
-The selected native RPC must support historical `eth_call` at registration blocks
-back to deployment. Scope comes from each log; expiry comes from that log's
-matching end-of-block contract entry, so Safe, batch and manager transactions
-work without decoding outer transaction calldata. Same-block revoked entries are
-excluded, and later registrations are matched in log order. Unavailable archive
-state stops replay/indexing with a worker error; it never silently defaults a
-restricted delegation to all tokens or unlimited expiry. Change to an
-archive-capable RPC and rerun NFTDelegation to resume.
+Historical contract state is not required. The selected mainnet RPC must serve
+historical logs/block headers and ordinary recent `eth_call`; this supports the
+AWS full-node service behind the default RPC. Scope comes directly from logs,
+and expiry comes from matched surviving contract entries, independent of Safe,
+batch or manager outer transaction calldata. A failed recent RPC call leaves
+live rows and saved progress intact for the next run. The index reconstructs
+current surviving registrations, not expiry snapshots for already-revoked
+historical registrations. Four-wallet timestamps remain historical block times.
 
 Core preserves backend #2151's representation: all-token scope stores token zero;
 false/zero values are written explicitly; zero or beyond-safe-integer expiry maps
@@ -83,9 +111,10 @@ to `NEVER_DATE`. The existing delegation table stores the last registration per
 (block, from, to, collection, use case), rather than all token-specific entries
 sharing that key. Token-specific IDs above the backend signed-INT ceiling are
 logged and excluded from emitted rows rather than widened or truncated; their
-positions remain in the historical-state read plan so other entries in that
-block still resolve correctly. Sub-delegation registrations revoked later in
-the same block are also excluded, while later re-registrations survive.
+positions remain in the surviving-registration ledger so other entries still
+match their own contract slot and expiry. Sub-delegation registrations use the same ordered replay and scope/expiry
+reconciliation; registrations revoked later in the same block are excluded,
+while later re-registrations survive.
 Consolidation eligibility continues to use the backend's confirmed-pair contract,
 rather than ordinary delegation expiry/token scope. Ordinary delegation scope
 and expiry changes do not alter token ownership, holding age or TDH boosts, so

@@ -7,12 +7,18 @@ import {
   ReplayDelegation,
   NFTDelegationReplayBlock,
   Delegation,
+  NativeDelegationRegistration,
+  ReplayNativeDelegationRegistration,
 } from "../../../db/entities/IDelegation";
 import { planConsolidationEvent } from "./consolidation-row-plan";
 import { writeDelegations } from "./delegation-row";
 import { NativeDelegationScan } from "./delegation-logs";
 import { NATIVE_DELEGATION_INDEX_VERSION } from "../../../../electron-constants";
 import { setTdhRecalculationNeeded } from "../transactions-worker/transactions-worker.db";
+import {
+  writeStagedDelegationEvents,
+  replaceIndexTable,
+} from "./staged-delegation-sync.db";
 
 export async function getLatestNFTDBlock(db: DataSource): Promise<number> {
   const block = await db
@@ -38,6 +44,7 @@ export async function persistNftDelegations(
   maxRetries: number = 5,
   delayMs: number = 100,
   replay = false,
+  blockHash?: string,
 ) {
   let attempt = 0;
   while (attempt < maxRetries) {
@@ -48,17 +55,31 @@ export async function persistNftDelegations(
           nftDelegations.consolidations,
           replay,
         );
-        await writeDelegations(
-          transaction.getRepository(replay ? ReplayDelegation : Delegation),
-          undefined,
-          nftDelegations.registrations,
-          nftDelegations.revocations,
-        );
         if (replay) {
-          await transaction
+          await writeStagedDelegationEvents(transaction, nftDelegations);
+          const checkpoint = await transaction
             .getRepository(NFTDelegationReplayBlock)
-            .upsert({ id: 1, block: endBlock, timestamp }, ["id"]);
+            .findOneBy({ id: 1 });
+          await transaction.getRepository(NFTDelegationReplayBlock).upsert(
+            {
+              id: 1,
+              block: endBlock,
+              timestamp,
+              index_version: NATIVE_DELEGATION_INDEX_VERSION,
+              block_hash: blockHash ?? null,
+              consolidations_changed:
+                checkpoint?.consolidations_changed === true ||
+                nftDelegations.consolidations.length > 0,
+            },
+            ["id"],
+          );
         } else {
+          await writeDelegations(
+            transaction.getRepository(Delegation),
+            undefined,
+            nftDelegations.registrations,
+            nftDelegations.revocations,
+          );
           await persistNftDelegationBlock(transaction, endBlock, timestamp);
           // Durable even if the worker exits before immediate reconsolidation.
           if (nftDelegations.consolidations.length)
@@ -125,34 +146,25 @@ export async function completeNativeDelegationReplay(
     const checkpoint = await manager
       .getRepository(NFTDelegationReplayBlock)
       .findOne({ where: { id: 1 } });
-    if (!checkpoint || checkpoint.block !== endBlock)
+    if (
+      !checkpoint ||
+      checkpoint.block !== endBlock ||
+      checkpoint.index_version !== NATIVE_DELEGATION_INDEX_VERSION
+    )
       throw new Error("Delegation replay checkpoint incomplete");
+    const pending = await manager
+      .getRepository(ReplayNativeDelegationRegistration)
+      .createQueryBuilder("registration")
+      .where("registration.expiry IS NULL")
+      .getCount();
+    if (pending)
+      throw new Error("Delegation replay expiry reconciliation incomplete");
     for (const [live, shadow] of [
       [Consolidation, ReplayConsolidation],
       [Delegation, ReplayDelegation],
+      [NativeDelegationRegistration, ReplayNativeDelegationRegistration],
     ]) {
-      const liveMetadata = db.getMetadata(live);
-      const shadowMetadata = db.getMetadata(shadow);
-      const shadowColumns = new Set(
-        shadowMetadata.columns.map((column) => column.databaseName),
-      );
-      if (
-        shadowColumns.size !== liveMetadata.columns.length ||
-        !liveMetadata.columns.every((column) =>
-          shadowColumns.has(column.databaseName),
-        )
-      ) {
-        throw new Error(
-          `Delegation replay column mismatch: ${liveMetadata.tableName} / ${shadowMetadata.tableName}`,
-        );
-      }
-      const columns = liveMetadata.columns
-        .map((column) => `"${column.databaseName}"`)
-        .join(", ");
-      await manager.query(`DELETE FROM "${liveMetadata.tableName}"`);
-      await manager.query(
-        `INSERT INTO "${liveMetadata.tableName}" (${columns}) SELECT ${columns} FROM "${shadowMetadata.tableName}"`,
-      );
+      await replaceIndexTable(manager, live, shadow);
     }
     await manager.getRepository(NFTDelegationBlock).upsert(
       {
@@ -160,12 +172,16 @@ export async function completeNativeDelegationReplay(
         block: endBlock,
         timestamp: checkpoint.timestamp,
         index_version: NATIVE_DELEGATION_INDEX_VERSION,
+        block_hash: checkpoint.block_hash,
       },
       ["id"],
     );
-    await setTdhRecalculationNeeded(manager, true);
+    if (checkpoint.upgrade || checkpoint.consolidations_changed) {
+      await setTdhRecalculationNeeded(manager, true);
+    }
     await manager.getRepository(ReplayConsolidation).clear();
     await manager.getRepository(ReplayDelegation).clear();
+    await manager.getRepository(ReplayNativeDelegationRegistration).clear();
     await manager.getRepository(NFTDelegationReplayBlock).clear();
   });
 }
@@ -175,6 +191,7 @@ export async function resetNativeDelegationReplay(db: DataSource) {
   await db.transaction(async (manager) => {
     await manager.getRepository(ReplayConsolidation).clear();
     await manager.getRepository(ReplayDelegation).clear();
+    await manager.getRepository(ReplayNativeDelegationRegistration).clear();
     await manager.getRepository(NFTDelegationReplayBlock).clear();
     await manager
       .getRepository(NFTDelegationBlock)
