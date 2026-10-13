@@ -531,6 +531,7 @@ export const calculateTDH = async (
       allNextgenTDH,
       allTdh,
       ADJUSTED_NFTS,
+      nextgen,
     );
     rankedTdh = allRankedTdh.filter((t: TDH) =>
       startingWallets.some((sw) => areEqualAddresses(sw, t.wallet)),
@@ -541,6 +542,7 @@ export const calculateTDH = async (
       allNextgenTDH,
       boostedTdh,
       ADJUSTED_NFTS,
+      nextgen,
     );
   }
 
@@ -939,6 +941,9 @@ export async function calculateRanks(
   allNextgenTDH: any[],
   boostedTDH: any[],
   ADJUSTED_NFTS: any[],
+  NEXTGEN_NFTS: any[] = ADJUSTED_NFTS.filter((nft) =>
+    areEqualAddresses(nft.contract, NEXTGEN_CONTRACT),
+  ),
 ) {
   allGradientsTDH.sort((a, b) => b.tdh - a.tdh || a.id - b.id || -1);
   const rankedGradientsTdh = allGradientsTDH.map((a, index) => {
@@ -951,6 +956,12 @@ export async function calculateRanks(
     a.rank = index + 1;
     return a;
   });
+  const nextgenRanksById = new Map<number, number>();
+  for (const token of rankedNextgenTdh) {
+    if (token.id !== null && token.id !== undefined) {
+      nextgenRanksById.set(Number(token.id), token.rank);
+    }
+  }
 
   ADJUSTED_NFTS.forEach((nft) => {
     boostedTDH
@@ -998,16 +1009,6 @@ export async function calculateRanks(
           }
           return w;
         }
-        if (areEqualAddresses(nft.contract, NEXTGEN_CONTRACT)) {
-          const nextgen = w.nextgen.find((g: any) => g.id == nft.id);
-          if (nextgen) {
-            w.nextgen_ranks.push({
-              id: nft.id,
-              rank: rankedNextgenTdh.find((s) => s.id == nft.id)?.rank,
-            });
-          }
-          return w;
-        }
       });
 
     if (areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
@@ -1034,6 +1035,20 @@ export async function calculateRanks(
         }
       });
     }
+  });
+
+  NEXTGEN_NFTS.forEach((nft) => {
+    const tokenId = Number(nft.id);
+    const rank = nextgenRanksById.get(tokenId);
+    boostedTDH
+      .filter((w) =>
+        w.nextgen?.some(
+          (token: any) => Number(token.id) === tokenId && token.tdh > 0,
+        ),
+      )
+      .forEach((w) => {
+        w.nextgen_ranks.push({ id: nft.id, rank });
+      });
   });
 
   boostedTDH.sort((a: TDH, b: TDH) => {

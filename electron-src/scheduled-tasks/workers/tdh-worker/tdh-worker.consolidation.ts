@@ -1,5 +1,5 @@
 import type { ConsolidationPolicy } from "./consolidation-policy";
-import { ConsolidatedTDH, TDH } from "../../../db/entities/ITDH";
+import { ConsolidatedTDH, TDH, type TokenTDH } from "../../../db/entities/ITDH";
 import {
   fetchAllConsolidatedTdh,
   fetchAllTDH,
@@ -19,6 +19,7 @@ import {
   getGenesisAndNaka,
 } from "./tdh";
 import { MEMES_CONTRACT } from "../../../../shared/abis/memes";
+import { NEXTGEN_CONTRACT } from "../../../../shared/abis/nextgen";
 import { NFT } from "../../../db/entities/INFT";
 import { DataSource } from "typeorm";
 import { parentPort } from "worker_threads";
@@ -243,6 +244,9 @@ export const consolidateTDH = async (
   const memes = nfts.filter((n) =>
     areEqualAddresses(n.contract, MEMES_CONTRACT),
   );
+  const nextgen = nfts.filter((n) =>
+    areEqualAddresses(n.contract, NEXTGEN_CONTRACT),
+  );
   const seasons = buildSeasons(memes);
 
   logInfo(
@@ -297,6 +301,7 @@ export const consolidateTDH = async (
       allNextgenTDH,
       allTdh,
       nfts,
+      nextgen,
     );
     rankedTdh = allRankedTdh.filter((t: ConsolidatedTDH) =>
       startingWallets.some((sw) =>
@@ -309,6 +314,7 @@ export const consolidateTDH = async (
       allNextgenTDH,
       consolidatedBoostedTdh,
       nfts,
+      nextgen,
     );
   }
 
@@ -330,25 +336,31 @@ export const consolidateTDH = async (
   logInfo(parentPort, `[FINAL ENTRIES ${rankedTdh.length}]`);
 };
 
-function consolidateCards(consolidationTokens: any[], walletTokens: any[]) {
-  const mergedArray = [...consolidationTokens, ...walletTokens].reduce(
-    (accumulator, current) => {
-      const existingIndex = accumulator.findIndex(
-        (item: any) => item.id === current.id,
-      );
+export function consolidateCards(
+  consolidationTokens: TokenTDH[],
+  walletTokens: TokenTDH[],
+): TokenTDH[] {
+  const mergedArray = [...consolidationTokens, ...walletTokens].reduce<
+    TokenTDH[]
+  >((accumulator, current) => {
+    const existingIndex = accumulator.findIndex(
+      (item) => item.id === current.id,
+    );
 
-      if (existingIndex === -1) {
-        accumulator.push(current);
-      } else {
-        accumulator[existingIndex].balance += current.balance;
-        accumulator[existingIndex].tdh += current.tdh;
-        accumulator[existingIndex].tdh__raw += current.tdh__raw;
-      }
+    if (existingIndex === -1) {
+      accumulator.push(current);
+    } else {
+      accumulator[existingIndex].balance += current.balance;
+      accumulator[existingIndex].tdh += current.tdh;
+      accumulator[existingIndex].tdh__raw += current.tdh__raw;
+      accumulator[existingIndex].days_held_per_edition = [
+        ...accumulator[existingIndex].days_held_per_edition,
+        ...current.days_held_per_edition,
+      ].sort((a, b) => a - b);
+    }
 
-      return accumulator;
-    },
-    [],
-  );
+    return accumulator;
+  }, []);
 
   return mergedArray;
 }

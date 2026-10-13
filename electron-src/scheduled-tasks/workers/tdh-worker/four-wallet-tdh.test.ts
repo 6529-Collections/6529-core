@@ -78,7 +78,16 @@ it("aggregates four native wallet TDH rows into one consolidation including shar
       nextgen_tdh: 0,
       nextgen_tdh__raw: 0,
       nextgen_balance: 0,
-      memes: [{ id: 1, balance: 1, tdh: 10, tdh__raw: 10 }],
+      memes: [
+        {
+          id: 1,
+          balance: 1,
+          hodl_rate: 1,
+          tdh: 10,
+          tdh__raw: 10,
+          days_held_per_edition: [10],
+        },
+      ],
       gradients: [],
       nextgen: [],
     }),
@@ -95,5 +104,6 @@ it("aggregates four native wallet TDH rows into one consolidation including shar
   assert.equal(result.tdh__raw, 40);
   assert.equal(result.memes[0].balance, 4);
   assert.equal(result.memes[0].tdh__raw, 40);
+  assert.deepEqual(result.memes[0].days_held_per_edition, [10, 10, 10, 10]);
   assert.equal(result.memes_cards_sets, 4);
 });
