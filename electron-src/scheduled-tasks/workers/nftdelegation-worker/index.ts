@@ -47,7 +47,10 @@ import { NFTOwner } from "../../../db/entities/INFTOwner";
 import { findLatestBlockBeforeTimestamp } from "../tdh-worker/tdh";
 
 import { mapDelegationLogs } from "./delegation-logs";
-import { createDelegationStateReader } from "./delegation-registration-expiry";
+import {
+  createDelegationStateReader,
+  readRecentDelegationState,
+} from "./delegation-registration-expiry";
 import { syncNativeDelegations } from "./delegation-sync";
 import { expandAffectedConsolidationWallets } from "../tdh-worker/tdh-worker.db";
 
@@ -106,7 +109,11 @@ class NFTDelegationWorker extends CoreWorker {
       createDelegationStateReader(
         (to, callData, blockTag) =>
           this.getBottleneck().schedule(() =>
-            provider.call({ to, data: callData, blockTag }),
+            readRecentDelegationState(
+              blockTag,
+              () => provider.getBlockNumber(),
+              () => provider.call({ to, data: callData, blockTag }),
+            ),
           ),
         DELEGATION_CONTRACT.contract,
       ),

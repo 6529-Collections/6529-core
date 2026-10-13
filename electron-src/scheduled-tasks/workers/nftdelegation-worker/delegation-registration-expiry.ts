@@ -132,7 +132,6 @@ export async function reconcileRegistrationExpiries(
     collection: first.collection,
     useCase: first.use_case,
   };
-  const delegates = await reader.readDelegates(query);
   const byDelegate = new Map<string, NativeDelegationRegistration[]>();
   for (const registration of registrations) {
     if (
@@ -147,6 +146,7 @@ export async function reconcileRegistrationExpiries(
     entries.push(registration);
     byDelegate.set(key, entries);
   }
+  const delegates = await reader.readDelegates(query);
   const reads: { registration: NativeDelegationRegistration; index: number }[] =
     [];
   for (const [delegate, entries] of byDelegate) {
@@ -191,6 +191,43 @@ export function assertRecentDelegationSnapshot(
       "Delegation state snapshot is no longer recent; retry to resume with a fresh snapshot",
     );
   }
+}
+
+/** Check at dispatch and completion, including pruning errors during a slow call. */
+export async function readRecentDelegationState<T>(
+  snapshotBlock: number,
+  latestBlock: () => Promise<number>,
+  read: () => Promise<T>,
+): Promise<T> {
+  assertRecentDelegationSnapshot(snapshotBlock, await latestBlock());
+  let result: T;
+  try {
+    result = await read();
+  } catch (error) {
+    // Prefer the retriable age error over a pruning/decode/count error if the
+    // state window expired while a queued or in-flight request was running.
+    assertRecentDelegationSnapshot(snapshotBlock, await latestBlock());
+    throw error;
+  }
+  assertRecentDelegationSnapshot(snapshotBlock, await latestBlock());
+  return result;
+}
+
+/** Guard injected readers as well as the production RPC dispatch boundary. */
+export function guardRecentDelegationReader(
+  reader: DelegationStateReader,
+  latestBlock: () => Promise<number>,
+): DelegationStateReader {
+  return {
+    readDelegates: (query) =>
+      readRecentDelegationState(query.block, latestBlock, () =>
+        reader.readDelegates(query),
+      ),
+    readEntry: (query, delegate, index) =>
+      readRecentDelegationState(query.block, latestBlock, () =>
+        reader.readEntry(query, delegate, index),
+      ),
+  };
 }
 
 export function toExpirySeconds(expiry: bigint): number {

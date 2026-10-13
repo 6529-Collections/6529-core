@@ -4,6 +4,7 @@ import {
   assertRecentDelegationSnapshot,
   DelegationStateReader,
   reconcileRegistrationExpiries,
+  guardRecentDelegationReader,
 } from "./delegation-registration-expiry";
 import {
   getPendingDelegationGroups,
@@ -28,6 +29,9 @@ export async function syncNativeDelegations(
   progress: () => void,
 ): Promise<{ block: number; upgrade: boolean }> {
   const start = await prepareNativeDelegationReplay(db);
+  const guardedReader = guardRecentDelegationReader(reader, () =>
+    provider.getBlockNumber(),
+  );
   const upgrade = start.upgrade;
   if (
     start.block_hash &&
@@ -80,7 +84,7 @@ export async function syncNativeDelegations(
       return reconcileRegistrationExpiries(
         registrations,
         snapshotBlock,
-        reader,
+        guardedReader,
       );
     });
     assertRecentDelegationSnapshot(

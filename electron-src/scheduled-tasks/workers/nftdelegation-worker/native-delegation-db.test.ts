@@ -285,31 +285,37 @@ describe("native delegation persistence and resumable atomic replay", () => {
   it("fails safely if live and shadow column sets drift", async () => {
     await persistNftDelegations(db, 100, 2000, scan(), 5, 100, true);
     await resolveFixtureGroups(db, 100);
-    const metadata = db.getMetadata(ReplayDelegation);
-    const originalColumns = metadata.columns;
-    const extraColumn = Object.assign(
-      Object.create(
-        Object.getPrototypeOf(originalColumns[0]),
-      ) as (typeof originalColumns)[0],
-      originalColumns[0],
-      { databaseName: "unexpected_column" },
-    );
-    metadata.columns = [...originalColumns, extraColumn];
-    try {
-      await assert.rejects(
-        completeFixtureReplay(db, 100),
-        /replay column mismatch/,
+    for (const target of [
+      ReplayConsolidation,
+      ReplayDelegation,
+      ReplayNativeDelegationRegistration,
+    ]) {
+      const metadata = db.getMetadata(target);
+      const originalColumns = metadata.columns;
+      const extraColumn = Object.assign(
+        Object.create(
+          Object.getPrototypeOf(originalColumns[0]),
+        ) as (typeof originalColumns)[0],
+        originalColumns[0],
+        { databaseName: "unexpected_column" },
       );
-    } finally {
-      metadata.columns = originalColumns;
+      metadata.columns = [...originalColumns, extraColumn];
+      try {
+        await assert.rejects(
+          completeFixtureReplay(db, 100),
+          /replay column mismatch/,
+        );
+      } finally {
+        metadata.columns = originalColumns;
+      }
+      assert.equal(
+        (await db.getRepository(Consolidation).find())[0].wallet1,
+        "old",
+      );
+      assert.equal(await getLatestNFTDBlock(db), 10);
+      assert.equal(await isNativeDelegationIndexReady(db), false);
+      assert.equal(await db.getRepository(ReplayConsolidation).count(), 1);
     }
-    assert.equal(
-      (await db.getRepository(Consolidation).find())[0].wallet1,
-      "old",
-    );
-    assert.equal(await getLatestNFTDBlock(db), 10);
-    assert.equal(await isNativeDelegationIndexReady(db), false);
-    assert.equal(await db.getRepository(ReplayConsolidation).count(), 1);
     await completeFixtureReplay(db, 100);
     assert.equal(await isNativeDelegationIndexReady(db), true);
   });
@@ -749,6 +755,96 @@ describe("native delegation persistence and resumable atomic replay", () => {
       21,
     );
     assert.equal(await isNativeDelegationIndexReady(db), true);
+  });
+
+  it("partitions pending state reads by all three tuple fields and writes canonical decimal token IDs", async () => {
+    const base = scan().registrationLogs[0];
+    const logs = [
+      { ...base, logIndex: 0, tokenId: BigInt("0x07") },
+      { ...base, logIndex: 1, tokenId: BigInt("0008") },
+      { ...base, logIndex: 2, delegator: "c" },
+      { ...base, logIndex: 3, collection: "other" },
+      { ...base, logIndex: 4, useCase: 3 },
+    ];
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      {
+        consolidations: [],
+        registrations: [],
+        revocations: [],
+        registrationLogs: logs,
+      },
+      1,
+      0,
+      true,
+    );
+    const groups = await getPendingDelegationGroups(db);
+    assert.equal(groups.length, 4);
+    let rows = 0;
+    for (const group of groups) {
+      const records = await getStagedDelegationRegistrations(db, group);
+      rows += records.length;
+      assert.ok(
+        records.every(
+          (r) =>
+            r.from_address === group.from_address &&
+            r.collection === group.collection &&
+            r.use_case === group.use_case,
+        ),
+      );
+      assert.ok(records.every((r) => /^(0|[1-9][0-9]*)$/.test(r.token_id)));
+    }
+    assert.equal(rows, 5);
+    assert.deepEqual(
+      (
+        await getStagedDelegationRegistrations(db, {
+          from_address: "a",
+          collection: "memes",
+          use_case: 2,
+        })
+      ).map((r) => r.token_id),
+      ["7", "8"],
+    );
+  });
+
+  it("a pruning failure during reconciliation reports a resumable age error and leaves live rows intact", async () => {
+    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+    let head = 100;
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        {
+          getBlockNumber: async () => head,
+          getBlock: async () => ({ hash: "100" }),
+        },
+        {
+          readDelegates: async () => {
+            head = 229;
+            throw new Error("historical state unavailable");
+          },
+          readEntry: async () => {
+            throw new Error("unexpected entry read");
+          },
+        },
+        async () => {
+          throw new Error("unexpected scan");
+        },
+        () => {},
+      ),
+      /no longer recent/,
+    );
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    assert.equal(
+      (await db.getRepository(ReplayNativeDelegationRegistration).find())[0]
+        .expiry,
+      null,
+    );
+    assert.equal(
+      (await db.getRepository(Consolidation).find())[0].wallet1,
+      "old",
+    );
   });
 
   it("rejects a changed saved checkpoint before scanning or reading state", async () => {

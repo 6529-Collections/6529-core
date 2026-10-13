@@ -8,6 +8,8 @@ import {
   DelegationStateReader,
   reconcileRegistrationExpiries,
   toExpirySeconds,
+  guardRecentDelegationReader,
+  readRecentDelegationState,
 } from "./delegation-registration-expiry";
 import { DELEGATIONS_IFACE } from "../../../../shared/abis/delegations";
 import { NEVER_DATE } from "../../../../electron-constants";
@@ -148,4 +150,77 @@ it("bounds state reads inside the full-node window and retains never-expiry norm
     NEVER_DATE,
   );
   assert.equal(toExpirySeconds(BigInt(1234)), 1234);
+});
+
+it("rejects mixed delegators, collections, use cases and future logs before any state lookup", async () => {
+  const first = registration(1, 0);
+  for (const change of [
+    { from_address: b },
+    { collection: b },
+    { use_case: 3 },
+    { block: 10001 },
+  ]) {
+    await assert.rejects(
+      reconcileRegistrationExpiries(
+        [first, { ...registration(2, 1), ...change }],
+        10000,
+        {
+          readDelegates: async () => {
+            throw new Error("unexpected state lookup");
+          },
+          readEntry: async () => {
+            throw new Error("unexpected entry lookup");
+          },
+        },
+      ),
+      /group does not match/,
+    );
+  }
+});
+
+it("returns the retriable age error when a slow state call returns empty data or fails after pruning", async () => {
+  for (const fails of [false, true]) {
+    let head = 164;
+    const guarded = guardRecentDelegationReader(
+      {
+        readDelegates: async () => {
+          head = 229;
+          if (fails) throw new Error("historical state unavailable");
+          return [];
+        },
+        readEntry: async () => {
+          throw new Error("unexpected entry call");
+        },
+      },
+      async () => head,
+    );
+    await assert.rejects(
+      reconcileRegistrationExpiries([registration(1, 0)], 100, guarded),
+      /no longer recent/,
+    );
+  }
+  let dispatched = false;
+  await assert.rejects(
+    readRecentDelegationState(
+      100,
+      async () => 165,
+      async () => {
+        dispatched = true;
+        return "0x";
+      },
+    ),
+    /no longer recent/,
+  );
+  assert.equal(dispatched, false);
+  const rpcError = new Error("RPC temporarily unavailable");
+  await assert.rejects(
+    readRecentDelegationState(
+      100,
+      async () => 100,
+      async () => {
+        throw rpcError;
+      },
+    ),
+    (error) => error === rpcError,
+  );
 });

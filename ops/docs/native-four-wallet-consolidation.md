@@ -67,9 +67,13 @@ processes at most 20 delegator/collection/use-case groups per batch, using one
 pinned recent block per batch. If a long scan or interruption ages the target by
 more than 32 blocks, logs catch up before further state calls. A batch exceeding
 64 blocks of age is rejected, safely inside AWS's 128-block state window.
+Each state request checks age at dispatch and completion, including RPC failures
+after pruning, so a slow or queued read reports the resumable snapshot-age error
+instead of misclassifying expired state as a slot-count or metadata mismatch.
 Snapshot hashes are checked around state reads; saved checkpoint hashes detect
 a changed chain checkpoint and require Reset to rebuild rather than publishing
-mixed history. State/count/scope/time mismatches stop reconciliation without
+mixed history. The checkpoint hash also commits to its ancestors through each
+block's parent hash, so a canonical reorg below the checkpoint changes that hash. State/count/scope/time mismatches stop reconciliation without
 publishing guessed values.
 
 Verified expiry is immutable for a surviving registration slot, so matched
