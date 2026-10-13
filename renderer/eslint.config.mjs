@@ -620,7 +620,6 @@ export const createEslintConfig = ({
       files: [
         "config/alchemyEnv.ts",
         "config/assets.ts",
-        "config/deploymentEnv.ts",
         "config/env.ts",
         "config/ethereumRpcEnv.ts",
         "config/museumPublicationEnv.server.ts",
