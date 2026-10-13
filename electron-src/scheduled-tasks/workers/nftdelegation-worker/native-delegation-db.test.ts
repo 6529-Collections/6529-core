@@ -1,6 +1,9 @@
 import "reflect-metadata";
 import assert from "node:assert/strict";
 import { afterEach, beforeEach, describe, it } from "node:test";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { DataSource } from "typeorm";
 import {
   Consolidation,
@@ -35,6 +38,7 @@ import {
 } from "./staged-delegation-sync.db";
 import { syncNativeDelegations } from "./delegation-sync";
 import { DelegationStateReader } from "./delegation-registration-expiry";
+import { retryReplayTransaction } from "./replay-transaction";
 import {
   DELEGATION_CONTRACT,
   NATIVE_DELEGATION_INDEX_VERSION,
@@ -72,12 +76,16 @@ const { DatabaseSync } = require("node:sqlite") as {
   };
 };
 class FixtureDriver {
-  private database = new DatabaseSync(":memory:");
+  private database;
+  constructor(path = ":memory:") {
+    this.database = new DatabaseSync(path);
+  }
   prepare(sql: string) {
     const statement = this.database.prepare(sql);
     return {
       reader: statement.columns().length > 0,
-      all: (...args: unknown[]) => statement.all(...args),
+      all: (...args: unknown[]) =>
+        statement.all(...args).map((row) => ({ ...(row as object) })),
       run: (...args: unknown[]) => statement.run(...args),
     };
   }
@@ -127,6 +135,7 @@ const scan = (
 
 describe("native delegation persistence and resumable atomic replay", () => {
   let db: DataSource;
+  let temporaryDirectory: string | undefined;
   beforeEach(async () => {
     db = new DataSource({
       type: "better-sqlite3",
@@ -177,6 +186,198 @@ describe("native delegation persistence and resumable atomic replay", () => {
   });
   afterEach(async () => {
     if (db?.isInitialized) await db.destroy();
+    if (temporaryDirectory) {
+      rmSync(temporaryDirectory, { recursive: true, force: true });
+      temporaryDirectory = undefined;
+    }
+  });
+
+  async function openCompetingConnection() {
+    const options = db.options;
+    if (options.type !== "better-sqlite3") {
+      throw new Error("Lock fixture requires SQLite");
+    }
+    await db.destroy();
+    temporaryDirectory = mkdtempSync(join(tmpdir(), "core-replay-lock-"));
+    const path = join(temporaryDirectory, "fixture.sqlite");
+    db = await new DataSource({ ...options, database: path }).initialize();
+    await db.query("PRAGMA busy_timeout = 0");
+    await db
+      .getRepository(TransactionBlock)
+      .save({ id: 1, block: 100, timestamp: 1000 });
+    const competitor = new FixtureDriver(path);
+    competitor.pragma("busy_timeout = 0");
+    return competitor;
+  }
+
+  it("retries a real competing writer after rollback without rereading contract state", async () => {
+    const competitor = await openCompetingConnection();
+    try {
+      await prepareNativeDelegationReplay(db);
+      await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+      competitor.prepare("BEGIN IMMEDIATE").run();
+      const waits: boolean[] = [];
+      let reads = 0;
+      const reader: DelegationStateReader = {
+        readDelegates: async () => {
+          reads++;
+          return ["b"];
+        },
+        readEntry: async () => {
+          reads++;
+          return {
+            delegator: "a",
+            delegate: "b",
+            registeredAt: BigInt(1792022400),
+            expiry: BigInt(1234),
+            allTokens: false,
+            tokenId: BigInt(0),
+          };
+        },
+      };
+      await syncNativeDelegations(
+        db,
+        {
+          getBlockNumber: async () => 100,
+          getBlock: async () => ({ hash: "100" }),
+        },
+        reader,
+        async () => {
+          throw new Error("unexpected rescan");
+        },
+        () => {},
+        (waiting) => {
+          waits.push(waiting);
+          if (waiting) {
+            assert.equal(db.createQueryRunner().isTransactionActive, false);
+            assert.deepEqual(
+              competitor
+                .prepare(
+                  "SELECT expiry FROM native_delegation_registrations_replay",
+                )
+                .all(),
+              [{ expiry: null }],
+            );
+            competitor.prepare("ROLLBACK").run();
+          }
+        },
+      );
+      assert.deepEqual(waits, [true, false]);
+      assert.equal(reads, 2);
+      assert.equal(await isNativeDelegationIndexReady(db), true);
+      assert.equal(
+        (
+          await db
+            .getRepository(Delegation)
+            .findOneByOrFail({ from_address: "a" })
+        ).expiry,
+        1234,
+      );
+    } finally {
+      competitor.close();
+    }
+  });
+
+  it("rolls back a blocked publication commit, preserving all tables before retry", async () => {
+    const competitor = await openCompetingConnection();
+    try {
+      await prepareNativeDelegationReplay(db);
+      await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+      await resolveFixtureGroups(db, 100);
+      competitor.prepare("BEGIN").run();
+      competitor.prepare("SELECT * FROM nft_delegation_blocks").all();
+      const waits: boolean[] = [];
+      await completeNativeDelegationReplay(db, 100, (waiting) => {
+        waits.push(waiting);
+        if (waiting) {
+          assert.deepEqual(
+            competitor
+              .prepare("SELECT block, index_version FROM nft_delegation_blocks")
+              .all(),
+            [{ block: 10, index_version: 0 }],
+          );
+          for (const [live, staged] of [
+            ["consolidations", "consolidations_replay"],
+            ["delegations", "delegations_replay"],
+            [
+              "native_delegation_registrations",
+              "native_delegation_registrations_replay",
+            ],
+          ]) {
+            const expectedLive = live === "consolidations" ? 1 : 0;
+            assert.deepEqual(
+              competitor.prepare(`SELECT COUNT(*) AS n FROM ${live}`).all(),
+              [{ n: expectedLive }],
+            );
+            assert.deepEqual(
+              competitor.prepare(`SELECT COUNT(*) AS n FROM ${staged}`).all(),
+              [{ n: 1 }],
+            );
+          }
+          assert.deepEqual(
+            competitor
+              .prepare("SELECT block FROM nft_delegation_replay_blocks")
+              .all(),
+            [{ block: 100 }],
+          );
+          competitor.prepare("ROLLBACK").run();
+        }
+      });
+      assert.deepEqual(waits, [true, false]);
+      assert.equal(await isNativeDelegationIndexReady(db), true);
+      for (const entity of [
+        Consolidation,
+        Delegation,
+        NativeDelegationRegistration,
+      ]) {
+        assert.equal(await db.getRepository(entity).count(), 1);
+      }
+      assert.equal(await db.getRepository(NFTDelegationReplayBlock).count(), 0);
+    } finally {
+      competitor.close();
+    }
+  });
+
+  it("bounds persistent real contention and does not retry unrelated failures", async () => {
+    const competitor = await openCompetingConnection();
+    try {
+      competitor.prepare("BEGIN IMMEDIATE").run();
+      let attempts = 0;
+      const waits: boolean[] = [];
+      await assert.rejects(
+        retryReplayTransaction(
+          db,
+          (waiting) => waits.push(waiting),
+          async (manager) => {
+            attempts++;
+            await manager
+              .getRepository(NFTDelegationBlock)
+              .findOneByOrFail({ id: 1 });
+            await manager
+              .getRepository(NFTDelegationBlock)
+              .update({ id: 1 }, { block: 200 });
+          },
+          { maxAttempts: 3, baseDelayMs: 1 },
+        ),
+        /database is locked/,
+      );
+      assert.equal(attempts, 3);
+      assert.deepEqual(waits, [true, true]);
+      competitor.prepare("ROLLBACK").run();
+      assert.equal(await getLatestNFTDBlock(db), 10);
+      attempts = 0;
+      const failure = new Error("invalid reconciliation metadata");
+      await assert.rejects(
+        retryReplayTransaction(db, undefined, async () => {
+          attempts++;
+          throw failure;
+        }),
+        (error) => error === failure,
+      );
+      assert.equal(attempts, 1);
+    } finally {
+      competitor.close();
+    }
   });
 
   it("preserves legacy rows during chunks, resumes by checkpoint, then replaces atomically", async () => {
@@ -746,7 +947,10 @@ describe("native delegation persistence and resumable atomic replay", () => {
       syncNativeDelegations(db, provider, reader, noScan, recordProgress),
       /last batch interrupted/,
     );
-    assert.deepEqual(progress, [[0, 21], [20, 21]]);
+    assert.deepEqual(progress, [
+      [0, 21],
+      [20, 21],
+    ]);
     assert.equal(await getLatestNFTDBlock(db), 10);
     assert.equal(await db.getRepository(Delegation).count(), 0);
     assert.equal(await db.getRepository(ReplayDelegation).count(), 20);

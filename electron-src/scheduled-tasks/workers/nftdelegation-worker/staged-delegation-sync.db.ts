@@ -25,6 +25,10 @@ import {
   writeDelegations,
 } from "./delegation-row";
 import { mapInChunks } from "./map-in-chunks";
+import {
+  retryReplayTransaction,
+  type DatabaseWaitUpdate,
+} from "./replay-transaction";
 
 /** Resume version-2 staging, or rebuild only shadow state after an older replay. */
 export async function prepareNativeDelegationReplay(
@@ -163,9 +167,10 @@ export async function persistReconciledDelegationGroup(
   db: DataSource,
   snapshotBlock: number,
   registrations: NativeDelegationRegistration[],
+  onDatabaseWait?: DatabaseWaitUpdate,
 ) {
   if (!registrations.length) return;
-  await db.transaction(async (manager) => {
+  await retryReplayTransaction(db, onDatabaseWait, async (manager) => {
     const checkpoint = await manager
       .getRepository(NFTDelegationReplayBlock)
       .findOneByOrFail({ id: 1 });

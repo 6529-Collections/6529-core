@@ -16,6 +16,10 @@ import { NativeDelegationScan } from "./delegation-logs";
 import { NATIVE_DELEGATION_INDEX_VERSION } from "../../../../electron-constants";
 import { setTdhRecalculationNeeded } from "../transactions-worker/transactions-worker.db";
 import {
+  retryReplayTransaction,
+  type DatabaseWaitUpdate,
+} from "./replay-transaction";
+import {
   writeStagedDelegationEvents,
   replaceIndexTable,
 } from "./staged-delegation-sync.db";
@@ -141,8 +145,9 @@ export async function persistNftDelegationBlock(
 export async function completeNativeDelegationReplay(
   db: DataSource,
   endBlock: number,
+  onDatabaseWait?: DatabaseWaitUpdate,
 ) {
-  await db.transaction(async (manager) => {
+  await retryReplayTransaction(db, onDatabaseWait, async (manager) => {
     const checkpoint = await manager
       .getRepository(NFTDelegationReplayBlock)
       .findOne({ where: { id: 1 } });

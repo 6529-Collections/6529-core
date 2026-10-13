@@ -17,6 +17,7 @@ import {
 } from "./staged-delegation-sync.db";
 import { completeNativeDelegationReplay } from "./nftdelegation-worker.db";
 import { mapInChunks } from "./map-in-chunks";
+import type { DatabaseWaitUpdate } from "./replay-transaction";
 
 interface RecentStateProvider {
   getBlockNumber(): Promise<number>;
@@ -30,6 +31,7 @@ export async function syncNativeDelegations(
   reader: DelegationStateReader,
   scan: (fromBlock: number, toBlock: number) => Promise<void>,
   progress: (completed: number, total: number) => void,
+  onDatabaseWait?: DatabaseWaitUpdate,
 ): Promise<{ block: number; upgrade: boolean }> {
   const start = await prepareNativeDelegationReplay(db);
   const guardedReader = guardRecentDelegationReader(reader, () =>
@@ -78,7 +80,7 @@ export async function syncNativeDelegations(
     }
     const groups = await getPendingDelegationGroups(db);
     if (!groups.length) {
-      await completeNativeDelegationReplay(db, snapshotBlock);
+      await completeNativeDelegationReplay(db, snapshotBlock, onDatabaseWait);
       return { block: snapshotBlock, upgrade };
     }
     const counts = await db
@@ -113,7 +115,12 @@ export async function syncNativeDelegations(
     // durably; later event catch-up removes revoked slots and marks new ones
     // pending, so resuming never applies old expiry to a newer registration.
     await mapInChunks(resolved, 1, (registrations) =>
-      persistReconciledDelegationGroup(db, snapshotBlock, registrations),
+      persistReconciledDelegationGroup(
+        db,
+        snapshotBlock,
+        registrations,
+        onDatabaseWait,
+      ),
     );
   }
 }

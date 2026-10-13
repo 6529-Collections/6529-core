@@ -103,6 +103,18 @@ class NFTDelegationWorker extends CoreWorker {
     }
     const consolidations: ConsolidationEvent[] = [];
     const provider = this.getProvider();
+    let reconciliationPercentage = 0;
+    const reportReconciliation = (waiting: boolean) =>
+      sendStatusUpdate(parentPort, {
+        update: {
+          status: ScheduledWorkerStatus.RUNNING,
+          message: "Reconciling delegation scope and expiry",
+          action: waiting
+            ? "Waiting for database"
+            : "Reading recent contract state",
+          statusPercentage: reconciliationPercentage,
+        },
+      });
     const result = await syncNativeDelegations(
       this.getDb(),
       provider,
@@ -129,15 +141,11 @@ class NFTDelegationWorker extends CoreWorker {
         );
         consolidations.push(...scanned.consolidations);
       },
-      (completed, total) =>
-        sendStatusUpdate(parentPort, {
-          update: {
-            status: ScheduledWorkerStatus.RUNNING,
-            message: "Reconciling delegation scope and expiry",
-            action: "Reading recent contract state",
-            statusPercentage: total > 0 ? (completed / total) * 100 : 0,
-          },
-        }),
+      (completed, total) => {
+        reconciliationPercentage = total > 0 ? (completed / total) * 100 : 0;
+        reportReconciliation(false);
+      },
+      reportReconciliation,
     );
     if (result.upgrade) {
       sendStatusUpdate(parentPort, {
