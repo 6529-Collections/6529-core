@@ -1,7 +1,21 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import MyStreamWave from "@/components/brain/my-stream/MyStreamWave";
+import type * as ContentTabContext from "@/components/brain/ContentTabContext";
 import { HeaderProvider, useHeaderContext } from "@/contexts/HeaderContext";
 import { markMobileLaunchStep } from "@/utils/monitoring/mobileLaunchTiming";
+import { useCompetitionEvents } from "@/hooks/competitions/useCompetitionEvents";
+import { useWaveData } from "@/hooks/useWaveData";
+import { CompetitionState } from "@/components/competitions/CompetitionState";
+
+jest.mock("@/hooks/competitions/useCompetitionEvents", () => ({
+  useCompetitionEvents: jest.fn(),
+}));
 
 jest.mock("@/utils/monitoring/mobileLaunchTiming", () => ({
   markMobileLaunchStep: jest.fn(),
@@ -24,6 +38,7 @@ jest.mock("@/contexts/EditingDropContext", () => ({
 }));
 
 const mockRegisterWave = jest.fn();
+const mockUpdateAvailableTabs = jest.fn();
 const mockCompleteInitialRegistration = jest.fn();
 const mockSetQueryData = jest.fn();
 const mockSetWaveData = jest.fn();
@@ -34,10 +49,8 @@ const mockReplace = jest.fn();
 const mockMemesArtSubmissionModal = jest.fn((props: any) =>
   props.isOpen ? <div data-testid="memes-submit-modal" /> : null
 );
-const mockSearchParams = {
-  get: jest.fn(),
-  toString: jest.fn(),
-};
+let mockSearchParams = new URLSearchParams();
+let mockPathname = "/waves/wave-1";
 const mockWave = {
   id: "wave-1",
   name: "Wave 1",
@@ -50,6 +63,7 @@ const mockWave = {
   wave: { authenticated_user_eligible_for_admin: false },
   metrics: {},
 } as any;
+let mockResolvedWave = mockWave;
 let mockIsApp = false;
 let mockWaveInfo: any;
 
@@ -86,7 +100,7 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 jest.mock("next/navigation", () => ({
-  usePathname: () => "/waves/wave-1",
+  usePathname: () => mockPathname,
   useRouter: () => ({
     push: mockPush,
     replace: mockReplace,
@@ -116,15 +130,39 @@ jest.mock("@/components/react-query-wrapper/ReactQueryWrapper", () => ({
 }));
 
 jest.mock("@/components/brain/ContentTabContext", () => ({
+  ...jest.requireActual<typeof ContentTabContext>(
+    "@/components/brain/ContentTabContext"
+  ),
   useContentTab: () => ({
     activeContentTab: "CHAT",
+    updateAvailableTabs: mockUpdateAvailableTabs,
+  }),
+}));
+
+jest.mock("@/hooks/competitions/useWaveCompetitionsTab", () => ({
+  useWaveCompetitionsTab: () => ({
+    hasCompetitions: false,
+    hideCompetitionsTab: false,
+    defaultCompetitionId: null,
+    defaultSelectionEnabled: false,
+  }),
+}));
+
+jest.mock("@/hooks/useWaveHasPolls", () => ({
+  useWavePollSummary: () => ({ hasPolls: false }),
+}));
+
+jest.mock("@/hooks/useWaveTimers", () => ({
+  useWaveTimers: () => ({
+    voting: { isUpcoming: false, isCompleted: false },
+    decisions: { firstDecisionDone: false },
   }),
 }));
 
 jest.mock("@/hooks/useWaveData", () => ({
-  useWaveData: () => ({
-    data: mockWave,
-  }),
+  useWaveData: jest.fn(() => ({
+    data: mockResolvedWave,
+  })),
 }));
 
 jest.mock("@/contexts/wave/MyStreamContext", () => ({
@@ -162,6 +200,7 @@ jest.mock("@/hooks/waves/useApprovalWaveStatus", () => ({
 }));
 
 jest.mock("@/hooks/waves/useWaveMetadata", () => ({
+  useWaveMetadata: () => ({ isPending: false }),
   useWaveOutcomeVisibility: () => true,
   useWaveSubmissionButtonLabelOverride: () => null,
 }));
@@ -266,18 +305,110 @@ describe("MyStreamWave registration", () => {
     jest.clearAllMocks();
     mockIsApp = false;
     mockWaveInfo = getDefaultMockWaveInfo();
-    mockSearchParams.get.mockReturnValue(null);
-    mockSearchParams.toString.mockReturnValue("");
+    mockResolvedWave = mockWave;
+    mockSearchParams = new URLSearchParams();
+    mockPathname = "/waves/wave-1";
+    window.history.replaceState(null, "", mockPathname);
   });
 
   it("registers the mounted wave for direct URL loads", async () => {
     renderWave();
+    expect(useCompetitionEvents).toHaveBeenCalledWith("wave-1", true);
 
     await waitFor(() => {
       expect(mockRegisterWave).toHaveBeenCalledWith("wave-1", true);
       expect(mockCompleteInitialRegistration).toHaveBeenCalledWith("wave-1");
+      expect(mockUpdateAvailableTabs).toHaveBeenCalledWith(
+        expect.objectContaining({ waveId: "wave-1" })
+      );
     });
   });
+
+  it.each([
+    "/waves/wave-1/competitions",
+    "/waves/wave-1/competitions/alpha",
+    "/waves/wave-1/competitions/new",
+  ])(
+    "keeps the competition error route available on a missing wave (%s)",
+    (pathname) => {
+      mockPathname = pathname;
+      renderWave();
+      const options = jest.mocked(useWaveData).mock.calls.at(-1)![0];
+      expect(options.onWaveNotFound).toBeUndefined();
+      act(() => options.onWaveNotFound?.());
+      expect(mockPush).not.toHaveBeenCalled();
+    }
+  );
+
+  it("renders the competition error and Retry without wave metadata", () => {
+    mockPathname = "/waves/wave-1/competitions/alpha";
+    mockResolvedWave = undefined;
+    const retry = jest.fn();
+    render(
+      <HeaderProvider>
+        <MyStreamWave
+          waveId="wave-1"
+          competitionContent={<CompetitionState error retry={retry} />}
+        />
+      </HeaderProvider>
+    );
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "This competition could not be loaded"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(retry).toHaveBeenCalledTimes(1);
+    expect(mockPush).not.toHaveBeenCalled();
+  });
+
+  it("keeps ordinary absent-wave content empty", () => {
+    mockResolvedWave = undefined;
+    render(
+      <HeaderProvider>
+        <MyStreamWave
+          waveId="wave-1"
+          competitionContent={<CompetitionState error retry={jest.fn()} />}
+        />
+      </HeaderProvider>
+    );
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByTestId("chat")).toBeNull();
+  });
+
+  it.each([
+    ["/waves/wave-1", "/waves"],
+    ["/messages/wave-1", "/messages"],
+  ])(
+    "still clears an ordinary missing-wave route (%s)",
+    (pathname, destination) => {
+      mockPathname = pathname;
+      mockSearchParams = new URLSearchParams("wave=wave-1&serialNo=23");
+      window.history.replaceState(null, "", `${pathname}?${mockSearchParams}`);
+      renderWave();
+      const options = jest.mocked(useWaveData).mock.calls.at(-1)![0];
+      expect(options.onWaveNotFound).toBeDefined();
+      act(() => options.onWaveNotFound?.());
+      expect(mockPush).toHaveBeenCalledWith(`${destination}?serialNo=23`, {
+        scroll: false,
+      });
+    }
+  );
+
+  it.each([
+    "/waves/wave-1/competitions/alpha?tab=leaderboard",
+    "/waves/wave-2?tab=chat",
+    "/network?wave=wave-1",
+  ])(
+    "ignores a captured missing-wave callback after moving to %s",
+    (target) => {
+      renderWave();
+      const callback = jest.mocked(useWaveData).mock.calls.at(-1)![0]
+        .onWaveNotFound;
+      expect(callback).toBeDefined();
+      window.history.replaceState(null, "", target);
+      act(() => callback?.());
+      expect(mockPush).not.toHaveBeenCalled();
+    }
+  );
 
   it("renders embedded competition tabs without a second wave header", () => {
     render(
@@ -286,6 +417,7 @@ describe("MyStreamWave registration", () => {
       </HeaderProvider>
     );
     expect(screen.getByTestId("competition-tabs")).toBeVisible();
+    expect(useCompetitionEvents).toHaveBeenCalledWith("wave-1", false);
     expect(screen.queryByTestId("tabs")).not.toBeInTheDocument();
   });
 
@@ -309,6 +441,14 @@ describe("MyStreamWave registration", () => {
         "Submit drop"
       );
     });
+    expect(screen.queryByTestId("competition-tabs")).not.toBeInTheDocument();
+    expect(mockUpdateAvailableTabs).toHaveBeenCalledWith(
+      expect.objectContaining({
+        waveId: "wave-1",
+        hasAuthenticatedProfile: true,
+        votingState: "ONGOING",
+      })
+    );
   });
 
   it("does not expose the app header drop action while editing", async () => {

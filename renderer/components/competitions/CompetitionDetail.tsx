@@ -9,6 +9,7 @@ import { useMemo, useState } from "react";
 import { WaveDisplayMetadataContext } from "@/contexts/WaveDisplayMetadataContext";
 import { TabToggle } from "@/components/common/TabToggle";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
+import { useWaveTabNavigation } from "@/hooks/useWaveTabNavigation";
 import {
   useCompetitionDetail,
   useCompetitionHub,
@@ -24,6 +25,7 @@ import {
   getCompetitionTab,
   getCompetitionsRoute,
   isMultiCompetitionEnabled,
+  isCompetitionAccessError,
 } from "@/helpers/competition.helpers";
 import { ContentTabProvider } from "@/components/brain/ContentTabContext";
 import { useBrowserLocale } from "@/hooks/useBrowserLocale";
@@ -35,12 +37,21 @@ import CompetitionResources from "./CompetitionResources";
 import CompetitionEntryForm from "./CompetitionEntryForm";
 import CompetitionDraftEditor from "./CompetitionDraftEditor";
 import CompetitionBackLink from "./CompetitionBackLink";
+import useDeviceInfo from "@/hooks/useDeviceInfo";
+import { useLayout } from "@/components/brain/my-stream/layout/LayoutContext";
 
-function NativeCompetitionContent() {
+export function NativeCompetitionContent({
+  embedded = false,
+}: {
+  readonly embedded?: boolean;
+}) {
   const { competition, wave } = useCompetition();
+  const { isApp } = useDeviceInfo();
+  const { waveViewStyle } = useLayout();
   const locale = useBrowserLocale();
   const pathname = usePathname();
   const router = useRouter();
+  const navigateTab = useWaveTabNavigation();
   const search = useSearchParams();
   const displayMetadata = useMemo(
     () => ({
@@ -66,7 +77,7 @@ function NativeCompetitionContent() {
       : selectedTab;
   const approveLabels = getApproveWaveTabLabelsFromMetadata(presentation);
   const tabLabel = (value: (typeof COMPETITION_TABS)[number]) => {
-    if (value === "rules") return t(locale, "competitions.configuration");
+    if (value === "rules") return t(locale, "competitions.settings");
     if (competition.type === ApiCompetitionType.Approve) {
       if (value === "leaderboard") return approveLabels.approvals;
       if (value === "decisions") return approveLabels.approved;
@@ -80,6 +91,14 @@ function NativeCompetitionContent() {
     competitionId: competition.id,
   });
   const paused = pauses.isSuccess ? pauses.data : null;
+  const tabOptions = COMPETITION_TABS.filter(
+    (value) => outcomesVisible || value !== "outcomes"
+  ).map((value) => ({
+    key: value,
+    label: tabLabel(value),
+    panelId: `competition-${competition.id}-${value}`,
+  }));
+  const selectTab = (value: string) => navigateTab(`${pathname}?tab=${value}`);
   if (
     mutationsEnabled &&
     competition.lifecycle === ApiCompetitionLifecycle.Draft &&
@@ -93,24 +112,29 @@ function NativeCompetitionContent() {
       />
     );
   return (
-    <div className="tw-space-y-5">
-      <div className="tw-flex tw-items-center tw-gap-3 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-px-2 sm:tw-px-4">
-        <div className="tw-min-w-0 tw-flex-1 tw-overflow-x-auto tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500">
-          <TabToggle
-            options={COMPETITION_TABS.filter(
-              (value) => outcomesVisible || value !== "outcomes"
-            ).map((value) => ({
-              key: value,
-              label: tabLabel(value),
-              panelId: `competition-${competition.id}-${value}`,
-            }))}
-            activeKey={tab}
-            onSelect={(value) =>
-              router.push(`${pathname}?tab=${value}`, { scroll: false })
-            }
-          />
+    <div
+      style={embedded && isApp ? waveViewStyle : undefined}
+      className={
+        embedded
+          ? "tw-h-full tw-min-h-0 tw-space-y-5 tw-overflow-y-auto tw-p-4"
+          : "tw-space-y-5"
+      }
+    >
+      {!embedded && (
+        <div
+          data-competition-navigation="detail"
+          className="tw-flex tw-items-center tw-gap-3 tw-border-x-0 tw-border-b tw-border-t-0 tw-border-solid tw-border-iron-800 tw-bg-iron-950 tw-px-2 sm:tw-px-4"
+        >
+          <div className="tw-min-w-0 tw-flex-1 tw-overflow-x-auto tw-scrollbar-thin tw-scrollbar-track-iron-800 tw-scrollbar-thumb-iron-500">
+            <TabToggle
+              transition
+              options={tabOptions}
+              activeKey={tab}
+              onSelect={selectTab}
+            />
+          </div>
         </div>
-      </div>
+      )}
       {pauses.isError && (
         <CompetitionState
           error
@@ -120,12 +144,9 @@ function NativeCompetitionContent() {
         />
       )}
       {paused && (
-        <p
-          role="status"
-          className="tw-rounded-lg tw-bg-iron-900 tw-p-4 tw-text-sm tw-text-amber-300"
-        >
+        <output className="tw-block tw-rounded-lg tw-bg-iron-900 tw-p-4 tw-text-sm tw-text-amber-300">
           {t(locale, "competitions.paused")}
-        </p>
+        </output>
       )}
       {!competition.permissions.submit && (
         <p className="tw-text-sm tw-text-iron-400">
@@ -139,7 +160,7 @@ function NativeCompetitionContent() {
         />
       )}
       <section
-        role="tabpanel"
+        role={embedded ? undefined : "tabpanel"}
         id={`competition-${competition.id}-${tab}`}
         aria-label={tabLabel(tab)}
         className="tw-space-y-5"
@@ -175,10 +196,24 @@ export default function CompetitionDetail({
   readonly waveId: string;
   readonly competitionId: string;
 }) {
-  const wave = useWaveData({ waveId, onWaveNotFound: () => undefined });
+  const { isApp } = useDeviceInfo();
+  const { waveViewStyle } = useLayout();
+  const search = useSearchParams();
+  const tab = getCompetitionTab(search.get("tab"));
+  const wave = useWaveData({
+    waveId,
+    onWaveNotFound: () => undefined,
+  });
   const hub = useCompetitionHub(waveId);
   const competition = useCompetitionDetail({ waveId, competitionId });
-  const error = hub.isError || competition.isError || wave.isError;
+  const isDraft = competition.data?.lifecycle === ApiCompetitionLifecycle.Draft;
+  const hasCachedContent = Boolean(hub.data && competition.data && wave.data);
+  const accessRejected = [hub.error, competition.error, wave.error].some(
+    isCompetitionAccessError
+  );
+  const error =
+    accessRejected ||
+    (!hasCachedContent && (hub.isError || competition.isError || wave.isError));
   let content = <CompetitionState />;
   if (error)
     content = (
@@ -200,7 +235,9 @@ export default function CompetitionDetail({
           wave: wave.data,
         }}
       >
-        {hub.data.legacy_primary_competition_id === competitionId ? (
+        {hub.data.legacy_primary_competition_id === competitionId &&
+        tab !== "rules" &&
+        tab !== "votes" ? (
           <div className="tw-h-[70dvh]">
             <ContentTabProvider competitionOnly>
               <MyStreamWave waveId={waveId} competitionOnly />
@@ -212,14 +249,19 @@ export default function CompetitionDetail({
       </CompetitionProvider>
     );
   return (
-    <section className="tw-h-full tw-min-h-0 tw-overflow-y-auto tw-p-4 sm:tw-p-6">
+    <section
+      data-competition-detail
+      style={isApp && isDraft ? waveViewStyle : undefined}
+      className={`tw-h-full tw-min-h-0 tw-overflow-y-auto tw-px-4 tw-pt-4 sm:tw-px-6 sm:tw-pt-6 ${isDraft ? "tw-scroll-pb-24" : "tw-pb-4 sm:tw-pb-6"}`}
+    >
       <div className="tw-mx-auto tw-max-w-5xl tw-space-y-5">
         <header className="tw-space-y-3">
           <nav>
             <CompetitionBackLink waveId={waveId} />
           </nav>
-          {competition.data &&
-            competition.data.lifecycle !== ApiCompetitionLifecycle.Draft &&
+          {!error &&
+            competition.data &&
+            !isDraft &&
             hub.data &&
             hub.data.legacy_primary_competition_id !== competitionId && (
               <h1 className="tw-m-0 tw-min-w-0 tw-break-words tw-text-xl tw-font-bold tw-leading-tight tw-text-iron-50 sm:tw-text-2xl">

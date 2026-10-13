@@ -39,7 +39,9 @@ import HeaderActionButtons from "./HeaderActionButtons";
 import NetworkHealthCTA from "./NetworkHealthCTA";
 import Button from "../utils/button/Button";
 import { useWaveShareCopyAction } from "@/hooks/waves/useWaveShareCopyAction";
-import WaveDescriptionPopover from "@/components/waves/header/WaveDescriptionPopover";
+import { useWaveInformation } from "@/contexts/WaveInformationContext";
+import { useBrowserLocale } from "@/hooks/useBrowserLocale";
+import { t } from "@/i18n/messages";
 import WavePicture from "@/components/waves/WavePicture";
 import { getDirectMessageProfileHref } from "@/helpers/waves/direct-message-profile.helpers";
 import {
@@ -64,6 +66,7 @@ import {
 } from "./app-header-wave-preview";
 import WaveHeaderRestrictionButton from "@/components/waves/header/WaveHeaderRestrictionButton";
 import WaveParentNavigation from "@/components/waves/header/WaveParentNavigation";
+import WaveJoinCta from "@/components/waves/header/WaveJoinCta";
 import MainStageNominationPopover from "@/components/brain/my-stream/tabs/MainStageNominationPopover";
 import { useProfileDoubleActivate } from "./useProfileDoubleActivate";
 
@@ -229,6 +232,8 @@ const HeaderTitleContent = ({
   readonly previewText: string | null;
   readonly finalTitle: ReactNode;
 }) => {
+  const information = useWaveInformation();
+  const locale = useBrowserLocale();
   if (displayWave === null) {
     return <span className="tw-text-sm tw-font-semibold">{finalTitle}</span>;
   }
@@ -266,23 +271,25 @@ const HeaderTitleContent = ({
               parentWave={activeWave?.parent_wave}
               variant="compact-header"
             />
-            {activeWave !== null &&
-            Boolean(activeWave.description_drop?.id) &&
-            !isDm &&
-            previewText !== null ? (
-              <WaveDescriptionPopover
-                wave={activeWave}
-                align="left"
-                ariaLabel="Show wave description"
-                triggerClassName="tw-flex tw-w-full tw-min-w-0 tw-flex-col tw-items-start tw-border-0 tw-bg-transparent tw-p-0 tw-text-left"
+            {activeWave !== null && !isDm ? (
+              <button
+                type="button"
+                onClick={() => information?.open(activeWave.id)}
+                aria-haspopup="dialog"
+                aria-label={t(locale, "waves.information.open", {
+                  name: displayWave.name,
+                })}
+                className="tw-flex tw-min-h-8 tw-w-full tw-min-w-0 tw-flex-col tw-items-start tw-rounded tw-border-0 tw-bg-transparent tw-p-0 tw-text-left tw-text-iron-50 focus-visible:tw-outline focus-visible:tw-outline-2 focus-visible:tw-outline-primary-400"
               >
                 <span className="tw-w-full tw-truncate tw-text-sm tw-font-semibold">
                   {displayWave.name}
                 </span>
-                <span className="tw-hidden tw-w-full tw-truncate tw-text-xs tw-font-normal tw-text-iron-400 sm:tw-block">
-                  {previewText}
-                </span>
-              </WaveDescriptionPopover>
+                {previewText && (
+                  <span className="tw-hidden tw-w-full tw-truncate tw-text-xs tw-font-normal tw-text-iron-400 sm:tw-block">
+                    {previewText}
+                  </span>
+                )}
+              </button>
             ) : (
               <span className="tw-w-full tw-min-w-0 tw-truncate tw-text-sm tw-font-semibold">
                 {displayWave.name}
@@ -712,6 +719,13 @@ export default function AppHeader() {
           />
         </div>
         <div className="tw-flex tw-flex-shrink-0 tw-items-center tw-justify-end tw-gap-x-0.5">
+          {activeWave && isInsideWave && (
+            <WaveJoinCta
+              wave={activeWave}
+              variant="app-header"
+              className="tw-mr-1"
+            />
+          )}
           <HeaderDropActionButton action={headerDropAction} />
           {isHomeRoute && (
             <NetworkHealthCTA

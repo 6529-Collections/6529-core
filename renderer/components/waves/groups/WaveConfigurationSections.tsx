@@ -1,5 +1,6 @@
 import type { ApiWave } from "@/generated/models/ApiWave";
 import { ApiWaveType } from "@/generated/models/ApiWaveType";
+import WaveChatReplies from "@/components/waves/specs/WaveChatReplies";
 import WaveChatStatus from "@/components/waves/specs/WaveChatStatus";
 import WaveDisableLinks from "@/components/waves/specs/WaveDisableLinks";
 import WaveSlowMode from "@/components/waves/specs/WaveSlowMode";
@@ -7,9 +8,7 @@ import { waveRightPanelText } from "@/helpers/waves/wave-right-panel.helpers";
 import WaveAccessGroups from "./WaveAccessGroups";
 import WaveConfigurationAdminSettings from "./WaveConfigurationAdminSettings";
 import WaveConfigurationDeleteChatHistory from "./WaveConfigurationDeleteChatHistory";
-import WaveConfigurationDisplay from "./WaveConfigurationDisplay";
 import WaveConfigurationPersonalDisplay from "./WaveConfigurationPersonalDisplay";
-import WaveConfigurationReadOnlySections from "./WaveConfigurationReadOnlySections";
 import WaveConfigurationRules from "./WaveConfigurationRules";
 import WavePanelSection from "./WavePanelSection";
 
@@ -29,7 +28,11 @@ export default function WaveConfigurationSections({
       <WavePanelSection
         title={waveRightPanelText("waves.sidebar.rightPanel.settings.access")}
       >
-        <WaveAccessGroups wave={wave} display="members" />
+        <WaveAccessGroups
+          wave={wave}
+          display="members"
+          includeCompetition={false}
+        />
       </WavePanelSection>
 
       {showChatSection && (
@@ -44,15 +47,16 @@ export default function WaveConfigurationSections({
               <>
                 <WaveDisableLinks wave={wave} display="configuration" />
                 <WaveSlowMode wave={wave} display="configuration" />
+                <WaveChatReplies wave={wave} />
               </>
             )}
           </div>
         </WavePanelSection>
       )}
 
-      <WaveConfigurationDisplay wave={wave} />
-      <WaveConfigurationReadOnlySections wave={wave} />
-      <WaveConfigurationRules wave={wave} />
+      {wave.wave.type === ApiWaveType.Chat && (
+        <WaveConfigurationRules wave={wave} />
+      )}
       <WaveConfigurationAdminSettings wave={wave} />
       <WaveConfigurationDeleteChatHistory wave={wave} />
       {showChatSettings && <WaveConfigurationPersonalDisplay />}

@@ -2,6 +2,7 @@ import type { ApiDropCompetitionContext } from "@/generated/models/ApiDropCompet
 import { QueryKey } from "@/components/react-query-wrapper/query-keys";
 import { ApiCompetitionComputedPhase } from "@/generated/models/ApiCompetitionComputedPhase";
 import type { ApiCompetition } from "@/generated/models/ApiCompetition";
+import type { ApiDefaultCompetition } from "@/generated/models/ApiDefaultCompetition";
 import type { ApiCompetitionPage } from "@/generated/models/ApiCompetitionPage";
 import type { ApiCompetitionEntryPage } from "@/generated/models/ApiCompetitionEntryPage";
 import type { ApiCompetitionLeaderboardPage } from "@/generated/models/ApiCompetitionLeaderboardPage";
@@ -28,6 +29,7 @@ import {
   commonApiPut,
 } from "@/services/api/common-api";
 import type { QueryClient } from "@tanstack/react-query";
+import { scheduleDropCompetitionContext } from "./competition-context-scheduler";
 
 export interface CompetitionIdentity {
   readonly waveId: string;
@@ -46,17 +48,25 @@ export const competitionQueryKey = (
   identity: CompetitionIdentity,
   viewer: string | null
 ) => [QueryKey.COMPETITION, { ...competitionScope(identity), viewer }] as const;
+export const defaultCompetitionQueryKey = (
+  waveId: string,
+  viewer: string | null
+) => [QueryKey.DEFAULT_COMPETITION, { wave_id: waveId, viewer }] as const;
 
 export async function fetchDropCompetitionContext(
   waveId: string,
   dropId: string,
   signal?: AbortSignal
 ) {
-  const context = await commonApiFetch<ApiDropCompetitionContext>({
-    endpoint: `v3/waves/${encodeURIComponent(waveId)}/drops/${encodeURIComponent(dropId)}/competition-context`,
-    signal,
-    errorMode: "structured",
-  });
+  const context = await scheduleDropCompetitionContext(
+    () =>
+      commonApiFetch<ApiDropCompetitionContext>({
+        endpoint: `v3/waves/${encodeURIComponent(waveId)}/drops/${encodeURIComponent(dropId)}/competition-context`,
+        signal,
+        errorMode: "structured",
+      }),
+    signal
+  );
   if (context.competition === null && context.entry === null) return context;
   if (
     !context.competition ||
@@ -83,6 +93,13 @@ export async function fetchCompetitionHub(
   if (hub.id !== waveId) throw new Error("Invalid competition parent");
   return hub;
 }
+
+export const fetchDefaultCompetition = (waveId: string, signal?: AbortSignal) =>
+  commonApiFetch<ApiDefaultCompetition>({
+    endpoint: `v3/waves/${encodeURIComponent(waveId)}/default-competition`,
+    signal,
+    errorMode: "structured",
+  });
 
 export async function fetchCompetition(
   identity: CompetitionIdentity,
@@ -310,6 +327,15 @@ async function invalidateCompetitionScope(
   scope: { wave_id: string; competition_id?: string }
 ) {
   await Promise.all([
+    client.invalidateQueries({
+      queryKey: [QueryKey.WAVE, { wave_id: waveId }],
+    }),
+    client.invalidateQueries({
+      queryKey: [QueryKey.WAVE_METADATA, { wave_id: waveId }],
+    }),
+    client.invalidateQueries({
+      queryKey: [QueryKey.DEFAULT_COMPETITION, { wave_id: waveId }],
+    }),
     client.invalidateQueries({
       queryKey: [QueryKey.COMPETITION_DROP_CONTEXT, { wave_id: waveId }],
     }),

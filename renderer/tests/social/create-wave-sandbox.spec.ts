@@ -37,6 +37,193 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     "Create-wave sandbox requires the local mock API runner."
   );
 
+  test("announces empty fields and recovers first-post text after reload", async ({
+    page,
+    baseURL,
+  }) => {
+    await gotoCreateWave(page);
+    await nextStepButton(page).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Name is required" })
+    ).toBeVisible();
+    await expect(page.getByLabel(/Wave Name/)).toBeFocused();
+    await page.getByLabel(/Wave Name/).fill("Quick Chat Recovery");
+    await nextStepButton(page).click();
+    const editor = page.getByRole("textbox", {
+      name: "First post",
+      exact: true,
+    });
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Write a first post" })
+    ).toBeVisible();
+    await expect(editor).toHaveAttribute("aria-invalid", "true");
+    await expect(editor).toHaveAttribute("aria-required", "true");
+    await expect(editor).toBeFocused();
+    await expect(editor).toHaveAccessibleDescription(
+      "Write a first post or add media before continuing."
+    );
+    await editor.fill("   ");
+    await nextStepButton(page).click();
+    await expect(editor).toHaveAttribute("aria-invalid", "true");
+    await editor.fill("Text that must survive a tab reload.");
+    await expect(editor).toHaveAttribute("aria-invalid", "false");
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Object.keys(localStorage)
+            .filter((key) => key.startsWith("create-wave-drafts:v2:"))
+            .map((key) => localStorage.getItem(key))
+            .join("\n")
+        )
+      )
+      .toContain("Text that must survive a tab reload.");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForRouteReady(page);
+    await dismissNextDevTools(page);
+    await page
+      .getByRole("button", { name: "Saved Drafts", exact: true })
+      .click();
+    await page.getByRole("button", { name: /^Quick Chat Recovery/ }).click();
+    await expect(page.getByLabel(/Wave Name/)).toHaveValue(
+      "Quick Chat Recovery"
+    );
+    await expect(editor).toContainText("Text that must survive a tab reload.");
+    await nextStepButton(page).click();
+    await expect(
+      page.getByRole("button", { name: "Confirm and create" })
+    ).toBeVisible();
+    await expect(
+      page.getByText("Text that must survive a tab reload.").first()
+    ).toBeVisible();
+    await previousStepButton(page).click();
+    await expect(editor).toContainText("Text that must survive a tab reload.");
+    await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("blocks invalid names after Review and submits only the refreshed first post", async ({
+    page,
+    baseURL,
+  }) => {
+    await gotoCreateWave(page);
+    const name = page.getByLabel(/Wave Name/);
+    const editor = page.getByRole("textbox", {
+      name: "First post",
+      exact: true,
+    });
+    const originalPost = "First post shown in the original review.";
+    const editedPost = SANDBOX_CREATED_WAVE_DESCRIPTION;
+    const review = page.getByRole("region", {
+      name: "Description",
+      exact: true,
+    });
+    await name.fill(SANDBOX_CREATED_WAVE_NAME);
+    await editor.fill(originalPost);
+    await nextStepButton(page).click();
+    await expect(review.getByText(originalPost, { exact: true })).toBeVisible();
+    await previousStepButton(page).click();
+    await name.fill("   ");
+    await editor.fill(editedPost);
+    await nextStepButton(page).click();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Name is required" })
+    ).toBeVisible();
+    await expect(name).toBeFocused();
+    await expect(editor).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Confirm and create", exact: true })
+    ).toHaveCount(0);
+    expect(
+      (await fetchSandboxRequests(baseURL)).filter(
+        (request) => request.method === "POST" && request.path === "/api/waves"
+      )
+    ).toEqual([]);
+
+    await name.fill(SANDBOX_CREATED_WAVE_NAME);
+    await nextStepButton(page).click();
+    await expect(review.getByText(editedPost, { exact: true })).toBeVisible();
+    await expect(review.getByText(originalPost, { exact: true })).toHaveCount(
+      0
+    );
+    await page
+      .getByRole("button", { name: "Confirm and create", exact: true })
+      .click();
+    await expect(page).toHaveURL(
+      new RegExp(`/waves/${SANDBOX_CREATED_WAVE_ID}$`),
+      { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
+    );
+    expect(await fetchSandboxRequests(baseURL)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          method: "POST",
+          path: "/api/waves",
+          body: expect.objectContaining({
+            name: SANDBOX_CREATED_WAVE_NAME,
+            description: editedPost,
+          }),
+        }),
+      ])
+    );
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
+  test("restores multipart first posts with visible parts that can be removed", async ({
+    page,
+    baseURL,
+  }) => {
+    await gotoCreateWave(page);
+    await page.getByLabel(/Wave Name/).fill("Multipart draft recovery");
+    const editor = page.getByRole("textbox", {
+      name: "First post",
+      exact: true,
+    });
+    await editor.fill("Earlier part that must stay visible.");
+    await page
+      .getByRole("button", { name: "Break into storm", exact: true })
+      .click();
+    await editor.fill("Current restored part.");
+    await expect
+      .poll(() =>
+        page.evaluate(() =>
+          Object.keys(localStorage)
+            .filter((key) => key.startsWith("create-wave-drafts:v2:"))
+            .map((key) => localStorage.getItem(key))
+            .join("\n")
+        )
+      )
+      .toContain("Current restored part.");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await waitForRouteReady(page);
+    await dismissNextDevTools(page);
+    await page
+      .getByRole("button", { name: "Saved Drafts", exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: /^Multipart draft recovery/ })
+      .click();
+    await expect(
+      page.getByText("Earlier part that must stay visible.", { exact: true })
+    ).toBeVisible();
+    await expect(editor).toContainText("Current restored part.");
+    await expect(
+      page.getByRole("button", { name: "Continue storm", exact: true })
+    ).toBeVisible();
+    await page
+      .getByRole("button", { name: "Remove part", exact: true })
+      .click();
+    await expect(
+      page.getByText("Earlier part that must stay visible.", { exact: true })
+    ).toHaveCount(0);
+    await nextStepButton(page).click();
+    await expect(
+      page.getByText("Current restored part.", { exact: true }).first()
+    ).toBeVisible();
+    await expect(
+      page.getByText("Earlier part that must stay visible.", { exact: true })
+    ).toHaveCount(0);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
   test("creates a chat wave with only explicit sandbox mutations", async ({
     baseURL,
     page,
@@ -44,10 +231,11 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await gotoCreateWave(page);
 
     await page.getByLabel(/Wave Name/).fill(SANDBOX_CREATED_WAVE_NAME);
-    // The wave type must be explicitly chosen now (no default); pick Chat.
-    await page.getByText("Chat", { exact: true }).click();
-    await expect(nextStepButton(page)).toBeEnabled();
-    await nextStepButton(page).click();
+    // Chat starts with name and first post; permissions are optional.
+    await expect(
+      page.getByRole("heading", { name: "First post" })
+    ).toBeVisible();
+    await openOptionalSettings(page);
 
     await expect(
       page.getByRole("heading", { name: "Access", level: 2 })
@@ -86,18 +274,8 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await expect(
       adminGroup.getByRole("button", { name: "View members" })
     ).toBeVisible();
-    await nextStepButton(page).click();
-
-    await expect(
-      page.getByRole("heading", { name: "Rules", level: 2, exact: true })
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await nextStepButton(page).click();
-
-    await expect(
-      page.getByText("Give a good description of your wave")
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
     await fillDescription(page, SANDBOX_CREATED_WAVE_DESCRIPTION);
-    await page.getByRole("button", { name: "Complete" }).click();
+    await completeWaveReview(page);
     await expect
       .poll(
         async () =>
@@ -176,6 +354,97 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
+  test("scrolls the wave form with the pointer inside Admins", async ({
+    page,
+    baseURL,
+  }) => {
+    await installExternalDataFixtures(page);
+    await page.goto("/waves?create=wave", { waitUntil: "domcontentloaded" });
+    await waitForRouteReady(page);
+    await expect(
+      page.getByRole("heading", { name: "Create Wave", exact: true })
+    ).toBeVisible();
+    await dismissNextDevTools(page);
+    await openOptionalSettings(page);
+    await page
+      .getByRole("button", { name: /Customize other permissions/ })
+      .click();
+    const admins = page.getByRole("group", { name: "Admins", exact: true });
+    await admins.getByRole("button", { name: "Edit", exact: true }).click();
+    const criteria = admins.getByRole("group", {
+      name: "Group criteria",
+      exact: true,
+    });
+    const choices = criteria.getByRole("button");
+    const desktopCriteria = await page.evaluate(
+      () => window.matchMedia("(min-width: 1024px)").matches
+    );
+    const positions = await choices.evaluateAll((buttons) =>
+      buttons.map((button) => {
+        const bounds = button.getBoundingClientRect();
+        return { x: bounds.x, y: bounds.y };
+      })
+    );
+    const alignedPositions = positions.map((position) =>
+      desktopCriteria ? position.x : position.y
+    );
+    expect(
+      Math.max(...alignedPositions) - Math.min(...alignedPositions)
+    ).toBeLessThan(1);
+    if (desktopCriteria) {
+      expect(positions.at(-1)!.y).toBeGreaterThan(positions[0]!.y);
+      const criteriaBounds = await criteria.boundingBox();
+      const editorBounds = await admins
+        .getByRole("region", { name: "Identities", exact: true })
+        .boundingBox();
+      expect(editorBounds!.x).toBeGreaterThanOrEqual(
+        criteriaBounds!.x + criteriaBounds!.width
+      );
+    }
+    const lastCriterion = choices.last();
+    await lastCriterion.focus();
+    await expect(lastCriterion).toBeInViewport({ ratio: 1 });
+    const horizontalScroll = await criteria.evaluate((element) => ({
+      left: element.scrollLeft,
+      width: element.clientWidth,
+      contentWidth: element.scrollWidth,
+    }));
+    if (horizontalScroll.contentWidth > horizontalScroll.width) {
+      expect(horizontalScroll.left).toBeGreaterThan(0);
+    }
+    await choices.first().focus();
+    const included = admins.getByRole("tab", { name: "Included", exact: true });
+    await included.scrollIntoViewIfNeeded();
+    const scrollPosition = () =>
+      included.evaluate((element) => {
+        for (
+          let parent = element.parentElement;
+          parent;
+          parent = parent.parentElement
+        ) {
+          if (
+            getComputedStyle(parent).overflowY === "auto" &&
+            parent.scrollHeight > parent.clientHeight
+          ) {
+            return parent.scrollTop;
+          }
+        }
+        throw new Error("Expected a scrollable wave form");
+      });
+    const before = await scrollPosition();
+    // The compact desktop editor can already be near the form's bottom.
+    // Scroll toward the earlier fields to test propagation with room to move.
+    expect(before).toBeGreaterThan(50);
+    await included.hover();
+    await page.mouse.wheel(0, -260);
+    await expect.poll(scrollPosition).toBeLessThan(before - 50);
+    await expect(
+      page.getByRole("heading", { name: "Create Wave", exact: true })
+    ).toBeInViewport();
+    await expectNoHorizontalOverflow(page);
+    await expectNoUnsafeSandboxMutations(baseURL);
+  });
+
   test("creates, attaches, and restores a rule-based access group", async ({
     baseURL,
     page,
@@ -185,18 +454,28 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
 
     await gotoCreateWave(page);
     await page.getByLabel(/Wave Name/).fill(waveName);
-    await page.getByText("Chat", { exact: true }).click();
-    await nextStepButton(page).press("Enter");
+    await openOptionalSettings(page);
 
     let accessGroup = page.getByRole("group", {
       name: "Who can access this wave",
     });
     await accessGroup.getByRole("button", { name: "Edit" }).click();
     await expect(accessGroup.getByText("Before editing")).toBeVisible();
+    await page
+      .getByRole("button", { name: /Customize other permissions/ })
+      .click();
+    await expect(
+      accessGroup.getByRole("region", { name: "Identities", exact: true })
+    ).toBeVisible();
     await accessGroup
       .getByRole("button", { name: "Level", exact: true })
       .click();
     await accessGroup.getByLabel("Level at least").fill("3");
+    await page.getByRole("heading", { name: "Access", exact: true }).click();
+    await expect(accessGroup.getByLabel("Level at least")).toHaveValue("3");
+    await expect(
+      accessGroup.getByRole("region", { name: "Level", exact: true })
+    ).toBeVisible();
     await accessGroup.getByRole("button", { name: "Save changes" }).click();
 
     await expect(page.getByText("Group created and attached.")).toBeVisible({
@@ -206,6 +485,51 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await expect(
       accessGroup.getByRole("button", { name: "View members" })
     ).toBeVisible();
+    await accessGroup
+      .getByRole("button", { name: "Edit", exact: true })
+      .click();
+    await expect(
+      accessGroup.getByRole("button", { name: /Remove playwright, wallet/ })
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+    const configuredLevel = accessGroup.getByRole("button", {
+      name: /Level.*Configured/,
+    });
+    const cancel = accessGroup.getByRole("button", {
+      name: "Cancel",
+      exact: true,
+    });
+    const cancelBounds = await cancel.boundingBox();
+    const beforeEditing = accessGroup.getByText("Before editing", {
+      exact: true,
+    });
+    const beforeEditingBounds = await beforeEditing.boundingBox();
+    const headerContentRight = await beforeEditing.evaluate((element) => {
+      const header = element.parentElement!;
+      const style = getComputedStyle(header);
+      return (
+        header.getBoundingClientRect().right -
+        Number.parseFloat(style.paddingRight) -
+        Number.parseFloat(style.borderRightWidth)
+      );
+    });
+    expect(cancelBounds).not.toBeNull();
+    expect(beforeEditingBounds).not.toBeNull();
+    expect(cancelBounds!.x + cancelBounds!.width).toBeCloseTo(
+      headerContentRight,
+      0
+    );
+    expect(cancelBounds!.y + cancelBounds!.height / 2).toBeCloseTo(
+      beforeEditingBounds!.y + beforeEditingBounds!.height / 2,
+      0
+    );
+    await expect(configuredLevel).not.toHaveAttribute("aria-current");
+    await configuredLevel.click();
+    await expect(accessGroup.getByLabel("Level at least")).toHaveValue("3");
+    await expect(configuredLevel).toHaveAttribute("aria-current", "true");
+    await accessGroup
+      .getByRole("button", { name: "Cancel", exact: true })
+      .click();
 
     await expect
       .poll(
@@ -254,7 +578,10 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
       .poll(
         async () =>
           page.evaluate(() =>
-            window.localStorage.getItem("create-wave-drafts:v1")
+            Object.keys(window.localStorage)
+              .filter((key) => key.startsWith("create-wave-drafts:v2:"))
+              .map((key) => window.localStorage.getItem(key))
+              .join("\n")
           ),
         { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
       )
@@ -270,7 +597,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await page
       .getByRole("button", { name: new RegExp(`^${waveName}`) })
       .click();
-    await nextStepButton(page).press("Enter");
+    await openOptionalSettings(page);
 
     accessGroup = page.getByRole("group", {
       name: "Who can access this wave",
@@ -296,8 +623,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
 
     await gotoCreateWave(page);
     await page.getByLabel(/Wave Name/).fill(draftName);
-    await page.getByText("Chat", { exact: true }).click();
-    await nextStepButton(page).press("Enter");
+    await openOptionalSettings(page);
 
     const accessGroup = page.getByRole("group", {
       name: "Who can access this wave",
@@ -329,8 +655,10 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
       chatGroup.getByRole("button", { name: "Match wave access" })
     ).toBeVisible();
 
-    await previousStepButton(page).click();
+    await fillDescription(page, "Recoverable permissions test post.");
     await nextStepButton(page).click();
+    await previousStepButton(page).click();
+    await openOptionalSettings(page);
     await expect(advancedPermissions).toHaveAttribute("aria-expanded", "true");
     await expect(chatGroup.getByText("Level at least 4")).toBeVisible();
 
@@ -356,8 +684,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
   }) => {
     await gotoCreateWave(page);
     await page.getByLabel(/Wave Name/).fill("Sandbox Access Summary Wave");
-    await page.getByText("Chat", { exact: true }).click();
-    await nextStepButton(page).click();
+    await openOptionalSettings(page);
 
     await expect(
       page.getByRole("heading", { name: "Access", level: 2 })
@@ -378,8 +705,10 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
       .getByText("Allow admins to delete posts", { exact: true })
       .click();
     await expect(adminDeleteToggle).not.toBeChecked();
-    await page.getByRole("button", { name: "Previous" }).click();
+    await fillDescription(page, "Recoverable permissions test post.");
     await nextStepButton(page).click();
+    await previousStepButton(page).click();
+    await openOptionalSettings(page);
     await expect(advancedPermissions).toHaveAttribute("aria-expanded", "true");
     await expect(adminDeleteToggle).not.toBeChecked();
     await expectNoHorizontalOverflow(page);
@@ -392,7 +721,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
   }) => {
     await gotoCreateWave(page);
     await page.getByLabel(/Wave Name/).fill("Sandbox Schedule Summary Wave");
-    await page.getByText("Rank", { exact: true }).click();
+    await chooseWaveType(page, "Rank");
     await nextStepButton(page).click();
     await expect(
       page.getByRole("heading", { name: "Access", level: 2 })
@@ -421,7 +750,12 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await expect(winnersAnnouncements).toBeVisible();
     await nextStepButton(page).click();
 
-    await page.getByRole("button", { name: "Submission requirements" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Submission requirements",
+        exact: true,
+      })
+    ).toBeVisible();
     await expect(
       page.locator("#no-of-applications-allowed-per-participant")
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
@@ -435,7 +769,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await gotoCreateWave(page);
 
     await page.getByLabel(/Wave Name/).fill(SANDBOX_PERPETUAL_WAVE_NAME);
-    await page.getByText("Rank", { exact: true }).click();
+    await chooseWaveType(page, "Rank");
 
     // The scheduling mode is chosen up front on the Overview step.
     const announceRadio = page.getByRole("radio", {
@@ -466,7 +800,12 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
       page.getByText("First Winners Announcement").first()
     ).toBeVisible();
     await nextStepButton(page).click();
-    await page.getByRole("button", { name: "Submission requirements" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Submission requirements",
+        exact: true,
+      })
+    ).toBeVisible();
     await expect(
       page.locator("#no-of-applications-allowed-per-participant")
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
@@ -509,14 +848,14 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     ).toBeHidden();
 
     await nextStepButton(page).click();
-    await page.getByRole("button", { name: "Submission requirements" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Submission requirements",
+        exact: true,
+      })
+    ).toBeVisible();
     await expect(
       page.locator("#no-of-applications-allowed-per-participant")
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await nextStepButton(page).click();
-
-    await expect(
-      page.getByRole("heading", { name: "Rules", level: 2, exact: true })
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
     await nextStepButton(page).click();
 
@@ -525,10 +864,14 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await nextStepButton(page).click();
 
     await expect(
+      page.getByRole("heading", { name: "Guidelines", level: 2, exact: true })
+    ).toBeVisible();
+    await nextStepButton(page).click();
+    await expect(
       page.getByText("Give a good description of your wave")
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
     await fillDescription(page, SANDBOX_PERPETUAL_WAVE_DESCRIPTION);
-    await page.getByRole("button", { name: "Complete" }).click();
+    await completeWaveReview(page);
 
     // The sandbox mock only whitelists a rank body with a null decision
     // strategy, open-ended periods and zero outcomes; anything else would be
@@ -569,7 +912,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
       new RegExp(`/waves/${SANDBOX_CREATED_WAVE_ID}$`),
       { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
     );
-    await checkProposalCardConfiguration(page);
+    await checkWaveConfiguration(page);
     await expectNoUnsafeSandboxMutations(baseURL);
   });
 
@@ -579,7 +922,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await gotoCreateWave(page);
 
     await page.getByLabel(/Wave Name/).fill("Sandbox Rank Defaults Wave");
-    await page.getByText("Rank", { exact: true }).click();
+    await chooseWaveType(page, "Rank");
     await nextStepButton(page).click();
     await expect(
       page.getByRole("heading", { name: "Access", level: 2 })
@@ -611,13 +954,14 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     ).toBeVisible();
     await nextStepButton(page).click();
 
-    await page.getByRole("button", { name: "Submission requirements" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Submission requirements",
+        exact: true,
+      })
+    ).toBeVisible();
     await expect(
       page.locator("#no-of-applications-allowed-per-participant")
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await nextStepButton(page).click();
-    await expect(
-      page.getByRole("heading", { name: "Rules", level: 2, exact: true })
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
     await nextStepButton(page).click();
     // Voting keeps defaults; proceed to Outcomes.
@@ -648,6 +992,10 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     expect(await outcomesAlert.count()).toBe(0);
     await nextStepButton(page).click();
 
+    await expect(
+      page.getByRole("heading", { name: "Guidelines", level: 2, exact: true })
+    ).toBeVisible();
+    await nextStepButton(page).click();
     // The description composer speaks to its context now.
     await expect(
       page.getByText("Give a good description of your wave")
@@ -664,7 +1012,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await gotoCreateWave(page);
 
     await page.getByLabel(/Wave Name/).fill(SANDBOX_SCHEDULED_WAVE_NAME);
-    await page.getByText("Rank", { exact: true }).click();
+    await chooseWaveType(page, "Rank");
 
     // "Announce Winners" is the default scheduling mode; keep it.
     await expect(
@@ -688,14 +1036,14 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     ).toBeVisible();
     await nextStepButton(page).click();
 
-    await page.getByRole("button", { name: "Submission requirements" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Submission requirements",
+        exact: true,
+      })
+    ).toBeVisible();
     await expect(
       page.locator("#no-of-applications-allowed-per-participant")
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await nextStepButton(page).click();
-
-    await expect(
-      page.getByRole("heading", { name: "Rules", level: 2, exact: true })
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
     await nextStepButton(page).click();
 
@@ -718,10 +1066,14 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await nextStepButton(page).click();
 
     await expect(
+      page.getByRole("heading", { name: "Guidelines", level: 2, exact: true })
+    ).toBeVisible();
+    await nextStepButton(page).click();
+    await expect(
       page.getByText("Give a good description of your wave")
     ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
     await fillDescription(page, SANDBOX_SCHEDULED_WAVE_DESCRIPTION);
-    await page.getByRole("button", { name: "Complete" }).click();
+    await completeWaveReview(page);
 
     // The sandbox mock only whitelists a rank body with exactly one
     // non-rolling decision point and exactly this manual outcome; anything
@@ -790,7 +1142,7 @@ test.describe("Create wave local sandbox @auth @medium @local-only", () => {
     await gotoCreateWave(page);
 
     await page.getByLabel(/Wave Name/).fill("Sandbox Approve Wave");
-    await page.getByText("Approve", { exact: true }).click();
+    await chooseWaveType(page, "Approve");
     // The ranking-mode choice is a Rank-only concept, on Overview included.
     await expect(page.getByText("Perpetual Ranking")).toBeHidden();
     await nextStepButton(page).click();
@@ -841,13 +1193,13 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await expect(page.getByText(/Step 1 of \d+/)).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    // Walk one step to prove the flow is actually usable, not just visible.
     await page.getByLabel(/Wave Name/).fill("Mobile Sandbox Wave");
+    await fillDescription(page, "Mobile review reachability post.");
     await nextStepButton(page).click();
     await expect(
-      page.getByRole("heading", { name: "Access", level: 2 })
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await expect(page.getByText(/Step 2 of \d+/)).toBeVisible();
+      page.getByRole("button", { name: "Confirm and create" })
+    ).toBeVisible();
+    await expect(page.getByText("Step 2 of 2")).toBeVisible();
     await expectNoHorizontalOverflow(page);
   });
 
@@ -882,33 +1234,17 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await expect(progressBar).toHaveAttribute("aria-valuenow", "1");
     await page.getByLabel(/Wave Name/).fill(SANDBOX_CREATED_WAVE_NAME);
     await expectNoHorizontalOverflow(page);
-    await nextStepButton(page).click();
-
-    // Access
-    await expect(
-      page.getByRole("heading", { name: "Access", level: 2 })
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await expect(page.getByText(/Step 2 of 4/)).toBeVisible();
-    await expectNoHorizontalOverflow(page);
-    await nextStepButton(page).click();
-
-    // Rules
-    await expect(
-      page.getByRole("heading", { name: "Rules", level: 2, exact: true })
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await expect(page.getByText(/Step 3 of 4/)).toBeVisible();
-    await expect(progressBar).toHaveAttribute("aria-valuenow", "3");
-    await expectNoHorizontalOverflow(page);
-    await nextStepButton(page).click();
-
-    // Description + submit
-    await expect(
-      page.getByText("Give a good description of your wave")
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await expect(page.getByText(/Step 4 of 4/)).toBeVisible();
     await fillDescription(page, SANDBOX_CREATED_WAVE_DESCRIPTION);
+    await nextStepButton(page).click();
+    await expect(page.getByText("Step 2 of 2")).toBeVisible();
+    await expect(progressBar).toHaveAttribute("aria-valuenow", "2");
+    await expect(
+      page.getByText(SANDBOX_CREATED_WAVE_DESCRIPTION).first()
+    ).toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await page.getByRole("button", { name: "Complete" }).click();
+    await page
+      .getByRole("button", { name: "Confirm and create", exact: true })
+      .click();
 
     // The exact-body allowlist accepts the same payload regardless of
     // viewport; landing on the wave page proves the whole mobile flow.
@@ -925,10 +1261,10 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     page,
   }) => {
     await gotoCreateWave(page);
-    await expect(page.getByText("Click to upload")).toBeVisible();
+    await expect(page.getByText("Click to upload")).toBeHidden();
 
     await page.getByLabel(/Wave Name/).fill("Advanced Overview Wave");
-    await page.getByText("Approve", { exact: true }).click();
+    await chooseWaveType(page, "Approve");
 
     const advancedSettings = page.getByRole("button", {
       name: /Appearance and labels/,
@@ -999,7 +1335,7 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await expect(page.getByLabel(/Wave Name/)).toBeFocused();
 
     await page.getByLabel(/Wave Name/).fill("Mobile Rank Layout Wave");
-    await page.getByText("Rank", { exact: true }).click();
+    await chooseWaveType(page, "Rank");
     await nextStepButton(page).click();
 
     await expect(
@@ -1043,7 +1379,12 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
 
     // Drops: the submissions-per-participant label used to wrap over the
     // input and hide the typed value at phone width.
-    await page.getByRole("button", { name: "Submission requirements" }).click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Submission requirements",
+        exact: true,
+      })
+    ).toBeVisible();
     const submissions = page.locator(
       "#no-of-applications-allowed-per-participant"
     );
@@ -1062,10 +1403,6 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await expectNoHorizontalOverflow(page);
     await nextStepButton(page).click();
 
-    await expect(
-      page.getByRole("heading", { name: "Rules", level: 2, exact: true })
-    ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
-    await nextStepButton(page).click();
     await nextStepButton(page).click();
 
     // Outcomes: the saved row's type label and entered name used to overlap
@@ -1112,7 +1449,7 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
 
     const draftName = "Draft Resume Wave";
     await page.locator("#create-wave-name").fill(draftName);
-    await page.getByText("Rank", { exact: true }).click();
+    await chooseWaveType(page, "Rank");
     const overviewAdvancedSettings = page.getByRole("button", {
       name: /Appearance and labels/,
     });
@@ -1120,7 +1457,8 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await page.getByText("Full proposal", { exact: true }).click();
     await overviewAdvancedSettings.click();
     await expect(overviewAdvancedSettings).toContainText("Customized");
-    // Leaving Overview is what arms autosave.
+    // Moving to Access must persist the latest Rank settings, including edits
+    // made after the named Chat draft first became eligible for autosave.
     await nextStepButton(page).click();
     await expect(
       page.getByRole("heading", { name: "Access", level: 2 })
@@ -1132,12 +1470,22 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
     await expect
       .poll(
         async () =>
-          page.evaluate(() =>
-            window.localStorage.getItem("create-wave-drafts:v1")
+          page.evaluate(
+            (name) =>
+              Object.keys(window.localStorage)
+                .filter((key) => key.startsWith("create-wave-drafts:v2:"))
+                .flatMap((key) =>
+                  JSON.parse(window.localStorage.getItem(key) ?? "[]")
+                )
+                .find((draft) => draft.config.overview.name === name)?.config,
+            draftName
           ),
         { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
       )
-      .toContain(draftName);
+      .toMatchObject({
+        overview: { name: draftName, type: "RANK" },
+        display: { proposalCards: { mode: "standard" } },
+      });
 
     // Reload the page: a real tab death / crash. The in-memory config is
     // gone, but the on-device draft must survive and be offered on Overview.
@@ -1207,15 +1555,15 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
         timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS,
       });
       await nameField.fill(name);
-      await nextStepButton(page).click();
-      await expect(
-        page.getByRole("heading", { name: "Access", level: 2 })
-      ).toBeVisible({ timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS });
+      await fillDescription(page, `Draft first post for ${name}`);
       await expect
         .poll(
           async () =>
             page.evaluate(() =>
-              window.localStorage.getItem("create-wave-drafts:v1")
+              Object.keys(window.localStorage)
+                .filter((key) => key.startsWith("create-wave-drafts:v2:"))
+                .map((key) => window.localStorage.getItem(key))
+                .join("\n")
             ),
           { timeout: LOCAL_SANDBOX_NAVIGATION_TIMEOUT_MS }
         )
@@ -1265,7 +1613,7 @@ test.describe("Create wave mobile reachability @auth @medium @local-only", () =>
   });
 });
 
-async function checkProposalCardConfiguration(page: Page) {
+async function checkWaveConfiguration(page: Page) {
   const mobile = (page.viewportSize()?.width ?? 1280) < 768;
   await page
     .getByRole("button", {
@@ -1273,60 +1621,21 @@ async function checkProposalCardConfiguration(page: Page) {
       exact: true,
     })
     .click();
-  await page.getByRole("tab", { name: "Configuration", exact: true }).click();
-  const edit = page.getByRole("button", {
-    name: "Edit proposal card settings",
-  });
-  await edit.focus();
-  await page.keyboard.press("Enter");
-
-  const editor = page.getByRole("dialog", {
-    name: "Edit proposal card settings",
-  });
-  const full = editor.getByRole("radio", {
-    name: "Full proposal",
-    exact: true,
-  });
-  const summary = editor.getByRole("radio", {
-    name: "Summary card",
-    exact: true,
-  });
-  const initiallySummary = await summary.isChecked();
-  await expect(initiallySummary ? summary : full).toBeFocused();
+  const details = page
+    .getByRole("complementary", { name: "Wave details" })
+    .or(page.getByRole("dialog", { name: "Wave details" }));
+  await details
+    .getByRole("tab", { name: "Configuration", exact: true })
+    .click();
   await expect(
-    editor.getByRole("button", { name: "Save", exact: true })
-  ).toBeDisabled();
-
-  if (mobile) {
-    await full.tap();
-    await summary.tap();
-  } else {
-    await full.check();
-    await page.keyboard.press("ArrowRight");
-  }
-  await expect(summary).toBeChecked();
-  const limit = editor.getByRole("spinbutton", { name: /Text preview limit/ });
-  await limit.fill("119");
-  await expect(limit).toHaveAttribute("aria-invalid", "true");
-  await expect(editor.getByRole("alert")).toContainText("120");
-  const save = editor.getByRole("button", { name: "Save", exact: true });
-  await expect(save).toBeDisabled();
-  await expect(save).toBeInViewport();
-  const bounds = await editor.boundingBox();
-  expect(bounds).not.toBeNull();
-  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(
-    page.viewportSize()!.height
-  );
+    details.getByRole("heading", { name: "Chat", exact: true })
+  ).toBeVisible();
+  // Proposal appearance now belongs to competition Settings; its validation
+  // and cancellation are covered by the native/legacy competition sandbox.
+  await expect(
+    details.getByRole("button", { name: "Edit proposal card settings" })
+  ).toHaveCount(0);
   await expectNoHorizontalOverflow(page);
-  await editor.getByRole("button", { name: "Cancel", exact: true }).click();
-  await expect(editor).toBeHidden();
-  await expect(edit).toBeFocused();
-
-  await edit.press("Enter");
-  await expect(initiallySummary ? summary : full).toBeChecked();
-  await page.keyboard.press("Escape");
-  await expect(editor).toBeHidden();
-  await expect(edit).toBeFocused();
 }
 
 async function gotoCreateWave(page: Page) {
@@ -1341,6 +1650,28 @@ async function gotoCreateWave(page: Page) {
   await expectNoHorizontalOverflow(page);
 }
 
+async function openOptionalSettings(page: Page) {
+  const toggle = page.getByRole("button", { name: /^Optional settings/ });
+  if ((await toggle.getAttribute("aria-expanded")) === "false")
+    await toggle.click();
+}
+
+async function chooseWaveType(page: Page, type: "Rank" | "Approve") {
+  await page.getByRole("button", { name: /^Other wave types/ }).click();
+  await page.getByText(type, { exact: true }).click();
+  await page.getByRole("button", { name: "Change type", exact: true }).click();
+}
+
+async function completeWaveReview(page: Page) {
+  await nextStepButton(page).click();
+  await expect(
+    page.getByRole("button", { name: "Confirm and create", exact: true })
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Confirm and create", exact: true })
+    .click();
+}
+
 async function fillDescription(page: Page, text: string) {
   const editor = page.locator('[contenteditable="true"]').last();
   await expect(editor).toBeVisible({
@@ -1350,7 +1681,7 @@ async function fillDescription(page: Page, text: string) {
 }
 
 function nextStepButton(page: Page) {
-  return page.getByRole("button", { name: "Next", exact: true });
+  return page.getByRole("button", { name: /^(Next|Review wave)$/ });
 }
 
 function previousStepButton(page: Page) {

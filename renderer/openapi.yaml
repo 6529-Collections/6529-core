@@ -5107,6 +5107,43 @@ paths:
           application/json:
             schema:
               $ref: "#/components/schemas/ApiCreateWaveHubRequest"
+  /v3/waves/{wave_id}/default-competition:
+    get:
+      tags:
+        - Competitions
+      summary: Resolve the viewer's default competition
+      operationId: getDefaultWaveCompetitionV3
+      description: >-
+        Selects from all readable published competitions, independently of list
+        pagination and the immutable legacy primary. Active competitions take
+        precedence, ordered by earliest start; otherwise soonest upcoming,
+        otherwise latest end. Drafts and cancellation-only records are excluded.
+        Archived completed history remains eligible. Null ID means no default.
+        Decisions paused or still pending after voting closes remain active.
+      parameters:
+        - name: wave_id
+          in: path
+          required: true
+          schema:
+            type: string
+      x-6529-router:
+        enabled: true
+        auth: optional
+        cache: false
+        handler:
+          import: "@/api/competitions/competitions-v3.handlers"
+          name: handleGetDefaultWaveCompetitionV3
+      responses:
+        "200":
+          description: Authoritative navigation selection at server time
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiDefaultCompetition"
+        "400":
+          description: Invalid wave identifier or unexpected query parameter
+        "404":
+          description: Wave unavailable or unreadable
   /v3/waves/{wave_id}/competitions:
     post:
       tags:
@@ -6321,6 +6358,73 @@ paths:
                 $ref: "#/components/schemas/ApiCompetitionError"
         "404":
           description: Masked parent, competition, or outcome mismatch
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCompetitionError"
+  /v3/waves/{wave_id}/competitions/{competition_id}/activity:
+    get:
+      tags:
+        - CompetitionsV3
+      summary: List vote activity for the selected competition
+      operationId: listCompetitionVoteActivityV3
+      security:
+        - bearerAuth: []
+        - {}
+      x-6529-router:
+        enabled: true
+        auth: optional
+        typeImportGroup: competitions-v3
+        handler:
+          import: "@/api/competitions/competitions-v3.handlers"
+          name: handleListCompetitionVoteActivityV3
+      parameters:
+        - name: wave_id
+          in: path
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: competition_id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 0
+            maximum: 100000
+            default: 0
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            format: int32
+            minimum: 1
+            maximum: 100
+            default: 50
+      responses:
+        "200":
+          description: Most recent votes first, ordered by time then stable sequence
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ApiWaveLog"
+        "400":
+          description: Invalid pagination
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiCompetitionError"
+        "404":
+          description: Masked parent or competition mismatch
           content:
             application/json:
               schema:
@@ -11143,13 +11247,13 @@ paths:
     get:
       tags:
         - Minting Claims
-      summary: >-
-        Get supported minting claim action types for a contract (claims admin
-        only)
+      summary: Get supported minting claim action types for an authorized launch wallet
       description: >
         Returns the supported minting claim action names for the given contract.
-        Only CLAIMS_ADMIN_WALLETS can call this. Unsupported contracts return
-        400.
+        Authenticated CLAIMS_ADMIN_WALLETS and the mainnet Memes creator owner
+        or on-chain admins can call this. On-chain permission is checked fresh
+        per request; verification failures return 503. Unsupported contracts
+        return 400.
       operationId: getMintingClaimActionTypes
       parameters:
         - name: contract
@@ -11170,17 +11274,21 @@ paths:
         "401":
           description: Unauthorized - authentication required
         "403":
-          description: Forbidden - only claims admins can access
+          description: Forbidden - claims admin or creator admin access required
+        "503":
+          description: Creator admin permission could not be verified
   /minting-claims/actions/{contract}/{claim_id}:
     get:
       tags:
         - Minting Claims
-      summary: Get minting claim actions (claims admin only)
+      summary: Get minting claim actions for an authorized launch wallet
       description: >
         Returns the current action state for a minting claim. All supported
         actions for the contract are always returned; missing records are
-        represented as completed=false. Only CLAIMS_ADMIN_WALLETS can call this.
-        Unsupported contracts return 400.
+        represented as completed=false. Authenticated CLAIMS_ADMIN_WALLETS and
+        the mainnet Memes creator owner or on-chain admins can call this.
+        On-chain permission is checked fresh per request; verification failures
+        return 503. Unsupported contracts return 400.
       operationId: getMintingClaimActions
       parameters:
         - name: contract
@@ -11208,17 +11316,21 @@ paths:
         "401":
           description: Unauthorized - authentication required
         "403":
-          description: Forbidden - only claims admins can access
+          description: Forbidden - claims admin or creator admin access required
         "404":
           description: Claim not found
+        "503":
+          description: Creator admin permission could not be verified
     post:
       tags:
         - Minting Claims
-      summary: Upsert minting claim action state (claims admin only)
+      summary: Upsert minting claim action state for an authorized launch wallet
       description: >
         Creates or updates the current state of a minting claim action for the
-        given claim. The caller wallet is recorded as the actor. Only
-        CLAIMS_ADMIN_WALLETS can call this. Unsupported contracts or unsupported
+        given claim. The caller wallet is recorded as the actor. Authenticated
+        CLAIMS_ADMIN_WALLETS and the mainnet Memes creator owner or on-chain
+        admins can call this. On-chain permission is checked fresh per request;
+        verification failures return 503. Unsupported contracts or unsupported
         action names for the given contract return 400.
       operationId: postMintingClaimAction
       parameters:
@@ -11253,9 +11365,11 @@ paths:
         "401":
           description: Unauthorized - authentication required
         "403":
-          description: Forbidden - only claims admins can update
+          description: Forbidden - claims admin or creator admin access required
         "404":
           description: Claim not found
+        "503":
+          description: Creator admin permission could not be verified
   /nft-link:
     get:
       tags:
@@ -25567,6 +25681,11 @@ components:
         - rank
         - top_raters
       properties:
+        voters_count_available:
+          type: boolean
+          description: >-
+            False when a winner has no saved at-decision voter records. The
+            voter count is then unknown, not zero. Omitted by older servers.
         over_threshold_since_ms:
           type: integer
           format: int64
@@ -26235,6 +26354,15 @@ components:
           type: string
         key:
           type: string
+        video_poster_base64:
+          type: string
+          maxLength: 174764
+          description: >-
+            Optional base64 JPEG captured on the device for a drop video,
+            without a data URL prefix. Maximum decoded size 128 KiB and
+            dimensions 640 by 640. Validated and stored before video upload
+            completion; invalid or unavailable posters fall back to backend
+            generation. Ignored for other media.
         parts:
           type: array
           items:
@@ -27124,6 +27252,7 @@ components:
           maxLength: 100
         media_upload_id:
           type: string
+          maxLength: 100
           nullable: true
     ApiCreateDropPart:
       type: object
@@ -27145,11 +27274,13 @@ components:
             - type: "null"
         media:
           type: array
+          maxItems: 20
           items:
             $ref: "#/components/schemas/ApiCreateDropMedia"
         attachments:
           type: array
           default: []
+          maxItems: 20
           items:
             $ref: "#/components/schemas/ApiDropAttachmentReference"
     ApiCreateDropPollRequest:
@@ -27333,6 +27464,7 @@ components:
       properties:
         wave_name_in_content:
           type: string
+          maxLength: 250
           minLength: 1
         wave_id:
           type: string
@@ -27516,6 +27648,28 @@ components:
           format: int64
           minimum: 1000
         links_disabled:
+          type: boolean
+        replies:
+          $ref: "#/components/schemas/ApiCreateNewWaveChatRepliesConfig"
+    ApiCreateNewWaveChatRepliesConfig:
+      description: >-
+        Reply settings for the wave chat. When omitted on update, the existing
+        settings are kept.
+      type: object
+      required:
+        - open
+        - collapsed
+      properties:
+        open:
+          description: >-
+            When true, everyone who can view the wave may reply to drops, even
+            if they are not in the chat group. Top-level drops still require the
+            chat group.
+          type: boolean
+        collapsed:
+          description: >-
+            When true, replies are left out of the wave's main drop feed and are
+            shown as a thread under the drop they reply to.
           type: boolean
     ApiCreateNewWaveParticipationConfig:
       type: object
@@ -27823,27 +27977,34 @@ components:
         parts:
           type: array
           minItems: 1
+          maxItems: 250
           description: >-
             Across all parts, runtime validation allows at most 50,000
             JavaScript UTF-16 code units. Each part is also subject to the
-            per-part UTF-16 and UTF-8 limits documented on ApiCreateDropPart.
+            per-part UTF-16 and UTF-8 limits documented on ApiCreateDropPart. A
+            drop may have at most 250 parts, and at most 100 media items and 100
+            attachments in total across all parts.
           x-6529-max-total-utf16-code-units: 50000
           items:
             $ref: "#/components/schemas/ApiCreateDropPart"
         referenced_nfts:
           type: array
+          maxItems: 500
           items:
             $ref: "#/components/schemas/ApiDropReferencedNFT"
         mentioned_users:
           type: array
+          maxItems: 500
           items:
             $ref: "#/components/schemas/ApiDropMentionedUser"
         mentioned_waves:
           type: array
+          maxItems: 100
           items:
             $ref: "#/components/schemas/ApiCreateMentionedWave"
         metadata:
           type: array
+          maxItems: 100
           items:
             $ref: "#/components/schemas/ApiDropMetadata"
         signature:
@@ -28034,6 +28195,28 @@ components:
           type: array
           items:
             type: string
+    ApiDefaultCompetition:
+      type: object
+      required:
+        - competition_id
+        - evaluated_at
+        - next_refresh_at
+      properties:
+        competition_id:
+          type: string
+          format: uuid
+          nullable: true
+        evaluated_at:
+          type: integer
+          format: int64
+          description: Server evaluation time in milliseconds since epoch.
+        next_refresh_at:
+          type: integer
+          format: int64
+          nullable: true
+          description: >-
+            Next known timing boundary in milliseconds since epoch. Clients also
+            refresh on lifecycle changes and periodically for worker completion.
     ApiDeleteEulaConsentRequest:
       type: object
       additionalProperties: false
@@ -28181,6 +28364,11 @@ components:
         - is_additional_action_promised
         - hide_link_preview
       properties:
+        voters_count_available:
+          type: boolean
+          description: >-
+            False when a winner has no saved at-decision voter records. The
+            voter count is then unknown, not zero. Omitted by older servers.
         id:
           type: string
         serial_no:
@@ -28322,6 +28510,7 @@ components:
       properties:
         attachment_id:
           type: string
+          maxLength: 100
     ApiDropBoost:
       type: object
       required:
@@ -29001,6 +29190,12 @@ components:
         boosts:
           type: integer
           format: int64
+        replies_count:
+          description: >-
+            Number of replies in this drop's thread. Only provided for drops in
+            waves with collapsed replies, and omitted when there are none.
+          type: integer
+          format: int64
         reply_to_drop:
           $ref: "#/components/schemas/ApiReplyToDropV2"
         submission_context:
@@ -29223,6 +29418,11 @@ components:
         - is_additional_action_promised
         - hide_link_preview
       properties:
+        voters_count_available:
+          type: boolean
+          description: >-
+            False when a winner has no saved at-decision voter records. The
+            voter count is then unknown, not zero. Omitted by older servers.
         id:
           type: string
         serial_no:
@@ -33522,6 +33722,12 @@ components:
           format: int64
         drop_type:
           $ref: "#/components/schemas/ApiDropMainType"
+        created_at:
+          type: integer
+          format: int64
+          description: >-
+            Original drop publication time in Unix milliseconds, for CHAT and
+            SUBMISSION drops.
         submission_status:
           $ref: "#/components/schemas/ApiSubmissionDropStatus"
         submitted_at:
@@ -36200,6 +36406,13 @@ components:
           type: string
         native_refresh_token:
           type: string
+        refresh_request_id:
+          type: string
+          format: uuid
+          description: >-
+            Persist a random UUID before refreshing and reuse it with the same
+            native refresh token after an interrupted request. A retry recovers
+            the already rotated token without rotating or extending it again.
     ApiSessionRefreshWebRequest:
       type: object
       required:
@@ -36346,6 +36559,11 @@ components:
         - voters_count
         - place
       properties:
+        voters_count_available:
+          type: boolean
+          description: >-
+            False when a winner has no saved at-decision voter records. The
+            voter count is then unknown, not zero. Omitted by older servers.
         largest_vote:
           description: >-
             Largest absolute current individual allocation, retaining its sign.
@@ -37548,6 +37766,8 @@ components:
           type: integer
           format: int64
           minimum: 1000
+        replies:
+          $ref: "#/components/schemas/ApiWaveChatRepliesConfig"
     ApiWaveChatHistoryPurgePlan:
       type: object
       additionalProperties: false
@@ -37557,6 +37777,34 @@ components:
         purge_token:
           type: string
           description: Opaque signed cutoff bound to the authenticated author and wave
+    ApiWaveChatRepliesConfig:
+      type: object
+      required:
+        - open
+        - collapsed
+        - authenticated_user_eligible
+        - authenticated_user_can_delete
+      properties:
+        open:
+          description: >-
+            When true, everyone who can view the wave may reply to drops, even
+            if they are not in the chat group. Top-level drops still require the
+            chat group.
+          type: boolean
+        collapsed:
+          description: >-
+            When true, replies are left out of the wave's main drop feed and are
+            shown as a thread under the drop they reply to.
+          type: boolean
+        authenticated_user_eligible:
+          description: Whether the authenticated user may reply in this wave
+          type: boolean
+        authenticated_user_can_delete:
+          description: >-
+            Whether the authenticated user may delete other people's replies.
+            With open replies, the wave creator, admins and chat group members
+            can.
+          type: boolean
     ApiWaveConfig:
       type: object
       required:
@@ -38128,6 +38376,17 @@ components:
           type: boolean
         authenticated_user_eligible_to_chat:
           type: boolean
+        authenticated_user_eligible_to_reply:
+          description: >-
+            Whether the authenticated user may reply to drops in this wave.
+            Waves with open replies allow this outside the chat group.
+          type: boolean
+        authenticated_user_can_delete_replies:
+          description: >-
+            Whether the authenticated user may delete other people's replies in
+            this wave. With open replies, the wave creator, admins and chat
+            group members can.
+          type: boolean
         authenticated_user_admin:
           type: boolean
         visibility_group_id:
@@ -38297,6 +38556,11 @@ components:
           type: boolean
         links_disabled:
           type: boolean
+        replies_collapsed:
+          description: >-
+            When true, replies are left out of the wave's main drop feed and are
+            shown as a thread under the drop they reply to.
+          type: boolean
         description_drop:
           $ref: "#/components/schemas/ApiWaveOverviewDescriptionDrop"
         total_drops_count:
@@ -38333,6 +38597,17 @@ components:
           type: boolean
         can_chat:
           type: boolean
+        can_reply:
+          description: >-
+            Whether the profile may reply to drops in this wave. Waves with open
+            replies allow this outside the chat group.
+          type: boolean
+        can_delete_replies:
+          description: >-
+            Whether the profile may delete other people's replies in this wave.
+            With open replies, the wave creator, admins and chat group members
+            can.
+          type: boolean
         next_drop_allowed:
           type: integer
           format: int64
@@ -38346,8 +38621,8 @@ components:
           type: integer
           format: int64
           description: >-
-            Unread drops across all visible subwaves, independent of whether the
-            authenticated profile follows each subwave.
+            Unread drops across visible subwaves that the authenticated profile
+            follows and has not muted.
         followed_subwaves_count:
           type: integer
           format: int64

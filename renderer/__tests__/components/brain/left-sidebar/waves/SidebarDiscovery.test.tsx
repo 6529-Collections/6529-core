@@ -225,6 +225,31 @@ it("uses the vote scroll area for pagination, guards duplicate loads, and render
   );
   expect(mockDisconnect).toHaveBeenCalled();
 });
+it("updates the active-votes fade on scroll without measuring layout for unrelated renders", () => {
+  const { rerender } = renderDiscovery();
+  const list = screen.getByRole("region", { name: "Active voting waves" });
+  let contentHeight = 300;
+  const readHeight = jest.fn(() => contentHeight);
+  Object.defineProperties(list, {
+    scrollHeight: { configurable: true, get: readHeight },
+    clientHeight: { configurable: true, get: () => 144 },
+    scrollTop: { configurable: true, get: () => 0 },
+  });
+  const fade = () => list.parentElement?.querySelector('[aria-hidden="true"]');
+
+  fireEvent.scroll(list);
+  expect(fade()).toBeInTheDocument();
+  readHeight.mockClear();
+
+  mockActiveWaveId = "QUORUM";
+  rerender(<SidebarDiscovery previewItems={[]} isTouchPreview={false} />);
+  expect(readHeight).not.toHaveBeenCalled();
+  expect(fade()).toBeInTheDocument();
+
+  contentHeight = 144;
+  fireEvent.scroll(list);
+  expect(fade()).toBeNull();
+});
 it("provides a keyboard-accessible load-more fallback and disables it while fetching", () => {
   const { rerender } = renderDiscovery();
   fireEvent.click(screen.getByRole("button", { name: "Load more" }));
@@ -250,17 +275,17 @@ it("tracks the current wave in Active Votes when selection changes elsewhere", (
   const quorum = screen.getByRole("link", { name: /QUORUM/ });
   const rarePepe = screen.getByRole("link", { name: /Rare Pepe/ });
   expect(quorum).toHaveAttribute("aria-current", "page");
-  expect(quorum.parentElement).toHaveClass("tw-bg-iron-700/50");
+  expect(quorum.parentElement).toHaveClass("tw-bg-iron-800/70");
   expect(rarePepe).not.toHaveAttribute("aria-current");
 
   mockActiveWaveId = "Rare Pepe acquisition";
   rerender(<SidebarDiscovery previewItems={[]} isTouchPreview={false} />);
   expect(rarePepe).toHaveAttribute("aria-current", "page");
   expect(quorum).not.toHaveAttribute("aria-current");
-  expect(quorum.parentElement).not.toHaveClass("tw-bg-iron-700/50");
+  expect(quorum.parentElement).not.toHaveClass("tw-bg-iron-800/70");
 
   mockActiveWaveId = null;
   rerender(<SidebarDiscovery previewItems={[]} isTouchPreview={false} />);
   expect(rarePepe).not.toHaveAttribute("aria-current");
-  expect(rarePepe.parentElement).not.toHaveClass("tw-bg-iron-700/50");
+  expect(rarePepe.parentElement).not.toHaveClass("tw-bg-iron-800/70");
 });

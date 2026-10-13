@@ -478,6 +478,7 @@ export const baseRules = deepFreezeRuleConfig({
 export const baseGlobalIgnores = Object.freeze([
   "**/node_modules",
   "**/.next",
+  "**/.next-playwright-*",
   "**/.deployment-artifact/**",
   "**/dist",
   "**/out",
@@ -619,7 +620,6 @@ export const createEslintConfig = ({
       files: [
         "config/alchemyEnv.ts",
         "config/assets.ts",
-        "config/deploymentEnv.ts",
         "config/env.ts",
         "config/ethereumRpcEnv.ts",
         "config/museumPublicationEnv.server.ts",

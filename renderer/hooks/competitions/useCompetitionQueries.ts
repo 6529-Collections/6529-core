@@ -5,8 +5,10 @@ import { useAuth } from "@/components/auth/Auth";
 import { QueryKey } from "@/components/react-query-wrapper/query-keys";
 import {
   competitionQueryKey,
+  defaultCompetitionQueryKey,
   competitionScope,
   fetchCompetition,
+  fetchDefaultCompetition,
   fetchCompetitionHub,
   fetchCompetitionPauseState,
   fetchCompetitions,
@@ -31,6 +33,29 @@ export function useCompetitionHub(waveId: string, enabled = true) {
     retry: false,
     staleTime: 30_000,
     enabled,
+  });
+}
+
+export function useDefaultCompetition(waveId: string, enabled = true) {
+  const viewer = useCompetitionViewer();
+  return useQuery({
+    queryKey: defaultCompetitionQueryKey(waveId, viewer),
+    queryFn: ({ signal }) => fetchDefaultCompetition(waveId, signal),
+    enabled: enabled && Boolean(waveId),
+    retry: false,
+    staleTime: 0,
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      // Use server durations so device clock skew cannot keep a completed contest active.
+      if (
+        data?.next_refresh_at === undefined ||
+        data.next_refresh_at === null ||
+        data.next_refresh_at <= data.evaluated_at
+      )
+        return 30_000;
+      const delay = data.next_refresh_at - data.evaluated_at;
+      return Math.max(250, Math.min(30_000, delay));
+    },
   });
 }
 
@@ -69,7 +94,10 @@ export function useCompetitionPauseState(identity: CompetitionIdentity) {
   });
 }
 
-export function useCompetitionDetail(identity: CompetitionIdentity) {
+export function useCompetitionDetail(
+  identity: CompetitionIdentity,
+  enabled = true
+) {
   const viewer = useCompetitionViewer();
   return useQuery({
     queryKey: competitionQueryKey(identity, viewer),
@@ -77,6 +105,7 @@ export function useCompetitionDetail(identity: CompetitionIdentity) {
     retry: false,
     staleTime: 15_000,
     refetchInterval: 30_000,
+    enabled,
   });
 }
 

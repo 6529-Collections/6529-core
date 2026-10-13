@@ -1,3 +1,4 @@
+import type { ApiSubmissionDropVoting } from "@/generated/models/ApiSubmissionDropVoting";
 import type { ApiDropContextProfileContext } from "@/generated/models/ApiDropContextProfileContext";
 import type { ApiDropMetadataResponse } from "@/generated/models/ApiDropMetadataResponse";
 import type { ApiDropPart } from "@/generated/models/ApiDropPart";
@@ -97,6 +98,12 @@ export const mapApiWaveOverviewToApiWaveMin = (
   authenticated_user_eligible_to_participate: true,
   authenticated_user_eligible_to_chat:
     wave.context_profile_context?.can_chat ?? true,
+  authenticated_user_eligible_to_reply:
+    wave.context_profile_context?.can_reply ??
+    wave.context_profile_context?.can_chat ??
+    true,
+  authenticated_user_can_delete_replies:
+    wave.context_profile_context?.can_delete_replies ?? false,
   authenticated_user_admin: false,
   visibility_group_id: wave.is_private ? "private" : null,
   participation_group_id: null,
@@ -125,6 +132,8 @@ export const createFallbackWaveMin = (waveId: string): ApiWaveMin => ({
   authenticated_user_eligible_to_vote: true,
   authenticated_user_eligible_to_participate: true,
   authenticated_user_eligible_to_chat: true,
+  authenticated_user_eligible_to_reply: true,
+  authenticated_user_can_delete_replies: false,
   authenticated_user_admin: false,
   visibility_group_id: null,
   participation_group_id: null,
@@ -298,3 +307,18 @@ export const getContextProfileContext = (
     curated: false,
   };
 };
+
+export function mapSubmissionVotingV2(
+  voting: ApiSubmissionDropVoting | null | undefined
+) {
+  return {
+    rating: voting?.current_calculated_vote ?? 0,
+    realtime_rating:
+      voting?.total_votes_given ?? voting?.current_calculated_vote ?? 0,
+    rating_prediction: voting?.predicted_final_vote ?? 0,
+    raters_count: voting?.voters_count ?? 0,
+    ...(voting?.voters_count_available === undefined
+      ? {}
+      : { voters_count_available: voting.voters_count_available }),
+  };
+}

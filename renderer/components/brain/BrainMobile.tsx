@@ -1,6 +1,19 @@
 "use client";
 import { useWaveCompetitionsTab } from "@/hooks/competitions/useWaveCompetitionsTab";
-import { isCompetitionPathname } from "@/helpers/competition.helpers";
+import {
+  getCompetitionRoute,
+  isCompetitionPathname,
+  getCompetitionIdFromPathname,
+} from "@/helpers/competition.helpers";
+import { waveCompetitionTabs } from "@/helpers/default-competition.helpers";
+import { MyStreamWaveTab } from "@/types/waves.types";
+import {
+  useWaveTabPreference,
+  rememberHistoryWaveTab,
+} from "@/hooks/useWaveTabPreference";
+import { useDefaultCompetitionNavigation } from "@/hooks/competitions/useDefaultCompetitionNavigation";
+import { useWaveTabNavigation } from "@/hooks/useWaveTabNavigation";
+import { getMissingWaveNavigationRoute } from "@/helpers/waves/missing-wave-navigation.helpers";
 
 import type { ReactNode } from "react";
 import React, {
@@ -56,6 +69,8 @@ import { useWaveListSwipeBack } from "./mobile/useWaveListSwipeBack";
 import { SidebarTab } from "./right-sidebar/BrainRightSidebarTypes";
 import { WaveContentTabs } from "./right-sidebar/WaveContent";
 import { waveRightPanelText } from "@/helpers/waves/wave-right-panel.helpers";
+import { useWaveInformation } from "@/contexts/WaveInformationContext";
+import WaveInformationSheet from "./mobile/WaveInformationSheet";
 import { useLayout } from "./my-stream/layout/LayoutContext";
 import { useNavigationHistoryContext } from "@/contexts/NavigationHistoryContext";
 
@@ -77,12 +92,23 @@ const getRestoredWaveView = (
 ): BrainView | null =>
   isApp && currentWaveView?.waveId === waveId ? currentWaveView.view : null;
 
+function getWaveTab(view: BrainView): MyStreamWaveTab | undefined {
+  const tab =
+    view === BrainView.DEFAULT
+      ? MyStreamWaveTab.CHAT
+      : (view as unknown as MyStreamWaveTab);
+  return Object.values(MyStreamWaveTab).includes(tab) ? tab : undefined;
+}
+
 const BrainMobileContent: React.FC<Props> = ({ children }) => {
   const router = useRouter();
+  const navigateTab = useWaveTabNavigation();
+  const information = useWaveInformation();
   // react-doctor-disable-next-line react-doctor/nextjs-no-use-search-params-without-suspense covered by BrainMobile Suspense wrapper
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { isApp } = useDeviceInfo();
+  const { rememberTab } = useWaveTabPreference();
   const { currentWaveView, rememberWaveView } = useNavigationHistoryContext();
   const shouldReduceMotion = useReducedMotion() ?? false;
   const { registerRef } = useLayout();
@@ -121,18 +147,22 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
     null;
   const { data: wave } = useWaveData({
     waveId: waveId,
-    onWaveNotFound: () => {
-      const params = new URLSearchParams(searchParams.toString() || "");
-      params.delete("wave");
-      const basePath = getWaveHomeRoute({
-        isDirectMessage: pathname.startsWith("/messages"),
-        isApp,
-      });
-      const newUrl = params.toString()
-        ? `${basePath}?${params.toString()}`
-        : basePath || getHomeRoute();
-      router.push(newUrl, { scroll: false });
-    },
+    onWaveNotFound: isCompetitionPathname(pathname)
+      ? undefined
+      : () => {
+          const route = getMissingWaveNavigationRoute(waveId);
+          if (!route) return;
+          const params = route.searchParams;
+          params.delete("wave");
+          const basePath = getWaveHomeRoute({
+            isDirectMessage: route.pathname.startsWith("/messages"),
+            isApp,
+          });
+          const newUrl = params.toString()
+            ? `${basePath}?${params.toString()}`
+            : basePath || getHomeRoute();
+          router.push(newUrl, { scroll: false });
+        },
   });
 
   const { isMemesWave, isCurationWave, isRankWave, isApproveWave } =
@@ -144,8 +174,12 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
   const outcomesVisible = useWaveOutcomeVisibility(wave);
   const {
     hasCompetitions: hasAvailableCompetitions,
+    hideCompetitionsTab,
     activeCount: activeCompetitionCount,
+    defaultCompetitionId,
+    defaultSelectionEnabled,
   } = useWaveCompetitionsTab(wave);
+  useDefaultCompetitionNavigation(wave, true);
   const hasCompetitions =
     hasAvailableCompetitions || isCompetitionPathname(pathname);
 
@@ -177,6 +211,7 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
     showOutcomeView: outcomesVisible,
     hasCompetitions,
     hasPolls,
+    defaultSelectionEnabled,
     pathname,
     searchParams,
     wave,
@@ -185,7 +220,26 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
   });
   const onViewChange = useCallback(
     (view: BrainView) => {
+      const competitionTab =
+        waveCompetitionTabs[view as unknown as MyStreamWaveTab];
+      if (waveId && defaultSelectionEnabled && competitionTab) {
+        const selectedId = isCompetitionPathname(pathname)
+          ? getCompetitionIdFromPathname(pathname)
+          : (searchParams.get("competition") ?? defaultCompetitionId);
+        rememberTab(waveId, view as unknown as MyStreamWaveTab, selectedId);
+        navigateTab(
+          selectedId
+            ? `${getCompetitionRoute(waveId, selectedId)}?tab=${competitionTab}`
+            : `${getWavePathRoute(waveId)}?tab=${view.toLowerCase()}`
+        );
+        return;
+      }
       selectView(view);
+      const tab = getWaveTab(view);
+      if (waveId && tab !== undefined) {
+        rememberTab(waveId, tab);
+        rememberHistoryWaveTab(waveId, tab);
+      }
       if (isApp && waveId) {
         rememberWaveView({ waveId, view });
       }
@@ -194,10 +248,26 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
         isCompetitionPathname(pathname) &&
         view !== BrainView.COMPETITIONS
       ) {
-        router.push(getWavePathRoute(waveId), { scroll: false });
+        const competitionId = getCompetitionIdFromPathname(pathname);
+        const params = new URLSearchParams({
+          tab: tab?.toLowerCase() ?? view.toLowerCase(),
+        });
+        if (competitionId) params.set("competition", competitionId);
+        navigateTab(`${getWavePathRoute(waveId)}?${params}`);
       }
     },
-    [selectView, isApp, waveId, rememberWaveView, pathname, router]
+    [
+      selectView,
+      rememberTab,
+      isApp,
+      waveId,
+      rememberWaveView,
+      pathname,
+      navigateTab,
+      defaultSelectionEnabled,
+      defaultCompetitionId,
+      searchParams,
+    ]
   );
   const [aboutTabState, setAboutTabState] = useState<MobileAboutTabState>({
     waveId: null,
@@ -228,6 +298,7 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
   const onDropClick = (selectedDrop: ExtendedDrop) => {
     const params = new URLSearchParams(searchParams.toString() || "");
     params.set("drop", selectedDrop.id);
+    params.delete("default");
     router.push(`${pathname}?${params.toString()}`, { scroll: false });
   };
 
@@ -332,6 +403,15 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
           />
         </div>
       )}
+      {wave &&
+        information?.request?.overlay &&
+        information.request.waveId === wave.id && (
+          <WaveInformationSheet
+            key={information.request.id}
+            wave={wave}
+            onClose={information.close}
+          />
+        )}
       {(hasWave || !isApp) && (
         <BrainMobileTabs
           activeView={activeView}
@@ -340,6 +420,10 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
           waveActive={hasWave}
           hasPolls={hasPolls}
           hasCompetitions={hasCompetitions}
+          hideCompetitionsTab={hideCompetitionsTab}
+          hasDefaultCompetition={Boolean(
+            searchParams.get("competition") ?? defaultCompetitionId
+          )}
           activeCompetitionCount={activeCompetitionCount}
           outcomesVisible={outcomesVisible}
           waveNavigationReady={waveNavigationReady}
@@ -353,7 +437,6 @@ const BrainMobileContent: React.FC<Props> = ({ children }) => {
         (activeView === BrainView.ABOUT ? (
           <div ref={setInformationTabsRef}>
             <WaveContentTabs
-              wave={wave}
               activeTab={activeAboutTab}
               setActiveTab={onAboutTabChange}
               maxVisibleTabs={3}

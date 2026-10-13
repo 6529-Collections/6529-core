@@ -1627,6 +1627,37 @@ const connectorModalFunction = findFunction(
   connectorModal,
   "HeaderUserConnectModal",
 );
+assertContract(
+  connectorModalFunction &&
+    jsxAttributeContainsIdentifier(
+      connectorModalFunction,
+      "div",
+      "className",
+      "AUTHENTICATION_MODAL_OVERLAY_CLASS",
+    ) &&
+    jsxAttributeUsesIdentifier(
+      connectorModalFunction,
+      "div",
+      "onKeyDown",
+      "handleDialogKeyDown",
+    ) &&
+    callsIdentifier(connectorModalFunction, "trapTabFocus"),
+  connectorModalPath,
+  "connector chooser must use the authentication layer above transaction dialogs and retain keyboard focus handling",
+);
+const onchainTransactionModalPath =
+  "renderer/components/common/OnchainTransactionModal.tsx";
+const onchainTransactionModal = parseSource(onchainTransactionModalPath);
+assertContract(
+  jsxAttributeContainsIdentifier(
+    onchainTransactionModal,
+    "div",
+    "className",
+    "NON_WALLET_MODAL_OVERLAY_CLASS",
+  ),
+  onchainTransactionModalPath,
+  "on-chain transaction dialogs must remain below connector, authentication, and Core wallet prompts",
+);
 const connectorSelectorFunction = findFunction(
   connectorModal,
   "ConnectorSelector",

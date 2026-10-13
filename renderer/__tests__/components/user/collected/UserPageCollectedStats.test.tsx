@@ -1,11 +1,12 @@
 import UserPageCollectedStats from "@/components/user/collected/UserPageCollectedStats";
+import { getCollectedClick } from "@/components/user/collected/collectedTracking";
 import type { UserPageStatsInitialData } from "@/components/user/stats/userPageStats.types";
 import { CollectedCollectionType } from "@/entities/IProfile";
 import { commonApiFetch } from "@/services/api/common-api";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { cloneElement, isValidElement, type ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useDesktopSeasonRowCapacity } from "@/components/user/collected/stats/useDesktopSeasonRowCapacity";
 
@@ -33,8 +34,11 @@ jest.mock("@/services/api/common-api", () => ({
   commonApiFetch: jest.fn(),
 }));
 
+const mockReplace = jest.fn();
 jest.mock("next/navigation", () => ({
   useSearchParams: jest.fn(),
+  usePathname: () => "/punk6529/collected",
+  useRouter: () => ({ replace: mockReplace }),
 }));
 
 jest.mock(
@@ -107,9 +111,21 @@ const renderWithQueryClient = (ui: ReactNode) => {
     },
   });
 
-  return render(
+  const view = (
     <QueryClientProvider client={queryClient}>{ui}</QueryClientProvider>
   );
+  const result = render(view);
+  mockReplace.mockImplementation((href: string) => {
+    useSearchParamsMock.mockReturnValue(
+      new URL(href, "https://6529.io").searchParams
+    );
+    result.rerender(
+      <QueryClientProvider client={queryClient}>
+        {isValidElement(ui) ? cloneElement(ui) : ui}
+      </QueryClientProvider>
+    );
+  });
+  return result;
 };
 
 const createDeferred = <T,>() => {
@@ -128,9 +144,8 @@ describe("UserPageCollectedStats", () => {
   beforeEach(() => {
     apiMock.mockClear();
     apiMock.mockResolvedValue({});
-    useSearchParamsMock.mockReturnValue({
-      get: () => null,
-    });
+    mockReplace.mockReset();
+    useSearchParamsMock.mockReturnValue(new URLSearchParams());
     useDesktopSeasonRowCapacityMock.mockReturnValue({
       containerRef: { current: null },
       visibleSeasonCount: null,
@@ -537,6 +552,11 @@ describe("UserPageCollectedStats", () => {
         })
       ).not.toBeInTheDocument();
 
+      expect(showMoreButton).toHaveAttribute(
+        "data-profile-action",
+        "Show more seasons"
+      );
+
       await user.click(showMoreButton);
 
       expect(
@@ -544,6 +564,10 @@ describe("UserPageCollectedStats", () => {
           name: /szn6/i,
         })
       ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Show less" })).toHaveAttribute(
+        "data-profile-action",
+        "Show fewer seasons"
+      );
       expect(
         screen.getByRole("button", {
           name: "Show less",
@@ -663,7 +687,7 @@ describe("UserPageCollectedStats", () => {
   it("starts legacy stats fetches only when details are opened", async () => {
     const user = userEvent.setup();
 
-    renderWithQueryClient(
+    const { container } = renderWithQueryClient(
       <UserPageCollectedStats
         profile={profile}
         activeAddress={null}
@@ -674,7 +698,26 @@ describe("UserPageCollectedStats", () => {
 
     expect(apiMock).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: "Details" }));
+    expect(
+      getCollectedClick(
+        container,
+        screen.getByRole("link", { name: "Complete my set" })
+      )
+    ).toEqual({ section: "Collection summary", action: "Complete my set" });
+    expect(
+      getCollectedClick(
+        container,
+        screen.getByRole("link", { name: "Manage orders" })
+      )
+    ).toEqual({ section: "Collection summary", action: "Manage orders" });
+
+    const detailsButton = screen.getByRole("button", { name: "Details" });
+    expect(detailsButton).toHaveAttribute("data-profile-action", "Details");
+    await user.click(detailsButton);
+    expect(detailsButton).toHaveAttribute(
+      "data-profile-action",
+      "Hide details"
+    );
 
     await waitFor(() => expect(apiMock).toHaveBeenCalledTimes(4));
 
@@ -716,6 +759,39 @@ describe("UserPageCollectedStats", () => {
       screen.getByText("Stats are unavailable for this profile.")
     ).toBeInTheDocument();
     expect(apiMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps Details closed on return without losing activity filters or pages", async () => {
+    const user = userEvent.setup();
+    useSearchParamsMock.mockReturnValue(
+      new URLSearchParams(
+        "activity=wallet-activity&wallet-activity=mint&wallet-activity-page=2&page=3"
+      )
+    );
+    const ui = (
+      <UserPageCollectedStats
+        profile={profile}
+        activeAddress={null}
+        initialStatsData={buildInitialStatsData()}
+      />
+    );
+    const result = renderWithQueryClient(ui);
+    await user.click(screen.getByRole("button", { name: "Hide Details" }));
+    expect(mockReplace).toHaveBeenCalledWith(
+      "/punk6529/collected?activity=wallet-activity&wallet-activity=mint&wallet-activity-page=2&page=3&details=closed",
+      { scroll: false }
+    );
+    result.unmount();
+    renderWithQueryClient(ui);
+    expect(
+      screen.getByRole("button", { name: "Details" })
+    ).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByTestId("details")).not.toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: "Details" })
+    );
+    expect(mockReplace.mock.lastCall?.[0]).toContain("details=open");
+    expect(mockReplace.mock.lastCall?.[0]).toContain("wallet-activity-page=2");
   });
 
   it("starts with details open when an activity query param is present", async () => {
@@ -822,6 +898,20 @@ describe("UserPageCollectedStats", () => {
       </QueryClientProvider>
     );
 
+    mockReplace.mockImplementation((href: string) => {
+      useSearchParamsMock.mockReturnValue(
+        new URL(href, "https://6529.io").searchParams
+      );
+      rerender(
+        <QueryClientProvider client={queryClient}>
+          <UserPageCollectedStats
+            profile={profile}
+            activeAddress={null}
+            initialStatsData={buildInitialStatsData()}
+          />
+        </QueryClientProvider>
+      );
+    });
     await user.click(screen.getByRole("button", { name: "Details" }));
 
     await waitFor(() =>

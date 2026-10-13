@@ -8,7 +8,15 @@ import {
 import BrainMobile from "@/components/brain/BrainMobile";
 import { BrainView } from "@/components/brain/mobile/brainMobileViews";
 import { SidebarTab } from "@/components/brain/right-sidebar/BrainRightSidebarTypes";
+import { useWaveData } from "@/hooks/useWaveData";
+import {
+  getHistoryWaveTab,
+  WAVE_TAB_STORAGE_KEY,
+} from "@/hooks/useWaveTabPreference";
 
+jest.mock("@/hooks/competitions/useDefaultCompetitionNavigation", () => ({
+  useDefaultCompetitionNavigation: jest.fn(),
+}));
 jest.mock("@/hooks/competitions/useWaveCompetitionsTab", () => ({
   useWaveCompetitionsTab: () => ({ hasCompetitions: false, activeCount: 0 }),
 }));
@@ -83,7 +91,7 @@ jest.mock("@tanstack/react-query", () => ({
 }));
 
 jest.mock("@/hooks/useWaveData", () => ({
-  useWaveData: () => ({ data: waveData }),
+  useWaveData: jest.fn(() => ({ data: waveData })),
 }));
 
 const mockUseWave = jest.fn();
@@ -340,6 +348,8 @@ describe("BrainMobile", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    localStorage.clear();
+    window.history.replaceState(null, "", "/");
     mockSearchParams = new URLSearchParams();
     mockPathname = "/";
     mockPush.mockClear();
@@ -405,6 +415,64 @@ describe("BrainMobile", () => {
     await waitFor(() => expect(screen.getByTestId("tabs")).toBeInTheDocument());
     rerender(<div />);
   });
+
+  it.each([
+    "/waves/1/competitions",
+    "/waves/1/competitions/alpha",
+    "/waves/1/competitions/new",
+  ])(
+    "preserves the selected competition route on a missing wave (%s)",
+    (pathname) => {
+      mockPathname = pathname;
+      mockActiveWaveId = "1";
+      render(<BrainMobile>child</BrainMobile>);
+      const options = jest.mocked(useWaveData).mock.calls.at(-1)![0];
+      expect(options.onWaveNotFound).toBeUndefined();
+      act(() => options.onWaveNotFound?.());
+      expect(mockPush).not.toHaveBeenCalled();
+    }
+  );
+
+  it.each([
+    ["/waves/1", "/waves"],
+    ["/messages/1", "/messages"],
+  ])(
+    "retains ordinary app missing-wave navigation (%s)",
+    (pathname, destination) => {
+      mockPathname = pathname;
+      mockActiveWaveId = "1";
+      mockSearchParams = new URLSearchParams("wave=1&serialNo=23");
+      window.history.replaceState(null, "", `${pathname}?${mockSearchParams}`);
+      render(<BrainMobile>child</BrainMobile>);
+      const options = jest.mocked(useWaveData).mock.calls.at(-1)![0];
+      expect(options.onWaveNotFound).toBeDefined();
+      act(() => options.onWaveNotFound?.());
+      expect(mockPush).toHaveBeenCalledWith(`${destination}?serialNo=23`, {
+        scroll: false,
+      });
+    }
+  );
+
+  it.each([
+    "/waves/1/competitions/alpha?tab=leaderboard",
+    "/waves/2?tab=chat",
+    "/network?wave=1",
+  ])(
+    "ignores a captured missing-wave callback after moving to %s",
+    (target) => {
+      mockPathname = "/waves/1";
+      mockActiveWaveId = "1";
+      window.history.replaceState(null, "", mockPathname);
+      render(<BrainMobile>child</BrainMobile>);
+      const callback = jest.mocked(useWaveData).mock.calls.at(-1)![0]
+        .onWaveNotFound;
+      expect(callback).toBeDefined();
+      window.history.replaceState(null, "", target);
+      act(() => callback?.());
+      expect(mockPush).not.toHaveBeenCalled();
+      expect(mockSetActiveWave).not.toHaveBeenCalled();
+    }
+  );
 
   it.each([
     { pathname: "/messages", testId: "messages" },
@@ -578,7 +646,7 @@ describe("BrainMobile", () => {
     }
   );
 
-  it("keeps My Votes unavailable for guests on memes waves", async () => {
+  it("keeps Votes available for guests on memes waves", async () => {
     mockSearchParams.set("wave", "1");
     waveData = createWave(false);
     (useAuth as jest.Mock).mockReturnValue({
@@ -600,8 +668,7 @@ describe("BrainMobile", () => {
     });
 
     await waitFor(() => {
-      expect(screen.queryByTestId("myvotes")).toBeNull();
-      expect(screen.getByText("child")).toBeInTheDocument();
+      expect(screen.getByTestId("myvotes")).toBeInTheDocument();
     });
   });
 
@@ -660,7 +727,7 @@ describe("BrainMobile", () => {
     });
   });
 
-  it("does not resurrect a stale tab selection when revisiting a wave", async () => {
+  it("restores the remembered tab independently when revisiting a wave", async () => {
     mockSearchParams.set("wave", "1");
     waveData = createWave(false);
 
@@ -690,8 +757,8 @@ describe("BrainMobile", () => {
     rerender(<BrainMobile>child</BrainMobile>);
 
     await waitFor(() => {
-      expect(screen.queryByTestId("about")).toBeNull();
-      expect(screen.getByText("child")).toBeInTheDocument();
+      expect(screen.getByTestId("about")).toBeInTheDocument();
+      expect(screen.queryByText("child")).toBeNull();
     });
   });
 
@@ -736,6 +803,19 @@ describe("BrainMobile", () => {
       expect(mockRememberWaveView).not.toHaveBeenCalled();
     }
   );
+
+  it("does not remember a non-wave view as a wave tab", async () => {
+    mockSearchParams.set("wave", "1");
+    waveData = createWave(false);
+    window.history.replaceState(null, "", "/waves/1");
+    const initial = JSON.stringify({ "1": "ABOUT" });
+    localStorage.setItem(WAVE_TAB_STORAGE_KEY, initial);
+    render(<BrainMobile>child</BrainMobile>);
+    await waitFor(() => expect(screen.getByTestId("tabs")).toBeInTheDocument());
+    act(() => latestTabsProps.onViewChange(BrainView.MESSAGES));
+    expect(localStorage.getItem(WAVE_TAB_STORAGE_KEY)).toBe(initial);
+    expect(getHistoryWaveTab("1")).toBeUndefined();
+  });
 
   it("keeps the selected shell tab when web create modal query changes", async () => {
     isApp = false;

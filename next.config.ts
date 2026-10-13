@@ -468,6 +468,9 @@ function sharedConfig(publicEnv: PublicEnv, assetPrefix: string): NextConfig {
     experimental: {
       webpackMemoryOptimizations: true,
       webpackBuildWorker: true,
+      // Match FE's Next 16.3 compiler-API build check; the default CLI also
+      // includes renderer tests, which are checked separately.
+      useTypeScriptCli: false,
     },
     images: {
       loader: "default",
