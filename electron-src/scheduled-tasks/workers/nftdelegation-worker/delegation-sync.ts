@@ -1,5 +1,8 @@
 import { DataSource } from "typeorm";
-import { NFTDelegationReplayBlock } from "../../../db/entities/IDelegation";
+import {
+  NFTDelegationReplayBlock,
+  ReplayNativeDelegationRegistration,
+} from "../../../db/entities/IDelegation";
 import {
   assertRecentDelegationSnapshot,
   DelegationStateReader,
@@ -26,7 +29,7 @@ export async function syncNativeDelegations(
   provider: RecentStateProvider,
   reader: DelegationStateReader,
   scan: (fromBlock: number, toBlock: number) => Promise<void>,
-  progress: () => void,
+  progress: (completed: number, total: number) => void,
 ): Promise<{ block: number; upgrade: boolean }> {
   const start = await prepareNativeDelegationReplay(db);
   const guardedReader = guardRecentDelegationReader(reader, () =>
@@ -78,7 +81,17 @@ export async function syncNativeDelegations(
       await completeNativeDelegationReplay(db, snapshotBlock);
       return { block: snapshotBlock, upgrade };
     }
-    progress();
+    const counts = await db
+      .getRepository(ReplayNativeDelegationRegistration)
+      .createQueryBuilder("r")
+      .select("COUNT(*)", "total")
+      .addSelect(
+        "COALESCE(SUM(CASE WHEN r.expiry IS NOT NULL THEN 1 ELSE 0 END), 0)",
+        "completed",
+      )
+      .getRawOne<{ completed: number; total: number }>();
+    if (!counts) throw new Error("Missing delegation reconciliation progress");
+    progress(Number(counts.completed), Number(counts.total));
     const resolved = await mapInChunks(groups, 5, async (group) => {
       const registrations = await getStagedDelegationRegistrations(db, group);
       return reconcileRegistrationExpiries(

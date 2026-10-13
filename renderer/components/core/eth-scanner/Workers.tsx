@@ -198,7 +198,7 @@ export function WorkerCard({
     const printProgress = () =>
       task.status?.action ? (
         <>
-          {" "}
+          {" — "}
           <span>{task.status.action}</span>
         </>
       ) : null;

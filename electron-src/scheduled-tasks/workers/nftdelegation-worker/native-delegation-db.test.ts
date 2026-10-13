@@ -738,16 +738,23 @@ describe("native delegation persistence and resumable atomic replay", () => {
     const noScan = async () => {
       throw new Error("unexpected rescan");
     };
+    const progress: [number, number][] = [];
+    const recordProgress = (completed: number, total: number) => {
+      progress.push([completed, total]);
+    };
     await assert.rejects(
-      syncNativeDelegations(db, provider, reader, noScan, () => {}),
+      syncNativeDelegations(db, provider, reader, noScan, recordProgress),
       /last batch interrupted/,
     );
+    assert.deepEqual(progress, [[0, 21], [20, 21]]);
     assert.equal(await getLatestNFTDBlock(db), 10);
     assert.equal(await db.getRepository(Delegation).count(), 0);
     assert.equal(await db.getRepository(ReplayDelegation).count(), 20);
     fail = false;
     reads.length = 0;
-    await syncNativeDelegations(db, provider, reader, noScan, () => {});
+    progress.length = 0;
+    await syncNativeDelegations(db, provider, reader, noScan, recordProgress);
+    assert.deepEqual(progress, [[20, 21]]);
     assert.deepEqual(reads, ["a20"]);
     assert.equal(await db.getRepository(Delegation).count(), 21);
     assert.equal(

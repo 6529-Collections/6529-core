@@ -129,12 +129,13 @@ class NFTDelegationWorker extends CoreWorker {
         );
         consolidations.push(...scanned.consolidations);
       },
-      () =>
+      (completed, total) =>
         sendStatusUpdate(parentPort, {
           update: {
             status: ScheduledWorkerStatus.RUNNING,
             message: "Reconciling delegation scope and expiry",
             action: "Reading recent contract state",
+            statusPercentage: total > 0 ? (completed / total) * 100 : 0,
           },
         }),
     );
