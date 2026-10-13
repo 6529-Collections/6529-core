@@ -89,9 +89,7 @@ the same block are also excluded, while later re-registrations survive.
 Consolidation eligibility continues to use the backend's confirmed-pair contract,
 rather than ordinary delegation expiry/token scope. Ordinary delegation scope
 and expiry changes do not alter token ownership, holding age or TDH boosts, so
-only consolidation changes invalidate TDH during incremental indexing. Backend
-and Core must use the same activation constant if the proposed rollout date
-changes.
+only consolidation changes invalidate TDH during incremental indexing. Core reads the selected backend’s activation policy; there is no separate native cutoff to update.
 
 ## Environment activation policy
 
@@ -99,4 +97,14 @@ Core reads `consolidation.four_wallet_activation_at` from `/api/settings` on its
 
 A calculation uses one policy snapshot for its holding-time and grouping work, including incremental reconsolidation and missing-wallet rows. TDH block completion records the backend URL and normalized cutoff. When they differ, an incremental calculation becomes a full calculation so every wallet is regrouped under the same policy. Existing databases gain the nullable completion field through the normal Core entity synchronization.
 
-Production is configured for 2026-10-15 00:00 UTC; staging may use an earlier cutoff to test four-wallet behavior before launch. Configuration belongs to the backend environment. Both environments read the same mainnet contract, so test with dedicated wallets and renew any pre-production-cutoff links after the production cutoff before expecting them to count in production.
+Production launch is intended for 2026-10-15 00:00 UTC; staging may use an earlier cutoff to test four-wallet behavior before launch. Configuration belongs to the backend environment. Both environments read the same mainnet contract, so test with dedicated wallets and renew any pre-production-cutoff links after the production cutoff before expecting them to count in production.
+
+### First calculation and policy failures
+
+The first calculation for an existing TDH block without a `consolidation_policy_key` is a full calculation, even if triggered by a small consolidation change. The missing key is not evidence that the old groups follow the new policy. This is the same full regrouping requirement raised by the index upgrade, not a separate automatic second run.
+
+The settings request passes an abort signal to `fetch` and has a 15-second timeout covering headers and response-body processing. Network failure, timeout or invalid policy defers TDH; it never supplies an old or production-date fallback. A failed full run is retried by the next TDH schedule (00:15 daily) or by manually requesting Recalculate TDH Now. A failed event-driven reconsolidation marks TDH for recalculation; a later full run or a new consolidation-triggered calculation applies it. Indexing can continue meanwhile.
+
+The backend emits canonical whole-second UTC timestamps with `.000Z`; native parsing also accepts the equivalent `Z` form. Other offsets or fractional formats are deliberately outside the shared policy contract. A future contract-format change must update the backend and both clients together rather than silently widening native acceptance.
+
+The workers capture a policy separately for each calculation. If configuration changes between runs, displayed groups retain the completed run’s policy until the next calculation detects the changed key and fully regroups. Active calculations retain their own snapshot, so they do not mix cutoffs mid-run.
