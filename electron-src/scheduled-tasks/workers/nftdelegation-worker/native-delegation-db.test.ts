@@ -633,6 +633,46 @@ describe("native delegation persistence and resumable atomic replay", () => {
     assert.equal(await db.getRepository(Delegation).count(), 1);
   });
 
+  it("projects the last representable same-key slot while retaining every exact ledger entry", async () => {
+    const events = scan();
+    const base = events.registrationLogs[0];
+    const oversized = (BigInt(1) << BigInt(256)) - BigInt(1);
+    events.registrationLogs = [
+      { ...base, logIndex: 0, tokenId: BigInt(7) },
+      { ...base, logIndex: 1, tokenId: oversized },
+      { ...base, logIndex: 2, tokenId: BigInt(61) },
+      { ...base, logIndex: 3, tokenId: oversized - BigInt(1) },
+    ];
+    await persistNftDelegations(db, 100, 2000, events, 1, 0, true);
+    const [group] = await getPendingDelegationGroups(db);
+    const staged = await getStagedDelegationRegistrations(db, group);
+    // Reconciliation must normalize input order before projecting its legacy key.
+    await persistReconciledDelegationGroup(
+      db,
+      100,
+      staged.map((r) => ({ ...r, expiry: 1000 + r.log_index })).reverse(),
+    );
+    assert.equal(await db.getRepository(Delegation).count(), 0);
+    await completeNativeDelegationReplay(db, 100);
+    const rows = await db.getRepository(Delegation).find();
+    assert.equal(rows.length, 1);
+    assert.equal(rows[0].all_tokens, false);
+    assert.equal(rows[0].token_id, 61);
+    assert.equal(rows[0].expiry, 1002);
+    const ledger = await db.getRepository(NativeDelegationRegistration).find({
+      order: { block: "ASC", log_index: "ASC" },
+    });
+    assert.deepEqual(
+      ledger.map((r) => [r.token_id, r.expiry]),
+      [
+        ["7", 1000],
+        [oversized.toString(), 1001],
+        ["61", 1002],
+        [(oversized - BigInt(1)).toString(), 1003],
+      ],
+    );
+  });
+
   it("incremental sync applies same-block revoke/re-register order and keeps oversized slots aligned", async () => {
     await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
     await completeFixtureReplay(db, 100);

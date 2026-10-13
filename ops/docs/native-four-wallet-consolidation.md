@@ -85,8 +85,11 @@ registration-ledger tables, advances the live checkpoint, and clears shadow
 state. TDH waits for the initial upgrade; ordinary scope/expiry updates do not
 invalidate token-holding TDH. Consolidation changes durably mark recalculation.
 
-Existing version-zero/one databases rebuild the version-two index. A partial
-older-format replay restarts only its shadow state once, preserving live rows.
+Existing version-zero/one databases rebuild the version-two index.
+Even an early tester who completed the version-one replay must perform one full
+version-two rebuild; completing that earlier replay does not avoid this upgrade.
+A partial older-format replay restarts only its shadow state once, preserving
+live rows.
 Subsequent version-two interruptions resume from saved scan/reconciliation
 progress. An explicit NFTDelegation Reset clears shadow progress and marks the
 index unready while preserving live rows until its replacement is complete.
@@ -111,10 +114,12 @@ historical registrations. Four-wallet timestamps remain historical block times.
 
 Core preserves backend #2151's representation: all-token scope stores token zero;
 false/zero values are written explicitly; zero or beyond-safe-integer expiry maps
-to `NEVER_DATE`. The existing delegation table stores the last registration per
-(block, from, to, collection, use case), rather than all token-specific entries
-sharing that key. Token-specific IDs above the backend signed-INT ceiling are
-logged and excluded from emitted rows rather than widened or truncated; their
+to `NEVER_DATE`. The existing delegation table stores the last representable
+registration per (block, from, to, collection, use case), rather than all token-specific entries
+sharing that key. Reconciliation sorts the complete ledger by block/log index,
+regenerates each group's public rows from the verified entries, and only then
+deduplicates that legacy key. Token-specific IDs above the backend signed-INT
+ceiling are logged and excluded from emitted rows rather than widened or truncated; their
 positions remain in the surviving-registration ledger so other entries still
 match their own contract slot and expiry. Sub-delegation registrations use the same ordered replay and scope/expiry
 reconciliation; registrations revoked later in the same block are excluded,
