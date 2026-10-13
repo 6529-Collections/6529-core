@@ -4,6 +4,8 @@ export interface ConsolidationSettingsRequest {
 }
 export interface ConsolidationPolicy {
   readonly activationTimestamp: number;
+  readonly maxWallets: number;
+  readonly ungatedMaxWallets: number;
   readonly key: string;
 }
 
@@ -24,6 +26,20 @@ export function parseConsolidationPolicy(
     !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.000)?Z$/.test(cutoff)
   )
     throw new Error("Backend consolidation policy is unavailable or invalid");
+  const maxWallets = Reflect.get(value, "max_wallets");
+  const ungatedMaxWallets = Reflect.get(value, "ungated_max_wallets");
+  if (
+    typeof maxWallets !== "number" ||
+    !Number.isSafeInteger(maxWallets) ||
+    maxWallets < 2 ||
+    typeof ungatedMaxWallets !== "number" ||
+    !Number.isSafeInteger(ungatedMaxWallets) ||
+    ungatedMaxWallets < 2 ||
+    ungatedMaxWallets > maxWallets
+  )
+    throw new Error(
+      "Backend consolidation wallet limits are unavailable or invalid",
+    );
   const activationMs = Date.parse(cutoff);
   const normalized = cutoff.endsWith(".000Z")
     ? cutoff
@@ -35,7 +51,9 @@ export function parseConsolidationPolicy(
     throw new Error("Backend consolidation policy is invalid");
   return {
     activationTimestamp: activationMs / 1000,
-    key: `${settingsUrl}:${normalized}`,
+    maxWallets,
+    ungatedMaxWallets,
+    key: `${settingsUrl}:${normalized}:${maxWallets}:${ungatedMaxWallets}`,
   };
 }
 

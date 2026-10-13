@@ -3,6 +3,13 @@ import { describe, it } from "node:test";
 const cutoff = Date.parse("2026-10-15T00:00:00Z") / 1000;
 import { consolidationTools, ConsolidationLink } from "./consolidation-tools";
 
+const policy = {
+  activationTimestamp: cutoff,
+  maxWallets: 4,
+  ungatedMaxWallets: 3,
+  key: "test",
+};
+
 const wallets = ["a", "b", "c", "d", "e"];
 function mesh(freshMember?: string): ConsolidationLink[] {
   return wallets.slice(0, 4).flatMap((wallet1, i) =>
@@ -21,7 +28,7 @@ function mesh(freshMember?: string): ConsolidationLink[] {
 }
 const groups = (links: ConsolidationLink[]) =>
   consolidationTools
-    .extractConsolidations(links, cutoff)
+    .extractConsolidations(links, policy)
     .map((group) => group.slice().sort().join(""))
     .sort();
 
@@ -68,7 +75,7 @@ describe("native grouping parity with backend #2148", () => {
       wallet1_registered_at: cutoff,
       wallet2_registered_at: cutoff,
     });
-    const result = consolidationTools.extractConsolidations(links, cutoff);
+    const result = consolidationTools.extractConsolidations(links, policy);
     const flattened = result.flat();
     assert.equal(new Set(flattened).size, flattened.length);
     assert.equal(flattened.length, 5);
@@ -92,12 +99,26 @@ it("applies different environment cutoffs to the same on-chain links", () => {
   }));
   assert.ok(
     consolidationTools
-      .extractConsolidations(links, staging)
+      .extractConsolidations(links, { ...policy, activationTimestamp: staging })
       .some((group) => group.length === 4),
   );
   assert.ok(
     consolidationTools
-      .extractConsolidations(links, cutoff)
+      .extractConsolidations(links, policy)
       .every((group) => group.length <= 3),
+  );
+});
+
+it("uses the limits from the calculation snapshot rather than native constants", () => {
+  assert.ok(
+    consolidationTools
+      .extractConsolidations(mesh("d"), { ...policy, maxWallets: 3 })
+      .every((group) => group.length <= 3),
+  );
+  assert.deepEqual(
+    consolidationTools
+      .extractConsolidations(mesh(), { ...policy, ungatedMaxWallets: 4 })
+      .map((group) => group.length),
+    [4],
   );
 });

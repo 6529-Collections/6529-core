@@ -1,3 +1,4 @@
+import type { ConsolidationPolicy } from "./consolidation-policy";
 import { ConsolidatedTDH, TDH } from "../../../db/entities/ITDH";
 import {
   fetchAllConsolidatedTdh,
@@ -28,7 +29,7 @@ export async function consolidateTDHForWallets(
   db: DataSource,
   tdh: TDH[],
   MEMES_COUNT: number,
-  activationTimestamp: number,
+  policy: ConsolidationPolicy,
 ) {
   const consolidatedTdh: ConsolidatedTDH[] = [];
   const processedWallets = new Set<string>();
@@ -40,7 +41,7 @@ export async function consolidateTDHForWallets(
     const consolidations = await retrieveWalletConsolidations(
       db,
       wallet,
-      activationTimestamp,
+      policy,
     );
     const consolidationKey = buildConsolidationKey(consolidations);
 
@@ -165,7 +166,7 @@ export async function consolidateTDHForWallets(
 export const consolidateMissingWallets = async (
   db: DataSource,
   wallets: string[],
-  activationTimestamp: number,
+  policy: ConsolidationPolicy,
 ): Promise<ConsolidatedTDH[]> => {
   const processedWallets = new Set<string>();
   const missingTdh: ConsolidatedTDH[] = [];
@@ -175,7 +176,7 @@ export const consolidateMissingWallets = async (
     const consolidations = await retrieveWalletConsolidations(
       db,
       wallet,
-      activationTimestamp,
+      policy,
     );
     const consolidationKey = buildConsolidationKey(consolidations);
 
@@ -234,7 +235,7 @@ export const consolidateTDH = async (
   db: DataSource,
   block: number,
   nfts: NFT[],
-  activationTimestamp: number,
+  policy: ConsolidationPolicy,
   startingWallets?: string[],
 ) => {
   const tdh: TDH[] = await fetchAllTDH(db, block, startingWallets);
@@ -257,7 +258,7 @@ export const consolidateTDH = async (
   });
 
   const { consolidatedTdh, allGradientsTDH, allNextgenTDH } =
-    await consolidateTDHForWallets(db, tdh, memes.length, activationTimestamp);
+    await consolidateTDHForWallets(db, tdh, memes.length, policy);
   const consolidatedBoostedTdh = await calculateBoosts(
     seasons,
     consolidatedTdh,
@@ -272,7 +273,7 @@ export const consolidateTDH = async (
     const missingConsolidatedTdh = await consolidateMissingWallets(
       db,
       missingWallets,
-      activationTimestamp,
+      policy,
     );
     logInfo(
       parentPort,

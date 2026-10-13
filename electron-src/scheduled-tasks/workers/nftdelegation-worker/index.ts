@@ -352,6 +352,20 @@ class NFTDelegationWorker extends CoreWorker {
         `[RECONSOLIDATING FOR ${affectedWallets.length} DISTINCT WALLETS]`,
       );
 
+      let policy;
+      try {
+        policy = await loadConsolidationPolicy(
+          data.consolidationSettingsRequest,
+        );
+      } catch {
+        await setTdhRecalculationNeeded(this.getDb().manager, true);
+        logInfo(
+          parentPort,
+          "Reconsolidation deferred until backend consolidation settings are available; previous TDH is preserved",
+        );
+        return;
+      }
+
       const lastTDHCalc = getLastTDH();
       const blockBefore = await findLatestBlockBeforeTimestamp(
         this.getProvider(),
@@ -367,19 +381,6 @@ class NFTDelegationWorker extends CoreWorker {
 
       const walletsArray = affectedWallets;
 
-      let policy;
-      try {
-        policy = await loadConsolidationPolicy(
-          data.consolidationSettingsRequest,
-        );
-      } catch {
-        await setTdhRecalculationNeeded(this.getDb().manager, true);
-        logInfo(
-          parentPort,
-          "Reconsolidation deferred until backend consolidation settings are available; previous TDH is preserved",
-        );
-        return;
-      }
       await calculateTDH(
         this.getDb(),
         block,

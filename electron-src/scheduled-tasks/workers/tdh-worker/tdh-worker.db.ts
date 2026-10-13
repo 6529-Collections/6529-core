@@ -1,3 +1,4 @@
+import type { ConsolidationPolicy } from "./consolidation-policy";
 import { DataSource, In, LessThanOrEqual, Like, MoreThan } from "typeorm";
 import {
   CONSOLIDATIONS_TABLE,
@@ -88,21 +89,17 @@ export function getConsolidationsSql(wallet: string) {
 export async function retrieveWalletConsolidations(
   db: DataSource,
   wallet: string,
-  activationTimestamp: number,
+  policy: ConsolidationPolicy,
 ) {
   const { sql, params } = getConsolidationsSql(wallet);
   const consolidations: any[] = await db.query(sql, params);
-  return extractConsolidationWallets(
-    consolidations,
-    wallet,
-    activationTimestamp,
-  );
+  return extractConsolidationWallets(consolidations, wallet, policy);
 }
 
 export function extractConsolidationWallets(
   consolidations: ConsolidationLink[],
   wallet: string,
-  activationTimestamp: number,
+  policy: ConsolidationPolicy,
 ): string[] {
   return consolidationTools.extractConsolidationWallets(
     consolidations.map((c) => ({
@@ -111,7 +108,7 @@ export function extractConsolidationWallets(
       wallet2: c.wallet2.toLowerCase(),
     })),
     wallet.toLowerCase(),
-    activationTimestamp,
+    policy,
   );
 }
 
@@ -263,18 +260,16 @@ export async function persistTDHBlock(
   const merkleRoot = await computeMerkleRoot(db);
   await db.transaction(async (manager) => {
     const timestamp = blockTimestamp.toSeconds();
-    await manager
-      .getRepository(TDHBlock)
-      .upsert(
-        [
-          {
-            block,
-            timestamp,
-            consolidation_policy_key: consolidationPolicyKey,
-          },
-        ],
-        ["block"],
-      );
+    await manager.getRepository(TDHBlock).upsert(
+      [
+        {
+          block,
+          timestamp,
+          consolidation_policy_key: consolidationPolicyKey,
+        },
+      ],
+      ["block"],
+    );
 
     await manager.getRepository(TDHMerkleRoot).upsert(
       [

@@ -352,7 +352,7 @@ export const calculateTDH = async (
       const consolidations = await retrieveWalletConsolidations(
         db,
         wallet,
-        policy.activationTimestamp,
+        policy,
       );
 
       const walletMemes: any[] = [];
@@ -568,13 +568,7 @@ export const calculateTDH = async (
     },
   });
 
-  await consolidateTDH(
-    db,
-    block,
-    ADJUSTED_NFTS,
-    policy.activationTimestamp,
-    startingWallets,
-  );
+  await consolidateTDH(db, block, ADJUSTED_NFTS, policy, startingWallets);
   await processNftTdh(db, ADJUSTED_NFTS);
 
   const merkleRoot = await persistTDHBlock(

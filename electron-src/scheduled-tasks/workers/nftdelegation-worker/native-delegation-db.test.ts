@@ -303,20 +303,22 @@ describe("native delegation persistence and resumable atomic replay", () => {
     }
     assert.deepEqual(
       (
-        await retrieveWalletConsolidations(
-          db,
-          "A",
-          Date.parse("2026-10-15T00:00:00Z") / 1000,
-        )
+        await retrieveWalletConsolidations(db, "A", {
+          activationTimestamp: Date.parse("2026-10-15T00:00:00Z") / 1000,
+          maxWallets: 4,
+          ungatedMaxWallets: 3,
+          key: "test",
+        })
       ).sort(),
       ["a", "b", "d"],
     );
     assert.deepEqual(
-      await retrieveWalletConsolidations(
-        db,
-        "c",
-        Date.parse("2026-10-15T00:00:00Z") / 1000,
-      ),
+      await retrieveWalletConsolidations(db, "c", {
+        activationTimestamp: Date.parse("2026-10-15T00:00:00Z") / 1000,
+        maxWallets: 4,
+        ungatedMaxWallets: 3,
+        key: "test",
+      }),
       ["c"],
     );
     // Only the wallet list is needed; raw SQL avoids inventing unrelated TDH fields.

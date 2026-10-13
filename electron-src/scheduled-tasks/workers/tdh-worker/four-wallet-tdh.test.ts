@@ -83,12 +83,12 @@ it("aggregates four native wallet TDH rows into one consolidation including shar
       nextgen: [],
     }),
   );
-  const { consolidatedTdh } = await consolidateTDHForWallets(
-    db,
-    rows,
-    1,
-    Date.parse("2026-10-15T00:00:00Z") / 1000,
-  );
+  const { consolidatedTdh } = await consolidateTDHForWallets(db, rows, 1, {
+    activationTimestamp: Date.parse("2026-10-15T00:00:00Z") / 1000,
+    maxWallets: 4,
+    ungatedMaxWallets: 3,
+    key: "test",
+  });
   assert.equal(consolidatedTdh.length, 1);
   const result = consolidatedTdh[0];
   assert.deepEqual(result.wallets.slice().sort(), wallets);

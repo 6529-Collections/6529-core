@@ -1,8 +1,5 @@
+import type { ConsolidationPolicy } from "./consolidation-policy";
 import { areEqualAddresses as equalIgnoreCase } from "../../../../shared/helpers";
-import {
-  CONSOLIDATIONS_LIMIT,
-  CONSOLIDATIONS_UNGATED_LIMIT,
-} from "../../../../electron-constants";
 import { Consolidation } from "../../../db/entities/IDelegation";
 
 export type ConsolidationLink = Pick<
@@ -17,12 +14,9 @@ export class ConsolidationTools {
   public extractConsolidationWallets(
     consolidations: ConsolidationLink[],
     wallet: string,
-    activationTimestamp: number,
+    policy: ConsolidationPolicy,
   ): string[] {
-    const clusters = this.extractConsolidations(
-      consolidations,
-      activationTimestamp,
-    );
+    const clusters = this.extractConsolidations(consolidations, policy);
     const walletCluster = clusters.find((c) =>
       c.some((w) => equalIgnoreCase(w, wallet)),
     );
@@ -37,14 +31,14 @@ export class ConsolidationTools {
    *
    * The newest unused link starts a group, and a wallet joins only when it has
    * a confirmed link with every current member. Groups stop at
-   * CONSOLIDATIONS_LIMIT wallets. Past CONSOLIDATIONS_UNGATED_LIMIT, a wallet
+   * policy.maxWallets wallets. Past policy.ungatedMaxWallets, a wallet
    * may only join if the resulting group has a member whose links to all other
    * members were registered in both directions at or after
    * the selected backend’s configured activation time.
    */
   public extractConsolidations(
     consolidations: ConsolidationLink[],
-    activationTimestamp: number,
+    policy: ConsolidationPolicy,
   ): string[][] {
     // Newest link first. Links confirmed in the same block are ordered by
     // their pair key so every caller groups the same rows the same way.
@@ -81,7 +75,7 @@ export class ConsolidationTools {
         queue,
         usedWallets,
         linksByKey,
-        activationTimestamp,
+        policy,
       );
       for (const w of cluster) {
         usedWallets.add(w);
@@ -112,10 +106,10 @@ export class ConsolidationTools {
     queue: ConsolidationLink[],
     usedWallets: Set<string>,
     linksByKey: Map<string, ConsolidationLink>,
-    activationTimestamp: number,
+    policy: ConsolidationPolicy,
   ): string[] {
     const cluster = new Set<string>([seed.wallet1, seed.wallet2]);
-    while (cluster.size < CONSOLIDATIONS_LIMIT) {
+    while (cluster.size < policy.maxWallets) {
       const index = queue.findIndex((candidate) => {
         const newWallet = this.getJoiningWallet(
           cluster,
@@ -123,8 +117,7 @@ export class ConsolidationTools {
           usedWallets,
         );
         return (
-          !!newWallet &&
-          this.canJoin(cluster, newWallet, linksByKey, activationTimestamp)
+          !!newWallet && this.canJoin(cluster, newWallet, linksByKey, policy)
         );
       });
       if (index === -1) {
@@ -171,7 +164,7 @@ export class ConsolidationTools {
 
   public isPostActivationLink(
     link: ConsolidationLink | undefined,
-    activationTimestamp: number,
+    policy: ConsolidationPolicy,
   ): boolean {
     if (!link) {
       return false;
@@ -180,7 +173,7 @@ export class ConsolidationTools {
       (registeredAt) =>
         registeredAt !== null &&
         registeredAt !== undefined &&
-        Number(registeredAt) >= activationTimestamp,
+        Number(registeredAt) >= policy.activationTimestamp,
     );
   }
 
@@ -188,7 +181,7 @@ export class ConsolidationTools {
     cluster: Set<string>,
     wallet: string,
     linksByKey: Map<string, ConsolidationLink>,
-    activationTimestamp: number,
+    policy: ConsolidationPolicy,
   ): boolean {
     const members = Array.from(cluster);
     const linkedToEveryMember = members.every((member) =>
@@ -197,13 +190,13 @@ export class ConsolidationTools {
     if (!linkedToEveryMember) {
       return false;
     }
-    if (cluster.size < CONSOLIDATIONS_UNGATED_LIMIT) {
+    if (cluster.size < policy.ungatedMaxWallets) {
       return true;
     }
     return this.hasPostActivationMember(
       [...members, wallet],
       linksByKey,
-      activationTimestamp,
+      policy,
     );
   }
 
@@ -213,7 +206,7 @@ export class ConsolidationTools {
   private hasPostActivationMember(
     wallets: string[],
     linksByKey: Map<string, ConsolidationLink>,
-    activationTimestamp: number,
+    policy: ConsolidationPolicy,
   ): boolean {
     return wallets.some((candidate) =>
       wallets.every(
@@ -221,7 +214,7 @@ export class ConsolidationTools {
           other === candidate ||
           this.isPostActivationLink(
             linksByKey.get(this.buildConsolidationKey([candidate, other])),
-            activationTimestamp,
+            policy,
           ),
       ),
     );
