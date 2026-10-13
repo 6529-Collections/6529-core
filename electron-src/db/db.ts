@@ -1,6 +1,5 @@
 import databasePath from "../utils/databasePath";
-import { MNEMONIC_NA } from "../../electron-constants";
-import { encryptData } from "../../shared/encrypt";
+import { encryptSeedWalletSecrets } from "./seed-wallet-secrets";
 
 import { ethers } from "ethers";
 import { SeedWallet } from "./entities/ISeedWallet";
@@ -27,28 +26,19 @@ export async function addSeedWallet(
   pass: string
 ): Promise<string | undefined> {
   const wallet = ethers.Wallet.createRandom();
-  const encryptedAddress = await encryptData(
-    wallet.address,
-    wallet.address,
-    pass
-  );
-  const encryptedMnemonic = await encryptData(
+  const secrets = await encryptSeedWalletSecrets(
     wallet.address,
     wallet.mnemonic!.phrase,
-    pass
-  );
-  const encryptedPrivateKey = await encryptData(
-    wallet.address,
     wallet.privateKey,
     pass
   );
 
   const seedWallet = new SeedWallet();
   seedWallet.address = wallet.address;
-  seedWallet.address_hashed = encryptedAddress;
+  seedWallet.address_hashed = secrets.address_hashed;
   seedWallet.name = name;
-  seedWallet.mnemonic = encryptedMnemonic;
-  seedWallet.private_key = encryptedPrivateKey;
+  seedWallet.mnemonic = secrets.mnemonic;
+  seedWallet.private_key = secrets.private_key;
 
   await AppDataSource.manager.save(seedWallet);
   return wallet.address;
@@ -61,19 +51,19 @@ export async function importSeedWallet(
   mnemonic: string,
   privateKey: string
 ): Promise<void> {
-  const encryptedAddress = await encryptData(address, address, pass);
-  const encryptedMnemonic =
-    mnemonic === MNEMONIC_NA
-      ? mnemonic
-      : await encryptData(address, mnemonic, pass);
-  const encryptedPrivateKey = await encryptData(address, privateKey, pass);
+  const secrets = await encryptSeedWalletSecrets(
+    address,
+    mnemonic,
+    privateKey,
+    pass
+  );
 
   const seedWallet = new SeedWallet();
   seedWallet.address = address;
-  seedWallet.address_hashed = encryptedAddress;
+  seedWallet.address_hashed = secrets.address_hashed;
   seedWallet.name = name;
-  seedWallet.mnemonic = encryptedMnemonic;
-  seedWallet.private_key = encryptedPrivateKey;
+  seedWallet.mnemonic = secrets.mnemonic;
+  seedWallet.private_key = secrets.private_key;
   seedWallet.imported = true;
 
   await AppDataSource.manager.save(seedWallet);
