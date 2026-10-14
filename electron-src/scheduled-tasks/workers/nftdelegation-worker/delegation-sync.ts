@@ -38,13 +38,16 @@ export async function syncNativeDelegations(
     provider.getBlockNumber(),
   );
   const upgrade = start.upgrade;
-  if (
-    start.block_hash &&
-    (await provider.getBlock(start.block))?.hash !== start.block_hash
-  ) {
-    throw new Error(
-      "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
-    );
+  if (start.block_hash) {
+    const checkpoint = await provider.getBlock(start.block);
+    if (!checkpoint?.hash)
+      throw new Error(
+        `Missing delegation checkpoint block ${start.block}; retry to resume reconciliation`,
+      );
+    if (checkpoint.hash !== start.block_hash)
+      throw new Error(
+        "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
+      );
   }
   const initialHead = await provider.getBlockNumber();
   if (initialHead < start.block)
@@ -72,7 +75,9 @@ export async function syncNativeDelegations(
     );
     const snapshot = await provider.getBlock(snapshotBlock);
     if (!snapshot?.hash)
-      throw new Error(`Missing delegation snapshot block ${snapshotBlock}`);
+      throw new Error(
+        `Missing delegation snapshot block ${snapshotBlock}; retry to resume reconciliation`,
+      );
     if (checkpoint.block_hash && checkpoint.block_hash !== snapshot.hash) {
       throw new Error(
         "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
@@ -107,7 +112,11 @@ export async function syncNativeDelegations(
       await provider.getBlockNumber(),
     );
     const after = await provider.getBlock(snapshotBlock);
-    if (after?.hash !== snapshot.hash)
+    if (!after?.hash)
+      throw new Error(
+        `Missing delegation snapshot block ${snapshotBlock}; retry to resume reconciliation`,
+      );
+    if (after.hash !== snapshot.hash)
       throw new Error(
         "Delegation state snapshot changed; retry to resume reconciliation",
       );

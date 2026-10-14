@@ -947,25 +947,37 @@ describe("native delegation persistence and resumable atomic replay", () => {
     assert.equal(await getLatestNFTDBlock(db), 200);
   });
 
-  it("discards an older replay format while preserving live rows and native index version", async () => {
-    await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
-    await db
-      .getRepository(NFTDelegationReplayBlock)
-      .update({ id: 1 }, { index_version: 1 });
-    await db
-      .getRepository(NFTDelegationBlock)
-      .update({ id: 1 }, { index_version: 1 });
-    const checkpoint = await prepareNativeDelegationReplay(db);
-    assert.equal(checkpoint.block, DELEGATION_CONTRACT.deploy_block - 1);
-    assert.equal(checkpoint.index_version, NATIVE_DELEGATION_INDEX_VERSION);
-    assert.equal(
-      await db.getRepository(ReplayNativeDelegationRegistration).count(),
-      0,
-    );
-    assert.equal(await getLatestNFTDBlock(db), 10);
-    assert.equal(await db.getRepository(Consolidation).count(), 1);
-    assert.equal(await isNativeDelegationIndexReady(db), false);
-  });
+  for (const staleHash of [null, "stale-v1-hash"]) {
+    it(`discards an older replay format with ${staleHash ?? "no hash"} while preserving live rows`, async () => {
+      await persistNftDelegations(db, 100, 2000, scan(), 1, 0, true);
+      await db.getRepository(NFTDelegationReplayBlock).update(
+        { id: 1 },
+        {
+          index_version: 1,
+          block_hash: staleHash,
+          upgrade: false,
+          consolidations_changed: true,
+        },
+      );
+      await db
+        .getRepository(NFTDelegationBlock)
+        .update({ id: 1 }, { index_version: 1 });
+      const checkpoint = await prepareNativeDelegationReplay(db);
+      assert.equal(checkpoint.block, DELEGATION_CONTRACT.deploy_block - 1);
+      assert.equal(checkpoint.index_version, NATIVE_DELEGATION_INDEX_VERSION);
+      assert.equal(checkpoint.block_hash, null);
+      assert.equal(checkpoint.upgrade, true);
+      assert.equal(checkpoint.consolidations_changed, false);
+      assert.equal(checkpoint.timestamp, 0);
+      assert.equal(
+        await db.getRepository(ReplayNativeDelegationRegistration).count(),
+        0,
+      );
+      assert.equal(await getLatestNFTDBlock(db), 10);
+      assert.equal(await db.getRepository(Consolidation).count(), 1);
+      assert.equal(await isNativeDelegationIndexReady(db), false);
+    });
+  }
 
   it("resumes expiry batches without rereading verified groups or exposing partial live rows", async () => {
     const logs = Array.from({ length: 21 }, (_, index) => ({
@@ -1135,6 +1147,103 @@ describe("native delegation persistence and resumable atomic replay", () => {
     assert.equal(
       (await db.getRepository(Consolidation).find())[0].wallet1,
       "old",
+    );
+  });
+
+  it("resumes without Reset after missing checkpoint or snapshot blocks", async () => {
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      scan(),
+      1,
+      0,
+      true,
+      "original-hash",
+    );
+    const checkpoint = await db
+      .getRepository(NFTDelegationReplayBlock)
+      .findOneByOrFail({ id: 1 });
+    const noScan = async () => {
+      throw new Error("unexpected scan");
+    };
+    let reads = 0;
+    const reader: DelegationStateReader = {
+      readDelegates: async () => {
+        reads++;
+        return ["b"];
+      },
+      readEntry: async () => {
+        reads++;
+        return {
+          delegator: "a",
+          delegate: "b",
+          registeredAt: BigInt(1792022400),
+          expiry: BigInt(1234),
+          allTokens: false,
+          tokenId: BigInt(0),
+        };
+      },
+    };
+    for (const missingBlock of [null, { hash: null }]) {
+      // Saved checkpoint, snapshot before reads, and snapshot after reads.
+      for (const missingAt of [1, 2, 3]) {
+        let blocks = 0;
+        reads = 0;
+        await assert.rejects(
+          syncNativeDelegations(
+            db,
+            {
+              getBlockNumber: async () => 100,
+              getBlock: async () =>
+                ++blocks === missingAt
+                  ? missingBlock
+                  : { hash: "original-hash" },
+            },
+            reader,
+            noScan,
+            () => {},
+          ),
+          (error: unknown) => {
+            assert.ok(error instanceof Error);
+            assert.match(
+              error.message,
+              /Missing delegation .* block 100; retry/,
+            );
+            assert.doesNotMatch(error.message, /Reset/);
+            return true;
+          },
+        );
+        assert.equal(reads, missingAt === 3 ? 2 : 0);
+        assert.equal(await getLatestNFTDBlock(db), 10);
+        assert.deepEqual(
+          await db
+            .getRepository(NFTDelegationReplayBlock)
+            .findOneByOrFail({ id: 1 }),
+          checkpoint,
+        );
+        assert.equal(
+          (await db.getRepository(ReplayNativeDelegationRegistration).find())[0]
+            .expiry,
+          null,
+        );
+      }
+    }
+    await syncNativeDelegations(
+      db,
+      {
+        getBlockNumber: async () => 100,
+        getBlock: async () => ({ hash: "original-hash" }),
+      },
+      reader,
+      noScan,
+      () => {},
+    );
+    assert.equal(await getLatestNFTDBlock(db), 100);
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+    assert.equal(
+      (await db.getRepository(NativeDelegationRegistration).find())[0].expiry,
+      1234,
     );
   });
 

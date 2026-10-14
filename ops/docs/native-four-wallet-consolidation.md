@@ -72,9 +72,11 @@ after pruning, so a slow or queued read reports the resumable snapshot-age error
 instead of misclassifying expired state as a slot-count or metadata mismatch.
 Snapshot hashes are checked around state reads; saved checkpoint hashes detect
 a changed chain checkpoint and require Reset to rebuild rather than publishing
-mixed history. The checkpoint hash also commits to its ancestors through each
-block's parent hash, so a canonical reorg below the checkpoint changes that hash. State/count/scope/time mismatches stop reconciliation without
-publishing guessed values.
+mixed history. A temporarily unavailable block or hash preserves replay progress
+and asks for a retry; it does not require Reset. The checkpoint hash also commits
+to its ancestors through each block's parent hash, so a canonical reorg below the
+checkpoint changes that hash. State/count/scope/time mismatches stop reconciliation
+without publishing guessed values.
 
 Verified expiry is immutable for a surviving registration slot, so matched
 groups are durable across interruptions and newer snapshot blocks. Later log
