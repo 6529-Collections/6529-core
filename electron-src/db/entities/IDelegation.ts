@@ -154,9 +154,11 @@ export class NativeDelegationRegistration {
   all_tokens!: boolean;
 
   @Column({ type: "varchar", length: 78 })
+  // Token IDs span uint256; decimal text avoids JavaScript number precision loss.
   token_id!: string;
 
   @Column({ type: "bigint", nullable: true, default: null })
+  // Normalized epoch seconds (including NEVER_DATE) fit safely in a number.
   expiry!: number | null;
 }
 

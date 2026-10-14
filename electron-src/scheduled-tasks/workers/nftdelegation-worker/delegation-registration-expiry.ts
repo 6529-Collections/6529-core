@@ -180,8 +180,9 @@ export async function reconcileRegistrationExpiries(
   });
 }
 
-// Stay well inside AWS's 128-block state window. A failed/aged batch is retried
-// from durable log progress with a fresh snapshot, without publishing guesses.
+// Deliberately cap age at 64 blocks, leaving margin inside AWS's 128-block
+// state window. The next worker attempt catches up durable logs and uses a
+// fresh snapshot after an aged batch fails, without publishing guesses.
 export function assertRecentDelegationSnapshot(
   snapshotBlock: number,
   latestBlock: number,

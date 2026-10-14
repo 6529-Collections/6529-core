@@ -851,7 +851,47 @@ describe("native delegation persistence and resumable atomic replay", () => {
         .expiry,
       null,
     );
-    await syncNativeDelegations(db, provider, slots, noScan, () => {});
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    const snapshots: number[] = [];
+    await syncNativeDelegations(
+      db,
+      { ...provider, getBlockNumber: async () => 165 },
+      {
+        readDelegates: async (query) => {
+          snapshots.push(query.block);
+          return slots.readDelegates();
+        },
+        readEntry: async (query) => {
+          snapshots.push(query.block);
+          return slots.readEntry();
+        },
+      },
+      async (from, to) => {
+        assert.deepEqual([from, to], [101, 165]);
+        assert.equal(await getLatestNFTDBlock(db), 10);
+        await persistNftDelegations(
+          db,
+          to,
+          3000,
+          {
+            consolidations: [],
+            registrations: [],
+            revocations: [],
+            registrationLogs: [],
+          },
+          1,
+          0,
+          true,
+        );
+      },
+      () => {},
+    );
+    assert.deepEqual(snapshots, [165, 165]);
+    assert.equal(await getLatestNFTDBlock(db), 165);
+    assert.equal(
+      (await db.getRepository(NativeDelegationRegistration).find())[0].expiry,
+      1234,
+    );
     assert.equal(await isNativeDelegationIndexReady(db), true);
   });
 
