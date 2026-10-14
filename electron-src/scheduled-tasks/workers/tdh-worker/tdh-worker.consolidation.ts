@@ -297,17 +297,14 @@ export const consolidateTDH = async (
       )
       .concat(consolidatedBoostedTdh);
     const allRankedTdh = await calculateRanks(
-      allGradientsTDH,
-      allNextgenTDH,
+      allTdh.flatMap((t: ConsolidatedTDH) => t.gradients),
+      allTdh.flatMap((t: ConsolidatedTDH) => t.nextgen),
       allTdh,
       nfts,
       nextgen,
     );
-    rankedTdh = allRankedTdh.filter((t: ConsolidatedTDH) =>
-      startingWallets.some((sw) =>
-        t.wallets.some((tw: string) => areEqualAddresses(tw, sw)),
-      ),
-    );
+    // Persist global rank shifts alongside the recalculated groups.
+    rankedTdh = allRankedTdh;
   } else {
     rankedTdh = await calculateRanks(
       allGradientsTDH,

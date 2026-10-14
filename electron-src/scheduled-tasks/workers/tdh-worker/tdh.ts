@@ -40,6 +40,13 @@ import {
   retrieveWalletConsolidations,
 } from "./tdh-worker.db";
 import { processNftTdh } from "./tdh-worker.nfts";
+import {
+  compareCollectionTdh,
+  compareMemeOwnerTdh,
+  compareOverallTdh,
+  compareTokenTdh,
+  shouldIncludeWalletTdh,
+} from "./tdh-ranking";
 export const TDH_CONTRACTS = [
   MEMES_CONTRACT,
   GRADIENT_CONTRACT,
@@ -446,6 +453,13 @@ export const calculateTDH = async (
         }
       });
 
+      // Match backend inclusion before contributing rows or token rank catalogs.
+      if (
+        !shouldIncludeWalletTdh(totalTDH, totalBalance, consolidations.length)
+      ) {
+        return;
+      }
+
       let memesCardSets = 0;
       if (walletMemes.length == memes.length) {
         memesCardSets = Math.min(
@@ -527,15 +541,14 @@ export const calculateTDH = async (
       )
       .concat(boostedTdh);
     const allRankedTdh = await calculateRanks(
-      allGradientsTDH,
-      allNextgenTDH,
+      allTdh.flatMap((t: TDH) => t.gradients),
+      allTdh.flatMap((t: TDH) => t.nextgen),
       allTdh,
       ADJUSTED_NFTS,
       nextgen,
     );
-    rankedTdh = allRankedTdh.filter((t: TDH) =>
-      startingWallets.some((sw) => areEqualAddresses(sw, t.wallet)),
-    );
+    // A changed member can shift ranks for every row, even unchanged wallets.
+    rankedTdh = allRankedTdh;
   } else {
     rankedTdh = await calculateRanks(
       allGradientsTDH,
@@ -945,13 +958,18 @@ export async function calculateRanks(
     areEqualAddresses(nft.contract, NEXTGEN_CONTRACT),
   ),
 ) {
-  allGradientsTDH.sort((a, b) => b.tdh - a.tdh || a.id - b.id || -1);
+  for (const row of boostedTDH) {
+    row.memes_ranks = [];
+    row.gradients_ranks = [];
+    row.nextgen_ranks = [];
+  }
+  allGradientsTDH.sort(compareTokenTdh);
   const rankedGradientsTdh = allGradientsTDH.map((a, index) => {
     a.rank = index + 1;
     return a;
   });
 
-  allNextgenTDH.sort((a, b) => b.tdh - a.tdh || a.id - b.id || -1);
+  allNextgenTDH.sort(compareTokenTdh);
   const rankedNextgenTdh = allNextgenTDH.map((a, index) => {
     a.rank = index + 1;
     return a;
@@ -972,25 +990,11 @@ export async function calculateRanks(
           (areEqualAddresses(nft.contract, GRADIENT_CONTRACT) &&
             w.gradients_tdh > 0),
       )
-      .sort((a, b) => {
-        const aNftBalance = areEqualAddresses(nft.contract, MEMES_CONTRACT)
-          ? a.memes.find((m: any) => m.id == nft.id).tdh
-          : a.gradients_tdh;
-        const bNftBalance = areEqualAddresses(nft.contract, MEMES_CONTRACT)
-          ? b.memes.find((m: any) => m.id == nft.id).tdh
-          : b.gradients_tdh;
-
-        if (aNftBalance > bNftBalance) {
-          return -1;
-        } else if (aNftBalance < bNftBalance) {
-          return 1;
-        } else {
-          if (a.boosted_tdh > b.boosted_tdh) {
-            return -1;
-          }
-          return 1;
-        }
-      })
+      .sort((a, b) =>
+        areEqualAddresses(nft.contract, MEMES_CONTRACT)
+          ? compareMemeOwnerTdh(nft.id, a, b)
+          : compareCollectionTdh("gradients", a, b),
+      )
       .forEach((w, index) => {
         if (areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
           w.memes_ranks.push({
@@ -1010,31 +1014,6 @@ export async function calculateRanks(
           return w;
         }
       });
-
-    if (areEqualAddresses(nft.contract, MEMES_CONTRACT)) {
-      const wallets = [...boostedTDH].filter((w) =>
-        w.memes.some((m: any) => m.id == nft.id),
-      );
-
-      wallets.sort((a, b) => {
-        const aNftBalance = a.memes.find((m: any) => m.id == nft.id).tdh;
-        const bNftBalance = b.memes.find((m: any) => m.id == nft.id).tdh;
-
-        if (aNftBalance > bNftBalance) {
-          return -1;
-        }
-        if (aNftBalance > bNftBalance) {
-          return -1;
-        } else if (aNftBalance < bNftBalance) {
-          return 1;
-        } else {
-          if (a.boosted_tdh > b.boosted_tdh) {
-            return -1;
-          }
-          return 1;
-        }
-      });
-    }
   });
 
   NEXTGEN_NFTS.forEach((nft) => {
@@ -1051,78 +1030,18 @@ export async function calculateRanks(
       });
   });
 
-  boostedTDH.sort((a: TDH, b: TDH) => {
-    if (a.boosted_tdh > b.boosted_tdh) return -1;
-    else if (a.boosted_tdh < b.boosted_tdh) return 1;
-    else if (a.tdh > b.tdh) return -1;
-    else if (a.tdh < b.tdh) return 1;
-    else if (a.gradients_tdh > b.gradients_tdh) return -1;
-    else if (a.gradients_tdh < b.gradients_tdh) return 1;
-    else if (a.nextgen_tdh > b.nextgen_tdh) return -1;
-    else if (a.nextgen_tdh < b.nextgen_tdh) return 1;
-    else return -1;
-  });
-  boostedTDH = boostedTDH.map((w, index) => {
-    w.tdh_rank = index + 1;
-    return w;
+  boostedTDH.sort(compareOverallTdh);
+  boostedTDH.forEach((row, index) => {
+    row.tdh_rank = index + 1;
   });
 
-  boostedTDH.sort((a: TDH, b: TDH) => {
-    if (a.boosted_memes_tdh > b.boosted_memes_tdh) return -1;
-    else if (a.boosted_memes_tdh < b.boosted_memes_tdh) return 1;
-    else if (a.memes_tdh > b.memes_tdh) return -1;
-    else if (a.memes_tdh < b.memes_tdh) return 1;
-    else if (a.memes_balance > b.memes_balance) return -1;
-    else if (a.memes_balance < b.memes_balance) return 1;
-    else if (a.balance > b.balance) return -1;
-    else return -1;
-  });
-  boostedTDH = boostedTDH.map((w, index) => {
-    if (w.boosted_memes_tdh > 0) {
-      w.tdh_rank_memes = index + 1;
-    } else {
-      w.tdh_rank_memes = -1;
-    }
-    return w;
-  });
-
-  boostedTDH.sort((a: TDH, b: TDH) => {
-    if (a.boosted_gradients_tdh > b.boosted_gradients_tdh) return -1;
-    else if (a.boosted_gradients_tdh < b.boosted_gradients_tdh) return 1;
-    else if (a.gradients_tdh > b.gradients_tdh) return -1;
-    else if (a.gradients_tdh < b.gradients_tdh) return 1;
-    else if (a.gradients_balance > b.gradients_balance) return -1;
-    else if (a.gradients_balance < b.gradients_balance) return 1;
-    else if (a.balance > b.balance) return -1;
-    else return -1;
-  });
-  boostedTDH = boostedTDH.map((w, index) => {
-    if (w.boosted_gradients_tdh > 0) {
-      w.tdh_rank_gradients = index + 1;
-    } else {
-      w.tdh_rank_gradients = -1;
-    }
-    return w;
-  });
-
-  boostedTDH.sort((a: TDH, b: TDH) => {
-    if (a.boosted_nextgen_tdh > b.boosted_nextgen_tdh) return -1;
-    else if (a.boosted_nextgen_tdh < b.boosted_nextgen_tdh) return 1;
-    else if (a.nextgen_tdh > b.nextgen_tdh) return -1;
-    else if (a.nextgen_tdh < b.nextgen_tdh) return 1;
-    else if (a.nextgen_balance > b.nextgen_balance) return -1;
-    else if (a.nextgen_balance < b.nextgen_balance) return 1;
-    else if (a.balance > b.balance) return -1;
-    else return -1;
-  });
-  boostedTDH = boostedTDH.map((w, index) => {
-    if (w.boosted_nextgen_tdh > 0) {
-      w.tdh_rank_nextgen = index + 1;
-    } else {
-      w.tdh_rank_nextgen = -1;
-    }
-    return w;
-  });
+  for (const collection of ["memes", "gradients", "nextgen"] as const) {
+    boostedTDH.sort((a, b) => compareCollectionTdh(collection, a, b));
+    boostedTDH.forEach((row, index) => {
+      row[`tdh_rank_${collection}`] =
+        row[`boosted_${collection}_tdh`] > 0 ? index + 1 : -1;
+    });
+  }
 
   return boostedTDH;
 }

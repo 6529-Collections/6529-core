@@ -150,3 +150,28 @@ The settings request passes an abort signal to `fetch` and has a 15-second timeo
 The backend emits canonical whole-second UTC timestamps with `.000Z`; native parsing also accepts the equivalent `Z` form. Other offsets or fractional formats are deliberately outside the shared policy contract. A future contract-format change must update the backend and both clients together rather than silently widening native acceptance.
 
 The workers capture a policy separately for each calculation. If configuration changes between runs, displayed groups retain the completed run’s policy until the next calculation detects the changed key and fully regroups. Active calculations retain their own snapshot, so they do not mix cutoffs mid-run.
+
+## Deterministic TDH ranking
+
+Wallet and consolidated ranks use the same ordering as backend #2148.
+Overall rank sorts descending by boosted TDH, TDH, Gradient TDH and NextGen
+TDH. Each collection sorts descending by its boosted TDH, TDH, balance and
+then total wallet/group balance. Remaining ties use lowercase wallet or
+consolidation key in ascending plain lexical order; equal identities compare
+as equal. Collection ranks remain `-1` for zero boosted collection scores.
+Per-Meme owner ranks use token TDH, total boosted TDH and the same identity
+ordering. Gradient and NextGen token ranks retain descending token TDH and
+ascending numeric token ID.
+
+Raw wallet candidates are included when TDH or total balance is positive, or
+the resolved consolidation has multiple wallets. Empty standalone wallets are
+excluded; funded zero-score wallets and empty members of a consolidation stay.
+The next full calculation replaces old raw/group TDH rows, naturally removing
+previously included empty singleton rows. No ownership or delegation repair is
+needed for this ranking change. Partial calculations still recalculate only
+affected holdings, but rebuild token rank arrays and persist global rank shifts
+for all retained rows using the complete current token catalogs.
+
+Scores, boosts, holding ages, merged edition-day arrays and the positive-score
+Merkle leaves are unchanged by ranking. Compare Core and backend results only
+at the same TDH block and consolidation policy after both use these tie rules.
