@@ -1060,6 +1060,118 @@ describe("native delegation persistence and resumable atomic replay", () => {
     assert.equal(await isNativeDelegationIndexReady(db), true);
   });
 
+  it("advances durable reconciliation across several batches while the chain head moves", async () => {
+    const logs = Array.from({ length: 45 }, (_, index) => ({
+      ...scan().registrationLogs[0],
+      logIndex: index,
+      delegator: `a${String(index).padStart(2, "0")}`,
+      tokenId: BigInt(index),
+    }));
+    const empty = {
+      consolidations: [],
+      registrations: [],
+      revocations: [],
+      registrationLogs: [],
+    };
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      { ...empty, registrationLogs: logs },
+      1,
+      0,
+      true,
+      "hash-100",
+    );
+    let head = 100;
+    const reads = new Map<string, number>();
+    const snapshots = new Map<number, number>();
+    const catchups: [number, number][] = [];
+    const progress: [number, number][] = [];
+    const result = await syncNativeDelegations(
+      db,
+      {
+        getBlockNumber: async () => head,
+        getBlock: async (block) => ({ hash: `hash-${block}` }),
+      },
+      {
+        readDelegates: async () => {
+          head++; // Model twelve seconds of chain movement per RPC request.
+          return ["b"];
+        },
+        readEntry: async (query) => {
+          head++;
+          reads.set(query.delegator, (reads.get(query.delegator) ?? 0) + 1);
+          snapshots.set(query.block, (snapshots.get(query.block) ?? 0) + 1);
+          const index = Number(query.delegator.slice(1));
+          return {
+            delegator: query.delegator,
+            delegate: "b",
+            registeredAt: BigInt(logs[index].timestamp),
+            expiry: BigInt(1234 + index),
+            allTokens: false,
+            tokenId: BigInt(index),
+          };
+        },
+      },
+      async (from, to) => {
+        catchups.push([from, to]);
+        assert.equal(await getLatestNFTDBlock(db), 10);
+        const verified = await db
+          .getRepository(ReplayNativeDelegationRegistration)
+          .createQueryBuilder("r")
+          .where("r.expiry IS NOT NULL")
+          .getCount();
+        assert.equal(verified, catchups.length * 20);
+        await persistNftDelegations(
+          db,
+          to,
+          3000,
+          empty,
+          1,
+          0,
+          true,
+          `hash-${to}`,
+        );
+      },
+      (completed, total) => {
+        progress.push([completed, total]);
+      },
+    );
+    assert.deepEqual(progress, [
+      [0, 45],
+      [20, 45],
+      [40, 45],
+    ]);
+    assert.deepEqual(catchups, [
+      [101, 140],
+      [141, 180],
+    ]);
+    assert.deepEqual(
+      [...snapshots],
+      [
+        [100, 20],
+        [140, 20],
+        [180, 5],
+      ],
+    );
+    assert.equal(reads.size, 45);
+    assert.ok([...reads.values()].every((count) => count === 1));
+    assert.deepEqual(result, { block: 180, upgrade: true });
+    assert.equal(head, 190);
+    assert.equal(await getLatestNFTDBlock(db), 180);
+    const live = await db.getRepository(NativeDelegationRegistration).find();
+    assert.equal(live.length, 45);
+    assert.ok(
+      live.every((r) => r.expiry === 1234 + Number(r.from_address.slice(1))),
+    );
+    assert.equal(
+      await db.getRepository(ReplayNativeDelegationRegistration).count(),
+      0,
+    );
+    assert.equal(await isNativeDelegationIndexReady(db), true);
+  });
+
   it("partitions pending state reads by all three tuple fields and writes canonical decimal token IDs", async () => {
     const base = scan().registrationLogs[0];
     const logs = [

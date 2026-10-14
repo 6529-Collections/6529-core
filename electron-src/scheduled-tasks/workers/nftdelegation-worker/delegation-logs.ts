@@ -91,6 +91,8 @@ export async function mapDelegationLogs(
       timestamp: 0,
     });
     if (tokenId > MAX_STORABLE_DELEGATION_TOKEN_ID) {
+      // Only the legacy INT projection omits this token. registrationLogs
+      // retains its full uint256 for the staged ledger and expiry slot matching.
       warn(
         `Skipping token ID ${tokenId} outside native/backend token_id range at ${log.blockNumber}:${log.index}`,
       );

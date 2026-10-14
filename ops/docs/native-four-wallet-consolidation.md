@@ -80,6 +80,21 @@ to its ancestors through each block's parent hash, so a canonical reorg below th
 checkpoint changes that hash. State/count/scope/time mismatches stop reconciliation
 without publishing guessed values.
 
+Scanning extends the saved checkpoint from `checkpoint.block + 1`; committed
+chunks are not overwritten by overlapping rescans. Each chunk captures its end
+block hash before fetching logs and rechecks it and the previous checkpoint
+before the atomic event/checkpoint commit. A changed uncommitted range is
+retried; a changed committed ancestor requires Reset. Deleting only ledger rows
+in a re-mined range would not undo revocations or consolidation changes, so it
+is not a substitute for this checkpoint protection.
+
+Each reconciliation iteration reads at most 20 tuple groups with concurrency
+five, preserving verified progress and catching logs up when the checkpoint
+ages by more than 32 blocks. This bounds group count, not elapsed time or the
+number of entries within one group. The 64-block safety cap cannot guarantee
+completion for arbitrarily slow RPCs or arbitrarily large groups; an aged batch
+fails closed and retries from durable progress with a fresh snapshot.
+
 Verified expiry is immutable for a surviving registration slot, so matched
 groups are durable across interruptions and newer snapshot blocks. Later log
 catch-up deletes revoked slots and marks new registrations pending; it never

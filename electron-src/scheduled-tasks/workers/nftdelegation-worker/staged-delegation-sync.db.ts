@@ -131,7 +131,7 @@ export interface PendingDelegationGroup {
   use_case: number;
 }
 
-/** Limit each live-read batch so its pinned block stays in the full-node window. */
+/** Bound group count; per-read age guards still protect large or slow groups. */
 export async function getPendingDelegationGroups(
   db: DataSource,
 ): Promise<PendingDelegationGroup[]> {
