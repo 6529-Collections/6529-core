@@ -24,6 +24,23 @@ interface RecentStateProvider {
   getBlock(block: number): Promise<{ hash: string | null } | null>;
 }
 
+/** Never extend durable history from an orphaned checkpoint. */
+export async function verifyDelegationCheckpoint(
+  provider: Pick<RecentStateProvider, "getBlock">,
+  checkpoint: Pick<NFTDelegationReplayBlock, "block" | "block_hash">,
+): Promise<void> {
+  if (!checkpoint.block_hash) return;
+  const block = await provider.getBlock(checkpoint.block);
+  if (!block?.hash)
+    throw new Error(
+      `Missing delegation checkpoint block ${checkpoint.block}; retry to resume reconciliation`,
+    );
+  if (block.hash !== checkpoint.block_hash)
+    throw new Error(
+      "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
+    );
+}
+
 /** Scan durable history, then reconcile bounded batches inside the state window. */
 export async function syncNativeDelegations(
   db: DataSource,
@@ -38,17 +55,7 @@ export async function syncNativeDelegations(
     provider.getBlockNumber(),
   );
   const upgrade = start.upgrade;
-  if (start.block_hash) {
-    const checkpoint = await provider.getBlock(start.block);
-    if (!checkpoint?.hash)
-      throw new Error(
-        `Missing delegation checkpoint block ${start.block}; retry to resume reconciliation`,
-      );
-    if (checkpoint.hash !== start.block_hash)
-      throw new Error(
-        "Delegation log checkpoint changed; Reset NFTDelegation to rebuild the index",
-      );
-  }
+  await verifyDelegationCheckpoint(provider, start);
   const initialHead = await provider.getBlockNumber();
   if (initialHead < start.block)
     throw new Error("Delegation checkpoint is ahead of the chain");
@@ -63,6 +70,7 @@ export async function syncNativeDelegations(
     // A long historical scan or an interrupted reconciliation can leave its
     // target outside AWS's state window. Catch up logs before any eth_call.
     if (head - checkpoint.block > 32) {
+      await verifyDelegationCheckpoint(provider, checkpoint);
       await scan(checkpoint.block + 1, head);
       checkpoint = await db
         .getRepository(NFTDelegationReplayBlock)

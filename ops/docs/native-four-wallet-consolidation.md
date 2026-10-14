@@ -70,7 +70,9 @@ more than 32 blocks, logs catch up before further state calls. A batch exceeding
 Each state request checks age at dispatch and completion, including RPC failures
 after pruning, so a slow or queued read reports the resumable snapshot-age error
 instead of misclassifying expired state as a slot-count or metadata mismatch.
-Snapshot hashes are checked around state reads; saved checkpoint hashes detect
+Snapshot hashes are checked around state reads. Before catch-up and each scan
+chunk's commit, the previous saved checkpoint hash is rechecked so a canonical
+new endpoint cannot overwrite evidence of orphaned staged history. Saved hashes detect
 a changed chain checkpoint and require Reset to rebuild rather than publishing
 mixed history. A temporarily unavailable block or hash preserves replay progress
 and asks for a retry; it does not require Reset. The checkpoint hash also commits

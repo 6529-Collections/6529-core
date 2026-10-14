@@ -1247,6 +1247,68 @@ describe("native delegation persistence and resumable atomic replay", () => {
     );
   });
 
+  it("rejects a checkpoint reorg between reconciliation batches before catch-up can replace its hash", async () => {
+    await persistNftDelegations(
+      db,
+      100,
+      2000,
+      scan(),
+      1,
+      0,
+      true,
+      "original-hash",
+    );
+    let hashes = 0;
+    let advanced = false;
+    let reads = 0;
+    await assert.rejects(
+      syncNativeDelegations(
+        db,
+        {
+          getBlockNumber: async () => (advanced ? 200 : 100),
+          getBlock: async () => {
+            hashes++;
+            if (hashes === 3) advanced = true;
+            return { hash: hashes > 3 ? "other-fork" : "original-hash" };
+          },
+        },
+        {
+          readDelegates: async () => {
+            reads++;
+            return ["b"];
+          },
+          readEntry: async () => {
+            reads++;
+            return {
+              delegator: "a",
+              delegate: "b",
+              registeredAt: BigInt(1792022400),
+              expiry: BigInt(1234),
+              allTokens: false,
+              tokenId: BigInt(0),
+            };
+          },
+        },
+        async () => {
+          throw new Error("orphaned checkpoint must not be extended");
+        },
+        () => {},
+      ),
+      /checkpoint changed; Reset NFTDelegation/,
+    );
+    assert.equal(reads, 2);
+    assert.equal(await getLatestNFTDBlock(db), 10);
+    const checkpoint = await db
+      .getRepository(NFTDelegationReplayBlock)
+      .findOneByOrFail({ id: 1 });
+    assert.equal(checkpoint.block, 100);
+    assert.equal(checkpoint.block_hash, "original-hash");
+    assert.equal(
+      await db.getRepository(NativeDelegationRegistration).count(),
+      0,
+    );
+  });
+
   it("rejects a changed saved checkpoint before scanning or reading state", async () => {
     await persistNftDelegations(
       db,

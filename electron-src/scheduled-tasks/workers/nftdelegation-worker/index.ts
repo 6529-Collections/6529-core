@@ -51,7 +51,10 @@ import {
   createDelegationStateReader,
   readRecentDelegationState,
 } from "./delegation-registration-expiry";
-import { syncNativeDelegations } from "./delegation-sync";
+import {
+  syncNativeDelegations,
+  verifyDelegationCheckpoint,
+} from "./delegation-sync";
 import { expandAffectedConsolidationWallets } from "../tdh-worker/tdh-worker.db";
 
 const data: ResettableWorkerData = workerData;
@@ -186,6 +189,9 @@ class NFTDelegationWorker extends CoreWorker {
         currentFromBlock + this.getBlockRange(),
         toBlock,
       );
+      const previousCheckpoint = await this.getDb()
+        .getRepository(NFTDelegationReplayBlock)
+        .findOneByOrFail({ id: 1 });
 
       const latestBlockTime = await getBlockTimestamp(
         parentPort,
@@ -205,6 +211,12 @@ class NFTDelegationWorker extends CoreWorker {
             "Delegation scan block changed; retry to resume from the last checkpoint",
           );
         }
+        // Check the saved anchor before replacing it with this chunk's hash.
+        // A canonical new endpoint alone cannot validate older staged history.
+        await verifyDelegationCheckpoint(
+          this.getProvider(),
+          previousCheckpoint,
+        );
       };
 
       const printStatus = (...args: any[]) => {
