@@ -17,12 +17,17 @@ import { normalizeOptionalWaveId } from "@/helpers/waves/wave.helpers";
 import { fetchUrl } from "@/services/6529api";
 import type { ReactNode } from "react";
 
-type SeizeSettingsState = ApiSeizeSettings & {
+type SeizeSettingsState = Omit<ApiSeizeSettings, "consolidation"> & {
+  consolidation: ApiSeizeSettings["consolidation"] | null;
   curation_wave_id: string | null;
 };
 
-type ApiSeizeSettingsResponse = Omit<ApiSeizeSettings, "auth"> & {
+type ApiSeizeSettingsResponse = Omit<
+  ApiSeizeSettings,
+  "auth" | "consolidation"
+> & {
   auth?: ApiSeizeSettings["auth"] | undefined;
+  consolidation?: ApiSeizeSettings["consolidation"] | undefined;
 };
 
 const DEFAULT_AUTH_SETTINGS: ApiSeizeSettings["auth"] = {
@@ -62,6 +67,7 @@ export const SeizeSettingsProvider = ({
     distribution_admin_wallets: [],
     claims_admin_wallets: [],
     auth: DEFAULT_AUTH_SETTINGS,
+    consolidation: null,
   });
   const [isLoaded, setIsLoaded] = useState(false);
   const [loadError, setLoadError] = useState<Error | null>(null);
@@ -87,6 +93,7 @@ export const SeizeSettingsProvider = ({
           distribution_admin_wallets: settings.distribution_admin_wallets ?? [],
           claims_admin_wallets: settings.claims_admin_wallets ?? [],
           auth: settings.auth ?? previous.auth,
+          consolidation: settings.consolidation ?? null,
           memes_wave_id:
             publicEnv.DEV_MODE_MEMES_WAVE_ID ?? settings.memes_wave_id,
           curation_wave_id:
