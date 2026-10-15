@@ -43,20 +43,28 @@ test("repacking preserves existing unpacking and unpacks new native libraries", 
       "existing/new.txt",
       "app/[route]/keep.txt",
     ]) {
-      assert.equal(asar.statFile(archive, file).unpacked, true, file);
+      // asar looks entries up by platform path, so use native separators.
+      assert.equal(
+        asar.statFile(archive, path.normalize(file)).unpacked,
+        true,
+        file,
+      );
       assert.equal(
         fs.readFileSync(path.join(`${archive}.unpacked`, file), "utf8"),
         file,
       );
     }
-    assert.equal(asar.statFile(archive, "app/main.js").unpacked, undefined);
     assert.equal(
-      asar.extractFile(archive, "app/main.js").toString(),
+      asar.statFile(archive, path.normalize("app/main.js")).unpacked,
+      undefined,
+    );
+    assert.equal(
+      asar.extractFile(archive, path.normalize("app/main.js")).toString(),
       "app/main.js",
     );
     if (process.platform !== "win32") {
       assert.equal(
-        asar.extractFile(archive, "app/alias.js").toString(),
+        asar.extractFile(archive, path.normalize("app/alias.js")).toString(),
         "app/main.js",
       );
     }

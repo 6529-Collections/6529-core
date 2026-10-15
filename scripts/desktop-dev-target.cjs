@@ -4,6 +4,7 @@ const { spawnSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
+const { resolvePnpmCommand } = require("./helpers/pnpm-command.cjs");
 
 const ROOT = path.resolve(__dirname, "..");
 const LIVE_BASE_ENDPOINT = "https://6529.io";
@@ -86,12 +87,12 @@ function getDevEnvironment(backendTarget) {
 }
 
 function run(command, args, env) {
-  const executable =
-    process.platform === "win32" && command === "pnpm" ? "pnpm.cmd" : command;
-  const result = spawnSync(executable, args, {
+  const resolved = resolvePnpmCommand(command, args, env);
+  const result = spawnSync(resolved.executable, resolved.args, {
     cwd: ROOT,
     env,
     stdio: "inherit",
+    shell: resolved.shell ?? false,
   });
   if (result.error) {
     throw result.error;
