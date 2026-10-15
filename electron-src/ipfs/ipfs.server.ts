@@ -87,9 +87,14 @@ export default class IPFSServer {
     return this.startup;
   }
 
-  /** Resolves once startup has finished, successfully or not. */
-  whenSettled(): Promise<IpfsStatus> {
-    return this.startup ?? Promise.resolve(this.status);
+  /**
+   * Resolves once startup has finished, successfully or not, with the
+   * current status: a daemon that became ready after the startup timeout,
+   * or stopped after being ready, is reported as it is now.
+   */
+  async whenSettled(): Promise<IpfsStatus> {
+    await this.startup;
+    return this.status;
   }
 
   private getBinaryPath(): string {
