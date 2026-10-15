@@ -315,8 +315,12 @@ async function launchSecondInstance(ctx: SuiteContext, ...args: string[]): Promi
     [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`, ...args],
     { stdio: "ignore" },
   );
-  const exitCode = await new Promise<number | null | "timeout">((resolve) => {
+  const exitCode = await new Promise<number | null | "timeout">((resolve, reject) => {
     const timer = setTimeout(() => resolve("timeout"), 30_000);
+    second.once("error", (error) => {
+      clearTimeout(timer);
+      reject(new Error(`the second launch could not start: ${error.message}`));
+    });
     second.once("exit", (code) => {
       clearTimeout(timer);
       resolve(code);
