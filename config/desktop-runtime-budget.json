@@ -1,0 +1,15 @@
+{
+  "$comment": "Runtime budget for e2e/desktop/runtime.ts --budget. Timings and CPU depend on the machine, so each entry is for one reference machine, keyed by platform-arch. win32-x64 is the Windows Server 2025 build machine without a GPU (the home screen's video is composited in software, which is most of the idle CPU), measured 2026-10-15 on 16 launches: no launch stuck on the splash, main window at 5.3 s fresh and 9.3 s warm (medians), 729 MiB private memory on the home screen after a minute, 94 CPU-s over an idle minute, 21 requests per idle minute. Each slimming stage lowers these.",
+  "default": {
+    "maxHangs": 0
+  },
+  "platforms": {
+    "win32-x64": {
+      "maxHangs": 0,
+      "maxMainWindowShownWarmS": 15,
+      "maxPrivateMiB": 800,
+      "maxIdleCpuSeconds": 130,
+      "maxIdleRequestsPerMinute": 30
+    }
+  }
+}

@@ -70,7 +70,6 @@ async function measureLaunch(
     await app.connect(60_000);
     const shown = await app.waitForLog(/Main window ready to show/, settings.hangMs).catch(() => null);
     result.splashMs = app.logMilestone(/Creating splash/);
-    result.ipfsReadyMs = app.logMilestone(/\[IPFS\] Daemon fully initialized/);
     if (!shown) {
       result.hung = true;
       result.failure = app.hasExited ? `exited with code ${app.exitCode}` : "main window not shown";
@@ -83,6 +82,8 @@ async function measureLaunch(
     await page.waitForLoadState("domcontentloaded").catch(() => undefined);
 
     await sleep(settings.settleMs);
+    // IPFS starts after the main window, so read its milestone afterwards.
+    result.ipfsReadyMs = app.logMilestone(/\[IPFS\] Daemon fully initialized/);
     const before = sampleTree(app.pid);
     const requests: string[] = [];
     const onRequest = (request: { url(): string }) => requests.push(request.url());
