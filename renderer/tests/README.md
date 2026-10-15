@@ -229,6 +229,9 @@ Use `expectUrlState` from `support/urlState.ts` for route/query predicates;
 Playwright's predicate-based `toHaveURL` also waits for the page load event,
 which pending media can delay even after the correct URL is committed. Keep
 destination content, focus, scroll restoration, and media assertions separate.
+The distribution return coverage also expands its panel after focus returns to
+exercise late layout changes. It retains the original URL, focus, and viewport
+assertions; the test never scrolls the returned row into view itself.
 
 App PR CI:
 
@@ -250,6 +253,13 @@ App PR CI:
   Playwright packs. A separate Museum lane joins the matrix when a change can
   affect a Museum page or the Museum lane itself; Museum unit tests and
   workflows without Museum lanes do not start it.
+- The PR critical-shell lane runs `test:e2e:critical-shell` twice with
+  complementary `--grep` / `--grep-invert` title filters, so each half gets a
+  fresh `next dev` server and every test still runs once. One Turbopack dev
+  session that compiles every critical-shell route outgrows the 16 GB runner's
+  memory. Those steps also set `NEXT_DEV_TURBOPACK_FS_CACHE=0`, which
+  `next.config.ts` maps to `experimental.turbopackFileSystemCacheForDev:
+  false` because CI dev servers always start cold.
 - Museum selection: `scripts/museum-release-selection.cjs` maps each changed
   file to Museum page surfaces through the surface registry and import graph
   (copy keys and `public/museum` assets map through the sources that name
