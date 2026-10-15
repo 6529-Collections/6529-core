@@ -3,6 +3,7 @@
 // dialog, background mode and quit.
 
 import { spawn, spawnSync } from "node:child_process";
+import fs from "node:fs";
 import path from "node:path";
 import { chromium, firefox } from "@playwright/test";
 import { sleep, waitFor } from "../lib/app";
@@ -59,14 +60,18 @@ export async function runShellChecks(ctx: SuiteContext): Promise<void> {
       }
     });
   }
-  for (const [name, method] of [
-    ["Chrome", "openExternalChrome"],
-    ["Brave", "openExternalBrave"],
-    ["Firefox", "openExternalFirefox"],
+  for (const [name, method, exeName] of [
+    ["Chrome", "openExternalChrome", "chrome.exe"],
+    ["Brave", "openExternalBrave", "brave.exe"],
+    ["Firefox", "openExternalFirefox", "firefox.exe"],
   ] as const) {
     await r.check("F4", `connector-open-${name.toLowerCase()}`, `"Open in ${name}" launches ${name} with the connector`, async () => {
       if (!ctx.options.externalBrowsers) skip("needs --external-browsers (opens real browser windows)");
       if (process.platform !== "win32") skip("process lookup implemented for Windows");
+      // The app hands the URL to the browser and never learns whether it
+      // started, so a browser that is not installed has to be ruled out here.
+      if (!findInstalledBrowser(exeName)) skip(`${name} is not installed on this machine`);
+      const alreadyRunning = findProcessesByName(exeName).length > 0;
       const marker = `suite${Date.now()}`;
       const logStart = ctx.app.readMainLog().length;
       await bridge(page, "api", method, `${connectorUrl}?${marker}=1`);
@@ -86,7 +91,11 @@ export async function runShellChecks(ctx: SuiteContext): Promise<void> {
         .slice(logStart)
         .find((line) => new RegExp(`Failed to open in ${name}`).test(line.text));
       if (failure) throw new Error(`${name} launch failed, fell back to the default browser: ${failure.text.split("\n")[0].slice(0, 200)}`);
-      return seen.size > 0 ? `${name} started with the connector URL` : `${name} launch reported no error (handed to a running ${name})`;
+      if (seen.size > 0) return `${name} started with the connector URL`;
+      // A running browser takes the URL from a short-lived launcher process
+      // that can come and go between two looks.
+      if (alreadyRunning) return `handed to the running ${name} (no new process to observe)`;
+      throw new Error(`${name} did not start`);
     });
   }
 
@@ -322,6 +331,36 @@ async function launchSecondInstance(ctx: SuiteContext, ...args: string[]): Promi
     throw new Error("the second launch did not exit within 30 s: the app is no longer single-instance");
   }
   return exitCode;
+}
+
+/** Standard install locations; the browsers do not always register App Paths. */
+function findInstalledBrowser(exeName: string): string | null {
+  const roots = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"], process.env.LOCALAPPDATA].filter(
+    (root): root is string => Boolean(root),
+  );
+  const relative: Record<string, string[]> = {
+    "chrome.exe": ["Google", "Chrome", "Application", "chrome.exe"],
+    "brave.exe": ["BraveSoftware", "Brave-Browser", "Application", "brave.exe"],
+    "firefox.exe": ["Mozilla Firefox", "firefox.exe"],
+  };
+  const segments = relative[exeName];
+  if (!segments) return null;
+  for (const root of roots) {
+    const full = path.join(root, ...segments);
+    if (fs.existsSync(full)) return full;
+  }
+  return null;
+}
+
+function findProcessesByName(exeName: string): number[] {
+  const result = spawnSync("tasklist", ["/FI", `IMAGENAME eq ${exeName}`, "/FO", "CSV", "/NH"], {
+    encoding: "utf8",
+    windowsHide: true,
+  });
+  return result.stdout
+    .split(/\r?\n/)
+    .map((line) => Number(line.split('","')[1]?.replace(/"/g, "")))
+    .filter((pid) => Number.isInteger(pid) && pid > 0);
 }
 
 function findProcessesByCommandLine(marker: string): number[] {
