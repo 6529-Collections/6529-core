@@ -8,6 +8,7 @@ const asar = require("@electron/asar");
 const { copyResolvedTree } = require("./helpers/copy-resolved-tree.cjs");
 const { getUnpackedPaths, repackAsar } = require("./helpers/repack-asar.cjs");
 const { assertNoPackagedBuildCache } = require("./helpers/packaged-build-cache.cjs");
+const { checkPackedAppSizeBudget } = require("./helpers/size-budget.cjs");
 
 const SOURCE_RELATIVE_PATHS = [
   path.join("renderer", "out", "node_modules"),
@@ -269,6 +270,12 @@ const copyIntoAsar = async (asarPath, copyEntries, allowedRoots, projectDir) => 
 };
 
 module.exports = async function afterPack(context) {
+  await copyRendererNodeModules(context);
+  // Last, once the app folder is final and before any installer is made.
+  checkPackedAppSizeBudget(context);
+};
+
+async function copyRendererNodeModules(context) {
   const allowedSourceRoots = [context.packager.projectDir];
   const copyEntries = SOURCE_RELATIVE_PATHS.map((relativePath) => ({
     relativePath,
@@ -321,4 +328,4 @@ module.exports = async function afterPack(context) {
   );
   assertElectronUpdaterRuntime(appDir);
   assertNoPackagedBuildCache(resourcesDir, false);
-};
+}
