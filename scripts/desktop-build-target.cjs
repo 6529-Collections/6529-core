@@ -120,6 +120,21 @@ const COMMANDS = {
       "always",
     ],
   },
+  // CI checks: the unpacked staging app only, for the size budget and the
+  // function suite. Never publishes.
+  "check-linux-staging": {
+    appEnvironment: "staging",
+    build: ["pnpm", ["run", "build"]],
+    electronBuilder: [
+      "--config",
+      "electron-builder.staging.json",
+      "--linux",
+      "--x64",
+      "--dir",
+      "--publish",
+      "never",
+    ],
+  },
   "dist-linux-production": {
     appEnvironment: "production",
     build: ["pnpm", ["run", "build"]],
