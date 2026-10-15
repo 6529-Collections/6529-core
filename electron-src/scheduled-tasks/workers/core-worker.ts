@@ -4,6 +4,7 @@ import { initWorkerDb } from "./workers.db";
 import { logError, logInfo, sendStatusUpdate } from "../worker-helpers";
 import { ScheduledWorkerStatus } from "../../../shared/types";
 import Bottleneck from "bottleneck";
+import { summarizeWorkerError } from "../worker-error-summary";
 
 export abstract class CoreWorker {
   private provider: ethers.JsonRpcProvider;
@@ -59,7 +60,10 @@ export abstract class CoreWorker {
       await this.work();
     } catch (error: any) {
       logError(this.parentPort, error);
-      if (error.message.includes('"code": 429')) {
+      if (
+        typeof error?.message === "string" &&
+        error.message.includes('"code": 429')
+      ) {
         sendStatusUpdate(this.parentPort, {
           update: {
             status: ScheduledWorkerStatus.THROTTLED,
@@ -70,7 +74,7 @@ export abstract class CoreWorker {
         sendStatusUpdate(this.parentPort, {
           update: {
             status: ScheduledWorkerStatus.ERROR,
-            message: `Error - ${error.message}`,
+            message: `Error - ${summarizeWorkerError(error)}`,
           },
         });
       }

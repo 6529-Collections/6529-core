@@ -195,20 +195,13 @@ export function WorkerCard({
       }
     }
 
-    const printProgress = () => {
-      let p = <></>;
-
-      if (task.status?.action) {
-        p = (
-          <>
-            {p}&nbsp;
-            <span>{task.status.action}</span>
-          </>
-        );
-      }
-
-      return p;
-    };
+    const printProgress = () =>
+      task.status?.action ? (
+        <>
+          {" — "}
+          <span>{task.status.action}</span>
+        </>
+      ) : null;
 
     const progressBg =
       task.status?.status === ScheduledWorkerStatus.COMPLETED
@@ -223,10 +216,10 @@ export function WorkerCard({
     }
 
     return (
-      <span>
+      <div className="tw-w-full tw-min-w-0 tw-max-w-full">
         <div className="tw-flex tw-items-center tw-justify-end tw-gap-2">
           {progressNowLabel !== undefined && (
-            <span className="tw-font-light tw-text-iron-400">
+            <span className="tw-shrink-0 tw-font-light tw-text-iron-400">
               {(Math.floor(progressNowLabel * 100) / 100).toLocaleString(
                 "en-US",
                 {
@@ -244,11 +237,18 @@ export function WorkerCard({
             />
           </div>
         </div>
-        <div className="tw-mt-1 tw-flex tw-text-right tw-text-sm tw-font-light tw-text-iron-400">
+        <div
+          role={
+            task.status?.status === ScheduledWorkerStatus.ERROR
+              ? "alert"
+              : undefined
+          }
+          className="tw-mt-1 tw-min-w-0 tw-max-w-full tw-whitespace-pre-wrap tw-text-right tw-text-sm tw-font-light tw-text-iron-400 [overflow-wrap:anywhere]"
+        >
           <span>{task.status?.message}</span>
           {printProgress()}
         </div>
-      </span>
+      </div>
     );
   };
 
@@ -499,7 +499,7 @@ export function WorkerCard({
           className={`tw-flex tw-flex-wrap tw-gap-2 tw-pb-2 ${isMobile ? "tw-flex-col tw-items-center" : "tw-flex-row tw-items-start tw-justify-between"}`}
         >
           <div
-            className={`tw-flex tw-flex-col tw-gap-1 ${isMobile ? "tw-items-center" : "tw-items-start"}`}
+            className={`tw-flex tw-min-w-0 tw-max-w-full tw-flex-col tw-gap-1 ${isMobile ? "tw-items-center" : "tw-items-start"}`}
           >
             <div className="tw-flex tw-items-center tw-gap-3 tw-pb-1">
               <span className="tw-text-lg tw-font-semibold tw-text-white">
@@ -519,7 +519,7 @@ export function WorkerCard({
             ) : null}
           </div>
           <div
-            className={`tw-flex tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-items-center" : "tw-items-end"}`}
+            className={`tw-flex tw-min-w-0 tw-max-w-full tw-flex-1 tw-flex-col tw-gap-3 tw-pb-2 tw-pt-2 ${isMobile ? "tw-w-full tw-items-center" : "tw-basis-[20rem] tw-items-end"}`}
           >
             {printStatus()}
           </div>

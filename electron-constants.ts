@@ -42,7 +42,7 @@ export const DELEGATION_CONTRACT: {
 } = {
   chain_id: 1,
   contract: "0x2202CB9c00487e7e8EF21e6d8E914B32e709f43d",
-  deploy_block: 17114430,
+  deploy_block: 17114433,
 };
 
 export const DELEGATION_ALL_ADDRESS =
@@ -54,7 +54,7 @@ export const USE_CASE_AIRDROPS = 3;
 export const USE_CASE_PRIMARY_ADDRESS = 997;
 export const USE_CASE_SUB_DELEGATION = 998;
 export const USE_CASE_CONSOLIDATION = 999;
-export const CONSOLIDATIONS_LIMIT = 3;
+export const NATIVE_DELEGATION_INDEX_VERSION = 2;
 export const NEVER_DATE = 64060588800;
 
 export const MEME_8_EDITION_BURN_ADJUSTMENT = -2588;

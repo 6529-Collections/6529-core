@@ -1,3 +1,4 @@
+import type { ConsolidationSettingsRequest } from "./workers/tdh-worker/consolidation-policy";
 import Logger from "electron-log";
 import { WorkerLogger } from "./worker-logger";
 import cron from "node-cron";
@@ -23,11 +24,10 @@ import {
   startTransactionReconciliation,
   type TransactionReconciliationState,
 } from "./workers/transactions-worker/transactions-worker.db";
-import {
-  isValidTransactionReconciliationState,
-} from "./workers/transactions-worker/transaction-reconciliation-state";
+import { isValidTransactionReconciliationState } from "./workers/transactions-worker/transaction-reconciliation-state";
 
 export interface WorkerData {
+  consolidationSettingsRequest?: ConsolidationSettingsRequest;
   rpcUrl: string;
   dbParams: BetterSqlite3ConnectionOptions;
   blockRange: number;
@@ -52,6 +52,14 @@ export interface WorkerStartResult {
 }
 
 export class ScheduledWorker {
+  private consolidationSettingsRequest?: ConsolidationSettingsRequest;
+
+  public setConsolidationSettingsRequest(
+    request: ConsolidationSettingsRequest | undefined,
+  ) {
+    this.consolidationSettingsRequest = request;
+  }
+
   protected rpcUrl: string | null;
   protected namespace: string;
   protected display: string;
@@ -182,9 +190,7 @@ export class ScheduledWorker {
   }
 
   private queueStartWithMessage(waitingMessage: string) {
-    this.setQueuedStatus(
-      this.startQueue.queueWaitingMessage(waitingMessage),
-    );
+    this.setQueuedStatus(this.startQueue.queueWaitingMessage(waitingMessage));
   }
 
   private setQueuedStatus(waitingMessage: string) {
@@ -295,6 +301,8 @@ export class ScheduledWorker {
         maxConcurrentRequests: this.maxConcurrentRequests,
       } as WorkerData;
     }
+
+    workerData.consolidationSettingsRequest = this.consolidationSettingsRequest;
 
     this.logger.log("info", `Starting task\n\n---------- New Run ----------\n`);
 
