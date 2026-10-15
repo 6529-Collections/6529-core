@@ -249,24 +249,25 @@ export async function runLifecycleChecks(ctx: SuiteContext): Promise<void> {
     await r.check("F8", "close-dialog", "Close confirmation", async () => skip("lifecycle checks not requested"));
     return;
   }
-  const dialogScript = path.join(ctx.repoRoot, "e2e", "desktop", "lib", "dialog.ps1");
+  const script = (name: string) => path.join(ctx.repoRoot, "e2e", "desktop", "lib", name);
+  const powershell = (name: string, ...args: string[]) =>
+    spawnSync("powershell", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", script(name), ...args], {
+      encoding: "utf8",
+      windowsHide: true,
+    });
+  // Button ids of the close dialog (electron-src/app-close.ts lists Quit,
+  // Run in Background, Cancel): Electron gives Cancel the common IDCANCEL
+  // and numbers the others from 100 in order.
+  const CLOSE_DIALOG_BUTTONS: Record<string, number> = { Quit: 100, "Run in Background": 101, Cancel: 2 };
   const clickDialog = (button: string) => {
-    const result = spawnSync(
-      "powershell",
-      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", dialogScript, "-Title", "Close 6529 Desktop", "-Button", button, "-TimeoutSec", "20"],
-      { encoding: "utf8", windowsHide: true },
-    );
+    const result = powershell("dialog.ps1", "-ProcessId", String(ctx.app.pid), "-Title", "Close 6529 Desktop", "-ButtonId", String(CLOSE_DIALOG_BUTTONS[button]));
     if (result.status !== 0) throw new Error(`dialog button "${button}": ${(result.stdout + result.stderr).trim()}`);
   };
   // window.close() from the page does not reach the BrowserWindow; post the
   // native close message, as the title bar's close button does.
   const requestClose = async () => {
     await ctx.app.mainPage(30_000);
-    const sent = spawnSync(
-      "powershell",
-      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(ctx.repoRoot, "e2e", "desktop", "lib", "close-window.ps1"), "-ProcessId", String(ctx.app.pid)],
-      { encoding: "utf8", windowsHide: true },
-    );
+    const sent = powershell("close-window.ps1", "-ProcessId", String(ctx.app.pid));
     if (sent.status !== 0) throw new Error(`close: ${(sent.stdout + sent.stderr).trim()}`);
   };
 
@@ -285,18 +286,29 @@ export async function runLifecycleChecks(ctx: SuiteContext): Promise<void> {
     assert(!ctx.app.hasExited, "the app exited");
     const info = await fetch(`${ctx.baseUrl}/api/version`, { signal: AbortSignal.timeout(15_000) });
     assert(info.ok, "renderer server stopped in background mode");
+    const windows = (await ctx.app.cdpTargets()).filter((target) => target.type === "page");
+    return `${windows.length} window(s) left open${windows.length ? `: ${windows.map((target) => target.title || target.url).join(", ")}` : ""}`;
   });
   await r.check("F9", "restore-from-background", "Restoring from background mode reopens the main window", async () => {
     if (process.platform !== "win32") skip("window automation implemented for Windows");
-    const restore = spawnSync(
-      "powershell",
-      ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", path.join(ctx.repoRoot, "e2e", "desktop", "lib", "restore-window.ps1"), "-ProcessId", String(ctx.app.pid)],
-      { encoding: "utf8", windowsHide: true },
+    // Launching the app again is how people reopen it; builds that keep a
+    // minimized splash instead reopen when it is restored from the taskbar.
+    const second = spawn(
+      ctx.app.options.exe,
+      [...(ctx.app.options.extraArgs ?? []), `--user-data-dir=${ctx.app.options.profileDir}`],
+      { stdio: "ignore" },
     );
-    assert(restore.status === 0, `restore: ${(restore.stdout + restore.stderr).trim()}`);
+    await new Promise((resolve) => second.once("exit", resolve));
+    let how = "a second launch reopened it";
+    const reopened = await ctx.app.mainPage(15_000).catch(() => null);
+    if (!reopened) {
+      const restore = powershell("restore-window.ps1", "-ProcessId", String(ctx.app.pid));
+      assert(restore.status === 0, `neither a second launch nor restoring a window reopened the app: ${(restore.stdout + restore.stderr).trim()}`);
+      how = "restoring the minimized splash reopened it (a second launch did not)";
+    }
     ctx.page = await ctx.app.mainPage(60_000);
     await ctx.page.waitForLoadState("domcontentloaded");
-    return restore.stdout.trim();
+    return how;
   });
   await r.check("F8", "close-dialog-quit", "Quit stops the app and its IPFS node", async () => {
     if (process.platform !== "win32") skip("dialog automation implemented for Windows");

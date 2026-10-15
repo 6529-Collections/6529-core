@@ -177,7 +177,10 @@ async function main(): Promise<number> {
   writeReport(outDir, report, baseline);
   console.log(`[suite] report: ${path.join(outDir, "function-suite.md")}`);
   const anyFailure = recorder.results.some((result) => result.status === "fail");
-  if (typeof args.profile !== "string" && args["keep-profile"] !== true && !anyFailure) {
+  if (typeof args.profile === "string") {
+    // The profile belongs to the caller; the work folder only held backups.
+    fs.rmSync(work, { recursive: true, force: true });
+  } else if (args["keep-profile"] !== true && !anyFailure) {
     fs.rmSync(work, { recursive: true, force: true });
   } else {
     console.log(`[suite] kept profile and work files: ${work}`);

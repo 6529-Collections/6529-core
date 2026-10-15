@@ -109,8 +109,13 @@ export class AppSession {
   private exited = false;
   exitCode: number | null = null;
 
+  /** Bytes of main.log written before this launch (a reused profile keeps its log). */
+  private readonly logOffset: number;
+
   private constructor(readonly options: LaunchOptions) {
     fs.mkdirSync(options.profileDir, { recursive: true });
+    const logPath = path.join(options.profileDir, "logs", "main.log");
+    this.logOffset = fs.existsSync(logPath) ? fs.statSync(logPath).size : 0;
     this.startedAt = Date.now();
     this.child = spawn(
       options.exe,
@@ -207,7 +212,8 @@ export class AppSession {
   readMainLog(): MainLogLine[] {
     if (!fs.existsSync(this.mainLogPath)) return [];
     const lines: MainLogLine[] = [];
-    for (const raw of fs.readFileSync(this.mainLogPath, "utf8").split(/\r?\n/)) {
+    const text = fs.readFileSync(this.mainLogPath).subarray(this.logOffset).toString("utf8");
+    for (const raw of text.split(/\r?\n/)) {
       const match = raw.match(/^\[(\d{4}-\d{2}-\d{2}) (\d{2}:\d{2}:\d{2}\.\d{3})\] \[(\w+)\]\s+(.*)$/);
       if (match) {
         lines.push({ time: new Date(`${match[1]}T${match[2]}`).getTime(), level: match[3], text: match[4] });
