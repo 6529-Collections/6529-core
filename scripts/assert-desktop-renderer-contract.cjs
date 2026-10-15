@@ -2277,6 +2277,18 @@ for (const seedWalletRendererPath of [
   );
 }
 
+const museumSnapshotPath = "renderer/scripts/build-museum-publication-snapshot.ts";
+const museumSnapshot = parseSource(museumSnapshotPath).text;
+assertContract(
+  museumSnapshot.includes('"ls-remote"') &&
+    museumSnapshot.includes("isExactGitCommit(commit)") &&
+    museumSnapshot.includes("pRetry(resolveMuseumBuildCommit, retryOptions)") &&
+    /new GitHubMuseumPublicationSource\(\{\s*ref,/.test(museumSnapshot) &&
+    museumSnapshot.includes("catalogResolver: museumPublicationCatalogResolver"),
+  museumSnapshotPath,
+  "Museum build snapshots must pin the public Git ref without anonymous REST API lookup and retain publication validation",
+);
+
 if (failures.length > 0) {
   console.error("Desktop renderer contract failed:");
   for (const failure of failures) {
