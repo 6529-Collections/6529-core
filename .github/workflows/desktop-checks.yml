@@ -1,0 +1,115 @@
+name: Desktop checks
+
+# Builds the unpacked Linux staging app on every pull request, which runs the
+# desktop size budget (config/desktop-size-budget.json) before packaging, and
+# then runs the desktop function suite (e2e/desktop) against it. Nothing is
+# signed or published.
+
+on:
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+      - "ops/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-checks-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Size budget and function suite (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      SEIZE_6529_COMMAND: "1"
+      SEIZE_SECURE_INSTALL: "1"
+      GIPHY_API_KEY: ${{ secrets.GIPHY_API_KEY }}
+      HAS_AWS: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install renderer dependencies
+        working-directory: renderer
+        run: pnpm install --frozen-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ github.token }}
+
+      - name: Configure AWS credentials for the Kubo binary
+        id: aws
+        if: ${{ env.HAS_AWS == 'true' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Download the Kubo binary
+        if: ${{ steps.aws.outcome == 'success' }}
+        run: |
+          aws s3 cp s3://6529bucket/ipfs-binaries/linux ./ipfs-binaries/linux --recursive
+          find ./ipfs-binaries/linux -type f -name ipfs -exec chmod +x {} \;
+
+      - name: Build the unpacked staging app (runs the size budget)
+        run: node scripts/desktop-build-target.cjs check-linux-staging
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+
+      - name: Size report
+        if: ${{ always() }}
+        run: |
+          for report in dist/desktop-footprint-*.md; do
+            [ -f "$report" ] && cat "$report" >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Install Playwright browsers and a virtual display
+        run: |
+          pnpm exec playwright install --with-deps chromium firefox
+          sudo apt-get install -y xvfb
+
+      - name: Function suite
+        run: |
+          xvfb-run -a --server-args="-screen 0 1920x1080x24" \
+            pnpm exec tsx e2e/desktop/run.ts \
+              --exe dist/linux-unpacked/6529-staging-core \
+              --routes smoke --no-lifecycle --extra-arg --no-sandbox \
+              --out e2e-out --label "pr-${{ github.event.pull_request.number || 'manual' }}"
+
+      - name: Function suite report
+        if: ${{ always() }}
+        run: |
+          [ -f e2e-out/function-suite.md ] && cat e2e-out/function-suite.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Upload reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-checks
+          path: |
+            dist/desktop-footprint-*.json
+            dist/desktop-footprint-*.md
+            e2e-out/
+          if-no-files-found: ignore
