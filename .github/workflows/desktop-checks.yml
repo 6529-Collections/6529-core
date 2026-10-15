@@ -85,18 +85,27 @@ jobs:
             [ -f "$report" ] && cat "$report" >> "$GITHUB_STEP_SUMMARY"
           done
 
-      - name: Install Playwright browsers and a virtual display
+      - name: Install Playwright browsers, a virtual display and a keyring
         run: |
           pnpm exec playwright install --with-deps chromium firefox
-          sudo apt-get install -y xvfb
+          sudo apt-get install -y xvfb gnome-keyring dbus-x11
 
+      # The app keeps session refresh tokens with Electron's safeStorage,
+      # which needs a Secret Service keyring on Linux: run an unlocked
+      # gnome-keyring inside a D-Bus session for the suite.
       - name: Function suite
+        env:
+          SUITE_LABEL: pr-${{ github.event.pull_request.number || 'manual' }}
         run: |
-          xvfb-run -a --server-args="-screen 0 1920x1080x24" \
-            pnpm exec tsx e2e/desktop/run.ts \
-              --exe dist/linux-unpacked/6529-staging-core \
-              --routes smoke --no-lifecycle --extra-arg --no-sandbox \
-              --out e2e-out --label "pr-${{ github.event.pull_request.number || 'manual' }}"
+          dbus-run-session -- bash -c '
+            echo "" | gnome-keyring-daemon --unlock --components=secrets > /dev/null
+            xvfb-run -a --server-args="-screen 0 1920x1080x24" \
+              pnpm exec tsx e2e/desktop/run.ts \
+                --exe dist/linux-unpacked/6529-staging-core \
+                --routes smoke --no-lifecycle \
+                --extra-arg --no-sandbox --extra-arg --password-store=gnome-libsecret \
+                --out e2e-out --label "$SUITE_LABEL"
+          '
 
       - name: Function suite report
         if: ${{ always() }}
