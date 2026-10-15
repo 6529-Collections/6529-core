@@ -22,17 +22,22 @@ const execFileAsync = promisify(execFile);
 const retryOptions = {
   retries: BUILD_SNAPSHOT_RETRIES,
   minTimeout: BUILD_SNAPSHOT_RETRY_DELAY_MS,
+  maxTimeout: 4_000,
   factor: 2,
   randomize: true,
 };
 
-async function resolveMuseumBuildCommit(): Promise<string> {
-  // Core builds must not depend on the anonymous GitHub REST API quota.
-  // Pin the public Git ref once; the source still verifies the full catalog,
-  // manifest and document fixity against this immutable commit.
+/** Resolve Museum main through bounded Git execution and return its validated SHA. */
+export async function resolveMuseumBuildCommit(): Promise<string> {
+  // Resolve main without consuming the anonymous REST quota. The source still
+  // verifies the catalog, manifest and document hashes at this immutable SHA.
   const { stdout } = await execFileAsync(
     "git",
     [
+      "-c",
+      "credential.helper=",
+      "-c",
+      "core.askPass=",
       "ls-remote",
       "--exit-code",
       "--refs",
@@ -40,12 +45,20 @@ async function resolveMuseumBuildCommit(): Promise<string> {
       "refs/heads/main",
     ],
     {
+      encoding: "utf8",
       timeout: 30_000,
+      killSignal: "SIGKILL",
       maxBuffer: 4096,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: "0" },
+      env: {
+        ...process.env,
+        GIT_TERMINAL_PROMPT: "0",
+        GIT_ASKPASS: "",
+        SSH_ASKPASS: "",
+        GCM_INTERACTIVE: "never",
+      },
     }
   );
-  const [commit, ref, ...extra] = stdout.trim().split(/\s+/u);
+  const [commit, ref, ...extra] = stdout.trim().split("\t");
   if (
     commit === undefined ||
     !isExactGitCommit(commit) ||
@@ -57,25 +70,23 @@ async function resolveMuseumBuildCommit(): Promise<string> {
   return commit;
 }
 
-async function main(): Promise<void> {
+/** Load a commit-pinned, verified publication and atomically replace its build snapshot. */
+export async function buildMuseumPublicationSnapshot(): Promise<void> {
   const ref = await pRetry(resolveMuseumBuildCommit, retryOptions);
   const source = new GitHubMuseumPublicationSource({
     ref,
     assembler: legacyCaseyPublicationAssembler,
     catalogResolver: museumPublicationCatalogResolver,
   });
-  const state = await pRetry(
-    async () => {
-      const candidate = await source.load();
-      if (candidate.status !== "current") {
-        throw new Error(
-          candidate.errorCode ?? "publication_build_snapshot_unavailable"
-        );
-      }
-      return candidate;
-    },
-    retryOptions
-  );
+  const state = await pRetry(async () => {
+    const candidate = await source.load();
+    if (candidate.status !== "current") {
+      throw new Error(
+        candidate.errorCode ?? "publication_build_snapshot_unavailable"
+      );
+    }
+    return candidate;
+  }, retryOptions);
 
   const snapshot = createMuseumPublicationBuildSnapshot(state.publication);
   const outputPath = path.resolve(
@@ -98,11 +109,14 @@ async function main(): Promise<void> {
   );
 }
 
-void main().catch((error: unknown) => {
-  const errorCode =
-    error instanceof Error && error.message.length > 0
-      ? error.message
-      : "publication_build_snapshot_failed";
-  process.stderr.write(`${errorCode}\n`);
-  process.exitCode = 1;
-});
+const invokedPath = process.argv[1]?.replaceAll("\\", "/");
+if (invokedPath?.endsWith("/scripts/build-museum-publication-snapshot.ts")) {
+  void buildMuseumPublicationSnapshot().catch((error: unknown) => {
+    const errorCode =
+      error instanceof Error && error.message.length > 0
+        ? error.message
+        : "publication_build_snapshot_failed";
+    process.stderr.write(`${errorCode}\n`);
+    process.exitCode = 1;
+  });
+}
